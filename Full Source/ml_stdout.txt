@@ -1,0 +1,6 @@
+ Assembling: OmegaPro_v3_fixed.asm
+
+***********
+ASCII build
+***********
+

@@ -1,0 +1,30 @@
+# Prometheus configuration for RawrXD
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'rawrxd-production'
+    environment: 'production'
+
+scrape_configs:
+  - job_name: 'rawrxd-core'
+    static_configs:
+      - targets: ['rawrxd-core:9090']
+        labels:
+          service: 'rawrxd-core'
+          instance: 'core-1'
+
+  - job_name: 'ollama'
+    static_configs:
+      - targets: ['rawrxd-ollama:11434']
+        labels:
+          service: 'ollama'
+          instance: 'ollama-1'
+
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+          instance: 'prometheus-1'

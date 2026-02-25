@@ -1,0 +1,721 @@
+﻿{
+    "Summary":  {
+                    "TotalValidated":  0,
+                    "TotalParsed":  119,
+                    "TotalDiscovered":  127
+                },
+    "DiscoveredManifests":  [
+                                {
+                                    "Path":  "D:\\lazy init ide\\agentic_build\\build_config.json",
+                                    "Format":  "JSON",
+                                    "Name":  "build_config.json",
+                                    "Size":  26906,
+                                    "LastModified":  "\/Date(1768666109003)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\audit_output\\RawrXD_ComprehensiveManifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "RawrXD_ComprehensiveManifest.json",
+                                    "Size":  14742,
+                                    "LastModified":  "\/Date(1769226256142)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\auto_generated_methods\\ManifestChangeNotifier_AutoFeature.ps1",
+                                    "Format":  "PowerShell",
+                                    "Name":  "ManifestChangeNotifier_AutoFeature.ps1",
+                                    "Size":  295,
+                                    "LastModified":  "\/Date(1769229188734)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\auto_generated_methods\\SourceDigestionOrchestrator_AutoMethod.ps1",
+                                    "Format":  "PowerShell",
+                                    "Name":  "SourceDigestionOrchestrator_AutoMethod.ps1",
+                                    "Size":  381,
+                                    "LastModified":  "\/Date(1769228648297)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\auto_generated_methods\\Test-Security-Settings-Fix_AutoMethod.ps1",
+                                    "Format":  "PowerShell",
+                                    "Name":  "Test-Security-Settings-Fix_AutoMethod.ps1",
+                                    "Size":  378,
+                                    "LastModified":  "\/Date(1769228648298)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\build\\CMakeFiles\\CMakeConfigureLog.yaml",
+                                    "Format":  "YAML",
+                                    "Name":  "CMakeConfigureLog.yaml",
+                                    "Size":  1758217,
+                                    "LastModified":  "\/Date(1769201489029)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\build\\_deps\\zlib-subbuild\\CMakeFiles\\CMakeConfigureLog.yaml",
+                                    "Format":  "YAML",
+                                    "Name":  "CMakeConfigureLog.yaml",
+                                    "Size":  271,
+                                    "LastModified":  "\/Date(1769201476107)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\build-arm64\\CMakeFiles\\CMakeConfigureLog.yaml",
+                                    "Format":  "YAML",
+                                    "Name":  "CMakeConfigureLog.yaml",
+                                    "Size":  270,
+                                    "LastModified":  "\/Date(1765826567896)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\build_universal\\CMakeFiles\\CMakeConfigureLog.yaml",
+                                    "Format":  "YAML",
+                                    "Name":  "CMakeConfigureLog.yaml",
+                                    "Size":  1753175,
+                                    "LastModified":  "\/Date(1768666837798)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\build_universal\\_deps\\zlib-subbuild\\CMakeFiles\\CMakeConfigureLog.yaml",
+                                    "Format":  "YAML",
+                                    "Name":  "CMakeConfigureLog.yaml",
+                                    "Size":  271,
+                                    "LastModified":  "\/Date(1768666617641)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\.vscode\\settings.json",
+                                    "Format":  "JSON",
+                                    "Name":  "settings.json",
+                                    "Size":  277,
+                                    "LastModified":  "\/Date(1759240566029)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\02-RawrZ-Desktop-Encryptor\\RawrZ.NET\\RawrZSecurityPlatform\\Properties\\launchSettings.json",
+                                    "Format":  "JSON",
+                                    "Name":  "launchSettings.json",
+                                    "Size":  621,
+                                    "LastModified":  "\/Date(1759229614513)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\02-RawrZ-Desktop-Encryptor\\RawrZ.NET\\RawrZSecurityPlatform\\appsettings.Development.json",
+                                    "Format":  "JSON",
+                                    "Name":  "appsettings.Development.json",
+                                    "Size":  119,
+                                    "LastModified":  "\/Date(1759229614505)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\02-RawrZ-Desktop-Encryptor\\RawrZ.NET\\RawrZSecurityPlatform\\appsettings.json",
+                                    "Format":  "JSON",
+                                    "Name":  "appsettings.json",
+                                    "Size":  142,
+                                    "LastModified":  "\/Date(1759229614507)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\cleaned-output\\config.json",
+                                    "Format":  "JSON",
+                                    "Name":  "config.json",
+                                    "Size":  1596,
+                                    "LastModified":  "\/Date(1759229616565)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\config\\ai_config.toml",
+                                    "Format":  "TOML",
+                                    "Name":  "ai_config.toml",
+                                    "Size":  2419,
+                                    "LastModified":  "\/Date(1759229616619)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\config\\appsettings.json",
+                                    "Format":  "JSON",
+                                    "Name":  "appsettings.json",
+                                    "Size":  2644,
+                                    "LastModified":  "\/Date(1759229616623)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\cursor-integration\\cursor-ai-config.json",
+                                    "Format":  "JSON",
+                                    "Name":  "cursor-ai-config.json",
+                                    "Size":  4623,
+                                    "LastModified":  "\/Date(1759229616635)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\finished\\local-deployment\\monitoring\\loki-config.yml",
+                                    "Format":  "YAML",
+                                    "Name":  "loki-config.yml",
+                                    "Size":  1261,
+                                    "LastModified":  "\/Date(1759229616774)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\finished\\online-deployment\\monitoring\\loki-config.yml",
+                                    "Format":  "YAML",
+                                    "Name":  "loki-config.yml",
+                                    "Size":  1261,
+                                    "LastModified":  "\/Date(1759229616817)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\local_ai_copilot\\configs\\copilot_config.json",
+                                    "Format":  "JSON",
+                                    "Name":  "copilot_config.json",
+                                    "Size":  2474,
+                                    "LastModified":  "\/Date(1759229617056)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\monitoring\\loki-config.yml",
+                                    "Format":  "YAML",
+                                    "Name":  "loki-config.yml",
+                                    "Size":  1261,
+                                    "LastModified":  "\/Date(1759229617078)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\n0mn0m-vscode-extension\\tsconfig.json",
+                                    "Format":  "JSON",
+                                    "Name":  "tsconfig.json",
+                                    "Size":  236,
+                                    "LastModified":  "\/Date(1759229617095)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\online_ide_workspace\\config\\backend_config.json",
+                                    "Format":  "JSON",
+                                    "Name":  "backend_config.json",
+                                    "Size":  2049,
+                                    "LastModified":  "\/Date(1759229617135)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\our_own_toolchain\\config\\toolchain_config.json",
+                                    "Format":  "JSON",
+                                    "Name":  "toolchain_config.json",
+                                    "Size":  550,
+                                    "LastModified":  "\/Date(1759229617194)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\Private Co Pilot\\AIDesktopHelper.Api\\appsettings.Development.json",
+                                    "Format":  "JSON",
+                                    "Name":  "appsettings.Development.json",
+                                    "Size":  0,
+                                    "LastModified":  "\/Date(1759229615961)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\Private Co Pilot\\AIDesktopHelper.Api\\appsettings.json",
+                                    "Format":  "JSON",
+                                    "Name":  "appsettings.json",
+                                    "Size":  1261,
+                                    "LastModified":  "\/Date(1759229615963)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\Private Co Pilot\\secure-ai-assistant\\manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest.json",
+                                    "Size":  858,
+                                    "LastModified":  "\/Date(1759229616021)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\Privvate Co Pilot\\ASP.NET\\manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest.json",
+                                    "Size":  715,
+                                    "LastModified":  "\/Date(1759229616081)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\Privvate Co Pilot\\CodeBlock3\\manifest-enhanced.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest-enhanced.json",
+                                    "Size":  1923,
+                                    "LastModified":  "\/Date(1759229616149)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\Privvate Co Pilot\\CodeBlock3\\manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest.json",
+                                    "Size":  647,
+                                    "LastModified":  "\/Date(1759229616150)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\Privvate Co Pilot\\CodeBlock3\\native-host-manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "native-host-manifest.json",
+                                    "Size":  217,
+                                    "LastModified":  "\/Date(1759229616154)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\Privvate Co Pilot\\CodeBlocks\\manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest.json",
+                                    "Size":  422,
+                                    "LastModified":  "\/Date(1759229616171)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\Privvate Co Pilot\\Codeblocks2\\manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest.json",
+                                    "Size":  521,
+                                    "LastModified":  "\/Date(1759229616212)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\Privvate Co Pilot\\Codeblocks2\\native-host-manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "native-host-manifest.json",
+                                    "Size":  264,
+                                    "LastModified":  "\/Date(1759229616215)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\Privvate Co Pilot\\Project\\manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest.json",
+                                    "Size":  242,
+                                    "LastModified":  "\/Date(1759229616238)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\Privvate Co Pilot\\Project\\native-host-manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "native-host-manifest.json",
+                                    "Size":  135,
+                                    "LastModified":  "\/Date(1759229616242)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\Privvate Co Pilot\\native-host-manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "native-host-manifest.json",
+                                    "Size":  260,
+                                    "LastModified":  "\/Date(1759229616053)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\RawrZSecurityPlatform.NET\\RawrZSecurityPlatform\\Properties\\launchSettings.json",
+                                    "Format":  "JSON",
+                                    "Name":  "launchSettings.json",
+                                    "Size":  621,
+                                    "LastModified":  "\/Date(1759229616389)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\RawrZSecurityPlatform.NET\\RawrZSecurityPlatform\\appsettings.Development.json",
+                                    "Format":  "JSON",
+                                    "Name":  "appsettings.Development.json",
+                                    "Size":  119,
+                                    "LastModified":  "\/Date(1759229616381)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\RawrZSecurityPlatform.NET\\RawrZSecurityPlatform\\appsettings.json",
+                                    "Format":  "JSON",
+                                    "Name":  "appsettings.json",
+                                    "Size":  142,
+                                    "LastModified":  "\/Date(1759229616383)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\real_compilation_workspace\\config\\real_compilation_config.json",
+                                    "Format":  "JSON",
+                                    "Name":  "real_compilation_config.json",
+                                    "Size":  1070,
+                                    "LastModified":  "\/Date(1759229617287)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\reverse_engineered_toolchain\\replit\\compiler_configs.json",
+                                    "Format":  "JSON",
+                                    "Name":  "compiler_configs.json",
+                                    "Size":  2080,
+                                    "LastModified":  "\/Date(1759229617339)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\vscode-extension\\tsconfig.json",
+                                    "Format":  "JSON",
+                                    "Name":  "tsconfig.json",
+                                    "Size":  236,
+                                    "LastModified":  "\/Date(1759229617839)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\config.cfg",
+                                    "Format":  "INI",
+                                    "Name":  "config.cfg",
+                                    "Size":  993,
+                                    "LastModified":  "\/Date(1759229612941)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\config.json",
+                                    "Format":  "JSON",
+                                    "Name":  "config.json",
+                                    "Size":  1675,
+                                    "LastModified":  "\/Date(1759229612946)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\copilot_integration_config.json",
+                                    "Format":  "JSON",
+                                    "Name":  "copilot_integration_config.json",
+                                    "Size":  809,
+                                    "LastModified":  "\/Date(1759229612950)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\dotnet-ide-config.json",
+                                    "Format":  "JSON",
+                                    "Name":  "dotnet-ide-config.json",
+                                    "Size":  479,
+                                    "LastModified":  "\/Date(1759235321174)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\n0mn0m_config.json",
+                                    "Format":  "JSON",
+                                    "Name":  "n0mn0m_config.json",
+                                    "Size":  352,
+                                    "LastModified":  "\/Date(1759229613506)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\itsmehrawrxd-master\\simple_copilot_integration_config.json",
+                                    "Format":  "JSON",
+                                    "Name":  "simple_copilot_integration_config.json",
+                                    "Size":  953,
+                                    "LastModified":  "\/Date(1759229613895)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\orchestrator_smoke_output\\manifest_tracer\\ManifestTracer_Report_20260123.json",
+                                    "Format":  "JSON",
+                                    "Name":  "ManifestTracer_Report_20260123.json",
+                                    "Size":  526,
+                                    "LastModified":  "\/Date(1769228525530)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\misc\\Desktop\\amazon-q-cursor\\tsconfig.json",
+                                    "Format":  "JSON",
+                                    "Name":  "tsconfig.json",
+                                    "Size":  560,
+                                    "LastModified":  "\/Date(1759080880471)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\misc\\Desktop\\copilot-ollama\\config.yaml",
+                                    "Format":  "YAML",
+                                    "Name":  "config.yaml",
+                                    "Size":  1000,
+                                    "LastModified":  "\/Date(1759205136050)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\misc\\Desktop\\config.json",
+                                    "Format":  "JSON",
+                                    "Name":  "config.json",
+                                    "Size":  2765,
+                                    "LastModified":  "\/Date(1758993555056)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\misc\\Desktop\\tsconfig.json",
+                                    "Format":  "JSON",
+                                    "Name":  "tsconfig.json",
+                                    "Size":  725,
+                                    "LastModified":  "\/Date(1758993369667)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\misc\\Desktop\\tsconfig.node.json",
+                                    "Format":  "JSON",
+                                    "Name":  "tsconfig.node.json",
+                                    "Size":  221,
+                                    "LastModified":  "\/Date(1758993372786)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\misc\\Desktop\\vscode-settings.json",
+                                    "Format":  "JSON",
+                                    "Name":  "vscode-settings.json",
+                                    "Size":  153,
+                                    "LastModified":  "\/Date(1759205084842)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\01-active-projects\\SaaSEncryptionSecurity\\tsconfig.json",
+                                    "Format":  "JSON",
+                                    "Name":  "tsconfig.json",
+                                    "Size":  721,
+                                    "LastModified":  "\/Date(1759217180963)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\01-active-projects\\UnifiedIDE\\config.json",
+                                    "Format":  "JSON",
+                                    "Name":  "config.json",
+                                    "Size":  230,
+                                    "LastModified":  "\/Date(1759120222098)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\ai-first-editor\\tsconfig.json",
+                                    "Format":  "JSON",
+                                    "Name":  "tsconfig.json",
+                                    "Size":  188,
+                                    "LastModified":  "\/Date(1759195496610)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\Eng Src\\Star5IDE\\x64\\Debug\\IDEConfig.ini",
+                                    "Format":  "INI",
+                                    "Name":  "IDEConfig.ini",
+                                    "Size":  119,
+                                    "LastModified":  "\/Date(1759219067097)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\Eng Src\\Star5IDE\\x64\\Debug\\Solution.solconfig.ini",
+                                    "Format":  "INI",
+                                    "Name":  "Solution.solconfig.ini",
+                                    "Size":  107,
+                                    "LastModified":  "\/Date(1759219067097)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\Eng Src\\Star5IDE\\IDEConfig.ini",
+                                    "Format":  "INI",
+                                    "Name":  "IDEConfig.ini",
+                                    "Size":  119,
+                                    "LastModified":  "\/Date(1759219066952)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\Eng Src\\Star5IDE\\Solution.solconfig.ini",
+                                    "Format":  "INI",
+                                    "Name":  "Solution.solconfig.ini",
+                                    "Size":  107,
+                                    "LastModified":  "\/Date(1759219066962)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\Eng Src\\Star5IDE\\tsconfig.json",
+                                    "Format":  "JSON",
+                                    "Name":  "tsconfig.json",
+                                    "Size":  340,
+                                    "LastModified":  "\/Date(1759219067096)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\RoslynBox\\RoslynBox.runtimeconfig.json",
+                                    "Format":  "JSON",
+                                    "Name":  "RoslynBox.runtimeconfig.json",
+                                    "Size":  98,
+                                    "LastModified":  "\/Date(1759209861969)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\Spotify ADS Remover 1.2.62.580\\Data\\LocalData\\Spotify\\AmountExtractionHeuristicRegexes\\3\\manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest.json",
+                                    "Size":  94,
+                                    "LastModified":  "\/Date(315532800000)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\Spotify ADS Remover 1.2.62.580\\Data\\LocalData\\Spotify\\AutofillStates\\2025.6.13.84507\\manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest.json",
+                                    "Size":  97,
+                                    "LastModified":  "\/Date(315532800000)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\Spotify ADS Remover 1.2.62.580\\Data\\LocalData\\Spotify\\CertificateRevocation\\10057\\manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest.json",
+                                    "Size":  96,
+                                    "LastModified":  "\/Date(1758976924000)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\Spotify ADS Remover 1.2.62.580\\Data\\LocalData\\Spotify\\CertificateRevocation\\10058\\manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest.json",
+                                    "Size":  95,
+                                    "LastModified":  "\/Date(1759024626000)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\Spotify ADS Remover 1.2.62.580\\Data\\LocalData\\Spotify\\CookieReadinessList\\2024.11.26.0\\manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest.json",
+                                    "Size":  91,
+                                    "LastModified":  "\/Date(315532800000)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\Spotify ADS Remover 1.2.62.580\\Data\\LocalData\\Spotify\\Crowd Deny\\2025.9.25.61\\manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest.json",
+                                    "Size":  108,
+                                    "LastModified":  "\/Date(1758737014000)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\Spotify ADS Remover 1.2.62.580\\Data\\LocalData\\Spotify\\FileTypePolicies\\67\\manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest.json",
+                                    "Size":  76,
+                                    "LastModified":  "\/Date(315532800000)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\Spotify ADS Remover 1.2.62.580\\Data\\LocalData\\Spotify\\FirstPartySetsPreloaded\\2025.7.24.0\\manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest.json",
+                                    "Size":  85,
+                                    "LastModified":  "\/Date(315532800000)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\Spotify ADS Remover 1.2.62.580\\Data\\LocalData\\Spotify\\hyphen-data\\120.0.6050.0\\manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest.json",
+                                    "Size":  82,
+                                    "LastModified":  "\/Date(978307200000)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\Spotify ADS Remover 1.2.62.580\\Data\\LocalData\\Spotify\\MEIPreload\\1.0.7.1744928549\\manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest.json",
+                                    "Size":  232,
+                                    "LastModified":  "\/Date(315532800000)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\Spotify ADS Remover 1.2.62.580\\Data\\LocalData\\Spotify\\OnDeviceHeadSuggestModel\\20250910.807035025.14\\manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest.json",
+                                    "Size":  108,
+                                    "LastModified":  "\/Date(1758636958000)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\Spotify ADS Remover 1.2.62.580\\Data\\LocalData\\Spotify\\OpenCookieDatabase\\2024.10.17.0\\manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest.json",
+                                    "Size":  90,
+                                    "LastModified":  "\/Date(315532800000)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\Spotify ADS Remover 1.2.62.580\\Data\\LocalData\\Spotify\\OptimizationHints\\542\\manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest.json",
+                                    "Size":  108,
+                                    "LastModified":  "\/Date(315532800000)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\Spotify ADS Remover 1.2.62.580\\Data\\LocalData\\Spotify\\OriginTrials\\1.0.0.17\\manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest.json",
+                                    "Size":  300,
+                                    "LastModified":  "\/Date(315532800000)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\Spotify ADS Remover 1.2.62.580\\Data\\LocalData\\Spotify\\PKIMetadata\\1442\\manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest.json",
+                                    "Size":  73,
+                                    "LastModified":  "\/Date(315532800000)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\Spotify ADS Remover 1.2.62.580\\Data\\LocalData\\Spotify\\PrivacySandboxAttestationsPreloaded\\2025.6.16.0\\manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest.json",
+                                    "Size":  97,
+                                    "LastModified":  "\/Date(315532800000)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\Spotify ADS Remover 1.2.62.580\\Data\\LocalData\\Spotify\\SafetyTips\\3083\\manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest.json",
+                                    "Size":  72,
+                                    "LastModified":  "\/Date(1758613498000)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\Spotify ADS Remover 1.2.62.580\\Data\\LocalData\\Spotify\\SSLErrorAssistant\\7\\manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest.json",
+                                    "Size":  76,
+                                    "LastModified":  "\/Date(315532800000)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\Spotify ADS Remover 1.2.62.580\\Data\\LocalData\\Spotify\\Subresource Filter\\Unindexed Rules\\9.60.0\\manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest.json",
+                                    "Size":  114,
+                                    "LastModified":  "\/Date(315532800000)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\Spotify ADS Remover 1.2.62.580\\Data\\LocalData\\Spotify\\TpcdMetadata\\2025.9.26.1\\manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest.json",
+                                    "Size":  108,
+                                    "LastModified":  "\/Date(1758921712000)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\Spotify ADS Remover 1.2.62.580\\Data\\LocalData\\Spotify\\TpcdMetadata\\2025.9.27.1\\manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest.json",
+                                    "Size":  108,
+                                    "LastModified":  "\/Date(1759008120000)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\Spotify ADS Remover 1.2.62.580\\Data\\LocalData\\Spotify\\TrustTokenKeyCommitments\\2025.8.25.1\\manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest.json",
+                                    "Size":  79,
+                                    "LastModified":  "\/Date(315532800000)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\Spotify ADS Remover 1.2.62.580\\Data\\LocalData\\Spotify\\WidevineCdm\\4.10.2891.0\\manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest.json",
+                                    "Size":  1001,
+                                    "LastModified":  "\/Date(315532800000)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\Spotify ADS Remover 1.2.62.580\\Data\\LocalData\\Spotify\\ZxcvbnData\\3\\manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest.json",
+                                    "Size":  69,
+                                    "LastModified":  "\/Date(1677021638000)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\Spotify ADS Remover 1.2.62.580\\Data\\settings\\Spotify ADS RemoverSettings.ini",
+                                    "Format":  "INI",
+                                    "Name":  "Spotify ADS RemoverSettings.ini",
+                                    "Size":  231,
+                                    "LastModified":  "\/Date(1759304981162)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\unified-workspace\\ai-tools\\tsconfig.json",
+                                    "Format":  "JSON",
+                                    "Name":  "tsconfig.json",
+                                    "Size":  188,
+                                    "LastModified":  "\/Date(1759195496610)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\OrganizedPiProject\\projects\\unified-workspace\\rawrz-platform\\k8s\\configmap.yaml",
+                                    "Format":  "YAML",
+                                    "Name":  "configmap.yaml",
+                                    "Size":  100,
+                                    "LastModified":  "\/Date(1758943909815)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\RawrXD-ModelLoader\\build\\CMakeFiles\\CMakeConfigureLog.yaml",
+                                    "Format":  "YAML",
+                                    "Name":  "CMakeConfigureLog.yaml",
+                                    "Size":  242968,
+                                    "LastModified":  "\/Date(1768416942693)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\RawrXD-ModelLoader\\build-arm64\\CMakeFiles\\CMakeConfigureLog.yaml",
+                                    "Format":  "YAML",
+                                    "Name":  "CMakeConfigureLog.yaml",
+                                    "Size":  270,
+                                    "LastModified":  "\/Date(1765826536402)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\RawrXD.exe.WebView2\\EBWebView\\AutoLaunchProtocolsComponent\\1.0.0.10\\manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest.json",
+                                    "Size":  135,
+                                    "LastModified":  "\/Date(1765826537977)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\RawrXD.exe.WebView2\\EBWebView\\CertificateRevocation\\6498.2025.9.4\\manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest.json",
+                                    "Size":  113,
+                                    "LastModified":  "\/Date(1765826538234)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\RawrXD.exe.WebView2\\EBWebView\\Domain Actions\\3.0.0.16\\manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest.json",
+                                    "Size":  171,
+                                    "LastModified":  "\/Date(1765826539761)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\RawrXD.exe.WebView2\\EBWebView\\hyphen-data\\120.0.6050.0\\manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest.json",
+                                    "Size":  86,
+                                    "LastModified":  "\/Date(1765826540117)\/"
+                                },
+                                {
+                                    "Path":  "D:\\lazy init ide\\RawrXD.exe.WebView2\\EBWebView\\OriginTrials\\0.0.1.7\\manifest.json",
+                                    "Format":  "JSON",
+                                    "Name":  "manifest.json",
+                                    "Size":  43,
+                                    "LastModified":  "\/Date(1765826539803)\/"
+                                }
+                            ],
+    "ValidationSummary":  {
+
+                          },
+    "Metadata":  {
+                     "Generated":  {
+                                       "value":  "\/Date(1769229191294)\/",
+                                       "DisplayHint":  2,
+                                       "DateTime":  "Friday, January 23, 2026 11:33:11 PM"
+                                   },
+                     "Tool":  "ManifestTracer",
+                     "Version":  "1.0"
+                 }
+}

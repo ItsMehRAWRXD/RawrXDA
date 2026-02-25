@@ -1,0 +1,74 @@
+┌─────────────────────────────────────────────────────────────┐
+│          RAWRXD IDE - QUICK STATUS CHECKLIST                │
+└─────────────────────────────────────────────────────────────┘
+
+BUILD STATUS:        ✓ COMPILES (ml64 + link successful)
+RUNTIME STATUS:      ✗ CRASHES ON EXIT  
+GUI STATUS:          ⚠ DISPLAYS BUT INPUT BROKEN
+CLI STATUS:          ✗ NOT WORKING
+
+┌─────────────────────────────────────────────────────────────┐
+│ MODE FUNCTIONALITY STATUS                                   │
+└─────────────────────────────────────────────────────────────┘
+
+1.  Compile Mode         ✗ CreateProcessA broken
+2.  Encrypt Mode         ✗ No file I/O, crypto is stub
+3.  Inject Mode          ✗ OpenProcess param order wrong
+4.  UAC Bypass           ✗ Stack corruption
+5.  Persistence          ✗ Stack corruption
+6.  Sideload             ✗ CopyFileA missing param
+7.  AV Scan              ⚠ Runs but scans fake data
+8.  Entropy              ⚠ Runs but processes fake data  
+9.  StubGen              ✗ No filename, will crash
+10. Trace Engine         ✗ No real tracing, static JSON
+
+┌─────────────────────────────────────────────────────────────┐
+│ WHAT WORKS                                                  │
+└─────────────────────────────────────────────────────────────┘
+
+✓ Assembly and linking
+✓ Banner display
+✓ Menu display
+✓ Console I/O (Print function)
+✓ GetTargetProcessId parser
+✓ Buffer initialization (AVScan, Entropy)
+✓ Basic Mirage obfuscation logic
+✓ Basic Camellia structure (incomplete)
+✓ String manipulation utilities
+✓ Entry point and shadow space
+
+┌─────────────────────────────────────────────────────────────┐
+│ WHAT'S BROKEN                                               │
+└─────────────────────────────────────────────────────────────┘
+
+✗ Exit process (always crashes)
+✗ Input parsing (always shows 'Invalid')
+✗ All file operations (wrong parameters)
+✗ Process injection (wrong API params)
+✗ Registry operations (stack corruption)
+✗ CLI mode selection
+✗ CreateProcess calls
+✗ Cryptographic functions (stubs)
+✗ AV scanning (empty stubs)
+
+┌─────────────────────────────────────────────────────────────┐
+│ TOP 5 FIXES NEEDED                                          │
+└─────────────────────────────────────────────────────────────┘
+
+1. 🔴 Fix mode handlers: Change JMP MainDispatcher to RET
+2. 🔴 Fix ReadGUIMenuSelection: Strip CR/LF from input
+3. 🟡 Fix file I/O: Add filenames and fix parameter order
+4. 🟡 Fix API calls: Add missing parameters and structures
+5. 🟡 Add error handling: Check all API return values
+
+┌─────────────────────────────────────────────────────────────┐
+│ COMPLETION ESTIMATE                                         │
+└─────────────────────────────────────────────────────────────┘
+
+Framework:        ████████████████████░░ 70%
+Implementation:   ████░░░░░░░░░░░░░░░░░░ 20%
+Production Ready: ██░░░░░░░░░░░░░░░░░░░░ 10%
+
+Hours to MVP (basic working): 4-8 hours
+Hours to full features:       40-60 hours
+

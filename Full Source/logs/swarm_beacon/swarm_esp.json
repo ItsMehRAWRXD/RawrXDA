@@ -1,0 +1,44 @@
+[
+  {
+    "LastUpdate": "2026-01-25T02:42:26.7424574-05:00",
+    "Location": "FCUKED",
+    "Started": "2026-01-25T02:42:26.6955034-05:00",
+    "InCode": false,
+    "State": "Failed",
+    "CurrentFile": "(initializing)",
+    "Error": "At D:\\lazy init ide\\Run-AutonomousAgent-IDE-Direct.ps1:158 char:22\r\n+         $prereqs = @{\r\n+                      ~\r\nMissing closing '}' in statement block or type definition.\r\n\r\nAt D:\\lazy init ide\\Run-AutonomousAgent-IDE-Direct.ps1:162 char:13\r\n+             .NETFramework = $false\r\n+             ~~~~~~~~~~~~~\r\nUnexpected token '.NETFramework' in expression or statement.\r\n\r\nAt D:\\lazy init ide\\Run-AutonomousAgent-IDE-Direct.ps1:164 char:10\r\n+         }\r\n+          ~\r\nThe Try statement is missing its Catch or Finally block.\r\n\r\nAt D:\\lazy init ide\\Run-AutonomousAgent-IDE-Direct.ps1:207 char:1\r\n+ }\r\n+ ~\r\nUnexpected token '}' in expression or statement.\r\n\r\nAt D:\\lazy init ide\\Run-AutonomousAgent-IDE-Direct.ps1:210 char:33\r\n+ function Import-AutonomousAgent {\r\n+                                 ~\r\nMissing closing '}' in statement block or type definition.",
+    "HasMoreData": false,
+    "PsJobTypeName": "Powershell.Job",
+    "AgentId": 1,
+    "ActiveSeconds": 0,
+    "Name": "agent1"
+  },
+  {
+    "LastUpdate": "2026-01-25T02:42:26.8553728-05:00",
+    "Started": "2026-01-25T02:42:26.8083548-05:00",
+    "ActiveSeconds": 0,
+    "Error": "At D:\\lazy init ide\\Run-AutonomousAgent-IDE-Direct.ps1:158 char:22\r\n+         $prereqs = @{\r\n+                      ~\r\nMissing closing '}' in statement block or type definition.\r\n\r\nAt D:\\lazy init ide\\Run-AutonomousAgent-IDE-Direct.ps1:162 char:13\r\n+             .NETFramework = $false\r\n+             ~~~~~~~~~~~~~\r\nUnexpected token '.NETFramework' in expression or statement.\r\n\r\nAt D:\\lazy init ide\\Run-AutonomousAgent-IDE-Direct.ps1:164 char:10\r\n+         }\r\n+          ~\r\nThe Try statement is missing its Catch or Finally block.\r\n\r\nAt D:\\lazy init ide\\Run-AutonomousAgent-IDE-Direct.ps1:207 char:1\r\n+ }\r\n+ ~\r\nUnexpected token '}' in expression or statement.\r\n\r\nAt D:\\lazy init ide\\Run-AutonomousAgent-IDE-Direct.ps1:210 char:33\r\n+ function Import-AutonomousAgent {\r\n+                                 ~\r\nMissing closing '}' in statement block or type definition.",
+    "Name": "agent2",
+    "AgentId": 2,
+    "HasMoreData": false,
+    "Location": "FCUKED",
+    "State": "Failed",
+    "CurrentFile": "(initializing)",
+    "PsJobTypeName": "Powershell.Job",
+    "InCode": false
+  },
+  {
+    "Name": "agent3",
+    "Started": "2026-01-25T02:42:26.9228197-05:00",
+    "LastUpdate": "2026-01-25T02:42:26.9503784-05:00",
+    "Error": null,
+    "AgentId": 3,
+    "ActiveSeconds": 0,
+    "State": "Running",
+    "CurrentFile": "(initializing)",
+    "InCode": false,
+    "PsJobTypeName": "Powershell.Job",
+    "HasMoreData": false,
+    "Location": "FCUKED"
+  }
+]

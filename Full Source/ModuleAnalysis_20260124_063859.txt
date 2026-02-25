@@ -1,0 +1,152 @@
+=== MODULE ANALYSIS FOR: d:\lazy init ide ===
+
+Total modules found: 44
+
+=== MODULES BY LOCATION ===
+Directory: (root)
+File count: 14
+  - ArchitectureEnhancementEngine.psm1 (122 KB, modified: 2026-01-24 01:11)
+  - ManifestTracer.psm1 (39.8 KB, modified: 2026-01-23 23:33)
+  - RawrXD.Agentic.Autonomy.psm1 (6.6 KB, modified: 2026-01-24 02:22)
+  - RawrXD.AutonomousAgent.psm1 (29.7 KB, modified: 2026-01-24 02:37)
+  - RawrXD.Config.psm1 (1.7 KB, modified: 2026-01-23 23:40)
+  - RawrXD.Core.psm1 (14.5 KB, modified: 2026-01-23 23:45)
+  - RawrXD.ErrorHandling.psm1 (1 KB, modified: 2026-01-24 02:22)
+  - RawrXD.Logging.psm1 (2.6 KB, modified: 2026-01-23 23:57)
+  - RawrXD.Metrics.psm1 (6.7 KB, modified: 2026-01-24 02:22)
+  - RawrXD.ModelLoader.psm1 (14.3 KB, modified: 2026-01-24 02:29)
+  - RawrXD.ProductionOrchestrator.psm1 (66 KB, modified: 2026-01-24 02:28)
+  - RawrXD.Tracing.psm1 (1.8 KB, modified: 2026-01-24 02:20)
+  - RawrXD.UI.psm1 (8.1 KB, modified: 2026-01-23 23:40)
+  - RawrXD.Win32Deployment.psm1 (4.3 KB, modified: 2026-01-24 02:21)
+
+Directory: auto_generated_methods
+File count: 28
+  - RawrXD_AIIntervention.psm1 (3.1 KB, modified: 2026-01-24 02:39)
+  - RawrXD_UniversalIntegrator.psm1 (7.3 KB, modified: 2026-01-24 02:39)
+  - RawrXD.AgenticCommands.psm1 (29.5 KB, modified: 2026-01-24 02:39)
+  - RawrXD.AutoDependencyGraph.psm1 (10.3 KB, modified: 2026-01-24 02:39)
+  - RawrXD.AutonomousEnhancement.psm1 (35.9 KB, modified: 2026-01-24 02:39)
+  - RawrXD.AutoRefactorSuggestor.psm1 (26.4 KB, modified: 2026-01-24 02:39)
+  - RawrXD.ContinuousIntegrationTrigger.psm1 (22 KB, modified: 2026-01-24 02:39)
+  - RawrXD.CustomModelLoaders.psm1 (29.7 KB, modified: 2026-01-24 02:26)
+  - RawrXD.CustomModelPerformance.psm1 (30.5 KB, modified: 2026-01-24 02:39)
+  - RawrXD.DeploymentOrchestrator.psm1 (65.8 KB, modified: 2026-01-24 02:40)
+  - RawrXD.DynamicTestHarness.psm1 (24.9 KB, modified: 2026-01-24 02:39)
+  - RawrXD.FullBraceError.psm1 (9.3 KB, modified: 2026-01-24 02:58)
+  - RawrXD.LiveMetricsDashboard.psm1 (28.8 KB, modified: 2026-01-24 02:39)
+  - RawrXD.Logging.psm1 (12.8 KB, modified: 2026-01-24 02:39)
+  - RawrXD.ManifestChangeNotifier.psm1 (22.1 KB, modified: 2026-01-24 02:39)
+  - RawrXD.Master.psm1 (20.4 KB, modified: 2026-01-24 02:39)
+  - RawrXD.Production.psm1 (20.2 KB, modified: 2026-01-24 02:39)
+  - RawrXD.ProductionDeployer.psm1 (67.2 KB, modified: 2026-01-24 02:15)
+  - RawrXD.ReverseEngineering.psm1 (43.9 KB, modified: 2026-01-24 02:39)
+  - RawrXD.SecurityScanner.psm1 (16.9 KB, modified: 2026-01-24 02:39)
+  - RawrXD.SelfHealingModule.psm1 (16.4 KB, modified: 2026-01-24 02:39)
+  - RawrXD.SourceCodeSummarizer.psm1 (32.1 KB, modified: 2026-01-24 02:39)
+  - RawrXD.SwarmAgent.psm1 (20.7 KB, modified: 2026-01-24 02:27)
+  - RawrXD.SwarmMaster.psm1 (22.2 KB, modified: 2026-01-24 02:39)
+  - RawrXD.SwarmOrchestrator.psm1 (30.7 KB, modified: 2026-01-24 02:55)
+  - RawrXD.TestFramework.psm1 (52.2 KB, modified: 2026-01-24 03:28)
+  - RawrXD.UltimateProduction.psm1 (38.4 KB, modified: 2026-01-24 02:28)
+  - RawrXD.Win32Deployment.psm1 (24.2 KB, modified: 2026-01-24 02:39)
+
+Directory: extensions
+File count: 1
+  - PoshLLM.psm1 (16.6 KB, modified: 2025-12-15 14:22)
+
+Directory: modules
+File count: 1
+  - RawrXD..psm1 (4.6 KB, modified: 2026-01-23 22:55)
+
+=== DUPLICATE MODULE NAMES ===
+Module: RawrXD.Logging.psm1
+  Appearances: 2
+    auto_generated_methods\RawrXD.Logging.psm1 (12.8 KB)
+    RawrXD.Logging.psm1 (2.6 KB)
+
+Module: RawrXD.Win32Deployment.psm1
+  Appearances: 2
+    auto_generated_methods\RawrXD.Win32Deployment.psm1 (24.2 KB)
+    RawrXD.Win32Deployment.psm1 (4.3 KB)
+
+Summary: 2 module names have duplicates
+Total duplicate files: 4
+
+=== CATEGORIZATION ANALYSIS ===
+Root directory (likely originals): 14 modules
+  - ArchitectureEnhancementEngine.psm1 (122 KB)
+  - ManifestTracer.psm1 (39.8 KB)
+  - RawrXD.Agentic.Autonomy.psm1 (6.6 KB)
+  - RawrXD.AutonomousAgent.psm1 (29.7 KB)
+  - RawrXD.Config.psm1 (1.7 KB)
+  - RawrXD.Core.psm1 (14.5 KB)
+  - RawrXD.ErrorHandling.psm1 (1 KB)
+  - RawrXD.Logging.psm1 (2.6 KB)
+  - RawrXD.Metrics.psm1 (6.7 KB)
+  - RawrXD.ModelLoader.psm1 (14.3 KB)
+  - RawrXD.ProductionOrchestrator.psm1 (66 KB)
+  - RawrXD.Tracing.psm1 (1.8 KB)
+  - RawrXD.UI.psm1 (8.1 KB)
+  - RawrXD.Win32Deployment.psm1 (4.3 KB)
+
+Auto-generated directory: 28 modules
+  - RawrXD_AIIntervention.psm1 (3.1 KB)
+  - RawrXD_UniversalIntegrator.psm1 (7.3 KB)
+  - RawrXD.AgenticCommands.psm1 (29.5 KB)
+  - RawrXD.AutoDependencyGraph.psm1 (10.3 KB)
+  - RawrXD.AutonomousEnhancement.psm1 (35.9 KB)
+  - RawrXD.AutoRefactorSuggestor.psm1 (26.4 KB)
+  - RawrXD.ContinuousIntegrationTrigger.psm1 (22 KB)
+  - RawrXD.CustomModelLoaders.psm1 (29.7 KB)
+  - RawrXD.CustomModelPerformance.psm1 (30.5 KB)
+  - RawrXD.DeploymentOrchestrator.psm1 (65.8 KB)
+  - RawrXD.DynamicTestHarness.psm1 (24.9 KB)
+  - RawrXD.FullBraceError.psm1 (9.3 KB)
+  - RawrXD.LiveMetricsDashboard.psm1 (28.8 KB)
+  - RawrXD.Logging.psm1 (12.8 KB)
+  - RawrXD.ManifestChangeNotifier.psm1 (22.1 KB)
+  - RawrXD.Master.psm1 (20.4 KB)
+  - RawrXD.Production.psm1 (20.2 KB)
+  - RawrXD.ProductionDeployer.psm1 (67.2 KB)
+  - RawrXD.ReverseEngineering.psm1 (43.9 KB)
+  - RawrXD.SecurityScanner.psm1 (16.9 KB)
+  - RawrXD.SelfHealingModule.psm1 (16.4 KB)
+  - RawrXD.SourceCodeSummarizer.psm1 (32.1 KB)
+  - RawrXD.SwarmAgent.psm1 (20.7 KB)
+  - RawrXD.SwarmMaster.psm1 (22.2 KB)
+  - RawrXD.SwarmOrchestrator.psm1 (30.7 KB)
+  - RawrXD.TestFramework.psm1 (52.2 KB)
+  - RawrXD.UltimateProduction.psm1 (38.4 KB)
+  - RawrXD.Win32Deployment.psm1 (24.2 KB)
+
+Extensions directory: 1 modules
+  - PoshLLM.psm1 (16.6 KB)
+
+Modules subdirectory: 1 modules
+  - RawrXD..psm1 (4.6 KB)
+
+=== DETAILED CONTENT COMPARISON ===
+Comparing: RawrXD.Logging.psm1
+  Result: DIFFERENT CONTENT
+  Differences found: 525 lines
+  File 1: D:\lazy init ide\auto_generated_methods\RawrXD.Logging.psm1 (12.8 KB)
+  File 2: D:\lazy init ide\RawrXD.Logging.psm1 (2.6 KB)
+
+Comparing: RawrXD.Win32Deployment.psm1
+  Result: DIFFERENT CONTENT
+  Differences found: 704 lines
+  File 1: D:\lazy init ide\auto_generated_methods\RawrXD.Win32Deployment.psm1 (24.2 KB)
+  File 2: D:\lazy init ide\RawrXD.Win32Deployment.psm1 (4.3 KB)
+
+=== ANALYSIS SUMMARY ===
+Total modules analyzed: 44
+Unique module names: 42
+Modules with duplicates: 2
+Likely original modules (root): 14
+Auto-generated modules: 28
+Extension modules: 1
+Modules from subdirectories: 1
+
+Analysis complete!
+

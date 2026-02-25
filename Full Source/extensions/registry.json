@@ -1,0 +1,12 @@
+{
+  "TestPlugin": {
+    "Enabled": true,
+    "Path": "d:\\lazy init ide\\craft_room\\TestPlugin.psm1",
+    "InstalledPath": "D:\\lazy init ide\\scripts\\modules\\TestPlugin.psm1",
+    "Created": "2026-01-26 06:22:41",
+    "Type": "Custom",
+    "LastEnabled": "2026-01-26 06:22:41",
+    "Parameters": {},
+    "Installed": true
+  }
+}

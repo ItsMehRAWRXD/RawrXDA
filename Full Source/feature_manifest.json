@@ -1,0 +1,2878 @@
+{
+  "generated": "2026-02-07 20:32:24",
+  "results": [
+    {
+      "evidence": "3 matches in 2470 lines",
+      "status": "REAL",
+      "feature": "New File",
+      "category": "File Ops",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in cli_shell.cpp",
+      "status": "REAL",
+      "feature": "New File",
+      "category": "File Ops",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "New File",
+      "category": "File Ops",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "4 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "New File",
+      "category": "File Ops",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "3 matches in 2470 lines",
+      "status": "REAL",
+      "feature": "Open File",
+      "category": "File Ops",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in cli_shell.cpp",
+      "status": "REAL",
+      "feature": "Open File",
+      "category": "File Ops",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Open File",
+      "category": "File Ops",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Open File",
+      "category": "File Ops",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "12 matches in 2470 lines",
+      "status": "REAL",
+      "feature": "Save File",
+      "category": "File Ops",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in cli_shell.cpp",
+      "status": "REAL",
+      "feature": "Save File",
+      "category": "File Ops",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Save File",
+      "category": "File Ops",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "6 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Save File",
+      "category": "File Ops",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "4 matches in 2470 lines",
+      "status": "REAL",
+      "feature": "Save As",
+      "category": "File Ops",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in cli_shell.cpp",
+      "status": "REAL",
+      "feature": "Save As",
+      "category": "File Ops",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Save As",
+      "category": "File Ops",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "3 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Save As",
+      "category": "File Ops",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "4 matches in 2470 lines",
+      "status": "REAL",
+      "feature": "Close File",
+      "category": "File Ops",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in cli_shell.cpp",
+      "status": "REAL",
+      "feature": "Close File",
+      "category": "File Ops",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Close File",
+      "category": "File Ops",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Close File",
+      "category": "File Ops",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "3 matches in 2470 lines",
+      "status": "REAL",
+      "feature": "Load Model",
+      "category": "File Ops",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "Load Model",
+      "category": "File Ops",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern found in React generator",
+      "status": "REAL",
+      "feature": "Load Model",
+      "category": "File Ops",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Load Model",
+      "category": "File Ops",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "4 matches in 2470 lines",
+      "status": "REAL",
+      "feature": "Model HF",
+      "category": "File Ops",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "Model HF",
+      "category": "File Ops",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Model HF",
+      "category": "File Ops",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "Model HF",
+      "category": "File Ops",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "9 matches in 2470 lines",
+      "status": "REAL",
+      "feature": "Recent Files",
+      "category": "File Ops",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "Recent Files",
+      "category": "File Ops",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Recent Files",
+      "category": "File Ops",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "3 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Recent Files",
+      "category": "File Ops",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "3 matches in 2470 lines",
+      "status": "REAL",
+      "feature": "Undo",
+      "category": "Editing",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in cli_shell.cpp",
+      "status": "REAL",
+      "feature": "Undo",
+      "category": "Editing",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Undo",
+      "category": "Editing",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "1 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Undo",
+      "category": "Editing",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "3 matches in 2470 lines",
+      "status": "REAL",
+      "feature": "Redo",
+      "category": "Editing",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in cli_shell.cpp",
+      "status": "REAL",
+      "feature": "Redo",
+      "category": "Editing",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Redo",
+      "category": "Editing",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "1 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Redo",
+      "category": "Editing",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "4 matches in 2470 lines",
+      "status": "REAL",
+      "feature": "Cut",
+      "category": "Editing",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in cli_shell.cpp",
+      "status": "REAL",
+      "feature": "Cut",
+      "category": "Editing",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Cut",
+      "category": "Editing",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "1 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Cut",
+      "category": "Editing",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "4 matches in 2470 lines",
+      "status": "REAL",
+      "feature": "Copy",
+      "category": "Editing",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in cli_shell.cpp",
+      "status": "REAL",
+      "feature": "Copy",
+      "category": "Editing",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Copy",
+      "category": "Editing",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "1 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Copy",
+      "category": "Editing",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "4 matches in 2470 lines",
+      "status": "REAL",
+      "feature": "Paste",
+      "category": "Editing",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in cli_shell.cpp",
+      "status": "REAL",
+      "feature": "Paste",
+      "category": "Editing",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Paste",
+      "category": "Editing",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "1 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Paste",
+      "category": "Editing",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "4 matches in 2470 lines",
+      "status": "REAL",
+      "feature": "Find",
+      "category": "Editing",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in cli_shell.cpp",
+      "status": "REAL",
+      "feature": "Find",
+      "category": "Editing",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Find",
+      "category": "Editing",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "3 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Find",
+      "category": "Editing",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "4 matches in 2470 lines",
+      "status": "REAL",
+      "feature": "Replace",
+      "category": "Editing",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in cli_shell.cpp",
+      "status": "REAL",
+      "feature": "Replace",
+      "category": "Editing",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Replace",
+      "category": "Editing",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "3 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Replace",
+      "category": "Editing",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "1 matches in 684 lines",
+      "status": "REAL",
+      "feature": "Agent Loop",
+      "category": "Agent",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in cli_shell.cpp",
+      "status": "REAL",
+      "feature": "Agent Loop",
+      "category": "Agent",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern found in React generator",
+      "status": "REAL",
+      "feature": "Agent Loop",
+      "category": "Agent",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "3 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Agent Loop",
+      "category": "Agent",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "1 matches in 684 lines",
+      "status": "REAL",
+      "feature": "Agent Execute",
+      "category": "Agent",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in cli_shell.cpp",
+      "status": "REAL",
+      "feature": "Agent Execute",
+      "category": "Agent",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern found in React generator",
+      "status": "REAL",
+      "feature": "Agent Execute",
+      "category": "Agent",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "9 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Agent Execute",
+      "category": "Agent",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "1 matches in 684 lines",
+      "status": "REAL",
+      "feature": "Agent Goal",
+      "category": "Agent",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in cli_shell.cpp",
+      "status": "REAL",
+      "feature": "Agent Goal",
+      "category": "Agent",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Agent Goal",
+      "category": "Agent",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "Agent Goal",
+      "category": "Agent",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern 'agentMemory' not found",
+      "status": "MISSING",
+      "feature": "Agent Memory",
+      "category": "Agent",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in cli_shell.cpp",
+      "status": "REAL",
+      "feature": "Agent Memory",
+      "category": "Agent",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Agent Memory",
+      "category": "Agent",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "Agent Memory",
+      "category": "Agent",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "1 matches in 684 lines",
+      "status": "REAL",
+      "feature": "Agent Stop",
+      "category": "Agent",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "Agent Stop",
+      "category": "Agent",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Agent Stop",
+      "category": "Agent",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Agent Stop",
+      "category": "Agent",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "105 matches in 1047 lines",
+      "status": "REAL",
+      "feature": "Failure Detect",
+      "category": "Agent",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "Failure Detect",
+      "category": "Agent",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Failure Detect",
+      "category": "Agent",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "31 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Failure Detect",
+      "category": "Agent",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "74 matches in 1160 lines",
+      "status": "REAL",
+      "feature": "Plan Executor",
+      "category": "Agent",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "Plan Executor",
+      "category": "Agent",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Plan Executor",
+      "category": "Agent",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "14 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Plan Executor",
+      "category": "Agent",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "57 matches in 955 lines",
+      "status": "REAL",
+      "feature": "Exec Governor",
+      "category": "Agent",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "Exec Governor",
+      "category": "Agent",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Exec Governor",
+      "category": "Agent",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "Exec Governor",
+      "category": "Agent",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "1 matches, 1 stubs in 2470 lines",
+      "status": "PARTIAL",
+      "feature": "Toggle",
+      "category": "Autonomy",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in cli_shell.cpp",
+      "status": "REAL",
+      "feature": "Toggle",
+      "category": "Autonomy",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Toggle",
+      "category": "Autonomy",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "Toggle",
+      "category": "Autonomy",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in 2470 lines",
+      "status": "REAL",
+      "feature": "Set Goal",
+      "category": "Autonomy",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in cli_shell.cpp",
+      "status": "REAL",
+      "feature": "Set Goal",
+      "category": "Autonomy",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Set Goal",
+      "category": "Autonomy",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "Set Goal",
+      "category": "Autonomy",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern 'maxActionsPerMinute' not found",
+      "status": "MISSING",
+      "feature": "Rate Limit",
+      "category": "Autonomy",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in cli_shell.cpp",
+      "status": "REAL",
+      "feature": "Rate Limit",
+      "category": "Autonomy",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Rate Limit",
+      "category": "Autonomy",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "Rate Limit",
+      "category": "Autonomy",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "5 matches in 684 lines",
+      "status": "REAL",
+      "feature": "Deep Thinking",
+      "category": "AI Mode",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in cli_shell.cpp",
+      "status": "REAL",
+      "feature": "Deep Thinking",
+      "category": "AI Mode",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern found in React generator",
+      "status": "REAL",
+      "feature": "Deep Thinking",
+      "category": "AI Mode",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "Deep Thinking",
+      "category": "AI Mode",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "5 matches in 684 lines",
+      "status": "REAL",
+      "feature": "Deep Research",
+      "category": "AI Mode",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in cli_shell.cpp",
+      "status": "REAL",
+      "feature": "Deep Research",
+      "category": "AI Mode",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern found in React generator",
+      "status": "REAL",
+      "feature": "Deep Research",
+      "category": "AI Mode",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "Deep Research",
+      "category": "AI Mode",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "5 matches in 684 lines",
+      "status": "REAL",
+      "feature": "No Refusal",
+      "category": "AI Mode",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "No Refusal",
+      "category": "AI Mode",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern found in React generator",
+      "status": "REAL",
+      "feature": "No Refusal",
+      "category": "AI Mode",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "No Refusal",
+      "category": "AI Mode",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "33 matches in 684 lines",
+      "status": "REAL",
+      "feature": "Context Window",
+      "category": "AI Mode",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in cli_shell.cpp",
+      "status": "REAL",
+      "feature": "Context Window",
+      "category": "AI Mode",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern found in React generator",
+      "status": "REAL",
+      "feature": "Context Window",
+      "category": "AI Mode",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "3 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Context Window",
+      "category": "AI Mode",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "1 matches in 1342 lines",
+      "status": "REAL",
+      "feature": "Start Debug",
+      "category": "Debug",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in cli_shell.cpp",
+      "status": "REAL",
+      "feature": "Start Debug",
+      "category": "Debug",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Start Debug",
+      "category": "Debug",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "Start Debug",
+      "category": "Debug",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "83 matches in 1342 lines",
+      "status": "REAL",
+      "feature": "Breakpoints",
+      "category": "Debug",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "6 matches in cli_shell.cpp",
+      "status": "REAL",
+      "feature": "Breakpoints",
+      "category": "Debug",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Breakpoints",
+      "category": "Debug",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "Breakpoints",
+      "category": "Debug",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "8 matches in 1342 lines",
+      "status": "REAL",
+      "feature": "Step Over",
+      "category": "Debug",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in cli_shell.cpp",
+      "status": "REAL",
+      "feature": "Step Over",
+      "category": "Debug",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Step Over",
+      "category": "Debug",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "Step Over",
+      "category": "Debug",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern 'IDebugClient|DbgEng' not found",
+      "status": "MISSING",
+      "feature": "Native DbgEng",
+      "category": "Debug",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "Native DbgEng",
+      "category": "Debug",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Native DbgEng",
+      "category": "Debug",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "Native DbgEng",
+      "category": "Debug",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in 665 lines",
+      "status": "REAL",
+      "feature": "PE Analysis",
+      "category": "RE",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "PE Analysis",
+      "category": "RE",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern found in React generator",
+      "status": "REAL",
+      "feature": "PE Analysis",
+      "category": "RE",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "PE Analysis",
+      "category": "RE",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in 665 lines",
+      "status": "REAL",
+      "feature": "Disassembly",
+      "category": "RE",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "Disassembly",
+      "category": "RE",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Disassembly",
+      "category": "RE",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "Disassembly",
+      "category": "RE",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in 665 lines",
+      "status": "REAL",
+      "feature": "DumpBin",
+      "category": "RE",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "DumpBin",
+      "category": "RE",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern found in React generator",
+      "status": "REAL",
+      "feature": "DumpBin",
+      "category": "RE",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "DumpBin",
+      "category": "RE",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in 665 lines",
+      "status": "REAL",
+      "feature": "MASM Compile",
+      "category": "RE",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "MASM Compile",
+      "category": "RE",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern found in React generator",
+      "status": "REAL",
+      "feature": "MASM Compile",
+      "category": "RE",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "MASM Compile",
+      "category": "RE",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in 665 lines",
+      "status": "REAL",
+      "feature": "SSA Lifting",
+      "category": "RE",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "SSA Lifting",
+      "category": "RE",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "SSA Lifting",
+      "category": "RE",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "SSA Lifting",
+      "category": "RE",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in 665 lines",
+      "status": "REAL",
+      "feature": "Type Recovery",
+      "category": "RE",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "Type Recovery",
+      "category": "RE",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Type Recovery",
+      "category": "RE",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "Type Recovery",
+      "category": "RE",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in 665 lines",
+      "status": "REAL",
+      "feature": "Data Flow",
+      "category": "RE",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "Data Flow",
+      "category": "RE",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Data Flow",
+      "category": "RE",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "Data Flow",
+      "category": "RE",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in 665 lines",
+      "status": "REAL",
+      "feature": "CFG Generation",
+      "category": "RE",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "CFG Generation",
+      "category": "RE",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "CFG Generation",
+      "category": "RE",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "CFG Generation",
+      "category": "RE",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in 665 lines",
+      "status": "REAL",
+      "feature": "Export IDA",
+      "category": "RE",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "Export IDA",
+      "category": "RE",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Export IDA",
+      "category": "RE",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "Export IDA",
+      "category": "RE",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in 665 lines",
+      "status": "REAL",
+      "feature": "Export Ghidra",
+      "category": "RE",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "Export Ghidra",
+      "category": "RE",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Export Ghidra",
+      "category": "RE",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "Export Ghidra",
+      "category": "RE",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "43 matches in 1965 lines",
+      "status": "REAL",
+      "feature": "D2D Split View",
+      "category": "Decompiler",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "D2D Split View",
+      "category": "Decompiler",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "D2D Split View",
+      "category": "Decompiler",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "D2D Split View",
+      "category": "Decompiler",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "5 matches in 1965 lines",
+      "status": "REAL",
+      "feature": "Syntax Coloring",
+      "category": "Decompiler",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "Syntax Coloring",
+      "category": "Decompiler",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Syntax Coloring",
+      "category": "Decompiler",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "Syntax Coloring",
+      "category": "Decompiler",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "14 matches in 1965 lines",
+      "status": "REAL",
+      "feature": "Sync Selection",
+      "category": "Decompiler",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "Sync Selection",
+      "category": "Decompiler",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Sync Selection",
+      "category": "Decompiler",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "Sync Selection",
+      "category": "Decompiler",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "15 matches in 1965 lines",
+      "status": "REAL",
+      "feature": "SSA Var Rename",
+      "category": "Decompiler",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "SSA Var Rename",
+      "category": "Decompiler",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "SSA Var Rename",
+      "category": "Decompiler",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "SSA Var Rename",
+      "category": "Decompiler",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "9 matches in 158 lines",
+      "status": "REAL",
+      "feature": "Memory Patch",
+      "category": "Hotpatch",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "4 matches in cli_shell.cpp",
+      "status": "REAL",
+      "feature": "Memory Patch",
+      "category": "Hotpatch",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern found in React generator",
+      "status": "REAL",
+      "feature": "Memory Patch",
+      "category": "Hotpatch",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "Memory Patch",
+      "category": "Hotpatch",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern 'directWrite|directSearch' not found",
+      "status": "MISSING",
+      "feature": "Byte-Level",
+      "category": "Hotpatch",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "Byte-Level",
+      "category": "Hotpatch",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Byte-Level",
+      "category": "Hotpatch",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "Byte-Level",
+      "category": "Hotpatch",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "22 matches in 154 lines",
+      "status": "REAL",
+      "feature": "Server Patch",
+      "category": "Hotpatch",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "Server Patch",
+      "category": "Hotpatch",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern found in React generator",
+      "status": "REAL",
+      "feature": "Server Patch",
+      "category": "Hotpatch",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "Server Patch",
+      "category": "Hotpatch",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "19 matches in 274 lines",
+      "status": "REAL",
+      "feature": "Unified Manager",
+      "category": "Hotpatch",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "Unified Manager",
+      "category": "Hotpatch",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Unified Manager",
+      "category": "Hotpatch",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "Unified Manager",
+      "category": "Hotpatch",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "1 matches in 393 lines",
+      "status": "REAL",
+      "feature": "Hotpatch Panel",
+      "category": "Hotpatch",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "Hotpatch Panel",
+      "category": "Hotpatch",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern found in React generator",
+      "status": "REAL",
+      "feature": "Hotpatch Panel",
+      "category": "Hotpatch",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "Hotpatch Panel",
+      "category": "Hotpatch",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "63 matches in 1704 lines",
+      "status": "REAL",
+      "feature": "16 Built-in",
+      "category": "Themes",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "16 Built-in",
+      "category": "Themes",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "16 Built-in",
+      "category": "Themes",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "11 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "16 Built-in",
+      "category": "Themes",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern 'showThemeEditor' not found",
+      "status": "MISSING",
+      "feature": "Theme Editor",
+      "category": "Themes",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "Theme Editor",
+      "category": "Themes",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Theme Editor",
+      "category": "Themes",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Theme Editor",
+      "category": "Themes",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "8 matches in 1704 lines",
+      "status": "REAL",
+      "feature": "Transparency",
+      "category": "Themes",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "Transparency",
+      "category": "Themes",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Transparency",
+      "category": "Themes",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "Transparency",
+      "category": "Themes",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "5 matches in 1029 lines",
+      "status": "REAL",
+      "feature": "C++ Keywords",
+      "category": "Syntax",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "C++ Keywords",
+      "category": "Syntax",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern found in React generator",
+      "status": "REAL",
+      "feature": "C++ Keywords",
+      "category": "Syntax",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "3 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "C++ Keywords",
+      "category": "Syntax",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern 'asmMnemonic|registerName' not found",
+      "status": "MISSING",
+      "feature": "ASM Semantic",
+      "category": "Syntax",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "ASM Semantic",
+      "category": "Syntax",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "ASM Semantic",
+      "category": "Syntax",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "ASM Semantic",
+      "category": "Syntax",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "57 matches in 1029 lines",
+      "status": "REAL",
+      "feature": "6 Languages",
+      "category": "Syntax",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "6 Languages",
+      "category": "Syntax",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern found in React generator",
+      "status": "REAL",
+      "feature": "6 Languages",
+      "category": "Syntax",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "6 Languages",
+      "category": "Syntax",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "14 matches in 175 lines",
+      "status": "REAL",
+      "feature": "New Terminal",
+      "category": "Terminal",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in cli_shell.cpp",
+      "status": "REAL",
+      "feature": "New Terminal",
+      "category": "Terminal",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "New Terminal",
+      "category": "Terminal",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "New Terminal",
+      "category": "Terminal",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern 'splitTerminal' not found",
+      "status": "MISSING",
+      "feature": "Split Terminal",
+      "category": "Terminal",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in cli_shell.cpp",
+      "status": "REAL",
+      "feature": "Split Terminal",
+      "category": "Terminal",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Split Terminal",
+      "category": "Terminal",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Split Terminal",
+      "category": "Terminal",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern 'killTerminal' not found",
+      "status": "MISSING",
+      "feature": "Kill Terminal",
+      "category": "Terminal",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in cli_shell.cpp",
+      "status": "REAL",
+      "feature": "Kill Terminal",
+      "category": "Terminal",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Kill Terminal",
+      "category": "Terminal",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Kill Terminal",
+      "category": "Terminal",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern 'appendStreamingToken|streamingOutput' not found",
+      "status": "MISSING",
+      "feature": "Token Stream",
+      "category": "Streaming",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "Token Stream",
+      "category": "Streaming",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Token Stream",
+      "category": "Streaming",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "13 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Token Stream",
+      "category": "Streaming",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "64 matches in 418 lines",
+      "status": "REAL",
+      "feature": "Ghost Text",
+      "category": "Streaming",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "Ghost Text",
+      "category": "Streaming",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Ghost Text",
+      "category": "Streaming",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Ghost Text",
+      "category": "Streaming",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "6 matches in 37 lines",
+      "status": "REAL",
+      "feature": "Spawn SubAgent",
+      "category": "SubAgent",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in cli_shell.cpp",
+      "status": "REAL",
+      "feature": "Spawn SubAgent",
+      "category": "SubAgent",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Spawn SubAgent",
+      "category": "SubAgent",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "3 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Spawn SubAgent",
+      "category": "SubAgent",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern 'executeChain' not found",
+      "status": "MISSING",
+      "feature": "Prompt Chain",
+      "category": "SubAgent",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in cli_shell.cpp",
+      "status": "REAL",
+      "feature": "Prompt Chain",
+      "category": "SubAgent",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Prompt Chain",
+      "category": "SubAgent",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Prompt Chain",
+      "category": "SubAgent",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern 'executeSwarm' not found",
+      "status": "MISSING",
+      "feature": "HexMag Swarm",
+      "category": "SubAgent",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in cli_shell.cpp",
+      "status": "REAL",
+      "feature": "HexMag Swarm",
+      "category": "SubAgent",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "HexMag Swarm",
+      "category": "SubAgent",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "3 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "HexMag Swarm",
+      "category": "SubAgent",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern 'todoList|TodoItem' not found",
+      "status": "MISSING",
+      "feature": "Todo List",
+      "category": "SubAgent",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in cli_shell.cpp",
+      "status": "REAL",
+      "feature": "Todo List",
+      "category": "SubAgent",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Todo List",
+      "category": "SubAgent",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "3 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Todo List",
+      "category": "SubAgent",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "1 matches in 753 lines",
+      "status": "REAL",
+      "feature": "Swarm Panel",
+      "category": "SubAgent",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "Swarm Panel",
+      "category": "SubAgent",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Swarm Panel",
+      "category": "SubAgent",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "Swarm Panel",
+      "category": "SubAgent",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "11 matches in 385 lines",
+      "status": "REAL",
+      "feature": "Save Session",
+      "category": "Session",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "Save Session",
+      "category": "Session",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Save Session",
+      "category": "Session",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "6 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Save Session",
+      "category": "Session",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "10 matches in 385 lines",
+      "status": "REAL",
+      "feature": "Restore Session",
+      "category": "Session",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "Restore Session",
+      "category": "Session",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Restore Session",
+      "category": "Session",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "3 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Restore Session",
+      "category": "Session",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "8 matches in 322 lines",
+      "status": "REAL",
+      "feature": "Editor Config",
+      "category": "Settings",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "Editor Config",
+      "category": "Settings",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Editor Config",
+      "category": "Settings",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Editor Config",
+      "category": "Settings",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "4 matches in 2470 lines",
+      "status": "REAL",
+      "feature": "Git Status",
+      "category": "Git",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "Git Status",
+      "category": "Git",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Git Status",
+      "category": "Git",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "3 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Git Status",
+      "category": "Git",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "3 matches in 2470 lines",
+      "status": "REAL",
+      "feature": "Git Commit",
+      "category": "Git",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "Git Commit",
+      "category": "Git",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Git Commit",
+      "category": "Git",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "18 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Git Commit",
+      "category": "Git",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "1 matches, 3 stubs in 2615 lines",
+      "status": "PARTIAL",
+      "feature": "Sidebar",
+      "category": "View",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "Sidebar",
+      "category": "View",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Sidebar",
+      "category": "View",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "3 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Sidebar",
+      "category": "View",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern 'toggleOutputPanel' not found",
+      "status": "MISSING",
+      "feature": "Output Panel",
+      "category": "View",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "Output Panel",
+      "category": "View",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Output Panel",
+      "category": "View",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Output Panel",
+      "category": "View",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern 'toggleMinimap' not found",
+      "status": "MISSING",
+      "feature": "Minimap",
+      "category": "View",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "Minimap",
+      "category": "View",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern found in React generator",
+      "status": "REAL",
+      "feature": "Minimap",
+      "category": "View",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Minimap",
+      "category": "View",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "72 matches in 2470 lines",
+      "status": "REAL",
+      "feature": "Command Palette",
+      "category": "View",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "Command Palette",
+      "category": "View",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Command Palette",
+      "category": "View",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Command Palette",
+      "category": "View",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "64 matches in 914 lines",
+      "status": "REAL",
+      "feature": "PS Execute",
+      "category": "PowerShell",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "PS Execute",
+      "category": "PowerShell",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "PS Execute",
+      "category": "PowerShell",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "5 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "PS Execute",
+      "category": "PowerShell",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "1 matches in 728 lines",
+      "status": "REAL",
+      "feature": "PS Panel",
+      "category": "PowerShell",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "PS Panel",
+      "category": "PowerShell",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "PS Panel",
+      "category": "PowerShell",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "PS Panel",
+      "category": "PowerShell",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "36 matches in 1889 lines",
+      "status": "REAL",
+      "feature": "Multi-Engine",
+      "category": "LLM",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "2 matches in cli_shell.cpp",
+      "status": "REAL",
+      "feature": "Multi-Engine",
+      "category": "LLM",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern found in React generator",
+      "status": "REAL",
+      "feature": "Multi-Engine",
+      "category": "LLM",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "1 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Multi-Engine",
+      "category": "LLM",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "210 matches in 893 lines",
+      "status": "REAL",
+      "feature": "Backend Switch",
+      "category": "LLM",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "Backend Switch",
+      "category": "LLM",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern found in React generator",
+      "status": "REAL",
+      "feature": "Backend Switch",
+      "category": "LLM",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "6 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Backend Switch",
+      "category": "LLM",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "6 matches in 1569 lines",
+      "status": "REAL",
+      "feature": "LSP Client",
+      "category": "LSP",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in cli_shell.cpp",
+      "status": "MISSING",
+      "feature": "LSP Client",
+      "category": "LSP",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "LSP Client",
+      "category": "LSP",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not found in RawrXD2.ps1",
+      "status": "MISSING",
+      "feature": "LSP Client",
+      "category": "LSP",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "150 matches in 1877 lines",
+      "status": "REAL",
+      "feature": "Local Server",
+      "category": "LLM",
+      "variant": "Win32",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "3 matches in cli_shell.cpp",
+      "status": "REAL",
+      "feature": "Local Server",
+      "category": "LLM",
+      "variant": "CLI",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "Pattern not in React files",
+      "status": "MISSING",
+      "feature": "Local Server",
+      "category": "LLM",
+      "variant": "React",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "6 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Local Server",
+      "category": "LLM",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "4 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "GGUF Binary Reader",
+      "category": "PS-Only",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "1 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "PoshLLM Inference",
+      "category": "PS-Only",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "7 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Zone-Streamed Tensors",
+      "category": "PS-Only",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "8 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Extension Marketplace",
+      "category": "PS-Only",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "394 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "WebView2 Browser",
+      "category": "PS-Only",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "6 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "PS5.1 Video Browser",
+      "category": "PS-Only",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "9 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Dependency Tracker",
+      "category": "PS-Only",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "6 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Task Scheduler",
+      "category": "PS-Only",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "8 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Multi-threaded Agents",
+      "category": "PS-Only",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "7 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "AI Code Snippets",
+      "category": "PS-Only",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "8 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Reverse HTTP Backend",
+      "category": "PS-Only",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "6 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "LMStudio Integration",
+      "category": "PS-Only",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "5 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "llama.cpp Direct",
+      "category": "PS-Only",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "31 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Chat Tabs",
+      "category": "PS-Only",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "8 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Pop-Out Editor",
+      "category": "PS-Only",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "4 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Monaco Editor Embed",
+      "category": "PS-Only",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "4 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Custom Theme Builder",
+      "category": "PS-Only",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "5 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Performance Profiler",
+      "category": "PS-Only",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "3 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Security Settings",
+      "category": "PS-Only",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "3 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "Encryption Test",
+      "category": "PS-Only",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "3 matches in RawrXD2.ps1",
+      "status": "REAL",
+      "feature": "AI Debug Metrics",
+      "category": "PS-Only",
+      "variant": "PS",
+      "testType": "PatternMatch"
+    },
+    {
+      "evidence": "6.6 MB, built 02/07/2026 20:27:42",
+      "status": "REAL",
+      "feature": "Win32 IDE Binary",
+      "category": "Build",
+      "variant": "Win32",
+      "testType": "BuildTest"
+    },
+    {
+      "evidence": "1.5 MB",
+      "status": "REAL",
+      "feature": "CLI Engine Binary",
+      "category": "Build",
+      "variant": "CLI",
+      "testType": "BuildTest"
+    }
+  ],
+  "total_tests": 359
+}
