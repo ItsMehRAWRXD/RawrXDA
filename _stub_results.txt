@@ -1,0 +1,655 @@
+=== TOTAL STUBS FOUND: 12549 ===
+
+=== STUB #1 (Complexity: 10/10) ===
+File: D:\rawrxd\src\asm\RawrXD_ShellIntegration.asm
+Proc: FlashAttention_Init (Line 50597)
+Reason: minimal(3 instr)
+Instructions: 3
+Critical Match: Attention
+--- Code ---
+FlashAttention_Init PROC
+    call    FlashAttention_CheckAVX512
+    mov     g_AVX512Ready, eax
+    ret
+FlashAttention_Init ENDP
+--- End ---
+
+=== STUB #2 (Complexity: 10/10) ===
+File: D:\rawrxd\src\asm\RawrXD_UnifiedOverclockGovernor.asm
+Proc: Attention_Softmax (Line 15989)
+Reason: stub-comment(simplified)
+Instructions: 42
+Critical Match: SoftMax
+--- Code ---
+Attention_Softmax PROC FRAME pScores:DQ, seqLen:DWORD
+    LOCAL pData:DQ
+    LOCAL len:DWORD
+    LOCAL i:DWORD
+    LOCAL j:DWORD
+    LOCAL maxVal:REAL4
+    LOCAL sum:REAL4
+    
+    push rbx
+    
+    .endprolog
+    
+    mov pData, rcx
+    mov len, edx
+    
+    ; Find max for numerical stability
+    movss xmm0, [pData]
+    mov maxVal, xmm0
+    
+    mov i, 1
+--- End ---
+
+=== STUB #3 (Complexity: 10/10) ===
+File: D:\rawrxd\src\asm\RawrXD_Hotpatch_Kernel.asm
+Proc: Attention_Softmax (Line 15989)
+Reason: stub-comment(simplified)
+Instructions: 42
+Critical Match: SoftMax
+--- Code ---
+Attention_Softmax PROC FRAME pScores:DQ, seqLen:DWORD
+    LOCAL pData:DQ
+    LOCAL len:DWORD
+    LOCAL i:DWORD
+    LOCAL j:DWORD
+    LOCAL maxVal:REAL4
+    LOCAL sum:REAL4
+    
+    push rbx
+    
+    .endprolog
+    
+    mov pData, rcx
+    mov len, edx
+    
+    ; Find max for numerical stability
+    movss xmm0, [pData]
+    mov maxVal, xmm0
+    
+    mov i, 1
+--- End ---
+
+=== STUB #4 (Complexity: 10/10) ===
+File: D:\rawrxd\src\asm\RawrXD_DynamicPromptEngine.asm
+Proc: Attention_Softmax (Line 15989)
+Reason: stub-comment(simplified)
+Instructions: 42
+Critical Match: SoftMax
+--- Code ---
+Attention_Softmax PROC FRAME pScores:DQ, seqLen:DWORD
+    LOCAL pData:DQ
+    LOCAL len:DWORD
+    LOCAL i:DWORD
+    LOCAL j:DWORD
+    LOCAL maxVal:REAL4
+    LOCAL sum:REAL4
+    
+    push rbx
+    
+    .endprolog
+    
+    mov pData, rcx
+    mov len, edx
+    
+    ; Find max for numerical stability
+    movss xmm0, [pData]
+    mov maxVal, xmm0
+    
+    mov i, 1
+--- End ---
+
+=== STUB #5 (Complexity: 10/10) ===
+File: D:\rawrxd\src\asm\ai_completion_provider_masm_fixed.asm
+Proc: FlashAttention_Init (Line 50597)
+Reason: minimal(3 instr)
+Instructions: 3
+Critical Match: Attention
+--- Code ---
+FlashAttention_Init PROC
+    call    FlashAttention_CheckAVX512
+    mov     g_AVX512Ready, eax
+    ret
+FlashAttention_Init ENDP
+--- End ---
+
+=== STUB #6 (Complexity: 10/10) ===
+File: D:\rawrxd\src\asm\agentic_puppeteer_byte_ops_fixed.asm
+Proc: AttentionShutdown (Line 162648)
+Reason: xor+ret
+Instructions: 2
+Critical Match: Attention
+--- Code ---
+AttentionShutdown PROC
+    ; Clean up thread pool
+    xor rax, rax
+    ret
+AttentionShutdown ENDP
+--- End ---
+
+=== STUB #7 (Complexity: 10/10) ===
+File: D:\rawrxd\src\asm\RawrXD_DynamicPromptEngine.asm
+Proc: MatMul_QKTranspose (Line 27398)
+Reason: stub-comment(simplified)
+Instructions: 5
+Critical Match: MatMul
+--- Code ---
+MatMul_QKTranspose PROC FRAME
+    sub rsp, 40
+    .allocstack 40
+    .endprolog
+    
+    ; Simplified matrix multiply
+    ; Production: use optimized GEMM
+    
+    add rsp, 40
+    ret
+MatMul_QKTranspose ENDP
+--- End ---
+
+=== STUB #8 (Complexity: 10/10) ===
+File: D:\rawrxd\src\asm\RawrXD_Pyre_Compute.asm
+Proc: asm_attention_forward (Line 46970)
+Reason: stub-comment(simplified)
+Instructions: 15
+Critical Match: Attention
+--- Code ---
+asm_attention_forward PROC FRAME
+    ; RCX = Q, RDX = K, R8 = V, R9 = Output
+    ; [RSP+40] = seq_len, [RSP+48] = head_dim
+
+    mov     r11, [rsp+40]           ; seq_len
+    mov     r12, [rsp+48]           ; head_dim
+
+    ; Allocate scratch space for attention scores
+    sub     rsp, 4096
+    .allocstack 4096
+
+    mov     r10, r11                ; Outer loop: query positions
+    dec     r10
+
+@@q_loop:
+    cmp     r10, 0
+    jl      @@done
+
+    ; Compute attention scores for this query (simplified - no softmax call)
+    dec     r10
+--- End ---
+
+=== STUB #9 (Complexity: 10/10) ===
+File: D:\rawrxd\src\asm\RawrXD_ShellIntegration.asm
+Proc: asm_attention_forward (Line 46970)
+Reason: stub-comment(simplified)
+Instructions: 15
+Critical Match: Attention
+--- Code ---
+asm_attention_forward PROC FRAME
+    ; RCX = Q, RDX = K, R8 = V, R9 = Output
+    ; [RSP+40] = seq_len, [RSP+48] = head_dim
+
+    mov     r11, [rsp+40]           ; seq_len
+    mov     r12, [rsp+48]           ; head_dim
+
+    ; Allocate scratch space for attention scores
+    sub     rsp, 4096
+    .allocstack 4096
+
+    mov     r10, r11                ; Outer loop: query positions
+    dec     r10
+
+@@q_loop:
+    cmp     r10, 0
+    jl      @@done
+
+    ; Compute attention scores for this query (simplified - no softmax call)
+    dec     r10
+--- End ---
+
+=== STUB #10 (Complexity: 10/10) ===
+File: D:\rawrxd\src\asm\ai_completion_provider_masm.asm
+Proc: MatMul_ScoresV (Line 27550)
+Reason: stub-comment(simplified)
+Instructions: 5
+Critical Match: MatMul
+--- Code ---
+MatMul_ScoresV PROC FRAME
+    sub rsp, 40
+    .allocstack 40
+    .endprolog
+    
+    ; output = scores @ V
+    ; Simplified implementation
+    
+    add rsp, 40
+    ret
+MatMul_ScoresV ENDP
+--- End ---
+
+=== STUB #11 (Complexity: 10/10) ===
+File: D:\rawrxd\src\asm\RawrXD_Pyre_Compute.asm
+Proc: FlashAttention_Init (Line 50597)
+Reason: minimal(3 instr)
+Instructions: 3
+Critical Match: Attention
+--- Code ---
+FlashAttention_Init PROC
+    call    FlashAttention_CheckAVX512
+    mov     g_AVX512Ready, eax
+    ret
+FlashAttention_Init ENDP
+--- End ---
+
+=== STUB #12 (Complexity: 10/10) ===
+File: D:\rawrxd\src\asm\RawrXD_Hotpatch_Kernel.asm
+Proc: MatMul_QKTranspose (Line 27398)
+Reason: stub-comment(simplified)
+Instructions: 5
+Critical Match: MatMul
+--- Code ---
+MatMul_QKTranspose PROC FRAME
+    sub rsp, 40
+    .allocstack 40
+    .endprolog
+    
+    ; Simplified matrix multiply
+    ; Production: use optimized GEMM
+    
+    add rsp, 40
+    ret
+MatMul_QKTranspose ENDP
+--- End ---
+
+=== STUB #13 (Complexity: 10/10) ===
+File: D:\rawrxd\src\asm\agentic_puppeteer_byte_ops.asm
+Proc: AttentionShutdown (Line 162648)
+Reason: xor+ret
+Instructions: 2
+Critical Match: Attention
+--- Code ---
+AttentionShutdown PROC
+    ; Clean up thread pool
+    xor rax, rax
+    ret
+AttentionShutdown ENDP
+--- End ---
+
+=== STUB #14 (Complexity: 10/10) ===
+File: D:\rawrxd\src\asm\agentic_puppeteer_byte_ops_fixed.asm
+Proc: ggml_masm_flash_attn_f32 (Line 162093)
+Reason: ret-only
+Instructions: 1
+Critical Match: Flash
+--- Code ---
+ggml_masm_flash_attn_f32 PROC
+    ; MASM64 stub for Flash Attention kernel (to be optimized)
+    ret
+ggml_masm_flash_attn_f32 ENDP
+--- End ---
+
+=== STUB #15 (Complexity: 10/10) ===
+File: D:\rawrxd\src\asm\rawrxd_link.asm
+Proc: asm_attention_forward (Line 46970)
+Reason: stub-comment(simplified)
+Instructions: 15
+Critical Match: Attention
+--- Code ---
+asm_attention_forward PROC FRAME
+    ; RCX = Q, RDX = K, R8 = V, R9 = Output
+    ; [RSP+40] = seq_len, [RSP+48] = head_dim
+
+    mov     r11, [rsp+40]           ; seq_len
+    mov     r12, [rsp+48]           ; head_dim
+
+    ; Allocate scratch space for attention scores
+    sub     rsp, 4096
+    .allocstack 4096
+
+    mov     r10, r11                ; Outer loop: query positions
+    dec     r10
+
+@@q_loop:
+    cmp     r10, 0
+    jl      @@done
+
+    ; Compute attention scores for this query (simplified - no softmax call)
+    dec     r10
+--- End ---
+
+=== STUB #16 (Complexity: 10/10) ===
+File: D:\rawrxd\src\asm\RawrXD_Hotpatch_Kernel.asm
+Proc: MatMul_ScoresV (Line 27550)
+Reason: stub-comment(simplified)
+Instructions: 5
+Critical Match: MatMul
+--- Code ---
+MatMul_ScoresV PROC FRAME
+    sub rsp, 40
+    .allocstack 40
+    .endprolog
+    
+    ; output = scores @ V
+    ; Simplified implementation
+    
+    add rsp, 40
+    ret
+MatMul_ScoresV ENDP
+--- End ---
+
+=== STUB #17 (Complexity: 10/10) ===
+File: D:\rawrxd\src\asm\agentic_puppeteer_byte_ops.asm
+Proc: ggml_masm_flash_attn_f32 (Line 162093)
+Reason: ret-only
+Instructions: 1
+Critical Match: Flash
+--- Code ---
+ggml_masm_flash_attn_f32 PROC
+    ; MASM64 stub for Flash Attention kernel (to be optimized)
+    ret
+ggml_masm_flash_attn_f32 ENDP
+--- End ---
+
+=== STUB #18 (Complexity: 10/10) ===
+File: D:\rawrxd\src\asm\rawrxd_link.asm
+Proc: masm_agentic_attention_forward (Line 44416)
+Reason: stub-comment(simplified)
+Instructions: 20
+Critical Match: Attention
+--- Code ---
+masm_agentic_attention_forward PROC FRAME
+    ; RCX = query, RDX = key, R8 = value, R9 = output
+    push    rbp
+    .pushreg rbp
+    mov     rbp, rsp
+    .setframe rbp, 0
+    sub     rsp, 128
+    .allocstack 128
+    .endprolog
+    
+    and     rsp, -64
+    
+    ; Compute Q·K^T
+    vmovdqu64 zmm0, [rcx]           ; Load query
+    vmovdqu64 zmm1, [rdx]           ; Load key
+    
+    ; Matrix multiplication (simplified)
+    vmulps  zmm2, zmm0, zmm1
+    vhaddps zmm2, zmm2, zmm2
+    
+--- End ---
+
+=== STUB #19 (Complexity: 10/10) ===
+File: D:\rawrxd\src\asm\agentic_puppeteer_byte_ops.asm
+Proc: Attention_Softmax (Line 15989)
+Reason: stub-comment(simplified)
+Instructions: 42
+Critical Match: SoftMax
+--- Code ---
+Attention_Softmax PROC FRAME pScores:DQ, seqLen:DWORD
+    LOCAL pData:DQ
+    LOCAL len:DWORD
+    LOCAL i:DWORD
+    LOCAL j:DWORD
+    LOCAL maxVal:REAL4
+    LOCAL sum:REAL4
+    
+    push rbx
+    
+    .endprolog
+    
+    mov pData, rcx
+    mov len, edx
+    
+    ; Find max for numerical stability
+    movss xmm0, [pData]
+    mov maxVal, xmm0
+    
+    mov i, 1
+--- End ---
+
+=== STUB #20 (Complexity: 10/10) ===
+File: D:\rawrxd\src\asm\rawrxd_link.asm
+Proc: masm_agentic_attention_forward (Line 44757)
+Reason: stub-comment(simplified)
+Instructions: 32
+Critical Match: Attention
+--- Code ---
+masm_agentic_attention_forward PROC FRAME
+    ; RCX = Query matrix
+    ; RDX = Key matrix
+    ; R8 = Value matrix
+    ; R9 = Output matrix
+    ; [RSP+40] = seq_len
+    ; [RSP+48] = head_dim
+
+    mov     r11, [rsp+40]           ; Seq length
+    mov     r12, [rsp+48]           ; Head dimension
+
+    ; Simplified flash attention: Q @ K.T
+    xor     r10, r10                ; Row counter
+
+@@row_loop:
+    cmp     r10, r11
+    jge     @@done
+
+    ; Compute softmax(Q[row] @ K.T)
+    imul    rax, r10, 64
+--- End ---
+
+=== STUB #21 (Complexity: 10/10) ===
+File: D:\rawrxd\src\asm\ai_completion_provider_masm_fixed.asm
+Proc: masm_agentic_attention_forward (Line 44416)
+Reason: stub-comment(simplified)
+Instructions: 20
+Critical Match: Attention
+--- Code ---
+masm_agentic_attention_forward PROC FRAME
+    ; RCX = query, RDX = key, R8 = value, R9 = output
+    push    rbp
+    .pushreg rbp
+    mov     rbp, rsp
+    .setframe rbp, 0
+    sub     rsp, 128
+    .allocstack 128
+    .endprolog
+    
+    and     rsp, -64
+    
+    ; Compute Q·K^T
+    vmovdqu64 zmm0, [rcx]           ; Load query
+    vmovdqu64 zmm1, [rdx]           ; Load key
+    
+    ; Matrix multiplication (simplified)
+    vmulps  zmm2, zmm0, zmm1
+    vhaddps zmm2, zmm2, zmm2
+    
+--- End ---
+
+=== STUB #22 (Complexity: 10/10) ===
+File: D:\rawrxd\src\asm\ai_completion_provider_masm_fixed.asm
+Proc: masm_agentic_attention_forward (Line 44757)
+Reason: stub-comment(simplified)
+Instructions: 32
+Critical Match: Attention
+--- Code ---
+masm_agentic_attention_forward PROC FRAME
+    ; RCX = Query matrix
+    ; RDX = Key matrix
+    ; R8 = Value matrix
+    ; R9 = Output matrix
+    ; [RSP+40] = seq_len
+    ; [RSP+48] = head_dim
+
+    mov     r11, [rsp+40]           ; Seq length
+    mov     r12, [rsp+48]           ; Head dimension
+
+    ; Simplified flash attention: Q @ K.T
+    xor     r10, r10                ; Row counter
+
+@@row_loop:
+    cmp     r10, r11
+    jge     @@done
+
+    ; Compute softmax(Q[row] @ K.T)
+    imul    rax, r10, 64
+--- End ---
+
+=== STUB #23 (Complexity: 10/10) ===
+File: D:\rawrxd\src\asm\RawrXD_ShellIntegration.asm
+Proc: ggml_masm_flash_attn_f32 (Line 162093)
+Reason: ret-only
+Instructions: 1
+Critical Match: Flash
+--- Code ---
+ggml_masm_flash_attn_f32 PROC
+    ; MASM64 stub for Flash Attention kernel (to be optimized)
+    ret
+ggml_masm_flash_attn_f32 ENDP
+--- End ---
+
+=== STUB #24 (Complexity: 10/10) ===
+File: D:\rawrxd\src\asm\rawrxd_link.asm
+Proc: MatMul_ScoresV (Line 27550)
+Reason: stub-comment(simplified)
+Instructions: 5
+Critical Match: MatMul
+--- Code ---
+MatMul_ScoresV PROC FRAME
+    sub rsp, 40
+    .allocstack 40
+    .endprolog
+    
+    ; output = scores @ V
+    ; Simplified implementation
+    
+    add rsp, 40
+    ret
+MatMul_ScoresV ENDP
+--- End ---
+
+=== STUB #25 (Complexity: 10/10) ===
+File: D:\rawrxd\src\asm\rawrxd_link.asm
+Proc: MatMul_QKTranspose (Line 27398)
+Reason: stub-comment(simplified)
+Instructions: 5
+Critical Match: MatMul
+--- Code ---
+MatMul_QKTranspose PROC FRAME
+    sub rsp, 40
+    .allocstack 40
+    .endprolog
+    
+    ; Simplified matrix multiply
+    ; Production: use optimized GEMM
+    
+    add rsp, 40
+    ret
+MatMul_QKTranspose ENDP
+--- End ---
+
+=== STUB #26 (Complexity: 10/10) ===
+File: D:\rawrxd\src\asm\ai_completion_provider_masm.asm
+Proc: Attention_Softmax (Line 15989)
+Reason: stub-comment(simplified)
+Instructions: 42
+Critical Match: SoftMax
+--- Code ---
+Attention_Softmax PROC FRAME pScores:DQ, seqLen:DWORD
+    LOCAL pData:DQ
+    LOCAL len:DWORD
+    LOCAL i:DWORD
+    LOCAL j:DWORD
+    LOCAL maxVal:REAL4
+    LOCAL sum:REAL4
+    
+    push rbx
+    
+    .endprolog
+    
+    mov pData, rcx
+    mov len, edx
+    
+    ; Find max for numerical stability
+    movss xmm0, [pData]
+    mov maxVal, xmm0
+    
+    mov i, 1
+--- End ---
+
+=== STUB #27 (Complexity: 10/10) ===
+File: D:\rawrxd\src\asm\RawrXD_StreamingWeights.asm
+Proc: AttentionShutdown (Line 162648)
+Reason: xor+ret
+Instructions: 2
+Critical Match: Attention
+--- Code ---
+AttentionShutdown PROC
+    ; Clean up thread pool
+    xor rax, rax
+    ret
+AttentionShutdown ENDP
+--- End ---
+
+=== STUB #28 (Complexity: 10/10) ===
+File: D:\rawrxd\src\asm\RawrXD_StreamingWeights.asm
+Proc: ggml_masm_flash_attn_f32 (Line 162093)
+Reason: ret-only
+Instructions: 1
+Critical Match: Flash
+--- Code ---
+ggml_masm_flash_attn_f32 PROC
+    ; MASM64 stub for Flash Attention kernel (to be optimized)
+    ret
+ggml_masm_flash_attn_f32 ENDP
+--- End ---
+
+=== STUB #29 (Complexity: 10/10) ===
+File: D:\rawrxd\src\asm\RawrXD_UnifiedOverclock_Governor.asm
+Proc: Attention_Softmax (Line 15989)
+Reason: stub-comment(simplified)
+Instructions: 42
+Critical Match: SoftMax
+--- Code ---
+Attention_Softmax PROC FRAME pScores:DQ, seqLen:DWORD
+    LOCAL pData:DQ
+    LOCAL len:DWORD
+    LOCAL i:DWORD
+    LOCAL j:DWORD
+    LOCAL maxVal:REAL4
+    LOCAL sum:REAL4
+    
+    push rbx
+    
+    .endprolog
+    
+    mov pData, rcx
+    mov len, edx
+    
+    ; Find max for numerical stability
+    movss xmm0, [pData]
+    mov maxVal, xmm0
+    
+    mov i, 1
+--- End ---
+
+=== STUB #30 (Complexity: 10/10) ===
+File: D:\rawrxd\src\asm\RawrXD_UnifiedOverclockGovernor.asm
+Proc: MatMul_QKTranspose (Line 27398)
+Reason: stub-comment(simplified)
+Instructions: 5
+Critical Match: MatMul
+--- Code ---
+MatMul_QKTranspose PROC FRAME
+    sub rsp, 40
+    .allocstack 40
+    .endprolog
+    
+    ; Simplified matrix multiply
+    ; Production: use optimized GEMM
+    
+    add rsp, 40
+    ret
+MatMul_QKTranspose ENDP
+--- End ---
+

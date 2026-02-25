@@ -1,0 +1,54 @@
+╔══════════════════════════════════════════════════════════════╗
+║           RAWRXD POWERBUILD v14.2.0                          ║
+║     MASM64 + C++ Hybrid Build System                         ║
+╚══════════════════════════════════════════════════════════════╝
+**********************************************************************
+** Visual Studio 2022 Developer Command Prompt v17.14.27
+** Copyright (c) 2025 Microsoft Corporation
+**********************************************************************
+[vcvarsall.bat] Environment initialized for: 'x64'
+[+] Toolchain ready:
+    ml64: C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\bin\HostX64\x64\ml64.exe
+    cl:   C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\bin\HostX64\x64\cl.exe
+    link: C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\bin\HostX64\x64\link.exe
+
+[*] Scanning source files...
+    Found: 596 files
+    Build: 248 files
+    Skip:  348 files (up to date)
+
+=== MASM64 Compilation ===
+[ASM] D:\rawrxd\src\asm\RawrXD_DiskRecoveryAgent.asm [OK]
+[ASM] D:\rawrxd\src\asm\RawrXD_Swarm_Network.asm [OK]
+[ASM] D:\rawrxd\src\asm\RawrXD_Swarm_Orchestrator.asm [OK]
+[ASM] D:\rawrxd\src\asm\monolithic\agent.asm [OK]
+[ASM] D:\rawrxd\src\asm\monolithic\beacon.asm [OK]
+[ASM] D:\rawrxd\src\asm\monolithic\dap.asm [OK]
+[ASM] D:\rawrxd\src\asm\monolithic\inference.asm [OK]
+[ASM] D:\rawrxd\src\asm\monolithic\lsp.asm [OK]
+[ASM] D:\rawrxd\src\asm\monolithic\main.asm [OK]
+[ASM] D:\rawrxd\src\asm\monolithic\model_loader.asm [OK]
+[ASM] D:\rawrxd\src\asm\monolithic\tasks.asm [OK]
+[ASM] D:\rawrxd\src\asm\monolithic\testing.asm [OK]
+[ASM] D:\rawrxd\src\asm\monolithic\ui.asm [OK]
+[ASM] D:\rawrxd\asm\RawrXD_120B_Loader.asm [OK]
+[ASM] D:\rawrxd\asm\RawrXD_Inference.asm [OK]
+[ASM] D:\rawrxd\asm\RawrXD_Tokenizer.asm [OK]
+[ASM] D:\rawrxd\asm\test.asm [OK]
+
+=== C Compilation ===
+[C] D:\rawrxd\src\core\sqlite3.c [OK]
+
+=== C++ Compilation ===
+[C++] D:\rawrxd\src\agentic\AgentOllamaClient.cpp [OK]
+[C++] D:\rawrxd\src\config\IDEConfig.cpp [FAIL]
+IDEConfig.cpp D:\rawrxd\include\logging\log_level.hpp(7): error C2143: syntax error: missing '}' before 'constant' D:\rawrxd\include\logging\log_level.hpp(7): error C2059: syntax error: 'constant' D:\rawrxd\include\logging\log_level.hpp(9): error C2143: syntax error: missing ';' before '}' D:\rawrxd\include\logging\log_level.hpp(9): error C2059: syntax error: '}' D:\rawrxd\include\logging/logger.h(115): error C2838: 'ERROR': illegal qualified name in member declaration D:\rawrxd\include\logging/logger.h(95): note: This diagnostic occurred in the compiler generated function 'void Logger::log(LogLevel,const std::string &,Args...)' D:\rawrxd\include\logging/logger.h(133): error C2838: 'ERROR': illegal qualified name in member declaration D:\rawrxd\include\logging/logger.h(133): error C2065: 'ERROR': undeclared identifier D:\rawrxd\include\logging/logger.h(133): error C2131: expression did not evaluate to a constant D:\rawrxd\include\logging/logger.h(133): note: a non-constant (sub-)expression was encountered D:\rawrxd\include\logging/logger.h(134): error C2838: 'CRITICAL': illegal qualified name in member declaration D:\rawrxd\include\logging/logger.h(134): error C2065: 'CRITICAL': undeclared identifier D:\rawrxd\include\logging/logger.h(134): error C2131: expression did not evaluate to a constant D:\rawrxd\include\logging/logger.h(134): note: a non-constant (sub-)expression was encountered D:\rawrxd\include\logging/logger.h(133): error C2051: case expression not constant D:\rawrxd\include\logging/logger.h(134): error C2051: case expression not constant
+[C++] D:\rawrxd\src\core\accelerator_router.cpp [FAIL]
+accelerator_router.cpp D:\rawrxd\src\core\accelerator_router.h(37): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition D:\rawrxd\src\core\accelerator_router.h(37): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line D:\rawrxd\src\core\accelerator_router.h(40): fatal error C1083: Cannot open include file: 'CLI_CONTRACT_v1.0.md': No such file or directory
+[C++] D:\rawrxd\src\core\adaptive_pipeline_parallel.cpp [FAIL]
+adaptive_pipeline_parallel.cpp D:\rawrxd\src\core\adaptive_pipeline_parallel.h(48): fatal error C1083: Cannot open include file: 'CLI_CONTRACT_v1.0.md': No such file or directory
+[C++] D:\rawrxd\src\core\agentic_task_graph.cpp [FAIL]
+agentic_task_graph.cpp D:\rawrxd\src\core\agentic_task_graph.hpp(31): fatal error C1083: Cannot open include file: 'CLI_CONTRACT_v1.0.md': No such file or directory
+[C++] D:\rawrxd\src\core\agent_memory_indexer.cpp [OK]
+[C++] D:\rawrxd\src\core\agent_safety_contract.cpp [FAIL]
+agent_safety_contract.cpp D:\rawrxd\src\core\agent_safety_contract.h(25): fatal error C1083: Cannot open include file: 'CLI_CONTRACT_v1.0.md': No such file or directory

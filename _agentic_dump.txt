@@ -1,0 +1,7 @@
+Microsoft (R) COFF/PE Dumper Version 14.44.35223.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+Dump of file obj\agentic_AgentOllamaClient.obj
+
+File Type: ANONYMOUS OBJECT

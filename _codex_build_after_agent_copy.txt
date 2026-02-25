@@ -1,0 +1,106 @@
+[1/101] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\sentinel_watchdog.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.cpp(15): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.cpp(15): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[2/101] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\shadow_page_detour.cpp.obj
+D:\rawrxd\src\core\shadow_page_detour.cpp(14): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\shadow_page_detour.cpp(14): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+D:\rawrxd\src\core\shadow_page_detour.cpp(157): warning C4477: 'snprintf' : format string '%lu' requires an argument of type 'unsigned long', but variadic argument 1 has type 'const char *'
+D:\rawrxd\src\core\shadow_page_detour.cpp(157): warning C4313: 'snprintf': '%u' in format string conflicts with argument 1 of type 'const char *'
+[3/101] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\speciator_engine.cpp.obj
+D:\rawrxd\src\core\speciator_engine.cpp(12): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\speciator_engine.cpp(12): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[4/101] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\shared_feature_dispatch.cpp.obj
+[5/101] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\ssot_validation.cpp.obj
+[6/101] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\semantic_delta_tracker.cpp.obj
+D:\rawrxd\src\core\semantic_delta_tracker.cpp(9): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\semantic_delta_tracker.cpp(9): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[7/101] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\auto_feature_registry.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/core/auto_feature_registry.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_ENABLE_OLLAMA=0 -DRAWRXD_PURE_SIDEBAR=1 -DRAWRXD_QT_ELIMINATED=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_SOVEREIGN_ENGINES=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\include -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\core\auto_feature_registry.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\core\auto_feature_registry.cpp
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(3): fatal error C1083: Cannot open include file: '../json_types.hpp': No such file or directory
+[8/101] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\shortcut_manager.cpp.obj
+[9/101] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\reasoning_profile.cpp.obj
+[10/101] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\ssot_handlers.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+D:\rawrxd\src\core\ssot_handlers.cpp(1050): warning C4477: 'snprintf' : format string '%u' requires an argument of type 'unsigned int', but variadic argument 1 has type 'uint64_t'
+D:\rawrxd\src\core\ssot_handlers.cpp(1050): note: consider using '%llu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(1050): note: consider using '%Iu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(1050): note: consider using '%I64u' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(1050): warning C4477: 'snprintf' : format string '%u' requires an argument of type 'unsigned int', but variadic argument 2 has type 'uint64_t'
+D:\rawrxd\src\core\ssot_handlers.cpp(1050): note: consider using '%llu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(1050): note: consider using '%Iu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(1050): note: consider using '%I64u' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(1070): warning C4477: 'snprintf' : format string '%u' requires an argument of type 'unsigned int', but variadic argument 4 has type 'unsigned __int64'
+D:\rawrxd\src\core\ssot_handlers.cpp(1070): note: consider using '%llu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(1070): note: consider using '%Iu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(1070): note: consider using '%I64u' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(1893): warning C4477: 'fprintf' : format string '%u' requires an argument of type 'unsigned int', but variadic argument 1 has type 'unsigned __int64'
+D:\rawrxd\src\core\ssot_handlers.cpp(1893): note: consider using '%llu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(1893): note: consider using '%Iu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(1893): note: consider using '%I64u' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(1893): warning C4477: 'fprintf' : format string '%u' requires an argument of type 'unsigned int', but variadic argument 2 has type 'unsigned __int64'
+D:\rawrxd\src\core\ssot_handlers.cpp(1893): note: consider using '%llu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(1893): note: consider using '%Iu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(1893): note: consider using '%I64u' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(1893): warning C4477: 'fprintf' : format string '%u' requires an argument of type 'unsigned int', but variadic argument 3 has type 'unsigned __int64'
+D:\rawrxd\src\core\ssot_handlers.cpp(1893): note: consider using '%llu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(1893): note: consider using '%Iu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(1893): note: consider using '%I64u' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(1893): warning C4477: 'fprintf' : format string '%u' requires an argument of type 'unsigned int', but variadic argument 4 has type 'unsigned __int64'
+D:\rawrxd\src\core\ssot_handlers.cpp(1893): note: consider using '%llu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(1893): note: consider using '%Iu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(1893): note: consider using '%I64u' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(2135): warning C4477: 'fprintf' : format string '%u' requires an argument of type 'unsigned int', but variadic argument 1 has type 'unsigned __int64'
+D:\rawrxd\src\core\ssot_handlers.cpp(2135): note: consider using '%llu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(2135): note: consider using '%Iu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(2135): note: consider using '%I64u' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(2135): warning C4477: 'fprintf' : format string '%u' requires an argument of type 'unsigned int', but variadic argument 2 has type 'uint64_t'
+D:\rawrxd\src\core\ssot_handlers.cpp(2135): note: consider using '%llu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(2135): note: consider using '%Iu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(2135): note: consider using '%I64u' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(2135): warning C4477: 'fprintf' : format string '%u' requires an argument of type 'unsigned int', but variadic argument 3 has type 'uint64_t'
+D:\rawrxd\src\core\ssot_handlers.cpp(2135): note: consider using '%llu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(2135): note: consider using '%Iu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(2135): note: consider using '%I64u' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(2157): warning C4477: 'fprintf' : format string '%u' requires an argument of type 'unsigned int', but variadic argument 1 has type 'unsigned __int64'
+D:\rawrxd\src\core\ssot_handlers.cpp(2157): note: consider using '%llu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(2157): note: consider using '%Iu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(2157): note: consider using '%I64u' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(2157): warning C4477: 'fprintf' : format string '%u' requires an argument of type 'unsigned int', but variadic argument 2 has type 'unsigned __int64'
+D:\rawrxd\src\core\ssot_handlers.cpp(2157): note: consider using '%llu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(2157): note: consider using '%Iu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(2157): note: consider using '%I64u' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(2157): warning C4477: 'fprintf' : format string '%u' requires an argument of type 'unsigned int', but variadic argument 3 has type 'unsigned __int64'
+D:\rawrxd\src\core\ssot_handlers.cpp(2157): note: consider using '%llu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(2157): note: consider using '%Iu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(2157): note: consider using '%I64u' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(2157): warning C4477: 'fprintf' : format string '%u' requires an argument of type 'unsigned int', but variadic argument 4 has type 'unsigned __int64'
+D:\rawrxd\src\core\ssot_handlers.cpp(2157): note: consider using '%llu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(2157): note: consider using '%Iu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(2157): note: consider using '%I64u' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(2216): warning C4477: 'fprintf' : format string '%u' requires an argument of type 'unsigned int', but variadic argument 7 has type 'unsigned __int64'
+D:\rawrxd\src\core\ssot_handlers.cpp(2216): note: consider using '%llu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(2216): note: consider using '%Iu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(2216): note: consider using '%I64u' in the format string
+[11/101] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\reasoning_schema_versioning.cpp.obj
+[12/101] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\ssot_handlers_ext.cpp.obj
+[13/101] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\safe_refactor_engine.cpp.obj
+[14/101] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\sqlite_wrapper.cpp.obj
+[15/101] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\swarm_reconciliation.cpp.obj
+[16/101] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\sandbox_integration.cpp.obj
+D:\rawrxd\src\core\sandbox_integration.h(24): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sandbox_integration.h(24): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[17/101] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\semantic_code_intelligence.cpp.obj
+[18/101] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\self_host_engine.cpp.obj
+D:\rawrxd\src\core\self_host_engine.cpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\self_host_engine.cpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[19/101] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\static_analysis_engine.cpp.obj
+[20/101] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\streaming_engine_registry.cpp.obj
+[21/101] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\subsystem_health_monitor.cpp.obj
+[22/101] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\swarm_conflict_resolver.cpp.obj
+[23/101] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\swarm_decision_bridge.cpp.obj
+[24/101] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\swarm_coordinator.cpp.obj
+ninja: build stopped: subcommand failed.

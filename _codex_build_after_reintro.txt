@@ -1,0 +1,1406 @@
+[1/286] [MASM] Assembling RawrXD_SelfHost_Engine.asm (Self-Compile, uASM, Atomic Swap)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_SelfHost_Engine.asm
+
+[2/286] [MASM] Assembling RawrXD_Swarm_Network.asm (P2P Discovery, Task Distribution)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_Swarm_Network.asm
+
+[3/286] [MASM] Assembling RawrXD_Hotpatch_Kernel.asm (hotpatch atomic swap + trampoline install)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_Hotpatch_Kernel.asm
+
+[4/286] [MASM] Assembling RawrXD_Snapshot.asm (rollback snapshots)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_Snapshot.asm
+
+[5/286] [MASM] Assembling RawrXD_Speciator.asm (Genome, Crossover, Mutation, Speciation)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_Speciator.asm
+
+[6/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\ConsentPrompt.cpp.obj
+[7/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\IDEAutoHealerLauncher.cpp.obj
+[8/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\OSExplorerInterceptor.cpp.obj
+[9/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\IDELogger.cpp.obj
+[10/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\TransparentRenderer.cpp.obj
+[11/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\IocpFileWatcher.cpp.obj
+[12/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\SourceFileRegistry.cpp.obj
+[13/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\FileRegistry_Auto.cpp.obj
+[14/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\IDEDiagnosticAutoHealer.cpp.obj
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xutility(4924): warning C4244: '=': conversion from 'wchar_t' to 'char', possible loss of data
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xutility(4924): note: the template instantiation context (the oldest one first) is
+D:\rawrxd\src\win32app\IDEDiagnosticAutoHealer.cpp(505): note: see reference to function template instantiation 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string<std::_String_iterator<std::_String_val<std::_Simple_types<_Elem>>>,0>(_Iter,_Iter,const _Alloc &)' being compiled
+        with
+        [
+            _Elem=wchar_t,
+            _Iter=std::_String_iterator<std::_String_val<std::_Simple_types<wchar_t>>>,
+            _Alloc=std::allocator<char>
+        ]
+D:\rawrxd\src\win32app\IDEDiagnosticAutoHealer.cpp(505): note: see the first reference to 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string' in 'DiagnosticUtils::ReadDigestFile'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(862): note: see reference to function template instantiation 'void std::basic_string<char,std::char_traits<char>,std::allocator<char>>::_Construct_from_iter<wchar_t*,wchar_t*,_Size_type>(_Iter,const _Sent,_Size)' being compiled
+        with
+        [
+            _Size_type=unsigned __int64,
+            _Iter=wchar_t *,
+            _Sent=wchar_t *,
+            _Size=unsigned __int64
+        ]
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(1018): note: see reference to function template instantiation '_OutIt *std::_Copy_n_unchecked4<wchar_t*,_Size,char*>(_InIt,_SizeTy,_OutIt)' being compiled
+        with
+        [
+            _OutIt=char *,
+            _Size=unsigned __int64,
+            _InIt=wchar_t *,
+            _SizeTy=unsigned __int64
+        ]
+[15/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\CircularBeaconSystem.cpp.obj
+[16/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\TodoManager.cpp.obj
+[17/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\AutonomousAgent.cpp.obj
+[18/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AgentHistory.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[19/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\HeadlessIDE.cpp.obj
+[20/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AgentPanel.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[21/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AIReverseEngineering.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[22/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Autonomy.cpp.obj
+[23/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AuditDashboard.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[24/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AgentCommands.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\memory(1210): warning C4150: deletion of pointer to incomplete type 'RawrXD::IMemoryPlugin'; no destructor called
+D:\rawrxd\include\cpu_inference_engine.h(16): note: see declaration of 'RawrXD::IMemoryPlugin'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\memory(1210): note: the template instantiation context (the oldest one first) is
+D:\rawrxd\src\win32app\Win32IDE_AgentCommands.cpp(787): note: see reference to function template instantiation 'std::shared_ptr<RawrXD::IMemoryPlugin>::shared_ptr<RawrXD::IMemoryPlugin,0>(_Ux *)' being compiled
+        with
+        [
+            _Ux=RawrXD::IMemoryPlugin
+        ]
+D:\rawrxd\src\win32app\Win32IDE_AgentCommands.cpp(787): note: see the first reference to 'std::shared_ptr<RawrXD::IMemoryPlugin>::shared_ptr' in 'Win32IDE::loadMemoryPlugin'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\memory(1612): note: see reference to class template instantiation 'std::_Ref_count<RawrXD::IMemoryPlugin>' being compiled
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\memory(1209): note: while compiling class template member function 'void std::_Ref_count<RawrXD::IMemoryPlugin>::_Destroy(void) noexcept'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\memory(1553): warning C4150: deletion of pointer to incomplete type 'RawrXD::IMemoryPlugin'; no destructor called
+D:\rawrxd\include\cpu_inference_engine.h(16): note: see declaration of 'RawrXD::IMemoryPlugin'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\memory(1553): note: the template instantiation context (the oldest one first) is
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\memory(1611): note: see reference to class template instantiation 'std::_Temporary_owner<RawrXD::IMemoryPlugin>' being compiled
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\memory(1552): note: while compiling class template member function 'std::_Temporary_owner<RawrXD::IMemoryPlugin>::~_Temporary_owner(void)'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\memory(1611): note: see the first reference to 'std::_Temporary_owner<RawrXD::IMemoryPlugin>::~_Temporary_owner' in 'std::shared_ptr<RawrXD::IMemoryPlugin>::shared_ptr'
+D:\rawrxd\src\win32app\Win32IDE_AgentCommands.cpp(787): note: see the first reference to 'std::shared_ptr<RawrXD::IMemoryPlugin>::shared_ptr' in 'Win32IDE::loadMemoryPlugin'
+[25/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Annotations.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[26/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AsmSemantic.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[27/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Breadcrumbs.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[28/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+D:\rawrxd\src\win32app\Win32IDE.cpp(343): warning C4005: 'IDM_TERMINAL_SPLIT_H': macro redefinition
+D:\rawrxd\src\win32app\Win32IDE.h(100): note: see previous definition of 'IDM_TERMINAL_SPLIT_H'
+D:\rawrxd\src\win32app\Win32IDE.cpp(344): warning C4005: 'IDM_TERMINAL_SPLIT_V': macro redefinition
+D:\rawrxd\src\win32app\Win32IDE.h(101): note: see previous definition of 'IDM_TERMINAL_SPLIT_V'
+D:\rawrxd\src\win32app\Win32IDE.cpp(811): warning C4312: 'type cast': conversion from 'int' to 'HMENU' of greater size
+D:\rawrxd\src\win32app\Win32IDE.cpp(3132): warning C4005: 'IDC_BTN_CLOSE': macro redefinition
+D:\rawrxd\src\win32app\Win32IDE.cpp(218): note: see previous definition of 'IDC_BTN_CLOSE'
+[29/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AirgappedEnterprise.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[30/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AgenticBridge.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[31/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_ColorPicker.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[32/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_CopilotGapPanel.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[33/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Core.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[34/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_BackendSwitcher.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[35/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_CrashReporter.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[36/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Commands.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[37/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_CruciblePanel.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[38/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_CursorParity.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[39/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Debugger.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[40/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_EditorEngine.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[41/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_DiskRecovery.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+D:\rawrxd\src\win32app\Win32IDE_DiskRecovery.cpp(198): warning C4477: 'snprintf' : format string '%s' requires an argument of type 'char *', but variadic argument 1 has type 'std::string'
+D:\rawrxd\src\win32app\Win32IDE_DiskRecovery.cpp(244): warning C4477: 'snprintf' : format string '%s' requires an argument of type 'char *', but variadic argument 1 has type 'std::string'
+D:\rawrxd\src\win32app\Win32IDE_DiskRecovery.cpp(306): warning C4477: 'snprintf' : format string '%s' requires an argument of type 'char *', but variadic argument 1 has type 'std::string'
+D:\rawrxd\src\win32app\Win32IDE_DiskRecovery.cpp(376): warning C4477: 'snprintf' : format string '%s' requires an argument of type 'char *', but variadic argument 1 has type 'std::string'
+D:\rawrxd\src\win32app\Win32IDE_DiskRecovery.cpp(408): warning C4477: 'snprintf' : format string '%s' requires an argument of type 'char *', but variadic argument 1 has type 'std::string'
+[42/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_EmojiSupport.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[43/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_ExecutionGovernor.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[44/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_DecompilerView.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[45/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FeatureManifest.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[46/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_DualAgentPanel.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[47/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FailureIntelligence.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[48/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FileMenu.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+D:\rawrxd\src\win32app\Win32IDE_FileMenu.cpp(177): warning C4312: 'type cast': conversion from 'const UINT' to 'HMENU' of greater size
+D:\rawrxd\src\win32app\Win32IDE_FileMenu.cpp(212): warning C4312: 'type cast': conversion from 'const UINT' to 'HMENU' of greater size
+D:\rawrxd\src\win32app\Win32IDE_FileMenu.cpp(218): warning C4312: 'type cast': conversion from 'const UINT' to 'HMENU' of greater size
+[49/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_GUILayoutHotpatch.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[50/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FileOps.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[51/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FlagshipFeatures.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[52/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FlightRecorder.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[53/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FailureDetector.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[54/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_GameEnginePanel.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[55/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Gauntlet.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[56/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_GhostText.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[57/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_HotpatchPanel.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[58/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_HotpatchCtrlPanel.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[59/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_MCPHooks.cpp.obj
+[60/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Instructions.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[61/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_LSPClient.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[62/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_MarketplacePanel.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[63/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_LLMRouter.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[64/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_LSPServer.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[65/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Logger.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[66/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_MultiResponse.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[67/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_MonacoThemes.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[68/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_MCP.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[69/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_PowerShellBeaconButtons.cpp.obj
+[70/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_LocalServer.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[71/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_PDBSymbols.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[72/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_LSP_AI_Bridge.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[73/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_NativeDebugPanel.cpp.obj
+D:\rawrxd\src\win32app\Win32IDE_NativeDebugPanel.cpp(16): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\win32app\Win32IDE_NativeDebugPanel.cpp(16): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+D:\rawrxd\src\win32app\Win32IDE_NativeDebugPanel.cpp(17): warning C4005: 'NOMINMAX': macro redefinition
+D:\rawrxd\src\win32app\Win32IDE_NativeDebugPanel.cpp(17): note: 'NOMINMAX' previously declared on the command line
+[74/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_PipelinePanel.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[75/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_NetworkPanel.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[76/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_OutlinePanel.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[77/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Sidebar_PathOps.cpp.obj
+[78/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_SidebarBridge.cpp.obj
+[79/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Plugins.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[80/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_NativePipeline.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[81/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_SwarmModelSelector.cpp.obj
+[82/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_PowerShellPanel.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[83/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_PlanExecutor.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[84/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_QuickWins.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[85/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_ProvableAgent.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[86/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_SemanticPanel.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[87/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_PowerShell.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[88/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_RenamePreview.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[89/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_ShortcutEditor.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[90/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Settings.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[91/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_ReverseEngineering.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[92/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Session.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[93/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_SourceFilePicker.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[94/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_StaticAnalysisPanel.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[95/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_TelemetryPanel.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[96/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Sidebar.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+D:\rawrxd\src\win32app\Win32IDE_Sidebar.cpp(488): warning C4312: 'type cast': conversion from 'const int' to 'HMENU' of greater size
+D:\rawrxd\src\win32app\Win32IDE_Sidebar.cpp(884): warning C4312: 'type cast': conversion from 'const int' to 'HMENU' of greater size
+D:\rawrxd\src\win32app\Win32IDE_Sidebar.cpp(896): warning C4312: 'type cast': conversion from 'const int' to 'HMENU' of greater size
+D:\rawrxd\src\win32app\Win32IDE_Sidebar.cpp(898): warning C4312: 'type cast': conversion from 'const int' to 'HMENU' of greater size
+D:\rawrxd\src\win32app\Win32IDE_Sidebar.cpp(900): warning C4312: 'type cast': conversion from 'const int' to 'HMENU' of greater size
+D:\rawrxd\src\win32app\Win32IDE_Sidebar.cpp(907): warning C4312: 'type cast': conversion from 'const int' to 'HMENU' of greater size
+D:\rawrxd\src\win32app\Win32IDE_Sidebar.cpp(914): warning C4312: 'type cast': conversion from 'const int' to 'HMENU' of greater size
+D:\rawrxd\src\win32app\Win32IDE_Sidebar.cpp(921): warning C4312: 'type cast': conversion from 'const int' to 'HMENU' of greater size
+D:\rawrxd\src\win32app\Win32IDE_Sidebar.cpp(1167): warning C4312: 'type cast': conversion from 'const int' to 'HMENU' of greater size
+D:\rawrxd\src\win32app\Win32IDE_Sidebar.cpp(1175): warning C4312: 'type cast': conversion from 'const int' to 'HMENU' of greater size
+D:\rawrxd\src\win32app\Win32IDE_Sidebar.cpp(1311): warning C4312: 'type cast': conversion from 'const int' to 'HMENU' of greater size
+D:\rawrxd\src\win32app\Win32IDE_Sidebar.cpp(1313): warning C4312: 'type cast': conversion from 'const int' to 'HMENU' of greater size
+D:\rawrxd\src\win32app\Win32IDE_Sidebar.cpp(1320): warning C4312: 'type cast': conversion from 'const int' to 'HMENU' of greater size
+D:\rawrxd\src\win32app\Win32IDE_Sidebar.cpp(1335): warning C4312: 'type cast': conversion from 'const int' to 'HMENU' of greater size
+D:\rawrxd\src\win32app\Win32IDE_Sidebar.cpp(1533): warning C4312: 'type cast': conversion from 'const int' to 'HMENU' of greater size
+D:\rawrxd\src\win32app\Win32IDE_Sidebar.cpp(1541): warning C4312: 'type cast': conversion from 'const int' to 'HMENU' of greater size
+[97/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_TelemetryDashboard.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[98/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_SwarmPanel.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[99/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32TerminalManager.cpp.obj
+[100/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Themes.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[101/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Tier2Cosmetics.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[102/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\EditorEngineFactory.cpp.obj
+[103/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Telemetry.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[104/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_SubAgent.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[105/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_StreamingUX.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[106/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\RichEditEditorEngine.cpp.obj
+[107/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\MonacoCoreEngine.cpp.obj
+[108/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\_test_uhm_include.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[109/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\WebView2EditorEngine.cpp.obj
+[110/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\agent_memory_indexer.cpp.obj
+[111/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Tier5Cosmetics.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[112/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\accelerator_router.cpp.obj
+D:\rawrxd\src\core\accelerator_router.h(37): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\accelerator_router.h(37): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[113/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Tier3Cosmetics.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[114/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Tier1Cosmetics.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[115/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_WebView2.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[116/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Tier3Polish.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[117/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\agentic_task_graph.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/core/agentic_task_graph.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_ENABLE_OLLAMA=0 -DRAWRXD_PURE_SIDEBAR=1 -DRAWRXD_QT_ELIMINATED=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_SOVEREIGN_ENGINES=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\include -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\core\agentic_task_graph.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\core\agentic_task_graph.cpp
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+D:\rawrxd\src\core\agentic_task_graph.cpp(1823): error C2664: 'RawrXD::Agentic::TaskResult RawrXD::Agentic::TaskResult::error(const char *,int)': cannot convert argument 1 from 'std::string' to 'const char *'
+D:\rawrxd\src\core\agentic_task_graph.cpp(1823): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\core\agentic_task_graph.hpp(58): note: see declaration of 'RawrXD::Agentic::TaskResult::error'
+D:\rawrxd\src\core\agentic_task_graph.cpp(1823): note: while trying to match the argument list '(std::string, int)'
+D:\rawrxd\src\core\agentic_task_graph.cpp(1850): error C2664: 'RawrXD::Agentic::TaskResult RawrXD::Agentic::TaskResult::error(const char *,int)': cannot convert argument 1 from 'std::string' to 'const char *'
+D:\rawrxd\src\core\agentic_task_graph.cpp(1850): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\core\agentic_task_graph.hpp(58): note: see declaration of 'RawrXD::Agentic::TaskResult::error'
+D:\rawrxd\src\core\agentic_task_graph.cpp(1850): note: while trying to match the argument list '(std::string, int)'
+D:\rawrxd\src\core\agentic_task_graph.cpp(1870): error C2664: 'RawrXD::Agentic::TaskResult RawrXD::Agentic::TaskResult::error(const char *,int)': cannot convert argument 1 from 'std::string' to 'const char *'
+D:\rawrxd\src\core\agentic_task_graph.cpp(1870): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\core\agentic_task_graph.hpp(58): note: see declaration of 'RawrXD::Agentic::TaskResult::error'
+D:\rawrxd\src\core\agentic_task_graph.cpp(1870): note: while trying to match the argument list '(std::string, int)'
+[118/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_SyntaxHighlight.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[119/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\auto_update_system.cpp.obj
+[120/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\auto_discovery.cpp.obj
+[121/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\adaptive_pipeline_parallel.cpp.obj
+[122/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\agent_safety_contract.cpp.obj
+[123/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\auto_repair_orchestrator.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/core/auto_repair_orchestrator.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_ENABLE_OLLAMA=0 -DRAWRXD_PURE_SIDEBAR=1 -DRAWRXD_QT_ELIMINATED=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_SOVEREIGN_ENGINES=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\include -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\core\auto_repair_orchestrator.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\core\auto_repair_orchestrator.cpp
+D:\rawrxd\src\core\auto_repair_orchestrator.hpp(35): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\auto_repair_orchestrator.hpp(35): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+D:\rawrxd\src\core\auto_repair_orchestrator.cpp(449): error C2440: '?': cannot convert from 'std::string' to 'bool'
+D:\rawrxd\src\core\auto_repair_orchestrator.cpp(449): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\core\auto_repair_orchestrator.cpp(448): warning C4473: 'snprintf' : not enough arguments passed for format string
+D:\rawrxd\src\core\auto_repair_orchestrator.cpp(448): note: placeholders and their parameters expect 1 variadic arguments, but 0 were provided
+D:\rawrxd\src\core\auto_repair_orchestrator.cpp(448): note: the missing variadic argument 1 is required by format string '%s'
+[124/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\amd_gpu_accelerator.cpp.obj
+D:\rawrxd\src\core\amd_gpu_accelerator.h(26): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\amd_gpu_accelerator.h(26): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[125/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_VoiceChat.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[126/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\alert_system.cpp.obj
+[127/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\byte_level_hotpatcher.cpp.obj
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(2): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(2): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[128/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_VSCodeUI.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+D:\rawrxd\src\win32app\Win32IDE_VSCodeUI.cpp(155): warning C4312: 'type cast': conversion from 'int' to 'HMENU' of greater size
+[129/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\main_win32.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[130/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\arm64_gpu_accelerator.cpp.obj
+D:\rawrxd\src\core\arm64_gpu_accelerator.h(37): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\arm64_gpu_accelerator.h(37): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[131/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\autonomous_debugger.cpp.obj
+[132/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\auto_feature_registry.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/core/auto_feature_registry.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_ENABLE_OLLAMA=0 -DRAWRXD_PURE_SIDEBAR=1 -DRAWRXD_QT_ELIMINATED=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_SOVEREIGN_ENGINES=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\include -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\core\auto_feature_registry.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\core\auto_feature_registry.cpp
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+D:\rawrxd\src\core\auto_feature_registry.cpp(99): error C2664: 'CommandResult CommandResult::ok(const char *)': cannot convert argument 1 from 'const std::string' to 'const char *'
+D:\rawrxd\src\core\auto_feature_registry.cpp(99): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\core\shared_feature_dispatch.h(76): note: see declaration of 'CommandResult::ok'
+D:\rawrxd\src\core\auto_feature_registry.cpp(99): note: while trying to match the argument list '(const std::string)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(99): error C2664: 'CommandResult CommandResult::error(const char *,int)': cannot convert argument 1 from 'const std::string' to 'const char *'
+D:\rawrxd\src\core\auto_feature_registry.cpp(99): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\core\shared_feature_dispatch.h(77): note: see declaration of 'CommandResult::error'
+D:\rawrxd\src\core\auto_feature_registry.cpp(99): note: while trying to match the argument list '(const std::string, const int)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(100): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(100): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(100): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(100): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(100): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(100): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(100): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(100): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(100): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(101): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(101): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(101): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(101): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(101): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(101): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(101): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(101): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(101): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(124): error C2440: 'return': cannot convert from 'bool' to 'BackupManager &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(125): error C2440: 'return': cannot convert from 'bool' to 'BackupManager &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(131): error C2440: 'return': cannot convert from 'bool' to 'AlertSystem &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(132): error C2440: 'return': cannot convert from 'bool' to 'AlertSystem &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(138): error C2440: 'return': cannot convert from 'bool' to 'ShortcutManager &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(139): error C2440: 'return': cannot convert from 'bool' to 'ShortcutManager &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(145): error C2440: 'return': cannot convert from 'bool' to 'VoiceAutomation &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(146): error C2440: 'return': cannot convert from 'bool' to 'VoiceAutomation &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(152): error C2440: 'return': cannot convert from 'bool' to 'ModelInvoker &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(153): error C2440: 'return': cannot convert from 'bool' to 'ModelInvoker &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(159): error C2440: 'return': cannot convert from 'bool' to 'IntentEngine &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(160): error C2440: 'return': cannot convert from 'bool' to 'IntentEngine &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(166): error C2440: 'return': cannot convert from 'bool' to 'AgenticDeepThinkingEngine &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(167): error C2440: 'return': cannot convert from 'bool' to 'AgenticDeepThinkingEngine &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(172): error C2440: 'return': cannot convert from 'bool' to 'LocalReasoningEngine &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(173): error C2440: 'return': cannot convert from 'bool' to 'LocalReasoningEngine &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(662): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(662): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(662): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(662): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(662): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(662): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(662): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(662): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(662): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(663): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(663): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(663): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(663): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(663): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(663): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(663): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(663): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(663): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(667): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(667): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(667): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(667): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(667): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(667): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(667): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(667): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(667): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(668): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(668): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(668): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(668): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(668): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(668): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(668): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(668): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(668): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(683): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(683): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(683): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(683): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(683): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(683): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(683): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(683): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(683): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(684): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(684): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(684): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(684): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(684): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(684): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(684): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(684): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(684): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(691): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(691): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(691): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(691): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(691): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(691): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(691): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(691): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(691): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(692): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(692): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(692): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(692): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(692): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(692): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(692): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(692): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(692): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(698): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(698): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(698): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(698): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(698): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(698): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(698): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(698): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(698): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(699): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(699): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(699): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(699): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(699): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(699): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(699): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(699): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(699): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(703): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(703): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(703): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(703): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(703): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(703): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(703): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(703): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(703): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(704): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(704): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(704): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(704): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(704): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(704): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(704): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(704): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(704): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(730): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(730): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(730): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(730): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(730): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(730): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(730): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(730): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(730): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(731): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(731): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(731): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(731): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(731): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(731): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(731): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(731): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(731): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(735): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(735): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(735): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(735): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(735): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(735): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(735): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(735): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(735): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(736): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(736): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(736): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(736): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(736): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(736): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(736): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(736): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(736): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(752): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(752): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(752): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(752): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(752): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(752): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(752): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(752): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(752): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(753): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(753): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(753): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(753): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(753): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(753): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(753): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(753): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(753): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(760): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(760): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(760): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(760): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(760): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(760): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(760): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(760): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(760): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(761): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(761): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(761): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(761): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(761): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(761): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(761): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(761): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(761): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(785): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(785): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(785): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(785): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(785): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(785): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(785): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(785): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(785): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(786): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(786): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(786): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(786): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(786): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(786): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(786): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(786): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(786): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(790): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(790): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(790): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(790): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(790): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(790): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(790): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(790): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(790): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(791): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(791): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(791): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(791): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(791): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(791): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(791): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(791): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(791): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(807): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(807): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(807): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(807): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(807): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(807): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(807): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(807): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(807): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(808): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(808): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(808): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(808): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(808): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(808): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(808): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(808): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(808): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(824): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(824): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(824): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(824): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(824): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(824): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(824): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(824): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(824): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(825): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(825): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(825): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(825): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(825): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(825): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(825): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(825): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(825): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(841): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(841): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(841): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(841): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(841): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(841): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(841): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(841): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(841): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(842): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(842): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(842): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(842): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(842): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(842): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(842): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(842): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(842): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(856): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(856): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(856): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(856): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(856): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(856): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(856): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(856): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(856): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(857): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(857): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(857): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(857): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(857): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(857): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(857): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(857): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(857): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(878): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(878): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(878): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(878): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(878): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(878): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(878): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(878): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(878): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(879): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(879): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(879): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(879): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(879): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(879): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(879): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(879): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(879): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(905): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(905): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(905): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(905): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(905): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(905): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(905): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(905): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(905): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(906): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(906): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(906): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(906): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(906): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(906): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(906): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(906): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(906): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(913): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(913): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(913): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(913): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(913): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(913): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(913): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(913): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(913): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(914): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(914): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(914): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(914): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(914): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(914): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(914): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(914): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(914): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(917): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(917): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(917): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(917): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(917): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(917): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(917): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(917): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(917): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(918): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(918): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(918): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(918): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(918): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(918): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(918): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(918): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(918): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(921): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(921): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(921): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(921): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(921): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(921): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(921): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(921): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(921): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(922): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(922): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(922): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(922): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(922): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(922): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(922): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(922): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(922): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(929): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(929): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(929): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(929): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(929): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(929): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(929): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(929): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(929): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(930): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(930): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(930): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(930): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(930): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(930): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(930): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(930): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(930): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(937): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(937): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(937): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(937): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(937): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(937): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(937): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(937): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(937): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(938): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(938): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(938): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(938): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(938): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(938): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(938): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(938): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(938): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(941): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(941): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(941): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(941): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(941): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(941): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(941): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(941): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(941): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(942): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(942): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(942): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(942): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(942): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(942): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(942): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(942): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(942): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(949): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(949): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(949): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(949): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(949): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(949): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(949): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(949): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(949): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(950): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(950): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(950): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(950): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(950): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(950): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(950): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(950): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(950): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(953): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(953): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(953): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(953): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(953): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(953): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(953): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(953): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(953): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(954): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(954): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(954): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(954): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(954): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(954): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(954): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(954): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(954): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(977): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(977): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(977): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(977): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(977): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(977): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(977): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(977): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(977): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(978): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(978): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(978): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(978): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(978): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(978): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(978): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(978): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(978): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(997): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(997): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(997): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(997): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(997): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(997): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(997): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(997): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(997): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(998): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(998): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(998): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(998): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(998): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(998): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(998): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(998): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(998): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1002): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1002): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1002): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1002): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1002): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1002): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1002): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1002): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(1002): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1003): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1003): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1003): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1003): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1003): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1003): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1003): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1003): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(1003): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1027): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1027): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1027): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1027): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1027): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1027): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1027): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1027): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(1027): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1028): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1028): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1028): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1028): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1028): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1028): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1028): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1028): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(1028): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1056): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1056): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1056): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1056): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1056): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1056): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1056): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1056): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(1056): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1057): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1057): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1057): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1057): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1057): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1057): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1057): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1057): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(1057): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1064): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1064): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1064): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1064): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1064): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1064): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1064): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1064): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(1064): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1065): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1065): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1065): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1065): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1065): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1065): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1065): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1065): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(1065): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1068): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1068): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1068): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1068): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1068): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1068): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1068): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1068): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(1068): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1069): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1069): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1069): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1069): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1069): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1069): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1069): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1069): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(1069): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1072): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1072): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1072): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1072): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1072): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1072): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1072): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1072): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(1072): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1073): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1073): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1073): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1073): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1073): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1073): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1073): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1073): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(1073): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1081): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1081): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1081): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1081): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1081): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1081): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1081): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1081): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(1081): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1082): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1082): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1082): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1082): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1082): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1082): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1082): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1082): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(1082): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1090): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1090): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1090): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1090): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1090): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1090): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1090): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1090): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(1090): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1091): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1091): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1091): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1091): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1091): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1091): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1091): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1091): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(1091): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1094): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1094): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1094): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1094): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1094): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1094): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1094): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1094): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(1094): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1095): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1095): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1095): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1095): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1095): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1095): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1095): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1095): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(1095): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1103): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1103): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1103): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1103): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1103): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1103): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1103): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1103): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(1103): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1104): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1104): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1104): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1104): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1104): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1104): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1104): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1104): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(1104): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1107): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1107): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1107): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1107): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1107): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1107): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1107): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1107): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(1107): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1108): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1108): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1108): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1108): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1108): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1108): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1108): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1108): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(1108): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1134): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1134): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1134): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1134): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1134): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1134): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1134): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1134): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(1134): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1135): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1135): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1135): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1135): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1135): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1135): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1135): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1135): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(1135): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1156): error C2440: 'return': cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1156): note: 'CommandResult::CommandResult': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: could be 'CommandResult::CommandResult(CommandResult &&)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1156): note: 'CommandResult::CommandResult(CommandResult &&)': cannot convert argument 1 from 'bool' to 'CommandResult &&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1156): note: Reason: cannot convert from 'bool' to 'CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1156): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\shared_feature_dispatch.h(78): note: or       'CommandResult::CommandResult(const CommandResult &)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1156): note: 'CommandResult::CommandResult(const CommandResult &)': cannot convert argument 1 from 'bool' to 'const CommandResult &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1156): note: Reason: cannot convert from 'bool' to 'const CommandResult'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1156): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\auto_feature_registry.cpp(1156): note: while trying to match the argument list '(bool)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1156): fatal error C1003: error count exceeds 100; stopping compilation
+[133/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\backup_manager.cpp.obj
+[134/286] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\autonomous_workflow_engine.cpp.obj
+ninja: build stopped: subcommand failed.

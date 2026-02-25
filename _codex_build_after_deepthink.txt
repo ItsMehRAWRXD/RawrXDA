@@ -1,0 +1,98 @@
+[1/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\layer_contribution_scorer.cpp.obj
+D:\rawrxd\src\core\layer_contribution_scorer.cpp(9): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\layer_contribution_scorer.cpp(9): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[2/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\masm_stress_harness.cpp.obj
+D:\rawrxd\src\core\masm_stress_harness.cpp(11): warning C4005: 'NOMINMAX': macro redefinition
+D:\rawrxd\src\core\masm_stress_harness.cpp(11): note: 'NOMINMAX' previously declared on the command line
+[3/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\auto_repair_orchestrator.cpp.obj
+D:\rawrxd\src\core\auto_repair_orchestrator.hpp(35): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\auto_repair_orchestrator.hpp(35): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[4/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\live_binary_patcher.cpp.obj
+D:\rawrxd\src\core\live_binary_patcher.cpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\live_binary_patcher.cpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[5/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\knowledge_graph_core.cpp.obj
+[6/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\intent_engine.cpp.obj
+[7/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\iterative_tensor_traversal.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[8/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\local_parity_bridge.cpp.obj
+[9/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\lock_hierarchy.cpp.obj
+[10/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\local_ai_core.cpp.obj
+D:\rawrxd\src\core\local_ai_core.cpp(14): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\local_ai_core.cpp(14): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[11/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\layer_offload_manager.cpp.obj
+D:\rawrxd\src\core\layer_offload_manager.cpp(18): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\layer_offload_manager.cpp(18): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[12/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\intel_gpu_accelerator.cpp.obj
+D:\rawrxd\src\core\intel_gpu_accelerator.h(29): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\intel_gpu_accelerator.h(29): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[13/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\jsonrpc_parser.cpp.obj
+[14/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\mesh_brain.cpp.obj
+D:\rawrxd\src\core\mesh_brain.cpp(12): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\mesh_brain.cpp(12): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[15/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\model_memory_hotpatch.cpp.obj
+[16/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\memory_ownership.cpp.obj
+[17/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\js_extension_host.cpp.obj
+D:\rawrxd\src\core\js_extension_host.cpp(379): warning C4477: 'snprintf' : format string '%s' requires an argument of type 'char *', but variadic argument 1 has type 'std::string'
+[18/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\menu_auditor.cpp.obj
+[19/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\memory_pressure_handler.cpp.obj
+[20/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\pdb_reference_provider.cpp.obj
+[21/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\patch_rollback_ledger.cpp.obj
+D:\rawrxd\src\core\patch_rollback_ledger.cpp(11): warning C4005: 'NOMINMAX': macro redefinition
+D:\rawrxd\src\core\patch_rollback_ledger.cpp(11): note: 'NOMINMAX' previously declared on the command line
+[22/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\instructions_provider.cpp.obj
+[23/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\multiwindow_scheduler.cpp.obj
+[24/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\pdb_gsi_hash.cpp.obj
+[25/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\pdb_native.cpp.obj
+[26/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\agentic_task_graph.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[27/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\omega_orchestrator.cpp.obj
+[28/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\native_inference_pipeline.cpp.obj
+D:\rawrxd\src\core\native_inference_pipeline.cpp(13): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\native_inference_pipeline.cpp(13): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[29/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\neural_bridge.cpp.obj
+[30/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\pdb_lsp_bridge.cpp.obj
+[31/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\multi_response_engine.cpp.obj
+[32/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\auto_feature_registry.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/core/auto_feature_registry.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_ENABLE_OLLAMA=0 -DRAWRXD_PURE_SIDEBAR=1 -DRAWRXD_QT_ELIMINATED=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_SOVEREIGN_ENGINES=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\include -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\core\auto_feature_registry.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\core\auto_feature_registry.cpp
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+D:\rawrxd\src\core\auto_feature_registry.cpp(67): fatal error C1083: Cannot open include file: '../agent/local_reasoning_engine.hpp': No such file or directory
+[33/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\quant_hysteresis.cpp.obj
+D:\rawrxd\src\core\quant_hysteresis.cpp(10): warning C4005: 'NOMINMAX': macro redefinition
+D:\rawrxd\src\core\quant_hysteresis.cpp(10): note: 'NOMINMAX' previously declared on the command line
+[34/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\model_training_pipeline.cpp.obj
+[35/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\plugin_signature.cpp.obj
+[36/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\model_bruteforce_engine.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[37/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\pt_driver_contract.cpp.obj
+[38/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\rawrxd_subsystem_api.cpp.obj
+D:\rawrxd\src\core\rawrxd_subsystem_api.cpp(17): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\rawrxd_subsystem_api.cpp(17): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[39/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\quickjs_sandbox.cpp.obj
+[40/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\proxy_hotpatcher.cpp.obj
+[41/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\native_speed_layer.cpp.obj
+D:\rawrxd\src\core\native_speed_layer.cpp(13): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\native_speed_layer.cpp(13): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[42/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\rawrxd_state_mmf.cpp.obj
+D:\rawrxd\src\core\rawrxd_state_mmf.cpp(16): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\rawrxd_state_mmf.cpp(16): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[43/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\perf_telemetry.cpp.obj
+D:\rawrxd\src\core\perf_telemetry.cpp(16): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\perf_telemetry.cpp(16): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+D:\rawrxd\src\core\perf_telemetry.cpp(17): warning C4005: 'NOMINMAX': macro redefinition
+D:\rawrxd\src\core\perf_telemetry.cpp(17): note: 'NOMINMAX' previously declared on the command line
+[44/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\prompt_template_engine.cpp.obj
+[45/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\reasoning_cot_bridge.cpp.obj
+[46/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\reasoning_pipeline_orchestrator.cpp.obj
+[47/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\quantum_safe_transport.cpp.obj
+[48/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\production_release.cpp.obj
+[49/116] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\native_debugger_engine.cpp.obj
+D:\rawrxd\src\core\native_debugger_engine.cpp(28): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\native_debugger_engine.cpp(28): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+D:\rawrxd\src\core\native_debugger_engine.cpp(29): warning C4005: 'NOMINMAX': macro redefinition
+D:\rawrxd\src\core\native_debugger_engine.cpp(29): note: 'NOMINMAX' previously declared on the command line
+ninja: build stopped: subcommand failed.

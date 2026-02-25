@@ -1,0 +1,744 @@
+[1/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\traversal_strategy.cpp.obj
+D:\rawrxd\src\core\traversal_strategy.cpp(9): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\traversal_strategy.cpp(9): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[2/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\update_signature.cpp.obj
+[3/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\transcendence_coordinator.cpp.obj
+D:\rawrxd\src\core\self_host_engine.hpp(20): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\self_host_engine.hpp(20): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[4/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\swarm_worker.cpp.obj
+[5/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\vision_embedding_cache.cpp.obj
+[6/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\vision_token_gate.cpp.obj
+[7/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\vision_gpu_staging.cpp.obj
+[8/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\thread_pool.cpp.obj
+[9/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\unified_command_dispatch.cpp.obj
+[10/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\transaction_journal.cpp.obj
+[11/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\thread_contention_profiler.cpp.obj
+[12/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\universal_model_hotpatcher.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[13/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\vision_kv_isolation.cpp.obj
+[14/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\webrtc_signaling.cpp.obj
+[15/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\watchdog_service.cpp.obj
+D:\rawrxd\src\core\watchdog_service.cpp(22): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\watchdog_service.cpp(22): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+D:\rawrxd\src\core\watchdog_service.cpp(23): warning C4005: 'NOMINMAX': macro redefinition
+D:\rawrxd\src\core\watchdog_service.cpp(23): note: 'NOMINMAX' previously declared on the command line
+[16/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\vision_encoder.cpp.obj
+[17/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\game_engine_manager.cpp.obj
+[18/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\voice_chat.cpp.obj
+[19/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\voice_automation.cpp.obj
+[20/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\unified_hotpatch_manager.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[21/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\auto_feature_registry.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/core/auto_feature_registry.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_ENABLE_OLLAMA=0 -DRAWRXD_PURE_SIDEBAR=1 -DRAWRXD_QT_ELIMINATED=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_SOVEREIGN_ENGINES=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\include -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\core\auto_feature_registry.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\core\auto_feature_registry.cpp
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): error C2143: syntax error: missing ')' before '{'
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): error C2059: syntax error: ')'
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(29): error C3646: 'getAllTelemetryData': unknown override specifier
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(29): error C2059: syntax error: '('
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(29): error C2238: unexpected token(s) preceding ';'
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(53): error C2065: 'JsonObject': undeclared identifier
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(53): error C2923: 'std::vector': 'JsonObject' is not a valid template type argument for parameter '_Ty'
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(53): note: see declaration of 'JsonObject'
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(53): error C2976: 'std::vector': too few template arguments
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(53): error C2955: 'std::vector': use of class template requires template argument list
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(56): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(56): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(91): error C2664: 'CommandResult CommandResult::ok(const char *)': cannot convert argument 1 from 'const std::string' to 'const char *'
+D:\rawrxd\src\core\auto_feature_registry.cpp(91): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\core\shared_feature_dispatch.h(76): note: see declaration of 'CommandResult::ok'
+D:\rawrxd\src\core\auto_feature_registry.cpp(91): note: while trying to match the argument list '(const std::string)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(91): error C2664: 'CommandResult CommandResult::error(const char *,int)': cannot convert argument 1 from 'const std::string' to 'const char *'
+D:\rawrxd\src\core\auto_feature_registry.cpp(91): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\core\shared_feature_dispatch.h(77): note: see declaration of 'CommandResult::error'
+D:\rawrxd\src\core\auto_feature_registry.cpp(91): note: while trying to match the argument list '(const std::string, const int)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(867): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\core\auto_feature_registry.cpp(867): note: while trying to match the argument list '(const char [24])'
+D:\rawrxd\src\core\auto_feature_registry.cpp(991): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\core\auto_feature_registry.cpp(991): note: while trying to match the argument list '(const char [21])'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1197): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1197): note: while trying to match the argument list '(const char [28])'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1250): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1250): note: while trying to match the argument list '(const char [15])'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1351): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1351): note: while trying to match the argument list '(const char [20])'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1377): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1377): note: while trying to match the argument list '(const char [27])'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1387): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1387): note: while trying to match the argument list '(const char [28])'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1507): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1507): note: while trying to match the argument list '(const char [14])'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1576): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1576): note: while trying to match the argument list '(const char [19])'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1674): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1674): note: while trying to match the argument list '(const char [15])'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1725): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1725): note: while trying to match the argument list '(const char [13])'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1932): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1932): note: while trying to match the argument list '(const char [17])'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1995): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1995): note: while trying to match the argument list '(const char [17])'
+D:\rawrxd\src\core\auto_feature_registry.cpp(2016): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\core\auto_feature_registry.cpp(2016): note: while trying to match the argument list '(const char [14])'
+D:\rawrxd\src\core\auto_feature_registry.cpp(2071): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\core\auto_feature_registry.cpp(2071): note: while trying to match the argument list '(const char [16])'
+D:\rawrxd\src\core\auto_feature_registry.cpp(2653): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\core\auto_feature_registry.cpp(2653): note: while trying to match the argument list '(const char [13])'
+D:\rawrxd\src\core\auto_feature_registry.cpp(2761): warning C4477: 'snprintf' : format string '%s' requires an argument of type 'char *', but variadic argument 4 has type 'std::string'
+D:\rawrxd\src\core\auto_feature_registry.cpp(2765): error C2664: 'CommandResult CommandResult::ok(const char *)': cannot convert argument 1 from 'std::string' to 'const char *'
+D:\rawrxd\src\core\auto_feature_registry.cpp(2765): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\core\shared_feature_dispatch.h(76): note: see declaration of 'CommandResult::ok'
+D:\rawrxd\src\core\auto_feature_registry.cpp(2765): note: while trying to match the argument list '(std::string)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(2765): error C2664: 'CommandResult CommandResult::error(const char *,int)': cannot convert argument 1 from 'std::string' to 'const char *'
+D:\rawrxd\src\core\auto_feature_registry.cpp(2765): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\core\shared_feature_dispatch.h(77): note: see declaration of 'CommandResult::error'
+D:\rawrxd\src\core\auto_feature_registry.cpp(2765): note: while trying to match the argument list '(std::string, int)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(2819): warning C4477: 'snprintf' : format string '%s' requires an argument of type 'char *', but variadic argument 3 has type 'std::string'
+D:\rawrxd\src\core\auto_feature_registry.cpp(2823): error C2664: 'CommandResult CommandResult::ok(const char *)': cannot convert argument 1 from 'std::string' to 'const char *'
+D:\rawrxd\src\core\auto_feature_registry.cpp(2823): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\core\shared_feature_dispatch.h(76): note: see declaration of 'CommandResult::ok'
+D:\rawrxd\src\core\auto_feature_registry.cpp(2823): note: while trying to match the argument list '(std::string)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(2823): error C2664: 'CommandResult CommandResult::error(const char *,int)': cannot convert argument 1 from 'std::string' to 'const char *'
+D:\rawrxd\src\core\auto_feature_registry.cpp(2823): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\core\shared_feature_dispatch.h(77): note: see declaration of 'CommandResult::error'
+D:\rawrxd\src\core\auto_feature_registry.cpp(2823): note: while trying to match the argument list '(std::string, int)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(3131): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\core\auto_feature_registry.cpp(3131): note: while trying to match the argument list '(const char [14])'
+D:\rawrxd\src\core\auto_feature_registry.cpp(3146): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\core\auto_feature_registry.cpp(3146): note: while trying to match the argument list '(const char [14])'
+D:\rawrxd\src\core\auto_feature_registry.cpp(3202): error C2039: 'diagnosticRefreshes': is not a member of 'LSPHotpatchBridge::Stats'
+D:\rawrxd\src\core\../lsp/lsp_hotpatch_bridge.hpp(26): note: see declaration of 'LSPHotpatchBridge::Stats'
+D:\rawrxd\src\core\auto_feature_registry.cpp(3195): warning C4477: 'snprintf' : format string '%llu' requires an argument of type 'unsigned __int64', but variadic argument 3 has type 'const char *'
+D:\rawrxd\src\core\auto_feature_registry.cpp(3195): warning C4473: 'snprintf' : not enough arguments passed for format string
+D:\rawrxd\src\core\auto_feature_registry.cpp(3195): note: placeholders and their parameters expect 5 variadic arguments, but 4 were provided
+D:\rawrxd\src\core\auto_feature_registry.cpp(3195): note: the missing variadic argument 5 is required by format string '%s'
+D:\rawrxd\src\core\auto_feature_registry.cpp(3243): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\core\auto_feature_registry.cpp(3243): note: while trying to match the argument list '(const char [24])'
+D:\rawrxd\src\core\auto_feature_registry.cpp(3261): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\core\auto_feature_registry.cpp(3261): note: while trying to match the argument list '(const char [22])'
+D:\rawrxd\src\core\auto_feature_registry.cpp(3268): warning C4477: 'snprintf' : format string '%s' requires an argument of type 'char *', but variadic argument 2 has type 'std::string'
+D:\rawrxd\src\core\auto_feature_registry.cpp(3290): error C2039: 'diagnosticRefreshes': is not a member of 'LSPHotpatchBridge::Stats'
+D:\rawrxd\src\core\../lsp/lsp_hotpatch_bridge.hpp(26): note: see declaration of 'LSPHotpatchBridge::Stats'
+D:\rawrxd\src\core\auto_feature_registry.cpp(3289): warning C4473: 'snprintf' : not enough arguments passed for format string
+D:\rawrxd\src\core\auto_feature_registry.cpp(3289): note: placeholders and their parameters expect 2 variadic arguments, but 1 were provided
+D:\rawrxd\src\core\auto_feature_registry.cpp(3289): note: the missing variadic argument 2 is required by format string '%llu'
+D:\rawrxd\src\core\auto_feature_registry.cpp(3304): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\core\auto_feature_registry.cpp(3304): note: while trying to match the argument list '(const char [16])'
+D:\rawrxd\src\core\auto_feature_registry.cpp(3317): error C2039: 'diagnosticRefreshes': is not a member of 'LSPHotpatchBridge::Stats'
+D:\rawrxd\src\core\../lsp/lsp_hotpatch_bridge.hpp(26): note: see declaration of 'LSPHotpatchBridge::Stats'
+D:\rawrxd\src\core\auto_feature_registry.cpp(3313): warning C4473: 'snprintf' : not enough arguments passed for format string
+D:\rawrxd\src\core\auto_feature_registry.cpp(3313): note: placeholders and their parameters expect 3 variadic arguments, but 2 were provided
+D:\rawrxd\src\core\auto_feature_registry.cpp(3313): note: the missing variadic argument 3 is required by format string '%zu'
+D:\rawrxd\src\core\auto_feature_registry.cpp(3347): error C2039: 'diagnosticRefreshes': is not a member of 'LSPHotpatchBridge::Stats'
+D:\rawrxd\src\core\../lsp/lsp_hotpatch_bridge.hpp(26): note: see declaration of 'LSPHotpatchBridge::Stats'
+D:\rawrxd\src\core\auto_feature_registry.cpp(3346): warning C4473: 'snprintf' : not enough arguments passed for format string
+D:\rawrxd\src\core\auto_feature_registry.cpp(3346): note: placeholders and their parameters expect 1 variadic arguments, but 0 were provided
+D:\rawrxd\src\core\auto_feature_registry.cpp(3346): note: the missing variadic argument 1 is required by format string '%llu'
+D:\rawrxd\src\core\auto_feature_registry.cpp(3634): warning C4477: 'snprintf' : format string '%s' requires an argument of type 'char *', but variadic argument 2 has type 'std::string'
+D:\rawrxd\src\core\auto_feature_registry.cpp(3634): warning C4477: 'snprintf' : format string '%s' requires an argument of type 'char *', but variadic argument 3 has type 'std::string'
+D:\rawrxd\src\core\auto_feature_registry.cpp(3746): error C2039: 'getAllTelemetryData': is not a member of 'TelemetryCollector'
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(15): note: see declaration of 'TelemetryCollector'
+D:\rawrxd\src\core\auto_feature_registry.cpp(4352): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\core\auto_feature_registry.cpp(4352): note: while trying to match the argument list '(const char [19])'
+D:\rawrxd\src\core\auto_feature_registry.cpp(4359): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\core\auto_feature_registry.cpp(4359): note: while trying to match the argument list '(const char [18])'
+D:\rawrxd\src\core\auto_feature_registry.cpp(4445): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\core\auto_feature_registry.cpp(4445): note: while trying to match the argument list '(const char [19])'
+D:\rawrxd\src\core\auto_feature_registry.cpp(4454): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\core\auto_feature_registry.cpp(4454): note: while trying to match the argument list '(const char [17])'
+D:\rawrxd\src\core\auto_feature_registry.cpp(4476): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\core\auto_feature_registry.cpp(4476): note: while trying to match the argument list '(const char [18])'
+D:\rawrxd\src\core\auto_feature_registry.cpp(4537): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\core\auto_feature_registry.cpp(4537): note: while trying to match the argument list '(const char [17])'
+D:\rawrxd\src\core\auto_feature_registry.cpp(4636): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\core\auto_feature_registry.cpp(4636): note: while trying to match the argument list '(const char [18])'
+D:\rawrxd\src\core\auto_feature_registry.cpp(4671): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\core\auto_feature_registry.cpp(4671): note: while trying to match the argument list '(const char [18])'
+D:\rawrxd\src\core\auto_feature_registry.cpp(4717): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\core\auto_feature_registry.cpp(4717): note: while trying to match the argument list '(const char [20])'
+D:\rawrxd\src\core\auto_feature_registry.cpp(4736): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\core\auto_feature_registry.cpp(4736): note: while trying to match the argument list '(const char [23])'
+D:\rawrxd\src\core\auto_feature_registry.cpp(5687): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\core\auto_feature_registry.cpp(5687): note: while trying to match the argument list '(const char [21])'
+D:\rawrxd\src\core\auto_feature_registry.cpp(5707): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\core\auto_feature_registry.cpp(5707): note: while trying to match the argument list '(const char [19])'
+D:\rawrxd\src\core\auto_feature_registry.cpp(5727): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\core\../agent/telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\core\auto_feature_registry.cpp(5727): note: while trying to match the argument list '(const char [14])'
+D:\rawrxd\src\core\auto_feature_registry.cpp(6492): warning C4477: 'snprintf' : format string '%s' requires an argument of type 'char *', but variadic argument 3 has type 'std::string'
+D:\rawrxd\src\core\auto_feature_registry.cpp(6540): warning C4477: 'snprintf' : format string '%s' requires an argument of type 'char *', but variadic argument 2 has type 'std::string'
+D:\rawrxd\src\core\auto_feature_registry.cpp(6566): warning C4477: 'snprintf' : format string '%s' requires an argument of type 'char *', but variadic argument 1 has type 'std::string'
+[22/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\agent_hot_patcher.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/agent/agent_hot_patcher.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_ENABLE_OLLAMA=0 -DRAWRXD_PURE_SIDEBAR=1 -DRAWRXD_QT_ELIMINATED=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_SOVEREIGN_ENGINES=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\include -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\agent\agent_hot_patcher.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\agent\agent_hot_patcher.cpp
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): error C2665: 'JsonValue::JsonValue': no overloaded function could convert all the argument types
+D:\rawrxd\src\agent\simple_json.hpp(609): note: could be 'JsonValue::JsonValue(JsonValue &&)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: 'JsonValue::JsonValue(JsonValue &&)': cannot convert argument 1 from 'JsonValue::Type' to 'JsonValue &&'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: Reason: cannot convert from 'JsonValue::Type' to 'JsonValue'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\agent\simple_json.hpp(609): note: or       'JsonValue::JsonValue(const JsonValue &)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: 'JsonValue::JsonValue(const JsonValue &)': cannot convert argument 1 from 'JsonValue::Type' to 'const JsonValue &'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: Reason: cannot convert from 'JsonValue::Type' to 'const JsonValue'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\agent\simple_json.hpp(191): note: or       'JsonValue::JsonValue(JsonValue::Object &&)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: 'JsonValue::JsonValue(JsonValue::Object &&)': cannot convert argument 1 from 'JsonValue::Type' to 'JsonValue::Object &&'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: Reason: cannot convert from 'JsonValue::Type' to 'JsonValue::Object'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\agent\simple_json.hpp(190): note: or       'JsonValue::JsonValue(const JsonValue::Object &)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: 'JsonValue::JsonValue(const JsonValue::Object &)': cannot convert argument 1 from 'JsonValue::Type' to 'const JsonValue::Object &'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: Reason: cannot convert from 'JsonValue::Type' to 'const JsonValue::Object'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\agent\simple_json.hpp(189): note: or       'JsonValue::JsonValue(JsonValue::Array &&)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: 'JsonValue::JsonValue(JsonValue::Array &&)': cannot convert argument 1 from 'JsonValue::Type' to 'JsonValue::Array &&'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: Reason: cannot convert from 'JsonValue::Type' to 'JsonValue::Array'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\agent\simple_json.hpp(188): note: or       'JsonValue::JsonValue(const JsonValue::Array &)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: 'JsonValue::JsonValue(const JsonValue::Array &)': cannot convert argument 1 from 'JsonValue::Type' to 'const JsonValue::Array &'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: Reason: cannot convert from 'JsonValue::Type' to 'const JsonValue::Array'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\agent\simple_json.hpp(187): note: or       'JsonValue::JsonValue(std::string &&)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: 'JsonValue::JsonValue(std::string &&)': cannot convert argument 1 from 'JsonValue::Type' to 'std::string &&'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: Reason: cannot convert from 'JsonValue::Type' to 'std::string'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\agent\simple_json.hpp(186): note: or       'JsonValue::JsonValue(const std::string &)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: 'JsonValue::JsonValue(const std::string &)': cannot convert argument 1 from 'JsonValue::Type' to 'const std::string &'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: Reason: cannot convert from 'JsonValue::Type' to 'const std::string'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\agent\simple_json.hpp(185): note: or       'JsonValue::JsonValue(const char *)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: 'JsonValue::JsonValue(const char *)': cannot convert argument 1 from 'JsonValue::Type' to 'const char *'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: Conversion from integral type to pointer type requires reinterpret_cast, C-style cast or parenthesized function-style cast
+D:\rawrxd\src\agent\simple_json.hpp(184): note: or       'JsonValue::JsonValue(double)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: 'JsonValue::JsonValue(double)': cannot convert argument 1 from 'JsonValue::Type' to 'double'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: This conversion requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+D:\rawrxd\src\agent\simple_json.hpp(183): note: or       'JsonValue::JsonValue(size_t)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: 'JsonValue::JsonValue(size_t)': cannot convert argument 1 from 'JsonValue::Type' to 'size_t'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: This conversion requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+D:\rawrxd\src\agent\simple_json.hpp(182): note: or       'JsonValue::JsonValue(unsigned int)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: 'JsonValue::JsonValue(unsigned int)': cannot convert argument 1 from 'JsonValue::Type' to 'unsigned int'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: This conversion requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+D:\rawrxd\src\agent\simple_json.hpp(181): note: or       'JsonValue::JsonValue(int64_t)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: 'JsonValue::JsonValue(int64_t)': cannot convert argument 1 from 'JsonValue::Type' to 'int64_t'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: This conversion requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+D:\rawrxd\src\agent\simple_json.hpp(180): note: or       'JsonValue::JsonValue(int)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: 'JsonValue::JsonValue(int)': cannot convert argument 1 from 'JsonValue::Type' to 'int'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: This conversion requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+D:\rawrxd\src\agent\simple_json.hpp(179): note: or       'JsonValue::JsonValue(bool)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: 'JsonValue::JsonValue(bool)': cannot convert argument 1 from 'JsonValue::Type' to 'bool'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: This conversion requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+D:\rawrxd\src\agent\simple_json.hpp(178): note: or       'JsonValue::JsonValue(std::nullptr_t)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: 'JsonValue::JsonValue(std::nullptr_t)': cannot convert argument 1 from 'JsonValue::Type' to 'std::nullptr_t'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: nullptr can only be converted to pointer or handle types
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(744): note: while trying to match the argument list '(JsonValue::Type)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): error C2665: 'JsonValue::JsonValue': no overloaded function could convert all the argument types
+D:\rawrxd\src\agent\simple_json.hpp(609): note: could be 'JsonValue::JsonValue(JsonValue &&)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: 'JsonValue::JsonValue(JsonValue &&)': cannot convert argument 1 from 'JsonValue::Type' to 'JsonValue &&'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: Reason: cannot convert from 'JsonValue::Type' to 'JsonValue'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\agent\simple_json.hpp(609): note: or       'JsonValue::JsonValue(const JsonValue &)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: 'JsonValue::JsonValue(const JsonValue &)': cannot convert argument 1 from 'JsonValue::Type' to 'const JsonValue &'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: Reason: cannot convert from 'JsonValue::Type' to 'const JsonValue'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\agent\simple_json.hpp(191): note: or       'JsonValue::JsonValue(JsonValue::Object &&)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: 'JsonValue::JsonValue(JsonValue::Object &&)': cannot convert argument 1 from 'JsonValue::Type' to 'JsonValue::Object &&'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: Reason: cannot convert from 'JsonValue::Type' to 'JsonValue::Object'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\agent\simple_json.hpp(190): note: or       'JsonValue::JsonValue(const JsonValue::Object &)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: 'JsonValue::JsonValue(const JsonValue::Object &)': cannot convert argument 1 from 'JsonValue::Type' to 'const JsonValue::Object &'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: Reason: cannot convert from 'JsonValue::Type' to 'const JsonValue::Object'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\agent\simple_json.hpp(189): note: or       'JsonValue::JsonValue(JsonValue::Array &&)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: 'JsonValue::JsonValue(JsonValue::Array &&)': cannot convert argument 1 from 'JsonValue::Type' to 'JsonValue::Array &&'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: Reason: cannot convert from 'JsonValue::Type' to 'JsonValue::Array'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\agent\simple_json.hpp(188): note: or       'JsonValue::JsonValue(const JsonValue::Array &)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: 'JsonValue::JsonValue(const JsonValue::Array &)': cannot convert argument 1 from 'JsonValue::Type' to 'const JsonValue::Array &'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: Reason: cannot convert from 'JsonValue::Type' to 'const JsonValue::Array'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\agent\simple_json.hpp(187): note: or       'JsonValue::JsonValue(std::string &&)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: 'JsonValue::JsonValue(std::string &&)': cannot convert argument 1 from 'JsonValue::Type' to 'std::string &&'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: Reason: cannot convert from 'JsonValue::Type' to 'std::string'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\agent\simple_json.hpp(186): note: or       'JsonValue::JsonValue(const std::string &)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: 'JsonValue::JsonValue(const std::string &)': cannot convert argument 1 from 'JsonValue::Type' to 'const std::string &'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: Reason: cannot convert from 'JsonValue::Type' to 'const std::string'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\agent\simple_json.hpp(185): note: or       'JsonValue::JsonValue(const char *)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: 'JsonValue::JsonValue(const char *)': cannot convert argument 1 from 'JsonValue::Type' to 'const char *'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: Conversion from integral type to pointer type requires reinterpret_cast, C-style cast or parenthesized function-style cast
+D:\rawrxd\src\agent\simple_json.hpp(184): note: or       'JsonValue::JsonValue(double)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: 'JsonValue::JsonValue(double)': cannot convert argument 1 from 'JsonValue::Type' to 'double'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: This conversion requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+D:\rawrxd\src\agent\simple_json.hpp(183): note: or       'JsonValue::JsonValue(size_t)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: 'JsonValue::JsonValue(size_t)': cannot convert argument 1 from 'JsonValue::Type' to 'size_t'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: This conversion requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+D:\rawrxd\src\agent\simple_json.hpp(182): note: or       'JsonValue::JsonValue(unsigned int)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: 'JsonValue::JsonValue(unsigned int)': cannot convert argument 1 from 'JsonValue::Type' to 'unsigned int'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: This conversion requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+D:\rawrxd\src\agent\simple_json.hpp(181): note: or       'JsonValue::JsonValue(int64_t)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: 'JsonValue::JsonValue(int64_t)': cannot convert argument 1 from 'JsonValue::Type' to 'int64_t'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: This conversion requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+D:\rawrxd\src\agent\simple_json.hpp(180): note: or       'JsonValue::JsonValue(int)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: 'JsonValue::JsonValue(int)': cannot convert argument 1 from 'JsonValue::Type' to 'int'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: This conversion requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+D:\rawrxd\src\agent\simple_json.hpp(179): note: or       'JsonValue::JsonValue(bool)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: 'JsonValue::JsonValue(bool)': cannot convert argument 1 from 'JsonValue::Type' to 'bool'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: This conversion requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+D:\rawrxd\src\agent\simple_json.hpp(178): note: or       'JsonValue::JsonValue(std::nullptr_t)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: 'JsonValue::JsonValue(std::nullptr_t)': cannot convert argument 1 from 'JsonValue::Type' to 'std::nullptr_t'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: nullptr can only be converted to pointer or handle types
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(746): note: while trying to match the argument list '(JsonValue::Type)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): error C2665: 'JsonValue::JsonValue': no overloaded function could convert all the argument types
+D:\rawrxd\src\agent\simple_json.hpp(609): note: could be 'JsonValue::JsonValue(JsonValue &&)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: 'JsonValue::JsonValue(JsonValue &&)': cannot convert argument 1 from 'JsonValue::Type' to 'JsonValue &&'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: Reason: cannot convert from 'JsonValue::Type' to 'JsonValue'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\agent\simple_json.hpp(609): note: or       'JsonValue::JsonValue(const JsonValue &)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: 'JsonValue::JsonValue(const JsonValue &)': cannot convert argument 1 from 'JsonValue::Type' to 'const JsonValue &'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: Reason: cannot convert from 'JsonValue::Type' to 'const JsonValue'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\agent\simple_json.hpp(191): note: or       'JsonValue::JsonValue(JsonValue::Object &&)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: 'JsonValue::JsonValue(JsonValue::Object &&)': cannot convert argument 1 from 'JsonValue::Type' to 'JsonValue::Object &&'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: Reason: cannot convert from 'JsonValue::Type' to 'JsonValue::Object'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\agent\simple_json.hpp(190): note: or       'JsonValue::JsonValue(const JsonValue::Object &)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: 'JsonValue::JsonValue(const JsonValue::Object &)': cannot convert argument 1 from 'JsonValue::Type' to 'const JsonValue::Object &'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: Reason: cannot convert from 'JsonValue::Type' to 'const JsonValue::Object'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\agent\simple_json.hpp(189): note: or       'JsonValue::JsonValue(JsonValue::Array &&)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: 'JsonValue::JsonValue(JsonValue::Array &&)': cannot convert argument 1 from 'JsonValue::Type' to 'JsonValue::Array &&'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: Reason: cannot convert from 'JsonValue::Type' to 'JsonValue::Array'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\agent\simple_json.hpp(188): note: or       'JsonValue::JsonValue(const JsonValue::Array &)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: 'JsonValue::JsonValue(const JsonValue::Array &)': cannot convert argument 1 from 'JsonValue::Type' to 'const JsonValue::Array &'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: Reason: cannot convert from 'JsonValue::Type' to 'const JsonValue::Array'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\agent\simple_json.hpp(187): note: or       'JsonValue::JsonValue(std::string &&)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: 'JsonValue::JsonValue(std::string &&)': cannot convert argument 1 from 'JsonValue::Type' to 'std::string &&'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: Reason: cannot convert from 'JsonValue::Type' to 'std::string'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\agent\simple_json.hpp(186): note: or       'JsonValue::JsonValue(const std::string &)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: 'JsonValue::JsonValue(const std::string &)': cannot convert argument 1 from 'JsonValue::Type' to 'const std::string &'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: Reason: cannot convert from 'JsonValue::Type' to 'const std::string'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\agent\simple_json.hpp(185): note: or       'JsonValue::JsonValue(const char *)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: 'JsonValue::JsonValue(const char *)': cannot convert argument 1 from 'JsonValue::Type' to 'const char *'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: Conversion from integral type to pointer type requires reinterpret_cast, C-style cast or parenthesized function-style cast
+D:\rawrxd\src\agent\simple_json.hpp(184): note: or       'JsonValue::JsonValue(double)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: 'JsonValue::JsonValue(double)': cannot convert argument 1 from 'JsonValue::Type' to 'double'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: This conversion requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+D:\rawrxd\src\agent\simple_json.hpp(183): note: or       'JsonValue::JsonValue(size_t)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: 'JsonValue::JsonValue(size_t)': cannot convert argument 1 from 'JsonValue::Type' to 'size_t'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: This conversion requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+D:\rawrxd\src\agent\simple_json.hpp(182): note: or       'JsonValue::JsonValue(unsigned int)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: 'JsonValue::JsonValue(unsigned int)': cannot convert argument 1 from 'JsonValue::Type' to 'unsigned int'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: This conversion requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+D:\rawrxd\src\agent\simple_json.hpp(181): note: or       'JsonValue::JsonValue(int64_t)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: 'JsonValue::JsonValue(int64_t)': cannot convert argument 1 from 'JsonValue::Type' to 'int64_t'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: This conversion requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+D:\rawrxd\src\agent\simple_json.hpp(180): note: or       'JsonValue::JsonValue(int)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: 'JsonValue::JsonValue(int)': cannot convert argument 1 from 'JsonValue::Type' to 'int'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: This conversion requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+D:\rawrxd\src\agent\simple_json.hpp(179): note: or       'JsonValue::JsonValue(bool)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: 'JsonValue::JsonValue(bool)': cannot convert argument 1 from 'JsonValue::Type' to 'bool'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: This conversion requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+D:\rawrxd\src\agent\simple_json.hpp(178): note: or       'JsonValue::JsonValue(std::nullptr_t)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: 'JsonValue::JsonValue(std::nullptr_t)': cannot convert argument 1 from 'JsonValue::Type' to 'std::nullptr_t'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: nullptr can only be converted to pointer or handle types
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(752): note: while trying to match the argument list '(JsonValue::Type)'
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(758): error C2039: 'dump': is not a member of 'JsonValue'
+D:\rawrxd\src\agent\simple_json.hpp(160): note: see declaration of 'JsonValue'
+[23/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\agent_self_healing_orchestrator.cpp.obj
+D:\rawrxd\src\agent\agent_self_healing_orchestrator.cpp(12): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\agent\agent_self_healing_orchestrator.cpp(12): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[24/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\workspace_reasoning_profiles.cpp.obj
+[25/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\vsix_loader_win32.cpp.obj
+[26/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\unity_engine_integration.cpp.obj
+[27/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\action_executor.cpp.obj
+D:\rawrxd\src\agent\action_executor.hpp(31): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\agent\action_executor.hpp(31): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[28/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\agent_self_repair.cpp.obj
+D:\rawrxd\src\agent\agent_self_repair.cpp(12): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\agent\agent_self_repair.cpp(12): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[29/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\engine_manager.cpp.obj
+[30/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\DiskRecoveryAgent.cpp.obj
+D:\rawrxd\src\agent\DiskRecoveryAgent.h(22): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\agent\DiskRecoveryAgent.h(22): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[31/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\agentic_failure_detector_new.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/agent/agentic_failure_detector_new.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_ENABLE_OLLAMA=0 -DRAWRXD_PURE_SIDEBAR=1 -DRAWRXD_QT_ELIMINATED=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_SOVEREIGN_ENGINES=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\include -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\agent\agentic_failure_detector_new.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\agent\agentic_failure_detector_new.cpp
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(14): error C2084: function 'AgenticFailureDetector::~AgenticFailureDetector(void)' already has a body
+D:\rawrxd\src\agent\agentic_failure_detector.hpp(36): note: see previous definition of 'AgenticFailureDetector::~AgenticFailureDetector'
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(108): error C2511: 'bool AgenticFailureDetector::isRefusal(const std::string &)': overloaded member function not found in 'AgenticFailureDetector'
+D:\rawrxd\src\agent\agentic_failure_detector.hpp(33): note: see declaration of 'AgenticFailureDetector'
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(109): error C3312: no callable 'begin' function found for type 'unknown'
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(109): error C3312: no callable 'end' function found for type 'unknown'
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(109): error C2530: 'pattern': references must be initialized
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(109): error C3531: 'pattern': a symbol whose type contains 'auto' must have an initializer
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(109): error C2143: syntax error: missing ';' before ':'
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(109): error C2597: illegal reference to non-static member 'AgenticFailureDetector::m_refusalPatterns'
+D:\rawrxd\src\agent\agentic_failure_detector.hpp(91): note: see declaration of 'AgenticFailureDetector::m_refusalPatterns'
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(109): error C2143: syntax error: missing ';' before ')'
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(109): error C2451: a conditional expression of type 'unknown' is not valid
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(109): note: ill-formed reference to a non-static member
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(115): error C2511: 'bool AgenticFailureDetector::isSafetyViolation(const std::string &)': overloaded member function not found in 'AgenticFailureDetector'
+D:\rawrxd\src\agent\agentic_failure_detector.hpp(33): note: see declaration of 'AgenticFailureDetector'
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(116): error C3312: no callable 'begin' function found for type 'unknown'
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(116): error C3312: no callable 'end' function found for type 'unknown'
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(116): error C2530: 'pattern': references must be initialized
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(116): error C3531: 'pattern': a symbol whose type contains 'auto' must have an initializer
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(116): error C2143: syntax error: missing ';' before ':'
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(116): error C2597: illegal reference to non-static member 'AgenticFailureDetector::m_safetyPatterns'
+D:\rawrxd\src\agent\agentic_failure_detector.hpp(94): note: see declaration of 'AgenticFailureDetector::m_safetyPatterns'
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(116): error C2143: syntax error: missing ';' before ')'
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(116): error C2451: a conditional expression of type 'unknown' is not valid
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(116): note: ill-formed reference to a non-static member
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(122): error C2511: 'bool AgenticFailureDetector::isTokenLimitExceeded(const std::string &)': overloaded member function not found in 'AgenticFailureDetector'
+D:\rawrxd\src\agent\agentic_failure_detector.hpp(33): note: see declaration of 'AgenticFailureDetector'
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(133): error C2511: 'bool AgenticFailureDetector::isTimeout(const std::string &)': overloaded member function not found in 'AgenticFailureDetector'
+D:\rawrxd\src\agent\agentic_failure_detector.hpp(33): note: see declaration of 'AgenticFailureDetector'
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(134): error C3312: no callable 'begin' function found for type 'unknown'
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(134): error C3312: no callable 'end' function found for type 'unknown'
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(134): error C2530: 'pattern': references must be initialized
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(134): error C3531: 'pattern': a symbol whose type contains 'auto' must have an initializer
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(134): error C2143: syntax error: missing ';' before ':'
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(134): error C2597: illegal reference to non-static member 'AgenticFailureDetector::m_timeoutIndicators'
+D:\rawrxd\src\agent\agentic_failure_detector.hpp(95): note: see declaration of 'AgenticFailureDetector::m_timeoutIndicators'
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(134): error C2143: syntax error: missing ';' before ')'
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(134): error C2451: a conditional expression of type 'unknown' is not valid
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(134): note: ill-formed reference to a non-static member
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(140): error C2511: 'bool AgenticFailureDetector::isResourceExhausted(const std::string &)': overloaded member function not found in 'AgenticFailureDetector'
+D:\rawrxd\src\agent\agentic_failure_detector.hpp(33): note: see declaration of 'AgenticFailureDetector'
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(141): error C3312: no callable 'begin' function found for type 'unknown'
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(141): error C3312: no callable 'end' function found for type 'unknown'
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(141): error C2530: 'pattern': references must be initialized
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(141): error C3531: 'pattern': a symbol whose type contains 'auto' must have an initializer
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(141): error C2143: syntax error: missing ';' before ':'
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(141): error C2597: illegal reference to non-static member 'AgenticFailureDetector::m_resourceExhaustionIndicators'
+D:\rawrxd\src\agent\agentic_failure_detector.hpp(96): note: see declaration of 'AgenticFailureDetector::m_resourceExhaustionIndicators'
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(141): error C2143: syntax error: missing ';' before ')'
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(141): error C2451: a conditional expression of type 'unknown' is not valid
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(141): note: ill-formed reference to a non-static member
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(167): error C2838: 'ResourceExhaustion': illegal qualified name in member declaration
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(167): error C2065: 'ResourceExhaustion': undeclared identifier
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(167): error C2131: expression did not evaluate to a constant
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(167): note: a non-constant (sub-)expression was encountered
+D:\rawrxd\src\agent\agentic_failure_detector_new.cpp(167): error C2051: case expression not constant
+[32/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\agentic_puppeteer.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/agent/agentic_puppeteer.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_ENABLE_OLLAMA=0 -DRAWRXD_PURE_SIDEBAR=1 -DRAWRXD_QT_ELIMINATED=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_SOVEREIGN_ENGINES=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\include -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\agent\agentic_puppeteer.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\agent\agentic_puppeteer.cpp
+D:\rawrxd\src\agent\agentic_puppeteer.cpp(425): error C2660: 'nlohmann::json::parse': function does not take 3 arguments
+D:\rawrxd\include\nlohmann/json.hpp(394): note: see declaration of 'nlohmann::json::parse'
+D:\rawrxd\src\agent\agentic_puppeteer.cpp(425): note: while trying to match the argument list '(const std::string, nullptr, bool)'
+D:\rawrxd\src\agent\agentic_puppeteer.cpp(427): error C2039: 'is_discarded': is not a member of 'nlohmann::json'
+D:\rawrxd\include\nlohmann/json.hpp(23): note: see declaration of 'nlohmann::json'
+D:\rawrxd\src\agent\agentic_puppeteer.cpp(443): error C2660: 'nlohmann::json::parse': function does not take 3 arguments
+D:\rawrxd\include\nlohmann/json.hpp(394): note: see declaration of 'nlohmann::json::parse'
+D:\rawrxd\src\agent\agentic_puppeteer.cpp(443): note: while trying to match the argument list '(std::string, nullptr, bool)'
+D:\rawrxd\src\agent\agentic_puppeteer.cpp(444): error C2039: 'is_discarded': is not a member of 'nlohmann::json'
+D:\rawrxd\include\nlohmann/json.hpp(23): note: see declaration of 'nlohmann::json'
+[33/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\agentic_copilot_bridge.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/agent/agentic_copilot_bridge.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_ENABLE_OLLAMA=0 -DRAWRXD_PURE_SIDEBAR=1 -DRAWRXD_QT_ELIMINATED=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_SOVEREIGN_ENGINES=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\include -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\agent\agentic_copilot_bridge.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\agent\agentic_copilot_bridge.cpp
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(30): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(30): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(33): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(33): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(34): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(34): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(35): error C3646: 'executeAgentTask': unknown override specifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(35): error C2059: syntax error: '('
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(35): error C2238: unexpected token(s) preceding ';'
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(36): error C3646: 'planMultiStepTask': unknown override specifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(36): error C2059: syntax error: '('
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(36): error C2238: unexpected token(s) preceding ';'
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(37): error C3646: 'transformCode': unknown override specifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(37): error C2059: syntax error: '('
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(37): error C2238: unexpected token(s) preceding ';'
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(42): error C3646: 'trainModel': unknown override specifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(42): error C2059: syntax error: '('
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(42): error C2238: unexpected token(s) preceding ';'
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(58): error C2065: 'JsonObject': undeclared identifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(58): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(58): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(58): error C2143: syntax error: missing ')' before '>'
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(71): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(71): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(74): error C3646: 'buildExecutionContext': unknown override specifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(74): error C2059: syntax error: '('
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(74): error C2238: unexpected token(s) preceding ';'
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(75): error C3646: 'buildCodeContext': unknown override specifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(75): error C2059: syntax error: '('
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(75): error C2238: unexpected token(s) preceding ';'
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(76): error C3646: 'buildFileContext': unknown override specifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(76): error C2059: syntax error: '('
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(76): error C2238: unexpected token(s) preceding ';'
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(84): error C3646: 'm_conversationHistory': unknown override specifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(84): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(72): error C2065: 'JsonObject': undeclared identifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(72): error C2146: syntax error: missing ';' before identifier 'params'
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(72): error C2065: 'params': undeclared identifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(73): error C2065: 'params': undeclared identifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(74): error C2065: 'params': undeclared identifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(75): error C2065: 'params': undeclared identifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(75): error C2065: 'JsonArray': undeclared identifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(77): error C2027: use of undefined type 'AgenticEngine'
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(14): note: see declaration of 'AgenticEngine'
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(77): error C2065: 'params': undeclared identifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(222): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(222): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(242): error C2065: 'm_conversationHistory': undeclared identifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(242): error C2064: term does not evaluate to a function taking 1 arguments
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(245): error C2146: syntax error: missing ';' before identifier 'fullContext'
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(245): error C2065: 'fullContext': undeclared identifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(245): error C3861: 'buildExecutionContext': identifier not found
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(246): error C2065: 'context': undeclared identifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(246): error C3536: 'it': cannot be used before it is initialized
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(246): error C2065: 'context': undeclared identifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(247): error C2065: 'fullContext': undeclared identifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(247): error C7732: expected an expression before ']'
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(255): error C2065: 'm_conversationHistory': undeclared identifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(255): error C2530: 'msg': references must be initialized
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(255): error C3531: 'msg': a symbol whose type contains 'auto' must have an initializer
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(255): error C2143: syntax error: missing ';' before ':'
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(255): error C2143: syntax error: missing ';' before ')'
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(256): error C2146: syntax error: missing ';' before identifier 'msgObj'
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(256): error C2065: 'msgObj': undeclared identifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(257): error C2065: 'msgObj': undeclared identifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(258): error C2065: 'msgObj': undeclared identifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(263): error C2146: syntax error: missing ';' before identifier 'params'
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(263): error C2065: 'params': undeclared identifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(264): error C2065: 'params': undeclared identifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(265): error C2065: 'params': undeclared identifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(266): error C2065: 'params': undeclared identifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(266): error C2065: 'fullContext': undeclared identifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(268): error C2027: use of undefined type 'AgenticEngine'
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(14): note: see declaration of 'AgenticEngine'
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(268): error C2065: 'params': undeclared identifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(280): error C2065: 'm_conversationHistory': undeclared identifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(280): error C2064: term does not evaluate to a function taking 1 arguments
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(285): error C2065: 'm_conversationHistory': undeclared identifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(284): warning C4473: 'fprintf' : not enough arguments passed for format string
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(284): note: placeholders and their parameters expect 3 variadic arguments, but 2 were provided
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(284): note: the missing variadic argument 3 is required by format string '%zu'
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(297): error C2660: 'AgenticCopilotBridge::askAgent': function does not take 1 arguments
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(222): note: see declaration of 'AgenticCopilotBridge::askAgent'
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(297): note: while trying to match the argument list '(const std::string)'
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(320): error C2065: 'JsonObject': undeclared identifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(320): error C2146: syntax error: missing ';' before identifier 'context'
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(320): error C2065: 'context': undeclared identifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(320): error C3861: 'buildExecutionContext': identifier not found
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(323): error C2065: 'context': undeclared identifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(340): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(340): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(349): error C2065: 'context': undeclared identifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(349): error C2593: 'operator =' is ambiguous
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(1503): note: could be 'std::basic_string<char,std::char_traits<char>,std::allocator<char>> &std::basic_string<char,std::char_traits<char>,std::allocator<char>>::operator =(const _Elem)'
+        with
+        [
+            _Elem=char
+        ]
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(1495): note: or       'std::basic_string<char,std::char_traits<char>,std::allocator<char>> &std::basic_string<char,std::char_traits<char>,std::allocator<char>>::operator =(const _Elem *const )'
+        with
+        [
+            _Elem=char
+        ]
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(1444): note: or       'std::basic_string<char,std::char_traits<char>,std::allocator<char>> &std::basic_string<char,std::char_traits<char>,std::allocator<char>>::operator =(const std::basic_string<char,std::char_traits<char>,std::allocator<char>> &)'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(1395): note: or       'std::basic_string<char,std::char_traits<char>,std::allocator<char>> &std::basic_string<char,std::char_traits<char>,std::allocator<char>>::operator =(std::initializer_list<_Elem>)'
+        with
+        [
+            _Elem=char
+        ]
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(1274): note: or       'std::basic_string<char,std::char_traits<char>,std::allocator<char>> &std::basic_string<char,std::char_traits<char>,std::allocator<char>>::operator =(std::basic_string<char,std::char_traits<char>,std::allocator<char>> &&) noexcept'
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(349): note: while trying to match the argument list '(std::string, <error>)'
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(356): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(356): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(372): error C2065: 'context': undeclared identifier
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(372): error C2593: 'operator =' is ambiguous
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(1503): note: could be 'std::basic_string<char,std::char_traits<char>,std::allocator<char>> &std::basic_string<char,std::char_traits<char>,std::allocator<char>>::operator =(const _Elem)'
+        with
+        [
+            _Elem=char
+        ]
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(1495): note: or       'std::basic_string<char,std::char_traits<char>,std::allocator<char>> &std::basic_string<char,std::char_traits<char>,std::allocator<char>>::operator =(const _Elem *const )'
+        with
+        [
+            _Elem=char
+        ]
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(1444): note: or       'std::basic_string<char,std::char_traits<char>,std::allocator<char>> &std::basic_string<char,std::char_traits<char>,std::allocator<char>>::operator =(const std::basic_string<char,std::char_traits<char>,std::allocator<char>> &)'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(1395): note: or       'std::basic_string<char,std::char_traits<char>,std::allocator<char>> &std::basic_string<char,std::char_traits<char>,std::allocator<char>>::operator =(std::initializer_list<_Elem>)'
+        with
+        [
+            _Elem=char
+        ]
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(1274): note: or       'std::basic_string<char,std::char_traits<char>,std::allocator<char>> &std::basic_string<char,std::char_traits<char>,std::allocator<char>>::operator =(std::basic_string<char,std::char_traits<char>,std::allocator<char>> &&) noexcept'
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(372): note: while trying to match the argument list '(std::string, <error>)'
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(379): error C2039: 'executeAgentTask': is not a member of 'AgenticCopilotBridge'
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(20): note: see declaration of 'AgenticCopilotBridge'
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(379): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(379): error C2146: syntax error: missing ';' before identifier 'executeAgentTask'
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(379): error C2143: syntax error: missing ';' before '{'
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(379): error C2447: '{': missing function header (old-style formal list?)
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(416): error C2039: 'planMultiStepTask': is not a member of 'AgenticCopilotBridge'
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(20): note: see declaration of 'AgenticCopilotBridge'
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(416): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(416): error C2146: syntax error: missing ';' before identifier 'planMultiStepTask'
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(416): error C2143: syntax error: missing ';' before '{'
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(416): error C2447: '{': missing function header (old-style formal list?)
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(454): error C2039: 'transformCode': is not a member of 'AgenticCopilotBridge'
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(20): note: see declaration of 'AgenticCopilotBridge'
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(454): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(454): error C2086: 'int JsonObject': redefinition
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(379): note: see declaration of 'JsonObject'
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(454): error C2146: syntax error: missing ';' before identifier 'transformCode'
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(454): error C2143: syntax error: missing ';' before '{'
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(454): error C2447: '{': missing function header (old-style formal list?)
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(634): error C2027: use of undefined type 'AgenticEngine'
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(14): note: see declaration of 'AgenticEngine'
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(635): error C2027: use of undefined type 'AgenticEngine'
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(14): note: see declaration of 'AgenticEngine'
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(636): error C2027: use of undefined type 'AgenticEngine'
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(14): note: see declaration of 'AgenticEngine'
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(639): error C2027: use of undefined type 'AgenticEngine'
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(14): note: see declaration of 'AgenticEngine'
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(643): error C2027: use of undefined type 'AgenticEngine'
+D:\rawrxd\src\agent\agentic_copilot_bridge.hpp(14): note: see declaration of 'AgenticEngine'
+D:\rawrxd\src\agent\agentic_copilot_bridge.cpp(643): fatal error C1003: error count exceeds 100; stopping compilation
+[34/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\agentic_hotpatch_orchestrator.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[35/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\agentic_failure_detector.cpp.obj
+[36/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\vector_index.cpp.obj
+[37/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\agentic_deep_thinking_engine.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/agent/agentic_deep_thinking_engine.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_ENABLE_OLLAMA=0 -DRAWRXD_PURE_SIDEBAR=1 -DRAWRXD_QT_ELIMINATED=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_SOVEREIGN_ENGINES=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\include -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\agent\agentic_deep_thinking_engine.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp
+D:\rawrxd\src\agent\telemetry_collector.hpp(25): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\agent\telemetry_collector.hpp(25): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\agent\telemetry_collector.hpp(25): error C2143: syntax error: missing ')' before '{'
+D:\rawrxd\src\agent\telemetry_collector.hpp(25): error C2059: syntax error: ')'
+D:\rawrxd\src\agent\telemetry_collector.hpp(29): error C3646: 'getAllTelemetryData': unknown override specifier
+D:\rawrxd\src\agent\telemetry_collector.hpp(29): error C2059: syntax error: '('
+D:\rawrxd\src\agent\telemetry_collector.hpp(29): error C2238: unexpected token(s) preceding ';'
+D:\rawrxd\src\agent\telemetry_collector.hpp(53): error C2065: 'JsonObject': undeclared identifier
+D:\rawrxd\src\agent\telemetry_collector.hpp(53): error C2923: 'std::vector': 'JsonObject' is not a valid template type argument for parameter '_Ty'
+D:\rawrxd\src\agent\telemetry_collector.hpp(53): note: see declaration of 'JsonObject'
+D:\rawrxd\src\agent\telemetry_collector.hpp(53): error C2976: 'std::vector': too few template arguments
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\agent\telemetry_collector.hpp(53): error C2955: 'std::vector': use of class template requires template argument list
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\agent\telemetry_collector.hpp(56): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\agent\telemetry_collector.hpp(56): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(62): error C2065: 'ScopedMeasurement': undeclared identifier
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(62): error C2146: syntax error: missing ';' before identifier 'perf'
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(62): error C2653: 'KernelSlot': is not a class or namespace name
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(62): error C2065: 'TotalInference': undeclared identifier
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(62): error C3861: 'perf': identifier not found
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(72): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\agent\telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(72): note: while trying to match the argument list '(const char [20])'
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(124): error C2296: '<<': not valid as left operand has type 'const char [39]'
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(124): error C2297: '<<': not valid as right operand has type 'const char *'
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(124): error C2143: syntax error: missing ')' before ';'
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(124): error C2672: 'Logger::error': no matching overloaded function found
+D:\rawrxd\include\logging/logger.h(84): note: could be 'void Logger::error(const std::string &,Args...)'
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(545): error C2065: 'ScopedMeasurement': undeclared identifier
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(545): error C2146: syntax error: missing ';' before identifier 'perf'
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(545): error C2653: 'KernelSlot': is not a class or namespace name
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(545): error C2065: 'TotalInference': undeclared identifier
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(545): error C3861: 'perf': identifier not found
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(802): error C2065: 'ScopedMeasurement': undeclared identifier
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(802): error C2146: syntax error: missing ';' before identifier 'perf'
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(802): error C2653: 'KernelSlot': is not a class or namespace name
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(802): error C2065: 'TotalInference': undeclared identifier
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(802): error C3861: 'perf': identifier not found
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(872): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\agent\telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(872): note: while trying to match the argument list '(const char [30])'
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1077): error C2065: 'ScopedMeasurement': undeclared identifier
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1077): error C2146: syntax error: missing ';' before identifier 'perf'
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1077): error C2653: 'KernelSlot': is not a class or namespace name
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1077): error C2065: 'TotalInference': undeclared identifier
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1077): error C3861: 'perf': identifier not found
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1224): error C2065: 'ScopedMeasurement': undeclared identifier
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1224): error C2146: syntax error: missing ';' before identifier 'perf'
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1224): error C2653: 'KernelSlot': is not a class or namespace name
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1224): error C2065: 'TotalInference': undeclared identifier
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1224): error C3861: 'perf': identifier not found
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1292): error C2065: 'ScopedMeasurement': undeclared identifier
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1292): error C2146: syntax error: missing ';' before identifier 'perf'
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1292): error C2653: 'KernelSlot': is not a class or namespace name
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1292): error C2065: 'TotalInference': undeclared identifier
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1292): error C3861: 'perf': identifier not found
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1463): error C2065: 'ScopedMeasurement': undeclared identifier
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1463): error C2146: syntax error: missing ';' before identifier 'perf'
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1463): error C2653: 'KernelSlot': is not a class or namespace name
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1463): error C2065: 'TotalInference': undeclared identifier
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1463): error C3861: 'perf': identifier not found
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1730): error C2065: 'ScopedMeasurement': undeclared identifier
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1730): error C2146: syntax error: missing ';' before identifier 'perf'
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1730): error C2653: 'KernelSlot': is not a class or namespace name
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1730): error C2065: 'TotalInference': undeclared identifier
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1730): error C3861: 'perf': identifier not found
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1795): error C2065: 'ScopedMeasurement': undeclared identifier
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1795): error C2146: syntax error: missing ';' before identifier 'perf'
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1795): error C2653: 'KernelSlot': is not a class or namespace name
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1795): error C2065: 'TotalInference': undeclared identifier
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1795): error C3861: 'perf': identifier not found
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1867): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\agent\telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1867): note: while trying to match the argument list '(const char [25])'
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1944): error C2296: '<<': not valid as left operand has type 'const char [42]'
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1944): error C2297: '<<': not valid as right operand has type 'const char *'
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1944): error C2143: syntax error: missing ')' before ';'
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(1944): error C2672: 'Logger::error': no matching overloaded function found
+D:\rawrxd\include\logging/logger.h(84): note: could be 'void Logger::error(const std::string &,Args...)'
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(2542): error C2760: syntax error: ';' was unexpected here; expected ')'
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(2543): error C3878: syntax error: unexpected token 'std' following 'expression'
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(2543): note: parsing resumes here
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(2543): error C2760: syntax error: ')' was unexpected here; expected ';'
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(2543): error C3878: syntax error: unexpected token ')' following 'expression-statement'
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(2549): error C2059: syntax error: ')'
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(2623): error C2660: 'TelemetryCollector::trackFeatureUsage': function does not take 1 arguments
+D:\rawrxd\src\agent\telemetry_collector.hpp(25): note: see declaration of 'TelemetryCollector::trackFeatureUsage'
+D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp(2623): note: while trying to match the argument list '(const char [26])'
+[38/78] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\unreal_engine_integration.cpp.obj
+ninja: build stopped: subcommand failed.

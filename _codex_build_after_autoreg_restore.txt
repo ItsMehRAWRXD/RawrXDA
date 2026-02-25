@@ -1,0 +1,82 @@
+[1/155] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\crash_containment.cpp.obj
+D:\rawrxd\src\core\crash_containment.cpp(10): warning C4005: 'NOMINMAX': macro redefinition
+D:\rawrxd\src\core\crash_containment.cpp(10): note: 'NOMINMAX' previously declared on the command line
+D:\rawrxd\src\core\crash_containment.cpp(147): warning C4477: 'snprintf' : format string '%d' requires an argument of type 'int', but variadic argument 24 has type 'unsigned __int64'
+D:\rawrxd\src\core\crash_containment.cpp(147): note: consider using '%lld' in the format string
+D:\rawrxd\src\core\crash_containment.cpp(147): note: consider using '%Id' in the format string
+D:\rawrxd\src\core\crash_containment.cpp(147): note: consider using '%I64d' in the format string
+D:\rawrxd\src\core\crash_containment.cpp(147): warning C4477: 'snprintf' : format string '%u' requires an argument of type 'unsigned int', but variadic argument 25 has type 'unsigned __int64'
+D:\rawrxd\src\core\crash_containment.cpp(147): note: consider using '%llu' in the format string
+D:\rawrxd\src\core\crash_containment.cpp(147): note: consider using '%Iu' in the format string
+D:\rawrxd\src\core\crash_containment.cpp(147): note: consider using '%I64u' in the format string
+D:\rawrxd\src\core\crash_containment.cpp(147): warning C4477: 'snprintf' : format string '%s' requires an argument of type 'char *', but variadic argument 26 has type 'const int32_t'
+D:\rawrxd\src\core\crash_containment.cpp(147): warning C4313: 'snprintf': '%s' in format string conflicts with argument 26 of type 'const int32_t'
+D:\rawrxd\src\core\crash_containment.cpp(147): warning C4477: 'snprintf' : format string '%s' requires an argument of type 'char *', but variadic argument 27 has type 'const uint32_t'
+D:\rawrxd\src\core\crash_containment.cpp(147): warning C4313: 'snprintf': '%s' in format string conflicts with argument 27 of type 'const uint32_t'
+[2/155] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\cursor_github_parity_bridge.cpp.obj
+[3/155] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\convergence_stress_harness.cpp.obj
+D:\rawrxd\src\core\convergence_stress_harness.cpp(15): warning C4005: 'NOMINMAX': macro redefinition
+D:\rawrxd\src\core\convergence_stress_harness.cpp(15): note: 'NOMINMAX' previously declared on the command line
+[4/155] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\cross_run_tensor_cache.cpp.obj
+D:\rawrxd\src\core\cross_run_tensor_cache.cpp(9): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\cross_run_tensor_cache.cpp(9): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[5/155] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\convergence_controller.cpp.obj
+D:\rawrxd\src\core\convergence_controller.cpp(9): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\convergence_controller.cpp(9): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[6/155] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\auto_repair_orchestrator.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/core/auto_repair_orchestrator.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_ENABLE_OLLAMA=0 -DRAWRXD_PURE_SIDEBAR=1 -DRAWRXD_QT_ELIMINATED=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_SOVEREIGN_ENGINES=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\include -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\core\auto_repair_orchestrator.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\core\auto_repair_orchestrator.cpp
+D:\rawrxd\src\core\auto_repair_orchestrator.hpp(35): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\auto_repair_orchestrator.hpp(35): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+D:\rawrxd\src\core\auto_repair_orchestrator.cpp(449): error C2440: '?': cannot convert from 'std::string' to 'bool'
+D:\rawrxd\src\core\auto_repair_orchestrator.cpp(449): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\core\auto_repair_orchestrator.cpp(448): warning C4473: 'snprintf' : not enough arguments passed for format string
+D:\rawrxd\src\core\auto_repair_orchestrator.cpp(448): note: placeholders and their parameters expect 1 variadic arguments, but 0 were provided
+D:\rawrxd\src\core\auto_repair_orchestrator.cpp(448): note: the missing variadic argument 1 is required by format string '%s'
+[7/155] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\camellia256_bridge.cpp.obj
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[8/155] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\auto_feature_registry.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/core/auto_feature_registry.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_ENABLE_OLLAMA=0 -DRAWRXD_PURE_SIDEBAR=1 -DRAWRXD_QT_ELIMINATED=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_SOVEREIGN_ENGINES=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\include -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\core\auto_feature_registry.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\core\auto_feature_registry.cpp
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+D:\rawrxd\src\core\auto_feature_registry.cpp(51): fatal error C1083: Cannot open include file: '../lsp/hotpatch_symbol_provider.hpp': No such file or directory
+[9/155] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\chain_of_thought_engine.cpp.obj
+[10/155] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\dynamic_prompt_engine_glue.cpp.obj
+[11/155] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\command_id_validator.cpp.obj
+[12/155] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\agentic_task_graph.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/core/agentic_task_graph.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_ENABLE_OLLAMA=0 -DRAWRXD_PURE_SIDEBAR=1 -DRAWRXD_QT_ELIMINATED=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_SOVEREIGN_ENGINES=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\include -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\core\agentic_task_graph.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\core\agentic_task_graph.cpp
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sentinel_watchdog.hpp(40): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+D:\rawrxd\src\core\agentic_task_graph.cpp(1823): error C2664: 'RawrXD::Agentic::TaskResult RawrXD::Agentic::TaskResult::error(const char *,int)': cannot convert argument 1 from 'std::string' to 'const char *'
+D:\rawrxd\src\core\agentic_task_graph.cpp(1823): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\core\agentic_task_graph.hpp(58): note: see declaration of 'RawrXD::Agentic::TaskResult::error'
+D:\rawrxd\src\core\agentic_task_graph.cpp(1823): note: while trying to match the argument list '(std::string, int)'
+D:\rawrxd\src\core\agentic_task_graph.cpp(1850): error C2664: 'RawrXD::Agentic::TaskResult RawrXD::Agentic::TaskResult::error(const char *,int)': cannot convert argument 1 from 'std::string' to 'const char *'
+D:\rawrxd\src\core\agentic_task_graph.cpp(1850): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\core\agentic_task_graph.hpp(58): note: see declaration of 'RawrXD::Agentic::TaskResult::error'
+D:\rawrxd\src\core\agentic_task_graph.cpp(1850): note: while trying to match the argument list '(std::string, int)'
+D:\rawrxd\src\core\agentic_task_graph.cpp(1870): error C2664: 'RawrXD::Agentic::TaskResult RawrXD::Agentic::TaskResult::error(const char *,int)': cannot convert argument 1 from 'std::string' to 'const char *'
+D:\rawrxd\src\core\agentic_task_graph.cpp(1870): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\core\agentic_task_graph.hpp(58): note: see declaration of 'RawrXD::Agentic::TaskResult::error'
+D:\rawrxd\src\core\agentic_task_graph.cpp(1870): note: while trying to match the argument list '(std::string, int)'
+[13/155] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\cerebras_wse_accelerator.cpp.obj
+D:\rawrxd\src\core\cerebras_wse_accelerator.h(38): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\cerebras_wse_accelerator.h(38): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[14/155] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\confidence_gate.cpp.obj
+[15/155] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\deterministic_scheduler.cpp.obj
+[16/155] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\cot_fallback_system.cpp.obj
+[17/155] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\deterministic_swarm.cpp.obj
+[18/155] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\deterministic_replay.cpp.obj
+[19/155] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\code_linter.cpp.obj
+[20/155] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\dml_streaming_integration.cpp.obj
+[21/155] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\directml_compute.cpp.obj
+D:\rawrxd\src\core\directml_compute.cpp(21): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\directml_compute.cpp(21): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+D:\rawrxd\src\core\directml_compute.cpp(22): warning C4005: 'NOMINMAX': macro redefinition
+D:\rawrxd\src\core\directml_compute.cpp(22): note: 'NOMINMAX' previously declared on the command line
+[22/155] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\distributed_pipeline_orchestrator.cpp.obj
+[23/155] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\embedding_engine.cpp.obj
+ninja: build stopped: subcommand failed.

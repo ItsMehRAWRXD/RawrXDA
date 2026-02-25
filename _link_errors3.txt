@@ -1,0 +1,187 @@
+Swarm_Init
+SwarmCoord_Init
+public: struct UnifiedResult __cdecl UnifiedHotpatchManager::pt_restore_snapshot(unsigned int)
+public: struct UnifiedResult __cdecl UnifiedHotpatchManager::add_server_patch(struct ServerHotpatch *)
+public: struct UnifiedResult __cdecl UnifiedHotpatchManager::apply_byte_patch(char const *,struct BytePatch const &)
+public: struct UnifiedResult __cdecl UnifiedHotpatchManager::apply_memory_patch(void *,unsigned __int64,void const *)
+public: static class UnifiedHotpatchManager & __cdecl UnifiedHotpatchManager::instance(void)
+asm_snapshot_discard
+asm_hotpatch_flush_icache
+asm_snapshot_verify
+public: struct UnifiedHotpatchManager::Stats const & __cdecl UnifiedHotpatchManager::getStats(void)const 
+asm_snapshot_restore
+find_pattern_asm
+asm_camellia256_encrypt_block
+asm_camellia256_decrypt_ctr
+asm_camellia256_self_test
+asm_camellia256_init
+asm_camellia256_shutdown
+asm_camellia256_get_hmac_key
+asm_camellia256_decrypt_block
+asm_camellia256_decrypt_file
+asm_camellia256_get_status
+asm_camellia256_set_key
+asm_camellia256_encrypt_file
+asm_camellia256_encrypt_ctr
+asm_camellia256_auth_decrypt_file
+asm_camellia256_auth_encrypt_file
+KQuant_DequantizeQ2_K
+asm_perf_get_slot_count
+asm_watchdog_init
+asm_perf_init
+asm_watchdog_verify
+asm_perf_read_slot
+asm_kquant_cpuid_check
+KQuant_DequantizeQ3_K
+KQuant_Dispatch
+asm_perf_reset_slot
+asm_camellia256_auth_encrypt_buf
+KQuant_DequantizeF16
+asm_camellia256_auth_decrypt_buf
+asm_perf_get_table_base
+asm_watchdog_get_status
+asm_watchdog_get_baseline
+asm_perf_begin
+asm_watchdog_shutdown
+asm_perf_end
+asm_dml_rope_rotate_fp32
+PromptGen_AnalyzeContext
+g_EnterpriseFeatures
+asm_lsp_bridge_init
+asm_spengine_cpu_optimize
+MC_GapBuffer_LineCount
+MC_GapBuffer_Insert
+MC_GapBuffer_Delete
+MC_GapBuffer_Init
+MC_GapBuffer_Length
+MC_GapBuffer_Destroy
+MC_GapBuffer_GetLine
+FlashAttention_Init
+FlashAttention_GetTileConfig
+FlashAttention_Forward
+g_FlashAttnTiles
+g_FlashAttnCalls
+asm_dml_dequant_q4_0_to_fp32
+asm_dml_prefetch_tensor_block
+asm_dml_dequant_q8_0_to_fp32
+asm_lsp_bridge_set_weights
+asm_orchestrator_register_hook
+asm_gguf_loader_init
+asm_quadbuf_push_token
+asm_spengine_init
+asm_spengine_quant_switch_adaptive
+asm_quadbuf_render_frame
+asm_quadbuf_shutdown
+asm_gguf_loader_lookup
+asm_spengine_rollback
+asm_lsp_bridge_shutdown
+asm_orchestrator_init
+asm_spengine_register
+asm_orchestrator_shutdown
+asm_orchestrator_queue_async
+asm_orchestrator_dispatch
+asm_spengine_get_stats
+asm_gguf_loader_get_info
+asm_quadbuf_set_flags
+asm_quadbuf_resize
+asm_gguf_loader_configure_gpu
+asm_gguf_loader_close
+asm_spengine_shutdown
+asm_orchestrator_set_vtable
+asm_lsp_bridge_get_stats
+asm_lsp_bridge_query
+asm_lsp_bridge_invalidate
+asm_orchestrator_get_metrics
+asm_quadbuf_get_stats
+asm_gguf_loader_parse
+asm_spengine_apply
+asm_lsp_bridge_sync
+asm_spengine_quant_switch
+asm_quadbuf_init
+asm_gguf_loader_get_stats
+public: virtual bool __cdecl GGUFLoader::ParseMetadata(void)
+public: virtual bool __cdecl GGUFLoader::ParseHeader(void)
+public: virtual bool __cdecl GGUFLoader::Close(void)
+public: virtual bool __cdecl GGUFLoader::Open(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)
+public: virtual __cdecl GGUFLoader::~GGUFLoader(void)
+public: __cdecl GGUFLoader::GGUFLoader(void)
+public: class std::vector<int,class std::allocator<int> > __cdecl RawrXD::CPUInferenceEngine::Tokenize(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)
+public: bool __cdecl RawrXD::CPUInferenceEngine::isModelLoaded(void)const 
+public: class RawrXD::Expected<void,enum RawrXD::InferenceError> __cdecl RawrXD::CPUInferenceEngine::loadModel(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)
+public: __cdecl RawrXD::CPUInferenceEngine::~CPUInferenceEngine(void)
+public: __cdecl RawrXD::CPUInferenceEngine::~CPUInferenceEngine(void)
+public: __cdecl RawrXD::CPUInferenceEngine::CPUInferenceEngine(void)
+Quant_DequantQ8_0
+Quant_DequantQ4_0
+KQuant_DequantizeQ6_K
+KQuant_DequantizeQ4_K
+MC_TokenizeLine
+__imp_SwarmBroadcast
+__imp_GetMicroseconds
+__imp_ChainOfThought
+__imp_CancelTask
+__imp_UnregisterWindow
+__imp_KernelInit
+__imp_RegisterWindow
+__imp_IsTaskComplete
+__imp_GetKernelStats
+__imp_SendIPCMessage
+__imp_KernelShutdown
+__imp_SubmitTask
+dequant_q4_0_avx512
+native_nt_memcpy
+native_softmax_avx512
+dequant_q4_0_avx2
+qgemv_q4_0_avx2
+dequant_q8_0_avx512
+dequant_q8_0_avx2
+sgemm_avx2
+native_vdot_avx512
+qgemv_q8_0_avx2
+native_fused_mlp_avx2
+sgemm_avx512
+native_rope_avx2
+native_rmsnorm_avx2
+dequant_q2k_avx2
+sgemv_avx512
+sgemv_avx2
+native_softmax_avx2
+native_vdot_avx2
+native_rmsnorm_avx512
+DiskRecovery_ExtractKey
+DiskRecovery_Cleanup
+DiskRecovery_FindDrive
+DiskRecovery_GetStats
+DiskRecovery_Init
+DiskRecovery_Run
+asm_hotpatch_restore_prologue
+asm_hotpatch_backup_prologue
+asm_hotpatch_alloc_shadow
+asm_hotpatch_verify_prologue
+asm_hotpatch_install_trampoline
+asm_hotpatch_free_shadow
+asm_snapshot_capture
+asm_hotpatch_atomic_swap
+asm_hotpatch_get_stats
+asm_snapshot_get_stats
+public: void __cdecl UnifiedHotpatchManager::resetStats(void)
+public: bool __cdecl UnifiedHotpatchManager::poll_event(struct HotpatchEvent *)
+public: struct PatchResult __cdecl UnifiedHotpatchManager::load_preset(char const *,struct HotpatchPreset *)
+public: struct PatchResult __cdecl UnifiedHotpatchManager::save_preset(char const *,struct HotpatchPreset const &)
+public: void __cdecl UnifiedHotpatchManager::clearAllPatches(void)
+public: struct UnifiedResult __cdecl UnifiedHotpatchManager::remove_server_patch(char const *)
+public: void __cdecl BeaconStorage::ClearHistory(void)
+public: struct AgentResponse __cdecl AgenticBridge::ExecuteAgentCommand(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)
+public: void __cdecl Win32IDE::onAutonomyViewMemory(void)
+public: void __cdecl Win32IDE::onAutonomyViewStatus(void)
+public: void __cdecl Win32IDE::onAutonomySetGoal(void)
+public: void __cdecl Win32IDE::onAutonomyToggle(void)
+public: void __cdecl Win32IDE::onAutonomyStop(void)
+public: void __cdecl Win32IDE::onAutonomyStart(void)
+public: bool __cdecl AgenticBridge::DispatchModelToolCalls(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > &)
+public: void __cdecl Win32IDE::openModel(void)
+public: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl AgentEvent::typeString(void)const 
+public: static class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl RawrXD::UI::ToolActionStatusFormatter::formatPlainTextBlock(class std::vector<struct RawrXD::UI::ToolActionStatus,class std::allocator<struct RawrXD::UI::ToolActionStatus> > const &,int)
+public: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl RawrXD::UI::ToolActionAccumulator::renderBubblesPlainText(void)const 
+public: void __cdecl RawrXD::UI::ToolActionAccumulator::clear(void)
+public: __cdecl SubAgentManager::~SubAgentManager(void)

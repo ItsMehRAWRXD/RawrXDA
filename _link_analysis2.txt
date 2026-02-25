@@ -1,0 +1,311 @@
+=== CRT/Runtime Symbols (10) ===
+  __acrt_initialize
+  __acrt_thread_attach
+  __acrt_thread_detach
+  __acrt_uninitialize
+  __acrt_uninitialize_critical
+  __vcrt_initialize
+  __vcrt_thread_attach
+  __vcrt_thread_detach
+  __vcrt_uninitialize
+  __vcrt_uninitialize_critical
+
+=== Win32IDE methods (non-handler) (127) ===
+  private: bool __cdecl Win32IDE::applyWorkspaceEdit(struct Win32IDE::LSPWorkspaceEdit const &)
+  private: bool __cdecl Win32IDE::executeGitCommand(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > &)
+  private: bool __cdecl Win32IDE::isDecompilerViewActive(void)const 
+  private: bool __cdecl Win32IDE::isGitRepository(void)const 
+  private: bool __cdecl Win32IDE::isModelLoaded(void)const 
+  private: bool __cdecl Win32IDE::loadGGUFModel(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)
+  private: bool __cdecl Win32IDE::setActiveBackend(enum Win32IDE::AIBackendType)
+  private: bool __cdecl Win32IDE::trySendToOllama(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > &)
+  private: class nlohmann::json __cdecl Win32IDE::readLSPResponse(enum Win32IDE::LSPLanguage,int,int)
+  private: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl Win32IDE::backendTypeString(enum Win32IDE::AIBackendType)const 
+  private: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl Win32IDE::filePathToUri(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)const 
+  private: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl Win32IDE::generateResponse(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)
+  private: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl Win32IDE::getBackendStatusString(void)const 
+  private: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl Win32IDE::getFailureDetectorStats(void)const 
+  private: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl Win32IDE::getLSPConfigFilePath(void)const 
+  private: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl Win32IDE::getLSPDiagnosticsSummary(void)const 
+  private: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl Win32IDE::getLSPStatsString(void)const 
+  private: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl Win32IDE::getLSPStatusString(void)const 
+  private: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl Win32IDE::getModelInfo(void)const 
+  private: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl Win32IDE::getPlanStatusString(void)const 
+  private: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl Win32IDE::getTreeItemPath(struct _TREEITEM *)const 
+  private: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl Win32IDE::getWindowText(struct HWND__ *)
+  private: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl Win32IDE::lspLanguageId(enum Win32IDE::LSPLanguage)const 
+  private: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl Win32IDE::routeInferenceRequest(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)
+  private: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl Win32IDE::uriToFilePath(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)const 
+  private: class std::vector<struct GitFile,class std::allocator<struct GitFile> > __cdecl Win32IDE::getGitChangedFiles(void)const 
+  private: class std::vector<struct std::pair<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,class std::vector<struct Win32IDE::LSPDiagnostic,class std::allocator<struct Win32IDE::LSPDiagnostic> > >,class std::allocator<struct std::pair<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,class std::vector<struct Win32IDE::LSPDiagnostic,class std::allocator<struct Win32IDE::LSPDiagnostic> > > > > __cdecl Win32IDE::getAllDiagnostics(void)const 
+  private: class std::vector<struct Win32IDE::LSPDiagnostic,class std::allocator<struct Win32IDE::LSPDiagnostic> > __cdecl Win32IDE::getDiagnosticsForFile(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)const 
+  private: class std::vector<struct Win32IDE::LSPLocation,class std::allocator<struct Win32IDE::LSPLocation> > __cdecl Win32IDE::lspFindReferences(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,int,int)
+  private: class std::vector<struct Win32IDE::LSPLocation,class std::allocator<struct Win32IDE::LSPLocation> > __cdecl Win32IDE::lspGotoDefinition(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,int,int)
+  ... and 97 more
+
+=== Truly Other (265) ===
+  _is_c_termination_complete
+  asm_camellia256_auth_decrypt_buf
+  asm_camellia256_auth_decrypt_file
+  asm_camellia256_auth_encrypt_buf
+  asm_camellia256_auth_encrypt_file
+  asm_camellia256_decrypt_block
+  asm_camellia256_decrypt_ctr
+  asm_camellia256_decrypt_file
+  asm_camellia256_encrypt_block
+  asm_camellia256_encrypt_ctr
+  asm_camellia256_encrypt_file
+  asm_camellia256_get_hmac_key
+  asm_camellia256_get_status
+  asm_camellia256_init
+  asm_camellia256_self_test
+  asm_camellia256_set_key
+  asm_camellia256_shutdown
+  asm_dequant_q4_k_avx2
+  asm_dequant_q4_k_avx512
+  asm_dequant_q4_k_batch
+  asm_dml_dequant_q4_0_to_fp32
+  asm_dml_dequant_q8_0_to_fp32
+  asm_dml_prefetch_tensor_block
+  asm_dml_rope_rotate_fp32
+  asm_hotpatch_alloc_shadow
+  asm_hotpatch_atomic_swap
+  asm_hotpatch_backup_prologue
+  asm_hotpatch_flush_icache
+  asm_hotpatch_free_shadow
+  asm_hotpatch_get_stats
+  asm_hotpatch_install_trampoline
+  asm_hotpatch_restore_prologue
+  asm_hotpatch_verify_prologue
+  asm_kquant_cpuid_check
+  asm_lsp_bridge_get_stats
+  asm_lsp_bridge_init
+  asm_lsp_bridge_invalidate
+  asm_lsp_bridge_query
+  asm_lsp_bridge_set_weights
+  asm_lsp_bridge_shutdown
+  asm_lsp_bridge_sync
+  asm_orchestrator_dispatch
+  asm_orchestrator_get_metrics
+  asm_orchestrator_init
+  asm_orchestrator_queue_async
+  asm_orchestrator_register_hook
+  asm_orchestrator_set_vtable
+  asm_orchestrator_shutdown
+  asm_perf_begin
+  asm_perf_end
+  asm_perf_get_slot_count
+  asm_perf_get_table_base
+  asm_perf_init
+  asm_perf_read_slot
+  asm_perf_reset_slot
+  asm_quadbuf_get_stats
+  asm_quadbuf_init
+  asm_quadbuf_push_token
+  asm_quadbuf_render_frame
+  asm_quadbuf_resize
+  asm_quadbuf_set_flags
+  asm_quadbuf_shutdown
+  asm_snapshot_capture
+  asm_snapshot_discard
+  asm_snapshot_get_stats
+  asm_snapshot_restore
+  asm_snapshot_verify
+  asm_spengine_apply
+  asm_spengine_cpu_optimize
+  asm_spengine_get_stats
+  asm_spengine_init
+  asm_spengine_quant_switch
+  asm_spengine_quant_switch_adaptive
+  asm_spengine_register
+  asm_spengine_rollback
+  asm_spengine_shutdown
+  asm_watchdog_get_baseline
+  asm_watchdog_get_status
+  asm_watchdog_init
+  asm_watchdog_shutdown
+  asm_watchdog_verify
+  dequant_q2k_avx2
+  dequant_q4_0_avx2
+  dequant_q4_0_avx512
+  dequant_q8_0_avx2
+  dequant_q8_0_avx512
+  DiskRecovery_Cleanup
+  DiskRecovery_ExtractKey
+  DiskRecovery_FindDrive
+  DiskRecovery_GetStats
+  DiskRecovery_Init
+  DiskRecovery_Run
+  find_pattern_asm
+  FlashAttention_Forward
+  FlashAttention_GetTileConfig
+  FlashAttention_Init
+  g_FlashAttnCalls
+  g_FlashAttnTiles
+  KQuant_DequantizeF16
+  KQuant_DequantizeQ2_K
+  KQuant_DequantizeQ3_K
+  KQuant_DequantizeQ4_K
+  KQuant_DequantizeQ6_K
+  KQuant_Dispatch
+  MC_GapBuffer_Delete
+  MC_GapBuffer_Destroy
+  MC_GapBuffer_GetLine
+  MC_GapBuffer_Init
+  MC_GapBuffer_Insert
+  MC_GapBuffer_Length
+  MC_GapBuffer_LineCount
+  MC_TokenizeLine
+  native_fused_mlp_avx2
+  native_nt_memcpy
+  native_rmsnorm_avx2
+  native_rmsnorm_avx512
+  native_rope_avx2
+  native_softmax_avx2
+  native_softmax_avx512
+  native_vdot_avx2
+  native_vdot_avx512
+  PromptGen_AnalyzeContext
+  public: __cdecl GGUFLoader::GGUFLoader(void)
+  public: __cdecl RawrXD::CPUInferenceEngine::~CPUInferenceEngine(void)
+  public: __cdecl RawrXD::CPUInferenceEngine::CPUInferenceEngine(void)
+  public: __cdecl RawrXD::Crucible::CrucibleEngine::~CrucibleEngine(void)
+  public: __cdecl RawrXD::Crucible::CrucibleEngine::CrucibleEngine(void)
+  public: __cdecl RawrXD::GameEngine::GameEngineManager::~GameEngineManager(void)
+  public: __cdecl RawrXD::GameEngine::GameEngineManager::GameEngineManager(void)
+  public: __cdecl RawrXD::LSPServer::RawrXDLSPServer::~RawrXDLSPServer(void)
+  public: __cdecl RawrXD::LSPServer::RawrXDLSPServer::RawrXDLSPServer(void)
+  public: __cdecl RawrXD::MCP::MCPServer::~MCPServer(void)
+  public: __cdecl RawrXD::MCP::MCPServer::MCPServer(void)
+  public: __cdecl RawrXD::Multimodal::VisionEncoder::~VisionEncoder(void)
+  public: __cdecl RawrXD::Multimodal::VisionEncoder::VisionEncoder(void)
+  public: __cdecl RawrXD::Prediction::OllamaProvider::OllamaProvider(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)
+  public: __cdecl RawrXD::Win32PluginLoader::~Win32PluginLoader(void)
+  public: __cdecl RawrXD::Win32PluginLoader::Win32PluginLoader(void)
+  public: bool __cdecl RawrXD::CPUInferenceEngine::isModelLoaded(void)const 
+  public: bool __cdecl RawrXD::Crucible::CrucibleEngine::initialize(void)
+  public: bool __cdecl RawrXD::Crucible::CrucibleEngine::runAllAsync(void)
+  public: bool __cdecl RawrXD::GameEngine::GameEngineManager::closeProject(void)
+  public: bool __cdecl RawrXD::GameEngine::GameEngineManager::compile(void)
+  public: bool __cdecl RawrXD::GameEngine::GameEngineManager::enterPlayMode(void)
+  public: bool __cdecl RawrXD::GameEngine::GameEngineManager::exitPlayMode(void)
+  public: bool __cdecl RawrXD::GameEngine::GameEngineManager::initialize(void)
+  public: bool __cdecl RawrXD::GameEngine::GameEngineManager::isInPlayMode(void)const 
+  public: bool __cdecl RawrXD::GameEngine::GameEngineManager::isProfilerRunning(void)const 
+  public: bool __cdecl RawrXD::GameEngine::GameEngineManager::isProjectOpen(void)const 
+  public: bool __cdecl RawrXD::GameEngine::GameEngineManager::openProject(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)
+  public: bool __cdecl RawrXD::GameEngine::GameEngineManager::pausePlayMode(void)
+  public: bool __cdecl RawrXD::GameEngine::GameEngineManager::resumePlayMode(void)
+  public: bool __cdecl RawrXD::GameEngine::GameEngineManager::startDebugSession(void)
+  public: bool __cdecl RawrXD::GameEngine::GameEngineManager::startProfiler(void)
+  public: bool __cdecl RawrXD::GameEngine::GameEngineManager::stopDebugSession(void)
+  public: bool __cdecl RawrXD::GameEngine::GameEngineManager::stopProfiler(void)
+  public: bool __cdecl RawrXD::GameEngine::UnityEngineIntegration::isPaused(void)const 
+  public: bool __cdecl RawrXD::GameEngine::UnrealEngineIntegration::cookContent(enum RawrXD::GameEngine::UnrealBuildTarget)
+  public: bool __cdecl RawrXD::GameEngine::UnrealEngineIntegration::createCppClass(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)
+  public: bool __cdecl RawrXD::GameEngine::UnrealEngineIntegration::createModule(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)
+  public: bool __cdecl RawrXD::GameEngine::UnrealEngineIntegration::createPlugin(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)
+  public: bool __cdecl RawrXD::GameEngine::UnrealEngineIntegration::disableLiveCoding(void)
+  public: bool __cdecl RawrXD::GameEngine::UnrealEngineIntegration::enableLiveCoding(void)
+  public: bool __cdecl RawrXD::GameEngine::UnrealEngineIntegration::generateProjectFiles(void)
+  public: bool __cdecl RawrXD::GameEngine::UnrealEngineIntegration::isLiveCodingEnabled(void)const 
+  public: bool __cdecl RawrXD::GameEngine::UnrealEngineIntegration::isPIEPaused(void)const 
+  public: bool __cdecl RawrXD::GameEngine::UnrealEngineIntegration::packageProject(enum RawrXD::GameEngine::UnrealBuildTarget,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)
+  public: bool __cdecl RawrXD::LSPServer::RawrXDLSPServer::start(void)
+  public: bool __cdecl RawrXD::MCP::MCPServer::initialize(struct RawrXD::MCP::ServerInfo const &)
+  public: bool __cdecl RawrXD::Win32PluginLoader::isLoaded(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)const 
+  public: bool __cdecl RawrXD::Win32PluginLoader::loadPlugin(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)
+  public: bool __cdecl RawrXD::Win32PluginLoader::unloadPlugin(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)
+  public: bool __cdecl UnifiedHotpatchManager::poll_event(struct HotpatchEvent *)
+  public: bool __cdecl VSIXLoader::LoadPlugin(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)
+  public: bool __cdecl VSIXLoader::ReloadPlugin(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)
+  public: bool __cdecl VSIXLoader::UnloadPlugin(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)
+  public: class RawrXD::Expected<struct RawrXD::CPUInferenceEngine::GenerationResult,enum RawrXD::InferenceError> __cdecl RawrXD::CPUInferenceEngine::generate(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,float,float,int)
+  public: class RawrXD::Expected<void,enum RawrXD::InferenceError> __cdecl RawrXD::CPUInferenceEngine::loadModel(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)
+  public: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl MetricsCollector::exportPrometheus(void)const 
+  public: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl RawrXD::CPUInferenceEngine::Detokenize(class std::vector<int,class std::allocator<int> > const &)
+  public: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl RawrXD::Crucible::CrucibleEngine::getReport(void)const 
+  public: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl RawrXD::Crucible::CrucibleEngine::toJSON(void)const 
+  public: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl RawrXD::GameEngine::GameEngineManager::generateAIProjectSummary(void)const 
+  public: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl RawrXD::GameEngine::GameEngineManager::generateAISceneDescription(void)const 
+  public: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl RawrXD::GameEngine::GameEngineManager::getActiveProjectName(void)const 
+  public: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl RawrXD::GameEngine::GameEngineManager::getHelpText(void)const 
+  public: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl RawrXD::GameEngine::GameEngineManager::getStatusString(void)const 
+  public: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl RawrXD::GameEngine::UnityEngineIntegration::generateScriptTemplate(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)const 
+  public: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl RawrXD::LSPServer::RawrXDLSPServer::getStatsString(void)const 
+  public: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl RawrXD::LSPServer::RawrXDLSPServer::pollOutgoing(void)
+  public: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl RawrXD::UI::ToolActionAccumulator::renderBubblesPlainText(void)const 
+  public: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl RetryStrategy::typeString(void)const 
+  public: class std::vector<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,class std::allocator<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > > > __cdecl RawrXD::GameEngine::GameEngineManager::getCompileErrorStrings(void)const 
+  public: class std::vector<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,class std::allocator<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > > > __cdecl RawrXD::GameEngine::UnityEngineIntegration::getInstalledPackages(void)const 
+  public: class std::vector<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,class std::allocator<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > > > __cdecl RawrXD::GameEngine::UnrealEngineIntegration::getBlueprints(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)const 
+  public: class std::vector<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,class std::allocator<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > > > __cdecl RawrXD::Win32PluginLoader::pluginNames(void)const 
+  public: class std::vector<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,class std::allocator<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > > > __cdecl RawrXD::Win32PluginLoader::scanDirectory(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)const 
+  public: class std::vector<int,class std::allocator<int> > __cdecl RawrXD::CPUInferenceEngine::Tokenize(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)
+  public: class std::vector<struct RawrXD::GameEngine::GameEngineManager::EngineInstallation,class std::allocator<struct RawrXD::GameEngine::GameEngineManager::EngineInstallation> > __cdecl RawrXD::GameEngine::GameEngineManager::getAllInstallations(void)const 
+  public: class std::vector<struct RawrXD::GameEngine::UnityAssetInfo,class std::allocator<struct RawrXD::GameEngine::UnityAssetInfo> > __cdecl RawrXD::GameEngine::UnityEngineIntegration::getAssets(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)const 
+  public: class std::vector<struct RawrXD::GameEngine::UnitySceneInfo,class std::allocator<struct RawrXD::GameEngine::UnitySceneInfo> > __cdecl RawrXD::GameEngine::UnityEngineIntegration::getScenes(void)const 
+  public: class std::vector<struct RawrXD::GameEngine::UnrealLevelInfo,class std::allocator<struct RawrXD::GameEngine::UnrealLevelInfo> > __cdecl RawrXD::GameEngine::UnrealEngineIntegration::getLevels(void)const 
+  public: class std::vector<struct RawrXD::MCP::PromptTemplate,class std::allocator<struct RawrXD::MCP::PromptTemplate> > __cdecl RawrXD::MCP::MCPServer::listPrompts(void)const 
+  public: class std::vector<struct RawrXD::MCP::ResourceDefinition,class std::allocator<struct RawrXD::MCP::ResourceDefinition> > __cdecl RawrXD::MCP::MCPServer::listResources(void)const 
+  public: class std::vector<struct RawrXD::MCP::ToolDefinition,class std::allocator<struct RawrXD::MCP::ToolDefinition> > __cdecl RawrXD::MCP::MCPServer::listTools(void)const 
+  public: class std::vector<struct VSIXPlugin *,class std::allocator<struct VSIXPlugin *> > __cdecl VSIXLoader::GetLoadedPlugins(void)
+  public: enum RawrXD::GameEngine::GameEngineType __cdecl RawrXD::GameEngine::GameEngineManager::getActiveEngine(void)const 
+  public: static char const * __cdecl RawrXD::Crucible::CrucibleEngine::stageName(enum RawrXD::Crucible::CrucibleStage)
+  public: static class RawrXD::LSP::DiagnosticConsumer & __cdecl RawrXD::LSP::DiagnosticConsumer::Global(void)
+  public: static class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl RawrXD::UI::ToolActionStatusFormatter::formatPlainTextBlock(class std::vector<struct RawrXD::UI::ToolActionStatus,class std::allocator<struct RawrXD::UI::ToolActionStatus> > const &,int)
+  public: static class UnifiedHotpatchManager & __cdecl UnifiedHotpatchManager::instance(void)
+  public: static class VSIXLoader & __cdecl VSIXLoader::GetInstance(void)
+  public: struct PatchResult __cdecl UnifiedHotpatchManager::load_preset(char const *,struct HotpatchPreset *)
+  public: struct PatchResult __cdecl UnifiedHotpatchManager::save_preset(char const *,struct HotpatchPreset const &)
+  public: struct RawrXD::Crucible::CrucibleBarrelSummary __cdecl RawrXD::Crucible::CrucibleEngine::runBarrel(enum RawrXD::Crucible::CrucibleBarrel)
+  public: struct RawrXD::Crucible::CrucibleConfig __cdecl RawrXD::Crucible::CrucibleEngine::getConfig(void)const 
+  public: struct RawrXD::GameEngine::EngineDetectionResult __cdecl RawrXD::GameEngine::GameEngineManager::detectProject(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)const 
+  public: struct RawrXD::GameEngine::GameBuildResultUnified __cdecl RawrXD::GameEngine::GameEngineManager::buildProject(struct RawrXD::GameEngine::GameBuildRequest const &)
+  public: struct RawrXD::GameEngine::GameProfilerSnapshotUnified __cdecl RawrXD::GameEngine::GameEngineManager::getProfilerSnapshot(void)const 
+  public: struct RawrXD::GameEngine::UnityProjectInfo __cdecl RawrXD::GameEngine::UnityEngineIntegration::getProjectInfo(void)const 
+  public: struct RawrXD::LSP::DiagResult __cdecl RawrXD::LSP::DiagnosticConsumer::publishDiagnostics(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::vector<struct RawrXD::LSP::Diagnostic,class std::allocator<struct RawrXD::LSP::Diagnostic> > const &)
+  public: struct RawrXD::LSPServer::ServerStats __cdecl RawrXD::LSPServer::RawrXDLSPServer::getStats(void)const 
+  public: struct RawrXD::Multimodal::VisionResult __cdecl RawrXD::Multimodal::VisionEncoder::CaptureScreenshot(int,int,int,int)
+  public: struct RawrXD::PluginInstance const * __cdecl RawrXD::Win32PluginLoader::getPlugin(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)const 
+  public: struct UnifiedHotpatchManager::Stats const & __cdecl UnifiedHotpatchManager::getStats(void)const 
+  public: struct UnifiedResult __cdecl UnifiedHotpatchManager::add_server_patch(struct ServerHotpatch *)
+  public: struct UnifiedResult __cdecl UnifiedHotpatchManager::apply_byte_patch(char const *,struct BytePatch const &)
+  public: struct UnifiedResult __cdecl UnifiedHotpatchManager::apply_memory_patch(void *,unsigned __int64,void const *)
+  public: struct UnifiedResult __cdecl UnifiedHotpatchManager::pt_restore_snapshot(unsigned int)
+  public: struct UnifiedResult __cdecl UnifiedHotpatchManager::remove_server_patch(char const *)
+  public: struct VSIXPlugin * __cdecl VSIXLoader::GetPlugin(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)
+  public: unsigned __int64 __cdecl RawrXD::LSPServer::RawrXDLSPServer::getIndexedSymbolCount(void)const 
+  public: unsigned __int64 __cdecl RawrXD::LSPServer::RawrXDLSPServer::getTrackedFileCount(void)const 
+  public: unsigned __int64 __cdecl RawrXD::Win32PluginLoader::pluginCount(void)const 
+  public: virtual __cdecl GGUFLoader::~GGUFLoader(void)
+  public: virtual bool __cdecl GGUFLoader::Close(void)
+  public: virtual bool __cdecl GGUFLoader::Open(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)
+  public: virtual bool __cdecl GGUFLoader::ParseHeader(void)
+  public: virtual bool __cdecl GGUFLoader::ParseMetadata(void)
+  public: void __cdecl RawrXD::CPUInferenceEngine::RegisterMemoryPlugin(class std::shared_ptr<class RawrXD::IMemoryPlugin>)
+  public: void __cdecl RawrXD::Crucible::CrucibleEngine::cancel(void)
+  public: void __cdecl RawrXD::LSPServer::RawrXDLSPServer::configure(struct RawrXD::LSPServer::ServerConfig const &)
+  public: void __cdecl RawrXD::LSPServer::RawrXDLSPServer::injectMessage(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)
+  public: void __cdecl RawrXD::LSPServer::RawrXDLSPServer::publishDiagnostics(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::vector<struct RawrXD::LSPServer::DiagnosticEntry,class std::allocator<struct RawrXD::LSPServer::DiagnosticEntry> > const &)
+  public: void __cdecl RawrXD::LSPServer::RawrXDLSPServer::rebuildIndex(void)
+  public: void __cdecl RawrXD::LSPServer::RawrXDLSPServer::stop(void)
+  public: void __cdecl RawrXD::MCP::MCPServer::registerPrompt(struct RawrXD::MCP::PromptTemplate const &,class std::function<class std::vector<struct RawrXD::MCP::PromptMessage,class std::allocator<struct RawrXD::MCP::PromptMessage> > __cdecl(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)>)
+  public: void __cdecl RawrXD::MCP::MCPServer::registerResource(struct RawrXD::MCP::ResourceDefinition const &,class std::function<struct RawrXD::MCP::ResourceContent __cdecl(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)>)
+  public: void __cdecl RawrXD::MCP::MCPServer::shutdown(void)
+  public: void __cdecl RawrXD::UI::ToolActionAccumulator::clear(void)
+  public: void __cdecl RawrXD::Win32PluginLoader::setLogCallback(class std::function<void __cdecl(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,int)>)
+  public: void __cdecl RawrXD::Win32PluginLoader::unloadAll(void)
+  public: void __cdecl UnifiedHotpatchManager::clearAllPatches(void)
+  public: void __cdecl UnifiedHotpatchManager::resetStats(void)
+  qgemv_q4_0_avx2
+  qgemv_q8_0_avx2
+  Quant_DequantQ4_0
+  Quant_DequantQ8_0
+  sgemm_avx2
+  sgemm_avx512
+  sgemv_avx2
+  sgemv_avx512
+  Swarm_Init
+  SwarmCoord_Init
+  void __cdecl RawrXD::MCP::registerBuiltinTools(class RawrXD::MCP::MCPServer &)

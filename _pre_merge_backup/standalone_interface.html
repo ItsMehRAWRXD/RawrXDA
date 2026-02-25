@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RawrXD Standalone Web Interface</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+    }
+
+    .header {
+      background: #2c3e50;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .content {
+      padding: 30px;
+    }
+
+    .status {
+      display: inline-block;
+      padding: 5px 15px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    .status.ready {
+      background: #27ae60;
+      color: white;
+    }
+
+    .status.not-ready {
+      background: #e74c3c;
+      color: white;
+    }
+
+    .status.connecting {
+      background: #f39c12;
+      color: white;
+    }
+
+    .input-group {
+      margin: 20px 0;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #2c3e50;
+    }
+
+    textarea,
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #ddd;
+      border-radius: 5px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    button {
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background: #2980b9;
+    }
+
+    button:disabled {
+      background: #bdc3c7;
+      cursor: not-allowed;
+    }
+
+    .response {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 5px;
+      background: #f8f9fa;
+      border-left: 4px solid #3498db;
+    }
+
+    .error {
+      border-left-color: #e74c3c;
+      background: #fdf2f2;
+    }
+
+    .stats {
+      background: #ecf0f1;
+      padding: 15px;
+      border-radius: 5px;
+      margin: 20px 0;
+    }
+
+    .stats h3 {
+      margin-top: 0;
+      color: #2c3e50;
+    }
+
+    pre {
+      background: #2c3e50;
+      color: #ecf0f1;
+      padding: 15px;
+      border-radius: 5px;
+      overflow-x: auto;
+      font-size: 12px;
+      margin: 0;
+    }
+
+    .connection-info {
+      background: #e8f4fd;
+      padding: 10px;
+      border-radius: 5px;
+      margin: 10px 0;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🔥 RawrXD Standalone Interface</h1>
+      <p>Qt-Free Browser TCP Bypass - Direct Model Communication</p>
+      <div id="status" class="status not-ready">Initializing...</div>
+      <p style="margin-top:12px;font-size:14px;">
+        <a href="gui/ide_chatbot.html" target="_blank" rel="noopener" style="color:#fff;text-decoration:underline;">Open full IDE Chat (agentic interface)</a>
+        <span style="margin:0 8px;">|</span>
+        <a href="https://github.com/ItsMehRAWRXD/RawrXD-IDE-Final/commit/99ebcadb6f579d54f86ac6b5dace01793e636f7d" target="_blank" rel="noopener" style="color:#fff;text-decoration:underline;">Web bridge commit</a>
+      </p>
+    </div>
+
+    <div class="content">
+      <div class="connection-info">
+        <strong>Connection:</strong> <span id="connectionStatus">Not connected</span><br>
+        <strong>Protocol:</strong> <span id="protocol">HTTP + WebSocket</span>
+      </div>
+
+      <div class="stats">
+        <h3>Server Statistics</h3>
+        <pre id="stats">Loading...</pre>
+      </div>
+
+      <div class="input-group">
+        <label for="prompt">Model Prompt:</label>
+        <textarea id="prompt"
+          placeholder="Enter your prompt here...">Hello! This is a Qt-free web interface that bypasses browser TCP limitations using HTTP and WebSocket APIs.</textarea>
+      </div>
+
+      <div class="input-group">
+        <label for="temperature">Temperature (0.0 - 1.0):</label>
+        <input type="text" id="temperature" value="0.7" placeholder="0.7">
+      </div>
+
+      <button id="sendBtn" onclick="sendToModel()" disabled>Send to Model</button>
+
+      <div id="response" class="response" style="display: none;">
+        <h3>Model Response:</h3>
+        <div id="responseContent"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Configuration
+    const HTTP_PORT = 8080;
+    const WS_PORT = 8081;
+    const HTTP_BASE_URL = `http://localhost:${HTTP_PORT}`;
+    const WS_URL = `ws://localhost:${WS_PORT}`;
+
+    // Global state
+    let wsConnection = null;
+    let requestId = 1;
+    let isServerReady = false;
+    let reconnectAttempts = 0;
+    const MAX_RECONNECT_ATTEMPTS = 5;
+
+    // Initialize on page load
+    window.addEventListener('load', function () {
+      console.log('[StandaloneInterface] Initializing...');
+      initializeConnection();
+    });
+
+    // Initialize HTTP and WebSocket connections
+    function initializeConnection() {
+      updateStatus('connecting', 'Connecting to server...');
+
+      // First try HTTP connection
+      checkHttpConnection().then(() => {
+        // Then establish WebSocket connection
+        connectWebSocket();
+      }).catch(error => {
+        console.error('[StandaloneInterface] HTTP connection failed:', error);
+        updateStatus('not-ready', 'Server not available');
+        setTimeout(initializeConnection, 5000);
+      });
+    }
+
+    // Check HTTP connection
+    async function checkHttpConnection() {
+      try {
+        const response = await fetch(`${HTTP_BASE_URL}/api/status`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        console.log('[StandaloneInterface] HTTP connection successful:', data);
+        return data;
+      } catch (error) {
+        throw error;
+      }
+    }
+
+    // Establish WebSocket connection
+    function connectWebSocket() {
+      if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
+        return;
+      }
+
+      try {
+        wsConnection = new WebSocket(WS_URL);
+
+        wsConnection.onopen = function (event) {
+          console.log('[StandaloneInterface] WebSocket connected');
+          updateStatus('ready', 'Connected');
+          reconnectAttempts = 0;
+          updateConnectionStatus('Connected via WebSocket');
+          checkServerStatus();
+        };
+
+        wsConnection.onmessage = function (event) {
+          handleWebSocketMessage(event.data);
+        };
+
+        wsConnection.onclose = function (event) {
+          console.log('[StandaloneInterface] WebSocket closed:', event.code, event.reason);
+          updateStatus('not-ready', 'Disconnected');
+          updateConnectionStatus('Disconnected');
+
+          // Attempt reconnection
+          if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+            reconnectAttempts++;
+            setTimeout(() => {
+              console.log(`[StandaloneInterface] Reconnecting... (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
+              connectWebSocket();
+            }, 2000 * reconnectAttempts);
+          }
+        };
+
+        wsConnection.onerror = function (error) {
+          console.error('[StandaloneInterface] WebSocket error:', error);
+          updateStatus('not-ready', 'Connection error');
+        };
+
+      } catch (error) {
+        console.error('[StandaloneInterface] WebSocket creation failed:', error);
+        updateStatus('not-ready', 'WebSocket failed');
+      }
+    }
+
+    // Handle WebSocket messages
+    function handleWebSocketMessage(data) {
+      try {
+        const response = JSON.parse(data);
+        console.log('[StandaloneInterface] WebSocket response:', response);
+
+        if (response.result) {
+          // Handle successful response
+          if (response.id) {
+            // This is a response to a specific request
+            handleJsonRpcResponse(response);
+          }
+        } else if (response.error) {
+          showError(`WebSocket error: ${response.error.message || 'Unknown error'}`);
+        }
+      } catch (error) {
+        console.error('[StandaloneInterface] Failed to parse WebSocket message:', error);
+      }
+    }
+
+    // Handle JSON-RPC responses
+    function handleJsonRpcResponse(response) {
+      const result = response.result;
+
+      if (result.success === false) {
+        showError(result.error || 'Request failed');
+      } else {
+        // Handle successful responses
+        if (result.response) {
+          // This is a model response
+          showResponse(result.response);
+        } else if (result.listening !== undefined) {
+          // This is server status
+          updateServerStatus(result);
+        }
+      }
+    }
+
+    // Check server status
+    function checkServerStatus() {
+      if (!wsConnection || wsConnection.readyState !== WebSocket.OPEN) {
+        console.warn('[StandaloneInterface] WebSocket not ready for status check');
+        return;
+      }
+
+      const request = {
+        jsonrpc: "2.0",
+        method: "getServerStatus",
+        params: {},
+        id: requestId++
+      };
+
+      wsConnection.send(JSON.stringify(request));
+    }
+
+    // Update server statistics
+    function updateStats() {
+      fetch(`${HTTP_BASE_URL}/api/stats`)
+        .then(response => response.text())
+        .then(data => {
+          document.getElementById('stats').textContent = data;
+        })
+        .catch(error => {
+          console.error('[StandaloneInterface] Failed to fetch stats:', error);
+          document.getElementById('stats').textContent = 'Failed to load statistics';
+        });
+    }
+
+    // Send prompt to model
+    function sendToModel() {
+      if (!wsConnection || wsConnection.readyState !== WebSocket.OPEN) {
+        showError('WebSocket not connected');
+        return;
+      }
+
+      if (!isServerReady) {
+        showError('Server not ready');
+        return;
+      }
+
+      const prompt = document.getElementById('prompt').value.trim();
+      if (!prompt) {
+        showError('Please enter a prompt');
+        return;
+      }
+
+      const temperature = parseFloat(document.getElementById('temperature').value) || 0.7;
+
+      const request = {
+        jsonrpc: "2.0",
+        method: "sendToModel",
+        params: {
+          prompt: prompt,
+          options: {
+            temperature: Math.max(0, Math.min(1, temperature)),
+            max_tokens: 1000,
+            stream: false
+          }
+        },
+        id: requestId++
+      };
+
+      console.log('[StandaloneInterface] Sending request:', request);
+      wsConnection.send(JSON.stringify(request));
+
+      // Disable button temporarily
+      const sendBtn = document.getElementById('sendBtn');
+      sendBtn.disabled = true;
+      sendBtn.textContent = 'Sending...';
+      setTimeout(() => {
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Send to Model';
+      }, 1000);
+    }
+
+    // Update status display
+    function updateStatus(statusClass, message) {
+      const statusEl = document.getElementById('status');
+      statusEl.className = `status ${statusClass}`;
+      statusEl.textContent = message;
+
+      isServerReady = (statusClass === 'ready');
+      document.getElementById('sendBtn').disabled = !isServerReady;
+    }
+
+    // Update connection status
+    function updateConnectionStatus(status) {
+      document.getElementById('connectionStatus').textContent = status;
+    }
+
+    // Update server status display
+    function updateServerStatus(status) {
+      if (status.listening) {
+        updateStatus('ready', `Server Ready (Port ${status.port})`);
+      } else {
+        updateStatus('not-ready', 'Server Not Ready');
+      }
+
+      // Update stats periodically
+      updateStats();
+    }
+
+    // Show response
+    function showResponse(content) {
+      const responseEl = document.getElementById('response');
+      const contentEl = document.getElementById('responseContent');
+
+      responseEl.className = 'response';
+      contentEl.innerHTML = content.replace(/\n/g, '<br>');
+      responseEl.style.display = 'block';
+
+      // Scroll to response
+      responseEl.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Show error
+    function showError(message) {
+      const responseEl = document.getElementById('response');
+      const contentEl = document.getElementById('responseContent');
+
+      responseEl.className = 'response error';
+      contentEl.innerHTML = '<strong>Error:</strong> ' + message;
+      responseEl.style.display = 'block';
+    }
+
+    // Periodic status updates
+    setInterval(() => {
+      if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
+        checkServerStatus();
+      }
+    }, 10000);
+
+    // Handle keyboard shortcuts
+    document.addEventListener('keydown', function (e) {
+      if (e.ctrlKey && e.key === 'Enter') {
+        e.preventDefault();
+        sendToModel();
+      }
+    });
+
+    console.log('[StandaloneInterface] Page loaded, waiting for connections...');
+    console.log(`[StandaloneInterface] HTTP endpoint: ${HTTP_BASE_URL}`);
+    console.log(`[StandaloneInterface] WebSocket endpoint: ${WS_URL}`);
+  </script>
+</body>
+
+</html>
