@@ -11,6 +11,7 @@
 #include <cmath>
 #include <iomanip>
 #include <fstream>
+#include <filesystem>
 
 using namespace RawrXD;
 
@@ -136,14 +137,15 @@ std::vector<PerformanceOptimization> AutonomousFeatureEngine::suggestOptimizatio
              size_t nextLine = res.response.find('\n', rPos);
              opt.reasoning = res.response.substr(rPos + 10, nextLine - (rPos + 10));
         }
-        // Parse impact analysis or infer from keywords
+        // Estimate expected speedup from heuristic keywords.
         if (res.response.find("O(1)") != std::string::npos || res.response.find("cache") != std::string::npos || res.response.find("allocation") != std::string::npos) {
-             opt.impact = "High";
+             opt.expectedSpeedup = 2.0;
         } else if (res.response.find("O(n)") != std::string::npos || res.response.find("loop") != std::string::npos) {
-             opt.impact = "Medium";
+             opt.expectedSpeedup = 1.3;
         } else {
-             opt.impact = "Low";
+             opt.expectedSpeedup = 1.1;
         }
+        opt.confidence = 0.7;
 
         opts.push_back(opt);
     }
@@ -207,12 +209,13 @@ std::vector<AutonomousSuggestion> AutonomousFeatureEngine::getSuggestionsForCode
     CodeQualityMetrics q = assessCodeQuality(code, language);
     
     // 2. Complexity Reduction Suggestion
-    if (q.details["cyclomatic_complexity"] > 15) {
+    const double cyclomatic = q.details.value("cyclomatic_complexity", 0.0);
+    if (cyclomatic > 15.0) {
         AutonomousSuggestion s;
         s.suggestionId = GenerateUUID();
         s.type = "refactoring";
         s.filePath = "buffer";
-        s.explanation = "High cyclomatic complexity (" + std::to_string(int(q.details["cyclomatic_complexity"])) + "). Consider breaking down function.";
+        s.explanation = "High cyclomatic complexity (" + std::to_string(static_cast<int>(cyclomatic)) + "). Consider breaking down function.";
         s.confidence = 0.85;
         suggestions.push_back(s);
     }
@@ -661,7 +664,7 @@ void AutonomousFeatureEngine::updateLearningModel(const std::string& c, const st
            << "}" << std::endl;
     }
 }
-std::vector<std::string> AutonomousFeatureEngine::getRecommendedActions(const std::string& codeContext) {
+std::vector<std::string> AutonomousFeatureEngine::predictNextAction(const std::string& codeContext) {
     std::vector<std::string> actions;
     
     // Heuristic: If code has 'TODO', suggest 'Implement TODO'
@@ -680,14 +683,16 @@ std::vector<std::string> AutonomousFeatureEngine::getRecommendedActions(const st
     }
     
     // Use Cloud for intelligent prediction if available
-    ExecutionRequest req;
-    req.requestId = "pred-" + GenerateUUID();
-    req.taskType = "prediction";
-    req.prompt = "Predict the next mostly likely developer action for this code:\n" + codeContext.substr(0, 1000); // Limit context
-    
-    ExecutionResult res = hybridCloudManager->execute(req);
-    if (res.success && res.response.length() < 50) {
-         actions.insert(actions.begin(), res.response);
+    if (hybridCloudManager) {
+        ExecutionRequest req;
+        req.requestId = "pred-" + GenerateUUID();
+        req.taskType = "prediction";
+        req.prompt = "Predict the next mostly likely developer action for this code:\n" + codeContext.substr(0, 1000); // Limit context
+        
+        ExecutionResult res = hybridCloudManager->execute(req);
+        if (res.success && res.response.length() < 50) {
+             actions.insert(actions.begin(), res.response);
+        }
     }
     
     if (actions.empty()) actions.push_back("Refactor");
@@ -842,4 +847,348 @@ AutonomousSuggestion AutonomousFeatureEngine::generateTestSuggestion(const std::
     return s;
 }
 
+// ============================================================================
+// Additional Helper Implementations
+// ============================================================================
 
+AutonomousSuggestion AutonomousFeatureEngine::generateRefactoringSuggestion(
+    const std::string& code, const std::string& filePath) {
+    
+    AutonomousSuggestion s;
+    s.suggestionId = GenerateUUID();
+    s.type = "refactoring";
+    s.filePath = filePath;
+    s.originalCode = code.substr(0, std::min(size_t(200), code.length()));
+    s.explanation = "Code can be refactored for clarity and maintainability";
+    s.confidence = 0.75;
+    
+    return s;
+}
+
+AutonomousSuggestion AutonomousFeatureEngine::generateOptimizationSuggestion(
+    const std::string& code) {
+    
+    AutonomousSuggestion s;
+    s.suggestionId = GenerateUUID();
+    s.type = "optimization";
+    s.originalCode = code.substr(0, std::min(size_t(200), code.length()));
+    s.explanation = "Performance optimization detected";
+    s.confidence = 0.8;
+    
+    return s;
+}
+
+AutonomousSuggestion AutonomousFeatureEngine::generateSecurityFixSuggestion(
+    const SecurityIssue& issue) {
+    
+    AutonomousSuggestion s;
+    s.suggestionId = GenerateUUID();
+    s.type = "security_fix";
+    s.filePath = issue.filePath;
+    s.lineNumber = issue.lineNumber;
+    s.originalCode = issue.vulnerableCode;
+    s.suggestedCode = issue.suggestedFix;
+    s.explanation = issue.description;
+    s.confidence = 0.95;
+    
+    return s;
+}
+
+bool AutonomousFeatureEngine::detectSQLInjection(const std::string& code) {
+    return code.find("SELECT") != std::string::npos && 
+           code.find("+") != std::string::npos;
+}
+
+bool AutonomousFeatureEngine::detectXSS(const std::string& code) {
+    return code.find("innerHTML") != std::string::npos ||
+           code.find("document.write") != std::string::npos;
+}
+
+bool AutonomousFeatureEngine::detectBufferOverflow(const std::string& code) {
+    return code.find("strcpy") != std::string::npos ||
+           code.find("sprintf") != std::string::npos ||
+           code.find("gets") != std::string::npos;
+}
+
+bool AutonomousFeatureEngine::detectCommandInjection(const std::string& code) {
+    return code.find("system(") != std::string::npos ||
+           code.find("exec(") != std::string::npos;
+}
+
+bool AutonomousFeatureEngine::detectPathTraversal(const std::string& code) {
+    return code.find("../") != std::string::npos &&
+           code.find("file") != std::string::npos;
+}
+
+bool AutonomousFeatureEngine::detectInsecureCrypto(const std::string& code) {
+    return code.find("MD5") != std::string::npos ||
+           code.find("SHA1") != std::string::npos;
+}
+
+bool AutonomousFeatureEngine::canParallelize(const std::string& code) {
+    int loopCount = 0;
+    std::regex loopRegex(R"(\b(for|while)\b)");
+    loopCount = std::distance(
+        std::sregex_iterator(code.begin(), code.end(), loopRegex),
+        std::sregex_iterator());
+    return loopCount > 1 && code.find("critical") == std::string::npos;
+}
+
+bool AutonomousFeatureEngine::canCache(const std::string& code) {
+    return code.find("expensive_operation") != std::string::npos ||
+           code.find("database_query") != std::string::npos;
+}
+
+bool AutonomousFeatureEngine::hasInefficientAlgorithm(const std::string& code, 
+                                                     std::string& algorithmName) {
+    if (code.find("bubble_sort") != std::string::npos) {
+        algorithmName = "Bubble Sort (O(n²))";
+        return true;
+    }
+    if (code.find("linear_search") != std::string::npos && 
+        code.find("binary_search") == std::string::npos) {
+        algorithmName = "Linear Search (could use Binary Search)";
+        return true;
+    }
+    return false;
+}
+
+bool AutonomousFeatureEngine::hasMemoryWaste(const std::string& code) {
+    return code.find("new ") != std::string::npos && 
+           code.find("delete ") == std::string::npos;
+}
+
+std::vector<std::string> AutonomousFeatureEngine::extractFunctionParameters(
+    const std::string& functionCode) {
+    
+    std::vector<std::string> params;
+    size_t start = functionCode.find('(');
+    size_t end = functionCode.find(')');
+    
+    if (start == std::string::npos || end == std::string::npos) {
+        return params;
+    }
+    
+    std::string paramStr = functionCode.substr(start + 1, end - start - 1);
+    std::istringstream ss(paramStr);
+    std::string param;
+    while (std::getline(ss, param, ',')) {
+        // Trim whitespace
+        size_t first = param.find_first_not_of(" \t");
+        if (first != std::string::npos) {
+            params.push_back(param.substr(first));
+        }
+    }
+    
+    return params;
+}
+
+std::string AutonomousFeatureEngine::inferReturnType(const std::string& functionCode) {
+    if (functionCode.find("int ") != std::string::npos) return "int";
+    if (functionCode.find("void ") != std::string::npos) return "void";
+    if (functionCode.find("bool ") != std::string::npos) return "bool";
+    if (functionCode.find("string ") != std::string::npos) return "std::string";
+    if (functionCode.find("vector ") != std::string::npos) return "std::vector";
+    return "auto";
+}
+
+std::vector<std::string> AutonomousFeatureEngine::generateTestCases(
+    const TestGenerationRequest& request) {
+    
+    std::vector<std::string> testCases;
+    
+    // Generate boundary and normal test cases
+    testCases.push_back("// Test with normal input");
+    testCases.push_back("// Test with edge cases");
+    testCases.push_back("// Test with invalid input");
+    
+    return testCases;
+}
+
+std::string AutonomousFeatureEngine::generateAssertions(
+    const std::string& functionName,
+    const std::vector<std::string>& inputs,
+    const std::string& expectedOutput) {
+    
+    std::string assertions = "ASSERT_EQ(" + functionName + "(";
+    for (size_t i = 0; i < inputs.size(); ++i) {
+        assertions += inputs[i];
+        if (i < inputs.size() - 1) assertions += ", ";
+    }
+    assertions += "), " + expectedOutput + ");";
+    
+    return assertions;
+}
+
+std::string AutonomousFeatureEngine::extractFunctionPurpose(
+    const std::string& functionCode) {
+    
+    // Look for preceding comments
+    size_t commentPos = functionCode.rfind("//");
+    if (commentPos != std::string::npos) {
+        size_t newlinePos = functionCode.rfind('\n', commentPos);
+        if (newlinePos != std::string::npos) {
+            return functionCode.substr(commentPos + 2, 
+                                      functionCode.find('\n', commentPos) - commentPos - 2);
+        }
+    }
+    return "Unknown purpose";
+}
+
+std::vector<std::string> AutonomousFeatureEngine::extractParameters(
+    const std::string& functionCode) {
+    
+    return extractFunctionParameters(functionCode);
+}
+
+std::string AutonomousFeatureEngine::extractReturnValue(
+    const std::string& functionCode) {
+    
+    return inferReturnType(functionCode);
+}
+
+std::vector<std::string> AutonomousFeatureEngine::extractExceptions(
+    const std::string& functionCode) {
+    
+    std::vector<std::string> exceptions;
+    if (functionCode.find("throw ") != std::string::npos) {
+        exceptions.push_back("std::exception");
+    }
+    return exceptions;
+}
+
+int AutonomousFeatureEngine::calculateDuplication(const std::string& code) {
+    // Simple heuristic: count repeated substrings
+    int duplication = 0;
+    std::unordered_map<std::string, int> substrings;
+    
+    for (size_t i = 10; i < code.length(); i += 10) {
+        std::string substr = code.substr(i, 10);
+        if (++substrings[substr] > 1) {
+            duplication++;
+        }
+    }
+    
+    return duplication;
+}
+
+int AutonomousFeatureEngine::countCodeSmells(const std::string& code) {
+    int smells = 0;
+    
+    // Long method
+    if (code.length() > 500) smells++;
+    
+    // Duplicate code
+    if (calculateDuplication(code) > 3) smells++;
+    
+    // Comments
+    if (code.find("TODO") != std::string::npos) smells++;
+    if (code.find("HACK") != std::string::npos) smells++;
+    
+    // Magic numbers
+    std::regex magicNum(R"(\b[2-9]\d*\b)");
+    if (std::regex_search(code, magicNum)) smells++;
+    
+    return smells;
+}
+
+double AutonomousFeatureEngine::calculateTestability(const std::string& code) {
+    // Higher score = more testable
+    double score = 100.0;
+    
+    if (code.find("static ") != std::string::npos) score -= 20;
+    if (code.find("global ") != std::string::npos) score -= 15;
+    if (calculateComplexity(code) > 10) score -= (calculateComplexity(code) - 10);
+    
+    return std::max(0.0, score);
+}
+
+double AutonomousFeatureEngine::calculateSuggestionConfidence(
+    const AutonomousSuggestion& suggestion) {
+    
+    // Default to the suggestion's own confidence
+    return suggestion.confidence;
+}
+
+void AutonomousFeatureEngine::updateAcceptanceRates() {
+    // Update user profile based on recent acceptance/rejection patterns
+    int totalSuggestions = 0;
+    int acceptedCount = 0;
+    
+    for (const auto& [type, count] : acceptedSuggestionsByType) {
+        acceptedCount += count;
+    }
+    
+    for (const auto& [type, count] : rejectedSuggestionsByType) {
+        totalSuggestions += count;
+    }
+    
+    totalSuggestions += acceptedCount;
+    
+    if (totalSuggestions > 0) {
+        userProfile.averageAcceptanceRate = static_cast<double>(acceptedCount) / totalSuggestions;
+    }
+}
+
+std::vector<double> AutonomousFeatureEngine::extractCodeFeatures(
+    const std::string& code) {
+    
+    std::vector<double> features;
+    
+    // Feature 1: Code length
+    features.push_back(static_cast<double>(code.length()));
+    
+    // Feature 2: Complexity
+    features.push_back(static_cast<double>(calculateComplexity(code)));
+    
+    // Feature 3: Code smells
+    features.push_back(static_cast<double>(countCodeSmells(code)));
+    
+    // Feature 4: Duplication
+    features.push_back(static_cast<double>(calculateDuplication(code)));
+    
+    return features;
+}
+
+double AutonomousFeatureEngine::predictAcceptanceProbability(
+    const AutonomousSuggestion& suggestion) {
+    
+    // Simple ML model: use suggestion type and confidence
+    double probability = suggestion.confidence;
+    
+    // Boost specific types
+    if (suggestion.type == "refactoring") probability *= 1.1;
+    if (suggestion.type == "security_fix") probability *= 1.3;
+    if (suggestion.type == "optimization") probability *= 0.9;
+    
+    return std::min(1.0, probability);
+}
+
+bool AutonomousFeatureEngine::matchesPattern(const std::string& code,
+                                            const std::string& patternName) {
+    if (patternName == "singleton") {
+        return code.find("static") != std::string::npos &&
+               code.find("getInstance") != std::string::npos;
+    }
+    if (patternName == "factory") {
+        return code.find("create") != std::string::npos ||
+               code.find("Create") != std::string::npos;
+    }
+    if (patternName == "observer") {
+        return code.find("notify") != std::string::npos &&
+               code.find("attach") != std::string::npos;
+    }
+    return false;
+}
+
+std::vector<std::string> AutonomousFeatureEngine::detectPatterns(
+    const std::string& code) {
+    
+    std::vector<std::string> patterns;
+    
+    if (matchesPattern(code, "singleton")) patterns.push_back("Singleton");
+    if (matchesPattern(code, "factory")) patterns.push_back("Factory");
+    if (matchesPattern(code, "observer")) patterns.push_back("Observer");
+    
+    return patterns;
+}

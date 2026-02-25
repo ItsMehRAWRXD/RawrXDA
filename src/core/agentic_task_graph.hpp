@@ -36,7 +36,7 @@ namespace Agentic {
 // ============================================================================
 struct TaskResult {
     bool success;
-    const char* detail;
+    std::string detail;
     int errorCode;
 
     static TaskResult ok(const char* msg = "OK") {
@@ -47,7 +47,23 @@ struct TaskResult {
         return r;
     }
 
+    static TaskResult ok(const std::string& msg) {
+        TaskResult r;
+        r.success = true;
+        r.detail = msg;
+        r.errorCode = 0;
+        return r;
+    }
+
     static TaskResult error(const char* msg, int code = -1) {
+        TaskResult r;
+        r.success = false;
+        r.detail = msg;
+        r.errorCode = code;
+        return r;
+    }
+
+    static TaskResult error(const std::string& msg, int code = -1) {
         TaskResult r;
         r.success = false;
         r.detail = msg;
@@ -200,7 +216,7 @@ struct TaskGraphEvent {
     uint64_t graphId;
     uint64_t taskId;
     uint32_t progressPercentage;
-    const char* detail;
+    std::string detail;
     std::chrono::steady_clock::time_point timestamp;
 };
 

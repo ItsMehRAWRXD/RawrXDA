@@ -3,6 +3,7 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <windows.h>
+#include <commdlg.h>
 
 // Undefine Windows macros that conflict with our code
 #ifdef ERROR
@@ -61,6 +62,7 @@ class CheckpointManager;
 class CICDSettings;
 class MultiFileSearchWidget;
 namespace RawrXD { namespace LSPServer { class RawrXDLSPServer; } }
+namespace RawrXD { class GhostTextRenderer; }
 
 // Tier 3: File Watcher + DirectWrite (need full types for unique_ptr destructor)
 #include "IocpFileWatcher.h"
@@ -745,6 +747,8 @@ struct AgentHistoryStats {
 // Forward declaration for friend class
 namespace vscode { class VSCodeExtensionAPI; }
 
+class FeatureRegistryPanel;
+
 class Win32IDE
 {
     friend class AgenticBridge;
@@ -754,13 +758,15 @@ class Win32IDE
     friend void bgInitBody(void* self);
 
 public:
+    void runWorkspaceSearchFromDialog(const std::string& query);
     void deferredHeavyInitBody();   // SEH-safe body, called from bg thread via sehRunBgThread
 
     enum class OutputSeverity {
         Debug = 0,
         Info = 1,
         Warning = 2,
-        Error = 3
+        Error = 3,
+        Success = 4
     };
 
     enum class PanelTab {
@@ -824,6 +830,7 @@ public:
     // Note: loadMemoryPlugin is the legacy single-DLL loader.
     // For the full plugin system, use m_pluginLoader (Phase 43).
     void loadMemoryPlugin(const std::string& path);
+
 
     // ========================================================================
     // AGENT MEMORY — Persistent observation store for agentic iterations
@@ -1259,6 +1266,25 @@ private:
     void handleGitCommand(int commandId);
     void handleAgentCommand(int commandId);
 
+    // Swarm state
+    bool isSwarmRunning() const;
+
+    // Edit helpers
+    void pastePlainText();
+
+    // License / Feature dialogs
+    void showLicenseCreatorDialog();
+    void showFeatureRegistryDialog();
+    void showEnterpriseLicenseDialog();
+
+    // Monaco settings / Thermal dashboard
+    void showMonacoSettingsDialog();
+    void showThermalDashboard();
+
+    // Simple modal input dialog (implemented in Win32IDE_Quantum.cpp)
+    bool DialogBoxWithInput(const wchar_t* title, const wchar_t* prompt,
+                            wchar_t* buffer, size_t bufferSize);
+
     // Security scans (Top-50 P0)
     bool handleSecurityCommand(int commandId);
     void RunSecretsScan();
@@ -1383,12 +1409,14 @@ private:
     void showPowerShellDocs();
     void searchHelp(const std::string& query);
 
-    // Enhanced output panel
+public:
+    // Enhanced output panel (public — accessed by BuildRunner, AgentStreamingBridge, AuditDashboard, etc.)
     void createOutputTabs();
     void addOutputTab(const std::string& name);
     void appendToOutput(const std::string& text, const std::string& tabName = "General", OutputSeverity severity = OutputSeverity::Info);
     void clearOutput(const std::string& tabName = "General");
     void formatOutput(const std::string& text, COLORREF color, const std::string& tabName = "");
+private:
 
     // Enhanced clipboard
     void copyWithFormatting();
@@ -1737,13 +1765,16 @@ private:
     void updateExtension(const std::string& extensionId);
     void showExtensionDetails(const std::string& extensionId);
     void loadInstalledExtensions();
-    void runWorkspaceSearchFromDialog(const std::string& query);
+private:
     void installFromVSIXFile();
     void showMultiFileSearchDialog();
     void showCICDSettingsDialog();
     void showModelRegistryDialog();
     friend LRESULT CALLBACK CICDSettingsDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+    friend LRESULT CALLBACK MultiFileSearchDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
     friend LRESULT CALLBACK ModelRegistryDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+    friend LRESULT CALLBACK SettingsGUIProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+    friend LRESULT CALLBACK auditDashboardWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 private:
     // ========================================================================
@@ -2157,6 +2188,7 @@ private:
     std::vector<StackFrame> m_callStack;
     std::vector<Variable> m_localVariables;
     std::vector<WatchItem> m_watchList;
+    int m_selectedStackFrameIndex = 0;
 
     // Extensions View
     HWND m_hwndExtensionsList;
@@ -2353,7 +2385,13 @@ private:
     ModelRegistry*         m_modelRegistry         = nullptr;
     InterpretabilityPanel* m_interpretabilityPanel = nullptr;
     BenchmarkMenu*         m_benchmarkMenu         = nullptr;
+    CheckpointManager*     m_checkpointManager     = nullptr;
+    CICDSettings*          m_ciCdSettings          = nullptr;
+    MultiFileSearchWidget* m_multiFileSearch       = nullptr;
     ModelRegistry* getModelRegistry() { return m_modelRegistry; }
+
+    // Project root (for build commands)
+    std::string m_projectRoot;
 
     // FIM Prediction Provider (OllamaProvider for ghost text)
     std::unique_ptr<RawrXD::Prediction::OllamaProvider> m_predictionProvider;
@@ -2460,6 +2498,7 @@ private:
     void onModelSelectionChanged();
     void onMaxTokensChanged(int newValue);
     // Debugger Execution Control
+    void handleDebuggerToolbarCommand(int commandId);
     void pauseExecution();
     void resumeExecution();
     void stepOverExecution();
@@ -2524,8 +2563,7 @@ private:
     std::string trimGhostText(const std::string& raw);
 
     // Ghost Text state
-    class GhostTextRenderer;
-    GhostTextRenderer* m_ghostTextRendererOverlay = nullptr;
+    RawrXD::GhostTextRenderer* m_ghostTextRendererOverlay = nullptr;
     bool m_ghostTextEnabled     = false;
     bool m_ghostTextVisible     = false;
     bool m_ghostTextAccepted    = false;
@@ -2547,6 +2585,14 @@ private:
     void refreshAgentDiffDisplay();
     std::string getAgentSessionSummary() const;
     void renderAgentDiffPanel(HDC hdc, RECT panelRect);
+    static LRESULT CALLBACK AgentDiffPanelProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+    bool m_agentPanelInitialized = false;
+    HWND m_hwndAgentStatusLabel = nullptr;
+    HWND m_hwndAgentDiffPanel = nullptr;
+    HWND m_hwndAgentSummaryEdit = nullptr;
+    HWND m_hwndAgentAcceptAllBtn = nullptr;
+    HWND m_hwndAgentRejectAllBtn = nullptr;
+    HWND m_hwndAgentNewSessionBtn = nullptr;
     void onBoundedAgentLoop();  // Ctrl+Shift+I → Bounded Agent (FIM tools)
     void toggleAgentPanel();   // View > Agent Panel — show/hide agent chat panel
 
@@ -2566,10 +2612,8 @@ private:
 
     // ========================================================================
     // Security Scans (Win32IDE_SecurityScans.cpp) — Top-50 P0
+    // (declarations in earlier section ~line 1264)
     // ========================================================================
-    void RunSecretsScan();
-    void RunSastScan();
-    void RunDependencyAudit();
 
     // ========================================================================
     // Disk Recovery Panel (Win32IDE_DiskRecovery.cpp)
@@ -2750,7 +2794,10 @@ private:
         OpenAI     = 2,   // OpenAI API (gpt-4o, etc.)
         Claude     = 3,   // Anthropic Claude API
         Gemini     = 4,   // Google Gemini API
-        Count      = 5
+        ReasoningEngine = 5,  // RawrXD local reasoning engine
+        GitHubCopilot   = 6,  // GitHub Copilot extension
+        AmazonQ         = 7,  // Amazon Q extension
+        Count      = 8
     };
 
     struct AIBackendConfig {
@@ -2816,6 +2863,9 @@ private:
     std::string routeToOpenAI(const std::string& prompt);
     std::string routeToClaude(const std::string& prompt);
     std::string routeToGemini(const std::string& prompt);
+    std::string routeToReasoningEngine(const std::string& prompt);
+    std::string routeToGitHubCopilot(const std::string& prompt);
+    std::string routeToAmazonQ(const std::string& prompt);
 
     // HTTP helpers for remote backends
     std::string httpPost(const std::string& url, const std::string& body,
@@ -3318,6 +3368,9 @@ private:
     void handleOpenAIChatCompletions(SOCKET client, const std::string& body);
     void handleModelsEndpoint(SOCKET client);
     void handleAskEndpoint(SOCKET client, const std::string& body);
+    void handleV1ModelsEndpoint(SOCKET client);
+    void handleReSetBinaryEndpoint(SOCKET client, const std::string& body);
+    static std::vector<std::string> getCandidateModelRootPaths();
     void handleServeGui(SOCKET client);
     void handleReadFileEndpoint(SOCKET client, const std::string& body);
     void handleWriteFileEndpoint(SOCKET client, const std::string& body);
@@ -4247,7 +4300,7 @@ private:
 // ============================================================================
 // BUILD COMMANDS — Unified Build Pipeline (9602+)
 // ============================================================================
-#define IDM_BUILD_SOLUTION              9602
+// IDM_BUILD_SOLUTION already defined as 10400 above
 
 // ============================================================================
 // PHASE 33: VOICE CHAT — Native Win32 Audio Engine (9700 range)
@@ -4888,16 +4941,24 @@ private:
     bool getEditorCursorFileLineCol(std::string& outFile, uint32_t& outLine1Based, uint32_t& outCol) const;
     void navigateToFileLine(const std::string& filePath, uint32_t line1Based);
 
-    // Unified Problems Panel (P0)
+public:
+    // Unified Problems Panel (P0) — accessed by ProblemsListSubclassProc
     void initProblemsPanel();
     void refreshProblemsView();
     void onProblemsItemActivate(int index);
+private:
     void handleProblemsCommand(int commandId);
     void runBuildInBackground(const std::string& workingDir, const std::string& buildCommand);
     bool m_problemsPanelInitialized = false;
     bool m_problemsShowErrors = true;
     bool m_problemsShowWarnings = true;
     bool m_problemsShowInfo = false;
+
+    // Tier 5 Cosmetics state
+    bool m_lineEndingSelectorInitialized = false;
+    int  m_lineEndingMode = 0;
+    bool m_debugWatchInitialized = false;
+    bool m_callStackSymbolsInitialized = false;
     HWND m_hwndProblemsPanel = nullptr;
     HWND m_hwndProblemsFilter = nullptr;
     std::vector<RawrXD::ProblemEntry> m_problemsViewCache;
@@ -6121,6 +6182,13 @@ public:
     bool m_marketplaceInitialized        = false;
     bool m_shortcutEditorInitialized     = false;
     bool m_emojiSupportInitialized       = false;
+
+    // Feature Registry / License Creator
+    HWND m_hwndFeatureRegistryHost = nullptr;
+    std::unique_ptr<FeatureRegistryPanel> m_featureRegistryPanel;
+    static LRESULT CALLBACK LicenseCreatorWndProc(HWND, UINT, WPARAM, LPARAM);
+    static LRESULT CALLBACK FeatureRegistryHostProc(HWND, UINT, WPARAM, LPARAM);
+
 private:
 };
 

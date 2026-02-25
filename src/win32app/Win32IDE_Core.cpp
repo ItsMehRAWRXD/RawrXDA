@@ -6,10 +6,14 @@
 // ============================================================================
 
 #include "Win32IDE.h"
+#include "feature_registry_panel.h"
 #include "Win32IDE_IELabels.h"
 #include "../../include/model_registry.h"
 #include "../../include/interpretability_panel.h"
 #include "../../include/benchmark_menu_widget.hpp"
+#include "../../include/multi_file_search.h"
+#include "../../include/ci_cd_settings.h"
+#include "../../include/checkpoint_manager.h"
 #include "IDELogger.h"
 #include "IDEConfig.h"
 #include "../../include/agentic_autonomous_config.h"
@@ -35,10 +39,15 @@
 #include <sstream>
 #include <fstream>
 #include <algorithm>
+#include <filesystem>
 #include <nlohmann/json.hpp>
 
 // Menu command IDs — must match Win32IDE.cpp definitions
 #ifndef IDM_FILE_NEW
+#ifndef IDM_BUILD_PROJECT
+#define IDM_BUILD_PROJECT 2801
+#endif
+
 #define IDM_FILE_NEW 2001
 #endif
 #ifndef IDM_FILE_OPEN
@@ -61,6 +70,9 @@
 // Window Class Name
 // ============================================================================
 static const char* kWindowClassName = "RawrXD_IDE_MainWindow";
+
+// Implemented in src/multi_file_search.cpp (Win32 dialog invoked by MultiFileSearchWidget::show()).
+extern void MultiFileSearchWidget_ShowDialog(void* ctx);
 
 // ============================================================================
 // Destructor
@@ -351,8 +363,8 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
                     int line = (int)SendMessage(m_hwndEditor, EM_LINEFROMCHAR, sel.cpMin, 0);
                     int lineStart = (int)SendMessage(m_hwndEditor, EM_LINEINDEX, line, 0);
                     int col = sel.cpMin - lineStart;
-                    char posBuf[64];
-                    snprintf(posBuf, sizeof(posBuf), "Ln %d, Col %d", line + 1, col + 1);
+                    wchar_t posBuf[64];
+                    swprintf(posBuf, 64, L"Ln %d, Col %d", line + 1, col + 1);
                     if (m_hwndStatusBar) {
                         SendMessage(m_hwndStatusBar, SB_SETTEXT, 1, (LPARAM)posBuf);
                     }
@@ -430,7 +442,7 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
             KillTimer(hwnd, 42);
             // Restore default status bar text
             if (m_hwndStatusBar) {
-                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Ready");
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"Ready");
             }
             return 0;
         }
@@ -1158,6 +1170,25 @@ void Win32IDE::onCreate(HWND hwnd) {
     // Create UI components — SEH-safe breadcrumb trail for diagnosis
     // Each step is wrapped so a crash pinpoints the exact function.
     // ================================================================
+
+    // Optional panels (keep them alive for the lifetime of the IDE; no extra stub layers).
+    // These are lightweight wrappers; heavy init is still deferred.
+    if (!m_modelRegistry) m_modelRegistry = new ModelRegistry(hwnd);
+    if (!m_interpretabilityPanel) {
+        m_interpretabilityPanel = new InterpretabilityPanel();
+        m_interpretabilityPanel->setParent(hwnd);
+    }
+    if (!m_checkpointManager) m_checkpointManager = new CheckpointManager(hwnd);
+    if (!m_ciCdSettings) m_ciCdSettings = new CICDSettings();
+    if (!m_multiFileSearch) {
+        m_multiFileSearch = new MultiFileSearchWidget();
+        // Default root: project root if set; else current working directory.
+        const std::string root = m_projectRoot.empty() ? std::filesystem::current_path().string() : m_projectRoot;
+        m_multiFileSearch->setProjectRoot(root);
+        m_multiFileSearch->setShowCallback(&MultiFileSearchWidget_ShowDialog, m_multiFileSearch);
+    }
+    if (!m_benchmarkMenu) m_benchmarkMenu = new BenchmarkMenu(hwnd);
+
     OutputDebugStringA("[onCreate] createMenuBar...\n");
     createMenuBar(hwnd);  // ESP:m_hMenu — menus/submenus wired end-to-end
     OutputDebugStringA("[onCreate] createToolbar...\n");
@@ -1849,8 +1880,8 @@ void Win32IDE::onCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify) {
             int line = (int)SendMessage(m_hwndEditor, EM_LINEFROMCHAR, sel.cpMin, 0);
             int lineStart = (int)SendMessage(m_hwndEditor, EM_LINEINDEX, line, 0);
             int col = sel.cpMin - lineStart;
-            char posBuf[64];
-            snprintf(posBuf, sizeof(posBuf), "Ln %d, Col %d", line + 1, col + 1);
+            wchar_t posBuf[64];
+            swprintf(posBuf, 64, L"Ln %d, Col %d", line + 1, col + 1);
             if (m_hwndStatusBar) {
                 SendMessage(m_hwndStatusBar, SB_SETTEXT, 1, (LPARAM)posBuf);
             }
@@ -1880,10 +1911,10 @@ void Win32IDE::onCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify) {
 
     // ── GUI-ONLY FILE / MODEL / VIEW TOGGLES — Win32 menu IDs that must run IDE actions (dialogs, loading, toggles). All other commands go through unified dispatch (Agent, Autonomy, Backend, LSP, Hotpatch, etc.).
     switch (id) {
-        case 2001: newFile(); if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"New file created"); return;
+        case 2001: newFile(); if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"New file created"); return;
         case 2002: openFile(); return;
-        case 2003: if (saveFile() && m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"File saved"); return;
-        case 2004: if (saveFileAs() && m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"File saved as new name"); return;
+        case 2003: if (saveFile() && m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"File saved"); return;
+        case 2004: if (saveFileAs() && m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"File saved as new name"); return;
         case 2005: if (!m_fileModified || promptSaveChanges()) PostQuitMessage(0); return;
         case 1030: openModel(); return;
         case 1031: openModelFromHuggingFace(); return;
@@ -1893,23 +1924,23 @@ void Win32IDE::onCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify) {
         case 1035: quickLoadGGUFModel(); return;
         case 2007: // Edit > Undo (Win32 menu ID)
             if (m_hwndEditor) SendMessage(m_hwndEditor, EM_UNDO, 0, 0);
-            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Undo");
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"Undo");
             return;
         case 2008: // Edit > Redo
             if (m_hwndEditor) SendMessage(m_hwndEditor, EM_REDO, 0, 0);
-            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Redo");
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"Redo");
             return;
         case 2009: // Edit > Cut
             if (m_hwndEditor) { SendMessage(m_hwndEditor, WM_CUT, 0, 0); m_fileModified = true; }
-            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Cut");
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"Cut");
             return;
         case 2010: // Edit > Copy
             if (m_hwndEditor) SendMessage(m_hwndEditor, WM_COPY, 0, 0);
-            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Copied");
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"Copied");
             return;
         case 2011: // Edit > Paste
             if (m_hwndEditor) { SendMessage(m_hwndEditor, WM_PASTE, 0, 0); m_fileModified = true; }
-            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Pasted");
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"Pasted");
             return;
         case 2026: // View > Use Streaming Loader — toggle so model loading uses low-memory path
             m_useStreamingLoader = !m_useStreamingLoader;
@@ -1928,12 +1959,12 @@ void Win32IDE::onCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify) {
             return;
         case 1022:  // Title bar GH button — toggle AI Chat panel (secondary sidebar)
             toggleSecondarySidebar();
-            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)(m_secondarySidebarVisible ? "AI Chat shown" : "AI Chat hidden"));
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)(m_secondarySidebarVisible ? L"AI Chat shown" : L"AI Chat hidden"));
             return;
         case 3007:  // View > AI Chat — toggle secondary sidebar (Ctrl+Alt+B)
         case 3009:  // View > Agent Chat (autonomous)
             toggleSecondarySidebar();
-            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)(m_secondarySidebarVisible ? "Chat panel shown" : "Chat panel hidden"));
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)(m_secondarySidebarVisible ? L"Chat panel shown" : L"Chat panel hidden"));
             return;
         case IDM_VIEW_AGENT_PANEL:
             toggleAgentPanel();

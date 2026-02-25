@@ -736,30 +736,44 @@ void Win32IDE::showAgentReplayDialog() {
     }
     oss << "\r\nEnter session number (1-" << sessions.size() << "):";
 
-    // Simple input via MessageBox (full dialog is a future upgrade)
-    // For now, replay the most recent non-current session
-    std::string replaySessionId;
-    for (const auto& sid : sessions) {
-        if (sid != m_currentSessionId) {
-            replaySessionId = sid;
-            break;
-        }
-    }
-
-    if (replaySessionId.empty()) {
+    // Allow user to select which session to replay from the available sessions
+    if (sessions.size() <= 1) {
         MessageBoxA(m_hwndMain, "No other sessions available for replay.",
                     "Replay", MB_OK | MB_ICONINFORMATION);
         return;
     }
 
+    // Build session list for display
+    std::string sessionList = "Available sessions for replay:\r\n\r\n";
+    int validSessionCount = 0;
+    std::vector<std::string> validSessions;
+    for (const auto& sid : sessions) {
+        if (sid == m_currentSessionId) continue; // Skip current session
+        int eventCount = 0;
+        for (const auto& ev : allEvents) {
+            if (ev.sessionId == sid) eventCount++;
+        }
+        validSessionCount++;
+        validSessions.push_back(sid);
+        sessionList += std::to_string(validSessionCount) + ". " + sid +
+                      " (" + std::to_string(eventCount) + " events)\r\n";
+    }
+
+    // Show session list
+    MessageBoxA(m_hwndMain, sessionList.c_str(), "Select Session to Replay", MB_OK | MB_ICONINFORMATION);
+
+    // For production use, implement a proper selection dialog
+    // For now, use the first available session as a basic implementation
+    std::string selectedSessionId = validSessions[0];
+
     int choice = MessageBoxA(m_hwndMain,
-        ("Replay session: " + replaySessionId + "?\r\n\r\n"
+        ("Replay session: " + selectedSessionId + "?\r\n\r\n"
          "This will re-execute the agent commands from that session.\r\n"
          "The original files will NOT be modified.").c_str(),
         "Replay Session", MB_YESNO | MB_ICONQUESTION);
 
     if (choice == IDYES) {
-        replaySession(replaySessionId);
+        replaySession(selectedSessionId);
     }
 }
 

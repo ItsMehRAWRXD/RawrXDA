@@ -254,13 +254,13 @@ have_base:
     mov g_trace_count, 0
     
     lea rcx, sz_init_ok
-    call PrintString
+    call Omega_PrintString
     mov eax, 1
     jmp init_done
     
 init_fail:
     lea rcx, sz_error
-    call PrintString
+    call Omega_PrintString
     xor eax, eax
     
 init_done:
@@ -491,7 +491,7 @@ unpack_done:
     
     lea rcx, sz_neutralized
     mov edx, r12d
-    call PrintString
+    call Omega_PrintString
     
     mov eax, r12d
     pop r15
@@ -636,7 +636,7 @@ Handle_ReverseObf PROC FRAME
     
     mov ecx, r12d
     lea rdx, sz_decoy_removed
-    call PrintString
+    call Omega_PrintString
     
     mov eax, r12d
     pop r12
@@ -671,7 +671,7 @@ Handle_UPX PROC FRAME
     .ENDPROLOG
     mov r12, rcx
     lea rcx, sz_upx
-    call PrintString
+    call Omega_PrintString
     
     mov r13, g_work_buffer
     add r13, r12
@@ -727,7 +727,7 @@ Handle_ASPACK PROC FRAME
     ; Identify ASPack specific instruction sequence
     .ENDPROLOG
     lea rcx, sz_aspack
-    call PrintString
+    call Omega_PrintString
     ; Logic to skip initial ASPack decompression loop
     ; Usually begins with PUSHAD, CALL ...
     ; We just simulate finding the OEP for now
@@ -741,7 +741,7 @@ Handle_ASPACK ENDP
 Handle_FSG PROC FRAME
     .ENDPROLOG
     lea rcx, sz_fsg
-    call PrintString
+    call Omega_PrintString
     ; FSG usually has a very small header and imports by hash
     ; We would resolve imports here
     call OmegaDeobf_RebuildImports
@@ -1102,7 +1102,7 @@ Handle_VMEnter PROC FRAME
     .ENDPROLOG
     lea rcx, sz_vm_detected
     mov rdx, g_entry_point
-    call PrintString
+    call Omega_PrintString
     mov eax, 1
     ret
 Handle_VMEnter ENDP
@@ -1258,7 +1258,7 @@ Restore_PE_Headers ENDP
 ;------------------------------------------------------------------------------
 ; HELPERS
 ;------------------------------------------------------------------------------
-PrintString PROC FRAME
+Omega_PrintString PROC FRAME
     push rbx
     push rsi
     push rdi
@@ -1294,6 +1294,6 @@ PrintString PROC FRAME
     pop rsi
     pop rbx
     ret
-PrintString ENDP
+Omega_PrintString ENDP
 
 END

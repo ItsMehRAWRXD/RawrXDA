@@ -229,7 +229,7 @@ EXTERN memcpy:PROC
 EXTERN memmove:PROC
 EXTERN memcmp:PROC
 EXTERN strlen:PROC
-EXTERN sprintf:PROC
+; EXTERN :PROC  ; Removed unused and problematic reference
 EXTERN printf:PROC
 EXTERN floor:PROC
 EXTERN ceil:PROC

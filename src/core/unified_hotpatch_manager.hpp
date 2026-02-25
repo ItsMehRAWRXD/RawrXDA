@@ -34,6 +34,7 @@ namespace RawrXD { namespace Auth { class RBACEngine; } }
 #include <cstddef>
 #include <mutex>
 #include <atomic>
+#include <string>
 #include <vector>
 
 // Forward declarations removed — now included via gguf_server_hotpatch.hpp
@@ -98,7 +99,7 @@ struct HotpatchEvent {
     Type        type;
     uint64_t    timestamp;      // GetTickCount64() or RDTSC
     uint64_t    sequenceId;
-    const char* detail;
+    char        detail[256];
     const char* layerName;      // "memory", "byte", or "server"
     const char* patchName;      // Human-readable patch identifier
     bool        success;        // Whether the operation succeeded
@@ -312,6 +313,7 @@ private:
     UnifiedHotpatchManager& operator=(const UnifiedHotpatchManager&) = delete;
 
     void emit_event(HotpatchEvent::Type type, const char* detail);
+    void emit_event(HotpatchEvent::Type type, const std::string& detail);
     uint64_t next_sequence();
 
     std::mutex                              m_mutex;

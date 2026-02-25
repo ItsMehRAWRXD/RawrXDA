@@ -31,6 +31,7 @@ struct SwarmTrace;
 #include <cstring>
 #include <cstdio>
 #include <fstream>
+#include <string>
 
 // ---------------------------------------------------------------------------
 // Singleton
@@ -61,7 +62,7 @@ void UnifiedHotpatchManager::emit_event(HotpatchEvent::Type type, const char* de
     m_eventRing[idx].type       = type;
     m_eventRing[idx].timestamp  = GetTickCount64();
     m_eventRing[idx].sequenceId = seq;
-    m_eventRing[idx].detail     = detail;
+    std::snprintf(m_eventRing[idx].detail, sizeof(m_eventRing[idx].detail), "%s", detail ? detail : "");
 
     // Fire callbacks
     for (size_t i = 0; i < m_callbackCount; ++i) {
@@ -69,6 +70,10 @@ void UnifiedHotpatchManager::emit_event(HotpatchEvent::Type type, const char* de
             m_callbacks[i].callback(&m_eventRing[idx], m_callbacks[i].userData);
         }
     }
+}
+
+void UnifiedHotpatchManager::emit_event(HotpatchEvent::Type type, const std::string& detail) {
+    emit_event(type, detail.c_str());
 }
 
 // ---------------------------------------------------------------------------

@@ -528,9 +528,10 @@ ToolExecResult HandleApplyHotpatch(const json& args) {
     }
 
     if (!ur.result.success) {
+        const char* detail = ur.result.detail.empty() ? "unknown error" : ur.result.detail.c_str();
         return ToolExecResult::error(
             std::string("[apply_hotpatch] ") + layer + " layer failed: " +
-            (ur.result.detail ? ur.result.detail : "unknown error"),
+            detail,
             ur.result.errorCode);
     }
 

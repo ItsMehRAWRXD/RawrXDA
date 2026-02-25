@@ -12,6 +12,7 @@
 #include <iomanip>
 #include <cmath>
 #include <random>
+#include <numeric>
 
 extern "C" {
 #include <windows.h>

@@ -13,6 +13,7 @@
 #include <chrono>
 #include <cmath>
 #include <ctime>
+#include <functional>
 #include <numeric>
 #include <regex>
 #include <set>
@@ -846,12 +847,12 @@ json MetaPlanner::perfPlan(const std::string& wish) {
 
     // Phase 2: Optimization
     json p2tasks = json::array();
+    json searchSpace = json::object();
+    searchSpace["batch_size"] = json::array({1, 2, 4, 8, 16});
+    searchSpace["thread_count"] = json::array({1, 2, 4, 8});
+    searchSpace["prefetch_distance"] = json::array({64, 128, 256, 512});
     auto t5 = task("auto_tune", target + "_quant_params",
-        {{"metric", metric}, {"search_space", json::object({
-            {"batch_size", json::array({1, 2, 4, 8, 16})},
-            {"thread_count", json::array({1, 2, 4, 8})},
-            {"prefetch_distance", json::array({64, 128, 256, 512})}
-         })}},
+        {{"metric", metric}, {"search_space", searchSpace}},
         8, 600, "inference_core");
     auto t6 = task("hotpatch", target + "_critical_path",
         {{"strategy", "inline_hot_loops"}, {"threshold_cycles", 1000}},
@@ -975,7 +976,7 @@ json MetaPlanner::testPlan(const std::string& wish) {
     deps.push_back(depEdge(t3["id"], t6["id"]));
     deps.push_back(depEdge(t4["id"], t6["id"]));
     if (!p3tasks.empty()) {
-        deps.push_back(depEdge(p3tasks[0]["id"].get<uint32_t>(), t6["id"].get<uint32_t>()));
+        deps.push_back(depEdge(p3tasks[(size_t)0]["id"].get<uint32_t>(), t6["id"].get<uint32_t>()));
     }
 
     uint32_t totalSeconds = 0;

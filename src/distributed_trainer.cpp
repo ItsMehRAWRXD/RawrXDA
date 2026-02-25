@@ -214,7 +214,8 @@ bool DistributedTrainer::setupProcessGroup() {
 bool DistributedTrainer::synchronizeGradients() {
     if (m_config.pgConfig.worldSize > 1) {
         // In a real distributed run, these would use NCCL/MPI
-        return false; // Not implemented for multi-node
+        statusChanged("Distributed gradient sync not supported yet (worldSize > 1).");
+        return false;
     }
     // Single node: Gradients are already local
     return true; 

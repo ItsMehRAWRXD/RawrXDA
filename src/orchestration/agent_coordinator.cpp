@@ -206,45 +206,32 @@ std::string AgentCoordinator::submitPlan(const std::vector<AgentTask>& tasks,
     if (!validateTasks(tasks, validationError)) {
         logCoordinatorEvent("submitPlan() failed",
                           std::string("Validation error: %1"), true);
-        return std::string();  // Return empty string to indicate failure
+        return std::string();
     }
 
-    // Phase 2: Build plan state OUTSIDE lock (expensive computation)
-    // This reduces critical section duration from 2-5ms to < 100µs
+    // Phase 2: Build plan state OUTSIDE lock to reduce contention
     PlanState plan;
     plan.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
     plan.sharedContext = initialContext;
     plan.createdAt = std::chrono::system_clock::time_point::currentDateTimeUtc();
 
-    // Initialize task state entries (Pending → Ready or Pending → Running)
     for (const auto& task : tasks) {
         plan.tasks.insert(task.id, task);
         plan.state.insert(task.id, TaskState::Pending);
         plan.remainingDependencies.insert(task.id, task.dependencies.size());
     }
 
-    // Build dependency graph and identify initially-ready tasks
-    // (Tasks with 0 remaining dependencies)
     initialisePlanGraphs(plan);
     std::vector<AgentTask> readyToEmit = scheduleReadyTasks(plan);
 
-    // Phase 3: MINIMAL CRITICAL SECTION - Only atomic registry insertion
-    // Duration: < 100µs (vs 2-5ms for graph building)
+    // Phase 3: MINIMAL CRITICAL SECTION for plan insertion
     {
         QWriteLocker locker(&m_lock);
         m_plans.insert(plan.id, plan);
-        logCoordinatorEvent("submitPlan() success",
-                          std::string("plan=%1 | tasks=%2 | initialReady=%3")
-                              
-                              )
-                              ));
-    }  // Release lock before signals
+    }
 
-    // Phase 4: signals OUTSIDE lock (Qt event loop interaction)
-    // This prevents potential deadlocks from event handler re-entrancy
+    // Phase 4: Emit signals OUTSIDE lock to prevent deadlocks
     planSubmitted(plan.id);
-    
-    // Notify agents about immediately-ready tasks
     for (const auto& task : readyToEmit) {
         taskReady(plan.id, task);
     }
@@ -688,12 +675,12 @@ bool AgentCoordinator::detectCycle(const std::vector<AgentTask>& tasks) const
     // Lambda DFS function for recursive graph traversal
     std::function<bool(const std::string&)> dfs = [&](const std::string& node) -> bool {
         // Retrieve current color (default 0 if not found)
-        int nodeColor = color.value(node, 0);
+        int nodeColor = color.count(node) ? color[node] : 0;
         
         // Back edge detected: node is in current path = cycle found
         if (nodeColor == 1) {
             logCoordinatorEvent("detectCycle() found cycle",
-                              std::string("Back edge at node %1"), true);
+                              std::string("Back edge at node %1").arg(node), true);
             return true;
         }
         
@@ -706,35 +693,32 @@ bool AgentCoordinator::detectCycle(const std::vector<AgentTask>& tasks) const
         color[node] = 1;
         
         // Traverse all direct dependencies
-        const std::vector<std::string> deps = graph.value(node);
-        for (const auto& dep : deps) {
-            // Skip dependencies not in our task graph (orphaned references already caught)
-            if (!graph.contains(dep)) {
-                continue;
-            }
-            
-            // Recursively check subtree for cycles
-            if (dfs(dep)) {
-                return true;  // Cycle found in dependency chain
+        if (graph.count(node)) {
+            const std::vector<std::string>& deps = graph.at(node);
+            for (const auto& dep : deps) {
+                if (graph.count(dep)) {
+                    if (dfs(dep)) {
+                        return true;
+                    }
+                }
             }
         }
         
         // Mark as Black (fully processed, no cycles found in subtree)
         color[node] = 2;
-        return false;  // No cycles in this subtree
+        return false;
     };
 
     // Process all nodes, initiating DFS only from unvisited (White) nodes
-    for (const auto& nodeId : graph.keys()) {
-        // Only start DFS from White nodes (unvisited) to avoid redundant processing
-        if (color.value(nodeId, 0) == 0) {
-            if (dfs(nodeId)) {
-                return true;  // Cycle detected in graph
+    for (const auto& task : tasks) {
+        if (color.count(task.id) == 0 || color[task.id] == 0) {
+            if (dfs(task.id)) {
+                return true;
             }
         }
     }
     
-    return false;  // Graph is acyclic (valid DAG)
+    return false;
 }
 
 void AgentCoordinator::initialisePlanGraphs(PlanState& plan)

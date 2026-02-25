@@ -33,6 +33,8 @@ public:
     bool startServer();
     void stopServer();
     bool isListening() const;
+    int getPort() const { return m_listenPort; }
+    int getActiveConnections() const { return m_activeConnections; }
     nlohmann::json getServerStatistics() const;
     void setConnectionPoolSize(int size);
     void setConnectionTimeout(int ms);

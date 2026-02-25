@@ -45,11 +45,15 @@ class BenchmarkSelector {
 public:
     BenchmarkSelector() = default;
 
+    // Win32: create child controls inside a parent window.
+    void create(HWND parent, int x, int y, int w, int h);
+
     // Get selected tests
     std::vector<std::string> getSelectedTests() const;
     
     // Get configuration
     std::string getModelPath() const;
+    void setModelPath(const std::string& path);
     bool isGPUEnabled() const;
     bool isVerbose() const;
 
@@ -63,9 +67,12 @@ private:
     std::vector<HWND> testCheckboxes_;
     
     // Configuration widgets
-    HWND modelCombo_ = nullptr;
+    HWND modelCombo_ = nullptr; // Win32: EDIT control holding model path
     HWND gpuCheckbox_ = nullptr;
     HWND verboseCheckbox_ = nullptr;
+
+    HWND parent_ = nullptr;
+    HWND group_ = nullptr;
 };
 
 /**
@@ -88,6 +95,8 @@ public:
     void logTestResult(const std::string& testName, bool passed, double latencyMs);
     void clear();
 
+    void attach(HWND hwndEdit) { m_hwnd = hwndEdit; }
+
 private:
     void formatLog(const std::string& message, LogLevel level);
     std::string levelToString(LogLevel level);
@@ -103,6 +112,9 @@ class BenchmarkResultsDisplay {
 public:
     BenchmarkResultsDisplay() = default;
 
+    // Win32: create child controls inside a parent window.
+    void create(HWND parent, int x, int y, int w, int h);
+
     void setTotalTests(int count);
     void updateProgress(int current);
     void addResult(const std::string& testName, bool passed, 
@@ -115,6 +127,7 @@ private:
 
     HWND progressBar_ = nullptr;
     HWND resultsDisplay_ = nullptr;
+    HWND parent_ = nullptr;
     int totalTests_ = 0;
     std::vector<TestResult> results_;
 };
@@ -141,12 +154,19 @@ public:
     void stopBenchmarks();
     void viewBenchmarkResults();
 
+    // Win32 dialog proc helpers (keeps private UI pointers encapsulated).
+    BenchmarkSelector* ensureSelectorAttached(HWND parent);
+    BenchmarkLogOutput* ensureLogAttached(HWND logEdit);
+    BenchmarkResultsDisplay* ensureResultsAttached(HWND parent);
+    void notifyFinished();
+
 private:
     void createMenu();
     void createDialog();
     void connectHandlers();
 
     HWND mainWindow_ = nullptr;
+    HWND dialogHwnd_ = nullptr;
     HMENU benchmarkMenu_ = nullptr;
     
     // Dialog components

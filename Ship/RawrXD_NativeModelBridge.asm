@@ -25,7 +25,7 @@ extern free : PROC
 extern memset : PROC
 extern memcpy : PROC
 extern strlen : PROC
-extern sprintf : PROC
+; extern  : PROC  ; Removed unused and problematic reference
 extern sin : PROC
 extern cos : PROC
 extern pow : PROC

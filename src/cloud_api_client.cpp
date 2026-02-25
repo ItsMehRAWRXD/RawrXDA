@@ -117,23 +117,34 @@ ApiResponse CloudApiClient::performRequest(const std::string& url_str, const nlo
             if (!streamCallback) {
                 try {
                      if (!response.raw_body.empty()) {
-                        auto j = nlohmann::json::parse(response.raw_body);
-                        if (config.provider == "openai" || config.provider == "azure") {
-                            if (j.contains("choices") && !j["choices"].empty()) {
-                                response.content = j["choices"][0]["message"]["content"];
-                            }
-                        } else if (config.provider == "ollama") {
-                            if (j.contains("response")) response.content = j["response"];
-                        } else if (config.provider == "anthropic") {
-                            if (j.contains("content")) {
-                                for (auto& item : j["content"]) {
-                                    if (item["type"] == "text") response.content += item["text"];
-                                }
-                            }
-                        }
-                     }
-                } catch(...) {}
-            }
+                         auto j = nlohmann::json::parse(response.raw_body);
+                         if (config.provider == "openai" || config.provider == "azure") {
+                             if (j.contains("choices") && !j["choices"].empty()) {
+                                 auto& choice0 = j["choices"][(size_t)0];
+                                 if (choice0.contains("message") && choice0["message"].contains("content")) {
+                                     auto& content = choice0["message"]["content"];
+                                     if (content.is_string()) response.content = content.get<std::string>();
+                                 }
+                             }
+                         } else if (config.provider == "ollama") {
+                             if (j.contains("response")) {
+                                 auto& resp = j["response"];
+                                 if (resp.is_string()) response.content = resp.get<std::string>();
+                             }
+                         } else if (config.provider == "anthropic") {
+                             if (j.contains("content")) {
+                                 for (auto& item : j["content"]) {
+                                     if (item.contains("type") && item["type"].is_string() &&
+                                         item["type"].get<std::string>() == "text" &&
+                                         item.contains("text") && item["text"].is_string()) {
+                                         response.content += item["text"].get<std::string>();
+                                     }
+                                 }
+                             }
+                         }
+                      }
+                 } catch(...) {}
+             }
         } else {
             response.error_message = "HTTP " + std::to_string(response.status_code);
         }

@@ -63,22 +63,14 @@ public:
     void setInferenceEngine(RawrXD::InferenceEngine* engine) { m_inferenceEngine = engine; }
 
 private:
-    std::string generateCacheKey(const std::string& prefix, const std::string& suffix) {
-        return prefix + "|" + suffix;
-    }
-    
-    void updateCache(const std::string& key, const std::vector<CodeCompletion>& completions) {
-        std::lock_guard<std::mutex> lock(m_cacheMutex);
-        m_completionCache[key] = completions;
-    }
-    
+    std::string generateCacheKey(const std::string& prefix, const std::string& suffix);
+    bool shouldUseCache(const std::string& key);
+    void updateCache(const std::string& key, const std::vector<CodeCompletion>& completions);
+
     std::string buildCompletionPrompt(const std::string& prefix, const std::string& suffix, const std::string& context);
     std::vector<CodeCompletion> generateCompletionsWithModel(const std::string& prompt, int maxTokens);
     std::vector<CodeCompletion> postProcessCompletions(const std::string& modelOutput, const std::string& prefix);
-    
-    double calculateConfidence(const std::string& completion, const std::string& prompt) {
-        return 0.85; // Heuristic
-    }
+    double calculateConfidence(const std::string& completion, const std::string& prompt);
 
 private:
     std::shared_ptr<Logger> m_logger;
@@ -88,10 +80,11 @@ private:
     std::mutex m_cacheMutex;
     std::unordered_map<std::string, std::vector<CodeCompletion>> m_completionCache;
     
-    std::mutex m_latencyMutex;
+    mutable std::mutex m_latencyMutex;
     std::vector<double> m_latencyHistory;
     
     long long m_totalRequests = 0;
     long long m_cacheHits = 0;
+    long long m_errorCount = 0;
     double m_minConfidence = 50.0;
 };

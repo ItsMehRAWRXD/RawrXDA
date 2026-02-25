@@ -105,7 +105,7 @@ static const char* storeString(std::vector<std::string>& storage, const std::str
 // FULL INDEX REBUILD
 // ============================================================================
 
-PatchResult HotpatchSymbolProvider::rebuildIndex() {
+::PatchResult HotpatchSymbolProvider::rebuildIndex() {
     std::lock_guard<std::mutex> lock(m_mutex);
 
     auto t0 = std::chrono::high_resolution_clock::now();
@@ -130,7 +130,7 @@ PatchResult HotpatchSymbolProvider::rebuildIndex() {
     m_stats.totalSymbols.store(m_symbols.size());
     m_stats.rebuildCount.fetch_add(1);
 
-    return PatchResult::ok("Symbol index rebuilt");
+    return ::PatchResult::ok("Symbol index rebuilt");
 }
 
 // ============================================================================
@@ -269,7 +269,7 @@ void HotpatchSymbolProvider::scanGGUFModels() {
             // Read GGUF magic + version (first 8 bytes)
             uint32_t header[2] = {0, 0};
             size_t bytesRead = 0;
-            PatchResult rr = direct_read(path.c_str(), 0, 8, header, &bytesRead);
+            ::PatchResult rr = direct_read(path.c_str(), 0, 8, header, &bytesRead);
             if (!rr.success || bytesRead < 8) continue;
 
             uint32_t magic   = header[0];
@@ -308,10 +308,10 @@ void HotpatchSymbolProvider::scanGGUFModels() {
 // INCREMENTAL SYMBOL ADDITIONS
 // ============================================================================
 
-PatchResult HotpatchSymbolProvider::addMemoryPatchSymbol(
+::PatchResult HotpatchSymbolProvider::addMemoryPatchSymbol(
     const MemoryPatchEntry* entry, const char* name, const char* description)
 {
-    if (!entry || !name) return PatchResult::error("null entry or name");
+    if (!entry || !name) return ::PatchResult::error("null entry or name");
 
     std::lock_guard<std::mutex> lock(m_mutex);
 
@@ -333,13 +333,13 @@ PatchResult HotpatchSymbolProvider::addMemoryPatchSymbol(
     m_stats.totalSymbols.fetch_add(1);
 
     rebuildSortedIndex();
-    return PatchResult::ok("Memory patch symbol added");
+    return ::PatchResult::ok("Memory patch symbol added");
 }
 
-PatchResult HotpatchSymbolProvider::addBytePatchSymbol(
+::PatchResult HotpatchSymbolProvider::addBytePatchSymbol(
     const BytePatch* patch, const char* filename, const char* name)
 {
-    if (!patch || !name) return PatchResult::error("null patch or name");
+    if (!patch || !name) return ::PatchResult::error("null patch or name");
 
     std::lock_guard<std::mutex> lock(m_mutex);
 
@@ -361,11 +361,11 @@ PatchResult HotpatchSymbolProvider::addBytePatchSymbol(
     m_stats.totalSymbols.fetch_add(1);
 
     rebuildSortedIndex();
-    return PatchResult::ok("Byte patch symbol added");
+    return ::PatchResult::ok("Byte patch symbol added");
 }
 
-PatchResult HotpatchSymbolProvider::addServerPatchSymbol(const ServerHotpatch* patch) {
-    if (!patch || !patch->name) return PatchResult::error("null server patch");
+::PatchResult HotpatchSymbolProvider::addServerPatchSymbol(const ServerHotpatch* patch) {
+    if (!patch || !patch->name) return ::PatchResult::error("null server patch");
 
     std::lock_guard<std::mutex> lock(m_mutex);
 
@@ -387,15 +387,15 @@ PatchResult HotpatchSymbolProvider::addServerPatchSymbol(const ServerHotpatch* p
     m_stats.totalSymbols.fetch_add(1);
 
     rebuildSortedIndex();
-    return PatchResult::ok("Server patch symbol added");
+    return ::PatchResult::ok("Server patch symbol added");
 }
 
-PatchResult HotpatchSymbolProvider::addGGUFTensorSymbol(
+::PatchResult HotpatchSymbolProvider::addGGUFTensorSymbol(
     const char* modelPath, const char* tensorName,
     uint32_t type, uint64_t offset, uint64_t size,
     const uint32_t dims[4], uint32_t nDims)
 {
-    if (!tensorName) return PatchResult::error("null tensor name");
+    if (!tensorName) return ::PatchResult::error("null tensor name");
 
     std::lock_guard<std::mutex> lock(m_mutex);
 
@@ -422,13 +422,13 @@ PatchResult HotpatchSymbolProvider::addGGUFTensorSymbol(
     m_stats.totalSymbols.fetch_add(1);
 
     rebuildSortedIndex();
-    return PatchResult::ok("GGUF tensor symbol added");
+    return ::PatchResult::ok("GGUF tensor symbol added");
 }
 
-PatchResult HotpatchSymbolProvider::addGGUFMetadataSymbol(
+::PatchResult HotpatchSymbolProvider::addGGUFMetadataSymbol(
     const char* modelPath, const char* key, const char* value)
 {
-    if (!key) return PatchResult::error("null metadata key");
+    if (!key) return ::PatchResult::error("null metadata key");
 
     std::lock_guard<std::mutex> lock(m_mutex);
 
@@ -452,11 +452,11 @@ PatchResult HotpatchSymbolProvider::addGGUFMetadataSymbol(
     m_stats.totalSymbols.fetch_add(1);
 
     rebuildSortedIndex();
-    return PatchResult::ok("GGUF metadata symbol added");
+    return ::PatchResult::ok("GGUF metadata symbol added");
 }
 
-PatchResult HotpatchSymbolProvider::removeSymbol(const char* name) {
-    if (!name) return PatchResult::error("null name");
+::PatchResult HotpatchSymbolProvider::removeSymbol(const char* name) {
+    if (!name) return ::PatchResult::error("null name");
 
     std::lock_guard<std::mutex> lock(m_mutex);
 
@@ -465,14 +465,14 @@ PatchResult HotpatchSymbolProvider::removeSymbol(const char* name) {
                               [hash](const HotpatchSymbolEntry& s) {
                                   return s.hash == hash;
                               });
-    if (it == m_symbols.end()) return PatchResult::error("Symbol not found");
+    if (it == m_symbols.end()) return ::PatchResult::error("Symbol not found");
 
     size_t removed = std::distance(it, m_symbols.end());
     m_symbols.erase(it, m_symbols.end());
     m_stats.totalSymbols.fetch_sub(removed);
 
     rebuildSortedIndex();
-    return PatchResult::ok("Symbol removed");
+    return ::PatchResult::ok("Symbol removed");
 }
 
 // ============================================================================

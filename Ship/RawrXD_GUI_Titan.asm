@@ -43,6 +43,7 @@ EXTERN Titan_CreateContext:PROC
 EXTERN Titan_LoadModel_GGUF:PROC
 EXTERN Titan_BeginStreamingInference:PROC
 EXTERN Titan_ConsumeToken:PROC
+EXTERN Titan_StopInference:PROC
 EXTERN Titan_Shutdown:PROC
 
 ; ============================================================================
@@ -638,6 +639,10 @@ WndProc PROC FRAME hWnd:QWORD, uMsg:DWORD, wParam:QWORD, lParam:QWORD
     jmp @@done
     
 @@OnStopClick:
+    ; Stop producer thread (best-effort) before stopping UI polling.
+    mov rcx, hContext
+    call Titan_StopInference
+
     ; Stop polling
     mov rcx, [rbp+16]
     mov edx, TIMER_POLL_ID
@@ -724,6 +729,10 @@ WndProc PROC FRAME hWnd:QWORD, uMsg:DWORD, wParam:QWORD, lParam:QWORD
     mov rcx, [rbp+16]
     mov edx, TIMER_POLL_ID
     call KillTimer
+
+    ; Stop producer thread if any.
+    mov rcx, hContext
+    call Titan_StopInference
     
     ; Delete font
     mov rcx, hFont

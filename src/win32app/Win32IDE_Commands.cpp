@@ -4,10 +4,21 @@
 #include "Win32IDE.h"
 #include "IDEConfig.h"
 #include "win32_feature_adapter.h"
+#include "../../include/model_registry.h"
+#include "../../include/interpretability_panel.h"
+#include "../../include/benchmark_menu_widget.hpp"
+#include "../../include/checkpoint_manager.h"
+#include "../../include/multi_file_search.h"
+#include "../../include/ci_cd_settings.h"
+
+#ifndef IDM_BUILD_PROJECT
+#define IDM_BUILD_PROJECT 2801
+#endif
 #include "../core/enterprise_license.h"
 #include "../core/unified_hotpatch_manager.hpp"
 #include "../core/proxy_hotpatcher.hpp"
 #include "../core/instructions_provider.hpp"
+#include "../hybrid_cloud_manager.h"
 #include "../../include/enterprise_license.h"
 #include "../ui/monaco_settings_dialog.h"
 #include "../thermal/RAWRXD_ThermalDashboard.hpp"
@@ -21,6 +32,7 @@
 #include <set>
 #include <sstream>
 #include <memory>
+#include <chrono>
 
 // SCAFFOLD_173: Command registry and dispatch
 
@@ -39,6 +51,53 @@ static bool gateEnterpriseFeatureUI(HWND hwnd,
     MessageBoxW(hwnd, msg.c_str(), L"License Required", MB_OK | MB_ICONINFORMATION);
     return false;
 }
+
+namespace {
+HybridCloudManager& commandCloudManager() {
+    static HybridCloudManager mgr(nullptr);
+    static bool initialized = false;
+    if (!initialized) {
+        CloudProvider local;
+        local.providerId = "ollama";
+        local.name = "Ollama";
+        local.endpoint = "http://127.0.0.1:11434";
+        local.isEnabled = true;
+        local.isHealthy = true;
+        local.costPerRequest = 0.0;
+        local.averageLatency = 120.0;
+        mgr.addProvider(local);
+        initialized = true;
+    }
+    return mgr;
+}
+
+std::string formatCloudPlannerStatus(const std::string& prompt) {
+    auto& mgr = commandCloudManager();
+    ExecutionRequest req;
+    req.requestId = "cmd-status-" + std::to_string(GetTickCount64());
+    req.taskType = "chat";
+    req.prompt = prompt.empty() ? "status-check" : prompt;
+    req.language = "cpp";
+    req.maxTokens = 1024;
+    req.timestamp = std::chrono::system_clock::now();
+
+    const HybridExecution plan = mgr.planExecution(req, "auto");
+    const CostMetrics cost = mgr.getCostMetrics();
+    const PerformanceMetrics perf = mgr.getPerformanceMetrics();
+
+    std::ostringstream ss;
+    ss << "[CloudPlanner]\n";
+    ss << "  Route: " << (plan.useCloud ? "cloud" : "local") << "\n";
+    ss << "  Provider: " << (plan.selectedProvider.empty() ? "n/a" : plan.selectedProvider) << "\n";
+    ss << "  Model: " << (plan.selectedModel.empty() ? "n/a" : plan.selectedModel) << "\n";
+    ss << "  Reason: " << (plan.reasoning.empty() ? "n/a" : plan.reasoning) << "\n";
+    ss << "  Est. Cost: $" << plan.estimatedCost << "  Est. Latency: " << plan.estimatedLatency << " ms\n";
+    ss << "  Confidence: " << plan.confidenceScore << "\n";
+    ss << "  Failovers: " << perf.failoverCount << "  SuccessRate: " << perf.successRate << "%\n";
+    ss << "  TotalCost: $" << cost.totalCostUSD << "  Requests: " << cost.totalRequests;
+    return ss.str();
+}
+}  // namespace
 
 // Menu command IDs (with guards to avoid redefinition from Win32IDE.cpp)
 #ifndef IDM_FILE_NEW
@@ -1494,7 +1553,11 @@ void Win32IDE::handleToolsCommand(int commandId) {
             break;
 
         case IDM_BACKEND_SHOW_STATUS:  // 5042
+        {
             appendToOutput(getBackendStatusString(), "General", OutputSeverity::Info);
+            const std::string plannerStatus = formatCloudPlannerStatus(getWindowText(m_hwndCopilotChatInput));
+            appendToOutput(plannerStatus, "General", OutputSeverity::Info);
+        }
             break;
 
         case IDM_BACKEND_SHOW_SWITCHER:  // 5043
@@ -3453,9 +3516,14 @@ void Win32IDE::handleMonacoCommand(int commandId) {
     case IDM_VIEW_MONACO_DEVTOOLS:
         // Open Edge DevTools for WebView2 debugging
         if (m_webView2 && m_webView2->isReady()) {
-            // DevTools can be opened via the WebView2 API
-            // For now, use the keyboard shortcut approach
-            LOG_INFO("Monaco: Opening DevTools...");
+            WebView2Result result = m_webView2->openDevTools();
+            if (result.success) {
+                LOG_INFO("Monaco: DevTools opened successfully");
+            } else {
+                LOG_ERROR("Monaco: Failed to open DevTools: " + std::string(result.detail ? result.detail : "Unknown error"));
+            }
+        } else {
+            LOG_WARNING("Monaco: Cannot open DevTools - WebView2 not ready");
         }
         break;
 

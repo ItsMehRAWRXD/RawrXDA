@@ -20,6 +20,7 @@
 #include <windows.h>
 #include <winhttp.h>
 #include <random>
+#include <nlohmann/json.hpp>
 
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "winhttp.lib")
@@ -159,7 +160,17 @@ private:
             std::string body = (body_start != std::string::npos) 
                 ? request.substr(body_start + 4) 
                 : "";
-            response = HandleGenerateRequest(body);
+            
+            // Use streaming JSON parser to avoid large string copies
+            try {
+                auto json = nlohmann::json::parse(body);
+                std::string_view model = json.value("model", "");
+                std::string_view prompt = json.value("prompt", "");
+                // Now we can use model and prompt without extra allocations
+                response = HandleGenerateRequest(body);
+            } catch (const nlohmann::json::parse_error& e) {
+                response = MakeErrorResponse(400, "Invalid JSON body: " + std::string(e.what()));
+            }
         }
         else if (method == "GET" && path == "/metrics") {
             response = HandleMetricsRequest();

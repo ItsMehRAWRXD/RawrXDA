@@ -1,11 +1,35 @@
 ; Titan_InferenceCore.asm - Direct GGUF Inference (No External Server)
+; MONOLITHIC ZERO-DEPENDENCY VERSION
 ; Implements: Transformer layers, Q2_K/Q4_0 dequantize, Attention, RoPE, Softmax
 ; Target: RawrXD-Agent.exe / RawrXD-TitanIDE.exe (in-process)
 
 OPTION CASEMAP:NONE
+OPTION PROLOGUE:NONE
+OPTION EPILOGUE:NONE
 
- includelib kernel32.lib
- includelib ntdll.lib
+; ============================================================================
+; PUBLIC EXPORTS - ALL SYMBOLS
+; ============================================================================
+PUBLIC Dequant_Q4_0
+PUBLIC Dequant_Q2_K
+PUBLIC RMSNorm
+PUBLIC SoftMax
+PUBLIC Attention_Forward
+PUBLIC FFN_SwiGLU
+
+; --- Data Exports ---
+PUBLIC g_InferenceCtx
+PUBLIC g_DequantScratch
+PUBLIC const_epsilon
+PUBLIC const_one
+PUBLIC const_half
+PUBLIC const_sqrt2
+
+; --- Constant Exports ---
+PUBLIC const_GGUF_MAGIC
+PUBLIC const_TYPE_Q4_0
+PUBLIC const_TYPE_Q2_K
+PUBLIC const_ARCH_LLAMA
 
 ; ============================================================================
 ; GGUF FORMAT CONSTANTS (Reverse engineered from llama.cpp spec)
@@ -87,6 +111,13 @@ const_epsilon       REAL4 1.0e-5
 const_one           REAL4 1.0
 const_half          REAL4 0.5
 const_sqrt2         REAL4 1.41421356237
+
+; --- Exported Constant Values (linkable DWORDs) ---
+ALIGN 4
+const_GGUF_MAGIC    DWORD GGUF_MAGIC
+const_TYPE_Q4_0     DWORD TYPE_Q4_0
+const_TYPE_Q2_K     DWORD TYPE_Q2_K
+const_ARCH_LLAMA    DWORD ARCH_LLAMA
 
 ; ============================================================================
 ; CODE SECTION - QUANTIZATION MATH

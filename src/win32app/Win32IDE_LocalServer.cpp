@@ -29,9 +29,11 @@
 #include <sstream>
 #include <chrono>
 #include <algorithm>
+#include <cctype>
 #include <cstring>
 #include <iomanip>
 #include <vector>
+#include <unordered_set>
 
 // Forward: socket type
 using LocalServerSocket = SOCKET;
@@ -1343,6 +1345,94 @@ void Win32IDE::handleOpenAIChatCompletions(SOCKET client, const std::string& bod
 // ============================================================================
 // FRONTEND: /models — scan candidate model roots for .gguf + blobs (dynamic paths)
 // ============================================================================
+
+std::vector<std::string> Win32IDE::getCandidateModelRootPaths() {
+    auto trimCopy = [](const std::string& s) -> std::string {
+        size_t b = 0;
+        while (b < s.size() && std::isspace((unsigned char)s[b])) b++;
+        size_t e = s.size();
+        while (e > b && std::isspace((unsigned char)s[e - 1])) e--;
+        return s.substr(b, e - b);
+    };
+
+    auto normalizePath = [&](std::string p) -> std::string {
+        p = trimCopy(p);
+        if (p.size() >= 2 && p.front() == '"' && p.back() == '"') {
+            p = p.substr(1, p.size() - 2);
+        }
+        std::replace(p.begin(), p.end(), '/', '\\');
+        while (!p.empty() && (p.back() == '\\' || p.back() == '/')) p.pop_back();
+        return p;
+    };
+
+    auto getEnvA = [](const char* name) -> std::string {
+        DWORD needed = GetEnvironmentVariableA(name, nullptr, 0);
+        if (needed == 0) return {};
+        std::string out;
+        out.resize(needed);
+        DWORD written = GetEnvironmentVariableA(name, out.data(), needed);
+        if (written == 0) return {};
+        out.resize(written);
+        return out;
+    };
+
+    auto isDir = [](const std::string& p) -> bool {
+        if (p.empty()) return false;
+        DWORD attr = GetFileAttributesA(p.c_str());
+        return (attr != INVALID_FILE_ATTRIBUTES) && ((attr & FILE_ATTRIBUTE_DIRECTORY) != 0);
+    };
+
+    std::vector<std::string> roots;
+    std::unordered_set<std::string> seen;
+
+    auto addRoot = [&](const std::string& p) {
+        std::string n = normalizePath(p);
+        if (!isDir(n)) return;
+        std::string key = LocalServerUtil::toLower(n);
+        if (!seen.insert(key).second) return;
+        roots.push_back(n);
+    };
+
+    // 1) Explicit override (Ollama uses this).
+    // Note: Some users set this to multiple paths; support ';' separated lists.
+    std::string ollamaModels = getEnvA("OLLAMA_MODELS");
+    if (!ollamaModels.empty()) {
+        size_t start = 0;
+        while (start < ollamaModels.size()) {
+            size_t semi = ollamaModels.find(';', start);
+            std::string part = (semi == std::string::npos)
+                ? ollamaModels.substr(start)
+                : ollamaModels.substr(start, semi - start);
+            addRoot(part);
+            if (semi == std::string::npos) break;
+            start = semi + 1;
+        }
+    }
+
+    // 2) Default Ollama paths.
+    std::string localAppData = getEnvA("LOCALAPPDATA");
+    if (!localAppData.empty()) addRoot(localAppData + "\\Ollama\\models");
+    std::string userProfile = getEnvA("USERPROFILE");
+    if (!userProfile.empty()) addRoot(userProfile + "\\.ollama\\models");
+    std::string programData = getEnvA("ProgramData");
+    if (!programData.empty()) addRoot(programData + "\\Ollama\\models");
+
+    // 3) Common custom locations (esp. on machines with big D: drives).
+    addRoot("D:\\OllamaModels");
+    addRoot("D:\\models");
+
+    // 4) Portable folder next to the executable (bin\\models).
+    char exePath[MAX_PATH] = {};
+    DWORD n = GetModuleFileNameA(nullptr, exePath, MAX_PATH);
+    if (n > 0 && n < MAX_PATH) {
+        std::string exe(exePath, exePath + n);
+        size_t slash = exe.find_last_of("\\/");
+        std::string dir = (slash == std::string::npos) ? std::string() : exe.substr(0, slash);
+        if (!dir.empty()) addRoot(dir + "\\models");
+    }
+
+    return roots;
+}
 
 void Win32IDE::handleModelsEndpoint(SOCKET client) {
     std::ostringstream j;

@@ -62,17 +62,18 @@ class RawrXDModelLoader {
     VkDevice device;
     VkPhysicalDeviceMemoryProperties memProps;
     
-public:
-    struct Tensor {
-        std::string name;
-        uint32_t type;     // GGUF type enum
-        std::vector<uint64_t> dims;
-        void* data = nullptr;        // CPU mmap pointer
-        uint64_t offset = 0;         // File offset
-        VkBuffer gpuBuffer = VK_NULL_HANDLE;  // GPU memory
-        VkDeviceMemory gpuMemory = VK_NULL_HANDLE;
-        bool onGPU = false;
-    };
+  public:
+      struct Tensor {
+          std::string name;
+          uint32_t type;     // GGUF type enum
+          std::vector<uint64_t> dims;
+          void* data = nullptr;        // CPU mmap pointer
+          uint64_t offset = 0;         // File offset
+          VkBuffer gpuBuffer = VK_NULL_HANDLE;  // GPU memory
+          VkDeviceMemory gpuMemory = VK_NULL_HANDLE;
+          VkDeviceSize gpuSizeBytes = 0;        // Allocated device memory size (best-effort)
+          bool onGPU = false;
+      };
     
     std::unordered_map<std::string, Tensor> tensors;
     uint32_t n_layers = 0;
@@ -147,39 +148,18 @@ public:
         return ptr;
     }
 
-    uint8_t* InternalParseTensorInfo(uint8_t* ptr, Tensor& t) {
-        // Name
-        uint64_t len = *(uint64_t*)ptr; ptr += 8;
-        t.name = std::string((char*)ptr, len); ptr += len;
-        
-        // Dims
-        uint32_t n_dims = *(uint32_t*)ptr; ptr += 4;
-        for (uint32_t i = 0; i < n_dims; i++) {
-            t.dims.push_back(*(uint64_t*)ptr); ptr += 8;
-        }
-        
-        // Type
-        t.type = *(uint32_t*)ptr; ptr += 4;
-        
-        // Offset
-        t.offset = *(uint64_t*)ptr; ptr += 8;
-        
-        return ptr;
-    }
+      // Expose best-effort CPU pointers for embedding/weight lookup. This always points into the mmap.
+      const void* GetTensorCpuPtr(const Tensor& t) const {
+          if (t.data) return t.data;
+          if (!mappedView) return nullptr;
+          return (const uint8_t*)mappedView + t.offset;
+      }
 
-    // Extended Tensor definition to include offset
-    struct TensorExtended : public Tensor {
-         uint64_t offset;
-    } currentTensor;
-    
-    // Fix: Redefine ParseTensorInfo to use the correct Tensor struct or add offset to Tensor logic
-    // The user's provided Tensor struct doesn't have 'offset'.
-    // I will add it to the user's struct in the output or use specific logic.
-    // User struct: std::unordered_map<std::string, Tensor> tensors;
-    // tensorInfos uses Tensor.
-    // I need to patch 'offset' into Tensor or the loader code won't compile.
-    // Checking `LoadTensorAsync`: `void* srcData = (uint8_t*)mappedView + t.offset;`
-    // So `Tensor` MUST have `offset`.
+      const void* GetTensorCpuPtr(const std::string& name) const {
+          auto it = tensors.find(name);
+          if (it == tensors.end()) return nullptr;
+          return GetTensorCpuPtr(it->second);
+      }
 
     bool Load(const wchar_t* path, VkDevice vkDevice, VkPhysicalDevice physDevice) {
         device = vkDevice;
@@ -289,37 +269,52 @@ public:
     // Alias for compatibility
     uint32_t GetMetadata(const std::string& key) { return GetMetadataInt(key); }
 
-private:
+  private:
    // Definition of Tensor struct with offset
    // Use the one from the prompt logic but fix it up
     
-    float CalculateVRAMUsage() {
-        return 0.0f; // TODO
-    }
+      float CalculateVRAMUsage() {
+          double total = 0.0;
+          for (const auto& kv : tensors) {
+              const auto& t = kv.second;
+              if (t.onGPU) total += (double)t.gpuSizeBytes;
+          }
+          return (float)total;
+      }
 
-    uint8_t* InternalParseTensorInfo(uint8_t* ptr, Tensor& t) {
-        uint64_t len = *(uint64_t*)ptr; ptr += 8;
-        t.name = std::string((char*)ptr, len); ptr += len;
-        
-        uint32_t n_dims = *(uint32_t*)ptr; ptr += 4;
+      uint8_t* InternalParseTensorInfo(uint8_t* ptr, Tensor& t) {
+          uint64_t len = *(uint64_t*)ptr; ptr += 8;
+          t.name = std::string((char*)ptr, len); ptr += len;
+          
+          uint32_t n_dims = *(uint32_t*)ptr; ptr += 4;
         for(uint32_t i=0; i<n_dims; i++) {
             t.dims.push_back(*(uint64_t*)ptr); ptr += 8;
         }
         t.type = *(uint32_t*)ptr; ptr += 4;
-        t.offset = *(uint64_t*)ptr; ptr += 8;
-        return ptr;
-    }
+          t.offset = *(uint64_t*)ptr; ptr += 8;
+          return ptr;
+      }
 
-    void UploadF32(Tensor& t, void* src, size_t n) {}
-    void UploadF16(Tensor& t, void* src, size_t n) {}
-    void DequantAndUploadQ5_0(Tensor& t, Q5_0_Block* blocks, size_t n) {}
-    void DequantAndUploadQ8_0(Tensor& t, Q8_0_Block* blocks, size_t n) {}
-    void DequantAndUploadQ4_K(Tensor& t, Q4_K_Block* blocks, size_t n) {}
+      void UploadF32(Tensor& t, void* src, size_t n) {
+          const size_t size = n * sizeof(float);
+          CreateGPUBuffer(t, src, size);
+          t.onGPU = true;
+      }
 
-    void LoadTensorAsync(Tensor& t) {
-        void* srcData = (uint8_t*)mappedView + t.offset;
-        size_t numElements = 1;
-        for (auto d : t.dims) numElements *= d;
+      void UploadF16(Tensor& t, void* src, size_t n) {
+          const size_t size = n * sizeof(uint16_t);
+          CreateGPUBuffer(t, src, size);
+          t.onGPU = true;
+      }
+      void DequantAndUploadQ5_0(Tensor& t, Q5_0_Block* blocks, size_t n) {}
+      void DequantAndUploadQ8_0(Tensor& t, Q8_0_Block* blocks, size_t n) {}
+      void DequantAndUploadQ4_K(Tensor& t, Q4_K_Block* blocks, size_t n) {}
+
+      void LoadTensorAsync(Tensor& t) {
+          void* srcData = (uint8_t*)mappedView + t.offset;
+          t.data = srcData; // mmap-backed pointer (even if we also upload to GPU)
+          size_t numElements = 1;
+          for (auto d : t.dims) numElements *= d;
         
         // Determine dequantization strategy per tensor type
         switch (t.type) {
@@ -379,18 +374,19 @@ private:
         t.onGPU = true;
     }
     
-    void CreateGPUBuffer(Tensor& t, void* data, size_t size) {
-        // Create Vulkan buffer
-        VkBufferCreateInfo bufInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-        bufInfo.size = size;
+      void CreateGPUBuffer(Tensor& t, void* data, size_t size) {
+          // Create Vulkan buffer
+          VkBufferCreateInfo bufInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+          bufInfo.size = size;
         bufInfo.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | 
                        VK_BUFFER_USAGE_TRANSFER_DST_BIT;
         bufInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         
         vkCreateBuffer(device, &bufInfo, nullptr, &t.gpuBuffer);
         
-        VkMemoryRequirements memReq;
-        vkGetBufferMemoryRequirements(device, t.gpuBuffer, &memReq);
+          VkMemoryRequirements memReq;
+          vkGetBufferMemoryRequirements(device, t.gpuBuffer, &memReq);
+          t.gpuSizeBytes = memReq.size;
         
         VkMemoryAllocateInfo allocInfo = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
         allocInfo.allocationSize = memReq.size;

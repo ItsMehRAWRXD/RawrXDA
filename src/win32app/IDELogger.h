@@ -9,6 +9,10 @@
 #include <sstream>
 #include <iomanip>
 
+// Pull in canonical LogLevel from logging/logger.h and alias for IDELogger consumers
+#include "logging/logger.h"
+using IDELogLevel = LogLevel;
+
 // Comprehensive logging system for RawrXD IDE
 class IDELogger {
 public:

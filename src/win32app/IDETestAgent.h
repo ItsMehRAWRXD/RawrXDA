@@ -9,20 +9,8 @@
 #include <functional>
 #include <chrono>
 
-// PatchResult pattern for no-exceptions architecture
-struct PatchResult {
-    bool success;
-    const char* detail;
-    int errorCode;
-    
-    static PatchResult ok(const char* msg = "Success") {
-        return {true, msg, 0};
-    }
-    
-    static PatchResult error(const char* msg, int code = -1) {
-        return {false, msg, code};
-    }
-};
+// PatchResult — use canonical definition (avoids redefinition across TUs)
+#include "../core/patch_result.hpp"
 
 // Comprehensive IDE Test Agent
 // Tests every function in the IDE with detailed logging

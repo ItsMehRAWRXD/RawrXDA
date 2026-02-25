@@ -85,8 +85,20 @@ public:
     ComputeResult SiLU(const ComputeBuffer& input, ComputeBuffer& output);
     ComputeResult RoPE(ComputeBuffer& data, int nHead, int headDim, int posOffset);
 
+    // Attention operation
+    ComputeResult Attention(const ComputeBuffer& Q, const ComputeBuffer& K,
+                            const ComputeBuffer& V, ComputeBuffer& output,
+                            int nHeads, int headDim, float scale);
+
+    // Compute pipeline operations (Vulkan-style)
+    ComputeResult CreateComputePipeline(const void* shaderCode, size_t shaderSize,
+                                        uint64_t* pipelineHandle);
+    ComputeResult DestroyComputePipeline(uint64_t pipelineHandle);
+    void Shutdown();
+
     // Buffer management
     ComputeResult AllocateBuffer(ComputeBuffer& buf, int rows, int cols, QuantType type);
+    ComputeResult AllocateBuffer(size_t sizeBytes, uint32_t usage, void** ppBuffer);
     void FreeBuffer(ComputeBuffer& buf);
 
     // Metrics
@@ -101,6 +113,7 @@ private:
     size_t bytesPerElement(QuantType type) const;
 
     bool     m_initialized   = false;
+    bool     m_gpuAvailable  = false;
     int      m_numThreads    = 1;
     double   m_lastOpTimeMs  = 0.0;
     uint64_t m_totalOps      = 0;
@@ -109,6 +122,18 @@ private:
     // Thread pool handle (Windows)
     PTP_POOL m_threadPool    = nullptr;
     TP_CALLBACK_ENVIRON m_callbackEnv = {};
+
+    // Vulkan dynamic loading state
+    HMODULE  m_vulkanLib     = nullptr;
+    void*    m_vkInstance    = nullptr;
+    void*    m_vkDevice      = nullptr;
+    void*    m_vkQueue       = nullptr;
+    void*    m_vkCmdPool     = nullptr;
+
+    // Compute pipeline tracking
+    static constexpr int MAX_PIPELINES = 64;
+    uint64_t m_pipelines[MAX_PIPELINES] = {};
+    int      m_pipelineCount = 0;
 };
 
 // ============================================================================
@@ -118,6 +143,13 @@ extern "C" {
     VulkanCompute* VulkanCompute_Create();
     int  VulkanCompute_Initialize(VulkanCompute* vc);
     void VulkanCompute_Cleanup(VulkanCompute* vc);
+    void VulkanCompute_Shutdown(VulkanCompute* vc);
+    int  VulkanCompute_CreatePipeline(VulkanCompute* vc, const void* shaderCode, size_t shaderSize, uint64_t* pHandle);
+    int  VulkanCompute_DestroyPipeline(VulkanCompute* vc, uint64_t handle);
+    int  VulkanCompute_AllocateBuffer(VulkanCompute* vc, size_t size, uint32_t usage, void** ppBuffer);
+    int  VulkanCompute_Attention(VulkanCompute* vc, const ComputeBuffer* Q, const ComputeBuffer* K,
+                                  const ComputeBuffer* V, ComputeBuffer* output, int nHeads, int headDim, float scale);
+    int  VulkanCompute_RMSNorm(VulkanCompute* vc, const ComputeBuffer* input, ComputeBuffer* output, float eps);
     int  VulkanCompute_MatMul(VulkanCompute* vc, const ComputeBuffer* A,
                                const ComputeBuffer* B, ComputeBuffer* C);
     int  VulkanCompute_IsGPU(VulkanCompute* vc);

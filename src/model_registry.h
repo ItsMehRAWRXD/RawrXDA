@@ -1,5 +1,10 @@
 #pragma once
 
+#include <string>
+#include <vector>
+#include <chrono>
+#include <cstdint>
+#include <functional>
 
 // Forward declarations
 
@@ -14,7 +19,7 @@ struct ModelVersion
     std::string path;                // File path to .gguf file
     std::string baseModel;           // Base model used for fine-tuning
     std::string dataset;             // Dataset used for training
-    std::chrono::system_clock::time_point createdAt;         // Timestamp
+    int64_t createdAt;            // Timestamp (epoch ms)
     float finalLoss;             // Final training loss
     float perplexity;            // Validation perplexity
     int epochs;                  // Number of training epochs
@@ -24,6 +29,13 @@ struct ModelVersion
     std::string notes;               // User notes
     int64_t fileSize;             // File size in bytes
     bool isActive;               // Currently selected/active model
+
+    // Extended metadata
+    std::string family;              // Model family (e.g. "llama", "mistral")
+    std::string parameter_size;      // Parameter count (e.g. "7B", "13B")
+    std::string quantization_level;  // Quantization (e.g. "Q4_K_M")
+    std::string capabilities;        // Capability tags (comma-separated)
+    bool agent_capable = false;      // Whether model supports agentic use
 };
 
 /**
@@ -36,12 +48,17 @@ struct ModelVersion
  * - Tagging and annotation
  * - Search and filtering
  */
-class ModelRegistry : public void
+// Callback typedefs
+using ModelSelectedCb = std::function<void(const std::string& modelPath)>;
+using ModelUpdatedCb  = std::function<void()>;
+using ModelDeletedCb  = std::function<void(int id)>;
+
+class ModelRegistry
 {
 
 public:
     explicit ModelRegistry(void* parent = nullptr);
-    ~ModelRegistry() override;
+    ~ModelRegistry();
     
     /**
      * Two-phase initialization - call after void is ready
@@ -124,10 +141,10 @@ private:
     void loadModels();
     void populateTable(const std::vector<ModelVersion>& models);
     std::string formatFileSize(int64_t bytes) const;
-    std::string formatTimestamp(const std::chrono::system_clock::time_point& dt) const;
+    std::string formatTimestamp(int64_t epochMs) const;
 
     // UI Components
-    QTableWidget* m_tableWidget;
+    void* m_tableWidget;
     void* m_refreshButton;
     void* m_deleteButton;
     void* m_activateButton;
@@ -138,12 +155,17 @@ private:
     void* m_statusLabel;
 
     // Database
-    QSqlDatabase m_db;
+    void* m_dbHandle;
     std::string m_dbPath;
 
     // State
     std::vector<ModelVersion> m_models;
     int m_selectedModelId;
+
+    // Callbacks
+    ModelSelectedCb m_selectedCb;
+    ModelUpdatedCb  m_updatedCb;
+    ModelDeletedCb  m_deletedCb;
 };
 
 

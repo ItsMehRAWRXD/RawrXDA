@@ -88,7 +88,7 @@ using RawrXD::ReverseEngineering::RECodex;
 
 // Helper: convert PatchResult to CommandResult (same layout, different types)
 static CommandResult toCmd(const PatchResult& pr) {
-    return pr.success ? CommandResult::ok(pr.detail) : CommandResult::error(pr.detail, pr.errorCode);
+    return pr.success ? CommandResult::ok(pr.detail.c_str()) : CommandResult::error(pr.detail.c_str(), pr.errorCode);
 }
 
 // ── Canonical version constants (single source of truth) ──
@@ -2783,7 +2783,7 @@ CommandResult handleHotpatchByteApply(const CommandContext& ctx) {
              (unsigned long long)offset, filename,
              result.result.success ? "OK" : "FAILED", result.result.detail);
     ctx.output(buf);
-    return result.result.success ? CommandResult::ok(result.result.detail) : CommandResult::error(result.result.detail, result.result.errorCode);
+    return result.result.success ? CommandResult::ok(result.result.detail.c_str()) : CommandResult::error(result.result.detail.c_str(), result.result.errorCode);
 }
 
 CommandResult handleHotpatchByteSearch(const CommandContext& ctx) {
@@ -2841,7 +2841,7 @@ CommandResult handleHotpatchMemoryApply(const CommandContext& ctx) {
              (unsigned long long)addr, result.result.success ? "OK" : "FAILED",
              result.result.detail);
     ctx.output(buf);
-    return result.result.success ? CommandResult::ok(result.result.detail) : CommandResult::error(result.result.detail, result.result.errorCode);
+    return result.result.success ? CommandResult::ok(result.result.detail.c_str()) : CommandResult::error(result.result.detail.c_str(), result.result.errorCode);
 }
 
 CommandResult handleHotpatchMemoryRevert(const CommandContext& ctx) {

@@ -82,6 +82,12 @@ public:
     using OutputCallback = std::function<void(const std::string&, const std::string&)>;
     void SetOutputCallback(OutputCallback callback);
 
+    // Compatibility callbacks used by Win32IDE_AgentCommands.cpp
+    using ErrorCallback = std::function<void(const std::string&)>;
+    using ProgressCallback = std::function<void(const std::string&)>;
+    void SetErrorCallback(ErrorCallback cb) { m_errorCallback = std::move(cb); }
+    void SetProgressCallback(ProgressCallback cb) { m_progressCallback = std::move(cb); }
+
     // RE Tools Access
     std::string RunDumpbin(const std::string& path, const std::string& mode);
     std::string RunCodex(const std::string& path);
@@ -111,6 +117,18 @@ public:
 
     /// Dispatch tool calls detected in model output
     bool DispatchModelToolCalls(const std::string& modelOutput, std::string& toolResult);
+
+    // Compatibility wrappers (older UI command layer)
+    void ExecuteSubAgentChain(const std::string& taskDescription);
+    void ExecuteSubAgentSwarm(const std::string& taskDescription);
+    std::vector<std::string> GetSubAgentTodoList();
+    void ClearSubAgentTodoList();
+    std::string ExportAgentMemory();
+    void ClearAgentMemory();
+    void ExecuteBoundedAgentLoop(const std::string& prompt, int maxIterations);
+    bool LoadConfiguration(const std::string& configPath);
+    void EnableMultiAgent(bool enabled) { m_multiAgentEnabled = enabled; }
+    void WarmUpModel();
 
 private:
    // Native Integration
@@ -160,4 +178,7 @@ private:
 
     // Output callback for streaming results to UI
     OutputCallback m_outputCallback;
+    ErrorCallback m_errorCallback;
+    ProgressCallback m_progressCallback;
+    bool m_multiAgentEnabled = false;
 };

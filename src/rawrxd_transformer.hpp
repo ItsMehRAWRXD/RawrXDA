@@ -6,6 +6,7 @@
 
 #include <vulkan/vulkan.h>
 #include <cmath>
+#include <cstdio>
 #include <cstring>
 #include <vector>
 #include "rawrxd_model_loader.hpp"
@@ -62,10 +63,10 @@ public:
         // Using cooperative matrix (tensor cores) if available
         CreateComputePipelines();
         
-        // Allocate KV cache
-        size_t kvSize = config.n_layers * config.maxSeqLen * 
-                       config.n_kv_heads * (config.dim / config.n_heads);
-        kvSize *= sizeof(uint16_t); // FP16
+          // Allocate KV cache
+          size_t kvSize = config.n_layers * kvCache.maxSeqLen * 
+                         config.n_kv_heads * (config.dim / config.n_heads);
+          kvSize *= sizeof(uint16_t); // FP16
         
         for (uint32_t i = 0; i < config.n_layers; i++) {
             VkBuffer kBuf, vBuf;
@@ -112,10 +113,68 @@ public:
         return logits;
     }
 
-private:
-    uint16_t* TokenEmbeddings(const std::vector<uint32_t>& tokens) {
-        return new uint16_t[tokens.size() * config.dim]; // Stub
-    }
+ private:
+      uint16_t* TokenEmbeddings(const std::vector<uint32_t>& tokens) {
+          const size_t seqLen = tokens.size();
+          const size_t dim = (size_t)config.dim;
+          uint16_t* out = new uint16_t[seqLen * dim];
+          std::memset(out, 0, seqLen * dim * sizeof(uint16_t));
+
+          if (!loaderPtr) return out;
+
+          // Common embedding tensor names across GGUF exports.
+          const char* kNames[] = {
+              "token_embd.weight",
+              "tok_embeddings.weight",
+              "token_embedding.weight",
+          };
+
+          const RawrXDModelLoader::Tensor* t = nullptr;
+          for (const char* n : kNames) {
+              auto it = loaderPtr->tensors.find(n);
+              if (it != loaderPtr->tensors.end()) { t = &it->second; break; }
+          }
+          if (!t) return out;
+          if (t->dims.size() < 2) return out;
+
+          const uint64_t vocab = t->dims[0];
+          const uint64_t embd = t->dims[1];
+          if (embd != dim) {
+              // Mismatch: keep zeros to avoid OOB reads.
+              return out;
+          }
+
+          const void* cpuPtr = loaderPtr->GetTensorCpuPtr(*t);
+          if (!cpuPtr) return out;
+
+          if (t->type == 1) {
+              // F16 embeddings: direct row copy
+              const uint16_t* emb = (const uint16_t*)cpuPtr;
+              for (size_t i = 0; i < seqLen; ++i) {
+                  uint64_t id = (uint64_t)tokens[i];
+                  if (id >= vocab) id = 0;
+                  std::memcpy(out + i * dim, emb + id * dim, dim * sizeof(uint16_t));
+              }
+              return out;
+          }
+
+          if (t->type == 0) {
+              // F32 embeddings: convert to F16
+              const float* emb = (const float*)cpuPtr;
+              for (size_t i = 0; i < seqLen; ++i) {
+                  uint64_t id = (uint64_t)tokens[i];
+                  if (id >= vocab) id = 0;
+                  const float* row = emb + id * dim;
+                  for (size_t j = 0; j < dim; ++j) {
+                      out[i * dim + j] = FloatToHalf(row[j]);
+                  }
+              }
+              return out;
+          }
+
+          // Quantized embeddings not handled here yet (requires dequant path).
+          return out;
+      }
 
     void Attention(uint16_t* x, uint32_t layer, uint32_t startPos, size_t seqLen) {
         // QKV projections
@@ -349,43 +408,17 @@ private:
         // Pipeline creation...
     }
     
-    void* GetWeightCPU(const char* fmt, uint32_t layer = 0) {
-        char name[128];
-        if (strstr(fmt, "%d"))
-            sprintf(name, fmt, layer);
+      void* GetWeightCPU(const char* fmt, uint32_t layer = 0) {
+          char name[128];
+          if (strstr(fmt, "%d"))
+              sprintf(name, fmt, layer);
         else
             strcpy(name, fmt);
             
-        if(loaderPtr) {
-             auto& t = loaderPtr->tensors;
-             auto it = t.find(name);
-             if (it != t.end()) return it->second.data; // Return CPU ptr
-        }
-        return nullptr;
-    }
-
-    uint16_t* TokenEmbeddings(const std::vector<uint32_t>& tokens) {
-        // Real Lookup
-        void* w = GetWeightCPU("token_embd.weight");
-        if (!w) return new uint16_t[tokens.size() * config.dim]; // Fallback
-
-        size_t size = tokens.size() * config.dim;
-        uint16_t* out = new uint16_t[size];
-        
-        // Assuming F16 weights for embeddings? 
-        // GGUF embeddings usually F16 or Q buffers. 
-        // For simplicity assuming F16 (simplest real impl).
-        // If Q, we need dequant. 
-        // Let's assume loader dequantized to F16 or kept as is.
-        // Loader logic: "DequantAndUpload..." -> writes to GPU buffer.
-        // But original data (`data`) is still raw GGUF (Quantized).
-        
-        // If we want CPU inference on Quantized data, we need the Dequant kernels.
-        // `DequantQ4_0_AVX512` unpacks to F32.
-        
-        // This is getting complex for "One-Shot".
-        // I will implement a simpler Float path or assume dequant is handled.
-        
-        return out; 
-    }
-
+          if(loaderPtr) {
+               auto& t = loaderPtr->tensors;
+               auto it = t.find(name);
+               if (it != t.end()) return (void*)loaderPtr->GetTensorCpuPtr(it->second);
+          }
+          return nullptr;
+      }

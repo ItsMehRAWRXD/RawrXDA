@@ -15,7 +15,11 @@
 // Opaque structures (match MASM struct layouts)
 // ---------------------------------------------------------------------------
 
-// GGUF file header (24 bytes)
+// NOTE: These structs are shared with the MASM implementation; keep them packed
+// and layout-stable.
+#pragma pack(push, 1)
+
+// GGUF file header
 struct AD_GGUFHeader {
     uint64_t magic;         // 0x46554747666C6C67 ("ggllFUGF")
     uint32_t version;       // Must be 3
@@ -23,28 +27,30 @@ struct AD_GGUFHeader {
     uint64_t metadata_kv;
 };
 
-// Tensor metadata (120 bytes, matches MASM TensorInfo)
+// Tensor metadata (matches MASM TensorInfo)
 struct AD_TensorInfo {
     uint64_t name_len;
     uint64_t name_ptr;      // Pointer to name buffer
     uint32_t dtype;          // GGUF dtype enum
     uint64_t shape_rank;
     uint64_t shape[4];       // Max 4D
-    uint64_t offset;         // File offset (never read for analysis)
+    uint64_t file_offset;    // File offset (never read for analysis)
     uint32_t pattern_type;   // FFN=1, ATTN=2, EMBED=3, NORM=4, UNKNOWN=0
     uint64_t param_count;    // Computed parameter count
 };
 
 // Analysis result summary
 struct AD_AnalysisResult {
-    uint64_t ffn_blocks;
-    uint64_t attn_heads;
-    uint64_t embed_tokens;
-    uint64_t norm_layers;
-    uint64_t unknown_layers;
-    uint64_t layer_count;
     uint64_t total_params;
+    uint32_t layer_count;
+    uint32_t ffn_blocks;
+    uint32_t attn_heads;
+    uint32_t embed_tokens;
+    uint32_t norm_layers;
+    uint32_t unknown_layers;
 };
+
+#pragma pack(pop)
 
 // Pattern type constants
 constexpr uint32_t AD_PATTERN_UNKNOWN   = 0;

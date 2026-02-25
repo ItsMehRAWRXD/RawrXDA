@@ -138,7 +138,8 @@ void Win32IDE::initTranscendence() {
             << (health.overallScore * 100.0f) << "%";
         logMessage("Transcendence", oss.str());
     } else {
-        logMessage("Transcendence", std::string("[INIT] ") + (r.detail ? r.detail : "init failed"));
+        const std::string detail = r.detail.empty() ? "init failed" : r.detail;
+        logMessage("Transcendence", std::string("[INIT] ") + detail);
     }
 }
 
@@ -205,7 +206,8 @@ bool Win32IDE::handleTranscendenceCommand(int cmdId) {
     }
     case 6003: { // Emergency stop
         PatchResult r = coord.emergencyStop();
-        logMessage("Transcendence", std::string("[EMERGENCY] ") + (r.detail ? r.detail : "stopped"));
+        const std::string detail = r.detail.empty() ? "stopped" : r.detail;
+        logMessage("Transcendence", std::string("[EMERGENCY] ") + detail);
         return true;
     }
     case 6004: { // Run autonomous cycle
@@ -292,7 +294,7 @@ std::string Win32IDE::handleTranscendenceEndpoint(
                 "{\"error\":\"Unknown phase: " + LocalServerUtil::escapeJson(phase) + "\"}");
         }
 
-        std::string detail = r.detail ? r.detail : "";
+        std::string detail = r.detail;
         return LocalServerUtil::buildHttpResponse(200,
             "{\"success\":" + std::string(r.success ? "true" : "false") +
             ",\"detail\":\"" + LocalServerUtil::escapeJson(detail) + "\"}");
@@ -301,7 +303,7 @@ std::string Win32IDE::handleTranscendenceEndpoint(
     // POST /api/transcendence/shutdown
     if (method == "POST" && path == "/api/transcendence/shutdown") {
         PatchResult r = coord.shutdownAll();
-        std::string detail = r.detail ? r.detail : "";
+        std::string detail = r.detail;
         return LocalServerUtil::buildHttpResponse(200,
             "{\"success\":" + std::string(r.success ? "true" : "false") +
             ",\"detail\":\"" + LocalServerUtil::escapeJson(detail) + "\"}");
@@ -310,7 +312,7 @@ std::string Win32IDE::handleTranscendenceEndpoint(
     // POST /api/transcendence/emergency-stop
     if (method == "POST" && path == "/api/transcendence/emergency-stop") {
         PatchResult r = coord.emergencyStop();
-        std::string detail = r.detail ? r.detail : "";
+        std::string detail = r.detail;
         return LocalServerUtil::buildHttpResponse(200,
             "{\"success\":" + std::string(r.success ? "true" : "false") +
             ",\"detail\":\"" + LocalServerUtil::escapeJson(detail) + "\"}");

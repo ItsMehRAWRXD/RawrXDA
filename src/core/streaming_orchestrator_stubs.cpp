@@ -12,7 +12,7 @@
 // Rule:    NO SOURCE FILE IS TO BE SIMPLIFIED
 // =============================================================================
 
-#if !defined(RAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM) || !RAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM
+#if defined(RAWRXD_GOLD_BUILD) || !defined(RAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM) || !RAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM
 
 #include "streaming_orchestrator.h"
 #include <cstring>
@@ -31,8 +31,12 @@
 #include <dlfcn.h>
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
+#include <poll.h>
 #include <time.h>
 #endif
+
+#include <algorithm>
 
 // ---------------------------------------------------------------------------
 // Internal state
@@ -592,6 +596,261 @@ intptr_t SO_OpenMemoryMappedFile(const char* path, uint64_t fileSize) {
     int fd = open(path, O_RDONLY);
     return (intptr_t)fd;
 #endif
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Weight Streaming from Disk
+// ═══════════════════════════════════════════════════════════════════
+
+// Internal structure for weight streaming context
+struct WeightStreamContext {
+    intptr_t fileHandle;
+    uint64_t fileSize;
+    uint64_t currentOffset;
+    void* mappedBase;
+    uint64_t mappedSize;
+    uint32_t layerCount;
+    bool initialized;
+};
+
+static WeightStreamContext g_weightStreamCtx = {};
+
+int SO_StreamWeights(const char* modelPath) {
+    if (!modelPath) return 0;
+
+    // Initialize streaming system if needed
+    if (!g_streamingInitialized) {
+        SO_InitializeStreaming();
+    }
+
+    // Create memory arena if not exists
+    if (!g_memoryArena) {
+        g_memoryArena = SO_CreateMemoryArena(512ULL * 1024 * 1024); // 512MB default
+        if (!g_memoryArena) {
+            fprintf(stderr, "[StreamingOrchestrator] Failed to create memory arena\n");
+            return 0;
+        }
+    }
+
+#ifdef _WIN32
+    // Open the model file
+    HANDLE hFile = CreateFileA(modelPath, GENERIC_READ, FILE_SHARE_READ,
+                                NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, NULL);
+    if (hFile == INVALID_HANDLE_VALUE) {
+        fprintf(stderr, "[StreamingOrchestrator] Failed to open model file: %s\n", modelPath);
+        return 0;
+    }
+
+    // Get file size
+    LARGE_INTEGER fileSize;
+    if (!GetFileSizeEx(hFile, &fileSize)) {
+        CloseHandle(hFile);
+        return 0;
+    }
+    g_weightStreamCtx.fileSize = (uint64_t)fileSize.QuadPart;
+    g_weightStreamCtx.fileHandle = (intptr_t)hFile;
+
+    // Create file mapping
+    HANDLE hMapping = CreateFileMappingA(hFile, NULL, PAGE_READONLY, 0, 0, NULL);
+    if (!hMapping) {
+        CloseHandle(hFile);
+        return 0;
+    }
+
+    // Map view of file (first 64MB or entire file if smaller)
+    uint64_t mapSize = (std::min)(g_weightStreamCtx.fileSize, (uint64_t)(64 * 1024 * 1024));
+    void* mapped = MapViewOfFile(hMapping, FILE_MAP_READ, 0, 0, (SIZE_T)mapSize);
+    if (!mapped) {
+        CloseHandle(hMapping);
+        CloseHandle(hFile);
+        return 0;
+    }
+
+    g_weightStreamCtx.mappedBase = mapped;
+    g_weightStreamCtx.mappedSize = mapSize;
+    g_weightStreamCtx.currentOffset = 0;
+    g_weightStreamCtx.initialized = true;
+
+    // Parse model header to determine layer count
+    // Assuming GGUF-style format: magic (4 bytes) + version (4 bytes) + tensor count (8 bytes)
+    const uint8_t* data = (const uint8_t*)mapped;
+    if (mapSize >= 16) {
+        // Check for GGUF magic
+        if (memcmp(data, "GGUF", 4) == 0 || memcmp(data, "ggml", 4) == 0) {
+            // GGUF format
+            uint32_t version = *(const uint32_t*)(data + 4);
+            uint64_t tensorCount = *(const uint64_t*)(data + 8);
+            (void)version;
+            
+            // Estimate layer count from tensor count (typically 10-15 tensors per layer)
+            g_weightStreamCtx.layerCount = (uint32_t)(tensorCount / 12);
+            if (g_weightStreamCtx.layerCount > MAX_LAYERS) {
+                g_weightStreamCtx.layerCount = MAX_LAYERS;
+            }
+        } else {
+            // Unknown format - assume raw weights, default layer count
+            g_weightStreamCtx.layerCount = 32;
+        }
+    }
+
+    // Initialize layer states for streaming
+    for (uint32_t i = 0; i < g_weightStreamCtx.layerCount && i < MAX_LAYERS; i++) {
+        g_layerStates[i].layer_id = i;
+        g_layerStates[i].state = SO_LAYER_NOT_LOADED;
+        g_layerStates[i].memory_offset = 0;
+        g_layerStates[i].size_bytes = g_weightStreamCtx.fileSize / g_weightStreamCtx.layerCount;
+        g_layerStates[i].last_access = 0;
+        g_layerStates[i].access_count = 0;
+        g_layerStates[i].prefetch_score = 0;
+    }
+
+    g_metrics.bytes_streamed += mapSize;
+    fprintf(stdout, "[StreamingOrchestrator] Model opened: %s (%.2f MB, %u layers)\n",
+            modelPath, (double)g_weightStreamCtx.fileSize / (1024 * 1024),
+            g_weightStreamCtx.layerCount);
+
+    // Keep mapping handle open (will be closed in cleanup)
+    CloseHandle(hMapping);
+
+#else
+    // POSIX implementation
+    int fd = open(modelPath, O_RDONLY);
+    if (fd < 0) {
+        fprintf(stderr, "[StreamingOrchestrator] Failed to open model file: %s\n", modelPath);
+        return 0;
+    }
+
+    struct stat st;
+    if (fstat(fd, &st) < 0) {
+        close(fd);
+        return 0;
+    }
+    g_weightStreamCtx.fileSize = (uint64_t)st.st_size;
+    g_weightStreamCtx.fileHandle = (intptr_t)fd;
+
+    // Memory map the file
+    uint64_t mapSize = g_weightStreamCtx.fileSize;
+    if (mapSize > 64 * 1024 * 1024) mapSize = 64 * 1024 * 1024;
+
+    void* mapped = mmap(NULL, (size_t)mapSize, PROT_READ, MAP_PRIVATE, fd, 0);
+    if (mapped == MAP_FAILED) {
+        close(fd);
+        return 0;
+    }
+
+    g_weightStreamCtx.mappedBase = mapped;
+    g_weightStreamCtx.mappedSize = mapSize;
+    g_weightStreamCtx.currentOffset = 0;
+    g_weightStreamCtx.initialized = true;
+    g_weightStreamCtx.layerCount = 32; // Default
+
+    g_metrics.bytes_streamed += mapSize;
+    fprintf(stdout, "[StreamingOrchestrator] Model opened: %s (%.2f MB)\n",
+            modelPath, (double)g_weightStreamCtx.fileSize / (1024 * 1024));
+#endif
+
+    return 1;
+}
+
+int SO_CloseWeightStream(void) {
+    if (!g_weightStreamCtx.initialized) return 0;
+
+#ifdef _WIN32
+    if (g_weightStreamCtx.mappedBase) {
+        UnmapViewOfFile(g_weightStreamCtx.mappedBase);
+        g_weightStreamCtx.mappedBase = nullptr;
+    }
+    if (g_weightStreamCtx.fileHandle != 0 && g_weightStreamCtx.fileHandle != -1) {
+        CloseHandle((HANDLE)g_weightStreamCtx.fileHandle);
+    }
+#else
+    if (g_weightStreamCtx.mappedBase) {
+        munmap(g_weightStreamCtx.mappedBase, (size_t)g_weightStreamCtx.mappedSize);
+        g_weightStreamCtx.mappedBase = nullptr;
+    }
+    if (g_weightStreamCtx.fileHandle > 0) {
+        close((int)g_weightStreamCtx.fileHandle);
+    }
+#endif
+
+    memset(&g_weightStreamCtx, 0, sizeof(g_weightStreamCtx));
+    return 1;
+}
+
+void* SO_GetLayerWeights(uint64_t layerId, uint64_t* outSize) {
+    if (!g_weightStreamCtx.initialized) return nullptr;
+    if (layerId >= g_weightStreamCtx.layerCount) return nullptr;
+    if (layerId >= MAX_LAYERS) return nullptr;
+
+    // Calculate offset and size for this layer
+    uint64_t layerSize = g_weightStreamCtx.fileSize / g_weightStreamCtx.layerCount;
+    uint64_t layerOffset = layerId * layerSize;
+
+    // Update layer state
+    g_layerStates[layerId].state = SO_LAYER_LOADING;
+    g_layerStates[layerId].last_access = get_ticks();
+    g_layerStates[layerId].access_count++;
+
+    // Check if offset is within current mapping
+    if (layerOffset < g_weightStreamCtx.mappedSize) {
+        g_layerStates[layerId].state = SO_LAYER_LOADED;
+        g_metrics.layers_loaded++;
+        
+        if (outSize) *outSize = (std::min)(layerSize, g_weightStreamCtx.mappedSize - layerOffset);
+        return (char*)g_weightStreamCtx.mappedBase + layerOffset;
+    }
+
+#ifdef _WIN32
+    // Need to remap to access this offset
+    if (g_weightStreamCtx.mappedBase) {
+        UnmapViewOfFile(g_weightStreamCtx.mappedBase);
+    }
+
+    HANDLE hFile = (HANDLE)g_weightStreamCtx.fileHandle;
+    HANDLE hMapping = CreateFileMappingA(hFile, NULL, PAGE_READONLY, 0, 0, NULL);
+    if (hMapping) {
+        uint64_t mapSize = (std::min)(g_weightStreamCtx.fileSize - layerOffset, (uint64_t)(64 * 1024 * 1024));
+        DWORD offsetHigh = (DWORD)(layerOffset >> 32);
+        DWORD offsetLow = (DWORD)(layerOffset & 0xFFFFFFFF);
+        
+        // Align offset to allocation granularity
+        SYSTEM_INFO si;
+        GetSystemInfo(&si);
+        DWORD allocGran = si.dwAllocationGranularity;
+        uint64_t alignedOffset = (layerOffset / allocGran) * allocGran;
+        uint64_t offsetDelta = layerOffset - alignedOffset;
+        
+        void* mapped = MapViewOfFile(hMapping, FILE_MAP_READ,
+                                      (DWORD)(alignedOffset >> 32),
+                                      (DWORD)(alignedOffset & 0xFFFFFFFF),
+                                      (SIZE_T)(mapSize + offsetDelta));
+        CloseHandle(hMapping);
+
+        if (mapped) {
+            g_weightStreamCtx.mappedBase = mapped;
+            g_weightStreamCtx.mappedSize = mapSize + offsetDelta;
+            g_weightStreamCtx.currentOffset = alignedOffset;
+
+            g_layerStates[layerId].state = SO_LAYER_LOADED;
+            g_metrics.layers_loaded++;
+            g_metrics.bytes_streamed += mapSize;
+
+            if (outSize) *outSize = (std::min)(layerSize, mapSize);
+            return (char*)mapped + offsetDelta;
+        }
+    }
+#endif
+
+    g_layerStates[layerId].state = SO_LAYER_NOT_LOADED;
+    return nullptr;
+}
+
+uint32_t SO_GetStreamedLayerCount(void) {
+    return g_weightStreamCtx.layerCount;
+}
+
+uint64_t SO_GetModelFileSize(void) {
+    return g_weightStreamCtx.fileSize;
 }
 
 #ifdef __cplusplus

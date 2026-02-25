@@ -17,6 +17,7 @@
 // ============================================================================
 
 #include "BoundedAgentLoop.h"
+#include "AgentOllamaClient.h"
 
 #include <sstream>
 #include <thread>
@@ -422,7 +423,19 @@ LLMChatResponse BoundedAgentLoop::OllamaChat(const LLMChatRequest& request,
 
     // Build Ollama chat request body
     json body;
-    body["model"] = request.model;
+
+    // Auto-detect model if not explicitly set
+    std::string modelName = request.model;
+    if (modelName.empty()) {
+        // Query Ollama /api/tags for the first available model
+        RawrXD::Agent::OllamaConfig detectCfg;
+        detectCfg.timeout_ms = 3000;
+        RawrXD::Agent::AgentOllamaClient detectClient(detectCfg);
+        // Constructor auto-detects — use whatever it found
+        modelName = detectClient.GetConfig().chat_model;
+    }
+
+    body["model"] = modelName;
     body["messages"] = request.messages;
     body["stream"] = false;
     body["options"] = {

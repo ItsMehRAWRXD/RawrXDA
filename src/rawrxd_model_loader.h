@@ -15,6 +15,7 @@ struct Tensor {
     // Vulkan
     VkBuffer gpuBuffer = VK_NULL_HANDLE;
     VkDeviceMemory gpuMemory = VK_NULL_HANDLE;
+    size_t gpuSizeBytes = 0;
     bool onGPU = false;
     
     // CPU Float cache for reference implementation

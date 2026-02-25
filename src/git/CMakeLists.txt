@@ -1,9 +1,12 @@
 # Git diff/merge orchestration module
 add_library(RawrXDGit STATIC
+    git_context.h
+    git_context.cpp
     semantic_diff_analyzer.hpp
     semantic_diff_analyzer.cpp
     ai_merge_resolver.hpp
     ai_merge_resolver.cpp
+    ai_merge_resolver_impl.cpp
 )
 
 # Qt-free: uses nlohmann::json + STL + WinHTTP

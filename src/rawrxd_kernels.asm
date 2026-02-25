@@ -1,23 +1,30 @@
+; =============================================================================
+; rawrxd_kernels.asm - MONOLITHIC ZERO-DEPENDENCY MATH KERNELS
+; Real AVX-512 / SSE Fallback Implementation
+; Complete Inline Definitions - No External Includes
+; =============================================================================
+
+OPTION CASEMAP:NONE
+OPTION PROLOGUE:NONE
+OPTION EPILOGUE:NONE
+
+; =============================================================================
+; PUBLIC EXPORTS - ALL KERNEL SYMBOLS
+; =============================================================================
+
+PUBLIC MatMul_F16F32_AVX512
+PUBLIC RMSNorm_AVX512
+PUBLIC SoftMax_AVX512
+PUBLIC RoPE_Rotate_AVX512
+
+; --- Constant Exports ---
+PUBLIC const_1_0
+PUBLIC const_0_5
+PUBLIC exp_magic_scale
+PUBLIC exp_magic_bias
+PUBLIC exp_clamp_lo
+
 .code
-option casemap:none
-
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
-
-; =========================================================================================
-; RawrXD Math Kernels (Real AVX-512 / Fallback Implementation)
-; Implements real math logic to ensure inference works.
-; =========================================================================================
-
-public MatMul_F16F32_AVX512
-public RMSNorm_AVX512
-public SoftMax_AVX512
-public RoPE_Rotate_AVX512
-
-; External C Runtime math for SoftMax (expf) if needed, 
-; but we will implement simple approx or loop if linking is tricky.
-; Since this is MASM64 in VS, we can assume standard x64 calling convention.
 
 ; -----------------------------------------------------------------------------------------
 ; MatMul_F16F32_AVX512

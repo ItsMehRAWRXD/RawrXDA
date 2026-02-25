@@ -172,7 +172,7 @@ Reconstructor_Initialize PROC
     
     ; Print banner
     lea rcx, sz_banner
-    call PrintString
+    call CPR_PrintString
     
     mov eax, 1
     add rsp, 20h
@@ -199,7 +199,7 @@ Reconstructor_ScanPatterns PROC
     sub rsp, 20h
     
     lea rcx, sz_analyzing
-    call PrintString
+    call CPR_PrintString
     
     mov r12, g_context.binary_base
     mov r13, g_context.binary_size
@@ -594,7 +594,7 @@ Reconstructor_BuildASM PROC
     sub rsp, 20h
     
     lea rcx, sz_reconstructing
-    call PrintString
+    call CPR_PrintString
     
     mov r12, g_context.output_buffer
     mov r13d, g_context.functions_found
@@ -723,7 +723,7 @@ build_loop:
     
 build_done:
     lea rcx, sz_complete
-    call PrintString
+    call CPR_PrintString
 
     ; Finalize reconstructed size
     mov rax, r15
@@ -988,7 +988,7 @@ AppendDecU32 ENDP
 ;--------------------------------------------------------------------------------
 ; Print string helper
 ;--------------------------------------------------------------------------------
-PrintString PROC
+CPR_PrintString PROC
     push rbx
     push r12
     push r13
@@ -1019,7 +1019,7 @@ strlen_done:
     pop r12
     pop rbx
     ret
-PrintString ENDP
+CPR_PrintString ENDP
 
 ;--------------------------------------------------------------------------------
 ; Cleanup / Free reconstructor resources

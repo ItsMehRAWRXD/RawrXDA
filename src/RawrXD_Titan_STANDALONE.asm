@@ -1,12 +1,39 @@
 ; =============================================================================
-; RawrXD_Titan_STANDALONE.asm - FINAL COMPILABLE VERSION
+; RawrXD_Titan_STANDALONE.asm - MONOLITHIC ZERO-DEPENDENCY VERSION
 ; Native GGUF Inference Engine - Win64 ABI Compliant
+; Complete PE Backend Implementation - No External Libs
 ; =============================================================================
 
 OPTION CASEMAP:NONE
+OPTION PROLOGUE:NONE
+OPTION EPILOGUE:NONE
 
-includelib kernel32.lib
-includelib ntdll.lib
+; =============================================================================
+; PUBLIC EXPORTS - ALL SYMBOLS
+; =============================================================================
+PUBLIC Math_InitTables
+PUBLIC Quant_Q2K_Deblock
+PUBLIC RMSNorm_F32_AVX512
+PUBLIC SoftMax_F32
+PUBLIC Attention_Forward_GQA
+PUBLIC FeedForward_SwiGLU
+PUBLIC Titan_RunInferenceStep
+PUBLIC Titan_LoadModel
+PUBLIC Titan_InferenceThread
+PUBLIC main
+
+; --- Data Exports ---
+PUBLIC g_RingBase
+PUBLIC g_RingHeader
+PUBLIC g_pTokenData
+PUBLIC g_nContexts
+PUBLIC one_f
+PUBLIC eps_f
+
+; --- Constant Exports ---
+PUBLIC const_GGUF_MAGIC
+PUBLIC const_TYPE_Q2_K
+PUBLIC const_RING_SIZE_LOG2
 
 ; ============================================================================
 ; CONSTANTS
@@ -17,7 +44,7 @@ TYPE_Q2_K           EQU 14
 RING_SIZE_LOG2      EQU 26
 
 ; ============================================================================
-; STRUCTURES
+; STRUCTURES (Monolithic - No External Includes)
 ; ============================================================================
 
 GGUFHeader STRUC
@@ -56,6 +83,12 @@ g_nContexts         DWORD ?
 
 one_f               REAL4 1.0
 eps_f               REAL4 0.0001
+
+; --- Exported Constant Values ---
+ALIGN 4
+const_GGUF_MAGIC        DWORD GGUF_MAGIC
+const_TYPE_Q2_K         DWORD TYPE_Q2_K
+const_RING_SIZE_LOG2    DWORD RING_SIZE_LOG2
 
 ; ============================================================================
 ; CODE

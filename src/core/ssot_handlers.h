@@ -81,6 +81,22 @@ CommandResult handleTerminalSplitCode(const CommandContext& ctx);
 // ═══════════ AUTONOMY (extended) ═══════════
 CommandResult handleAutonomyStatus(const CommandContext& ctx);
 CommandResult handleAutonomyMemory(const CommandContext& ctx);
+CommandResult handleAutonomyToggle(const CommandContext& ctx);
+CommandResult handleAutonomyStart(const CommandContext& ctx);
+CommandResult handleAutonomyStop(const CommandContext& ctx);
+CommandResult handleAutonomyPause(const CommandContext& ctx);
+CommandResult handleAutonomyProgress(const CommandContext& ctx);
+
+// ═══════════ AGENT LOOP ═══════════
+CommandResult handleAgentLoop(const CommandContext& ctx);
+CommandResult handleAgentExecute(const CommandContext& ctx);
+CommandResult handleAgentConfigure(const CommandContext& ctx);
+CommandResult handleAgentStop(const CommandContext& ctx);
+CommandResult handleAgentState(const CommandContext& ctx);
+
+// ═══════════ SUB-AGENT ═══════════
+CommandResult handleSubAgentSpawn(const CommandContext& ctx);
+CommandResult handleSubAgentStatus(const CommandContext& ctx);
 
 // ═══════════ AI MODE / CONTEXT ═══════════
 CommandResult handleAINoRefusal(const CommandContext& ctx);
@@ -224,6 +240,42 @@ CommandResult handleTelemetryExportCsv(const CommandContext& ctx);
 CommandResult handleTelemetryDashboard(const CommandContext& ctx);
 CommandResult handleTelemetryClear(const CommandContext& ctx);
 CommandResult handleTelemetrySnapshot(const CommandContext& ctx);
+
+// ═══════════ BACKEND SWITCHER ═══════════
+CommandResult handleBackendSwitchLocal(const CommandContext& ctx);
+CommandResult handleBackendSwitchOllama(const CommandContext& ctx);
+CommandResult handleBackendSwitchOpenAI(const CommandContext& ctx);
+CommandResult handleBackendSwitchClaude(const CommandContext& ctx);
+CommandResult handleBackendSwitchGemini(const CommandContext& ctx);
+CommandResult handleBackendShowStatus(const CommandContext& ctx);
+CommandResult handleBackendShowSwitcher(const CommandContext& ctx);
+CommandResult handleBackendConfigure(const CommandContext& ctx);
+CommandResult handleBackendHealthCheck(const CommandContext& ctx);
+CommandResult handleBackendSetApiKey(const CommandContext& ctx);
+CommandResult handleBackendSaveConfigs(const CommandContext& ctx);
+
+// ═══════════ ROUTER ═══════════
+CommandResult handleRouterEnable(const CommandContext& ctx);
+CommandResult handleRouterDisable(const CommandContext& ctx);
+CommandResult handleRouterStatus(const CommandContext& ctx);
+CommandResult handleRouterDecision(const CommandContext& ctx);
+CommandResult handleRouterSetPolicy(const CommandContext& ctx);
+CommandResult handleRouterCapabilities(const CommandContext& ctx);
+CommandResult handleRouterFallbacks(const CommandContext& ctx);
+CommandResult handleRouterSaveConfig(const CommandContext& ctx);
+CommandResult handleRouterRoutePrompt(const CommandContext& ctx);
+CommandResult handleRouterResetStats(const CommandContext& ctx);
+CommandResult handleRouterWhyBackend(const CommandContext& ctx);
+CommandResult handleRouterPinTask(const CommandContext& ctx);
+CommandResult handleRouterUnpinTask(const CommandContext& ctx);
+CommandResult handleRouterShowPins(const CommandContext& ctx);
+CommandResult handleRouterShowHeatmap(const CommandContext& ctx);
+CommandResult handleRouterEnsembleEnable(const CommandContext& ctx);
+CommandResult handleRouterEnsembleDisable(const CommandContext& ctx);
+CommandResult handleRouterEnsembleStatus(const CommandContext& ctx);
+CommandResult handleRouterSimulate(const CommandContext& ctx);
+CommandResult handleRouterSimulateLast(const CommandContext& ctx);
+CommandResult handleRouterShowCostStats(const CommandContext& ctx);
 
 // ═══════════ TIER 1: CRITICAL COSMETICS (12000-12099) ═══════════
 CommandResult handleTier1SmoothScrollToggle(const CommandContext& ctx);

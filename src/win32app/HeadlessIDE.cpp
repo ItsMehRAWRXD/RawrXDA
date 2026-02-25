@@ -947,7 +947,7 @@ void HeadlessIDE::runInferenceStreaming(const std::string& prompt,
         RawrXD::Agent::OllamaConfig cfg;
         cfg.host = "127.0.0.1";
         cfg.port = 11434;
-        cfg.chat_model = "qwen2.5-coder:14b";
+        // chat_model left empty — auto-detected from Ollama /api/tags
         cfg.temperature = m_config.temperature;
         cfg.max_tokens = m_config.maxTokens;
         cfg.use_gpu = true;
@@ -1092,7 +1092,7 @@ std::string HeadlessIDE::routeInferenceRequest(const std::string& prompt) {
         RawrXD::Agent::OllamaConfig cfg;
         cfg.host = "127.0.0.1";
         cfg.port = 11434;
-        cfg.chat_model = "qwen2.5-coder:14b";
+        // chat_model left empty — auto-detected from Ollama /api/tags
         cfg.temperature = m_config.temperature;
         cfg.max_tokens = m_config.maxTokens;
         cfg.use_gpu = true;

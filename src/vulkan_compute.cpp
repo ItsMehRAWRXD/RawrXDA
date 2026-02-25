@@ -1816,6 +1816,8 @@ bool VulkanCompute::ReplacePipeline(const std::string& shader_name, const std::s
 
     // Recreate pipeline with existing layout
     if (it->second.layout) {
+        VkPipeline old_pipeline = it->second.pipeline;
+
         VkPipelineShaderStageCreateInfo stage_info{};
         stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         stage_info.stage = VK_SHADER_STAGE_COMPUTE_BIT;
@@ -1830,6 +1832,10 @@ bool VulkanCompute::ReplacePipeline(const std::string& shader_name, const std::s
         if (vkCreateComputePipelines(device_, nullptr, 1, &pipeline_info, nullptr, &it->second.pipeline) != VK_SUCCESS) {
             std::cerr << "Failed to create replacement compute pipeline" << std::endl;
             return false;
+        }
+
+        if (old_pipeline) {
+            vkDestroyPipeline(device_, old_pipeline, nullptr);
         }
     }
 
@@ -2262,6 +2268,15 @@ int VulkanKernel_CopyToHost(uint32_t buf_idx, void* data, uint64_t size) {
     if (!g_vulkan_instance || !data) return 0;
     return g_vulkan_instance->CopyBufferToHost(buf_idx, data,
                                                 static_cast<size_t>(size)) ? 1 : 0;
+}
+
+// Historical/ASM-facing aliases (some MASM modules reference these names).
+int VulkanKERNEL_TYPE_COPYToDevice(uint32_t buf_idx, const void* data, uint64_t size) {
+    return VulkanKernel_CopyToDevice(buf_idx, data, size);
+}
+
+int VulkanKERNEL_TYPE_COPYToHost(uint32_t buf_idx, void* data, uint64_t size) {
+    return VulkanKernel_CopyToHost(buf_idx, data, size);
 }
 
 int VulkanKernel_DispatchMatMul(uint32_t a, uint32_t b, uint32_t out,

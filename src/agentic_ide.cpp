@@ -1,6 +1,7 @@
 #include <thread>
 #include <atomic>
 #include <shared_mutex>
+#include <filesystem>
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 #include <compare>
@@ -113,8 +114,18 @@ Result<void> AgenticIDE::initializeComponents() {
         m_terminalPool = std::make_shared<RawrXD::TerminalPool>();
         m_orchestrator = std::make_shared<RawrXD::AutonomousIntelligenceOrchestrator>(this);
         
-        // Use LSPConfig instead of LSPServerConfig
-        m_lspClient = std::make_shared<RawrXD::LSPClient>(RawrXD::LSPConfig{});
+        // Detect workspace root and initialize LSP
+        std::string workspaceRoot = detectWorkspaceRoot();
+        RawrXD::LSPConfig lspConfig{};
+        if (!workspaceRoot.empty()) {
+            lspConfig.workspaceFolder = workspaceRoot;
+            log("Workspace root detected: " + workspaceRoot, spdlog::level::info);
+        } else {
+            log("No workspace root detected, using default", spdlog::level::warn);
+        }
+        
+        m_lspClient = std::make_shared<RawrXD::LSPClient>(lspConfig);
+        m_workspaceRoot = workspaceRoot;
 
         return Result<void>();
     } catch (...) {
@@ -387,4 +398,62 @@ void AgenticIDE::submitTask(std::function<void()> task) {
         m_taskQueue.push_back(std::move(task));
     }
     m_queueCv.notify_one();
+}
+std::string AgenticIDE::detectWorkspaceRoot() {
+    // Try to detect workspace root by searching for marker files/directories
+    // Starting from current working directory and moving up
+    std::filesystem::path currentPath = std::filesystem::current_path();
+    
+    // Workspace marker detection order
+    const std::vector<std::string> workspaceMarkers = {
+        ".git",           // Git repository
+        ".workspace",     // RawrXD workspace marker
+        "CMakeLists.txt", // CMake project
+        ".vscode",        // VS Code workspace
+        "package.json",   // Node/NPM project
+        "Cargo.toml"      // Rust project
+    };
+    
+    // Search up to 10 levels or filesystem root
+    int maxLevels = 10;
+    int currentLevel = 0;
+    
+    while (currentLevel < maxLevels && !currentPath.empty()) {
+        // Check for each marker
+        for (const auto& marker : workspaceMarkers) {
+            std::filesystem::path markerPath = currentPath / marker;
+            
+            if (std::filesystem::exists(markerPath)) {
+                log("Found workspace marker '" + marker + "' at: " + currentPath.string(), 
+                    spdlog::level::info);
+                return currentPath.string();
+            }
+        }
+        
+        // Move up one directory
+        std::filesystem::path parentPath = currentPath.parent_path();
+        if (parentPath == currentPath) {
+            // Reached filesystem root
+            break;
+        }
+        
+        currentPath = parentPath;
+        currentLevel++;
+    }
+    
+    // If no workspace root found, try to use config modelsPath directory
+    if (!m_config.modelsPath.empty()) {
+        std::filesystem::path modelsDir(m_config.modelsPath);
+        if (std::filesystem::exists(modelsDir)) {
+            log("Using models path as workspace root: " + m_config.modelsPath, 
+                spdlog::level::info);
+            return m_config.modelsPath;
+        }
+    }
+    
+    // Default fallback to current working directory
+    std::string cwd = std::filesystem::current_path().string();
+    log("No workspace markers found, using current directory: " + cwd, 
+        spdlog::level::warn);
+    return cwd;
 }

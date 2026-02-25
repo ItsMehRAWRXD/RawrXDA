@@ -237,7 +237,7 @@ static std::string aiSuggestSymbolName(const std::string& originalName,
     RawrXD::Agent::OllamaConfig cfg;
     cfg.host = "127.0.0.1";
     cfg.port = 11434;
-    cfg.chat_model = "qwen2.5-coder:14b";
+    // chat_model left empty — auto-detected from Ollama /api/tags
     cfg.temperature = 0.1f;  // Low temperature for deterministic naming
     cfg.max_tokens = 64;
     cfg.timeout_ms = 10000;  // Quick timeout for RE workflow
@@ -300,7 +300,7 @@ static std::string aiSuggestType(const std::string& originalType, const std::str
         RawrXD::Agent::OllamaConfig cfg;
         cfg.host = "127.0.0.1";
         cfg.port = 11434;
-        cfg.chat_model = "qwen2.5-coder:14b";
+        // chat_model left empty — auto-detected from Ollama /api/tags
         cfg.temperature = 0.1f;
         cfg.max_tokens = 32;
         cfg.timeout_ms = 8000;

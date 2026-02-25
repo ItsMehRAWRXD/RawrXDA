@@ -646,8 +646,25 @@ std::expected<std::string, CLIError> EnhancedCLI::cmdOptimize(const std::vector<
 
 std::expected<std::string, CLIError> EnhancedCLI::cmdTest(const std::vector<std::string>& args, IDEOrchestrator* ide) {
     if (args.empty()) return "Usage: test <files...>";
-    // Placeholder for triggering test runner
-    return "Running tests for: " + args[0];
+
+    // Minimal deterministic test runner hook:
+    // - Validate that paths exist.
+    // - If an IDE/toolchain integration is available, higher layers can wire an actual build+test invocation.
+    size_t ok = 0;
+    std::vector<std::string> missing;
+    for (const auto& p : args) {
+        std::ifstream f(p);
+        if (f.good()) ok++;
+        else missing.push_back(p);
+    }
+
+    std::ostringstream oss;
+    oss << "Test request: " << ok << " file(s) found";
+    if (!missing.empty()) {
+        oss << ", " << missing.size() << " missing:";
+        for (const auto& m : missing) oss << " " << m;
+    }
+    return oss.str();
 }
 
 std::expected<std::string, CLIError> EnhancedCLI::cmdDocs(const std::vector<std::string>& args, IDEOrchestrator* ide) {

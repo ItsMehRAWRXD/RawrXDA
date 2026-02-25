@@ -336,12 +336,22 @@ std::string AgenticBridge::GetAgentStatus() {
 void AgenticBridge::SetModel(const std::string& modelName) {
     m_modelName = modelName;
     LOG_INFO("Model set to: " + modelName);
-    // Only load as GGUF path when it looks like a file path (agentic autonomous: Ollama tags are valid, don't LoadModel)
-    if (g_cpuEngine && !modelName.empty()) {
-        bool isPath = modelName.find_first_of("/\\") != std::string::npos
-                   || modelName.size() > 4 && modelName.compare(modelName.size() - 5, 5, ".gguf") == 0;
-        if (isPath)
+
+    bool isPath = !modelName.empty() &&
+                  (modelName.find_first_of("/\\") != std::string::npos ||
+                   (modelName.size() > 5 && modelName.compare(modelName.size() - 5, 5, ".gguf") == 0));
+
+    if (isPath) {
+        // GGUF file path — load via native engine
+        if (g_cpuEngine)
             g_cpuEngine->LoadModel(modelName);
+    } else if (!modelName.empty()) {
+        // Ollama model tag (e.g. "llama3.3:latest") — propagate to BackendSwitcher
+        // so that routeToOllama() sends the correct model name
+        if (m_ide) {
+            m_ide->setBackendModel(Win32IDE::AIBackendType::Ollama, modelName);
+            LOG_INFO("BackendSwitcher Ollama model updated to: " + modelName);
+        }
     }
 }
 
@@ -737,4 +747,41 @@ bool AgenticBridge::LoadModel(const std::string& path) {
         return success;
     }
     return false;
+}
+
+// ============================================================================
+// Compatibility wrappers (older UI command layer)
+// ============================================================================
+
+bool AgenticBridge::LoadConfiguration(const std::string& configPath) {
+    SCOPED_METRIC("agentic.load_configuration");
+    if (configPath.empty()) return false;
+
+    // IDEConfig is the canonical config source for feature toggles and runtime knobs.
+    // Bridge-specific config reflection is intentionally minimal: the engine reads most
+    // toggles directly from CONFIG / FeatureToggle.
+    if (!CONFIG.loadFromFile(configPath)) {
+        LOG_WARNING("AgenticBridge::LoadConfiguration failed: " + configPath);
+        return false;
+    }
+
+    CONFIG.applyEnvironmentOverrides();
+    CONFIG.applyFeatureToggles();
+
+    LOG_INFO("AgenticBridge configuration loaded: " + configPath);
+    return true;
+}
+
+void AgenticBridge::WarmUpModel() {
+    SCOPED_METRIC("agentic.warmup_model");
+
+    if (!g_agentEngine) {
+        LOG_WARNING("AgenticBridge::WarmUpModel: agent engine not initialized");
+        return;
+    }
+
+    // Minimal warmup: force the engine to touch inference path and allocator.
+    // Keep it deterministic and fast; ignore the output.
+    (void)g_agentEngine->chat("warmup");
+    LOG_INFO("AgenticBridge warmup complete");
 }

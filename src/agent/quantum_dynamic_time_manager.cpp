@@ -4,6 +4,7 @@
 #include <cmath>
 #include <fstream>
 #include <iomanip>
+#include <iostream>
 #include <numeric>
 #include <sstream>
 
@@ -34,7 +35,18 @@ namespace {
     // Quantum optimization constants
     constexpr float QUANTUM_UNCERTAINTY_BASE = 0.05f;
     constexpr float TEMPORAL_COHERENCE_FACTOR = 1.1f;
+    constexpr double PI_D = 3.14159265358979323846;
+
+    std::chrono::milliseconds scaleDuration(std::chrono::milliseconds value, float factor) {
+        const auto scaled = static_cast<double>(value.count()) * static_cast<double>(factor);
+        const auto clamped = std::max(0.0, scaled);
+        return std::chrono::milliseconds(static_cast<long long>(std::llround(clamped)));
+    }
 }
+
+using TimeProfile = QuantumDynamicTimeManager::TimeProfile;
+using ExecutionContext = QuantumDynamicTimeManager::ExecutionContext;
+using TimeAllocation = QuantumDynamicTimeManager::TimeAllocation;
 
 QuantumDynamicTimeManager::QuantumDynamicTimeManager(AdjustmentStrategy strategy)
     : m_strategy(strategy)
@@ -141,10 +153,10 @@ TimeAllocation QuantumDynamicTimeManager::calculateTimeAllocation(const Executio
         case AdjustmentStrategy::Aggressive: {
             auto allocation = adaptiveTimeAllocation(context);
             // Reduce all times by 30%
-            allocation.total_time = std::chrono::duration_cast<std::chrono::milliseconds>(allocation.total_time * 0.7f);
-            allocation.thinking_time = std::chrono::duration_cast<std::chrono::milliseconds>(allocation.thinking_time * 0.7f);
-            allocation.execution_time = std::chrono::duration_cast<std::chrono::milliseconds>(allocation.execution_time * 0.7f);
-            allocation.buffer_time = std::chrono::duration_cast<std::chrono::milliseconds>(allocation.buffer_time * 0.5f);
+            allocation.total_time = scaleDuration(allocation.total_time, 0.7f);
+            allocation.thinking_time = scaleDuration(allocation.thinking_time, 0.7f);
+            allocation.execution_time = scaleDuration(allocation.execution_time, 0.7f);
+            allocation.buffer_time = scaleDuration(allocation.buffer_time, 0.5f);
             return allocation;
         }
         case AdjustmentStrategy::Adaptive:
@@ -193,8 +205,7 @@ TimeAllocation QuantumDynamicTimeManager::adaptiveTimeAllocation(const Execution
         complexity_multiplier = profile->quantum_multiplier;
     }
     
-    auto complexity_adjusted_time = std::chrono::duration_cast<std::chrono::milliseconds>(
-        base_time * complexity_multiplier);
+    auto complexity_adjusted_time = scaleDuration(base_time, complexity_multiplier);
     
     // Apply system factors
     float system_factor = 1.0f;
@@ -202,14 +213,12 @@ TimeAllocation QuantumDynamicTimeManager::adaptiveTimeAllocation(const Execution
     system_factor += (1.0f - (context.available_memory_gb / 32.0f)) * MEMORY_PRESSURE_IMPACT;
     system_factor += (2.0f - context.network_quality) * NETWORK_IMPACT;
     
-    auto system_adjusted_time = std::chrono::duration_cast<std::chrono::milliseconds>(
-        complexity_adjusted_time * system_factor);
+    auto system_adjusted_time = scaleDuration(complexity_adjusted_time, system_factor);
     
     // Multi-agent factor
     if (context.agent_count > 1) {
         float multi_agent_factor = 1.0f + (std::log2(context.agent_count) * 0.2f);
-        system_adjusted_time = std::chrono::duration_cast<std::chrono::milliseconds>(
-            system_adjusted_time * multi_agent_factor);
+        system_adjusted_time = scaleDuration(system_adjusted_time, multi_agent_factor);
     }
     
     // Apply bounds
@@ -218,9 +227,9 @@ TimeAllocation QuantumDynamicTimeManager::adaptiveTimeAllocation(const Execution
     
     // Distribute time across components
     allocation.total_time = system_adjusted_time;
-    allocation.thinking_time = std::chrono::duration_cast<std::chrono::milliseconds>(system_adjusted_time * 0.4f);
-    allocation.execution_time = std::chrono::duration_cast<std::chrono::milliseconds>(system_adjusted_time * 0.5f);
-    allocation.buffer_time = std::chrono::duration_cast<std::chrono::milliseconds>(system_adjusted_time * 0.1f);
+    allocation.thinking_time = scaleDuration(system_adjusted_time, 0.4f);
+    allocation.execution_time = scaleDuration(system_adjusted_time, 0.5f);
+    allocation.buffer_time = scaleDuration(system_adjusted_time, 0.1f);
     
     // PowerShell timeout if needed
     if (context.requires_pwsh) {
@@ -229,7 +238,7 @@ TimeAllocation QuantumDynamicTimeManager::adaptiveTimeAllocation(const Execution
     
     // Production critical tasks get extra buffer
     if (context.is_production_critical) {
-        allocation.buffer_time = std::chrono::duration_cast<std::chrono::milliseconds>(allocation.buffer_time * 1.5f);
+        allocation.buffer_time = scaleDuration(allocation.buffer_time, 1.5f);
         allocation.total_time += allocation.buffer_time;
     }
     
@@ -262,14 +271,13 @@ TimeAllocation QuantumDynamicTimeManager::quantumTimeAllocation(const ExecutionC
     
     // Apply quantum optimization to times
     allocation.total_time = applyQuantumOptimization(allocation.total_time, context);
-    allocation.thinking_time = std::chrono::duration_cast<std::chrono::milliseconds>(
-        allocation.thinking_time * (1.0f + quantum_bonus * 0.3f));
-    allocation.execution_time = std::chrono::duration_cast<std::chrono::milliseconds>(
-        allocation.execution_time * coherence_factor);
+    allocation.thinking_time = scaleDuration(allocation.thinking_time, 1.0f + quantum_bonus * 0.3f);
+    allocation.execution_time = scaleDuration(allocation.execution_time, coherence_factor);
     
     // Quantum-enhanced buffer calculation
-    auto quantum_buffer = std::chrono::duration_cast<std::chrono::milliseconds>(
-        allocation.buffer_time * (1.0f + quantum_uncertainty + quantum_bonus * 0.2f));
+    auto quantum_buffer = scaleDuration(
+        allocation.buffer_time,
+        1.0f + quantum_uncertainty + quantum_bonus * 0.2f);
     allocation.buffer_time = quantum_buffer;
     
     // Recalculate total with quantum adjustments
@@ -284,11 +292,12 @@ TimeAllocation QuantumDynamicTimeManager::quantumTimeAllocation(const ExecutionC
     for (int i = 1; i <= checkpoint_count; ++i) {
         float checkpoint_ratio = static_cast<float>(i) / checkpoint_count;
         // Apply quantum smoothing to checkpoint distribution
-        float quantum_ratio = checkpoint_ratio + quantum_uncertainty * std::sin(checkpoint_ratio * M_PI);
+        float quantum_ratio = checkpoint_ratio + quantum_uncertainty * std::sin(checkpoint_ratio * PI_D);
         quantum_ratio = std::max(0.0f, std::min(1.0f, quantum_ratio));
         
-        auto checkpoint_time = std::chrono::duration_cast<std::chrono::milliseconds>(
-            (allocation.thinking_time + allocation.execution_time) * quantum_ratio);
+        auto checkpoint_time = scaleDuration(
+            allocation.thinking_time + allocation.execution_time,
+            quantum_ratio);
         allocation.checkpoint_times.push_back(checkpoint_time);
         allocation.checkpoint_names.push_back("Quantum_Checkpoint_" + std::to_string(i));
     }
@@ -327,7 +336,7 @@ std::chrono::milliseconds QuantumDynamicTimeManager::getRandomPwshTimeout(const 
     }
     
     // Apply randomization
-    auto randomized_timeout = std::chrono::duration_cast<std::chrono::milliseconds>(base_timeout * random_factor);
+    auto randomized_timeout = scaleDuration(base_timeout, random_factor);
     
     // Apply bounds
     randomized_timeout = std::max(randomized_timeout, m_pwsh_config.min_timeout);
@@ -348,15 +357,15 @@ std::chrono::milliseconds QuantumDynamicTimeManager::getAdaptivePwshTimeout(cons
     
     // Adjust for complexity
     float complexity_factor = 1.0f + (context.complexity_score * 2.0f);
-    base_timeout = std::chrono::duration_cast<std::chrono::milliseconds>(base_timeout * complexity_factor);
+    base_timeout = scaleDuration(base_timeout, complexity_factor);
     
     // Adjust for system load
     float load_factor = 1.0f + (context.current_system_load * 0.5f);
-    base_timeout = std::chrono::duration_cast<std::chrono::milliseconds>(base_timeout * load_factor);
+    base_timeout = scaleDuration(base_timeout, load_factor);
     
     // Adjust for production criticality
     if (context.is_production_critical) {
-        base_timeout = std::chrono::duration_cast<std::chrono::milliseconds>(base_timeout * 1.5f);
+        base_timeout = scaleDuration(base_timeout, 1.5f);
     }
     
     // Historical success rate adjustment
@@ -367,7 +376,7 @@ std::chrono::milliseconds QuantumDynamicTimeManager::getAdaptivePwshTimeout(cons
         if (success_rate < m_pwsh_config.success_rate_threshold) {
             // Increase timeout if success rate is low
             float adjustment = (m_pwsh_config.success_rate_threshold - success_rate) * m_pwsh_config.adjustment_sensitivity;
-            base_timeout = std::chrono::duration_cast<std::chrono::milliseconds>(base_timeout * (1.0f + adjustment));
+            base_timeout = scaleDuration(base_timeout, 1.0f + adjustment);
         }
     }
     
@@ -376,7 +385,7 @@ std::chrono::milliseconds QuantumDynamicTimeManager::getAdaptivePwshTimeout(cons
         float random_factor = m_gaussian_dist(m_random_generator);
         random_factor = std::max(m_pwsh_config.min_random_factor, 
                                 std::min(m_pwsh_config.max_random_factor, random_factor));
-        base_timeout = std::chrono::duration_cast<std::chrono::milliseconds>(base_timeout * random_factor);
+        base_timeout = scaleDuration(base_timeout, random_factor);
     }
     
     // Apply bounds
@@ -388,6 +397,10 @@ std::chrono::milliseconds QuantumDynamicTimeManager::getAdaptivePwshTimeout(cons
 
 void QuantumDynamicTimeManager::recordExecution(const std::string& task_id, const ExecutionContext& context,
                                                std::chrono::milliseconds actual_time, bool success) {
+    // Predict outside the profile lock to avoid recursive locking through calculateTimeAllocation.
+    auto predicted_allocation = calculateTimeAllocation(context);
+    std::chrono::milliseconds predicted_time = predicted_allocation.total_time;
+
     std::lock_guard<std::mutex> lock(m_profiles_mutex);
     
     // Find profile for this task type
@@ -398,10 +411,6 @@ void QuantumDynamicTimeManager::recordExecution(const std::string& task_id, cons
     }
     
     TimeProfile& profile = profile_it->second;
-    
-    // Calculate predicted time for comparison
-    auto predicted_allocation = calculateTimeAllocation(context);
-    std::chrono::milliseconds predicted_time = predicted_allocation.total_time;
     
     // Update profile with feedback
     updateProfileWithFeedback(profile, actual_time, predicted_time, success);
@@ -416,7 +425,7 @@ void QuantumDynamicTimeManager::recordExecution(const std::string& task_id, cons
             m_metrics.timeout_failures++;
         }
         
-        if (actual_time < predicted_time * 0.8f) {
+        if (actual_time < scaleDuration(predicted_time, 0.8f)) {
             m_metrics.early_completions++;
         }
         

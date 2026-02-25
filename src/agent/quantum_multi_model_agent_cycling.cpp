@@ -8,6 +8,7 @@
 #include <iomanip>
 #include <future>
 #include <regex>
+#include <iostream>
 
 extern "C" {
 #include <windows.h>
@@ -17,6 +18,10 @@ extern "C" {
 namespace RawrXD::Agent {
 
 namespace {
+    using ModelType = QuantumMultiModelAgentCycling::ModelType;
+    using TaskCategory = QuantumAutonomousTodoSystem::TaskCategory;
+    using TaskComplexity = QuantumAutonomousTodoSystem::TaskComplexity;
+
     // Performance calculation constants
     constexpr float PERFORMANCE_DECAY_FACTOR = 0.95f;
     constexpr float MIN_MODEL_WEIGHT = 0.1f;
@@ -344,7 +349,8 @@ ExecutionResult QuantumMultiModelAgentCycling::executeWithCycling(const TaskDefi
     return result;
 }
 
-ConsensusResult QuantumMultiModelAgentCycling::executeWithConsensus(const TaskDefinition& task, int min_agents) {
+QuantumMultiModelAgentCycling::ConsensusResult
+QuantumMultiModelAgentCycling::executeWithConsensus(const TaskDefinition& task, int min_agents) {
     auto start_time = std::chrono::steady_clock::now();
     
     ConsensusResult consensus_result;

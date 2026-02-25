@@ -2218,7 +2218,7 @@ std::string CompletionServer::HandlePipelineSubmitRequest(const std::string& bod
         PatchResult init = orch.initialize(0);
         if (!init.success)
             return "{\"error\":\"pipeline_init_failed\",\"detail\":\"" +
-                   std::string(init.detail ? init.detail : "unknown") + "\"}";
+                   (init.detail.empty() ? std::string("unknown") : init.detail) + "\"}";
     }
 
     std::string taskName;
@@ -2241,7 +2241,7 @@ std::string CompletionServer::HandlePipelineSubmitRequest(const std::string& bod
 
     return "{\"success\":" + std::string(r.success ? "true" : "false") +
            ",\"taskId\":" + std::to_string(r.taskId) +
-           ",\"detail\":\"" + std::string(r.detail ? r.detail : "") + "\"}";
+           ",\"detail\":\"" + r.detail + "\"}";
 }
 
 std::string CompletionServer::HandlePipelineTasksRequest() {
@@ -2274,14 +2274,14 @@ std::string CompletionServer::HandlePipelineCancelRequest(const std::string& bod
         PatchResult r = orch.cancelTask(taskId);
         return "{\"success\":" + std::string(r.success ? "true" : "false") +
                ",\"taskId\":" + std::to_string(taskId) +
-               ",\"detail\":\"" + std::string(r.detail ? r.detail : "") + "\"}";
+               ",\"detail\":\"" + r.detail + "\"}";
     }
 
     // Cancel all
     PatchResult r = orch.cancelAll();
     return "{\"success\":" + std::string(r.success ? "true" : "false") +
            ",\"cancelled\":\"all\",\"detail\":\"" +
-           std::string(r.detail ? r.detail : "") + "\"}";
+           r.detail + "\"}";
 }
 
 std::string CompletionServer::HandlePipelineNodesRequest() {
@@ -2372,7 +2372,7 @@ std::string CompletionServer::HandleHotpatchCPApplyRequest(const std::string& bo
     PatchResult r = cp.applyPatch(patchId, actor, reason);
     return "{\"success\":" + std::string(r.success ? "true" : "false") +
            ",\"patchId\":" + std::to_string(patchId) +
-           ",\"detail\":\"" + std::string(r.detail ? r.detail : "") + "\"}";
+           ",\"detail\":\"" + r.detail + "\"}";
 }
 
 std::string CompletionServer::HandleHotpatchCPRollbackRequest(const std::string& body) {
@@ -2392,7 +2392,7 @@ std::string CompletionServer::HandleHotpatchCPRollbackRequest(const std::string&
     PatchResult r = cp.rollbackPatch(patchId, actor, reason);
     return "{\"success\":" + std::string(r.success ? "true" : "false") +
            ",\"patchId\":" + std::to_string(patchId) +
-           ",\"detail\":\"" + std::string(r.detail ? r.detail : "") + "\"}";
+           ",\"detail\":\"" + r.detail + "\"}";
 }
 
 std::string CompletionServer::HandleHotpatchCPAuditRequest() {
@@ -2474,7 +2474,7 @@ std::string CompletionServer::HandleAnalysisRunRequest(const std::string& body) 
     const auto* cfg = eng.getCFG(funcId);
     std::string json = "{\"success\":" + std::string(r.success ? "true" : "false") +
                        ",\"functionId\":" + std::to_string(funcId) +
-                       ",\"detail\":\"" + std::string(r.detail ? r.detail : "") + "\"";
+                       ",\"detail\":\"" + r.detail + "\"";
     if (cfg) {
         auto loops = eng.getLoops(funcId);
         json += ",\"totalBlocks\":" + std::to_string(cfg->totalBlocks) +
@@ -2570,7 +2570,7 @@ std::string CompletionServer::HandleSemanticIndexRequest(const std::string& body
 
     return "{\"success\":" + std::string(r.success ? "true" : "false") +
            ",\"file\":\"" + filePath +
-           "\",\"detail\":\"" + std::string(r.detail ? r.detail : "") + "\"}";
+           "\",\"detail\":\"" + r.detail + "\"}";
 }
 
 std::string CompletionServer::HandleSemanticSearchRequest(const std::string& body) {
@@ -2737,7 +2737,7 @@ std::string CompletionServer::HandleTelemetryComplianceRequest() {
     std::string json = "{\"auditIntegrity\":" +
                        std::string(integrity.success ? "true" : "false") +
                        ",\"integrityDetail\":\"" +
-                       std::string(integrity.detail ? integrity.detail : "") +
+                       integrity.detail +
                        "\",\"unresolvedViolations\":" +
                        std::to_string(violations.size()) +
                        ",\"violations\":[";
@@ -2817,7 +2817,7 @@ std::string CompletionServer::HandleTelemetryExportRequest(const std::string& bo
     return "{\"success\":" + std::string(r.success ? "true" : "false") +
            ",\"format\":\"" + (format.empty() ? "audit_log" : format) +
            "\",\"outputPath\":\"" + outputPath +
-           "\",\"detail\":\"" + std::string(r.detail ? r.detail : "") + "\"}";
+           "\",\"detail\":\"" + r.detail + "\"}";
 }
 
 // ============================================================================
@@ -3187,7 +3187,7 @@ std::string CompletionServer::HandleTunerStatusRequest() {
        << (licensed ? "true" : "false")
        << ",\"initialized\":" << (tuner.isInitialized() ? "true" : "false")
        << ",\"initSuccess\":" << (initResult.success ? "true" : "false")
-       << ",\"detail\":\"" << (initResult.detail ? initResult.detail : "") << "\""
+      << ",\"detail\":\"" << initResult.detail << "\""
        << ",\"tuner\":" << tunerJson
        << "}";
     return ss.str();
@@ -3226,7 +3226,8 @@ std::string CompletionServer::HandleTunerRunRequest(const std::string& body) {
     if (!tuner.isInitialized()) {
         AutotuneResult r = tuner.initialize();
         if (!r.success)
-            return "{\"success\":false,\"error\":\"" + EscapeJson(r.detail ? r.detail : "tuner not initialized") + "\"}";
+            return "{\"success\":false,\"error\":\"" +
+                   EscapeJson((r.detail && r.detail[0]) ? r.detail : "tuner not initialized") + "\"}";
     }
     TuneStrategy strategy = TuneStrategy::Heuristic;
     std::string tmp;
@@ -3237,7 +3238,7 @@ std::string CompletionServer::HandleTunerRunRequest(const std::string& body) {
     }
     AutotuneResult r = tuner.tuneAllKernels(strategy);
     return "{\"success\":" + std::string(r.success ? "true" : "false")
-         + ",\"detail\":\"" + EscapeJson(r.detail ? r.detail : "") + "\""
+         + ",\"detail\":\"" + EscapeJson(r.detail) + "\""
          + ",\"tuner\":" + (tuner.isInitialized() ? tuner.toJson() : "{}") + "}";
 }
 
@@ -3265,7 +3266,8 @@ std::string CompletionServer::HandleSandboxCreateRequest(const std::string& body
     std::string outId;
     SandboxResult r = SandboxManager::instance().createSandbox(config, outId);
     if (!r.success)
-        return "{\"success\":false,\"error\":\"" + EscapeJson(r.detail ? r.detail : "create failed") + "\"}";
+        return "{\"success\":false,\"error\":\"" +
+               EscapeJson((r.detail && r.detail[0]) ? r.detail : "create failed") + "\"}";
     return "{\"success\":true,\"sandbox_id\":\"" + EscapeJson(outId) + "\"}";
 }
 
@@ -3281,7 +3283,7 @@ std::string CompletionServer::HandleGpuToggleRequest() {
     bool on = AMDGPUAccelerator::instance().isGPUEnabled();
     return "{\"success\":" + std::string(r.success ? "true" : "false")
          + ",\"enabled\":" + (on ? "true" : "false")
-         + ",\"detail\":\"" + EscapeJson(r.detail ? r.detail : "") + "\"}";
+         + ",\"detail\":\"" + EscapeJson(r.detail) + "\"}";
 }
 
 std::string CompletionServer::HandleGpuFeaturesRequest() {

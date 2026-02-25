@@ -60,11 +60,11 @@ bool OrchestratorBridge::Initialize(const std::string& workingDir,
 
     m_workingDir = workingDir;
 
-    // Configure Ollama
+    // Configure Ollama — sensible defaults, but prefer live detection
     m_ollamaConfig.host = "127.0.0.1";
     m_ollamaConfig.port = 11434;
-    m_ollamaConfig.chat_model = "qwen2.5-coder:14b";
-    m_ollamaConfig.fim_model = "qwen2.5-coder:7b";
+    m_ollamaConfig.chat_model = "";   // Will auto-detect from Ollama /api/tags
+    m_ollamaConfig.fim_model  = "";   // Will auto-detect from Ollama /api/tags
     m_ollamaConfig.timeout_ms = 120000;
     m_ollamaConfig.temperature = 0.1f;  // Low temp for tool use
     m_ollamaConfig.num_ctx = 8192;
@@ -90,8 +90,23 @@ bool OrchestratorBridge::Initialize(const std::string& workingDir,
     // Create Ollama client
     m_ollamaClient = std::make_unique<AgentOllamaClient>(m_ollamaConfig);
 
-    // Test connection
-    if (!m_ollamaClient->TestConnection()) {
+    // Test connection and auto-detect models if not explicitly set
+    if (m_ollamaClient->TestConnection()) {
+        if (m_ollamaConfig.chat_model.empty() || m_ollamaConfig.fim_model.empty()) {
+            auto models = m_ollamaClient->ListModels();
+            if (!models.empty()) {
+                if (m_ollamaConfig.chat_model.empty()) {
+                    m_ollamaConfig.chat_model = models[0];
+                }
+                if (m_ollamaConfig.fim_model.empty()) {
+                    // Use the same model if only one available, 
+                    // or prefer a smaller model if multiple exist
+                    m_ollamaConfig.fim_model = models.size() > 1 ? models[1] : models[0];
+                }
+                m_ollamaClient->SetConfig(m_ollamaConfig);
+            }
+        }
+    } else {
         // Non-fatal: agent loop will still work but will error on first call
     }
 

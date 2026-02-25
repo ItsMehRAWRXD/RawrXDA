@@ -28,7 +28,8 @@ enum class ModelBackend {
     GOOGLE,            // Gemini (Google)
     MOONSHOT,          // Kimi (Moonshot)
     AZURE_OPENAI,      // OpenAI through Azure
-    AWS_BEDROCK        // Claude/Mistral through AWS
+    AWS_BEDROCK,       // Claude/Mistral through AWS
+    REASONING_ENGINE   // Specialized reasoning engine backend
 };
 
 // Model configuration structure
@@ -84,6 +85,9 @@ public:
     void initializeLocalEngine(const std::string& engine_config_path);
     void initializeCloudClient();
     
+    // Model hot-swap
+    bool hotSwapModel(const std::string& new_model_path, bool preserve_kv_cache = false);
+    
     // Direct model access
     ModelConfig getOrLoadModel(const std::string& model_name);
     bool isModelAvailable(const std::string& model_name) const;
@@ -96,14 +100,29 @@ public:
     // Inference
     std::string routeQuery(const std::string& model_name, const std::string& prompt, float temperature = 0.7f);
     void routeStreamQuery(const std::string& model_name, const std::string& prompt, StreamCallback callback, float temperature = 0.7f);
+    
+    // Additional features
+    std::vector<std::string> getAvailableBackends() const;
+    void routeRequest(const std::string& model_name, const std::string& prompt, std::function<void(const std::string&)> callback);
+
+    // Callbacks from engine
+    void onLocalEngineInitialized();
+    void onCloudClientInitialized();
+    void onEngineError(const std::string& error);
 
 private:
-    std::map<std::string, ModelConfig> model_registry;
+    std::map<std::string, ModelConfig> m_modelRegistry;
     std::unique_ptr<RawrXD::CPUInferenceEngine> local_engine;
     std::unique_ptr<RawrXD::PipeClient> titan_client;
     std::unique_ptr<CloudApiClient> cloud_client; // Default deleter ok
-    bool local_engine_ready;
-    bool cloud_client_ready;
+    bool m_localEngineReady;
+    bool m_cloudClientReady;
+    
+    // Callbacks
+    ErrorCallback m_onError;
+    std::function<void(const std::string&, ModelBackend)> m_onModelRegistered;
+    std::function<void(const std::string&)> m_onModelUnregistered;
+    std::function<void(int)> m_onConfigLoaded;
 };
 
 } // namespace RawrXD

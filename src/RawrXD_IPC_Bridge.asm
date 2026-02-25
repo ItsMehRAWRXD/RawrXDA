@@ -3,9 +3,6 @@
 ; Allows CLI and GUI to share the same Vulkan Compute Queue
 ;================================================================================
 
-.686
-.xmm
-.model flat, c
 option casemap:none
 option frame:auto
 
@@ -134,8 +131,14 @@ PUBLIC IPC_ShareVulkanContext
 IPC_Initialize PROC FRAME
     ; ecx = is_gui (0=CLI, 1=GUI)
     push rbx
+    .pushreg rbx
     push r12
+    .pushreg r12
     push r13
+    .pushreg r13
+    sub rsp, 48
+    .allocstack 48
+    .ENDPROLOG
     
     mov r12b, cl            ; Save is_gui
     
@@ -144,10 +147,10 @@ IPC_Initialize PROC FRAME
     je ipc_already_init
     
     ; Allocate context
-    mov rcx, sizeof IPC_CONTEXT
-    mov edx, MEM_COMMIT or MEM_RESERVE
-    mov r8d, PAGE_READWRITE
-    xor r9d, r9d
+    xor ecx, ecx                       ; lpAddress = NULL
+    mov edx, sizeof IPC_CONTEXT        ; dwSize
+    mov r8d, MEM_COMMIT or MEM_RESERVE  ; flAllocationType
+    mov r9d, PAGE_READWRITE             ; flProtect
     call VirtualAlloc
     test rax, rax
     jz ipc_fail
@@ -168,43 +171,41 @@ IPC_Initialize PROC FRAME
     ; Create events
     xor ecx, ecx
     xor edx, edx
-    mov r8b, 0              ; Auto-reset
+    xor r8d, r8d            ; bInitialState = FALSE (full dword clear)
     lea r9, IPC_EVENT_GUI
     call CreateEventA
     mov [rbx].IPC_CONTEXT.h_event_gui, rax
     
     xor ecx, ecx
     xor edx, edx
-    mov r8b, 0
+    xor r8d, r8d            ; bInitialState = FALSE (full dword clear)
     lea r9, IPC_EVENT_CLI
     call CreateEventA
     mov [rbx].IPC_CONTEXT.h_event_cli, rax
     
-    ; Create or open file mapping
-    xor ecx, ecx            ; Security
-    mov edx, PAGE_READWRITE
-    mov r8d, IPC_SHARED_MEM_SIZE
-    xor r9d, r9d            ; Name in next param
-    push 0
-    lea rax, IPC_SHARED_MEM_NAME
-    push rax
-    sub rsp, 32
+    ; Create or open file mapping (x64 calling convention)
+    ; CreateFileMappingA(hFile, lpAttributes, flProtect, dwMaxHigh, dwMaxLow, lpName)
+    mov  rcx, INVALID_HANDLE_VALUE  ; hFile — page file
+    xor  edx, edx                   ; lpFileMappingAttributes = NULL
+    mov  r8d, PAGE_READWRITE        ; flProtect
+    xor  r9d, r9d                   ; dwMaximumSizeHigh = 0
+    mov  dword ptr [rsp+20h], IPC_SHARED_MEM_SIZE  ; dwMaximumSizeLow
+    lea  rax, IPC_SHARED_MEM_NAME
+    mov  qword ptr [rsp+28h], rax   ; lpName
     call CreateFileMappingA
-    add rsp, 48
     
     test rax, rax
     jz ipc_cleanup
     mov [rbx].IPC_CONTEXT.h_map_file, rax
     
-    ; Map view
-    mov rcx, rax
-    xor edx, edx            ; Desired access
-    xor r8d, r8d            ; File offset high
-    xor r9d, r9d            ; File offset low
-    push 0                  ; Number of bytes (0=all)
-    sub rsp, 32
+    ; Map view (x64 calling convention)
+    ; MapViewOfFile(hFileMappingObject, dwDesiredAccess, dwFileOffsetHigh, dwFileOffsetLow, dwNumberOfBytesToMap)
+    mov  rcx, rax                    ; hFileMappingObject
+    mov  edx, FILE_MAP_ALL_ACCESS    ; dwDesiredAccess
+    xor  r8d, r8d                    ; dwFileOffsetHigh = 0
+    xor  r9d, r9d                    ; dwFileOffsetLow = 0
+    mov  qword ptr [rsp+20h], 0      ; dwNumberOfBytesToMap = 0 (map all)
     call MapViewOfFile
-    add rsp, 40
     
     test rax, rax
     jz ipc_cleanup_map
@@ -271,6 +272,7 @@ ipc_fail:
     xor eax, eax
     
 ipc_done:
+    add rsp, 48
     pop r13
     pop r12
     pop rbx
@@ -285,14 +287,26 @@ IPC_SendMessage PROC FRAME
     ; rdx = payload pointer
     ; r8d = payload_size
     push rbx
+    .pushreg rbx
     push r12
+    .pushreg r12
     push r13
+    .pushreg r13
     push r14
+    .pushreg r14
     push r15
+    .pushreg r15
+    .ENDPROLOG
     
     mov r12d, ecx           ; msg_type
     mov r13, rdx            ; payload
     mov r14d, r8d           ; payload_size
+    
+    ; ---- Clamp payload_size to IPC_MAX_MESSAGE_SIZE to prevent buffer overflow ----
+    cmp  r14d, IPC_MAX_MESSAGE_SIZE
+    jbe  @ipc_size_ok
+    mov  r14d, IPC_MAX_MESSAGE_SIZE
+@ipc_size_ok:
     
     mov rbx, g_ipc_context
     
@@ -329,18 +343,24 @@ check_space:
     
     ; Fill message
     mov [rax].IPC_MESSAGE.msg_type, r12d
-    mov [rax].IPC_MESSAGE.payload_size, r14d
+    mov r12, rax            ; Save message pointer in non-volatile r12 (msg_type already written)
+    mov [r12].IPC_MESSAGE.payload_size, r14d
     
     call GetCurrentProcessId
-    mov [rax].IPC_MESSAGE.sender_pid, eax
+    mov [r12].IPC_MESSAGE.sender_pid, eax
     
     call GetTickCount64
-    mov [rax].IPC_MESSAGE.timestamp, rax
+    mov [r12].IPC_MESSAGE.timestamp, rax
     
-    ; Copy payload
-    mov rcx, [rax].IPC_MESSAGE.payload
+    ; Copy payload with bounds-checked length
+    lea rcx, [r12].IPC_MESSAGE.payload
     mov rdx, r13
+    ; Clamp copy size to prevent overflow
     mov r8d, r14d
+    cmp r8d, IPC_MAX_MESSAGE_SIZE
+    jbe @F
+    mov r8d, IPC_MAX_MESSAGE_SIZE
+@@:
     call memcpy
     
     ; Update head and count
@@ -384,17 +404,93 @@ send_done:
 IPC_SendMessage ENDP
 
 ;================================================================================
+; MESSAGE PEEKING - Non-blocking, does NOT consume the message
+;================================================================================
+IPC_PeekMessage PROC FRAME
+    ; rcx = output buffer (IPC_MESSAGE pointer)
+    ; Returns: eax = 1 if message available (copied but NOT consumed), 0 if empty
+    push rbx
+    .pushreg rbx
+    push r12
+    .pushreg r12
+    push r13
+    .pushreg r13
+    .ENDPROLOG
+    
+    mov  r12, rcx            ; Output buffer
+    mov  rbx, g_ipc_context
+    
+    ; Acquire mutex
+    mov  rcx, [rbx].IPC_CONTEXT.h_mutex
+    mov  edx, INFINITE
+    call WaitForSingleObject
+    
+    ; Get appropriate ring buffer (opposite of send — same as recv)
+    cmp  [rbx].IPC_CONTEXT.is_gui, 1
+    je   peek_gui_receiving
+    
+    ; CLI peeking from GUI: read from gui_to_cli
+    mov  r13, [rbx].IPC_CONTEXT.shared_state
+    add  r13, OFFSET IPC_SHARED_STATE.gui_to_cli
+    jmp  peek_check
+    
+peek_gui_receiving:
+    ; GUI peeking from CLI: read from cli_to_gui
+    mov  r13, [rbx].IPC_CONTEXT.shared_state
+    add  r13, OFFSET IPC_SHARED_STATE.cli_to_gui
+    
+peek_check:
+    ; Check if any messages
+    cmp  [r13].IPC_RING_BUFFER.count, 0
+    je   peek_empty
+    
+    ; Calculate read position (tail)
+    mov  ecx, [r13].IPC_RING_BUFFER.tail
+    imul ecx, sizeof IPC_MESSAGE
+    lea  rax, [r13].IPC_RING_BUFFER.messages
+    add  rax, rcx
+    
+    ; Copy message to output — but do NOT advance tail or decrement count
+    mov  rcx, r12
+    mov  rdx, rax
+    mov  r8d, sizeof IPC_MESSAGE
+    call memcpy
+    
+    mov  eax, 1
+    jmp  peek_done
+    
+peek_empty:
+    xor  eax, eax
+    
+peek_done:
+    ; Release mutex
+    mov  rcx, [rbx].IPC_CONTEXT.h_mutex
+    call ReleaseMutex
+    
+    pop  r13
+    pop  r12
+    pop  rbx
+    ret
+IPC_PeekMessage ENDP
+
+;================================================================================
 ; MESSAGE RECEIVING - Non-blocking
 ;================================================================================
 IPC_RecvMessage PROC FRAME
     ; rcx = output buffer (IPC_MESSAGE pointer)
     ; Returns: eax = 1 if message received, 0 if empty
     push rbx
+    .pushreg rbx
     push r12
+    .pushreg r12
     push r13
+    .pushreg r13
+    .ENDPROLOG
     
     mov r12, rcx            ; Output buffer
     mov rbx, g_ipc_context
+    test rbx, rbx
+    jz recv_null_ctx        ; NULL check - bypass mutex release
     
     ; Acquire mutex
     mov rcx, [rbx].IPC_CONTEXT.h_mutex
@@ -456,6 +552,13 @@ recv_done:
     pop r12
     pop rbx
     ret
+
+recv_null_ctx:
+    xor eax, eax
+    pop r13
+    pop r12
+    pop rbx
+    ret
 IPC_RecvMessage ENDP
 
 ;================================================================================
@@ -465,8 +568,12 @@ IPC_WaitForMessage PROC FRAME
     ; ecx = output buffer
     ; edx = timeout_ms
     push rbx
+    .pushreg rbx
     push r12
+    .pushreg r12
     push r13
+    .pushreg r13
+    .ENDPROLOG
     
     mov r12, rcx
     mov r13d, edx
@@ -482,12 +589,12 @@ wait_loop:
     
     ; Wait for event
     cmp [rbx].IPC_CONTEXT.is_gui, 1
-    je wait_cli_event
-    mov rcx, [rbx].IPC_CONTEXT.h_event_gui
+    je wait_gui_event
+    mov rcx, [rbx].IPC_CONTEXT.h_event_cli
     jmp do_wait
     
-wait_cli_event:
-    mov rcx, [rbx].IPC_CONTEXT.h_event_cli
+wait_gui_event:
+    mov rcx, [rbx].IPC_CONTEXT.h_event_gui
     
 do_wait:
     mov edx, 100              ; 100ms timeout for polling
@@ -516,25 +623,48 @@ IPC_WaitForMessage ENDP
 IPC_AttachGPU PROC FRAME
     ; Attach to shared GPU context
     push rbx
+    .pushreg rbx
+    push r12
+    .pushreg r12
+    push r13
+    .pushreg r13
+    .ENDPROLOG
     mov rbx, g_ipc_context
     
     ; Wait for GPU to be free
-    mov r8, [rbx].IPC_CONTEXT.shared_state
+    mov r12, [rbx].IPC_CONTEXT.shared_state
+    xor r13d, r13d          ; Initialize timeout counter
     
 gpu_wait_loop:
-    cmp [r8].IPC_SHARED_STATE.gpu_busy, 0
+    cmp [r12].IPC_SHARED_STATE.gpu_busy, 0
     je gpu_available
     mov ecx, 1
     call Sleep
+    ; Timeout after 30 seconds to prevent infinite spin
+    inc r13d
+    cmp r13d, 30000
+    jae gpu_timeout
     jmp gpu_wait_loop
     
+gpu_timeout:
+    xor rax, rax            ; Return NULL on timeout
+    pop r13
+    pop r12
+    pop rbx
+    ret
+    
 gpu_available:
-    ; Mark GPU as in use by us
-    mov [r8].IPC_SHARED_STATE.gpu_busy, 1
+    ; Atomic compare-and-swap for gpu_busy flag
+    xor eax, eax            ; Expected: 0 (not busy)
+    mov cl, 1               ; Desired: 1 (busy)
+    lock cmpxchg [r12].IPC_SHARED_STATE.gpu_busy, cl
+    jnz gpu_wait_loop       ; CAS failed, another process got it first
     
     ; Return shared queue handle
-    mov rax, [r8].IPC_SHARED_STATE.compute_queue
+    mov rax, [r12].IPC_SHARED_STATE.compute_queue
     
+    pop r13
+    pop r12
     pop rbx
     ret
 IPC_AttachGPU ENDP
@@ -542,6 +672,8 @@ IPC_AttachGPU ENDP
 IPC_DetachGPU PROC FRAME
     ; Release GPU
     push rbx
+    .pushreg rbx
+    .ENDPROLOG
     mov rbx, g_ipc_context
     mov r8, [rbx].IPC_CONTEXT.shared_state
     mov [r8].IPC_SHARED_STATE.gpu_busy, 0
@@ -553,6 +685,8 @@ IPC_ShareVulkanContext PROC FRAME
     ; rcx = VkDevice
     ; rdx = VkQueue (compute)
     push rbx
+    .pushreg rbx
+    .ENDPROLOG
     mov rbx, g_ipc_context
     mov r8, [rbx].IPC_CONTEXT.shared_state
     
@@ -568,6 +702,8 @@ IPC_ShareVulkanContext ENDP
 ;================================================================================
 IPC_Shutdown PROC FRAME
     push rbx
+    .pushreg rbx
+    .ENDPROLOG
     mov rbx, g_ipc_context
     
     test rbx, rbx
@@ -621,7 +757,10 @@ IPC_Shutdown ENDP
 memcpy PROC FRAME
     ; rcx = dest, rdx = src, r8d = count
     push rsi
+    .pushreg rsi
     push rdi
+    .pushreg rdi
+    .ENDPROLOG
     
     mov rdi, rcx
     mov rsi, rdx

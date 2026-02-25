@@ -1725,7 +1725,7 @@ TaskResult AgenticTaskGraph::executor_agenticLoop(TaskNode* self, void* context)
     // Configure the bounded agent loop
     RawrXD::Agent::AgentLoopConfig config;
     config.maxSteps = 8;
-    config.model = "qwen2.5-coder:14b";
+    // model left empty — auto-detected from Ollama /api/tags at runtime
     config.ollamaBaseUrl = "http://localhost:11434";
     config.autoVerify = true;
 

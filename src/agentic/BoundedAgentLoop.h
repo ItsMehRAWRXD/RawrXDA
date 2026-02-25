@@ -49,7 +49,7 @@ namespace Agent {
 struct AgentLoopConfig {
     int maxSteps                = 8;        // Bounded step limit
     int maxTokensPerRequest     = 8192;     // Context window budget
-    std::string model           = "qwen2.5-coder:14b";
+    std::string model;                              // Auto-detected from Ollama /api/tags
     std::string ollamaBaseUrl   = "http://localhost:11434";
     std::string workingDirectory;
     std::vector<std::string> openFiles;

@@ -4,6 +4,7 @@
 // ============================================================================
 
 #include "Win32IDE.h"
+#include "resource.h"
 #include "FileRegistry_Auto.h"
 #include "logging/logger.h"
 #include <windows.h>
@@ -246,23 +247,4 @@ void Win32IDE_ShowQuickOpen(HWND parent) {
               QuickOpenDialogProc);
 }
 
-// ============================================================================
-// Menu Command IDs
-// ============================================================================
-
-constexpr UINT ID_FILE_NEW = 1001;
-constexpr UINT ID_FILE_OPEN = 1002;
-constexpr UINT ID_FILE_SAVE = 1003;
-constexpr UINT ID_FILE_EXIT = 1004;
-constexpr UINT ID_EDIT_UNDO = 2001;
-constexpr UINT ID_EDIT_REDO = 2002;
-constexpr UINT ID_EDIT_CUT = 2003;
-constexpr UINT ID_EDIT_COPY = 2004;
-constexpr UINT ID_EDIT_PASTE = 2005;
-constexpr UINT ID_VIEW_EXPLORER = 3001;
-constexpr UINT ID_VIEW_SEARCH = 3002;
-constexpr UINT ID_VIEW_TERMINAL = 3003;
-constexpr UINT ID_FILE_BROWSER_LIST = 4001;
-constexpr UINT ID_QUICKOPEN_SEARCH = 5001;
-constexpr UINT ID_QUICKOPEN_RESULTS = 5002;
-constexpr UINT IDD_QUICKOPEN = 6001;
+// Menu Command IDs — see resource.h

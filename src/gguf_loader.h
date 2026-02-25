@@ -197,6 +197,11 @@ private:
     std::unordered_map<std::string, VulkanTensor> vulkan_tensors_;
     bool use_dummy_mode_{false};  // Skip tensor loading for huge files
     uint64_t file_size_{0};
+
+    // Non-streaming loader "zones": we can still preload groups of tensors into RAM
+    // to satisfy callers that expect zone-based workflows.
+    std::unordered_map<std::string, std::vector<uint8_t>> loaded_zones_;
+    uint64_t current_memory_usage_{0};
     
     // Unsupported type tracking (for IDE conversion workflow)
     std::vector<UnsupportedTypeInfo> unsupported_types_;

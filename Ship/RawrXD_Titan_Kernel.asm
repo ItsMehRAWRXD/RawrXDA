@@ -26,7 +26,7 @@ extern memset : PROC
 extern memcpy : PROC
 extern strlen : PROC
 extern strcmp : PROC
-extern sprintf : PROC
+; extern  : PROC  ; Removed unused and problematic reference
 
 ;==============================================================================
 ; CONSTANTS

@@ -215,6 +215,18 @@ public:
     void setSearchCompletedCb(SearchCompletedCb cb, void* ctx) { m_completedCb = cb; m_completedCtx = ctx; }
     void setSearchProgressCb(SearchProgressCb cb, void* ctx) { m_progressCb = cb; m_progressCtx = ctx; }
 
+    // UI-less polling support (Win32 integration can poll results on a timer).
+    std::vector<MultiFileSearchResult> takePendingResults();
+    int totalResultCount() const { return m_totalResultCount; }
+
+    // Search option wiring (used by the Win32 dialog implementation).
+    void setUseRegex(bool v) { m_useRegex = v; }
+    void setCaseSensitive(bool v) { m_caseSensitive = v; }
+    void setFileFilter(const std::string& filter) { m_fileFilter = filter; }
+    bool useRegex() const { return m_useRegex; }
+    bool caseSensitive() const { return m_caseSensitive; }
+    std::string fileFilter() const { return m_fileFilter; }
+
 private:
     /**
      * @brief Handles double-click on a tree item.
@@ -313,6 +325,10 @@ private:
     mutable std::mutex m_resultsMutex;                        ///< Protects m_pendingResults
     std::vector<MultiFileSearchResult> m_pendingResults;      ///< Results waiting for UI update
     int m_totalResultCount = 0;                               ///< Running total of matches found
+
+    bool m_useRegex = false;
+    bool m_caseSensitive = false;
+    std::string m_fileFilter = "*";
 
     // ─────────────────────────────────────────────────────────────────────
     // Callback Pointers (replaces Qt signals)

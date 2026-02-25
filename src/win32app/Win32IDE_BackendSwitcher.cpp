@@ -15,6 +15,7 @@
 // ============================================================================
 
 #include "Win32IDE.h"
+#include "../agentic/AgentOllamaClient.h"
 #include "../modules/vsix_loader.h"
 #include <winhttp.h>
 #include <fstream>
@@ -51,7 +52,7 @@ void Win32IDE::initBackendManager() {
     ollama.type      = AIBackendType::Ollama;
     ollama.name      = "Ollama";
     ollama.endpoint  = "http://localhost:11434";
-    ollama.model     = "llama3.2";
+    ollama.model     = "";  // Will be populated from Ollama /api/tags or settings
     ollama.apiKey    = "";
     ollama.enabled   = true;
     ollama.timeoutMs = 30000;
@@ -143,6 +144,29 @@ void Win32IDE::initBackendManager() {
 
     // ---- Load saved configs (overrides defaults) ---------------------------
     loadBackendConfigs();
+
+    // ---- Auto-detect Ollama model if still empty ----------------------------
+    {
+        auto& ollamaCfg = m_backendConfigs[(size_t)AIBackendType::Ollama];
+        if (ollamaCfg.model.empty() && ollamaCfg.enabled) {
+            try {
+                RawrXD::Agent::OllamaConfig probeCfg;
+                probeCfg.host = "127.0.0.1";
+                probeCfg.port = 11434;
+                probeCfg.timeout_ms = 3000;
+                RawrXD::Agent::AgentOllamaClient probeClient(probeCfg);
+                if (probeClient.TestConnection()) {
+                    auto models = probeClient.ListModels();
+                    if (!models.empty()) {
+                        ollamaCfg.model = models[0];
+                        logInfo("[BackendSwitcher] Auto-detected Ollama model: " + ollamaCfg.model);
+                    }
+                }
+            } catch (...) {
+                // Non-fatal — leave model empty; user can set it via UI
+            }
+        }
+    }
 
     m_activeBackend = AIBackendType::LocalGGUF;
     m_backendManagerInitialized = true;
@@ -868,20 +892,20 @@ std::string Win32IDE::routeToGitHubCopilot(const std::string& prompt) {
     args["prompt"] = prompt;
     args["context"] = "ide_backend_switcher";
     
-    // We expect the extension to update a shared state or result via the API
-    // For now, we simulate the extension host bridge
+    // Route the prompt to GitHub Copilot VS Code Extension via the extension API
     std::string result = "[BackendSwitcher] Routing to GitHub Copilot extension...\n";
-    
+
     auto apiResult = api.executeCommand("github.copilot.chat.proxy", args.dump().c_str());
     if (apiResult.success) {
         // If the command returned immediately with a result string in 'detail'
         if (apiResult.detail && strlen(apiResult.detail) > 0 && strcmp(apiResult.detail, "Success") != 0) {
             return apiResult.detail;
         }
-        return result + "Extension command triggered successfully. Awaiting stream...";
+        // Command was triggered successfully, extension will handle streaming
+        return result + "Extension command triggered successfully. Awaiting response stream...";
     } else {
-        return "[BackendSwitcher] Error: Failed to trigger GitHub Copilot extension command: " + 
-               std::string(apiResult.detail);
+        return "[BackendSwitcher] Error: Failed to trigger GitHub Copilot extension command: " +
+               std::string(apiResult.detail ? apiResult.detail : "Unknown error");
     }
 }
 

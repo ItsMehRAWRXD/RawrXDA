@@ -5,52 +5,548 @@
 #include "Win32IDE_AgenticBridge.h"
 #include "ModelConnection.h"
 #include "IDELogger.h"
+#include "../agentic/AgentOllamaClient.h"
 #include "../core/enterprise_license.h"
 #include <sstream>
 #include <algorithm>
+#include <fstream>
 
-// SCAFFOLD_040: SubAgent chain/swarm/todo handlers
+// ============================================================================
+// SUBAGENT CHAIN / SWARM / TODO HANDLERS (Phase 19B)
+// ============================================================================
+#if 0
+// Implemented elsewhere:
+// - SubAgent + agent memory UI: Win32IDE_SubAgent.cpp
+// - Autonomy UI: Win32IDE.cpp
+// - Bounded agent loop UI: Win32IDE_AgentPanel.cpp
+void Win32IDE::onSubAgentChain() {
+    LOG_INFO("onSubAgentChain called");
+    if (!m_agenticBridge) {
+        initializeAgenticBridge();
+    }
+    if (!m_agenticBridge || !m_agenticBridge->IsInitialized()) {
+        MessageBoxA(m_hwndMain, "Agentic Framework not initialized", "SubAgent Error", MB_OK | MB_ICONERROR);
+        return;
+    }
+    
+    // Get task description from user
+    char taskDesc[1024] = {0};
+    if (DialogBoxParamA(m_hInstance, "AGENT_PROMPT_DLG", m_hwndMain,
+        [](HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) -> INT_PTR {
+            switch (msg) {
+                case WM_INITDIALOG:
+                    SetWindowTextA(GetDlgItem(hwnd, 101), "Enter task for SubAgent Chain:");
+                    return TRUE;
+                case WM_COMMAND:
+                    if (LOWORD(wp) == IDOK) {
+                        GetDlgItemTextA(hwnd, 102, (char*)lp, 1024);
+                        EndDialog(hwnd, IDOK);
+                        return TRUE;
+                    } else if (LOWORD(wp) == IDCANCEL) {
+                        EndDialog(hwnd, IDCANCEL);
+                        return TRUE;
+                    }
+                    break;
+            }
+            return FALSE;
+        }, (LPARAM)taskDesc) != IDOK) {
+        return;
+    }
+    
+    if (strlen(taskDesc) == 0) {
+        strcpy_s(taskDesc, "Execute modular task sequence");
+    }
+    
+    appendToOutput("🔗 SubAgent Chain initiated: " + std::string(taskDesc) + "\n", "Output", OutputSeverity::Info);
+    
+    // Execute chain in background
+    std::thread([this, taskStr = std::string(taskDesc)]() {
+        DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+        if (_guard.cancelled) return;
+        m_agenticBridge->ExecuteSubAgentChain(taskStr);
+    }).detach();
+}
 
+void Win32IDE::onSubAgentSwarm() {
+    LOG_INFO("onSubAgentSwarm called");
+    if (!m_agenticBridge) {
+        initializeAgenticBridge();
+    }
+    if (!m_agenticBridge || !m_agenticBridge->IsInitialized()) {
+        MessageBoxA(m_hwndMain, "Agentic Framework not initialized", "SubAgent Error", MB_OK | MB_ICONERROR);
+        return;
+    }
+    
+    // Get swarm task from user
+    char taskDesc[1024] = {0};
+    if (DialogBoxParamA(m_hInstance, "AGENT_PROMPT_DLG", m_hwndMain,
+        [](HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) -> INT_PTR {
+            switch (msg) {
+                case WM_INITDIALOG:
+                    SetWindowTextA(GetDlgItem(hwnd, 101), "Enter task for SubAgent Swarm:");
+                    return TRUE;
+                case WM_COMMAND:
+                    if (LOWORD(wp) == IDOK) {
+                        GetDlgItemTextA(hwnd, 102, (char*)lp, 1024);
+                        EndDialog(hwnd, IDOK);
+                        return TRUE;
+                    } else if (LOWORD(wp) == IDCANCEL) {
+                        EndDialog(hwnd, IDCANCEL);
+                        return TRUE;
+                    }
+                    break;
+            }
+            return FALSE;
+        }, (LPARAM)taskDesc) != IDOK) {
+        return;
+    }
+    
+    if (strlen(taskDesc) == 0) {
+        strcpy_s(taskDesc, "Execute parallel task swarm");
+    }
+    
+    appendToOutput("🐝 SubAgent Swarm initiated: " + std::string(taskDesc) + "\n", "Output", OutputSeverity::Info);
+    
+    // Execute swarm in background
+    std::thread([this, taskStr = std::string(taskDesc)]() {
+        DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+        if (_guard.cancelled) return;
+        m_agenticBridge->ExecuteSubAgentSwarm(taskStr);
+    }).detach();
+}
 
-// SCAFFOLD_039: Agent commands menu dispatch
+void Win32IDE::onSubAgentTodoList() {
+    LOG_INFO("onSubAgentTodoList called");
+    if (!m_agenticBridge || !m_agenticBridge->IsInitialized()) {
+        appendToOutput("Agentic Bridge not initialized\n", "Output", OutputSeverity::Warning);
+        return;
+    }
+    
+    std::vector<std::string> todoItems = m_agenticBridge->GetSubAgentTodoList();
+    
+    std::stringstream todoOutput;
+    todoOutput << "=== SubAgent Todo List ===\n\n";
+    if (todoItems.empty()) {
+        todoOutput << "(empty)\n";
+    } else {
+        for (size_t i = 0; i < todoItems.size(); ++i) {
+            todoOutput << (i + 1) << ". " << todoItems[i] << "\n";
+        }
+    }
+    
+    appendToOutput(todoOutput.str(), "Output", OutputSeverity::Info);
+}
 
+void Win32IDE::onSubAgentTodoClear() {
+    LOG_INFO("onSubAgentTodoClear called");
+    if (!m_agenticBridge || !m_agenticBridge->IsInitialized()) {
+        appendToOutput("Agentic Bridge not initialized\n", "Output", OutputSeverity::Warning);
+        return;
+    }
+    
+    if (MessageBoxA(m_hwndMain, "Clear all SubAgent todo items?", "Confirm", MB_YESNO | MB_ICONQUESTION) == IDYES) {
+        m_agenticBridge->ClearSubAgentTodoList();
+        appendToOutput("🗑️ SubAgent Todo List cleared\n", "Output", OutputSeverity::Info);
+    }
+}
 
-// SCAFFOLD_017: AI mode toggles (Max, Deep Think, etc.)
+void Win32IDE::onSubAgentStatus() {
+    LOG_INFO("onSubAgentStatus called");
+    if (!m_agenticBridge || !m_agenticBridge->IsInitialized()) {
+        appendToOutput("Agentic Bridge not initialized\n", "Output", OutputSeverity::Warning);
+        return;
+    }
+    
+    std::string status = m_agenticBridge->GetSubAgentStatus();
+    appendToOutput("=== SubAgent Status ===\n" + status + "\n", "Output", OutputSeverity::Info);
+}
+
+// ============================================================================
+// AGENT MEMORY HANDLERS (Phase 19B)
+// ============================================================================
+void Win32IDE::onAgentMemoryView() {
+    LOG_INFO("onAgentMemoryView called");
+    if (!m_agenticBridge) {
+        initializeAgenticBridge();
+    }
+    if (!m_agenticBridge || !m_agenticBridge->IsInitialized()) {
+        MessageBoxA(m_hwndMain, "Agentic Framework not initialized", "Agent Error", MB_OK | MB_ICONERROR);
+        return;
+    }
+    
+    std::string memory = m_agenticBridge->ExportAgentMemory();
+    std::stringstream memOutput;
+    memOutput << "=== Agent Memory Context ===\n\n" << memory << "\n";
+    
+    appendToOutput(memOutput.str(), "Output", OutputSeverity::Info);
+}
+
+void Win32IDE::onAgentMemoryClear() {
+    LOG_INFO("onAgentMemoryClear called");
+    if (!m_agenticBridge) {
+        initializeAgenticBridge();
+    }
+    if (!m_agenticBridge || !m_agenticBridge->IsInitialized()) {
+        MessageBoxA(m_hwndMain, "Agentic Framework not initialized", "Agent Error", MB_OK | MB_ICONERROR);
+        return;
+    }
+    
+    if (MessageBoxA(m_hwndMain, "Clear all agent memory? This cannot be undone.", "Confirm Clear", MB_YESNO | MB_ICONWARNING) == IDYES) {
+        m_agenticBridge->ClearAgentMemory();
+        appendToOutput("🗑️ Agent Memory cleared\n", "Output", OutputSeverity::Info);
+    }
+}
+
+void Win32IDE::onAgentMemoryExport() {
+    LOG_INFO("onAgentMemoryExport called");
+    if (!m_agenticBridge) {
+        initializeAgenticBridge();
+    }
+    if (!m_agenticBridge || !m_agenticBridge->IsInitialized()) {
+        MessageBoxA(m_hwndMain, "Agentic Framework not initialized", "Agent Error", MB_OK | MB_ICONERROR);
+        return;
+    }
+    
+    // Prefer the IDE's tracked directory; fall back to deriving from current file.
+    std::string exportPath = m_currentDirectory;
+    if (exportPath.empty()) {
+        exportPath = m_currentFile;
+        if (!exportPath.empty()) {
+            size_t lastSlash = exportPath.find_last_of("\\/");
+            if (lastSlash != std::string::npos) {
+                exportPath = exportPath.substr(0, lastSlash);
+            } else {
+                exportPath.clear();
+            }
+        }
+    }
+    if (exportPath.empty()) exportPath = ".";
+    exportPath += "\\agent_memory_export.json";
+    
+    std::string memory = m_agenticBridge->ExportAgentMemory();
+    
+    std::ofstream outFile(exportPath);
+    if (outFile.is_open()) {
+        outFile << memory;
+        outFile.close();
+        appendToOutput("✅ Agent Memory exported to: " + exportPath + "\n", "Output", OutputSeverity::Info);
+    } else {
+        appendToOutput("❌ Failed to export agent memory\n", "Errors", OutputSeverity::Error);
+    }
+}
+
+// ============================================================================
+// AUTONOMY HANDLERS
+// ============================================================================
+void Win32IDE::onAutonomyToggle() {
+    LOG_INFO("onAutonomyToggle called");
+    if (!m_agenticBridge) {
+        initializeAgenticBridge();
+    }
+    if (!m_autonomyManager) {
+        initializeAutonomy();
+    }
+    
+    bool isRunning = m_autonomyManager && m_autonomyManager->IsRunning();
+    if (m_autonomyManager) {
+        if (isRunning) {
+            m_autonomyManager->Stop();
+            appendToOutput("⏸️ Autonomy toggled OFF\n", "Output", OutputSeverity::Info);
+        } else {
+            m_autonomyManager->Start();
+            appendToOutput("▶️ Autonomy toggled ON\n", "Output", OutputSeverity::Info);
+        }
+    }
+}
+
+void Win32IDE::onAutonomyStart() {
+    LOG_INFO("onAutonomyStart called");
+    if (!m_agenticBridge) {
+        initializeAgenticBridge();
+    }
+    if (!m_autonomyManager) {
+        initializeAutonomy();
+    }
+    
+    if (m_autonomyManager && !m_autonomyManager->IsRunning()) {
+        m_autonomyManager->Start();
+        appendToOutput("▶️ Autonomy started\n", "Output", OutputSeverity::Info);
+    }
+}
+
+void Win32IDE::onAutonomyStop() {
+    LOG_INFO("onAutonomyStop called");
+    if (m_autonomyManager && m_autonomyManager->IsRunning()) {
+        m_autonomyManager->Stop();
+        appendToOutput("⏹️ Autonomy stopped\n", "Output", OutputSeverity::Info);
+    }
+}
+
+void Win32IDE::onAutonomySetGoal() {
+    LOG_INFO("onAutonomySetGoal called");
+    if (!m_autonomyManager) {
+        appendToOutput("Autonomy Manager not initialized\n", "Output", OutputSeverity::Warning);
+        return;
+    }
+    
+    char goalText[512] = {0};
+    if (DialogBoxParamA(m_hInstance, "AGENT_PROMPT_DLG", m_hwndMain,
+        [](HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) -> INT_PTR {
+            switch (msg) {
+                case WM_INITDIALOG:
+                    SetWindowTextA(GetDlgItem(hwnd, 101), "Enter autonomy goal:");
+                    return TRUE;
+                case WM_COMMAND:
+                    if (LOWORD(wp) == IDOK) {
+                        GetDlgItemTextA(hwnd, 102, (char*)lp, 512);
+                        EndDialog(hwnd, IDOK);
+                        return TRUE;
+                    } else if (LOWORD(wp) == IDCANCEL) {
+                        EndDialog(hwnd, IDCANCEL);
+                        return TRUE;
+                    }
+                    break;
+            }
+            return FALSE;
+        }, (LPARAM)goalText) == IDOK && strlen(goalText) > 0) {
+        m_autonomyManager->SetGoal(std::string(goalText));
+        appendToOutput("🎯 Autonomy goal set: " + std::string(goalText) + "\n", "Output", OutputSeverity::Info);
+    }
+}
+
+void Win32IDE::onAutonomyViewStatus() {
+    LOG_INFO("onAutonomyViewStatus called");
+    if (!m_autonomyManager) {
+        appendToOutput("Autonomy Manager not initialized\n", "Output", OutputSeverity::Warning);
+        return;
+    }
+    
+    std::string status = m_autonomyManager->GetStatus();
+    appendToOutput("=== Autonomy Status ===\n" + status + "\n", "Output", OutputSeverity::Info);
+}
+
+void Win32IDE::onAutonomyViewMemory() {
+    LOG_INFO("onAutonomyViewMemory called");
+    if (!m_autonomyManager) {
+        appendToOutput("Autonomy Manager not initialized\n", "Output", OutputSeverity::Warning);
+        return;
+    }
+    
+    std::string memory = m_autonomyManager->ExportMemory();
+    appendToOutput("=== Autonomy Memory ===\n" + memory + "\n", "Output", OutputSeverity::Info);
+}
+
+void Win32IDE::onBoundedAgentLoop() {
+    LOG_INFO("onBoundedAgentLoop called");
+    if (!m_agenticBridge) {
+        initializeAgenticBridge();
+    }
+    if (!m_agenticBridge || !m_agenticBridge->IsInitialized()) {
+        MessageBoxA(m_hwndMain, "Agentic Framework not initialized", "Agent Error", MB_OK | MB_ICONERROR);
+        return;
+    }
+    
+    // Get task and iteration limit from user
+    char taskDesc[1024] = {0};
+    if (DialogBoxParamA(m_hInstance, "AGENT_PROMPT_DLG", m_hwndMain,
+        [](HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) -> INT_PTR {
+            switch (msg) {
+                case WM_INITDIALOG:
+                    SetWindowTextA(GetDlgItem(hwnd, 101), "Enter task for Bounded Agent Loop (task:max_iterations):");
+                    return TRUE;
+                case WM_COMMAND:
+                    if (LOWORD(wp) == IDOK) {
+                        GetDlgItemTextA(hwnd, 102, (char*)lp, 1024);
+                        EndDialog(hwnd, IDOK);
+                        return TRUE;
+                    } else if (LOWORD(wp) == IDCANCEL) {
+                        EndDialog(hwnd, IDCANCEL);
+                        return TRUE;
+                    }
+                    break;
+            }
+            return FALSE;
+        }, (LPARAM)taskDesc) != IDOK) {
+        return;
+    }
+    
+    std::string input(taskDesc);
+    std::string task = input;
+    int maxIterations = 5; // default
+    
+    size_t colonPos = input.find(':');
+    if (colonPos != std::string::npos) {
+        task = input.substr(0, colonPos);
+        std::string iterStr = input.substr(colonPos + 1);
+        try {
+            maxIterations = std::stoi(iterStr);
+            if (maxIterations <= 0) maxIterations = 5;
+        } catch (...) {
+            maxIterations = 5;
+        }
+    }
+    
+    if (task.empty()) {
+        task = "Execute bounded task";
+    }
+    
+    appendToOutput("⚙️ Bounded Agent Loop with max iterations (" + std::to_string(maxIterations) + "): " + task + "\n", "Output", OutputSeverity::Info);
+    
+    // Execute with bounded retries in background
+    std::thread([this, taskStr = task, maxIter = maxIterations]() {
+        DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+        if (_guard.cancelled) return;
+        m_agenticBridge->ExecuteBoundedAgentLoop(taskStr, maxIter);
+    }).detach();
+}
+
+#endif // 0
 
 
 // Initialize the Agentic Bridge
 void Win32IDE::initializeAgenticBridge() {
     LOG_INFO("Initializing Agentic Bridge");
-    
+
     if (!m_agenticBridge) {
-        m_agenticBridge = std::make_unique<AgenticBridge>(this);
-        
-        // Set output callback to send agent responses to Copilot Chat
-        m_agenticBridge->SetOutputCallback([this](const std::string& title, const std::string& content) {
-            appendToOutput(title + ":\n" + content + "\n", "Output", OutputSeverity::Info);
-            
-            // Also send to Copilot Chat if available
-            if (m_hwndCopilotChatOutput) {
-                std::string formatted = "🤖 " + title + "\n" + content + "\n\n";
-                SendMessageA(m_hwndCopilotChatOutput, EM_SETSEL, -1, -1);
-                SendMessageA(m_hwndCopilotChatOutput, EM_REPLACESEL, FALSE, (LPARAM)formatted.c_str());
+        try {
+            m_agenticBridge = std::make_unique<AgenticBridge>(this);
+
+            // Set output callback to send agent responses to Copilot Chat
+            m_agenticBridge->SetOutputCallback([this](const std::string& title, const std::string& content) {
+                appendToOutput(title + ":\n" + content + "\n", "Output", OutputSeverity::Info);
+
+                // Also send to Copilot Chat if available
+                if (m_hwndCopilotChatOutput) {
+                    std::string formatted = "🤖 " + title + "\n" + content + "\n\n";
+                    SendMessageA(m_hwndCopilotChatOutput, EM_SETSEL, -1, -1);
+                    SendMessageA(m_hwndCopilotChatOutput, EM_REPLACESEL, FALSE, (LPARAM)formatted.c_str());
+                }
+            });
+
+            // Load agent configuration from file if exists
+            std::string configPath = m_currentDirectory;
+            if (configPath.empty()) {
+                configPath = m_currentFile;
+                if (!configPath.empty()) {
+                    size_t lastSlash = configPath.find_last_of("\\/");
+                    if (lastSlash != std::string::npos) {
+                        configPath = configPath.substr(0, lastSlash);
+                    } else {
+                        configPath.clear();
+                    }
+                }
             }
-        });
-        
-        // Initialize with default framework path
-        if (m_agenticBridge->Initialize("", "bigdaddyg-personalized-agentic:latest")) {
-            LOG_INFO("Agentic Bridge initialized successfully");
-            appendToOutput("✅ Agentic Framework initialized\n", "Output", OutputSeverity::Info);
-            
-            // Initialize Autonomy Manager
-            m_autonomyManager = std::make_unique<AutonomyManager>(m_agenticBridge.get());
-        } else {
-            LOG_ERROR("Failed to initialize Agentic Bridge");
-            appendToOutput("❌ Failed to initialize Agentic Framework\n", "Errors", OutputSeverity::Error);
+            if (configPath.empty()) configPath = ".";
+            configPath += "\\agent_config.json";
+            if (std::ifstream(configPath).good()) {
+                m_agenticBridge->LoadConfiguration(configPath);
+                LOG_INFO("Loaded agent configuration from: " + configPath);
+            } else {
+                LOG_INFO("No agent configuration file found, using defaults");
+            }
+
+            // Initialize with default framework path
+            std::string frameworkPath = ""; // Default to current directory or configured path
+            std::string defaultModel = "bigdaddyg-personalized-agentic:latest";
+
+            // Attempt to find framework path from environment or config
+            char* envPath = getenv("AGENTIC_FRAMEWORK_PATH");
+            if (envPath) {
+                frameworkPath = envPath;
+            }
+
+            if (m_agenticBridge->Initialize(frameworkPath, defaultModel)) {
+                LOG_INFO("Agentic Bridge initialized successfully");
+                appendToOutput("✅ Agentic Framework initialized\n", "Output", OutputSeverity::Info);
+
+                // Initialize Autonomy Manager
+                initializeAutonomy();
+
+                // Initialize Native Engine if not already done
+                if (!m_nativeEngine) {
+                    try {
+                        m_nativeEngine = std::make_unique<RawrXD::CPUInferenceEngine>();
+                        m_nativeEngineLoaded = false;
+                        LOG_INFO("Native CPU Inference Engine created");
+                        appendToOutput("✅ Native CPU Inference Engine created\n", "Output", OutputSeverity::Info);
+                    } catch (const std::exception& e) {
+                        LOG_WARNING(std::string("Failed to create Native CPU Inference Engine: ") + e.what());
+                        appendToOutput("⚠️ Failed to create Native CPU Inference Engine\n", "Output", OutputSeverity::Warning);
+                    }
+                }
+
+                // Set default AI modes based on configuration or defaults
+                m_agenticBridge->SetMaxMode(false); // Default off
+                m_agenticBridge->SetDeepThinking(true); // Default on for better reasoning
+                m_agenticBridge->SetDeepResearch(false); // Default off
+                m_agenticBridge->SetNoRefusal(false); // Default off
+                m_agenticBridge->SetContextSize("32k"); // Default context size
+
+                // Propagate to Native Engine if available
+                if (m_nativeEngine) {
+                    m_nativeEngine->SetMaxMode(false);
+                    m_nativeEngine->SetDeepThinking(true);
+                    m_nativeEngine->SetDeepResearch(false);
+                    m_nativeEngine->SetContextSize(32768);
+                }
+
+                // Load default memory plugins
+                std::string pluginDir = frameworkPath.empty() ? "." : frameworkPath;
+                pluginDir += "\\plugins";
+                if (std::filesystem::exists(pluginDir)) {
+                    for (const auto& entry : std::filesystem::directory_iterator(pluginDir)) {
+                        if (entry.path().extension() == ".dll") {
+                            loadMemoryPlugin(entry.path().string());
+                        }
+                    }
+                }
+
+                // Set up additional callbacks for enhanced functionality
+                m_agenticBridge->SetErrorCallback([this](const std::string& error) {
+                    appendToOutput("❌ Agent Error: " + error + "\n", "Errors", OutputSeverity::Error);
+                });
+
+                m_agenticBridge->SetProgressCallback([this](const std::string& progress) {
+                    appendToOutput("🔄 " + progress + "\n", "Output", OutputSeverity::Info);
+                });
+
+                // Initialize multi-agent system if enabled
+                if (m_multiAgentEnabled) {
+                    m_agenticBridge->EnableMultiAgent(true);
+                    appendToOutput("✅ Multi-Agent system enabled\n", "Output", OutputSeverity::Info);
+                }
+
+                // Set initial language context
+                m_agenticBridge->SetLanguageContext(getSyntaxLanguageName(), m_currentFile);
+
+                // Warm up the model with a simple query to reduce first-response latency
+                std::thread([this]() {
+                    DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+                    if (_guard.cancelled) return;
+                    m_agenticBridge->WarmUpModel();
+                }).detach();
+
+                LOG_INFO("Agentic Bridge fully initialized with enhancements");
+            } else {
+                LOG_ERROR("Failed to initialize Agentic Bridge");
+                appendToOutput("❌ Failed to initialize Agentic Framework\n", "Errors", OutputSeverity::Error);
+                MessageBoxA(m_hwndMain, 
+                    "Failed to initialize Agentic Framework.\nMake sure Agentic-Framework.ps1 is in the Powershield folder.\nCheck logs for detailed error information.", 
+                    "Agent Error", MB_OK | MB_ICONERROR);
+            }
+        } catch (const std::exception& e) {
+            LOG_ERROR("Exception during Agentic Bridge initialization: " + std::string(e.what()));
+            appendToOutput("❌ Exception during initialization: " + std::string(e.what()) + "\n", "Errors", OutputSeverity::Error);
             MessageBoxA(m_hwndMain, 
-                "Failed to initialize Agentic Framework.\nMake sure Agentic-Framework.ps1 is in the Powershield folder.", 
+                ("Initialization failed with exception:\n" + std::string(e.what())).c_str(), 
                 "Agent Error", MB_OK | MB_ICONERROR);
+        } catch (...) {
+            LOG_ERROR("Unknown exception during Agentic Bridge initialization");
+            appendToOutput("❌ Unknown error during initialization\n", "Errors", OutputSeverity::Error);
+            MessageBoxA(m_hwndMain, "Unknown error during Agentic Framework initialization", "Agent Error", MB_OK | MB_ICONERROR);
         }
+    } else {
+        LOG_INFO("Agentic Bridge already initialized");
     }
 }
 
@@ -182,75 +678,152 @@ void Win32IDE::onAgentExecuteCommand() {
 void Win32IDE::onAgentConfigureModel() {
     LOG_INFO("onAgentConfigureModel called");
     
+    // Initialize agentic bridge if needed
     if (!m_agenticBridge) {
         initializeAgenticBridge();
     }
     
-    if (!m_agenticBridge) {
+    if (!m_agenticBridge || !m_agenticBridge->IsInitialized()) {
+        MessageBoxA(m_hwndMain, 
+            "Agentic Framework not initialized.\nPlease use Agent > Start Loop first to initialize.", 
+            "Agent Error", MB_OK | MB_ICONERROR);
         return;
     }
     
-    // Retrieve available models from the local model service (fallback to defaults)
+    // Retrieve available models from Ollama with enhanced error handling
     std::vector<std::string> availableModels;
+    std::string connectionStatus = "Probing Ollama connection...";
+    bool ollamaAvailable = false;
+    
     try {
-        ModelConnection connection;
-        availableModels = connection.getAvailableModels();
+        RawrXD::Agent::OllamaConfig probeCfg;
+        probeCfg.timeout_ms = 5000;  // Increased timeout for reliability
+        RawrXD::Agent::AgentOllamaClient probeClient(probeCfg);
+        
+        if (probeClient.TestConnection()) {
+            availableModels = probeClient.ListModels();
+            ollamaAvailable = true;
+            connectionStatus = "✅ Connected to Ollama";
+            LOG_INFO("Successfully queried Ollama for available models: " + std::to_string(availableModels.size()) + " found");
+        } else {
+            connectionStatus = "⚠️ Ollama connection failed";
+            LOG_WARNING("Ollama connection test failed");
+        }
+    } catch (const std::exception& e) {
+        connectionStatus = std::string("❌ Ollama error: ") + e.what();
+        LOG_ERROR("Ollama probe exception: " + std::string(e.what()));
+        availableModels.clear();
     } catch (...) {
+        connectionStatus = "❌ Ollama probe failed (unknown error)";
+        LOG_ERROR("Ollama probe failed with unknown exception");
         availableModels.clear();
     }
 
+    // Fallback to ModelConnection if Ollama probe failed
+    if (!ollamaAvailable) {
+        try {
+            ModelConnection connection;
+            availableModels = connection.getAvailableModels();
+            if (!availableModels.empty()) {
+                ollamaAvailable = true;
+                connectionStatus = "✅ Connected via ModelConnection";
+                LOG_INFO("Successfully queried ModelConnection for available models: " + std::to_string(availableModels.size()) + " found");
+            }
+        } catch (const std::exception& e) {
+            connectionStatus = std::string("❌ ModelConnection error: ") + e.what();
+            LOG_ERROR("ModelConnection probe exception: " + std::string(e.what()));
+            availableModels.clear();
+        } catch (...) {
+            connectionStatus = "❌ ModelConnection probe failed (unknown error)";
+            LOG_ERROR("ModelConnection probe failed with unknown exception");
+            availableModels.clear();
+        }
+    }
+
     if (availableModels.empty()) {
-        availableModels = {
-            "bigdaddyg-personalized-agentic:latest",
-            "codestral:latest",
-            "llama3.3:latest"
-        };
+        std::string detailedMsg = std::string(connectionStatus) + 
+            "\n\nNo models available. Please ensure:\n"
+            "1. Ollama is installed and running (ollama serve)\n"
+            "2. At least one model is pulled (ollama pull <model>)\n"
+            "3. Ollama is accessible at http://localhost:11434\n\n"
+            "Common models: llama2, mistral, neural-chat, deepseek-coder";
+        
+        MessageBoxA(m_hwndMain, detailedMsg.c_str(), "Agent Model Configuration", MB_OK | MB_ICONWARNING);
+        appendToOutput("⚠️ Model configuration failed: " + detailedMsg + "\n", "Output", OutputSeverity::Warning);
+        return;
     }
 
-    // Ensure current model is present and pre-selected
+    // Get current model and ensure it's in the list
     const std::string currentModel = m_agenticBridge->GetCurrentModel();
-    if (std::find(availableModels.begin(), availableModels.end(), currentModel) == availableModels.end()) {
-        availableModels.insert(availableModels.begin(), currentModel);
+    bool currentModelFound = std::find(availableModels.begin(), availableModels.end(), currentModel) != availableModels.end();
+    
+    if (!currentModelFound && !currentModel.empty()) {
+        // Insert current model at the beginning if it's not in the available list
+        availableModels.insert(availableModels.begin(), currentModel + " (current, not available)");
     }
 
-    // Create a lightweight modal selection dialog (no resource template required)
+    // Sort models alphabetically for better UX (keep current at top if found)
+    if (currentModelFound) {
+        std::sort(availableModels.begin() + 1, availableModels.end());
+    } else {
+        std::sort(availableModels.begin(), availableModels.end());
+    }
+
+    // Create modal dialog window with enhanced styling
     RECT parentRect{};
     GetWindowRect(m_hwndMain, &parentRect);
 
-    const int dlgWidth = 420;
-    const int dlgHeight = 200;
+    const int dlgWidth = 500;
+    const int dlgHeight = 280;
     const int dlgX = parentRect.left + ((parentRect.right - parentRect.left) - dlgWidth) / 2;
     const int dlgY = parentRect.top + ((parentRect.bottom - parentRect.top) - dlgHeight) / 2;
 
     EnableWindow(m_hwndMain, FALSE);
 
-    HWND hwndDlg = CreateWindowExA(WS_EX_DLGMODALFRAME, "STATIC", "Select Agent Model",
+    HWND hwndDlg = CreateWindowExA(WS_EX_DLGMODALFRAME, "STATIC", "🤖 Configure AI Model",
         WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
         dlgX, dlgY, dlgWidth, dlgHeight, m_hwndMain, nullptr, m_hInstance, nullptr);
 
     if (!hwndDlg) {
         EnableWindow(m_hwndMain, TRUE);
-        MessageBoxA(m_hwndMain, "Failed to create model selection dialog", "Agent", MB_OK | MB_ICONERROR);
+        MessageBoxA(m_hwndMain, "Failed to create model selection dialog", "Agent Error", MB_OK | MB_ICONERROR);
+        LOG_ERROR("Failed to create model selection dialog window");
         return;
     }
 
-    CreateWindowExA(0, "STATIC", "Choose an available model:", WS_CHILD | WS_VISIBLE,
-        10, 10, dlgWidth - 20, 20, hwndDlg, nullptr, m_hInstance, nullptr);
+    // Connection status label
+    CreateWindowExA(0, "STATIC", connectionStatus.c_str(), WS_CHILD | WS_VISIBLE,
+        10, 10, dlgWidth - 20, 18, hwndDlg, nullptr, m_hInstance, nullptr);
 
+    // Model selection label
+    CreateWindowExA(0, "STATIC", "Select an available model:", WS_CHILD | WS_VISIBLE,
+        10, 35, dlgWidth - 20, 16, hwndDlg, nullptr, m_hInstance, nullptr);
+
+    // Combo box for model selection
     HWND hwndCombo = CreateWindowExA(WS_EX_CLIENTEDGE, "COMBOBOX", "",
         WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL,
-        10, 35, dlgWidth - 40, 140, hwndDlg, (HMENU)1001, m_hInstance, nullptr);
+        10, 53, dlgWidth - 20, 160, hwndDlg, (HMENU)1001, m_hInstance, nullptr);
 
     int selectedIndex = 0;
     for (size_t i = 0; i < availableModels.size(); ++i) {
         const auto& model = availableModels[i];
         SendMessageA(hwndCombo, CB_ADDSTRING, 0, (LPARAM)model.c_str());
+        
+        // Pre-select current model or first in list
         if (model == currentModel) {
             selectedIndex = static_cast<int>(i);
+        } else if (i == 0 && selectedIndex == 0) {
+            selectedIndex = 0;  // Keep first index as fallback
         }
     }
     SendMessageA(hwndCombo, CB_SETCURSEL, selectedIndex, 0);
 
+    // Current model info label
+    std::string currentModelLabel = "Current model: " + (currentModel.empty() ? "(none)" : currentModel);
+    CreateWindowExA(0, "STATIC", currentModelLabel.c_str(), WS_CHILD | WS_VISIBLE,
+        10, dlgHeight - 85, dlgWidth - 20, 16, hwndDlg, nullptr, m_hInstance, nullptr);
+
+    // Buttons: Use Model and Cancel
     HWND hwndOk = CreateWindowExA(0, "BUTTON", "Use Model", WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
         dlgWidth - 200, dlgHeight - 50, 90, 30, hwndDlg, (HMENU)IDOK, m_hInstance, nullptr);
     HWND hwndCancel = CreateWindowExA(0, "BUTTON", "Cancel", WS_CHILD | WS_VISIBLE,
@@ -259,12 +832,12 @@ void Win32IDE::onAgentConfigureModel() {
     bool accepted = false;
     std::string selectedModel = currentModel;
 
+    // Modal message loop
     MSG msg{};
     while (IsWindow(hwndDlg) && GetMessage(&msg, nullptr, 0, 0)) {
         if (msg.message == WM_COMMAND) {
             const WORD cmdId = LOWORD(msg.wParam);
             const WORD cmdCode = HIWORD(msg.wParam);
-            HWND sender = (HWND)msg.hwnd;
 
             if (cmdId == IDOK && cmdCode == BN_CLICKED) {
                 int sel = (int)SendMessageA(hwndCombo, CB_GETCURSEL, 0, 0);
@@ -272,11 +845,20 @@ void Win32IDE::onAgentConfigureModel() {
                     char buffer[256] = {0};
                     SendMessageA(hwndCombo, CB_GETLBTEXT, sel, (LPARAM)buffer);
                     selectedModel = buffer;
+                    
+                    // Remove "(current, not available)" suffix if present
+                    size_t notAvailPos = selectedModel.find(" (current, not available)");
+                    if (notAvailPos != std::string::npos) {
+                        selectedModel = selectedModel.substr(0, notAvailPos);
+                    }
+                    
                     accepted = true;
+                    LOG_INFO("User selected model: " + selectedModel);
                 }
                 DestroyWindow(hwndDlg);
                 break;
             } else if (cmdId == IDCANCEL && cmdCode == BN_CLICKED) {
+                LOG_INFO("Model configuration cancelled");
                 DestroyWindow(hwndDlg);
                 break;
             }
@@ -289,10 +871,43 @@ void Win32IDE::onAgentConfigureModel() {
     EnableWindow(m_hwndMain, TRUE);
     SetForegroundWindow(m_hwndMain);
 
+    // Apply selected model with validation
     if (accepted && !selectedModel.empty()) {
-        m_agenticBridge->SetModel(selectedModel);
-        appendToOutput("✅ Agent model set to: " + selectedModel + "\n", "Output", OutputSeverity::Info);
-        MessageBoxA(m_hwndMain, ("Model updated to: " + selectedModel).c_str(), "Agent Model", MB_OK | MB_ICONINFORMATION);
+        // Validate model selection
+        if (selectedModel == currentModel) {
+            appendToOutput("ℹ️ Model already configured: " + selectedModel + "\n", "Output", OutputSeverity::Info);
+            return;
+        }
+
+        // Set model on agentic bridge
+        try {
+            m_agenticBridge->SetModel(selectedModel);
+            
+            // Also set on native engine if available
+            if (m_nativeEngine) {
+                // Native engine model setting if applicable
+                LOG_INFO("Setting model on native engine: " + selectedModel);
+            }
+            
+            appendToOutput("✅ Agent model configured: " + selectedModel + "\n", "Output", OutputSeverity::Info);
+            MessageBoxA(m_hwndMain, 
+                ("Model successfully updated to:\n" + selectedModel + "\n\nThe new model will be used for all future agent operations.").c_str(), 
+                "Agent Model Configuration", MB_OK | MB_ICONINFORMATION);
+            
+            LOG_INFO("Model successfully set to: " + selectedModel);
+        } catch (const std::exception& e) {
+            std::string errorMsg = std::string("Failed to set model: ") + e.what();
+            appendToOutput("❌ " + errorMsg + "\n", "Errors", OutputSeverity::Error);
+            MessageBoxA(m_hwndMain, errorMsg.c_str(), "Model Configuration Error", MB_OK | MB_ICONERROR);
+            LOG_ERROR("Exception setting model: " + errorMsg);
+        } catch (...) {
+            std::string errorMsg = "Failed to set model (unknown error)";
+            appendToOutput("❌ " + errorMsg + "\n", "Errors", OutputSeverity::Error);
+            MessageBoxA(m_hwndMain, errorMsg.c_str(), "Model Configuration Error", MB_OK | MB_ICONERROR);
+            LOG_ERROR("Unknown exception while setting model");
+        }
+    } else {
+        LOG_INFO("Model configuration completed without selection");
     }
 }
 

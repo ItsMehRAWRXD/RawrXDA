@@ -443,7 +443,7 @@ void AutoRepairOrchestrator::checkDetourIntegrity() {
         char desc[256];
         snprintf(desc, sizeof(desc),
                  "Detour CRC verification failed: %s",
-                 vr.detail ? vr.detail : "unknown");
+                 vr.detail.empty() ? "unknown" : vr.detail.c_str());
 
         logAnomaly(AnomalyType::DetourCRCMismatch, AnomalySeverity::Error,
                    "SelfRepairLoop", desc);

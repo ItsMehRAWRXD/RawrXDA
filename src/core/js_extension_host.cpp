@@ -198,6 +198,20 @@ static inline vscode::VSCodeExtensionAPI& vsapi() {
     return vscode::VSCodeExtensionAPI::instance();
 }
 
+static int32_t getJsArrayLength(JSContext* ctx, JSValue obj) {
+#if RAWRXD_HAS_QUICKJS
+    JSValue lenVal = JS_GetPropertyStr(ctx, obj, "length");
+    int32_t len = 0;
+    if (JS_ToInt32(ctx, &len, lenVal) != 0) {
+        len = 0;
+    }
+    JS_FreeValue(ctx, lenVal);
+    return len;
+#else
+    return JS_GetPropertyLength(ctx, obj);
+#endif
+}
+
 } // anonymous namespace
 
 // ============================================================================
@@ -368,7 +382,7 @@ PatchResult JSExtensionHost::initialize() {
         char err[256];
         std::snprintf(err, sizeof(err),
                       "[JSExtensionHost] Failed to initialize PolyfillEngine: %s\n",
-                      pfResult.detail);
+                      pfResult.detail.c_str());
         OutputDebugStringA(err);
         return PatchResult::error("PolyfillEngine initialization failed");
     }
@@ -385,8 +399,9 @@ PatchResult JSExtensionHost::initialize() {
 
     // Set custom module loader
     JS_SetModuleLoaderFunc(rt, nullptr,
-        [](JSContext* ctx, const char* moduleName, void* opaque) -> void* {
-            return JSExtensionHost::moduleLoader(ctx, moduleName, opaque);
+        [](JSContext* ctx, const char* moduleName, void* opaque) -> JSModuleDef* {
+            return reinterpret_cast<JSModuleDef*>(
+                JSExtensionHost::moduleLoader(ctx, moduleName, opaque));
         },
         this);
 
@@ -474,6 +489,7 @@ PatchResult JSExtensionHost::initialize() {
         JS_SetPropertyStr(ctx, global, "setTimeout",
             JS_NewCFunction(ctx, [](JSContext* cx, JSValue this_val, int argc, JSValue* argv) -> JSValue {
                 if (argc < 1) return JS_UNDEFINED;
+                if (!JS_IsFunction(cx, argv[0])) return JS_UNDEFINED;
                 int32_t delay = 0;
                 if (argc >= 2) JS_ToInt32(cx, &delay, argv[1]);
                 if (delay < 0) delay = 0;
@@ -481,14 +497,15 @@ PatchResult JSExtensionHost::initialize() {
                 auto* host = static_cast<JSExtensionHost*>(JS_GetContextOpaque(cx));
                 if (!host) return JS_UNDEFINED;
 
-                // In real QuickJS, we'd dup the callback value. In stub mode, use raw value.
-                uint64_t id = host->createTimer(static_cast<uint64_t>(delay), false, nullptr);
+                auto* callbackRef = new JSValue(JS_DupValue(cx, argv[0]));
+                uint64_t id = host->createTimer(static_cast<uint64_t>(delay), false, callbackRef);
                 return JS_NewInt64(cx, static_cast<int64_t>(id));
             }, "setTimeout", 2));
 
         JS_SetPropertyStr(ctx, global, "setInterval",
             JS_NewCFunction(ctx, [](JSContext* cx, JSValue this_val, int argc, JSValue* argv) -> JSValue {
                 if (argc < 1) return JS_UNDEFINED;
+                if (!JS_IsFunction(cx, argv[0])) return JS_UNDEFINED;
                 int32_t delay = 0;
                 if (argc >= 2) JS_ToInt32(cx, &delay, argv[1]);
                 if (delay < 1) delay = 1;
@@ -496,7 +513,8 @@ PatchResult JSExtensionHost::initialize() {
                 auto* host = static_cast<JSExtensionHost*>(JS_GetContextOpaque(cx));
                 if (!host) return JS_UNDEFINED;
 
-                uint64_t id = host->createTimer(static_cast<uint64_t>(delay), true, nullptr);
+                auto* callbackRef = new JSValue(JS_DupValue(cx, argv[0]));
+                uint64_t id = host->createTimer(static_cast<uint64_t>(delay), true, callbackRef);
                 return JS_NewInt64(cx, static_cast<int64_t>(id));
             }, "setInterval", 2));
 
@@ -883,7 +901,7 @@ void JSExtensionHost::bindVSCodeWindow(void* ctx) {
 
             // Extract items from JS array
             std::vector<VSCodeQuickPickItem> items;
-            int32_t len = JS_GetPropertyLength(c, argv[0]);
+            int32_t len = getJsArrayLength(c, argv[0]);
             for (int32_t i = 0; i < len; i++) {
                 JSValue elem = JS_GetPropertyUint32(c, argv[0], static_cast<uint32_t>(i));
                 VSCodeQuickPickItem item{};
@@ -2582,6 +2600,13 @@ void JSExtensionHost::cancelTimer(uint64_t timerId) {
 
     for (auto& timer : m_timers) {
         if (timer.id == timerId) {
+            if (timer.jsCallback && m_jsContext) {
+                JSContext* timerCtx = static_cast<JSContext*>(m_jsContext);
+                JSValue* callbackRef = reinterpret_cast<JSValue*>(timer.jsCallback);
+                JS_FreeValue(timerCtx, *callbackRef);
+                delete callbackRef;
+                timer.jsCallback = nullptr;
+            }
             timer.cancelled = true;
             return;
         }
@@ -2912,6 +2937,13 @@ DWORD WINAPI JSExtensionHost::extensionHostThread(LPVOID param) {
 
             for (auto it = host->m_timers.begin(); it != host->m_timers.end(); ) {
                 if (it->cancelled) {
+                    if (it->jsCallback && host->m_jsContext) {
+                        JSContext* timerCtx = static_cast<JSContext*>(host->m_jsContext);
+                        JSValue* callbackRef = reinterpret_cast<JSValue*>(it->jsCallback);
+                        JS_FreeValue(timerCtx, *callbackRef);
+                        delete callbackRef;
+                        it->jsCallback = nullptr;
+                    }
                     it = host->m_timers.erase(it);
                     continue;
                 }
@@ -2919,10 +2951,8 @@ DWORD WINAPI JSExtensionHost::extensionHostThread(LPVOID param) {
                 if (now >= it->fireTime) {
                     // Fire timer — invoke the JS callback function
                     if (it->jsCallback) {
-                        // The jsCallback is stored as an opaque void* to a DUP'd JSValue.
-                        // Cast back and invoke via JS_Call on the host's main JS context.
-                        JSValue callbackVal = static_cast<JSValue>(
-                            reinterpret_cast<uintptr_t>(it->jsCallback));
+                        // The callback is stored as an opaque pointer to a JSValue payload.
+                        JSValue callbackVal = *reinterpret_cast<JSValue*>(it->jsCallback);
                         JSContext* timerCtx = static_cast<JSContext*>(host->m_jsContext);
                         if (timerCtx) {
                             JSValue ret = JS_Call(timerCtx, callbackVal,
@@ -2946,6 +2976,13 @@ DWORD WINAPI JSExtensionHost::extensionHostThread(LPVOID param) {
                         it->fireTime = now + it->intervalMs;
                         ++it;
                     } else {
+                        if (it->jsCallback && host->m_jsContext) {
+                            JSContext* timerCtx = static_cast<JSContext*>(host->m_jsContext);
+                            JSValue* callbackRef = reinterpret_cast<JSValue*>(it->jsCallback);
+                            JS_FreeValue(timerCtx, *callbackRef);
+                            delete callbackRef;
+                            it->jsCallback = nullptr;
+                        }
                         it = host->m_timers.erase(it);
                     }
                 } else {
@@ -3054,4 +3091,3 @@ void JSExtensionHost::processMessageQueue() {
         messages.pop();
     }
 }
-

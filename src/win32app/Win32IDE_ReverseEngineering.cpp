@@ -9,7 +9,9 @@
 #include <shlwapi.h>
 #include <commdlg.h>
 #include <sstream>
+#include <vector>
 #include <algorithm>
+#include <cwchar>
 
 #pragma comment(lib, "shlwapi.lib")
 #pragma comment(lib, "comdlg32.lib")
@@ -22,6 +24,106 @@ static RawrXD::ReverseEngineering::RawrDumpBin s_reDumpbin;
 static RawrXD::ReverseEngineering::RawrCompiler s_reCompiler;
 static RawrXD::ReverseEngineering::RawrReverseEngine s_reEngine;
 static std::string s_reCurrentBinary;
+
+static bool TryGetPEImageBaseAndSize(const std::string& path, uint64_t& imageBase, uint32_t& sizeOfImage) {
+    imageBase = 0;
+    sizeOfImage = 0;
+
+    HANDLE hFile = CreateFileA(path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, nullptr);
+    if (hFile == INVALID_HANDLE_VALUE) return false;
+
+    HANDLE hMap = CreateFileMappingA(hFile, nullptr, PAGE_READONLY, 0, 0, nullptr);
+    if (!hMap) {
+        CloseHandle(hFile);
+        return false;
+    }
+
+    const uint8_t* base = (const uint8_t*)MapViewOfFile(hMap, FILE_MAP_READ, 0, 0, 0);
+    if (!base) {
+        CloseHandle(hMap);
+        CloseHandle(hFile);
+        return false;
+    }
+
+    bool ok = false;
+    __try {
+        if (*(const uint16_t*)(base + 0x00) != 0x5A4D) __leave; // MZ
+        uint32_t e_lfanew = *(const uint32_t*)(base + 0x3C);
+        const uint8_t* nt = base + e_lfanew;
+        if (*(const uint32_t*)(nt + 0x00) != 0x00004550) __leave; // PE\0\0
+        uint16_t optSize = *(const uint16_t*)(nt + 0x14);
+        const uint8_t* opt = nt + 0x18;
+        if (optSize < 0x40) __leave;
+        uint16_t magic = *(const uint16_t*)(opt + 0x00);
+        if (magic == 0x20B) {
+            imageBase = *(const uint64_t*)(opt + 0x18);
+            sizeOfImage = *(const uint32_t*)(opt + 0x38);
+            ok = (imageBase != 0 && sizeOfImage != 0);
+        } else if (magic == 0x10B) {
+            imageBase = *(const uint32_t*)(opt + 0x1C);
+            sizeOfImage = *(const uint32_t*)(opt + 0x38);
+            ok = (imageBase != 0 && sizeOfImage != 0);
+        }
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        ok = false;
+    }
+
+    UnmapViewOfFile(base);
+    CloseHandle(hMap);
+    CloseHandle(hFile);
+    return ok;
+}
+
+static uint64_t TryGetPEEntryPointRVA(const std::string& path) {
+    HANDLE hFile = CreateFileA(path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, nullptr);
+    if (hFile == INVALID_HANDLE_VALUE) return 0;
+
+    HANDLE hMap = CreateFileMappingA(hFile, nullptr, PAGE_READONLY, 0, 0, nullptr);
+    if (!hMap) {
+        CloseHandle(hFile);
+        return 0;
+    }
+
+    const uint8_t* base = (const uint8_t*)MapViewOfFile(hMap, FILE_MAP_READ, 0, 0, 0);
+    if (!base) {
+        CloseHandle(hMap);
+        CloseHandle(hFile);
+        return 0;
+    }
+
+    uint64_t epRva = 0;
+    __try {
+        if (*(const uint16_t*)(base + 0x00) != 0x5A4D) __leave; // MZ
+        uint32_t e_lfanew = *(const uint32_t*)(base + 0x3C);
+        const uint8_t* nt = base + e_lfanew;
+        if (*(const uint32_t*)(nt + 0x00) != 0x00004550) __leave; // PE\0\0
+        uint16_t optSize = *(const uint16_t*)(nt + 0x14);
+        const uint8_t* opt = nt + 0x18;
+        if (optSize < 0x18) __leave;
+        uint16_t magic = *(const uint16_t*)(opt + 0x00);
+        if (magic != 0x10B && magic != 0x20B) __leave;
+        epRva = *(const uint32_t*)(opt + 0x10); // AddressOfEntryPoint
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        epRva = 0;
+    }
+
+    UnmapViewOfFile(base);
+    CloseHandle(hMap);
+    CloseHandle(hFile);
+    return epRva;
+}
+
+static bool ParseHexU64W(const wchar_t* s, uint64_t& out) {
+    out = 0;
+    if (!s) return false;
+    while (*s == L' ' || *s == L'\t' || *s == L'\r' || *s == L'\n') ++s;
+    if (*s == 0) return false;
+    wchar_t* end = nullptr;
+    unsigned long long v = wcstoull(s, &end, 0);
+    if (end == s) return false;
+    out = (uint64_t)v;
+    return true;
+}
 
 // Helper: Open file dialog
 static std::string OpenBinaryDialog(HWND hwnd) {
@@ -604,11 +706,37 @@ void Win32IDE::handleReverseEngineeringDecompilerView() {
     // Determine entry point for analysis
     auto symbols = s_reCodex.GetSymbols();
     uint64_t entryAddr = 0;
+
+    // Prefer the real PE entrypoint RVA when available (more reliable than symbols).
+    entryAddr = TryGetPEEntryPointRVA(s_reCurrentBinary);
+
+    // Advanced mode: hold SHIFT when invoking the decompiler view to jump to any function.
+    // Accepts VA (ImageBase+RVA) or plain RVA. We normalize VA->RVA when possible.
+    if (GetAsyncKeyState(VK_SHIFT) & 0x8000) {
+        wchar_t buf[64] = {};
+        if (!DialogBoxWithInput(L"Decompiler View Target",
+                                L"Function address (hex). VA or RVA. Blank = entrypoint.",
+                                buf, _countof(buf))) {
+            return;
+        }
+        uint64_t userAddr = 0;
+        if (ParseHexU64W(buf, userAddr)) {
+            uint64_t imageBase = 0;
+            uint32_t sizeOfImage = 0;
+            if (TryGetPEImageBaseAndSize(s_reCurrentBinary, imageBase, sizeOfImage) &&
+                userAddr >= imageBase && userAddr < (imageBase + (uint64_t)sizeOfImage)) {
+                entryAddr = userAddr - imageBase; // VA -> RVA
+            } else {
+                entryAddr = userAddr; // treat as RVA (or non-PE absolute addressing)
+            }
+        }
+    }
+
     for (const auto& sym : symbols) {
         if (sym.name == "_start" || sym.name == "main" || sym.name == "WinMain" ||
             sym.name == "_main" || sym.name == "wmain" || sym.name == "wWinMain" ||
             sym.name == "entry" || sym.name == "EntryPoint") {
-            entryAddr = sym.address;
+            if (entryAddr == 0) entryAddr = sym.address;
             break;
         }
     }
@@ -627,13 +755,61 @@ void Win32IDE::handleReverseEngineeringDecompilerView() {
         // Attempt SSA lifting to generate pseudocode
         auto ssaResult = s_reCodex.LiftToSSA(entryAddr);
         if (ssaResult.success) {
+            // Attempt type recovery to produce typed SSA locals.
+            // If type recovery fails, we still emit readable pseudocode with defaults.
+            std::vector<std::string> varTypes;
+            std::vector<uint32_t> varTypeConfidence;
+            varTypes.resize(ssaResult.totalVars, "uint64_t");
+            varTypeConfidence.resize(ssaResult.totalVars, 0);
+            {
+                auto typeResult = s_reCodex.RecoverTypes(entryAddr);
+                if (typeResult.success) {
+                    for (const auto& ti : typeResult.types) {
+                        if (ti.ssaVarId >= ssaResult.totalVars) continue;
+
+                        std::string t = ti.typeName.empty() ? "uint64_t" : ti.typeName;
+                        // Normalize some internal tags into C-ish types.
+                        switch (ti.baseType) {
+                            case RawrXD::ReverseEngineering::RecoveredType::Pointer:
+                            case RawrXD::ReverseEngineering::RecoveredType::DataPtr:
+                            case RawrXD::ReverseEngineering::RecoveredType::StructPtr:
+                            case RawrXD::ReverseEngineering::RecoveredType::ArrayPtr:
+                            case RawrXD::ReverseEngineering::RecoveredType::StringPtr:
+                                t = "void*";
+                                break;
+                            case RawrXD::ReverseEngineering::RecoveredType::CodePtr:
+                                t = "void(*)()";
+                                break;
+                            default:
+                                break;
+                        }
+
+                        // Keep widths sane if the inference didn't set it.
+                        if (ti.typeWidth == 4 && t == "uint64_t") t = "uint32_t";
+                        if (ti.typeWidth == 2 && t == "uint64_t") t = "uint16_t";
+                        if (ti.typeWidth == 1 && t == "uint64_t") t = "uint8_t";
+
+                        varTypes[ti.ssaVarId] = t;
+                        varTypeConfidence[ti.ssaVarId] = static_cast<uint32_t>(ti.confidence);
+                    }
+                }
+            }
+
             // Generate C-like pseudocode from SSA
             oss << "// @0x" << std::hex << entryAddr << "\n";
             oss << "int __cdecl entry_function(void) {\n";
 
             // Declare SSA variables
-            for (int v = 0; v < (int)ssaResult.totalVars && v < 32; ++v) {
-                oss << "    int var_rax_" << std::dec << v << ";  // SSA v" << v << "\n";
+            int maxDecl = (int)ssaResult.totalVars;
+            if (maxDecl > 256) maxDecl = 256; // avoid generating absurdly large local lists
+            for (int v = 0; v < maxDecl; ++v) {
+                oss << "    " << varTypes[v] << " v" << std::dec << v << ";";
+                if (varTypeConfidence[v] != 0) {
+                    oss << "  // SSA v" << v << ", conf=" << varTypeConfidence[v] << "%";
+                } else {
+                    oss << "  // SSA v" << v;
+                }
+                oss << "\n";
             }
             oss << "\n";
 
@@ -661,56 +837,56 @@ void Win32IDE::handleReverseEngineeringDecompilerView() {
                 oss << "// @0x" << std::hex << si.origAddress << "\n    ";
 
                 if (si.dstVarId >= 0) {
-                    oss << "var_rax_" << std::dec << si.dstVarId << " = ";
+                    oss << "v" << std::dec << si.dstVarId << " = ";
                 }
 
                 // Generate C-like expression
                 switch (si.op) {
                 case RawrXD::ReverseEngineering::SSAOpType::Assign:
                     if (si.src1VarId >= 0)
-                        oss << "var_rax_" << si.src1VarId;
+                        oss << "v" << si.src1VarId;
                     else
                         oss << "0";
                     break;
                 case RawrXD::ReverseEngineering::SSAOpType::Add:
-                    oss << "var_rax_" << si.src1VarId << " + var_rax_" << si.src2VarId;
+                    oss << "v" << si.src1VarId << " + v" << si.src2VarId;
                     break;
                 case RawrXD::ReverseEngineering::SSAOpType::Sub:
-                    oss << "var_rax_" << si.src1VarId << " - var_rax_" << si.src2VarId;
+                    oss << "v" << si.src1VarId << " - v" << si.src2VarId;
                     break;
                 case RawrXD::ReverseEngineering::SSAOpType::Load:
                     if (si.src1VarId >= 0)
-                        oss << "*(int*)var_rax_" << si.src1VarId;
+                        oss << "*(uint64_t*)v" << si.src1VarId;
                     else
-                        oss << "*(int*)0x0";
+                        oss << "*(uint64_t*)0x0";
                     break;
                 case RawrXD::ReverseEngineering::SSAOpType::Store:
                     if (si.src1VarId >= 0 && si.src2VarId >= 0)
-                        oss << "*(int*)var_rax_" << si.src1VarId << " = var_rax_" << si.src2VarId;
+                        oss << "*(uint64_t*)v" << si.src1VarId << " = v" << si.src2VarId;
                     break;
                 case RawrXD::ReverseEngineering::SSAOpType::Call:
                     oss << "func_0x" << std::hex << si.callTarget << std::dec << "(";
-                    if (si.src1VarId >= 0) oss << "var_rax_" << si.src1VarId;
+                    if (si.src1VarId >= 0) oss << "v" << si.src1VarId;
                     oss << ")";
                     break;
                 case RawrXD::ReverseEngineering::SSAOpType::Ret:
                     oss << "return";
-                    if (si.src1VarId >= 0) oss << " var_rax_" << si.src1VarId;
+                    if (si.src1VarId >= 0) oss << " v" << si.src1VarId;
                     break;
                 case RawrXD::ReverseEngineering::SSAOpType::Cmp:
-                    oss << "var_rax_" << si.src1VarId << " == var_rax_" << si.src2VarId;
+                    oss << "v" << si.src1VarId << " == v" << si.src2VarId;
                     break;
                 case RawrXD::ReverseEngineering::SSAOpType::Branch:
-                    oss << "if (var_rax_" << si.src1VarId << ") goto 0x"
+                    oss << "if (v" << si.src1VarId << ") goto 0x"
                         << std::hex << si.branchTarget << std::dec;
                     break;
                 case RawrXD::ReverseEngineering::SSAOpType::Lea:
-                    oss << "&var_rax_" << si.src1VarId;
+                    oss << "&v" << si.src1VarId;
                     break;
                 default:
                     oss << opName << "(";
-                    if (si.src1VarId >= 0) oss << "var_rax_" << si.src1VarId;
-                    if (si.src2VarId >= 0) oss << ", var_rax_" << si.src2VarId;
+                    if (si.src1VarId >= 0) oss << "v" << si.src1VarId;
+                    if (si.src2VarId >= 0) oss << ", v" << si.src2VarId;
                     oss << ")";
                     break;
                 }

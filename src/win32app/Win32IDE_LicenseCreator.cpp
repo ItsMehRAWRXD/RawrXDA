@@ -6,6 +6,7 @@
 // ============================================================================
 
 #include "Win32IDE.h"
+#include "feature_registry_panel.h"
 #include "../core/enterprise_license.h"
 #include "enterprise_feature_manager.hpp"
 #include "../../include/enterprise_license.h"

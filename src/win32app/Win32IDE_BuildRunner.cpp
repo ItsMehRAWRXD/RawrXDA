@@ -11,7 +11,8 @@
 
 namespace {
 
-void appendToOutput(Win32IDE* ide, const std::string& line) {
+// Avoid clashing with Win32IDE::appendToOutput (member) inside lambdas that capture `this`.
+static void appendBuildOutput(Win32IDE* ide, const std::string& line) {
     if (ide && line.size())
         ide->appendToOutput(line + "\n");
 }
@@ -96,7 +97,7 @@ void Win32IDE::runBuildInBackground(const std::string& workingDir, const std::st
         CloseHandle(hWrite);
         if (!ok) {
             CloseHandle(hRead);
-            appendToOutput(this, "[Build] CreateProcess failed.");
+            appendBuildOutput(this, "[Build] CreateProcess failed.");
             return;
         }
 
@@ -113,7 +114,7 @@ void Win32IDE::runBuildInBackground(const std::string& workingDir, const std::st
                 std::string line = lineBuf.substr(0, pos);
                 lineBuf.erase(0, pos + 1);
                 if (!line.empty() && line.back() == '\r') line.pop_back();
-                appendToOutput(this, line);
+                appendBuildOutput(this, line);
                 parseAndReport(line, this);
             }
         }
@@ -121,7 +122,7 @@ void Win32IDE::runBuildInBackground(const std::string& workingDir, const std::st
         WaitForSingleObject(pi.hProcess, INFINITE);
         CloseHandle(pi.hProcess);
         CloseHandle(hRead);
-        appendToOutput(this, "[Build] Done.");
+        appendBuildOutput(this, "[Build] Done.");
         refreshProblemsView();
     }).detach();
 }

@@ -27,45 +27,53 @@ cd /d D:\RawrXD\Ship
 
 echo [1/5] Building Titan Kernel DLL...
 ml64.exe /nologo /c /Fo:RawrXD_Titan_Kernel.obj RawrXD_Titan_Kernel.asm 2>nul
-if %errorlevel% neq 0 (
+if !errorlevel! neq 0 (
     echo      [!] Assembly failed, using pre-built if available
 ) else (
     link.exe /nologo /DLL /OUT:RawrXD_Titan_Kernel.dll RawrXD_Titan_Kernel.obj %LIBPATH% kernel32.lib ntdll.lib libcmt.lib libvcruntime.lib libucrt.lib
-    if %errorlevel% equ 0 echo      [OK] RawrXD_Titan_Kernel.dll
+    if !errorlevel! equ 0 (
+        echo      [OK] RawrXD_Titan_Kernel.dll
+    ) else (
+        echo      [FAIL] RawrXD_Titan_Kernel.dll Linkage Failed
+    )
 )
 
 echo [2/5] Building Native Model Bridge DLL...
 ml64.exe /nologo /c /Fo:RawrXD_NativeModelBridge.obj RawrXD_NativeModelBridge.asm 2>nul
-if %errorlevel% neq 0 (
+if !errorlevel! neq 0 (
     echo      [!] Assembly failed, using pre-built if available
 ) else (
-    link.exe /nologo /DLL /OUT:RawrXD_NativeModelBridge.dll RawrXD_NativeModelBridge.obj %LIBPATH% kernel32.lib ntdll.lib
-    if %errorlevel% equ 0 echo      [OK] RawrXD_NativeModelBridge.dll
+    link.exe /nologo /DLL /OUT:RawrXD_NativeModelBridge.dll RawrXD_NativeModelBridge.obj %LIBPATH% kernel32.lib ntdll.lib libcmt.lib libvcruntime.lib libucrt.lib
+    if !errorlevel! equ 0 (
+        echo      [OK] RawrXD_NativeModelBridge.dll
+    ) else (
+        echo      [FAIL] RawrXD_NativeModelBridge.dll Linkage Failed
+    )
 )
 
 echo [3/8] Building Inference Engine DLL...
 cl.exe %CFLAGS% /LD %INCLUDES% RawrXD_InferenceEngine.c /link %LIBPATH% /DLL /OUT:RawrXD_InferenceEngine.dll kernel32.lib
-if %errorlevel% equ 0 echo      [OK] RawrXD_InferenceEngine.dll
+if !errorlevel! equ 0 echo      [OK] RawrXD_InferenceEngine.dll
 
 echo [4/8] Building Agentic Engine DLL...
 cl.exe %CFLAGS% /LD %INCLUDES% RawrXD_AgenticEngine.c /link %LIBPATH% /DLL /OUT:RawrXD_AgenticEngine.dll kernel32.lib user32.lib shell32.lib
-if %errorlevel% equ 0 echo      [OK] RawrXD_AgenticEngine.dll
+if !errorlevel! equ 0 echo      [OK] RawrXD_AgenticEngine.dll
 
 echo [5/8] Building Terminal Manager DLL...
 cl.exe %CFLAGS% /LD %INCLUDES% RawrXD_TerminalMgr.c /link %LIBPATH% /DLL /OUT:RawrXD_TerminalMgr.dll kernel32.lib
-if %errorlevel% equ 0 echo      [OK] RawrXD_TerminalMgr.dll
+if !errorlevel! equ 0 echo      [OK] RawrXD_TerminalMgr.dll
 
 echo [6/8] Building Plan Orchestrator DLL...
 cl.exe %CFLAGS% /LD %INCLUDES% RawrXD_PlanOrchestrator.c /link %LIBPATH% /DLL /OUT:RawrXD_PlanOrchestrator.dll kernel32.lib shlwapi.lib
-if %errorlevel% equ 0 echo      [OK] RawrXD_PlanOrchestrator.dll
+if !errorlevel! equ 0 echo      [OK] RawrXD_PlanOrchestrator.dll
 
 echo [7/8] Building Win32 IDE (Full Production)...
 cl.exe %CFLAGS% %INCLUDES% Win32_IDE_Complete.cpp /link %LIBPATH% /SUBSYSTEM:WINDOWS /OUT:RawrXD_IDE_Production.exe %WINLIBS%
-if %errorlevel% equ 0 echo      [OK] RawrXD_IDE_Production.exe
+if !errorlevel! equ 0 echo      [OK] RawrXD_IDE_Production.exe
 
 echo [8/8] Building CLI...
 cl.exe %CFLAGS% %INCLUDES% RawrXD_CLI_Standalone.cpp /link %LIBPATH% /SUBSYSTEM:CONSOLE /OUT:RawrXD_CLI.exe %WINLIBS%
-if %errorlevel% equ 0 echo      [OK] RawrXD_CLI.exe
+if !errorlevel! equ 0 echo      [OK] RawrXD_CLI.exe
 
 echo.
 echo ============================================

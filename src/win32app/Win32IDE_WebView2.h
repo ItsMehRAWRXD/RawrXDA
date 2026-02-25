@@ -214,6 +214,7 @@ public:
     WebView2Result revealLine(int lineNumber);
     WebView2Result setReadOnly(bool readOnly);
     WebView2Result focus();
+    WebView2Result openDevTools();
 
     // ---- Callbacks ----
     void setReadyCallback(WebView2ReadyCallback fn, void* userData);

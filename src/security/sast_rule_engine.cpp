@@ -76,7 +76,7 @@ void SastRuleEngine::runRules(const std::string& path, const std::string& conten
     for (const Rule& rule : rules) {
         try {
             std::regex re(rule.pattern, rule.caseInsensitive ? std::regex::icase : std::regex_constants::ECMAScript);
-            std::cregex_iterator it(content.begin(), content.end(), re);
+            std::cregex_iterator it(base, base + totalSize, re);
             std::cregex_iterator end;
             for (; it != end; ++it) {
                 SastFinding f;

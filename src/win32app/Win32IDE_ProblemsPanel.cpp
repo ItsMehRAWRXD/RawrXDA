@@ -14,6 +14,36 @@ namespace {
 WNDPROC g_origProblemsPanelProc = nullptr;
 HWND g_hwndProblemsMain = nullptr;
 
+// The project builds as ANSI (no global UNICODE define). The ListView_* helper
+// macros in <commctrl.h> therefore resolve to ANSI variants (LV_ITEM/LPSTR),
+// which breaks when we pass wchar_t text. Use explicit wide (W) ListView
+// messages instead.
+#ifndef LVM_SETITEMTEXTW
+#define LVM_SETITEMTEXTW (LVM_FIRST + 116)
+#endif
+#ifndef LVM_INSERTITEMW
+#define LVM_INSERTITEMW  (LVM_FIRST + 77)
+#endif
+#ifndef LVM_INSERTCOLUMNW
+#define LVM_INSERTCOLUMNW (LVM_FIRST + 97)
+#endif
+
+static inline int LV_InsertItemW(HWND hwnd, const LVITEMW* item) {
+    return static_cast<int>(SendMessageW(hwnd, LVM_INSERTITEMW, 0,
+        reinterpret_cast<LPARAM>(item)));
+}
+static inline void LV_SetItemTextW(HWND hwnd, int iItem, int iSubItem, LPWSTR pszText) {
+    LVITEMW lvi{};
+    lvi.iSubItem = iSubItem;
+    lvi.pszText = pszText;
+    SendMessageW(hwnd, LVM_SETITEMTEXTW, static_cast<WPARAM>(iItem),
+        reinterpret_cast<LPARAM>(&lvi));
+}
+static inline int LV_InsertColumnW(HWND hwnd, int iCol, const LVCOLUMNW* col) {
+    return static_cast<int>(SendMessageW(hwnd, LVM_INSERTCOLUMNW,
+        static_cast<WPARAM>(iCol), reinterpret_cast<LPARAM>(col)));
+}
+
 LRESULT CALLBACK ProblemsPanelProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     if (msg == WM_COMMAND && g_hwndProblemsMain) {
         SendMessageW(g_hwndProblemsMain, WM_COMMAND, wParam, lParam);
@@ -32,7 +62,7 @@ std::wstring utf8ToWide(const std::string& s) {
 }
 
 Win32IDE* g_pProblemsIDE = nullptr;
-Win32IDE* g_pMainIDE = nullptr;
+// Note: g_pMainIDE is declared extern in Win32IDE.h — do not re-declare here
 
 LRESULT CALLBACK ProblemsListSubclassProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam,
                                           UINT_PTR uIdSubclass, DWORD_PTR dwRefData) {
@@ -53,7 +83,7 @@ void Win32IDE::initProblemsPanel() {
     if (m_problemsPanelInitialized) return;
 
     g_pProblemsIDE = this;
-    g_pMainIDE = this;
+    ::g_pMainIDE = this;
     HINSTANCE hInst = (HINSTANCE)GetWindowLongPtr(m_hwndMain, GWLP_HINSTANCE);
 
     RECT rc;
@@ -112,7 +142,7 @@ void Win32IDE::initProblemsPanel() {
         col.pszText = (LPWSTR)cols[i].text;
         col.cx = cols[i].width;
         col.iSubItem = i;
-        ListView_InsertColumn(m_hwndProblemsListView, i, &col);
+        LV_InsertColumnW(m_hwndProblemsListView, i, &col);
     }
 
     SetWindowSubclass(m_hwndProblemsListView, ProblemsListSubclassProc, 0, 0);
@@ -162,17 +192,17 @@ void Win32IDE::refreshProblemsView() {
 
         int sev = (p.severity >= 1 && p.severity <= 4) ? p.severity : 2;
         item.pszText = (LPWSTR)sevStr[sev];
-        ListView_InsertItem(m_hwndProblemsListView, &item);
+        LV_InsertItemW(m_hwndProblemsListView, &item);
 
-        ListView_SetItemText(m_hwndProblemsListView, (int)i, 1, (LPWSTR)utf8ToWide(p.source).c_str());
-        ListView_SetItemText(m_hwndProblemsListView, (int)i, 2, (LPWSTR)utf8ToWide(p.code).c_str());
-        ListView_SetItemText(m_hwndProblemsListView, (int)i, 3, (LPWSTR)utf8ToWide(p.message).c_str());
-        ListView_SetItemText(m_hwndProblemsListView, (int)i, 4, (LPWSTR)utf8ToWide(p.path).c_str());
+        { auto ws = utf8ToWide(p.source);  LV_SetItemTextW(m_hwndProblemsListView, (int)i, 1, (LPWSTR)ws.c_str()); }
+        { auto ws = utf8ToWide(p.code);    LV_SetItemTextW(m_hwndProblemsListView, (int)i, 2, (LPWSTR)ws.c_str()); }
+        { auto ws = utf8ToWide(p.message); LV_SetItemTextW(m_hwndProblemsListView, (int)i, 3, (LPWSTR)ws.c_str()); }
+        { auto ws = utf8ToWide(p.path);    LV_SetItemTextW(m_hwndProblemsListView, (int)i, 4, (LPWSTR)ws.c_str()); }
 
         wchar_t lineBuf[16];
         lineBuf[0] = L'\0';
         if (p.line > 0) _itow_s(p.line, lineBuf, 10);
-        ListView_SetItemText(m_hwndProblemsListView, (int)i, 5, lineBuf);
+        LV_SetItemTextW(m_hwndProblemsListView, (int)i, 5, lineBuf);
     }
 
     if (m_hwndStatusBar) {

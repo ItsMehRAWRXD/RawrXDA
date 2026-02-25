@@ -3,6 +3,8 @@
 
 
 #include <memory>
+#include <string>
+#include <vector>
 
 class ModelRouterAdapter;
 
@@ -20,7 +22,7 @@ class ModelRouterAdapter;
  * Connects to ModelRouterAdapter for all operations.
  * Emits user intent signals for IDE integration.
  */
-class ModelRouterWidget : public void {
+class ModelRouterWidget {
 
 public:
     explicit ModelRouterWidget(ModelRouterAdapter *adapter, void *parent = nullptr);
@@ -134,7 +136,7 @@ private:
     void onModelChanged(const std::string& model);
     void onStatusChanged(const std::string& status);
     void onCostUpdated(double total_cost);
-    void onStatisticsUpdated(const void*& stats);
+    void onStatisticsUpdated(const void* stats);
 
     // Button clicks
     void onGenerateButtonClicked();
@@ -153,6 +155,14 @@ private:
     void updateMetricsDisplay();
     void resetUI();
     void showTemporaryStatus(const std::string& message, int duration_ms = 3000);
+
+    // Metadata display methods
+    void setFamilyDisplay(const std::string& family);
+    void setParameterSizeDisplay(const std::string& params);
+    void setQuantizationDisplay(const std::string& quant);
+    void setCapabilitiesDisplay(const std::string& caps);
+    void setAgentBadge(bool isAgent);
+    void updateModelMetadata();  // pulls from hotpatch buffer
 
     // Members
     ModelRouterAdapter *m_adapter;
@@ -181,8 +191,15 @@ private:
     void *m_error_label;
     
     // Input/Output widgets
-    QPlainTextEdit *m_prompt_input;
-    QPlainTextEdit *m_output_display;
+    void *m_prompt_input;
+    void *m_output_display;
+
+    // Metadata display widgets
+    void *m_family_label;
+    void *m_params_label;
+    void *m_quant_label;
+    void *m_caps_label;
+    void *m_agent_badge;
     
     // State
     bool m_generation_active = false;

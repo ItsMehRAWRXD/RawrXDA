@@ -586,14 +586,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
             if (mmfResult.success) {
                 OutputDebugStringA("[main_win32] MMF cross-process state sync initialized\n");
             } else {
-                char err[256];
-                snprintf(err, sizeof(err),
-                         "[main_win32] MMF init warning: %s (non-fatal)\n",
-                         mmfResult.detail ? mmfResult.detail : "unknown");
-                OutputDebugStringA(err);
-            }
-        }
-    }
+                 char err[256];
+                 snprintf(err, sizeof(err),
+                          "[main_win32] MMF init warning: %s (non-fatal)\n",
+                         mmfResult.detail.empty() ? "unknown" : mmfResult.detail.c_str());
+                 OutputDebugStringA(err);
+             }
+         }
+     }
 
     // ========================================================================
     // JS EXTENSION HOST — Phase 37: QuickJS VSIX Runtime Bootstrap
@@ -607,14 +607,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
             if (jsResult.success) {
                 OutputDebugStringA("[main_win32] JS Extension Host initialized (QuickJS + PolyfillEngine)\n");
             } else {
-                char err[256];
-                snprintf(err, sizeof(err),
-                         "[main_win32] JS Extension Host init warning: %s (non-fatal)\n",
-                         jsResult.detail ? jsResult.detail : "unknown");
-                OutputDebugStringA(err);
-            }
-        }
-    }
+                 char err[256];
+                 snprintf(err, sizeof(err),
+                          "[main_win32] JS Extension Host init warning: %s (non-fatal)\n",
+                         jsResult.detail.empty() ? "unknown" : jsResult.detail.c_str());
+                 OutputDebugStringA(err);
+             }
+         }
+     }
 
     // ========================================================================
     // PLUGIN TRUST BOUNDARY — Phase 50: QuickJS Sandbox Enforcement

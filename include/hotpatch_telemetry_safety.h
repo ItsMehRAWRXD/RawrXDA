@@ -100,7 +100,7 @@ struct SafetyThresholds {
 // ============================================================================
 struct SafePatchResult {
     bool            success;          // Overall success (patch applied AND safe)
-    const char*     detail;
+    std::string     detail;
     int             errorCode;
 
     SafetyVerdict   verdict;
@@ -116,6 +116,16 @@ struct SafePatchResult {
     static SafePatchResult ok(const char* msg = "Safe patch applied") {
         SafePatchResult r{};
         r.success = true;
+        r.detail = msg ? msg : "";
+        r.errorCode = 0;
+        r.verdict = SafetyVerdict::Safe;
+        r.wasRolledBack = false;
+        return r;
+    }
+    static SafePatchResult ok(const std::string& msg, int code = 0) {
+        (void)code;
+        SafePatchResult r{};
+        r.success = true;
         r.detail = msg;
         r.errorCode = 0;
         r.verdict = SafetyVerdict::Safe;
@@ -123,6 +133,15 @@ struct SafePatchResult {
         return r;
     }
     static SafePatchResult error(const char* msg, int code = -1) {
+        SafePatchResult r{};
+        r.success = false;
+        r.detail = msg ? msg : "";
+        r.errorCode = code;
+        r.verdict = SafetyVerdict::Unsafe;
+        r.wasRolledBack = false;
+        return r;
+    }
+    static SafePatchResult error(const std::string& msg, int code = -1) {
         SafePatchResult r{};
         r.success = false;
         r.detail = msg;

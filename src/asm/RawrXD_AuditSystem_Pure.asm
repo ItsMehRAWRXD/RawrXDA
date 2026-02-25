@@ -9,12 +9,12 @@
 ; Accelerated pattern matching and checksum computation on x64
 ; ============================================================================
 
-.686p
-.xmm
-.model flat, stdcall
-.option casemap:none
-.option frame:auto
-.option win64:3
+; .686p
+; .xmm
+; .model flat, stdcall
+; .option casemap:none
+; .option frame:auto
+; .option win64:3
 
 ; ============================================================================
 ; EXTERNAL IMPORTS

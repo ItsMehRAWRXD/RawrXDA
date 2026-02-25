@@ -148,19 +148,39 @@ bool matchErrorBased(const std::string& body, char* dbType, int dbTypeSize) {
 // WinHTTP simple GET (in-house)
 int httpGet(const std::string& url, std::string& outBody, int timeoutMs, const char* userAgent) {
 #ifdef _WIN32
-    URL_COMPONENTSA uc = {};
-    char host[256] = {};
-    char path[2048] = {};
+    // WinHTTP is wide-char only; convert URL and UA (ASCII/UTF-8) to UTF-16.
+    auto to_wide = [](const std::string& s) -> std::wstring {
+        if (s.empty()) return {};
+        int n = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), (int)s.size(), nullptr, 0);
+        if (n <= 0) n = MultiByteToWideChar(CP_ACP, 0, s.c_str(), (int)s.size(), nullptr, 0);
+        if (n <= 0) return {};
+        std::wstring w;
+        w.resize((size_t)n);
+        int wrote = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), (int)s.size(), w.data(), n);
+        if (wrote <= 0) wrote = MultiByteToWideChar(CP_ACP, 0, s.c_str(), (int)s.size(), w.data(), n);
+        if (wrote <= 0) return {};
+        return w;
+    };
+
+    std::wstring wurl = to_wide(url);
+    if (wurl.empty()) return -1;
+
+    URL_COMPONENTS uc = {};
+    wchar_t host[256] = {};
+    wchar_t path[2048] = {};
     uc.dwStructSize = sizeof(uc);
     uc.lpszHostName = host;
-    uc.dwHostNameLength = sizeof(host);
+    uc.dwHostNameLength = (DWORD)_countof(host);
     uc.lpszUrlPath = path;
-    uc.dwUrlPathLength = sizeof(path);
+    uc.dwUrlPathLength = (DWORD)_countof(path);
 
-    if (!WinHttpCrackUrlA(url.c_str(), (DWORD)url.size(), 0, &uc))
+    if (!WinHttpCrackUrl(wurl.c_str(), (DWORD)wurl.size(), 0, &uc))
         return -1;
 
-    HINTERNET hSession = WinHttpOpenA(userAgent ? userAgent : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    std::wstring wua = to_wide(userAgent ? std::string(userAgent) : std::string());
+    if (wua.empty()) wua = L"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
+
+    HINTERNET hSession = WinHttpOpen(wua.c_str(),
         WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
     if (!hSession) return -1;
 
@@ -168,7 +188,7 @@ int httpGet(const std::string& url, std::string& outBody, int timeoutMs, const c
     if (!hConnect) { WinHttpCloseHandle(hSession); return -1; }
 
     DWORD flags = (uc.nScheme == INTERNET_SCHEME_HTTPS) ? WINHTTP_FLAG_SECURE : 0;
-    HINTERNET hRequest = WinHttpOpenRequestA(hConnect, "GET", path, nullptr, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, flags);
+    HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"GET", path, nullptr, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, flags);
     if (!hRequest) { WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession); return -1; }
 
     if (timeoutMs > 0) {

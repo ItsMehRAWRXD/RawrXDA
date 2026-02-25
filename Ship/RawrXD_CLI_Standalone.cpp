@@ -337,7 +337,39 @@ bool LoadModel(const std::string& path) {
                     case 2: case 3: elemSize = 2; break;
                     case 4: case 5: case 6: elemSize = 4; break;
                     case 10: case 11: case 12: elemSize = 8; break;
-                    case 8: // String array - read each string\n                        for (uint64_t j = 0; j < elemCount && f.good(); j++) {\n                            uint64_t sLen;\n                            f.read((char*)&sLen, 8);\n                            if (sLen > 0 && sLen < 65536) f.seekg(sLen, std::ios::cur);\n                        }\n                        elemSize = 0; // Already handled\n                        break;\n                    default: elemSize = 4; break;\n                }\n                if (elemSize > 0) {\n                    f.seekg(elemSize * elemCount, std::ios::cur);\n                }\n                break;\n            }\n            default:\n                // Unknown type - cannot continue parsing KV\n                std::cout << "[*] Unknown KV type " << valueType << " for key: " << key << std::endl;\n                goto done_kv;\n        }\n    }\n    done_kv:\n    \n    std::cout << "[+] Model config: vocab=" << g_model.n_vocab \n              << " ctx=" << g_model.n_ctx \n              << " embd=" << g_model.n_embd \n              << " layers=" << g_model.n_layer << std::endl;\n    if (!g_model.architecture.empty())\n        std::cout << "[+] Architecture: " << g_model.architecture << std::endl;\n    \n    g_model.loaded = true;\n    g_model.modelPath = path;\n    g_model.fileSize = fileSize;
+                    case 8: // String array - read each string
+                        for (uint64_t j = 0; j < elemCount && f.good(); j++) {
+                            uint64_t sLen;
+                            f.read((char*)&sLen, 8);
+                            if (sLen > 0 && sLen < 65536) f.seekg(sLen, std::ios::cur);
+                        }
+                        elemSize = 0; // Already handled
+                        break;
+                    default: elemSize = 4; break;
+                }
+                if (elemSize > 0) {
+                    f.seekg(elemSize * elemCount, std::ios::cur);
+                }
+                break;
+            }
+            default:
+                // Unknown type - cannot continue parsing KV
+                std::cout << "[*] Unknown KV type " << valueType << " for key: " << key << std::endl;
+                goto done_kv;
+        }
+    }
+    done_kv:
+    
+    std::cout << "[+] Model config: vocab=" << g_model.n_vocab 
+              << " ctx=" << g_model.n_ctx 
+              << " embd=" << g_model.n_embd 
+              << " layers=" << g_model.n_layer << std::endl;
+    if (!g_model.architecture.empty())
+        std::cout << "[+] Architecture: " << g_model.architecture << std::endl;
+    
+    g_model.loaded = true;
+    g_model.modelPath = path;
+    g_model.fileSize = fileSize;
     
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);

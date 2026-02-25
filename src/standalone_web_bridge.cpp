@@ -15,9 +15,6 @@
 #include <ws2tcpip.h>
 #pragma comment(lib, "ws2_32.lib")
 #define CLOSESOCKET closesocket
-#define SOCKET_ERROR SOCKET_ERROR
-#define INVALID_SOCKET INVALID_SOCKET
-typedef SOCKET socket_t;
 #else
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -27,7 +24,6 @@ typedef SOCKET socket_t;
 #define CLOSESOCKET close
 #define SOCKET_ERROR -1
 #define INVALID_SOCKET -1
-typedef int socket_t;
 #endif
 
 using json = nlohmann::json;

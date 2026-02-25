@@ -18,32 +18,9 @@
 #include <atomic>
 
 // ---------------------------------------------------------------------------
-// PatchResult — Structured result type (no exceptions)
+// PatchResult — Canonical definition from patch_result.hpp
 // ---------------------------------------------------------------------------
-#ifndef RAWRXD_PATCHRESULT_DEFINED
-#define RAWRXD_PATCHRESULT_DEFINED
-struct PatchResult {
-    bool        success;
-    const char* detail;
-    int         errorCode;
-
-    static PatchResult ok(const char* msg = "Success") {
-        PatchResult r;
-        r.success   = true;
-        r.detail    = msg;
-        r.errorCode = 0;
-        return r;
-    }
-
-    static PatchResult error(const char* msg, int code = -1) {
-        PatchResult r;
-        r.success   = false;
-        r.detail    = msg;
-        r.errorCode = code;
-        return r;
-    }
-};
-#endif // RAWRXD_PATCHRESULT_DEFINED
+#include "patch_result.hpp"
 
 // ---------------------------------------------------------------------------
 // MemoryPatchEntry — Describes one in-memory patch operation

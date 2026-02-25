@@ -13,12 +13,14 @@
 #include <random>
 #include <bitset>
 #include <thread>
+#include "quantum_autonomous_todo_system.hpp"
+
+class AgenticDeepThinkingEngine;
 
 // Forward declarations
 namespace RawrXD::Agent {
-    class AgenticDeepThinkingEngine;
-    struct TaskDefinition;
-    struct ExecutionResult;
+    using TaskDefinition = QuantumAutonomousTodoSystem::TaskDefinition;
+    using ExecutionResult = QuantumAutonomousTodoSystem::ExecutionResult;
 }
 
 extern "C" {
@@ -128,7 +130,7 @@ public:
     struct AgentInstance {
         AgentConfig config;
         std::atomic<AgentState> state{AgentState::Idle};
-        std::unique_ptr<AgenticDeepThinkingEngine> thinking_engine;
+        std::unique_ptr<::AgenticDeepThinkingEngine> thinking_engine;
         std::thread worker_thread;
         
         // Runtime state

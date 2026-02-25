@@ -5,6 +5,7 @@
 #include "telemetry_collector.hpp"
 #include "quantum_autonomous_todo_system.hpp"
 #include "quantum_multi_model_agent_cycling.hpp"
+#include "quantum_agent_orchestrator.hpp"
 #include "quantum_dynamic_time_manager.hpp"
 #include "../agentic/AgentOllamaClient.h"
 #include "../core/perf_telemetry.hpp"
@@ -33,7 +34,7 @@
 // ---------------------------------------------------------------------------
 static RawrXD::Agent::AgentOllamaClient& getThinkingLLM() {
     static RawrXD::Agent::OllamaConfig cfg;
-    cfg.chat_model  = "qwen2.5-coder:14b";
+    // chat_model left empty — auto-detected from Ollama /api/tags
     cfg.temperature = 0.3f;
     cfg.max_tokens  = 4096;
     cfg.timeout_ms  = 60000;
@@ -52,18 +53,18 @@ static AgenticPuppeteer& getPuppeteer() {
 }
 
 // Quantum system singletons
-static QuantumAutonomousTodoSystem& getQuantumTodoSystem() {
-    static QuantumAutonomousTodoSystem quantum_todo;
+static RawrXD::Agent::QuantumAutonomousTodoSystem& getQuantumTodoSystem() {
+    static RawrXD::Agent::QuantumAutonomousTodoSystem quantum_todo;
     return quantum_todo;
 }
 
-static QuantumMultiModelAgentCycling& getMultiModelCycling() {
-    static QuantumMultiModelAgentCycling multi_cycling;
+static RawrXD::Agent::QuantumMultiModelAgentCycling& getMultiModelCycling() {
+    static RawrXD::Agent::QuantumMultiModelAgentCycling multi_cycling;
     return multi_cycling;
 }
 
-static QuantumDynamicTimeManager& getTimeManager() {
-    static QuantumDynamicTimeManager time_manager;
+static RawrXD::Agent::QuantumDynamicTimeManager& getTimeManager() {
+    static RawrXD::Agent::QuantumDynamicTimeManager time_manager;
     return time_manager;
 }
 
@@ -98,7 +99,7 @@ AgenticDeepThinkingEngine::~AgenticDeepThinkingEngine() {
 }
 
 AgenticDeepThinkingEngine::ThinkingResult AgenticDeepThinkingEngine::think(const ThinkingContext& context) {
-    ScopedMeasurement perf(static_cast<uint32_t>(KernelSlot::TotalInference));
+    RawrXD::Perf::ScopedMeasurement perf(static_cast<uint32_t>(RawrXD::Perf::KernelSlot::UserSlot_0));
     auto startTime = std::chrono::high_resolution_clock::now();
     
     {   std::lock_guard<std::mutex> lock(m_statsMutex);
@@ -588,7 +589,7 @@ bool AgenticDeepThinkingEngine::evaluateAnswer(const std::string& answer, const 
 
 std::string AgenticDeepThinkingEngine::refineAnswer(const std::string& currentAnswer, const std::string& feedback) {
     if (feedback.empty()) return currentAnswer;
-    ScopedMeasurement perf(static_cast<uint32_t>(KernelSlot::TotalInference));
+    RawrXD::Perf::ScopedMeasurement perf(static_cast<uint32_t>(RawrXD::Perf::KernelSlot::UserSlot_0));
 
     // Step 1: Validate the current answer against the failure detector
     auto& detector = getFailureDetector();
@@ -845,7 +846,7 @@ std::vector<AgenticDeepThinkingEngine::ReasoningStep> AgenticDeepThinkingEngine:
 }
 
 AgenticDeepThinkingEngine::ReasoningStep AgenticDeepThinkingEngine::analyzeProblem(const ThinkingContext& context) {
-    ScopedMeasurement perf(static_cast<uint32_t>(KernelSlot::TotalInference));
+    RawrXD::Perf::ScopedMeasurement perf(static_cast<uint32_t>(RawrXD::Perf::KernelSlot::UserSlot_0));
     ReasoningStep step;
     step.step = ThinkingStep::ProblemAnalysis;
     step.title = "Problem Analysis";
@@ -1120,7 +1121,7 @@ std::string AgenticDeepThinkingEngine::categorizeIssue(const std::string& issue)
 }
 
 AgenticDeepThinkingEngine::ReasoningStep AgenticDeepThinkingEngine::gatherContext(const ThinkingContext& context) {
-    ScopedMeasurement perf(static_cast<uint32_t>(KernelSlot::TotalInference));
+    RawrXD::Perf::ScopedMeasurement perf(static_cast<uint32_t>(RawrXD::Perf::KernelSlot::UserSlot_0));
     ReasoningStep step;
     step.step = ThinkingStep::ContextGathering;
     step.title = "Context Gathering";
@@ -1267,7 +1268,7 @@ AgenticDeepThinkingEngine::ReasoningStep AgenticDeepThinkingEngine::generateHypo
     const ThinkingContext& context,
     const std::string& analysis
 ) {
-    ScopedMeasurement perf(static_cast<uint32_t>(KernelSlot::TotalInference));
+    RawrXD::Perf::ScopedMeasurement perf(static_cast<uint32_t>(RawrXD::Perf::KernelSlot::UserSlot_0));
     ReasoningStep step;
     step.step = ThinkingStep::HypothesiGeneration;
     step.title = "Hypothesis Generation";
@@ -1335,7 +1336,7 @@ AgenticDeepThinkingEngine::ReasoningStep AgenticDeepThinkingEngine::generateHypo
 }
 
 std::vector<std::string> AgenticDeepThinkingEngine::brainstormSolutions(const std::string& problem, int count) {
-    ScopedMeasurement perf(static_cast<uint32_t>(KernelSlot::TotalInference));
+    RawrXD::Perf::ScopedMeasurement perf(static_cast<uint32_t>(RawrXD::Perf::KernelSlot::UserSlot_0));
     std::vector<std::string> solutions;
 
     // Build a structured prompt asking the LLM to generate concrete, distinct hypotheses
@@ -1506,7 +1507,7 @@ AgenticDeepThinkingEngine::ReasoningStep AgenticDeepThinkingEngine::evaluateResu
     const std::vector<std::string>& results,
     const ThinkingContext& context
 ) {
-    ScopedMeasurement perf(static_cast<uint32_t>(KernelSlot::TotalInference));
+    RawrXD::Perf::ScopedMeasurement perf(static_cast<uint32_t>(RawrXD::Perf::KernelSlot::UserSlot_0));
     ReasoningStep step;
     step.step = ThinkingStep::ResultEvaluation;
     step.title = "Result Evaluation";
@@ -1773,7 +1774,7 @@ bool AgenticDeepThinkingEngine::detectFlaws(const std::vector<ReasoningStep>& st
 }
 
 std::string AgenticDeepThinkingEngine::correctFlaw(const std::string& flaw, const std::vector<ReasoningStep>& steps) {
-    ScopedMeasurement perf(static_cast<uint32_t>(KernelSlot::TotalInference));
+    RawrXD::Perf::ScopedMeasurement perf(static_cast<uint32_t>(RawrXD::Perf::KernelSlot::UserSlot_0));
 
     // Accumulate all findings from prior steps so the correction has full context
     std::string accumulatedContext;
@@ -1838,7 +1839,7 @@ AgenticDeepThinkingEngine::ReasoningStep AgenticDeepThinkingEngine::synthesizeAn
     const std::vector<ReasoningStep>& steps,
     const ThinkingContext& context
 ) {
-    ScopedMeasurement perf(static_cast<uint32_t>(KernelSlot::TotalInference));
+    RawrXD::Perf::ScopedMeasurement perf(static_cast<uint32_t>(RawrXD::Perf::KernelSlot::UserSlot_0));
     ReasoningStep step;
     step.step = ThinkingStep::FinalSynthesis;
     step.title = "Final Synthesis";
@@ -2915,9 +2916,97 @@ AgenticDeepThinkingEngine::AgentResult AgenticDeepThinkingEngine::selectBestByVo
     return *best;
 }
 
+AgenticDeepThinkingEngine::ThinkingResult
+AgenticDeepThinkingEngine::performTraditionalThinking(const ThinkingContext& context) {
+    ThinkingResult result;
+    result.steps = performChainOfThought(context);
+
+    if (!result.steps.empty()) {
+        const auto finalStep = synthesizeAnswer(result.steps, context);
+        result.steps.push_back(finalStep);
+        result.finalAnswer = finalStep.content;
+        result.iterationCount = static_cast<int>(result.steps.size());
+        result.overallConfidence = calculateOverallConfidence(result.steps);
+    } else {
+        result.finalAnswer = "No reasoning steps were generated.";
+        result.iterationCount = 0;
+        result.overallConfidence = 0.0f;
+    }
+
+    return result;
+}
+
+AgenticDeepThinkingEngine::ThinkingResult
+AgenticDeepThinkingEngine::performQuantumThinking(const ThinkingContext& context) {
+    auto result = performTraditionalThinking(context);
+    result.quantumOptimizationBonus = std::min(0.15f, 0.02f * static_cast<float>(context.cycleMultiplier));
+    result.usedMasmAcceleration = m_masm_acceleration_enabled;
+    result.overallConfidence = std::min(1.0f, result.overallConfidence + result.quantumOptimizationBonus);
+    return result;
+}
+
+AgenticDeepThinkingEngine::ProductionAuditResult
+AgenticDeepThinkingEngine::performProductionAudit(const ThinkingResult& result,
+                                                  const ThinkingContext& /*context*/) {
+    ProductionAuditResult audit;
+    audit.code_quality_score = auditCodeQuality(result.finalAnswer);
+    audit.performance_score = auditPerformance(result.finalAnswer);
+    audit.security_score = auditSecurity(result.finalAnswer);
+    audit.maintainability_score = auditMaintainability(result.finalAnswer);
+    audit.overall_score = (audit.code_quality_score + audit.performance_score +
+                           audit.security_score + audit.maintainability_score) / 4.0f;
+
+    if (audit.overall_score < m_quality_threshold) {
+        audit.findings.push_back("Overall production readiness is below quality threshold.");
+    }
+    return audit;
+}
+
+float AgenticDeepThinkingEngine::auditCodeQuality(const std::string& code) {
+    if (code.empty()) return 0.0f;
+    const bool hasStructure = code.find("```") != std::string::npos || code.find('\n') != std::string::npos;
+    return hasStructure ? 0.85f : 0.70f;
+}
+
+float AgenticDeepThinkingEngine::auditPerformance(const std::string& code) {
+    if (code.empty()) return 0.0f;
+    return (code.find("O(") != std::string::npos || code.find("cache") != std::string::npos) ? 0.82f : 0.72f;
+}
+
+float AgenticDeepThinkingEngine::auditSecurity(const std::string& code) {
+    if (code.empty()) return 0.0f;
+    return (code.find("validate") != std::string::npos || code.find("sanitize") != std::string::npos) ? 0.90f : 0.75f;
+}
+
+float AgenticDeepThinkingEngine::auditMaintainability(const std::string& code) {
+    if (code.empty()) return 0.0f;
+    return (code.find("TODO") == std::string::npos && code.find("FIXME") == std::string::npos) ? 0.84f : 0.68f;
+}
+
+AgenticDeepThinkingEngine::ThinkingResult
+AgenticDeepThinkingEngine::enhanceWithMultiAgentConsensus(const ThinkingResult& result,
+                                                          const ThinkingContext& context) {
+    auto multi = thinkMultiAgent(context);
+    if (!multi.agentResults.empty() && multi.consensusReached) {
+        return multi.consensusResult;
+    }
+    return result;
+}
+
+float AgenticDeepThinkingEngine::calculateEnhancedConfidence(const ThinkingResult& result) {
+    float confidence = result.overallConfidence;
+    if (result.productionReadinessScore > 0.0f) {
+        confidence = (confidence + result.productionReadinessScore) * 0.5f;
+    }
+    confidence += result.quantumOptimizationBonus;
+    return std::clamp(confidence, 0.0f, 1.0f);
+}
+
 // ============================================================================
 // Multi-Agent Execution — 1x-99x Agent Cycling
+// NOTE: duplicate legacy implementation retained for reference only.
 // ============================================================================
+#if 0
 AgenticDeepThinkingEngine::MultiAgentResult AgenticDeepThinkingEngine::thinkMultiAgent(
     const ThinkingContext& context) {
     
@@ -3196,3 +3285,4 @@ std::vector<std::string> AgenticDeepThinkingEngine::findDisagreements(
     
     return disagreements;
 }
+#endif

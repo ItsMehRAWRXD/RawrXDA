@@ -692,58 +692,10 @@ Titan_GetModelSizeClass PROC FRAME
 Titan_GetModelSizeClass ENDP
 
 ; ============================================================
-; SUBMIT WITH EXPLICIT REGISTER SETUP
+; SUBMIT
 ; ============================================================
-
-Titan_SubmitChunk PROC FRAME
-    ; rcx = chunk_ptr, rdx = chunk_size, r8 = completion_callback
-    push rbx
-    .pushreg rbx
-    push rsi
-    .pushreg rsi
-    push rdi
-    .pushreg rdi
-    sub rsp, 48
-    .allocstack 48
-    .endprolog
-    
-    mov rbx, rcx
-    mov rsi, rdx
-    mov rdi, r8
-    
-    ; Allocate completion context
-    call GetProcessHeap
-    mov rcx, rax
-    xor edx, edx
-    mov r8d, 64             ; sizeof(CompletionContext)
-    call HeapAlloc
-    
-    test rax, rax
-    jz @@failed
-    
-    ; Setup context
-    mov [rax], rbx          ; chunk_ptr
-    mov [rax+8], rsi        ; chunk_size
-    mov [rax+16], rdi       ; callback
-    
-    ; Submit to queue (simplified)
-    call Titan_LockScheduler
-    ; Add to pending queue
-    call Titan_UnlockScheduler
-    
-    xor rax, rax
-    jmp @@done
-    
-@@failed:
-    mov rax, -1
-    
-@@done:
-    add rsp, 48
-    pop rdi
-    pop rsi
-    pop rbx
-    ret
-Titan_SubmitChunk ENDP
+; Titan_SubmitChunk is implemented in the high-level API section below as a
+; direct ring-buffer writer (producer side), with wrap handling.
 
 ; ============================================================
 ; MAIN INITIALIZATION
@@ -843,6 +795,24 @@ CTX_STATE_LOADING   EQU 1
 CTX_STATE_ACTIVE    EQU 2
 CTX_STATE_COMPLETE  EQU 3
 
+; Context struct extra fields (we allocate 128 bytes in Titan_CreateContext)
+; Existing layout uses:
+; +0  magic (DWORD)
+; +4  state (DWORD)
+; +8  hModelFile (QWORD)
+; +16 hModelMap (QWORD)
+; +24 pModelBase (QWORD)
+; +32 modelSizeClass (DWORD)
+; +40 ringReadIdx (QWORD)
+; +48 lastHeartbeat (QWORD)
+; +56 userData (QWORD)
+; We use remaining bytes for streaming thread state:
+CTX_OFF_THREAD_HANDLE  EQU 64        ; QWORD
+CTX_OFF_STOP_EVENT     EQU 72        ; QWORD
+CTX_OFF_PROMPT_PTR     EQU 80        ; QWORD
+CTX_OFF_PROMPT_LEN     EQU 88        ; QWORD
+CTX_OFF_TOKEN_COUNT    EQU 96        ; DWORD
+
 ; Ring header offsets (matches 64MB ring layout)
 OFF_WRITE_IDX       EQU 0
 OFF_READ_IDX        EQU 8
@@ -857,6 +827,12 @@ align 8
 g_ContextPtrs       QWORD MAX_CONTEXTS DUP(?)
 g_ContextCount      DWORD ?
 g_RingHeaderPtr     QWORD ?          ; Points to ring header (write/read idx)
+
+.DATA
+szNativePrefix      BYTE "[Native] ",0
+szNativePrefixLen   EQU ($ - szNativePrefix - 1)
+szNativeSuffix      BYTE 13,10,"[done]",13,10,0
+szNativeSuffixLen   EQU ($ - szNativeSuffix - 1)
 
 .CODE
 
@@ -910,6 +886,11 @@ Titan_CreateContext PROC FRAME
     mov QWORD PTR [rbx+40], 0            ; +40: RingReadIdx (consumer pointer)
     mov QWORD PTR [rbx+48], 0            ; +48: LastHeartbeat
     mov QWORD PTR [rbx+56], 0            ; +56: UserData (callback context)
+    mov QWORD PTR [rbx+CTX_OFF_THREAD_HANDLE], 0
+    mov QWORD PTR [rbx+CTX_OFF_STOP_EVENT], 0
+    mov QWORD PTR [rbx+CTX_OFF_PROMPT_PTR], 0
+    mov QWORD PTR [rbx+CTX_OFF_PROMPT_LEN], 0
+    mov DWORD PTR [rbx+CTX_OFF_TOKEN_COUNT], 0
     
     ; Store in slot
     lea rdi, g_ContextPtrs              ; Reload base (rdi may be clobbered)
@@ -1051,6 +1032,231 @@ Titan_LoadModel_GGUF PROC FRAME
 Titan_LoadModel_GGUF ENDP
 
 ; ----------------------------------------------------------------------------
+; Titan_SubmitChunk - Write a byte span into the streaming ring buffer
+; RCX = chunk_ptr, RDX = chunk_size, R8 = completion_callback (ignored)
+; Returns: RAX = bytes written (0 if no space), or -1 if ring not initialized.
+; ----------------------------------------------------------------------------
+Titan_SubmitChunk PROC FRAME
+    push rbx
+    .pushreg rbx
+    push rsi
+    .pushreg rsi
+    push rdi
+    .pushreg rdi
+    push r12
+    .pushreg r12
+    push r13
+    .pushreg r13
+    sub rsp, 40
+    .allocstack 40
+    .endprolog
+
+    mov rsi, rcx                    ; src
+    mov r12, rdx                    ; len
+
+    test rsi, rsi
+    jz @@zero
+    test r12, r12
+    jz @@zero
+
+    mov rbx, g_RingHeaderPtr
+    test rbx, rbx
+    jz @@no_ring
+
+    ; Serialize producer writes.
+    call Titan_LockScheduler
+
+    ; Compute free space in data region.
+    mov r13, g_RingBufferSize
+    sub r13, 4096                   ; dataSize
+
+    mov rax, [rbx+OFF_WRITE_IDX]
+    mov rdx, [rbx+OFF_READ_IDX]
+    sub rax, rdx                    ; used = write - read
+    mov rcx, r13
+    sub rcx, rax                    ; free = dataSize - used
+
+    test rcx, rcx
+    jz @@unlock_zero
+
+    ; Cap len to free space.
+    cmp r12, rcx
+    cmova r12, rcx
+
+    ; writeOff = writeIdx % dataSize
+    mov rax, [rbx+OFF_WRITE_IDX]
+    xor rdx, rdx
+    div r13                         ; rdx = remainder
+
+    ; dest = base + header + writeOff
+    mov rdi, g_RingBufferBase
+    add rdi, 4096
+    add rdi, rdx
+
+    ; firstPart = min(len, dataSize - writeOff)
+    mov rcx, r13
+    sub rcx, rdx                    ; toEnd
+    mov r8, r12
+    cmp r8, rcx
+    cmova r8, rcx                   ; r8 = firstPart
+
+    ; Copy first part
+    mov rcx, rdi                    ; dst
+    mov rdx, rsi                    ; src
+    call RtlCopyMemory
+
+    ; Copy second part (wrap) if needed.
+    mov rax, r12
+    sub rax, r8
+    jz @@advance
+
+    ; dst = base + header
+    mov rcx, g_RingBufferBase
+    add rcx, 4096
+    ; src = src + firstPart
+    lea rdx, [rsi+r8]
+    mov r8, rax
+    call RtlCopyMemory
+
+@@advance:
+    ; Advance write idx by bytes written.
+    mov rax, [rbx+OFF_WRITE_IDX]
+    add rax, r12
+    mov [rbx+OFF_WRITE_IDX], rax
+
+    call Titan_UnlockScheduler
+    mov rax, r12
+    jmp @@done
+
+@@unlock_zero:
+    call Titan_UnlockScheduler
+@@zero:
+    xor eax, eax
+    jmp @@done
+
+@@no_ring:
+    mov rax, -1
+
+@@done:
+    add rsp, 40
+    pop r13
+    pop r12
+    pop rdi
+    pop rsi
+    pop rbx
+    ret
+Titan_SubmitChunk ENDP
+
+; ----------------------------------------------------------------------------
+; Titan_StreamProducerThread - minimal native streaming producer
+; RCX = Context
+; ----------------------------------------------------------------------------
+Titan_StreamProducerThread PROC FRAME
+    push rbx
+    .pushreg rbx
+    push r12
+    .pushreg r12
+    push r13
+    .pushreg r13
+    push r14
+    .pushreg r14
+    push r15
+    .pushreg r15
+    sub rsp, 40
+    .allocstack 40
+    .endprolog
+
+    mov rbx, rcx                        ; ctx
+    test rbx, rbx
+    jz @@exit
+
+    ; Prefix
+    lea rcx, szNativePrefix
+    mov rdx, szNativePrefixLen
+    xor r8, r8
+    call Titan_SubmitChunk
+
+    ; Stream the prompt back in small chunks as a placeholder "token stream".
+    mov r12, [rbx+CTX_OFF_PROMPT_PTR]
+    mov r13, [rbx+CTX_OFF_PROMPT_LEN]
+    test r12, r12
+    jz @@finish
+    test r13, r13
+    jz @@finish
+
+    xor r14d, r14d                      ; offset
+
+@@loop:
+    ; Stop requested?
+    mov rcx, [rbx+CTX_OFF_STOP_EVENT]
+    test rcx, rcx
+    jz @@no_stop_check
+    xor edx, edx
+    call WaitForSingleObject
+    cmp eax, WAIT_OBJECT_0
+    je @@finish
+@@no_stop_check:
+
+    cmp r14, r13
+    jae @@finish
+
+    ; chunk = min(16, remaining)
+    mov r15, r13
+    sub r15, r14                        ; remaining
+    cmp r15, 16
+    jbe @@chunk_ok
+    mov r15, 16
+@@chunk_ok:
+
+    lea rcx, [r12+r14]                  ; src
+    mov rdx, r15                        ; len
+    xor r8, r8
+    call Titan_SubmitChunk
+
+    ; token count
+    inc DWORD PTR [rbx+CTX_OFF_TOKEN_COUNT]
+
+    ; small delay to simulate streaming
+    mov ecx, 5
+    call Sleep
+
+    add r14, r15
+    jmp @@loop
+
+@@finish:
+    ; Suffix + mark complete
+    lea rcx, szNativeSuffix
+    mov rdx, szNativeSuffixLen
+    xor r8, r8
+    call Titan_SubmitChunk
+
+    ; Set COMPLETE flag + update context state.
+    call Titan_LockScheduler
+    mov rax, g_RingHeaderPtr
+    test rax, rax
+    jz @@unlock_done
+    mov ecx, [rax+OFF_FLAGS]
+    or ecx, FLAG_COMPLETE
+    and ecx, (NOT FLAG_STREAMING)
+    mov [rax+OFF_FLAGS], ecx
+@@unlock_done:
+    call Titan_UnlockScheduler
+
+    mov DWORD PTR [rbx+4], CTX_STATE_COMPLETE
+
+@@exit:
+    xor eax, eax
+    add rsp, 40
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+Titan_StreamProducerThread ENDP
+
+; ----------------------------------------------------------------------------
 ; Titan_BeginStreamingInference - Start inference, activate ring producer
 ; RCX = Context, RDX = Prompt (char*), R8 = PromptLen
 ; Output: RAX = 1 success, 0 fail
@@ -1079,32 +1285,64 @@ Titan_BeginStreamingInference PROC FRAME
     
     ; Lock Scheduler for ring coordination
     call Titan_LockScheduler
-    
+
     ; Reset consumer read pointer for fresh inference
     mov QWORD PTR [rbx+40], 0
-    
+
     ; Initialize ring header if first use (set g_RingHeaderPtr)
     mov rax, g_RingBufferBase
     mov g_RingHeaderPtr, rax
-    
+
     ; Reset ring indices (producer starts at 0)
     mov rcx, g_RingHeaderPtr
     mov QWORD PTR [rcx+OFF_WRITE_IDX], 0
     mov QWORD PTR [rcx+OFF_READ_IDX], 0
     mov DWORD PTR [rcx+OFF_FLAGS], FLAG_STREAMING
-    
-    ; Submit prompt as initial chunk via existing primitive
-    mov rcx, r12            ; chunk_ptr = prompt
-    mov rdx, r13            ; chunk_size = prompt_len
-    xor r8, r8              ; No callback
-    call Titan_SubmitChunk
-    
+
+    ; Store prompt pointer/len in context for producer thread.
+    mov [rbx+CTX_OFF_PROMPT_PTR], r12
+    mov [rbx+CTX_OFF_PROMPT_LEN], r13
+    mov DWORD PTR [rbx+CTX_OFF_TOKEN_COUNT], 0
+
+    ; Ensure stop event exists (manual reset, initially non-signaled).
+    mov rax, [rbx+CTX_OFF_STOP_EVENT]
+    test rax, rax
+    jnz @@have_stop
+    xor rcx, rcx
+    mov edx, 1
+    xor r8d, r8d
+    xor r9, r9
+    call CreateEventA
+    mov [rbx+CTX_OFF_STOP_EVENT], rax
+@@have_stop:
+    ; Clear stop event for this run.
+    mov rcx, [rbx+CTX_OFF_STOP_EVENT]
+    test rcx, rcx
+    jz @@unlock_fail
+    call ResetEvent
+
+    ; Spawn producer thread.
+    xor rcx, rcx
+    xor edx, edx
+    mov r8, OFFSET Titan_StreamProducerThread
+    mov r9, rbx
+    mov QWORD PTR [rsp+32], 0
+    mov QWORD PTR [rsp+40], 0
+    call CreateThread
+    test rax, rax
+    jz @@unlock_fail
+    mov [rbx+CTX_OFF_THREAD_HANDLE], rax
+
     ; Transition to ACTIVE
     mov DWORD PTR [rbx+4], CTX_STATE_ACTIVE
-    
+
     call Titan_UnlockScheduler
     mov eax, 1
     jmp @@done
+
+@@unlock_fail:
+    call Titan_UnlockScheduler
+    jmp @@fail
     
 @@fail:
     xor eax, eax
@@ -1116,6 +1354,64 @@ Titan_BeginStreamingInference PROC FRAME
     pop rbx
     ret
 Titan_BeginStreamingInference ENDP
+
+; ----------------------------------------------------------------------------
+; Titan_StopInference - stop streaming producer for a context
+; RCX = Context
+; ----------------------------------------------------------------------------
+PUBLIC Titan_StopInference
+Titan_StopInference PROC FRAME
+    push rbx
+    .pushreg rbx
+    sub rsp, 28h
+    .allocstack 28h
+    .endprolog
+
+    mov rbx, rcx
+    test rbx, rbx
+    jz @@done
+    cmp DWORD PTR [rbx], CTX_MAGIC
+    jne @@done
+
+    ; Signal stop event (if any)
+    mov rcx, [rbx+CTX_OFF_STOP_EVENT]
+    test rcx, rcx
+    jz @@wait
+    call SetEvent
+
+@@wait:
+    ; Wait for thread to exit, then close handle.
+    mov rcx, [rbx+CTX_OFF_THREAD_HANDLE]
+    test rcx, rcx
+    jz @@mark
+    mov edx, 5000
+    call WaitForSingleObject
+
+    mov rcx, [rbx+CTX_OFF_THREAD_HANDLE]
+    call CloseHandle
+    mov QWORD PTR [rbx+CTX_OFF_THREAD_HANDLE], 0
+
+@@mark:
+    ; Mark complete and set ring COMPLETE flag.
+    call Titan_LockScheduler
+    mov rax, g_RingHeaderPtr
+    test rax, rax
+    jz @@unlock
+    mov ecx, [rax+OFF_FLAGS]
+    or ecx, FLAG_COMPLETE
+    and ecx, (NOT FLAG_STREAMING)
+    mov [rax+OFF_FLAGS], ecx
+@@unlock:
+    call Titan_UnlockScheduler
+
+    mov DWORD PTR [rbx+4], CTX_STATE_COMPLETE
+
+@@done:
+    xor eax, eax
+    add rsp, 28h
+    pop rbx
+    ret
+Titan_StopInference ENDP
 
 ; ----------------------------------------------------------------------------
 ; Titan_ConsumeToken - Read tokens from ring buffer (consumer side)
@@ -1181,11 +1477,33 @@ Titan_ConsumeToken PROC FRAME
     xor rdx, rdx
     div rcx                         ; rdx = readIdx mod dataSize
     add rsi, rdx                    ; Source address
-    
-    ; Copy to user buffer
-    mov rdi, r12
-    mov rcx, r13
+
+    ; Copy with wrap handling (consumer may straddle end of data region).
+    mov rdi, r12                    ; dst
+    mov r8, r13                     ; total to copy
+
+    mov rax, rcx                    ; dataSize
+    sub rax, rdx                    ; toEnd
+    cmp r8, rax
+    jbe @@copy_one
+
+    ; Part 1
+    mov rcx, rax
     rep movsb
+
+    ; Part 2 from start of data region
+    mov rsi, g_RingBufferBase
+    add rsi, 4096
+    mov rcx, r8
+    sub rcx, rax
+    rep movsb
+    jmp @@copied
+
+@@copy_one:
+    mov rcx, r8
+    rep movsb
+
+@@copied:
     
     ; Update consumer read pointer
     add r15, r13
@@ -1255,6 +1573,10 @@ Titan_Shutdown PROC FRAME
     mov rsi, [rdi + rbx*8]              ; Index into array
     test rsi, rsi
     jz @@next_slot
+
+    ; Stop streaming thread if running.
+    mov rcx, rsi
+    call Titan_StopInference
     
     ; Unmap model if present
     mov rcx, [rsi+24]               ; pModelBase

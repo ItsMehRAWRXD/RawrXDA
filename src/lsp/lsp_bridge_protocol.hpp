@@ -17,21 +17,54 @@
 //   rawrxd/workspace/symbols     — get hotpatch-aware symbol table
 //   rawrxd/workspace/stats       — get hotpatch manager statistics
 //
-// Transport: JSON-RPC 2.0 over stdin/stdout (same as LSP)
+// Transport: JSON-RPC 2.0 over stdin/stdout or named pipes
 // Thread model: All handlers run on the LSP dispatch thread.
 // Error handling: PatchResult-style returns (no exceptions).
 //
+// Rule: NO SOURCE FILE IS TO BE SIMPLIFIED
 // Copyright (c) 2025-2026 RawrXD Project — All rights reserved.
 // ============================================================================
 #pragma once
 
 #include <cstdint>
 #include <cstddef>
+#include <string>
+
+#ifdef ERROR_INTERNAL_ERROR
+#undef ERROR_INTERNAL_ERROR
+#endif
+
+// ---------------------------------------------------------------------------
+// JSON-RPC 2.0 Constants
+// ---------------------------------------------------------------------------
+namespace RawrXD::LSPBridge {
+
+constexpr const char* JSONRPC_VERSION = "2.0";
+
+// Standard LSP error codes
+constexpr int ERROR_PARSE_ERROR      = -32700;
+constexpr int ERROR_INVALID_REQUEST  = -32600;
+constexpr int ERROR_METHOD_NOT_FOUND = -32601;
+constexpr int ERROR_INVALID_PARAMS   = -32602;
+constexpr int ERROR_INTERNAL_ERROR   = -32603;
+
+// LSP-specific error codes
+constexpr int ERROR_SERVER_NOT_INITIALIZED = -32002;
+constexpr int ERROR_UNKNOWN_ERROR_CODE     = -32001;
+constexpr int ERROR_REQUEST_FAILED         = -32803;
+constexpr int ERROR_REQUEST_CANCELLED      = -32800;
+constexpr int ERROR_CONTENT_MODIFIED       = -32801;
+
+// RawrXD custom error codes (4000-4999 range)
+constexpr int ERROR_HOTPATCH_FAILED        = -4001;
+constexpr int ERROR_GGUF_INVALID           = -4002;
+constexpr int ERROR_SYMBOL_NOT_FOUND       = -4003;
+constexpr int ERROR_LAYER_NOT_FOUND        = -4004;
+constexpr int ERROR_PATCH_CONFLICT         = -4005;
 
 // ---------------------------------------------------------------------------
 // Custom Method Names (rawrxd/ namespace to avoid LSP collisions)
 // ---------------------------------------------------------------------------
-namespace RawrXD::LSPBridge {
 
 // Hotpatch layer methods
 constexpr const char* METHOD_HOTPATCH_LIST        = "rawrxd/hotpatch/list";
@@ -197,5 +230,112 @@ struct LSPBridgeCapabilities {
     bool workspaceStats         : 1;
     bool eventNotifications     : 1;
 };
+
+// ---------------------------------------------------------------------------
+// PatchResult — Universal result type for hotpatch operations
+// ---------------------------------------------------------------------------
+struct PatchResult {
+    bool        success;
+    const char* detail;
+    int         errorCode;
+    
+    static PatchResult ok(const char* msg = "OK") {
+        PatchResult r;
+        r.success = true;
+        r.detail = msg;
+        r.errorCode = 0;
+        return r;
+    }
+    
+    static PatchResult error(const char* msg, int code = -1) {
+        PatchResult r;
+        r.success = false;
+        r.detail = msg;
+        r.errorCode = code;
+        return r;
+    }
+};
+
+// ---------------------------------------------------------------------------
+// HotpatchEvent — Event structure for callback notifications
+// ---------------------------------------------------------------------------
+struct HotpatchEvent {
+    enum class Type : uint8_t {
+        MemoryPatchApplied = 0,
+        MemoryPatchReverted = 1,
+        BytePatchApplied = 2,
+        BytePatchFailed = 3,
+        ServerPatchAdded = 4,
+        ServerPatchRemoved = 5,
+        PresetLoaded = 6,
+        PresetSaved = 7
+    };
+    
+    Type        type;
+    uint64_t    timestamp;      // Milliseconds since epoch
+    uint64_t    sequenceId;     // Monotonic event counter
+    const char* detail;         // Human-readable description
+    const char* patchName;      // Name of the affected patch
+    HotpatchLayer layer;        // Affected layer
+    uint64_t    address;        // Relevant address (for memory patches)
+    size_t      size;           // Relevant size
+};
+
+// ---------------------------------------------------------------------------
+// LSPBridgeRequest — Parsed incoming request
+// ---------------------------------------------------------------------------
+struct LSPBridgeRequest {
+    int         id;             // JSON-RPC request ID (-1 for notifications)
+    const char* method;         // Method name
+    const char* params;         // Raw JSON params string
+    bool        isNotification; // True if no response expected
+};
+
+// ---------------------------------------------------------------------------
+// LSPBridgeResponse — Outgoing response structure
+// ---------------------------------------------------------------------------
+struct LSPBridgeResponse {
+    int         id;             // Must match request ID
+    bool        isError;        // True if error response
+    int         errorCode;      // JSON-RPC error code (only if isError)
+    const char* errorMessage;   // Error message (only if isError)
+    const char* result;         // Result JSON string (only if !isError)
+};
+
+// ---------------------------------------------------------------------------
+// Utility Functions
+// ---------------------------------------------------------------------------
+
+// FNV-1a hash for fast symbol lookup
+inline uint64_t fnv1a_hash(const char* str) {
+    uint64_t hash = 14695981039346656037ULL;
+    if (str) {
+        while (*str) {
+            hash ^= static_cast<uint8_t>(*str++);
+            hash *= 1099511628211ULL;
+        }
+    }
+    return hash;
+}
+
+// Convert hotpatch layer to string
+inline const char* layerToString(HotpatchLayer layer) {
+    switch (layer) {
+        case HotpatchLayer::Memory: return "memory";
+        case HotpatchLayer::Byte:   return "byte";
+        case HotpatchLayer::Server: return "server";
+        case HotpatchLayer::All:    return "all";
+        default:                    return "unknown";
+    }
+}
+
+// Parse layer from string
+inline HotpatchLayer layerFromString(const char* str) {
+    if (!str) return HotpatchLayer::All;
+    if (str[0] == 'm' || str[0] == 'M') return HotpatchLayer::Memory;
+    if (str[0] == 'b' || str[0] == 'B') return HotpatchLayer::Byte;
+    if (str[0] == 's' || str[0] == 'S') return HotpatchLayer::Server;
+    return HotpatchLayer::All;
+}
 
 } // namespace RawrXD::LSPBridge

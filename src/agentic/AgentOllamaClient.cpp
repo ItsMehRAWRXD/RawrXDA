@@ -38,6 +38,16 @@ AgentOllamaClient::AgentOllamaClient(const OllamaConfig& config)
 #ifdef _WIN32
     InitWinHTTP();
 #endif
+    // Auto-detect models from Ollama /api/tags if not explicitly configured
+    if (m_config.chat_model.empty() || m_config.fim_model.empty()) {
+        auto models = ListModels();
+        if (!models.empty()) {
+            if (m_config.chat_model.empty())
+                m_config.chat_model = models[0];
+            if (m_config.fim_model.empty())
+                m_config.fim_model = models.size() > 1 ? models[1] : models[0];
+        }
+    }
 }
 
 AgentOllamaClient::~AgentOllamaClient() {

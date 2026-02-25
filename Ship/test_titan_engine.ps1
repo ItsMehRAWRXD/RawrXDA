@@ -3,6 +3,7 @@
 
 param(
     [string]$ModelPath = "C:\models\llama-7b-q4_0.gguf",
+    [string]$DllPath = "",
     [int]$MaxTokens = 100,
     [string]$Prompt = "Hello, world!",
     [switch]$Verbose
@@ -96,72 +97,46 @@ function Test-GGUFFile {
     
     $fileInfo = Get-Item $FilePath
     Write-Status "File size: $([math]::Round($fileInfo.Length / 1GB, 2)) GB" "OK"
-    
-    # Read header
-    $stream = [System.IO.File]::OpenRead($FilePath)
-    $header = New-Object byte[] 24
-    $null = $stream.Read($header, 0, 24)
-    
-    # Verify magic
-    $magic = Read-UInt32 $header 0
-    if ($magic -ne $GGUF_MAGIC) {
-        Write-Status "Invalid GGUF magic: 0x$('{0:X8}' -f $magic)" "ERROR"
+
+    # Parse the fixed-size GGUF header safely.
+    # GGUF header:
+    #   u32 magic, u32 version, u64 n_tensors, u64 n_kv
+    try {
+        $stream = [System.IO.File]::Open($FilePath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::Read)
+        $br = New-Object System.IO.BinaryReader($stream)
+
+        $magic = $br.ReadUInt32()
+        if ($magic -ne $GGUF_MAGIC) {
+            Write-Status "Invalid GGUF magic: 0x$('{0:X8}' -f $magic)" "ERROR"
+            $br.Close()
+            $stream.Close()
+            return $null
+        }
+        Write-Status "GGUF magic verified: 0x$('{0:X8}' -f $magic)" "OK"
+
+        $version = $br.ReadUInt32()
+        if ($version -gt $GGUF_VERSION) {
+            Write-Status "Unsupported GGUF version: $version (max $GGUF_VERSION)" "WARN"
+        } else {
+            Write-Status "GGUF version: $version" "OK"
+        }
+
+        $n_tensors = $br.ReadUInt64()
+        $n_kv = $br.ReadUInt64()
+        Write-Status "Tensors: $n_tensors" "OK"
+        Write-Status "Metadata KV pairs: $n_kv" "OK"
+
+        # Full KV parsing is non-trivial; avoid broken partial parsing in the harness.
+        if ($Verbose) {
+            Write-Status "Metadata parsing: skipped (harness header-only mode)" "DEBUG"
+        }
+
+        $br.Close()
         $stream.Close()
+    } catch {
+        Write-Status "GGUF header parse failed: $_" "ERROR"
         return $null
     }
-    Write-Status "GGUF magic verified: 0x$('{0:X8}' -f $magic)" "OK"
-    
-    # Verify version
-    $version = Read-UInt32 $header 4
-    if ($version -gt $GGUF_VERSION) {
-        Write-Status "Unsupported GGUF version: $version (max $GGUF_VERSION)" "WARN"
-    } else {
-        Write-Status "GGUF version: $version" "OK"
-    }
-    
-    # Parse counts
-    $n_tensors = Read-UInt64 $header 8
-    $n_kv = Read-UInt64 $header 16
-    
-    Write-Status "Tensors: $n_tensors" "OK"
-    Write-Status "Metadata KV pairs: $n_kv" "OK"
-    
-    # Parse metadata to find architecture and dimensions
-    $pos = 24
-    $metadata = @{}
-    
-    Write-Status "Parsing $n_kv metadata entries..." "INFO"
-    
-    for ($i = 0; $i -lt $n_kv -and $i -lt 100; $i++) {  # Limit to 100 for demo
-        $keyLen = Read-UInt32 $header $pos
-        $stream.Seek($pos + 4, [System.IO.SeekOrigin]::Begin) | Out-Null
-        
-        if ($pos + 4 + $keyLen -gt $stream.Length) {
-            break
-        }
-        
-        $keyBytes = New-Object byte[] $keyLen
-        $null = $stream.Read($keyBytes, 0, $keyLen)
-        $key = [System.Text.Encoding]::UTF8.GetString($keyBytes)
-        
-        # Store key for display
-        if ($key -match "architecture|vocab_size|embedding_length|block_count|head_count") {
-            $metadata[$key] = "found"
-        }
-        
-        $pos += 4 + $keyLen + 4  # key_len + key + value_type
-        # Skip value data based on type (simplified)
-        $pos += 8
-    }
-    
-    Write-Status "Found metadata keys:" "OK"
-    foreach ($k in $metadata.Keys | Select-Object -First 10) {
-        Write-Status "  - $k" "DEBUG"
-    }
-    
-    # Analyze tensors
-    Write-Status "Analyzing tensor types..." "INFO"
-    $stream.Close()
     
     # Summary
     $result = @{
@@ -269,7 +244,7 @@ function Estimate-MemoryUsage {
 # ============================================================================
 
 function Test-TitanEngineDLL {
-    param([string]$DllPath = "D:\RawrXD\Ship\RawrXD_Titan_Engine.dll")
+    param([string]$DllPath)
     
     Write-Status "Testing Titan Engine DLL..." "INFO"
     
@@ -302,6 +277,24 @@ function Invoke-TitanEngineTests {
     Write-Host @("═" * 80 -join "") -ForegroundColor Cyan
     Write-Host ""
     
+    $resolvedDllPath = $DllPath
+    if ([string]::IsNullOrWhiteSpace($resolvedDllPath)) {
+        $candidateTitan = Join-Path $PSScriptRoot "RawrXD_Titan_Engine.dll"
+        $candidateInference = Join-Path $PSScriptRoot "RawrXD_InferenceEngine.dll"
+
+        if (Test-Path $candidateTitan) {
+            $resolvedDllPath = $candidateTitan
+        } elseif (Test-Path $candidateInference) {
+            Write-Status "Titan DLL not found; falling back to RawrXD_InferenceEngine.dll" "WARN"
+            $resolvedDllPath = $candidateInference
+        } else {
+            $resolvedDllPath = $candidateTitan
+        }
+    }
+
+    $ggufOk = $true
+    $dllOk = $true
+    
     # Test 1: GGUF File Analysis
     Write-Status "TEST 1: GGUF File Analysis" "INFO"
     Write-Host ""
@@ -316,9 +309,12 @@ function Invoke-TitanEngineTests {
             Write-Status "  Size: $([math]::Round($ggufResult.FileSize / 1GB, 2)) GB" "OK"
             Write-Status "  Tensors: $($ggufResult.Tensors)" "OK"
             Write-Status "  Metadata pairs: $($ggufResult.Metadata)" "OK"
+        } else {
+            $ggufOk = $false
         }
     } else {
         Write-Status "Model file not found, using default values" "WARN"
+        $ggufOk = $false
         $ggufResult = @{
             FileSize = 3.5GB
             Tensors = 291
@@ -331,7 +327,7 @@ function Invoke-TitanEngineTests {
     # Test 2: DLL Validation
     Write-Status "TEST 2: DLL Validation" "INFO"
     Write-Host ""
-    Test-TitanEngineDLL | Out-Null
+    $dllOk = Test-TitanEngineDLL -DllPath $resolvedDllPath
     Write-Host ""
     
     # Test 3: Memory Estimation
@@ -360,15 +356,29 @@ function Invoke-TitanEngineTests {
     Write-Host @("═" * 80 -join "") -ForegroundColor Cyan
     
     Write-Host ""
-    Write-Host "✓ GGUF file analysis completed" -ForegroundColor Green
-    Write-Host "✓ DLL validated" -ForegroundColor Green
+    if ($ggufOk) {
+        Write-Host "✓ GGUF file analysis completed" -ForegroundColor Green
+    } else {
+        Write-Host "✗ GGUF file analysis failed (or used fallback values)" -ForegroundColor Red
+    }
+    if ($dllOk) {
+        Write-Host "✓ DLL validated" -ForegroundColor Green
+    } else {
+        Write-Host "✗ DLL validation failed" -ForegroundColor Red
+        Write-Status "DLL path checked: $resolvedDllPath" "DEBUG"
+    }
     Write-Host "✓ Memory requirements: $([math]::Round($memResult.TotalMemory / 1GB, 2)) GB" -ForegroundColor Green
     Write-Host "✓ Estimated throughput: $([math]::Round($perfResult.TokensPerSecond, 1)) tokens/sec" -ForegroundColor Green
     Write-Host ""
-    
-    Write-Status "All tests completed successfully!" "OK"
-    
-    return $true
+
+    $allOk = ($ggufOk -and $dllOk)
+    if ($allOk) {
+        Write-Status "All tests completed successfully!" "OK"
+    } else {
+        Write-Status "Some tests failed; see errors above." "ERROR"
+    }
+
+    return $allOk
 }
 
 # ============================================================================

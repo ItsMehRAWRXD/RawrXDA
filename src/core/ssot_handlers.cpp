@@ -165,10 +165,12 @@ static CommandResult setTheme(const CommandContext& ctx, uint32_t themeId, const
 }
 
 // Theme handlers — always in ssot_handlers
+#ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleThemeLightPlus(const CommandContext& ctx)   { return setTheme(ctx, 3102, "theme.lightPlus"); }
 CommandResult handleThemeMonokai(const CommandContext& ctx)     { return setTheme(ctx, 3103, "theme.monokai"); }
 CommandResult handleThemeDracula(const CommandContext& ctx)     { return setTheme(ctx, 3104, "theme.dracula"); }
 CommandResult handleThemeNord(const CommandContext& ctx)        { return setTheme(ctx, 3105, "theme.nord"); }
+#endif
 CommandResult handleThemeSolDark(const CommandContext& ctx)     { return setTheme(ctx, 3106, "theme.solarizedDark"); }
 CommandResult handleThemeSolLight(const CommandContext& ctx)    { return setTheme(ctx, 3107, "theme.solarizedLight"); }
 CommandResult handleThemeCyberpunk(const CommandContext& ctx)   { return setTheme(ctx, 3108, "theme.cyberpunk"); }
@@ -176,10 +178,14 @@ CommandResult handleThemeGruvbox(const CommandContext& ctx)     { return setThem
 CommandResult handleThemeCatppuccin(const CommandContext& ctx)  { return setTheme(ctx, 3110, "theme.catppuccin"); }
 CommandResult handleThemeTokyo(const CommandContext& ctx)       { return setTheme(ctx, 3111, "theme.tokyoNight"); }
 CommandResult handleThemeCrimson(const CommandContext& ctx)     { return setTheme(ctx, 3112, "theme.rawrxdCrimson"); }
+#ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleThemeHighContrast(const CommandContext& ctx){ return setTheme(ctx, 3113, "theme.highContrast"); }
+#endif
 CommandResult handleThemeOneDark(const CommandContext& ctx)     { return setTheme(ctx, 3114, "theme.oneDarkPro"); }
 CommandResult handleThemeSynthwave(const CommandContext& ctx)   { return setTheme(ctx, 3115, "theme.synthwave84"); }
+#ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleThemeAbyss(const CommandContext& ctx)       { return setTheme(ctx, 3116, "theme.abyss"); }
+#endif
 
 // TRANSPARENCY (always in ssot_handlers)
 CommandResult handleTrans100(const CommandContext& ctx) { return delegateToGui(ctx, 3200, "view.transparency100"); }
@@ -211,6 +217,7 @@ CommandResult handleHelpPsDocs(const CommandContext& ctx) {
     ctx.output("  Invoke-RawrXD <cmd>   — Execute a RawrXD command\n");
     return CommandResult::ok("help.psdocs");
 }
+#ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleHelpSearch(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) return delegateToGui(ctx, 4004, "help.search");
     std::string query = ctx.args ? ctx.args : "";
@@ -223,9 +230,12 @@ CommandResult handleHelpSearch(const CommandContext& ctx) {
     ctx.output("\n  Use !commands to list all, then grep for keyword.\n");
     return CommandResult::ok("help.search");
 }
+#endif
 
 // TERMINAL (extended)
+#ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleTerminalSplitCode(const CommandContext& ctx) { return delegateToGui(ctx, 4009, "terminal.splitCode"); }
+#endif
 
 // ============================================================================
 // AUTONOMY (extended)
@@ -733,6 +743,7 @@ CommandResult handleREDecompClose(const CommandContext& ctx) {
 // SWARM (extended)
 // ============================================================================
 
+#ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleSwarmStartLeader(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) {
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
@@ -835,6 +846,7 @@ CommandResult handleSwarmRemoveNode(const CommandContext& ctx) {
     }
     return CommandResult::ok("swarm.removeNode");
 }
+#endif
 CommandResult handleSwarmBlacklist(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) {
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
@@ -907,6 +919,7 @@ CommandResult handleSwarmBuildCmake(const CommandContext& ctx) {
     return CommandResult::ok("swarm.buildCmake");
 }
 #endif
+#ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleSwarmStartBuild(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) {
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
@@ -980,6 +993,7 @@ CommandResult handleSwarmCacheClear(const CommandContext& ctx) {
     ctx.output("[SWARM] Cache cleared.\n");
     return CommandResult::ok("swarm.cacheClear");
 }
+#endif
 CommandResult handleSwarmConfig(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) {
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
@@ -1072,6 +1086,7 @@ CommandResult handleSwarmStats(const CommandContext& ctx) {
     ctx.output(buf);
     return CommandResult::ok("swarm.stats");
 }
+#ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleSwarmResetStats(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) {
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
@@ -1139,6 +1154,7 @@ CommandResult handleSwarmWorkerDisconnect(const CommandContext& ctx) {
     ctx.output("[SWARM] Worker disconnected.\n");
     return CommandResult::ok("swarm.workerDisconnect");
 }
+#endif
 CommandResult handleSwarmFitness(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) {
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
@@ -1982,6 +1998,7 @@ CommandResult handleVoicePTT(const CommandContext& ctx) {
     ctx.output("  State: active while key held\n");
     return CommandResult::ok("voice.ptt");
 }
+#ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleVoiceJoinRoom(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) return delegateToGui(ctx, 9703, "voice.joinRoom");
     std::string room = (ctx.args && ctx.args[0]) ? ctx.args : "default";
@@ -2002,6 +2019,7 @@ CommandResult handleVoiceModeDisabled(const CommandContext& ctx) {
     ctx.output("  Use !voice_mode_continuous or !voice_ptt to re-enable.\n");
     return CommandResult::ok("voice.modeDisabled");
 }
+#endif
 
 // ============================================================================
 // QW (Quality/Workflow)
@@ -2133,6 +2151,7 @@ CommandResult handleQwSloDashboard(const CommandContext& ctx)       { return del
 // TELEMETRY
 // ============================================================================
 
+#ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleTelemetryToggle(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) {
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
@@ -2192,6 +2211,7 @@ CommandResult handleTelemetryExportCsv(const CommandContext& ctx) {
     }
     return CommandResult::ok("telemetry.exportCsv");
 }
+#endif
 CommandResult handleTelemetryDashboard(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) {
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
@@ -2213,6 +2233,7 @@ CommandResult handleTelemetryDashboard(const CommandContext& ctx) {
     ctx.output(oss.str().c_str());
     return CommandResult::ok("telemetry.dashboard");
 }
+#ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleTelemetryClear(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) {
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
@@ -2251,6 +2272,7 @@ CommandResult handleTelemetrySnapshot(const CommandContext& ctx) {
     }
     return CommandResult::ok("telemetry.snapshot");
 }
+#endif
 
 // ============================================================================
 // TIER 1: CRITICAL COSMETICS (12000-12099)

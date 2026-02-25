@@ -809,51 +809,90 @@ void Win32IDE::showAnnotationActionMenu(HWND hwndParent, int x, int y,
 void Win32IDE::saveSessionAnnotations(nlohmann::json& session) {
     if (m_annotations.empty()) return;
 
-    // Group annotations by the file they belong to (source path or current file)
-    // For now, all annotations belong to the current file
-    nlohmann::json annArray = nlohmann::json::array();
+    // Save annotations for all files that have been cached
+    nlohmann::json annsByFile = nlohmann::json::object();
 
-    for (const auto& ann : m_annotations) {
-        nlohmann::json j;
-        j["line"] = ann.line;
-        j["column"] = ann.column;
-        j["severity"] = (int)ann.severity;
-        j["text"] = ann.text;
-        j["source"] = ann.source;
-        j["visible"] = ann.visible;
+    // Save current file annotations
+    if (!m_annotations.empty()) {
+        nlohmann::json annArray = nlohmann::json::array();
+        for (const auto& ann : m_annotations) {
+            nlohmann::json j;
+            j["line"] = ann.line;
+            j["column"] = ann.column;
+            j["severity"] = (int)ann.severity;
+            j["text"] = ann.text;
+            j["source"] = ann.source;
+            j["visible"] = ann.visible;
 
-        // Persist actions array
-        nlohmann::json actionsArray = nlohmann::json::array();
-        for (const auto& act : ann.actions) {
-            nlohmann::json aj;
-            aj["type"] = (int)act.type;
-            aj["label"] = act.label;
-            aj["targetLine"] = act.targetLine;
-            aj["targetFile"] = act.targetFile;
-            aj["fixContent"] = act.fixContent;
-            aj["fixStartLine"] = act.fixStartLine;
-            aj["fixEndLine"] = act.fixEndLine;
-            aj["agentPrompt"] = act.agentPrompt;
-            aj["commandId"] = act.commandId;
-            actionsArray.push_back(aj);
+            // Persist actions array
+            nlohmann::json actionsArray = nlohmann::json::array();
+            for (const auto& act : ann.actions) {
+                nlohmann::json aj;
+                aj["type"] = (int)act.type;
+                aj["label"] = act.label;
+                aj["targetLine"] = act.targetLine;
+                aj["targetFile"] = act.targetFile;
+                aj["fixContent"] = act.fixContent;
+                aj["fixStartLine"] = act.fixStartLine;
+                aj["fixEndLine"] = act.fixEndLine;
+                aj["agentPrompt"] = act.agentPrompt;
+                aj["commandId"] = act.commandId;
+                actionsArray.push_back(aj);
+            }
+            j["actions"] = actionsArray;
+            annArray.push_back(j);
         }
-        j["actions"] = actionsArray;
 
-        annArray.push_back(j);
+        std::string fileKey = m_currentFile.empty() ? "__untitled__" : m_currentFile;
+        annsByFile[fileKey] = annArray;
     }
 
-    // Store under the current file path key
-    nlohmann::json annsByFile;
-    if (!m_currentFile.empty()) {
-        annsByFile[m_currentFile] = annArray;
-    } else {
-        annsByFile["__untitled__"] = annArray;
+    // Save cached annotations for other files
+    for (const auto& [filePath, cachedAnnotations] : m_annotationCache) {
+        if (cachedAnnotations.empty()) continue;
+
+        nlohmann::json annArray = nlohmann::json::array();
+        for (const auto& ann : cachedAnnotations) {
+            nlohmann::json j;
+            j["line"] = ann.line;
+            j["column"] = ann.column;
+            j["severity"] = (int)ann.severity;
+            j["text"] = ann.text;
+            j["source"] = ann.source;
+            j["visible"] = ann.visible;
+
+            // Persist actions array
+            nlohmann::json actionsArray = nlohmann::json::array();
+            for (const auto& act : ann.actions) {
+                nlohmann::json aj;
+                aj["type"] = (int)act.type;
+                aj["label"] = act.label;
+                aj["targetLine"] = act.targetLine;
+                aj["targetFile"] = act.targetFile;
+                aj["fixContent"] = act.fixContent;
+                aj["fixStartLine"] = act.fixStartLine;
+                aj["fixEndLine"] = act.fixEndLine;
+                aj["agentPrompt"] = act.agentPrompt;
+                aj["commandId"] = act.commandId;
+                actionsArray.push_back(aj);
+            }
+            j["actions"] = actionsArray;
+            annArray.push_back(j);
+        }
+
+        annsByFile[filePath] = annArray;
     }
 
     session["annotations"] = annsByFile;
     session["annotationsVisible"] = m_annotationsVisible;
 
-    LOG_INFO("Session: saved " + std::to_string(m_annotations.size()) + " annotations");
+    size_t totalAnnotations = m_annotations.size();
+    for (const auto& [filePath, cached] : m_annotationCache) {
+        totalAnnotations += cached.size();
+    }
+
+    LOG_INFO("Session: saved " + std::to_string(totalAnnotations) + " annotations across " +
+              std::to_string(annsByFile.size()) + " files");
 }
 
 // ============================================================================

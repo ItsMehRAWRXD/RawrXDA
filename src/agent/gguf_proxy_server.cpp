@@ -220,7 +220,11 @@ void GGUFProxyServer::processGGUFResponse(uintptr_t socketDescriptor) {
     auto& conn = it->second;
 
     std::string response(conn->responseBuffer.begin(), conn->responseBuffer.end());
-    std::string corrected = m_hotPatcher->interceptModelOutput(response, json{});
+    // AgentHotPatcher uses the project's minimal JsonValue type (simple_json.hpp),
+    // not nlohmann::json.
+    JsonValue ctx = JsonValue::makeObject();
+    JsonValue correctedVal = m_hotPatcher->interceptModelOutput(response, ctx);
+    std::string corrected = correctedVal.toJsonString();
 
     if (conn->clientSocket) {
         ::send(static_cast<SocketType>(conn->clientSocket),

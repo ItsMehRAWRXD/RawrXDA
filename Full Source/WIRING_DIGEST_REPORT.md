@@ -1,0 +1,6466 @@
+# Wiring Digest Report
+Generated: 2026-01-26 06:41:33
+
+## Summary
+- Total modules: 14
+- Wired modules: 14
+- Unwired modules: 0
+- Global wiring signals: 5598
+- Future-risk tags: 6603
+- Config signals: 528
+- Security signals: 15521
+- Large files (>=25MB): 2
+- Binary blobs: 0
+- Unused files: 1233
+- CI/CD health signals: 2
+- Packaging risk score: 46567 (High)
+- Secrets detected: 1548
+
+## Per-Language Breakdown
+- .c: 150 file(s)
+- .cmake: 57 file(s)
+- .cpp: 940 file(s)
+- .h: 548 file(s)
+- .hpp: 202 file(s)
+- .js: 474 file(s)
+- .json: 1328 file(s)
+- .md: 776 file(s)
+- .ps1: 310 file(s)
+- .psm1: 190 file(s)
+- .toml: 2 file(s)
+- .ts: 88 file(s)
+- .tsx: 27 file(s)
+- .txt: 278 file(s)
+
+## Wired Modules
+- Advanced-Model-Operations (19 reference(s), Strongly Wired, score=25)
+- codex_accessibility_layer (46 reference(s), Strongly Wired, score=56)
+- DependencyManager (7 reference(s), Strongly Wired, score=7)
+- ExtensionManager (67 reference(s), Strongly Wired, score=70)
+- language_model_registry (24 reference(s), Strongly Wired, score=26)
+- language_support (16 reference(s), Strongly Wired, score=18)
+- model_translator_engine (33 reference(s), Strongly Wired, score=42)
+- ModuleLifecycleManager (9 reference(s), Strongly Wired, score=9)
+- PatternTemplates (24 reference(s), Strongly Wired, score=24)
+- PerformanceFramework (7 reference(s), Strongly Wired, score=7)
+- plugin_craft_room (46 reference(s), Strongly Wired, score=54)
+- SecurityFramework (10 reference(s), Strongly Wired, score=10)
+- TODOAutoResolver_v2 (8 reference(s), Strongly Wired, score=9)
+- TodoManager (149 reference(s), Strongly Wired, score=154)
+
+## Unwired Modules
+
+## Unused Exported Functions
+- ExtensionManager: 1 unused
+- PatternTemplates: 3 unused
+- TODOAutoResolver_v2: 2 unused
+
+## Global Wiring Signals
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\gpt-2\CMakeLists.txt:5
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\gpt-2\CMakeLists.txt:6
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\gpt-2\CMakeLists.txt:9
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\gpt-2\CMakeLists.txt:10
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\gpt-2\CMakeLists.txt:13
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\gpt-2\CMakeLists.txt:14
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\gpt-2\CMakeLists.txt:17
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\gpt-2\CMakeLists.txt:18
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\gpt-2\CMakeLists.txt:24
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\gpt-2\CMakeLists.txt:25
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\gpt-2\CMakeLists.txt:31
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\gpt-2\CMakeLists.txt:32
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\gpt-j\CMakeLists.txt:5
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\gpt-j\CMakeLists.txt:6
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\gpt-j\CMakeLists.txt:12
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\gpt-j\CMakeLists.txt:13
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\magika\CMakeLists.txt:5
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\magika\CMakeLists.txt:6
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\mnist\CMakeLists.txt:5
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\mnist\CMakeLists.txt:6
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\mnist\CMakeLists.txt:12
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\mnist\CMakeLists.txt:13
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\mnist\CMakeLists.txt:19
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\mnist\CMakeLists.txt:20
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\mnist\CMakeLists.txt:28
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\mnist\CMakeLists.txt:29
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\perf-metal\CMakeLists.txt:5
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\perf-metal\CMakeLists.txt:6
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\sam\CMakeLists.txt:5
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\sam\CMakeLists.txt:6
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\sam\CMakeLists.txt:12
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\sam\CMakeLists.txt:13
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\simple\CMakeLists.txt:5
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\simple\CMakeLists.txt:6
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\simple\CMakeLists.txt:12
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\simple\CMakeLists.txt:13
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\test-cmake\CMakeLists.txt:9
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\test-cmake\CMakeLists.txt:10
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\yolo\CMakeLists.txt:5
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\yolo\CMakeLists.txt:6
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\CMakeLists.txt:14
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\CMakeLists.txt:15
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\CMakeLists.txt:17
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\CMakeLists.txt:18
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\examples\CMakeLists.txt:19
+- [CMake Subdir] D:\lazy init ide\3rdparty\ggml\examples\CMakeLists.txt:21
+- [CMake Subdir] D:\lazy init ide\3rdparty\ggml\examples\CMakeLists.txt:24
+- [CMake Subdir] D:\lazy init ide\3rdparty\ggml\examples\CMakeLists.txt:25
+- [CMake Subdir] D:\lazy init ide\3rdparty\ggml\examples\CMakeLists.txt:26
+- [CMake Subdir] D:\lazy init ide\3rdparty\ggml\examples\CMakeLists.txt:27
+- [CMake Subdir] D:\lazy init ide\3rdparty\ggml\examples\CMakeLists.txt:28
+- [CMake Subdir] D:\lazy init ide\3rdparty\ggml\examples\CMakeLists.txt:29
+- [CMake Subdir] D:\lazy init ide\3rdparty\ggml\examples\CMakeLists.txt:33
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\examples\stb_image.h:707
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\examples\stb_image.h:718
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-blas\CMakeLists.txt:82
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-blas\ggml-blas.cpp:297
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-cann\CMakeLists.txt:72
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-cann\CMakeLists.txt:73
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-cann\ggml-cann.cpp:232
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-cann\ggml-cann.cpp:262
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-cann\ggml-cann.cpp:321
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-cann\ggml-cann.cpp:427
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-cann\ggml-cann.cpp:455
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-cann\ggml-cann.cpp:520
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-cpu\amx\common.h:31
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-cpu\amx\mmq.cpp:1300
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-cpu\amx\mmq.cpp:2029
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-cpu\amx\mmq.cpp:2213
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-cpu\CMakeLists.txt:7
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-cpu\CMakeLists.txt:8
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-cpu\CMakeLists.txt:12
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-cpu\CMakeLists.txt:53
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-cpu\CMakeLists.txt:64
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-cpu\CMakeLists.txt:76
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-cpu\CMakeLists.txt:98
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-cpu\ggml-cpu.c:1617
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-cpu\ggml-cpu.c:1622
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-cpu\ops.cpp:8147
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-cpu\ops.cpp:8154
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-cpu\repack.cpp:1711
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-cpu\repack.cpp:1734
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-cuda\vendors\hip.h:3
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-cuda\CMakeLists.txt:103
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-cuda\CMakeLists.txt:106
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-cuda\CMakeLists.txt:108
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-cuda\CMakeLists.txt:112
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-cuda\CMakeLists.txt:118
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-cuda\CMakeLists.txt:41
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-hexagon\htp\CMakeLists.txt:16
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-hexagon\htp\main.c:121
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-hexagon\htp\main.c:133
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-hexagon\CMakeLists.txt:6
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-hexagon\CMakeLists.txt:10
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-hexagon\CMakeLists.txt:34
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-hexagon\CMakeLists.txt:35
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-hexagon\ggml-hexagon.cpp:1773
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-hexagon\ggml-hexagon.cpp:1804
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-hip\CMakeLists.txt:129
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-hip\CMakeLists.txt:138
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-hip\CMakeLists.txt:39
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-metal\CMakeLists.txt:16
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-metal\CMakeLists.txt:33
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-musa\CMakeLists.txt:106
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-musa\CMakeLists.txt:109
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-musa\CMakeLists.txt:112
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-musa\CMakeLists.txt:114
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-musa\CMakeLists.txt:121
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-opencl\CMakeLists.txt:9
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-opencl\CMakeLists.txt:10
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-opencl\CMakeLists.txt:31
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-opencl\ggml-opencl.cpp:369
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-opencl\ggml-opencl.cpp:2522
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-opencl\ggml-opencl.cpp:2857
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-opencl\ggml-opencl.cpp:2862
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-opencl\ggml-opencl.cpp:2867
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-rpc\CMakeLists.txt:8
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\dpct\helper.hpp:332
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\dpct\helper.hpp:347
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\dpct\helper.hpp:378
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\dpct\helper.hpp:389
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\dpct\helper.hpp:711
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\dpct\helper.hpp:764
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\dpct\helper.hpp:765
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\dpct\helper.hpp:769
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\dpct\helper.hpp:770
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\dpct\helper.hpp:773
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\dpct\helper.hpp:775
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\dpct\helper.hpp:780
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\dpct\helper.hpp:782
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\dpct\helper.hpp:787
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\dpct\helper.hpp:789
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\dpct\helper.hpp:823
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\dpct\helper.hpp:826
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\dpct\helper.hpp:833
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\dpct\helper.hpp:842
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\dpct\helper.hpp:845
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\dpct\helper.hpp:852
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\dpct\helper.hpp:1005
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\dpct\helper.hpp:1894
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\dpct\helper.hpp:1900
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\dpct\helper.hpp:2716
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\dpct\helper.hpp:2740
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\dpct\helper.hpp:2781
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\dpct\helper.hpp:2857
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\dpct\helper.hpp:2865
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\CMakeLists.txt:42
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\CMakeLists.txt:66
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\CMakeLists.txt:118
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\CMakeLists.txt:155
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\CMakeLists.txt:167
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\CMakeLists.txt:175
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\CMakeLists.txt:181
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\CMakeLists.txt:130
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\CMakeLists.txt:131
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\CMakeLists.txt:132
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\CMakeLists.txt:134
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\CMakeLists.txt:135
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\CMakeLists.txt:136
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\common.hpp:46
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\ggml-sycl.cpp:59
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\ggml-sycl.cpp:60
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\ggml-sycl.cpp:61
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\ggml-sycl.cpp:209
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\ggml-sycl.cpp:210
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\ggml-sycl.cpp:211
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\ggml-sycl.cpp:216
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\ggml-sycl.cpp:218
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\ggml-sycl.cpp:220
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\ggml-sycl.cpp:223
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\ggml-sycl.cpp:225
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\ggml-sycl.cpp:251
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\ggml-sycl.cpp:382
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\ggml-sycl.cpp:2036
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\ggml-sycl.cpp:2083
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\ggml-sycl.cpp:2273
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\ggml-sycl.cpp:2275
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\ggml-sycl.cpp:2298
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\ggml-sycl.cpp:2308
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\ggml-sycl.cpp:2858
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\ggml-sycl.cpp:3234
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\ggml-sycl.cpp:4167
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\set_rows.cpp:12
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\vulkan-shaders\CMakeLists.txt:33
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\vulkan-shaders\CMakeLists.txt:36
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\CMakeLists.txt:89
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\CMakeLists.txt:90
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:723
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:724
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:726
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:1849
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:1852
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:1913
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:2374
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:2824
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:2858
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:2863
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:2866
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:4100
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:4101
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:4106
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:4107
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:4138
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:4146
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:4151
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:4156
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:4279
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:4281
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:4424
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:4639
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:4738
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:4740
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:4747
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:4789
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:4794
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:4799
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:4804
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:4812
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:4813
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:4815
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:6064
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:6065
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:6067
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:6394
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:6484
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:11345
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:11348
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:11370
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:12545
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:12798
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\ggml-vulkan.cpp:12931
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-webgpu\CMakeLists.txt:61
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-webgpu\CMakeLists.txt:62
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-webgpu\ggml-webgpu.cpp:2388
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-webgpu\ggml-webgpu.cpp:2457
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\src\ggml-webgpu\ggml-webgpu.cpp:2458
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-zdnn\CMakeLists.txt:32
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\ggml-zdnn\CMakeLists.txt:33
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\CMakeLists.txt:196
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\CMakeLists.txt:219
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\CMakeLists.txt:224
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\CMakeLists.txt:226
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\CMakeLists.txt:240
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\CMakeLists.txt:243
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\CMakeLists.txt:248
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\CMakeLists.txt:259
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\CMakeLists.txt:260
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\CMakeLists.txt:264
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\CMakeLists.txt:265
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\CMakeLists.txt:427
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\CMakeLists.txt:431
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\CMakeLists.txt:436
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\src\CMakeLists.txt:441
+- [CMake Subdir] D:\lazy init ide\3rdparty\ggml\src\CMakeLists.txt:294
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:166
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:167
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:176
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:177
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:185
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:186
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:194
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:195
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:203
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:204
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:215
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:216
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:227
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:228
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:239
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:240
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:247
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:248
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:255
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:256
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:262
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:263
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:270
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:271
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:278
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:279
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:286
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:287
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:298
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:299
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:307
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:308
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:316
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:317
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:325
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:326
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:334
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:335
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:343
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:344
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:352
+- [CMake Targets] D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt:353
+- [CMake Subdir] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:284
+- [CMake Subdir] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:292
+- [CMake Subdir] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:296
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:291
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:410
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:416
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:417
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:418
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:419
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:420
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:421
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:422
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:423
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:424
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:425
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:428
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:429
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:431
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:432
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:433
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:435
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:436
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:437
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:438
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:439
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:440
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:442
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:443
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:445
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:446
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:447
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:449
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:450
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:454
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:455
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:456
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:457
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:458
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:459
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:460
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:461
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:462
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:463
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:464
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:465
+- [Feature Flags] D:\lazy init ide\3rdparty\ggml\CMakeLists.txt:466
+- [Feature Flags] D:\lazy init ide\agentic_build\build_config.json:385
+- [Feature Flags] D:\lazy init ide\agentic_build\build_config.json:386
+- [Feature Flags] D:\lazy init ide\AUDITS\QT_MASM_X64_AGENTIC_IDE_CLI_AUDIT_2026-01-23.md:24
+- [Feature Flags] D:\lazy init ide\build_universal\_deps\zlib-src\contrib\iostream3\zfstream.h:171
+- [Feature Flags] D:\lazy init ide\build_universal\_deps\zlib-src\contrib\iostream3\zfstream.h:181
+- [CMake Targets] D:\lazy init ide\build_universal\_deps\zlib-src\CMakeLists.txt:150
+- [CMake Targets] D:\lazy init ide\build_universal\_deps\zlib-src\CMakeLists.txt:151
+- [CMake Targets] D:\lazy init ide\build_universal\_deps\zlib-src\CMakeLists.txt:197
+- [CMake Targets] D:\lazy init ide\build_universal\_deps\zlib-src\CMakeLists.txt:198
+- [CMake Targets] D:\lazy init ide\build_universal\_deps\zlib-src\CMakeLists.txt:201
+- [CMake Targets] D:\lazy init ide\build_universal\_deps\zlib-src\CMakeLists.txt:202
+- [CMake Targets] D:\lazy init ide\build_universal\_deps\zlib-src\CMakeLists.txt:205
+- [CMake Targets] D:\lazy init ide\build_universal\_deps\zlib-src\CMakeLists.txt:206
+- [CMake Targets] D:\lazy init ide\build_universal\_deps\zlib-src\CMakeLists.txt:210
+- [CMake Targets] D:\lazy init ide\build_universal\_deps\zlib-src\CMakeLists.txt:211
+- [Feature Flags] D:\lazy init ide\build_universal\_deps\zlib-src\CMakeLists.txt:18
+- [Feature Flags] D:\lazy init ide\build_universal\_deps\zlib-subbuild\zlib-populate-prefix\tmp\zlib-populate-mkdirs.cmake:6
+- [Feature Flags] D:\lazy init ide\build_universal\3rdparty\ggml\src\ggml-vulkan\vulkan-shaders-gen-prefix\tmp\vulkan-shaders-gen-mkdirs.cmake:6
+- [CMake Targets] D:\lazy init ide\build_universal\3rdparty\ggml\ggml-config.cmake:259
+- [CMake Targets] D:\lazy init ide\build_universal\3rdparty\ggml\ggml-config.cmake:269
+- [CMake Targets] D:\lazy init ide\build_universal\3rdparty\ggml\ggml-config.cmake:287
+- [CMake Targets] D:\lazy init ide\build_universal\3rdparty\ggml\ggml-config.cmake:331
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\benchmark_completions_autogen.dir\AutogenInfo.json:623
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\benchmark_completions_autogen.dir\AutogenInfo.json:655
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\benchmark_completions_autogen.dir\AutogenInfo.json:687
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\benchmark_completions_autogen.dir\AutogenInfo.json:719
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\brutal_compression_lib_autogen.dir\AutogenInfo.json:541
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\brutal_compression_lib_autogen.dir\AutogenInfo.json:570
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\brutal_compression_lib_autogen.dir\AutogenInfo.json:599
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\brutal_compression_lib_autogen.dir\AutogenInfo.json:628
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\brutal_gzip_autogen.dir\AutogenInfo.json:553
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\brutal_gzip_autogen.dir\AutogenInfo.json:583
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\brutal_gzip_autogen.dir\AutogenInfo.json:613
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\brutal_gzip_autogen.dir\AutogenInfo.json:643
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\deflate_brutal_masm_lib_autogen.dir\AutogenInfo.json:541
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\deflate_brutal_masm_lib_autogen.dir\AutogenInfo.json:570
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\deflate_brutal_masm_lib_autogen.dir\AutogenInfo.json:599
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\deflate_brutal_masm_lib_autogen.dir\AutogenInfo.json:628
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\gguf_hotpatch_tester_autogen.dir\AutogenInfo.json:611
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\gguf_hotpatch_tester_autogen.dir\AutogenInfo.json:642
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\gguf_hotpatch_tester_autogen.dir\AutogenInfo.json:673
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\gguf_hotpatch_tester_autogen.dir\AutogenInfo.json:704
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\gpu_inference_benchmark_autogen.dir\AutogenInfo.json:611
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\gpu_inference_benchmark_autogen.dir\AutogenInfo.json:642
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\gpu_inference_benchmark_autogen.dir\AutogenInfo.json:673
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\gpu_inference_benchmark_autogen.dir\AutogenInfo.json:704
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\masm_cli_compiler_autogen.dir\AutogenInfo.json:542
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\masm_cli_compiler_autogen.dir\AutogenInfo.json:572
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\masm_cli_compiler_autogen.dir\AutogenInfo.json:602
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\masm_cli_compiler_autogen.dir\AutogenInfo.json:632
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\masm_solo_compiler_autogen.dir\AutogenInfo.json:541
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\masm_solo_compiler_autogen.dir\AutogenInfo.json:570
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\masm_solo_compiler_autogen.dir\AutogenInfo.json:599
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\masm_solo_compiler_autogen.dir\AutogenInfo.json:628
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\minimal_qt_test_autogen.dir\AutogenInfo.json:541
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\minimal_qt_test_autogen.dir\AutogenInfo.json:570
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\minimal_qt_test_autogen.dir\AutogenInfo.json:599
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\minimal_qt_test_autogen.dir\AutogenInfo.json:628
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\quant_engine_test_autogen.dir\AutogenInfo.json:541
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\quant_engine_test_autogen.dir\AutogenInfo.json:570
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\quant_engine_test_autogen.dir\AutogenInfo.json:599
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\quant_engine_test_autogen.dir\AutogenInfo.json:628
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\quant_utils_autogen.dir\AutogenInfo.json:549
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\quant_utils_autogen.dir\AutogenInfo.json:578
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\quant_utils_autogen.dir\AutogenInfo.json:607
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\quant_utils_autogen.dir\AutogenInfo.json:636
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\rawrxd_compiler_qt_autogen.dir\AutogenInfo.json:549
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\rawrxd_compiler_qt_autogen.dir\AutogenInfo.json:578
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\rawrxd_compiler_qt_autogen.dir\AutogenInfo.json:607
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\rawrxd_compiler_qt_autogen.dir\AutogenInfo.json:636
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\RawrXD-Agent_autogen.dir\AutogenInfo.json:579
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\RawrXD-Agent_autogen.dir\AutogenInfo.json:608
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\RawrXD-Agent_autogen.dir\AutogenInfo.json:637
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\RawrXD-Agent_autogen.dir\AutogenInfo.json:666
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\RawrXD-AgenticIDE_autogen.dir\AutogenInfo.json:965
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\RawrXD-AgenticIDE_autogen.dir\AutogenInfo.json:1001
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\RawrXD-AgenticIDE_autogen.dir\AutogenInfo.json:1037
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\RawrXD-AgenticIDE_autogen.dir\AutogenInfo.json:1073
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\RawrXD-Chromatic_autogen.dir\AutogenInfo.json:550
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\RawrXD-Chromatic_autogen.dir\AutogenInfo.json:580
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\RawrXD-Chromatic_autogen.dir\AutogenInfo.json:610
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\RawrXD-Chromatic_autogen.dir\AutogenInfo.json:640
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\RawrXD-Compiler_autogen.dir\AutogenInfo.json:541
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\RawrXD-Compiler_autogen.dir\AutogenInfo.json:570
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\RawrXD-Compiler_autogen.dir\AutogenInfo.json:599
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\RawrXD-Compiler_autogen.dir\AutogenInfo.json:628
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\RawrXD-QtShell_autogen.dir\AutogenInfo.json:970
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\RawrXD-QtShell_autogen.dir\AutogenInfo.json:1005
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\RawrXD-QtShell_autogen.dir\AutogenInfo.json:1040
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\RawrXD-QtShell_autogen.dir\AutogenInfo.json:1075
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\self_test_gate_autogen.dir\AutogenInfo.json:561
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\self_test_gate_autogen.dir\AutogenInfo.json:590
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\self_test_gate_autogen.dir\AutogenInfo.json:619
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\self_test_gate_autogen.dir\AutogenInfo.json:648
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\simple_gpu_test_autogen.dir\AutogenInfo.json:557
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\simple_gpu_test_autogen.dir\AutogenInfo.json:588
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\simple_gpu_test_autogen.dir\AutogenInfo.json:619
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\simple_gpu_test_autogen.dir\AutogenInfo.json:650
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\stub_test_autogen.dir\AutogenInfo.json:541
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\stub_test_autogen.dir\AutogenInfo.json:570
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\stub_test_autogen.dir\AutogenInfo.json:599
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\stub_test_autogen.dir\AutogenInfo.json:628
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_agent_coordinator_autogen.dir\AutogenInfo.json:542
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_agent_coordinator_autogen.dir\AutogenInfo.json:572
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_agent_coordinator_autogen.dir\AutogenInfo.json:602
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_agent_coordinator_autogen.dir\AutogenInfo.json:632
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_agent_coordinator_integration_autogen.dir\AutogenInfo.json:556
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_agent_coordinator_integration_autogen.dir\AutogenInfo.json:586
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_agent_coordinator_integration_autogen.dir\AutogenInfo.json:616
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_agent_coordinator_integration_autogen.dir\AutogenInfo.json:646
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_chat_streaming_autogen.dir\AutogenInfo.json:611
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_chat_streaming_autogen.dir\AutogenInfo.json:642
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_chat_streaming_autogen.dir\AutogenInfo.json:673
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_chat_streaming_autogen.dir\AutogenInfo.json:704
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_deflate_masm_autogen.dir\AutogenInfo.json:541
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_deflate_masm_autogen.dir\AutogenInfo.json:570
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_deflate_masm_autogen.dir\AutogenInfo.json:599
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_deflate_masm_autogen.dir\AutogenInfo.json:628
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_gguf_loader_autogen.dir\AutogenInfo.json:549
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_gguf_loader_autogen.dir\AutogenInfo.json:578
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_gguf_loader_autogen.dir\AutogenInfo.json:607
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_gguf_loader_autogen.dir\AutogenInfo.json:636
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_gguf_loader_simple_autogen.dir\AutogenInfo.json:549
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_gguf_loader_simple_autogen.dir\AutogenInfo.json:578
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_gguf_loader_simple_autogen.dir\AutogenInfo.json:607
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_gguf_loader_simple_autogen.dir\AutogenInfo.json:636
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_header_autogen.dir\AutogenInfo.json:541
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_header_autogen.dir\AutogenInfo.json:570
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_header_autogen.dir\AutogenInfo.json:599
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_header_autogen.dir\AutogenInfo.json:628
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_ide_main_autogen.dir\AutogenInfo.json:549
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_ide_main_autogen.dir\AutogenInfo.json:578
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_ide_main_autogen.dir\AutogenInfo.json:607
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_ide_main_autogen.dir\AutogenInfo.json:636
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_kv_cache_autogen.dir\AutogenInfo.json:541
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_kv_cache_autogen.dir\AutogenInfo.json:570
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_kv_cache_autogen.dir\AutogenInfo.json:599
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_kv_cache_autogen.dir\AutogenInfo.json:628
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_qmainwindow_autogen.dir\AutogenInfo.json:541
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_qmainwindow_autogen.dir\AutogenInfo.json:570
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_qmainwindow_autogen.dir\AutogenInfo.json:599
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeFiles\test_qmainwindow_autogen.dir\AutogenInfo.json:628
+- [Feature Flags] D:\lazy init ide\build_universal\src\masm\CMakeFiles\masm_writers_autogen.dir\AutogenInfo.json:69
+- [Feature Flags] D:\lazy init ide\build_universal\src\masm\CMakeFiles\masm_writers_autogen.dir\AutogenInfo.json:98
+- [Feature Flags] D:\lazy init ide\build_universal\src\masm\CMakeFiles\masm_writers_autogen.dir\AutogenInfo.json:127
+- [Feature Flags] D:\lazy init ide\build_universal\src\masm\CMakeFiles\masm_writers_autogen.dir\AutogenInfo.json:156
+- [Feature Flags] D:\lazy init ide\build_universal\src\orchestration\CMakeFiles\RawrXDOrchestration_autogen.dir\AutogenInfo.json:126
+- [Feature Flags] D:\lazy init ide\build_universal\src\orchestration\CMakeFiles\RawrXDOrchestration_autogen.dir\AutogenInfo.json:156
+- [Feature Flags] D:\lazy init ide\build_universal\src\orchestration\CMakeFiles\RawrXDOrchestration_autogen.dir\AutogenInfo.json:186
+- [Feature Flags] D:\lazy init ide\build_universal\src\orchestration\CMakeFiles\RawrXDOrchestration_autogen.dir\AutogenInfo.json:216
+- [Feature Flags] D:\lazy init ide\build_universal\src\paint\CMakeFiles\RawrXD-Paint_autogen.dir\AutogenInfo.json:63
+- [Feature Flags] D:\lazy init ide\build_universal\src\paint\CMakeFiles\RawrXD-Paint_autogen.dir\AutogenInfo.json:92
+- [Feature Flags] D:\lazy init ide\build_universal\src\paint\CMakeFiles\RawrXD-Paint_autogen.dir\AutogenInfo.json:121
+- [Feature Flags] D:\lazy init ide\build_universal\src\paint\CMakeFiles\RawrXD-Paint_autogen.dir\AutogenInfo.json:150
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeCache.txt:338
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeCache.txt:341
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeCache.txt:344
+- [Feature Flags] D:\lazy init ide\build_universal\CMakeCache.txt:347
+- [CMake Targets] D:\lazy init ide\build_universal\ggml-config.cmake:140
+- [CMake Targets] D:\lazy init ide\build_universal\ggml-config.cmake:150
+- [CMake Targets] D:\lazy init ide\build_universal\ggml-config.cmake:168
+- [CMake Targets] D:\lazy init ide\build_universal\ggml-config.cmake:212
+- [CMake Targets] D:\lazy init ide\cmake\AutonomousHealer.cmake:9
+- [CMake Targets] D:\lazy init ide\cmake\AutonomousHealer.cmake:14
+- [CMake Targets] D:\lazy init ide\cmake\AutonomousHealer.cmake:20
+- [CMake Targets] D:\lazy init ide\cmake\AutonomousHealer.cmake:36
+- [CMake Targets] D:\lazy init ide\cmake\AutonomousHealer.cmake:40
+- [CMake Targets] D:\lazy init ide\cmake\AutonomousHealer.cmake:46
+- [CMake Targets] D:\lazy init ide\cmake\AutonomousHealer.cmake:65
+- [CMake Targets] D:\lazy init ide\cmake\MASMCompiler.cmake:41
+- [CMake Targets] D:\lazy init ide\cmake\MASMCompiler.cmake:44
+- [CMake Targets] D:\lazy init ide\cmake\MASMCompiler.cmake:64
+- [CMake Targets] D:\lazy init ide\cmake\MASMCompiler.cmake:84
+- [CMake Targets] D:\lazy init ide\cmake\MASMCompiler.cmake:116
+- [Feature Flags] D:\lazy init ide\cmake\MASMCompiler.cmake:132
+- [Feature Flags] D:\lazy init ide\Consolidated_Modules_20260124_064313\03_Production\RawrXD.Win32Deployment.psm1:55
+- [Feature Flags] D:\lazy init ide\Consolidated_Modules_20260124_064313\03_Production\RawrXD.Win32Deployment.psm1:62
+- [Feature Flags] D:\lazy init ide\Consolidated_Modules_20260124_064319\03_Production\RawrXD.Win32Deployment.psm1:55
+- [Feature Flags] D:\lazy init ide\Consolidated_Modules_20260124_064319\03_Production\RawrXD.Win32Deployment.psm1:62
+- [Feature Flags] D:\lazy init ide\Consolidated_Modules_20260124_064807\03_Production\RawrXD.Win32Deployment.psm1:55
+- [Feature Flags] D:\lazy init ide\Consolidated_Modules_20260124_064807\03_Production\RawrXD.Win32Deployment.psm1:62
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\bat\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\bat\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\clojure\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\clojure\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\coffeescript\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\coffeescript\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\configuration-editing\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\configuration-editing\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cpp\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cpp\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\csharp\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\csharp\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\css\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\css\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\css-language-features\schemas\package.schema.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\css-language-features\server\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\css-language-features\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\css-language-features\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-agent\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-agent\package.json:1
+- [VS Code ExtensionDeps] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-agent\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-agent-exec\package.json:1
+- [VS Code ExtensionDeps] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-agent-exec\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-always-local\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-always-local\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-android-emulator-connect\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-android-emulator-connect\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-browser-automation\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-browser-automation\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-browser-extension\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-browser-extension\package.json:1
+- [VS Code ExtensionDeps] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-browser-extension\package.json:1
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-commits\worker\pre-compile.js:3
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-commits\worker\pre-compile.js:4
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-commits\worker\pre-compile.js:5
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-commits\worker\pre-compile.js:6
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-commits\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-commits\package.json:1
+- [VS Code ExtensionDeps] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-commits\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-deeplink\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-deeplink\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-ios-simulator-connect\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-ios-simulator-connect\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-mcp\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-mcp\package.json:1
+- [VS Code ExtensionDeps] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-mcp\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-ndjson-ingest\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-ndjson-ingest\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-polyfills-remote\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-polyfills-remote\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-retrieval\schemas\package.schema.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-retrieval\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-retrieval\package.json:1
+- [VS Code ExtensionDeps] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-retrieval\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-shadow-workspace\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-shadow-workspace\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\cursor-worktree-textmate\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\dart\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\dart\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\debug-auto-launch\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\debug-auto-launch\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\debug-server-ready\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\debug-server-ready\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\diff\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\diff\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\docker\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\docker\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\emmet\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\emmet\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\extension-editing\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\extension-editing\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\fsharp\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\fsharp\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\git\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\git\package.json:1
+- [VS Code ExtensionDeps] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\git\package.json:1
+- [VS Code ExtensionDeps] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\git\README.md:23
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\git-base\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\git-base\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\github\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\github\package.json:1
+- [VS Code ExtensionDeps] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\github\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\github-authentication\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\github-authentication\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\go\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\go\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\groovy\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\groovy\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\grunt\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\grunt\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\gulp\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\gulp\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\handlebars\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\handlebars\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\hlsl\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\hlsl\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\html\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\html\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\html-language-features\schemas\package.schema.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\html-language-features\server\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\html-language-features\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\html-language-features\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ini\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ini\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ipynb\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ipynb\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\jake\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\jake\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\java\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\java\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\javascript\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\json\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\json\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\json-language-features\server\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\json-language-features\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\json-language-features\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\julia\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\julia\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\latex\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\latex\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\less\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\less\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\log\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\log\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\lua\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\lua\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\make\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\make\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\markdown-basics\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\markdown-basics\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\markdown-language-features\schemas\package.schema.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\markdown-language-features\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\markdown-language-features\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\markdown-math\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\markdown-math\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\media-preview\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\media-preview\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\merge-conflict\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\merge-conflict\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\microsoft-authentication\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\microsoft-authentication\package.json:1
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\vendor\acorn-loose.js:1
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\bootloader.js:8
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\diagnosticTool.js:1
+- [TS Imports] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:36
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:1
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:2
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:3
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:5
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:11
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:12
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:18
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:19
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:23
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:24
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:26
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:30
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:34
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:39
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:53
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:56
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:57
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:58
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:60
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:65
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:78
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:95
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:97
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:99
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:100
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:102
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:103
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:106
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:111
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:112
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:114
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:119
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:120
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:107
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:106
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\extension.js:114
+- [TS Imports] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\src\watchdog.js:18
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug-companion\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.js-debug-companion\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ms-vscode.vscode-js-profile-table\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\notebook-renderers\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\notebook-renderers\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\npm\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\npm\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\objective-c\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\objective-c\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ocaml\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ocaml\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\perl\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\perl\package.json:1
+- [CommonJS Requires] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\php\syntaxes\php.tmLanguage.json:1
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\php\syntaxes\php.tmLanguage.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\php\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\php\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\php-language-features\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\php-language-features\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\powershell\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\powershell\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\pug\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\pug\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\python\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\python\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\r\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\r\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\razor\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\razor\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\references-view\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\references-view\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\restructuredtext\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\restructuredtext\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ruby\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\ruby\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\rust\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\rust\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\scss\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\scss\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\search-result\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\search-result\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\shaderlab\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\shaderlab\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\shellscript\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\shellscript\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\simple-browser\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\simple-browser\package.json:1
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\sql\syntaxes\sql.tmLanguage.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\sql\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\sql\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\swift\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\swift\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\terminal-suggest\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\theme-abyss\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\theme-cursor\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\theme-defaults\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\theme-kimbie-dark\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\theme-monokai\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\theme-monokai-dimmed\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\theme-quietlight\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\theme-red\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\theme-seti\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\theme-seti\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\theme-solarized-dark\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\theme-solarized-light\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\theme-tomorrow-night-blue\package.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\tunnel-forwarding\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\tunnel-forwarding\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\typescript-basics\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\typescript-basics\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\typescript-language-features\schemas\package.schema.json:1
+- [VS Code Activation] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\typescript-language-features\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\typescript-language-features\package.json:1
+- [TS Imports] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\typescript-language-features\package.nls.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\vb\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\vb\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\vscode-jupyter-keymap\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\xml\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\xml\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\yaml\package.json:1
+- [Package Scripts] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\extensions\yaml\package.json:1
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2381
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2382
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2383
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2384
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2386
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2387
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2388
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2389
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2391
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2392
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2393
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2394
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2395
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2396
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2397
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2398
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2399
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2400
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2401
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2402
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2403
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2404
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2405
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2406
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2407
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2408
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2409
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2410
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2411
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2412
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2413
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2414
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2416
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2417
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2418
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2419
+- [Feature Flags] D:\lazy init ide\Cursor_Source_Extracted\electron_source_app\product.json:2420
+- [Feature Flags] D:\lazy init ide\docs\API_REFERENCE_PHASE2.md:685
+- [Feature Flags] D:\lazy init ide\docs\API_REFERENCE_PHASE2.md:686
+- [Feature Flags] D:\lazy init ide\docs\API_REFERENCE_PHASE2.md:687
+- [CMake Targets] D:\lazy init ide\docs\COMPILER_VERSIONS_SUMMARY.md:99
+- [CMake Targets] D:\lazy init ide\docs\COMPILER_VERSIONS_SUMMARY.md:102
+- [CMake Targets] D:\lazy init ide\docs\COMPILER_VERSIONS_SUMMARY.md:179
+- [CMake Targets] D:\lazy init ide\docs\INSTRUCTION_LOADER_IMPLEMENTATION.md:100
+- [CMake Targets] D:\lazy init ide\docs\INSTRUCTION_LOADER_IMPLEMENTATION.md:103
+- [CMake Targets] D:\lazy init ide\docs\INTEGRATION_SUMMARY.md:106
+- [CMake Targets] D:\lazy init ide\docs\INTEGRATION_SUMMARY.md:113
+- [CMake Targets] D:\lazy init ide\docs\PRODUCTION_COMPONENTS_INTEGRATION.md:324
+- [CMake Targets] D:\lazy init ide\docs\PRODUCTION_COMPONENTS_INTEGRATION.md:333
+- [Feature Flags] D:\lazy init ide\docs\PRODUCTION_CONFIGURATION_GUIDE.md:89
+- [Feature Flags] D:\lazy init ide\docs\PRODUCTION_CONFIGURATION_GUIDE.md:95
+- [Feature Flags] D:\lazy init ide\docs\PRODUCTION_CONFIGURATION_GUIDE.md:96
+- [Feature Flags] D:\lazy init ide\docs\PRODUCTION_CONFIGURATION_GUIDE.md:97
+- [Feature Flags] D:\lazy init ide\docs\PRODUCTION_CONFIGURATION_GUIDE.md:152
+- [Feature Flags] D:\lazy init ide\docs\PRODUCTION_CONFIGURATION_GUIDE.md:158
+- [Feature Flags] D:\lazy init ide\docs\PRODUCTION_CONFIGURATION_GUIDE.md:159
+- [Feature Flags] D:\lazy init ide\docs\PRODUCTION_CONFIGURATION_GUIDE.md:160
+- [Feature Flags] D:\lazy init ide\docs\PRODUCTION_CONFIGURATION_GUIDE.md:355
+- [Feature Flags] D:\lazy init ide\docs\PRODUCTION_CONFIGURATION_GUIDE.md:356
+- [Feature Flags] D:\lazy init ide\docs\PRODUCTION_CONFIGURATION_GUIDE.md:588
+- [Feature Flags] D:\lazy init ide\docs\PRODUCTION_CONFIGURATION_GUIDE.md:601
+- [Feature Flags] D:\lazy init ide\docs\PRODUCTION_CONFIGURATION_GUIDE.md:602
+- [Feature Flags] D:\lazy init ide\docs\TROUBLESHOOTING_GUIDE.md:399
+- [CMake Targets] D:\lazy init ide\examples\gpt-2\CMakeLists.txt:5
+- [CMake Targets] D:\lazy init ide\examples\gpt-2\CMakeLists.txt:6
+- [CMake Targets] D:\lazy init ide\examples\gpt-2\CMakeLists.txt:9
+- [CMake Targets] D:\lazy init ide\examples\gpt-2\CMakeLists.txt:10
+- [CMake Targets] D:\lazy init ide\examples\gpt-2\CMakeLists.txt:13
+- [CMake Targets] D:\lazy init ide\examples\gpt-2\CMakeLists.txt:14
+- [CMake Targets] D:\lazy init ide\examples\gpt-2\CMakeLists.txt:17
+- [CMake Targets] D:\lazy init ide\examples\gpt-2\CMakeLists.txt:18
+- [CMake Targets] D:\lazy init ide\examples\gpt-2\CMakeLists.txt:24
+- [CMake Targets] D:\lazy init ide\examples\gpt-2\CMakeLists.txt:25
+- [CMake Targets] D:\lazy init ide\examples\gpt-2\CMakeLists.txt:31
+- [CMake Targets] D:\lazy init ide\examples\gpt-2\CMakeLists.txt:32
+- [CMake Targets] D:\lazy init ide\examples\gpt-j\CMakeLists.txt:5
+- [CMake Targets] D:\lazy init ide\examples\gpt-j\CMakeLists.txt:6
+- [CMake Targets] D:\lazy init ide\examples\gpt-j\CMakeLists.txt:12
+- [CMake Targets] D:\lazy init ide\examples\gpt-j\CMakeLists.txt:13
+- [CMake Targets] D:\lazy init ide\examples\magika\CMakeLists.txt:5
+- [CMake Targets] D:\lazy init ide\examples\magika\CMakeLists.txt:6
+- [CMake Targets] D:\lazy init ide\examples\mnist\CMakeLists.txt:5
+- [CMake Targets] D:\lazy init ide\examples\mnist\CMakeLists.txt:6
+- [CMake Targets] D:\lazy init ide\examples\mnist\CMakeLists.txt:12
+- [CMake Targets] D:\lazy init ide\examples\mnist\CMakeLists.txt:13
+- [CMake Targets] D:\lazy init ide\examples\mnist\CMakeLists.txt:19
+- [CMake Targets] D:\lazy init ide\examples\mnist\CMakeLists.txt:20
+- [CMake Targets] D:\lazy init ide\examples\mnist\CMakeLists.txt:28
+- [CMake Targets] D:\lazy init ide\examples\mnist\CMakeLists.txt:29
+- [CMake Targets] D:\lazy init ide\examples\perf-metal\CMakeLists.txt:5
+- [CMake Targets] D:\lazy init ide\examples\perf-metal\CMakeLists.txt:6
+- [CMake Targets] D:\lazy init ide\examples\sam\CMakeLists.txt:5
+- [CMake Targets] D:\lazy init ide\examples\sam\CMakeLists.txt:6
+- [CMake Targets] D:\lazy init ide\examples\sam\CMakeLists.txt:12
+- [CMake Targets] D:\lazy init ide\examples\sam\CMakeLists.txt:13
+- [CMake Targets] D:\lazy init ide\examples\simple\CMakeLists.txt:5
+- [CMake Targets] D:\lazy init ide\examples\simple\CMakeLists.txt:6
+- [CMake Targets] D:\lazy init ide\examples\simple\CMakeLists.txt:12
+- [CMake Targets] D:\lazy init ide\examples\simple\CMakeLists.txt:13
+- [CMake Targets] D:\lazy init ide\examples\test-cmake\CMakeLists.txt:9
+- [CMake Targets] D:\lazy init ide\examples\test-cmake\CMakeLists.txt:10
+- [CMake Targets] D:\lazy init ide\examples\yolo\CMakeLists.txt:5
+- [CMake Targets] D:\lazy init ide\examples\yolo\CMakeLists.txt:6
+- [CMake Targets] D:\lazy init ide\examples\CMakeLists.txt:14
+- [CMake Targets] D:\lazy init ide\examples\CMakeLists.txt:15
+- [CMake Targets] D:\lazy init ide\examples\CMakeLists.txt:17
+- [CMake Targets] D:\lazy init ide\examples\CMakeLists.txt:18
+- [CMake Targets] D:\lazy init ide\examples\CMakeLists.txt:19
+- [CMake Subdir] D:\lazy init ide\examples\CMakeLists.txt:21
+- [CMake Subdir] D:\lazy init ide\examples\CMakeLists.txt:24
+- [CMake Subdir] D:\lazy init ide\examples\CMakeLists.txt:25
+- [CMake Subdir] D:\lazy init ide\examples\CMakeLists.txt:26
+- [CMake Subdir] D:\lazy init ide\examples\CMakeLists.txt:27
+- [CMake Subdir] D:\lazy init ide\examples\CMakeLists.txt:28
+- [CMake Subdir] D:\lazy init ide\examples\CMakeLists.txt:29
+- [CMake Subdir] D:\lazy init ide\examples\CMakeLists.txt:33
+- [Feature Flags] D:\lazy init ide\examples\stb_image.h:707
+- [Feature Flags] D:\lazy init ide\examples\stb_image.h:718
+- [CMake Targets] D:\lazy init ide\extension_registry\CMakeLists.txt:39
+- [CMake Targets] D:\lazy init ide\extension_registry\CMakeLists.txt:45
+- [CMake Targets] D:\lazy init ide\extension_registry\CMakeLists.txt:52
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\agent_features\cursor-agent\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\agent_features\cursor-agent\package.json:1
+- [VS Code ExtensionDeps] D:\lazy init ide\Extracted_Chat_Agent_Features\agent_features\cursor-agent\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\agent_features\cursor-agent-exec\package.json:1
+- [VS Code ExtensionDeps] D:\lazy init ide\Extracted_Chat_Agent_Features\agent_features\cursor-agent-exec\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\bat\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\bat\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\clojure\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\clojure\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\coffeescript\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\coffeescript\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\configuration-editing\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\configuration-editing\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cpp\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cpp\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\csharp\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\csharp\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\css\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\css\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\css-language-features\schemas\package.schema.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\css-language-features\server\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\css-language-features\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\css-language-features\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-agent\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-agent\package.json:1
+- [VS Code ExtensionDeps] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-agent\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-agent-exec\package.json:1
+- [VS Code ExtensionDeps] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-agent-exec\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-always-local\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-always-local\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-android-emulator-connect\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-android-emulator-connect\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-browser-automation\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-browser-automation\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-browser-extension\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-browser-extension\package.json:1
+- [VS Code ExtensionDeps] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-browser-extension\package.json:1
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-commits\worker\pre-compile.js:3
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-commits\worker\pre-compile.js:4
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-commits\worker\pre-compile.js:5
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-commits\worker\pre-compile.js:6
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-commits\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-commits\package.json:1
+- [VS Code ExtensionDeps] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-commits\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-deeplink\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-deeplink\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-ios-simulator-connect\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-ios-simulator-connect\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-mcp\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-mcp\package.json:1
+- [VS Code ExtensionDeps] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-mcp\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-ndjson-ingest\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-ndjson-ingest\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-polyfills-remote\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-polyfills-remote\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-retrieval\schemas\package.schema.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-retrieval\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-retrieval\package.json:1
+- [VS Code ExtensionDeps] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-retrieval\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-shadow-workspace\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-shadow-workspace\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\cursor-worktree-textmate\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\dart\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\dart\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\debug-auto-launch\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\debug-auto-launch\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\debug-server-ready\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\debug-server-ready\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\diff\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\diff\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\docker\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\docker\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\emmet\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\emmet\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\extension-editing\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\extension-editing\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\fsharp\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\fsharp\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\git\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\git\package.json:1
+- [VS Code ExtensionDeps] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\git\package.json:1
+- [VS Code ExtensionDeps] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\git\README.md:23
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\git-base\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\git-base\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\github\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\github\package.json:1
+- [VS Code ExtensionDeps] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\github\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\github-authentication\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\github-authentication\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\go\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\go\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\groovy\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\groovy\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\grunt\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\grunt\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\gulp\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\gulp\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\handlebars\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\handlebars\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\hlsl\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\hlsl\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\html\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\html\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\html-language-features\schemas\package.schema.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\html-language-features\server\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\html-language-features\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\html-language-features\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ini\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ini\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ipynb\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ipynb\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\jake\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\jake\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\java\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\java\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\javascript\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\json\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\json\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\json-language-features\server\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\json-language-features\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\json-language-features\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\julia\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\julia\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\latex\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\latex\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\less\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\less\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\log\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\log\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\lua\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\lua\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\make\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\make\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\markdown-basics\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\markdown-basics\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\markdown-language-features\schemas\package.schema.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\markdown-language-features\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\markdown-language-features\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\markdown-math\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\markdown-math\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\media-preview\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\media-preview\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\merge-conflict\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\merge-conflict\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\microsoft-authentication\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\microsoft-authentication\package.json:1
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\vendor\acorn-loose.js:1
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\bootloader.js:8
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\diagnosticTool.js:1
+- [TS Imports] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:36
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:1
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:2
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:3
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:5
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:11
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:12
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:18
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:19
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:23
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:24
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:26
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:30
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:34
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:39
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:53
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:56
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:57
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:58
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:60
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:65
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:78
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:95
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:97
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:99
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:100
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:102
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:103
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:106
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:111
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:112
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:114
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:119
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:120
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:107
+- [Feature Flags] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:106
+- [Feature Flags] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\extension.js:114
+- [TS Imports] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\src\watchdog.js:18
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug-companion\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.js-debug-companion\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ms-vscode.vscode-js-profile-table\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\notebook-renderers\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\notebook-renderers\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\npm\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\npm\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\objective-c\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\objective-c\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ocaml\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ocaml\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\perl\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\perl\package.json:1
+- [CommonJS Requires] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\php\syntaxes\php.tmLanguage.json:1
+- [Feature Flags] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\php\syntaxes\php.tmLanguage.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\php\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\php\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\php-language-features\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\php-language-features\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\powershell\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\powershell\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\pug\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\pug\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\python\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\python\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\r\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\r\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\razor\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\razor\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\references-view\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\references-view\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\restructuredtext\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\restructuredtext\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ruby\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\ruby\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\rust\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\rust\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\scss\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\scss\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\search-result\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\search-result\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\shaderlab\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\shaderlab\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\shellscript\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\shellscript\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\simple-browser\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\simple-browser\package.json:1
+- [Feature Flags] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\sql\syntaxes\sql.tmLanguage.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\sql\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\sql\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\swift\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\swift\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\terminal-suggest\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\theme-abyss\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\theme-cursor\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\theme-defaults\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\theme-kimbie-dark\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\theme-monokai\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\theme-monokai-dimmed\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\theme-quietlight\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\theme-red\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\theme-seti\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\theme-seti\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\theme-solarized-dark\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\theme-solarized-light\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\theme-tomorrow-night-blue\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\tunnel-forwarding\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\tunnel-forwarding\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\typescript-basics\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\typescript-basics\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\typescript-language-features\schemas\package.schema.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\typescript-language-features\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\typescript-language-features\package.json:1
+- [TS Imports] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\typescript-language-features\package.nls.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\vb\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\vb\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\vscode-jupyter-keymap\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\xml\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\xml\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\yaml\package.json:1
+- [Package Scripts] D:\lazy init ide\Extracted_Chat_Agent_Features\extension_system\all_extensions\yaml\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\github_copilot\github\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\github_copilot\github\package.json:1
+- [VS Code ExtensionDeps] D:\lazy init ide\Extracted_Chat_Agent_Features\github_copilot\github\package.json:1
+- [VS Code Activation] D:\lazy init ide\Extracted_Chat_Agent_Features\github_copilot\github-authentication\package.json:1
+- [VS Code Contributes] D:\lazy init ide\Extracted_Chat_Agent_Features\github_copilot\github-authentication\package.json:1
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\vendor\acorn-loose.js:1
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\bootloader.js:8
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\diagnosticTool.js:1
+- [TS Imports] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:36
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:1
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:2
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:3
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:5
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:11
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:12
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:18
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:19
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:23
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:24
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:26
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:30
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:34
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:39
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:53
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:56
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:57
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:58
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:60
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:65
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:78
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:95
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:97
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:99
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:100
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:102
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:103
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:106
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:111
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:112
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:114
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:119
+- [CommonJS Requires] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:120
+- [Package Scripts] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:107
+- [Feature Flags] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:106
+- [Feature Flags] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\extension.js:114
+- [TS Imports] D:\lazy init ide\Fixed_Reverse_Engineered\obfuscated_js\ectron_source_app\extensions\ms-vscode.js-debug\src\watchdog.js:18
+- [Feature Flags] D:\lazy init ide\include\renderer.h:16
+- [Feature Flags] D:\lazy init ide\include\settings.h:12
+- [Feature Flags] D:\lazy init ide\include\settings.h:13
+- [Feature Flags] D:\lazy init ide\include\settings.h:14
+- [Feature Flags] D:\lazy init ide\include\settings.h:15
+- [Feature Flags] D:\lazy init ide\include\settings.h:19
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-backup.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-backup.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-backup.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-backup.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-backup.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-backup.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-backup.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-backup.js:1071
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-backup.js:1464
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-backup.js:2180
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-backup.js:2671
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-backup.js:2744
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-backup.js:2768
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-backup.js:2844
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-backup.js:2878
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-backup.js:2904
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-backup.js:3067
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-fixed.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-fixed.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-fixed.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-fixed.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-fixed.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-fixed.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-no-cli.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-no-cli.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-no-cli.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-no-cli.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-no-cli.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-no-cli.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-no-cli.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-no-cli.js:9
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-no-cli.js:10
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-real.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-real.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-real.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-real.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-real.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-real.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-real.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-real.js:9
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-real.js:10
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-real.js:391
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-real.js:523
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-real.js:1219
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-real.js:1378
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-real.js:1417
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-real.js:1874
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server-real.js:3748
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\api-server.js:118
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\native-compile-server.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\native-compile-server.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\native-compile-server.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\native-compile-server.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\native-compile-server.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\native-compile-server.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server_old.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server_old.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server_working.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server_working.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server_working.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server_working.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server_working.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server_working.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server_working.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server_working.js:203
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server_working.js:220
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server_working.js:244
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server_working.js:245
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server-backup.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server-backup.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server-fixed.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server-fixed.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server-fixed.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server-fixed.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server-fixed.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server-fixed.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server-fixed.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server-fixed.js:11
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server-fixed.js:12
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server-fixed.js:13
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server-real-bots.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server-real-bots.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server-real-bots.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server-real-bots.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server-real-bots.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server-real-bots.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server-real-bots.js:9
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server-real-bots.js:10
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server-real-bots.js:11
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server-real-bots.js:12
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server-real-bots.js:13
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server.js:9
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server.js:10
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server.js:13
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server.js:14
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server.js:15
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server.js:1322
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\server.js:1342
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\04-NodeJS-Server\test-real-bot-integration.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test_beaconism_encryption_integration.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test_reverse_engineering_final.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test_reverse_engineering_simple.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test_reverse_engineering.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test_stealth_engine.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test_stealth_engine.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test_stealth_integration.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-all-features.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-all-features.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-all-features.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-api.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-beaconism-fileless-advanced.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-beaconism-fileless-advanced.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-beaconism-fileless-advanced.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-beaconism-fileless-advanced.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-beaconism-fileless-advanced.js:208
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-beaconism-fileless-advanced.js:215
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-beaconism-fileless-advanced.js:224
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-beaconism-fileless-advanced.js:231
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-beaconism-fileless-advanced.js:243
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-beaconism-fileless-advanced.js:244
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-beaconism-fileless-advanced.js:259
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-beaconism-fileless-advanced.js:260
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-beaconism-fileless-advanced.js:261
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-beaconism-fileless-advanced.js:678
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-beaconism-fileless-advanced.js:679
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-beaconism-fileless-advanced.js:821
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-beaconism-fileless-advanced.js:822
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-beaconism-fileless-advanced.js:823
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-bot-client.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-bot-client.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-bot-client.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-bot-commands.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-bot-commands.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-bot-commands.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-bot-data.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-bot-panel-integration.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-bot-panel-integration.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-botnet-panel-secure.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-botnet-panel-secure.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-botnet-panel-secure.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-botnet-panel-secure.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-botnet-panel-secure.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-botnet-panel-secure.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-botnet-panel-secure.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-botnet-panel-secure.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-botnet-panel.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-botnet-panel.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-botnet-panel.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-botnet-panel.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-botnet-panel.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-botnet-panel.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-complete-extraction-system.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-complete-extraction-system.js:105
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-complete-extraction-system.js:106
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-elevated-privileges-linux.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-elevated-privileges-linux.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-elevated-privileges-linux.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-elevated-privileges-linux.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-elevated-privileges.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-elevated-privileges.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-elevated-privileges.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-elevated-privileges.js:25
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-elevated-privileges.js:36
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-encryption-endpoints.js:9
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-encryption-endpoints.js:10
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-encryption-endpoints.js:11
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-encryption-endpoints.js:12
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-extraction-logs.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-panel-integration.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\06-Test-Files\test-real-functionality.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\ai-terminal-project\ai-terminal.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\ai-terminal-project\ai-terminal.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\ai-terminal-project\ai-terminal.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\ai-terminal-project\ai-terminal.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\ai-terminal-project\ai-terminal.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\ai-terminal-project\ai-terminal.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\cleaned-output\server.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\cleaned-output\server.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\cleaned-output\server.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\cleaned-output\server.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\cleaned-output\server.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\cleaned-output\server.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\cleaned-output\server.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\cleaned-output\server.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\cleaned-output\server.js:9
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\cleaned-output\server.js:10
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\cleaned-output\server.js:11
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\cleaned-output\server.js:12
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\cleaned-output\server.js:14
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\cleaned-output\server.js:15
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\cleaned-output\server.js:16
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\cleaned-output\server.js:17
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\cleaned-output\server.js:20
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\cleaned-output\server.js:21
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\cleaned-output\server.js:22
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\cleaned-output\server.js:25
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\cleaned-output\server.js:40
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\cleaned-output\server.js:664
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\cleaned-output\server.js:665
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\cursor-integration\install-cursor-integration.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\cursor-integration\install-cursor-integration.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\cursor-integration\install-cursor-integration.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\compilers\eon_compiler_helper.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\compilers\eon_compiler_helper.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\compilers\eon_compiler_helper.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\compilers\eon_compiler_helper.js:214
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\eon_ide_cli.js:10
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\eon_ide_cli.js:11
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\eon_ide_cli.js:12
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\eon_ide_hybrid.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\eon_ide_hybrid.js:9
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\eon_log_based_generator.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\eon_log_based_generator.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\eon_log_based_generator.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\eon_log_based_generator.js:66
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\eon_smart_fixer.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\eon_smart_fixer.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\eon-artifact-cleaner.js:10
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\eon-artifact-cleaner.js:11
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\eon-artifact-cleaner.js:12
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\eon-artifact-cleaner.js:1176
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\eon-artifact-cleaner.js:1177
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\eon-artifact-cleaner.js:1345
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\eon-artifact-cleaner.js:1346
+- [CMake Targets] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\eon-ide-generator.js:347
+- [CMake Targets] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\eon-ide-generator.js:350
+- [CMake Targets] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\eon-ide-generator.js:356
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\eon-ide-generator.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\eon-ide-generator.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\eon-ide-generator.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\eon-ide-generator.js:73
+- [Package Scripts] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\eon-ide-generator.js:399
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\generate_full_eon_ide.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\integrate-eon-ide.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\integrate-eon-ide.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\simple_eon_compiler.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\simple_eon_compiler.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\smart-eon-builder.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\smart-eon-builder.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\smart-eon-builder.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\smart-eon-builder.js:77
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\test_eon_syntax_fixes.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\test_eon_syntax_fixes.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\test-eon-cleaner.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\test-eon-cleaner.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\Eon-ASM\tools\test-eon-cleaner.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\finished\local-deployment\api-server-no-cli.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\finished\local-deployment\api-server-no-cli.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\finished\local-deployment\api-server-no-cli.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\finished\local-deployment\api-server-no-cli.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\finished\local-deployment\api-server-no-cli.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\finished\local-deployment\api-server-no-cli.js:7
+- [Package Scripts] D:\lazy init ide\itsmehrawrxd-master\finished\local-deployment\package.json:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\finished\online-deployment\api-server-no-cli.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\finished\online-deployment\api-server-no-cli.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\finished\online-deployment\api-server-no-cli.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\finished\online-deployment\api-server-no-cli.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\finished\online-deployment\api-server-no-cli.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\finished\online-deployment\api-server-no-cli.js:7
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\local_ai_copilot\configs\copilot_config.json:82
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\local_ai_copilot\configs\copilot_config.json:83
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\local_ai_copilot\configs\copilot_config.json:84
+- [VS Code Activation] D:\lazy init ide\itsmehrawrxd-master\n0mn0m-vscode-extension\package.json:15
+- [VS Code Contributes] D:\lazy init ide\itsmehrawrxd-master\n0mn0m-vscode-extension\package.json:26
+- [Package Scripts] D:\lazy init ide\itsmehrawrxd-master\n0mn0m-vscode-extension\package.json:179
+- [TS Imports] D:\lazy init ide\itsmehrawrxd-master\pages\_app.js:1
+- [TS Imports] D:\lazy init ide\itsmehrawrxd-master\Privvate Co Pilot\ASP.NET\background-orchestrator.js:7
+- [TS Imports] D:\lazy init ide\itsmehrawrxd-master\Privvate Co Pilot\ASP.NET\background-orchestrator.js:8
+- [TS Imports] D:\lazy init ide\itsmehrawrxd-master\Privvate Co Pilot\ASP.NET\background-orchestrator.js:9
+- [TS Imports] D:\lazy init ide\itsmehrawrxd-master\Privvate Co Pilot\ASP.NET\chatbox-enhanced.js:6
+- [TS Imports] D:\lazy init ide\itsmehrawrxd-master\Privvate Co Pilot\ASP.NET\chatbox-enhanced.js:7
+- [TS Imports] D:\lazy init ide\itsmehrawrxd-master\Privvate Co Pilot\ASP.NET\chatbox-enhanced.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\reconstructed-ide\eon-ide-reconstructed.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\reconstructed-ide\eon-ide-reconstructed.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\spoofed-ai-project\spoofed-ai-server.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\spoofed-ai-project\spoofed-ai-server.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\spoofed-ai-project\spoofed-ai-server.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\spoofed-ai-project\spoofed-ai-server.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\spoofed-ai-project\spoofed-ai-server.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-analytics-engine.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-analytics-engine.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-analytics-engine.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-analytics-engine.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-analytics-engine.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-analytics-engine.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-analytics-engine.js:509
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-anti-analysis.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-anti-analysis.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-anti-analysis.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-anti-analysis.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-anti-analysis.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-anti-analysis.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-anti-analysis.js:9
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-anti-analysis.js:10
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-anti-analysis.js:11
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-anti-analysis.js:1153
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-anti-analysis.js:1272
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-anti-analysis.js:1416
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-anti-analysis.js:1445
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-crypto.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-crypto.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-crypto.js:156
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-crypto.js:303
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-crypto.js:984
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-evasion-engine.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-evasion-engine.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-fud-engine.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-fud-engine.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-fud-engine.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-fud-engine.js:9
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-fud-engine.js:10
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-fud-engine.js:11
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-polymorphic-loader.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-polymorphic-loader.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-polymorphic-loader.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-polymorphic-loader.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-polymorphic-loader.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-polymorphic-loader.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-stub-generator.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-stub-generator.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-stub-generator.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-stub-generator.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-stub-generator.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-stub-generator.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-stub-generator.js:9
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-stub-generator.js:10
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-stub-generator.js:11
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-stub-generator.js:79
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-stub-generator.js:87
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-stub-generator.js:98
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-stub-generator.js:1585
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-stub-generator.js:1586
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-stub-generator.js:1587
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\advanced-stub-generator.js:1695
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\ai-threat-detector.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\ai-threat-detector.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\ai-threat-detector.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\ai-threat-detector.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\ai-threat-detector.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\ai-threat-detector.js:757
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\ai-threat-detector.js:780
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\ai-threat-detector.js:928
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\ai-threat-detector.js:949
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\anti-analysis.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\anti-analysis.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\anti-analysis.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\anti-analysis.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\api-status.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\api-status.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\api-status.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\api-status.js:426
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\api-status.js:427
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\api-status.js:428
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\backup-system.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\backup-system.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\backup-system.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\backup-system.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\backup-system.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\backup-system.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\beaconism-dll-sideloading.js:19
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\beaconism-dll-sideloading.js:20
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\beaconism-dll-sideloading.js:21
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\beaconism-dll-sideloading.js:22
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\beaconism-dll-sideloading.js:23
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\beaconism-dll-sideloading.js:24
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\beaconism-dll-sideloading.js:25
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\beaconism-dll-sideloading.js:1002
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\beaconism-dll-sideloading.js:1264
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\beaconism-dll-sideloading.js:1279
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\beaconism-dll-sideloading.js:1334
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\beaconism-dll-sideloading.js:1335
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\beaconism-dll-sideloading.js:1363
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\beaconism-dll-sideloading.js:1364
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\beaconism-dll-sideloading.js:1392
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\beaconism-dll-sideloading.js:1393
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\beaconism-dll-sideloading.js:1467
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\beaconism-dll-sideloading.js:1630
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\beaconism-dll-sideloading.js:1631
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\beaconism-dll-sideloading.js:1632
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\black-hat-capabilities.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\black-hat-capabilities.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\black-hat-capabilities.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\black-hat-capabilities.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\black-hat-capabilities.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\black-hat-capabilities.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\burn-and-go-cryptor.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\burn-and-go-cryptor.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\burn-and-go-cryptor.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\burn-and-go-cryptor.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\burn-and-go-cryptor.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\burn-and-go-cryptor.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\burner-encryption-engine.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\burner-encryption-engine.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\burner-encryption-engine.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\burner-encryption-engine.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\camellia-assembly.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\camellia-assembly.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\camellia-assembly.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\camellia-assembly.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\camellia-assembly.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\compression-engine.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\compression-engine.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\compression-engine.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\compression-engine.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\compression-engine.js:199
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\compression-engine.js:200
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\compression-engine.js:236
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\compression-engine.js:237
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\cve-analysis-engine.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\cve-analysis-engine.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\cve-analysis-engine.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\cve-analysis-engine.js:9
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\cve-analysis-engine.js:10
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\cve-analysis-engine.js:247
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\cve-analysis-engine.js:248
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\cve-analysis-engine.js:570
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\cve-analysis-engine.js:571
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\cve-analysis-engine.js:614
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\cve-analysis-engine.js:634
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\digital-forensics.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\digital-forensics.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\digital-forensics.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\digital-forensics.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\dotnet-workaround.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\dotnet-workaround.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\dotnet-workaround.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\dotnet-workaround.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\dotnet-workaround.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\dotnet-workaround.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\dotnet-workaround.js:9
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\dotnet-workaround.js:10
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\dual-crypto-engine.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\dual-crypto-engine.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\dual-crypto-engine.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\dual-crypto-engine.js:49
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\dual-crypto-engine.js:62
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\dual-crypto-engine.js:77
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\dual-crypto-engine.js:98
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\dual-crypto-engine.js:101
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\dual-crypto-engine.js:105
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\dual-generators.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\dual-generators.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\dual-generators.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\endpoint-customization-engine.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\endpoint-customization-engine.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\endpoint-customization-engine.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\endpoint-customization-engine.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\endpoint-customization-engine.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\endpoint-customization-engine.js:344
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\ev-cert-encryptor.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\ev-cert-encryptor.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\ev-cert-encryptor.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\ev-cert-encryptor.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\ev-cert-encryptor.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\ev-cert-encryptor.js:826
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\ev-cert-encryptor.js:827
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\ev-cert-encryptor.js:828
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\evasion-engine.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\evasion-engine.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\file-operations.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\file-operations.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\file-operations.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\file-operations.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\file-operations.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\full-assembly.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\full-assembly.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\full-assembly.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\full-assembly.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\health-monitor.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\health-monitor.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\health-monitor.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\health-monitor.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\health-monitor.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\health-monitor.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\health-monitor.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\health-monitor.js:9
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\health-monitor.js:10
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\health-monitor.js:11
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\health-monitor.js:12
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\health-monitor.js:13
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\health-monitor.js:337
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\health-monitor.js:338
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\health-monitor.js:361
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\health-monitor.js:386
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\health-monitor.js:403
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\health-monitor.js:404
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\health-monitor.js:428
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\health-monitor.js:429
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\health-monitor.js:571
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\health-monitor.js:634
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\health-monitor.js:654
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\health-monitor.js:675
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\health-monitor.js:1165
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\health-monitor.js:1198
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\health-monitor.js:1199
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\health-monitor.js:1215
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\health-monitor.js:1216
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\health-monitor.js:1240
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\health-monitor.js:1241
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\health-monitor.js:1275
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\health-monitor.js:1281
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\health-monitor.js:1298
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\hot-patchers.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\hot-patchers.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\hot-patchers.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\hot-patchers.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\http-bot-generator.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\http-bot-generator.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\http-bot-generator.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\http-bot-generator.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\http-bot-generator.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\http-bot-generator.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\http-bot-generator.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\http-bot-generator.js:9
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\http-bot-generator.js:473
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\http-bot-generator.js:474
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\http-bot-generator.js:475
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\http-bot-manager.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\http-bot-manager.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\http-bot-manager.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\http-bot-manager.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\http-bot-manager.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\implementation-checker.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\implementation-checker.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\implementation-checker.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\implementation-checker.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\implementation-checker.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\implementation-checker.js:186
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\implementation-checker.js:332
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\implementation-checker.js:632
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:41
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:42
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:43
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:44
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:98
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:99
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:267
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:268
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:269
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:270
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:271
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:272
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:1084
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:1085
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:1086
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:1087
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:1088
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:1118
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:1138
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:1200
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:1213
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:1214
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:1215
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:1216
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:1217
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:1319
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:1347
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:1382
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:1879
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:1897
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:1906
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:1926
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:1991
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\irc-bot-generator.js:2043
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\java-dotnet-unified-cryptor.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\java-dotnet-unified-cryptor.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\java-dotnet-unified-cryptor.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\java-dotnet-unified-cryptor.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\java-dotnet-unified-cryptor.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\java-dotnet-unified-cryptor.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\jotti-scanner.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\jotti-scanner.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\jotti-scanner.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\jotti-scanner.js:9
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\jotti-scanner.js:10
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\jotti-scanner.js:11
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\jotti-scanner.js:12
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\jotti-scanner.js:13
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\malware-analysis.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\malware-analysis.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\malware-analysis.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\malware-analysis.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\memory-manager.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\memory-manager.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\memory-manager.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\memory-manager.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\mobile-bot-engine.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\mobile-tools.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\mobile-tools.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\mobile-tools.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\mobile-tools.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\multi-platform-bot-generator.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\multi-platform-bot-generator.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\multi-platform-bot-generator.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\multi-platform-bot-generator.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\multi-platform-bot-generator.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\multi-platform-bot-generator.js:498
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\multi-platform-bot-generator.js:740
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\mutex-engine.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\mutex-engine.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\mutex-engine.js:291
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\mutex-engine.js:292
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\mutex-engine.js:293
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\native-compiler.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\native-compiler.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\native-compiler.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\native-compiler.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\native-compiler.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\native-compiler.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\native-compiler.js:9
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\native-compiler.js:10
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\native-compiler.js:11
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\network-tools.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\network-tools.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\network-tools.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\network-tools.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\network-tools.js:42
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\network-tools.js:232
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\openssl-management.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\openssl-management.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\openssl-management.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\openssl-management.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\openssl-management.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\openssl-management.js:11
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\openssl-management.js:18
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\openssl-management.js:99
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\openssl-management.js:105
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\openssl-management.js:253
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\openssl-management.js:265
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\openssl-management.js:277
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\openssl-management.js:289
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\openssl-management.js:302
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\openssl-management.js:315
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\openssl-management.js:328
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\openssl-management.js:341
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\openssl-management.js:351
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\paneling-refactor-engine.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\paneling-refactor-engine.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\paneling-refactor-engine.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\paneling-refactor-engine.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\paneling-refactor-engine.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\payload-manager.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\payload-manager.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\payload-manager.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\payload-manager.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\payload-manager.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\performance-optimizer.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\performance-optimizer.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\performance-optimizer.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\performance-optimizer.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\performance-optimizer.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\performance-optimizer.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\performance-optimizer.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\performance-optimizer.js:9
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\performance-optimizer.js:865
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\performance-worker.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\performance-worker.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\performance-worker.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\performance-worker.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\performance-worker.js:136
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\performance-worker.js:562
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\performance-worker.js:563
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\plugin-architecture.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\plugin-architecture.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\plugin-architecture.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\plugin-architecture.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\plugin-architecture.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\plugin-architecture.js:271
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\polymorphic-engine.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\polymorphic-engine.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\private-virus-scanner.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\private-virus-scanner.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\private-virus-scanner.js:9
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\private-virus-scanner.js:10
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\private-virus-scanner.js:11
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\private-virus-scanner.js:12
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\private-virus-scanner.js:13
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\private-virus-scanner.js:14
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\private-virus-scanner.js:15
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\rawrz-engine.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\rawrz-engine.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\rawrz-engine.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\rawrz-engine.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\rawrz-engine.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\rawrz-engine.js:196
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\RawrZEngine2.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\RawrZEngine2.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\RawrZEngine2.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\RawrZEngine2.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\RawrZEngine2.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\RawrZEngine2.js:143
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\RawrZEngine2.js:146
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\RawrZEngine2.js:149
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\RawrZEngine2.js:152
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\RawrZEngine2.js:155
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\RawrZEngine2.js:158
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\RawrZEngine2.js:161
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\RawrZEngine2.js:164
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\RawrZEngine2.js:167
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\RawrZEngine2.js:170
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\RawrZEngine2.js:173
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\RawrZEngine2.js:176
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\RawrZEngine2.js:179
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\RawrZEngine2.js:182
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\RawrZEngine2.js:185
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\RawrZEngine2.js:188
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\real-encryption-engine.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\real-encryption-engine.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\real-encryption-engine.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\real-encryption-engine.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\real-encryption-engine.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\red-killer.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\red-killer.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\red-killer.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\red-killer.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\red-killer.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\red-killer.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\red-killer.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\red-killer.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\red-killer.js:9
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\red-shells.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\red-shells.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\red-shells.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\red-shells.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\red-shells.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\red-shells.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\red-shells.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\red-shells.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\red-shells.js:90
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\red-shells.js:97
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\red-shells.js:98
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\reverse-engineering.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\reverse-engineering.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\reverse-engineering.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\reverse-engineering.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\startup-persistence.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\startup-persistence.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\startup-persistence.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\startup-persistence.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\startup-persistence.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\stealth-engine.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\stealth-engine.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\stealth-engine.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\stealth-engine.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\stealth-engine.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\stealth-engine.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\stealth-engine.js:309
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\stub-generator.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\stub-generator.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\stub-generator.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\stub-generator.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\stub-generator.js:727
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\stub-generator.js:907
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\stub-generator.js:1494
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\template-generator.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\template-generator.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\template-generator.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\template-generator.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\template-generator.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\unified-compiler-engine.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\unified-compiler-engine.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\unified-compiler-engine.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\unified-compiler-engine.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\unified-compiler-engine.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\engines\unified-compiler-engine.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\init\exampleUsage.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\init\exampleUsage.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\init\exampleUsage.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\init\exampleUsage.js:106
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\init\exampleUsage.js:149
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\init\initializationValidator.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\init\initializationValidator.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\init\initializationValidator.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\init\README.md:36
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\init\README.md:54
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\init\README.md:68
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\init\README.md:183
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\init\safeEntry.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\init\safeEntry.js:66
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\init\safeStartup.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\init\safeStartup.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\init\safeStartup.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\init\safeStartup.js:137
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\init\safeStartup.js:157
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\init\safeStartup.js:158
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\init\standardizedInit.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\init\standardizedInit.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\init\standardizedInit.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\init\standardizedInit.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\init\standardizedInit.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\init\standardizedInit.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\init\standardizedInit.js:161
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\init\testInitialization.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\init\testInitialization.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\init\testInitialization.js:128
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\init\testInitialization.js:153
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\init\testInitialization.js:188
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\builtinDatabase.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\builtinDatabase.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\builtinDatabase.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\builtinDatabase.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\chatterbox.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\chatterbox.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\chatterbox.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\chatterbox.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\data-persistence.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\data-persistence.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\data-persistence.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\data-persistence.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\databaseIntegration.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\databaseIntegration.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\databaseIntegration.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\dataIntegrity.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\dataIntegrity.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\dataIntegrity.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\dataIntegrity.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\dataIntegrity.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\dataIntegrity.js:47
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\helpers.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\helpers.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\helpers.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\helpers.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:102
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:416
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:507
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:517
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:518
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:634
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:635
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:731
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:746
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:747
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:786
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:787
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:919
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:935
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:936
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:976
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:991
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:992
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1023
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1024
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1074
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1075
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1095
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1105
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1106
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1141
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1142
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1216
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1217
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1272
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1304
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1313
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1314
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1338
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1339
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1375
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1414
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1454
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1494
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1534
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1574
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1606
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1628
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1660
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1693
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1702
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1703
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1738
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1760
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1786
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1787
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1788
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1843
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1844
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1861
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:1862
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:2083
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:2084
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:2085
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\ircBot.js:2086
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\logger.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\logger.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\memory-manager.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\openssl-config.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\openssl-manager.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\openssl-manager.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\openssl-manager.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\reverseTracePipeline.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\reverseTracePipeline.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\reverseTracePipeline.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\reverseTracer.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\reverseTracer.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\reverseTracer.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\reverseTracer.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\safeInitializer.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\safeInitializer.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\safeInitializer.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\utils\safeInitializer.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\app.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\app.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\app.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\app.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\app.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\app.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\app.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\app.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\app.js:9
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\src\app.js:14
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\tests\comprehensive-test-suite.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\tests\comprehensive-test-suite.js:9
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\tests\comprehensive-test-suite.js:10
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\tests\comprehensive-test-suite.js:11
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\tests\comprehensive-test-suite.js:12
+- [TS Imports] D:\lazy init ide\itsmehrawrxd-master\vscode-extension\src\extension.ts:1
+- [TS Imports] D:\lazy init ide\itsmehrawrxd-master\vscode-extension\src\extension.ts:2
+- [TS Imports] D:\lazy init ide\itsmehrawrxd-master\vscode-extension\src\extension.ts:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\ai-assembly-generator.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\ai-assembly-generator.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\ai-screen-share-server.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\ai-screen-share-server.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\ai-screen-share-server.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\ai-screen-share-server.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\ai-screen-share-server.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\ai-screen-share-server.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\ai-screen-share-server.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\ai-screen-share-server.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\ai-terminal.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\ai-terminal.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\ai-terminal.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\ai-terminal.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\ai-terminal.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\ai-terminal.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\airtight-ollama-server.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\airtight-ollama-server.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\airtight-ollama-server.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\airtight-ollama-server.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\airtight-ollama-server.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\api-server.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\api-server.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\api-server.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\api-server.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\api-server.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\api-server.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\api-server.js:118
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\ASSEMBLY_COMPILER_SUMMARY.md:30
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\ASSEMBLY_COMPILER_SUMMARY.md:31
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\ASSEMBLY_COMPILER_SUMMARY.md:32
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\auto-server.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\auto-server.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\auto-server.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\auto-server.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\auto-server.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\auto-server.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\auto-server.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\auto-server.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\auto-server.js:9
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\auto-server.js:10
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\auto-server.js:11
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\auto-server.js:12
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\auto-server.js:14
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\auto-server.js:15
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\auto-server.js:16
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\auto-server.js:17
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\auto-server.js:20
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\auto-server.js:21
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\auto-server.js:22
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\auto-server.js:25
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\auto-server.js:40
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\auto-server.js:632
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\auto-server.js:633
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\auto-spoof-launcher.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\auto-spoof-launcher.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\auto-spoof-launcher.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\auto-spoof-launcher.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\auto-spoof-launcher.js:172
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\auto-spoof-launcher.js:265
+- [Package Scripts] D:\lazy init ide\itsmehrawrxd-master\branch-analysis-report.json:30
+- [Package Scripts] D:\lazy init ide\itsmehrawrxd-master\branch-analysis-report.json:109
+- [Package Scripts] D:\lazy init ide\itsmehrawrxd-master\branch-analysis-report.json:186
+- [Package Scripts] D:\lazy init ide\itsmehrawrxd-master\branch-analysis-report.json:263
+- [Package Scripts] D:\lazy init ide\itsmehrawrxd-master\branch-analysis-report.json:340
+- [Package Scripts] D:\lazy init ide\itsmehrawrxd-master\branch-analysis-report.json:418
+- [Package Scripts] D:\lazy init ide\itsmehrawrxd-master\branch-analysis-report.json:495
+- [Package Scripts] D:\lazy init ide\itsmehrawrxd-master\branch-analysis-report.json:573
+- [Package Scripts] D:\lazy init ide\itsmehrawrxd-master\branch-analysis-report.json:650
+- [Package Scripts] D:\lazy init ide\itsmehrawrxd-master\branch-analysis-report.json:727
+- [Package Scripts] D:\lazy init ide\itsmehrawrxd-master\branch-analysis-report.json:807
+- [Package Scripts] D:\lazy init ide\itsmehrawrxd-master\branch-analysis-report.json:906
+- [CMake Targets] D:\lazy init ide\itsmehrawrxd-master\CMakeLists_template_generator.txt:78
+- [CMake Targets] D:\lazy init ide\itsmehrawrxd-master\CMakeLists_template_generator.txt:90
+- [CMake Targets] D:\lazy init ide\itsmehrawrxd-master\CMakeLists_template_generator.txt:147
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\CMakeLists_template_generator.txt:152
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\CMakeLists.txt:87
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\CMakeLists.txt:88
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\config-loader.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\config-loader.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\csp-fix.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\csp-fix.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\demo_stealth_engine.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\demo_stealth_engine.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\demo_stealth_engine.js:120
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\deploy-fix.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\deploy-fix.js:9
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\deploy-fix.js:10
+- [Package Scripts] D:\lazy init ide\itsmehrawrxd-master\deployment-package.json:6
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\DOCUMENTATION.md:70
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\expand-ide.js:3
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\expand-ide.js:5611
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\expand-ide.js:5697
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\expand-ide.js:5702
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\expand-ide.js:7242
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\expand-ide.js:7247
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\femtosecond-billing.js:96
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\final-ide-generator.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\final-verification-test.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\gemini-ide-completion.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\gemini-ide-completion.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\gemini-ide-completion.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\gemini-ide-completion.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:5
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:43
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:44
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:45
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:46
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:47
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:48
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:49
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:50
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:51
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:52
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:53
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:54
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:55
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:56
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:57
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:58
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:59
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:60
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:61
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:62
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:63
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:64
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:65
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:66
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:67
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:68
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:69
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:70
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:71
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:72
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:73
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:74
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:75
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:76
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:77
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:78
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:79
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:80
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:81
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:82
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:83
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:84
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:85
+- [Feature Flags] D:\lazy init ide\itsmehrawrxd-master\generate_all_compilers.js:88
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\generate-monolithic-ide.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\generate-monolithic-ide.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\generate-monolithic-ide.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\ide-backend-server.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\ide-backend-server.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\ide-backend-server.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\ide-backend-server.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\ide-backend-server.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\ide-backend-server.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\ide-backend-server.js:620
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\ide-backend-server.js:728
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\ide-compiler.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\ide-setup.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\ide-setup.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\infinite-ai-questionnaire.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\infinite-ai-questionnaire.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\infinite-ai-questionnaire.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\infinite-ai-questionnaire.js:76
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\infinite-ai-questionnaire.js:302
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\install-n0mn0m-extension.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\install-n0mn0m-extension.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\install-n0mn0m-extension.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\install-n0mn0m-extension.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\launch-rawrz.js:10
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\launch-rawrz.js:11
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\launch-rawrz.js:12
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\master-spoof-launcher.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\master-spoof-launcher.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\master-spoof-launcher.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\master-spoof-launcher.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\master-spoof-launcher.js:34
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\master-spoof-launcher.js:42
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\meta-engine-generator.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\meta-engine-telemetry.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\meta-engine-telemetry.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\n0mn0m_ecosystem_builder.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\n0mn0m_ecosystem_builder.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\n0mn0m-ide-completion.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\n0mn0m-ide-completion.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\n0mn0m-ide-completion.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\n0mn0m-ide-completion.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\n0mn0m-ide-completion.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\n0mn0m-ide-completion.js:160
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\n0mn0m-master-launcher.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\n0mn0m-master-launcher.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\n0mn0m-master-launcher.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\n0mn0m-master-launcher.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\n0mn0m-master-launcher.js:173
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\n0mn0m-master-launcher.js:211
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\nasm_template_generator.js:9
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\nasm_template_generator.js:10
+- [TS Imports] D:\lazy init ide\itsmehrawrxd-master\nextauth-example.js:3
+- [TS Imports] D:\lazy init ide\itsmehrawrxd-master\nextauth-example.js:4
+- [Package Scripts] D:\lazy init ide\itsmehrawrxd-master\package-scripts.json:2
+- [Package Scripts] D:\lazy init ide\itsmehrawrxd-master\package-secure.json:6
+- [Package Scripts] D:\lazy init ide\itsmehrawrxd-master\package.json:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\pe-recorder.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\pe-recorder.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\pe-recorder.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\pump_it_up.js:9
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\rawrz-standalone.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\rawrz-standalone.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\rawrz-standalone.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\rawrz-standalone.js:9
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\rawrz-standalone.js:10
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\rawrz-standalone.js:230
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\rawrz-standalone.js:245
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\rawrz-standalone.js:582
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\rawrz-standalone.js:802
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\rawrz-standalone.js:803
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\rawrz-standalone.js:804
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\rawrz-standalone.js:833
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\rest-api-fix.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\run-tests.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\run-tests.js:9
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\run-tests.js:10
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\run-tests.js:17
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\security-config.js:274
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\security-config.js:280
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\security-config.js:287
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\security-config.js:293
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\security-config.js:309
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\self-building-ai.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\self-building-ai.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\self-building-ai.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\self-building-ai.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\self-building-ai.js:503
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\server.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\server.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\server.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\server.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\server.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\server.js:6
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\server.js:7
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\server.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\server.js:9
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\server.js:10
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\server.js:11
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\server.js:12
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\server.js:14
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\server.js:15
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\server.js:16
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\server.js:17
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\server.js:20
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\server.js:21
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\server.js:22
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\server.js:25
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\server.js:26
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\server.js:27
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\server.js:28
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\server.js:31
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\server.js:46
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\server.js:701
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\server.js:702
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\simple-irc-bot.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\simple-irc-bot.js:188
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\smoke_test.js:8
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\smoke_test.js:9
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\smoke_test.js:10
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\smoke_test.js:11
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\smoke_test.js:12
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\smoke_test.js:53
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\smoke_test.js:263
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\spoofed-ai-server.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\spoofed-ai-server.js:2
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\spoofed-ai-server.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\spoofed-ai-server.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\spoofed-ai-server.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\test_compilation.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\test-complete-system.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\test-complete-system.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\test-complete-system.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\test-deaf-ai.js:1
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\unified_ide_integration.js:3
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\unified_ide_integration.js:4
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\unified_ide_integration.js:5
+- [CommonJS Requires] D:\lazy init ide\itsmehrawrxd-master\unified_ide_integration.js:6
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\amazon-q-cursor\src\server\WebSocketServer.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\amazon-q-cursor\src\server\WebSocketServer.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\amazon-q-cursor\src\server\WebSocketServer.ts:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\amazon-q-cursor\src\services\AmazonQService.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\amazon-q-cursor\src\services\AmazonQService.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\amazon-q-cursor\src\services\AmazonQService.ts:3
+- [Package Scripts] D:\lazy init ide\OrganizedPiProject\misc\Desktop\amazon-q-cursor\package.json:7
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\AIEngine.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\AIEngine.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\AIEngine.ts:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\EditorManager.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\EditorManager.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\EditorManager.ts:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\EditorManager.ts:4
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\FileManager.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\FileManager.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\FileManager.ts:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\FileManager.ts:4
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\SecureIDE.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\SecureIDE.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\SecureIDE.ts:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\SecureIDE.ts:4
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\SecureIDE.ts:5
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\SecureIDE.ts:6
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\SecureIDE.ts:7
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\SecureIDE.ts:8
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\SecureIDE.ts:9
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\SecurityManager.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\SecurityManager.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\SecurityManager.ts:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\SecurityManager.ts:4
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\SecurityManager.ts:5
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\security\SecurityManager.js:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\security\SecurityManager.js:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\security\SecurityManager.js:4
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\server\index.js:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\server\index.js:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\server\index.js:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\server\index.js:4
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\server\index.js:5
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\server\index.js:6
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\server\index.js:7
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\server\index.js:8
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\server\index.js:9
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\server\index.js:10
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\app.js:39
+- [Package Scripts] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\package.json:7
+- [Feature Flags] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\README.md:87
+- [Package Scripts] D:\lazy init ide\OrganizedPiProject\misc\Desktop\web-ai-chat\package.json:7
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\AiResponseRenderer.tsx:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\AiResponseRenderer.tsx:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\AiResponseRenderer.tsx:4
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\AiResponseRenderer.tsx:5
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\AiResponseRenderer.tsx:6
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\AiResponseRenderer.tsx:7
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\AiResponseRenderer.tsx:8
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\AiResponseRenderer.tsx:9
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\AiResponseRenderer.tsx:10
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\AiResponseRenderer.tsx:11
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\App.tsx:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\App.tsx:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\App.tsx:4
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\ChatView.tsx:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\ChatView.tsx:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\ChatView.tsx:4
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\ChatView.tsx:5
+- [CMake Targets] D:\lazy init ide\OrganizedPiProject\misc\Desktop\CMakeLists.txt:21
+- [CMake Targets] D:\lazy init ide\OrganizedPiProject\misc\Desktop\CMakeLists.txt:26
+- [CMake Targets] D:\lazy init ide\OrganizedPiProject\misc\Desktop\CMakeLists.txt:33
+- [CMake Targets] D:\lazy init ide\OrganizedPiProject\misc\Desktop\CMakeLists.txt:39
+- [CMake Targets] D:\lazy init ide\OrganizedPiProject\misc\Desktop\CMakeLists.txt:45
+- [CMake Targets] D:\lazy init ide\OrganizedPiProject\misc\Desktop\CMakeLists.txt:50
+- [CMake Targets] D:\lazy init ide\OrganizedPiProject\misc\Desktop\CMakeLists.txt:56
+- [CMake Targets] D:\lazy init ide\OrganizedPiProject\misc\Desktop\CMakeLists.txt:57
+- [CMake Targets] D:\lazy init ide\OrganizedPiProject\misc\Desktop\CMakeLists.txt:58
+- [CMake Targets] D:\lazy init ide\OrganizedPiProject\misc\Desktop\CMakeLists.txt:59
+- [CMake Targets] D:\lazy init ide\OrganizedPiProject\misc\Desktop\CMakeLists.txt:65
+- [CMake Targets] D:\lazy init ide\OrganizedPiProject\misc\Desktop\CMakeLists.txt:70
+- [CMake Targets] D:\lazy init ide\OrganizedPiProject\misc\Desktop\CMakeLists.txt:79
+- [CMake Targets] D:\lazy init ide\OrganizedPiProject\misc\Desktop\CMakeLists.txt:83
+- [CMake Targets] D:\lazy init ide\OrganizedPiProject\misc\Desktop\CMakeLists.txt:85
+- [CMake Targets] D:\lazy init ide\OrganizedPiProject\misc\Desktop\CMakeLists.txt:87
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\extension.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\extension.ts:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\llm-server.js:1
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\llm-server.js:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\MultiAgentUIIntegration.tsx:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\MultiAgentUIIntegration.tsx:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\MultiAgentUIIntegration.tsx:4
+- [VS Code Contributes] D:\lazy init ide\OrganizedPiProject\misc\Desktop\package.json:27
+- [Package Scripts] D:\lazy init ide\OrganizedPiProject\misc\Desktop\package.json:112
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\puller.js:9
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\puller.js:10
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\puller.js:11
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\puller.js:12
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\puller.js:13
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\puller.js:14
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\puller.js:160
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\rawrz-standalone.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\rawrz-standalone.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\rawrz-standalone.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\review-orchestrator.js:19
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\review-orchestrator.js:20
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\review-orchestrator.js:21
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\review-orchestrator.js:22
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\review-orchestrator.js:23
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-compile-api.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-compile-api.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-compile-api.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-compile-api.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-compile-api.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-compile-api.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\server.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\server.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\server.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\server.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\server.js:9
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\server.js:10
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\server.js:11
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\server.js:12
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\server.js:13
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\server.js:14
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\server.js:15
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\server.js:16
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\server.js:17
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\server.js:18
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\server.js:19
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\server.js:20
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\server.js:23
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\server.js:24
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\server.js:26
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\server.js:27
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\server.js:55
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\tailwind.config.js:103
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\tailwind.config.js:104
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\tailwind.config.js:105
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\test-compile.js:1
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\test-debugger-fixes.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\test-debugger-fixes.js:9
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Desktop\test-debugger-fixes.js:10
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\vite.config.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\vite.config.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Desktop\vite.config.ts:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\lah.txt:2144
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:17530
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:17531
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:17532
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:17533
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:17534
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:17989
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:17990
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:17991
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:17992
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:17993
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:19337
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:19338
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:19339
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:19465
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:19466
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:19467
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:19468
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:19469
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:20584
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:20585
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:20586
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:20587
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:20588
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:21641
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:21642
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:21643
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:22484
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:22485
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:22486
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:22487
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:22488
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:12
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:13
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:15
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:16
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:19
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:20
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:358
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:359
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:360
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:361
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:362
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:363
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:364
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:365
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:366
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:367
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:370
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:373
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:376
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:377
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:831
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:906
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:930
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:931
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:932
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:933
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:934
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:935
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:936
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:937
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:938
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:939
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:940
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:941
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:944
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:945
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:1176
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:1179
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:1182
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:1286
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:1287
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:1288
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:1289
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:1290
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:1291
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:1292
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:1293
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:1294
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:1295
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:1296
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:1297
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:1300
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:1301
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:1538
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:1541
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:1738
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:1739
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:1740
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:1741
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:1742
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:1743
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:1744
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:1745
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:1746
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:1747
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:1748
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:1749
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:1752
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:1753
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2053
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2054
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2055
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2056
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2057
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2058
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2059
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2060
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2061
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2062
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2063
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2064
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2067
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2068
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2406
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2409
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2520
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2521
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2522
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2523
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2524
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2525
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2526
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2527
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2528
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2529
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2530
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2531
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2534
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2535
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2804
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2807
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2885
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2886
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2887
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2888
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2889
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2890
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2891
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2892
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2893
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2894
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2895
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2896
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2899
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:2900
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:3244
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:3247
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:3329
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:3330
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:3331
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:3332
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:3333
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:3334
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:3335
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:3336
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:3337
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:3338
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:3339
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:3340
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:3343
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:3344
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:3639
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:3642
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:3714
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:3715
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:3716
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:3717
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:3718
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:3719
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:3720
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:3721
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:3722
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:3723
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:3724
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:3725
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:3728
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:3729
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4021
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4024
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4100
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4101
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4102
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4103
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4104
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4105
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4106
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4107
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4108
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4109
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4110
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4111
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4114
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4115
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4414
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4417
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4485
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4486
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4487
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4488
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4489
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4490
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4491
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4492
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4493
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4494
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4495
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4496
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4499
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4500
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4793
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4794
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4795
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4796
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4797
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4798
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4799
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4800
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4801
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4802
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4803
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4804
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4807
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:4808
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5107
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5114
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5117
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5185
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5186
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5187
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5188
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5189
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5190
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5191
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5192
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5193
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5194
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5195
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5196
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5199
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5200
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5501
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5504
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5575
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5576
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5577
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5578
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5579
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5580
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5581
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5582
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5583
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5584
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5585
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5586
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5589
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5590
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5883
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5884
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5885
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5886
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5887
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5888
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5889
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5890
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5891
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5892
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5893
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5894
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5897
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:5898
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6191
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6192
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6193
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6194
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6195
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6196
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6197
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6198
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6199
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6200
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6201
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6202
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6205
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6206
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6538
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6539
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6540
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6541
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6542
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6543
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6544
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6545
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6546
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6547
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6548
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6549
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6552
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6553
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6847
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6848
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6849
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6850
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6851
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6852
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6853
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6854
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6855
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6856
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6857
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6858
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6861
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:6862
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7158
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7159
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7160
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7161
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7162
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7163
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7164
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7165
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7166
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7167
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7168
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7169
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7172
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7173
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7517
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7520
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7617
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7618
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7619
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7620
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7621
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7622
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7623
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7624
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7625
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7626
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7628
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7630
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7633
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7634
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7986
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7987
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7988
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7989
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7990
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7991
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7992
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7993
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7994
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7995
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7996
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7997
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:7998
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8000
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8001
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8278
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8279
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8280
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8281
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8282
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8283
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8285
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8286
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8522
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8523
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8524
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8525
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8526
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8527
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8528
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8529
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8530
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8531
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8532
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8533
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8535
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8536
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8829
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8830
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8831
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8832
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8833
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8834
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8835
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8836
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8837
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8838
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8839
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8840
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8841
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8843
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8844
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9019
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9020
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9021
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9022
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9023
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9024
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9025
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9026
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9027
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9028
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9029
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9030
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9031
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9033
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9034
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9333
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9334
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9335
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9336
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9337
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9338
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9339
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9340
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9341
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9342
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9343
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9344
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9345
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9348
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9349
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9663
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9664
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9665
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9666
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9667
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9668
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9669
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9670
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9671
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9672
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9673
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9674
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9675
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9678
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9679
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:9997
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10011
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10012
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10013
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10014
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10015
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10016
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10017
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10018
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10019
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10020
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10021
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10022
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10023
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10024
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10027
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10028
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10355
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10356
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10357
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10358
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10359
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10360
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10361
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10362
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10363
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10364
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10365
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10366
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10367
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10368
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10371
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10372
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10710
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10711
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10712
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10713
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10714
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10715
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10716
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10717
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10718
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10719
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10720
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10721
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10722
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10723
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10726
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:10727
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11065
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11066
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11067
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11068
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11069
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11070
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11071
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11072
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11073
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11074
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11075
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11076
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11077
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11078
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11081
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11082
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11442
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11443
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11444
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11445
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11446
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11447
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11448
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11449
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11450
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11451
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11452
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11453
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11454
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11455
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11456
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11459
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11460
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11920
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11921
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11922
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11923
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11924
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11925
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11926
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11927
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11928
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11929
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11930
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11931
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11932
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11933
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11934
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11937
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:11938
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:12382
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:12383
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:12384
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:12385
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:12386
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:12387
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:12388
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:12389
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:12390
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:12391
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:12392
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:12393
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:12394
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:12395
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:12396
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:12399
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:12400
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:12821
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:12822
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:12823
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:12824
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:12825
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:12826
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:12827
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:12828
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:12829
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:12830
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:12831
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:12832
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:12833
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:12834
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:12835
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:12838
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:12839
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:13205
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:13206
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:13207
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:13208
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:13209
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:13210
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:13211
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:13212
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:13213
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:13214
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:13215
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:13216
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:13217
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:13218
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:13219
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:13222
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:13223
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:13558
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:13559
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:13560
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:13561
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:13562
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:13563
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:13564
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:13565
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:13566
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:13567
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:13568
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:13569
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:13570
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:13571
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:13572
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:13575
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:13576
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14009
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14010
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14011
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14012
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14013
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14014
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14015
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14016
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14017
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14018
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14019
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14020
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14021
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14022
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14023
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14026
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14027
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14444
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14445
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14446
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14447
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14448
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14449
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14450
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14451
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14452
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14453
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14454
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14455
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14456
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14457
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14458
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14461
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14462
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14878
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14879
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14880
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14881
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14882
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14883
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14884
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14885
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14886
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14887
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14888
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14889
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14890
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14891
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14892
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14893
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14896
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:14897
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:15322
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:15323
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:15324
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:15325
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:15326
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:15327
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:15328
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:15329
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:15330
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:15331
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:15332
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:15333
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:15334
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:15335
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:15336
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:15337
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:15340
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:15341
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:16130
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:16131
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:16132
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:16133
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:16134
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:16135
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:16136
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:16137
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:16138
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:16139
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:16140
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:16141
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:16142
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:16143
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:16144
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:16145
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:16148
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:16149
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:18327
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:18328
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:18329
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:18330
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:18331
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:18332
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:18333
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:18334
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:18335
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:18336
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:18337
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:18338
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:18339
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:18340
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:18341
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:18342
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:18345
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:18346
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:18555
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:18764
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:18765
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:18766
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:18965
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:19057
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:19058
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:19067
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:19089
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:19401
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:19402
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:19413
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:19840
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:19841
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:19842
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:19843
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:19844
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:19845
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:19846
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:19847
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:19848
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:19849
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:19850
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:19851
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:19852
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:19853
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:19854
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:19855
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:19858
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:19859
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:19860
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:20085
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:20466
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:20467
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:20468
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:20959
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:20960
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:20961
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:20962
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:20963
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:20964
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:20965
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:20966
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:20967
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:20968
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:20969
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:20970
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:20971
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:20972
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:20973
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:20974
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:20977
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:20978
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:20979
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:21336
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:21549
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:21550
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:21561
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:21693
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:21694
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:21695
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:21792
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:21793
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:21794
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:21795
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:21853
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:22025
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:22173
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:22174
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:22202
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:22515
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:22687
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:22688
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:22849
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:22996
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:23677
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:23834
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:23835
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:23836
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:23917
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:23973
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:23974
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:23975
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:23976
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:23985
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:24019
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:24020
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:24021
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:24022
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:24023
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:24024
+- [Package Scripts] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:17951
+- [Package Scripts] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:18747
+- [Package Scripts] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:18938
+- [Package Scripts] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:22640
+- [Feature Flags] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8781
+- [Feature Flags] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8782
+- [Feature Flags] D:\lazy init ide\OrganizedPiProject\misc\Skip to content.txt:8819
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\attack\test\route.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\attack\test\route.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\attack\page.tsx:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\attack\page.tsx:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\attack\page.tsx:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\attack\page.tsx:4
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\attack\page.tsx:5
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\bots\test\route.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\bots\test\route.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\bots\page.tsx:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\bots\page.tsx:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\bots\page.tsx:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\bots\page.tsx:4
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\bots\page.tsx:5
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\rate-limiting\test\route.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\rate-limiting\test\route.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\rate-limiting\test\route.ts:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\rate-limiting\test\route.ts:4
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\rate-limiting\test\route.ts:5
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\rate-limiting\page.tsx:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\rate-limiting\page.tsx:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\rate-limiting\page.tsx:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\rate-limiting\page.tsx:4
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\rate-limiting\page.tsx:5
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\rate-limiting\page.tsx:6
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\rate-limiting\page.tsx:7
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\sensitive-info\submitted\page.tsx:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\sensitive-info\submitted\page.tsx:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\sensitive-info\test\route.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\sensitive-info\test\route.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\sensitive-info\test\route.ts:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\sensitive-info\page.tsx:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\sensitive-info\page.tsx:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\sensitive-info\page.tsx:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\sensitive-info\page.tsx:4
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\sensitive-info\page.tsx:5
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\sensitive-info\schema.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\signup\test\route.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\signup\test\route.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\signup\test\route.ts:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\signup\page.tsx:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\signup\page.tsx:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\signup\page.tsx:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\signup\page.tsx:4
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\signup\page.tsx:5
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\signup\schema.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\layout.tsx:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\layout.tsx:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\layout.tsx:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\layout.tsx:4
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\layout.tsx:5
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\layout.tsx:7
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\layout.tsx:8
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\layout.tsx:11
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\layout.tsx:12
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\layout.tsx:13
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\layout.tsx:14
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\page.tsx:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\app\page.tsx:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\components\brand\LogoMarkSpark.tsx:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\components\brand\LogoMarkSpark.tsx:4
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\components\compositions\VisitDashboard.tsx:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\components\compositions\VisitDashboard.tsx:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\components\compositions\VisitDashboard.tsx:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\components\compositions\VisitDashboard.tsx:4
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\components\compositions\VisitDashboard.tsx:5
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\components\compositions\VisitDashboard.tsx:6
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\components\compositions\WhatNext.tsx:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\components\icons\ArrowExternal.tsx:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\components\EmailForm.tsx:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\components\EmailForm.tsx:4
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\components\EmailForm.tsx:5
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\components\EmailForm.tsx:6
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\components\EmailForm.tsx:7
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\components\NavLink.tsx:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\components\NavLink.tsx:4
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\components\NavLink.tsx:5
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\components\PopoverTarget.tsx:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\components\RLForm.tsx:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\components\RLForm.tsx:4
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\components\RLForm.tsx:5
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\components\RLForm.tsx:6
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\components\RLForm.tsx:7
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\components\SignIn.tsx:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\components\SignOut.tsx:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\components\SuppportForm.tsx:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\components\SuppportForm.tsx:4
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\components\SuppportForm.tsx:5
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\components\SuppportForm.tsx:6
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\components\SuppportForm.tsx:7
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\lib\auth.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\lib\auth.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\tests\screenshots.test.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\tests\screenshots.test.ts:4
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\middleware.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\middleware.ts:2
+- [Package Scripts] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\package.json:22
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\SaaSEncryptionSecurity\playwright.config.ts:1
+- [Package Scripts] D:\lazy init ide\OrganizedPiProject\projects\01-active-projects\UnifiedIDE\config.json:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\ai\provider.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\ai\provider.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\ai\Untitled-1.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\ai\Untitled-1.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\AgentFinder.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\AgentFinder.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\AgentFinder.ts:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\AgentOrchestrator.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\AgentOrchestrator.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\AgentOrchestrator.ts:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\cli.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\cli.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\CodingAssistant.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\CodingAssistant.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\CodingAssistant.ts:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\CopilotReplacer.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\CopilotReplacer.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\CopilotReplacer.ts:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\CopilotStudioConnector.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\DesktopSearchEnhancer.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\DesktopSearchEnhancer.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\DesktopSearchEnhancer.ts:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\DesktopSearchEnhancer.ts:7
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\extension.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\extension.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\extension.ts:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\extension.ts:4
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\extension.ts:5
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\extension.ts:6
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\extension.ts:7
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\extension.ts:8
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\extension.ts:9
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\extension.ts:10
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\extension.ts:11
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\extension.ts:12
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\extension.ts:13
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\FileUploadManager.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\FileUploadManager.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\MultiChatManager.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\QDeveloperContainer.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\QDeveloperContainer.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\SelfAwareAgent.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\SelfAwareAgent.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\SelfAwareAgent.ts:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\VSCodeEnhancer.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\WebSearchAgent.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\src\WorkflowManager.ts:1
+- [VS Code Activation] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\package.json:10
+- [VS Code Contributes] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\package.json:12
+- [Package Scripts] D:\lazy init ide\OrganizedPiProject\projects\ai-first-editor\package.json:56
+- [Package Scripts] D:\lazy init ide\OrganizedPiProject\projects\custom-editor\package.json:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\Eng Src\Star5IDE\demo\inject.js:1
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\Eng Src\Star5IDE\demo\inject.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\Eng Src\Star5IDE\HelloWorld\main.js:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\Eng Src\Star5IDE\HelloWorld\main.ts:1
+- [Package Scripts] D:\lazy init ide\OrganizedPiProject\projects\Eng Src\Star5IDE\HelloWorld\Package.json:5
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\Eng Src\Star5IDE\src\extension.ts:1
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\Eng Src\Star5IDE\tools\carmilla-openssl.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\Eng Src\Star5IDE\tools\carmilla-openssl.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\Eng Src\Star5IDE\tools\carmilla-openssl.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\Eng Src\Star5IDE\tools\carmilla-openssl.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\Eng Src\Star5IDE\tools\carpatcher.js:10
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\Eng Src\Star5IDE\tools\carpatcher.js:11
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\Eng Src\Star5IDE\tools\carpatcher.js:12
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\Eng Src\Star5IDE\tools\carpatcher.js:13
+- [VS Code Activation] D:\lazy init ide\OrganizedPiProject\projects\Eng Src\Star5IDE\package.json:7
+- [VS Code Contributes] D:\lazy init ide\OrganizedPiProject\projects\Eng Src\Star5IDE\package.json:9
+- [Package Scripts] D:\lazy init ide\OrganizedPiProject\projects\Eng Src\Star5IDE\package.json:17
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\Eng Src\Star5IDE\tsconfig.json:1
+- [Feature Flags] D:\lazy init ide\OrganizedPiProject\projects\Spotify ADS Remover 1.2.62.580\Data\LocalData\Spotify\OpenCookieDatabase\2024.10.17.0\open_cookie_database.json:4530
+- [Feature Flags] D:\lazy init ide\OrganizedPiProject\projects\Spotify ADS Remover 1.2.62.580\Data\LocalData\Spotify\OpenCookieDatabase\2024.10.17.0\open_cookie_database.json:13938
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\ai\provider.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\ai\provider.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\ai\Untitled-1.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\ai\Untitled-1.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\AgentFinder.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\AgentFinder.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\AgentFinder.ts:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\AgentOrchestrator.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\AgentOrchestrator.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\AgentOrchestrator.ts:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\cli.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\cli.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\CodingAssistant.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\CodingAssistant.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\CodingAssistant.ts:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\CopilotReplacer.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\CopilotReplacer.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\CopilotReplacer.ts:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\CopilotStudioConnector.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\DesktopSearchEnhancer.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\DesktopSearchEnhancer.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\DesktopSearchEnhancer.ts:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\DesktopSearchEnhancer.ts:7
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\extension.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\extension.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\extension.ts:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\extension.ts:4
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\extension.ts:5
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\extension.ts:6
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\extension.ts:7
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\extension.ts:8
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\extension.ts:9
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\extension.ts:10
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\extension.ts:11
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\extension.ts:12
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\extension.ts:13
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\FileUploadManager.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\FileUploadManager.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\MultiChatManager.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\QDeveloperContainer.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\QDeveloperContainer.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\SelfAwareAgent.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\SelfAwareAgent.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\SelfAwareAgent.ts:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\VSCodeEnhancer.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\WebSearchAgent.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\src\WorkflowManager.ts:1
+- [VS Code Activation] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\package.json:10
+- [VS Code Contributes] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\package.json:12
+- [Package Scripts] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ai-tools\package.json:56
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\AIEngine.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\AIEngine.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\AIEngine.ts:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\EditorManager.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\EditorManager.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\EditorManager.ts:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\EditorManager.ts:4
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\FileManager.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\FileManager.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\FileManager.ts:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\FileManager.ts:4
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\SecureIDE.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\SecureIDE.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\SecureIDE.ts:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\SecureIDE.ts:4
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\SecureIDE.ts:5
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\SecureIDE.ts:6
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\SecureIDE.ts:7
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\SecureIDE.ts:8
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\SecureIDE.ts:9
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\SecurityManager.ts:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\SecurityManager.ts:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\SecurityManager.ts:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\SecurityManager.ts:4
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\SecurityManager.ts:5
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\security\SecurityManager.js:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\security\SecurityManager.js:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\security\SecurityManager.js:4
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\server\index.js:1
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\server\index.js:2
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\server\index.js:3
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\server\index.js:4
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\server\index.js:5
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\server\index.js:6
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\server\index.js:7
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\server\index.js:8
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\server\index.js:9
+- [TS Imports] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\server\index.js:10
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\app.js:39
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\auto-kimi.js:1
+- [Package Scripts] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\package.json:5
+- [Feature Flags] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\README.md:87
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\scripts\audit.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\scripts\audit.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\scripts\audit.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\scripts\toggle-cli.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\scripts\toggle-cli.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\auth\jwt.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\auth\jwt.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\auth\jwt.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\config\toggles.js:314
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\config\toggles.js:315
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\config\toggles.js:339
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\config\toggles.js:340
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-analytics-engine.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-analytics-engine.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-analytics-engine.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-analytics-engine.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-analytics-engine.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-analytics-engine.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-analytics-engine.js:515
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-anti-analysis.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-anti-analysis.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-anti-analysis.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-anti-analysis.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-anti-analysis.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-anti-analysis.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-anti-analysis.js:9
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-anti-analysis.js:10
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-anti-analysis.js:11
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-anti-analysis.js:1158
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-anti-analysis.js:1277
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-anti-analysis.js:1431
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-anti-analysis.js:1460
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-crypto.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-crypto.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-crypto.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-crypto.js:180
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-crypto.js:327
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-crypto.js:1008
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-crypto.js:1366
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-crypto.js:1367
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-crypto.js:1368
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-evasion-engine.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-evasion-engine.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-fud-engine.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-fud-engine.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-fud-engine.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-fud-engine.js:9
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-fud-engine.js:10
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-fud-engine.js:11
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-stub-generator.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-stub-generator.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-stub-generator.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-stub-generator.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-stub-generator.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-stub-generator.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-stub-generator.js:9
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-stub-generator.js:10
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-stub-generator.js:11
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-stub-generator.js:85
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-stub-generator.js:93
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-stub-generator.js:104
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-stub-generator.js:1703
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-stub-generator.js:1704
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-stub-generator.js:1705
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\advanced-stub-generator.js:1813
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\ai-threat-detector.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\ai-threat-detector.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\ai-threat-detector.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\ai-threat-detector.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\ai-threat-detector.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\ai-threat-detector.js:763
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\ai-threat-detector.js:786
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\ai-threat-detector.js:934
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\ai-threat-detector.js:955
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\anti-analysis.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\anti-analysis.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\anti-analysis.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\anti-analysis.js:5
+- [Feature Flags] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\anti-analysis.js:425
+- [Feature Flags] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\anti-analysis.js:446
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\api-status.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\api-status.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\api-status.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\api-status.js:435
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\api-status.js:436
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\api-status.js:437
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\backup-system.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\backup-system.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\backup-system.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\backup-system.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\backup-system.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\backup-system.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\beaconism-dll-sideloading.js:19
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\beaconism-dll-sideloading.js:20
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\beaconism-dll-sideloading.js:21
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\beaconism-dll-sideloading.js:22
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\beaconism-dll-sideloading.js:23
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\beaconism-dll-sideloading.js:24
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\beaconism-dll-sideloading.js:25
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\beaconism-dll-sideloading.js:30
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\beaconism-dll-sideloading.js:31
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\beaconism-dll-sideloading.js:1377
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\beaconism-dll-sideloading.js:1657
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\beaconism-dll-sideloading.js:1672
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\beaconism-dll-sideloading.js:1727
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\beaconism-dll-sideloading.js:1728
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\beaconism-dll-sideloading.js:1756
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\beaconism-dll-sideloading.js:1757
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\beaconism-dll-sideloading.js:1785
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\beaconism-dll-sideloading.js:1786
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\beaconism-dll-sideloading.js:1860
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\beaconism-dll-sideloading.js:2031
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\beaconism-dll-sideloading.js:2032
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\beaconism-dll-sideloading.js:2033
+- [Feature Flags] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\beaconism-dll-sideloading.js:1508
+- [Feature Flags] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\beaconism-dll-sideloading.js:1510
+- [Feature Flags] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\beaconism-dll-sideloading.js:1517
+- [Feature Flags] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\beaconism-dll-sideloading.js:1521
+- [Feature Flags] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\beaconism-dll-sideloading.js:1558
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\black-hat-capabilities.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\black-hat-capabilities.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\black-hat-capabilities.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\black-hat-capabilities.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\black-hat-capabilities.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\black-hat-capabilities.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\burner-encryption-engine.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\burner-encryption-engine.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\burner-encryption-engine.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\burner-encryption-engine.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\camellia-assembly.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\camellia-assembly.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\camellia-assembly.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\camellia-assembly.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\camellia-assembly.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\camellia-assembly.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\compression-engine.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\compression-engine.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\compression-engine.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\compression-engine.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\compression-engine.js:204
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\compression-engine.js:205
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\compression-engine.js:241
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\compression-engine.js:242
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\cve-analysis-engine.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\cve-analysis-engine.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\cve-analysis-engine.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\cve-analysis-engine.js:9
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\cve-analysis-engine.js:10
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\cve-analysis-engine.js:254
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\cve-analysis-engine.js:255
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\cve-analysis-engine.js:577
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\cve-analysis-engine.js:578
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\cve-analysis-engine.js:621
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\cve-analysis-engine.js:641
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\database.engine.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\database.engine.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\database.engine.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\database.engine.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\digital-forensics.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\digital-forensics.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\digital-forensics.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\digital-forensics.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\dotnet-workaround.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\dotnet-workaround.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\dotnet-workaround.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\dotnet-workaround.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\dotnet-workaround.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\dotnet-workaround.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\dotnet-workaround.js:9
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\dotnet-workaround.js:10
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\dual-crypto-engine.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\dual-crypto-engine.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\dual-crypto-engine.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\dual-crypto-engine.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\dual-crypto-engine.js:57
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\dual-crypto-engine.js:70
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\dual-crypto-engine.js:85
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\dual-crypto-engine.js:106
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\dual-crypto-engine.js:109
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\dual-crypto-engine.js:113
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\dual-generators.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\dual-generators.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\dual-generators.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\ev-cert-encryptor.js:1
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\ev-cert-encryptor.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\ev-cert-encryptor.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\ev-cert-encryptor.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\ev-cert-encryptor.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\ev-cert-encryptor.js:832
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\ev-cert-encryptor.js:833
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\ev-cert-encryptor.js:834
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\file-operations.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\file-operations.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\file-operations.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\file-operations.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\file-operations.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\full-assembly.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\full-assembly.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\full-assembly.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\full-assembly.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\health-monitor.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\health-monitor.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\health-monitor.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\health-monitor.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\health-monitor.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\health-monitor.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\health-monitor.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\health-monitor.js:9
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\health-monitor.js:10
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\health-monitor.js:11
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\health-monitor.js:12
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\health-monitor.js:13
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\health-monitor.js:345
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\health-monitor.js:346
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\health-monitor.js:369
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\health-monitor.js:394
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\health-monitor.js:411
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\health-monitor.js:412
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\health-monitor.js:436
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\health-monitor.js:437
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\health-monitor.js:579
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\health-monitor.js:642
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\health-monitor.js:662
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\health-monitor.js:683
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\health-monitor.js:1173
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\health-monitor.js:1206
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\health-monitor.js:1207
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\health-monitor.js:1223
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\health-monitor.js:1224
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\health-monitor.js:1248
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\health-monitor.js:1249
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\health-monitor.js:1283
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\health-monitor.js:1289
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\health-monitor.js:1306
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\hot-patchers.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\hot-patchers.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\hot-patchers.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\hot-patchers.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\http-bot-generator.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\http-bot-generator.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\http-bot-generator.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\http-bot-generator.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\http-bot-generator.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\http-bot-generator.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\http-bot-generator.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\http-bot-generator.js:9
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\http-bot-generator.js:478
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\http-bot-generator.js:479
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\http-bot-generator.js:480
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\http-bot-manager.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\http-bot-manager.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\http-bot-manager.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\http-bot-manager.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\http-bot-manager.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\implementation-checker.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\implementation-checker.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\implementation-checker.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\implementation-checker.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\implementation-checker.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\implementation-checker.js:186
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\implementation-checker.js:326
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\implementation-checker.js:623
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\index.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\index.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\index.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\index.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\index.js:25
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\index.js:26
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\index.js:27
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\index.js:117
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:34
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:35
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:36
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:37
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:86
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:281
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:282
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:283
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:284
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:285
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:286
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:1098
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:1099
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:1100
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:1101
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:1102
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:1132
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:1152
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:1217
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:1230
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:1231
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:1232
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:1233
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:1234
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:1336
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:1364
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:1399
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:1896
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:1917
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:1926
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:1952
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:2017
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\irc-bot-generator.js:2069
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\jotti-scanner.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\jotti-scanner.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\jotti-scanner.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\jotti-scanner.js:9
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\jotti-scanner.js:10
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\jotti-scanner.js:11
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\jotti-scanner.js:12
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\jotti-scanner.js:13
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\malware-analysis.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\malware-analysis.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\malware-analysis.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\malware-analysis.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\memory-manager.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\memory-manager.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\memory-manager.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\memory-manager.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\mobile-tools.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\mobile-tools.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\mobile-tools.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\mobile-tools.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\multi-platform-bot-generator.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\multi-platform-bot-generator.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\multi-platform-bot-generator.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\multi-platform-bot-generator.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\multi-platform-bot-generator.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\multi-platform-bot-generator.js:498
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\multi-platform-bot-generator.js:740
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\mutex-engine.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\mutex-engine.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\mutex-engine.js:297
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\mutex-engine.js:298
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\mutex-engine.js:299
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\native-compiler.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\native-compiler.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\native-compiler.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\native-compiler.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\native-compiler.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\native-compiler.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\native-compiler.js:9
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\native-compiler.js:10
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\native-compiler.js:11
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\network-engine.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\network-engine.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\network-engine.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\network-tools.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\network-tools.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\network-tools.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\network-tools.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\network-tools.js:48
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\network-tools.js:238
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\openssl-management.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\openssl-management.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\openssl-management.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\openssl-management.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\openssl-management.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\openssl-management.js:11
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\openssl-management.js:18
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\openssl-management.js:99
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\openssl-management.js:105
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\openssl-management.js:253
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\openssl-management.js:265
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\openssl-management.js:277
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\openssl-management.js:289
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\openssl-management.js:303
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\openssl-management.js:315
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\openssl-management.js:327
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\openssl-management.js:339
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\openssl-management.js:348
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\payload-manager.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\payload-manager.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\payload-manager.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\payload-manager.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\payload-manager.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\performance-optimizer.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\performance-optimizer.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\performance-optimizer.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\performance-optimizer.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\performance-optimizer.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\performance-optimizer.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\performance-optimizer.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\performance-optimizer.js:835
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\performance-worker.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\performance-worker.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\performance-worker.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\performance-worker.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\performance-worker.js:136
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\performance-worker.js:562
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\performance-worker.js:563
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\plugin-architecture.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\plugin-architecture.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\plugin-architecture.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\plugin-architecture.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\plugin-architecture.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\plugin-architecture.js:271
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\polymorphic-engine.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\polymorphic-engine.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\private-virus-scanner.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\private-virus-scanner.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\private-virus-scanner.js:9
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\private-virus-scanner.js:10
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\private-virus-scanner.js:11
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\private-virus-scanner.js:12
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\private-virus-scanner.js:13
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\private-virus-scanner.js:14
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\private-virus-scanner.js:15
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\rawrz-engine.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\rawrz-engine.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\rawrz-engine.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\rawrz-engine.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\rawrz-engine.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\rawrz-engine.js:199
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\RawrZEngine2.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\RawrZEngine2.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\RawrZEngine2.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\RawrZEngine2.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\RawrZEngine2.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\RawrZEngine2.js:143
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\RawrZEngine2.js:146
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\RawrZEngine2.js:149
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\RawrZEngine2.js:152
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\RawrZEngine2.js:155
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\RawrZEngine2.js:158
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\RawrZEngine2.js:161
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\RawrZEngine2.js:164
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\RawrZEngine2.js:167
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\RawrZEngine2.js:170
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\RawrZEngine2.js:173
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\RawrZEngine2.js:176
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\RawrZEngine2.js:179
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\RawrZEngine2.js:182
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\RawrZEngine2.js:185
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\RawrZEngine2.js:188
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\real-encryption-engine.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\real-encryption-engine.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\real-encryption-engine.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\real-encryption-engine.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\real-encryption-engine.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\real-encryption-engine.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\red-killer.js:1
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\red-killer.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\red-killer.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\red-killer.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\red-killer.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\red-killer.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\red-killer.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\red-killer.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\red-killer.js:9
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\red-shells.js:1
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\red-shells.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\red-shells.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\red-shells.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\red-shells.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\red-shells.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\red-shells.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\red-shells.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\red-shells.js:90
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\red-shells.js:97
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\red-shells.js:98
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\reverse-engineering.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\reverse-engineering.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\reverse-engineering.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\reverse-engineering.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\startup-persistence.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\startup-persistence.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\startup-persistence.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\startup-persistence.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\startup-persistence.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\stealth-engine.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\stealth-engine.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\stealth-engine.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\stealth-engine.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\stealth-engine.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\stealth-engine.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\stealth-engine.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\stub-generator.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\stub-generator.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\stub-generator.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\stub-generator.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\stub-generator.js:732
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\stub-generator.js:912
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\stub-generator.js:1107
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\stub-generator.js:1222
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\stub-generator.js:1386
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\stub-generator.js:1486
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\stub-generator.js:1655
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\stub-generator.js:1750
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\stub-generator.js:2689
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\template-generator.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\template-generator.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\template-generator.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\template-generator.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\template-generator.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\universal-wmic-engine.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\universal-wmic-engine.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\universal-wmic-engine.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\universal-wmic-engine.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\engines\universal-wmic-engine.js:9
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\builtinDatabase.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\builtinDatabase.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\builtinDatabase.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\builtinDatabase.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\chatterbox.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\chatterbox.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\chatterbox.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\chatterbox.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\databaseIntegration.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\databaseIntegration.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\databaseIntegration.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\dataIntegrity.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\dataIntegrity.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\dataIntegrity.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\dataIntegrity.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\dataIntegrity.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\dataIntegrity.js:47
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\helpers.js:1
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\helpers.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\helpers.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\helpers.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:102
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:416
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:507
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:517
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:518
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:634
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:635
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:731
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:746
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:747
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:786
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:787
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:919
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:935
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:936
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:976
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:991
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:992
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1023
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1024
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1074
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1075
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1095
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1105
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1106
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1141
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1142
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1216
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1217
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1272
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1304
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1313
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1314
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1338
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1339
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1375
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1414
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1454
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1494
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1534
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1574
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1606
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1628
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1660
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1693
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1702
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1703
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1738
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1760
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1786
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1787
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1788
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1843
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1844
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1861
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:1862
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:2083
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:2084
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:2085
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\ircBot.js:2086
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\logger.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\logger.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\memory-manager.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\openssl-config.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\openssl-manager.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\openssl-manager.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\openssl-manager.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\reverseTracePipeline.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\reverseTracePipeline.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\reverseTracePipeline.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\reverseTracer.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\reverseTracer.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\reverseTracer.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\reverseTracer.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\safeInitializer.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\safeInitializer.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\safeInitializer.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\utils\safeInitializer.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\src\event_bus.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\launch-control-center.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\launch-control-center.js:9
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\launch-control-center.js:45
+- [Package Scripts] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\package.json:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\rawrz-standalone.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\rawrz-standalone.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\rawrz-standalone.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\rawrz-standalone.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\SECURITY.md:46
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\SECURITY.md:61
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\SECURITY.md:62
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\server.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\server.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\server.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\server.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\server.js:9
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\server.js:10
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\server.js:11
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\server.js:12
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\server.js:13
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\server.js:14
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\server.js:15
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\server.js:16
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\server.js:17
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\server.js:18
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\server.js:19
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\server.js:20
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\server.js:23
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\server.js:24
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\server.js:25
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\server.js:26
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\server.js:27
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\server.js:28
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\server.js:29
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\server.js:777
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\server.js:1019
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\server.js:1073
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\server.js:1095
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\server.js:1134
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\server.js:1173
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\server.js:1245
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\test-delays.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\test-runtime-issues.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\test-runtime-issues.js:9
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\test-runtime-issues.js:68
+- [Feature Flags] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\test-runtime-issues.js:19
+- [Feature Flags] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\test-runtime-issues.js:20
+- [Feature Flags] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\test-runtime-issues.js:26
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\test-server.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\rawrz-platform\test-server.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-analytics-engine.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-analytics-engine.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-analytics-engine.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-analytics-engine.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-analytics-engine.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-analytics-engine.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-analytics-engine.js:509
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-anti-analysis.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-anti-analysis.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-anti-analysis.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-anti-analysis.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-anti-analysis.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-anti-analysis.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-anti-analysis.js:9
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-anti-analysis.js:10
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-anti-analysis.js:11
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-anti-analysis.js:1153
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-anti-analysis.js:1272
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-anti-analysis.js:1416
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-anti-analysis.js:1445
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-crypto.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-crypto.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-crypto.js:156
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-crypto.js:303
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-crypto.js:984
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-evasion-engine.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-evasion-engine.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-fud-engine.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-fud-engine.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-fud-engine.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-fud-engine.js:9
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-fud-engine.js:10
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-fud-engine.js:11
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-stub-generator.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-stub-generator.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-stub-generator.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-stub-generator.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-stub-generator.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-stub-generator.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-stub-generator.js:9
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-stub-generator.js:10
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-stub-generator.js:11
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-stub-generator.js:79
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-stub-generator.js:87
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-stub-generator.js:98
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-stub-generator.js:1585
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-stub-generator.js:1586
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-stub-generator.js:1587
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\advanced-stub-generator.js:1695
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\ai-threat-detector.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\ai-threat-detector.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\ai-threat-detector.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\ai-threat-detector.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\ai-threat-detector.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\ai-threat-detector.js:757
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\ai-threat-detector.js:780
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\ai-threat-detector.js:928
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\ai-threat-detector.js:949
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\anti-analysis.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\anti-analysis.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\anti-analysis.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\anti-analysis.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\api-status.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\api-status.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\api-status.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\api-status.js:426
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\api-status.js:427
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\api-status.js:428
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\backup-system.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\backup-system.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\backup-system.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\backup-system.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\backup-system.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\backup-system.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\beaconism-dll-sideloading.js:19
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\beaconism-dll-sideloading.js:20
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\beaconism-dll-sideloading.js:21
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\beaconism-dll-sideloading.js:22
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\beaconism-dll-sideloading.js:23
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\beaconism-dll-sideloading.js:24
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\beaconism-dll-sideloading.js:25
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\beaconism-dll-sideloading.js:1002
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\beaconism-dll-sideloading.js:1264
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\beaconism-dll-sideloading.js:1279
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\beaconism-dll-sideloading.js:1334
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\beaconism-dll-sideloading.js:1335
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\beaconism-dll-sideloading.js:1363
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\beaconism-dll-sideloading.js:1364
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\beaconism-dll-sideloading.js:1392
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\beaconism-dll-sideloading.js:1393
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\beaconism-dll-sideloading.js:1467
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\beaconism-dll-sideloading.js:1630
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\beaconism-dll-sideloading.js:1631
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\beaconism-dll-sideloading.js:1632
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\black-hat-capabilities.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\black-hat-capabilities.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\black-hat-capabilities.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\black-hat-capabilities.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\black-hat-capabilities.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\black-hat-capabilities.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\burner-encryption-engine.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\burner-encryption-engine.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\burner-encryption-engine.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\burner-encryption-engine.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\camellia-assembly.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\camellia-assembly.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\camellia-assembly.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\camellia-assembly.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\camellia-assembly.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\compression-engine.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\compression-engine.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\compression-engine.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\compression-engine.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\compression-engine.js:199
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\compression-engine.js:200
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\compression-engine.js:236
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\compression-engine.js:237
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\cve-analysis-engine.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\cve-analysis-engine.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\cve-analysis-engine.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\cve-analysis-engine.js:9
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\cve-analysis-engine.js:10
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\cve-analysis-engine.js:247
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\cve-analysis-engine.js:248
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\cve-analysis-engine.js:570
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\cve-analysis-engine.js:571
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\cve-analysis-engine.js:614
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\cve-analysis-engine.js:634
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\digital-forensics.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\digital-forensics.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\digital-forensics.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\digital-forensics.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\dotnet-workaround.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\dotnet-workaround.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\dotnet-workaround.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\dotnet-workaround.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\dotnet-workaround.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\dotnet-workaround.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\dotnet-workaround.js:9
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\dotnet-workaround.js:10
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\dual-crypto-engine.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\dual-crypto-engine.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\dual-crypto-engine.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\dual-crypto-engine.js:49
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\dual-crypto-engine.js:62
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\dual-crypto-engine.js:77
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\dual-crypto-engine.js:98
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\dual-crypto-engine.js:101
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\dual-crypto-engine.js:105
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\dual-generators.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\dual-generators.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\dual-generators.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\ev-cert-encryptor.js:1
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\ev-cert-encryptor.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\ev-cert-encryptor.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\ev-cert-encryptor.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\ev-cert-encryptor.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\ev-cert-encryptor.js:826
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\ev-cert-encryptor.js:827
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\ev-cert-encryptor.js:828
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\evasion-engine.js:1
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\evasion-engine.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\file-operations.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\file-operations.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\file-operations.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\file-operations.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\file-operations.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\full-assembly.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\full-assembly.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\full-assembly.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\full-assembly.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\health-monitor.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\health-monitor.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\health-monitor.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\health-monitor.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\health-monitor.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\health-monitor.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\health-monitor.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\health-monitor.js:9
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\health-monitor.js:10
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\health-monitor.js:11
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\health-monitor.js:12
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\health-monitor.js:13
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\health-monitor.js:337
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\health-monitor.js:338
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\health-monitor.js:361
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\health-monitor.js:386
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\health-monitor.js:403
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\health-monitor.js:404
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\health-monitor.js:428
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\health-monitor.js:429
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\health-monitor.js:571
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\health-monitor.js:634
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\health-monitor.js:654
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\health-monitor.js:675
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\health-monitor.js:1165
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\health-monitor.js:1198
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\health-monitor.js:1199
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\health-monitor.js:1215
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\health-monitor.js:1216
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\health-monitor.js:1240
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\health-monitor.js:1241
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\health-monitor.js:1275
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\health-monitor.js:1281
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\health-monitor.js:1298
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\hot-patchers.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\hot-patchers.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\hot-patchers.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\hot-patchers.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\http-bot-generator.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\http-bot-generator.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\http-bot-generator.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\http-bot-generator.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\http-bot-generator.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\http-bot-generator.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\http-bot-generator.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\http-bot-generator.js:9
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\http-bot-generator.js:473
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\http-bot-generator.js:474
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\http-bot-generator.js:475
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\http-bot-manager.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\http-bot-manager.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\http-bot-manager.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\http-bot-manager.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\http-bot-manager.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\implementation-checker.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\implementation-checker.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\implementation-checker.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\implementation-checker.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\implementation-checker.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\implementation-checker.js:186
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\implementation-checker.js:332
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\implementation-checker.js:632
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:41
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:42
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:43
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:44
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:98
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:99
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:267
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:268
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:269
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:270
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:271
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:272
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:1084
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:1085
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:1086
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:1087
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:1088
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:1118
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:1138
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:1200
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:1213
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:1214
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:1215
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:1216
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:1217
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:1319
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:1347
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:1382
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:1879
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:1897
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:1906
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:1926
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:1991
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\irc-bot-generator.js:2043
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\jotti-scanner.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\jotti-scanner.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\jotti-scanner.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\jotti-scanner.js:9
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\jotti-scanner.js:10
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\jotti-scanner.js:11
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\jotti-scanner.js:12
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\jotti-scanner.js:13
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\malware-analysis.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\malware-analysis.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\malware-analysis.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\malware-analysis.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\memory-manager.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\memory-manager.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\memory-manager.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\memory-manager.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\mobile-bot-engine.js:1
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\mobile-tools.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\mobile-tools.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\mobile-tools.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\mobile-tools.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\multi-platform-bot-generator.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\multi-platform-bot-generator.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\multi-platform-bot-generator.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\multi-platform-bot-generator.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\multi-platform-bot-generator.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\multi-platform-bot-generator.js:498
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\multi-platform-bot-generator.js:740
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\mutex-engine.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\mutex-engine.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\mutex-engine.js:291
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\mutex-engine.js:292
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\mutex-engine.js:293
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\native-compiler.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\native-compiler.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\native-compiler.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\native-compiler.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\native-compiler.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\native-compiler.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\native-compiler.js:9
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\native-compiler.js:10
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\native-compiler.js:11
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\network-tools.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\network-tools.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\network-tools.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\network-tools.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\network-tools.js:42
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\network-tools.js:232
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\openssl-management.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\openssl-management.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\openssl-management.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\openssl-management.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\openssl-management.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\openssl-management.js:11
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\openssl-management.js:18
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\openssl-management.js:99
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\openssl-management.js:105
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\openssl-management.js:253
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\openssl-management.js:265
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\openssl-management.js:277
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\openssl-management.js:289
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\openssl-management.js:302
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\openssl-management.js:315
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\openssl-management.js:328
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\openssl-management.js:341
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\openssl-management.js:351
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\payload-manager.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\payload-manager.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\payload-manager.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\payload-manager.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\payload-manager.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\performance-optimizer.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\performance-optimizer.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\performance-optimizer.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\performance-optimizer.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\performance-optimizer.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\performance-optimizer.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\performance-optimizer.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\performance-optimizer.js:9
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\performance-optimizer.js:865
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\performance-worker.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\performance-worker.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\performance-worker.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\performance-worker.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\performance-worker.js:136
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\performance-worker.js:562
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\performance-worker.js:563
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\plugin-architecture.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\plugin-architecture.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\plugin-architecture.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\plugin-architecture.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\plugin-architecture.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\plugin-architecture.js:271
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\polymorphic-engine.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\polymorphic-engine.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\private-virus-scanner.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\private-virus-scanner.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\private-virus-scanner.js:9
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\private-virus-scanner.js:10
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\private-virus-scanner.js:11
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\private-virus-scanner.js:12
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\private-virus-scanner.js:13
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\private-virus-scanner.js:14
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\private-virus-scanner.js:15
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\rawrz-engine.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\rawrz-engine.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\rawrz-engine.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\rawrz-engine.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\rawrz-engine.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\rawrz-engine.js:196
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\RawrZEngine2.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\RawrZEngine2.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\RawrZEngine2.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\RawrZEngine2.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\RawrZEngine2.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\RawrZEngine2.js:143
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\RawrZEngine2.js:146
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\RawrZEngine2.js:149
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\RawrZEngine2.js:152
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\RawrZEngine2.js:155
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\RawrZEngine2.js:158
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\RawrZEngine2.js:161
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\RawrZEngine2.js:164
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\RawrZEngine2.js:167
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\RawrZEngine2.js:170
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\RawrZEngine2.js:173
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\RawrZEngine2.js:176
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\RawrZEngine2.js:179
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\RawrZEngine2.js:182
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\RawrZEngine2.js:185
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\RawrZEngine2.js:188
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\real-encryption-engine.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\real-encryption-engine.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\real-encryption-engine.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\real-encryption-engine.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\real-encryption-engine.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\red-killer.js:1
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\red-killer.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\red-killer.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\red-killer.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\red-killer.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\red-killer.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\red-killer.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\red-killer.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\red-killer.js:9
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\red-shells.js:1
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\red-shells.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\red-shells.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\red-shells.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\red-shells.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\red-shells.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\red-shells.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\red-shells.js:8
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\red-shells.js:90
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\red-shells.js:97
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\red-shells.js:98
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\reverse-engineering.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\reverse-engineering.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\reverse-engineering.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\reverse-engineering.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\startup-persistence.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\startup-persistence.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\startup-persistence.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\startup-persistence.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\startup-persistence.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\stealth-engine.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\stealth-engine.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\stealth-engine.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\stealth-engine.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\stealth-engine.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\stealth-engine.js:7
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\stealth-engine.js:309
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\stub-generator.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\stub-generator.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\stub-generator.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\stub-generator.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\stub-generator.js:727
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\stub-generator.js:907
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\stub-generator.js:1494
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\template-generator.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\template-generator.js:3
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\template-generator.js:4
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\template-generator.js:5
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\tools\03-tools-utilities\template-generator.js:6
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\sandbox-runner.js:1
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\sandbox-runner.js:2
+- [CommonJS Requires] D:\lazy init ide\OrganizedPiProject\scripts\sandbox-runner.js:33
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\src\ui\chromatic_window.cpp:285
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\src\ui\chromatic_window.cpp:326
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\src\win32app\TransparentRenderer.cpp:357
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\src\win32app\TransparentRenderer.cpp:542
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\src\win32app\TransparentRenderer.cpp:760
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\src\win32app\Win32IDE.cpp:438
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\src\win32app\Win32IDE.cpp:1495
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\src\win32app\Win32IDE.cpp:1505
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\src\bench_main.cpp:121
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\src\gui.cpp:89
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\src\gui.cpp:90
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\src\gui.cpp:91
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\src\gui.cpp:92
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\src\gui.cpp:102
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\src\main.cpp:42
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\src\main.cpp:58
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\src\rawrxd_cli.cpp:31
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\src\settings.cpp:27
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\src\settings.cpp:28
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\src\settings.cpp:29
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\src\settings.cpp:30
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\src\settings.cpp:41
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\src\settings.cpp:42
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\src\settings.cpp:43
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\src\settings.cpp:44
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\src\settings.cpp:61
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\src\settings.cpp:86
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\Tiny-Home\CMakeLists.txt:8
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CHAT-APP-MANIFEST.md:335
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CHAT-APP-MANIFEST.md:344
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CHAT-APP-MANIFEST.md:351
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\cmake_nasm_test.txt:2
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:60
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:81
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:91
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:92
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:113
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:141
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:156
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:178
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:190
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:197
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:203
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:237
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:253
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:266
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:268
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:277
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:293
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:312
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:320
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:322
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:326
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:330
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:343
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:348
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:351
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:357
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:362
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:367
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:368
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:382
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:407
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:408
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:432
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:437
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:441
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:465
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:484
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:490
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:508
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:513
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:523
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:528
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:537
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:542
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:554
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:560
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:574
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:581
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:592
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:598
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:608
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:618
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:619
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:17
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:85
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:136
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:137
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:138
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:167
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:168
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:170
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:171
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:189
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:217
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:218
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:225
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:553
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:571
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:589
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:623
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\CMakeLists.txt:627
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\IDE-COPILOT-INTEGRATION.md:63
+- [CMake Targets] D:\lazy init ide\RawrXD-ModelLoader\IDE-COPILOT-INTEGRATION.md:68
+- [Feature Flags] D:\lazy init ide\RawrXD-ModelLoader\OVERCLOCKING.md:17
+- [Feature Flags] D:\lazy init ide\scripts\SourceWiringDigest.ps1:479
+- [Feature Flags] D:\lazy init ide\src\agent\agent_hot_patcher.hpp:76
+- [Feature Flags] D:\lazy init ide\src\agent\agent_hot_patcher.hpp:80
+- [Feature Flags] D:\lazy init ide\src\agent\gguf_proxy_server.hpp:54
+- [CommonJS Requires] D:\lazy init ide\src\agent\planner.cpp:480
+- [CommonJS Requires] D:\lazy init ide\src\agent\planner.cpp:481
+- [Package Scripts] D:\lazy init ide\src\agent\planner.cpp:462
+- [CMake Targets] D:\lazy init ide\src\ai\CMakeLists.txt:10
+- [CMake Targets] D:\lazy init ide\src\ai\CMakeLists.txt:17
+- [CMake Targets] D:\lazy init ide\src\ai\CMakeLists.txt:34
+- [CMake Targets] D:\lazy init ide\src\ai\CMakeLists.txt:35
+- [CMake Targets] D:\lazy init ide\src\ai\CMakeLists.txt:42
+- [CMake Targets] D:\lazy init ide\src\ai\CMakeLists.txt:48
+- [Feature Flags] D:\lazy init ide\src\ai\CMakeLists.txt:28
+- [CMake Targets] D:\lazy init ide\src\digestion\CMakeLists.txt:11
+- [CMake Targets] D:\lazy init ide\src\digestion\CMakeLists.txt:24
+- [CMake Targets] D:\lazy init ide\src\digestion\CMakeLists.txt:33
+- [CMake Targets] D:\lazy init ide\src\digestion\CMakeLists.txt:37
+- [CMake Targets] D:\lazy init ide\src\digestion\CMakeLists.txt:41
+- [CMake Targets] D:\lazy init ide\src\digestion\CMakeLists.txt:42
+- [CMake Targets] D:\lazy init ide\src\digestion\CMakeLists.txt:47
+- [CMake Targets] D:\lazy init ide\src\digestion\CMakeLists.txt:52
+- [CMake Targets] D:\lazy init ide\src\digestion\CMakeLists.txt:62
+- [CMake Targets] D:\lazy init ide\src\digestion\CMakeLists.txt:65
+- [CMake Targets] D:\lazy init ide\src\digestion\CMakeLists.txt:68
+- [CMake Targets] D:\lazy init ide\src\digestion\CMakeLists.txt:71
+- [Feature Flags] D:\lazy init ide\src\digestion\CMakeLists.txt:32
+- [Feature Flags] D:\lazy init ide\src\digestion\CMakeLists.txt:60
+- [CMake Targets] D:\lazy init ide\src\ggml-blas\CMakeLists.txt:82
+- [Feature Flags] D:\lazy init ide\src\ggml-blas\ggml-blas.cpp:297
+- [CMake Targets] D:\lazy init ide\src\ggml-cann\CMakeLists.txt:72
+- [CMake Targets] D:\lazy init ide\src\ggml-cann\CMakeLists.txt:73
+- [Feature Flags] D:\lazy init ide\src\ggml-cann\ggml-cann.cpp:232
+- [Feature Flags] D:\lazy init ide\src\ggml-cann\ggml-cann.cpp:262
+- [Feature Flags] D:\lazy init ide\src\ggml-cann\ggml-cann.cpp:321
+- [Feature Flags] D:\lazy init ide\src\ggml-cann\ggml-cann.cpp:427
+- [Feature Flags] D:\lazy init ide\src\ggml-cann\ggml-cann.cpp:455
+- [Feature Flags] D:\lazy init ide\src\ggml-cann\ggml-cann.cpp:520
+- [Feature Flags] D:\lazy init ide\src\ggml-cpu\amx\common.h:31
+- [Feature Flags] D:\lazy init ide\src\ggml-cpu\amx\mmq.cpp:1300
+- [Feature Flags] D:\lazy init ide\src\ggml-cpu\amx\mmq.cpp:2029
+- [Feature Flags] D:\lazy init ide\src\ggml-cpu\amx\mmq.cpp:2213
+- [CMake Targets] D:\lazy init ide\src\ggml-cpu\CMakeLists.txt:7
+- [CMake Targets] D:\lazy init ide\src\ggml-cpu\CMakeLists.txt:8
+- [CMake Targets] D:\lazy init ide\src\ggml-cpu\CMakeLists.txt:12
+- [CMake Targets] D:\lazy init ide\src\ggml-cpu\CMakeLists.txt:53
+- [CMake Targets] D:\lazy init ide\src\ggml-cpu\CMakeLists.txt:64
+- [CMake Targets] D:\lazy init ide\src\ggml-cpu\CMakeLists.txt:76
+- [CMake Targets] D:\lazy init ide\src\ggml-cpu\CMakeLists.txt:98
+- [Feature Flags] D:\lazy init ide\src\ggml-cpu\ggml-cpu.c:1617
+- [Feature Flags] D:\lazy init ide\src\ggml-cpu\ggml-cpu.c:1622
+- [Feature Flags] D:\lazy init ide\src\ggml-cpu\ops.cpp:8147
+- [Feature Flags] D:\lazy init ide\src\ggml-cpu\ops.cpp:8154
+- [Feature Flags] D:\lazy init ide\src\ggml-cpu\repack.cpp:1711
+- [Feature Flags] D:\lazy init ide\src\ggml-cpu\repack.cpp:1734
+- [Feature Flags] D:\lazy init ide\src\ggml-cuda\vendors\hip.h:3
+- [CMake Targets] D:\lazy init ide\src\ggml-cuda\CMakeLists.txt:103
+- [CMake Targets] D:\lazy init ide\src\ggml-cuda\CMakeLists.txt:106
+- [CMake Targets] D:\lazy init ide\src\ggml-cuda\CMakeLists.txt:108
+- [CMake Targets] D:\lazy init ide\src\ggml-cuda\CMakeLists.txt:112
+- [CMake Targets] D:\lazy init ide\src\ggml-cuda\CMakeLists.txt:118
+- [Feature Flags] D:\lazy init ide\src\ggml-cuda\CMakeLists.txt:41
+- [CMake Targets] D:\lazy init ide\src\ggml-hexagon\htp\CMakeLists.txt:16
+- [Feature Flags] D:\lazy init ide\src\ggml-hexagon\htp\main.c:121
+- [Feature Flags] D:\lazy init ide\src\ggml-hexagon\htp\main.c:133
+- [CMake Targets] D:\lazy init ide\src\ggml-hexagon\CMakeLists.txt:6
+- [CMake Targets] D:\lazy init ide\src\ggml-hexagon\CMakeLists.txt:10
+- [CMake Targets] D:\lazy init ide\src\ggml-hexagon\CMakeLists.txt:34
+- [CMake Targets] D:\lazy init ide\src\ggml-hexagon\CMakeLists.txt:35
+- [Feature Flags] D:\lazy init ide\src\ggml-hexagon\ggml-hexagon.cpp:1773
+- [Feature Flags] D:\lazy init ide\src\ggml-hexagon\ggml-hexagon.cpp:1804
+- [CMake Targets] D:\lazy init ide\src\ggml-hip\CMakeLists.txt:129
+- [CMake Targets] D:\lazy init ide\src\ggml-hip\CMakeLists.txt:138
+- [Feature Flags] D:\lazy init ide\src\ggml-hip\CMakeLists.txt:39
+- [CMake Targets] D:\lazy init ide\src\ggml-metal\CMakeLists.txt:16
+- [Feature Flags] D:\lazy init ide\src\ggml-metal\CMakeLists.txt:33
+- [CMake Targets] D:\lazy init ide\src\ggml-musa\CMakeLists.txt:106
+- [CMake Targets] D:\lazy init ide\src\ggml-musa\CMakeLists.txt:109
+- [CMake Targets] D:\lazy init ide\src\ggml-musa\CMakeLists.txt:112
+- [CMake Targets] D:\lazy init ide\src\ggml-musa\CMakeLists.txt:114
+- [CMake Targets] D:\lazy init ide\src\ggml-musa\CMakeLists.txt:121
+- [CMake Targets] D:\lazy init ide\src\ggml-opencl\CMakeLists.txt:9
+- [CMake Targets] D:\lazy init ide\src\ggml-opencl\CMakeLists.txt:10
+- [CMake Targets] D:\lazy init ide\src\ggml-opencl\CMakeLists.txt:31
+- [Feature Flags] D:\lazy init ide\src\ggml-opencl\ggml-opencl.cpp:369
+- [Feature Flags] D:\lazy init ide\src\ggml-opencl\ggml-opencl.cpp:2522
+- [Feature Flags] D:\lazy init ide\src\ggml-opencl\ggml-opencl.cpp:2857
+- [Feature Flags] D:\lazy init ide\src\ggml-opencl\ggml-opencl.cpp:2862
+- [Feature Flags] D:\lazy init ide\src\ggml-opencl\ggml-opencl.cpp:2867
+- [CMake Targets] D:\lazy init ide\src\ggml-rpc\CMakeLists.txt:8
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\dpct\helper.hpp:332
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\dpct\helper.hpp:347
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\dpct\helper.hpp:378
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\dpct\helper.hpp:389
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\dpct\helper.hpp:711
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\dpct\helper.hpp:764
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\dpct\helper.hpp:765
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\dpct\helper.hpp:769
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\dpct\helper.hpp:770
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\dpct\helper.hpp:773
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\dpct\helper.hpp:775
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\dpct\helper.hpp:780
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\dpct\helper.hpp:782
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\dpct\helper.hpp:787
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\dpct\helper.hpp:789
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\dpct\helper.hpp:823
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\dpct\helper.hpp:826
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\dpct\helper.hpp:833
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\dpct\helper.hpp:842
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\dpct\helper.hpp:845
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\dpct\helper.hpp:852
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\dpct\helper.hpp:1005
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\dpct\helper.hpp:1894
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\dpct\helper.hpp:1900
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\dpct\helper.hpp:2716
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\dpct\helper.hpp:2740
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\dpct\helper.hpp:2781
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\dpct\helper.hpp:2857
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\dpct\helper.hpp:2865
+- [CMake Targets] D:\lazy init ide\src\ggml-sycl\CMakeLists.txt:42
+- [CMake Targets] D:\lazy init ide\src\ggml-sycl\CMakeLists.txt:66
+- [CMake Targets] D:\lazy init ide\src\ggml-sycl\CMakeLists.txt:118
+- [CMake Targets] D:\lazy init ide\src\ggml-sycl\CMakeLists.txt:155
+- [CMake Targets] D:\lazy init ide\src\ggml-sycl\CMakeLists.txt:167
+- [CMake Targets] D:\lazy init ide\src\ggml-sycl\CMakeLists.txt:175
+- [CMake Targets] D:\lazy init ide\src\ggml-sycl\CMakeLists.txt:181
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\CMakeLists.txt:130
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\CMakeLists.txt:131
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\CMakeLists.txt:132
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\CMakeLists.txt:134
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\CMakeLists.txt:135
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\CMakeLists.txt:136
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\common.hpp:46
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\ggml-sycl.cpp:59
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\ggml-sycl.cpp:60
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\ggml-sycl.cpp:61
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\ggml-sycl.cpp:209
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\ggml-sycl.cpp:210
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\ggml-sycl.cpp:211
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\ggml-sycl.cpp:216
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\ggml-sycl.cpp:218
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\ggml-sycl.cpp:220
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\ggml-sycl.cpp:223
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\ggml-sycl.cpp:225
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\ggml-sycl.cpp:251
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\ggml-sycl.cpp:382
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\ggml-sycl.cpp:2036
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\ggml-sycl.cpp:2083
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\ggml-sycl.cpp:2273
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\ggml-sycl.cpp:2275
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\ggml-sycl.cpp:2298
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\ggml-sycl.cpp:2308
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\ggml-sycl.cpp:2858
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\ggml-sycl.cpp:3234
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\ggml-sycl.cpp:4167
+- [Feature Flags] D:\lazy init ide\src\ggml-sycl\set_rows.cpp:12
+- [CMake Targets] D:\lazy init ide\src\ggml-vulkan\vulkan-shaders\CMakeLists.txt:28
+- [CMake Targets] D:\lazy init ide\src\ggml-vulkan\vulkan-shaders\CMakeLists.txt:31
+- [CMake Targets] D:\lazy init ide\src\ggml-vulkan\CMakeLists.txt:89
+- [CMake Targets] D:\lazy init ide\src\ggml-vulkan\CMakeLists.txt:90
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:723
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:724
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:726
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:1849
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:1852
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:1913
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:2374
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:2824
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:2858
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:2863
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:2866
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:4100
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:4101
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:4106
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:4107
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:4138
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:4146
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:4151
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:4156
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:4279
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:4281
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:4424
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:4639
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:4738
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:4740
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:4747
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:4789
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:4794
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:4799
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:4804
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:4812
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:4813
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:4815
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:6064
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:6065
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:6067
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:6394
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:6484
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:11345
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:11348
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:11370
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:12545
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:12798
+- [Feature Flags] D:\lazy init ide\src\ggml-vulkan\ggml-vulkan.cpp:12931
+- [CMake Targets] D:\lazy init ide\src\ggml-webgpu\CMakeLists.txt:61
+- [CMake Targets] D:\lazy init ide\src\ggml-webgpu\CMakeLists.txt:62
+- [Feature Flags] D:\lazy init ide\src\ggml-webgpu\ggml-webgpu.cpp:2388
+- [Feature Flags] D:\lazy init ide\src\ggml-webgpu\ggml-webgpu.cpp:2457
+- [Feature Flags] D:\lazy init ide\src\ggml-webgpu\ggml-webgpu.cpp:2458
+- [CMake Targets] D:\lazy init ide\src\ggml-zdnn\CMakeLists.txt:32
+- [CMake Targets] D:\lazy init ide\src\ggml-zdnn\CMakeLists.txt:33
+- [CMake Targets] D:\lazy init ide\src\git\CMakeLists.txt:2
+- [CMake Targets] D:\lazy init ide\src\git\CMakeLists.txt:9
+- [CMake Targets] D:\lazy init ide\src\git\CMakeLists.txt:17
+- [Feature Flags] D:\lazy init ide\src\git\semantic_diff_analyzer.cpp:241
+- [Feature Flags] D:\lazy init ide\src\git\semantic_diff_analyzer.cpp:242
+- [CMake Targets] D:\lazy init ide\src\masm\CMakeLists.txt:12
+- [CMake Targets] D:\lazy init ide\src\masm\CMakeLists.txt:15
+- [CMake Targets] D:\lazy init ide\src\orchestration\CMakeLists.txt:11
+- [CMake Targets] D:\lazy init ide\src\orchestration\CMakeLists.txt:29
+- [CMake Targets] D:\lazy init ide\src\orchestration\CMakeLists.txt:37
+- [CMake Targets] D:\lazy init ide\src\paint\CMakeLists.txt:4
+- [CMake Targets] D:\lazy init ide\src\paint\CMakeLists.txt:5
+- [CMake Targets] D:\lazy init ide\src\paint\CMakeLists.txt:20
+- [CMake Targets] D:\lazy init ide\src\paint\CMakeLists.txt:25
+- [CMake Targets] D:\lazy init ide\src\paint\CMakeLists.txt:31
+- [CMake Targets] D:\lazy init ide\src\paint\CMakeLists.txt:44
+- [CMake Targets] D:\lazy init ide\src\paint\CMakeLists.txt:48
+- [CMake Targets] D:\lazy init ide\src\paint\CMakeLists.txt:54
+- [CMake Targets] D:\lazy init ide\src\qtapp\CMakeLists_chat_test.txt:17
+- [CMake Targets] D:\lazy init ide\src\qtapp\CMakeLists_chat_test.txt:20
+- [CMake Targets] D:\lazy init ide\src\qtapp\CMakeLists_chat_test.txt:28
+- [Feature Flags] D:\lazy init ide\src\qtapp\main_qt.cpp:14
+- [Feature Flags] D:\lazy init ide\src\qtapp\main_qt.cpp:46
+- [Feature Flags] D:\lazy init ide\src\qtapp\main_qt.cpp:75
+- [CMake Targets] D:\lazy init ide\src\qtapp\MainWindow_AI_Integration.cpp:378
+- [Feature Flags] D:\lazy init ide\src\qtapp\ProdIntegration.h:22
+- [Feature Flags] D:\lazy init ide\src\qtapp\ProdIntegration.h:25
+- [Feature Flags] D:\lazy init ide\src\qtapp\renderer.h:16
+- [Feature Flags] D:\lazy init ide\src\qtapp\settings.h:12
+- [Feature Flags] D:\lazy init ide\src\qtapp\settings.h:13
+- [Feature Flags] D:\lazy init ide\src\qtapp\settings.h:14
+- [Feature Flags] D:\lazy init ide\src\qtapp\settings.h:15
+- [Feature Flags] D:\lazy init ide\src\qtapp\settings.h:19
+- [CMake Targets] D:\lazy init ide\src\registry_core\CMakeLists.txt:37
+- [CMake Targets] D:\lazy init ide\src\registry_core\CMakeLists.txt:40
+- [CMake Targets] D:\lazy init ide\src\registry_core\CMakeLists.txt:50
+- [CMake Targets] D:\lazy init ide\src\terminal\CMakeLists.txt:2
+- [CMake Targets] D:\lazy init ide\src\terminal\CMakeLists.txt:9
+- [CMake Targets] D:\lazy init ide\src\terminal\CMakeLists.txt:17
+- [CMake Targets] D:\lazy init ide\src\tools\CMakeLists.txt:4
+- [CMake Targets] D:\lazy init ide\src\tools\CMakeLists.txt:8
+- [CMake Targets] D:\lazy init ide\src\tools\CMakeLists.txt:15
+- [CMake Targets] D:\lazy init ide\src\tools\CMakeLists.txt:19
+- [CMake Targets] D:\lazy init ide\src\tools\CMakeLists.txt:26
+- [CMake Targets] D:\lazy init ide\src\tools\CMakeLists.txt:30
+- [CMake Targets] D:\lazy init ide\src\tools\CMakeLists.txt:37
+- [Feature Flags] D:\lazy init ide\src\ui\chromatic_window.cpp:285
+- [Feature Flags] D:\lazy init ide\src\ui\chromatic_window.cpp:326
+- [Feature Flags] D:\lazy init ide\src\win32app\TransparentRenderer.cpp:357
+- [Feature Flags] D:\lazy init ide\src\win32app\TransparentRenderer.cpp:542
+- [Feature Flags] D:\lazy init ide\src\win32app\TransparentRenderer.cpp:760
+- [Feature Flags] D:\lazy init ide\src\win32app\Win32IDE.cpp:648
+- [Feature Flags] D:\lazy init ide\src\win32app\Win32IDE.cpp:2020
+- [Feature Flags] D:\lazy init ide\src\win32app\Win32IDE.cpp:2030
+- [Feature Flags] D:\lazy init ide\src\bench_main.cpp:121
+- [Feature Flags] D:\lazy init ide\src\cloud_settings_dialog.cpp:245
+- [Feature Flags] D:\lazy init ide\src\cloud_settings_dialog.cpp:246
+- [Feature Flags] D:\lazy init ide\src\cloud_settings_dialog.cpp:247
+- [Feature Flags] D:\lazy init ide\src\cloud_settings_dialog.cpp:249
+- [Feature Flags] D:\lazy init ide\src\cloud_settings_dialog.cpp:250
+- [Feature Flags] D:\lazy init ide\src\cloud_settings_dialog.cpp:251
+- [Feature Flags] D:\lazy init ide\src\cloud_settings_dialog.cpp:399
+- [Feature Flags] D:\lazy init ide\src\cloud_settings_dialog.cpp:400
+- [Feature Flags] D:\lazy init ide\src\cloud_settings_dialog.cpp:401
+- [Feature Flags] D:\lazy init ide\src\cloud_settings_dialog.cpp:403
+- [Feature Flags] D:\lazy init ide\src\cloud_settings_dialog.cpp:404
+- [Feature Flags] D:\lazy init ide\src\cloud_settings_dialog.cpp:405
+- [Feature Flags] D:\lazy init ide\src\cloud_settings_dialog.cpp:450
+- [Feature Flags] D:\lazy init ide\src\cloud_settings_dialog.cpp:451
+- [Feature Flags] D:\lazy init ide\src\cloud_settings_dialog.cpp:477
+- [Feature Flags] D:\lazy init ide\src\cloud_settings_dialog.cpp:478
+- [Feature Flags] D:\lazy init ide\src\cloud_settings_dialog.cpp:676
+- [Feature Flags] D:\lazy init ide\src\cloud_settings_dialog.cpp:677
+- [Feature Flags] D:\lazy init ide\src\cloud_settings_dialog.h:160
+- [Feature Flags] D:\lazy init ide\src\cloud_settings_dialog.h:161
+- [Feature Flags] D:\lazy init ide\src\cloud_settings_dialog.h:178
+- [Feature Flags] D:\lazy init ide\src\cloud_settings_dialog.h:179
+- [CMake Targets] D:\lazy init ide\src\CMakeLists.txt:199
+- [CMake Targets] D:\lazy init ide\src\CMakeLists.txt:232
+- [CMake Targets] D:\lazy init ide\src\CMakeLists.txt:237
+- [CMake Targets] D:\lazy init ide\src\CMakeLists.txt:239
+- [CMake Targets] D:\lazy init ide\src\CMakeLists.txt:253
+- [CMake Targets] D:\lazy init ide\src\CMakeLists.txt:256
+- [CMake Targets] D:\lazy init ide\src\CMakeLists.txt:261
+- [CMake Targets] D:\lazy init ide\src\CMakeLists.txt:272
+- [CMake Targets] D:\lazy init ide\src\CMakeLists.txt:273
+- [CMake Targets] D:\lazy init ide\src\CMakeLists.txt:277
+- [CMake Targets] D:\lazy init ide\src\CMakeLists.txt:278
+- [CMake Targets] D:\lazy init ide\src\CMakeLists.txt:445
+- [CMake Targets] D:\lazy init ide\src\CMakeLists.txt:449
+- [CMake Targets] D:\lazy init ide\src\CMakeLists.txt:454
+- [CMake Targets] D:\lazy init ide\src\CMakeLists.txt:459
+- [CMake Subdir] D:\lazy init ide\src\CMakeLists.txt:307
+- [Feature Flags] D:\lazy init ide\src\gui.cpp:89
+- [Feature Flags] D:\lazy init ide\src\gui.cpp:90
+- [Feature Flags] D:\lazy init ide\src\gui.cpp:91
+- [Feature Flags] D:\lazy init ide\src\gui.cpp:92
+- [Feature Flags] D:\lazy init ide\src\gui.cpp:102
+- [Feature Flags] D:\lazy init ide\src\main.cpp:42
+- [Feature Flags] D:\lazy init ide\src\main.cpp:58
+- [Feature Flags] D:\lazy init ide\src\rawrxd_cli.cpp:157
+- [Feature Flags] D:\lazy init ide\src\settings.cpp:62
+- [Feature Flags] D:\lazy init ide\src\settings.cpp:63
+- [Feature Flags] D:\lazy init ide\src\settings.cpp:64
+- [Feature Flags] D:\lazy init ide\src\settings.cpp:65
+- [Feature Flags] D:\lazy init ide\src\settings.cpp:76
+- [Feature Flags] D:\lazy init ide\src\settings.cpp:77
+- [Feature Flags] D:\lazy init ide\src\settings.cpp:78
+- [Feature Flags] D:\lazy init ide\src\settings.cpp:79
+- [Feature Flags] D:\lazy init ide\src\settings.cpp:96
+- [Feature Flags] D:\lazy init ide\src\settings.cpp:121
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:79
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:80
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:81
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:89
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:90
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:91
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:100
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:101
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:102
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:111
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:112
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:113
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:122
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:123
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:124
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:132
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:133
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:134
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:142
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:143
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:144
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:152
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:153
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:154
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:162
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:163
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:164
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:172
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:173
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:174
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:182
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:183
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:184
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:192
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:193
+- [CMake Targets] D:\lazy init ide\tests\CMakeLists.txt:194
+- [Feature Flags] D:\lazy init ide\tests\CMakeLists.txt:25
+- [TS Imports] D:\lazy init ide\tests\semantic_diff_analyzer_test.cpp:202
+- [TS Imports] D:\lazy init ide\tests\semantic_diff_analyzer_test.cpp:203
+- [CMake Targets] D:\lazy init ide\Tiny-Home\CMakeLists.txt:8
+- [CMake Targets] D:\lazy init ide\ADVANCED_FEATURES_EXECUTIVE_SUMMARY.md:230
+- [CMake Subdir] D:\lazy init ide\ADVANCED_FEATURES_EXECUTIVE_SUMMARY.md:226
+- [CMake Subdir] D:\lazy init ide\ADVANCED_FEATURES_EXECUTIVE_SUMMARY.md:227
+- [CMake Subdir] D:\lazy init ide\ADVANCED_FEATURES_EXECUTIVE_SUMMARY.md:228
+- [CMake Targets] D:\lazy init ide\AGENT_COORDINATOR_TESTS_BUILD_REPORT.md:92
+- [CMake Targets] D:\lazy init ide\AGENT_COORDINATOR_TESTS_BUILD_REPORT.md:93
+- [CMake Targets] D:\lazy init ide\AGENT_COORDINATOR_TESTS_BUILD_REPORT.md:96
+- [CMake Targets] D:\lazy init ide\AGENT_COORDINATOR_TESTS_BUILD_REPORT.md:100
+- [CMake Targets] D:\lazy init ide\AGENTIC_INTEGRATION_COMPLETE.md:422
+- [Feature Flags] D:\lazy init ide\AGENTIC_LOOPS_FULL_IMPLEMENTATION.md:447
+- [CMake Targets] D:\lazy init ide\AGENTIC_LOOPS_INTEGRATION_GUIDE.md:56
+- [CMake Targets] D:\lazy init ide\AGENTIC_LOOPS_INTEGRATION_GUIDE.md:63
+- [CommonJS Requires] D:\lazy init ide\AGENTIC_WEB_PROJECTS.md:182
+- [CommonJS Requires] D:\lazy init ide\AGENTIC_WEB_PROJECTS.md:183
+- [CMake Targets] D:\lazy init ide\AUTONOMOUS-AGENT-GUIDE.md:300
+- [CMake Targets] D:\lazy init ide\AUTONOMOUS-AGENT-GUIDE.md:310
+- [CMake Targets] D:\lazy init ide\BENCHMARK_IDE_INTEGRATION.md:39
+- [CMake Targets] D:\lazy init ide\BUILD_VICTORY_SUMMARY.md:120
+- [CMake Targets] D:\lazy init ide\BUILD_VICTORY_SUMMARY.md:125
+- [CMake Targets] D:\lazy init ide\BUILD_VICTORY_SUMMARY.md:128
+- [CMake Targets] D:\lazy init ide\BUILD_VICTORY_SUMMARY.md:129
+- [CMake Targets] D:\lazy init ide\CHAT-APP-MANIFEST.md:335
+- [CMake Targets] D:\lazy init ide\CHAT-APP-MANIFEST.md:344
+- [CMake Targets] D:\lazy init ide\CHAT-APP-MANIFEST.md:351
+- [CMake Targets] D:\lazy init ide\cmake_nasm_test.txt:2
+- [CMake Targets] D:\lazy init ide\CMakeLists_test_chat.txt:17
+- [CMake Targets] D:\lazy init ide\CMakeLists_test_chat.txt:25
+- [CMake Targets] D:\lazy init ide\CMakeLists_tests.txt:23
+- [CMake Targets] D:\lazy init ide\CMakeLists_tests.txt:28
+- [CMake Targets] D:\lazy init ide\CMakeLists_tests.txt:34
+- [CMake Targets] D:\lazy init ide\CMakeLists_tests.txt:39
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:259
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:260
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:261
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:268
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:373
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:559
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:564
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:565
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:568
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:569
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:570
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:573
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:576
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:599
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:605
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:620
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:622
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:631
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:636
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:639
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:646
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:655
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:660
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:688
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:696
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:706
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:709
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:734
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:740
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:747
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:751
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:754
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:777
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:793
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:800
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:804
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:808
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:820
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:824
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:830
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:842
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:858
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:865
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:869
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:873
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:885
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:901
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:910
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:914
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:918
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:930
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:940
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:948
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:976
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:980
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:985
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1008
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1012
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1018
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1037
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1038
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1049
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1139
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1164
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1166
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1169
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1172
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1174
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1177
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1180
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1184
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1194
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1200
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1205
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1222
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1285
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1289
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1299
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1311
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1318
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1324
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1358
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1374
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1387
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1389
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1397
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1414
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1433
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1441
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1443
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1447
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1451
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1464
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1469
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1472
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1478
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1483
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1488
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1489
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1503
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1528
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1529
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1553
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1558
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1562
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1963
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1967
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1969
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1982
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:1998
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2005
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2027
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2034
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2042
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2085
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2088
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2098
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2103
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2107
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2110
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2113
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2115
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2144
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2146
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2147
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2169
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2171
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2172
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2176
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2195
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2201
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2219
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2224
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2234
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2239
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2248
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2253
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2275
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2282
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2297
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2304
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2315
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2321
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2331
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2332
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2337
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2340
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2345
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2352
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2353
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2360
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2361
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2366
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2376
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2393
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2400
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2415
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2419
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2420
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2430
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2436
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2440
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2450
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2456
+- [CMake Targets] D:\lazy init ide\CMakeLists.txt:2460
+- [CMake Subdir] D:\lazy init ide\CMakeLists.txt:256
+- [CMake Subdir] D:\lazy init ide\CMakeLists.txt:353
+- [CMake Subdir] D:\lazy init ide\CMakeLists.txt:354
+- [CMake Subdir] D:\lazy init ide\CMakeLists.txt:355
+- [CMake Subdir] D:\lazy init ide\CMakeLists.txt:356
+- [CMake Subdir] D:\lazy init ide\CMakeLists.txt:1036
+- [CMake Subdir] D:\lazy init ide\CMakeLists.txt:2491
+- [Feature Flags] D:\lazy init ide\CMakeLists.txt:11
+- [Feature Flags] D:\lazy init ide\CMakeLists.txt:62
+- [Feature Flags] D:\lazy init ide\CMakeLists.txt:63
+- [Feature Flags] D:\lazy init ide\CMakeLists.txt:91
+- [Feature Flags] D:\lazy init ide\CMakeLists.txt:282
+- [Feature Flags] D:\lazy init ide\CMakeLists.txt:283
+- [Feature Flags] D:\lazy init ide\CMakeLists.txt:284
+- [Feature Flags] D:\lazy init ide\CMakeLists.txt:287
+- [Feature Flags] D:\lazy init ide\CMakeLists.txt:299
+- [Feature Flags] D:\lazy init ide\CMakeLists.txt:327
+- [Feature Flags] D:\lazy init ide\CMakeLists.txt:1083
+- [Feature Flags] D:\lazy init ide\CMakeLists.txt:1084
+- [Feature Flags] D:\lazy init ide\CMakeLists.txt:1085
+- [Feature Flags] D:\lazy init ide\CMakeLists.txt:1250
+- [Feature Flags] D:\lazy init ide\CMakeLists.txt:1251
+- [Feature Flags] D:\lazy init ide\CMakeLists.txt:1253
+- [Feature Flags] D:\lazy init ide\CMakeLists.txt:1254
+- [Feature Flags] D:\lazy init ide\CMakeLists.txt:1310
+- [Feature Flags] D:\lazy init ide\CMakeLists.txt:1338
+- [Feature Flags] D:\lazy init ide\CMakeLists.txt:1339
+- [Feature Flags] D:\lazy init ide\CMakeLists.txt:1346
+- [Feature Flags] D:\lazy init ide\CMakeLists.txt:2293
+- [Feature Flags] D:\lazy init ide\CMakeLists.txt:2312
+- [Feature Flags] D:\lazy init ide\CMakeLists.txt:2414
+- [Feature Flags] D:\lazy init ide\CMakeLists.txt:2476
+- [Feature Flags] D:\lazy init ide\CODE_REVIEW_FIXES_APPLIED.md:18
+- [Feature Flags] D:\lazy init ide\CODE_REVIEW_FIXES_APPLIED.md:106
+- [CMake Targets] D:\lazy init ide\COMPREHENSIVE_AUDIT_REPORT.md:480
+- [CMake Targets] D:\lazy init ide\COMPREHENSIVE_AUDIT_REPORT.md:610
+- [Feature Flags] D:\lazy init ide\COMPREHENSIVE_AUDIT_REPORT.md:630
+- [CMake Targets] D:\lazy init ide\CONTEXT_DRAWING_ENGINE_INTEGRATION_GUIDE.md:62
+- [CMake Targets] D:\lazy init ide\CONTEXT_DRAWING_QUICK_REFERENCE.md:298
+- [CommonJS Requires] D:\lazy init ide\CONTRIBUTING.md:248
+- [CommonJS Requires] D:\lazy init ide\CONTRIBUTING.md:249
+- [CommonJS Requires] D:\lazy init ide\CONTRIBUTING.md:273
+- [CMake Targets] D:\lazy init ide\COPILOT_AUTOMATION_COMPLETE.md:60
+- [CMake Targets] D:\lazy init ide\COPILOT_INSTRUCTIONS_AUTOMATION.md:107
+- [CMake Targets] D:\lazy init ide\COPILOT_INSTRUCTIONS_AUTOMATION.md:108
+- [CMake Targets] D:\lazy init ide\COPILOT_INSTRUCTIONS_AUTOMATION.md:109
+- [CMake Targets] D:\lazy init ide\COPILOT_INSTRUCTIONS_AUTOMATION.md:183
+- [CommonJS Requires] D:\lazy init ide\cursor_js_analyzer.ps1:96
+- [CMake Targets] D:\lazy init ide\CURSOR-STYLE-IDE-GUIDE.md:69
+- [CMake Targets] D:\lazy init ide\CURSOR-STYLE-IDE-GUIDE.md:81
+- [CMake Targets] D:\lazy init ide\CURSOR-STYLE-IDE-GUIDE.md:91
+- [CMake Targets] D:\lazy init ide\CURSOR-STYLE-IDE-GUIDE.md:93
+- [Feature Flags] D:\lazy init ide\CURSOR-STYLE-IDE-GUIDE.md:485
+- [CMake Targets] D:\lazy init ide\DEPENDENCY_REMOVAL_PHASE1_PLAN.md:99
+- [CMake Targets] D:\lazy init ide\DEPENDENCY_REMOVAL_PHASE1_PLAN.md:100
+- [CMake Targets] D:\lazy init ide\DEPENDENCY_REMOVAL_PHASE1_PLAN.md:101
+- [CMake Targets] D:\lazy init ide\DEPENDENCY_REMOVAL_PHASE1_PLAN.md:104
+- [CMake Targets] D:\lazy init ide\DEPENDENCY_REMOVAL_PHASE1_PLAN.md:110
+- [CMake Targets] D:\lazy init ide\FEATURE_ENHANCEMENTS_COMPLETE.md:239
+- [CMake Subdir] D:\lazy init ide\FEATURE_ENHANCEMENTS_COMPLETE.md:225
+- [CMake Targets] D:\lazy init ide\GGUF_INTEGRATION_TESTING.md:279
+- [CMake Targets] D:\lazy init ide\GGUF_INTEGRATION_TESTING.md:280
+- [Feature Flags] D:\lazy init ide\GGUF_INTEGRATION_TESTING.md:278
+- [CMake Targets] D:\lazy init ide\GGUFLOADER_LINKING_FIX_SUMMARY.md:86
+- [CMake Targets] D:\lazy init ide\GGUFLOADER_LINKING_FIX_SUMMARY.md:88
+- [CMake Targets] D:\lazy init ide\HOTPATCH_INTEGRATION_COMPLETE.md:151
+- [CMake Targets] D:\lazy init ide\HOTPATCH_INTEGRATION_COMPLETE.md:155
+- [Feature Flags] D:\lazy init ide\IDE_INTEGRATION_GUIDE.md:134
+- [CMake Targets] D:\lazy init ide\IDE-COPILOT-INTEGRATION.md:63
+- [CMake Targets] D:\lazy init ide\IDE-COPILOT-INTEGRATION.md:68
+- [CMake Targets] D:\lazy init ide\IMPLEMENTATION_SUMMARY_COMPLETE.md:288
+- [CMake Targets] D:\lazy init ide\IMPLEMENTATION_SUMMARY.md:257
+- [CMake Targets] D:\lazy init ide\IMPLEMENTATION_SUMMARY.md:262
+- [CMake Targets] D:\lazy init ide\INTEGRATION_BUILD_GUIDE.md:96
+- [CMake Targets] D:\lazy init ide\INTEGRATION_BUILD_GUIDE.md:104
+- [CMake Targets] D:\lazy init ide\INTEGRATION_BUILD_GUIDE.md:224
+- [CMake Targets] D:\lazy init ide\INTEGRATION_DEPLOYMENT_GUIDE.md:69
+- [CMake Targets] D:\lazy init ide\INTEGRATION_DEPLOYMENT_GUIDE.md:89
+- [CMake Targets] D:\lazy init ide\INTEGRATION_DEPLOYMENT_GUIDE.md:98
+- [CMake Targets] D:\lazy init ide\INTEGRATION_DEPLOYMENT_GUIDE.md:105
+- [CMake Targets] D:\lazy init ide\INTEGRATION_DEPLOYMENT_GUIDE.md:122
+- [CMake Targets] D:\lazy init ide\INTEGRATION_DEPLOYMENT_GUIDE.md:129
+- [CMake Targets] D:\lazy init ide\INTEGRATION_DEPLOYMENT_GUIDE.md:135
+- [CMake Targets] D:\lazy init ide\INTEGRATION_DEPLOYMENT_GUIDE.md:152
+- [CMake Targets] D:\lazy init ide\INTEGRATION_DEPLOYMENT_GUIDE.md:159
+- [CMake Targets] D:\lazy init ide\INTEGRATION_DEPLOYMENT_GUIDE.md:165
+- [CMake Targets] D:\lazy init ide\INTEGRATION_DEPLOYMENT_GUIDE.md:172
+- [CMake Targets] D:\lazy init ide\INTEGRATION_DEPLOYMENT_GUIDE.md:174
+- [CMake Subdir] D:\lazy init ide\INTEGRATION_DEPLOYMENT_GUIDE.md:64
+- [CMake Subdir] D:\lazy init ide\INTEGRATION_DEPLOYMENT_GUIDE.md:65
+- [CMake Subdir] D:\lazy init ide\INTEGRATION_DEPLOYMENT_GUIDE.md:66
+- [CMake Subdir] D:\lazy init ide\INTEGRATION_DEPLOYMENT_GUIDE.md:404
+- [CMake Subdir] D:\lazy init ide\INTEGRATION_DEPLOYMENT_GUIDE.md:405
+- [CMake Subdir] D:\lazy init ide\INTEGRATION_DEPLOYMENT_GUIDE.md:406
+- [CMake Targets] D:\lazy init ide\INTEGRATION-GUIDE.md:264
+- [CMake Targets] D:\lazy init ide\INTEGRATION-GUIDE.md:278
+- [Feature Flags] D:\lazy init ide\INTEGRATION-GUIDE.md:261
+- [CMake Targets] D:\lazy init ide\LLM_CONNECTIVITY_COMPLETE.md:477
+- [CMake Targets] D:\lazy init ide\LLM_CONNECTIVITY_COMPLETE.md:482
+- [CMake Targets] D:\lazy init ide\LLM_CONNECTIVITY_COMPLETE.md:485
+- [CMake Targets] D:\lazy init ide\LLM_CONNECTIVITY_COMPLETE.md:486
+- [CMake Targets] D:\lazy init ide\MAINTENANCE_GUIDE.md:48
+- [CMake Targets] D:\lazy init ide\MASM_COMPILER_SUITE_COMPLETE.md:420
+- [CMake Targets] D:\lazy init ide\MASM_COMPILER_SUITE_COMPLETE.md:425
+- [CMake Targets] D:\lazy init ide\MASM_COMPILER_SUITE_COMPLETE.md:437
+- [CMake Targets] D:\lazy init ide\MASM_COMPILER_SUITE_COMPLETE.md:451
+- [CMake Targets] D:\lazy init ide\MASM_COMPILER_SUITE_COMPLETE.md:466
+- [Feature Flags] D:\lazy init ide\MASM_COMPILER_SUITE_COMPLETE.md:471
+- [CMake Targets] D:\lazy init ide\MODELTRAINER_FILE_STRUCTURE.md:199
+- [CMake Targets] D:\lazy init ide\MODELTRAINER_INTEGRATION_GUIDE.md:129
+- [CMake Targets] D:\lazy init ide\MODELTRAINER_INTEGRATION_GUIDE.md:135
+- [CMake Targets] D:\lazy init ide\MODELTRAINER_INTEGRATION_GUIDE.md:141
+- [CMake Targets] D:\lazy init ide\MODELTRAINER_INTEGRATION_GUIDE.md:149
+- [CMake Targets] D:\lazy init ide\MODELTRAINER_INTEGRATION_GUIDE.md:155
+- [CMake Targets] D:\lazy init ide\NEXT_STEPS.md:86
+- [CMake Targets] D:\lazy init ide\NEXT_STEPS.md:171
+- [CMake Targets] D:\lazy init ide\Omega-Install-Reverser.ps1:557
+- [CMake Targets] D:\lazy init ide\Omega-Install-Reverser.ps1:561
+- [Feature Flags] D:\lazy init ide\OVERCLOCKING.md:17
+- [CMake Targets] D:\lazy init ide\PHASE_3_STATUS_HANDOFF.md:265
+- [CMake Targets] D:\lazy init ide\PHASE1_DIGESTION_PIPELINE_COMPLETE.md:189
+- [CMake Targets] D:\lazy init ide\QUICK_REFERENCE_CARD.md:109
+- [CMake Subdir] D:\lazy init ide\QUICK_REFERENCE_CARD.md:106
+- [CMake Subdir] D:\lazy init ide\QUICK_REFERENCE_CARD.md:107
+- [CMake Subdir] D:\lazy init ide\QUICK_REFERENCE_CARD.md:108
+- [Feature Flags] D:\lazy init ide\RawrXD.Win32Deployment.psm1:31
+- [Feature Flags] D:\lazy init ide\RawrXD.Win32Deployment.psm1:158
+- [Feature Flags] D:\lazy init ide\RawrXD.Win32Deployment.psm1:165
+- [CMake Targets] D:\lazy init ide\REVERSE_ENGINEERING_TOOLKIT_SUMMARY.md:245
+- [CMake Targets] D:\lazy init ide\REVERSE_ENGINEERING_TOOLKIT_SUMMARY.md:249
+- [Feature Flags] D:\lazy init ide\SESSION_COMPLETION_SUMMARY.md:11
+- [Feature Flags] D:\lazy init ide\smoke_tests.cmake:4
+- [CMake Targets] D:\lazy init ide\START_HERE.md:22
+- [CMake Targets] D:\lazy init ide\START_HERE.md:27
+- [CMake Targets] D:\lazy init ide\START_HERE.md:155
+- [CMake Subdir] D:\lazy init ide\TEST_CONFIGURATION.md:61
+
+## Future-Risk Tags
+- [TODO] D:\lazy init ide\3rdparty\ggml\docs\gguf.md:638
+- [TODO] D:\lazy init ide\3rdparty\ggml\docs\gguf.md:642
+- [PENDING] D:\lazy init ide\3rdparty\ggml\docs\gguf.md:42
+- [PENDING] D:\lazy init ide\3rdparty\ggml\examples\gpt-2\main-batched.cpp:428
+- [TODO] D:\lazy init ide\3rdparty\ggml\examples\gpt-2\main-sched.cpp:579
+- [FIXME] D:\lazy init ide\3rdparty\ggml\examples\gpt-2\main-sched.cpp:534
+- [PENDING] D:\lazy init ide\3rdparty\ggml\examples\gpt-2\main-sched.cpp:415
+- [TODO] D:\lazy init ide\3rdparty\ggml\examples\gpt-2\README.md:27
+- [PENDING] D:\lazy init ide\3rdparty\ggml\examples\mnist\README.md:168
+- [TODO] D:\lazy init ide\3rdparty\ggml\examples\sam\sam.cpp:440
+- [TODO] D:\lazy init ide\3rdparty\ggml\examples\sam\sam.cpp:442
+- [TODO] D:\lazy init ide\3rdparty\ggml\examples\sam\sam.cpp:1176
+- [TODO] D:\lazy init ide\3rdparty\ggml\examples\sam\sam.cpp:1447
+- [TODO] D:\lazy init ide\3rdparty\ggml\examples\sam\sam.cpp:1471
+- [TODO] D:\lazy init ide\3rdparty\ggml\examples\sam\sam.cpp:1629
+- [TODO] D:\lazy init ide\3rdparty\ggml\examples\sam\sam.cpp:1801
+- [TODO] D:\lazy init ide\3rdparty\ggml\examples\sam\sam.cpp:1814
+- [TODO] D:\lazy init ide\3rdparty\ggml\examples\sam\sam.cpp:2166
+- [TODO] D:\lazy init ide\3rdparty\ggml\examples\CMakeLists.txt:4
+- [DISABLED] D:\lazy init ide\3rdparty\ggml\examples\common.cpp:107
+- [DISABLED] D:\lazy init ide\3rdparty\ggml\examples\common.cpp:108
+- [TODO] D:\lazy init ide\3rdparty\ggml\examples\common.h:110
+- [TODO] D:\lazy init ide\3rdparty\ggml\examples\common.h:111
+- [HACK] D:\lazy init ide\3rdparty\ggml\examples\stb_image_write.h:142
+- [TODO] D:\lazy init ide\3rdparty\ggml\examples\stb_image.h:1274
+- [TODO] D:\lazy init ide\3rdparty\ggml\examples\stb_image.h:1300
+- [TODO] D:\lazy init ide\3rdparty\ggml\examples\stb_image.h:1301
+- [TODO] D:\lazy init ide\3rdparty\ggml\examples\stb_image.h:1993
+- [TODO] D:\lazy init ide\3rdparty\ggml\examples\stb_image.h:2941
+- [TODO] D:\lazy init ide\3rdparty\ggml\examples\stb_image.h:2967
+- [TODO] D:\lazy init ide\3rdparty\ggml\examples\stb_image.h:2999
+- [TODO] D:\lazy init ide\3rdparty\ggml\examples\stb_image.h:3030
+- [TODO] D:\lazy init ide\3rdparty\ggml\examples\stb_image.h:3059
+- [TODO] D:\lazy init ide\3rdparty\ggml\examples\stb_image.h:5897
+- [TODO] D:\lazy init ide\3rdparty\ggml\examples\stb_image.h:5898
+- [@todo] D:\lazy init ide\3rdparty\ggml\examples\stb_image.h:1274
+- [@todo] D:\lazy init ide\3rdparty\ggml\examples\stb_image.h:1300
+- [@todo] D:\lazy init ide\3rdparty\ggml\examples\stb_image.h:1301
+- [@todo] D:\lazy init ide\3rdparty\ggml\examples\stb_image.h:5897
+- [@todo] D:\lazy init ide\3rdparty\ggml\examples\stb_image.h:5898
+- [DEPRECATED] D:\lazy init ide\3rdparty\ggml\examples\stb_image.h:65
+- [DEPRECATED] D:\lazy init ide\3rdparty\ggml\examples\stb_image.h:7783
+- [DEPRECATED] D:\lazy init ide\3rdparty\ggml\examples\stb_image.h:7868
+- [DEPRECATED] D:\lazy init ide\3rdparty\ggml\examples\stb_image.h:7885
+- [PENDING] D:\lazy init ide\3rdparty\ggml\examples\stb_image.h:2914
+- [EXPERIMENTAL] D:\lazy init ide\3rdparty\ggml\examples\stb_image.h:66
+- [DISABLED] D:\lazy init ide\3rdparty\ggml\include\ggml-cpu.h:26
+- [TODO] D:\lazy init ide\3rdparty\ggml\include\ggml-metal.h:42
+- [TODO] D:\lazy init ide\3rdparty\ggml\include\ggml-opt.h:158
+- [TODO] D:\lazy init ide\3rdparty\ggml\include\ggml.h:152
+- ...(6553 more)
+
+## Config & Manifest Signals
+- D:\lazy init ide\3rdparty\ggml\cmake\BuildTypes.cmake
+- D:\lazy init ide\3rdparty\ggml\cmake\common.cmake
+- D:\lazy init ide\3rdparty\ggml\cmake\GitVars.cmake
+- D:\lazy init ide\3rdparty\ggml\examples\gpt-2\CMakeLists.txt
+- D:\lazy init ide\3rdparty\ggml\examples\gpt-2\README.md
+- D:\lazy init ide\3rdparty\ggml\examples\gpt-j\CMakeLists.txt
+- D:\lazy init ide\3rdparty\ggml\examples\gpt-j\README.md
+- D:\lazy init ide\3rdparty\ggml\examples\magika\CMakeLists.txt
+- D:\lazy init ide\3rdparty\ggml\examples\magika\README.md
+- D:\lazy init ide\3rdparty\ggml\examples\mnist\CMakeLists.txt
+- D:\lazy init ide\3rdparty\ggml\examples\mnist\README.md
+- D:\lazy init ide\3rdparty\ggml\examples\perf-metal\CMakeLists.txt
+- D:\lazy init ide\3rdparty\ggml\examples\python\README.md
+- D:\lazy init ide\3rdparty\ggml\examples\sam\CMakeLists.txt
+- D:\lazy init ide\3rdparty\ggml\examples\sam\README.md
+- D:\lazy init ide\3rdparty\ggml\examples\simple\CMakeLists.txt
+- D:\lazy init ide\3rdparty\ggml\examples\simple\README.md
+- D:\lazy init ide\3rdparty\ggml\examples\test-cmake\CMakeLists.txt
+- D:\lazy init ide\3rdparty\ggml\examples\test-cmake\README.md
+- D:\lazy init ide\3rdparty\ggml\examples\yolo\CMakeLists.txt
+- D:\lazy init ide\3rdparty\ggml\examples\yolo\README.md
+- D:\lazy init ide\3rdparty\ggml\examples\CMakeLists.txt
+- D:\lazy init ide\3rdparty\ggml\src\ggml-blas\CMakeLists.txt
+- D:\lazy init ide\3rdparty\ggml\src\ggml-cann\CMakeLists.txt
+- D:\lazy init ide\3rdparty\ggml\src\ggml-cpu\cmake\FindSIMD.cmake
+- D:\lazy init ide\3rdparty\ggml\src\ggml-cpu\CMakeLists.txt
+- D:\lazy init ide\3rdparty\ggml\src\ggml-cuda\CMakeLists.txt
+- D:\lazy init ide\3rdparty\ggml\src\ggml-hexagon\htp\cmake-toolchain.cmake
+- D:\lazy init ide\3rdparty\ggml\src\ggml-hexagon\htp\CMakeLists.txt
+- D:\lazy init ide\3rdparty\ggml\src\ggml-hexagon\CMakeLists.txt
+- D:\lazy init ide\3rdparty\ggml\src\ggml-hip\CMakeLists.txt
+- D:\lazy init ide\3rdparty\ggml\src\ggml-metal\CMakeLists.txt
+- D:\lazy init ide\3rdparty\ggml\src\ggml-musa\CMakeLists.txt
+- D:\lazy init ide\3rdparty\ggml\src\ggml-opencl\CMakeLists.txt
+- D:\lazy init ide\3rdparty\ggml\src\ggml-rpc\CMakeLists.txt
+- D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\CMakeLists.txt
+- D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\vulkan-shaders\CMakeLists.txt
+- D:\lazy init ide\3rdparty\ggml\src\ggml-vulkan\CMakeLists.txt
+- D:\lazy init ide\3rdparty\ggml\src\ggml-webgpu\CMakeLists.txt
+- D:\lazy init ide\3rdparty\ggml\src\ggml-zdnn\CMakeLists.txt
+- D:\lazy init ide\3rdparty\ggml\src\CMakeLists.txt
+- D:\lazy init ide\3rdparty\ggml\tests\CMakeLists.txt
+- D:\lazy init ide\3rdparty\ggml\CMakeLists.txt
+- D:\lazy init ide\3rdparty\ggml\README.md
+- D:\lazy init ide\3rdparty\ggml\requirements.txt
+- D:\lazy init ide\assets\README.md
+- D:\lazy init ide\audit_output\README.md
+- D:\lazy init ide\auto_generated_methods\README.md
+- D:\lazy init ide\build_universal\_deps\zlib-build\cmake_install.cmake
+- D:\lazy init ide\build_universal\_deps\zlib-build\CTestTestfile.cmake
+- ...(478 more)
+
+## Security-Relevant Signals
+- [Network] D:\lazy init ide\.github\CI_CD_DELIVERY_COMPLETE.md:591
+- [Network] D:\lazy init ide\.github\CI_CD_DELIVERY_COMPLETE.md:601
+- [Network] D:\lazy init ide\.github\CI_CD_DELIVERY_COMPLETE.md:603
+- [Network] D:\lazy init ide\.github\CI_CD_DELIVERY_COMPLETE.md:605
+- [Network] D:\lazy init ide\.github\CI_CD_DELIVERY_COMPLETE.md:607
+- [Secret] D:\lazy init ide\.github\CI_CD_SETUP.md:387
+- [Network] D:\lazy init ide\.github\CI_CD_SETUP.md:473
+- [Network] D:\lazy init ide\.github\CI_CD_SETUP.md:474
+- [Network] D:\lazy init ide\.github\CI_CD_SETUP.md:475
+- [Network] D:\lazy init ide\.github\CI_CD_SETUP.md:476
+- [Network] D:\lazy init ide\.github\CI_CD_SETUP.md:565
+- [Network] D:\lazy init ide\.github\CI_CD_SETUP.md:566
+- [Network] D:\lazy init ide\.github\CI_CD_SETUP.md:567
+- [Network] D:\lazy init ide\.github\CI_CD_SETUP.md:568
+- [Network] D:\lazy init ide\.github\CI_CD_SETUP.md:569
+- [Network] D:\lazy init ide\.github\pull_request_template.md:1
+- [Network] D:\lazy init ide\3rdparty\ggml\.github\pull_request_template.md:1
+- [Network] D:\lazy init ide\3rdparty\ggml\docs\gguf.md:123
+- [Network] D:\lazy init ide\3rdparty\ggml\docs\gguf.md:124
+- [Network] D:\lazy init ide\3rdparty\ggml\docs\gguf.md:376
+- [Network] D:\lazy init ide\3rdparty\ggml\docs\gguf.md:380
+- [Network] D:\lazy init ide\3rdparty\ggml\docs\gguf.md:381
+- [Network] D:\lazy init ide\3rdparty\ggml\docs\gguf.md:384
+- [Network] D:\lazy init ide\3rdparty\ggml\docs\gguf.md:412
+- [Network] D:\lazy init ide\3rdparty\ggml\docs\gguf.md:413
+- [Network] D:\lazy init ide\3rdparty\ggml\docs\gguf.md:422
+- [Network] D:\lazy init ide\3rdparty\ggml\docs\gguf.md:423
+- [Network] D:\lazy init ide\3rdparty\ggml\docs\gguf.md:682
+- [Network] D:\lazy init ide\3rdparty\ggml\docs\gguf.md:688
+- [Network] D:\lazy init ide\3rdparty\ggml\docs\gguf.md:689
+- [Secret] D:\lazy init ide\3rdparty\ggml\examples\gpt-2\main-batched.cpp:133
+- [Secret] D:\lazy init ide\3rdparty\ggml\examples\gpt-2\main-batched.cpp:142
+- [Secret] D:\lazy init ide\3rdparty\ggml\examples\gpt-2\main-batched.cpp:850
+- [Secret] D:\lazy init ide\3rdparty\ggml\examples\gpt-2\main-batched.cpp:1139
+- [Secret] D:\lazy init ide\3rdparty\ggml\examples\gpt-2\main-ctx.cpp:687
+- [Secret] D:\lazy init ide\3rdparty\ggml\examples\gpt-2\main-ctx.cpp:688
+- [Secret] D:\lazy init ide\3rdparty\ggml\examples\gpt-2\main-ctx.cpp:763
+- [Secret] D:\lazy init ide\3rdparty\ggml\examples\gpt-2\main-ctx.cpp:830
+- [Secret] D:\lazy init ide\3rdparty\ggml\examples\gpt-2\README.md:70
+- [Network] D:\lazy init ide\3rdparty\ggml\examples\gpt-2\README.md:3
+- [Network] D:\lazy init ide\3rdparty\ggml\examples\gpt-2\README.md:7
+- [Network] D:\lazy init ide\3rdparty\ggml\examples\gpt-2\README.md:110
+- [Network] D:\lazy init ide\3rdparty\ggml\examples\gpt-2\README.md:116
+- [Secret] D:\lazy init ide\3rdparty\ggml\examples\gpt-j\main.cpp:608
+- [Secret] D:\lazy init ide\3rdparty\ggml\examples\gpt-j\main.cpp:609
+- [Secret] D:\lazy init ide\3rdparty\ggml\examples\gpt-j\main.cpp:678
+- [Secret] D:\lazy init ide\3rdparty\ggml\examples\gpt-j\main.cpp:745
+- [Secret] D:\lazy init ide\3rdparty\ggml\examples\gpt-j\README.md:61
+- [Secret] D:\lazy init ide\3rdparty\ggml\examples\gpt-j\README.md:136
+- [Network] D:\lazy init ide\3rdparty\ggml\examples\gpt-j\README.md:19
+- ...(15471 more)
+
+## Large Files (>=25MB)
+- D:\lazy init ide\auto_generated_methods\Powershield_Audit_Report.json (191.3 MB)
+- D:\lazy init ide\auto_generated_methods\RefactorSuggestions.json (79.09 MB)
+
+## Binary Blob Signals
+- No binary blobs detected
+
+## Unused Files (Name not referenced)
+- D:\lazy init ide\3rdparty\ggml\cmake\BuildTypes.cmake
+- D:\lazy init ide\3rdparty\ggml\cmake\GitVars.cmake
+- D:\lazy init ide\3rdparty\ggml\examples\prompts\dolly-v2.txt
+- D:\lazy init ide\3rdparty\ggml\examples\prompts\gpt-2-chinese.txt
+- D:\lazy init ide\3rdparty\ggml\examples\prompts\gpt-2.txt
+- D:\lazy init ide\3rdparty\ggml\examples\prompts\gpt-j.txt
+- D:\lazy init ide\3rdparty\ggml\examples\prompts\gpt-neox-japanese.txt
+- D:\lazy init ide\3rdparty\ggml\examples\prompts\gpt-neox.txt
+- D:\lazy init ide\3rdparty\ggml\examples\prompts\polyglot-ko.txt
+- D:\lazy init ide\3rdparty\ggml\examples\prompts\replit.txt
+- D:\lazy init ide\3rdparty\ggml\examples\prompts\starcoder.txt
+- D:\lazy init ide\3rdparty\ggml\examples\prompts\test-cases.txt
+- D:\lazy init ide\3rdparty\ggml\examples\prompts\whisper.txt
+- D:\lazy init ide\3rdparty\ggml\src\ggml-cann\acl_tensor.cpp
+- D:\lazy init ide\3rdparty\ggml\src\ggml-cann\aclnn_ops.cpp
+- D:\lazy init ide\3rdparty\ggml\src\ggml-cann\ggml-cann.cpp
+- D:\lazy init ide\3rdparty\ggml\src\ggml-cuda\vendors\hip.h
+- D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\binbcast.cpp
+- D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\concat.cpp
+- D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\conv.cpp
+- D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\convert.cpp
+- D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\count-equal.cpp
+- D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\cpy.cpp
+- D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\dmmv.cpp
+- D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\element_wise.cpp
+- D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\getrows.cpp
+- D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\gla.cpp
+- D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\im2col.cpp
+- D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\mmvq.cpp
+- D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\norm.cpp
+- D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\outprod.cpp
+- D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\pad_reflect_1d.cpp
+- D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\pad.cpp
+- D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\repeat_back.cpp
+- D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\roll.cpp
+- D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\rope.cpp
+- D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\set_rows.cpp
+- D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\set.cpp
+- D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\softmax.cpp
+- D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\ssm_conv.cpp
+- D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\sycl_hw.cpp
+- D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\tsembd.cpp
+- D:\lazy init ide\3rdparty\ggml\src\ggml-sycl\wkv.cpp
+- D:\lazy init ide\3rdparty\ggml\src\ggml-zdnn\ggml-zdnn.cpp
+- D:\lazy init ide\3rdparty\ggml\src\ggml-zdnn\mmf.cpp
+- D:\lazy init ide\3rdparty\ggml\tests\test-arange.cpp
+- D:\lazy init ide\3rdparty\ggml\tests\test-backend-ops.cpp
+- D:\lazy init ide\3rdparty\ggml\tests\test-cont.c
+- D:\lazy init ide\3rdparty\ggml\tests\test-conv-transpose-1d.cpp
+- D:\lazy init ide\3rdparty\ggml\tests\test-conv-transpose.c
+- ...(1183 more)
+
+## CI/CD Health
+- [Missing] Azure Pipelines config missing: d:\lazy init ide\azure-pipelines.yml
+- [Missing] AppVeyor config missing: d:\lazy init ide\appveyor.yml
+
+## Packaging Risk Score
+- Score: 46567
+- Level: High
+- Factors: binary blobs (0), large files (2), security signals (15521)
+- Secrets detected: 1548
+
+## Module Overrides
+- plugin_craft_room: MaxUnusedExports=5
+## Reference Details
+### Advanced-Model-Operations
+- D:\lazy init ide\docs\NATURAL_LANGUAGE_ASSISTANT_GUIDE.md:85 [Strong]
+- D:\lazy init ide\docs\NATURAL_LANGUAGE_ASSISTANT_GUIDE.md:86 [Strong]
+- D:\lazy init ide\docs\NATURAL_LANGUAGE_ASSISTANT_GUIDE.md:85 [Weak]
+- D:\lazy init ide\docs\NATURAL_LANGUAGE_ASSISTANT_GUIDE.md:86 [Weak]
+- D:\lazy init ide\scripts\command_translator.ps1:225 [Strong]
+- D:\lazy init ide\scripts\command_translator.ps1:234 [Strong]
+- D:\lazy init ide\scripts\command_translator.ps1:225 [Weak]
+- D:\lazy init ide\scripts\command_translator.ps1:234 [Weak]
+- D:\lazy init ide\scripts\ide_chatbot.ps1:244 [Strong]
+- D:\lazy init ide\scripts\ide_chatbot.ps1:299 [Strong]
+- D:\lazy init ide\scripts\ide_chatbot.ps1:244 [Weak]
+- D:\lazy init ide\scripts\ide_chatbot.ps1:299 [Weak]
+- D:\lazy init ide\scripts\ide_chatbot.ps1:350 [Weak]
+- D:\lazy init ide\scripts\model_agent_making_station.ps1:39 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:26 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:310 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:525 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:24 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:192 [Weak]
+- SignalLevel: Strongly Wired
+- Strong references: 6
+- Weak references: 13
+- Signal score: 25
+- Exported functions: 4
+- Unused exports: None
+
+### codex_accessibility_layer
+- D:\lazy init ide\scripts\codex_accessibility_layer.psm1:17 [Strong]
+- D:\lazy init ide\scripts\codex_accessibility_layer.psm1:17 [Weak]
+- D:\lazy init ide\.wiringdigestrules.json:68 [Weak]
+- D:\lazy init ide\.wiringdigestrules.json:76 [Weak]
+- D:\lazy init ide\.wiringdigestrules.json:100 [Weak]
+- D:\lazy init ide\.wiringdigestrules.json:103 [Weak]
+- D:\lazy init ide\INDEX.ps1:86 [Strong]
+- D:\lazy init ide\INDEX.ps1:81 [Weak]
+- D:\lazy init ide\INDEX.ps1:86 [Weak]
+- D:\lazy init ide\INDEX.ps1:189 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:205 [Strong]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:445 [Strong]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:27 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:100 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:178 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:199 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:204 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:205 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:221 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:309 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:444 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:445 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:526 [Weak]
+- D:\lazy init ide\SYSTEM_DELIVERY_SUMMARY.md:106 [Strong]
+- D:\lazy init ide\SYSTEM_DELIVERY_SUMMARY.md:256 [Strong]
+- D:\lazy init ide\SYSTEM_DELIVERY_SUMMARY.md:288 [Strong]
+- D:\lazy init ide\SYSTEM_DELIVERY_SUMMARY.md:288 [Strong]
+- D:\lazy init ide\SYSTEM_DELIVERY_SUMMARY.md:21 [Weak]
+- D:\lazy init ide\SYSTEM_DELIVERY_SUMMARY.md:57 [Weak]
+- D:\lazy init ide\SYSTEM_DELIVERY_SUMMARY.md:106 [Weak]
+- D:\lazy init ide\SYSTEM_DELIVERY_SUMMARY.md:256 [Weak]
+- D:\lazy init ide\SYSTEM_DELIVERY_SUMMARY.md:288 [Weak]
+- D:\lazy init ide\SYSTEM_QUICK_REFERENCE.md:268 [Strong]
+- D:\lazy init ide\SYSTEM_QUICK_REFERENCE.md:268 [Strong]
+- D:\lazy init ide\SYSTEM_QUICK_REFERENCE.md:252 [Weak]
+- D:\lazy init ide\SYSTEM_QUICK_REFERENCE.md:204 [Weak]
+- D:\lazy init ide\SYSTEM_QUICK_REFERENCE.md:252 [Weak]
+- D:\lazy init ide\SYSTEM_QUICK_REFERENCE.md:268 [Weak]
+- D:\lazy init ide\UNIFIED_SYSTEM_GUIDE.md:691 [Weak]
+- D:\lazy init ide\unified_system_launcher.ps1:39 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:25 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:39 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:54 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:210 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:211 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:212 [Weak]
+- SignalLevel: Strongly Wired
+- Strong references: 10
+- Weak references: 36
+- Signal score: 56
+- Exported functions: 13
+- Unused exports: None
+
+### DependencyManager
+- D:\lazy init ide\RawrXD.Modular.ps1:48 [Weak]
+- D:\lazy init ide\RawrXD.Modular.ps1:149 [Weak]
+- D:\lazy init ide\RawrXD.Modular.ps1:157 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:34 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:40 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:170 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:220 [Weak]
+- SignalLevel: Strongly Wired
+- Strong references: 0
+- Weak references: 7
+- Signal score: 7
+- Exported functions: 1
+- Unused exports: None
+
+### ExtensionManager
+- D:\lazy init ide\extension_registry\CMakeLists.txt:41 [Weak]
+- D:\lazy init ide\include\extension_manager.h:21 [Weak]
+- D:\lazy init ide\include\extension_manager.h:23 [Weak]
+- D:\lazy init ide\include\extension_manager.h:24 [Weak]
+- D:\lazy init ide\include\extension_manager.h:62 [Weak]
+- D:\lazy init ide\include\extension_panel.h:56 [Weak]
+- D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\SecureIDE.ts:5 [Weak]
+- D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\SecureIDE.ts:37 [Weak]
+- D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\SecureIDE.ts:57 [Weak]
+- D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\SecureIDE.ts:66 [Weak]
+- D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\SecureIDE.ts:74 [Weak]
+- D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\SecureIDE.ts:100 [Weak]
+- D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\SecureIDE.ts:105 [Weak]
+- D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\SecureIDE.ts:132 [Weak]
+- D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\SecureIDE.ts:163 [Weak]
+- D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\SecureIDE.ts:187 [Weak]
+- D:\lazy init ide\OrganizedPiProject\misc\Desktop\secure-ide\src\core\SecureIDE.ts:188 [Weak]
+- D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\SecureIDE.ts:5 [Weak]
+- D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\SecureIDE.ts:37 [Weak]
+- D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\SecureIDE.ts:57 [Weak]
+- D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\SecureIDE.ts:66 [Weak]
+- D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\SecureIDE.ts:74 [Weak]
+- D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\SecureIDE.ts:100 [Weak]
+- D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\SecureIDE.ts:105 [Weak]
+- D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\SecureIDE.ts:132 [Weak]
+- D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\SecureIDE.ts:163 [Weak]
+- D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\SecureIDE.ts:187 [Weak]
+- D:\lazy init ide\OrganizedPiProject\projects\unified-workspace\ide-suite\src\core\SecureIDE.ts:188 [Weak]
+- D:\lazy init ide\scripts\ExtensionManager.psm1:11 [Strong]
+- D:\lazy init ide\scripts\ExtensionManager.psm1:11 [Weak]
+- D:\lazy init ide\scripts\Find-ExtensionWiring.ps1:94 [Weak]
+- D:\lazy init ide\scripts\Find-ExtensionWiring.ps1:95 [Weak]
+- D:\lazy init ide\scripts\Find-ExtensionWiring.ps1:96 [Weak]
+- D:\lazy init ide\scripts\Find-ExtensionWiring.ps1:317 [Weak]
+- D:\lazy init ide\src\extension_manager.cpp:33 [Weak]
+- D:\lazy init ide\src\extension_manager.cpp:47 [Weak]
+- D:\lazy init ide\src\extension_manager.cpp:51 [Weak]
+- D:\lazy init ide\src\extension_manager.cpp:64 [Weak]
+- D:\lazy init ide\src\extension_manager.cpp:75 [Weak]
+- D:\lazy init ide\src\extension_manager.cpp:121 [Weak]
+- D:\lazy init ide\src\extension_manager.cpp:144 [Weak]
+- D:\lazy init ide\src\extension_manager.cpp:163 [Weak]
+- D:\lazy init ide\src\extension_manager.cpp:165 [Weak]
+- D:\lazy init ide\src\extension_manager.cpp:182 [Weak]
+- D:\lazy init ide\src\extension_manager.cpp:187 [Weak]
+- D:\lazy init ide\src\extension_manager.cpp:203 [Weak]
+- D:\lazy init ide\src\extension_manager.cpp:215 [Weak]
+- D:\lazy init ide\src\extension_manager.cpp:231 [Weak]
+- D:\lazy init ide\src\extension_manager.cpp:236 [Weak]
+- D:\lazy init ide\src\extension_manager.cpp:252 [Weak]
+- D:\lazy init ide\src\extension_manager.cpp:262 [Weak]
+- D:\lazy init ide\src\extension_manager.cpp:278 [Weak]
+- D:\lazy init ide\src\extension_manager.cpp:288 [Weak]
+- D:\lazy init ide\src\extension_manager.cpp:304 [Weak]
+- D:\lazy init ide\src\extension_manager.cpp:312 [Weak]
+- D:\lazy init ide\src\extension_manager.cpp:320 [Weak]
+- D:\lazy init ide\src\extension_manager.cpp:330 [Weak]
+- D:\lazy init ide\src\extension_manager.cpp:340 [Weak]
+- D:\lazy init ide\src\extension_manager.cpp:363 [Weak]
+- D:\lazy init ide\src\extension_manager.cpp:368 [Weak]
+- D:\lazy init ide\src\extension_manager.cpp:369 [Weak]
+- D:\lazy init ide\src\extension_panel.cpp:11 [Weak]
+- D:\lazy init ide\ExtensionManager.ps1:7 [Weak]
+- D:\lazy init ide\test_extension_manager.ps1:4 [Strong]
+- D:\lazy init ide\test_extension_manager.ps1:28 [Strong]
+- D:\lazy init ide\test_extension_manager.ps1:4 [Weak]
+- D:\lazy init ide\test_extension_manager.ps1:28 [Weak]
+- SignalLevel: Strongly Wired
+- Strong references: 3
+- Weak references: 64
+- Signal score: 70
+- Exported functions: 9
+- Unused exports: Invoke-$PluginName
+
+### language_model_registry
+- D:\lazy init ide\scripts\language_model_integration.ps1:34 [Weak]
+- D:\lazy init ide\scripts\language_model_manager.ps1:66 [Strong]
+- D:\lazy init ide\scripts\language_model_manager.ps1:109 [Weak]
+- D:\lazy init ide\scripts\language_model_manager.ps1:66 [Weak]
+- D:\lazy init ide\scripts\language_model_manager.ps1:109 [Weak]
+- D:\lazy init ide\scripts\language_model_manager.ps1:110 [Weak]
+- D:\lazy init ide\scripts\language_swarm_integration.ps1:47 [Weak]
+- D:\lazy init ide\scripts\verify_language_registry.ps1:398 [Strong]
+- D:\lazy init ide\scripts\verify_language_registry.ps1:37 [Weak]
+- D:\lazy init ide\scripts\verify_language_registry.ps1:41 [Weak]
+- D:\lazy init ide\scripts\verify_language_registry.ps1:42 [Weak]
+- D:\lazy init ide\scripts\verify_language_registry.ps1:43 [Weak]
+- D:\lazy init ide\scripts\verify_language_registry.ps1:199 [Weak]
+- D:\lazy init ide\scripts\verify_language_registry.ps1:203 [Weak]
+- D:\lazy init ide\scripts\verify_language_registry.ps1:300 [Weak]
+- D:\lazy init ide\scripts\verify_language_registry.ps1:305 [Weak]
+- D:\lazy init ide\scripts\verify_language_registry.ps1:398 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:28 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:52 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:222 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:522 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:26 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:41 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:229 [Weak]
+- SignalLevel: Strongly Wired
+- Strong references: 2
+- Weak references: 22
+- Signal score: 26
+- Exported functions: 12
+- Unused exports: None
+
+### language_support
+- D:\lazy init ide\itsmehrawrxd-master\real_compilation_test\test_report.json:13 [Weak]
+- D:\lazy init ide\scripts\language_assistant.ps1:11 [Strong]
+- D:\lazy init ide\scripts\language_assistant.ps1:11 [Weak]
+- D:\lazy init ide\scripts\language_assistant.ps1:126 [Weak]
+- D:\lazy init ide\scripts\language_support.psm1:3 [Strong]
+- D:\lazy init ide\scripts\language_support.psm1:3 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:29 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:53 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:219 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:306 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:523 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:27 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:42 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:254 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:258 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:259 [Weak]
+- SignalLevel: Strongly Wired
+- Strong references: 2
+- Weak references: 14
+- Signal score: 18
+- Exported functions: 13
+- Unused exports: None
+
+### model_translator_engine
+- D:\lazy init ide\scripts\model_translator_engine.psm1:16 [Strong]
+- D:\lazy init ide\scripts\model_translator_engine.psm1:16 [Weak]
+- D:\lazy init ide\INDEX.ps1:77 [Strong]
+- D:\lazy init ide\INDEX.ps1:167 [Strong]
+- D:\lazy init ide\INDEX.ps1:71 [Weak]
+- D:\lazy init ide\INDEX.ps1:77 [Weak]
+- D:\lazy init ide\INDEX.ps1:167 [Weak]
+- D:\lazy init ide\INDEX.ps1:188 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:30 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:220 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:524 [Weak]
+- D:\lazy init ide\SYSTEM_DELIVERY_SUMMARY.md:102 [Strong]
+- D:\lazy init ide\SYSTEM_DELIVERY_SUMMARY.md:255 [Strong]
+- D:\lazy init ide\SYSTEM_DELIVERY_SUMMARY.md:281 [Strong]
+- D:\lazy init ide\SYSTEM_DELIVERY_SUMMARY.md:281 [Strong]
+- D:\lazy init ide\SYSTEM_DELIVERY_SUMMARY.md:14 [Weak]
+- D:\lazy init ide\SYSTEM_DELIVERY_SUMMARY.md:56 [Weak]
+- D:\lazy init ide\SYSTEM_DELIVERY_SUMMARY.md:102 [Weak]
+- D:\lazy init ide\SYSTEM_DELIVERY_SUMMARY.md:255 [Weak]
+- D:\lazy init ide\SYSTEM_DELIVERY_SUMMARY.md:281 [Weak]
+- D:\lazy init ide\SYSTEM_QUICK_REFERENCE.md:267 [Strong]
+- D:\lazy init ide\SYSTEM_QUICK_REFERENCE.md:267 [Strong]
+- D:\lazy init ide\SYSTEM_QUICK_REFERENCE.md:251 [Weak]
+- D:\lazy init ide\SYSTEM_QUICK_REFERENCE.md:203 [Weak]
+- D:\lazy init ide\SYSTEM_QUICK_REFERENCE.md:251 [Weak]
+- D:\lazy init ide\SYSTEM_QUICK_REFERENCE.md:267 [Weak]
+- D:\lazy init ide\UNIFIED_SYSTEM_GUIDE.md:690 [Weak]
+- D:\lazy init ide\unified_system_launcher.ps1:35 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:28 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:43 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:267 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:268 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:269 [Weak]
+- SignalLevel: Strongly Wired
+- Strong references: 9
+- Weak references: 24
+- Signal score: 42
+- Exported functions: 8
+- Unused exports: None
+
+### ModuleLifecycleManager
+- D:\lazy init ide\scripts\ExtensionManager.psm1:8 [Weak]
+- D:\lazy init ide\scripts\ExtensionManager.psm1:28 [Weak]
+- D:\lazy init ide\scripts\ExtensionManager.psm1:172 [Weak]
+- D:\lazy init ide\scripts\SecurityFramework.psm1:500 [Weak]
+- D:\lazy init ide\scripts\SecurityFramework.psm1:504 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:29 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:44 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:172 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:277 [Weak]
+- SignalLevel: Strongly Wired
+- Strong references: 0
+- Weak references: 9
+- Signal score: 9
+- Exported functions: 5
+- Unused exports: None
+
+### PatternTemplates
+- D:\lazy init ide\scripts\PatternTemplates.psm1:2 [Weak]
+- D:\lazy init ide\scripts\PatternTemplates.psm1:7 [Weak]
+- D:\lazy init ide\scripts\PatternTemplates.psm1:159 [Weak]
+- D:\lazy init ide\scripts\PatternTemplates.psm1:302 [Weak]
+- D:\lazy init ide\scripts\PatternTemplates.psm1:439 [Weak]
+- D:\lazy init ide\scripts\PatternTemplates.psm1:541 [Weak]
+- D:\lazy init ide\scripts\PatternTemplates.psm1:681 [Weak]
+- D:\lazy init ide\scripts\PatternTemplates.psm1:682 [Weak]
+- D:\lazy init ide\scripts\PatternTemplates.psm1:683 [Weak]
+- D:\lazy init ide\scripts\PatternTemplates.psm1:684 [Weak]
+- D:\lazy init ide\scripts\PatternTemplates.psm1:685 [Weak]
+- D:\lazy init ide\scripts\PatternTemplates.psm1:724 [Weak]
+- D:\lazy init ide\scripts\PatternTemplates.psm1:725 [Weak]
+- D:\lazy init ide\scripts\PatternTemplates.psm1:726 [Weak]
+- D:\lazy init ide\scripts\PatternTemplates.psm1:727 [Weak]
+- D:\lazy init ide\scripts\PatternTemplates.psm1:728 [Weak]
+- D:\lazy init ide\scripts\PatternTemplates.psm1:752 [Weak]
+- D:\lazy init ide\scripts\PatternTemplates.psm1:753 [Weak]
+- D:\lazy init ide\scripts\PatternTemplates.psm1:754 [Weak]
+- D:\lazy init ide\scripts\PatternTemplates.psm1:755 [Weak]
+- D:\lazy init ide\scripts\PatternTemplates.psm1:756 [Weak]
+- D:\lazy init ide\scripts\PatternTemplates.psm1:760 [Weak]
+- D:\lazy init ide\scripts\PatternTemplates.psm1:761 [Weak]
+- D:\lazy init ide\scripts\PatternTemplates.psm1:762 [Weak]
+- SignalLevel: Strongly Wired
+- Strong references: 0
+- Weak references: 24
+- Signal score: 24
+- Exported functions: 3
+- Unused exports: Expand-PatternTemplate, Export-PatternLibrary, Get-PatternTemplate
+
+### PerformanceFramework
+- D:\lazy init ide\RawrXD.Modular.ps1:48 [Weak]
+- D:\lazy init ide\RawrXD.Modular.ps1:130 [Weak]
+- D:\lazy init ide\RawrXD.Modular.ps1:136 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:35 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:45 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:173 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:287 [Weak]
+- SignalLevel: Strongly Wired
+- Strong references: 0
+- Weak references: 7
+- Signal score: 7
+- Exported functions: 6
+- Unused exports: None
+
+### plugin_craft_room
+- D:\lazy init ide\scripts\ExtensionManager.psm1:8 [Weak]
+- D:\lazy init ide\scripts\ExtensionManager.psm1:27 [Weak]
+- D:\lazy init ide\.wiringdigestrules.json:65 [Weak]
+- D:\lazy init ide\.wiringdigestrules.json:83 [Weak]
+- D:\lazy init ide\.wiringdigestrules.json:87 [Weak]
+- D:\lazy init ide\.wiringdigestrules.json:88 [Weak]
+- D:\lazy init ide\.wiringdigestrules.json:91 [Weak]
+- D:\lazy init ide\.wiringdigestrules.json:94 [Weak]
+- D:\lazy init ide\INDEX.ps1:96 [Strong]
+- D:\lazy init ide\INDEX.ps1:172 [Strong]
+- D:\lazy init ide\INDEX.ps1:90 [Weak]
+- D:\lazy init ide\INDEX.ps1:96 [Weak]
+- D:\lazy init ide\INDEX.ps1:172 [Weak]
+- D:\lazy init ide\INDEX.ps1:190 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:31 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:61 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:80 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:100 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:219 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:220 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:293 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:449 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:527 [Weak]
+- D:\lazy init ide\SYSTEM_DELIVERY_SUMMARY.md:110 [Strong]
+- D:\lazy init ide\SYSTEM_DELIVERY_SUMMARY.md:257 [Strong]
+- D:\lazy init ide\SYSTEM_DELIVERY_SUMMARY.md:295 [Strong]
+- D:\lazy init ide\SYSTEM_DELIVERY_SUMMARY.md:295 [Strong]
+- D:\lazy init ide\SYSTEM_DELIVERY_SUMMARY.md:33 [Weak]
+- D:\lazy init ide\SYSTEM_DELIVERY_SUMMARY.md:58 [Weak]
+- D:\lazy init ide\SYSTEM_DELIVERY_SUMMARY.md:110 [Weak]
+- D:\lazy init ide\SYSTEM_DELIVERY_SUMMARY.md:257 [Weak]
+- D:\lazy init ide\SYSTEM_DELIVERY_SUMMARY.md:295 [Weak]
+- D:\lazy init ide\SYSTEM_QUICK_REFERENCE.md:269 [Strong]
+- D:\lazy init ide\SYSTEM_QUICK_REFERENCE.md:269 [Strong]
+- D:\lazy init ide\SYSTEM_QUICK_REFERENCE.md:253 [Weak]
+- D:\lazy init ide\SYSTEM_QUICK_REFERENCE.md:205 [Weak]
+- D:\lazy init ide\SYSTEM_QUICK_REFERENCE.md:253 [Weak]
+- D:\lazy init ide\SYSTEM_QUICK_REFERENCE.md:269 [Weak]
+- D:\lazy init ide\UNIFIED_SYSTEM_GUIDE.md:325 [Weak]
+- D:\lazy init ide\UNIFIED_SYSTEM_GUIDE.md:692 [Weak]
+- D:\lazy init ide\unified_system_launcher.ps1:43 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:30 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:46 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:296 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:297 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:298 [Weak]
+- SignalLevel: Strongly Wired
+- Strong references: 8
+- Weak references: 38
+- Signal score: 54
+- Exported functions: 19
+- Unused exports: None
+
+### SecurityFramework
+- D:\lazy init ide\RawrXD.Modular.ps1:48 [Weak]
+- D:\lazy init ide\RawrXD.Modular.ps1:98 [Weak]
+- D:\lazy init ide\RawrXD.Modular.ps1:101 [Weak]
+- D:\lazy init ide\RawrXD.Modular.ps1:103 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:36 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:47 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:175 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:278 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:279 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:306 [Weak]
+- SignalLevel: Strongly Wired
+- Strong references: 0
+- Weak references: 10
+- Signal score: 10
+- Exported functions: 12
+- Unused exports: None
+
+### TODOAutoResolver_v2
+- D:\lazy init ide\scripts\README_TODOAutoResolver_v2.md:9 [Strong]
+- D:\lazy init ide\scripts\README_TODOAutoResolver_v2.md:9 [Weak]
+- D:\lazy init ide\scripts\README_TODOAutoResolver_v2.md:17 [Weak]
+- D:\lazy init ide\scripts\Run-TODOAutoResolver_v2.ps1:2 [Weak]
+- D:\lazy init ide\scripts\Run-TODOAutoResolver_v2.ps1:3 [Weak]
+- D:\lazy init ide\scripts\Run-TODOAutoResolver_v2.ps1:8 [Weak]
+- D:\lazy init ide\scripts\TODOAutoResolver_v2.psm1:2 [Weak]
+- D:\lazy init ide\scripts\TODOAutoResolver_v2.psm1:640 [Weak]
+- SignalLevel: Strongly Wired
+- Strong references: 1
+- Weak references: 7
+- Signal score: 9
+- Exported functions: 5
+- Unused exports: Learn-FromResolution, Test-TODOPattern
+
+### TodoManager
+- D:\lazy init ide\docs\ENHANCED_CHATBOT_COMPLETE_GUIDE.md:284 [Weak]
+- D:\lazy init ide\docs\TODO_MANAGER_QUICK_REFERENCE.md:90 [Weak]
+- D:\lazy init ide\docs\TODO_MANAGER_QUICK_REFERENCE.md:95 [Weak]
+- D:\lazy init ide\docs\TODO_MANAGER_QUICK_REFERENCE.md:153 [Weak]
+- D:\lazy init ide\docs\TODO_MANAGER_QUICK_REFERENCE.md:154 [Weak]
+- D:\lazy init ide\docs\TODO_MODULE_USAGE_EXAMPLES.md:6 [Strong]
+- D:\lazy init ide\docs\TODO_MODULE_USAGE_EXAMPLES.md:1 [Weak]
+- D:\lazy init ide\docs\TODO_MODULE_USAGE_EXAMPLES.md:6 [Weak]
+- D:\lazy init ide\docs\TODO_MODULE_USAGE_EXAMPLES.md:24 [Weak]
+- D:\lazy init ide\include\todo_dock.h:8 [Weak]
+- D:\lazy init ide\include\todo_dock.h:14 [Weak]
+- D:\lazy init ide\include\todo_dock.h:38 [Weak]
+- D:\lazy init ide\include\todo_manager.h:18 [Weak]
+- D:\lazy init ide\include\todo_manager.h:21 [Weak]
+- D:\lazy init ide\include\todo_manager.h:22 [Weak]
+- D:\lazy init ide\scripts\ide_chatbot.ps1:144 [Strong]
+- D:\lazy init ide\scripts\ide_chatbot.ps1:144 [Weak]
+- D:\lazy init ide\scripts\ide_chatbot.ps1:349 [Weak]
+- D:\lazy init ide\scripts\ide_chatbot.ps1:359 [Weak]
+- D:\lazy init ide\scripts\TodoManager.psm1:13 [Strong]
+- D:\lazy init ide\scripts\TodoManager.psm1:18 [Strong]
+- D:\lazy init ide\scripts\TodoManager.psm1:22 [Strong]
+- D:\lazy init ide\scripts\TodoManager.psm1:13 [Weak]
+- D:\lazy init ide\scripts\TodoManager.psm1:18 [Weak]
+- D:\lazy init ide\scripts\TodoManager.psm1:22 [Weak]
+- D:\lazy init ide\src\qtapp\MainWindow_v5.cpp:95 [Weak]
+- D:\lazy init ide\src\qtapp\MainWindow_v5.cpp:339 [Weak]
+- D:\lazy init ide\src\qtapp\MainWindow_v5.cpp:340 [Weak]
+- D:\lazy init ide\src\qtapp\MainWindow_v5.cpp:1206 [Weak]
+- D:\lazy init ide\src\qtapp\MainWindow_v5.cpp:1213 [Weak]
+- D:\lazy init ide\src\qtapp\MainWindow_v5.cpp:1220 [Weak]
+- D:\lazy init ide\src\qtapp\MainWindow_v5.cpp:1277 [Weak]
+- D:\lazy init ide\src\qtapp\MainWindow_v5.h:21 [Weak]
+- D:\lazy init ide\src\qtapp\MainWindow_v5.h:142 [Weak]
+- D:\lazy init ide\src\qtapp\todo_dock.h:8 [Weak]
+- D:\lazy init ide\src\qtapp\todo_dock.h:14 [Weak]
+- D:\lazy init ide\src\qtapp\todo_dock.h:38 [Weak]
+- D:\lazy init ide\src\qtapp\todo_manager.h:18 [Weak]
+- D:\lazy init ide\src\qtapp\todo_manager.h:21 [Weak]
+- D:\lazy init ide\src\qtapp\todo_manager.h:22 [Weak]
+- D:\lazy init ide\src\win32app\TodoManager.cpp:4 [Weak]
+- D:\lazy init ide\src\win32app\TodoManager.cpp:16 [Weak]
+- D:\lazy init ide\src\win32app\TodoManager.cpp:19 [Weak]
+- D:\lazy init ide\src\win32app\TodoManager.cpp:36 [Weak]
+- D:\lazy init ide\src\win32app\TodoManager.cpp:40 [Weak]
+- D:\lazy init ide\src\win32app\TodoManager.cpp:75 [Weak]
+- D:\lazy init ide\src\win32app\TodoManager.cpp:111 [Weak]
+- D:\lazy init ide\src\win32app\TodoManager.cpp:115 [Weak]
+- D:\lazy init ide\src\win32app\TodoManager.cpp:149 [Weak]
+- D:\lazy init ide\src\win32app\TodoManager.cpp:172 [Weak]
+- D:\lazy init ide\src\win32app\TodoManager.cpp:196 [Weak]
+- D:\lazy init ide\src\win32app\TodoManager.cpp:213 [Weak]
+- D:\lazy init ide\src\win32app\TodoManager.cpp:220 [Weak]
+- D:\lazy init ide\src\win32app\TodoManager.cpp:246 [Weak]
+- D:\lazy init ide\src\win32app\TodoManager.cpp:251 [Weak]
+- D:\lazy init ide\src\win32app\TodoManager.cpp:258 [Weak]
+- D:\lazy init ide\src\win32app\TodoManager.cpp:264 [Weak]
+- D:\lazy init ide\src\win32app\TodoManager.cpp:292 [Weak]
+- D:\lazy init ide\src\win32app\TodoManager.cpp:307 [Weak]
+- D:\lazy init ide\src\win32app\TodoManager.cpp:314 [Weak]
+- D:\lazy init ide\src\win32app\TodoManager.cpp:329 [Weak]
+- D:\lazy init ide\src\win32app\TodoManager.cpp:351 [Weak]
+- D:\lazy init ide\src\win32app\TodoManager.cpp:367 [Weak]
+- D:\lazy init ide\src\win32app\TodoManager.cpp:394 [Weak]
+- D:\lazy init ide\src\win32app\TodoManager.cpp:395 [Weak]
+- D:\lazy init ide\src\win32app\TodoManager.cpp:426 [Weak]
+- D:\lazy init ide\src\win32app\TodoManager.cpp:427 [Weak]
+- D:\lazy init ide\src\win32app\TodoManager.h:58 [Weak]
+- D:\lazy init ide\src\win32app\TodoManager.h:60 [Weak]
+- D:\lazy init ide\src\win32app\TodoManager.h:61 [Weak]
+- D:\lazy init ide\src\win32app\TodoManager.h:131 [Weak]
+- D:\lazy init ide\src\todo_dock.cpp:15 [Weak]
+- D:\lazy init ide\src\todo_dock.cpp:16 [Weak]
+- D:\lazy init ide\src\todo_dock.cpp:27 [Weak]
+- D:\lazy init ide\src\todo_dock.cpp:28 [Weak]
+- D:\lazy init ide\src\todo_dock.cpp:29 [Weak]
+- D:\lazy init ide\src\todo_dock.cpp:57 [Weak]
+- D:\lazy init ide\src\todo_dock.cpp:120 [Weak]
+- D:\lazy init ide\src\todo_dock.cpp:128 [Weak]
+- D:\lazy init ide\src\todo_dock.cpp:136 [Weak]
+- D:\lazy init ide\src\todo_dock.h:8 [Weak]
+- D:\lazy init ide\src\todo_dock.h:14 [Weak]
+- D:\lazy init ide\src\todo_dock.h:38 [Weak]
+- D:\lazy init ide\src\todo_manager.cpp:21 [Weak]
+- D:\lazy init ide\src\todo_manager.cpp:24 [Weak]
+- D:\lazy init ide\src\todo_manager.cpp:25 [Weak]
+- D:\lazy init ide\src\todo_manager.cpp:48 [Weak]
+- D:\lazy init ide\src\todo_manager.cpp:81 [Weak]
+- D:\lazy init ide\src\todo_manager.cpp:116 [Weak]
+- D:\lazy init ide\src\todo_manager.cpp:148 [Weak]
+- D:\lazy init ide\src\todo_manager.cpp:153 [Weak]
+- D:\lazy init ide\src\todo_manager.cpp:164 [Weak]
+- D:\lazy init ide\src\todo_manager.cpp:176 [Weak]
+- D:\lazy init ide\src\todo_manager.cpp:206 [Weak]
+- D:\lazy init ide\src\todo_manager.cpp:214 [Weak]
+- D:\lazy init ide\src\todo_manager.cpp:249 [Weak]
+- D:\lazy init ide\src\todo_manager.h:18 [Weak]
+- D:\lazy init ide\src\todo_manager.h:21 [Weak]
+- D:\lazy init ide\src\todo_manager.h:22 [Weak]
+- D:\lazy init ide\ANALYSIS_COMPLETE.md:112 [Weak]
+- D:\lazy init ide\ANALYSIS_COMPLETE.md:202 [Weak]
+- D:\lazy init ide\ANALYSIS_INDEX.md:113 [Weak]
+- D:\lazy init ide\ANALYSIS_INDEX.md:140 [Weak]
+- D:\lazy init ide\ANALYSIS_INDEX.md:332 [Weak]
+- D:\lazy init ide\IDE_MENU_WIRING_COMPLETE.md:17 [Weak]
+- D:\lazy init ide\IDE_MENU_WIRING_COMPLETE.md:193 [Weak]
+- D:\lazy init ide\IMPLEMENTATION_COMPLETE.md:42 [Weak]
+- D:\lazy init ide\IMPLEMENTATION_COMPLETE.md:201 [Weak]
+- D:\lazy init ide\IMPLEMENTATION_COMPLETE.md:367 [Weak]
+- D:\lazy init ide\MISSING_FEATURES_AUDIT.md:165 [Weak]
+- D:\lazy init ide\MISSING_FEATURES_AUDIT.md:285 [Weak]
+- D:\lazy init ide\MISSING_FEATURES_AUDIT.md:306 [Weak]
+- D:\lazy init ide\MISSING_FEATURES_SUMMARY.md:33 [Weak]
+- D:\lazy init ide\MISSING_FEATURES_SUMMARY.md:117 [Weak]
+- D:\lazy init ide\MISSING_FEATURES_SUMMARY.md:168 [Weak]
+- D:\lazy init ide\QUICK_REFERENCE_CARD.txt:85 [Weak]
+- D:\lazy init ide\QUICK_REFERENCE_CARD.txt:112 [Weak]
+- D:\lazy init ide\QUICK_REFERENCE_CARD.txt:197 [Weak]
+- D:\lazy init ide\QUICK_WINS_IMPLEMENTATION_GUIDE.md:197 [Weak]
+- D:\lazy init ide\QUICK_WINS_IMPLEMENTATION_GUIDE.md:206 [Weak]
+- D:\lazy init ide\QUICK_WINS_IMPLEMENTATION_GUIDE.md:218 [Weak]
+- D:\lazy init ide\QUICK_WINS_IMPLEMENTATION_GUIDE.md:257 [Weak]
+- D:\lazy init ide\QUICK_WINS_IMPLEMENTATION_GUIDE.md:275 [Weak]
+- D:\lazy init ide\QUICK_WINS_IMPLEMENTATION_GUIDE.md:278 [Weak]
+- D:\lazy init ide\QUICK_WINS_IMPLEMENTATION_GUIDE.md:321 [Weak]
+- D:\lazy init ide\README_MISSING_FEATURES.md:52 [Weak]
+- D:\lazy init ide\replace_scantodos.ps1:7 [Weak]
+- D:\lazy init ide\replace_scantodos.ps1:19 [Weak]
+- D:\lazy init ide\replace_scantodos.ps1:95 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:32 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:47 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:100 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:158 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:166 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:223 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:292 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:305 [Weak]
+- D:\lazy init ide\REVERSE_ENGINEERING_REPORT.md:521 [Weak]
+- D:\lazy init ide\SOURCE_CODE_AUDIT_COMPLETE.md:45 [Weak]
+- D:\lazy init ide\SOURCE_CODE_AUDIT_COMPLETE.md:57 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:31 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:48 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:315 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:320 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:321 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:322 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:323 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:324 [Weak]
+- D:\lazy init ide\WIRING_DIGEST_REPORT.md:325 [Weak]
+- SignalLevel: Strongly Wired
+- Strong references: 5
+- Weak references: 144
+- Signal score: 154
+- Exported functions: 22
+- Unused exports: None
+

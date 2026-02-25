@@ -26,20 +26,40 @@ public:
     void stop();             // stop loop & flush state
     bool isRunning() const { return m_running.load(); }
 
+    // Compatibility wrappers (older call sites / command handlers).
+    void Start() { start(); }
+    void Stop() { stop(); }
+    bool IsRunning() const { return isRunning(); }
+
     void enableAutoLoop(bool enable); // toggle background loop
     bool isAutoLoopEnabled() const { return m_autoLoop.load(); }
 
     void setGoal(const std::string& goal);
     std::string getGoal() const;
 
+    void SetGoal(const std::string& goal) { setGoal(goal); }
+    std::string GetGoal() const { return getGoal(); }
+
     void addObservation(const std::string& obs); // append memory item
     std::vector<std::string> getMemorySnapshot();
+    std::vector<std::string> GetMemorySnapshot() { return getMemorySnapshot(); }
 
     void tick();              // single planning + execution step
     void setMaxActionsPerMinute(int v) { m_maxActionsPerMinute = v; }
 
     // Hook for external status surface
     std::string getStatus() const;
+    std::string GetStatus() const { return getStatus(); }
+
+    // Simple export surface used by UI commands.
+    std::string ExportMemory() {
+        std::ostringstream oss;
+        auto snap = getMemorySnapshot();
+        oss << "goal: " << getGoal() << "\n";
+        oss << "items: " << snap.size() << "\n";
+        for (const auto& s : snap) oss << "- " << s << "\n";
+        return oss.str();
+    }
 
 private:
     void loop();

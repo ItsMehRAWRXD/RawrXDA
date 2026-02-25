@@ -6,6 +6,7 @@
 //
 // Pattern: PatchResult-style, no exceptions, factory results.
 // Rule:    NO SOURCE FILE IS TO BE SIMPLIFIED.
+// Copyright (c) 2025-2026 RawrXD Project — All rights reserved.
 // ============================================================================
 
 #include "lsp/diagnostic_consumer.h"
@@ -13,15 +14,8 @@
 #include <sstream>
 #include <algorithm>
 #include <regex>
-
-// SCAFFOLD_144: Diagnostic severity and quick-fix
-
-
-// SCAFFOLD_142: Diagnostic consumer and aggregation
-
-
-// SCAFFOLD_097: diagnostic_consumer agentic auto-fix
-
+#include <cstring>
+#include <cctype>
 
 namespace RawrXD {
 namespace LSP {

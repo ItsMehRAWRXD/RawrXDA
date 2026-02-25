@@ -9,8 +9,7 @@
 #include <memory>
 #include <functional>
 
-class InferenceEngine;
-class RealTimeCompletionEngine;
+namespace RawrXD { class CPUInferenceEngine; }
 
 struct BenchmarkTestResult {
     std::string testName;
@@ -39,7 +38,7 @@ public:
     using ErrorFn = std::function<void(const std::string&)>;
     using LogMessageFn = std::function<void(const std::string& message, int level)>;
 
-    BenchmarkRunner() = default;
+    BenchmarkRunner();
     ~BenchmarkRunner();
 
     void setOnStarted(StartedFn f) { m_onStarted = std::move(f); }
@@ -79,8 +78,7 @@ private:
     bool verbose_ = false;
     bool shouldStop_ = false;
     std::vector<BenchmarkTestResult> results_;
-    std::unique_ptr<InferenceEngine> engine_;
-    std::unique_ptr<RealTimeCompletionEngine> completionEngine_;
+    std::unique_ptr<RawrXD::CPUInferenceEngine> engine_;
 
     StartedFn       m_onStarted;
     TestStartedFn   m_onTestStarted;

@@ -10,11 +10,19 @@
 #include <functional>
 #include <thread>
 #include <atomic>
+#include <cstdint>
+#include <mutex>
 #include <unordered_map>
 #include <nlohmann/json.hpp>
-#include "gguf_proxy_server.hpp"
+#include "agent/gguf_proxy_server.hpp"
 
 class AgentHotPatcher;
+
+#if defined(_WIN32)
+using socket_t = uintptr_t;  // SOCKET is UINT_PTR on Win64
+#else
+using socket_t = int;
+#endif
 
 /**
  * @brief Standalone web bridge API (Qt-free version)
@@ -126,7 +134,7 @@ public:
 
 private:
     void run();
-    void handleClient(int clientSocket);
+    void handleClient(int clientId, socket_t clientSocket);
     std::string performHandshake(const std::string& request);
     std::string decodeFrame(const std::string& frame);
     std::string encodeFrame(const std::string& message);

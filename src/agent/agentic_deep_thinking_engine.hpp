@@ -14,7 +14,7 @@
 // Forward declarations for quantum systems
 namespace RawrXD::Agent {
     class QuantumAutonomousTodoSystem;
-    struct ExecutionResult;
+    using ExecutionResult = QuantumAutonomousTodoSystem::ExecutionResult;
 }
 
 /**

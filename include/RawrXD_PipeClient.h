@@ -26,7 +26,12 @@
 #define RAWRXD_PIPE_CLIENT_H
 
 #include <windows.h>
+#include <cctype>
+#include <cstdint>
+#include <functional>
+#include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 #include <memory>
 #include <sstream>
@@ -80,7 +85,7 @@ using PatternCallback = std::function<void(const PatternResult&)>;
 class PipeClient {
 public:
     // Default pipe name matches RawrXD-IDE-Bridge.ps1
-    static constexpr const char* DEFAULT_PIPE_NAME = "\\\\.\\pipe\\RawrXD_PatternBridge";
+    static constexpr const char* DEFAULT_PIPE_NAME = "\\\\.\\pipe\\RawrXD_WidgetIntelligence";
     static constexpr DWORD DEFAULT_TIMEOUT_MS = 5000;
     
 private:
@@ -264,7 +269,7 @@ public:
         );
         
         if (m_hPipe == INVALID_HANDLE_VALUE) {
-            DWORD err = GetLastError();
+            DWORD err = ::GetLastError();
             if (err == ERROR_PIPE_BUSY) {
                 m_lastError = "Pipe is busy - another client connected";
             } else if (err == ERROR_FILE_NOT_FOUND) {

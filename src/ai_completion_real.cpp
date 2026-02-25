@@ -4,7 +4,7 @@
 #include <windows.h>
 #include <string>
 #include <vector>
-<iostream>
+#include <iostream>
 #include <thread>
 #include <mutex>
 #include <functional>
@@ -549,11 +549,6 @@ private:
         }
 
         if ((int)lines.size() > max_lines) lines.resize(max_lines);
-        return lines;
-    };
-        lines.push_back("    ProcessResult(result);");
-        lines.push_back("}");
-        
         return lines;
     }
     

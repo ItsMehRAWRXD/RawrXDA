@@ -482,7 +482,7 @@ REPL Commands (chat + agentic = Win32 IDE parity):
     // ═══════════════════════════════════════════════════════════════════
     // Phase 21: Distributed Swarm Inference Orchestrator
     // ═══════════════════════════════════════════════════════════════════
-    auto& swarmOrchestrator = RawrXD::Swarm::SwarmOrchestrator::instance();
+    RawrXD::SwarmOrchestrator swarmOrchestrator;
     std::cout << "[SYSTEM] Swarm Orchestrator: ready (use !swarm_join to start)\n";
 
     // ═══════════════════════════════════════════════════════════════════

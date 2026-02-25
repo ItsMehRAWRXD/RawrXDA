@@ -169,7 +169,8 @@ GuardedInputResult InputGuardSlicer::processGuarded(
     PatchResult preResult = preflightCheck(input);
     if (!preResult.success) {
         m_stats.rejected.fetch_add(1, std::memory_order_relaxed);
-        return GuardedInputResult::error(preResult.detail ? preResult.detail : "Preflight failed");
+        const std::string detail = preResult.detail.empty() ? "Preflight failed" : preResult.detail;
+        return GuardedInputResult::error(detail);
     }
 
     // Slice

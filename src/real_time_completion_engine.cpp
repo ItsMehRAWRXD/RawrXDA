@@ -1,6 +1,7 @@
 #include "real_time_completion_engine.h"
 #include <algorithm>
 #include <chrono>
+#include <cstddef>
 #include <sstream>
 #include <thread>
 
@@ -38,13 +39,8 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::getCompletions(
             }
         }
 
-        // Generate completions from model
-        auto completions = generateCompletionsWithModel(prefix + context, 50);
-
-        // Post-process results
-        completions = postProcessCompletions(
-            std::string(), prefix
-        );
+        const std::string prompt = buildCompletionPrompt(prefix, suffix, context);
+        auto completions = generateCompletionsWithModel(prompt, 50);
 
         // Update cache
         updateCache(cacheKey, completions);
@@ -66,7 +62,7 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::getCompletions(
         return completions;
 
     } catch (const std::exception& e) {
-
+        m_errorCount++;
         m_metrics->incrementCounter("completion_errors");
         return {};
     }
@@ -79,8 +75,9 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::getInlineCompletions(
 
 
     // Extract prefix/suffix from line
-    std::string prefix = currentLine.substr(0, cursorColumn);
-    std::string suffix = currentLine.substr(cursorColumn);
+    const int safeColumn = std::max(0, std::min(cursorColumn, static_cast<int>(currentLine.size())));
+    std::string prefix = currentLine.substr(0, safeColumn);
+    std::string suffix = currentLine.substr(safeColumn);
 
     return getCompletions(prefix, suffix, "cpp", "");
 }
@@ -166,7 +163,7 @@ PerformanceMetrics RealTimeCompletionEngine::getMetrics() const {
         ? (double)m_cacheHits / m_totalRequests 
         : 0.0;
     metrics.requestCount = m_totalRequests;
-    metrics.errorCount = m_metrics->getCounter("completion_errors");
+    metrics.errorCount = m_errorCount;
 
     return metrics;
 }
@@ -193,7 +190,7 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::generateCompletionsWithMod
             return {};
         }
 
-        if (!m_inferenceEngine->isModelLoaded()) {
+        if (!m_inferenceEngine->IsModelLoaded()) {
 
             m_metrics->incrementCounter("model_not_loaded_errors");
             return {};
@@ -202,18 +199,14 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::generateCompletionsWithMod
 
         // STEP 2: Tokenize Prompt with Context Window Enforcement
         // ========================================================
-        std::vector<int32_t> inputTokens = m_inferenceEngine->tokenize(std::string::fromStdString(prompt));
+        std::vector<int32_t> inputTokens = m_inferenceEngine->Tokenize(prompt);
 
 
         // Enforce context window limit (typical: 512-2048 tokens)
         // Leave some space for generation
         const size_t CONTEXT_WINDOW = 512;
-        const size_t GENERATION_BUDGET = 256;
-        const size_t TOTAL_LIMIT = CONTEXT_WINDOW + GENERATION_BUDGET;
 
         if (inputTokens.size() > CONTEXT_WINDOW) {
-
-                           inputTokens.size(), CONTEXT_WINDOW);
             // Keep the most recent tokens (sliding window)
             if (inputTokens.size() > CONTEXT_WINDOW) {
                 inputTokens.erase(inputTokens.begin(),
@@ -230,17 +223,10 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::generateCompletionsWithMod
         std::string generatedCompletion;
         if (generatedTokens.size() > inputTokens.size()) {
             std::vector<int32_t> completionSegment(
-                generatedTokens.begin() + static_cast<long long>(inputTokens.size()),
+                generatedTokens.begin() + static_cast<std::ptrdiff_t>(inputTokens.size()),
                 generatedTokens.end());
             generatedCompletion = m_inferenceEngine->Detokenize(completionSegment);
-        } else {
-
         }
-
-                      generatedCompletion.length(),
-                      generatedTokens.size() > inputTokens.size()
-                          ? static_cast<int>(generatedTokens.size() - inputTokens.size())
-                          : 0);
 
         // STEP 4: Parse Completions from Generated Text
         // =============================================
@@ -283,8 +269,8 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::generateCompletionsWithMod
 
         return completions;
 
-    } catch (const std::exception& e) {
-
+    } catch (const std::exception&) {
+        m_errorCount++;
         m_metrics->incrementCounter("completion_generation_errors");
         return {};
     }
@@ -404,4 +390,3 @@ std::string RealTimeCompletionEngine::generateCacheKey(
 
     return prefix + "|" + suffix;
 }
-

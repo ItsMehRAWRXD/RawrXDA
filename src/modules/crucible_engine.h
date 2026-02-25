@@ -90,7 +90,7 @@ enum class CrucibleStage : int {
 // ============================================================================
 struct CrucibleStageResult {
     bool          success      = false;
-    const char*   detail       = "";
+    std::string   detail;
     int           errorCode    = 0;
     double        durationMs   = 0.0;
     CrucibleStage stage        = CrucibleStage::SP_AcquireTarget;
@@ -98,10 +98,31 @@ struct CrucibleStageResult {
 
     static CrucibleStageResult pass(CrucibleStage s, const char* msg, double ms = 0.0,
                                      uint64_t items = 0) {
-        return {true, msg, 0, ms, s, items};
+        CrucibleStageResult r;
+        r.success = true;
+        r.detail = msg ? msg : "";
+        r.errorCode = 0;
+        r.durationMs = ms;
+        r.stage = s;
+        r.itemsProcessed = items;
+        return r;
+    }
+    static CrucibleStageResult pass(CrucibleStage s, const std::string& msg, double ms = 0.0,
+                                     uint64_t items = 0) {
+        return pass(s, msg.c_str(), ms, items);
     }
     static CrucibleStageResult fail(CrucibleStage s, const char* msg, int code = -1) {
-        return {false, msg, code, 0.0, s, 0};
+        CrucibleStageResult r;
+        r.success = false;
+        r.detail = msg ? msg : "";
+        r.errorCode = code;
+        r.durationMs = 0.0;
+        r.stage = s;
+        r.itemsProcessed = 0;
+        return r;
+    }
+    static CrucibleStageResult fail(CrucibleStage s, const std::string& msg, int code = -1) {
+        return fail(s, msg.c_str(), code);
     }
 };
 

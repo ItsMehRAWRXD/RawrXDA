@@ -86,11 +86,11 @@ void GGUFDiagnosticProvider::addDiag(
 // GGUF FILE VALIDATION
 // ============================================================================
 
-PatchResult GGUFDiagnosticProvider::validateGGUFFile(
+::PatchResult GGUFDiagnosticProvider::validateGGUFFile(
     const char* filePath,
     std::vector<HotpatchDiagEntry>& outDiags)
 {
-    if (!filePath) return PatchResult::error("null file path");
+    if (!filePath) return ::PatchResult::error("null file path");
 
     std::lock_guard<std::mutex> lock(m_mutex);
     m_stats.ggufFilesScanned.fetch_add(1);
@@ -101,7 +101,7 @@ PatchResult GGUFDiagnosticProvider::validateGGUFFile(
         addDiag(outDiags, HotpatchDiagSeverity::Error,
                 HotpatchDiagCode::GGUFMagicInvalid,
                 "GGUF file does not exist", "rawrxd-gguf", HotpatchLayer::Byte);
-        return PatchResult::error("File not found");
+        return ::PatchResult::error("File not found");
     }
 
     uint64_t fileSize = fs::file_size(filePath, ec);
@@ -110,19 +110,19 @@ PatchResult GGUFDiagnosticProvider::validateGGUFFile(
                 HotpatchDiagCode::GGUFMagicInvalid,
                 "File too small to be valid GGUF (< 8 bytes)",
                 "rawrxd-gguf", HotpatchLayer::Byte);
-        return PatchResult::error("File too small");
+        return ::PatchResult::error("File too small");
     }
 
     // Read header via byte-level direct_read (zero-copy)
     uint32_t header[2] = {0, 0};
     size_t bytesRead = 0;
-    PatchResult rr = direct_read(filePath, 0, 8, header, &bytesRead);
+    ::PatchResult rr = direct_read(filePath, 0, 8, header, &bytesRead);
     if (!rr.success || bytesRead < 8) {
         addDiag(outDiags, HotpatchDiagSeverity::Error,
                 HotpatchDiagCode::FileMappingFailure,
                 "Failed to read GGUF header",
                 "rawrxd-gguf", HotpatchLayer::Byte);
-        return PatchResult::error("Read failed");
+        return ::PatchResult::error("Read failed");
     }
 
     // Validate GGUF magic: "GGUF" = 0x46475547 (little-endian)
@@ -137,7 +137,7 @@ PatchResult GGUFDiagnosticProvider::validateGGUFFile(
                 HotpatchDiagCode::GGUFMagicInvalid,
                 storeDiagString(m_ownedStrings, msg.str()),
                 "rawrxd-gguf", HotpatchLayer::Byte);
-        return PatchResult::error("Invalid GGUF magic");
+        return ::PatchResult::error("Invalid GGUF magic");
     }
 
     // Validate GGUF version (supported: 2, 3)
@@ -193,14 +193,14 @@ PatchResult GGUFDiagnosticProvider::validateGGUFFile(
         }
     }
 
-    return PatchResult::ok("GGUF validation complete");
+    return ::PatchResult::ok("GGUF validation complete");
 }
 
 // ============================================================================
 // MEMORY LAYER VALIDATION
 // ============================================================================
 
-PatchResult GGUFDiagnosticProvider::validateMemoryLayer(
+::PatchResult GGUFDiagnosticProvider::validateMemoryLayer(
     std::vector<HotpatchDiagEntry>& outDiags)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
@@ -229,14 +229,14 @@ PatchResult GGUFDiagnosticProvider::validateMemoryLayer(
                 "rawrxd-memory", HotpatchLayer::Memory);
     }
 
-    return PatchResult::ok("Memory layer validation complete");
+    return ::PatchResult::ok("Memory layer validation complete");
 }
 
 // ============================================================================
 // BYTE LAYER VALIDATION
 // ============================================================================
 
-PatchResult GGUFDiagnosticProvider::validateByteLayer(
+::PatchResult GGUFDiagnosticProvider::validateByteLayer(
     std::vector<HotpatchDiagEntry>& outDiags)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
@@ -255,14 +255,14 @@ PatchResult GGUFDiagnosticProvider::validateByteLayer(
                 "rawrxd-byte", HotpatchLayer::Byte);
     }
 
-    return PatchResult::ok("Byte layer validation complete");
+    return ::PatchResult::ok("Byte layer validation complete");
 }
 
 // ============================================================================
 // SERVER LAYER VALIDATION
 // ============================================================================
 
-PatchResult GGUFDiagnosticProvider::validateServerLayer(
+::PatchResult GGUFDiagnosticProvider::validateServerLayer(
     std::vector<HotpatchDiagEntry>& outDiags)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
@@ -278,14 +278,14 @@ PatchResult GGUFDiagnosticProvider::validateServerLayer(
                 "rawrxd-server", HotpatchLayer::Server);
     }
 
-    return PatchResult::ok("Server layer validation complete");
+    return ::PatchResult::ok("Server layer validation complete");
 }
 
 // ============================================================================
 // CROSS-LAYER VALIDATION
 // ============================================================================
 
-PatchResult GGUFDiagnosticProvider::validateCrossLayer(
+::PatchResult GGUFDiagnosticProvider::validateCrossLayer(
     std::vector<HotpatchDiagEntry>& outDiags)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
@@ -320,14 +320,14 @@ PatchResult GGUFDiagnosticProvider::validateCrossLayer(
                 "rawrxd-cross", HotpatchLayer::All);
     }
 
-    return PatchResult::ok("Cross-layer validation complete");
+    return ::PatchResult::ok("Cross-layer validation complete");
 }
 
 // ============================================================================
 // FULL VALIDATION
 // ============================================================================
 
-PatchResult GGUFDiagnosticProvider::validateAll(
+::PatchResult GGUFDiagnosticProvider::validateAll(
     std::vector<HotpatchDiagEntry>& outDiags)
 {
     auto t0 = std::chrono::high_resolution_clock::now();
@@ -369,5 +369,5 @@ PatchResult GGUFDiagnosticProvider::validateAll(
     auto t1 = std::chrono::high_resolution_clock::now();
     m_stats.lastRunMs = std::chrono::duration<double, std::milli>(t1 - t0).count();
 
-    return PatchResult::ok("Full validation complete");
+    return ::PatchResult::ok("Full validation complete");
 }

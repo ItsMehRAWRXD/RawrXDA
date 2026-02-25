@@ -36,8 +36,8 @@ namespace Agent {
 struct OllamaConfig {
     std::string host = "127.0.0.1";
     uint16_t port = 11434;
-    std::string chat_model = "qwen2.5-coder:14b";
-    std::string fim_model = "qwen2.5-coder:7b";   // Smaller model for fast FIM
+    std::string chat_model;                         // Auto-detected from Ollama /api/tags
+    std::string fim_model;                          // Auto-detected from Ollama /api/tags
     int timeout_ms = 120000;
     float temperature = 0.2f;
     float top_p = 0.9f;

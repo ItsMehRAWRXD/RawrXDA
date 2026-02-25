@@ -741,21 +741,21 @@ bool AgentHotPatcher::saveCorrectionPatterns()
     std::string configPath = configDir + "\\correction_patterns.json";
     
     // Build JSON manually using simple_json serializer
-    JsonValue root(JsonValue::Type::Object);
+    JsonValue root = JsonValue::makeObject();
     
-    JsonValue hallPatterns(JsonValue::Type::Object);
+    JsonValue hallPatterns = JsonValue::makeObject();
     for (const auto& [key, val] : m_hallucationPatterns) {
         hallPatterns[key] = JsonValue(val);
     }
     root["hallucination_patterns"] = std::move(hallPatterns);
     
-    JsonValue navPatterns(JsonValue::Type::Object);
+    JsonValue navPatterns = JsonValue::makeObject();
     for (const auto& [key, val] : m_navigationPatterns) {
         navPatterns[key] = JsonValue(val);
     }
     root["navigation_patterns"] = std::move(navPatterns);
     
-    std::string json = root.dump();
+    std::string json = root.toJsonString();
     
     std::ofstream outFile(configPath);
     if (!outFile.is_open()) {

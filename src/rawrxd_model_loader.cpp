@@ -7,11 +7,96 @@
 #include <iostream>
 #include <intrin.h>
 #include <cstdint>
+#include <cstring>
 
 // MASM64 kernel declarations - these link to rawrxd_kernels.asm
 // Since rawrxd_kernels.asm was confirmed present, we can link these.
 extern "C" void DequantQ4_0_AVX512(void* src, uint16_t* dst, size_t blocks);
 extern "C" void DequantQ4_0_AVX2(void* src, uint16_t* dst, size_t blocks);
+
+// GGUF kv metadata value types (matches ggml's gguf_type enum).
+static size_t GGUFTypeSizeBytes(uint32_t t) {
+    switch (t) {
+        case 0:  /* UINT8   */ return 1;
+        case 1:  /* INT8    */ return 1;
+        case 2:  /* UINT16  */ return 2;
+        case 3:  /* INT16   */ return 2;
+        case 4:  /* UINT32  */ return 4;
+        case 5:  /* INT32   */ return 4;
+        case 6:  /* FLOAT32 */ return 4;
+        case 7:  /* BOOL    */ return 1; // gguf stores bool as a byte
+        case 10: /* UINT64  */ return 8;
+        case 11: /* INT64   */ return 8;
+        case 12: /* FLOAT64 */ return 8;
+        default: return 0;
+    }
+}
+
+// Fast scalar float32 -> IEEE 754 binary16 (round-to-nearest-even).
+static uint16_t FloatToHalfBits(float f) {
+    uint32_t x = 0;
+    std::memcpy(&x, &f, sizeof(x));
+
+    const uint32_t sign = (x >> 16) & 0x8000u;
+    uint32_t mant = x & 0x007FFFFFu;
+    int32_t exp = (int32_t)((x >> 23) & 0xFFu);
+
+    // NaN/Inf
+    if (exp == 255) {
+        if (mant != 0) {
+            // Quiet NaN
+            return (uint16_t)(sign | 0x7E00u);
+        }
+        return (uint16_t)(sign | 0x7C00u);
+    }
+
+    // Denormal/zero in f32
+    if (exp == 0) {
+        return (uint16_t)sign;
+    }
+
+    // Normalized: rebias exponent
+    exp = exp - 127 + 15;
+    if (exp >= 31) {
+        // Overflow -> Inf
+        return (uint16_t)(sign | 0x7C00u);
+    }
+    if (exp <= 0) {
+        // Underflow -> subnormal or zero
+        if (exp < -10) {
+            return (uint16_t)sign;
+        }
+        // Make mantissa with implicit leading 1
+        mant |= 0x00800000u;
+        // Shift based on exp (exp is <= 0)
+        const uint32_t shift = (uint32_t)(14 - exp);
+        uint32_t sub = mant >> shift;
+        // Round to nearest even using next bit
+        const uint32_t round_bit = 1u << (shift - 1);
+        const uint32_t round_mask = round_bit - 1;
+        if ((mant & round_bit) && ((mant & round_mask) || (sub & 1u))) {
+            sub++;
+        }
+        return (uint16_t)(sign | (uint16_t)sub);
+    }
+
+    // Round mantissa from 23 to 10 bits.
+    uint32_t half_mant = mant >> 13;
+    const uint32_t round = mant & 0x00001FFFu;
+    if (round > 0x1000u || (round == 0x1000u && (half_mant & 1u))) {
+        half_mant++;
+        if (half_mant == 0x0400u) {
+            // Mantissa overflow -> bump exponent
+            half_mant = 0;
+            exp++;
+            if (exp >= 31) {
+                return (uint16_t)(sign | 0x7C00u);
+            }
+        }
+    }
+
+    return (uint16_t)(sign | ((uint32_t)exp << 10) | (half_mant & 0x03FFu));
+}
 
 // Helper for CPUID
 static bool hasAVX512() {
@@ -151,9 +236,13 @@ uint8_t* RawrXDModelLoader::ParseMetadata(uint8_t* ptr, uint64_t count) {
                     if (atype == 8) { // Array of strings
                          uint64_t slen = *(uint64_t*)ptr; ptr += 8 + slen;
                     } else { // Fixed width (assume max 8 bytes for simplicity in skipper)
-                        // This is hacky, real GGUF needs sizeof(atype)
-                        // Most arrays are small ints/floats (4 bytes)
-                        ptr += 4; // TODO: Fix for 64-bit arrays
+                        const size_t elemSize = GGUFTypeSizeBytes(atype);
+                        if (elemSize == 0) {
+                            // Unknown type: fail-safe skip (GGUF spec mismatch). Avoid infinite loops.
+                            ptr += 4;
+                        } else {
+                            ptr += elemSize;
+                        }
                     }
                 }
                 break;
@@ -213,10 +302,15 @@ void RawrXDModelLoader::LoadTensorAsync(Tensor& t) {
         DequantAndUploadQ4_0(t, t.data, ne);
     } else if (t.type == 0) { // F32
         UploadF32(t, t.data, ne);
+    } else if (t.type == 1) { // F16 (already half precision)
+        // Upload raw FP16 tensor bytes directly.
+        const size_t sizeBytes = ne * sizeof(uint16_t);
+        CreateGPUBuffer(t, t.data, sizeBytes);
+        t.onGPU = true;
     } else {
-         // Placeholder for other types
-         // printf("Skipping unsupported type %d for %s\n", t.type, t.name.c_str());
-         // In production wed fail or handle F16/Q8 etc.
+         // Unsupported quantization types are intentionally skipped for now.
+         // The loader still maps the file, so CPU reference paths can read raw bytes if needed.
+         // printf("[RawrXD] Skipping unsupported tensor type %u for %s\n", t.type, t.name.c_str());
     }
 }
 
@@ -252,9 +346,10 @@ void RawrXDModelLoader::UploadF32(Tensor& t, void* data, size_t N) {
     // Quick F32->F16 approximate (truncation/conversion)
     // For now, lets just upload as F32 if the buffer allows, or convert.
     // Assuming transformer expects F16.
-    // TODO: Use correct half float conversion.
-    // Placeholder: Zero out for safety if no F16 lib linked
-    memset(staging, 0, dstSize); 
+    // Convert FP32 -> FP16 for GPU storage.
+    for (size_t i = 0; i < N; i++) {
+        staging[i] = FloatToHalfBits(src[i]);
+    }
     
     CreateGPUBuffer(t, staging, dstSize);
     free(staging);
@@ -275,6 +370,7 @@ void RawrXDModelLoader::CreateGPUBuffer(Tensor& t, void* data, size_t size) {
 
     VkMemoryRequirements memRequirements;
     vkGetBufferMemoryRequirements(device, t.gpuBuffer, &memRequirements);
+    t.gpuSizeBytes = (size_t)memRequirements.size;
 
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -389,7 +485,13 @@ uint32_t RawrXDModelLoader::FindMemoryType(uint32_t typeFilter, VkMemoryProperty
 
 int64_t RawrXDModelLoader::CalculateVRAMUsage() {
     // Sum up allocated GPU buffers
-    return 0; // TODO tracking
+    int64_t total = 0;
+    for (const auto& kv : tensors) {
+        const Tensor& t = kv.second;
+        if (!t.onGPU) continue;
+        total += (int64_t)t.gpuSizeBytes;
+    }
+    return total;
 }
 
 float* RawrXDModelLoader::GetTensor(const std::string& name) {

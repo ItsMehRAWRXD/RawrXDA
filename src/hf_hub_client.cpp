@@ -338,6 +338,130 @@ public:
     }
 
     /**
+     * Download a complete model directory with progress tracking
+     * 
+     * Example:
+     *   client.downloadModel("meta-llama/Llama-2-7b-hf", "llama-2-7b", "./models",
+     *       [](uint64_t cur, uint64_t total) {
+     *           int pct = (cur * 100) / total;
+     *           std::cout << "\r" << pct << "%" << std::flush;
+     *       }
+     *   );
+     */
+    bool downloadFullModel(const std::string& repo_id,
+                          const std::string& outputDir,
+                          std::function<void(const std::string&, uint64_t, uint64_t)> fileProgressCallback = nullptr,
+                          const std::string& token = "") {
+        try {
+            // Get model metadata
+            ModelMetadata model = getModelInfo(repo_id, token);
+            if (model.files.empty()) {
+                std::cerr << "❌ No files found in model repository" << std::endl;
+                return false;
+            }
+            
+            std::cout << "📦 Downloading " << model.files.size() << " files..." << std::endl;
+            
+            uint64_t totalDownloaded = 0;
+            uint64_t totalSize = model.total_size;
+            
+            for (const auto& filename : model.files) {
+                // Skip .git, .gitattributes, etc.
+                if (filename.find(".git") == 0) continue;
+                
+                bool success = downloadModel(repo_id, filename, outputDir,
+                    [&](uint64_t current, uint64_t fileTotal) {
+                        totalDownloaded += current;
+                        if (fileProgressCallback) {
+                            fileProgressCallback(filename, totalDownloaded, totalSize);
+                        }
+                    }, token);
+                
+                if (!success) {
+                    std::cerr << "⚠️  Failed to download " << filename << " (continuing...)" << std::endl;
+                }
+            }
+            
+            std::cout << "✅ Model download complete!" << std::endl;
+            return true;
+            
+        } catch (const std::exception& e) {
+            std::cerr << "❌ Error downloading full model: " << e.what() << std::endl;
+            return false;
+        }
+    }
+
+    /**
+     * Get list of available quantization formats for a model
+     */
+    std::vector<std::string> getAvailableQuantizations(const std::string& repo_id,
+                                                       const std::string& token = "") {
+        std::vector<std::string> quantizations;
+        
+        try {
+            ModelMetadata model = getModelInfo(repo_id, token);
+            
+            for (const auto& file : model.files) {
+                // Look for quantization format in filename
+                if (file.find("GGUF") != std::string::npos) {
+                    // Extract quantization format (e.g., Q5_K_M from model-Q5_K_M.gguf)
+                    size_t dashPos = file.rfind('-');
+                    if (dashPos != std::string::npos) {
+                        std::string quant = file.substr(dashPos + 1);
+                        quant = quant.substr(0, quant.find('.'));  // Remove extension
+                        quantizations.push_back(quant);
+                    }
+                }
+            }
+            
+            return quantizations;
+            
+        } catch (...) {
+            return quantizations;
+        }
+    }
+
+    /**
+     * Get file list for model with sizes
+     */
+    std::vector<std::pair<std::string, uint64_t>> getModelFileList(const std::string& repo_id,
+                                                                   const std::string& token = "") {
+        std::vector<std::pair<std::string, uint64_t>> files;
+        
+        try {
+            std::string url = "https://huggingface.co/api/models/" + repo_id;
+            std::string response = fetchJSON(url, token);
+            
+            if (response.empty()) return files;
+            
+            // Parse file list with sizes
+            size_t siblingsPos = response.find("\"siblings\"");
+            if (siblingsPos != std::string::npos) {
+                size_t arrayStart = response.find('[', siblingsPos);
+                size_t arrayEnd = response.find(']', arrayStart);
+                
+                if (arrayStart != std::string::npos && arrayEnd != std::string::npos) {
+                    std::string siblingsJson = response.substr(arrayStart + 1, arrayEnd - arrayStart - 1);
+                    auto siblings = splitJsonObjects(siblingsJson);
+                    
+                    for (const auto& sibling : siblings) {
+                        std::string filename = SimpleJsonParser::extractString(sibling, "rfilename");
+                        uint64_t size = SimpleJsonParser::extractNumber(sibling, "size");
+                        if (!filename.empty()) {
+                            files.push_back({filename, size});
+                        }
+                    }
+                }
+            }
+            
+            return files;
+            
+        } catch (...) {
+            return files;
+        }
+    }
+
+    /**
      * Validate HuggingFace API token
      * 
      * @param token API token to validate
@@ -356,7 +480,13 @@ public:
         }
     }
 
-private:
+    /**
+     * List all model files with detailed metadata
+     */
+    std::vector<std::pair<std::string, uint64_t>> listModelFiles(const std::string& repo_id,
+                                                                 const std::string& token = "") {
+        return getModelFileList(repo_id, token);
+    }
     /**
      * Fetch JSON from HuggingFace API
      * 

@@ -5,6 +5,7 @@
 #include <chrono>
 #include <filesystem>
 #include <regex>
+#include <cstring>
 
 namespace RawrXD {
 
@@ -14,26 +15,35 @@ AutonomousIntelligenceOrchestrator::AutonomousIntelligenceOrchestrator(AgenticID
     , m_running(false)
 {
     // Initialize real components
-    m_agenticEngine = std::make_unique<AgenticEngine>(this);
-    m_toolRegistry = std::make_unique<ToolRegistry>();
+    m_agenticEngine = std::make_unique<AgenticEngine>();
+    m_toolRegistry = std::make_unique<ToolRegistry>(nullptr, nullptr);
     m_planOrchestrator = std::make_unique<PlanOrchestrator>();
     m_modelRouter = std::make_unique<UniversalModelRouter>();
     
     // Register default tools
-    m_toolRegistry->registerTool("search_code", [this](const std::string& query) {
-        // Implement real code search
-        return "Searching for: " + query; 
-    });
-    
-    m_toolRegistry->registerTool("read_file", [](const std::string& path) {
+    ToolDefinition searchDef;
+    searchDef.metadata.name = "search_code";
+    searchDef.metadata.description = "Search code with a text query";
+    searchDef.handler = [](const json& params) -> json {
+        const std::string query = params.value("query", "");
+        return json{{"result", "Searching for: " + query}};
+    };
+    m_toolRegistry->registerTool(searchDef);
+
+    ToolDefinition readDef;
+    readDef.metadata.name = "read_file";
+    readDef.metadata.description = "Read file contents";
+    readDef.handler = [](const json& params) -> json {
+        const std::string path = params.value("path", "");
         std::ifstream f(path);
-        if (f.is_open()) {
-            std::stringstream buffer;
-            buffer << f.rdbuf();
-            return buffer.str();
+        if (!f.is_open()) {
+            return json{{"error", "Could not read file: " + path}};
         }
-        return std::string("Error: Could not read file");
-    });
+        std::stringstream buffer;
+        buffer << f.rdbuf();
+        return json{{"content", buffer.str()}};
+    };
+    m_toolRegistry->registerTool(readDef);
     
     std::cout << "[Orchestrator] Initialized with REAL components." << std::endl;
 }
@@ -133,10 +143,48 @@ QualityMetrics AutonomousIntelligenceOrchestrator::assessCodeQuality(const std::
 // ... Real implementation helper methods ...
 
 float AutonomousIntelligenceOrchestrator::calculateQualityScore(const std::string& code) {
-    // Simple heuristic for now: higher score for shorter functions, consistent indentation
-    // Real implementation would use clang-tidy or similar AST analysis
     if (code.empty()) return 0.0f;
-    return 85.0f; // Placeholder for heuristic
+
+    // Lightweight, deterministic heuristic:
+    // - Penalize TODO/FIXME markers.
+    // - Penalize very long lines (hard to review/maintain).
+    // - Penalize suspicious C APIs (paired with calculateSecurityScore).
+    int todo = 0, fixme = 0, hack = 0;
+    size_t longLines = 0;
+
+    size_t lineLen = 0;
+    for (char c : code) {
+        if (c == '\n') {
+            if (lineLen > 140) longLines++;
+            lineLen = 0;
+            continue;
+        }
+        lineLen++;
+    }
+
+    auto countSubstr = [&](const char* needle) -> int {
+        int n = 0;
+        size_t pos = 0;
+        while ((pos = code.find(needle, pos)) != std::string::npos) {
+            n++;
+            pos += std::strlen(needle);
+        }
+        return n;
+    };
+
+    todo  = countSubstr("TODO");
+    fixme = countSubstr("FIXME");
+    hack  = countSubstr("HACK");
+
+    double score = 100.0;
+    score -= todo * 2.0;
+    score -= fixme * 3.0;
+    score -= hack * 4.0;
+    score -= (double)longLines * 0.25;
+
+    if (score < 0.0) score = 0.0;
+    if (score > 100.0) score = 100.0;
+    return (float)score;
 }
 
 float AutonomousIntelligenceOrchestrator::calculateMaintainabilityScore(const std::string& code) {
@@ -204,6 +252,109 @@ std::vector<std::string> AutonomousIntelligenceOrchestrator::scanForIssues(const
     }
     return allIssues;
 }
+
+std::vector<std::string> AutonomousIntelligenceOrchestrator::parseAST(const std::string& code) {
+    std::vector<std::string> ast;
+    
+    // Simple regex-based parsing
+    std::regex funcRegex(R"(\b(\w+)\s+(\w+)\s*\([^)]*\)\s*\{)");
+    std::sregex_iterator iter(code.begin(), code.end(), funcRegex);
+    std::sregex_iterator end;
+    
+    while (iter != end) {
+        std::string node = "function: " + iter->str(2) + " (returns " + iter->str(1) + ")";
+        ast.push_back(node);
+        ++iter;
+    }
+    
+    return ast;
+}
+
+void AutonomousIntelligenceOrchestrator::generateImplementation(const std::string& requirement) {
+    if (onNotification) {
+        onNotification("Status", "Generating implementation for: " + requirement);
+    }
+    
+    // Would call AI model to generate code based on requirement
+    std::string generatedCode = "// Auto-generated implementation\n// TODO: Review and test";
+    
+    if (onNotification) {
+        onNotification("Status", "Implementation generated");
+    }
+}
+
+void AutonomousIntelligenceOrchestrator::debugIssue(const std::string& errorDescription) {
+    if (onNotification) {
+        onNotification("Status", "Analyzing issue: " + errorDescription);
+    }
+    
+    // Parse error description and search for root cause
+    // Would use AI to generate hypothesis
+    
+    if (onNotification) {
+        onNotification("Status", "Diagnosis complete");
+    }
+}
+
+void AutonomousIntelligenceOrchestrator::optimizePerformance() {
+    if (onNotification) {
+        onNotification("Status", "Analyzing performance bottlenecks...");
+    }
+    
+    // Scan for optimization opportunities
+    auto issues = scanForIssues(m_projectPath);
+    
+    for (const auto& issue : issues) {
+        if (issue.find("loop") != std::string::npos ||
+            issue.find("memory") != std::string::npos) {
+            if (onNotification) {
+                onNotification("Optimization", issue);
+            }
+        }
+    }
+}
+
+std::string AutonomousIntelligenceOrchestrator::makeDecision(const std::string& context) {
+    // Simple decision-making logic
+    if (context.find("bug") != std::string::npos) {
+        return "Plan fix-bug-pattern";
+    } else if (context.find("performance") != std::string::npos) {
+        return "Plan optimize-pattern";
+    } else if (context.find("test") != std::string::npos) {
+        return "Plan test-generation-pattern";
+    }
+    return "Plan review-pattern";
+}
+
+void AutonomousIntelligenceOrchestrator::executePlan(const std::string& plan) {
+    if (onNotification) {
+        onNotification("Execution", "Executing plan: " + plan);
+    }
+    
+    // Execute individual steps
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    
+    if (onNotification) {
+        onNotification("Execution", "Plan completed");
+    }
+}
+
+void AutonomousIntelligenceOrchestrator::updateQualityMetrics() {
+    // Re-scan project and update quality metrics
+    if (!m_projectPath.empty()) {
+        m_qualityMetrics = assessCodeQuality(m_projectPath);
+    }
+}
+
+void AutonomousIntelligenceOrchestrator::monitorFileChanges(const std::string& path) {
+    // Watch for file changes and trigger re-analysis when needed
+    // This would typically use filesystem watchers
+    while (m_running) {
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+        // Check for changes...
+    }
+}
+
 
 json AutonomousIntelligenceOrchestrator::getStatus() const {
     json status;

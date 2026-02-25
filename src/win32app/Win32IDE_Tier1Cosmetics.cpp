@@ -22,6 +22,7 @@
 #include "../../include/model_registry.h"
 #include "../core/command_registry.hpp"
 #include <commctrl.h>
+#include <commdlg.h>
 #include <richedit.h>
 #include <sstream>
 #include <algorithm>
@@ -293,7 +294,7 @@ void Win32IDE::onSmoothScrollTick() {
     int linesToScroll = (int)(m_smoothScroll.currentY / (float)lineHeight);
     if (linesToScroll != 0) {
         // Scroll the editor by that many lines
-        SendMessage(m_hwndEditor, EM_LINESCROLL, 0, linesToScroll);
+        SendMessageA(m_hwndEditor, EM_LINESCROLL, 0, linesToScroll);
         m_smoothScroll.currentY -= (float)(linesToScroll * lineHeight);
         updateLineNumbers();
         if (m_minimapVisible) updateMinimap();
@@ -362,7 +363,7 @@ void Win32IDE::paintMinimapEnhanced(HDC hdc, const RECT& rect) {
 
     if (!m_hwndEditor) return;
 
-    int totalLines = (int)SendMessage(m_hwndEditor, EM_GETLINECOUNT, 0, 0);
+    int totalLines = (int)SendMessageA(m_hwndEditor, EM_GETLINECOUNT, 0, 0);
     if (totalLines <= 0) return;
 
     int mapHeight = rect.bottom - rect.top;
@@ -375,7 +376,7 @@ void Win32IDE::paintMinimapEnhanced(HDC hdc, const RECT& rect) {
         : 1.0f;
 
     // Determine viewport position
-    int firstVisibleLine = (int)SendMessage(m_hwndEditor, EM_GETFIRSTVISIBLELINE, 0, 0);
+    int firstVisibleLine = (int)SendMessageA(m_hwndEditor, EM_GETFIRSTVISIBLELINE, 0, 0);
     RECT editorRect;
     GetClientRect(m_hwndEditor, &editorRect);
     int editorLineHeight = m_settings.fontSize + 2;
@@ -396,7 +397,7 @@ void Win32IDE::paintMinimapEnhanced(HDC hdc, const RECT& rect) {
         // Get line text
         char lineBuf[256] = {};
         *(WORD*)lineBuf = sizeof(lineBuf) - 2;
-        int len = (int)SendMessage(m_hwndEditor, EM_GETLINE, srcLine, (LPARAM)lineBuf);
+        int len = (int)SendMessageA(m_hwndEditor, EM_GETLINE, srcLine, (LPARAM)lineBuf);
         if (len < 0) len = 0;
         if (len > 254) len = 254;
         lineBuf[len] = '\0';
@@ -468,8 +469,8 @@ void Win32IDE::paintMinimapEnhanced(HDC hdc, const RECT& rect) {
     // Highlight current line
     if (m_minimapHighlightCursor && totalLines > 0) {
         CHARRANGE sel;
-        SendMessage(m_hwndEditor, EM_EXGETSEL, 0, (LPARAM)&sel);
-        int curLine = (int)SendMessage(m_hwndEditor, EM_LINEFROMCHAR, sel.cpMin, 0);
+        SendMessageA(m_hwndEditor, EM_EXGETSEL, 0, (LPARAM)&sel);
+        int curLine = (int)SendMessageA(m_hwndEditor, EM_LINEFROMCHAR, sel.cpMin, 0);
         float linePos = (float)curLine / (float)totalLines;
         int curY = rect.top + (int)(linePos * mapHeight);
 
@@ -513,7 +514,7 @@ static LRESULT CALLBACK MinimapWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
         int y = GET_Y_LPARAM(lParam);
         RECT rc;
         GetClientRect(hwnd, &rc);
-        int totalLines = (int)SendMessage(ide->m_hwndEditor, EM_GETLINECOUNT, 0, 0);
+        int totalLines = (int)SendMessageA(ide->m_hwndEditor, EM_GETLINECOUNT, 0, 0);
         if (totalLines > 0 && rc.bottom > 0) {
             int targetLine = (int)((float)y / (float)rc.bottom * (float)totalLines);
             // Scroll editor to target line (center it)
@@ -524,15 +525,15 @@ static LRESULT CALLBACK MinimapWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
             int scrollTo = targetLine - visLines / 2;
             if (scrollTo < 0) scrollTo = 0;
 
-            int firstVisible = (int)SendMessage(ide->m_hwndEditor, EM_GETFIRSTVISIBLELINE, 0, 0);
-            SendMessage(ide->m_hwndEditor, EM_LINESCROLL, 0, scrollTo - firstVisible);
+            int firstVisible = (int)SendMessageA(ide->m_hwndEditor, EM_GETFIRSTVISIBLELINE, 0, 0);
+            SendMessageA(ide->m_hwndEditor, EM_LINESCROLL, 0, scrollTo - firstVisible);
             ide->updateLineNumbers();
 
             // Move caret to clicked line
-            int charIndex = (int)SendMessage(ide->m_hwndEditor, EM_LINEINDEX, targetLine, 0);
+            int charIndex = (int)SendMessageA(ide->m_hwndEditor, EM_LINEINDEX, targetLine, 0);
             if (charIndex >= 0) {
                 CHARRANGE cr = { charIndex, charIndex };
-                SendMessage(ide->m_hwndEditor, EM_EXSETSEL, 0, (LPARAM)&cr);
+                SendMessageA(ide->m_hwndEditor, EM_EXSETSEL, 0, (LPARAM)&cr);
             }
         }
         SetCapture(hwnd);
@@ -545,7 +546,7 @@ static LRESULT CALLBACK MinimapWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
         int y = GET_Y_LPARAM(lParam);
         RECT rc;
         GetClientRect(hwnd, &rc);
-        int totalLines = (int)SendMessage(ide->m_hwndEditor, EM_GETLINECOUNT, 0, 0);
+        int totalLines = (int)SendMessageA(ide->m_hwndEditor, EM_GETLINECOUNT, 0, 0);
         if (totalLines > 0 && rc.bottom > 0) {
             int targetLine = (int)((float)y / (float)rc.bottom * (float)totalLines);
             targetLine = (std::max)(0, (std::min)(targetLine, totalLines - 1));
@@ -555,8 +556,8 @@ static LRESULT CALLBACK MinimapWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
             int visLines = (editorRect.bottom) / (lineHeight > 0 ? lineHeight : 16);
             int scrollTo = targetLine - visLines / 2;
             if (scrollTo < 0) scrollTo = 0;
-            int firstVisible = (int)SendMessage(ide->m_hwndEditor, EM_GETFIRSTVISIBLELINE, 0, 0);
-            SendMessage(ide->m_hwndEditor, EM_LINESCROLL, 0, scrollTo - firstVisible);
+            int firstVisible = (int)SendMessageA(ide->m_hwndEditor, EM_GETFIRSTVISIBLELINE, 0, 0);
+            SendMessageA(ide->m_hwndEditor, EM_LINESCROLL, 0, scrollTo - firstVisible);
             ide->updateLineNumbers();
         }
         InvalidateRect(hwnd, nullptr, FALSE);
@@ -584,9 +585,9 @@ void Win32IDE::updateBreadcrumbsOnCursorMove() {
         return;
 
     CHARRANGE sel;
-    SendMessage(m_hwndEditor, EM_EXGETSEL, 0, (LPARAM)&sel);
-    int line = (int)SendMessage(m_hwndEditor, EM_LINEFROMCHAR, sel.cpMin, 0);
-    int lineStart = (int)SendMessage(m_hwndEditor, EM_LINEINDEX, line, 0);
+    SendMessageA(m_hwndEditor, EM_EXGETSEL, 0, (LPARAM)&sel);
+    int line = (int)SendMessageA(m_hwndEditor, EM_LINEFROMCHAR, sel.cpMin, 0);
+    int lineStart = (int)SendMessageA(m_hwndEditor, EM_LINEINDEX, line, 0);
     int col = sel.cpMin - lineStart;
 
     updateBreadcrumbsForCursor(line + 1, col + 1);
@@ -996,8 +997,8 @@ static LRESULT CALLBACK SettingsGUIProc(HWND hwnd, UINT msg, WPARAM wParam, LPAR
         HWND search = CreateWindowExA(0, "EDIT", "",
             WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL | WS_BORDER,
             10, 10, 460, 28, hwnd, (HMENU)SC_SEARCH, nullptr, nullptr);
-        SendMessage(search, WM_SETFONT, (WPARAM)labelFont, TRUE);
-        SendMessage(search, EM_SETCUEBANNER, TRUE, (LPARAM)L"Search settings...");
+        SendMessageA(search, WM_SETFONT, (WPARAM)labelFont, TRUE);
+        SendMessageW(search, EM_SETCUEBANNER, TRUE, (LPARAM)L"Search settings...");
 
         // Scrollable area
         HWND scrollArea = CreateWindowExA(0, "STATIC", "",
@@ -1218,8 +1219,57 @@ static LRESULT CALLBACK SettingsGUIProc(HWND hwnd, UINT msg, WPARAM wParam, LPAR
             WS_CHILD | WS_VISIBLE | SS_RIGHT, 10, y + 4, 200, 20, hwnd, nullptr, nullptr, nullptr);
         edit = CreateWindowExA(0, "EDIT", s_ide->m_settings.localParityModelPath.c_str(),
             WS_CHILD | WS_VISIBLE | WS_BORDER,
-            220, y, 250, 24, hwnd, (HMENU)SC_LOCALPARITY_MODELPATH, nullptr, nullptr);
+            220, y, 200, 24, hwnd, (HMENU)SC_LOCALPARITY_MODELPATH, nullptr, nullptr);
         SendMessage(edit, WM_SETFONT, (WPARAM)labelFont, TRUE);
+        
+        // Browse button
+        HWND browseBtn = CreateWindowExA(0, "BUTTON", "...",
+            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+            425, y, 45, 24, hwnd, (HMENU)13070, nullptr, nullptr);
+        SendMessage(browseBtn, WM_SETFONT, (WPARAM)labelFont, TRUE);
+        y += 32;
+        
+        // Model dropdown populated from F:\OllamaModels
+        CreateWindowExA(0, "STATIC", "Available models:",
+            WS_CHILD | WS_VISIBLE | SS_RIGHT, 10, y + 4, 200, 20, hwnd, nullptr, nullptr, nullptr);
+        HWND modelCombo = CreateWindowExA(0, "COMBOBOX", "",
+            WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL,
+            220, y, 250, 200, hwnd, (HMENU)13071, nullptr, nullptr);
+        SendMessage(modelCombo, WM_SETFONT, (WPARAM)labelFont, TRUE);
+        
+        // Scan F:\OllamaModels for .gguf files
+        namespace fs = std::filesystem;
+        const std::string modelsDir = "F:\\OllamaModels";
+        int selectedIdx = -1;
+        int idx = 0;
+        
+        try {
+            if (fs::exists(modelsDir) && fs::is_directory(modelsDir)) {
+                for (const auto& entry : fs::directory_iterator(modelsDir)) {
+                    if (entry.is_regular_file()) {
+                        std::string path = entry.path().string();
+                        if (path.ends_with(".gguf")) {
+                            std::string filename = entry.path().filename().string();
+                            int itemIdx = (int)SendMessageA(modelCombo, CB_ADDSTRING, 0, (LPARAM)filename.c_str());
+                            SendMessageA(modelCombo, CB_SETITEMDATA, itemIdx, (LPARAM)_strdup(path.c_str()));
+                            
+                            if (path == s_ide->m_settings.localParityModelPath) {
+                                selectedIdx = itemIdx;
+                            }
+                            idx++;
+                        }
+                    }
+                }
+            }
+        } catch (...) {
+            SendMessageA(modelCombo, CB_ADDSTRING, 0, (LPARAM)"[Error scanning directory]");
+        }
+        
+        if (idx == 0) {
+            SendMessageA(modelCombo, CB_ADDSTRING, 0, (LPARAM)"[No models found in F:\\OllamaModels]");
+        } else if (selectedIdx >= 0) {
+            SendMessage(modelCombo, CB_SETCURSEL, selectedIdx, 0);
+        }
         y += 32;
 
         CreateWindowExA(0, "STATIC", "Update manifest URL (public):",
@@ -1252,20 +1302,56 @@ static LRESULT CALLBACK SettingsGUIProc(HWND hwnd, UINT msg, WPARAM wParam, LPAR
     case WM_COMMAND: {
         if (!s_ide) break;
         int cmd = LOWORD(wParam);
+        
+        // Browse button for model path — open file dialog
+        if (cmd == 13070) {
+            // Use GetOpenFileNameW to avoid ANSI/Unicode mixing issues with structures,
+            // then convert back to UTF-8/ANSI for internal storage.
+            wchar_t szFile[MAX_PATH] = { 0 };
+            OPENFILENAMEW ofn = { 0 };
+            ofn.lStructSize = sizeof(OPENFILENAMEW);
+            ofn.hwndOwner = hwnd;
+            ofn.lpstrFile = szFile;
+            ofn.nMaxFile = MAX_PATH;
+            ofn.lpstrFilter = L"GGUF Model Files (*.gguf)\0*.gguf\0All Files (*.*)\0*.*\0";
+            ofn.nFilterIndex = 1;
+            ofn.lpstrInitialDir = L"F:\\OllamaModels";
+            ofn.Flags = 0x00000800 | 0x00001000; // OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST
+            
+            if (::GetOpenFileNameW(&ofn)) {
+                char buf[MAX_PATH] = { 0 };
+                WideCharToMultiByte(CP_ACP, 0, szFile, -1, buf, MAX_PATH, nullptr, nullptr);
+                SetWindowTextA(GetDlgItem(hwnd, SC_LOCALPARITY_MODELPATH), buf);
+            }
+            return 0;
+        }
+        
+        // Model dropdown selection
+        if (cmd == 13071 && HIWORD(wParam) == CBN_SELCHANGE) {
+            HWND hCombo = GetDlgItem(hwnd, 13071);
+            int idx = (int)SendMessage(hCombo, CB_GETCURSEL, 0, 0);
+            if (idx != CB_ERR) {
+                char* fullPath = (char*)SendMessageA(hCombo, CB_GETITEMDATA, idx, 0);
+                if (fullPath && fullPath != (char*)CB_ERR) {
+                    SetWindowTextA(GetDlgItem(hwnd, SC_LOCALPARITY_MODELPATH), fullPath);
+                }
+            }
+            return 0;
+        }
 
         if (cmd == SC_SAVE_BTN) {
             // Read all controls back into settings
-            s_ide->m_settings.autoSaveEnabled = (SendMessage(GetDlgItem(hwnd, SC_AUTOSAVE), BM_GETCHECK, 0, 0) == BST_CHECKED);
-            s_ide->m_settings.lineNumbersVisible = (SendMessage(GetDlgItem(hwnd, SC_LINENUMBERS), BM_GETCHECK, 0, 0) == BST_CHECKED);
-            s_ide->m_settings.wordWrapEnabled = (SendMessage(GetDlgItem(hwnd, SC_WORDWRAP), BM_GETCHECK, 0, 0) == BST_CHECKED);
-            s_ide->m_settings.minimapEnabled = (SendMessage(GetDlgItem(hwnd, SC_MINIMAP), BM_GETCHECK, 0, 0) == BST_CHECKED);
-            s_ide->m_settings.syntaxColoringEnabled = (SendMessage(GetDlgItem(hwnd, SC_SYNTAXCOLORING), BM_GETCHECK, 0, 0) == BST_CHECKED);
-            s_ide->m_settings.ghostTextEnabled = (SendMessage(GetDlgItem(hwnd, SC_GHOSTTEXT), BM_GETCHECK, 0, 0) == BST_CHECKED);
-            s_ide->m_settings.breadcrumbsEnabled = (SendMessage(GetDlgItem(hwnd, SC_BREADCRUMBS), BM_GETCHECK, 0, 0) == BST_CHECKED);
-            s_ide->m_settings.smoothScrollEnabled = (SendMessage(GetDlgItem(hwnd, SC_SMOOTHSCROLL), BM_GETCHECK, 0, 0) == BST_CHECKED);
+            s_ide->m_settings.autoSaveEnabled = (SendMessageA(GetDlgItem(hwnd, SC_AUTOSAVE), BM_GETCHECK, 0, 0) == BST_CHECKED);
+            s_ide->m_settings.lineNumbersVisible = (SendMessageA(GetDlgItem(hwnd, SC_LINENUMBERS), BM_GETCHECK, 0, 0) == BST_CHECKED);
+            s_ide->m_settings.wordWrapEnabled = (SendMessageA(GetDlgItem(hwnd, SC_WORDWRAP), BM_GETCHECK, 0, 0) == BST_CHECKED);
+            s_ide->m_settings.minimapEnabled = (SendMessageA(GetDlgItem(hwnd, SC_MINIMAP), BM_GETCHECK, 0, 0) == BST_CHECKED);
+            s_ide->m_settings.syntaxColoringEnabled = (SendMessageA(GetDlgItem(hwnd, SC_SYNTAXCOLORING), BM_GETCHECK, 0, 0) == BST_CHECKED);
+            s_ide->m_settings.ghostTextEnabled = (SendMessageA(GetDlgItem(hwnd, SC_GHOSTTEXT), BM_GETCHECK, 0, 0) == BST_CHECKED);
+            s_ide->m_settings.breadcrumbsEnabled = (SendMessageA(GetDlgItem(hwnd, SC_BREADCRUMBS), BM_GETCHECK, 0, 0) == BST_CHECKED);
+            s_ide->m_settings.smoothScrollEnabled = (SendMessageA(GetDlgItem(hwnd, SC_SMOOTHSCROLL), BM_GETCHECK, 0, 0) == BST_CHECKED);
             s_ide->m_smoothScroll.enabled = s_ide->m_settings.smoothScrollEnabled;
-            s_ide->m_settings.failureDetectorEnabled = (SendMessage(GetDlgItem(hwnd, SC_FAILUREDETECTOR), BM_GETCHECK, 0, 0) == BST_CHECKED);
-            s_ide->m_settings.useSpaces = (SendMessage(GetDlgItem(hwnd, SC_USESPACES), BM_GETCHECK, 0, 0) == BST_CHECKED);
+            s_ide->m_settings.failureDetectorEnabled = (SendMessageA(GetDlgItem(hwnd, SC_FAILUREDETECTOR), BM_GETCHECK, 0, 0) == BST_CHECKED);
+            s_ide->m_settings.useSpaces = (SendMessageA(GetDlgItem(hwnd, SC_USESPACES), BM_GETCHECK, 0, 0) == BST_CHECKED);
 
             char buf[256];
             GetWindowTextA(GetDlgItem(hwnd, SC_FONTSIZE), buf, sizeof(buf));
@@ -1291,20 +1377,20 @@ static LRESULT CALLBACK SettingsGUIProc(HWND hwnd, UINT msg, WPARAM wParam, LPAR
             GetWindowTextA(GetDlgItem(hwnd, SC_OLLAMAURL), buf, sizeof(buf));
             s_ide->m_settings.aiOllamaUrl = buf;
 
-            s_ide->m_settings.localParityEnabled = (SendMessage(GetDlgItem(hwnd, SC_LOCALPARITY_ENABLED), BM_GETCHECK, 0, 0) == BST_CHECKED);
+            s_ide->m_settings.localParityEnabled = (SendMessageA(GetDlgItem(hwnd, SC_LOCALPARITY_ENABLED), BM_GETCHECK, 0, 0) == BST_CHECKED);
             GetWindowTextA(GetDlgItem(hwnd, SC_LOCALPARITY_MODELPATH), buf, sizeof(buf));
             s_ide->m_settings.localParityModelPath = buf;
             GetWindowTextA(GetDlgItem(hwnd, SC_UPDATEMANIFEST_URL), buf, sizeof(buf));
             s_ide->m_settings.updateManifestUrl = buf;
 
-            int encSel = (int)SendMessage(GetDlgItem(hwnd, SC_ENCODING), CB_GETCURSEL, 0, 0);
+            int encSel = (int)SendMessageA(GetDlgItem(hwnd, SC_ENCODING), CB_GETCURSEL, 0, 0);
             if (encSel != CB_ERR) {
                 char encBuf[64];
                 SendMessageA(GetDlgItem(hwnd, SC_ENCODING), CB_GETLBTEXT, encSel, (LPARAM)encBuf);
                 s_ide->m_settings.encoding = encBuf;
             }
 
-            int eolSel = (int)SendMessage(GetDlgItem(hwnd, SC_EOLSTYLE), CB_GETCURSEL, 0, 0);
+            int eolSel = (int)SendMessageA(GetDlgItem(hwnd, SC_EOLSTYLE), CB_GETCURSEL, 0, 0);
             if (eolSel != CB_ERR) {
                 char eolBuf[64];
                 SendMessageA(GetDlgItem(hwnd, SC_EOLSTYLE), CB_GETLBTEXT, eolSel, (LPARAM)eolBuf);
@@ -2313,7 +2399,7 @@ void Win32IDE::showReleaseNotes() {
 // MULTI-FILE SEARCH / CI/CD SETTINGS / MODEL REGISTRY — Real dialogs (no placeholders)
 // ============================================================================
 
-static LRESULT CALLBACK MultiFileSearchDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+LRESULT CALLBACK MultiFileSearchDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     Win32IDE* ide = (Win32IDE*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
     switch (msg) {
     case WM_CREATE: {

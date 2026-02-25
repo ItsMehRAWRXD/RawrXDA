@@ -72,37 +72,6 @@ SHIELD_MURMUR_FMIX2           EQU 0C4CEB9FE1A85EC53h
 SystemKernelDebuggerInformation EQU 23h
 
 ; =============================================================================
-;                    Win32 API External Declarations
-; =============================================================================
-; Kernel32.dll
-EXTERN GetEnvironmentVariableA:PROC
-EXTERN VirtualAlloc:PROC
-EXTERN VirtualFree:PROC
-EXTERN VirtualProtect:PROC
-EXTERN GetCurrentProcess:PROC
-EXTERN GetVolumeInformationA:PROC
-EXTERN GetLogicalDrives:PROC
-
-; Advapi32.dll
-EXTERN RegOpenKeyExA:PROC
-EXTERN RegQueryValueExA:PROC
-EXTERN RegSetValueExA:PROC
-EXTERN RegCloseKey:PROC
-EXTERN CryptAcquireContextA:PROC
-EXTERN CryptReleaseContext:PROC
-EXTERN CryptImportKey:PROC
-EXTERN CryptDestroyKey:PROC
-EXTERN CryptDecrypt:PROC
-EXTERN CryptCreateHash:PROC
-EXTERN CryptHashData:PROC
-EXTERN CryptGetHashParam:PROC
-EXTERN CryptDestroyHash:PROC
-
-; Ntdll.dll
-EXTERN RtlGetVersion:PROC
-EXTERN NtQuerySystemInformation:PROC
-
-; =============================================================================
 ;                         RawrXD Engine Constants
 ; =============================================================================
 

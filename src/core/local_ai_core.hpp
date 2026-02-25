@@ -38,6 +38,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <mutex>
+#include <string>
 #include <atomic>
 #include <chrono>
 #include <thread>
@@ -222,7 +223,7 @@ struct InferenceRequest {
 // ============================================================================
 struct InferenceResult {
     bool        success;
-    const char* detail;
+    std::string detail;
     int         errorCode;
 
     uint32_t*   outputTokens    = nullptr;  // Caller must free if non-null
@@ -240,7 +241,23 @@ struct InferenceResult {
         return r;
     }
 
+    static InferenceResult ok(const std::string& msg) {
+        InferenceResult r;
+        r.success = true;
+        r.detail = msg;
+        r.errorCode = 0;
+        return r;
+    }
+
     static InferenceResult error(const char* msg, int code = -1) {
+        InferenceResult r;
+        r.success = false;
+        r.detail = msg;
+        r.errorCode = code;
+        return r;
+    }
+
+    static InferenceResult error(const std::string& msg, int code = -1) {
         InferenceResult r;
         r.success = false;
         r.detail = msg;

@@ -43,12 +43,6 @@
 
 #ifdef _WIN32
 #include <windows.h>
-
-// SCAFFOLD_333: LSP hotpatch bridge revert error
-
-
-// SCAFFOLD_145: LSP hotpatch bridge
-
 #endif
 
 using json = nlohmann::json;
@@ -74,16 +68,6 @@ LSPHotpatchBridge::~LSPHotpatchBridge() {
 // ============================================================================
 // JSON SERIALIZATION HELPERS
 // ============================================================================
-
-static const char* layerToString(HotpatchLayer layer) {
-    switch (layer) {
-        case HotpatchLayer::Memory: return "memory";
-        case HotpatchLayer::Byte:   return "byte";
-        case HotpatchLayer::Server: return "server";
-        case HotpatchLayer::All:    return "all";
-        default:                    return "unknown";
-    }
-}
 
 static const char* symbolKindToString(HotpatchSymbolKind kind) {
     switch (kind) {
@@ -189,9 +173,9 @@ json LSPHotpatchBridge::diagToJson(const HotpatchDiagEntry& diag) {
 // ATTACH — Register all custom handlers with the LSP server
 // ============================================================================
 
-PatchResult LSPHotpatchBridge::attach(RawrXD::LSPServer::RawrXDLSPServer* server) {
-    if (!server) return PatchResult::error("null LSP server pointer");
-    if (m_attached.load()) return PatchResult::error("already attached");
+::PatchResult LSPHotpatchBridge::attach(RawrXD::LSPServer::RawrXDLSPServer* server) {
+    if (!server) return ::PatchResult::error("null LSP server pointer");
+    if (m_attached.load()) return ::PatchResult::error("already attached");
 
     std::lock_guard<std::mutex> lock(m_mutex);
     m_server = server;
@@ -268,15 +252,15 @@ PatchResult LSPHotpatchBridge::attach(RawrXD::LSPServer::RawrXDLSPServer* server
     HotpatchSymbolProvider::instance().rebuildIndex();
 
     m_attached.store(true);
-    return PatchResult::ok("LSP bridge attached with 9 custom handlers");
+    return ::PatchResult::ok("LSP bridge attached with 9 custom handlers");
 }
 
 // ============================================================================
 // DETACH — Unregister all custom handlers
 // ============================================================================
 
-PatchResult LSPHotpatchBridge::detach() {
-    if (!m_attached.load()) return PatchResult::error("not attached");
+::PatchResult LSPHotpatchBridge::detach() {
+    if (!m_attached.load()) return ::PatchResult::error("not attached");
 
     std::lock_guard<std::mutex> lock(m_mutex);
 
@@ -294,15 +278,15 @@ PatchResult LSPHotpatchBridge::detach() {
 
     m_server = nullptr;
     m_attached.store(false);
-    return PatchResult::ok("LSP bridge detached");
+    return ::PatchResult::ok("LSP bridge detached");
 }
 
 // ============================================================================
 // MANUAL TRIGGERS
 // ============================================================================
 
-PatchResult LSPHotpatchBridge::refreshDiagnostics() {
-    if (!m_attached.load()) return PatchResult::error("not attached");
+::PatchResult LSPHotpatchBridge::refreshDiagnostics() {
+    if (!m_attached.load()) return ::PatchResult::error("not attached");
 
     std::lock_guard<std::mutex> lock(m_mutex);
     m_stats.diagnosticRefreshes.fetch_add(1);
@@ -344,11 +328,11 @@ PatchResult LSPHotpatchBridge::refreshDiagnostics() {
         m_server->sendNotification(NOTIFY_DIAGNOSTIC_REFRESH, notifParams);
     }
 
-    return PatchResult::ok("Diagnostics refreshed");
+    return ::PatchResult::ok("Diagnostics refreshed");
 }
 
-PatchResult LSPHotpatchBridge::rebuildSymbolIndex() {
-    if (!m_attached.load()) return PatchResult::error("not attached");
+::PatchResult LSPHotpatchBridge::rebuildSymbolIndex() {
+    if (!m_attached.load()) return ::PatchResult::error("not attached");
 
     m_stats.symbolRebuilds.fetch_add(1);
     return HotpatchSymbolProvider::instance().rebuildIndex();
@@ -358,7 +342,7 @@ PatchResult LSPHotpatchBridge::rebuildSymbolIndex() {
 // HOTPATCH EVENT FORWARDING (static callback for UnifiedHotpatchManager)
 // ============================================================================
 
-void LSPHotpatchBridge::onHotpatchEvent(const struct HotpatchEvent* event, void* userData) {
+void LSPHotpatchBridge::onHotpatchEvent(const ::HotpatchEvent* event, void* userData) {
     (void)userData;
     auto& bridge = LSPHotpatchBridge::instance();
     if (!bridge.m_attached.load() || !bridge.m_server) return;
@@ -446,7 +430,7 @@ void LSPHotpatchBridge::handleHotpatchApply(int /*id*/, const json& params) {
     HotpatchLayer layer  = layerFromString(layerStr);
 
     auto& mgr = UnifiedHotpatchManager::instance();
-    PatchResult pr = PatchResult::error("Unknown layer");
+    ::PatchResult pr = ::PatchResult::error("Unknown layer");
 
     if (layer == HotpatchLayer::Memory) {
         // Memory patch: requires address + data (hex-encoded)
@@ -481,10 +465,10 @@ void LSPHotpatchBridge::handleHotpatchApply(int /*id*/, const json& params) {
                     bytes.size(),
                     bytes.data()).result;
             } else {
-                pr = PatchResult::error("Empty patch data");
+                pr = ::PatchResult::error("Empty patch data");
             }
         } else {
-            pr = PatchResult::error("Memory patch requires 'address' and 'data' params");
+            pr = ::PatchResult::error("Memory patch requires 'address' and 'data' params");
         }
     } else if (layer == HotpatchLayer::Byte) {
         // Byte patch: requires filename + offset + data
@@ -507,15 +491,15 @@ void LSPHotpatchBridge::handleHotpatchApply(int /*id*/, const json& params) {
                  // bp.pattern is not used for direct write
                  pr = UnifiedHotpatchManager::instance().apply_byte_patch(filename.c_str(), bp).result;
             } else {
-                pr = PatchResult::error("Empty patch data");
+                pr = ::PatchResult::error("Empty patch data");
             }
         } else {
-            pr = PatchResult::error("Byte patch requires 'filename', 'offset', and 'data' params");
+            pr = ::PatchResult::error("Byte patch requires 'filename', 'offset', and 'data' params");
         }
     } else if (layer == HotpatchLayer::Server) {
         // Server patches are registered transform functions — 
         // we can't create them from JSON, but we can enable/disable by name.
-        pr = PatchResult::ok("Server patch activation not supported via JSON-RPC. "
+        pr = ::PatchResult::ok("Server patch activation not supported via JSON-RPC. "
                              "Use C++ API to register transform functions.");
     }
 
@@ -526,7 +510,7 @@ void LSPHotpatchBridge::handleHotpatchApply(int /*id*/, const json& params) {
 
     json result;
     result["success"] = pr.success;
-    result["detail"]  = pr.detail ? pr.detail : "";
+    result["detail"]  = pr.detail;
     if (pr.errorCode != 0) {
         result["errorCode"] = pr.errorCode;
     }
@@ -557,7 +541,7 @@ void LSPHotpatchBridge::handleHotpatchRevert(int /*id*/, const json& params) {
     std::string name     = params["name"].get<std::string>();
     HotpatchLayer layer  = layerFromString(layerStr);
 
-    PatchResult pr = PatchResult::error("Revert supported for Memory, Byte, Server layers only");
+    ::PatchResult pr = ::PatchResult::error("Revert supported for Memory, Byte, Server layers only");
 
     if (layer == HotpatchLayer::Memory) {
         // Memory revert: construct a MemoryPatchEntry from the client-provided
@@ -577,7 +561,7 @@ void LSPHotpatchBridge::handleHotpatchRevert(int /*id*/, const json& params) {
             }
 
             if (origBytes.empty() || origBytes.size() > 64) {
-                pr = PatchResult::error("originalData must be 1-64 bytes (hex encoded)");
+                pr = ::PatchResult::error("originalData must be 1-64 bytes (hex encoded)");
             } else {
                 // Build a MemoryPatchEntry with the backed-up original bytes
                 MemoryPatchEntry entry{};
@@ -591,7 +575,7 @@ void LSPHotpatchBridge::handleHotpatchRevert(int /*id*/, const json& params) {
                 pr = ur.result;
             }
         } else {
-            pr = PatchResult::error(
+            pr = ::PatchResult::error(
                 "Memory patch revert requires 'address', 'size', and 'originalData' (hex)");
         }
     } else if (layer == HotpatchLayer::Byte) {
@@ -615,10 +599,10 @@ void LSPHotpatchBridge::handleHotpatchRevert(int /*id*/, const json& params) {
                 bp.data = bytes;
                 pr = UnifiedHotpatchManager::instance().apply_byte_patch(filename.c_str(), bp).result;
             } else {
-                pr = PatchResult::error("Empty original data");
+                pr = ::PatchResult::error("Empty original data");
             }
         } else {
-            pr = PatchResult::error("Byte revert requires 'filename', 'offset', and 'originalData'");
+            pr = ::PatchResult::error("Byte revert requires 'filename', 'offset', and 'originalData'");
         }
     } else if (layer == HotpatchLayer::Server) {
         // Server layer revert: remove a named server hotpatch by name
@@ -630,7 +614,7 @@ void LSPHotpatchBridge::handleHotpatchRevert(int /*id*/, const json& params) {
             auto ur = mgr.remove_server_patch(name.c_str());
             pr = ur.result;
         } else {
-            pr = PatchResult::error("Server revert requires a non-empty 'name'");
+            pr = ::PatchResult::error("Server revert requires a non-empty 'name'");
         }
     }
 
@@ -640,7 +624,7 @@ void LSPHotpatchBridge::handleHotpatchRevert(int /*id*/, const json& params) {
 
     json result;
     result["success"] = pr.success;
-    result["detail"]  = pr.detail ? pr.detail : "";
+    result["detail"]  = pr.detail;
     m_lastResult = result;
 }
 
@@ -725,7 +709,7 @@ void LSPHotpatchBridge::handleGGUFModelInfo(int /*id*/, const json& params) {
     // Read GGUF header
     uint32_t header[2] = {0, 0};
     size_t bytesRead = 0;
-    PatchResult rr = direct_read(filePath.c_str(), 0, 8, header, &bytesRead);
+    ::PatchResult rr = direct_read(filePath.c_str(), 0, 8, header, &bytesRead);
     if (!rr.success || bytesRead < 8) {
         json err;
         err["error"] = "Failed to read GGUF header";
@@ -861,7 +845,7 @@ void LSPHotpatchBridge::handleGGUFValidate(int /*id*/, const json& params) {
     auto t0 = std::chrono::high_resolution_clock::now();
 
     std::vector<HotpatchDiagEntry> diags;
-    PatchResult pr = GGUFDiagnosticProvider::instance().validateGGUFFile(
+    ::PatchResult pr = GGUFDiagnosticProvider::instance().validateGGUFFile(
         filePath.c_str(), diags);
 
     auto t1 = std::chrono::high_resolution_clock::now();

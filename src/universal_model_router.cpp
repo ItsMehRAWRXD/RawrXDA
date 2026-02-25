@@ -13,19 +13,43 @@
 #pragma comment(lib, "winhttp.lib")
 #endif
 
-// Complete type stubs before including header so unique_ptr destructor can be instantiated
-struct CloudApiClient { virtual ~CloudApiClient() = default; };
-struct QuantizationAwareInferenceEngine { virtual ~QuantizationAwareInferenceEngine() = default; };
-
 #include "universal_model_router.h"
+#include "cloud_api_client.h"
+#include "cpu_inference_engine.h"
+#include "RawrXD_PipeClient.h"
 #include <nlohmann/json.hpp>
+
+// ASM Model Loader externs
+extern "C" {
+    int LoadModel(const wchar_t* path);
+    void* GetTensor(const char* name);
+    void UnloadModel();
+    int ModelLoaderInit();
+    int HotSwapModel(const wchar_t* newPath, char preserveKV);
+    const wchar_t* GetCurrentModelPath();
+    unsigned long long GetModelLoadTimestamp();
+}
+
+// Beacon externs
+extern "C" {
+    int BeaconRouterInit();
+    int BeaconSend(int beaconID, void* pData, int dataLen);
+    int BeaconRecv(int beaconID, void** ppData, int* pLen);
+    int TryBeaconRecv(int beaconID, void** ppData, int* pLen);
+    int RegisterAgent(int agentID, int beaconSlot);
+}
+
 #include <fstream>
 #include <sstream>
 #include <cstdlib>
 #include <algorithm>
 #include <cstring>
+#include <chrono>
+#include <condition_variable>
+#include <mutex>
 #include "agent/local_reasoning_integration.hpp"
-#include "project_context.h"
+
+using namespace RawrXD;
 
 namespace {
 static ModelBackend backendFromString(const std::string& s) {
@@ -55,6 +79,8 @@ static const char* backendToString(ModelBackend b) {
     return "LOCAL_GGUF";
 }
 }
+
+namespace RawrXD {
 
 UniversalModelRouter::UniversalModelRouter()
     : m_localEngineReady(false),
@@ -137,41 +163,55 @@ bool UniversalModelRouter::loadConfigFromFile(const std::string& config_file_pat
         std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
         file.close();
         nlohmann::json j = nlohmann::json::parse(content);
-        if (!j.is_object() || !j.contains("models") || !j["models"].is_object()) {
-            if (m_onError) m_onError("Invalid config format: expected { \"models\": { ... } }");
-            return false;
-        }
-        m_modelRegistry.clear();
-        for (auto it = j["models"].begin(); it != j["models"].end(); ++it) {
-            const std::string& name = it.key();
-            const auto& mc = it.value();
-            if (!mc.is_object()) continue;
-            ModelConfig config;
-            config.backend = backendFromString(mc.value("backend", "LOCAL_GGUF"));
-            config.model_id = mc.value("model_id", "");
-            config.api_key = mc.value("api_key", "");
-            config.endpoint = mc.value("endpoint", "");
-            config.description = mc.value("description", "");
-            config.full_config = mc.contains("full_config") && mc["full_config"].is_string()
-                ? mc["full_config"].get<std::string>() : "";
-            if (mc.contains("parameters") && mc["parameters"].is_object()) {
-                for (auto p = mc["parameters"].begin(); p != mc["parameters"].end(); ++p)
-                    config.parameters[p.key()] = p->get<std::string>();
-            }
-            if (!config.model_id.empty()) {
-                m_modelRegistry[name] = config;
-                if (m_onModelRegistered) m_onModelRegistered(name, config.backend);
-            }
-        }
-        if (m_onConfigLoaded) m_onConfigLoaded(static_cast<int>(m_modelRegistry.size()));
-        return true;
+        return loadConfigFromJson(j);
     } catch (const std::exception& e) {
         if (m_onError) m_onError(std::string("Config parse error: ") + e.what());
         return false;
     }
 }
 
-bool UniversalModelRouter::saveConfigToFile(const std::string& config_file_path) const
+bool UniversalModelRouter::loadConfigFromJson(const json& config_json)
+{
+    if (!config_json.is_object() || !config_json.contains("models") || !config_json["models"].is_object()) {
+        if (m_onError) m_onError("Invalid config format: expected { \"models\": { ... } }");
+        return false;
+    }
+
+    m_modelRegistry.clear();
+    for (auto it = config_json["models"].begin(); it != config_json["models"].end(); ++it) {
+        const std::string& name = it.key();
+        const auto& mc = it.value();
+        if (!mc.is_object()) continue;
+
+        ModelConfig config;
+        config.backend = backendFromString(mc.value("backend", "LOCAL_GGUF"));
+        config.model_id = mc.value("model_id", "");
+        config.api_key = mc.value("api_key", "");
+        config.endpoint = mc.value("endpoint", "");
+        config.description = mc.value("description", "");
+        if (mc.contains("full_config")) {
+            config.full_config = mc["full_config"];
+        } else {
+            config.full_config = json{};
+        }
+        if (mc.contains("parameters") && mc["parameters"].is_object()) {
+            for (auto p = mc["parameters"].begin(); p != mc["parameters"].end(); ++p) {
+                if (p->is_string()) config.parameters[p.key()] = p->get<std::string>();
+                else config.parameters[p.key()] = p->dump();
+            }
+        }
+
+        if (!config.model_id.empty()) {
+            m_modelRegistry[name] = config;
+            if (m_onModelRegistered) m_onModelRegistered(name, config.backend);
+        }
+    }
+
+    if (m_onConfigLoaded) m_onConfigLoaded(static_cast<int>(m_modelRegistry.size()));
+    return true;
+}
+
+bool UniversalModelRouter::saveConfigToFile(const std::string& config_file_path)
 {
     std::ofstream file(config_file_path);
     if (!file.is_open()) {
@@ -207,11 +247,26 @@ bool UniversalModelRouter::saveConfigToFile(const std::string& config_file_path)
 
 void UniversalModelRouter::initializeLocalEngine(const std::string& model_path)
 {
-    // Initialize local GGUF engine with the specific model path
+    // Initialize the ASM Model Loader
+    if (ModelLoaderInit() != 0) {
+        if (m_onError) m_onError("Failed to initialize ASM Model Loader");
+        return;
+    }
+
+    // Initialize Beacon Router for inter-agent communication
+    if (BeaconRouterInit() != 0) {
+        if (m_onError) m_onError("Failed to initialize Beacon Router");
+        return;
+    }
+
+    // Load the model using ASM
+    std::wstring wide_path(model_path.begin(), model_path.end());
+    if (LoadModel(wide_path.c_str()) != 0) {
+        if (m_onError) m_onError("Failed to load model via ASM: " + model_path);
+        return;
+    }
+
     m_localEngineReady = true;
-    
-    // In a real implementation, we would re-initialize the QuantizationAwareInferenceEngine here
-    // with the provided model_path.
     
     if (m_onModelRegistered) {
         m_onModelRegistered(model_path, ModelBackend::LOCAL_GGUF);
@@ -222,6 +277,13 @@ void UniversalModelRouter::initializeCloudClient()
 {
     // Cloud client is already initialized
     m_cloudClientReady = true;
+}
+
+bool UniversalModelRouter::hotSwapModel(const std::string& new_model_path, bool preserve_kv_cache)
+{
+    std::wstring wide_path(new_model_path.begin(), new_model_path.end());
+    int result = HotSwapModel(wide_path.c_str(), preserve_kv_cache ? 1 : 0);
+    return result == 1;
 }
 
 ModelConfig UniversalModelRouter::getOrLoadModel(const std::string& model_name)
@@ -254,14 +316,26 @@ std::string UniversalModelRouter::getModelDescription(const std::string& model_n
     return "";
 }
 
-std::string UniversalModelRouter::getModelInfo(const std::string& model_name) const
+json UniversalModelRouter::getModelInfo(const std::string& model_name) const
 {
     auto it = m_modelRegistry.find(model_name);
     if (it != m_modelRegistry.end()) {
-        return it->second.full_config;
+        const ModelConfig& cfg = it->second;
+        json info = json::object();
+        info["backend"] = backendToString(cfg.backend);
+        info["model_id"] = cfg.model_id;
+        info["endpoint"] = cfg.endpoint;
+        info["description"] = cfg.description;
+        json params = json::object();
+        for (const auto& kv : cfg.parameters) {
+            params[kv.first] = kv.second;
+        }
+        info["parameters"] = std::move(params);
+        info["full_config"] = cfg.full_config;
+        return info;
     }
-    
-    return "";
+
+    return json{};
 }
 
 void UniversalModelRouter::onLocalEngineInitialized()
@@ -370,62 +444,82 @@ static void invokeOllamaGenerate(const std::string& model_name, const std::strin
 }
 #endif
 
-void UniversalModelRouter::routeRequest(const std::string& model_name, 
-                                      const std::string& prompt,
-                                      const RawrXD::ProjectContext& context,
-                                      std::function<void(const std::string& chunk, bool complete)> callback)
+std::string UniversalModelRouter::routeQuery(const std::string& model_name, const std::string& prompt, float /*temperature*/)
 {
-    (void)context;
-    if (model_name.find("Reasoning") != std::string::npos) {
-        if (callback) callback("[Reasoning Engine] Analyzing prompt: " + prompt + "\n", false);
-        
-        // Use the expert reasoning integration for a simulated "deep" response
-        auto result = LocalReasoningIntegration::analyzeCode(prompt, "text", true, true);
-        std::string analysis = result.summary;
-        for (const auto& s : result.suggestions) { analysis += "\n"; analysis += s; }
-        
-        if (callback) callback("\n[Reasoning Engine] result: " + analysis + "\n", false);
-        if (callback) callback("", true);
+    // If the user registered this model, prefer its configured model_id/backend.
+    std::string backendModelId = model_name;
+    ModelBackend backend = ModelBackend::OLLAMA_LOCAL;
+    auto it = m_modelRegistry.find(model_name);
+    if (it != m_modelRegistry.end()) {
+        backend = it->second.backend;
+        if (!it->second.model_id.empty()) backendModelId = it->second.model_id;
+    }
+
+    if (backend == ModelBackend::REASONING_ENGINE) {
+        auto rr = LocalReasoningIntegration::analyzeCode(prompt, "text", true, true);
+        std::string out = rr.summary;
+        for (const auto& s : rr.suggestions) { out += "\n"; out += s; }
+        return out;
+    }
+
+    if (backend == ModelBackend::ANTHROPIC) {
+        return "Error: ANTHROPIC backend not wired in this build. Configure a local backend (Ollama/LOCAL_GGUF) or add cloud client integration.";
+    }
+    if (backend == ModelBackend::OPENAI || backend == ModelBackend::AZURE_OPENAI) {
+        return "Error: OPENAI backend not wired in this build. Configure a local backend (Ollama/LOCAL_GGUF) or add cloud client integration.";
+    }
+
+#if defined(_WIN32)
+    std::string out;
+    std::mutex mu;
+    std::condition_variable cv;
+    bool done = false;
+
+    invokeOllamaGenerate(backendModelId, prompt, [&](const std::string& chunk, bool complete) {
+        if (!chunk.empty()) out += chunk;
+        if (complete) {
+            std::lock_guard<std::mutex> lock(mu);
+            done = true;
+            cv.notify_one();
+        }
+    });
+
+    {
+        std::unique_lock<std::mutex> lock(mu);
+        cv.wait_for(lock, std::chrono::seconds(120), [&]() { return done; });
+    }
+    if (!done && out.empty()) return "Error: Ollama request timed out.";
+    return out;
+#else
+    return "Error: Ollama streaming only implemented on Windows in this build.";
+#endif
+}
+
+void UniversalModelRouter::routeStreamQuery(const std::string& model_name, const std::string& prompt, StreamCallback callback, float /*temperature*/)
+{
+    if (!callback) return;
+
+    std::string backendModelId = model_name;
+    ModelBackend backend = ModelBackend::OLLAMA_LOCAL;
+    auto it = m_modelRegistry.find(model_name);
+    if (it != m_modelRegistry.end()) {
+        backend = it->second.backend;
+        if (!it->second.model_id.empty()) backendModelId = it->second.model_id;
+    }
+
+    if (backend == ModelBackend::REASONING_ENGINE) {
+        callback(routeQuery(model_name, prompt));
         return;
     }
 
-    if (model_name.find("Claude") != std::string::npos) {
-        const char* key = std::getenv("ANTHROPIC_API_KEY");
-        if (!key || !key[0]) {
-            if (callback) callback(
-                "Claude API requires ANTHROPIC_API_KEY. Set it in your environment, e.g. "
-                "set ANTHROPIC_API_KEY=sk-ant-... in CMD, or add to System Properties > Environment Variables. "
-                "Or switch to RawrXD-Native or Ollama for local inference.", true);
-            return;
-        }
-        if (callback) callback(
-            "Claude API integration: connect via config.example.json or register model with Anthropic endpoint. "
-            "For now, switch to RawrXD-Native (Load GGUF) or Ollama for immediate chat.", true);
-        return;
-    }
-    if (model_name.find("GPT") != std::string::npos) {
-        const char* key = std::getenv("OPENAI_API_KEY");
-        if (!key || !key[0]) {
-            if (callback) callback(
-                "OpenAI API requires OPENAI_API_KEY. Set it in your environment, e.g. "
-                "set OPENAI_API_KEY=sk-... in CMD, or add to System Properties > Environment Variables. "
-                "Or switch to RawrXD-Native or Ollama for local inference.", true);
-            return;
-        }
-        if (callback) callback(
-            "OpenAI API integration: connect via config.example.json or register model with OpenAI endpoint. "
-            "For now, switch to RawrXD-Native (Load GGUF) or Ollama for immediate chat.", true);
-        return;
-    }
-    {
 #if defined(_WIN32)
-        // Agentic autonomous local: use selected model name with Ollama (every model from /api/tags is valid)
-        invokeOllamaGenerate(model_name, prompt, callback);
+    invokeOllamaGenerate(backendModelId, prompt, [&](const std::string& chunk, bool complete) {
+        (void)complete;
+        if (!chunk.empty()) callback(chunk);
+    });
 #else
-        if (callback) callback("Using RawrXD Native Local Engine... ", false);
-        if (callback) callback("Local inference finished.", true);
+    callback(routeQuery(model_name, prompt));
 #endif
-    }
 }
 
 std::vector<std::string> UniversalModelRouter::getAvailableBackends() const
@@ -439,3 +533,13 @@ std::vector<std::string> UniversalModelRouter::getAvailableBackends() const
         "Llama-3-70B (Local Ollama)"
     };
 }
+
+void UniversalModelRouter::routeRequest(const std::string& model_name,
+                                        const std::string& prompt,
+                                        std::function<void(const std::string&)> callback)
+{
+    if (!callback) return;
+    callback(routeQuery(model_name, prompt));
+}
+
+} // namespace RawrXD

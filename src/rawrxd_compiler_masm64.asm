@@ -57,6 +57,35 @@ includelib \masm64\lib64\urlmon.lib
 .xmm
 option arch:AVX512
 
+; IR Opcodes - Bare Numbers
+IR_MOV_RAX_IMM  equ 0
+IR_MOV_RCX_IMM  equ 1
+IR_MOV_RDX_IMM  equ 2
+IR_MOV_R8_IMM   equ 3
+IR_MOV_R9_IMM   equ 4
+IR_CALL         equ 5
+IR_RET          equ 6
+IR_JMP          equ 7
+IR_ADD_RAX_IMM  equ 8
+IR_SUB_RSP_IMM  equ 9
+IR_MOV_RBP_RSP  equ 10
+IR_PUSH_RAX     equ 11
+IR_POP_RAX      equ 12
+
+; IR Structure (24 bytes)
+IR_Record STRUCT 8
+    opcode      dq ?
+    operand     dq ?        ; Immediate or target ID for fixups
+    flags       dq ?        ; 1=needs fixup, 2=is label
+IR_Record ENDS
+
+; Fixup Record (for patching relative addresses)
+Fixup STRUCT 8
+    code_offset dq ?        ; Where in code buffer to patch
+    target_id   dq ?        ; Which label/target
+    fixup_type  dq ?        ; 0=rel32, 1=abs64
+Fixup ENDS
+
 ;=============================================================================
 ; Constants
 ;=============================================================================
@@ -335,6 +364,7 @@ LEXER_STATE struct
     tokens dq ?                    ; Dynamic array
     tokenCount dq ?
     tokenCapacity dq ?
+    tokenIndex dq ?                ; Current token index for parsing
     keywords dq ?                  ; Hash table
     hHeap dq ?
 LEXER_STATE ends
@@ -467,6 +497,11 @@ szCompGoUnix db "go", 0
 szCompPython3 db "python3", 0
 szCompJavacUnix db "javac", 0
 szCompMcs db "mcs", 0
+
+; Parser strings
+szMain db "main", 0
+szReturn db "return", 0
+szErrNoLexer db "No lexer available for parsing", 0
 
 ; File extensions
 szExtH db "h", 0
@@ -1232,22 +1267,18 @@ WorkerThread_Proc endp
 ; Performs lexical analysis stage - produces token stream
 ;=============================================================================
 CompilerEngine_StageLexing proc frame engine:dq, options:dq, result:dq
-    local pOptions:dq
-    local pResult:dq
-    local hHeap:dq
-    local pSource:dq
-    local sourceSize:dq
-    local pLexer:dq
+    local pOptions:dq, pResult:dq, hHeap:dq
+    local pSource:dq, sourceSize:dq, pLexer:dq
     local token:TOKEN
-    
+
     push rbx
     push rsi
     push rdi
     push r12
-    
+
     mov pOptions, rdx
     mov pResult, r8
-    
+
     ; Read source file
     invoke File_ReadAllText, addr (COMPILE_OPTIONS ptr [pOptions]).sourcePath, 0, addr sourceSize
     .if rax == 0
@@ -1257,8 +1288,8 @@ CompilerEngine_StageLexing proc frame engine:dq, options:dq, result:dq
         jmp @@done
     .endif
     mov pSource, rax
-    
-    ; Create lexer
+
+    ; Create lexer with a generous token capacity
     invoke Lexer_Create, pSource, sourceSize, 0
     .if rax == 0
         invoke HeapFree, GetProcessHeap(), 0, pSource
@@ -1267,19 +1298,18 @@ CompilerEngine_StageLexing proc frame engine:dq, options:dq, result:dq
     .endif
     mov pLexer, rax
     mov r12, rax
-    
-    ; Tokenize entire source
-    xor esi, esi
-    
+
+    ; Tokenise and store each token
+    xor r15, r15                     ; token count
 @@token_loop:
     lea rdi, token
     invoke Lexer_NextToken, pLexer, rdi
-    
+
     ; Check for EOF
     .if (TOKEN ptr [rdi]).type == 0
         jmp @@token_done
     .endif
-    
+
     ; Check for lexer errors
     .if (TOKEN ptr [rdi]).type == -1
         invoke Diagnostic_Add, pResult, SEV_ERROR, (TOKEN ptr [rdi]).startLoc.line, \
@@ -1287,23 +1317,37 @@ CompilerEngine_StageLexing proc frame engine:dq, options:dq, result:dq
                 addr (COMPILE_OPTIONS ptr [pOptions]).sourcePath
         jmp @@token_loop
     .endif
-    
-    inc esi
+
+    ; Store token in lexer's token array (grow if needed)
+    mov rcx, r12                     ; lexer
+    lea rdx, token
+    invoke Lexer_AddToken, rcx, rdx
+    .if eax == 0
+        ; out of memory
+        jmp @@error
+    .endif
+    inc r15
     jmp @@token_loop
-    
+
 @@token_done:
-    ; Store lexer stats
+    ; Update statistics
     mov rbx, pResult
-    mov (COMPILE_RESULT ptr [rbx]).statistics.tokensProcessed, rsi
+    mov (COMPILE_RESULT ptr [rbx]).statistics.tokensProcessed, r15
     mov rax, sourceSize
     mov (COMPILE_RESULT ptr [rbx]).statistics.linesCompiled, rax
-    
-    ; Cleanup
-    invoke Lexer_Destroy, pLexer
-    invoke HeapFree, GetProcessHeap(), 0, pSource
-    
+
+    ; Store lexer pointer in result (so parser can use it)
+    ; We'll use the result's objectCode field temporarily to hold lexer pointer.
+    ; In production, you'd extend COMPILE_RESULT, but we'll reuse a spare field.
+    mov (COMPILE_RESULT ptr [rbx]).objectCode, r12
     mov eax, 1
-    
+    jmp @@done
+
+@@error:
+    invoke Lexer_Destroy, r12
+    invoke HeapFree, GetProcessHeap(), 0, pSource
+    xor eax, eax
+
 @@done:
     pop r12
     pop rdi
@@ -1317,9 +1361,89 @@ CompilerEngine_StageLexing endp
 ; Performs syntax analysis stage - builds AST
 ;=============================================================================
 CompilerEngine_StageParsing proc frame engine:dq, options:dq, result:dq
-    ; For production, would create full recursive-descent parser
-    ; with proper error recovery
+    local pLexer:dq, pAstRoot:dq
+    local currentTokenIdx:dq
+
+    mov rbx, r8                     ; result
+    ; Retrieve lexer pointer from result.objectCode (stored in lexing stage)
+    mov pLexer, (COMPILE_RESULT ptr [rbx]).objectCode
+    .if pLexer == 0
+        invoke Diagnostic_Add, result, SEV_FATAL, 0, 0, 3001, addr szErrNoLexer, 0
+        xor eax, eax
+        ret
+    .endif
+
+    ; Reset token index
+    mov (LEXER_STATE ptr [pLexer]).tokenIndex, 0
+
+    ; Expect "main" identifier
+    mov rcx, pLexer
+    mov rdx, 1                      ; IDENTIFIER type
+    mov r8, addr szMain             ; "main"
+    invoke Parser_ExpectToken, rcx, rdx, r8
+    .if eax == 0
+        jmp @@error
+    .endif
+
+    ; Expect '('
+    mov rcx, pLexer
+    mov rdx, 4                      ; OPERATOR type
+    mov r8, '('
+    invoke Parser_ExpectToken, rcx, rdx, r8
+    .if eax == 0
+        jmp @@error
+    .endif
+
+    ; Expect ')'
+    mov rcx, pLexer
+    mov rdx, 4                      ; OPERATOR type
+    mov r8, ')'
+    invoke Parser_ExpectToken, rcx, rdx, r8
+    .if eax == 0
+        jmp @@error
+    .endif
+
+    ; Expect '{'
+    mov rcx, pLexer
+    mov rdx, 4                      ; OPERATOR type
+    mov r8, '{'
+    invoke Parser_ExpectToken, rcx, rdx, r8
+    .if eax == 0
+        jmp @@error
+    .endif
+
+    ; Parse statement (return ...)
+    invoke Parser_ParseStatement, pLexer
+    .if rax == 0
+        jmp @@error
+    .endif
+    mov pAstRoot, rax
+
+    ; Expect '}'
+    mov rcx, pLexer
+    mov rdx, 4                      ; OPERATOR type
+    mov r8, '}'
+    invoke Parser_ExpectToken, rcx, rdx, r8
+    .if eax == 0
+        jmp @@error
+    .endif
+
+    ; Expect EOF
+    mov rcx, pLexer
+    mov rdx, 0                      ; EOF type
+    mov r8, 0
+    invoke Parser_ExpectToken, rcx, rdx, r8
+    .if eax == 0
+        jmp @@error
+    .endif
+
+    ; Store AST root in result (reuse objectCode field)
+    mov (COMPILE_RESULT ptr [rbx]).objectCode, pAstRoot
     mov eax, 1
+    ret
+
+@@error:
+    xor eax, eax
     ret
 CompilerEngine_StageParsing endp
 
@@ -1328,6 +1452,7 @@ CompilerEngine_StageParsing endp
 ; Performs semantic analysis - type checking, symbol resolution
 ;=============================================================================
 CompilerEngine_StageSemantic proc frame engine:dq, options:dq, result:dq
+    ; Pass-through for now, user will provide full implementation
     mov eax, 1
     ret
 CompilerEngine_StageSemantic endp
@@ -1337,6 +1462,56 @@ CompilerEngine_StageSemantic endp
 ; Performs IR generation - intermediate representation
 ;=============================================================================
 CompilerEngine_StageIRGen proc frame engine:dq, options:dq, result:dq
+    local pAst:dq, pIrList:dq, irCount:dword
+
+    ; Retrieve AST from result.objectCode
+    mov pAst, (COMPILE_RESULT ptr [r8]).objectCode
+    .if pAst == 0
+        xor eax, eax
+        ret
+    .endif
+
+    ; Allocate initial IR list (e.g., 16 instructions)
+    invoke HeapAlloc, GetProcessHeap(), HEAP_ZERO_MEMORY, 16 * sizeof IR_INSTR
+    .if rax == 0
+        xor eax, eax
+        ret
+    .endif
+    mov pIrList, rax
+    mov irCount, 0
+
+    ; Traverse AST and generate IR
+    ; For our simple AST, we have a FUNCTION node with one child RETURN_STMT.
+    ; RETURN_STMT has one child INTEGER.
+    mov rbx, pAst
+    ; Assume nodeType field: we define constants: 100 = FUNC, 200 = RETURN, 300 = INT
+    .if (AST_NODE ptr [rbx]).nodeType == 200   ; RETURN
+        mov rcx, (AST_NODE ptr [rbx]).children[0]   ; INTEGER
+        .if rcx != 0
+            ; Convert token value to integer
+            lea rsi, (AST_NODE ptr [rcx]).token.value
+            invoke atoi, rsi   ; we need an atoi function (simple implementation)
+            ; Generate IR: MOV eax, imm; RET
+            ; First instruction: IR_MOV_REG_IMM (we need opcodes)
+            mov rdi, pIrList
+            mov rcx, irCount
+            imul rcx, sizeof IR_INSTR
+            add rdi, rcx
+            mov (IR_INSTR ptr [rdi]).opcode, IR_MOV_RAX_IMM
+            mov (IR_INSTR ptr [rdi]).dest, 0     ; RAX (register index)
+            mov (IR_INSTR ptr [rdi]).src1, rax   ; immediate value
+            inc irCount
+
+            ; Second instruction: IR_RET
+            add rdi, sizeof IR_INSTR
+            mov (IR_INSTR ptr [rdi]).opcode, IR_RET
+            inc irCount
+        .endif
+    .endif
+
+    ; Store IR list in result (again reuse objectCode)
+    mov (COMPILE_RESULT ptr [r8]).objectCode, pIrList
+    mov (COMPILE_RESULT ptr [r8]).statistics.functionsCompiled, 1
     mov eax, 1
     ret
 CompilerEngine_StageIRGen endp
@@ -1346,6 +1521,7 @@ CompilerEngine_StageIRGen endp
 ; Performs optimizations - constant folding, dead code elimination, etc
 ;=============================================================================
 CompilerEngine_StageOptimize proc frame engine:dq, options:dq, result:dq
+    ; Pass-through
     mov eax, 1
     ret
 CompilerEngine_StageOptimize endp
@@ -1355,6 +1531,47 @@ CompilerEngine_StageOptimize endp
 ; Performs machine code generation - target-specific codegen
 ;=============================================================================
 CompilerEngine_StageCodegen proc frame engine:dq, options:dq, result:dq
+    local pIrList:dq, irCount:dword
+    local codeBuf:dq, codePos:dq
+
+    mov pIrList, (COMPILE_RESULT ptr [r8]).objectCode
+    .if pIrList == 0
+        xor eax, eax
+        ret
+    .endif
+    ; For simplicity, assume we have a fixed-size buffer (64KB) in engine or we allocate.
+    ; We'll allocate from heap (but code must be executable later; we'll need to copy to executable memory before writing PE? No, we'll just write raw bytes to file; no need for execution during compilation.)
+    ; So we can use heap memory for code buffer.
+    invoke HeapAlloc, GetProcessHeap(), HEAP_ZERO_MEMORY, 65536
+    .if rax == 0
+        xor eax, eax
+        ret
+    .endif
+    mov codeBuf, rax
+    mov codePos, rax
+
+    ; Process each IR instruction
+    mov rsi, pIrList
+    mov ecx, 2  ; We know we have exactly 2 instructions
+    .while ecx > 0
+        mov eax, (IR_INSTR ptr [rsi]).opcode
+        .if eax == IR_MOV_RAX_IMM
+            mov rdx, (IR_INSTR ptr [rsi]).src1       ; immediate
+            invoke Emit_MOV_REG_IMM, codePos, 0, rdx  ; RAX = 0
+            mov codePos, rax
+        .elseif eax == IR_RET
+            invoke Emit_RET, codePos
+            mov codePos, rax
+        .endif
+        add rsi, sizeof IR_INSTR
+        dec ecx
+    .endw
+
+    ; Store code buffer and size in result
+    mov (COMPILE_RESULT ptr [r8]).objectCode, codeBuf
+    mov rax, codePos
+    sub rax, codeBuf
+    mov (COMPILE_RESULT ptr [r8]).objectCodeSize, rax
     mov eax, 1
     ret
 CompilerEngine_StageCodegen endp
@@ -1364,16 +1581,139 @@ CompilerEngine_StageCodegen endp
 ; Performs assembly - object file generation
 ;=============================================================================
 CompilerEngine_StageAssembly proc frame engine:dq, options:dq, result:dq
+    ; Pass-through, object code is already generated in memory
     mov eax, 1
     ret
 CompilerEngine_StageAssembly endp
 
 ;=============================================================================
 ; CompilerEngine_StageLinking
-; Performs linking - final executable/library creation
+; Performs linking - final executable/library creation (PE32+ Writer)
 ;=============================================================================
 CompilerEngine_StageLinking proc frame engine:dq, options:dq, result:dq
+    local pOptions:dq
+    local pResult:dq
+    local hFile:dq
+    local bytesWritten:dword
+    local dosHeader:IMAGE_DOS_HEADER
+    local ntHeaders:IMAGE_NT_HEADERS64
+    local textSection:IMAGE_SECTION_HEADER
+    local codeSize:dword
+    local rawSize:dword
+    
+    push rbx
+    push rsi
+    push rdi
+    
+    mov pOptions, rdx
+    mov pResult, r8
+    
+    ; Get code size from result
+    mov rbx, pResult
+    mov rax, (COMPILE_RESULT ptr [rbx]).objectCodeSize
+    .if rax == 0
+        mov rax, 1
+    .endif
+    mov codeSize, eax
+    
+    ; Align code size to FileAlignment (512)
+    add eax, 511
+    and eax, 0FFFFFE00h
+    mov rawSize, eax
+    
+    ; Create output file
+    invoke CreateFileA, addr (COMPILE_OPTIONS ptr [pOptions]).outputPath, \
+           GENERIC_WRITE, 0, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0
+    .if rax == INVALID_HANDLE_VALUE
+        xor eax, eax
+        jmp @@done
+    .endif
+    mov hFile, rax
+    
+    ; 1. Write DOS Header
+    invoke RtlZeroMemory, addr dosHeader, sizeof IMAGE_DOS_HEADER
+    mov dosHeader.e_magic, 5A4Dh ; 'MZ'
+    mov dosHeader.e_lfanew, sizeof IMAGE_DOS_HEADER
+    invoke WriteFile, hFile, addr dosHeader, sizeof IMAGE_DOS_HEADER, addr bytesWritten, 0
+    
+    ; 2. Write NT Headers
+    invoke RtlZeroMemory, addr ntHeaders, sizeof IMAGE_NT_HEADERS64
+    mov ntHeaders.Signature, 4550h ; 'PE\0\0'
+    
+    ; FileHeader
+    mov ntHeaders.FileHeader.Machine, 8664h ; IMAGE_FILE_MACHINE_AMD64
+    mov ntHeaders.FileHeader.NumberOfSections, 1
+    mov ntHeaders.FileHeader.SizeOfOptionalHeader, sizeof IMAGE_OPTIONAL_HEADER64
+    mov ntHeaders.FileHeader.Characteristics, 0222h ; EXECUTABLE_IMAGE | LARGE_ADDRESS_AWARE | DEBUG_STRIPPED
+    
+    ; OptionalHeader
+    mov ntHeaders.OptionalHeader.Magic, 020Bh ; PE32+
+    mov eax, rawSize
+    mov ntHeaders.OptionalHeader.SizeOfCode, eax
+    mov ntHeaders.OptionalHeader.AddressOfEntryPoint, 1000h ; RVA of .text
+    mov ntHeaders.OptionalHeader.BaseOfCode, 1000h
+    mov ntHeaders.OptionalHeader.ImageBase, 140000000h
+    mov ntHeaders.OptionalHeader.SectionAlignment, 1000h
+    mov ntHeaders.OptionalHeader.FileAlignment, 200h
+    mov ntHeaders.OptionalHeader.MajorOperatingSystemVersion, 5
+    mov ntHeaders.OptionalHeader.MinorOperatingSystemVersion, 2
+    mov ntHeaders.OptionalHeader.MajorSubsystemVersion, 5
+    mov ntHeaders.OptionalHeader.MinorSubsystemVersion, 2
+    mov ntHeaders.OptionalHeader.SizeOfImage, 2000h ; Headers + 1 section aligned to 4K
+    mov ntHeaders.OptionalHeader.SizeOfHeaders, 200h ; Aligned to FileAlignment
+    mov ntHeaders.OptionalHeader.Subsystem, 3 ; IMAGE_SUBSYSTEM_WINDOWS_CUI
+    mov ntHeaders.OptionalHeader.DllCharacteristics, 8140h ; DYNAMIC_BASE | NX_COMPAT | TERMINAL_SERVER_AWARE
+    mov ntHeaders.OptionalHeader.SizeOfStackReserve, 100000h
+    mov ntHeaders.OptionalHeader.SizeOfStackCommit, 1000h
+    mov ntHeaders.OptionalHeader.SizeOfHeapReserve, 100000h
+    mov ntHeaders.OptionalHeader.SizeOfHeapCommit, 1000h
+    mov ntHeaders.OptionalHeader.NumberOfRvaAndSizes, 16
+    
+    invoke WriteFile, hFile, addr ntHeaders, sizeof IMAGE_NT_HEADERS64, addr bytesWritten, 0
+    
+    ; 3. Write Section Header (.text)
+    invoke RtlZeroMemory, addr textSection, sizeof IMAGE_SECTION_HEADER
+    mov dword ptr [textSection.Name1], 7865742Eh ; '.tex'
+    mov byte ptr [textSection.Name1 + 4], 74h    ; 't'
+    mov eax, codeSize
+    mov textSection.VirtualSize, eax
+    mov textSection.VirtualAddress, 1000h
+    mov eax, rawSize
+    mov textSection.SizeOfRawData, eax
+    mov textSection.PointerToRawData, 200h ; Right after headers
+    mov textSection.Characteristics, 60000020h ; MEM_EXECUTE | MEM_READ | CNT_CODE
+    
+    invoke WriteFile, hFile, addr textSection, sizeof IMAGE_SECTION_HEADER, addr bytesWritten, 0
+    
+    ; 4. Pad headers to FileAlignment (512 bytes)
+    invoke SetFilePointer, hFile, 200h, 0, FILE_BEGIN
+    
+    ; 5. Write Code
+    mov rbx, pResult
+    mov rcx, (COMPILE_RESULT ptr [rbx]).objectCode
+    .if rcx != 0
+        invoke WriteFile, hFile, rcx, codeSize, addr bytesWritten, 0
+    .else
+        ; Write dummy RET (0xC3)
+        local dummyCode:byte
+        mov dummyCode, 0C3h
+        invoke WriteFile, hFile, addr dummyCode, 1, addr bytesWritten, 0
+    .endif
+    
+    ; 6. Pad section to SizeOfRawData
+    mov eax, 200h
+    add eax, rawSize
+    invoke SetFilePointer, hFile, eax, 0, FILE_BEGIN
+    invoke SetEndOfFile, hFile
+    
+    invoke CloseHandle, hFile
+    
     mov eax, 1
+    
+@@done:
+    pop rdi
+    pop rsi
+    pop rbx
     ret
 CompilerEngine_StageLinking endp
 
@@ -1424,6 +1764,7 @@ Lexer_Create proc frame source:dq, size:dq, hHeap:dq
     mov [rbx].LEXER_STATE.tokens, rax
     mov [rbx].LEXER_STATE.tokenCapacity, 4096
     mov [rbx].LEXER_STATE.tokenCount, 0
+    mov [rbx].LEXER_STATE.tokenIndex, 0
     
     mov rax, pLexer
     jmp @@done
@@ -1460,6 +1801,39 @@ Lexer_Destroy proc frame lexer:dq
     
     ret
 Lexer_Destroy endp
+
+;=============================================================================
+; Lexer_AddToken – appends a token to the lexer's token array
+; Returns 1 on success, 0 on failure (realloc failure)
+;=============================================================================
+Lexer_AddToken proc uses rbx, pLexer:dq, pToken:dq
+    mov rbx, rcx                     ; pLexer
+    mov r8, [rbx].LEXER_STATE.tokenCount
+    mov r9, [rbx].LEXER_STATE.tokenCapacity
+    .if r8 >= r9
+        ; need to grow: double capacity
+        shl r9, 1
+        invoke Heap_ReAlloc, [rbx].LEXER_STATE.hHeap, [rbx].LEXER_STATE.tokens, r9 * sizeof TOKEN
+        .if rax == 0
+            xor eax, eax
+            ret
+        .endif
+        mov [rbx].LEXER_STATE.tokens, rax
+        mov [rbx].LEXER_STATE.tokenCapacity, r9
+    .endif
+    ; copy token
+    mov rax, [rbx].LEXER_STATE.tokens
+    mov rcx, r8
+    imul rcx, sizeof TOKEN
+    add rax, rcx
+    mov rsi, pToken
+    mov rdi, rax
+    mov rcx, sizeof TOKEN
+    rep movsb
+    inc [rbx].LEXER_STATE.tokenCount
+    mov eax, 1
+    ret
+Lexer_AddToken endp
 
 ;=============================================================================
 ; Lexer_NextToken - Gets next token from source (FULLY IMPLEMENTED)
@@ -1777,6 +2151,215 @@ Lexer_NextToken proc frame lexer:dq, token:dq
     pop rbx
     ret
 Lexer_NextToken endp
+
+;=============================================================================
+; Parser_ExpectToken – checks current token and advances
+; pLexer, expected type, expected value (for operators, value is char)
+; Returns 1 if matches, else 0.
+;=============================================================================
+Parser_ExpectToken proc pLexer:dq, expectedType:dword, expectedValue:dword
+    mov rbx, rcx
+    mov rsi, [rbx].LEXER_STATE.tokens
+    mov rcx, [rbx].LEXER_STATE.tokenIndex
+    
+    ; Check bounds
+    cmp rcx, [rbx].LEXER_STATE.tokenCount
+    jae @@fail
+    
+    ; Get current token
+    imul rcx, sizeof TOKEN
+    add rsi, rcx
+    
+    ; Check type
+    mov eax, (TOKEN ptr [rsi]).type
+    cmp eax, expectedType
+    jne @@fail
+    
+    ; For operators, check value
+    .if expectedType == 4
+        movzx eax, byte ptr [(TOKEN ptr [rsi]).value]
+        cmp eax, expectedValue
+        jne @@fail
+    .elseif expectedType == 1 && expectedValue != 0
+        ; For identifiers, check string match
+        invoke lstrcmpA, addr (TOKEN ptr [rsi]).value, expectedValue
+        test eax, eax
+        jnz @@fail
+    .endif
+    
+    ; Advance token index
+    inc [rbx].LEXER_STATE.tokenIndex
+    mov eax, 1
+    ret
+    
+@@fail:
+    xor eax, eax
+    ret
+Parser_ExpectToken endp
+
+;=============================================================================
+; Parser_ParseStatement - parses a return statement
+; Returns AST node pointer or 0 on error
+;=============================================================================
+Parser_ParseStatement proc pLexer:dq
+    local pNode:dq
+    
+    ; Expect "return"
+    mov rcx, pLexer
+    mov rdx, 1                      ; IDENTIFIER
+    mov r8, addr szReturn
+    invoke Parser_ExpectToken, rcx, rdx, r8
+    .if eax == 0
+        xor rax, rax
+        ret
+    .endif
+    
+    ; Parse expression (just a number for now)
+    invoke Parser_ParseExpression, pLexer
+    .if rax == 0
+        xor rax, rax
+        ret
+    .endif
+    mov pNode, rax
+    
+    ; Create return statement node
+    invoke HeapAlloc, GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof AST_NODE
+    .if rax == 0
+        invoke HeapFree, GetProcessHeap(), 0, pNode
+        xor rax, rax
+        ret
+    .endif
+    mov rcx, rax
+    mov (AST_NODE ptr [rcx]).nodeType, 200 ; RETURN_STMT
+    mov (AST_NODE ptr [rcx]).children[0], pNode
+    mov (AST_NODE ptr [rcx]).childCount, 1
+    mov pNode, rcx
+    
+    ; Expect ";"
+    mov rcx, pLexer
+    mov rdx, 4                      ; OPERATOR
+    mov r8, ';'
+    invoke Parser_ExpectToken, rcx, rdx, r8
+    .if eax == 0
+        ; Free node
+        invoke HeapFree, GetProcessHeap(), 0, pNode
+        xor rax, rax
+        ret
+    .endif
+    
+    mov rax, pNode
+    ret
+Parser_ParseStatement endp
+
+;=============================================================================
+; Parser_ParseExpression - parses a number expression
+; Returns AST node pointer or 0 on error
+;=============================================================================
+Parser_ParseExpression proc pLexer:dq
+    local pNode:dq
+    
+    mov rbx, rcx
+    mov rsi, [rbx].LEXER_STATE.tokens
+    mov rcx, [rbx].LEXER_STATE.tokenIndex
+    
+    ; Check bounds
+    cmp rcx, [rbx].LEXER_STATE.tokenCount
+    jae @@fail
+    
+    ; Get current token
+    imul rcx, sizeof TOKEN
+    add rsi, rcx
+    
+    ; Must be a number
+    mov eax, (TOKEN ptr [rsi]).type
+    cmp eax, 2                      ; NUMBER
+    jne @@fail
+    
+    ; Create AST node
+    invoke HeapAlloc, GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof AST_NODE
+    .if rax == 0
+        jmp @@fail
+    .endif
+    mov pNode, rax
+    
+    ; Initialize node
+    mov (AST_NODE ptr [rax]).nodeType, 300 ; INTEGER
+    ; Copy token
+    lea rdi, (AST_NODE ptr [rax]).token
+    mov rsi, [rbx].LEXER_STATE.tokens
+    mov rcx, [rbx].LEXER_STATE.tokenIndex
+    imul rcx, sizeof TOKEN
+    add rsi, rcx
+    mov rcx, sizeof TOKEN
+    rep movsb
+    
+    ; Advance token index
+    inc [rbx].LEXER_STATE.tokenIndex
+    
+    mov rax, pNode
+    ret
+    
+@@fail:
+    xor rax, rax
+    ret
+Parser_ParseExpression endp
+
+;=============================================================================
+; atoi - Simple ASCII to integer conversion
+;=============================================================================
+atoi proc str:dq
+    mov rsi, rcx
+    xor rax, rax
+    xor rdx, rdx
+@@loop:
+    movzx ecx, byte ptr [rsi]
+    .if cl == 0
+        ret
+    .endif
+    .if cl >= '0' && cl <= '9'
+        imul rax, rax, 10
+        sub cl, '0'
+        add rax, rcx
+        inc rsi
+        jmp @@loop
+    .else
+        ; ignore non-digits (assume well-formed)
+        inc rsi
+        jmp @@loop
+    .endif
+atoi endp
+
+;=============================================================================
+; Emit_MOV_REG_IMM - Emit MOV reg, imm64
+;=============================================================================
+Emit_MOV_REG_IMM proc buf:dq, reg:byte, imm64:qword
+    mov rcx, buf
+    ; REX.W
+    mov byte ptr [rcx], 48h
+    inc rcx
+    ; opcode B8 + reg
+    mov al, 0B8h
+    add al, reg
+    mov byte ptr [rcx], al
+    inc rcx
+    ; imm64
+    mov rax, imm64
+    mov qword ptr [rcx], rax
+    add rcx, 8
+    mov rax, rcx
+    ret
+Emit_MOV_REG_IMM endp
+
+;=============================================================================
+; Emit_RET - Emit RET
+;=============================================================================
+Emit_RET proc buf:dq
+    mov rcx, buf
+    mov byte ptr [rcx], 0C3h
+    inc rcx
+    mov rax, rcx
+    ret
+Emit_RET endp
 
 ;=============================================================================
 ; Cache_Initialize - Initializes compilation cache
@@ -2619,6 +3202,390 @@ CompilerEngine_InitializeCapabilities proc frame engine:dq
     mov eax, 1
     ret
 CompilerEngine_InitializeCapabilities endp
+
+;=============================================================================
+; RAWRXD_BAREMETAL_PE.ASM
+; Zero-Abstraction IR to PE Pipeline - Single Linear Flow
+; No Functions. No Stubs. Raw Bytes to Disk.
+;=============================================================================
+
+;=============================================================================
+; The Monolithic Compiler
+; RCX = IR array pointer
+; RDX = IR count
+; R8  = Output filename pointer
+;=============================================================================
+BareMetal_CompileToPE proc frame
+    ; Preserve all
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    push r13
+    push r14
+    push r15
+    
+    ;-------------------------------------------------------------------------
+    ; PHASE 1: Calculate Sizes & Allocate
+    ;-------------------------------------------------------------------------
+    mov r12, rcx            ; R12 = IR array
+    mov r13, rdx            ; R13 = IR count
+    mov r14, r8             ; R14 = filename
+    
+    ; Fixed PE header size: DOS(64) + Sig(4) + COFF(20) + OPT(240) + SEC(40) = 368
+    ; Align to 512 = 0x200
+    mov r15, 512            ; R15 = Headers size (file alignment)
+    
+    ; Calculate code size: assume max 15 bytes per IR instruction
+    mov rax, r13
+    imul rax, 16            ; Conservative: 16 bytes per IR
+    add rax, 64             ; Padding
+    mov rbx, rax            ; RBX = raw code size
+    
+    ; Align code to 512
+    add rax, 511
+    and rax, -512
+    mov rsi, rax            ; RSI = aligned code size
+    
+    ; Total file size
+    lea rdi, [r15 + rsi]    ; RDI = total file size
+    
+    ; Allocate buffer with execute-read-write (for code generation)
+    invoke VirtualAlloc, 0, rdi, MEM_COMMIT+MEM_RESERVE, PAGE_EXECUTE_READWRITE
+    test rax, rax
+    jz @@failed
+    mov rbx, rax            ; RBX = base of image buffer
+    
+    ;-------------------------------------------------------------------------
+    ; PHASE 2: Write DOS Header (Raw Bytes)
+    ;-------------------------------------------------------------------------
+    mov rdi, rbx            ; RDI = write cursor
+    
+    ; e_magic + DOS header (64 bytes)
+    mov dword ptr [rdi], 00905A4Dh      ; "MZ" + padding start
+    mov dword ptr [rdi+4], 000000003h   ; bytes on last page, pages in file
+    mov qword ptr [rdi+8], 000000004h   ; relocations, header size
+    mov qword ptr [rdi+16], 00000FFFFh  ; min/max alloc
+    mov qword ptr [rdi+24], 000000000h  ; SS:SP
+    mov dword ptr [rdi+32], 000000000h  ; checksum
+    mov dword ptr [rdi+36], 000000040h  ; IP + CS (pointing to stub)
+    mov dword ptr [rdi+40], 000001000h  ; reloc table addr + overlay
+    mov qword ptr [rdi+48], 000000000h  ; reserved
+    mov qword ptr [rdi+56], 000000000h  ; reserved + oem
+    mov dword ptr [rdi+60], 000000080h  ; e_lfanew = PE header at 0x80
+    
+    ; DOS Stub code at +0x40 (64 bytes total DOS)
+    mov word ptr [rdi+64], 0EB58h       ; jmp +88 to PE header
+    mov dword ptr [rdi+66], 21647261h   ; "Raw!"
+    mov qword ptr [rdi+70], 000064782Eh ; ".xd"
+    
+    add rdi, 128            ; Advance to PE signature location (0x80)
+    
+    ;-------------------------------------------------------------------------
+    ; PHASE 3: Write NT Headers (Raw Bytes)
+    ;-------------------------------------------------------------------------
+    ; PE Signature
+    mov dword ptr [rdi], 00004550h      ; "PE\0\0"
+    add rdi, 4
+    
+    ; COFF Header (20 bytes)
+    mov word ptr [rdi], 8664h           ; Machine: AMD64
+    mov word ptr [rdi+2], 1             ; NumberOfSections: 1
+    mov dword ptr [rdi+4], 0            ; TimeDateStamp
+    mov dword ptr [rdi+8], 0            ; SymbolTable
+    mov dword ptr [rdi+12], 0           ; NumberOfSymbols
+    mov word ptr [rdi+16], 240          ; SizeOfOptionalHeader: 0xF0
+    mov word ptr [rdi+18], 0022h        ; Characteristics: Executable | LargeAddress
+    
+    add rdi, 20
+    
+    ; Optional Header (240 bytes for PE32+)
+    mov word ptr [rdi], 020Bh           ; Magic: PE32+
+    mov byte ptr [rdi+2], 1             ; MajorLinkerVersion
+    mov byte ptr [rdi+3], 0             ; MinorLinkerVersion
+    mov dword ptr [rdi+4], 0            ; SizeOfCode (patched later)
+    mov dword ptr [rdi+8], 0            ; SizeOfInitializedData
+    mov dword ptr [rdi+12], 0           ; SizeOfUninitializedData
+    mov dword ptr [rdi+16], 1000h       ; AddressOfEntryPoint (RVA 0x1000)
+    mov dword ptr [rdi+20], 1000h       ; BaseOfCode
+    mov rax, 140000000h                 ; ImageBase
+    mov qword ptr [rdi+24], rax
+    mov dword ptr [rdi+32], 1000h       ; SectionAlignment
+    mov dword ptr [rdi+36], 200h        ; FileAlignment
+    mov dword ptr [rdi+40], 00000006h   ; MajorOSVersion
+    mov dword ptr [rdi+44], 0           ; ImageVersion
+    mov dword ptr [rdi+48], 00060001h   ; SubsystemVersion
+    mov dword ptr [rdi+52], 0           ; Win32Version
+    mov dword ptr [rdi+56], 2000h       ; SizeOfImage (2 pages: headers + code)
+    mov dword ptr [rdi+60], 200h        ; SizeOfHeaders (512)
+    mov dword ptr [rdi+64], 0           ; Checksum
+    mov word ptr [rdi+68], 1            ; Subsystem: CONSOLE
+    mov word ptr [rdi+70], 0            ; DllCharacteristics
+    mov rax, 100000h                    ; StackReserve
+    mov qword ptr [rdi+72], rax
+    mov rax, 1000h                      ; StackCommit
+    mov qword ptr [rdi+80], rax
+    mov qword ptr [rdi+88], rax         ; HeapReserve
+    mov qword ptr [rdi+96], rax         ; HeapCommit
+    mov dword ptr [rdi+104], 0          ; LoaderFlags
+    mov dword ptr [rdi+108], 0          ; NumberOfRvaAndSizes (no imports)
+    
+    ; Data directories (128 bytes of zeros at +112)
+    xor eax, eax
+    mov rcx, 16
+    lea rdx, [rdi+112]
+@@zero_dirs:
+    mov qword ptr [rdx], rax
+    add rdx, 8
+    dec rcx
+    jnz @@zero_dirs
+    
+    add rdi, 240
+    
+    ; Section Header ".text" (40 bytes)
+    mov rax, 747865742E2E2Eh            ; ".text..." (8 bytes)
+    mov qword ptr [rdi], rax
+    mov dword ptr [rdi+8], 0            ; VirtualSize (patched)
+    mov dword ptr [rdi+12], 1000h       ; VirtualAddress
+    mov dword ptr [rdi+16], 0           ; SizeOfRawData (patched)
+    mov dword ptr [rdi+20], 200h        ; PointerToRawData (after headers)
+    mov dword ptr [rdi+24], 0           ; Relocations
+    mov dword ptr [rdi+28], 0           ; Line numbers
+    mov dword ptr [rdi+32], 0           ; NumberOfRelocs/LineNums
+    mov dword ptr [rdi+36], 60000020h   ; Characteristics: Code | Execute | Read
+    
+    add rdi, 40
+    
+    ;-------------------------------------------------------------------------
+    ; PHASE 4: Pad to FileAlignment (0x200)
+    ;-------------------------------------------------------------------------
+    mov rax, rdi
+    sub rax, rbx            ; Current offset from base
+    mov rcx, 512
+    sub rcx, rax            ; Padding needed
+    jbe @@done_pad
+    
+    xor eax, eax
+    rep stosb               ; Pad with zeros
+    
+@@done_pad:
+    
+    ;-------------------------------------------------------------------------
+    ; PHASE 5: Linear Code Generation (IR -> Machine Code)
+    ;-------------------------------------------------------------------------
+    ; RDI now points to code area (0x200 offset)
+    mov r8, rdi             ; R8 = code start (for fixup calculations)
+    xor r9, r9              ; R9 = code size counter
+    
+    ; Fixup storage (on stack, max 64 fixups)
+    sub rsp, 1024           ; 64 fixups * 16 bytes
+    mov r10, rsp            ; R10 = fixup array
+    xor r11, r11            ; R11 = fixup count
+    
+    ; Label resolution (max 16 labels)
+    sub rsp, 128            ; 16 * 8 bytes
+    mov r15, rsp            ; R15 = label array (stores code offsets)
+    
+    ; Iterate IR
+    mov rsi, r12            ; RSI = IR array
+    mov rcx, r13            ; RCX = count
+    
+@@ir_loop:
+    test rcx, rcx
+    jz @@codegen_done
+    
+    mov rax, [rsi].IR_Record.opcode
+    mov rdx, [rsi].IR_Record.operand
+    mov rbx, [rsi].IR_Record.flags
+    
+    ; Check if label definition
+    test rbx, 2
+    jnz @@is_label
+    
+    cmp rax, IR_MOV_RAX_IMM
+    je @@emit_mov_rax_imm
+    cmp rax, IR_MOV_RCX_IMM
+    je @@emit_mov_rcx_imm
+    cmp rax, IR_CALL
+    je @@emit_call
+    cmp rax, IR_RET
+    je @@emit_ret
+    cmp rax, IR_JMP
+    je @@emit_jmp
+    cmp rax, IR_ADD_RAX_IMM
+    je @@emit_add_rax_imm
+    cmp rax, IR_SUB_RSP_IMM
+    je @@emit_sub_rsp_imm
+    jmp @@next_ir
+    
+@@is_label:
+    ; Record label position (operand = label ID)
+    mov [r15 + rdx*8], r9
+    jmp @@next_ir
+    
+@@emit_mov_rax_imm:
+    ; 48 B8 imm64
+    mov byte ptr [rdi], 48h
+    mov byte ptr [rdi+1], 0B8h
+    mov [rdi+2], rdx
+    add rdi, 10
+    add r9, 10
+    jmp @@next_ir
+    
+@@emit_mov_rcx_imm:
+    ; 48 B9 imm64
+    mov byte ptr [rdi], 48h
+    mov byte ptr [rdi+1], 0B9h
+    mov [rdi+2], rdx
+    add rdi, 10
+    add r9, 10
+    jmp @@next_ir
+    
+@@emit_add_rax_imm:
+    ; 48 05 imm32 (add rax, imm32) - simplified
+    mov byte ptr [rdi], 48h
+    mov byte ptr [rdi+1], 05h
+    mov [rdi+2], edx
+    add rdi, 6
+    add r9, 6
+    jmp @@next_ir
+    
+@@emit_sub_rsp_imm:
+    ; 48 83 EC imm8
+    mov byte ptr [rdi], 48h
+    mov byte ptr [rdi+1], 83h
+    mov byte ptr [rdi+2], 0ECh
+    mov byte ptr [rdi+3], dl
+    add rdi, 4
+    add r9, 4
+    jmp @@next_ir
+    
+@@emit_call:
+    ; E8 disp32 - needs fixup
+    mov byte ptr [rdi], 0E8h
+    ; Record fixup: offset in code, target label ID
+    mov [r10 + r11*16], r9          ; code_offset
+    mov [r10 + r11*16 + 8], rdx      ; target_id
+    inc r11
+    xor eax, eax
+    mov dword ptr [rdi+1], eax      ; placeholder
+    add rdi, 5
+    add r9, 5
+    jmp @@next_ir
+    
+@@emit_jmp:
+    ; E9 disp32 - needs fixup
+    mov byte ptr [rdi], 0E9h
+    mov [r10 + r11*16], r9
+    mov [r10 + r11*16 + 8], rdx
+    inc r11
+    xor eax, eax
+    mov dword ptr [rdi+1], eax
+    add rdi, 5
+    add r9, 5
+    jmp @@next_ir
+    
+@@emit_ret:
+    mov byte ptr [rdi], 0C3h
+    inc rdi
+    inc r9
+    
+@@next_ir:
+    add rsi, sizeof IR_Record
+    dec rcx
+    jmp @@ir_loop
+    
+@@codegen_done:
+
+    ;-------------------------------------------------------------------------
+    ; PHASE 6: Fixups (Backpatch relative addresses)
+    ;-------------------------------------------------------------------------
+    test r11, r11
+    jz @@no_fixups
+    
+    mov rcx, r11            ; Fixup count
+    xor rsi, rsi            ; Index
+    
+@@fixup_loop:
+    mov rax, [r10 + rsi*16]         ; Code offset
+    mov rbx, [r10 + rsi*16 + 8]     ; Target label ID
+    
+    ; Get target address
+    mov rdx, [r15 + rbx*8]          ; Target code offset
+    
+    ; Calculate relative offset: target - (current + 5)
+    ; Current instruction start = r8 + rax
+    ; End of instruction = r8 + rax + 5
+    lea rcx, [rax + 5]              ; Instruction end relative to code start
+    mov r12, rdx
+    sub r12, rcx                    ; Displacement
+    
+    ; Patch at r8 + rax + 1 (after opcode)
+    mov [r8 + rax + 1], r12d
+    
+    inc rsi
+    cmp rsi, r11
+    jb @@fixup_loop
+    
+@@no_fixups:
+    
+    ;-------------------------------------------------------------------------
+    ; PHASE 7: Patch PE Headers with Actual Sizes
+    ;-------------------------------------------------------------------------
+    mov rdi, rbx
+    add rdi, 4 + 20 + 240           ; PE sig + COFF + OPT header
+    
+    ; Patch SizeOfCode in Optional Header
+    mov eax, r9d                    ; Actual code size
+    mov [rbx + 4 + 20 + 4], eax
+    
+    ; Patch VirtualSize in Section Header
+    mov [rdi + 8], eax
+    
+    ; Align code size for raw data
+    add eax, 511
+    and eax, -512
+    mov [rdi + 16], eax             ; SizeOfRawData
+    
+    ;-------------------------------------------------------------------------
+    ; PHASE 8: Write to File
+    ;-------------------------------------------------------------------------
+    invoke CreateFileA, r14, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0
+    cmp rax, -1
+    je @@failed
+    mov rsi, rax                    ; File handle
+    
+    ; Calculate total write size: 512 (headers) + aligned code
+    mov rax, r9
+    add rax, 511
+    and rax, -512
+    add rax, 512                    ; Add headers
+    
+    invoke WriteFile, rsi, rbx, eax, 0, 0
+    invoke CloseHandle, rsi
+    
+    ; Cleanup buffer
+    invoke VirtualFree, rbx, 0, MEM_RELEASE
+    
+    ; Restore stack (fixup arrays)
+    add rsp, 1024 + 128
+    
+    mov rax, 1                      ; Success
+    jmp @@exit
+    
+@@failed:
+    xor eax, eax
+    
+@@exit:
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rdi
+    pop rsi
+    pop rbx
+    ret
+BareMetal_CompileToPE endp
 
 ;=============================================================================
 ; END OF ASSEMBLY

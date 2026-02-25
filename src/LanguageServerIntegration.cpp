@@ -236,6 +236,44 @@ PrepareRenameResult LanguageServerIntegration::prepareRename(
     return result;
 }
 
+void LanguageServerIntegration::initializeRoot(const std::string& rootPath) {
+    m_rootPath = rootPath;
+    initialize();
+}
+
+void LanguageServerIntegration::openFile(const std::string& filePath, const std::string& languageISO) {
+    // Register open file with language server
+    if (supportsLanguage(languageISO)) {
+        auto client = getClient(languageISO);
+        if (client) {
+            // Would call LSP textDocument/didOpen
+        }
+    }
+}
+
+void LanguageServerIntegration::closeFile(const std::string& filePath) {
+    // Notify language server that file is closed
+}
+
+void LanguageServerIntegration::changeFile(const std::string& filePath, const std::string& content) {
+    // Notify language server of file changes
+}
+
+std::shared_ptr<LSPClient> LanguageServerIntegration::getClient(const std::string& language) {
+    auto it = m_clients.find(language);
+    if (it != m_clients.end()) {
+        return it->second;
+    }
+    // Create new client for language if not exists
+    LSPConfig cfg;
+    cfg.languageId = language;
+    cfg.command = "";
+    cfg.rootPath = m_rootPath;
+    auto client = std::make_shared<LSPClient>(cfg);
+    m_clients[language] = client;
+    return client;
+}
+
 std::vector<TextEdit> LanguageServerIntegration::rename(
     const std::string& filePath, int line, int column,
     const std::string& newName, const std::string& language) {
@@ -381,6 +419,7 @@ void LanguageServerIntegration::registerLanguageHandler(
     
     m_languageHandlers[language] = handler;
 }
+
 
 // Private helper methods
 

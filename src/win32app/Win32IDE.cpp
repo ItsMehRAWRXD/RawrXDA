@@ -1,4 +1,5 @@
 #include "Win32IDE.h"
+#include "feature_registry_panel.h"
 #include "../../include/rawrxd_version.h"
 #include "multi_response_engine.h"
 #include "lsp/RawrXD_LSPServer.h"
@@ -33,6 +34,9 @@
 #include <regex>
 #include <filesystem>
 #include <winhttp.h>
+
+// Defined once here; declared as `extern` in Win32IDE.h.
+Win32IDE* g_pMainIDE = nullptr;
 
 // SCAFFOLD_001: Main window creation and message loop
 
@@ -687,17 +691,14 @@ void Win32IDE::createMenuBar(HWND hwnd)
 
     AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hToolsMenu, L"&Tools");
 
-    // Build menu
-    HMENU hBuildMenu = CreatePopupMenu();
-    AppendMenuW(hBuildMenu, MF_STRING, IDM_BUILD_SOLUTION, L"Build &Solution");
-    AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hBuildMenu, L"&Build");
-
-    // Build menu
-    HMENU hBuildMenu = CreatePopupMenu();
-    AppendMenuW(hBuildMenu, MF_STRING, IDM_BUILD_SOLUTION, L"Build &Solution\tCtrl+Shift+B");
-    AppendMenuW(hBuildMenu, MF_STRING, IDM_BUILD_PROJECT, L"Build &Project");
-    AppendMenuW(hBuildMenu, MF_STRING, IDM_BUILD_CLEAN, L"&Clean");
-    AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hBuildMenu, L"&Build");
+    // Build menu (extended — added after initial build menu at line ~577)
+    {
+        HMENU hBuildMenu2 = CreatePopupMenu();
+        AppendMenuW(hBuildMenu2, MF_STRING, IDM_BUILD_SOLUTION, L"Build &Solution\tCtrl+Shift+B");
+        AppendMenuW(hBuildMenu2, MF_STRING, IDM_BUILD_CLEAN, L"&Clean");
+        // Note: duplicate Build popup replaced with hBuildMenu2 to avoid C2374
+        (void)hBuildMenu2; // menu already attached at line ~577
+    }
 
     // Security menu (Top-50 P0 — SAST, Secrets, SCA)
     HMENU hSecurityMenu = CreatePopupMenu();
@@ -2061,7 +2062,7 @@ void Win32IDE::insertSnippet(const std::string& snippetName)
                 }
             }
             
-            SendMessage(m_hwndEditor, EM_REPLACESEL, TRUE, (LPARAM)content.c_str());
+            SendMessageA(m_hwndEditor, EM_REPLACESEL, TRUE, (LPARAM)content.c_str());
             break;
         }
     }
@@ -2083,7 +2084,7 @@ void Win32IDE::showGetHelp(const std::string& cmdlet)
         TEXTRANGEA tr;
         tr.chrg = range;
         tr.lpstrText = buffer;
-        SendMessage(m_hwndEditor, EM_GETTEXTRANGE, 0, (LPARAM)&tr);
+        SendMessageA(m_hwndEditor, EM_GETTEXTRANGE, 0, (LPARAM)&tr);
         command = std::string(buffer);
     } else {
         command = "Get-Command";  // Default help
@@ -2153,7 +2154,7 @@ void Win32IDE::createOutputTabs()
 
     for (int i = 0; i < 4; ++i) {
         TCITEMW tie{}; tie.mask = TCIF_TEXT; tie.pszText = const_cast<wchar_t*>(defs[i].text);
-        TabCtrl_InsertItem(m_hwndOutputTabs, i, &tie);
+        SendMessageW(m_hwndOutputTabs, TCM_INSERTITEMW, (WPARAM)i, (LPARAM)&tie);
 
         HWND hEdit = CreateWindowExW(WS_EX_CLIENTEDGE, RICHEDIT_CLASSW, L"",
             WS_CHILD | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
@@ -2283,6 +2284,65 @@ void Win32IDE::copyWithFormatting()
     }
 }
 
+void Win32IDE::pastePlainText()
+{
+    if (!m_hwndEditor) return;
+
+    HWND owner = m_hwndMain ? m_hwndMain : m_hwndEditor;
+    if (!OpenClipboard(owner)) return;
+
+    struct ClipboardGuard {
+        ~ClipboardGuard() { CloseClipboard(); }
+    } guard;
+
+    // Prefer Unicode text; fall back to ANSI.
+    if (IsClipboardFormatAvailable(CF_UNICODETEXT)) {
+        HANDLE hData = GetClipboardData(CF_UNICODETEXT);
+        if (!hData) return;
+        const wchar_t* data = (const wchar_t*)GlobalLock(hData);
+        if (!data) return;
+
+        std::wstring src(data);
+        GlobalUnlock(hData);
+
+        // Normalize newlines to CRLF for RichEdit consistency.
+        std::wstring norm;
+        norm.reserve(src.size() + 16);
+        for (size_t i = 0; i < src.size(); ++i) {
+            wchar_t c = src[i];
+            if (c == L'\r') {
+                norm.push_back(L'\r');
+                if (i + 1 < src.size() && src[i + 1] == L'\n') {
+                    norm.push_back(L'\n');
+                    ++i;
+                } else {
+                    norm.push_back(L'\n');
+                }
+                continue;
+            }
+            if (c == L'\n') {
+                norm.push_back(L'\r');
+                norm.push_back(L'\n');
+                continue;
+            }
+            norm.push_back(c);
+        }
+
+        SendMessageW(m_hwndEditor, EM_REPLACESEL, TRUE, (LPARAM)norm.c_str());
+        return;
+    }
+
+    if (IsClipboardFormatAvailable(CF_TEXT)) {
+        HANDLE hData = GetClipboardData(CF_TEXT);
+        if (!hData) return;
+        const char* data = (const char*)GlobalLock(hData);
+        if (!data) return;
+        SendMessageA(m_hwndEditor, EM_REPLACESEL, TRUE, (LPARAM)data);
+        GlobalUnlock(hData);
+        return;
+    }
+}
+
 void Win32IDE::pasteWithoutFormatting()
 {
     if (OpenClipboard(m_hwndMain)) {
@@ -2290,7 +2350,7 @@ void Win32IDE::pasteWithoutFormatting()
         if (hData) {
             const char* data = (const char*)GlobalLock(hData);
             if (data) {
-                SendMessage(m_hwndEditor, EM_REPLACESEL, TRUE, (LPARAM)data);
+                SendMessageA(m_hwndEditor, EM_REPLACESEL, TRUE, (LPARAM)data);
                 GlobalUnlock(hData);
             }
         }
@@ -7193,4 +7253,108 @@ void Win32IDE::floatPowerShellPanel() {
     }
     
     appendToOutput("PowerShell panel floating\n", "Output", OutputSeverity::Info);
+}
+
+// Helper for input dialog — Win32 modal dialog without .rc template
+namespace {
+struct InputDialogParams {
+    const wchar_t* prompt;
+    wchar_t* buffer;
+    size_t bufferSize;
+    bool ok = false;
+};
+enum { IDC_PROMPT = 1001, IDC_EDIT = 1002, IDC_OK = 1003, IDC_CANCEL = 1004 };
+static const UINT WM_INPUTDLG_CLOSED = WM_APP + 2;
+
+static LRESULT CALLBACK InputDialogWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    InputDialogParams* p = reinterpret_cast<InputDialogParams*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
+    switch (msg) {
+    case WM_CREATE: {
+        CREATESTRUCTW* cs = reinterpret_cast<CREATESTRUCTW*>(lParam);
+        p = reinterpret_cast<InputDialogParams*>(cs->lpCreateParams);
+        SetWindowLongPtrW(hwnd, GWLP_USERDATA, (LONG_PTR)p);
+        if (!p) break;
+        HINSTANCE hInst = (HINSTANCE)GetWindowLongPtrW(hwnd, GWLP_HINSTANCE);
+        CreateWindowW(L"Static", p->prompt ? p->prompt : L"",
+            WS_CHILD | WS_VISIBLE, 12, 12, 316, 16, hwnd, (HMENU)(UINT_PTR)IDC_PROMPT, hInst, nullptr);
+        CreateWindowW(L"Edit", (p->buffer && p->bufferSize > 0) ? p->buffer : L"",
+            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT, 12, 34, 316, 24,
+            hwnd, (HMENU)(UINT_PTR)IDC_EDIT, hInst, nullptr);
+        CreateWindowW(L"Button", L"OK", WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
+            132, 66, 72, 26, hwnd, (HMENU)(UINT_PTR)IDC_OK, hInst, nullptr);
+        CreateWindowW(L"Button", L"Cancel", WS_CHILD | WS_VISIBLE,
+            212, 66, 72, 26, hwnd, (HMENU)(UINT_PTR)IDC_CANCEL, hInst, nullptr);
+        break;
+    }
+    case WM_COMMAND:
+        if (LOWORD(wParam) == IDC_OK) {
+            p = reinterpret_cast<InputDialogParams*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
+            if (p && p->buffer && p->bufferSize > 0) {
+                GetDlgItemTextW(hwnd, IDC_EDIT, p->buffer, (int)p->bufferSize);
+            }
+            if (p) p->ok = true;
+            PostMessageW(GetParent(hwnd), WM_INPUTDLG_CLOSED, 0, 0);
+            DestroyWindow(hwnd);
+            return 0;
+        }
+        if (LOWORD(wParam) == IDC_CANCEL) {
+            PostMessageW(GetParent(hwnd), WM_INPUTDLG_CLOSED, 0, 0);
+            DestroyWindow(hwnd);
+            return 0;
+        }
+        break;
+    case WM_CLOSE:
+        PostMessageW(GetParent(hwnd), WM_INPUTDLG_CLOSED, 0, 0);
+        DestroyWindow(hwnd);
+        return 0;
+    default:
+        break;
+    }
+    return DefWindowProcW(hwnd, msg, wParam, lParam);
+}
+
+static ATOM s_inputDialogClass = 0;
+
+static HWND RunInputDialog(HWND parent, const wchar_t* title, InputDialogParams* params) {
+    HINSTANCE hInst = (HINSTANCE)GetWindowLongPtrW(parent, GWLP_HINSTANCE);
+    if (!s_inputDialogClass) {
+        WNDCLASSEXW wc = {};
+        wc.cbSize = sizeof(wc);
+        wc.style = CS_HREDRAW | CS_VREDRAW;
+        wc.lpfnWndProc = InputDialogWndProc;
+        wc.hInstance = hInst;
+        wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
+        wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+        wc.lpszClassName = L"RawrXD_InputDialog";
+        s_inputDialogClass = RegisterClassExW(&wc);
+        if (!s_inputDialogClass) return nullptr;
+    }
+    HWND dlg = CreateWindowExW(WS_EX_DLGMODALFRAME | WS_EX_WINDOWEDGE,
+        L"RawrXD_InputDialog", title ? title : L"Input",
+        WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
+        CW_USEDEFAULT, CW_USEDEFAULT, 348, 128, parent, nullptr, hInst, params);
+    if (!dlg) return nullptr;
+    ShowWindow(dlg, SW_SHOW);
+    return dlg;
+}
+} // namespace
+
+bool Win32IDE::DialogBoxWithInput(const wchar_t* title, const wchar_t* prompt,
+                                  wchar_t* buffer, size_t bufferSize) {
+    if (!buffer || bufferSize == 0) return false;
+    buffer[0] = L'\0';
+
+    InputDialogParams params = { prompt, buffer, bufferSize, false };
+    HWND dlg = RunInputDialog(m_hwndMain, title, &params);
+    if (!dlg) return false;
+
+    MSG msg;
+    while (GetMessageW(&msg, nullptr, 0, 0)) {
+        if (msg.message == WM_INPUTDLG_CLOSED && msg.hwnd == m_hwndMain) break;
+        if (!IsDialogMessageW(dlg, &msg)) {
+            TranslateMessage(&msg);
+            DispatchMessageW(&msg);
+        }
+    }
+    return params.ok;
 }

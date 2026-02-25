@@ -43,6 +43,7 @@ set(INFERENCE_CORE_SOURCES
     polymorphic_loader.cpp
     ollama_blob_parser.cpp
     inference_standalone_main.cpp
+    RawrXD_LlamaNative.cpp              # Native llama.dll bridge (zero HTTP)
 )
 
 # =============================================================================

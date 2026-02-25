@@ -68,13 +68,29 @@ extern "C" {
 // Logging
 enum LogLevel { LOG_DEBUG = 0, LOG_INFO = 1, LOG_WARN = 2, LOG_ERROR = 3 };
 
+static LogLevel s_minLogLevel = LOG_INFO;
+
 static void LogMessage(LogLevel level, const char* fmt, ...) {
+    if (level < s_minLogLevel) return;
+    
     va_list args;
     va_start(args, fmt);
+    
     const char* levels[] = { "[DEBUG]", "[INFO]", "[WARN]", "[ERROR]" };
-
-    v
-
+    const char* colors[] = { "\033[90m", "\033[36m", "\033[33m", "\033[31m" };
+    const char* reset = "\033[0m";
+    
+    // Print timestamp
+    SYSTEMTIME st;
+    GetLocalTime(&st);
+    fprintf(stderr, "%s[%02d:%02d:%02d.%03d] %s ", 
+            colors[level], st.wHour, st.wMinute, st.wSecond, st.wMilliseconds, levels[level]);
+    
+    // Print formatted message
+    vfprintf(stderr, fmt, args);
+    fprintf(stderr, "%s\n", reset);
+    fflush(stderr);
+    
     va_end(args);
 }
 

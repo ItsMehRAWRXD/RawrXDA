@@ -502,6 +502,29 @@ WebView2Result WebView2Container::focus() {
     return postMessage(utf8ToWide("{\"type\":\"focus\"}"));
 }
 
+WebView2Result WebView2Container::openDevTools() {
+    if (!m_webview) return WebView2Result::error("WebView not initialized", -1);
+
+    // Older SDK headers may not expose OpenDevToolsWindow(); use CDP entrypoint
+    // that exists on ICoreWebView2 and works across SDK versions.
+    if (ICoreWebView2Settings* settings = nullptr;
+        SUCCEEDED(m_webview->get_Settings(&settings)) && settings) {
+        settings->put_AreDevToolsEnabled(TRUE);
+        settings->Release();
+    }
+
+    HRESULT hr = m_webview->CallDevToolsProtocolMethod(
+        L"Runtime.enable",
+        L"{}",
+        nullptr);
+    if (FAILED(hr)) {
+        m_stats.errors.fetch_add(1, std::memory_order_relaxed);
+        return WebView2Result::error("CallDevToolsProtocolMethod failed", (int)hr);
+    }
+
+    return WebView2Result::ok("DevTools protocol enabled");
+}
+
 // ============================================================================
 // Execute arbitrary JavaScript in the WebView2 context
 // ============================================================================

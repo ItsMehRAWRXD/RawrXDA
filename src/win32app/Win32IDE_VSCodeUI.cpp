@@ -304,16 +304,7 @@ void Win32IDE::createSecondarySidebar(HWND hwndParent)
         "- Refactor this function\r\n");
 }
 
-void Win32IDE::toggleSecondarySidebar()
-{
-    m_secondarySidebarVisible = !m_secondarySidebarVisible;
-    ShowWindow(m_hwndSecondarySidebar, m_secondarySidebarVisible ? SW_SHOW : SW_HIDE);
-    
-    // Trigger resize to update layout
-    RECT rect;
-    GetClientRect(m_hwndMain, &rect);
-    onSize(rect.right, rect.bottom);
-}
+// Implemented in src/win32app/Win32IDE_Sidebar.cpp (avoid duplicate definition / LNK2005).
 
 void Win32IDE::updateSecondarySidebarContent()
 {

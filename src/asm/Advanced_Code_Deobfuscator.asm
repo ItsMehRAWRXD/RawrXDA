@@ -22,8 +22,8 @@ EXTERN ExitProcess:PROC
 
 OBFUSCATION_PATTERN struct
     pattern_type    dd ?        ; 0=junk, 1=constant_fold, 2=dead_code, 3=control_flow
-    offset          dq ?
-    length          dd ?
+    pattern_offset  dq ?
+    pattern_length  dd ?
     confidence      dd ?        ; 0-100
     replacement_len dd ?
 OBFUSCATION_PATTERN ends
@@ -142,7 +142,7 @@ Deobfuscator_Initialize PROC
     
     ; Print init message
     lea rcx, sz_init
-    call PrintString
+    call AD_PrintString
     
     mov eax, 1
     pop r12
@@ -173,7 +173,7 @@ Deobfuscator_AnalyzePatterns PROC
     xor r15, r15                ; offset iterator
     
     lea rcx, sz_analyzing
-    call PrintString
+    call AD_PrintString
     
 scan_loop:
     cmp r15, r13
@@ -572,7 +572,7 @@ Deobfuscator_GetResult ENDP
 ; Helper: Print string to console
 ; RCX = string pointer
 ;--------------------------------------------------------------------------------
-PrintString PROC
+AD_PrintString PROC
     push rbx
     push r12
     push r13
@@ -607,6 +607,6 @@ strlen_done:
     pop r12
     pop rbx
     ret
-PrintString ENDP
+AD_PrintString ENDP
 
 END

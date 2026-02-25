@@ -13,6 +13,7 @@ EXTERN CreateThread : PROC
 EXTERN WaitForSingleObject : PROC
 EXTERN GetCurrentThread : PROC
 EXTERN SetThreadPriority : PROC
+EXTERN CloseHandle : PROC
 
 .const
  THREAD_PRIORITY_HIGHEST EQU 2
@@ -52,11 +53,16 @@ EXTERN WaitForSingleObject : PROC
 ; RCX = Context pointer (pInferenceContext)
 ; Runs in separate thread, pulls tokens until Stop event or EOS
 ; ============================================================================
-NativeInferenceThread PROC
+NativeInferenceThread PROC FRAME
     push rbx
+    .pushreg rbx
     push r12
+    .pushreg r12
     push r13
-    sub rsp, 40h
+    .pushreg r13
+    sub rsp, 40h              ; 32B shadow + locals, keeps stack 16B aligned
+    .allocstack 40h
+    .endprolog
     
     mov r12, rcx            ; Context
     mov r13, 0              ; Token counter
@@ -69,7 +75,7 @@ NativeInferenceThread PROC
     
 @@token_loop:
     ; Check for stop signal
-    mov rcx, hStopEvent
+    mov rcx, [hStopEvent]
     mov edx, 0              ; No wait (non-blocking check)
     call WaitForSingleObject
     cmp eax, WAIT_OBJECT_0
@@ -92,7 +98,7 @@ NativeInferenceThread PROC
     ; TODO: Write token to ring buffer (Titan_SubmitChunk)
     
     ; Signal inference complete
-    mov rcx, hInferenceEvent
+    mov rcx, [hInferenceEvent]
     call SetEvent
     
     inc r13
@@ -119,10 +125,14 @@ NativeInferenceThread ENDP
 ; ============================================================================
 
 PUBLIC Titan_BeginStreamingInference_Native
-Titan_BeginStreamingInference_Native PROC pszModelPath:QWORD, pszPrompt:QWORD, pContext:QWORD
+Titan_BeginStreamingInference_Native PROC FRAME pszModelPath:QWORD, pszPrompt:QWORD, pContext:QWORD
     push rbx
+    .pushreg rbx
     push r12
-    sub rsp, 40h
+    .pushreg r12
+    sub rsp, 48h             ; 32B shadow + 16B for stack args, keeps stack 16B aligned
+    .allocstack 48h
+    .endprolog
     
     mov r12, pContext       ; Inference context
     
@@ -134,23 +144,23 @@ Titan_BeginStreamingInference_Native PROC pszModelPath:QWORD, pszPrompt:QWORD, p
     jz @@fail
     
     ; Create inference completion event
-    sub rsp, 8
     xor rcx, rcx            ; lpEventAttributes
     mov edx, 1              ; bManualReset = TRUE
     mov r8d, 0              ; bInitialState = FALSE
     xor r9, r9              ; lpName
     call CreateEventA
-    add rsp, 8
+    test rax, rax
+    jz @@fail_cleanup
     mov [hInferenceEvent], rax
     
     ; Create stop event
-    sub rsp, 8
     xor rcx, rcx
     mov edx, 1
     mov r8d, 0
     xor r9, r9
     call CreateEventA
-    add rsp, 8
+    test rax, rax
+    jz @@fail_cleanup
     mov [hStopEvent], rax
     
     ; Tokenize prompt and load into input buffer (placeholder)
@@ -158,7 +168,6 @@ Titan_BeginStreamingInference_Native PROC pszModelPath:QWORD, pszPrompt:QWORD, p
     mov [nCurrentToken], 1
     
     ; Create inference thread
-    sub rsp, 8
     xor rcx, rcx            ; lpThreadAttributes
     xor edx, edx            ; dwStackSize (default)
     mov r8, OFFSET NativeInferenceThread ; lpStartAddress
@@ -166,20 +175,41 @@ Titan_BeginStreamingInference_Native PROC pszModelPath:QWORD, pszPrompt:QWORD, p
     mov qword ptr [rsp+20h], 0 ; dwCreationFlags
     mov qword ptr [rsp+28h], 0 ; lpThreadId
     call CreateThread
-    add rsp, 8
+    test rax, rax
+    jz @@fail_cleanup
     
     mov [hInferenceThread], rax
     mov [fInferenceRunning], 1
     
     mov eax, 1              ; Success
-    add rsp, 40h
+    add rsp, 48h
     pop r12
     pop rbx
     ret
+
+@@fail_cleanup:
+    ; Best-effort cleanup for partially-initialized state.
+    mov rcx, [hInferenceEvent]
+    test rcx, rcx
+    jz @F
+    call CloseHandle
+@@:
+    mov QWORD PTR [hInferenceEvent], 0
+
+    mov rcx, [hStopEvent]
+    test rcx, rcx
+    jz @F
+    call CloseHandle
+@@:
+    mov QWORD PTR [hStopEvent], 0
+
+    mov QWORD PTR [hInferenceThread], 0
+    mov DWORD PTR [fInferenceRunning], 0
+    jmp @@fail
     
 @@fail:
     xor eax, eax
-    add rsp, 40h
+    add rsp, 48h
     pop r12
     pop rbx
     ret
@@ -189,37 +219,55 @@ Titan_BeginStreamingInference_Native ENDP
 ; PUBLIC API: Wait for inference to complete
 ; ============================================================================
 
-PUBLIC Titan_WaitInferenceComplete
-Titan_WaitInferenceComplete PROC dwTimeoutMs:DWORD
-    push rbx
+PUBLIC Titan_WaitInferenceComplete_Native
+Titan_WaitInferenceComplete_Native PROC FRAME dwTimeoutMs:DWORD
+    sub rsp, 28h             ; 32B shadow + align
+    .allocstack 28h
+    .endprolog
     
     mov rcx, [hInferenceEvent]
+    test rcx, rcx
+    jz @@no_event
     mov edx, dwTimeoutMs
     call WaitForSingleObject
     
-    pop rbx
+@@done:
+    add rsp, 28h
     ret
-Titan_WaitInferenceComplete ENDP
+
+@@no_event:
+    mov eax, 0FFFFFFFFh      ; WAIT_FAILED
+    jmp @@done
+Titan_WaitInferenceComplete_Native ENDP
 
 ; ============================================================================
 ; PUBLIC API: Stop inference thread
 ; ============================================================================
 
-PUBLIC Titan_StopInference
-Titan_StopInference PROC
-    push rbx
+PUBLIC Titan_StopInference_Native
+Titan_StopInference_Native PROC FRAME
+    sub rsp, 28h             ; 32B shadow + align
+    .allocstack 28h
+    .endprolog
     
     ; Signal stop event
     mov rcx, [hStopEvent]
+    test rcx, rcx
+    jz @@wait_thread
     call SetEvent
     
     ; Wait for thread to complete
+@@wait_thread:
     mov rcx, [hInferenceThread]
+    test rcx, rcx
+    jz @@done
     mov edx, INFINITE
     call WaitForSingleObject
     
-    pop rbx
+@@done:
+    xor eax, eax
+    add rsp, 28h
     ret
-Titan_StopInference ENDP
+Titan_StopInference_Native ENDP
 
 END

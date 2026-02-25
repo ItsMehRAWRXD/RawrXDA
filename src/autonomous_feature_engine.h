@@ -6,6 +6,7 @@
 #include <thread>
 #include <atomic>
 #include <functional>
+#include <chrono>
 
 // Forward declarations
 class HybridCloudManager;
@@ -294,5 +295,4 @@ private:
 };
 
 #endif // AUTONOMOUS_FEATURE_ENGINE_H
-
 
