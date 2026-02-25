@@ -1,0 +1,6 @@
+PREF_FILTER_TESTCODE=false
+eclipse.preferences.version=1
+java.project.resourceFilters=node_modules\:\:\\.git
+org.eclipse.jdt.ui.importorder=\#;java;javax;org;com;
+org.eclipse.jdt.ui.typefilter.enabled=java.awt.*;com.sun.*;sun.*;jdk.*;org.graalvm.*;io.micrometer.shaded.*
+workspaceInitialized=true

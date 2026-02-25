@@ -1,0 +1,308 @@
+name: Performance & Benchmark Tests
+
+on:
+  push:
+    branches:
+      - main
+      - agentic-ide-production
+    paths:
+      - 'src/**'
+      - 'include/**'
+      - 'tests/**'
+      - 'CMakeLists.txt'
+  pull_request:
+    branches:
+      - main
+      - agentic-ide-production
+  workflow_dispatch:
+
+jobs:
+  # ============================================================
+  # Performance Baseline Test
+  # ============================================================
+  benchmark-baseline:
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Add MSBuild
+        uses: microsoft/setup-msbuild@v1.3
+
+      - name: Install Qt
+        shell: pwsh
+        run: |
+          pip install aqtinstall
+          python -m aqt install-qt windows desktop 6.7.3 win64_msvc2019_64
+          $QtBase = Join-Path $PWD "Qt\6.7.3\msvc2019_64"
+          echo "Qt6_DIR=$QtBase" >> $env:GITHUB_ENV
+          echo "$($QtBase)\bin" >> $env:GITHUB_PATH
+
+      - name: Configure CMake (Release Optimized)
+        shell: pwsh
+        run: |
+          mkdir build_bench -Force
+          cd build_bench
+          cmake -DCMAKE_BUILD_TYPE=Release `
+                -DCMAKE_CXX_FLAGS_RELEASE="/O2 /Oi /Ot /Oy" `
+                -DENABLE_BENCHMARKING=ON `
+                -G "Visual Studio 17 2022" `
+                -A x64 `
+                ..
+
+      - name: Build Benchmark Suite
+        shell: pwsh
+        run: |
+          cd build_bench
+          cmake --build . --config Release --target benchmark_all -j4
+
+      - name: Run AgentCoordinator Benchmarks
+        shell: pwsh
+        run: |
+          cd build_bench
+          Write-Host "📊 Testing AgentCoordinator Performance"
+          Write-Host "Testing cycle detection on 1000-task graph..."
+          .\bin\Release\benchmark_agent_coordinator.exe --benchmark_filter="detectCycle"
+          
+          Write-Host "Testing lock contention (submitPlan critical section)..."
+          .\bin\Release\benchmark_agent_coordinator.exe --benchmark_filter="submitPlan"
+          
+          Write-Host "Testing concurrent task execution..."
+          .\bin\Release\benchmark_agent_coordinator.exe --benchmark_filter="completeTask"
+
+      - name: Run ModelTrainer Benchmarks
+        shell: pwsh
+        run: |
+          cd build_bench
+          Write-Host "📊 Testing ModelTrainer Performance"
+          Write-Host "Testing tokenization throughput (1000 sequences)..."
+          .\bin\Release\benchmark_model_trainer.exe --benchmark_filter="tokenize"
+          
+          Write-Host "Testing forward pass latency..."
+          .\bin\Release\benchmark_model_trainer.exe --benchmark_filter="forward"
+
+      - name: Run InferenceEngine Benchmarks
+        shell: pwsh
+        run: |
+          cd build_bench
+          Write-Host "📊 Testing InferenceEngine Performance"
+          Write-Host "Testing token generation latency..."
+          .\bin\Release\benchmark_inference_engine.exe --benchmark_filter="generate"
+          
+          Write-Host "Testing cache effectiveness..."
+          .\bin\Release\benchmark_inference_engine.exe --benchmark_filter="cache"
+
+      - name: Upload Benchmark Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: build_bench/benchmark_results/
+          retention-days: 90
+
+      - name: Store Benchmark Baseline
+        shell: pwsh
+        run: |
+          $results = @{
+            timestamp = Get-Date -AsUTC -Format "yyyy-MM-ddTHH:mm:ssZ"
+            commit = "${{ github.sha }}"
+            branch = "${{ github.ref }}"
+            results = "See artifacts"
+          }
+          $results | ConvertTo-Json | Out-File -FilePath "benchmark_baseline.json"
+
+      - name: Upload Baseline for Comparison
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-baseline-${{ github.sha }}
+          path: benchmark_baseline.json
+          retention-days: 180
+
+  # ============================================================
+  # Thread Safety & Concurrency Test
+  # ============================================================
+  concurrency-stress-test:
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Add MSBuild
+        uses: microsoft/setup-msbuild@v1.3
+
+      - name: Install Qt
+        shell: pwsh
+        run: |
+          pip install aqtinstall
+          python -m aqt install-qt windows desktop 6.7.3 win64_msvc2019_64
+          $QtBase = Join-Path $PWD "Qt\6.7.3\msvc2019_64"
+          echo "Qt6_DIR=$QtBase" >> $env:GITHUB_ENV
+          echo "$($QtBase)\bin" >> $env:GITHUB_PATH
+
+      - name: Build Concurrency Tests
+        shell: pwsh
+        run: |
+          mkdir build_concurrency -Force
+          cd build_concurrency
+          cmake -DCMAKE_BUILD_TYPE=Release `
+                -DENABLE_THREAD_SAFETY_TESTS=ON `
+                -G "Visual Studio 17 2022" `
+                -A x64 `
+                ..
+          cmake --build . --config Release --target concurrency_tests -j4
+
+      - name: Run Concurrency Stress Tests
+        shell: pwsh
+        run: |
+          cd build_concurrency
+          Write-Host "🔄 Running Concurrent Task Submission (100 tasks, 8 threads)"
+          .\bin\Release\concurrency_stress_test.exe --gtest_filter="*concurrent_submit*"
+          
+          Write-Host "🔄 Running Concurrent Task Completion (100 tasks, 8 threads)"
+          .\bin\Release\concurrency_stress_test.exe --gtest_filter="*concurrent_complete*"
+          
+          Write-Host "🔄 Running Cache Contention Test (1000 status queries, 8 threads)"
+          .\bin\Release\concurrency_stress_test.exe --gtest_filter="*cache_contention*"
+
+      - name: Upload Concurrency Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: concurrency-results
+          path: build_concurrency/Testing/
+          retention-days: 30
+
+  # ============================================================
+  # Code Coverage Analysis (Debug Build)
+  # ============================================================
+  code-coverage:
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Add MSBuild
+        uses: microsoft/setup-msbuild@v1.3
+
+      - name: Install Qt
+        shell: pwsh
+        run: |
+          pip install aqtinstall
+          python -m aqt install-qt windows desktop 6.7.3 win64_msvc2019_64
+          $QtBase = Join-Path $PWD "Qt\6.7.3\msvc2019_64"
+          echo "Qt6_DIR=$QtBase" >> $env:GITHUB_ENV
+          echo "$($QtBase)\bin" >> $env:GITHUB_PATH
+
+      - name: Install OpenCppCoverage
+        shell: pwsh
+        run: |
+          choco install opencppcoverage -y
+          echo "C:\Program Files\OpenCppCoverage" >> $env:GITHUB_PATH
+
+      - name: Build with Coverage Instrumentation
+        shell: pwsh
+        run: |
+          mkdir build_coverage -Force
+          cd build_coverage
+          cmake -DCMAKE_BUILD_TYPE=Debug `
+                -DENABLE_COVERAGE=ON `
+                -G "Visual Studio 17 2022" `
+                -A x64 `
+                ..
+          cmake --build . --config Debug --target RUN_TESTS -j4
+
+      - name: Run Coverage Analysis
+        shell: pwsh
+        run: |
+          $covDir = "coverage_results"
+          mkdir $covDir -Force
+          
+          OpenCppCoverage.exe `
+            --sources "$(Get-Location)/src" `
+            --export_type html:"$covDir" `
+            -- "$(Get-Location)/build_coverage/bin/Debug/gtest_all.exe" `
+            --gtest_shuffle
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage-report
+          path: coverage_results/
+          retention-days: 90
+
+      - name: Comment Coverage on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const coverage = fs.existsSync('coverage_results/index.html') 
+              ? '✅ Coverage report generated' 
+              : '⚠️ Coverage report generation failed';
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `📊 Code Coverage Analysis\n\n${coverage}\n\nDetails available in Artifacts.`
+            });
+
+  # ============================================================
+  # Memory Leak Detection (Valgrind-style on Windows)
+  # ============================================================
+  memory-safety:
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Add MSBuild
+        uses: microsoft/setup-msbuild@v1.3
+
+      - name: Install Qt
+        shell: pwsh
+        run: |
+          pip install aqtinstall
+          python -m aqt install-qt windows desktop 6.7.3 win64_msvc2019_64
+          $QtBase = Join-Path $PWD "Qt\6.7.3\msvc2019_64"
+          echo "Qt6_DIR=$QtBase" >> $env:GITHUB_ENV
+          echo "$($QtBase)\bin" >> $env:GITHUB_PATH
+
+      - name: Build with AddressSanitizer
+        shell: pwsh
+        run: |
+          mkdir build_asan -Force
+          cd build_asan
+          cmake -DCMAKE_BUILD_TYPE=Debug `
+                -DENABLE_ASAN=ON `
+                -G "Visual Studio 17 2022" `
+                -A x64 `
+                ..
+          cmake --build . --config Debug --target RUN_TESTS -j4
+
+      - name: Run Memory Safety Tests
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          cd build_asan
+          Write-Host "🔍 Running tests with AddressSanitizer enabled"
+          .\bin\Debug\gtest_all.exe --gtest_shuffle
+          
+          if ($LASTEXITCODE -ne 0) {
+            Write-Warning "AddressSanitizer detected issues - see logs"
+          }
+
+      - name: Upload Memory Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: memory-safety-reports
+          path: build_asan/asan_reports/
+          retention-days: 30

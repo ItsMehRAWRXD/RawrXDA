@@ -1,0 +1,5 @@
+eclipse.m2.downloadSources=false
+eclipse.m2.problem.notCoveredMojoExecution=warning
+eclipse.m2.problem.outofdateProjectConfig=warning
+eclipse.m2.unkownMojoExecutionAction=ignore
+eclipse.preferences.version=1

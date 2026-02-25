@@ -1,0 +1,26 @@
+{
+  message: 'Removing old folder in globalStorage : 1.46.0',
+  level: 'info',
+  timestamp: '2026-02-15 22:45:45.018'
+}
+{
+  message: "Use the JDK from '' as the initial default project JDK.",
+  level: 'info',
+  timestamp: '2026-02-15 22:45:45.033'
+}
+{
+  message: 'Starting Java server with: c:\\Users\\HiH8e\\.cursor\\extensions\\redhat.java-1.52.0-win32-x64\\jre\\21.0.9-win32-x86_64\\bin\\java --add-modules=ALL-SYSTEM --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/sun.nio.fs=ALL-UNNAMED -Declipse.application=org.eclipse.jdt.ls.core.id1 -Dosgi.bundles.defaultStartLevel=4 -Declipse.product=org.eclipse.jdt.ls.core.product -Djava.import.generatesMetadataFilesAtProjectRoot=false -DDetectVMInstallationsJob.disabled=true -Dfile.encoding=utf8 -XX:+UseParallelGC -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90 -Dsun.zip.disableMemoryMapping=true -Xmx2G -Xms100m -Xlog:disable -javaagent:c:\\Users\\HiH8e\\.cursor\\extensions\\redhat.java-1.52.0-win32-x64\\lombok\\lombok-1.18.39-4050.jar -jar c:\\Users\\HiH8e\\.cursor\\extensions\\redhat.java-1.52.0-win32-x64\\server\\plugins\\org.eclipse.equinox.launcher_1.7.100.v20251111-0406.jar -configuration c:\\Users\\HiH8e\\AppData\\Roaming\\Cursor\\User\\globalStorage\\redhat.java\\1.52.0\\config_ss_win -data c:\\Users\\HiH8e\\AppData\\Roaming\\Cursor\\User\\workspaceStorage\\03d1ba678f20cd6896cfbb5b8d7e8419\\redhat.java\\ss_ws',
+  level: 'info',
+  timestamp: '2026-02-15 22:45:45.046'
+}
+{
+  message: 'Starting Java server with: c:\\Users\\HiH8e\\.cursor\\extensions\\redhat.java-1.52.0-win32-x64\\jre\\21.0.9-win32-x86_64\\bin\\java --add-modules=ALL-SYSTEM --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/sun.nio.fs=ALL-UNNAMED -Declipse.application=org.eclipse.jdt.ls.core.id1 -Dosgi.bundles.defaultStartLevel=4 -Declipse.product=org.eclipse.jdt.ls.core.product -Djava.import.generatesMetadataFilesAtProjectRoot=false -DDetectVMInstallationsJob.disabled=true -Dfile.encoding=utf8 -XX:+UseParallelGC -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90 -Dsun.zip.disableMemoryMapping=true -Xmx2G -Xms100m -Xlog:disable -javaagent:c:\\Users\\HiH8e\\.cursor\\extensions\\redhat.java-1.52.0-win32-x64\\lombok\\lombok-1.18.39-4050.jar -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=c:\\Users\\HiH8e\\AppData\\Roaming\\Cursor\\User\\workspaceStorage\\03d1ba678f20cd6896cfbb5b8d7e8419\\redhat.java -Daether.dependencyCollector.impl=bf -jar c:\\Users\\HiH8e\\.cursor\\extensions\\redhat.java-1.52.0-win32-x64\\server\\plugins\\org.eclipse.equinox.launcher_1.7.100.v20251111-0406.jar -configuration c:\\Users\\HiH8e\\AppData\\Roaming\\Cursor\\User\\globalStorage\\redhat.java\\1.52.0\\config_win -data c:\\Users\\HiH8e\\AppData\\Roaming\\Cursor\\User\\workspaceStorage\\03d1ba678f20cd6896cfbb5b8d7e8419\\redhat.java\\jdt_ws',
+  level: 'info',
+  timestamp: '2026-02-15 22:45:47.466'
+}
+{
+  message: 'Feb 15, 2026 10:45:48 PM org.apache.aries.spifly.BaseActivator log\r\n' +
+    'INFO: Registered provider ch.qos.logback.classic.spi.LogbackServiceProvider of service org.slf4j.spi.SLF4JServiceProvider in bundle ch.qos.logback.classic\r\n',
+  level: 'info',
+  timestamp: '2026-02-15 22:45:48.470'
+}

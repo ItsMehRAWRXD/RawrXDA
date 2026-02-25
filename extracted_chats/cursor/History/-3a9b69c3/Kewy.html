@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Fancy Editor Demo</title>
+  <style>
+    :root{ --bg:#0b1020; --panel:#0f1724; --glass: rgba(255,255,255,0.03); --accent: #6ee7b7 }
+    html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
+    body{background:linear-gradient(180deg,#02030a 0%, #071128 60%, #081223 100%);display:flex;align-items:center;justify-content:center;padding:36px}
+
+    .editor-wrap{width:min(1400px,94vw);height:78vh;display:flex;gap:12px;align-items:stretch}
+
+    .side{width:240px;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);border-radius:12px;padding:12px;color:#dbeafe;box-shadow:0 8px 30px rgba(2,6,23,0.6);backdrop-filter: blur(6px)}
+    .main{flex:1;position:relative;border-radius:12px;padding:18px;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));box-shadow:0 12px 40px rgba(2,6,23,0.7);overflow:hidden}
+
+    /* glowing backplate */
+    .back-glow{position:absolute;inset:10px;border-radius:14px;filter:blur(38px);opacity:0.9;pointer-events:none;background:conic-gradient(from 120deg at 50% 50%, #ff6b6b, #f7b267, #6ee7b7, #6b9cff, #c56bff, #ff6b6b);mix-blend-mode:screen}
+
+    /* editor pane */
+    .pane{position:relative;height:100%;border-radius:8px;padding:12px;background:linear-gradient(180deg,rgba(10,14,24,0.6),rgba(6,10,18,0.8));overflow:auto;border:1px solid rgba(255,255,255,0.03)}
+
+    /* faux reflection */
+    .pane::after{content:"";position:absolute;left:0;right:0;bottom:0;height:40%;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0));transform:translateY(12px) skewY(-3deg);pointer-events:none}
+
+    /* editable area */
+    .code{white-space:pre-wrap;outline:none;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;line-height:1.45;color:#e6eef8}
+
+    /* rainbow caret effect */
+    .caret{display:inline-block;width:2px;height:1.2em;background:linear-gradient(180deg,#fff,#fff);vertical-align:middle;animation:blink 1s step-end infinite}
+    @keyframes blink{50%{opacity:0}} 
+
+    /* transparent slider controls */
+    .control{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+    .control label{font-size:12px;color:#cde7ff}
+    .control input[type=range]{-webkit-appearance:none;height:8px;border-radius:999px;background:linear-gradient(90deg,#6b9cff,#6ee7b7);opacity:0.95}
+
+    /* color shimmer on typed text */
+    .chameleon span{transition:color .5s ease}
+
+    /* footer */
+    .meta{font-size:12px;color:#98a8c7;margin-top:10px}
+  </style>
+</head>
+<body>
+  <div class="editor-wrap">
+    <div class="side">
+      <h3>Fancy Editor Controls</h3>
+      <div class="control">
+        <label>Glow Strength</label>
+        <input id="glow" type="range" min="0" max="100" value="60">
+      </div>
+      <div class="control">
+        <label>Rainbow Intensity</label>
+        <input id="rain" type="range" min="0" max="100" value="60">
+      </div>
+      <div class="control">
+        <label>Reflection</label>
+        <input id="refl" type="range" min="0" max="100" value="40">
+      </div>
+      <div class="meta">Type to see the chameleon rainbow effect. Drag sliders to tune glow and reflection.</div>
+    </div>
+
+    <div class="main">
+      <div class="back-glow" id="backGlow"></div>
+      <div class="pane">
+        <div id="code" class="code chameleon" contenteditable spellcheck="false" aria-label="Fancy code editor">
+// Start typing... this demo shows rainbow typing, reflection, and back-glow.
+function hello(){
+  console.log('hi from the fancy editor');
+}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const code = document.getElementById('code');
+    const backGlow = document.getElementById('backGlow');
+    const glow = document.getElementById('glow');
+    const rain = document.getElementById('rain');
+    const refl = document.getElementById('refl');
+
+    function updateBackGlow(){
+      const val = +glow.value; const alpha = 0.35 + (val/200);
+      backGlow.style.opacity = alpha;
+      backGlow.style.filter = `blur(${12 + (val/6)}px)`;
+    }
+
+    function updateReflection(){
+      const val = +refl.value; document.querySelector('.pane').style.setProperty('--refl', val);
+      document.querySelector('.pane').style.boxShadow = `0 12px 40px rgba(2,6,23,${0.45 - val/300})`;
+    }
+
+    function colorizeNode(node){
+      if(node.nodeType === Node.TEXT_NODE){
+        const txt = node.textContent;
+        const frag = document.createDocumentFragment();
+        for(let i=0;i<txt.length;i++){
+          const ch = txt[i];
+          const sp = document.createElement('span');
+          sp.textContent = ch;
+          const hue = (i*7 + (Date.now()/50)) % 360;
+          sp.style.color = `hsl(${hue} 85% ${50 + (rain.value/4)}%)`;
+          frag.appendChild(sp);
+        }
+        node.parentNode.replaceChild(frag, node);
+      } else if(node.nodeType === Node.ELEMENT_NODE && node.contentEditable !== 'true'){
+        // do nothing
+      } else {
+        for(let c of Array.from(node.childNodes)) colorizeNode(c);
+      }
+    }
+
+    let throttle = 0;
+    code.addEventListener('input', ()=>{
+      if(throttle) return; throttle = 1; setTimeout(()=>throttle=0,50);
+      // re-color text by wrapping characters
+      for(let c of Array.from(code.childNodes)){
+        colorizeNode(c);
+      }
+    });
+
+    // live animation loop to gently shift hues
+    function tick(){
+      for(const sp of code.querySelectorAll('span')){
+        const idx = Array.prototype.indexOf.call(sp.parentNode.childNodes, sp);
+        const hue = (idx*7 + (Date.now()/50)) % 360;
+        sp.style.color = `hsl(${hue} 85% ${50 + (rain.value/4)}%)`;
+      }
+      requestAnimationFrame(tick);
+    }
+    tick(); updateBackGlow(); updateReflection();
+
+    glow.addEventListener('input', updateBackGlow);
+    rain.addEventListener('input', ()=>{});
+    refl.addEventListener('input', updateReflection);
+
+    // Initialize colorization
+    for(let c of Array.from(code.childNodes)) colorizeNode(c);
+
+    // Accessibility: allow Ctrl+S to download buffer
+    document.addEventListener('keydown', (e)=>{
+      if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='s'){
+        e.preventDefault();
+        const blob = new Blob([code.innerText], {type:'text/plain;charset=utf-8'});
+        const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='untitled.txt'; a.click(); URL.revokeObjectURL(url);
+      }
+    });
+  </script>
+</body>
+</html>
+
+

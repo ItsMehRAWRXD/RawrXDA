@@ -1,0 +1,31 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #1e1e1e;
+  color: #f5f5f5;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+#app {
+  height: 100%;
+  display: flex;
+}
+
+#layout {
+  display: flex;
+  width: 100%;
+}
+
+#sidebar {
+  width: 240px;
+  background: #252526;
+  padding: 16px;
+}
+
+#editor {
+  flex: 1;
+  background: #1f1f1f;
+  padding: 16px;
+}
+

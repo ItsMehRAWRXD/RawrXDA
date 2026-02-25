@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎼 GenesisOS Conductor Interface</title>
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --cyan: #00d4ff;
+            --orange: #ff6b35;
+            --teal: #1dd1a1;
+            --void: #000;
+            --green: #00ff00;
+            --red: #ff4757;
+            --yellow: #ffaa00;
+            --purple: #9b59b6;
+            --glass: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: var(--cyan);
+            font-family: 'Courier New', monospace;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .conductor-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .score-panel {
+            width: 400px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(15px);
+            border-right: 1px solid var(--teal);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .conductor-header {
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid var(--teal);
+        }
+
+        .conductor-title {
+            font-size: 1.5em;
+            color: var(--teal);
+            margin-bottom: 10px;
+        }
+
+        .conductor-status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--green);
+            animation: pulse 2s infinite;
+        }
+
+        .orchestration-canvas {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.3);
+            margin: 20px;
+            border-radius: 10px;
+            border: 1px solid var(--teal);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .node {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            background: var(--glass);
+            border: 2px solid var(--teal);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .node:hover {
+            transform: scale(1.1);
+            border-color: var(--cyan);
+            box-shadow: 0 0 20px var(--teal);
+        }
+
+        .node.executing {
+            background: rgba(255, 170, 0, 0.3);
+            border-color: var(--yellow);
+            animation: pulse 1s infinite;
+        }
+
+        .node.completed {
+            background: rgba(0, 255, 0, 0.3);
+            border-color: var(--green);
+        }
+
+        .node.error {
+            background: rgba(255, 71, 87, 0.3);
+            border-color: var(--red);
+        }
+
+        .edge {
+            position: absolute;
+            height: 2px;
+            background: var(--teal);
+            transform-origin: left center;
+            z-index: 1;
+        }
+
+        .edge.active {
+            background: var(--yellow);
+            animation: flow 2s infinite;
+        }
+
+        @keyframes flow {
+            0% { box-shadow: 0 0 5px var(--yellow); }
+            50% { box-shadow: 0 0 20px var(--yellow); }
+            100% { box-shadow: 0 0 5px var(--yellow); }
+        }
+
+        .control-panel {
+            padding: 20px;
+            border-top: 1px solid var(--teal);
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+            color: var(--cyan);
+        }
+
+        .control-input {
+            width: 100%;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--teal);
+            border-radius: 5px;
+            color: var(--cyan);
+            font-family: 'Courier New', monospace;
+        }
+
+        .control-button {
+            width: 100%;
+            padding: 10px;
+            background: var(--teal);
+            border: none;
+            border-radius: 5px;
+            color: var(--void);
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            margin: 5px 0;
+            transition: all 0.3s ease;
+        }
+
+        .control-button:hover {
+            background: var(--cyan);
+            transform: translateY(-2px);
+        }
+
+        .control-button.danger {
+            background: var(--red);
+        }
+
+        .control-button.danger:hover {
+            background: var(--orange);
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .toolbar {
+            background: rgba(0, 0, 0, 0.9);
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border-bottom: 1px solid var(--teal);
+        }
+
+        .toolbar-button {
+            background: var(--glass);
+            border: 1px solid var(--teal);
+            border-radius: 5px;
+            padding: 8px 12px;
+            color: var(--cyan);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .toolbar-button:hover {
+            background: rgba(29, 209, 161, 0.2);
+        }
+
+        .content-area {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.9);
+            position: relative;
+        }
+
+        .execution-log {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 300px;
+            max-height: 200px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid var(--teal);
+            border-radius: 5px;
+            padding: 10px;
+            font-size: 11px;
+            overflow-y: auto;
+            z-index: 10;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+
+        .log-entry.info {
+            background: rgba(0, 212, 255, 0.2);
+            color: var(--cyan);
+        }
+
+        .log-entry.success {
+            background: rgba(0, 255, 0, 0.2);
+            color: var(--green);
+        }
+
+        .log-entry.error {
+            background: rgba(255, 71, 87, 0.2);
+            color: var(--red);
+        }
+
+        .log-entry.warning {
+            background: rgba(255, 170, 0, 0.2);
+            color: var(--yellow);
+        }
+
+        .bubble {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: var(--teal);
+            border-radius: 50%;
+            animation: bubble-rise 3s infinite;
+            pointer-events: none;
+        }
+
+        @keyframes bubble-rise {
+            0% {
+                transform: translateY(0) scale(0);
+                opacity: 1;
+            }
+            50% {
+                transform: translateY(-50px) scale(1);
+                opacity: 0.8;
+            }
+            100% {
+                transform: translateY(-100px) scale(0);
+                opacity: 0;
+            }
+        }
+
+        .transparency-slider {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 10;
+        }
+
+        .transparency-slider input {
+            width: 200px;
+        }
+    </style>
+</head>
+<body>
+    <div class="conductor-container">
+        <div class="score-panel">
+            <div class="conductor-header">
+                <div class="conductor-title">🎼 Conductor</div>
+                <div class="conductor-status">
+                    <div class="status-indicator"></div>
+                    <span>Orchestrating</span>
+                </div>
+            </div>
+            
+            <div class="orchestration-canvas" id="orchestrationCanvas">
+                <!-- Nodes and edges will be rendered here -->
+            </div>
+            
+            <div class="control-panel">
+                <div class="control-group">
+                    <label class="control-label">Compose New Flow:</label>
+                    <input type="text" class="control-input" id="flowInput" placeholder="Describe what you want to create...">
+                </div>
+                
+                <div class="control-group">
+                    <label class="control-label">Flow Type:</label>
+                    <select class="control-input" id="flowType">
+                        <option value="auto">Auto-detect</option>
+                        <option value="code">Code Generation</option>
+                        <option value="debug">Debugging</option>
+                        <option value="creative">Creative Writing</option>
+                        <option value="learning">Learning</option>
+                    </select>
+                </div>
+                
+                <button class="control-button" onclick="composeFlow()">🎵 Compose Flow</button>
+                <button class="control-button" onclick="executeFlow()">▶️ Execute</button>
+                <button class="control-button" onclick="pauseFlow()">⏸️ Pause</button>
+                <button class="control-button danger" onclick="stopFlow()">⏹️ Stop</button>
+                
+                <div class="control-group">
+                    <label class="control-label">Adaptation Mode:</label>
+                    <select class="control-input" id="adaptationMode">
+                        <option value="auto">Auto-adapt</option>
+                        <option value="manual">Manual</option>
+                        <option value="learning">Learning</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="toolbar">
+                <button class="toolbar-button" onclick="newComposition()">📄 New</button>
+                <button class="toolbar-button" onclick="saveComposition()">💾 Save</button>
+                <button class="toolbar-button" onclick="loadComposition()">📂 Load</button>
+                <button class="toolbar-button" onclick="exportComposition()">📤 Export</button>
+                <button class="toolbar-button" onclick="toggleTransparency()">👁️ Transparency</button>
+            </div>
+            
+            <div class="content-area" id="contentArea">
+                <div class="execution-log" id="executionLog">
+                    <div class="log-entry info">🎼 Conductor Interface Ready</div>
+                    <div class="log-entry info">Waiting for composition...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="transparency-slider" id="transparencySlider" style="display: none;">
+        <input type="range" min="0" max="100" value="80" id="transparencyRange" oninput="adjustTransparency(this.value)">
+        <label>Transparency: <span id="transparencyValue">80%</span></label>
+    </div>
+
+    <script src="ScoreComposer.js"></script>
+    <script>
+        class ConductorInterface {
+            constructor() {
+                this.scoreComposer = new ScoreComposer();
+                this.currentGraph = null;
+                this.isExecuting = false;
+                this.canvas = document.getElementById('orchestrationCanvas');
+                this.log = document.getElementById('executionLog');
+                this.nodePositions = new Map();
+                this.edgeElements = [];
+                
+                this.initializeCanvas();
+                this.setupEventListeners();
+            }
+            
+            initializeCanvas() {
+                // Set up canvas for node positioning
+                this.canvasWidth = this.canvas.offsetWidth;
+                this.canvasHeight = this.canvas.offsetHeight;
+            }
+            
+            setupEventListeners() {
+                // Add resize listener
+                window.addEventListener('resize', () => {
+                    this.canvasWidth = this.canvas.offsetWidth;
+                    this.canvasHeight = this.canvas.offsetHeight;
+                    this.renderGraph();
+                });
+            }
+            
+            composeFlow() {
+                const input = document.getElementById('flowInput').value;
+                const flowType = document.getElementById('flowType').value;
+                
+                if (!input.trim()) {
+                    this.addLogEntry('Please enter a description for the flow', 'warning');
+                    return;
+                }
+                
+                this.addLogEntry(`Composing ${flowType} flow: ${input}`, 'info');
+                
+                try {
+                    this.currentGraph = this.scoreComposer.composeContextualFlow(input);
+                    this.renderGraph();
+                    this.addLogEntry('Flow composed successfully!', 'success');
+                } catch (error) {
+                    this.addLogEntry(`Composition failed: ${error.message}`, 'error');
+                }
+            }
+            
+            async executeFlow() {
+                if (!this.currentGraph) {
+                    this.addLogEntry('No flow to execute. Compose a flow first.', 'warning');
+                    return;
+                }
+                
+                this.isExecuting = true;
+                this.addLogEntry('Starting execution...', 'info');
+                
+                try {
+                    const result = await this.scoreComposer.executeGraph(
+                        this.currentGraph,
+                        (progress) => this.onExecutionProgress(progress)
+                    );
+                    
+                    this.addLogEntry('Execution completed!', 'success');
+                    this.displayResults(result);
+                } catch (error) {
+                    this.addLogEntry(`Execution failed: ${error.message}`, 'error');
+                } finally {
+                    this.isExecuting = false;
+                }
+            }
+            
+            onExecutionProgress(progress) {
+                this.addLogEntry(`Executing ${progress.nodeId}: ${progress.status}`, 'info');
+                this.updateNodeStatus(progress.nodeId, progress.status);
+            }
+            
+            renderGraph() {
+                if (!this.currentGraph) return;
+                
+                // Clear existing elements
+                this.canvas.innerHTML = '';
+                this.edgeElements = [];
+                
+                // Calculate node positions
+                this.calculateNodePositions();
+                
+                // Render edges first (so they appear behind nodes)
+                this.renderEdges();
+                
+                // Render nodes
+                this.renderNodes();
+            }
+            
+            calculateNodePositions() {
+                const nodes = this.currentGraph.nodes;
+                const cols = Math.ceil(Math.sqrt(nodes.length));
+                const rows = Math.ceil(nodes.length / cols);
+                
+                const nodeWidth = 80;
+                const nodeHeight = 80;
+                const padding = 20;
+                
+                nodes.forEach((node, index) => {
+                    const row = Math.floor(index / cols);
+                    const col = index % cols;
+                    
+                    const x = padding + col * (nodeWidth + padding);
+                    const y = padding + row * (nodeHeight + padding);
+                    
+                    this.nodePositions.set(node.id, { x, y });
+                });
+            }
+            
+            renderNodes() {
+                this.currentGraph.nodes.forEach(node => {
+                    const position = this.nodePositions.get(node.id);
+                    const nodeElement = document.createElement('div');
+                    
+                    nodeElement.className = 'node';
+                    nodeElement.style.left = position.x + 'px';
+                    nodeElement.style.top = position.y + 'px';
+                    nodeElement.textContent = node.id;
+                    nodeElement.title = `${node.type}: ${node.config.model || node.config.template || 'N/A'}`;
+                    
+                    nodeElement.addEventListener('click', () => this.inspectNode(node));
+                    
+                    this.canvas.appendChild(nodeElement);
+                });
+            }
+            
+            renderEdges() {
+                this.currentGraph.edges.forEach(edge => {
+                    const fromPos = this.nodePositions.get(edge.from);
+                    const toPos = this.nodePositions.get(edge.to);
+                    
+                    if (!fromPos || !toPos) return;
+                    
+                    const edgeElement = document.createElement('div');
+                    edgeElement.className = 'edge';
+                    
+                    const length = Math.sqrt(
+                        Math.pow(toPos.x - fromPos.x, 2) + Math.pow(toPos.y - fromPos.y, 2)
+                    );
+                    
+                    const angle = Math.atan2(toPos.y - fromPos.y, toPos.x - fromPos.x) * 180 / Math.PI;
+                    
+                    edgeElement.style.width = length + 'px';
+                    edgeElement.style.left = (fromPos.x + 40) + 'px';
+                    edgeElement.style.top = (fromPos.y + 40) + 'px';
+                    edgeElement.style.transform = `rotate(${angle}deg)`;
+                    
+                    this.canvas.appendChild(edgeElement);
+                    this.edgeElements.push(edgeElement);
+                });
+            }
+            
+            updateNodeStatus(nodeId, status) {
+                const nodeElement = this.canvas.querySelector(`[title*="${nodeId}"]`);
+                if (nodeElement) {
+                    nodeElement.className = `node ${status}`;
+                }
+            }
+            
+            inspectNode(node) {
+                this.addLogEntry(`Inspecting node: ${node.id}`, 'info');
+                // In a real implementation, this would open a detailed view
+                console.log('Node details:', node);
+            }
+            
+            displayResults(results) {
+                this.addLogEntry('Results:', 'info');
+                Object.entries(results).forEach(([key, value]) => {
+                    this.addLogEntry(`${key}: ${JSON.stringify(value).substring(0, 100)}...`, 'info');
+                });
+            }
+            
+            addLogEntry(message, type = 'info') {
+                const logEntry = document.createElement('div');
+                logEntry.className = `log-entry ${type}`;
+                logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                
+                this.log.appendChild(logEntry);
+                this.log.scrollTop = this.log.scrollHeight;
+                
+                // Keep only last 50 entries
+                while (this.log.children.length > 50) {
+                    this.log.removeChild(this.log.firstChild);
+                }
+            }
+            
+            createBubble() {
+                const bubble = document.createElement('div');
+                bubble.className = 'bubble';
+                bubble.style.left = Math.random() * this.canvasWidth + 'px';
+                bubble.style.top = this.canvasHeight + 'px';
+                
+                this.canvas.appendChild(bubble);
+                
+                setTimeout(() => {
+                    if (bubble.parentNode) {
+                        bubble.parentNode.removeChild(bubble);
+                    }
+                }, 3000);
+            }
+            
+            pauseFlow() {
+                if (this.isExecuting) {
+                    this.addLogEntry('Flow paused', 'warning');
+                    // In a real implementation, this would pause execution
+                } else {
+                    this.addLogEntry('No flow is currently executing', 'warning');
+                }
+            }
+            
+            stopFlow() {
+                if (this.isExecuting) {
+                    this.isExecuting = false;
+                    this.addLogEntry('Flow stopped', 'warning');
+                    // In a real implementation, this would stop execution
+                } else {
+                    this.addLogEntry('No flow is currently executing', 'warning');
+                }
+            }
+        }
+        
+        // Global functions for HTML onclick events
+        function composeFlow() {
+            conductor.composeFlow();
+        }
+        
+        function executeFlow() {
+            conductor.executeFlow();
+        }
+        
+        function pauseFlow() {
+            conductor.pauseFlow();
+        }
+        
+        function stopFlow() {
+            conductor.stopFlow();
+        }
+        
+        function newComposition() {
+            conductor.currentGraph = null;
+            conductor.canvas.innerHTML = '';
+            conductor.addLogEntry('New composition started', 'info');
+        }
+        
+        function saveComposition() {
+            if (conductor.currentGraph) {
+                localStorage.setItem('conductor_composition', JSON.stringify(conductor.currentGraph));
+                conductor.addLogEntry('Composition saved', 'success');
+            } else {
+                conductor.addLogEntry('No composition to save', 'warning');
+            }
+        }
+        
+        function loadComposition() {
+            const saved = localStorage.getItem('conductor_composition');
+            if (saved) {
+                conductor.currentGraph = JSON.parse(saved);
+                conductor.renderGraph();
+                conductor.addLogEntry('Composition loaded', 'success');
+            } else {
+                conductor.addLogEntry('No saved composition found', 'warning');
+            }
+        }
+        
+        function exportComposition() {
+            if (conductor.currentGraph) {
+                const dataStr = JSON.stringify(conductor.currentGraph, null, 2);
+                const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'conductor_composition.json';
+                link.click();
+                conductor.addLogEntry('Composition exported', 'success');
+            } else {
+                conductor.addLogEntry('No composition to export', 'warning');
+            }
+        }
+        
+        function toggleTransparency() {
+            const slider = document.getElementById('transparencySlider');
+            slider.style.display = slider.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        function adjustTransparency(value) {
+            document.getElementById('transparencyValue').textContent = value + '%';
+            document.body.style.opacity = value / 100;
+        }
+        
+        // Initialize the conductor interface
+        const conductor = new ConductorInterface();
+        
+        // Create bubbles periodically
+        setInterval(() => {
+            if (conductor.isExecuting) {
+                conductor.createBubble();
+            }
+        }, 2000);
+        
+        console.log('🎼 Conductor Interface loaded - Ready to orchestrate!');
+    </script>
+</body>
+</html>

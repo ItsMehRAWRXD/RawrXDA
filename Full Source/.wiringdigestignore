@@ -1,0 +1,4 @@
+# Wiring Digest Ignore List
+*\[...nextauth\]*
+*\node_modules\*
+*\.git\*
