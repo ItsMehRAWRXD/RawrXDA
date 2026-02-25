@@ -1,0 +1,14 @@
+-- Configuring done (0.0s)
+CMake Error at CMakeLists.txt:173 (add_executable):
+  Cannot find source file:
+
+    src/win32app/Win32IDE_LSP_AI_Bridge.cpp
+
+
+CMake Error at CMakeLists.txt:173 (add_executable):
+  No SOURCES given to target: RawrXD-Win32IDE
+
+
+CMake Generate step failed.  Build files cannot be regenerated correctly.
+mingw32-make: *** [Makefile:2122: cmake_check_build_system] Error 1
+mingw32-make: Target 'RawrXD-Win32IDE' not remade because of errors.

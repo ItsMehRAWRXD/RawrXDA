@@ -1,0 +1,18 @@
+{
+  "Nodes": {},
+  "Metadata": {
+    "ExcludePatterns": null,
+    "FilesAnalyzed": 0,
+    "Version": "1.0.0",
+    "IncludePatterns": null,
+    "GeneratedAt": "2026-01-24T00:28:50.8884025-05:00",
+    "SourceDir": ""
+  },
+  "Edges": [],
+  "Summary": {
+    "CircularDependencies": [],
+    "TotalNodes": 0,
+    "TotalEdges": 0,
+    "OrphanedFiles": 0
+  }
+}

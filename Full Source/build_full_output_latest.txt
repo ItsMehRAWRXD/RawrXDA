@@ -1,0 +1,210 @@
+[0/1] Re-running CMake...
+-- [SDK Fix] INCLUDE = C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/include;C:/Program Files (x86)/Windows Kits/10/Include/10.0.22621.0/ucrt;C:/Program Files (x86)/Windows Kits/10/Include/10.0.26100.0/shared;C:/Program Files (x86)/Windows Kits/10/Include/10.0.26100.0/um
+-- [SDK Fix] LIB     = C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/lib/x64;C:/Program Files (x86)/Windows Kits/10/Lib/10.0.22621.0/ucrt/x64;C:/Program Files (x86)/Windows Kits/10/Lib/10.0.26100.0/um/x64
+-- [SDK Fix] MT      = C:/Program Files (x86)/Windows Kits/10/bin/10.0.22621.0/x64/mt.exe
+-- [Build Paths] MSVC CRT: C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207
+-- [Build Paths] SDK 10.0.22621.0: ucrt + um + shared
+-- MASM64 enabled: ASM kernels will be compiled
+-- [CommandAudit] Audit targets available: audit-registry, audit-registry-ci
+-- [RE] Deobfuscator MASM64 targets registered
+-- [RE] Model reverse pipeline MASM64 target registered
+-- [RE] Omega v3 MASM32 target registered
+-- [RE] Reverser compiler NASM targets registered
+-- [RE] Reverse Engineering Suite configured:
+--   C++ Library:       RawrXD-RE-Library (pe_tools/re_tools.cpp)
+--   Headers:           4 HPP files (Codex, Compiler, DumpBin, ReverseEngine)
+--   Omega Suite:       19 ASM files across v3/v4/v5/v7 + src_variants
+--   Deobfuscator:      3 ASM files + 1 INC + build/test
+--   Reverser Compiler: 11 ASM + 6 tests + 1 .rev source
+--   PE Tools:          re_tools.cpp/h (PE analyzer + inline compiler)
+--   Model Reverse:     model-llm-harvester.asm
+--   Security Toolkit:  RawrXD_IDE_unified.asm
+--   RE Modules:        gpu_dma_complete_reverse_engineered.asm
+-- [Gold] Standalone deployment target: RawrXD_Gold.exe (all MASM linked)
+-- [NanoQuant] DISABLED — enable with -DRAWR_ENABLE_NANOQUANT=ON
+-- [Vulkan] Found SDK: C:/VulkanSDK/1.4.328.1/include
+-- [Phase 6] Standalone inference engine target: RawrXD-InferenceEngine
+-- MultiWindow Kernel DLL target enabled
+-- DynamicPromptEngine DLL target enabled (Unity/Unreal compatible)
+-- QuickJS not found at D:/rawrxd/3rdparty/quickjs — JS extension host uses stubs
+-- Configuring done (14.1s)
+-- Generating done (0.4s)
+-- Build files have been written to: D:/rawrxd/build
+[1/423] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD_CopilotGapCloser.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_CopilotGapCloser.asm
+
+[2/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\hot_patcher.cpp.obj
+[3/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\stubs.cpp.obj
+[4/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\compression_interface.cpp.obj
+[5/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\gguf_vocab_resolver.cpp.obj
+[6/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\gguf_loader.cpp.obj
+[7/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\utils\Diagnostics.cpp.obj
+[8/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\engine\inference_kernels.cpp.obj
+[9/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent_history.cpp.obj
+[10/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent_explainability.cpp.obj
+[11/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\engine\transformer.cpp.obj
+[12/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\memory_core.cpp.obj
+[13/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\engine\gguf_core.cpp.obj
+[14/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\codec\compression.cpp.obj
+[15/423] Building CXX object CMakeFiles\RawrEngine.dir\src\core\enterprise_telemetry_compliance.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[16/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent_policy.cpp.obj
+[17/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\streaming_gguf_loader.cpp.obj
+[18/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\codec\brutal_gzip.cpp.obj
+[19/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\engine\sampler.cpp.obj
+[20/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\engine\rawr_engine.cpp.obj
+[21/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\cpu_inference_engine.cpp.obj
+[22/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\engine\core_generator.cpp.obj
+[23/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\engine\bpe_tokenizer.cpp.obj
+[24/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\main.cpp.obj
+[25/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\complete_server.cpp.obj
+[26/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\model_memory_hotpatch.cpp.obj
+[27/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\flash_attention.cpp.obj
+[28/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\execution_scheduler.cpp.obj
+[29/423] Building CXX object CMakeFiles\RawrEngine.dir\src\complete_server.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[30/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\multi_response_engine.cpp.obj
+[31/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\agent_safety_contract.cpp.obj
+[32/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic_engine.cpp.obj
+[33/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\confidence_gate.cpp.obj
+[34/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\deterministic_replay.cpp.obj
+[35/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\gpu_backend_bridge.cpp.obj
+[36/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\cli\cli_headless_systems.cpp.obj
+[37/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\execution_governor.cpp.obj
+[38/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\server\gguf_server_hotpatch.cpp.obj
+[39/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\proxy_hotpatcher.cpp.obj
+[40/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\byte_level_hotpatcher.cpp.obj
+[41/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\cli\cli_autonomy_loop.cpp.obj
+[42/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\subagent_core.cpp.obj
+[43/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\streaming_engine_registry.cpp.obj
+[44/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent\agentic_hotpatch_orchestrator.cpp.obj
+[45/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\vision_encoder.cpp.obj
+[46/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\agentic_task_graph.cpp.obj
+[47/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\marketplace\extension_marketplace.cpp.obj
+[48/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent\agent_self_repair.cpp.obj
+[49/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\cli\agentic_decision_tree.cpp.obj
+[50/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent\agentic_puppeteer.cpp.obj
+[51/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\unified_hotpatch_manager.cpp.obj
+[52/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic_loop_state.cpp.obj
+[53/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent\agentic_failure_detector.cpp.obj
+[54/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent\agent_self_healing_orchestrator.cpp.obj
+[55/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent\autonomous_subagent.cpp.obj
+[56/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\embedding_engine.cpp.obj
+[57/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\production_release.cpp.obj
+[58/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\webrtc_signaling.cpp.obj
+[59/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\auth\rbac_engine.cpp.obj
+[60/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic\DeterministicReplayEngine.cpp.obj
+[61/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent\llm_http_client.cpp.obj
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xutility(4813): warning C4244: '=': conversion from 'wchar_t' to 'char', possible loss of data
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xutility(4813): note: the template instantiation context (the oldest one first) is
+D:\rawrxd\src\agent\llm_http_client.cpp(220): note: see reference to function template instantiation 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string<std::_String_iterator<std::_String_val<std::_Simple_types<_Elem>>>,0>(_Iter,_Iter,const _Alloc &)' being compiled
+        with
+        [
+            _Elem=wchar_t,
+            _Iter=std::_String_iterator<std::_String_val<std::_Simple_types<wchar_t>>>,
+            _Alloc=std::allocator<char>
+        ]
+D:\rawrxd\src\agent\llm_http_client.cpp(219): note: see the first reference to 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string' in 'StlHttpClient::platformSend'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xstring(812): note: see reference to function template instantiation 'void std::basic_string<char,std::char_traits<char>,std::allocator<char>>::_Construct_from_iter<wchar_t*,wchar_t*,_Size_type>(_Iter,const _Sent,_Size)' being compiled
+        with
+        [
+            _Size_type=unsigned __int64,
+            _Iter=wchar_t *,
+            _Sent=wchar_t *,
+            _Size=unsigned __int64
+        ]
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xstring(968): note: see reference to function template instantiation '_OutIt *std::_Copy_n_unchecked4<wchar_t*,_Size,char*>(_InIt,_SizeTy,_OutIt)' being compiled
+        with
+        [
+            _OutIt=char *,
+            _Size=unsigned __int64,
+            _InIt=wchar_t *,
+            _SizeTy=unsigned __int64
+        ]
+[62/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent\planner.cpp.obj
+[63/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent\model_invoker.cpp.obj
+[64/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\pdb_gsi_hash.cpp.obj
+[65/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\pdb_reference_provider.cpp.obj
+[66/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\pdb_native.cpp.obj
+[67/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\swarm_network_stubs.cpp.obj
+[68/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\swarm_decision_bridge.cpp.obj
+[69/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\universal_model_hotpatcher.cpp.obj
+[70/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\enterprise_license_stubs.cpp.obj
+[71/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic\AgentToolHandlers.cpp.obj
+[72/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\gpu_kernel_autotuner.cpp.obj
+[73/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\analyzer_distiller_stubs.cpp.obj
+[74/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent\DiskRecoveryAgent.cpp.obj
+[75/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic\autonomous_recovery_orchestrator.cpp.obj
+[76/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\streaming_orchestrator_stubs.cpp.obj
+[77/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\sandbox_integration.cpp.obj
+[78/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\intel_gpu_accelerator.cpp.obj
+[79/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\amd_gpu_accelerator.cpp.obj
+[80/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\cerebras_wse_accelerator.cpp.obj
+[81/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\arm64_gpu_accelerator.cpp.obj
+[82/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\feature_registration.cpp.obj
+[83/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\enterprise_license.cpp.obj
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xutility(4813): warning C4244: '=': conversion from 'const wchar_t' to 'char', possible loss of data
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xutility(4813): note: the template instantiation context (the oldest one first) is
+D:\rawrxd\src\core\enterprise_license.cpp(301): note: see reference to function template instantiation 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string<std::_String_const_iterator<std::_String_val<std::_Simple_types<_Elem>>>,0>(_Iter,_Iter,const _Alloc &)' being compiled
+        with
+        [
+            _Elem=wchar_t,
+            _Iter=std::_String_const_iterator<std::_String_val<std::_Simple_types<wchar_t>>>,
+            _Alloc=std::allocator<char>
+        ]
+D:\rawrxd\src\core\enterprise_license.cpp(301): note: see the first reference to 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string' in 'RawrXD::EnterpriseLicense::InstallLicenseFromFile'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xstring(812): note: see reference to function template instantiation 'void std::basic_string<char,std::char_traits<char>,std::allocator<char>>::_Construct_from_iter<const wchar_t*,const wchar_t*,_Size_type>(_Iter,const _Sent,_Size)' being compiled
+        with
+        [
+            _Size_type=unsigned __int64,
+            _Iter=const wchar_t *,
+            _Sent=const wchar_t *,
+            _Size=unsigned __int64
+        ]
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xstring(968): note: see reference to function template instantiation '_OutIt *std::_Copy_n_unchecked4<const wchar_t*,_Size,char*>(_InIt,_SizeTy,_OutIt)' being compiled
+        with
+        [
+            _OutIt=char *,
+            _Size=unsigned __int64,
+            _InIt=const wchar_t *,
+            _SizeTy=unsigned __int64
+        ]
+[84/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\pt_driver_contract.cpp.obj
+[85/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\accelerator_router.cpp.obj
+[86/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\tool_registry.cpp.obj
+[87/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\shortcut_manager.cpp.obj
+[88/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\ssot_handlers.cpp.obj
+[89/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\cli\swarm_orchestrator.cpp.obj
+[90/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\ssot_validation.cpp.obj
+[91/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\unified_command_dispatch.cpp.obj
+[92/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\swarm_worker.cpp.obj
+[93/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\voice_chat.cpp.obj
+[94/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\feature_handlers.cpp.obj
+[95/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\swarm_coordinator.cpp.obj
+[96/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\rawrxd_state_mmf.cpp.obj
+[97/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\alert_system.cpp.obj
+[98/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\ssot_handlers_ext.cpp.obj
+[99/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\voice_automation.cpp.obj
+[100/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\chain_of_thought_engine.cpp.obj
+[101/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\backup_manager.cpp.obj
+[102/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\sqlite3_stubs.cpp.obj
+[103/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\reasoning_cot_bridge.cpp.obj
+[104/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\convergence_controller.cpp.obj
+[105/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\layer_contribution_scorer.cpp.obj
+[106/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\live_binary_patcher.cpp.obj
+[107/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\traversal_strategy.cpp.obj
+[108/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\semantic_delta_tracker.cpp.obj
+[109/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\reasoning_profile.cpp.obj
+[110/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\cross_run_tensor_cache.cpp.obj
+[111/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\missing_handler_stubs.cpp.obj
+[112/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\reasoning_pipeline_orchestrator.cpp.obj
+[113/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\iterative_tensor_traversal.cpp.obj
+[114/423] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\vulkan_compute.cpp.obj

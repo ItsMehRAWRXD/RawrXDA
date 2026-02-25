@@ -1,0 +1,74 @@
+Advanced Reverse Engineering Report
+=====================================
+Generated: 2026-01-24 11:42:04
+Tool: Reverse-Engineer-Advanced.ps1
+Version: 1.0
+
+SUMMARY
+-------
+Obfuscated Files: 303
+Reconstructed Files: 3
+Control Scenarios: 49
+Deobfuscated Files: 0
+Source Map Files: 28
+Inferred TypeScript: 0
+
+RECONSTRUCTION STATISTICS
+-------------------------
+Original Size: 56.64 MB
+Reconstructed Size: 1.46 MB
+Size Savings: 97.42%
+
+OBLFUSCATED FILES
+------------------ ectron_source_app\extensions\configuration-editing\dist\configurationEditingMain.js (Control Flow Obfuscation) - Confidence: Medium
+- ectron_source_app\extensions\css-language-features\client\dist\node\cssClientMain.js (Control Flow Obfuscation) - Confidence: Medium
+- ectron_source_app\extensions\css-language-features\server\dist\node\85.cssServerMain.js (Variable Obfuscation) - Confidence: Medium
+- ectron_source_app\extensions\css-language-features\server\dist\node\920.cssServerMain.js (Control Flow Obfuscation) - Confidence: Medium
+- ectron_source_app\extensions\css-language-features\server\dist\node\cssServerMain.js (Variable Obfuscation) - Confidence: Medium
+- ectron_source_app\extensions\cursor-agent\dist\main.js (Control Flow Obfuscation) - Confidence: Medium
+- ectron_source_app\extensions\cursor-agent\dist\claude-agent-sdk\cli.js (Control Flow Obfuscation) - Confidence: Medium
+- ectron_source_app\extensions\cursor-agent-exec\dist\621.js (Variable Obfuscation) - Confidence: Medium
+- ectron_source_app\extensions\cursor-agent-exec\dist\main.js (Control Flow Obfuscation) - Confidence: Medium
+- ectron_source_app\extensions\cursor-always-local\dist\gitWorker.js (Variable Obfuscation) - Confidence: Medium
+... and 293 more files
+
+CONTROL SCENARIOS
+------------------ ectron_source_app\node_modules.asar (Archive) - Action: ExtractAndReverse
+- ectron_source_app\node_modules\@vscode\vscode-languagedetection\model\group1-shard1of1.bin (Protected) - Action: ReverseEngineer
+- ectron_source_app\extensions\cursor-agent\dist\claude-agent-sdk\vendor\ripgrep\x64-win32\ripgrep.node (NativeModule) - Action: DecompileOrStub
+- ectron_source_app\extensions\cursor-retrieval\node_modules\@anysphere\file-service\file_service.win32-x64-msvc.node (NativeModule) - Action: DecompileOrStub
+- ectron_source_app\extensions\microsoft-authentication\dist\msal-node-runtime.node (NativeModule) - Action: DecompileOrStub
+- ectron_source_app\extensions\ms-vscode.js-debug\src\w32appcontainertokens-XTRA77NA.node (NativeModule) - Action: DecompileOrStub
+- ectron_source_app\node_modules\@anysphere\policy-watcher\build\Release\vscode-policy-watcher.node (NativeModule) - Action: DecompileOrStub
+- ectron_source_app\node_modules\@parcel\watcher\build\Release\watcher.node (NativeModule) - Action: DecompileOrStub
+- ectron_source_app\node_modules\@vscode\deviceid\build\Release\windows.node (NativeModule) - Action: DecompileOrStub
+- ectron_source_app\node_modules\@vscode\spdlog\build\Release\spdlog.node (NativeModule) - Action: DecompileOrStub
+... and 39 more scenarios
+
+RECOMMENDATIONS
+---------------- Use the SelfReverse.ps1 script to reverse the reconstruction if needed
+- Run ControlHandler.ps1 to manage protected files
+- Verify integrity with the -Verify flag
+- Create backups before modifications
+
+NEXT STEPS
+----------
+1. Review the reconstructed source in src/
+2. Examine the self-reversing mechanisms
+3. Test the control handlers
+4. Verify integrity with -Verify flag
+5. Create backups before modifications
+
+FILES CREATED
+-------------
+- advanced_reverse_engineering_report.json
+- advanced_reverse_engineering_report.txt
+- SelfReverse.ps1
+- CreateBackup.ps1
+- ControlHandler.ps1
+- RECONSTRUCTION.json
+- MANIFEST.json
+- README.md
+
+For detailed analysis, review the JSON report at:
+Advanced_Reverse_Engineered\advanced_reverse_engineering_report.json

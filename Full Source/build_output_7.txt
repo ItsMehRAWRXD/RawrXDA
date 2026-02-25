@@ -1,0 +1,6 @@
+[  1%] Building CXX object CMakeFiles/RawrEngine.dir/src/cpu_inference_engine_real.cpp.obj
+cc1plus.exe: fatal error: D:\rawrxd\src\cpu_inference_engine_real.cpp: No such file or directory
+compilation terminated.
+mingw32-make[2]: *** [CMakeFiles\RawrEngine.dir\build.make:169: CMakeFiles/RawrEngine.dir/src/cpu_inference_engine_real.cpp.obj] Error 1
+mingw32-make[1]: *** [CMakeFiles\Makefile2:89: CMakeFiles/RawrEngine.dir/all] Error 2
+mingw32-make: *** [Makefile:90: all] Error 2

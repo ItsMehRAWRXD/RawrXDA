@@ -1,0 +1,5 @@
+ninja: warning: premature end of file; recovering
+[1/179] Building CXX object CMakeFiles\RawrEngine.dir\src\main.cpp.obj
+D:\rawrxd\src\core\gpu_kernel_autotuner.h(24): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\gpu_kernel_autotuner.h(24): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[2/179] Building CXX object CMakeFiles\RawrEngine.dir\src\stubs.cpp.obj

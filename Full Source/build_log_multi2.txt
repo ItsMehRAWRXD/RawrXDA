@@ -1,0 +1,424 @@
+[  1%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_AsmSemantic.cpp.obj
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:39:6: error: no declaration matches 'void Win32IDE::gotoLine(int)'
+   39 | void Win32IDE::gotoLine(int line) {
+      |      ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:39:6: note: no functions named 'void Win32IDE::gotoLine(int)'
+In file included from D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:23:
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:55:13: error: no declaration matches 'std::string Win32IDE::getWordAtCursor() const'
+   55 | std::string Win32IDE::getWordAtCursor() const {
+      |             ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:55:13: note: no functions named 'std::string Win32IDE::getWordAtCursor() const'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:622:6: error: no declaration matches 'void Win32IDE::initAsmSemantic()'
+  622 | void Win32IDE::initAsmSemantic() {
+      |      ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:622:6: note: no functions named 'void Win32IDE::initAsmSemantic()'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:635:6: error: no declaration matches 'void Win32IDE::shutdownAsmSemantic()'
+  635 | void Win32IDE::shutdownAsmSemantic() {
+      |      ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:635:6: note: no functions named 'void Win32IDE::shutdownAsmSemantic()'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:649:6: error: no declaration matches 'void Win32IDE::parseAsmFile(const std::string&)'
+  649 | void Win32IDE::parseAsmFile(const std::string& filePath) {
+      |      ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:649:6: note: no functions named 'void Win32IDE::parseAsmFile(const std::string&)'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1018:6: error: no declaration matches 'void Win32IDE::parseAsmDirectory(const std::string&, bool)'
+ 1018 | void Win32IDE::parseAsmDirectory(const std::string& dirPath, bool recursive) {
+      |      ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1018:6: note: no functions named 'void Win32IDE::parseAsmDirectory(const std::string&, bool)'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1039:6: error: no declaration matches 'void Win32IDE::reparseCurrentAsmFile()'
+ 1039 | void Win32IDE::reparseCurrentAsmFile() {
+      |      ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1039:6: note: no functions named 'void Win32IDE::reparseCurrentAsmFile()'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1052:6: error: no declaration matches 'void Win32IDE::clearAsmSymbols()'
+ 1052 | void Win32IDE::clearAsmSymbols() {
+      |      ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1052:6: note: no functions named 'void Win32IDE::clearAsmSymbols()'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1061:6: error: no declaration matches 'void Win32IDE::clearAsmSymbolsForFile(const std::string&)'
+ 1061 | void Win32IDE::clearAsmSymbolsForFile(const std::string& filePath) {
+      |      ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1061:6: note: no functions named 'void Win32IDE::clearAsmSymbolsForFile(const std::string&)'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1077:17: error: 'AsmSymbol' in 'class Win32IDE' does not name a type
+ 1077 | const Win32IDE::AsmSymbol* Win32IDE::findAsmSymbol(const std::string& name) const {
+      |                 ^~~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1084:39: error: template argument 1 is invalid
+ 1084 | std::vector<const Win32IDE::AsmSymbol*> Win32IDE::findAsmSymbolsByKind(AsmSymbolKind kind) const {
+      |                                       ^
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1084:39: error: template argument 2 is invalid
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1084:41: error: 'int Win32IDE::findAsmSymbolsByKind' is not a static data member of 'class Win32IDE'
+ 1084 | std::vector<const Win32IDE::AsmSymbol*> Win32IDE::findAsmSymbolsByKind(AsmSymbolKind kind) const {
+      |                                         ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1084:72: error: 'AsmSymbolKind' was not declared in this scope
+ 1084 | std::vector<const Win32IDE::AsmSymbol*> Win32IDE::findAsmSymbolsByKind(AsmSymbolKind kind) const {
+      |                                                                        ^~~~~~~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1094:39: error: template argument 1 is invalid
+ 1094 | std::vector<const Win32IDE::AsmSymbol*> Win32IDE::findAsmSymbolsInFile(const std::string& filePath) const {
+      |                                       ^
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1094:39: error: template argument 2 is invalid
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1094:41: error: no declaration matches 'int Win32IDE::findAsmSymbolsInFile(const std::string&) const'
+ 1094 | std::vector<const Win32IDE::AsmSymbol*> Win32IDE::findAsmSymbolsInFile(const std::string& filePath) const {
+      |                                         ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1094:41: note: no functions named 'int Win32IDE::findAsmSymbolsInFile(const std::string&) const'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1108:39: error: template argument 1 is invalid
+ 1108 | std::vector<const Win32IDE::AsmSymbol*> Win32IDE::findAsmSymbolsInSection(const std::string& sectionName) const {
+      |                                       ^
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1108:39: error: template argument 2 is invalid
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1108:41: error: no declaration matches 'int Win32IDE::findAsmSymbolsInSection(const std::string&) const'
+ 1108 | std::vector<const Win32IDE::AsmSymbol*> Win32IDE::findAsmSymbolsInSection(const std::string& sectionName) const {
+      |                                         ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1108:41: note: no functions named 'int Win32IDE::findAsmSymbolsInSection(const std::string&) const'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1119:23: error: 'AsmSymbolRef' is not a member of 'Win32IDE'
+ 1119 | std::vector<Win32IDE::AsmSymbolRef> Win32IDE::findAsmSymbolReferences(const std::string& symbolName) const {
+      |                       ^~~~~~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1119:35: error: template argument 1 is invalid
+ 1119 | std::vector<Win32IDE::AsmSymbolRef> Win32IDE::findAsmSymbolReferences(const std::string& symbolName) const {
+      |                                   ^
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1119:35: error: template argument 2 is invalid
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1119:37: error: no declaration matches 'int Win32IDE::findAsmSymbolReferences(const std::string&) const'
+ 1119 | std::vector<Win32IDE::AsmSymbolRef> Win32IDE::findAsmSymbolReferences(const std::string& symbolName) const {
+      |                                     ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1119:37: note: no functions named 'int Win32IDE::findAsmSymbolReferences(const std::string&) const'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1129:6: error: no declaration matches 'bool Win32IDE::asmGotoDefinition(const std::string&)'
+ 1129 | bool Win32IDE::asmGotoDefinition(const std::string& symbolName) {
+      |      ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1129:6: note: no functions named 'bool Win32IDE::asmGotoDefinition(const std::string&)'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1155:6: error: no declaration matches 'bool Win32IDE::asmGotoDefinitionAtCursor()'
+ 1155 | bool Win32IDE::asmGotoDefinitionAtCursor() {
+      |      ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1155:6: note: no functions named 'bool Win32IDE::asmGotoDefinitionAtCursor()'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1165:23: error: 'AsmSymbolRef' is not a member of 'Win32IDE'
+ 1165 | std::vector<Win32IDE::AsmSymbolRef> Win32IDE::asmFindReferencesAtCursor() {
+      |                       ^~~~~~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1165:35: error: template argument 1 is invalid
+ 1165 | std::vector<Win32IDE::AsmSymbolRef> Win32IDE::asmFindReferencesAtCursor() {
+      |                                   ^
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1165:35: error: template argument 2 is invalid
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1165:37: error: no declaration matches 'int Win32IDE::asmFindReferencesAtCursor()'
+ 1165 | std::vector<Win32IDE::AsmSymbolRef> Win32IDE::asmFindReferencesAtCursor() {
+      |                                     ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1165:37: note: no functions named 'int Win32IDE::asmFindReferencesAtCursor()'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1194:11: error: 'AsmInstructionInfo' in 'class Win32IDE' does not name a type
+ 1194 | Win32IDE::AsmInstructionInfo Win32IDE::lookupInstruction(const std::string& mnemonic) const {
+      |           ^~~~~~~~~~~~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1214:11: error: 'AsmRegisterInfo' in 'class Win32IDE' does not name a type
+ 1214 | Win32IDE::AsmRegisterInfo Win32IDE::lookupRegister(const std::string& regName) const {
+      |           ^~~~~~~~~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1233:13: error: no declaration matches 'std::string Win32IDE::getInstructionInfoString(const std::string&) const'
+ 1233 | std::string Win32IDE::getInstructionInfoString(const std::string& mnemonic) const {
+      |             ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1233:13: note: no functions named 'std::string Win32IDE::getInstructionInfoString(const std::string&) const'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1245:13: error: no declaration matches 'std::string Win32IDE::getRegisterInfoString(const std::string&) const'
+ 1245 | std::string Win32IDE::getRegisterInfoString(const std::string& regName) const {
+      |             ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1245:13: note: no functions named 'std::string Win32IDE::getRegisterInfoString(const std::string&) const'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1261:23: error: 'AsmSectionInfo' is not a member of 'Win32IDE'
+ 1261 | std::vector<Win32IDE::AsmSectionInfo> Win32IDE::getAsmSections(const std::string& filePath) const {
+      |                       ^~~~~~~~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1261:37: error: template argument 1 is invalid
+ 1261 | std::vector<Win32IDE::AsmSectionInfo> Win32IDE::getAsmSections(const std::string& filePath) const {
+      |                                     ^
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1261:37: error: template argument 2 is invalid
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1261:39: error: no declaration matches 'int Win32IDE::getAsmSections(const std::string&) const'
+ 1261 | std::vector<Win32IDE::AsmSectionInfo> Win32IDE::getAsmSections(const std::string& filePath) const {
+      |                                       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1261:39: note: no functions named 'int Win32IDE::getAsmSections(const std::string&) const'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1288:13: error: no declaration matches 'std::string Win32IDE::getAsmSectionsString(const std::string&) const'
+ 1288 | std::string Win32IDE::getAsmSectionsString(const std::string& filePath) const {
+      |             ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1288:13: note: no functions named 'std::string Win32IDE::getAsmSectionsString(const std::string&) const'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1306:23: error: 'AsmCallEdge' is not a member of 'Win32IDE'
+ 1306 | std::vector<Win32IDE::AsmCallEdge> Win32IDE::buildCallGraph(const std::string& filePath) const {
+      |                       ^~~~~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1306:34: error: template argument 1 is invalid
+ 1306 | std::vector<Win32IDE::AsmCallEdge> Win32IDE::buildCallGraph(const std::string& filePath) const {
+      |                                  ^
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1306:34: error: template argument 2 is invalid
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1306:36: error: no declaration matches 'int Win32IDE::buildCallGraph(const std::string&) const'
+ 1306 | std::vector<Win32IDE::AsmCallEdge> Win32IDE::buildCallGraph(const std::string& filePath) const {
+      |                                    ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1306:36: note: no functions named 'int Win32IDE::buildCallGraph(const std::string&) const'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1372:13: error: no declaration matches 'std::string Win32IDE::getCallGraphString(const std::string&) const'
+ 1372 | std::string Win32IDE::getCallGraphString(const std::string& filePath) const {
+      |             ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1372:13: note: no functions named 'std::string Win32IDE::getCallGraphString(const std::string&) const'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1391:23: error: 'AsmDataFlowRef' is not a member of 'Win32IDE'
+ 1391 | std::vector<Win32IDE::AsmDataFlowRef> Win32IDE::analyzeDataFlow(
+      |                       ^~~~~~~~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1391:37: error: template argument 1 is invalid
+ 1391 | std::vector<Win32IDE::AsmDataFlowRef> Win32IDE::analyzeDataFlow(
+      |                                     ^
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1391:37: error: template argument 2 is invalid
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1391:39: error: no declaration matches 'int Win32IDE::analyzeDataFlow(const std::string&, const std::string&) const'
+ 1391 | std::vector<Win32IDE::AsmDataFlowRef> Win32IDE::analyzeDataFlow(
+      |                                       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1391:39: note: no functions named 'int Win32IDE::analyzeDataFlow(const std::string&, const std::string&) const'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1480:13: error: no declaration matches 'std::string Win32IDE::getDataFlowString(const std::string&, const std::string&) const'
+ 1480 | std::string Win32IDE::getDataFlowString(const std::string& symbolName,
+      |             ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1480:13: note: no functions named 'std::string Win32IDE::getDataFlowString(const std::string&, const std::string&) const'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1509:11: error: 'AsmBlockAnalysis' in 'class Win32IDE' does not name a type
+ 1509 | Win32IDE::AsmBlockAnalysis Win32IDE::analyzeAsmBlock(
+      |           ^~~~~~~~~~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1719:11: error: 'AsmBlockAnalysis' in 'class Win32IDE' does not name a type
+ 1719 | Win32IDE::AsmBlockAnalysis Win32IDE::analyzeCurrentProcedure() const {
+      |           ^~~~~~~~~~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1746:13: error: no declaration matches 'std::string Win32IDE::detectCallingConvention(const std::string&, int, int) const'
+ 1746 | std::string Win32IDE::detectCallingConvention(
+      |             ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1746:13: note: no functions named 'std::string Win32IDE::detectCallingConvention(const std::string&, int, int) const'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1833:55: error: 'AsmBlockAnalysis' does not name a type
+ 1833 | std::string Win32IDE::getAsmBlockAnalysisString(const AsmBlockAnalysis& analysis) const {
+      |                                                       ^~~~~~~~~~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1833:13: error: no declaration matches 'std::string Win32IDE::getAsmBlockAnalysisString(const int&) const'
+ 1833 | std::string Win32IDE::getAsmBlockAnalysisString(const AsmBlockAnalysis& analysis) const {
+      |             ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1833:13: note: no functions named 'std::string Win32IDE::getAsmBlockAnalysisString(const int&) const'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1877:13: error: no declaration matches 'std::string Win32IDE::getAsmSymbolTableString() const'
+ 1877 | std::string Win32IDE::getAsmSymbolTableString() const {
+      |             ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1877:13: note: no functions named 'std::string Win32IDE::getAsmSymbolTableString() const'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1907:13: error: no declaration matches 'std::string Win32IDE::getAsmSemanticStatsString() const'
+ 1907 | std::string Win32IDE::getAsmSemanticStatsString() const {
+      |             ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1907:13: note: no functions named 'std::string Win32IDE::getAsmSemanticStatsString() const'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1927:13: error: 'std::string Win32IDE::asmSymbolKindString' is not a static data member of 'class Win32IDE'
+ 1927 | std::string Win32IDE::asmSymbolKindString(AsmSymbolKind kind) const {
+      |             ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1927:43: error: 'AsmSymbolKind' was not declared in this scope
+ 1927 | std::string Win32IDE::asmSymbolKindString(AsmSymbolKind kind) const {
+      |                                           ^~~~~~~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1927:63: error: expected ',' or ';' before 'const'
+ 1927 | std::string Win32IDE::asmSymbolKindString(AsmSymbolKind kind) const {
+      |                                                               ^~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1947:6: error: no declaration matches 'void Win32IDE::cmdAsmParseSymbols()'
+ 1947 | void Win32IDE::cmdAsmParseSymbols() {
+      |      ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1947:6: note: no functions named 'void Win32IDE::cmdAsmParseSymbols()'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1976:6: error: no declaration matches 'void Win32IDE::cmdAsmGotoLabel()'
+ 1976 | void Win32IDE::cmdAsmGotoLabel() {
+      |      ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1976:6: note: no functions named 'void Win32IDE::cmdAsmGotoLabel()'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1980:6: error: no declaration matches 'void Win32IDE::cmdAsmFindLabelRefs()'
+ 1980 | void Win32IDE::cmdAsmFindLabelRefs() {
+      |      ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1980:6: note: no functions named 'void Win32IDE::cmdAsmFindLabelRefs()'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1984:6: error: no declaration matches 'void Win32IDE::cmdAsmShowSymbolTable()'
+ 1984 | void Win32IDE::cmdAsmShowSymbolTable() {
+      |      ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1984:6: note: no functions named 'void Win32IDE::cmdAsmShowSymbolTable()'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1988:6: error: no declaration matches 'void Win32IDE::cmdAsmInstructionInfo()'
+ 1988 | void Win32IDE::cmdAsmInstructionInfo() {
+      |      ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1988:6: note: no functions named 'void Win32IDE::cmdAsmInstructionInfo()'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1998:6: error: no declaration matches 'void Win32IDE::cmdAsmRegisterInfo()'
+ 1998 | void Win32IDE::cmdAsmRegisterInfo() {
+      |      ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:1998:6: note: no functions named 'void Win32IDE::cmdAsmRegisterInfo()'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:2008:6: error: no declaration matches 'void Win32IDE::cmdAsmAnalyzeBlock()'
+ 2008 | void Win32IDE::cmdAsmAnalyzeBlock() {
+      |      ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:2008:6: note: no functions named 'void Win32IDE::cmdAsmAnalyzeBlock()'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:2017:6: error: no declaration matches 'void Win32IDE::cmdAsmShowCallGraph()'
+ 2017 | void Win32IDE::cmdAsmShowCallGraph() {
+      |      ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:2017:6: note: no functions named 'void Win32IDE::cmdAsmShowCallGraph()'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:2025:6: error: no declaration matches 'void Win32IDE::cmdAsmShowDataFlow()'
+ 2025 | void Win32IDE::cmdAsmShowDataFlow() {
+      |      ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:2025:6: note: no functions named 'void Win32IDE::cmdAsmShowDataFlow()'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:2039:6: error: no declaration matches 'void Win32IDE::cmdAsmDetectConvention()'
+ 2039 | void Win32IDE::cmdAsmDetectConvention() {
+      |      ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:2039:6: note: no functions named 'void Win32IDE::cmdAsmDetectConvention()'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:2057:6: error: no declaration matches 'void Win32IDE::cmdAsmShowSections()'
+ 2057 | void Win32IDE::cmdAsmShowSections() {
+      |      ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:2057:6: note: no functions named 'void Win32IDE::cmdAsmShowSections()'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:2065:6: error: no declaration matches 'void Win32IDE::cmdAsmClearSymbols()'
+ 2065 | void Win32IDE::cmdAsmClearSymbols() {
+      |      ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:2065:6: note: no functions named 'void Win32IDE::cmdAsmClearSymbols()'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:2073:6: error: no declaration matches 'void Win32IDE::handleAsmSymbolsEndpoint(SOCKET, const std::string&)'
+ 2073 | void Win32IDE::handleAsmSymbolsEndpoint(SOCKET client, const std::string& path) {
+      |      ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:2073:6: note: no functions named 'void Win32IDE::handleAsmSymbolsEndpoint(SOCKET, const std::string&)'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:2137:6: error: no declaration matches 'void Win32IDE::handleAsmNavigateEndpoint(SOCKET, const std::string&)'
+ 2137 | void Win32IDE::handleAsmNavigateEndpoint(SOCKET client, const std::string& body) {
+      |      ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:2137:6: note: no functions named 'void Win32IDE::handleAsmNavigateEndpoint(SOCKET, const std::string&)'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:2210:6: error: no declaration matches 'void Win32IDE::handleAsmAnalyzeEndpoint(SOCKET, const std::string&)'
+ 2210 | void Win32IDE::handleAsmAnalyzeEndpoint(SOCKET client, const std::string& body) {
+      |      ^~~~~~~~
+D:\rawrxd\src\win32app\Win32IDE_AsmSemantic.cpp:2210:6: note: no functions named 'void Win32IDE::handleAsmAnalyzeEndpoint(SOCKET, const std::string&)'
+D:\rawrxd\src\win32app\Win32IDE.h:690:7: note: 'class Win32IDE' defined here
+  690 | class Win32IDE
+      |       ^~~~~~~~
+mingw32-make[3]: *** [CMakeFiles\RawrXD-Win32IDE.dir\build.make:514: CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_AsmSemantic.cpp.obj] Error 1
+[  5%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/agentic_engine.cpp.obj
+[  2%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/agent_policy.cpp.obj
+[  4%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/agent_explainability.cpp.obj
+[  5%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/utils/ErrorReporter.cpp.obj
+[  7%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/modules/engine_manager.cpp.obj
+[  8%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/cpu_inference_engine.cpp.obj
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/memory_core.cpp.obj
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/hot_patcher.cpp.obj
+[ 12%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/streaming_gguf_loader.cpp.obj
+[  2%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/gguf_loader.cpp.obj
+[  4%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/gguf_vocab_resolver.cpp.obj
+[  5%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/model_source_resolver.cpp.obj
+[  7%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/compression_interface.cpp.obj
+[  8%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/engine/gguf_core.cpp.obj
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/engine/inference_kernels.cpp.obj
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/engine/transformer.cpp.obj
+[ 12%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/engine/bpe_tokenizer.cpp.obj
+[ 14%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/engine/sampler.cpp.obj
+[ 15%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/engine/rawr_engine.cpp.obj
+[ 16%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/engine/core_generator.cpp.obj
+[ 18%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/codec/compression.cpp.obj
+[ 19%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/codec/brutal_gzip.cpp.obj
+[ 21%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/streaming_engine_registry.cpp.obj
+[ 22%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/gpu_backend_bridge.cpp.obj
+D:\rawrxd\src\core\gpu_backend_bridge.cpp: In member function 'RawrXD::GPU::GPUResult RawrXD::GPU::GPUBackendBridge::initDX12()':
+D:\rawrxd\src\core\gpu_backend_bridge.cpp:392:30: error: 'bestreinterpret_cast' was not declared in this scope
+  392 |             if (bestAdapter) bestreinterpret_cast<IUnknown*>(adapter)->Release();
+      |                              ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:\rawrxd\src\core\gpu_backend_bridge.cpp:430:37: error: 'adapter' was not declared in this scope
+  430 |     bestreinterpret_cast<IUnknown*>(adapter)->Release();
+      |                                     ^~~~~~~
+D:\rawrxd\src\core\gpu_backend_bridge.cpp:430:5: error: 'bestreinterpret_cast' was not declared in this scope
+  430 |     bestreinterpret_cast<IUnknown*>(adapter)->Release();
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+mingw32-make[3]: *** [CMakeFiles\RawrXD-Win32IDE.dir\build.make:1009: CMakeFiles/RawrXD-Win32IDE.dir/src/core/gpu_backend_bridge.cpp.obj] Error 1
+[ 23%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/execution_scheduler.cpp.obj
+[ 25%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/enterprise_license.cpp.obj
+[ 26%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/enterprise_license_stubs.cpp.obj
+[ 28%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/flash_attention.cpp.obj
+[ 29%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/multi_response_engine.cpp.obj
+[ 30%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/modules/vsix_loader_win32.cpp.obj
+[ 32%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/modules/codex_ultimate.cpp.obj
+mingw32-make[3]: Target 'CMakeFiles/RawrXD-Win32IDE.dir/build' not remade because of errors.
+mingw32-make[2]: *** [CMakeFiles\Makefile2:156: CMakeFiles/RawrXD-Win32IDE.dir/all] Error 2
+mingw32-make[1]: *** [CMakeFiles\Makefile2:163: CMakeFiles/RawrXD-Win32IDE.dir/rule] Error 2
+mingw32-make[1]: Target 'RawrXD-Win32IDE' not remade because of errors.
+mingw32-make: *** [Makefile:149: RawrXD-Win32IDE] Error 2

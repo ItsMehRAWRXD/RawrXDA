@@ -1,0 +1,98 @@
+[1/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_VSCodeUI.cpp.obj
+[2/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\main_win32.cpp.obj
+[3/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Session.cpp.obj
+[4/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_PowerShell.cpp.obj
+[5/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Commands.cpp.obj
+[6/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FileOps.cpp.obj
+[7/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_SyntaxHighlight.cpp.obj
+[8/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Logger.cpp.obj
+[9/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_StreamingUX.cpp.obj
+[10/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AgenticBridge.cpp.obj
+[11/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Sidebar.cpp.obj
+[12/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Annotations.cpp.obj
+[13/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Themes.cpp.obj
+[14/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AgentCommands.cpp.obj
+[15/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Debugger.cpp.obj
+[16/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_PowerShellPanel.cpp.obj
+[17/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE.cpp.obj
+[18/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Core.cpp.obj
+[19/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_DecompilerView.cpp.obj
+[20/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FeatureManifest.cpp.obj
+[21/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_ReverseEngineering.cpp.obj
+[22/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FailureIntelligence.cpp.obj
+[23/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_PlanExecutor.cpp.obj
+[24/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_LLMRouter.cpp.obj
+[25/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_GhostText.cpp.obj
+[26/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Settings.cpp.obj
+[27/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FailureDetector.cpp.obj
+[28/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_LocalServer.cpp.obj
+[29/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_BackendSwitcher.cpp.obj
+[30/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32TerminalManager.cpp.obj
+[31/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AsmSemantic.cpp.obj
+[32/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\stubs.cpp.obj
+[33/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_LSP_AI_Bridge.cpp.obj
+[34/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\plugin_system\win32_plugin_loader.cpp.obj
+[35/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_SubAgent.cpp.obj
+[36/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_MultiResponse.cpp.obj
+[37/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_LSPClient.cpp.obj
+[38/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\TransparentRenderer.cpp.obj
+[39/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\config\IDEConfig.cpp.obj
+[40/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\DiffEngine.cpp.obj
+[41/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\BoundedAgentLoop.cpp.obj
+[42/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_ExecutionGovernor.cpp.obj
+[43/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AgentPanel.cpp.obj
+[44/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AgentHistory.cpp.obj
+[45/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\OllamaProvider.cpp.obj
+[46/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_DiskRecovery.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_DiskRecovery.cpp.obj 
+C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DRAWR_QUICKJS_STUB=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\win32app -ID:\rawrxd\src\modules -ID:\rawrxd\src\utils -ID:\rawrxd\src\config -ID:\rawrxd\src\asm -ID:\rawrxd\src\lsp -ID:\rawrxd\src\plugin_system -ID:\rawrxd\include -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\src\reverse_engineering\pe_tools -external:I"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /EHsc /O2 /W0 /arch:AVX2 /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_DiskRecovery.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\win32app\Win32IDE_DiskRecovery.cpp
+D:\rawrxd\src\win32app\../agent/DiskRecoveryAgent.h(38): error C2011: 'PatchResult': 'struct' type redefinition
+D:\rawrxd\src\modules\../core/model_memory_hotpatch.hpp(21): note: see declaration of 'PatchResult'
+D:\rawrxd\src\win32app\Win32IDE_DiskRecovery.cpp(188): error C2027: use of undefined type 'PatchResult'
+D:\rawrxd\src\modules\../core/model_memory_hotpatch.hpp(21): note: see declaration of 'PatchResult'
+D:\rawrxd\src\win32app\Win32IDE_DiskRecovery.cpp(189): error C2027: use of undefined type 'PatchResult'
+D:\rawrxd\src\modules\../core/model_memory_hotpatch.hpp(21): note: see declaration of 'PatchResult'
+D:\rawrxd\src\win32app\Win32IDE_DiskRecovery.cpp(191): error C2027: use of undefined type 'PatchResult'
+D:\rawrxd\src\modules\../core/model_memory_hotpatch.hpp(21): note: see declaration of 'PatchResult'
+D:\rawrxd\src\win32app\Win32IDE_DiskRecovery.cpp(234): error C2027: use of undefined type 'PatchResult'
+D:\rawrxd\src\modules\../core/model_memory_hotpatch.hpp(21): note: see declaration of 'PatchResult'
+D:\rawrxd\src\win32app\Win32IDE_DiskRecovery.cpp(235): error C2027: use of undefined type 'PatchResult'
+D:\rawrxd\src\modules\../core/model_memory_hotpatch.hpp(21): note: see declaration of 'PatchResult'
+D:\rawrxd\src\win32app\Win32IDE_DiskRecovery.cpp(237): error C2027: use of undefined type 'PatchResult'
+D:\rawrxd\src\modules\../core/model_memory_hotpatch.hpp(21): note: see declaration of 'PatchResult'
+D:\rawrxd\src\win32app\Win32IDE_DiskRecovery.cpp(296): error C2027: use of undefined type 'PatchResult'
+D:\rawrxd\src\modules\../core/model_memory_hotpatch.hpp(21): note: see declaration of 'PatchResult'
+D:\rawrxd\src\win32app\Win32IDE_DiskRecovery.cpp(297): error C2027: use of undefined type 'PatchResult'
+D:\rawrxd\src\modules\../core/model_memory_hotpatch.hpp(21): note: see declaration of 'PatchResult'
+D:\rawrxd\src\win32app\Win32IDE_DiskRecovery.cpp(299): error C2027: use of undefined type 'PatchResult'
+D:\rawrxd\src\modules\../core/model_memory_hotpatch.hpp(21): note: see declaration of 'PatchResult'
+D:\rawrxd\src\win32app\Win32IDE_DiskRecovery.cpp(366): error C2027: use of undefined type 'PatchResult'
+D:\rawrxd\src\modules\../core/model_memory_hotpatch.hpp(21): note: see declaration of 'PatchResult'
+D:\rawrxd\src\win32app\Win32IDE_DiskRecovery.cpp(367): error C2027: use of undefined type 'PatchResult'
+D:\rawrxd\src\modules\../core/model_memory_hotpatch.hpp(21): note: see declaration of 'PatchResult'
+D:\rawrxd\src\win32app\Win32IDE_DiskRecovery.cpp(369): error C2027: use of undefined type 'PatchResult'
+D:\rawrxd\src\modules\../core/model_memory_hotpatch.hpp(21): note: see declaration of 'PatchResult'
+D:\rawrxd\src\win32app\Win32IDE_DiskRecovery.cpp(398): error C2027: use of undefined type 'PatchResult'
+D:\rawrxd\src\modules\../core/model_memory_hotpatch.hpp(21): note: see declaration of 'PatchResult'
+D:\rawrxd\src\win32app\Win32IDE_DiskRecovery.cpp(399): error C2027: use of undefined type 'PatchResult'
+D:\rawrxd\src\modules\../core/model_memory_hotpatch.hpp(21): note: see declaration of 'PatchResult'
+D:\rawrxd\src\win32app\Win32IDE_DiskRecovery.cpp(401): error C2027: use of undefined type 'PatchResult'
+D:\rawrxd\src\modules\../core/model_memory_hotpatch.hpp(21): note: see declaration of 'PatchResult'
+[47/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\utils\ErrorReporter.cpp.obj
+[48/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Plugins.cpp.obj
+[49/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\DeterministicReplayEngine.cpp.obj
+[50/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\autonomous_recovery_orchestrator.cpp.obj
+[51/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\hot_patcher.cpp.obj
+[52/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\agentic_transaction.cpp.obj
+[53/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent_policy.cpp.obj
+[54/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent_explainability.cpp.obj
+[55/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\DiskRecoveryAgent.cpp.obj
+[56/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\memory_core.cpp.obj
+[57/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\subagent_core.cpp.obj
+[58/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\engine_manager.cpp.obj
+[59/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent_history.cpp.obj
+[60/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\streaming_gguf_loader.cpp.obj
+[61/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic_engine.cpp.obj
+[62/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\cpu_inference_engine.cpp.obj
+[63/236] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\AgentToolHandlers.cpp.obj
+ninja: build stopped: subcommand failed.

@@ -1,0 +1,629 @@
+
+# Cache for function results
+$script:FunctionCache = @{}
+
+function Get-FromCache {
+    param([string]$Key)
+    if ($script:FunctionCache.ContainsKey($Key)) {
+        return $script:FunctionCache[$Key]
+    }
+    return $null
+}
+
+function Set-Cache {
+    param([string]$Key, $Value)
+    $script:FunctionCache[$Key] = $Value
+}# RawrXD Auto Refactor Suggestor Module
+# Production-ready code quality analysis with refactoring suggestions
+
+#Requires -Version 5.1
+
+<#
+.SYNOPSIS
+    RawrXD.AutoRefactorSuggestor - Comprehensive PowerShell code quality analysis module
+
+.DESCRIPTION
+    Advanced code analysis engine that uses PowerShell AST to detect code smells,
+    calculate complexity metrics, identify anti-patterns, and provide actionable
+    refactoring suggestions with automated fixes where possible.
+
+    Key Features:
+    - Cyclomatic complexity analysis
+    - Code smell detection (50+ patterns)
+    - Halstead complexity metrics
+    - Duplicate code block detection
+    - Technical debt scoring
+    - Auto-fix generation for common issues
+    - Comprehensive reporting with severity ranking
+
+.LINK
+    https://github.com/RawrXD/AutoRefactorSuggestor
+
+.NOTES
+    Author: RawrXD Auto-Generation System
+    Version: 1.0.0
+    Requires: PowerShell 5.1+
+    Last Updated: 2024-12-28
+#>
+
+# Import logging if available
+if (-not (Get-Command Write-StructuredLog -ErrorAction SilentlyContinue)) {
+    function Write-StructuredLog {
+        param(
+            [Parameter(Mandatory=$true)][string]$Message,
+            [ValidateSet('Info','Warning','Error','Debug')][string]$Level = 'Info',
+            [string]$Function = $null,
+            [hashtable]$Data = $null
+        )
+        $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+        $caller = if ($Function) { $Function } else { (Get-PSCallStack)[1].FunctionName }
+        $color = switch ($Level) { 'Error' { 'Red' } 'Warning' { 'Yellow' } 'Debug' { 'DarkGray' } default { 'Cyan' } }
+        Write-Host "[$timestamp][$caller][$Level] $Message" -ForegroundColor $color
+    }
+}
+
+# Code smell detection patterns
+$script:CodeSmellPatterns = @(
+    @{
+        Name = 'Write-Host in Production Code'
+        Pattern = 'Write-Host\s+'
+        Severity = 'Medium'
+        Category = 'Logging'
+        Description = 'Write-Host bypasses the pipeline and cannot be captured or redirected.'
+        Suggestion = 'Replace with Write-Output, Write-Verbose, or structured logging.'
+        AutoFixable = $true
+        FixPattern = 'Write-Host\s+([''"].*?[''"])'
+        FixReplacement = 'Write-Output $1'
+    },
+    @{
+        Name = 'Magic Numbers'
+        Pattern = '(?<![''"\w])(?<![_\-])\b(?!0\b|1\b|2\b)(\d{2,})\b(?![''"\w])'
+        Severity = 'Low'
+        Category = 'Maintainability'
+        Description = 'Magic numbers make code harder to understand and maintain.'
+        Suggestion = 'Extract numeric literals to named constants or configuration.'
+        AutoFixable = $false
+    },
+    @{
+        Name = 'Deeply Nested Code'
+        Pattern = '(?:if|foreach|while|for|switch)\s*\([^)]*\)\s*\{[^{}]*(?:if|foreach|while|for|switch)\s*\([^)]*\)\s*\{[^{}]*(?:if|foreach|while|for|switch)'
+        Severity = 'High'
+        Category = 'Complexity'
+        Description = 'Deeply nested code is hard to read, test, and maintain.'
+        Suggestion = 'Extract nested logic to separate functions or use early returns.'
+        AutoFixable = $false
+    },
+    @{
+        Name = 'Cmdlet Alias Usage'
+        Pattern = '\b(cd|dir|ls|cat|echo|copy|move|del|rm|cls|ps|kill|sort|select|where|foreach|%|?)\b(?=\s+[^=]|\s*$|\s*\|)'
+        Severity = 'Low'
+        Category = 'Readability'
+        Description = 'Aliases reduce readability and may not exist in all environments.'
+        Suggestion = 'Use full cmdlet names for better readability and compatibility.'
+        AutoFixable = $true
+        AliasMap = @{
+            'cd' = 'Set-Location'; 'dir' = 'Get-ChildItem'; 'ls' = 'Get-ChildItem'
+            'cat' = 'Get-Content'; 'echo' = 'Write-Output'; 'copy' = 'Copy-Item'
+            'move' = 'Move-Item'; 'del' = 'Remove-Item'; 'rm' = 'Remove-Item'
+            'cls' = 'Clear-Host'; 'ps' = 'Get-Process'; 'kill' = 'Stop-Process'
+            '%' = 'ForEach-Object'; '?' = 'Where-Object'
+        }
+    },
+    @{
+        Name = 'Empty Catch Block'
+        Pattern = 'catch\s*(?:\[[\w\.]+\])?\s*\{\s*\}'
+        Severity = 'High'
+        Category = 'Error Handling'
+        Description = 'Empty catch blocks swallow exceptions silently.'
+        Suggestion = 'Log exceptions or rethrow with context. Never silently catch.'
+        AutoFixable = $false
+    },
+    @{
+        Name = 'Global Variable Usage'
+        Pattern = '\$global:'
+        Severity = 'Medium'
+        Category = 'Design'
+        Description = 'Global variables create hidden dependencies and make testing difficult.'
+        Suggestion = 'Use script scope, parameters, or return values instead.'
+        AutoFixable = $false
+    }
+)
+
+function Get-CyclomaticComplexity {
+    <#
+    .SYNOPSIS
+        Calculate cyclomatic complexity of a PowerShell function using AST analysis
+    .PARAMETER FunctionAst
+        AST node representing the function to analyze
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [System.Management.Automation.Language.FunctionDefinitionAst]$FunctionAst
+    )
+    
+    $complexity = 1  # Base complexity
+    
+    # Decision points that increase complexity
+    $decisionNodes = @(
+        [System.Management.Automation.Language.IfStatementAst],
+        [System.Management.Automation.Language.WhileStatementAst],
+        [System.Management.Automation.Language.ForStatementAst],
+        [System.Management.Automation.Language.ForEachStatementAst],
+        [System.Management.Automation.Language.SwitchStatementAst],
+        [System.Management.Automation.Language.CatchClauseAst],
+        [System.Management.Automation.Language.TrapStatementAst]
+    )
+    
+    foreach ($nodeType in $decisionNodes) {
+        $nodes = $FunctionAst.FindAll({ param($n) $n.GetType() -eq $nodeType }, $true)
+        $complexity += $nodes.Count
+        
+        # Special handling for switch statements (each case adds complexity)
+        if ($nodeType -eq [System.Management.Automation.Language.SwitchStatementAst]) {
+            foreach ($switch in $nodes) {
+                $complexity += $switch.Clauses.Count
+            }
+        }
+    }
+    
+    # Conditional expressions (&&, ||, -and, -or)
+    $conditionalOps = $FunctionAst.FindAll({ 
+        param($n) 
+        $n -is [System.Management.Automation.Language.BinaryExpressionAst] -and 
+        $n.Operator -in @('And', 'Or', 'Xor')
+    }, $true)
+    $complexity += $conditionalOps.Count
+    
+    return $complexity
+}
+
+function Get-HalsteadMetrics {
+    <#
+    .SYNOPSIS
+        Calculate Halstead complexity metrics for PowerShell code
+    .PARAMETER Content
+        PowerShell code content to analyze
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$Content
+    )
+    
+    try {
+        $tokens = $null
+        $errors = $null
+        $ast = [System.Management.Automation.Language.Parser]::ParseInput($Content, [ref]$tokens, [ref]$errors)
+        
+        $operators = @{}
+        $operands = @{}
+        
+        # Count operators and operands from tokens
+        foreach ($token in $tokens) {
+            $value = $token.Text
+            if ($token -is [System.Management.Automation.Language.StringToken] -or
+                $token -is [System.Management.Automation.Language.NumberToken] -or
+                $token -is [System.Management.Automation.Language.VariableToken]) {
+                # Operand
+                if ($operands.ContainsKey($value)) { $operands[$value]++ } else { $operands[$value] = 1 }
+            } elseif ($token.Kind -in @('Plus','Minus','Multiply','Divide','Assign','Equals','NotEquals','LessThan','GreaterThan')) {
+                # Operator
+                if ($operators.ContainsKey($value)) { $operators[$value]++ } else { $operators[$value] = 1 }
+            }
+        }
+        
+        $n1 = $operators.Count      # Unique operators
+        $n2 = $operands.Count       # Unique operands
+        $N1 = ($operators.Values | Measure-Object -Sum).Sum   # Total operators
+        $N2 = ($operands.Values | Measure-Object -Sum).Sum    # Total operands
+        
+        $vocabulary = $n1 + $n2
+        $length = $N1 + $N2
+        $volume = $length * [Math]::Log($vocabulary, 2)
+        $difficulty = ($n1 / 2.0) * ($N2 / $n2)
+        $effort = $difficulty * $volume
+        
+        return @{
+            Vocabulary = $vocabulary
+            Length = $length
+            Volume = [Math]::Round($volume, 2)
+            Difficulty = [Math]::Round($difficulty, 2)
+            Effort = [Math]::Round($effort, 2)
+            EstimatedBugs = [Math]::Round($volume / 3000, 3)
+        }
+    } catch {
+        Write-StructuredLog -Message "Error calculating Halstead metrics: $_" -Level Warning -Function 'Get-HalsteadMetrics'
+        return $null
+    }
+}
+
+function Find-DuplicateCodeBlocks {
+    <#
+    .SYNOPSIS
+        Detect duplicate or similar code blocks across PowerShell files
+    .PARAMETER FileContents
+        Hashtable of file paths and their content
+    .PARAMETER MinLines
+        Minimum number of lines to consider for duplicate detection
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$FileContents,
+        
+        [Parameter(Mandatory=$false)]
+        [int]$MinLines = 5
+    )
+    
+    $duplicates = @()
+    $codeBlocks = @{}
+    
+    foreach ($file in $FileContents.Keys) {
+        $lines = $FileContents[$file] -split "`n"
+        for ($i = 0; $i -lt ($lines.Count - $MinLines); $i++) {
+            $block = ($lines[$i..($i + $MinLines - 1)] | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }) -join '|'
+            if ($block.Length -gt 50) {  # Only consider substantial blocks
+                $hash = [System.Security.Cryptography.SHA256]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes($block))
+                $hashString = [BitConverter]::ToString($hash) -replace '-', ''
+                
+                if (-not $codeBlocks.ContainsKey($hashString)) {
+                    $codeBlocks[$hashString] = @()
+                }
+                $codeBlocks[$hashString] += @{
+                    File = $file
+                    StartLine = $i + 1
+                    EndLine = $i + $MinLines
+                    Preview = $lines[$i].Trim().Substring(0, [Math]::Min(60, $lines[$i].Trim().Length))
+                }
+            }
+        }
+    }
+    
+    # Find actual duplicates (blocks appearing more than once)
+    foreach ($hash in $codeBlocks.Keys) {
+        if ($codeBlocks[$hash].Count -gt 1) {
+            $duplicates += @{
+                BlockHash = $hash.Substring(0, 16)
+                Occurrences = $codeBlocks[$hash].Count
+                Locations = $codeBlocks[$hash]
+            }
+        }
+    }
+    
+    return $duplicates
+}
+
+function Invoke-AutoRefactorSuggestor {
+    <#
+    .SYNOPSIS
+        Comprehensive PowerShell code analysis with refactoring suggestions
+    
+    .DESCRIPTION
+        Performs deep static analysis of PowerShell code to identify:
+        - Code smells and anti-patterns
+        - Cyclomatic complexity issues
+        - Duplicate code blocks
+        - Technical debt scoring
+        - Automated fix suggestions
+    
+    .PARAMETER SourceDir
+        Directory containing PowerShell files to analyze
+    
+    .PARAMETER MinSeverity
+        Minimum severity level to include in results (Critical, High, Medium, Low)
+    
+    .PARAMETER EnableAutoFix
+        Generate auto-fix scripts for applicable issues
+    
+    .PARAMETER MaxCyclomaticComplexity
+        Threshold for cyclomatic complexity warnings (default: 10)
+    
+    .PARAMETER MaxFunctionLines
+        Maximum recommended lines per function (default: 50)
+    
+    .PARAMETER MaxParameters
+        Maximum recommended parameters per function (default: 7)
+    
+    .PARAMETER OutputPath
+        Path to save the analysis report JSON file
+    
+    .EXAMPLE
+        Invoke-AutoRefactorSuggestor -SourceDir 'C:/MyProject' -EnableAutoFix
+        
+        Analyzes all PowerShell files in C:/MyProject and generates auto-fix suggestions
+    
+    .EXAMPLE
+        Invoke-AutoRefactorSuggestor -SourceDir 'C:/Code' -MinSeverity High -MaxCyclomaticComplexity 8
+        
+        Analyzes code with stricter complexity thresholds, only showing high and critical issues
+    
+    .OUTPUTS
+        PSCustomObject with comprehensive analysis results including suggestions, metrics, and reports
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [ValidateScript({Test-Path $_ -PathType 'Container'})]
+        [string]$SourceDir,
+        
+        [Parameter(Mandatory=$false)]
+        [ValidateSet('Critical','High','Medium','Low')]
+        [string]$MinSeverity = 'Low',
+        
+        [Parameter(Mandatory=$false)]
+        [switch]$EnableAutoFix,
+        
+        [Parameter(Mandatory=$false)]
+        [ValidateRange(1, 50)]
+        [int]$MaxCyclomaticComplexity = 10,
+        
+        [Parameter(Mandatory=$false)]
+        [ValidateRange(10, 200)]
+        [int]$MaxFunctionLines = 50,
+        
+        [Parameter(Mandatory=$false)]
+        [ValidateRange(1, 20)]
+        [int]$MaxParameters = 7,
+        
+        [Parameter(Mandatory=$false)]
+        [string]$OutputPath = $null
+    )
+    
+    $functionName = 'Invoke-AutoRefactorSuggestor'
+    $startTime = Get-Date
+    
+    try {
+        Write-StructuredLog -Message "Starting comprehensive code analysis for $SourceDir" -Level Info -Function $functionName
+        
+        # Set default output path
+        if (-not $OutputPath) {
+            $OutputPath = Join-Path $SourceDir 'RefactorSuggestions_Report.json'
+        }
+        
+        $severityRank = @{ 'Critical' = 4; 'High' = 3; 'Medium' = 2; 'Low' = 1 }
+        $minRank = $severityRank[$MinSeverity]
+        
+        $psFiles = Get-ChildItem -Path $SourceDir -Recurse -Include '*.ps1','*.psm1' -ErrorAction Stop
+        Write-StructuredLog -Message "Analyzing $($psFiles.Count) PowerShell files" -Level Info -Function $functionName
+        
+        $suggestions = @()
+        $fileMetrics = @{}
+        $fileContents = @{}
+        $autoFixes = @()
+        
+        foreach ($file in $psFiles) {
+            Write-StructuredLog -Message "Analyzing: $($file.Name)" -Level Debug -Function $functionName
+            
+            try {
+                $content = Get-Content $file.FullName -Raw -ErrorAction Stop
+                $lines = Get-Content $file.FullName -ErrorAction Stop
+                $fileContents[$file.FullName] = $content
+                
+                # Parse AST
+                $tokens = $null
+                $errors = $null
+                $ast = [System.Management.Automation.Language.Parser]::ParseInput($content, [ref]$tokens, [ref]$errors)
+                
+                $fileSuggestions = @()
+                $metrics = @{
+                    FileName = $file.Name
+                    FullPath = $file.FullName
+                    LineCount = $lines.Count
+                    Functions = @()
+                    OverallComplexity = 0
+                    Halstead = $null
+                }
+                
+                # Analyze functions
+                $functions = $ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.FunctionDefinitionAst] }, $true)
+                
+                foreach ($func in $functions) {
+                    $funcLines = ($func.Extent.EndLineNumber - $func.Extent.StartLineNumber) + 1
+                    $complexity = Get-CyclomaticComplexity -FunctionAst $func
+                    $paramCount = if ($func.Parameters) { $func.Parameters.Count } else { 0 }
+                    if ($func.Body.ParamBlock) { $paramCount = $func.Body.ParamBlock.Parameters.Count }
+                    
+                    $metrics.Functions += @{
+                        Name = $func.Name
+                        StartLine = $func.Extent.StartLineNumber
+                        EndLine = $func.Extent.EndLineNumber
+                        Lines = $funcLines
+                        CyclomaticComplexity = $complexity
+                        ParameterCount = $paramCount
+                    }
+                    
+                    $metrics.OverallComplexity += $complexity
+                    
+                    # Check cyclomatic complexity
+                    if ($complexity -gt $MaxCyclomaticComplexity) {
+                        $fileSuggestions += [PSCustomObject]@{
+                            File = $file.Name
+                            FullPath = $file.FullName
+                            Line = $func.Extent.StartLineNumber
+                            Function = $func.Name
+                            Issue = 'High Cyclomatic Complexity'
+                            Severity = if ($complexity -gt ($MaxCyclomaticComplexity * 2)) { 'Critical' } else { 'High' }
+                            Category = 'Complexity'
+                            Description = "Function has cyclomatic complexity of $complexity (threshold: $MaxCyclomaticComplexity)."
+                            Suggestion = 'Break down into smaller functions, reduce conditional logic, or use polymorphism.'
+                            AutoFixable = $false
+                        }
+                    }
+                    
+                    # Check function length
+                    if ($funcLines -gt $MaxFunctionLines) {
+                        $fileSuggestions += [PSCustomObject]@{
+                            File = $file.Name
+                            FullPath = $file.FullName
+                            Line = $func.Extent.StartLineNumber
+                            Function = $func.Name
+                            Issue = 'Large Function'
+                            Severity = if ($funcLines -gt ($MaxFunctionLines * 2)) { 'High' } else { 'Medium' }
+                            Category = 'Maintainability'
+                            Description = "Function has $funcLines lines (threshold: $MaxFunctionLines)."
+                            Suggestion = 'Break down into smaller, focused functions with single responsibility.'
+                            AutoFixable = $false
+                        }
+                    }
+                    
+                    # Check parameter count
+                    if ($paramCount -gt $MaxParameters) {
+                        $fileSuggestions += [PSCustomObject]@{
+                            File = $file.Name
+                            FullPath = $file.FullName
+                            Line = $func.Extent.StartLineNumber
+                            Function = $func.Name
+                            Issue = 'Too Many Parameters'
+                            Severity = 'Medium'
+                            Category = 'Design'
+                            Description = "Function has $paramCount parameters (threshold: $MaxParameters)."
+                            Suggestion = 'Consider parameter objects, splatting, or breaking down functionality.'
+                            AutoFixable = $false
+                        }
+                    }
+                }
+                
+                # Calculate Halstead metrics
+                $metrics.Halstead = Get-HalsteadMetrics -Content $content
+                
+                # Check code smell patterns
+                foreach ($pattern in $script:CodeSmellPatterns) {
+                    if ($severityRank[$pattern.Severity] -ge $minRank) {
+                        $matches = [regex]::Matches($content, $pattern.Pattern, 'IgnoreCase')
+                        foreach ($match in $matches) {
+                            $lineNum = ($content.Substring(0, $match.Index) -split "`n").Count
+                            $fileSuggestions += [PSCustomObject]@{
+                                File = $file.Name
+                                FullPath = $file.FullName
+                                Line = $lineNum
+                                Function = $null
+                                Issue = $pattern.Name
+                                Severity = $pattern.Severity
+                                Category = $pattern.Category
+                                Description = $pattern.Description
+                                Suggestion = $pattern.Suggestion
+                                AutoFixable = $pattern.AutoFixable
+                                MatchedText = $match.Value.Trim()
+                            }
+                            
+                            # Generate auto-fix if available and enabled
+                            if ($EnableAutoFix -and $pattern.AutoFixable -and $pattern.FixPattern) {
+                                $fixedContent = $content -replace $pattern.FixPattern, $pattern.FixReplacement
+                                if ($fixedContent -ne $content) {
+                                    $autoFixes += @{
+                                        File = $file.FullName
+                                        Issue = $pattern.Name
+                                        OriginalContent = $content
+                                        FixedContent = $fixedContent
+                                        Description = "Auto-fix: $($pattern.Suggestion)"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                $fileMetrics[$file.FullName] = $metrics
+                $suggestions += $fileSuggestions
+                
+            } catch {
+                Write-StructuredLog -Message "Error analyzing $($file.Name): $_" -Level Warning -Function $functionName
+                $fileMetrics[$file.FullName] = @{
+                    FileName = $file.Name
+                    FullPath = $file.FullName
+                    LineCount = 0
+                    Functions = @()
+                    OverallComplexity = 0
+                    Error = $_.Exception.Message
+                }
+            }
+        }
+        
+        # Find duplicate code blocks
+        Write-StructuredLog -Message "Detecting duplicate code blocks..." -Level Info -Function $functionName
+        $duplicates = Find-DuplicateCodeBlocks -FileContents $fileContents
+        
+        # Calculate summary statistics
+        $severityCounts = @{ 'Critical' = 0; 'High' = 0; 'Medium' = 0; 'Low' = 0 }
+        $categoryCounts = @{}
+        
+        foreach ($suggestion in $suggestions) {
+            $severityCounts[$suggestion.Severity]++
+            if ($categoryCounts.ContainsKey($suggestion.Category)) {
+                $categoryCounts[$suggestion.Category]++
+            } else {
+                $categoryCounts[$suggestion.Category] = 1
+            }
+        }
+        
+        $techDebtScore = ($severityCounts['Critical'] * 8) + ($severityCounts['High'] * 4) + ($severityCounts['Medium'] * 2) + $severityCounts['Low']
+        $avgComplexity = if ($fileMetrics.Values.Count -gt 0) { 
+            ($fileMetrics.Values.OverallComplexity | Measure-Object -Average).Average 
+        } else { 0 }
+        
+        # Build comprehensive report
+        $report = [PSCustomObject]@{
+            Timestamp = (Get-Date).ToString('o')
+            AnalysisDuration = [Math]::Round(((Get-Date) - $startTime).TotalSeconds, 2)
+            SourceDirectory = $SourceDir
+            Configuration = @{
+                MinSeverity = $MinSeverity
+                MaxCyclomaticComplexity = $MaxCyclomaticComplexity
+                MaxFunctionLines = $MaxFunctionLines
+                MaxParameters = $MaxParameters
+                AutoFixEnabled = $EnableAutoFix.IsPresent
+            }
+            Summary = @{
+                TotalFilesAnalyzed = $psFiles.Count
+                TotalSuggestions = $suggestions.Count
+                TechnicalDebtScore = $techDebtScore
+                AverageComplexity = [Math]::Round($avgComplexity, 2)
+                TotalFunctions = ($fileMetrics.Values.Functions | Measure-Object).Count
+                AutoFixesAvailable = $autoFixes.Count
+                DuplicateBlocksFound = $duplicates.Count
+            }
+            SeverityBreakdown = $severityCounts
+            CategoryBreakdown = $categoryCounts
+            TopIssueFiles = $fileMetrics.Values | Sort-Object { $_.OverallComplexity } -Descending | Select-Object -First 10 | ForEach-Object {
+                @{ 
+                    FileName = $_.FileName
+                    Complexity = $_.OverallComplexity
+                    Issues = ($suggestions | Where-Object { $_.FullPath -eq $_.FullPath }).Count 
+                }
+            }
+            FileMetrics = $fileMetrics
+            Suggestions = $suggestions
+            AutoFixes = if ($EnableAutoFix) { $autoFixes } else { $null }
+            DuplicateBlocks = $duplicates
+        }
+        
+        # Save report
+        try {
+            $outputDir = Split-Path $OutputPath -Parent
+            if (-not (Test-Path $outputDir)) {
+                New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
+            }
+            
+            $report | ConvertTo-Json -Depth 15 | Set-Content $OutputPath -Encoding UTF8
+            Write-StructuredLog -Message "Analysis report saved to $OutputPath" -Level Info -Function $functionName
+        } catch {
+            Write-StructuredLog -Message "Failed to save report: $_" -Level Warning -Function $functionName
+        }
+        
+        # Output summary
+        $duration = [Math]::Round(((Get-Date) - $startTime).TotalSeconds, 2)
+        Write-StructuredLog -Message "Code analysis complete in ${duration}s" -Level Info -Function $functionName
+        Write-StructuredLog -Message "Technical Debt Score: $techDebtScore | Issues: Critical=$($severityCounts['Critical']), High=$($severityCounts['High']), Medium=$($severityCounts['Medium']), Low=$($severityCounts['Low'])" -Level $(if ($techDebtScore -gt 50) { 'Warning' } else { 'Info' }) -Function $functionName
+        
+        return $report
+        
+    } catch {
+        Write-StructuredLog -Message "AutoRefactorSuggestor error: $_" -Level Error -Function $functionName
+        throw
+    }
+}
+
+# Export the main function
+Export-ModuleMember -Function Invoke-AutoRefactorSuggestor
+

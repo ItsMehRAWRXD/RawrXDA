@@ -1,0 +1,14 @@
+﻿{
+    "Version":  "1.0.0",
+    "Timestamp":  "2026-01-24T03:25:01.2387617-05:00",
+    "SystemReady":  true,
+    "FailedModules":  5,
+    "DeploymentStartTime":  {
+                                "value":  "\/Date(1769243101238)\/",
+                                "DisplayHint":  2,
+                                "DateTime":  "Saturday, January 24, 2026 3:25:01 AM"
+                            },
+    "Mode":  "DryRun",
+    "LoadedModules":  23,
+    "ModuleCount":  28
+}

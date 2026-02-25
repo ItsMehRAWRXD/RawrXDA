@@ -1,0 +1,676 @@
+# RawrXD Live Metrics Dashboard Module
+# Production-ready real-time monitoring and metrics collection
+
+#Requires -Version 5.1
+
+<#
+.SYNOPSIS
+    RawrXD.LiveMetricsDashboard - Real-time system monitoring and metrics collection
+
+.DESCRIPTION
+    Comprehensive metrics collection engine providing:
+    - Real-time system performance monitoring
+    - Application health tracking and metrics
+    - Resource utilization analysis
+    - Performance baselining and trend analysis
+    - Anomaly detection and alerting
+    - Exportable dashboards and reports
+    - Historical data retention and analysis
+
+.LINK
+    https://github.com/RawrXD/LiveMetricsDashboard
+
+.NOTES
+    Author: RawrXD Auto-Generation System
+    Version: 1.0.0
+    Requires: PowerShell 5.1+
+    Last Updated: 2024-12-28
+#>
+
+# Import logging if available
+if (-not (Get-Command Write-StructuredLog -ErrorAction SilentlyContinue)) {
+    function Write-StructuredLog {
+        param(
+            [Parameter(Mandatory=$true)][string]$Message,
+            [ValidateSet('Info','Warning','Error','Debug')][string]$Level = 'Info',
+            [string]$Function = $null,
+            [hashtable]$Data = $null
+        )
+        $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+        $caller = if ($Function) { $Function } else { (Get-PSCallStack)[1].FunctionName }
+        $color = switch ($Level) { 'Error' { 'Red' } 'Warning' { 'Yellow' } 'Debug' { 'DarkGray' } default { 'Cyan' } }
+        Write-Host "[$timestamp][$caller][$Level] $Message" -ForegroundColor $color
+    }
+}
+
+# Global metrics storage
+$script:MetricsHistory = @{
+    System = [System.Collections.Generic.List[PSCustomObject]]::new()
+    Process = [System.Collections.Generic.List[PSCustomObject]]::new()
+    Features = [System.Collections.Generic.List[PSCustomObject]]::new()
+    Custom = [System.Collections.Generic.List[PSCustomObject]]::new()
+}
+
+$script:MetricsConfig = @{
+    MaxHistoryDepth = 100
+    RefreshIntervalSeconds = 5
+    EnableAnomalyDetection = $true
+    AnomalyThreshold = 2.0  # Standard deviations
+    IsRunning = $false
+    CollectSystemMetrics = $true
+    CollectProcessMetrics = $true
+    CollectFeatureMetrics = $true
+}
+
+function Get-SystemMetrics {
+    <#
+    .SYNOPSIS
+        Collect system-level performance metrics
+    #>
+    [CmdletBinding()]
+    param()
+    
+    try {
+        # Get system performance counters
+        $cpu = Get-CimInstance -ClassName Win32_PerfRawData_PerfOS_Processor | Where-Object { $_.Name -eq '_Total' }
+        $memory = Get-CimInstance -ClassName Win32_OperatingSystem
+        $disk = Get-CimInstance -ClassName Win32_LogicalDisk | Where-Object { $_.DriveType -eq 3 }
+        
+        $metrics = [PSCustomObject]@{
+            Timestamp = Get-Date
+            Type = 'System'
+            CPU = @{
+                ProcessorTime = if ($cpu) { $cpu.PercentProcessorTime } else { 0 }
+                ProcessorQueue = (Get-Counter -Counter "\System\Processor Queue Length" -ErrorAction SilentlyContinue).CounterSamples[0].CookedValue
+            }
+            Memory = @{
+                TotalGB = [Math]::Round($memory.TotalVisibleMemorySize / 1MB, 2)
+                FreeGB = [Math]::Round($memory.FreePhysicalMemory / 1MB, 2)
+                UsedGB = [Math]::Round(($memory.TotalVisibleMemorySize - $memory.FreePhysicalMemory) / 1MB, 2)
+                UsagePercent = [Math]::Round((($memory.TotalVisibleMemorySize - $memory.FreePhysicalMemory) / $memory.TotalVisibleMemorySize) * 100, 1)
+            }
+            Disk = @{
+                TotalGB = [Math]::Round(($disk | Measure-Object Size -Sum).Sum / 1GB, 2)
+                FreeGB = [Math]::Round(($disk | Measure-Object FreeSpace -Sum).Sum / 1GB, 2)
+                UsedGB = [Math]::Round((($disk | Measure-Object Size -Sum).Sum - ($disk | Measure-Object FreeSpace -Sum).Sum) / 1GB, 2)
+                UsagePercent = if (($disk | Measure-Object Size -Sum).Sum -gt 0) {
+                    [Math]::Round(((($disk | Measure-Object Size -Sum).Sum - ($disk | Measure-Object FreeSpace -Sum).Sum) / ($disk | Measure-Object Size -Sum).Sum) * 100, 1)
+                } else { 0 }
+            }
+        }
+        
+        return $metrics
+        
+    } catch {
+        Write-StructuredLog -Message "Error collecting system metrics: $_" -Level Warning -Function 'Get-SystemMetrics'
+        return $null
+    }
+}
+
+function Get-ProcessMetrics {
+    <#
+    .SYNOPSIS
+        Collect PowerShell process performance metrics
+    #>
+    [CmdletBinding()]
+    param()
+    
+    try {
+        $process = Get-Process -Id $PID
+        
+        $metrics = [PSCustomObject]@{
+            Timestamp = Get-Date
+            Type = 'Process'
+            ProcessId = $PID
+            ProcessName = $process.ProcessName
+            Memory = @{
+                WorkingSetMB = [Math]::Round($process.WorkingSet64 / 1MB, 2)
+                PrivateMemoryMB = [Math]::Round($process.PrivateMemorySize64 / 1MB, 2)
+                VirtualMemoryMB = [Math]::Round($process.VirtualMemorySize64 / 1MB, 2)
+                PagedMemoryMB = [Math]::Round($process.PagedMemorySize64 / 1MB, 2)
+            }
+            CPU = @{
+                TotalProcessorTime = $process.TotalProcessorTime.TotalMilliseconds
+                UserProcessorTime = $process.UserProcessorTime.TotalMilliseconds
+                PrivilegedProcessorTime = $process.PrivilegedProcessorTime.TotalMilliseconds
+                Threads = $process.Threads.Count
+            }
+            Handles = $process.HandleCount
+            StartTime = $process.StartTime
+            Runtime = [Math]::Round((Get-Date - $process.StartTime).TotalSeconds, 1)
+        }
+        
+        return $metrics
+        
+    } catch {
+        Write-StructuredLog -Message "Error collecting process metrics: $_" -Level Warning -Function 'Get-ProcessMetrics'
+        return $null
+    }
+}
+
+function Get-FeatureMetrics {
+    <#
+    .SYNOPSIS
+        Collect metrics about loaded PowerShell features and modules
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$false)]
+        [string]$MethodsDir = $null
+    )
+    
+    try {
+        $loadedModules = Get-Module
+        $loadedFunctions = Get-Command -CommandType Function | Where-Object { $_.ModuleName -like '*RawrXD*' }
+        
+        $metrics = [PSCustomObject]@{
+            Timestamp = Get-Date
+            Type = 'Features'
+            Modules = @{
+                TotalLoaded = $loadedModules.Count
+                RawrXDModules = ($loadedModules | Where-Object { $_.Name -like '*RawrXD*' }).Count
+                ModuleList = ($loadedModules | Where-Object { $_.Name -like '*RawrXD*' } | Select-Object Name, Version).Name -join ', '
+            }
+            Functions = @{
+                TotalLoaded = (Get-Command -CommandType Function).Count
+                RawrXDFunctions = $loadedFunctions.Count
+                FunctionList = ($loadedFunctions | Select-Object -First 10).Name -join ', '
+            }
+            Variables = @{
+                TotalVariables = (Get-Variable).Count
+                ScriptVariables = (Get-Variable -Scope Script).Count
+                GlobalVariables = (Get-Variable -Scope Global).Count
+            }
+            AutoFeatures = @{
+                AvailableFiles = if ($MethodsDir -and (Test-Path $MethodsDir)) {
+                    (Get-ChildItem -Path $MethodsDir -Filter '*_AutoFeature.ps1').Count
+                } else { 0 }
+                LoadedFeatures = if ($MethodsDir -and (Test-Path $MethodsDir)) {
+                    $availableFeatures = Get-ChildItem -Path $MethodsDir -Filter '*_AutoFeature.ps1'
+                    $loadedCount = 0
+                    foreach ($feature in $availableFeatures) {
+                        $funcName = 'Invoke-' + ($feature.BaseName -replace '_AutoFeature$', '')
+                        if (Get-Command $funcName -ErrorAction SilentlyContinue) {
+                            $loadedCount++
+                        }
+                    }
+                    $loadedCount
+                } else { 0 }
+            }
+        }
+        
+        return $metrics
+        
+    } catch {
+        Write-StructuredLog -Message "Error collecting feature metrics: $_" -Level Warning -Function 'Get-FeatureMetrics'
+        return $null
+    }
+}
+
+function Test-AnomalyDetection {
+    <#
+    .SYNOPSIS
+        Perform statistical anomaly detection on metrics
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$MetricType,
+        
+        [Parameter(Mandatory=$true)]
+        [PSCustomObject]$CurrentMetric,
+        
+        [Parameter(Mandatory=$false)]
+        [double]$Threshold = 2.0
+    )
+    
+    $anomalies = @()
+    $history = $script:MetricsHistory[$MetricType]
+    
+    if ($history.Count -lt 10) {
+        return $anomalies  # Need at least 10 data points for meaningful analysis
+    }
+    
+    try {
+        # Analyze numeric properties for anomalies
+        switch ($MetricType) {
+            'System' {
+                $memUsage = $history | Select-Object -Last 20 | ForEach-Object { $_.Memory.UsagePercent }
+                $cpuQueue = $history | Select-Object -Last 20 | ForEach-Object { $_.CPU.ProcessorQueue }
+                $diskUsage = $history | Select-Object -Last 20 | ForEach-Object { $_.Disk.UsagePercent }
+                
+                # Check memory usage anomaly
+                $memMean = ($memUsage | Measure-Object -Average).Average
+                $memStdDev = [Math]::Sqrt((($memUsage | ForEach-Object { [Math]::Pow($_ - $memMean, 2) }) | Measure-Object -Average).Average)
+                if ([Math]::Abs($CurrentMetric.Memory.UsagePercent - $memMean) -gt ($Threshold * $memStdDev)) {
+                    $anomalies += @{
+                        Type = 'Memory Usage'
+                        Value = $CurrentMetric.Memory.UsagePercent
+                        Expected = [Math]::Round($memMean, 1)
+                        Severity = if ([Math]::Abs($CurrentMetric.Memory.UsagePercent - $memMean) -gt (3 * $memStdDev)) { 'High' } else { 'Medium' }
+                    }
+                }
+                
+                # Check CPU queue anomaly
+                if ($cpuQueue -and $cpuQueue.Count -gt 5) {
+                    $cpuMean = ($cpuQueue | Measure-Object -Average).Average
+                    $cpuStdDev = [Math]::Sqrt((($cpuQueue | ForEach-Object { [Math]::Pow($_ - $cpuMean, 2) }) | Measure-Object -Average).Average)
+                    if ([Math]::Abs($CurrentMetric.CPU.ProcessorQueue - $cpuMean) -gt ($Threshold * $cpuStdDev)) {
+                        $anomalies += @{
+                            Type = 'CPU Queue Length'
+                            Value = $CurrentMetric.CPU.ProcessorQueue
+                            Expected = [Math]::Round($cpuMean, 1)
+                            Severity = if ($CurrentMetric.CPU.ProcessorQueue -gt 10) { 'High' } else { 'Medium' }
+                        }
+                    }
+                }
+            }
+            
+            'Process' {
+                $memUsage = $history | Select-Object -Last 20 | ForEach-Object { $_.Memory.WorkingSetMB }
+                $memMean = ($memUsage | Measure-Object -Average).Average
+                $memStdDev = [Math]::Sqrt((($memUsage | ForEach-Object { [Math]::Pow($_ - $memMean, 2) }) | Measure-Object -Average).Average)
+                
+                if ([Math]::Abs($CurrentMetric.Memory.WorkingSetMB - $memMean) -gt ($Threshold * $memStdDev)) {
+                    $anomalies += @{
+                        Type = 'Process Memory'
+                        Value = $CurrentMetric.Memory.WorkingSetMB
+                        Expected = [Math]::Round($memMean, 1)
+                        Severity = if ($CurrentMetric.Memory.WorkingSetMB -gt 500) { 'High' } else { 'Medium' }
+                    }
+                }
+            }
+        }
+        
+        return $anomalies
+        
+    } catch {
+        Write-StructuredLog -Message "Error in anomaly detection: $_" -Level Warning -Function 'Test-AnomalyDetection'
+        return @()
+    }
+}
+
+function Export-MetricsDashboard {
+    <#
+    .SYNOPSIS
+        Export metrics data to various formats
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$false)]
+        [ValidateSet('JSON', 'CSV', 'HTML')]
+        [string]$Format = 'HTML',
+        
+        [Parameter(Mandatory=$false)]
+        [string]$OutputPath = $null
+    )
+    
+    if (-not $OutputPath) {
+        $timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
+        $OutputPath = "MetricsDashboard_$timestamp.$($Format.ToLower())"
+    }
+    
+    $dashboardData = @{
+        Timestamp = Get-Date
+        Configuration = $script:MetricsConfig
+        History = @{
+            System = $script:MetricsHistory.System | Select-Object -Last 50
+            Process = $script:MetricsHistory.Process | Select-Object -Last 50
+            Features = $script:MetricsHistory.Features | Select-Object -Last 20
+        }
+        Summary = @{
+            TotalDataPoints = ($script:MetricsHistory.System.Count + $script:MetricsHistory.Process.Count + $script:MetricsHistory.Features.Count)
+            DataCollectionRuntime = if ($script:MetricsHistory.System.Count -gt 1) {
+                [Math]::Round(((Get-Date) - $script:MetricsHistory.System[0].Timestamp).TotalMinutes, 1)
+            } else { 0 }
+            LastSystemMetric = $script:MetricsHistory.System | Select-Object -Last 1
+            LastProcessMetric = $script:MetricsHistory.Process | Select-Object -Last 1
+        }
+    }
+    
+    try {
+        switch ($Format) {
+            'JSON' {
+                $dashboardData | ConvertTo-Json -Depth 10 | Set-Content $OutputPath -Encoding UTF8
+            }
+            'CSV' {
+                # Export system metrics to CSV
+                $script:MetricsHistory.System | Select-Object Timestamp, @{N='CPU_Queue';E={$_.CPU.ProcessorQueue}}, @{N='Memory_UsagePercent';E={$_.Memory.UsagePercent}}, @{N='Disk_UsagePercent';E={$_.Disk.UsagePercent}} | Export-Csv $OutputPath -NoTypeInformation
+            }
+            'HTML' {
+                $html = @"
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RawrXD Live Metrics Dashboard</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; margin: 20px; background: #f5f5f5; }
+        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .metric-value { font-size: 2em; font-weight: bold; color: #2196F3; }
+        .metric-label { color: #666; margin-bottom: 10px; }
+        .status-good { color: #4CAF50; }
+        .status-warning { color: #FF9800; }
+        .status-critical { color: #F44336; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #f2f2f2; }
+    </style>
+    <script>
+        setInterval(function() {
+            document.getElementById('timestamp').innerHTML = 'Last Updated: ' + new Date().toLocaleString();
+        }, 1000);
+    </script>
+</head>
+<body>
+    <h1>🚀 RawrXD Live Metrics Dashboard</h1>
+    <div id="timestamp">Last Updated: $((Get-Date).ToString())</div>
+    <br>
+    
+    <div class="dashboard">
+        <div class="card">
+            <div class="metric-label">System Memory</div>
+            <div class="metric-value $(if ($dashboardData.Summary.LastSystemMetric.Memory.UsagePercent -gt 80) { 'status-critical' } elseif ($dashboardData.Summary.LastSystemMetric.Memory.UsagePercent -gt 60) { 'status-warning' } else { 'status-good' })">
+                $($dashboardData.Summary.LastSystemMetric.Memory.UsagePercent)%
+            </div>
+            <div>$($dashboardData.Summary.LastSystemMetric.Memory.UsedGB) GB / $($dashboardData.Summary.LastSystemMetric.Memory.TotalGB) GB</div>
+        </div>
+        
+        <div class="card">
+            <div class="metric-label">Disk Usage</div>
+            <div class="metric-value $(if ($dashboardData.Summary.LastSystemMetric.Disk.UsagePercent -gt 90) { 'status-critical' } elseif ($dashboardData.Summary.LastSystemMetric.Disk.UsagePercent -gt 75) { 'status-warning' } else { 'status-good' })">
+                $($dashboardData.Summary.LastSystemMetric.Disk.UsagePercent)%
+            </div>
+            <div>$($dashboardData.Summary.LastSystemMetric.Disk.UsedGB) GB / $($dashboardData.Summary.LastSystemMetric.Disk.TotalGB) GB</div>
+        </div>
+        
+        <div class="card">
+            <div class="metric-label">Process Memory</div>
+            <div class="metric-value status-good">$($dashboardData.Summary.LastProcessMetric.Memory.WorkingSetMB) MB</div>
+            <div>Runtime: $($dashboardData.Summary.LastProcessMetric.Runtime)s</div>
+        </div>
+        
+        <div class="card">
+            <div class="metric-label">Data Collection</div>
+            <div class="metric-value status-good">$($dashboardData.Summary.TotalDataPoints)</div>
+            <div>Total data points collected over $($dashboardData.Summary.DataCollectionRuntime) minutes</div>
+        </div>
+    </div>
+    
+    <h2>Recent System Metrics</h2>
+    <table>
+        <tr><th>Time</th><th>Memory %</th><th>Disk %</th><th>CPU Queue</th></tr>
+$(foreach ($metric in ($dashboardData.History.System | Select-Object -Last 10)) {
+"        <tr><td>$($metric.Timestamp.ToString('HH:mm:ss'))</td><td>$($metric.Memory.UsagePercent)%</td><td>$($metric.Disk.UsagePercent)%</td><td>$($metric.CPU.ProcessorQueue)</td></tr>"
+})
+    </table>
+</body>
+</html>
+"@
+                $html | Set-Content $OutputPath -Encoding UTF8
+            }
+        }
+        
+        Write-StructuredLog -Message "Dashboard exported to: $OutputPath" -Level Info -Function 'Export-MetricsDashboard'
+        return $OutputPath
+        
+    } catch {
+        Write-StructuredLog -Message "Error exporting dashboard: $_" -Level Error -Function 'Export-MetricsDashboard'
+        throw
+    }
+}
+
+function Invoke-LiveMetricsDashboard {
+    <#
+    .SYNOPSIS
+        Main metrics collection and dashboard entry point
+    
+    .DESCRIPTION
+        Starts continuous metrics collection with real-time monitoring, anomaly detection,
+        and dashboard generation. Supports both daemon mode and snapshot mode.
+    
+    .PARAMETER MethodsDir
+        Directory containing AutoFeature methods to monitor
+    
+    .PARAMETER RefreshIntervalSeconds
+        Interval between metric collection cycles
+    
+    .PARAMETER CollectSystemMetrics
+        Enable system-level metrics (CPU, RAM, Disk)
+    
+    .PARAMETER CollectProcessMetrics
+        Enable process-level metrics for PowerShell
+    
+    .PARAMETER CollectFeatureMetrics
+        Enable feature/module-level metrics
+    
+    .PARAMETER HistoryDepth
+        Number of historical data points to retain
+    
+    .PARAMETER EnableAnomalyDetection
+        Enable statistical anomaly detection on metrics
+    
+    .PARAMETER SnapshotMode
+        Collect single snapshot and exit (no continuous monitoring)
+    
+    .PARAMETER ExportDashboard
+        Export dashboard to file after collection
+    
+    .PARAMETER DashboardFormat
+        Dashboard export format (JSON, CSV, HTML)
+    
+    .EXAMPLE
+        Invoke-LiveMetricsDashboard -CollectSystemMetrics -RefreshIntervalSeconds 10
+        
+        Start continuous monitoring with 10-second intervals
+    
+    .EXAMPLE
+        Invoke-LiveMetricsDashboard -SnapshotMode -ExportDashboard -DashboardFormat HTML
+        
+        Take single metrics snapshot and export HTML dashboard
+    
+    .OUTPUTS
+        Hashtable containing current metrics and dashboard data
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$false)]
+        [string]$MethodsDir = $null,
+        
+        [Parameter(Mandatory=$false)]
+        [ValidateRange(1, 300)]
+        [int]$RefreshIntervalSeconds = 5,
+        
+        [Parameter(Mandatory=$false)]
+        [switch]$CollectSystemMetrics,
+        
+        [Parameter(Mandatory=$false)]
+        [switch]$CollectProcessMetrics,
+        
+        [Parameter(Mandatory=$false)]
+        [switch]$CollectFeatureMetrics,
+        
+        [Parameter(Mandatory=$false)]
+        [ValidateRange(10, 1000)]
+        [int]$HistoryDepth = 100,
+        
+        [Parameter(Mandatory=$false)]
+        [switch]$EnableAnomalyDetection,
+        
+        [Parameter(Mandatory=$false)]
+        [switch]$SnapshotMode,
+        
+        [Parameter(Mandatory=$false)]
+        [switch]$ExportDashboard,
+        
+        [Parameter(Mandatory=$false)]
+        [ValidateSet('JSON', 'CSV', 'HTML')]
+        [string]$DashboardFormat = 'HTML'
+    )
+    
+    $functionName = 'Invoke-LiveMetricsDashboard'
+    
+    try {
+        # Update configuration
+        $script:MetricsConfig.MaxHistoryDepth = $HistoryDepth
+        $script:MetricsConfig.RefreshIntervalSeconds = $RefreshIntervalSeconds
+        $script:MetricsConfig.EnableAnomalyDetection = $EnableAnomalyDetection.IsPresent
+        $script:MetricsConfig.CollectSystemMetrics = $CollectSystemMetrics.IsPresent
+        $script:MetricsConfig.CollectProcessMetrics = $CollectProcessMetrics.IsPresent
+        $script:MetricsConfig.CollectFeatureMetrics = $CollectFeatureMetrics.IsPresent
+        
+        Write-StructuredLog -Message "Starting live metrics dashboard" -Level Info -Function $functionName -Data @{
+            SnapshotMode = $SnapshotMode.IsPresent
+            RefreshInterval = $RefreshIntervalSeconds
+            EnableAnomalyDetection = $EnableAnomalyDetection.IsPresent
+        }
+        
+        $collectionStart = Get-Date
+        $anomaliesDetected = @()
+        
+        if ($SnapshotMode) {
+            # Single collection cycle
+            Write-StructuredLog -Message "Collecting metrics snapshot" -Level Info -Function $functionName
+            
+            if ($CollectSystemMetrics) {
+                $systemMetrics = Get-SystemMetrics
+                if ($systemMetrics) {
+                    $script:MetricsHistory.System.Add($systemMetrics)
+                }
+            }
+            
+            if ($CollectProcessMetrics) {
+                $processMetrics = Get-ProcessMetrics
+                if ($processMetrics) {
+                    $script:MetricsHistory.Process.Add($processMetrics)
+                }
+            }
+            
+            if ($CollectFeatureMetrics) {
+                $featureMetrics = Get-FeatureMetrics -MethodsDir $MethodsDir
+                if ($featureMetrics) {
+                    $script:MetricsHistory.Features.Add($featureMetrics)
+                }
+            }
+            
+        } else {
+            # Continuous collection mode
+            $script:MetricsConfig.IsRunning = $true
+            
+            Write-StructuredLog -Message "Starting continuous metrics collection (Ctrl+C to stop)" -Level Info -Function $functionName
+            
+            while ($script:MetricsConfig.IsRunning) {
+                $cycleStart = Get-Date
+                
+                # Collect metrics
+                if ($CollectSystemMetrics) {
+                    $systemMetrics = Get-SystemMetrics
+                    if ($systemMetrics) {
+                        $script:MetricsHistory.System.Add($systemMetrics)
+                        
+                        # Anomaly detection
+                        if ($EnableAnomalyDetection) {
+                            $anomalies = Test-AnomalyDetection -MetricType 'System' -CurrentMetric $systemMetrics
+                            foreach ($anomaly in $anomalies) {
+                                $anomaliesDetected += $anomaly
+                                Write-StructuredLog -Message "ANOMALY DETECTED: $($anomaly.Type) = $($anomaly.Value) (expected ~$($anomaly.Expected))" -Level Warning -Function $functionName
+                            }
+                        }
+                        
+                        # Maintain history depth
+                        while ($script:MetricsHistory.System.Count -gt $HistoryDepth) {
+                            $script:MetricsHistory.System.RemoveAt(0)
+                        }
+                    }
+                }
+                
+                if ($CollectProcessMetrics) {
+                    $processMetrics = Get-ProcessMetrics
+                    if ($processMetrics) {
+                        $script:MetricsHistory.Process.Add($processMetrics)
+                        
+                        # Anomaly detection
+                        if ($EnableAnomalyDetection) {
+                            $anomalies = Test-AnomalyDetection -MetricType 'Process' -CurrentMetric $processMetrics
+                            foreach ($anomaly in $anomalies) {
+                                $anomaliesDetected += $anomaly
+                                Write-StructuredLog -Message "ANOMALY DETECTED: $($anomaly.Type) = $($anomaly.Value) (expected ~$($anomaly.Expected))" -Level Warning -Function $functionName
+                            }
+                        }
+                        
+                        # Maintain history depth
+                        while ($script:MetricsHistory.Process.Count -gt $HistoryDepth) {
+                            $script:MetricsHistory.Process.RemoveAt(0)
+                        }
+                    }
+                }
+                
+                if ($CollectFeatureMetrics) {
+                    $featureMetrics = Get-FeatureMetrics -MethodsDir $MethodsDir
+                    if ($featureMetrics) {
+                        $script:MetricsHistory.Features.Add($featureMetrics)
+                        
+                        # Maintain history depth
+                        while ($script:MetricsHistory.Features.Count -gt $HistoryDepth) {
+                            $script:MetricsHistory.Features.RemoveAt(0)
+                        }
+                    }
+                }
+                
+                # Wait for next cycle
+                $cycleDuration = ((Get-Date) - $cycleStart).TotalSeconds
+                if ($cycleDuration -lt $RefreshIntervalSeconds) {
+                    Start-Sleep -Seconds ($RefreshIntervalSeconds - $cycleDuration)
+                }
+                
+                # Check for cancellation (simplified)
+                if ([Console]::KeyAvailable) {
+                    $key = [Console]::ReadKey($true)
+                    if ($key.Key -eq 'C' -and $key.Modifiers -eq 'Control') {
+                        $script:MetricsConfig.IsRunning = $false
+                        Write-StructuredLog -Message "Metrics collection stopped by user" -Level Info -Function $functionName
+                    }
+                }
+            }
+        }
+        
+        # Build final report
+        $result = @{
+            CollectionSummary = @{
+                StartTime = $collectionStart
+                EndTime = Get-Date
+                Duration = [Math]::Round(((Get-Date) - $collectionStart).TotalSeconds, 1)
+                DataPointsCollected = ($script:MetricsHistory.System.Count + $script:MetricsHistory.Process.Count + $script:MetricsHistory.Features.Count)
+                AnomaliesDetected = $anomaliesDetected.Count
+            }
+            CurrentMetrics = @{
+                System = $script:MetricsHistory.System | Select-Object -Last 1
+                Process = $script:MetricsHistory.Process | Select-Object -Last 1
+                Features = $script:MetricsHistory.Features | Select-Object -Last 1
+            }
+            Configuration = $script:MetricsConfig
+            AnomaliesDetected = $anomaliesDetected
+        }
+        
+        # Export dashboard if requested
+        if ($ExportDashboard) {
+            $dashboardPath = Export-MetricsDashboard -Format $DashboardFormat
+            $result.DashboardPath = $dashboardPath
+        }
+        
+        $duration = [Math]::Round(((Get-Date) - $collectionStart).TotalSeconds, 1)
+        Write-StructuredLog -Message "Metrics collection completed in ${duration}s" -Level Info -Function $functionName
+        Write-StructuredLog -Message "Collected $($result.CollectionSummary.DataPointsCollected) data points, detected $($result.CollectionSummary.AnomaliesDetected) anomalies" -Level Info -Function $functionName
+        
+        return $result
+        
+    } catch {
+        Write-StructuredLog -Message "Live metrics dashboard error: $_" -Level Error -Function $functionName
+        throw
+    } finally {
+        $script:MetricsConfig.IsRunning = $false
+    }
+}
+
+# Export main function
+Export-ModuleMember -Function Invoke-LiveMetricsDashboard
