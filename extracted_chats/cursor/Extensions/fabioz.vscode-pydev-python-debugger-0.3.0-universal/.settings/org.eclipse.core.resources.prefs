@@ -1,0 +1,9 @@
+eclipse.preferences.version=1
+encoding//.settings/org.python.pydev.yaml=UTF-8
+encoding//PyDev.Debugger/_pydevd_bundle/_debug_adapter/pydevd_schema.py=utf-8
+encoding//PyDev.Debugger/pydevd_attach_to_process/winappdbg/crash.py=utf-8
+encoding//PyDev.Debugger/pydevd_attach_to_process/winappdbg/process.py=utf-8
+encoding//PyDev.Debugger/tests_python/debugger_fixtures.py=utf-8
+encoding//PyDev.Debugger/tests_python/test_debugger_json.py=utf-8
+encoding//src_adapter/pydevd_dap_adapter/debug_adapter_core/dap/pydevd_schema.py=utf-8
+encoding//tests_adapter/tests_adapter/fixtures.py=utf-8
