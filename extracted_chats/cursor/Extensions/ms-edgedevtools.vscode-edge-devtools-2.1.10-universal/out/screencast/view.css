@@ -1,0 +1,228 @@
+html,
+body {
+  --toolbar-height: 32px;
+  --emulation-bar-height: 32px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+#main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+#toolbar {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  width: 100%;
+  height: var(--toolbar-height);
+  border-bottom: 1px solid var(--vscode-editorGroup-border);
+  box-sizing: border-box;
+}
+
+#toolbar>button {
+  padding: 4px;
+  background-color: var(--vscode-editor-background);
+  border: none;
+  border-radius: 4px;
+  color: var(--vscode-editor-foreground);
+  cursor: pointer;
+}
+
+#toolbar>button:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+#toolbar>button:hover:not(:disabled) {
+  background-color: var(--vscode-toolbar-hoverBackground);
+}
+
+#url {
+  flex: 1;
+  background-color: var(--vscode-input-background);
+  border-color: var(--vscode-input-background);
+  border-style: solid;
+  border-width: 1px;
+  color: var(--vscode-input-foreground);
+}
+
+#canvas-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: calc(100% - var(--toolbar-height) - var(--emulation-bar-height));
+}
+
+#canvas {
+  outline: none;
+}
+
+#canvas.touch {
+  cursor: -webkit-image-set(url('../../resources/Images/touchCursor.png') 1x, url('../../resources/Images/touchCursor_2x.png') 2x), default;
+}
+
+#inactive-overlay {
+  backdrop-filter: blur(2px);
+  background-color: rgba(0,0,0,0.5);
+  font-size: 200%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-shadow: 2px 2px 5px #000;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+#inactive-overlay[hidden] {
+  display: none;
+}
+
+#emulation-bar {
+  background-color: var(--vscode-editor-background);
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  height: var(--emulation-bar-height);
+  width: 100%;
+}
+
+#emulation-bar * {
+  align-self: center;
+}
+
+#emulation-bar input {
+  width: 48px;
+  height: 24px;
+  background-color: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border: none;
+  appearance: none;
+}
+
+#emulation-bar input:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+#emulation-bar-right,
+#emulation-bar-center,
+#emulation-bar-left {
+  display: flex;
+}
+
+#emulation-bar button {
+  padding: 4px;
+  margin-left: 4px;
+  display: flex;
+  border: none;
+  background-color: var(--vscode-editor-background);
+  color: var(--vscode-editor-foreground);
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+#emulation-bar .codicon-close {
+  padding: 0px 4px;
+}
+
+#emulation-bar button:last-child {
+  margin-right: 4px;
+}
+
+#emulation-bar button:hover {
+  background-color: var(--vscode-toolbar-hoverBackground);
+}
+
+#popover {
+  border: 1px solid var(--vscode-dropdown-border);
+  border-radius: 8px;
+  box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+  background-color: var(--vscode-editor-background);
+  color: var(--vscode-editor-foreground);
+  max-height: 50%;
+  overflow: auto;
+}
+
+#popover hr {
+  background-color: var(--vscode-input-background);
+  border: none;
+  height: 1px;
+  margin-left: 35px;
+}
+
+#popover ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+
+#popover li {
+  display: flex;
+  padding: 5px 0px;
+  padding-right: 25px;
+  cursor: default;
+}
+
+#popover li:hover {
+  background-color: var(--vscode-button-hoverBackground);
+}
+
+#popover li i {
+  padding: 0px 10px;
+}
+
+#popover li:first-child {
+  margin-top: 5px;
+}
+
+#popover li:last-child {
+  margin-bottom: 5px;
+}
+
+.devtools-open {
+  color: #7dbae9;
+}
+
+.infobar {
+  flex-direction: row;
+  width: 100vw;
+  color: black;
+  background-color: rgb(254 246 213 / 100%);
+  height: 30px;
+}
+
+.infobar-message {
+  text-align: left;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: small;
+  padding: 5px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.infobar-close-button {
+  background-image: url('../../resources/Images/cross.svg');
+  background-repeat: no-repeat;
+  align-self: right;
+  background-size: 18px;
+  width: 20px;
+  height: 20px;
+  margin: 5px 10px 5px auto;
+}
