@@ -1,0 +1,45 @@
+{
+  "models": {
+    "defaultGGUF": "E:\\models\\llama-2-7b-q4_0.gguf",
+    "fallbackGGUF": "E:\\models\\llama-2-7b-q8_0.gguf",
+    "tokenizerVocab": "E:\\models\\tokenizer.model",
+    "checkpointDir": "E:\\checkpoints"
+  },
+  "endpoints": {
+    "ollamaAPI": "http://localhost:11434/api/generate",
+    "distributedTrainerMaster": "localhost:8888",
+    "telemetryCollector": "https://telemetry.example.com/v1/metrics"
+  },
+  "features": {
+    "hotpatchingEnabled": true,
+    "telemetryEnabled": false,
+    "flashAttentionEnabled": true,
+    "distributedTrainingEnabled": false,
+    "autoCheckpointInterval": 300,
+    "compressionLevel": 9
+  },
+  "security": {
+    "aesKeyEnvVar": "RAWRXD_AES_KEY",
+    "certPinning": {
+      "enabled": true,
+      "pins": [
+        "sha256/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+        "sha256/BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB="
+      ]
+    },
+    "auditLogPath": "E:\\logs\\audit.log",
+    "auditLogMaxSizeMB": 100,
+    "auditLogRotateOnStartup": true
+  },
+  "performance": {
+    "flashAttentionBlockSize": 64,
+    "kvCacheMaxSize": 2048,
+    "maxConcurrentJobs": 4,
+    "threadPoolSize": 8
+  },
+  "cicd": {
+    "defaultShell": "powershell.exe",
+    "jobTimeoutSeconds": 300,
+    "artifactOutputDir": "E:\\artifacts"
+  }
+}

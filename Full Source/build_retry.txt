@@ -1,0 +1,178 @@
+[1/13] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\enterprise_license_stubs.cpp.obj
+[2/13] Building CXX object CMakeFiles\RawrEngine.dir\src\core\enterprise_license_stubs.cpp.obj
+[3/13] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\core\enterprise_license_stubs.cpp.obj
+[4/13] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Core.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_Core.cpp.obj 
+C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DRAWR_QUICKJS_STUB=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\win32app -ID:\rawrxd\src\modules -ID:\rawrxd\src\utils -ID:\rawrxd\src\config -ID:\rawrxd\src\asm -ID:\rawrxd\src\lsp -ID:\rawrxd\src\plugin_system -ID:\rawrxd\include -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\src\reverse_engineering\pe_tools -external:I"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /EHsc /O2 /W0 /arch:AVX2 /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Core.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\win32app\Win32IDE_Core.cpp
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1064): error C2039: 'deferredHeavyInitBody': is not a member of 'Win32IDE'
+D:\rawrxd\src\win32app\Win32IDE.h(663): note: see declaration of 'Win32IDE'
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1067): error C2039: 'deferredHeavyInitBody': is not a member of 'Win32IDE'
+D:\rawrxd\src\win32app\Win32IDE.h(663): note: see declaration of 'Win32IDE'
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1074): error C3861: 'isShuttingDown': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1078): error C2065: 'm_nativeEngine': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1080): error C2065: 'm_nativeEngine': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1081): error C2065: 'm_nativeEngineLoaded': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1083): error C2065: 'm_nativeEngine': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1084): error C2065: 'm_nativeEngineLoaded': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1087): error C3861: 'isShuttingDown': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1091): error C2065: 'm_renderer': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1093): error C2065: 'm_renderer': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1099): error C3861: 'initializePowerShellState': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1108): error C3861: 'loadCodeSnippets': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1115): error C2065: 'm_nativeEngine': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1116): error C2065: 'm_agent': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1116): error C2065: 'm_nativeEngine': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1116): error C2672: 'std::make_unique': no matching overloaded function found
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\memory(3640): note: could be 'void std::make_unique(_Types ...)'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\memory(3634): note: or       'std::unique_ptr<_Ty,std::default_delete<_Ty>> std::make_unique(const size_t)'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\memory(3629): note: or       'std::unique_ptr<_Ty,std::default_delete<_Ty>> std::make_unique(_Types ...)'
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1117): error C2065: 'm_agent': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1117): error C3482: 'this' can only be used as a lambda capture within a non-static member function
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1118): error C3861: 'postAgentOutputSafe': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1127): error C2065: 'm_extensionLoader': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1128): error C2065: 'm_extensionLoader': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1129): error C2065: 'm_extensionLoader': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1133): error C3861: 'isShuttingDown': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1137): error C3861: 'initializeAgenticBridge': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1144): error C3861: 'initGhostText': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1151): error C3861: 'initFailureDetector': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1158): error C3861: 'loadSettings': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1159): error C3861: 'applySettings': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1163): error C3861: 'isShuttingDown': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1167): error C3861: 'initAgentHistory': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1174): error C3861: 'initFailureIntelligence': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1181): error C2065: 'm_modelResolver': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1183): error C2065: 'm_modelResolver': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1184): error C2065: 'm_modelResolver': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1187): error C2065: 'm_modelResolver': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1192): error C2065: 'm_modelResolver': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1200): error C2065: 'm_gpuTextEnabled': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1203): error C2653: 'OutputSeverity': is not a class or namespace name
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1203): error C2065: 'Info': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1203): error C3861: 'appendToOutput': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1205): error C2065: 'm_gpuTextEnabled': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1212): error C3861: 'initPhase10': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1219): error C3861: 'initPhase11': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1226): error C3861: 'initPhase12': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1233): error C3861: 'initDecompilerView': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1240): error C3861: 'initVoiceChat': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1241): error C3861: 'voiceLoadPreferences': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1242): error C2065: 'm_hwndMain': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1242): error C3861: 'createVoiceChatPanel': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1243): error C3861: 'registerVoiceHotkeys': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1244): error C3861: 'updateVoiceStatusBar': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1252): error C2065: 'm_hwndMain': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1254): error C2065: 'm_hwndMain': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1257): error C2065: 'm_voiceAutomationInitialized': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1265): error C3861: 'initQuickWinSystems': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1272): error C3861: 'initChainOfThought': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1279): error C3861: 'initTelemetry': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1286): error C3861: 'initFlightRecorder': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1293): error C3861: 'initMCP': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1300): error C3861: 'initVSCodeExtensionAPI': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1305): error C3861: 'isShuttingDown': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1309): error C3861: 'initPluginSystem': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1315): error C3861: 'isShuttingDown': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1317): error C3861: 'startLocalServer': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1326): error C2065: 'm_hwndMain': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1326): error C3861: 'isShuttingDown': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1327): error C2065: 'm_hwndMain': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1329): error C2059: syntax error: ')'
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1329): error C2059: syntax error: '.'
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1330): error C2059: syntax error: '}'
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1330): error C2143: syntax error: missing ';' before '}'
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1335): error C2143: syntax error: missing ';' before '{'
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1335): error C2447: '{': missing function header (old-style formal list?)
+[5/13] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\win32app\Win32IDE_Core.cpp.obj
+FAILED: CMakeFiles/RawrXD-Gold.dir/src/win32app/Win32IDE_Core.cpp.obj 
+C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_GOLD_BUILD=1 -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DRAWR_QUICKJS_STUB=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\win32app -ID:\rawrxd\src\modules -ID:\rawrxd\src\utils -ID:\rawrxd\src\config -ID:\rawrxd\src\asm -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\plugin_system -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:I"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /EHsc /O2 /W0 /arch:AVX2 /showIncludes /FoCMakeFiles\RawrXD-Gold.dir\src\win32app\Win32IDE_Core.cpp.obj /FdCMakeFiles\RawrXD-Gold.dir\ /FS -c D:\rawrxd\src\win32app\Win32IDE_Core.cpp
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1064): error C2039: 'deferredHeavyInitBody': is not a member of 'Win32IDE'
+D:\rawrxd\src\win32app\Win32IDE.h(663): note: see declaration of 'Win32IDE'
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1067): error C2039: 'deferredHeavyInitBody': is not a member of 'Win32IDE'
+D:\rawrxd\src\win32app\Win32IDE.h(663): note: see declaration of 'Win32IDE'
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1074): error C3861: 'isShuttingDown': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1078): error C2065: 'm_nativeEngine': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1080): error C2065: 'm_nativeEngine': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1081): error C2065: 'm_nativeEngineLoaded': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1083): error C2065: 'm_nativeEngine': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1084): error C2065: 'm_nativeEngineLoaded': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1087): error C3861: 'isShuttingDown': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1091): error C2065: 'm_renderer': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1093): error C2065: 'm_renderer': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1099): error C3861: 'initializePowerShellState': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1108): error C3861: 'loadCodeSnippets': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1115): error C2065: 'm_nativeEngine': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1116): error C2065: 'm_agent': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1116): error C2065: 'm_nativeEngine': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1116): error C2672: 'std::make_unique': no matching overloaded function found
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\memory(3640): note: could be 'void std::make_unique(_Types ...)'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\memory(3634): note: or       'std::unique_ptr<_Ty,std::default_delete<_Ty>> std::make_unique(const size_t)'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\memory(3629): note: or       'std::unique_ptr<_Ty,std::default_delete<_Ty>> std::make_unique(_Types ...)'
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1117): error C2065: 'm_agent': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1117): error C3482: 'this' can only be used as a lambda capture within a non-static member function
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1118): error C3861: 'postAgentOutputSafe': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1127): error C2065: 'm_extensionLoader': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1128): error C2065: 'm_extensionLoader': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1129): error C2065: 'm_extensionLoader': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1133): error C3861: 'isShuttingDown': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1137): error C3861: 'initializeAgenticBridge': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1144): error C3861: 'initGhostText': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1151): error C3861: 'initFailureDetector': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1158): error C3861: 'loadSettings': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1159): error C3861: 'applySettings': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1163): error C3861: 'isShuttingDown': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1167): error C3861: 'initAgentHistory': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1174): error C3861: 'initFailureIntelligence': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1181): error C2065: 'm_modelResolver': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1183): error C2065: 'm_modelResolver': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1184): error C2065: 'm_modelResolver': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1187): error C2065: 'm_modelResolver': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1192): error C2065: 'm_modelResolver': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1200): error C2065: 'm_gpuTextEnabled': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1203): error C2653: 'OutputSeverity': is not a class or namespace name
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1203): error C2065: 'Info': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1203): error C3861: 'appendToOutput': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1205): error C2065: 'm_gpuTextEnabled': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1212): error C3861: 'initPhase10': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1219): error C3861: 'initPhase11': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1226): error C3861: 'initPhase12': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1233): error C3861: 'initDecompilerView': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1240): error C3861: 'initVoiceChat': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1241): error C3861: 'voiceLoadPreferences': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1242): error C2065: 'm_hwndMain': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1242): error C3861: 'createVoiceChatPanel': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1243): error C3861: 'registerVoiceHotkeys': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1244): error C3861: 'updateVoiceStatusBar': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1252): error C2065: 'm_hwndMain': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1254): error C2065: 'm_hwndMain': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1257): error C2065: 'm_voiceAutomationInitialized': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1265): error C3861: 'initQuickWinSystems': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1272): error C3861: 'initChainOfThought': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1279): error C3861: 'initTelemetry': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1286): error C3861: 'initFlightRecorder': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1293): error C3861: 'initMCP': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1300): error C3861: 'initVSCodeExtensionAPI': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1305): error C3861: 'isShuttingDown': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1309): error C3861: 'initPluginSystem': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1315): error C3861: 'isShuttingDown': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1317): error C3861: 'startLocalServer': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1326): error C2065: 'm_hwndMain': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1326): error C3861: 'isShuttingDown': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1327): error C2065: 'm_hwndMain': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1329): error C2059: syntax error: ')'
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1329): error C2059: syntax error: '.'
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1330): error C2059: syntax error: '}'
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1330): error C2143: syntax error: missing ';' before '}'
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1335): error C2143: syntax error: missing ';' before '{'
+D:\rawrxd\src\win32app\Win32IDE_Core.cpp(1335): error C2447: '{': missing function header (old-style formal list?)
+[6/13] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\core\native_debugger_engine.cpp.obj
+[7/13] Building CXX object CMakeFiles\RawrEngine.dir\src\core\native_debugger_engine.cpp.obj
+D:\rawrxd\src\core\native_debugger_engine.cpp(28): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\native_debugger_engine.cpp(28): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+D:\rawrxd\src\core\native_debugger_engine.cpp(29): warning C4005: 'NOMINMAX': macro redefinition
+D:\rawrxd\src\core\native_debugger_engine.cpp(29): note: 'NOMINMAX' previously declared on the command line
+[8/13] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\native_debugger_engine.cpp.obj
+[9/13] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\native_debugger_engine.cpp.obj
+[10/13] Linking CXX executable RawrEngine.exe
+[11/13] Linking CXX executable gold\RawrXD_Gold.exe
+ninja: build stopped: cannot make progress due to previous errors.

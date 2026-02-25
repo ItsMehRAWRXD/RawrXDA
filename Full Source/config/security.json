@@ -1,0 +1,7 @@
+{
+  "allowedScripts": [
+    "*.ps1"
+  ],
+  "validateInputs": true,
+  "enforceTLS": true
+}

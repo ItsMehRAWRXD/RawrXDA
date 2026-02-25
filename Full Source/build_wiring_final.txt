@@ -1,0 +1,165 @@
+[1/8] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD_DiskRecoveryAgent.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_DiskRecoveryAgent.asm
+
+[2/8] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD-AnalyzerDistiller.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD-AnalyzerDistiller.asm
+
+[3/8] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD-AnalyzerDistiller.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD-AnalyzerDistiller.asm
+
+[4/8] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD_DiskRecoveryAgent.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_DiskRecoveryAgent.asm
+
+[5/8] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD-StreamingOrchestrator.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD-StreamingOrchestrator.asm
+
+[6/8] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD-StreamingOrchestrator.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD-StreamingOrchestrator.asm
+
+[7/8] Linking CXX executable RawrEngine.exe
+FAILED: RawrEngine.exe 
+C:\WINDOWS\system32\cmd.exe /C "cd . && "C:\Program Files\CMake\bin\cmake.exe" -E vs_link_exe --msvc-ver=1944 --intdir=CMakeFiles\RawrEngine.dir --rc=C:\PROGRA~2\WI3CF2~1\10\bin\100226~1.0\x64\rc.exe --mt=C:\PROGRA~2\WI3CF2~1\10\bin\100226~1.0\x64\mt.exe --manifests  -- C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\link.exe /nologo @CMakeFiles\RawrEngine.rsp  /out:RawrEngine.exe /implib:RawrEngine.lib /pdb:RawrEngine.pdb /version:0.0 /machine:x64 /INCREMENTAL:NO /subsystem:console /LARGEADDRESSAWARE:NO && cd ."
+LINK: command "C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\link.exe /nologo @CMakeFiles\RawrEngine.rsp /out:RawrEngine.exe /implib:RawrEngine.lib /pdb:RawrEngine.pdb /version:0.0 /machine:x64 /INCREMENTAL:NO /subsystem:console /LARGEADDRESSAWARE:NO /MANIFEST:EMBED,ID=1" failed (exit code 1169) with the following output:
+RawrXD-AnalyzerDistiller.asm.obj : error LNK2005: main already defined in main.cpp.obj
+
+RawrXD-AnalyzerDistiller.asm.obj : error LNK2005: AD_OpenGGUFFile already defined in analyzer_distiller_stubs.cpp.obj
+
+RawrXD-AnalyzerDistiller.asm.obj : error LNK2005: AD_ValidateGGUFHeader already defined in analyzer_distiller_stubs.cpp.obj
+
+RawrXD-AnalyzerDistiller.asm.obj : error LNK2005: AD_SkipMetadataKV already defined in analyzer_distiller_stubs.cpp.obj
+
+RawrXD-AnalyzerDistiller.asm.obj : error LNK2005: AD_ParseTensorMetadata already defined in analyzer_distiller_stubs.cpp.obj
+
+RawrXD-AnalyzerDistiller.asm.obj : error LNK2005: AD_IdentifyPattern already defined in analyzer_distiller_stubs.cpp.obj
+
+RawrXD-AnalyzerDistiller.asm.obj : error LNK2005: AD_AnalyzeStructure already defined in analyzer_distiller_stubs.cpp.obj
+
+RawrXD-AnalyzerDistiller.asm.obj : error LNK2005: AD_DistillToExec already defined in analyzer_distiller_stubs.cpp.obj
+
+RawrXD-AnalyzerDistiller.asm.obj : error LNK2005: AD_WriteExecFile already defined in analyzer_distiller_stubs.cpp.obj
+
+RawrXD-AnalyzerDistiller.asm.obj : error LNK2005: AD_CountParameters already defined in analyzer_distiller_stubs.cpp.obj
+
+RawrXD-AnalyzerDistiller.asm.obj : error LNK2005: AD_ExtractLayerIndex already defined in analyzer_distiller_stubs.cpp.obj
+
+RawrXD-AnalyzerDistiller.asm.obj : error LNK2005: AD_ProcessGGUF already defined in analyzer_distiller_stubs.cpp.obj
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2005: PrintError already defined in RawrXD-AnalyzerDistiller.asm.obj
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2005: PrintInfo already defined in RawrXD-AnalyzerDistiller.asm.obj
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2005: SO_LoadExecFile already defined in streaming_orchestrator_stubs.cpp.obj
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2005: SO_InitializeVulkan already defined in streaming_orchestrator_stubs.cpp.obj
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2005: SO_CreateMemoryArena already defined in streaming_orchestrator_stubs.cpp.obj
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2005: SO_CompileSPIRVShader already defined in streaming_orchestrator_stubs.cpp.obj
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2005: SO_CreateComputePipelines already defined in streaming_orchestrator_stubs.cpp.obj
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2005: SO_ExecuteLayer already defined in streaming_orchestrator_stubs.cpp.obj
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2005: SO_DispatchOperator already defined in streaming_orchestrator_stubs.cpp.obj
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2005: SO_ExecuteInference already defined in streaming_orchestrator_stubs.cpp.obj
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2005: SO_PrintStatistics already defined in streaming_orchestrator_stubs.cpp.obj
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2005: SO_InitializeStreaming already defined in streaming_orchestrator_stubs.cpp.obj
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2005: SO_CreateThreadPool already defined in streaming_orchestrator_stubs.cpp.obj
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2005: SO_StartDEFLATEThreads already defined in streaming_orchestrator_stubs.cpp.obj
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2005: SO_InitializePrefetchQueue already defined in streaming_orchestrator_stubs.cpp.obj
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2005: SO_ExecuteStreamingInference already defined in streaming_orchestrator_stubs.cpp.obj
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2005: SO_ProcessLayerAsync already defined in streaming_orchestrator_stubs.cpp.obj
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2005: SO_EvictLayer already defined in streaming_orchestrator_stubs.cpp.obj
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2005: SO_PrefetchLayer already defined in streaming_orchestrator_stubs.cpp.obj
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2005: SO_CalculatePrefetchScore already defined in streaming_orchestrator_stubs.cpp.obj
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2005: SO_GetMemoryPressure already defined in streaming_orchestrator_stubs.cpp.obj
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2005: SO_UpdateMetrics already defined in streaming_orchestrator_stubs.cpp.obj
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2005: SO_PrintMetrics already defined in streaming_orchestrator_stubs.cpp.obj
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2005: SO_GetMetrics already defined in streaming_orchestrator_stubs.cpp.obj
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2005: SO_CreateTimelineSemaphore already defined in streaming_orchestrator_stubs.cpp.obj
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2005: SO_SignalTimeline already defined in streaming_orchestrator_stubs.cpp.obj
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2005: SO_WaitTimeline already defined in streaming_orchestrator_stubs.cpp.obj
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2005: SO_FileSeekAndMap already defined in streaming_orchestrator_stubs.cpp.obj
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2005: SO_DecompressBlock already defined in streaming_orchestrator_stubs.cpp.obj
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2005: SO_ExecuteLayerOps already defined in streaming_orchestrator_stubs.cpp.obj
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2005: SO_DestroyStreamingSystem already defined in streaming_orchestrator_stubs.cpp.obj
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2005: SO_OpenMemoryMappedFile already defined in streaming_orchestrator_stubs.cpp.obj
+
+RawrEngine.exe : fatal error LNK1169: one or more multiply defined symbols found
+
+
+[8/8] Linking CXX executable bin\RawrXD-Win32IDE.exe
+FAILED: bin/RawrXD-Win32IDE.exe 
+C:\WINDOWS\system32\cmd.exe /C "cd . && "C:\Program Files\CMake\bin\cmake.exe" -E vs_link_exe --msvc-ver=1944 --intdir=CMakeFiles\RawrXD-Win32IDE.dir --rc=C:\PROGRA~2\WI3CF2~1\10\bin\100226~1.0\x64\rc.exe --mt=C:\PROGRA~2\WI3CF2~1\10\bin\100226~1.0\x64\mt.exe --manifests  -- C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\link.exe /nologo @CMakeFiles\RawrXD-Win32IDE.rsp  /out:bin\RawrXD-Win32IDE.exe /implib:RawrXD-Win32IDE.lib /pdb:bin\RawrXD-Win32IDE.pdb /version:0.0 /machine:x64 /INCREMENTAL:NO /subsystem:windows /LARGEADDRESSAWARE:NO && cd ."
+LINK: command "C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\link.exe /nologo @CMakeFiles\RawrXD-Win32IDE.rsp /out:bin\RawrXD-Win32IDE.exe /implib:RawrXD-Win32IDE.lib /pdb:bin\RawrXD-Win32IDE.pdb /version:0.0 /machine:x64 /INCREMENTAL:NO /subsystem:windows /LARGEADDRESSAWARE:NO /MANIFEST:EMBED,ID=1" failed (exit code 1169) with the following output:
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2005: PrintError already defined in RawrXD-AnalyzerDistiller.asm.obj
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2005: PrintInfo already defined in RawrXD-AnalyzerDistiller.asm.obj
+
+RawrXD_OmegaDeobfuscator.obj : error LNK2005: PrintString already defined in RawrXD-AnalyzerDistiller.asm.obj
+
+model_llm_harvester.obj : error LNK2005: main already defined in RawrXD-AnalyzerDistiller.asm.obj
+
+bin\RawrXD-Win32IDE.exe : fatal error LNK1169: one or more multiply defined symbols found
+
+
+ninja: build stopped: subcommand failed.

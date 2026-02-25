@@ -1,0 +1,27 @@
+[1/288] [MASM] Assembling RawrXD_NanoQuant_Engine.asm (ADMM, AVX2/512, NQ_1/NQ_R4)
+FAILED: RawrXD_NanoQuant_Engine.obj D:/rawrxd/build/RawrXD_NanoQuant_Engine.obj 
+C:\WINDOWS\system32\cmd.exe /C "cd /D D:\rawrxd\build && "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\ml64.exe" /c /Zi /Zd /FoD:/rawrxd/build/RawrXD_NanoQuant_Engine.obj D:/rawrxd/src/asm/RawrXD_NanoQuant_Engine.asm"
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_NanoQuant_Engine.asm
+D:/rawrxd/src/asm/RawrXD_NanoQuant_Engine.asm(643) : error A2008:syntax error : ymm5
+D:/rawrxd/src/asm/RawrXD_NanoQuant_Engine.asm(690) : error A2008:syntax error : ymm5
+D:/rawrxd/src/asm/RawrXD_NanoQuant_Engine.asm(727) : error A2008:syntax error : ymm5
+D:/rawrxd/src/asm/RawrXD_NanoQuant_Engine.asm(759) : error A2008:syntax error : ymm5
+D:/rawrxd/src/asm/RawrXD_NanoQuant_Engine.asm(993) : error A2008:syntax error : ymm3
+D:/rawrxd/src/asm/RawrXD_NanoQuant_Engine.asm(1198) : error A2008:syntax error : ymm3
+D:/rawrxd/src/asm/RawrXD_NanoQuant_Engine.asm(598) : error A2083:invalid scale value
+D:/rawrxd/src/asm/RawrXD_NanoQuant_Engine.asm(599) : error A2083:invalid scale value
+D:/rawrxd/src/asm/RawrXD_NanoQuant_Engine.asm(600) : error A2083:invalid scale value
+D:/rawrxd/src/asm/RawrXD_NanoQuant_Engine.asm(630) : error A2083:invalid scale value
+D:/rawrxd/src/asm/RawrXD_NanoQuant_Engine.asm(696) : error A2083:invalid scale value
+D:/rawrxd/src/asm/RawrXD_NanoQuant_Engine.asm(697) : error A2083:invalid scale value
+D:/rawrxd/src/asm/RawrXD_NanoQuant_Engine.asm(705) : error A2083:invalid scale value
+D:/rawrxd/src/asm/RawrXD_NanoQuant_Engine.asm(731) : error A2083:invalid scale value
+D:/rawrxd/src/asm/RawrXD_NanoQuant_Engine.asm(734) : error A2083:invalid scale value
+D:/rawrxd/src/asm/RawrXD_NanoQuant_Engine.asm(736) : error A2083:invalid scale value
+D:/rawrxd/src/asm/RawrXD_NanoQuant_Engine.asm(763) : error A2083:invalid scale value
+D:/rawrxd/src/asm/RawrXD_NanoQuant_Engine.asm(1991) : error A2029:multiple base registers not allowed
+D:/rawrxd/src/asm/RawrXD_NanoQuant_Engine.asm(2618) : error A2029:multiple base registers not allowed
+ninja: build stopped: cannot make progress due to previous errors.

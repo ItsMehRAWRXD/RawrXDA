@@ -1,0 +1,7 @@
+{
+  "OllamaHost": "http://localhost:11434",
+  "OllamaModel": "llama3",
+  "EnableThreading": true,
+  "EnableStreaming": true,
+  "EnableSecurity": true
+}
