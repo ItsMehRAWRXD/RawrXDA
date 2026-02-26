@@ -142,7 +142,7 @@ int AD_SkipMetadataKV(uint64_t kvCount, intptr_t fileHandle) {
 #else
         // POSIX equivalent — full type-switch matching Win32 path
         if (read((int)(intptr_t)fileHandle, &keyLen, 8) < 8) return 0;
-        lseek((int)(intptr_t)fileHandle, (off_t)keyLen, SEEK_CUR);
+        if (lseek((int)(intptr_t)fileHandle, (off_t)keyLen, SEEK_CUR) == (off_t)-1) return 0;
         uint32_t valueType = 0;
         if (read((int)(intptr_t)fileHandle, &valueType, 4) < 4) return 0;
         uint64_t skipBytes = 0;
@@ -181,23 +181,25 @@ int AD_SkipMetadataKV(uint64_t kvCount, intptr_t fileHandle) {
                     for (uint64_t e = 0; e < elemCount; e++) {
                         uint64_t sl = 0;
                         if (read((int)(intptr_t)fileHandle, &sl, 8) < 8) return 0;
-                        lseek((int)(intptr_t)fileHandle, (off_t)sl, SEEK_CUR);
+                        if (lseek((int)(intptr_t)fileHandle, (off_t)sl, SEEK_CUR) == (off_t)-1) return 0;
                     }
                     continue;
                 }
-                uint64_t elemSize = 4;
+                uint64_t elemSize = 0;
                 switch (elemType) {
                     case 0: case 1: case 7: elemSize = 1; break;
                     case 2: case 3: elemSize = 2; break;
                     case 4: case 5: case 6: elemSize = 4; break;
                     case 10: case 11: case 12: elemSize = 8; break;
+                    default: return 0;
                 }
                 skipBytes = elemCount * elemSize;
                 break;
             }
-            default: skipBytes = 8; break;
+            default: return 0;
         }
-        lseek((int)(intptr_t)fileHandle, (off_t)skipBytes, SEEK_CUR);
+        if (skipBytes > 0 &&
+            lseek((int)(intptr_t)fileHandle, (off_t)skipBytes, SEEK_CUR) == (off_t)-1) return 0;
 #endif
     }
     return 1;

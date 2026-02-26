@@ -18,6 +18,11 @@
 #include <cstddef>
 #include <cstring>
 #include <cstdlib>
+#include <cmath>
+#include <limits>
+#include <vector>
+
+#include "flash_attention.h"
 
 #ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN
@@ -560,10 +565,82 @@ int32_t FlashAttention_Init() {
 
 int32_t FlashAttention_Forward(void* cfg) {
     if (!cfg) return -1;
-    if (!FlashAttention_CheckAVX512()) return -1;
-    g_FlashAttnCalls++;
-    // CPU fallback would compute attention here
-    return 0; // Success
+
+    auto* fa = reinterpret_cast<RawrXD::FlashAttentionConfig*>(cfg);
+    if (!fa->Q || !fa->K || !fa->V || !fa->O) return -1;
+    if (fa->seqLenM <= 0 || fa->seqLenN <= 0 || fa->headDim <= 0) return -1;
+    if (fa->numHeads <= 0 || fa->numKVHeads <= 0 || fa->batchSize <= 0) return -1;
+
+    const int32_t seqM = fa->seqLenM;
+    const int32_t seqN = fa->seqLenN;
+    const int32_t dim = fa->headDim;
+    const int32_t numHeads = fa->numHeads;
+    const int32_t numKVHeads = fa->numKVHeads;
+    const int32_t batch = fa->batchSize;
+    const float scale = (fa->scale != 0.0f) ? fa->scale : (1.0f / std::sqrt(static_cast<float>(dim)));
+    const bool causal = (fa->causal != 0);
+
+    std::vector<float> scores(static_cast<size_t>(seqN), 0.0f);
+    std::vector<float> probs(static_cast<size_t>(seqN), 0.0f);
+
+    for (int32_t b = 0; b < batch; ++b) {
+        for (int32_t h = 0; h < numHeads; ++h) {
+            int32_t kvHead = (h * numKVHeads) / numHeads;
+            if (kvHead < 0) kvHead = 0;
+            if (kvHead >= numKVHeads) kvHead = numKVHeads - 1;
+
+            for (int32_t m = 0; m < seqM; ++m) {
+                float maxLogit = -std::numeric_limits<float>::infinity();
+
+                for (int32_t n = 0; n < seqN; ++n) {
+                    if (causal && n > m) {
+                        scores[static_cast<size_t>(n)] = -std::numeric_limits<float>::infinity();
+                        continue;
+                    }
+
+                    float dot = 0.0f;
+                    const size_t qBase = (((static_cast<size_t>(b) * numHeads + h) * seqM + m) * dim);
+                    const size_t kBase = (((static_cast<size_t>(b) * numKVHeads + kvHead) * seqN + n) * dim);
+                    for (int32_t d = 0; d < dim; ++d) {
+                        dot += fa->Q[qBase + static_cast<size_t>(d)] * fa->K[kBase + static_cast<size_t>(d)];
+                    }
+                    const float logit = dot * scale;
+                    scores[static_cast<size_t>(n)] = logit;
+                    if (logit > maxLogit) maxLogit = logit;
+                }
+
+                float denom = 0.0f;
+                for (int32_t n = 0; n < seqN; ++n) {
+                    const float s = scores[static_cast<size_t>(n)];
+                    if (!std::isfinite(s)) {
+                        probs[static_cast<size_t>(n)] = 0.0f;
+                        continue;
+                    }
+                    const float ex = std::exp(s - maxLogit);
+                    probs[static_cast<size_t>(n)] = ex;
+                    denom += ex;
+                }
+                if (denom <= 0.0f) return -1;
+
+                const size_t oBase = (((static_cast<size_t>(b) * numHeads + h) * seqM + m) * dim);
+                for (int32_t d = 0; d < dim; ++d) {
+                    float acc = 0.0f;
+                    for (int32_t n = 0; n < seqN; ++n) {
+                        const float p = probs[static_cast<size_t>(n)] / denom;
+                        if (p == 0.0f) continue;
+                        const size_t vBase = (((static_cast<size_t>(b) * numKVHeads + kvHead) * seqN + n) * dim);
+                        acc += p * fa->V[vBase + static_cast<size_t>(d)];
+                    }
+                    fa->O[oBase + static_cast<size_t>(d)] = acc;
+                }
+
+                ++g_FlashAttnTiles;
+            }
+        }
+    }
+
+    ++g_FlashAttnCalls;
+    return 0;
 }
 
 int32_t FlashAttention_GetTileConfig(void* out) {

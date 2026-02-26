@@ -8,12 +8,18 @@
 // ============================================================================
 
 #include "multi_response_engine.h"
+#include "../agentic/AgentOllamaClient.h"
 
 #include <algorithm>
 #include <sstream>
 #include <cstring>
 #include <cmath>
 #include <ctime>
+
+using RawrXD::Agent::AgentOllamaClient;
+using RawrXD::Agent::ChatMessage;
+using RawrXD::Agent::InferenceResult;
+using RawrXD::Agent::OllamaConfig;
 
 // ────────────────────────────────────────────────────────────────────────────
 // Construction / Destruction
@@ -229,65 +235,34 @@ GeneratedResponse MultiResponseEngine::generateSingleResponse(const std::string&
     auto t0 = std::chrono::steady_clock::now();
 
     // Build the request payload. The actual HTTP call to the active backend
-    // is handled by the existing inference path. We format the prompt with
-    // the template's system prompt and parameters.
+    // is executed here via AgentOllamaClient so this engine returns real model output.
     std::string systemPrompt = buildSystemPrompt(tmpl);
 
-    // ── Construct the completion request body (OpenAI-compatible) ──
-    // This will be sent to the active backend via the existing
-    // Win32IDE::sendInferenceRequest() path.
-    std::ostringstream reqBody;
-    reqBody << "{\"model\":\"default\","
-            << "\"temperature\":" << tmpl.temperature << ","
-            << "\"max_tokens\":" << tmpl.maxTokens << ","
-            << "\"messages\":["
-            << "{\"role\":\"system\",\"content\":\"";
+    OllamaConfig cfg;
+    cfg.temperature = tmpl.temperature;
+    cfg.max_tokens = tmpl.maxTokens;
 
-    // Escape the system prompt for JSON
-    for (char c : systemPrompt) {
-        switch (c) {
-            case '"':  reqBody << "\\\""; break;
-            case '\\': reqBody << "\\\\"; break;
-            case '\n': reqBody << "\\n";  break;
-            case '\r': reqBody << "\\r";  break;
-            case '\t': reqBody << "\\t";  break;
-            default:   reqBody << c;      break;
-        }
-    }
-    reqBody << "\"},";
-
-    // Include context if provided
+    AgentOllamaClient client(cfg);
+    std::vector<ChatMessage> messages;
+    messages.push_back({"system", systemPrompt, "", json::array()});
     if (!context.empty()) {
-        reqBody << "{\"role\":\"system\",\"content\":\"Context: ";
-        for (char c : context) {
-            switch (c) {
-                case '"':  reqBody << "\\\""; break;
-                case '\\': reqBody << "\\\\"; break;
-                case '\n': reqBody << "\\n";  break;
-                case '\r': reqBody << "\\r";  break;
-                case '\t': reqBody << "\\t";  break;
-                default:   reqBody << c;      break;
-            }
-        }
-        reqBody << "\"},";
+        messages.push_back({"system", "Context: " + context, "", json::array()});
     }
+    messages.push_back({"user", prompt, "", json::array()});
 
-    reqBody << "{\"role\":\"user\",\"content\":\"";
-    for (char c : prompt) {
-        switch (c) {
-            case '"':  reqBody << "\\\""; break;
-            case '\\': reqBody << "\\\\"; break;
-            case '\n': reqBody << "\\n";  break;
-            case '\r': reqBody << "\\r";  break;
-            case '\t': reqBody << "\\t";  break;
-            default:   reqBody << c;      break;
-        }
+    InferenceResult infer = client.ChatSync(messages);
+    if (infer.success) {
+        resp.content = infer.response;
+        resp.tokenCount = static_cast<int>(infer.completion_tokens);
+        resp.complete = true;
+        resp.error = false;
+    } else {
+        resp.content.clear();
+        resp.tokenCount = 0;
+        resp.complete = true;
+        resp.error = true;
+        resp.errorDetail = infer.error_message;
     }
-    reqBody << "\"}]}";
-
-    resp.content  = reqBody.str();  // Store the request body — actual send handled by caller
-    resp.complete = true;
-    resp.error    = false;
 
     auto t1 = std::chrono::steady_clock::now();
     resp.latencyMs = std::chrono::duration<double, std::milli>(t1 - t0).count();

@@ -2,6 +2,7 @@
 ; Stub implementations for core DMA/compute operations
 
 OPTION CASEMAP:NONE
+INCLUDE ssot_beacon.inc
 
 ; ============================================================
 ; EXTERNAL IMPORTS
@@ -20,6 +21,8 @@ PUBLIC Titan_PerformDMA
 PUBLIC Titan_InitializeDMA
 PUBLIC Titan_ShutdownDMA
 PUBLIC Titan_GetDMAStats
+PUBLIC SSOT_HasCppOwner
+PUBLIC SSOT_GetActiveOwner
 
 ; ============================================================
 ; CONSTANTS
@@ -107,5 +110,31 @@ Titan_GetDMAStats PROC FRAME
     mov eax, TITAN_SUCCESS
     ret
 Titan_GetDMAStats ENDP
+
+; ============================================================
+; SSOT_HasCppOwner
+; ECX = FNV1a-32 hash of handler symbol
+; Returns EAX = 1 if C++ provider is active for that symbol, else 0
+; ============================================================
+SSOT_HasCppOwner PROC
+    sub rsp, 28h
+    call rawr_ssot_owner_for_hash
+    cmp eax, RAWR_SSOT_OWNER_NONE
+    setne al
+    movzx eax, al
+    add rsp, 28h
+    ret
+SSOT_HasCppOwner ENDP
+
+; ============================================================
+; SSOT_GetActiveOwner
+; Returns EAX = active SSOT owner enum
+; ============================================================
+SSOT_GetActiveOwner PROC
+    sub rsp, 28h
+    call rawr_ssot_active_owner
+    add rsp, 28h
+    ret
+SSOT_GetActiveOwner ENDP
 
 END

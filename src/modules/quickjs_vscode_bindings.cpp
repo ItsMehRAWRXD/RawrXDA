@@ -25,7 +25,7 @@
 #ifndef RAWR_QUICKJS_STUB
 
 extern "C" {
-#include "quickjs/quickjs.h"
+#include "quickjs.h"
 }
 
 #include <cstring>
@@ -192,12 +192,12 @@ static void jsCommandTrampoline(void* ctx) {
 
     // Create a callback ref and dispatch into the extension's event loop
     QuickJSCallbackRef ref;
-    ref.jsFunction = binding->callback;
+    ref.jsFunction = reinterpret_cast<uintptr_t>(JS_VALUE_GET_PTR(binding->callback));
     ref.ctx = binding->ctx;
     ref.extensionId = binding->extensionId;
     ref.disposed = false;
 
-    host.dispatchCallback(binding->extensionId, ref, args);
+    host.dispatchCallback(binding->extensionId.c_str(), ref, args);
 }
 
 static JSValue js_commands_registerCommand(JSContext* ctx, JSValueConst this_val,
@@ -429,7 +429,7 @@ static JSValue js_window_createOutputChannel(JSContext* ctx, JSValueConst this_v
             JS_ToFloat64(ctx, &nativeId, nativeVal);
             JS_FreeValue(ctx, nativeVal);
 
-            auto& api = VSCodeExtensionAPI::instance();
+            auto& api = vscode::VSCodeExtensionAPI::instance();
             VSCodeOutputChannel* nativeCh = api.getOutputChannelById(
                 static_cast<uint64_t>(nativeId));
             if (nativeCh) {
@@ -480,7 +480,11 @@ static JSValue js_window_createOutputChannel(JSContext* ctx, JSValueConst this_v
 static JSValue js_window_showQuickPick(JSContext* ctx, JSValueConst this_val,
                                          int argc, JSValueConst* argv) {
     if (argc < 1) return JS_ThrowTypeError(ctx, "window.showQuickPick: items required");
+#if defined(QUICKJS_NG)
+    if (!JS_IsArray(argv[0]))
+#else
     if (!JS_IsArray(ctx, argv[0]))
+#endif
         return JS_ThrowTypeError(ctx, "window.showQuickPick: items must be an array");
 
     // Convert JS array to QuickPickItems
@@ -905,15 +909,13 @@ static JSValue js_workspace_findFiles(JSContext* ctx, JSValueConst this_val,
 
 static JSValue js_workspace_applyEdit(JSContext* ctx, JSValueConst this_val,
                                         int argc, JSValueConst* argv) {
-    // Extract workspace edit from JS WorkspaceEdit object
-    if (argc < 1) return resultToPromise(ctx, VSCodeAPIResult::error("WorkspaceEdit required"));
+    if (argc < 1 || !JS_IsObject(argv[0])) {
+        return resultToPromise(ctx, VSCodeAPIResult::error("WorkspaceEdit required"));
+    }
 
     VSCodeWorkspaceEdit edit;
-    edit.entryCount = 0;
 
-    // Deep extraction from JS WorkspaceEdit object
-    // A WorkspaceEdit has entries: array of { uri, edits[] }
-    // Each edit: { range: { start: { line, character }, end: { line, character } }, newText }
+    // WorkspaceEdit shape from our JS bindings: _entries = [{ uri, edits[] }]
     JSValue entries = JS_GetPropertyStr(ctx, argv[0], "_entries");
     if (!JS_IsUndefined(entries) && JS_IsObject(entries)) {
         int32_t entryLen = 0;
@@ -921,77 +923,99 @@ static JSValue js_workspace_applyEdit(JSContext* ctx, JSValueConst this_val,
         JS_ToInt32(ctx, &entryLen, lenVal);
         JS_FreeValue(ctx, lenVal);
 
-        for (int32_t i = 0; i < entryLen && edit.entryCount < 64; i++) {
+        for (int32_t i = 0; i < entryLen; ++i) {
             JSValue entry = JS_GetPropertyUint32(ctx, entries, static_cast<uint32_t>(i));
-            if (JS_IsObject(entry)) {
-                // Extract URI
-                JSValue uriVal = JS_GetPropertyStr(ctx, entry, "uri");
+            if (!JS_IsObject(entry)) {
+                JS_FreeValue(ctx, entry);
+                continue;
+            }
+
+            std::string uriKey;
+            JSValue uriVal = JS_GetPropertyStr(ctx, entry, "uri");
+            if (JS_IsString(uriVal)) {
+                const char* uriStr = JS_ToCString(ctx, uriVal);
+                if (uriStr) {
+                    uriKey = uriStr;
+                    JS_FreeCString(ctx, uriStr);
+                }
+            } else if (JS_IsObject(uriVal)) {
                 JSValue fsPathVal = JS_GetPropertyStr(ctx, uriVal, "fsPath");
                 const char* fsPath = JS_ToCString(ctx, fsPathVal);
+                if (fsPath && *fsPath) {
+                    uriKey = VSCodeUri::file(fsPath).toString();
+                }
                 if (fsPath) {
-                    std::strncpy(edit.entries[edit.entryCount].uri.fsPath,
-                                 fsPath, sizeof(edit.entries[edit.entryCount].uri.fsPath) - 1);
                     JS_FreeCString(ctx, fsPath);
                 }
                 JS_FreeValue(ctx, fsPathVal);
-                JS_FreeValue(ctx, uriVal);
-
-                // Extract edits array
-                JSValue editsArr = JS_GetPropertyStr(ctx, entry, "edits");
-                if (JS_IsObject(editsArr)) {
-                    int32_t editsLen = 0;
-                    JSValue editsLenVal = JS_GetPropertyStr(ctx, editsArr, "length");
-                    JS_ToInt32(ctx, &editsLen, editsLenVal);
-                    JS_FreeValue(ctx, editsLenVal);
-
-                    edit.entries[edit.entryCount].editCount = 0;
-                    for (int32_t j = 0; j < editsLen &&
-                         edit.entries[edit.entryCount].editCount < 32; j++) {
-                        JSValue editObj = JS_GetPropertyUint32(ctx, editsArr,
-                            static_cast<uint32_t>(j));
-                        if (JS_IsObject(editObj)) {
-                            auto& te = edit.entries[edit.entryCount]
-                                .edits[edit.entries[edit.entryCount].editCount];
-
-                            // Extract range
-                            JSValue rangeVal = JS_GetPropertyStr(ctx, editObj, "range");
-                            if (JS_IsObject(rangeVal)) {
-                                JSValue startVal = JS_GetPropertyStr(ctx, rangeVal, "start");
-                                JSValue endVal = JS_GetPropertyStr(ctx, rangeVal, "end");
-
-                                int32_t sl = 0, sc = 0, el = 0, ec = 0;
-                                JSValue slv = JS_GetPropertyStr(ctx, startVal, "line");
-                                JSValue scv = JS_GetPropertyStr(ctx, startVal, "character");
-                                JSValue elv = JS_GetPropertyStr(ctx, endVal, "line");
-                                JSValue ecv = JS_GetPropertyStr(ctx, endVal, "character");
-                                JS_ToInt32(ctx, &sl, slv); JS_ToInt32(ctx, &sc, scv);
-                                JS_ToInt32(ctx, &el, elv); JS_ToInt32(ctx, &ec, ecv);
-                                te.range.startLine = sl; te.range.startChar = sc;
-                                te.range.endLine = el; te.range.endChar = ec;
-                                JS_FreeValue(ctx, slv); JS_FreeValue(ctx, scv);
-                                JS_FreeValue(ctx, elv); JS_FreeValue(ctx, ecv);
-                                JS_FreeValue(ctx, startVal); JS_FreeValue(ctx, endVal);
-                            }
-                            JS_FreeValue(ctx, rangeVal);
-
-                            // Extract newText
-                            JSValue ntVal = JS_GetPropertyStr(ctx, editObj, "newText");
-                            const char* nt = JS_ToCString(ctx, ntVal);
-                            if (nt) {
-                                std::strncpy(te.newText, nt, sizeof(te.newText) - 1);
-                                JS_FreeCString(ctx, nt);
-                            }
-                            JS_FreeValue(ctx, ntVal);
-
-                            edit.entries[edit.entryCount].editCount++;
-                        }
-                        JS_FreeValue(ctx, editObj);
-                    }
-                }
-                JS_FreeValue(ctx, editsArr);
-
-                edit.entryCount++;
             }
+            JS_FreeValue(ctx, uriVal);
+
+            std::vector<VSCodeTextEdit> fileEdits;
+            JSValue editsArr = JS_GetPropertyStr(ctx, entry, "edits");
+            if (!JS_IsUndefined(editsArr) && JS_IsObject(editsArr)) {
+                int32_t editsLen = 0;
+                JSValue editsLenVal = JS_GetPropertyStr(ctx, editsArr, "length");
+                JS_ToInt32(ctx, &editsLen, editsLenVal);
+                JS_FreeValue(ctx, editsLenVal);
+
+                for (int32_t j = 0; j < editsLen; ++j) {
+                    JSValue editObj = JS_GetPropertyUint32(ctx, editsArr, static_cast<uint32_t>(j));
+                    if (!JS_IsObject(editObj)) {
+                        JS_FreeValue(ctx, editObj);
+                        continue;
+                    }
+
+                    VSCodeTextEdit te{};
+                    te.range.start = {0, 0};
+                    te.range.end = {0, 0};
+
+                    JSValue rangeVal = JS_GetPropertyStr(ctx, editObj, "range");
+                    if (JS_IsObject(rangeVal)) {
+                        JSValue startVal = JS_GetPropertyStr(ctx, rangeVal, "start");
+                        JSValue endVal = JS_GetPropertyStr(ctx, rangeVal, "end");
+
+                        if (JS_IsObject(startVal)) {
+                            JSValue lineVal = JS_GetPropertyStr(ctx, startVal, "line");
+                            JSValue charVal = JS_GetPropertyStr(ctx, startVal, "character");
+                            JS_ToInt32(ctx, &te.range.start.line, lineVal);
+                            JS_ToInt32(ctx, &te.range.start.character, charVal);
+                            JS_FreeValue(ctx, lineVal);
+                            JS_FreeValue(ctx, charVal);
+                        }
+
+                        if (JS_IsObject(endVal)) {
+                            JSValue lineVal = JS_GetPropertyStr(ctx, endVal, "line");
+                            JSValue charVal = JS_GetPropertyStr(ctx, endVal, "character");
+                            JS_ToInt32(ctx, &te.range.end.line, lineVal);
+                            JS_ToInt32(ctx, &te.range.end.character, charVal);
+                            JS_FreeValue(ctx, lineVal);
+                            JS_FreeValue(ctx, charVal);
+                        }
+
+                        JS_FreeValue(ctx, startVal);
+                        JS_FreeValue(ctx, endVal);
+                    }
+                    JS_FreeValue(ctx, rangeVal);
+
+                    JSValue newTextVal = JS_GetPropertyStr(ctx, editObj, "newText");
+                    const char* newText = JS_ToCString(ctx, newTextVal);
+                    if (newText) {
+                        te.newText = newText;
+                        JS_FreeCString(ctx, newText);
+                    }
+                    JS_FreeValue(ctx, newTextVal);
+
+                    fileEdits.push_back(std::move(te));
+                    JS_FreeValue(ctx, editObj);
+                }
+            }
+            JS_FreeValue(ctx, editsArr);
+
+            if (!uriKey.empty() && !fileEdits.empty()) {
+                edit.changes[uriKey] = std::move(fileEdits);
+            }
+
             JS_FreeValue(ctx, entry);
         }
     }
@@ -1841,7 +1865,8 @@ bool registerEnums(JSContext* ctx, JSValue vscodeNS) {
 // Master Registration: registerVSCodeAPI
 // ============================================================================
 
-bool registerVSCodeAPI(JSContext* ctx) {
+bool registerVSCodeAPI(JSContext* ctx, QuickJSExtensionRuntime* rt) {
+    (void)rt;
     JSValue vscodeNS = JS_NewObject(ctx);
 
     // Create sub-namespaces

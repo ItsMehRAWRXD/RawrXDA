@@ -129,7 +129,7 @@
     static int JS_ExecutePendingJob(JSRuntime* rt, JSContext** pctx) { return 0; }
     static void JS_SetModuleLoaderFunc(JSRuntime* rt,
         void* normalize_func,
-        void* (*module_loader)(JSContext*, const char*, void*),
+        JSModuleDef* (*module_loader)(JSContext*, const char*, void*),
         void* opaque) {}
     static void JS_SetContextOpaque(JSContext* ctx, void* opaque) {}
     static void* JS_GetContextOpaque(JSContext* ctx) { return nullptr; }
@@ -397,12 +397,9 @@ PatchResult JSExtensionHost::initialize() {
     JS_SetMemoryLimit(rt, 256 * 1024 * 1024);
     JS_SetMaxStackSize(rt, 8 * 1024 * 1024);
 
-    // Set custom module loader
-    JS_SetModuleLoaderFunc(rt, nullptr,
-        [](JSContext* ctx, const char* moduleName, void* opaque) -> JSModuleDef* {
-            return reinterpret_cast<JSModuleDef*>(
-                JSExtensionHost::moduleLoader(ctx, moduleName, opaque));
-        },
+    // Set custom module loader - use static wrapper to avoid lambda capture
+    JS_SetModuleLoaderFunc(rt, nullptr, 
+        &JSExtensionHost::moduleLoaderWrapper,
         this);
 
     m_jsRuntime = rt;
@@ -1851,8 +1848,12 @@ void JSExtensionHost::bindVSCodeExtensions(void* ctx) {
 //   4. Auto-generate polyfill via PolyfillEngine
 //   5. Return error with migration guide
 
-void* JSExtensionHost::moduleLoader(void* ctx, const char* moduleName, void* hostPtr) {
-    JSContext* cx = static_cast<JSContext*>(ctx);
+// Static wrapper for C function pointer compatibility
+JSModuleDef* JSExtensionHost::moduleLoaderWrapper(JSContext* ctx, const char* moduleName, void* opaque) {
+    return JSExtensionHost::moduleLoader(ctx, moduleName, opaque);
+}
+
+JSModuleDef* JSExtensionHost::moduleLoader(JSContext* cx, const char* moduleName, void* hostPtr) {
     JSExtensionHost* host = static_cast<JSExtensionHost*>(hostPtr);
 
     if (!moduleName || !cx) return nullptr;

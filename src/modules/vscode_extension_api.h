@@ -1708,6 +1708,7 @@ namespace vscode {
 
         // ---- Output Channels ----
         VSCodeOutputChannel* createOutputChannel(const char* name);
+        VSCodeOutputChannel* getOutputChannelById(uint64_t id);
         void flushOutputChannels();
 
         // ---- Tree Views ----

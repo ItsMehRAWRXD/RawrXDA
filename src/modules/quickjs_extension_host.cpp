@@ -136,8 +136,8 @@ void QuickJSExtensionHost::setDefaultSandboxConfig(const QuickJSSandboxConfig& c
 
 // QuickJS headers (compiled as C, included in C++ with extern "C")
 extern "C" {
-#include "quickjs/quickjs.h"
-#include "quickjs/quickjs-libc.h"
+#include "quickjs.h"
+#include "quickjs-libc.h"
 }
 
 #include <cstdarg>
@@ -880,7 +880,8 @@ bool QuickJSExtensionHost::injectTimers(QuickJSExtensionRuntime* rt) {
 
             QuickJSTimerEntry timer;
             timer.id = extRt->nextTimerId++;
-            timer.jsCallbackHandle = static_cast<uint64_t>(JS_VALUE_GET_PTR(JS_DupValue(ctx, fn)));
+            timer.jsCallbackHandle =
+                reinterpret_cast<uintptr_t>(JS_VALUE_GET_PTR(JS_DupValue(ctx, fn)));
             timer.intervalMs = 0;
             timer.nextFireTimeMs = GetTickCount64() + delay;
             timer.cancelled = false;
@@ -941,7 +942,8 @@ bool QuickJSExtensionHost::injectTimers(QuickJSExtensionRuntime* rt) {
 
             QuickJSTimerEntry timer;
             timer.id = extRt->nextTimerId++;
-            timer.jsCallbackHandle = static_cast<uint64_t>(JS_VALUE_GET_PTR(JS_DupValue(ctx, fn)));
+            timer.jsCallbackHandle =
+                reinterpret_cast<uintptr_t>(JS_VALUE_GET_PTR(JS_DupValue(ctx, fn)));
             timer.intervalMs = static_cast<uint64_t>(interval);
             timer.nextFireTimeMs = GetTickCount64() + static_cast<uint64_t>(interval);
             timer.cancelled = false;
@@ -1623,7 +1625,7 @@ void QuickJSExtensionHost::eventLoopEntry(QuickJSExtensionRuntime* rt) {
     SetThreadDescription(GetCurrentThread(),
         (L"QuickJS:" + std::wstring(rt->extensionId.begin(), rt->extensionId.end())).c_str());
 
-    logInfo("[QuickJS EventLoop] Started for '%s'", rt->extensionId.c_str());
+    instance().logInfo("[QuickJS EventLoop] Started for '%s'", rt->extensionId.c_str());
 
     while (rt->running.load(std::memory_order_acquire)) {
         // 1. Process queued events
@@ -1651,7 +1653,7 @@ void QuickJSExtensionHost::eventLoopEntry(QuickJSExtensionRuntime* rt) {
         }
     }
 
-    logInfo("[QuickJS EventLoop] Exiting for '%s'", rt->extensionId.c_str());
+    instance().logInfo("[QuickJS EventLoop] Exiting for '%s'", rt->extensionId.c_str());
 }
 
 void QuickJSExtensionHost::processEvents(QuickJSExtensionRuntime* rt) {
@@ -1731,8 +1733,7 @@ void QuickJSExtensionHost::processEvents(QuickJSExtensionRuntime* rt) {
                 // Execute a queued JS callback with payload
                 m_totalCallbacksDispatched.fetch_add(1, std::memory_order_relaxed);
 
-                // event.callbackHandle is a JSValue handle (JSValue is uint64_t)
-                JSValue fn = JS_MKVAL(JS_TAG_OBJECT, static_cast<int32_t>(event.callbackHandle));
+                JSValue fn = JS_MKPTR(JS_TAG_OBJECT, reinterpret_cast<void*>(event.callbackHandle));
                 
                 if (JS_IsFunction(rt->context, fn)) {
                     JSValue arg = JS_UNDEFINED;
@@ -1788,19 +1789,11 @@ void QuickJSExtensionHost::processTimers(QuickJSExtensionRuntime* rt) {
                 }
             }
         }
-
-        // Garbage collect cancelled timers
-        rt->timers.erase(
-            std::remove_if(rt->timers.begin(), rt->timers.end(),
-                           [](const QuickJSTimerEntry& t) { return t.cancelled; }),
-            rt->timers.end());
     }
 
     // Fire timers (outside lock)
     for (const auto& timer : firedTimers) {
-        // The timer callback handle is a DUP'd JSValue stored as uint64_t
-        // We need to reconstruct it and call it
-        JSValue fn = JS_MKVAL(JS_TAG_OBJECT, static_cast<int32_t>(timer.jsCallbackHandle));
+        JSValue fn = JS_MKPTR(JS_TAG_OBJECT, reinterpret_cast<void*>(timer.jsCallbackHandle));
         if (JS_IsFunction(rt->context, fn)) {
             JSValue result = JS_Call(rt->context, fn, JS_UNDEFINED, 0, nullptr);
             if (JS_IsException(result)) {
@@ -1814,6 +1807,25 @@ void QuickJSExtensionHost::processTimers(QuickJSExtensionRuntime* rt) {
             JS_FreeValue(rt->context, result);
         }
         m_totalTimersFired.fetch_add(1, std::memory_order_relaxed);
+    }
+
+    // Release JS callback refs for cancelled timers after firing.
+    {
+        std::lock_guard<std::mutex> lock(rt->timerMutex);
+        rt->timers.erase(
+            std::remove_if(rt->timers.begin(), rt->timers.end(),
+                [&](QuickJSTimerEntry& t) {
+                    if (!t.cancelled) {
+                        return false;
+                    }
+                    if (t.jsCallbackHandle != 0) {
+                        JSValue fn = JS_MKPTR(JS_TAG_OBJECT, reinterpret_cast<void*>(t.jsCallbackHandle));
+                        JS_FreeValue(rt->context, fn);
+                        t.jsCallbackHandle = 0;
+                    }
+                    return true;
+                }),
+            rt->timers.end());
     }
 }
 

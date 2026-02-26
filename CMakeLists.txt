@@ -545,6 +545,7 @@ set(SOURCES
     src/core/missing_handler_stubs.cpp
     src/core/model_training_pipeline.cpp
     src/core/ssot_handlers.cpp
+    src/core/ssot_beacon.cpp
     src/core/ssot_handlers_ext_runtime_minimal.cpp
     src/core/ssot_validation.cpp
 
@@ -833,6 +834,8 @@ set(SOURCES
 option(RAWR_REPLACE_SSOT_HANDLERS "Replace SSOT minimal/isolated lane with full ssot_handlers_ext.cpp" OFF)
 option(RAWR_REPLACE_MASM_FALLBACKS "Remove MASM-related C++ fallback stubs (and optionally re-enable blocked ASM units)" OFF)
 option(RAWR_REPLACE_SWARM_LICENSE_FALLBACKS "Remove swarm/license fallback stubs from SOURCES" OFF)
+set(RAWR_SSOT_PROVIDER "EXT" CACHE STRING "SSOT owner for RawrEngine: CORE, EXT, AUTO, STUBS, FEATURES")
+set_property(CACHE RAWR_SSOT_PROVIDER PROPERTY STRINGS CORE EXT AUTO STUBS FEATURES)
 
 if(RAWR_REPLACE_SSOT_HANDLERS)
     list(REMOVE_ITEM SOURCES
@@ -847,28 +850,19 @@ endif()
 
 if(RAWR_REPLACE_MASM_FALLBACKS)
     list(REMOVE_ITEM SOURCES
-        src/core/ai_agent_masm_stubs.cpp
-        src/core/analyzer_distiller_stubs.cpp
-        src/core/streaming_orchestrator_stubs.cpp
-        src/core/mesh_brain_asm_stubs.cpp
         src/core/memory_patch_byte_search_stubs.cpp
-        src/core/enterprise_devunlock_stub_masm.cpp
     )
     if(RAWR_HAS_MASM)
         list(APPEND ASM_KERNEL_SOURCES
             src/asm/memory_patch.asm
             src/asm/byte_search.asm
-            src/asm/RawrXD-AnalyzerDistiller.asm
-            src/asm/RawrXD-StreamingOrchestrator.asm
         )
         set_source_files_properties(
             src/asm/memory_patch.asm
             src/asm/byte_search.asm
-            src/asm/RawrXD-AnalyzerDistiller.asm
-            src/asm/RawrXD-StreamingOrchestrator.asm
             PROPERTIES LANGUAGE ASM_MASM
         )
-        message(STATUS "[ReplacementPass] MASM: stubs removed; blocked ASM units re-enabled for targeted validation")
+        message(STATUS "[ReplacementPass] MASM: promoted memory_patch/byte_search ASM; analyzer/streaming remain on C++ fallbacks pending asm include fixes")
     else()
         message(WARNING "[ReplacementPass] MASM replacement requested but RAWR_HAS_MASM=FALSE; fallback stubs removed without ASM replacements")
     endif()
@@ -882,17 +876,108 @@ if(RAWR_REPLACE_SWARM_LICENSE_FALLBACKS)
     message(STATUS "[ReplacementPass] Swarm/License: fallback stubs removed")
 endif()
 
+# Build target-scoped SSOT ownership partition for RawrEngine only.
+set(RAWR_ENGINE_SOURCES ${SOURCES})
+string(TOUPPER "${RAWR_SSOT_PROVIDER}" RAWR_SSOT_PROVIDER_UPPER)
+set(_RAWR_VALID_SSOT_PROVIDERS CORE EXT AUTO STUBS FEATURES)
+list(FIND _RAWR_VALID_SSOT_PROVIDERS "${RAWR_SSOT_PROVIDER_UPPER}" _rawwr_ssot_provider_idx)
+if(_rawwr_ssot_provider_idx EQUAL -1)
+    message(FATAL_ERROR "Invalid RAWR_SSOT_PROVIDER='${RAWR_SSOT_PROVIDER}'. Valid values: CORE, EXT, AUTO, STUBS, FEATURES")
+endif()
+
+set(_RAWR_SSOT_CORE 0)
+set(_RAWR_SSOT_EXT 0)
+set(_RAWR_SSOT_AUTO 0)
+set(_RAWR_SSOT_STUBS 0)
+set(_RAWR_SSOT_FEATURES 0)
+set(_RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS 0)
+
+if(RAWR_SSOT_PROVIDER_UPPER STREQUAL "CORE")
+    set(_RAWR_SSOT_CORE 1)
+    list(REMOVE_ITEM RAWR_ENGINE_SOURCES
+    src/core/ssot_handlers_ext_runtime_minimal.cpp
+    src/core/ssot_handlers_ext_isolated.cpp
+    src/core/ssot_handlers_ext.cpp
+        src/core/auto_feature_registry.cpp
+        src/core/missing_handler_stubs.cpp
+        src/core/feature_handlers.cpp
+    )
+elseif(RAWR_SSOT_PROVIDER_UPPER STREQUAL "EXT")
+    set(_RAWR_SSOT_EXT 1)
+    list(REMOVE_ITEM RAWR_ENGINE_SOURCES
+        src/core/auto_feature_registry.cpp
+        src/core/ssot_handlers_ext_runtime_minimal.cpp
+        src/core/ssot_handlers_ext_isolated.cpp
+        src/core/ssot_handlers_ext.cpp
+    )
+    list(APPEND RAWR_ENGINE_SOURCES src/core/ssot_handlers_ext_dedicated.cpp)
+elseif(RAWR_SSOT_PROVIDER_UPPER STREQUAL "AUTO")
+    set(_RAWR_SSOT_AUTO 1)
+    set(_RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS 1)
+    list(REMOVE_ITEM RAWR_ENGINE_SOURCES
+        src/core/missing_handler_stubs.cpp
+        src/core/ssot_handlers_ext_runtime_minimal.cpp
+        src/core/ssot_handlers_ext_isolated.cpp
+    )
+    list(REMOVE_ITEM RAWR_ENGINE_SOURCES src/core/ssot_handlers_ext_dedicated.cpp)
+    list(APPEND RAWR_ENGINE_SOURCES src/core/ssot_handlers_ext.cpp)
+elseif(RAWR_SSOT_PROVIDER_UPPER STREQUAL "STUBS")
+    set(_RAWR_SSOT_STUBS 1)
+    list(REMOVE_ITEM RAWR_ENGINE_SOURCES
+        src/core/ssot_handlers.cpp
+        src/core/auto_feature_registry.cpp
+        src/core/feature_handlers.cpp
+        src/core/ssot_handlers_ext_runtime_minimal.cpp
+        src/core/ssot_handlers_ext_isolated.cpp
+        src/core/ssot_handlers_ext.cpp
+    )
+elseif(RAWR_SSOT_PROVIDER_UPPER STREQUAL "FEATURES")
+    set(_RAWR_SSOT_FEATURES 1)
+    list(REMOVE_ITEM RAWR_ENGINE_SOURCES
+        src/core/ssot_handlers.cpp
+        src/core/auto_feature_registry.cpp
+        src/core/missing_handler_stubs.cpp
+        src/core/ssot_handlers_ext_runtime_minimal.cpp
+        src/core/ssot_handlers_ext_isolated.cpp
+        src/core/ssot_handlers_ext.cpp
+    )
+endif()
+
+list(REMOVE_DUPLICATES RAWR_ENGINE_SOURCES)
+message(STATUS "[SSOT Ownership] RawrEngine provider=${RAWR_SSOT_PROVIDER_UPPER} (CORE=${_RAWR_SSOT_CORE} EXT=${_RAWR_SSOT_EXT} AUTO=${_RAWR_SSOT_AUTO} STUBS=${_RAWR_SSOT_STUBS} FEATURES=${_RAWR_SSOT_FEATURES})")
+
 # =============================================================================
 # Command Table Audit — Build-time coverage validation targets
 # =============================================================================
 include(cmake/AutoFeatureRegistry.cmake)
+
+if(WIN32)
+    add_custom_target(regen-ssot-beacons
+        COMMAND powershell -ExecutionPolicy Bypass -File ${CMAKE_SOURCE_DIR}/tools/sync_ssot_beacon_symbols.ps1 -RepoRoot ${CMAKE_SOURCE_DIR}
+        COMMAND powershell -ExecutionPolicy Bypass -File ${CMAKE_SOURCE_DIR}/tools/generate_ssot_beacon_table.ps1 -RepoRoot ${CMAKE_SOURCE_DIR}
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMENT "Sync + regenerate SSOT beacon ownership artifacts"
+        VERBATIM
+    )
+
+    add_custom_target(verify-ssot-ext-ownership
+        COMMAND powershell -ExecutionPolicy Bypass -File ${CMAKE_SOURCE_DIR}/tools/verify_ssot_ext_ownership.ps1 -RepoRoot ${CMAKE_SOURCE_DIR}
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMENT "Verify SSOT EXT ownership artifacts are consistent"
+        VERBATIM
+    )
+endif()
 
 # =============================================================================
 # Reverse Engineering Suite (sub-module)
 # =============================================================================
 add_subdirectory(src/reverse_engineering)
 
-add_executable(RawrEngine ${SOURCES} ${ASM_KERNEL_SOURCES})
+add_executable(RawrEngine ${RAWR_ENGINE_SOURCES} ${ASM_KERNEL_SOURCES})
+
+if(WIN32)
+    add_dependencies(RawrEngine regen-ssot-beacons verify-ssot-ext-ownership)
+endif()
 
 # Link RE library into RawrEngine
 target_link_libraries(RawrEngine PRIVATE RawrXD-RE-Library)
@@ -923,8 +1008,14 @@ target_link_libraries(RawrEngine PRIVATE Threads::Threads)
 
 # Avoid duplicate register_sovereign_engines (real impl in sovereign_engines.cpp)
 target_compile_definitions(RawrEngine PRIVATE RAWR_HAS_SOVEREIGN_ENGINES=1)
-# When linking both ssot_handlers and auto_feature_registry, use auto's definitions for overlapping handlers (avoid LNK2005)
-target_compile_definitions(RawrEngine PRIVATE RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS=1)
+target_compile_definitions(RawrEngine PRIVATE
+    RAWR_SSOT_CORE=${_RAWR_SSOT_CORE}
+    RAWR_SSOT_EXT=${_RAWR_SSOT_EXT}
+    RAWR_SSOT_AUTO=${_RAWR_SSOT_AUTO}
+    RAWR_SSOT_STUBS=${_RAWR_SSOT_STUBS}
+    RAWR_SSOT_FEATURES=${_RAWR_SSOT_FEATURES}
+    $<$<BOOL:${_RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS}>:RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS=1>
+)
 
 # Sources used by missing_handler_stubs: debugger engine + symbols + Ollama client
 target_sources(RawrEngine PRIVATE
@@ -950,6 +1041,10 @@ endif()
 # All MASM modules linked, zero unresolved externals, static CRT
 # =============================================================================
 add_executable(RawrXD_Gold ${SOURCES} ${ASM_KERNEL_SOURCES})
+
+if(WIN32)
+    add_dependencies(RawrXD_Gold regen-ssot-beacons)
+endif()
 
 target_link_libraries(RawrXD_Gold PRIVATE RawrXD-RE-Library)
 
@@ -2244,6 +2339,7 @@ if(WIN32)
         src/agent/eval_framework.cpp
         src/agent/autonomous_subagent.cpp
         src/agent/agentic_failure_detector.cpp
+        src/agent/agentic_deep_thinking_engine.cpp
         src/core/ai_agent_masm_stubs.cpp
         src/agent/agentic_puppeteer.cpp
         src/cloud_api_client.cpp
@@ -2361,6 +2457,7 @@ if(WIN32)
         src/core/model_training_pipeline.cpp
         src/agentic/AgentOllamaClient.cpp
     src/core/ssot_handlers.cpp
+    src/core/ssot_handlers_ext_isolated.cpp
     src/core/ssot_validation.cpp
 
         # Unified Command Dispatch — Zero-drift SSOT dispatch (replaces manual registration)
@@ -2741,7 +2838,11 @@ if(WIN32)
         )
         target_include_directories(quickjs_static PUBLIC ${QUICKJS_DIR})
         if(MSVC)
-            target_compile_options(quickjs_static PRIVATE /W0 /O2 /experimental:c11atomics)
+            target_compile_options(quickjs_static PRIVATE
+                /W0
+                /experimental:c11atomics
+                $<$<NOT:$<CONFIG:Debug>>:/O2>
+            )
             if(QUICKJS_HAS_LIBBF)
                 target_compile_definitions(quickjs_static PRIVATE
                     _CRT_SECURE_NO_WARNINGS
@@ -2770,7 +2871,6 @@ if(WIN32)
             endif()
         endif()
         target_link_libraries(RawrXD-Win32IDE PRIVATE quickjs_static)
-        target_include_directories(RawrXD-Win32IDE PRIVATE ${QUICKJS_DIR}/..)
         if(TARGET RawrEngine)
             target_link_libraries(RawrEngine PRIVATE quickjs_static)
             target_include_directories(RawrEngine PRIVATE ${QUICKJS_DIR}/..)
@@ -3348,6 +3448,7 @@ if(WIN32)
         src/gpu/kv_cache_optimizer.cpp
         src/gpu/speculative_decoder.cpp
         src/gpu/speculative_decoder_v2.cpp
+        src/inference/ultra_fast_inference.cpp
 
         # ── UI ─────────────────────────────────────────────────────────
         src/ui/chat_message_renderer.cpp
@@ -3424,6 +3525,8 @@ if(WIN32)
         src/agent/quantum_autonomous_todo_system.cpp
         src/agent/quantum_multi_model_agent_cycling.cpp
         src/agent/quantum_dynamic_time_manager.cpp
+        src/agent/quantum_dynamic_time_manager_impl.cpp
+        src/agent/quantum_missing_impl.cpp
         src/agent/agentic_deep_thinking_engine.cpp
         src/agent/quantum_production_orchestrator.cpp
 
@@ -3541,7 +3644,6 @@ if(WIN32)
     # ── QuickJS embedded JS runtime ────────────────────────────────────
     if(TARGET quickjs_static)
         target_link_libraries(RawrXD-Gold PRIVATE quickjs_static)
-        target_include_directories(RawrXD-Gold PRIVATE ${QUICKJS_DIR}/..)
         target_compile_definitions(RawrXD-Gold PRIVATE RAWR_HAS_QUICKJS=1)
     else()
         target_compile_definitions(RawrXD-Gold PRIVATE RAWR_QUICKJS_STUB=1)

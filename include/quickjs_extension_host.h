@@ -57,7 +57,6 @@
 // These are opaque in this header; the .cpp files include quickjs.h directly.
 struct JSRuntime;
 struct JSContext;
-typedef uint64_t JSValue;  // QuickJS uses 64-bit NaN-boxed values
 
 // Forward-declare our own types
 struct VSCodeExtensionManifest;
@@ -95,7 +94,7 @@ struct QuickJSSandboxConfig {
 
 struct QuickJSTimerEntry {
     uint32_t    id;
-    uint64_t    jsCallbackHandle;       // Opaque handle to the JS function (stored in runtime)
+    uintptr_t   jsCallbackHandle;       // Opaque handle to the JS function object
     uint64_t    intervalMs;             // 0 = setTimeout (one-shot), >0 = setInterval (repeating)
     uint64_t    nextFireTimeMs;         // Absolute time (GetTickCount64-based)
     bool        cancelled;
@@ -118,7 +117,7 @@ enum class QuickJSEventType : int {
 
 struct QuickJSEvent {
     QuickJSEventType    type;
-    uint64_t            callbackHandle;     // JS function handle
+    uintptr_t           callbackHandle;     // JS function object handle
     std::string         payload;            // JSON-encoded arguments (for complex data)
     void*               nativeData;         // Raw pointer for native callback data
     uint32_t            timerId;            // For timer events
@@ -169,10 +168,10 @@ struct QuickJSExtensionRuntime {
     uint32_t                        nextTimerId;
 
     // JS Object Handles (stored as opaque uint64_t to avoid exposing JSValue in header)
-    uint64_t    jsGlobalVscode;         // globalThis.vscode
-    uint64_t    jsExportsActivate;      // exports.activate
-    uint64_t    jsExportsDeactivate;    // exports.deactivate
-    uint64_t    jsExtensionContext;     // The context object passed to activate()
+    uintptr_t   jsGlobalVscode;         // globalThis.vscode
+    uintptr_t   jsExportsActivate;      // exports.activate
+    uintptr_t   jsExportsDeactivate;    // exports.deactivate
+    uintptr_t   jsExtensionContext;     // The context object passed to activate()
 
     // Resource Tracking
     size_t      peakMemoryUsage;
@@ -208,7 +207,7 @@ struct QuickJSExtensionRuntime {
 // ============================================================================
 
 struct QuickJSCallbackRef {
-    uint64_t        jsFunction;         // Opaque handle (DUP'd JSValue)
+    uintptr_t       jsFunction;         // Opaque handle to JS function object
     JSContext*       ctx;                // Owning context (for thread affinity check)
     std::string     extensionId;        // For routing to correct event loop
     bool            disposed;
@@ -427,26 +426,6 @@ namespace quickjs_bindings {
 
     // Register the entire vscode.* API surface into globalThis.vscode
     bool registerVSCodeAPI(JSContext* ctx, QuickJSExtensionRuntime* rt);
-
-    // Individual namespace registration (called by registerVSCodeAPI)
-    bool registerCommands(JSContext* ctx, uint64_t vsCodeObj, QuickJSExtensionRuntime* rt);
-    bool registerWindow(JSContext* ctx, uint64_t vsCodeObj, QuickJSExtensionRuntime* rt);
-    bool registerWorkspace(JSContext* ctx, uint64_t vsCodeObj, QuickJSExtensionRuntime* rt);
-    bool registerLanguages(JSContext* ctx, uint64_t vsCodeObj, QuickJSExtensionRuntime* rt);
-    bool registerDebug(JSContext* ctx, uint64_t vsCodeObj, QuickJSExtensionRuntime* rt);
-    bool registerTasks(JSContext* ctx, uint64_t vsCodeObj, QuickJSExtensionRuntime* rt);
-    bool registerEnv(JSContext* ctx, uint64_t vsCodeObj, QuickJSExtensionRuntime* rt);
-    bool registerExtensions(JSContext* ctx, uint64_t vsCodeObj, QuickJSExtensionRuntime* rt);
-    bool registerSCM(JSContext* ctx, uint64_t vsCodeObj, QuickJSExtensionRuntime* rt);
-
-    // Enum/constant injection (CompletionItemKind, DiagnosticSeverity, etc.)
-    bool registerEnums(JSContext* ctx, uint64_t vsCodeObj);
-
-    // Utility: Convert C++ VSCodeAPIResult to a JS resolved/rejected Promise
-    uint64_t resultToPromise(JSContext* ctx, const VSCodeAPIResult& result);
-
-    // Utility: Extract QuickJSExtensionRuntime* from JS function's opaque data
-    QuickJSExtensionRuntime* getRuntimeFromContext(JSContext* ctx);
 
 } // namespace quickjs_bindings
 

@@ -75,6 +75,10 @@
 struct VSCodeExtensionManifest;
 struct VSCodeExtensionContext;
 struct VSCodeAPIResult;
+struct JSContext;  // QuickJS runtime context type
+struct JSRuntime;  // QuickJS runtime type
+struct JSModuleDef; // QuickJS module definition type
+
 #include "model_memory_hotpatch.hpp"  // PatchResult full definition
 
 // ============================================================================
@@ -301,6 +305,11 @@ public:
     // Check if an extension is a JS extension (vs native DLL)
     bool isJSExtension(const VSCodeExtensionManifest* manifest) const;
 
+    // ---- Module Loader Wrapper ----
+    // Static C-compatible wrapper for module loader function pointer
+    static JSModuleDef* moduleLoaderWrapper(JSContext* ctx, const char* moduleName, void* opaque);
+
+
     // ---- Event Dispatch ----
 
     // Fire a VS Code event into all active JS extensions
@@ -384,7 +393,7 @@ private:
     // 2. Check if module exists in extension's node_modules
     // 3. Check if polyfill engine can auto-generate
     // 4. Return error with helpful message
-    static void* moduleLoader(void* ctx, const char* moduleName, void* hostPtr);
+    static JSModuleDef* moduleLoader(JSContext* ctx, const char* moduleName, void* hostPtr);
 
     // ---- VSIX Extraction ----
     PatchResult extractZip(const char* zipPath, const char* destDir);
@@ -425,4 +434,3 @@ private:
     // ---- Statistics ----
     mutable Stats       m_stats;
 };
-

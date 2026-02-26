@@ -100,7 +100,10 @@ int SO_LoadExecFile(const char* filePath) {
     // Read and validate exec header magic
     char magic[4] = {0};
     DWORD rd = 0;
-    ReadFile(h, magic, 4, &rd, NULL);
+    if (!ReadFile(h, magic, 4, &rd, NULL) || rd != 4) {
+        CloseHandle(h);
+        return 0;
+    }
     CloseHandle(h);
     if (memcmp(magic, "EXEC", 4) != 0) return 0;
     return 1;
@@ -108,8 +111,9 @@ int SO_LoadExecFile(const char* filePath) {
     FILE* f = fopen(filePath, "rb");
     if (!f) return 0;
     char magic[4] = {0};
-    fread(magic, 1, 4, f);
+    const size_t rd = fread(magic, 1, 4, f);
     fclose(f);
+    if (rd != 4) return 0;
     return (memcmp(magic, "EXEC", 4) == 0) ? 1 : 0;
 #endif
 }
@@ -120,9 +124,9 @@ int SO_InitializeVulkan(void) {
     // Try to load Vulkan runtime
     HMODULE vk = LoadLibraryA("vulkan-1.dll");
     if (!vk) {
-        // Vulkan not available — acceptable fallback
+        // Vulkan not available; CPU fallback remains fully operational.
         g_vulkanInitialized = false;
-        return 0;
+        return 1;
     }
     FreeLibrary(vk);
 #endif
@@ -238,7 +242,8 @@ void SO_PrintStatistics(void) {
     fprintf(stdout, "  Bytes streamed:   %llu\n", (unsigned long long)g_metrics.bytes_streamed);
     fprintf(stdout, "  Prefetch hits:    %llu\n", (unsigned long long)g_metrics.prefetch_hits);
     fprintf(stdout, "  Prefetch misses:  %llu\n", (unsigned long long)g_metrics.prefetch_misses);
-    fprintf(stdout, "  Avg load time:    %u ms\n", g_metrics.avg_load_time_ms);
+    fprintf(stdout, "  Avg load time:    %llu ms\n",
+            (unsigned long long)g_metrics.avg_load_time_ms);
     fprintf(stdout, "  Memory used:      %llu / %llu bytes\n",
             (unsigned long long)g_memoryUsed, (unsigned long long)g_memoryCapacity);
     fprintf(stdout, "  Vulkan:           %s\n", g_vulkanInitialized ? "active" : "CPU fallback");
@@ -252,6 +257,7 @@ int SO_InitializeStreaming(void) {
     if (g_streamingInitialized) return 1;
     memset(g_layerStates, 0, sizeof(g_layerStates));
     memset(&g_metrics, 0, sizeof(g_metrics));
+    SO_InitializePrefetchQueue();
     g_streamingInitialized = true;
     return 1;
 }
@@ -259,7 +265,7 @@ int SO_InitializeStreaming(void) {
 int SO_CreateThreadPool(void) {
     memset(g_threads, 0, sizeof(g_threads));
     g_threadCount = 0;
-    return 1;
+    return SO_StartDEFLATEThreads(SO_DEFAULT_THREADS);
 }
 
 // ─── DEFLATE worker thread state ──────────────────────────────────────────
@@ -321,23 +327,48 @@ static void* DEFLATEWorkerProc(void* param) {
 
 int SO_StartDEFLATEThreads(uint32_t threadCount) {
     if (threadCount == 0 || threadCount > MAX_THREADS) threadCount = SO_DEFAULT_THREADS;
+    memset(g_deflateJobs, 0, sizeof(g_deflateJobs));
+    g_deflateShutdown = 0;
     g_threadCount = threadCount;
 #ifdef _WIN32
     for (uint32_t i = 0; i < threadCount; i++) {
         g_threads[i] = CreateThread(NULL, 0, DEFLATEWorkerProc, (LPVOID)(uintptr_t)i, 0, NULL);
-        if (!g_threads[i]) return 0;
+        if (!g_threads[i]) {
+            InterlockedExchange(&g_deflateShutdown, 1);
+            for (uint32_t j = 0; j < i; ++j) {
+                WaitForSingleObject(g_threads[j], 2000);
+                CloseHandle(g_threads[j]);
+                g_threads[j] = NULL;
+            }
+            g_threadCount = 0;
+            return 0;
+        }
     }
 #else
     for (uint32_t i = 0; i < threadCount; i++) {
-        if (pthread_create(&g_threads[i], NULL, DEFLATEWorkerProc, (void*)(uintptr_t)i) != 0)
+        if (pthread_create(&g_threads[i], NULL, DEFLATEWorkerProc, (void*)(uintptr_t)i) != 0) {
+            __atomic_store_n(&g_deflateShutdown, 1, __ATOMIC_RELEASE);
+            for (uint32_t j = 0; j < i; ++j) {
+                pthread_join(g_threads[j], nullptr);
+            }
+            g_threadCount = 0;
             return 0;
+        }
     }
 #endif
     return 1;
 }
 
 int SO_InitializePrefetchQueue(void) {
-    // Initialize prefetch entries with empty state
+    for (uint32_t i = 0; i < MAX_LAYERS; ++i) {
+        g_layerStates[i].layer_id = i;
+        g_layerStates[i].state = SO_LAYER_NOT_LOADED;
+        g_layerStates[i].memory_offset = 0;
+        g_layerStates[i].size_bytes = 0;
+        g_layerStates[i].last_access = 0;
+        g_layerStates[i].access_count = 0;
+        g_layerStates[i].prefetch_score = 0;
+    }
     return 1;
 }
 
@@ -355,18 +386,49 @@ int SO_ExecuteStreamingInference(void* layerTable, uint64_t layerCount) {
         if (i + SO_PREFETCH_DISTANCE < layerCount) {
             SO_PrefetchLayer(i + SO_PREFETCH_DISTANCE);
         }
-        // Process current layer
-        g_metrics.layers_loaded++;
+        // Process current layer through real layer-state path.
+        if (!SO_ProcessLayerAsync(i)) {
+            return 0;
+        }
     }
     return 1;
 }
 
 int SO_ProcessLayerAsync(uint64_t layerId) {
     if (layerId >= MAX_LAYERS) return 0;
+
+    if (!g_streamingInitialized) {
+        SO_InitializeStreaming();
+    }
+
+    // Derive a deterministic per-layer footprint from arena capacity when available.
+    const uint64_t defaultLayerBytes = 1024ULL * 1024ULL;
+    uint64_t layerBytes = defaultLayerBytes;
+    if (g_memoryCapacity > 0) {
+        uint64_t capBased = g_memoryCapacity / MAX_LAYERS;
+        if (capBased > 0) layerBytes = capBased;
+    }
+
     g_layerStates[layerId].state = SO_LAYER_LOADING;
     g_layerStates[layerId].last_access = get_ticks();
     g_layerStates[layerId].access_count++;
-    // In real impl: find idle thread, assign layer
+
+    // Enforce pressure by evicting one LRU layer when capacity would overflow.
+    if (g_memoryCapacity > 0 && g_memoryUsed + layerBytes > g_memoryCapacity) {
+        SO_EvictLayer(-1);
+    }
+
+    if (g_memoryCapacity > 0 && g_memoryUsed + layerBytes <= g_memoryCapacity) {
+        g_layerStates[layerId].memory_offset = g_memoryUsed;
+        g_layerStates[layerId].size_bytes = layerBytes;
+        g_memoryUsed += layerBytes;
+    } else {
+        // No arena/capacity: still treat as loaded metadata-only.
+        g_layerStates[layerId].memory_offset = 0;
+        g_layerStates[layerId].size_bytes = 0;
+    }
+
+    g_layerStates[layerId].prefetch_score = SO_CalculatePrefetchScore(layerId);
     g_layerStates[layerId].state = SO_LAYER_LOADED;
     g_metrics.layers_loaded++;
     return 1;
@@ -389,6 +451,13 @@ int SO_EvictLayer(int64_t layerId) {
     }
     if (layerId < 0 || layerId >= MAX_LAYERS) return 0;
     g_layerStates[layerId].state = SO_LAYER_EVICTING;
+    if (g_layerStates[layerId].size_bytes <= g_memoryUsed) {
+        g_memoryUsed -= g_layerStates[layerId].size_bytes;
+    } else {
+        g_memoryUsed = 0;
+    }
+    g_layerStates[layerId].size_bytes = 0;
+    g_layerStates[layerId].memory_offset = 0;
     g_layerStates[layerId].state = SO_LAYER_EVICTED;
     g_metrics.layers_evicted++;
     return 1;
@@ -435,7 +504,8 @@ void SO_PrintMetrics(void) {
     fprintf(stdout, "  Bytes streamed:   %llu MB\n", (unsigned long long)(g_metrics.bytes_streamed / (1024*1024)));
     fprintf(stdout, "  Prefetch hits:    %llu\n", (unsigned long long)g_metrics.prefetch_hits);
     fprintf(stdout, "  Prefetch misses:  %llu\n", (unsigned long long)g_metrics.prefetch_misses);
-    fprintf(stdout, "  Avg load time:    %u ms\n", g_metrics.avg_load_time_ms);
+    fprintf(stdout, "  Avg load time:    %llu ms\n",
+            (unsigned long long)g_metrics.avg_load_time_ms);
     fprintf(stdout, "  Memory pressure:  %s\n",
             SO_GetMemoryPressure() == SO_PRESSURE_LOW ? "LOW" :
             SO_GetMemoryPressure() == SO_PRESSURE_MEDIUM ? "MEDIUM" :
@@ -470,34 +540,39 @@ intptr_t SO_CreateTimelineSemaphore(void) {
 int SO_SignalTimeline(intptr_t semaphore, uint64_t value) {
     (void)value;
 #ifdef _WIN32
-    if (semaphore) SetEvent((HANDLE)semaphore);
+    if (!semaphore) return 0;
+    return SetEvent((HANDLE)semaphore) ? 1 : 0;
 #else
+    if (!semaphore) return 0;
     // POSIX: write a byte to the pipe's write-end to signal
     int writeFd = (int)(semaphore >> 32);
     if (writeFd > 0) {
         uint8_t sig = 1;
-        (void)write(writeFd, &sig, 1);
+        return (write(writeFd, &sig, 1) == 1) ? 1 : 0;
     }
+    return 0;
 #endif
-    return 1;
 }
 
 int SO_WaitTimeline(intptr_t semaphore, uint64_t value) {
     (void)value;
 #ifdef _WIN32
-    if (semaphore) WaitForSingleObject((HANDLE)semaphore, 5000);
+    if (!semaphore) return 0;
+    DWORD wr = WaitForSingleObject((HANDLE)semaphore, 5000);
+    return (wr == WAIT_OBJECT_0) ? 1 : 0;
 #else
+    if (!semaphore) return 0;
     // POSIX: read a byte from the pipe's read-end (blocks until signaled)
     int readFd = (int)(semaphore & 0xFFFFFFFF);
     if (readFd > 0) {
         uint8_t sig = 0;
         struct pollfd pfd = { readFd, POLLIN, 0 };
         if (poll(&pfd, 1, 5000) > 0) {
-            (void)read(readFd, &sig, 1);
+            return (read(readFd, &sig, 1) == 1) ? 1 : 0;
         }
     }
+    return 0;
 #endif
-    return 1;
 }
 
 void* SO_FileSeekAndMap(uint64_t fileOffset) {
@@ -567,6 +642,13 @@ void SO_ExecuteLayerOps(void* layerPtr) {
 }
 
 void SO_DestroyStreamingSystem(void) {
+    // Stop worker loops before waiting/joining.
+#ifdef _WIN32
+    InterlockedExchange(&g_deflateShutdown, 1);
+#else
+    __atomic_store_n(&g_deflateShutdown, 1, __ATOMIC_RELEASE);
+#endif
+
 #ifdef _WIN32
     for (uint32_t i = 0; i < g_threadCount; i++) {
         if (g_threads[i]) {
@@ -579,10 +661,22 @@ void SO_DestroyStreamingSystem(void) {
         VirtualFree(g_memoryArena, 0, MEM_RELEASE);
         g_memoryArena = nullptr;
     }
+#else
+    for (uint32_t i = 0; i < g_threadCount; i++) {
+        if (g_threads[i]) {
+            pthread_join(g_threads[i], nullptr);
+            g_threads[i] = {};
+        }
+    }
+    if (g_memoryArena) {
+        munmap(g_memoryArena, (size_t)g_memoryCapacity);
+        g_memoryArena = nullptr;
+    }
 #endif
     g_streamingInitialized = false;
     g_threadCount = 0;
     g_memoryUsed = 0;
+    g_memoryCapacity = 0;
 }
 
 intptr_t SO_OpenMemoryMappedFile(const char* path, uint64_t fileSize) {
@@ -591,9 +685,11 @@ intptr_t SO_OpenMemoryMappedFile(const char* path, uint64_t fileSize) {
 #ifdef _WIN32
     HANDLE h = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ,
                            NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (h == INVALID_HANDLE_VALUE) return -1;
     return (intptr_t)h;
 #else
     int fd = open(path, O_RDONLY);
+    if (fd < 0) return -1;
     return (intptr_t)fd;
 #endif
 }

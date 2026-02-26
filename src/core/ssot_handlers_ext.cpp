@@ -74,12 +74,14 @@ namespace {
         return defaultVal;
     }
 
-    std::string extractStringParam(const char* args[], const std::string& key) {
-        if (!args) return "";
-        for (int i = 0; args[i]; ++i) {
-            std::string arg = args[i];
-            if (arg.find(key + "=") == 0) {
-                return arg.substr(key.length() + 1);
+    std::string extractStringParam(const char* args, const std::string& key) {
+        if (!args || !*args) return "";
+        const std::string search = key + "=";
+        std::istringstream iss(args);
+        std::string token;
+        while (iss >> token) {
+            if (token.rfind(search, 0) == 0) {
+                return token.substr(search.size());
             }
         }
         return "";
@@ -135,12 +137,8 @@ static CommandResult delegateToGui(const CommandContext& ctx, uint32_t cmdId, co
 // FILE — IDE Core (ide_constants.h 105-110)
 // ============================================================================
 
-CommandResult handleFileAutoSave(const CommandContext& ctx)    { return delegateToGui(ctx, 105,  "file.autoSave"); }
 #ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
-CommandResult handleFileCloseFolder(const CommandContext& ctx) { return delegateToGui(ctx, 106,  "file.closeFolder"); }
-CommandResult handleFileOpenFolder(const CommandContext& ctx)  { return delegateToGui(ctx, 108,  "file.openFolder"); }
-CommandResult handleFileNewWindow(const CommandContext& ctx)   { return delegateToGui(ctx, 109,  "file.newWindow"); }
-CommandResult handleFileCloseTab(const CommandContext& ctx)    { return delegateToGui(ctx, 110,  "file.closeTab"); }
+// Definitions moved to the canonical FILE section later in this TU.
 #endif
 
 // ============================================================================
@@ -148,9 +146,7 @@ CommandResult handleFileCloseTab(const CommandContext& ctx)    { return delegate
 // ============================================================================
 
 #ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
-CommandResult handleEditMulticursorAdd(const CommandContext& ctx)    { return delegateToGui(ctx, 209, "edit.multicursorAdd"); }
-CommandResult handleEditMulticursorRemove(const CommandContext& ctx) { return delegateToGui(ctx, 210, "edit.multicursorRemove"); }
-CommandResult handleEditGotoLine(const CommandContext& ctx)          { return delegateToGui(ctx, 211, "edit.gotoLine"); }
+// Definitions moved to the canonical EDIT section later in this TU.
 #endif
 
 // ============================================================================

@@ -19,6 +19,7 @@
 #include <cstring>
 #include <cmath>
 #include <algorithm>
+#include <chrono>
 #include <vector>
 #include <atomic>
 #include <thread>
@@ -86,8 +87,8 @@ static inline float hsum_avx512(__m512 v) {
 
 extern "C" {
 
-static const char s_ok[] = "C++ stub";
-static const char s_fail[] = "C++ stub fallback";
+static const char s_ok[] = "C++ fallback";
+static const char s_fail[] = "C++ fallback error";
 
 MasmOperationResult masm_memory_protect_region(void* address, size_t size, uint32_t new_protection) {
     if (!address || size == 0)
@@ -106,9 +107,17 @@ MasmOperationResult masm_memory_direct_write(void* target, const void* source, s
     return MasmOperationResult::ok(s_ok);
 }
 
-MasmOperationResult masm_memory_atomic_exchange(void*, uint64_t new_val, uint64_t* old_val) {
-    if (old_val) *old_val = 0;
-    (void)new_val;
+MasmOperationResult masm_memory_atomic_exchange(void* target, uint64_t new_val, uint64_t* old_val) {
+    if (!target) return MasmOperationResult::error(s_fail, -1);
+#ifdef _WIN32
+    auto* p = reinterpret_cast<volatile long long*>(target);
+    const long long prev = _InterlockedExchange64(p, static_cast<long long>(new_val));
+    if (old_val) *old_val = static_cast<uint64_t>(prev);
+#else
+    auto* p = reinterpret_cast<uint64_t*>(target);
+    const uint64_t prev = __atomic_exchange_n(p, new_val, __ATOMIC_ACQ_REL);
+    if (old_val) *old_val = prev;
+#endif
     return MasmOperationResult::ok(s_ok);
 }
 
@@ -117,13 +126,10 @@ uint64_t masm_memory_scan_pattern_avx512(const void* memory, size_t memory_size,
         return 0;
     }
 
-    detect_cpu_features();
-    if (!g_avx512_supported) {
-        // Fallback to scalar implementation
+    auto scalar_scan = [&]() -> uint64_t {
         const uint8_t* mem = static_cast<const uint8_t*>(memory);
         const uint8_t* pat = reinterpret_cast<const uint8_t*>(pattern->pattern);
         uint64_t matches = 0;
-
         for (size_t i = 0; i <= memory_size - pattern->pattern_length; ++i) {
             bool match = true;
             for (size_t j = 0; j < pattern->pattern_length; ++j) {
@@ -137,6 +143,11 @@ uint64_t masm_memory_scan_pattern_avx512(const void* memory, size_t memory_size,
             if (match) matches++;
         }
         return matches;
+    };
+
+    detect_cpu_features();
+    if (!g_avx512_supported) {
+        return scalar_scan();
     }
 
 #ifdef __AVX512F__
@@ -197,7 +208,8 @@ uint64_t masm_memory_scan_pattern_avx512(const void* memory, size_t memory_size,
 
     return matches;
 #else
-    return 0;
+    // Compile-time AVX-512 unavailable; keep fully functional scalar path.
+    return scalar_scan();
 #endif
 }
 
@@ -1536,7 +1548,9 @@ uint64_t masm_get_performance_counter(void) {
     QueryPerformanceCounter(&li);
     return (uint64_t)li.QuadPart;
 #else
-    return 0;
+    return static_cast<uint64_t>(
+        std::chrono::steady_clock::now().time_since_epoch().count()
+    );
 #endif
 }
 
@@ -1551,7 +1565,17 @@ uint64_t masm_get_cpu_features(void) {
     if (regs[1] & (1 << 16)) f |= 1;  // AVX512F
     return f;
 #else
-    return 0;
+    uint64_t f = 0;
+#if defined(__AVX512F__)
+    f |= 1;
+#endif
+#if defined(__AVX2__)
+    f |= 2;
+#endif
+#if defined(__SSE4_1__)
+    f |= 4;
+#endif
+    return f;
 #endif
 }
 

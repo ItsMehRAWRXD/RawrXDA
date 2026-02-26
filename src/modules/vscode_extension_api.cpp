@@ -1920,6 +1920,17 @@ VSCodeOutputChannel* VSCodeExtensionAPI::createOutputChannel(const char* name) {
     return ptr;
 }
 
+VSCodeOutputChannel* VSCodeExtensionAPI::getOutputChannelById(uint64_t id) {
+    incrementAPICalls();
+    std::lock_guard<std::mutex> lock(m_outputMutex);
+    for (const auto& channel : m_outputChannels) {
+        if (channel && channel->id == id) {
+            return channel.get();
+        }
+    }
+    return nullptr;
+}
+
 void VSCodeExtensionAPI::flushOutputChannels() {
     incrementAPICalls();
     std::lock_guard<std::mutex> lock(m_outputMutex);

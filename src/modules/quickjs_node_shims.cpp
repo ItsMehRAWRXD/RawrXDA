@@ -23,7 +23,7 @@
 #ifndef RAWR_QUICKJS_STUB
 
 extern "C" {
-#include "quickjs/quickjs.h"
+#include "quickjs.h"
 }
 
 #include <cstring>

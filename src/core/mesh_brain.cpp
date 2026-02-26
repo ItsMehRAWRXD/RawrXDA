@@ -18,6 +18,11 @@
 #include <cstdio>
 #include <algorithm>
 
+extern "C" {
+void asm_mesh_crdt_track(uint64_t key, uint64_t value);
+void asm_mesh_topology_track(const uint64_t* nodeId);
+}
+
 // ---------------------------------------------------------------------------
 // Singleton
 // ---------------------------------------------------------------------------
@@ -141,6 +146,7 @@ PatchResult MeshBrain::putCRDT(uint64_t key, uint64_t value, CRDTType type) {
     entry.seqNo = 0;
 #ifdef RAWR_HAS_MASM
     asm_mesh_crdt_merge(&entry, 1);
+    asm_mesh_crdt_track(key, value);
 #endif
     // Always store locally for getCRDT / getCRDTCount to work
     // Last-writer-wins: update existing entry with same key if found
@@ -262,6 +268,7 @@ PatchResult MeshBrain::addPeer(const MeshNodeInfo& node) {
 #ifdef RAWR_HAS_MASM
     int rc = asm_mesh_topology_update(&node);
     if (rc == -1) return PatchResult::error("Mesh topology full", -1);
+    asm_mesh_topology_track(node.nodeId);
     const char* msg = (rc == 0) ? "Peer updated" : "Peer added";
     notifyCallback("peer_added", nullptr);
     return PatchResult::ok(msg);
