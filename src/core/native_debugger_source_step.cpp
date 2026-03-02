@@ -50,6 +50,29 @@ public:
         return stepToDifferentLine(currentAddress, false);
     }
 
+    StepResult lookupSource(uint64_t address) {
+        std::lock_guard<std::mutex> lock(mu_);
+        if (map_.empty()) {
+            return {};
+        }
+
+        auto it = std::lower_bound(
+            map_.begin(), map_.end(), address,
+            [](const SourceLineMap& e, uint64_t addr) { return e.address < addr; }
+        );
+
+        if (it != map_.end() && it->address == address) {
+            return {true, it->address, it->file, it->line};
+        }
+
+        if (it == map_.begin()) {
+            return {};
+        }
+
+        --it;
+        return {true, it->address, it->file, it->line};
+    }
+
 private:
     StepResult stepToDifferentLine(uint64_t currentAddress, bool allowSameFile) {
         if (map_.empty()) return {};
@@ -121,6 +144,24 @@ bool RawrXD_Debugger_StepOutSource(uint64_t currentAddress, uint64_t returnHint,
     if (outFile) *outFile = file.c_str();
     if (outLine) *outLine = r.line;
     return true;
+}
+
+const char* RawrXD_Debugger_SourceFileFromAddress(uint64_t address) {
+    auto r = RawrXD::Core::g_sourceStepper.lookupSource(address);
+    if (!r.success) {
+        return nullptr;
+    }
+    static thread_local std::string file;
+    file = r.file;
+    return file.c_str();
+}
+
+int RawrXD_Debugger_SourceLineFromAddress(uint64_t address) {
+    auto r = RawrXD::Core::g_sourceStepper.lookupSource(address);
+    if (!r.success) {
+        return 0;
+    }
+    return r.line;
 }
 
 }
