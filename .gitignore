@@ -107,3 +107,28 @@ Fixed_Reverse_Engineered/
 Consolidated_Modules_*/
 *.exe.WebView2/
 build_universal/
+
+# ═══════════════════════════════════════════════════════════════
+# Bloat Prevention (March 2026 cleanup)
+# ═══════════════════════════════════════════════════════════════
+
+# Distribution archives (keep only clean releases)
+/**/*.zip.part*
+/**/*.7z
+/**/*.rar
+RawrXD-v*.zip
+!dist/release/**/RawrXD-*-clean.zip
+
+# Large data outputs
+ipc_results.csv
+/**/*.csv
+!tests/**/*.csv
+
+# Generated code artifacts
+auto_generated_methods/*.json
+Powershield_Audit_Report.json
+RefactorSuggestions.json
+
+# Model/cache blobs
+**/blobs/
+**/*.safetensors
