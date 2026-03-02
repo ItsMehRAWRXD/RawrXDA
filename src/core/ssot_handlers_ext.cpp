@@ -5729,7 +5729,6 @@ CommandResult handleVoiceAutoStop(const CommandContext& ctx) {
     return CommandResult::ok("voice.autoStop");
 }
 #endif
-#endif
 
 #ifdef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 // ============================================================================
