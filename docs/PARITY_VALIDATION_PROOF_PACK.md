@@ -133,10 +133,20 @@ Validation focus: default-deny, explicit consent, payload preview/hash match, re
 
 ---
 
-## 6. Summary
+## 6. Completion / ghost text ship-gate (v1.3.0 Next 7)
+
+| ID | Test case name | Expected output / pass criteria | Artifacts / receipts |
+|----|----------------|----------------------------------|----------------------|
+| `COMP-01` | `completion_ghost_appears_deterministic` | For a deterministic fixture file/input, ghost text appears within debounce window and matches expected prefix extension. | `build_validation_completion_run1.txt` includes `COMP-01=PASS` and measured `keystroke_to_ghost_ms`. |
+| `COMP-02` | `completion_tab_accept_exact_insert` | Pressing `Tab` inserts exactly the suggested ghost text into the buffer at caret; no extra characters/newlines. | Diff artifact under `.rawrxd/audit/completion/` with expected == actual insertion payload. |
+| `COMP-03` | `completion_esc_clears_overlay` | Pressing `Esc` clears ghost overlay without mutating editor content. | `build_validation_completion_run1.txt` includes `COMP-03=PASS`; before/after buffer hash unchanged. |
+
+---
+
+## 7. Summary
 
 - **Build + smoke + (optional) self_test_gate** = minimum proof that the IDE and command surface exist and run.
 - **Checklist (§3)** = maps spec to test cases so parity is auditable.
-- **Hashes (§2), latency/resource (§4), and Cloud Bridge safety (§5)** = optional hardening for regression, performance, and privacy claims.
+- **Hashes (§2), latency/resource (§4), Cloud Bridge safety (§5), and completion ship-gates (§6)** = optional hardening for regression, performance, privacy, and UX claims.
 
 **Status:** Proof pack is the single place to point skeptics: “Run these commands; here is the checklist.”

@@ -25,6 +25,8 @@
 #include <thread>
 #include <atomic>
 #include <mutex>
+#include <chrono>
+#include <functional>
 
 #include "../agentic/OllamaProvider.h"
 
@@ -32,9 +34,32 @@
 // CONSTANTS
 // ============================================================================
 static const UINT_PTR GHOST_TEXT_TIMER_ID   = 8888;
-static const UINT      GHOST_TEXT_DELAY_MS  = 500;   // Debounce: 500ms after last keystroke
+static const UINT      GHOST_TEXT_DELAY_MS  = 120;   // Debounce: 120ms after last keystroke
 static const int       GHOST_TEXT_MAX_CHARS = 512;    // Max ghost text length
 static const int       GHOST_TEXT_MAX_LINES = 8;      // Max multi-line completions
+static const uint64_t  GHOST_TEXT_CACHE_TTL_MS = 2000;
+static const size_t    GHOST_TEXT_CACHE_MAX_ITEMS = 256;
+
+namespace {
+uint64_t nowMs() {
+    return (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+
+std::string buildGhostCacheKey(const std::string& filePath,
+                               const std::string& language,
+                               const std::string& prefix,
+                               const std::string& suffix,
+                               int line, int column) {
+    const size_t prefixWindow = (prefix.size() > 512) ? 512 : prefix.size();
+    const size_t suffixWindow = (suffix.size() > 256) ? 256 : suffix.size();
+    const std::string prefixTail = prefix.substr(prefix.size() - prefixWindow, prefixWindow);
+    const std::string suffixHead = suffix.substr(0, suffixWindow);
+    const std::string seed = filePath + "|" + language + "|" + std::to_string(line) + "|" +
+                             std::to_string(column) + "|" + prefixTail + "|" + suffixHead;
+    return std::to_string(std::hash<std::string>{}(seed));
+}
+} // namespace
 
 // ============================================================================
 // INITIALIZATION
@@ -89,6 +114,7 @@ void Win32IDE::triggerGhostTextCompletion() {
 
     // Kill any existing ghost text timer and dismiss current ghost text
     KillTimer(m_hwndMain, GHOST_TEXT_TIMER_ID);
+    ++m_ghostTextRequestSeq;
     dismissGhostText();
 
     // Start a new debounce timer
@@ -136,6 +162,12 @@ void Win32IDE::onGhostTextTimer() {
     m_ghostTextLine   = lineIndex;
     m_ghostTextColumn = column;
     m_ghostTextPending = true;
+    const uint64_t requestSeq = m_ghostTextRequestSeq.load();
+
+    {
+        std::lock_guard<std::mutex> lock(m_ghostTextCacheMutex);
+        m_ghostTextMetrics.requests++;
+    }
 
     // Detect language for context
     std::string language = getSyntaxLanguageName();
@@ -163,11 +195,47 @@ void Win32IDE::onGhostTextTimer() {
     int cursorCopy = cursorPos;
     int lineCopy = lineIndex;
     int colCopy = column;
+    std::string cacheKey = buildGhostCacheKey(fileCopy, langCopy, contextCopy, suffixCopy, lineCopy, colCopy);
 
-    std::thread([this, contextCopy, suffixCopy, langCopy, fileCopy, cursorCopy, lineCopy, colCopy]() {
+    {
+        std::lock_guard<std::mutex> lock(m_ghostTextCacheMutex);
+        auto it = m_ghostTextCache.find(cacheKey);
+        if (it != m_ghostTextCache.end() && (nowMs() - it->second.createdAtMs) <= GHOST_TEXT_CACHE_TTL_MS) {
+            m_ghostTextMetrics.cacheHits++;
+            m_ghostTextPending = false;
+            onGhostTextReady(cursorCopy, it->second.completion.c_str());
+            return;
+        }
+    }
+
+    std::thread([this, contextCopy, suffixCopy, langCopy, fileCopy, cursorCopy, lineCopy, colCopy, requestSeq]() {
         DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
         if (_guard.cancelled) return;
+        const uint64_t startedAt = nowMs();
         std::string completion = requestGhostTextCompletion(contextCopy, langCopy, suffixCopy, fileCopy, lineCopy, colCopy);
+        const uint64_t elapsedMs = nowMs() - startedAt;
+
+        if (requestSeq != m_ghostTextRequestSeq.load()) {
+            std::lock_guard<std::mutex> lock(m_ghostTextCacheMutex);
+            m_ghostTextMetrics.staleDrops++;
+            if (!isShuttingDown()) {
+                PostMessageA(m_hwndMain, WM_GHOST_TEXT_READY, (WPARAM)cursorCopy, (LPARAM)nullptr);
+            }
+            return;
+        }
+
+        if (!completion.empty()) {
+            std::lock_guard<std::mutex> lock(m_ghostTextCacheMutex);
+            if (m_ghostTextCache.size() >= GHOST_TEXT_CACHE_MAX_ITEMS) {
+                m_ghostTextCache.erase(m_ghostTextCache.begin());
+            }
+            const std::string key = buildGhostCacheKey(fileCopy, langCopy, contextCopy, suffixCopy, lineCopy, colCopy);
+            m_ghostTextCache[key] = GhostTextCacheEntry{completion, nowMs()};
+            m_ghostTextMetrics.lastLatencyMs = (double)elapsedMs;
+            const double reqCount = (double)std::max<uint64_t>(1, m_ghostTextMetrics.requests - m_ghostTextMetrics.cacheHits);
+            m_ghostTextMetrics.avgLatencyMs =
+                ((m_ghostTextMetrics.avgLatencyMs * (reqCount - 1.0)) + (double)elapsedMs) / reqCount;
+        }
 
         // Post result to UI thread
         if (isShuttingDown()) return;

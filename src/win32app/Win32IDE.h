@@ -2562,6 +2562,19 @@ private:
     void toggleGhostText();
     std::string trimGhostText(const std::string& raw);
 
+    struct GhostTextCacheEntry {
+        std::string completion;
+        uint64_t    createdAtMs = 0;
+    };
+
+    struct GhostTextMetrics {
+        uint64_t requests = 0;
+        uint64_t cacheHits = 0;
+        uint64_t staleDrops = 0;
+        double   lastLatencyMs = 0.0;
+        double   avgLatencyMs = 0.0;
+    };
+
     // Ghost Text state
     RawrXD::GhostTextRenderer* m_ghostTextRendererOverlay = nullptr;
     bool m_ghostTextEnabled     = false;
@@ -2572,6 +2585,10 @@ private:
     int m_ghostTextLine         = -1;
     int m_ghostTextColumn       = -1;
     HFONT m_ghostTextFont       = nullptr;
+    std::atomic<uint64_t> m_ghostTextRequestSeq{0};
+    std::mutex m_ghostTextCacheMutex;
+    std::unordered_map<std::string, GhostTextCacheEntry> m_ghostTextCache;
+    GhostTextMetrics m_ghostTextMetrics = {};
 
     // ========================================================================
     // Agent Panel — Multi-File Edit Session (Win32IDE_AgentPanel.cpp)
