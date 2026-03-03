@@ -1,6 +1,7 @@
 param(
     [string]$RepoRoot = (Resolve-Path "$PSScriptRoot\..").Path,
-    [string]$BuildDir = ""
+    [string]$BuildDir = "",
+    [string[]]$Objects = @()
 )
 
 Set-StrictMode -Version Latest
@@ -42,19 +43,21 @@ function Get-HandlerNames([string]$path, [string]$pattern) {
     return $names | Sort-Object -Unique
 }
 
-$providerPath = Join-Path $RepoRoot "src/core/ssot_missing_handlers_provider.cpp"
-
-if ([string]::IsNullOrWhiteSpace($BuildDir)) {
-    $BuildDir = Join-Path $RepoRoot "build"
-}
-
-$stubsObj = Join-Path $BuildDir "CMakeFiles/RawrXD-Win32IDE.dir/src/core/missing_handler_stubs.cpp.obj"
-$providerObj = Join-Path $BuildDir "CMakeFiles/RawrXD-Win32IDE.dir/src/core/ssot_missing_handlers_provider.cpp.obj"
-
-foreach ($p in @($stubsObj, $providerObj)) {
-    if (!(Test-Path $p)) {
-        throw "Missing object file: $p (build RawrXD-Win32IDE first)"
+function Resolve-ObjectPath([string[]]$candidates, [string]$leafName, [string]$missingMessage) {
+    foreach ($candidate in $candidates) {
+        if ([string]::IsNullOrWhiteSpace($candidate)) { continue }
+        $expanded = [Environment]::ExpandEnvironmentVariables($candidate)
+        $fullPath = $null
+        try {
+            $fullPath = (Resolve-Path -Path $expanded -ErrorAction Stop).Path
+        } catch {
+            continue
+        }
+        if ([IO.Path]::GetFileName($fullPath) -ieq $leafName) {
+            return $fullPath
+        }
     }
+    throw $missingMessage
 }
 
 function Get-DefinedHandlersFromObj([string]$objPath) {
@@ -75,26 +78,65 @@ function Get-DefinedHandlersFromObj([string]$objPath) {
     return $names | Sort-Object -Unique
 }
 
-$stubHandlers = Get-DefinedHandlersFromObj -objPath $stubsObj
-$providerHandlersDefined = Get-DefinedHandlersFromObj -objPath $providerObj
-$providerHandlersListed = Get-HandlerNames -path $providerPath -pattern 'X\((handle[A-Za-z0-9_]+)\)'
+$providerPath = Join-Path $RepoRoot "src/core/ssot_missing_handlers_provider.cpp"
+if ([string]::IsNullOrWhiteSpace($BuildDir)) {
+    $BuildDir = Join-Path $RepoRoot "build"
+}
 
-$providerSet = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
-foreach ($name in $providerHandlersDefined) { [void]$providerSet.Add($name) }
-
-$overlap = @()
-foreach ($name in $stubHandlers) {
-    if ($providerSet.Contains($name)) {
-        $overlap += $name
+$fallbackStubsObjCandidates = @(
+    (Join-Path $BuildDir "CMakeFiles/ssot_stub_lane_objs.dir/src/core/missing_handler_stubs.cpp.obj"),
+    (Join-Path $BuildDir "CMakeFiles/ssot_stub_lane_objs.dir/./src/core/missing_handler_stubs.cpp.obj"),
+    (Join-Path $BuildDir "CMakeFiles/RawrXD-Win32IDE.dir/src/core/missing_handler_stubs.cpp.obj"),
+    (Join-Path $BuildDir "CMakeFiles/RawrXD-Win32IDE.dir/./src/core/missing_handler_stubs.cpp.obj")
+)
+$fallbackProviderObjCandidates = @(
+    (Join-Path $BuildDir "CMakeFiles/ssot_stub_lane_objs.dir/src/core/ssot_missing_handlers_provider.cpp.obj"),
+    (Join-Path $BuildDir "CMakeFiles/ssot_stub_lane_objs.dir/./src/core/ssot_missing_handlers_provider.cpp.obj"),
+    (Join-Path $BuildDir "CMakeFiles/RawrXD-Win32IDE.dir/src/core/ssot_missing_handlers_provider.cpp.obj"),
+    (Join-Path $BuildDir "CMakeFiles/RawrXD-Win32IDE.dir/./src/core/ssot_missing_handlers_provider.cpp.obj")
+)
+$resolvedObjects = @()
+foreach ($obj in $Objects) {
+    if ([string]::IsNullOrWhiteSpace($obj)) { continue }
+    $expanded = [Environment]::ExpandEnvironmentVariables($obj)
+    if (Test-Path -Path $expanded) {
+        $resolvedObjects += (Resolve-Path -Path $expanded).Path
     }
 }
-
-if ($overlap.Count -gt 0) {
-    throw "Stub lane overlap detected between missing_handler_stubs.cpp and ssot_missing_handlers_provider.cpp: $($overlap -join ', ')"
+if ($resolvedObjects.Count -eq 0) {
+    $resolvedObjects = @($fallbackStubsObjCandidates + $fallbackProviderObjCandidates)
 }
 
-if ($providerHandlersListed.Count -ne 116) {
-    throw "Expected 116 provider handlers, found $($providerHandlersListed.Count)"
-}
+try {
+    $stubsObj = Resolve-ObjectPath -candidates $resolvedObjects -leafName "missing_handler_stubs.cpp.obj" -missingMessage "Missing object file: missing_handler_stubs.cpp.obj (build ssot_stub_lane_objs or RawrXD-Win32IDE first)"
+    $providerObj = Resolve-ObjectPath -candidates $resolvedObjects -leafName "ssot_missing_handlers_provider.cpp.obj" -missingMessage "Missing object file: ssot_missing_handlers_provider.cpp.obj (build ssot_stub_lane_objs or RawrXD-Win32IDE first)"
 
-Write-Host "SSOT stub-lane ownership verify OK: stubs_defined=$($stubHandlers.Count) provider_defined=$($providerHandlersDefined.Count) provider_listed=$($providerHandlersListed.Count) overlap=0"
+    $stubHandlers = Get-DefinedHandlersFromObj -objPath $stubsObj
+    $providerHandlersDefined = Get-DefinedHandlersFromObj -objPath $providerObj
+    $providerHandlersListed = Get-HandlerNames -path $providerPath -pattern 'X\((handle[A-Za-z0-9_]+)\)'
+
+    $providerSet = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+    foreach ($name in $providerHandlersDefined) { [void]$providerSet.Add($name) }
+
+    $overlap = @()
+    foreach ($name in $stubHandlers) {
+        if ($providerSet.Contains($name)) {
+            $overlap += $name
+        }
+    }
+
+    if ($overlap.Count -gt 0) {
+        throw "Stub lane overlap detected between missing_handler_stubs.cpp and ssot_missing_handlers_provider.cpp: $($overlap -join ', ')"
+    }
+
+    if ($providerHandlersListed.Count -ne 116) {
+        throw "Expected 116 provider handlers, found $($providerHandlersListed.Count)"
+    }
+
+    Write-Host "SSOT_STUB_LANE_GUARD: build=$BuildDir scanned_objs=$($resolvedObjects.Count) stubs_defined=$($stubHandlers.Count) provider_defined=$($providerHandlersDefined.Count) provider_listed=$($providerHandlersListed.Count) overlap=0 RESULT=PASS"
+    exit 0
+} catch {
+    $reason = $_.Exception.Message
+    Write-Host "SSOT_STUB_LANE_GUARD: build=$BuildDir scanned_objs=$($resolvedObjects.Count) RESULT=FAIL reason=$reason"
+    exit 1
+}

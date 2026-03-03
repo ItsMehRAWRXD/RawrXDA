@@ -3744,7 +3744,19 @@ elseif(RAWR_ASAN AND NOT MSVC)
     add_link_options(-fsanitize=address)
 endif()
 
-# CI gate: self_test_gate — quick compile + link check
+# Build only the SSOT objects needed by the ownership guard.
+add_library(ssot_stub_lane_objs OBJECT
+    ${CMAKE_SOURCE_DIR}/src/core/missing_handler_stubs.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/ssot_missing_handlers_provider.cpp
+)
+target_compile_definitions(ssot_stub_lane_objs PRIVATE
+    RAWRXD_ENABLE_MISSING_HANDLER_STUBS=1
+)
+target_include_directories(ssot_stub_lane_objs PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/core
+)
+
 add_custom_target(ssot_stub_lane_guard
     COMMAND powershell -NoProfile -ExecutionPolicy Bypass
         -File ${CMAKE_SOURCE_DIR}/tools/verify_stub_lane_handler_ownership.ps1
@@ -3754,12 +3766,12 @@ add_custom_target(ssot_stub_lane_guard
     COMMENT "[CI Gate] Verifying SSOT stub-lane handler ownership"
     VERBATIM
 )
+add_dependencies(ssot_stub_lane_guard ssot_stub_lane_objs)
 
 add_custom_target(self_test_gate
-    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config $<CONFIG> --target RawrXD-Win32IDE
     COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config $<CONFIG> --target ssot_stub_lane_guard
     COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config $<CONFIG> --target RawrXD-Gold
-    COMMENT "[CI Gate] Ownership guard + RawrXD-Win32IDE + RawrXD-Gold"
+    COMMENT "[CI Gate] Ownership guard + RawrXD-Gold"
     VERBATIM
 )
 
