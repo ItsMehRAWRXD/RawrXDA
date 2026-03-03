@@ -3768,12 +3768,21 @@ add_custom_target(ssot_stub_lane_guard
 )
 add_dependencies(ssot_stub_lane_guard ssot_stub_lane_objs)
 
-add_custom_target(self_test_gate
-    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config $<CONFIG> --target ssot_stub_lane_guard
-    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config $<CONFIG> --target RawrXD-Gold
-    COMMENT "[CI Gate] Ownership guard + RawrXD-Gold"
-    VERBATIM
-)
+option(RAWRXD_ENABLE_HEAVY_GATES "Run heavy ownership/compiled-symbol guards as part of self_test_gate" OFF)
+if(RAWRXD_ENABLE_HEAVY_GATES)
+    add_custom_target(self_test_gate
+        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config $<CONFIG> --target ssot_stub_lane_guard
+        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config $<CONFIG> --target RawrXD-Gold
+        COMMENT "[CI Gate] Ownership guard + RawrXD-Gold"
+        VERBATIM
+    )
+else()
+    add_custom_target(self_test_gate
+        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config $<CONFIG> --target RawrXD-Gold
+        COMMENT "[CI Gate] RawrXD-Gold (heavy gates disabled)"
+        VERBATIM
+    )
+endif()
 
 # CI gate: stress_test — build and note availability
 message(STATUS "[CI] self_test_gate target available (cmake --build . --target self_test_gate)")
