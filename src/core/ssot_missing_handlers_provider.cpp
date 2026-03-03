@@ -25,119 +25,44 @@ CommandResult missingHandler(const CommandContext& ctx, const char* name) {
 #define DEFINE_MISSING_HANDLER(name) \
 CommandResult name(const CommandContext& ctx) { return missingHandler(ctx, #name); }
 
-DEFINE_MISSING_HANDLER(handleAIChatMode)
-DEFINE_MISSING_HANDLER(handleAICtx128K)
-DEFINE_MISSING_HANDLER(handleAICtx1M)
-DEFINE_MISSING_HANDLER(handleAICtx256K)
-DEFINE_MISSING_HANDLER(handleAICtx32K)
-DEFINE_MISSING_HANDLER(handleAICtx4K)
-DEFINE_MISSING_HANDLER(handleAICtx512K)
-DEFINE_MISSING_HANDLER(handleAICtx64K)
-DEFINE_MISSING_HANDLER(handleAIExplainCode)
-DEFINE_MISSING_HANDLER(handleAIFixErrors)
-DEFINE_MISSING_HANDLER(handleAIGenerateDocs)
-DEFINE_MISSING_HANDLER(handleAIGenerateTests)
-DEFINE_MISSING_HANDLER(handleAIInlineComplete)
-DEFINE_MISSING_HANDLER(handleAIModelSelect)
-DEFINE_MISSING_HANDLER(handleAINoRefusal)
-DEFINE_MISSING_HANDLER(handleAIOptimizeCode)
-DEFINE_MISSING_HANDLER(handleAIRefactor)
-DEFINE_MISSING_HANDLER(handleAuditDashboard)
-DEFINE_MISSING_HANDLER(handleEditClipboardHist)
-DEFINE_MISSING_HANDLER(handleEditorCycle)
-DEFINE_MISSING_HANDLER(handleEditorMonacoCore)
-DEFINE_MISSING_HANDLER(handleEditorRichEdit)
-DEFINE_MISSING_HANDLER(handleEditorStatus)
-DEFINE_MISSING_HANDLER(handleEditorWebView2)
-DEFINE_MISSING_HANDLER(handleHelpCmdRef)
-DEFINE_MISSING_HANDLER(handleHelpPsDocs)
-DEFINE_MISSING_HANDLER(handleHotpatchEventLog)
-DEFINE_MISSING_HANDLER(handleHotpatchMemRevert)
-DEFINE_MISSING_HANDLER(handleHotpatchProxyStats)
-DEFINE_MISSING_HANDLER(handleLspSrvConfig)
-DEFINE_MISSING_HANDLER(handleLspSrvExportSymbols)
-DEFINE_MISSING_HANDLER(handleLspSrvLaunchStdio)
-DEFINE_MISSING_HANDLER(handleLspSrvPublishDiag)
-DEFINE_MISSING_HANDLER(handleLspSrvReindex)
-DEFINE_MISSING_HANDLER(handleLspSrvStart)
-DEFINE_MISSING_HANDLER(handleLspSrvStats)
-DEFINE_MISSING_HANDLER(handleLspSrvStatus)
-DEFINE_MISSING_HANDLER(handleLspSrvStop)
-DEFINE_MISSING_HANDLER(handleMonacoDevtools)
-DEFINE_MISSING_HANDLER(handleMonacoReload)
-DEFINE_MISSING_HANDLER(handleMonacoSyncTheme)
-DEFINE_MISSING_HANDLER(handleMonacoToggle)
-DEFINE_MISSING_HANDLER(handleMonacoZoomIn)
-DEFINE_MISSING_HANDLER(handleMonacoZoomOut)
-DEFINE_MISSING_HANDLER(handleQwAlertDismiss)
-DEFINE_MISSING_HANDLER(handleQwAlertHistory)
-DEFINE_MISSING_HANDLER(handleQwAlertMonitor)
-DEFINE_MISSING_HANDLER(handleRECompare)
-DEFINE_MISSING_HANDLER(handleRECompile)
-DEFINE_MISSING_HANDLER(handleREDataFlow)
-DEFINE_MISSING_HANDLER(handleREDecompClose)
-DEFINE_MISSING_HANDLER(handleREDecompilerView)
-DEFINE_MISSING_HANDLER(handleREDecompRename)
-DEFINE_MISSING_HANDLER(handleREDecompSync)
-DEFINE_MISSING_HANDLER(handleREDemangle)
-DEFINE_MISSING_HANDLER(handleREDetectVulns)
-DEFINE_MISSING_HANDLER(handleREExportGhidra)
-DEFINE_MISSING_HANDLER(handleREExportIDA)
-DEFINE_MISSING_HANDLER(handleREFunctions)
-DEFINE_MISSING_HANDLER(handleRELicenseInfo)
-DEFINE_MISSING_HANDLER(handleRERecursiveDisasm)
-DEFINE_MISSING_HANDLER(handleRETypeRecovery)
-DEFINE_MISSING_HANDLER(handleSwarmBlacklist)
-DEFINE_MISSING_HANDLER(handleSwarmConfig)
-DEFINE_MISSING_HANDLER(handleSwarmDiscovery)
-DEFINE_MISSING_HANDLER(handleSwarmEvents)
-DEFINE_MISSING_HANDLER(handleSwarmFitness)
-DEFINE_MISSING_HANDLER(handleSwarmStats)
-DEFINE_MISSING_HANDLER(handleSwarmTaskGraph)
-DEFINE_MISSING_HANDLER(handleTelemetryDashboard)
-DEFINE_MISSING_HANDLER(handleThemeCatppuccin)
-DEFINE_MISSING_HANDLER(handleThemeCrimson)
-DEFINE_MISSING_HANDLER(handleThemeCyberpunk)
-DEFINE_MISSING_HANDLER(handleThemeGruvbox)
-DEFINE_MISSING_HANDLER(handleThemeOneDark)
-DEFINE_MISSING_HANDLER(handleThemeSolDark)
-DEFINE_MISSING_HANDLER(handleThemeSolLight)
-DEFINE_MISSING_HANDLER(handleThemeSynthwave)
-DEFINE_MISSING_HANDLER(handleThemeTokyo)
-DEFINE_MISSING_HANDLER(handleTier1AutoUpdateCheck)
-DEFINE_MISSING_HANDLER(handleTier1BreadcrumbsToggle)
-DEFINE_MISSING_HANDLER(handleTier1FileIconTheme)
-DEFINE_MISSING_HANDLER(handleTier1FuzzyPalette)
-DEFINE_MISSING_HANDLER(handleTier1MinimapEnhanced)
-DEFINE_MISSING_HANDLER(handleTier1SettingsGUI)
-DEFINE_MISSING_HANDLER(handleTier1SmoothScrollToggle)
-DEFINE_MISSING_HANDLER(handleTier1SplitClose)
-DEFINE_MISSING_HANDLER(handleTier1SplitFocusNext)
-DEFINE_MISSING_HANDLER(handleTier1SplitGrid)
-DEFINE_MISSING_HANDLER(handleTier1SplitHorizontal)
-DEFINE_MISSING_HANDLER(handleTier1SplitVertical)
-DEFINE_MISSING_HANDLER(handleTier1TabDragToggle)
-DEFINE_MISSING_HANDLER(handleTier1UpdateDismiss)
-DEFINE_MISSING_HANDLER(handleTier1WelcomePage)
-DEFINE_MISSING_HANDLER(handleTrans100)
-DEFINE_MISSING_HANDLER(handleTrans40)
-DEFINE_MISSING_HANDLER(handleTrans50)
-DEFINE_MISSING_HANDLER(handleTrans60)
-DEFINE_MISSING_HANDLER(handleTrans70)
-DEFINE_MISSING_HANDLER(handleTrans80)
-DEFINE_MISSING_HANDLER(handleTrans90)
-DEFINE_MISSING_HANDLER(handleTransCustom)
-DEFINE_MISSING_HANDLER(handleTransToggle)
-DEFINE_MISSING_HANDLER(handleViewStreamingLoader)
-DEFINE_MISSING_HANDLER(handleViewVulkanRenderer)
-DEFINE_MISSING_HANDLER(handleVoicePTT)
-DEFINE_MISSING_HANDLER(handleVscExtDeactivateAll)
-DEFINE_MISSING_HANDLER(handleVscExtDiagnostics)
-DEFINE_MISSING_HANDLER(handleVscExtExportConfig)
-DEFINE_MISSING_HANDLER(handleVscExtExtensions)
-DEFINE_MISSING_HANDLER(handleVscExtListCommands)
-DEFINE_MISSING_HANDLER(handleVscExtListProviders)
-DEFINE_MISSING_HANDLER(handleVscExtLoadNative)
-DEFINE_MISSING_HANDLER(handleVscExtReload)
-DEFINE_MISSING_HANDLER(handleVscExtStats)
-DEFINE_MISSING_HANDLER(handleVscExtStatus)
+#define RAWR_MISSING_HANDLER_LIST(X) \
+    /* Batch 01 */ \
+    X(handleAIChatMode) X(handleAICtx128K) X(handleAICtx1M) X(handleAICtx256K) X(handleAICtx32K) X(handleAICtx4K) X(handleAICtx512K) \
+    /* Batch 02 */ \
+    X(handleAICtx64K) X(handleAIExplainCode) X(handleAIFixErrors) X(handleAIGenerateDocs) X(handleAIGenerateTests) X(handleAIInlineComplete) X(handleAIModelSelect) \
+    /* Batch 03 */ \
+    X(handleAINoRefusal) X(handleAIOptimizeCode) X(handleAIRefactor) X(handleAuditDashboard) X(handleEditClipboardHist) X(handleEditorCycle) X(handleEditorMonacoCore) \
+    /* Batch 04 */ \
+    X(handleEditorRichEdit) X(handleEditorStatus) X(handleEditorWebView2) X(handleHelpCmdRef) X(handleHelpPsDocs) X(handleHotpatchEventLog) X(handleHotpatchMemRevert) \
+    /* Batch 05 */ \
+    X(handleHotpatchProxyStats) X(handleLspSrvConfig) X(handleLspSrvExportSymbols) X(handleLspSrvLaunchStdio) X(handleLspSrvPublishDiag) X(handleLspSrvReindex) X(handleLspSrvStart) \
+    /* Batch 06 */ \
+    X(handleLspSrvStats) X(handleLspSrvStatus) X(handleLspSrvStop) X(handleMonacoDevtools) X(handleMonacoReload) X(handleMonacoSyncTheme) X(handleMonacoToggle) \
+    /* Batch 07 */ \
+    X(handleMonacoZoomIn) X(handleMonacoZoomOut) X(handleQwAlertDismiss) X(handleQwAlertHistory) X(handleQwAlertMonitor) X(handleRECompare) X(handleRECompile) \
+    /* Batch 08 */ \
+    X(handleREDataFlow) X(handleREDecompClose) X(handleREDecompilerView) X(handleREDecompRename) X(handleREDecompSync) X(handleREDemangle) X(handleREDetectVulns) \
+    /* Batch 09 */ \
+    X(handleREExportGhidra) X(handleREExportIDA) X(handleREFunctions) X(handleRELicenseInfo) X(handleRERecursiveDisasm) X(handleRETypeRecovery) X(handleSwarmBlacklist) \
+    /* Batch 10 */ \
+    X(handleSwarmConfig) X(handleSwarmDiscovery) X(handleSwarmEvents) X(handleSwarmFitness) X(handleSwarmStats) X(handleSwarmTaskGraph) X(handleTelemetryDashboard) \
+    /* Batch 11 */ \
+    X(handleThemeCatppuccin) X(handleThemeCrimson) X(handleThemeCyberpunk) X(handleThemeGruvbox) X(handleThemeOneDark) X(handleThemeSolDark) X(handleThemeSolLight) \
+    /* Batch 12 */ \
+    X(handleThemeSynthwave) X(handleThemeTokyo) X(handleTier1AutoUpdateCheck) X(handleTier1BreadcrumbsToggle) X(handleTier1FileIconTheme) X(handleTier1FuzzyPalette) X(handleTier1MinimapEnhanced) \
+    /* Batch 13 */ \
+    X(handleTier1SettingsGUI) X(handleTier1SmoothScrollToggle) X(handleTier1SplitClose) X(handleTier1SplitFocusNext) X(handleTier1SplitGrid) X(handleTier1SplitHorizontal) X(handleTier1SplitVertical) \
+    /* Batch 14 */ \
+    X(handleTier1TabDragToggle) X(handleTier1UpdateDismiss) X(handleTier1WelcomePage) X(handleTrans100) X(handleTrans40) X(handleTrans50) X(handleTrans60) \
+    /* Batch 15 */ \
+    X(handleTrans70) X(handleTrans80) X(handleTrans90) X(handleTransCustom) X(handleTransToggle) X(handleViewStreamingLoader) X(handleViewVulkanRenderer) \
+    /* Batch 16 */ \
+    X(handleVoicePTT) X(handleVscExtDeactivateAll) X(handleVscExtDiagnostics) X(handleVscExtExportConfig) X(handleVscExtExtensions) X(handleVscExtListCommands) X(handleVscExtListProviders) \
+    /* Batch 17 */ \
+    X(handleVscExtLoadNative) X(handleVscExtReload) X(handleVscExtStats) X(handleVscExtStatus)
+
+RAWR_MISSING_HANDLER_LIST(DEFINE_MISSING_HANDLER)
+
+#define COUNT_MISSING_HANDLER(name) +1
+constexpr int kMissingHandlerCount = 0 RAWR_MISSING_HANDLER_LIST(COUNT_MISSING_HANDLER);
+static_assert(kMissingHandlerCount == 116, "ssot_missing_handlers_provider must define exactly 116 handlers");
