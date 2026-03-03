@@ -67,7 +67,7 @@ All items in **docs/CURSOR_GITHUB_PARITY_SPEC.md** are part of the competitive b
 - **Resource generator** — Generate resource, Project scaffold, List/Search templates (IDM_RESOURCE_*).
 - **GitHub** — Read (releases); Write (create release, upload asset) via WinHTTP; no curl.
 
-All Cursor parity modules in `initAllCursorParityModules()`; all command IDs 11500–11574 in `handleCursorParityCommand()`; production-ready, not stubs.
+All listed commands are **wired** (command table + handler resolve); any Phase 1 or thin-wrapper behaviors are explicitly tagged and scheduled in the gap docs.
 
 ### 2.6 Polish & power-user
 
@@ -97,7 +97,32 @@ These must **remain** at or above the bar; no “basic” downgrade.
 
 ---
 
-## 4. Priority Order (To Be Competitive)
+## 3.5 Non-goals / scope control
+
+To avoid “missing feature” as a gotcha, the following are **explicitly out of scope** for the current bar or deferred:
+
+- **Cloud models** — Optional, not default. No requirement to ship cloud-first.
+- **Collaboration** — Live Share / multiplayer is a later phase.
+- **Web IDE** — Browser-based IDE is later; not part of v1.2.x bar.
+- **Mandatory telemetry** — Everything ships without required phone-home; zero telemetry by default.
+
+---
+
+## 4. How we measure parity
+
+Parity claims are backed by **measurable validation**, not spec alone.
+
+| Metric | Target / mechanism |
+|--------|---------------------|
+| **Latency (when implemented)** | Completion popup: &lt; X ms from keystroke; ghost text: &lt; Y ms to first token; search: &lt; Z ms for N files. Values and methodology in **docs/PARITY_VALIDATION_PROOF_PACK.md**. |
+| **Feature validation** | A single **`self_test_gate`** (or `--selftest`) target that emits pass/fail per area. See **docs/PARITY_VALIDATION_PROOF_PACK.md** for commands and checklist. |
+| **Resource envelope** | Working set in three modes: **idle**, **indexing**, **chat streaming**. Documented in proof pack or **docs/RUNTIME_BOOTSTRAP_AND_VALIDATION.md** so “substantially lower than Electron” is verifiable. |
+
+This turns the competitive standard from aspirational into **audit-proof**: skeptics can run the same commands and compare outputs.
+
+---
+
+## 5. Priority Order (To Be Competitive)
 
 From **docs/GAP_VS_CURSOR_VSCODE_COPILOT.md** §7, in order:
 
@@ -111,10 +136,13 @@ From **docs/GAP_VS_CURSOR_VSCODE_COPILOT.md** §7, in order:
 
 ---
 
-## 5. References
+## 6. References
 
 | Doc | Purpose |
 |-----|---------|
+| **docs/PARITY_VALIDATION_PROOF_PACK.md** | **Proof pack** — exact commands (build + headless selftests); checklist mapping CURSOR_GITHUB_PARITY_SPEC command IDs → test case → expected output; makes parity objectively testable. |
+| **docs/SOVEREIGN_CLOUD_BRIDGE_SPEC.md** | **v1.3.0 Cloud Bridge** — default-deny, explicit consent, BYOK, local audit/receipts, and ship-gate CB tests. |
+| **docs/RAWRXD_VS_CURSOR_DEFENSIBLE.md** | **Defensible comparison** — investor/power-user proof; no unverifiable claims; two-profile scorecard; one-sentence tagline. Use for external or strict evaluation. |
 | **docs/TOP_25_AI_IDE_LSP_EDITOR_FEATURES.md** | Top 25 AI IDE LSP/editor features — Cursor, GitHub Copilot & RawrXD target per feature. |
 | **docs/GAP_VS_CURSOR_VSCODE_COPILOT.md** | Detailed gap list (critical / high / medium); actions per gap. |
 | **docs/CURSOR_GITHUB_PARITY_SPEC.md** | Cursor & GitHub parity — command IDs, implementation requirements (C++20/MASM). |
@@ -124,7 +152,7 @@ From **docs/GAP_VS_CURSOR_VSCODE_COPILOT.md** §7, in order:
 
 ---
 
-## 6. Non-Basic Checklist (Quick Reference)
+## 7. Non-Basic Checklist (Quick Reference)
 
 When adding or reviewing a feature, ask:
 

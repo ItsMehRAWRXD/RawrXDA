@@ -29,6 +29,19 @@ Architecture and suite: `src/reverse_engineering/RE_ARCHITECTURE.md`.
 
 ---
 
+## Competitive and Parity
+
+| Document | Description |
+|----------|-------------|
+| [RAWRXD_COMPETITIVE_STANDARD.md](RAWRXD_COMPETITIVE_STANDARD.md) | Competitive bar, parity targets, and measurable validation rules. |
+| [PARITY_VALIDATION_PROOF_PACK.md](PARITY_VALIDATION_PROOF_PACK.md) | Build/test commands, parity checklist, and latency/resource evidence pack. |
+| [RAWRXD_VS_CURSOR_DEFENSIBLE.md](RAWRXD_VS_CURSOR_DEFENSIBLE.md) | Defensible capability comparison and positioning constraints for external use. |
+| [TOP_50_GAP_ANALYSIS.md](TOP_50_GAP_ANALYSIS.md) | Category-based gap map and implementation roadmap. |
+| [NEXT_7_GAP_IDS.md](NEXT_7_GAP_IDS.md) | Locked "Next 7" run tracking with closure criteria and validation artifact requirements. |
+| [SOVEREIGN_CLOUD_BRIDGE_SPEC.md](SOVEREIGN_CLOUD_BRIDGE_SPEC.md) | v1.3.0 cloud boundary policy: default deny, BYOK, explicit consent, and auditability. |
+
+---
+
 ## Other
 
 - **Ship:** Build and Qt-removal index: `Ship/DOCUMENTATION_INDEX.md`.

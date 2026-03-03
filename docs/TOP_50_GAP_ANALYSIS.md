@@ -132,6 +132,8 @@
 5. **AI:** RAG/embeddings and project-scoped chat — differentiates from “just another chat IDE.”
 
 Use this as a roadmap; each row in the tables above is a concrete “what code is missing” and “where to add it.”
+
+For the currently locked implementation batch and closure criteria, see `docs/NEXT_7_GAP_IDS.md`.
 ---
 
 ## FILES TO ADD
