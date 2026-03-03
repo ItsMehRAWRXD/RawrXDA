@@ -2107,6 +2107,10 @@ set_target_properties(rawrxd-monaco-gen PROPERTIES
 
 # Win32 GUI IDE
 if(WIN32)
+    option(RAWRXD_ENABLE_MISSING_HANDLER_STUBS
+        "Compile missing_handler_stubs.cpp into Win32IDE/Gold targets"
+        ON)
+
     set(WIN32IDE_SOURCES
         src/win32app/main_win32.cpp
         src/win32app/Win32IDE.cpp
@@ -2795,6 +2799,21 @@ if(WIN32)
     else()
         add_definitions(-DRAWRXD_HAS_PROMPT_ENGINE=0)
         message(STATUS "DynamicPromptEngine DLL skipped (no MASM)")
+    endif()
+
+    if(RAWRXD_ENABLE_MISSING_HANDLER_STUBS)
+        list(REMOVE_ITEM WIN32IDE_SOURCES
+            src/core/ssot_handlers.cpp
+            src/core/ssot_handlers_ext_isolated.cpp
+        )
+        list(APPEND WIN32IDE_SOURCES
+            src/core/ssot_missing_handlers_provider.cpp
+        )
+        message(STATUS "[SSOT] Win32IDE: STUBS lane enabled (excluding ssot_handlers.cpp + ssot_handlers_ext_isolated.cpp; adding ssot_missing_handlers_provider.cpp)")
+    else()
+        list(REMOVE_ITEM WIN32IDE_SOURCES src/core/missing_handler_stubs.cpp)
+        list(REMOVE_ITEM WIN32IDE_SOURCES src/core/ssot_missing_handlers_provider.cpp)
+        message(STATUS "[SSOT] Win32IDE: REAL lane enabled (excluding missing_handler_stubs.cpp)")
     endif()
 
     add_executable(RawrXD-Win32IDE WIN32 ${WIN32IDE_SOURCES} ${ASM_KERNEL_SOURCES}
@@ -3536,6 +3555,21 @@ if(WIN32)
         # ── Cloud Manager — resolves HybridCloudManager link symbols ──
         src/hybrid_cloud_manager_minimal.cpp
     )
+
+    if(RAWRXD_ENABLE_MISSING_HANDLER_STUBS)
+        list(REMOVE_ITEM GOLD_SOURCES
+            src/core/ssot_handlers.cpp
+            src/core/ssot_handlers_ext_isolated.cpp
+        )
+        list(APPEND GOLD_SOURCES
+            src/core/ssot_missing_handlers_provider.cpp
+        )
+        message(STATUS "[SSOT] Gold: STUBS lane enabled (excluding ssot_handlers.cpp + ssot_handlers_ext_isolated.cpp; adding ssot_missing_handlers_provider.cpp)")
+    else()
+        list(REMOVE_ITEM GOLD_SOURCES src/core/missing_handler_stubs.cpp)
+        list(REMOVE_ITEM GOLD_SOURCES src/core/ssot_missing_handlers_provider.cpp)
+        message(STATUS "[SSOT] Gold: REAL lane enabled (excluding missing_handler_stubs.cpp)")
+    endif()
 
     add_executable(RawrXD-Gold WIN32 ${GOLD_SOURCES} ${ASM_KERNEL_SOURCES}
         src/win32app/RawrXD-Win32IDE.rc)
