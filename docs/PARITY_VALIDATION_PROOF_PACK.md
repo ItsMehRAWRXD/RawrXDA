@@ -111,6 +111,7 @@ Replace placeholders (X, Y, Z, —) with actual numbers and document tool (e.g. 
 ## 5. Cloud Bridge safety (v1.3.0)
 
 Cloud Bridge safety validation is defined in **docs/SOVEREIGN_CLOUD_BRIDGE_SPEC.md** (CB-01..CB-07).
+Validation focus: default-deny, explicit consent, payload preview/hash match, receipts, panic-off enforcement, and adapter isolation.
 
 ### 5.1 CB ship-gate checklist
 

@@ -121,7 +121,7 @@ That communicates the truth without fake precision.
 - **Privacy** — zero telemetry by design; local embeddings.
 - **Cost** — free vs. paid subscription.
 
-RawrXD's cloud bridge is BYOK and default-deny: local context is never sent without explicit, per-request consent, with auditable local receipts.
+RawrXD's cloud bridge is BYOK and default-deny: local context is never sent without explicit, per-request consent, with locally stored receipts. See **docs/SOVEREIGN_CLOUD_BRIDGE_SPEC.md** for full policy.
 
 ---
 
