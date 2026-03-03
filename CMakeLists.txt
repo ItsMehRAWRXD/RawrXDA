@@ -3745,10 +3745,21 @@ elseif(RAWR_ASAN AND NOT MSVC)
 endif()
 
 # CI gate: self_test_gate — quick compile + link check
+add_custom_target(ssot_stub_lane_guard
+    COMMAND powershell -NoProfile -ExecutionPolicy Bypass
+        -File ${CMAKE_SOURCE_DIR}/tools/verify_stub_lane_handler_ownership.ps1
+        -RepoRoot ${CMAKE_SOURCE_DIR}
+        -BuildDir ${CMAKE_BINARY_DIR}
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    COMMENT "[CI Gate] Verifying SSOT stub-lane handler ownership"
+    VERBATIM
+)
+
 add_custom_target(self_test_gate
     COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config $<CONFIG> --target RawrXD-Win32IDE
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config $<CONFIG> --target ssot_stub_lane_guard
     COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config $<CONFIG> --target RawrXD-Gold
-    COMMENT "[CI Gate] Building RawrXD-Win32IDE + RawrXD-Gold (compile + link check)"
+    COMMENT "[CI Gate] Ownership guard + RawrXD-Win32IDE + RawrXD-Gold"
     VERBATIM
 )
 
