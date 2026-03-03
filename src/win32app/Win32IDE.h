@@ -2553,7 +2553,7 @@ private:
     std::string requestGhostTextCompletion(const std::string& context, const std::string& language);
     std::string requestGhostTextCompletion(const std::string& context, const std::string& language,
                                             const std::string& suffix, const std::string& filePath,
-                                            int cursorLine, int cursorCol);
+                                            int cursorLine, int cursorCol, uint64_t expectedSeq = 0);
     void onGhostTextReady(int requestedCursorPos, const char* completionText);
     void dismissGhostText();
     void acceptGhostText();
@@ -2571,6 +2571,9 @@ private:
         uint64_t requests = 0;
         uint64_t cacheHits = 0;
         uint64_t staleDrops = 0;
+        uint64_t localWins = 0;
+        uint64_t snippetWins = 0;
+        uint64_t lspWins = 0;
         double   lastLatencyMs = 0.0;
         double   avgLatencyMs = 0.0;
     };

@@ -27,6 +27,8 @@
 #include <mutex>
 #include <chrono>
 #include <functional>
+#include <array>
+#include <cctype>
 
 #include "../agentic/OllamaProvider.h"
 
@@ -58,6 +60,46 @@ std::string buildGhostCacheKey(const std::string& filePath,
     const std::string seed = filePath + "|" + language + "|" + std::to_string(line) + "|" +
                              std::to_string(column) + "|" + prefixTail + "|" + suffixHead;
     return std::to_string(std::hash<std::string>{}(seed));
+}
+
+std::string trimLeftCopy(const std::string& in) {
+    size_t i = 0;
+    while (i < in.size() && std::isspace(static_cast<unsigned char>(in[i])) != 0) ++i;
+    return in.substr(i);
+}
+
+std::string lowerCopy(const std::string& in) {
+    std::string out = in;
+    std::transform(out.begin(), out.end(), out.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return out;
+}
+
+std::string getLinePrefix(const std::string& context) {
+    const size_t pos = context.find_last_of('\n');
+    if (pos == std::string::npos) return context;
+    if (pos + 1 >= context.size()) return "";
+    return context.substr(pos + 1);
+}
+
+std::string buildSnippetCompletion(const std::string& context, const std::string& language) {
+    const std::string line = trimLeftCopy(getLinePrefix(context));
+    const std::string lowered = lowerCopy(line);
+    const std::string lang = lowerCopy(language);
+
+    if (lowered == "if") {
+        return " () {\n    \n}";
+    }
+    if (lowered == "for") {
+        return " (int i = 0; i < ; ++i) {\n    \n}";
+    }
+    if (lowered == "while") {
+        return " () {\n    \n}";
+    }
+    if ((lang == "c++" || lang == "cpp" || lang == "c") && lowered == "switch") {
+        return " () {\ncase :\n    break;\ndefault:\n    break;\n}";
+    }
+    return "";
 }
 } // namespace
 
@@ -212,7 +254,8 @@ void Win32IDE::onGhostTextTimer() {
         DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
         if (_guard.cancelled) return;
         const uint64_t startedAt = nowMs();
-        std::string completion = requestGhostTextCompletion(contextCopy, langCopy, suffixCopy, fileCopy, lineCopy, colCopy);
+        std::string completion = requestGhostTextCompletion(
+            contextCopy, langCopy, suffixCopy, fileCopy, lineCopy, colCopy, requestSeq);
         const uint64_t elapsedMs = nowMs() - startedAt;
 
         if (requestSeq != m_ghostTextRequestSeq.load()) {
@@ -262,71 +305,119 @@ std::string Win32IDE::requestGhostTextCompletion(const std::string& context,
                                                    const std::string& language,
                                                    const std::string& suffix,
                                                    const std::string& filePath,
-                                                   int cursorLine, int cursorCol) {
+                                                   int cursorLine, int cursorCol,
+                                                   uint64_t expectedSeq) {
     using namespace RawrXD::Prediction;
 
-    // ---- Strategy 0: OllamaProvider with FIM (preferred path) ----
-    // Lazy-init the provider on first call
-    if (!m_predictionProvider) {
-        std::string baseUrl = m_ollamaBaseUrl.empty() ? "http://localhost:11434" : m_ollamaBaseUrl;
-        m_predictionProvider = std::make_unique<OllamaProvider>(baseUrl);
+    const auto isStale = [this, expectedSeq]() -> bool {
+        return expectedSeq != 0 && expectedSeq != m_ghostTextRequestSeq.load();
+    };
 
-        PredictionConfig cfg;
-        cfg.model       = getResolvedOllamaModel().empty() ? "qwen2.5-coder:14b" : getResolvedOllamaModel();
-        cfg.temperature = 0.2f;
-        cfg.maxTokens   = 256;
-        cfg.maxLines    = GHOST_TEXT_MAX_LINES;
-        cfg.useFIM      = true;
-        cfg.stopSequences = "<|endoftext|>,<|fim_pad|>,\n\n\n";
-        m_predictionProvider->Configure(cfg);
-    }
+    enum class GhostProviderKind {
+        Local,
+        Snippet,
+        Lsp
+    };
+    const std::array<GhostProviderKind, 3> precedence = {
+        GhostProviderKind::Local,
+        GhostProviderKind::Snippet,
+        GhostProviderKind::Lsp
+    };
 
-    // Try FIM prediction through OllamaProvider
-    if (m_predictionProvider->IsAvailable()) {
-        PredictionContext ctx;
-        ctx.prefix       = context;
-        ctx.suffix       = suffix;
-        ctx.language     = language;
-        ctx.filePath     = filePath;
-        ctx.cursorLine   = cursorLine;
-        ctx.cursorColumn = cursorCol;
+    for (GhostProviderKind provider : precedence) {
+        if (isStale()) return "";
 
-        PredictionResult result = m_predictionProvider->Predict(ctx);
-        if (result.success && !result.completion.empty()) {
-            return trimGhostText(result.completion);
+        if (provider == GhostProviderKind::Local) {
+            // ---- Local provider: prediction backend, then native model, then local Ollama prompt ----
+            if (!m_predictionProvider) {
+                std::string baseUrl = m_ollamaBaseUrl.empty() ? "http://localhost:11434" : m_ollamaBaseUrl;
+                m_predictionProvider = std::make_unique<OllamaProvider>(baseUrl);
+
+                PredictionConfig cfg;
+                cfg.model       = getResolvedOllamaModel().empty() ? "qwen2.5-coder:14b" : getResolvedOllamaModel();
+                cfg.temperature = 0.2f;
+                cfg.maxTokens   = 256;
+                cfg.maxLines    = GHOST_TEXT_MAX_LINES;
+                cfg.useFIM      = true;
+                cfg.stopSequences = "<|endoftext|>,<|fim_pad|>,\n\n\n";
+                m_predictionProvider->Configure(cfg);
+            }
+
+            if (m_predictionProvider->IsAvailable()) {
+                PredictionContext ctx;
+                ctx.prefix       = context;
+                ctx.suffix       = suffix;
+                ctx.language     = language;
+                ctx.filePath     = filePath;
+                ctx.cursorLine   = cursorLine;
+                ctx.cursorColumn = cursorCol;
+
+                PredictionResult result = m_predictionProvider->Predict(ctx);
+                if (result.success && !result.completion.empty()) {
+                    std::lock_guard<std::mutex> lock(m_ghostTextCacheMutex);
+                    m_ghostTextMetrics.localWins++;
+                    return trimGhostText(result.completion);
+                }
+            }
+
+            if (isStale()) return "";
+
+            if (m_nativeEngine && m_nativeEngine->IsModelLoaded()) {
+                auto tokens = m_nativeEngine->Tokenize(
+                    "Complete the following " + language + " code. Output ONLY the completion, "
+                    "no explanation, no markdown:\n\n" + context);
+
+                auto generated = m_nativeEngine->Generate(tokens, 64);
+                std::string result = trimGhostText(m_nativeEngine->Detokenize(generated));
+                if (!result.empty()) {
+                    std::lock_guard<std::mutex> lock(m_ghostTextCacheMutex);
+                    m_ghostTextMetrics.localWins++;
+                    return result;
+                }
+            }
+
+            if (isStale()) return "";
+
+            if (!m_ollamaBaseUrl.empty()) {
+                std::string response;
+                std::string prompt = "Complete the following " + language + " code. "
+                                     "Output ONLY the completion, no explanation, no markdown. "
+                                     "Maximum 3 lines:\n\n" + context;
+                if (trySendToOllama(prompt, response)) {
+                    std::lock_guard<std::mutex> lock(m_ghostTextCacheMutex);
+                    m_ghostTextMetrics.localWins++;
+                    return trimGhostText(response);
+                }
+            }
         }
-        // If FIM failed, fall through to legacy strategies
-    }
 
-    // ---- Strategy 1: Use native engine if model is loaded ----
-    if (m_nativeEngine && m_nativeEngine->IsModelLoaded()) {
-        auto tokens = m_nativeEngine->Tokenize(
-            "Complete the following " + language + " code. Output ONLY the completion, "
-            "no explanation, no markdown:\n\n" + context);
+        if (provider == GhostProviderKind::Snippet) {
+            const std::string snippet = trimGhostText(buildSnippetCompletion(context, language));
+            if (!snippet.empty()) {
+                std::lock_guard<std::mutex> lock(m_ghostTextCacheMutex);
+                m_ghostTextMetrics.snippetWins++;
+                return snippet;
+            }
+        }
 
-        auto generated = m_nativeEngine->Generate(tokens, 64);  // Short completions
-        std::string result = m_nativeEngine->Detokenize(generated);
-
-        // Trim to reasonable length and line count
-        result = trimGhostText(result);
-        return result;
-    }
-
-    // Strategy 2: Try Ollama if connected
-    if (!m_ollamaBaseUrl.empty()) {
-        std::string response;
-        // Build a minimal completion prompt
-        std::string prompt = "Complete the following " + language + " code. "
-                             "Output ONLY the completion, no explanation, no markdown. "
-                             "Maximum 3 lines:\n\n" + context;
-
-        // Try Ollama — reuse existing trySendToOllama
-        if (trySendToOllama(prompt, response)) {
-            return trimGhostText(response);
+        if (provider == GhostProviderKind::Lsp) {
+            if (filePath.empty()) continue;
+            const int lspLine = cursorLine > 0 ? cursorLine - 1 : 0;
+            auto items = requestHybridCompletion(filePath, lspLine, cursorCol);
+            for (const auto& item : items) {
+                if (item.insertText.empty()) continue;
+                if (item.source != "lsp" && item.source != "merged") continue;
+                std::string lspText = trimGhostText(item.insertText);
+                if (!lspText.empty()) {
+                    std::lock_guard<std::mutex> lock(m_ghostTextCacheMutex);
+                    m_ghostTextMetrics.lspWins++;
+                    return lspText;
+                }
+            }
         }
     }
 
-    return "";  // No completion source available
+    return "";
 }
 
 // ============================================================================

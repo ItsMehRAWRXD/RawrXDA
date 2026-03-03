@@ -14,6 +14,7 @@ public:
     bool runIntegrationTests();  // deflate_50mb, flash_attn, etc.
     bool runLint();              // cl.exe /analyze
     bool runBenchmarkBaseline(); // tokens/sec vs. stored baseline
+    bool runCompletionShipGate();// COMP-01..COMP-03 checks
 
     const std::string& lastOutput() const { return m_output; }
     const std::string& lastError()  const { return m_error; }

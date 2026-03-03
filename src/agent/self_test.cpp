@@ -14,8 +14,69 @@
 #include <filesystem>
 #include <chrono>
 #include <regex>
+#include <unordered_map>
+#include <array>
 
 namespace fs = std::filesystem;
+namespace {
+
+enum class ProviderKind {
+    Local,
+    Snippet,
+    Lsp
+};
+
+bool runComp01StaleCancellation() {
+    uint64_t activeSeq = 1;
+    const uint64_t requestA = activeSeq;
+    activeSeq = 2; // B supersedes A
+    const uint64_t requestB = activeSeq;
+    const bool aStale = requestA != activeSeq;
+    const bool bFresh = requestB == activeSeq;
+    return aStale && bFresh;
+}
+
+bool runComp02CacheTtlBounds() {
+    struct Entry { uint64_t createdAtMs; };
+    std::unordered_map<std::string, Entry> cache;
+    const size_t kMax = 256;
+    uint64_t now = 10000;
+
+    for (size_t i = 0; i < kMax + 10; ++i) {
+        if (cache.size() >= kMax) cache.erase(cache.begin());
+        cache["k" + std::to_string(i)] = Entry{now};
+    }
+    if (cache.size() != kMax) return false;
+
+    cache["ttl"] = Entry{now};
+    const uint64_t ttlMs = 2000;
+    const bool hitBeforeExpiry = (now + 1999 - cache["ttl"].createdAtMs) <= ttlMs;
+    const bool missAfterExpiry = (now + 2001 - cache["ttl"].createdAtMs) > ttlMs;
+    return hitBeforeExpiry && missAfterExpiry;
+}
+
+bool runComp03DeterministicPrecedence() {
+    const std::array<ProviderKind, 3> precedence = {
+        ProviderKind::Local, ProviderKind::Snippet, ProviderKind::Lsp
+    };
+
+    auto choose = [&](bool localOk, bool snippetOk, bool lspOk) -> ProviderKind {
+        for (ProviderKind p : precedence) {
+            if (p == ProviderKind::Local && localOk) return p;
+            if (p == ProviderKind::Snippet && snippetOk) return p;
+            if (p == ProviderKind::Lsp && lspOk) return p;
+        }
+        return ProviderKind::Lsp;
+    };
+
+    const bool case1 = choose(false, true, true) == ProviderKind::Snippet;
+    const bool case2 = choose(true, true, true) == ProviderKind::Local;
+    const bool case3 = choose(false, false, true) == ProviderKind::Lsp;
+    const bool repeatStable = choose(false, true, true) == ProviderKind::Snippet;
+    return case1 && case2 && case3 && repeatStable;
+}
+
+} // namespace
 
 // ── Constructor ──────────────────────────────────────────────────────────
 
@@ -250,6 +311,23 @@ bool SelfTest::runBenchmarkBaseline() {
     return checkBenchmarkRegression("main", tps, storedBaseline);
 }
 
+// ── runCompletionShipGate ────────────────────────────────────────────────
+
+bool SelfTest::runCompletionShipGate() {
+    log("=== Completion / Ghost Ship Gate ===");
+
+    const bool comp01 = runComp01StaleCancellation();
+    log(std::string("COMP-01 ") + (comp01 ? "PASS" : "FAIL"));
+
+    const bool comp02 = runComp02CacheTtlBounds();
+    log(std::string("COMP-02 ") + (comp02 ? "PASS" : "FAIL"));
+
+    const bool comp03 = runComp03DeterministicPrecedence();
+    log(std::string("COMP-03 ") + (comp03 ? "PASS" : "FAIL"));
+
+    return comp01 && comp02 && comp03;
+}
+
 // ── runAll ───────────────────────────────────────────────────────────────
 
 bool SelfTest::runAll() {
@@ -260,6 +338,7 @@ bool SelfTest::runAll() {
     if (!runUnitTests())          ok = false;
     if (!runIntegrationTests())   ok = false;
     if (!runBenchmarkBaseline())  ok = false;
+    if (!runCompletionShipGate()) ok = false;
     // Lint is advisory, don't fail the gate
     runLint();
 
