@@ -3,7 +3,6 @@
 #include <iostream>
 #include <sstream>
 #include <algorithm>
-#include <immintrin.h>
 
 bool RawrXDTokenizer::Load(const std::string& vocabPath) {
     // 1. Initialize with bytes 
@@ -47,36 +46,15 @@ std::vector<uint32_t> RawrXDTokenizer::Encode(const std::string& text) {
     size_t pos = 0;
     size_t len = text.length();
     
-    // SIMD-optimized byte processing for simple byte-level tokenization
-    // Process 64 bytes at a time using AVX-512 (64 bytes = 512 bits)
-    while (pos + 63 < len) {
-        // Load 64 bytes into AVX-512 register
-        __m512i byte_vec = _mm512_loadu_si512((__m512i*)(text.data() + pos));
-        
-        // For each byte, create token
-        // Since we're doing byte-level, we can process all 64 bytes in parallel
-        for (int i = 0; i < 64; i++) {
-            uint8_t c = ((uint8_t*)&byte_vec)[i];
-            std::string s(1, (char)c);
-            if (vocab.count(s)) {
-                tokens.push_back(vocab[s]);
-            } else {
-                tokens.push_back(c + 3);
-            }
-        }
-        pos += 64;
-    }
-    
-    // Handle remaining bytes
+    // Byte-level tokenization — greedy longest-prefix matching
     while (pos < len) {
         uint8_t c = (uint8_t)text[pos];
         std::string s(1, (char)c);
-        
+
         if (vocab.count(s)) {
             tokens.push_back(vocab[s]);
         } else {
-            // Unknown? Just cast to int?
-            tokens.push_back(c + 3); 
+            tokens.push_back(c + 3);
         }
         pos++;
     }

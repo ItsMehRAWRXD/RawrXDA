@@ -3,7 +3,34 @@
 #include <string>
 #include <vector>
 #include <functional>
+#include <cstdint>
+#ifdef RAWR_ENABLE_VULKAN
 #include <vulkan/vulkan.h>
+#else
+// Vulkan stubs for CPU mode
+#ifndef VK_NULL_HANDLE
+#define VK_NULL_HANDLE 0
+#endif
+typedef void* VkInstance;
+typedef void* VkPhysicalDevice;
+typedef void* VkDevice;
+typedef void* VkQueue;
+typedef struct { int dummy; } VkApplicationInfo;
+typedef struct { int dummy; } VkInstanceCreateInfo;
+typedef struct { int dummy; } VkDeviceQueueCreateInfo;
+typedef struct { int dummy; } VkDeviceCreateInfo;
+typedef struct { int dummy; } VkPhysicalDeviceProperties;
+typedef struct { uint32_t queueFlags; } VkQueueFamilyProperties;
+#define VK_STRUCTURE_TYPE_APPLICATION_INFO 0
+#define VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO 0
+#define VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO 0
+#define VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO 0
+#define VK_MAKE_VERSION(a,b,c) 0
+#define VK_API_VERSION_1_2 0
+#define VK_SUCCESS 0
+#define VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU 0
+#define VK_QUEUE_COMPUTE_BIT 0
+#endif
 #include "rawrxd_model_loader.h"
 #include "rawrxd_transformer.h"
 #include "rawrxd_tokenizer.h"
@@ -21,6 +48,9 @@ class RawrXDInference {
     
     // Helpers
     VkInstance CreateVulkanInstance() {
+#ifndef RAWR_ENABLE_VULKAN
+        return VK_NULL_HANDLE;
+#else
         VkApplicationInfo appInfo{};
         appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         appInfo.pApplicationName = "RawrXD Inference";
@@ -41,13 +71,18 @@ class RawrXDInference {
             return VK_NULL_HANDLE;
         }
         return instance;
+#endif
     }
     
     VkPhysicalDevice SelectPhysicalDevice(VkInstance instance) {
+#ifndef RAWR_ENABLE_VULKAN
+        (void)instance;
+        return VK_NULL_HANDLE;
+#else
         uint32_t deviceCount = 0;
         vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
         if (deviceCount == 0) return VK_NULL_HANDLE;
-        
+
         std::vector<VkPhysicalDevice> devices(deviceCount);
         vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
         
@@ -60,9 +95,14 @@ class RawrXDInference {
             }
         }
         return devices[0];
+#endif
     }
     
     VkDevice CreateLogicalDevice(VkPhysicalDevice physDevice) {
+#ifndef RAWR_ENABLE_VULKAN
+        (void)physDevice;
+        return VK_NULL_HANDLE;
+#else
         uint32_t queueFamilyCount = 0;
         vkGetPhysicalDeviceQueueFamilyProperties(physDevice, &queueFamilyCount, nullptr);
         std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
@@ -96,12 +136,14 @@ class RawrXDInference {
             return VK_NULL_HANDLE;
         }
         return device;
+#endif
     }
 
 public:
     bool Initialize(const wchar_t* modelPath, 
                    const char* vocabPath,
                    const char* mergesPath) {
+#ifdef RAWR_ENABLE_VULKAN
         VkInstance instance = CreateVulkanInstance();
         if(!instance) return false;
         
@@ -110,13 +152,19 @@ public:
         
         VkDevice device = CreateLogicalDevice(physDevice);
         if(!device) return false;
+#else
+        // CPU-only mode — no GPU required
+        VkDevice device = VK_NULL_HANDLE;
+        VkPhysicalDevice physDevice = VK_NULL_HANDLE;
+        printf("[RawrXD] CPU-only mode (Vulkan disabled)\n");
+#endif
         
         if (!loader.Load(modelPath, device, physDevice)) {
             printf("[RawrXD] Failed to load model\n");
             return false;
         }
         
-        RawrXDTransformer::Config cfg;
+        RawrXDTransformer::Config cfg{}; // Zero-init all fields
         cfg.dim = loader.getDim();   
         cfg.n_layers = loader.getLayers();
         cfg.n_heads = loader.getHeads();
@@ -126,11 +174,17 @@ public:
         if (cfg.vocab_size == 0) cfg.vocab_size = 32000;
         if (cfg.dim == 0) cfg.dim = 4096;
         if (cfg.n_layers == 0) cfg.n_layers = 32;
+        if (cfg.n_heads == 0) cfg.n_heads = 32;
+        if (cfg.n_kv_heads == 0) cfg.n_kv_heads = cfg.n_heads;
         
-        cfg.seq_len = 4096;
+        cfg.hidden_dim = (loader.getFFNDim() > 0) ? loader.getFFNDim() : cfg.dim * 4;
+        cfg.n_ctx = 2048;  // Conservative context for CPU-only mode
+        cfg.seq_len = 2048;
         cfg.rope_theta = 10000.0f;
         cfg.rms_norm_eps = 1e-5f;
 
+        printf("[RawrXD] Config: dim=%d layers=%d heads=%d kv_heads=%d vocab=%d hidden=%d ctx=%d\n",
+               cfg.dim, cfg.n_layers, cfg.n_heads, cfg.n_kv_heads, cfg.vocab_size, cfg.hidden_dim, cfg.n_ctx);
         transformer.Initialize(device, physDevice, cfg, &loader);
         tokenizer.Load(vocabPath);
         
@@ -140,6 +194,13 @@ public:
     }
     
     bool IsInitialized() const { return m_initialized; }
+    
+    // Expose loader metadata to facade
+    int getVocabSize() const { return loader.getVocabSize(); }
+    int getDim() const { return loader.getDim(); }
+    int getLayers() const { return loader.getLayers(); }
+    int getHeads() const { return loader.getHeads(); }
+    int getKVHeads() const { return loader.getKVHeads(); }
 
     std::vector<uint32_t> Tokenize(const std::string& text) {
         return tokenizer.Encode(text);

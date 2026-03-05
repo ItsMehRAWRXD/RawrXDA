@@ -2,7 +2,21 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <cstdint>
+#ifdef RAWR_ENABLE_VULKAN
 #include <vulkan/vulkan.h>
+#else
+// Standard Win32/CPU build - Vulkan handles not needed
+#ifndef VK_NULL_HANDLE
+#define VK_NULL_HANDLE 0
+#endif
+typedef void* VkBuffer;
+typedef void* VkDeviceMemory;
+typedef void* VkDevice;
+typedef void* VkPhysicalDevice;
+typedef struct { uint32_t memoryTypeCount; } VkPhysicalDeviceMemoryProperties;
+typedef uint32_t VkMemoryPropertyFlags;
+#endif
 #include <windows.h>
 
 struct Tensor {
@@ -15,19 +29,14 @@ struct Tensor {
     // Vulkan
     VkBuffer gpuBuffer = VK_NULL_HANDLE;
     VkDeviceMemory gpuMemory = VK_NULL_HANDLE;
-    size_t gpuSizeBytes = 0;
     bool onGPU = false;
     
     // CPU Float cache for reference implementation
     std::vector<float> cpuFloatData;
 };
 
-struct GGUFHeader {
-    uint32_t magic;
-    uint32_t version;
-    uint64_t tensor_count;
-    uint64_t kv_count;
-};
+// struct GGUFHeader removed - use definition in RawrXD_Interfaces.h via gguf_loader.h if needed
+// Or rely on the fact that RawrXD_Interfaces.h is the source of truth.
 
 // GGUF Q4_0 block structure
 struct Q4_0_Block {
@@ -54,6 +63,7 @@ private:
     int n_heads_kv = 32;
     int n_ctx = 4096;
     int vocab_size = 32000;
+    int n_ffn = 0;  // feed_forward_length (0 = infer from dim*4)
 
 public:
     int getDim() const { return n_embd; }
@@ -62,6 +72,7 @@ public:
     int getKVHeads() const { return n_heads_kv; }
     int getCtx() const { return n_ctx; }
     int getVocabSize() const { return vocab_size; }
+    int getFFNDim() const { return n_ffn; }
     
     std::unordered_map<std::string, Tensor> tensors;
     
