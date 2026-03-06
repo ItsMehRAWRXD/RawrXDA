@@ -103,14 +103,14 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 # Keep Debug free of /O2 and /GL to avoid /RTC1 conflicts on single-config generators.
 if(MSVC)
     add_compile_options(
-        /MP
-        /GS-
-        /sdl-
-        $<$<NOT:$<CONFIG:Debug>>:/O2>
-        $<$<NOT:$<CONFIG:Debug>>:/GL>
+        $<$<COMPILE_LANGUAGE:C,CXX>:/MP>
+        $<$<COMPILE_LANGUAGE:C,CXX>:/GS->
+        $<$<COMPILE_LANGUAGE:C,CXX>:/sdl->
+        $<$<AND:$<COMPILE_LANGUAGE:C,CXX>,$<NOT:$<CONFIG:Debug>>>:/O2>
+        $<$<AND:$<COMPILE_LANGUAGE:C,CXX>,$<NOT:$<CONFIG:Debug>>>:/GL>
     )
 else()
-    add_compile_options(-O3)
+    add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:-O3>)
 endif()
 # Keep LTCG globally, but avoid executable-only/defaultlib overrides here.
 # /NODEFAULTLIB + /ENTRY + /SUBSYSTEM must not leak into DLL targets.
