@@ -61,10 +61,19 @@ public:
                          uint32_t dim);
 
     // RoPE in-place: inoutBuffer[0..dim-1] rotated at token position
+        bool DispatchCSRoPE_Fused(ID3D12Resource* q_buffer, ID3D12Resource* k_buffer, ID3D12Resource* cossin_buffer,
+                              uint32_t seq_pos, uint32_t head_dim, uint32_t num_heads);
     bool DispatchRoPE(ID3D12Resource* inoutBuffer,
                       uint32_t dim,
                       uint32_t position,
                       uint32_t thetaBase = 10000);
+
+    bool DispatchRoPEFused(ID3D12Resource* q_buffer,
+                           ID3D12Resource* k_buffer,
+                           ID3D12Resource* cossin_buffer,
+                           uint32_t seq_len,
+                           uint32_t head_dim,
+                           uint32_t num_heads);
 
     // SiLU in-place: inoutBuffer[0..dim-1] = x * sigmoid(x)
     bool DispatchSiLU(ID3D12Resource* inoutBuffer,
@@ -147,6 +156,12 @@ public:
     bool RecordSoftmax(ID3D12Resource* inoutBuffer, uint32_t dim);
     bool RecordRoPE(ID3D12Resource* inoutBuffer, uint32_t dim,
                     uint32_t position, uint32_t thetaBase = 10000);
+    bool RecordRoPEFused(ID3D12Resource* q_buffer,
+                         ID3D12Resource* k_buffer,
+                         ID3D12Resource* cossin_buffer,
+                         uint32_t seq_len,
+                         uint32_t head_dim,
+                         uint32_t num_heads);
     bool RecordSiLU(ID3D12Resource* inoutBuffer, uint32_t dim);
     bool RecordResidualAdd(ID3D12Resource* inoutBuffer,
                            ID3D12Resource* residualBuffer, uint32_t dim);
@@ -178,6 +193,7 @@ private:
         Microsoft::WRL::ComPtr<ID3DBlob> rmsNorm;
         Microsoft::WRL::ComPtr<ID3DBlob> softmax;
         Microsoft::WRL::ComPtr<ID3DBlob> rope;
+        Microsoft::WRL::ComPtr<ID3DBlob> ropeFused;
         // Phase D additions
         Microsoft::WRL::ComPtr<ID3DBlob> silu;
         Microsoft::WRL::ComPtr<ID3DBlob> residualAdd;
@@ -195,6 +211,7 @@ private:
         Microsoft::WRL::ComPtr<ID3D12PipelineState> psoRMSNorm;
         Microsoft::WRL::ComPtr<ID3D12PipelineState> psoSoftmax;
         Microsoft::WRL::ComPtr<ID3D12PipelineState> psoRoPE;
+        Microsoft::WRL::ComPtr<ID3D12PipelineState> psoRoPEFused;
         Microsoft::WRL::ComPtr<ID3D12PipelineState> psoSiLU;
         Microsoft::WRL::ComPtr<ID3D12PipelineState> psoResidualAdd;
         Microsoft::WRL::ComPtr<ID3D12PipelineState> psoMatVecFP32;
@@ -219,6 +236,7 @@ private:
         ID3D12Resource* matrix, uint32_t matrixElements,
         ID3D12Resource* vec, uint32_t vecElements,
         ID3D12Resource* gamma, uint32_t gammaElements,
+        ID3D12Resource* cossin, uint32_t cossinElements,
         ID3D12Resource* inout, uint32_t inoutElements,
         ID3D12Resource* out, uint32_t outElements);
 

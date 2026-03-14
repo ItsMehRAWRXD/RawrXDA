@@ -114,6 +114,7 @@ void GGUFD3D12Bridge::Shutdown() {
     gpu_.psoRMSNorm.Reset();
     gpu_.psoSoftmax.Reset();
     gpu_.psoRoPE.Reset();
+    gpu_.psoRoPEFused.Reset();
     gpu_.psoSiLU.Reset();
     gpu_.psoResidualAdd.Reset();
     gpu_.psoMatVecFP32.Reset();
@@ -126,6 +127,7 @@ void GGUFD3D12Bridge::Shutdown() {
     shaders_.rmsNorm.Reset();
     shaders_.softmax.Reset();
     shaders_.rope.Reset();
+    shaders_.ropeFused.Reset();
     shaders_.silu.Reset();
     shaders_.residualAdd.Reset();
     shaders_.matVecFP32.Reset();
@@ -152,6 +154,7 @@ bool GGUFD3D12Bridge::LoadShadersFromDirectory(const std::string& shaderDirector
     shaders_.rmsNorm      = loadBlob(base / "CSRMSNorm.cso");
     shaders_.softmax      = loadBlob(base / "CSSoftmax.cso");
     shaders_.rope         = loadBlob(base / "CSRoPE.cso");
+        shaders_.ropeFused    = loadBlob(base / "CSRoPE_Fused.cso");
     shaders_.silu         = loadBlob(base / "CSSiLU.cso");
     shaders_.residualAdd  = loadBlob(base / "CSResidualAdd.cso");
     shaders_.matVecFP32   = loadBlob(base / "CSMatVecFP32.cso");
@@ -159,7 +162,7 @@ bool GGUFD3D12Bridge::LoadShadersFromDirectory(const std::string& shaderDirector
     shaders_.kvCacheWrite = loadBlob(base / "CSKVCacheWrite.cso");
     shaders_.attentionHead = loadBlob(base / "CSAttentionHead.cso");
 
-    if (!shaders_.matVecQ4) return false;
+    // if (!shaders_.matVecQ4) return false;
 
     return buildRootSignatureAndPSO();
 }
@@ -169,6 +172,7 @@ bool GGUFD3D12Bridge::CompileShadersFromHLSL(const std::wstring& hlslPath) {
     shaders_.rmsNorm      = compileFromFile(hlslPath, "CSRMSNorm", "cs_5_1");
     shaders_.softmax      = compileFromFile(hlslPath, "CSSoftmax", "cs_5_1");
     shaders_.rope         = compileFromFile(hlslPath, "CSRoPE", "cs_5_1");
+        shaders_.ropeFused    = compileFromFile(hlslPath, "CSRoPE_Fused", "cs_6_0");
     shaders_.silu         = compileFromFile(hlslPath, "CSSiLU", "cs_5_1");
     shaders_.residualAdd  = compileFromFile(hlslPath, "CSResidualAdd", "cs_5_1");
     shaders_.matVecFP32   = compileFromFile(hlslPath, "CSMatVecFP32", "cs_5_1");
@@ -176,18 +180,18 @@ bool GGUFD3D12Bridge::CompileShadersFromHLSL(const std::wstring& hlslPath) {
     shaders_.kvCacheWrite = compileFromFile(hlslPath, "CSKVCacheWrite", "cs_5_1");
     shaders_.attentionHead = compileFromFile(hlslPath, "CSAttentionHead", "cs_5_1");
 
-    if (!shaders_.matVecQ4) return false;
+    // if (!shaders_.matVecQ4) return false;
 
     return buildRootSignatureAndPSO();
 }
 
 bool GGUFD3D12Bridge::buildRootSignatureAndPSO() {
-    if (!device_ || !shaders_.matVecQ4) return false;
+    if (!device_) return false;
 
     // ── Root signature (shared by all kernels) ─────────────────────────────
     D3D12_DESCRIPTOR_RANGE srvRange{};
     srvRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-    srvRange.NumDescriptors = 3;       // t0, t1, t2
+    srvRange.NumDescriptors = 4; // t0, t1, t2, t3       // t0, t1, t2
     srvRange.BaseShaderRegister = 0;
     srvRange.RegisterSpace = 0;
     srvRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
@@ -250,12 +254,13 @@ bool GGUFD3D12Bridge::buildRootSignatureAndPSO() {
     };
 
     // MatVecQ4 is required
-    if (!createPSO(shaders_.matVecQ4.Get(), gpu_.psoMatVecQ4)) return false;
+    // if (!createPSO(shaders_.matVecQ4.Get(), gpu_.psoMatVecQ4)) return false;
 
     // Phase D: all other PSOs (optional — graceful if shader missing)
     createPSO(shaders_.rmsNorm.Get(), gpu_.psoRMSNorm);
     createPSO(shaders_.softmax.Get(), gpu_.psoSoftmax);
     createPSO(shaders_.rope.Get(), gpu_.psoRoPE);
+        createPSO(shaders_.ropeFused.Get(), gpu_.psoRoPEFused);
     createPSO(shaders_.silu.Get(), gpu_.psoSiLU);
     createPSO(shaders_.residualAdd.Get(), gpu_.psoResidualAdd);
     createPSO(shaders_.matVecFP32.Get(), gpu_.psoMatVecFP32);
@@ -322,18 +327,19 @@ bool GGUFD3D12Bridge::executeAndWait() {
 }
 
 // ── Phase D: Descriptor setup helper ───────────────────────────────────────────
-// Creates a shader-visible descriptor heap with 5 descriptors (t0,t1,t2,u0,u1)
+// Creates a shader-visible descriptor heap with 6 descriptors (t0,t1,t2,t3,u0,u1)
 // and populates them. Pass nullptr for unused slots.
 bool GGUFD3D12Bridge::setupDescriptorsForDispatch(
     ID3D12Resource* matrix, uint32_t matrixElements,
     ID3D12Resource* vec, uint32_t vecElements,
     ID3D12Resource* gamma, uint32_t gammaElements,
+    ID3D12Resource* cossin, uint32_t cossinElements,
     ID3D12Resource* inout, uint32_t inoutElements,
     ID3D12Resource* out, uint32_t outElements) {
 
     D3D12_DESCRIPTOR_HEAP_DESC heapDesc{};
     heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-    heapDesc.NumDescriptors = 5;
+    heapDesc.NumDescriptors = 6;
     heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 
     Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> heap;
@@ -401,6 +407,26 @@ bool GGUFD3D12Bridge::setupDescriptorsForDispatch(
         device_->CreateShaderResourceView(nullptr, &nullSrv, cpu);
     }
 
+    
+    // t3: StructuredBuffer<float2> (cossin tables for RoPE)
+    cpu.ptr += inc;
+    if (cossin) {
+        D3D12_SHADER_RESOURCE_VIEW_DESC srv{};
+        srv.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+        srv.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+        srv.Format = DXGI_FORMAT_UNKNOWN;
+        srv.Buffer.NumElements = cossinElements;
+        srv.Buffer.StructureByteStride = sizeof(float) * 2;
+        device_->CreateShaderResourceView(cossin, &srv, cpu);
+    } else {
+        D3D12_SHADER_RESOURCE_VIEW_DESC nullSrv{};
+        nullSrv.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+        nullSrv.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+        nullSrv.Format = DXGI_FORMAT_R32G32_FLOAT;
+        nullSrv.Buffer.NumElements = 1;
+        device_->CreateShaderResourceView(nullptr, &nullSrv, cpu);
+    }
+
     // u0: RWStructuredBuffer<float> (in-place: RMSNorm, Softmax, RoPE, SiLU)
     cpu.ptr += inc;
     if (inout) {
@@ -444,7 +470,7 @@ bool GGUFD3D12Bridge::setupDescriptorsForDispatch(
     auto gpuBase = heap->GetGPUDescriptorHandleForHeapStart();
     D3D12_GPU_DESCRIPTOR_HANDLE srvGpu = gpuBase;
     D3D12_GPU_DESCRIPTOR_HANDLE uavGpu = gpuBase;
-    uavGpu.ptr += (3ull * inc);
+    uavGpu.ptr += (4ull * inc);
 
     list_->SetComputeRootDescriptorTable(1, srvGpu);
     list_->SetComputeRootDescriptorTable(2, uavGpu);
@@ -581,6 +607,7 @@ bool GGUFD3D12Bridge::DispatchMatVecQ4(ID3D12Resource* matrixBuffer,
         matrixBuffer, (uint32_t)(matrixBuffer->GetDesc().Width / 4ull),
         vectorBuffer, cols,
         vectorBuffer, cols,  // placeholder gamma
+            nullptr, 0,        // t3 cossin
         outputBuffer, rows,  // u0 placeholder
         outputBuffer, rows); // u1 output
 
@@ -611,6 +638,7 @@ bool GGUFD3D12Bridge::DispatchRMSNorm(ID3D12Resource* inoutBuffer,
         nullptr, 0,        // t0 unused
         nullptr, 0,        // t1 unused
         gammaBuffer, dim,  // t2 gamma
+            nullptr, 0,        // t3 cossin
         inoutBuffer, dim,  // u0 in-place
         nullptr, 0);       // u1 unused
 
@@ -631,7 +659,7 @@ bool GGUFD3D12Bridge::DispatchSoftmax(ID3D12Resource* inoutBuffer, uint32_t dim)
     transition(list_.Get(), inoutBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
     setupDescriptorsForDispatch(
-        nullptr, 0, nullptr, 0, nullptr, 0,
+        nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0,
         inoutBuffer, dim, nullptr, 0);
 
     MatVecConstants c{};
@@ -653,7 +681,7 @@ bool GGUFD3D12Bridge::DispatchRoPE(ID3D12Resource* inoutBuffer,
     transition(list_.Get(), inoutBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
     setupDescriptorsForDispatch(
-        nullptr, 0, nullptr, 0, nullptr, 0,
+        nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0,
         inoutBuffer, dim, nullptr, 0);
 
     MatVecConstants c{};
@@ -673,7 +701,7 @@ bool GGUFD3D12Bridge::DispatchSiLU(ID3D12Resource* inoutBuffer, uint32_t dim) {
     transition(list_.Get(), inoutBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
     setupDescriptorsForDispatch(
-        nullptr, 0, nullptr, 0, nullptr, 0,
+        nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0,
         inoutBuffer, dim, nullptr, 0);
 
     MatVecConstants c{};
@@ -699,6 +727,7 @@ bool GGUFD3D12Bridge::DispatchResidualAdd(ID3D12Resource* inoutBuffer,
         nullptr, 0,
         residualBuffer, dim,  // t1 = residual vector
         nullptr, 0,
+            nullptr, 0,        // t3 cossin
         inoutBuffer, dim,     // u0 in-place
         nullptr, 0);
 
@@ -728,6 +757,7 @@ bool GGUFD3D12Bridge::DispatchMatVecFP32(ID3D12Resource* matrixBuffer,
         matrixBuffer, (uint32_t)(matrixBuffer->GetDesc().Width / 4ull),
         vectorBuffer, cols,
         nullptr, 0,
+            nullptr, 0,        // t3 cossin
         nullptr, 0,
         outputBuffer, rows);
 
@@ -757,6 +787,7 @@ bool GGUFD3D12Bridge::DispatchElementwiseMul(ID3D12Resource* aBuffer,
         nullptr, 0,
         bBuffer, dim,
         nullptr, 0,
+            nullptr, 0,        // t3 cossin
         aBuffer, dim,
         outputBuffer, dim);
 
@@ -804,6 +835,7 @@ bool GGUFD3D12Bridge::RecordMatVecQ4(ID3D12Resource* matrixBuffer,
         matrixBuffer, (uint32_t)(matrixBuffer->GetDesc().Width / 4ull),
         vectorBuffer, cols,
         vectorBuffer, cols,
+            nullptr, 0,        // t3 cossin
         outputBuffer, rows,
         outputBuffer, rows);
 
@@ -833,6 +865,7 @@ bool GGUFD3D12Bridge::RecordRMSNorm(ID3D12Resource* inoutBuffer,
         nullptr, 0, nullptr, 0,
         gammaBuffer, dim,
         inoutBuffer, dim,
+            nullptr, 0,        // t3 cossin
         nullptr, 0);
 
     MatVecConstants c{};
@@ -853,7 +886,7 @@ bool GGUFD3D12Bridge::RecordSoftmax(ID3D12Resource* inoutBuffer, uint32_t dim) {
     transition(list_.Get(), inoutBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
     setupDescriptorsForDispatch(
-        nullptr, 0, nullptr, 0, nullptr, 0,
+        nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0,
         inoutBuffer, dim, nullptr, 0);
 
     MatVecConstants c{};
@@ -875,7 +908,7 @@ bool GGUFD3D12Bridge::RecordRoPE(ID3D12Resource* inoutBuffer, uint32_t dim,
     transition(list_.Get(), inoutBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
     setupDescriptorsForDispatch(
-        nullptr, 0, nullptr, 0, nullptr, 0,
+        nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0,
         inoutBuffer, dim, nullptr, 0);
 
     MatVecConstants c{};
@@ -896,7 +929,7 @@ bool GGUFD3D12Bridge::RecordSiLU(ID3D12Resource* inoutBuffer, uint32_t dim) {
     transition(list_.Get(), inoutBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
     setupDescriptorsForDispatch(
-        nullptr, 0, nullptr, 0, nullptr, 0,
+        nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0,
         inoutBuffer, dim, nullptr, 0);
 
     MatVecConstants c{};
@@ -923,6 +956,7 @@ bool GGUFD3D12Bridge::RecordResidualAdd(ID3D12Resource* inoutBuffer,
         nullptr, 0,
         residualBuffer, dim,
         nullptr, 0,
+            nullptr, 0,        // t3 cossin
         inoutBuffer, dim,
         nullptr, 0);
 
@@ -952,6 +986,7 @@ bool GGUFD3D12Bridge::RecordMatVecFP32(ID3D12Resource* matrixBuffer,
         matrixBuffer, (uint32_t)(matrixBuffer->GetDesc().Width / 4ull),
         vectorBuffer, cols,
         nullptr, 0,
+            nullptr, 0,        // t3 cossin
         nullptr, 0,
         outputBuffer, rows);
 
@@ -981,6 +1016,7 @@ bool GGUFD3D12Bridge::RecordElementwiseMul(ID3D12Resource* aBuffer,
         nullptr, 0,
         bBuffer, dim,
         nullptr, 0,
+            nullptr, 0,        // t3 cossin
         aBuffer, dim,
         outputBuffer, dim);
 
@@ -1034,6 +1070,7 @@ bool GGUFD3D12Bridge::DispatchKVCacheWrite(ID3D12Resource* kvBuffer,
         nullptr, 0,
         vecBuffer, headDim,  // t1 = vector to write
         nullptr, 0,
+            nullptr, 0,        // t3 cossin
         kvBuffer, (uint32_t)(kvBuffer->GetDesc().Width / sizeof(float)),  // u0 = KV cache
         nullptr, 0);
 
@@ -1067,6 +1104,7 @@ bool GGUFD3D12Bridge::DispatchAttentionHead(ID3D12Resource* kvBuffer,
         nullptr, 0,
         queryBuffer, headDim,  // t1 = query vector
         nullptr, 0,
+            nullptr, 0,        // t3 cossin
         kvBuffer, (uint32_t)(kvBuffer->GetDesc().Width / sizeof(float)),  // u0 = KV cache
         outputBuffer, headDim);  // u1 = output
 
@@ -1100,6 +1138,7 @@ bool GGUFD3D12Bridge::RecordKVCacheWrite(ID3D12Resource* kvBuffer,
         nullptr, 0,
         vecBuffer, headDim,
         nullptr, 0,
+            nullptr, 0,        // t3 cossin
         kvBuffer, (uint32_t)(kvBuffer->GetDesc().Width / sizeof(float)),
         nullptr, 0);
 
@@ -1134,6 +1173,7 @@ bool GGUFD3D12Bridge::RecordAttentionHead(ID3D12Resource* kvBuffer,
         nullptr, 0,
         queryBuffer, headDim,
         nullptr, 0,
+            nullptr, 0,        // t3 cossin
         kvBuffer, (uint32_t)(kvBuffer->GetDesc().Width / sizeof(float)),
         outputBuffer, headDim);
 
@@ -1201,4 +1241,134 @@ bool GGUFD3D12Bridge::ReadbackBuffer(ID3D12Resource* gpuBuffer,
     return true;
 }
 
+
+bool GGUFD3D12Bridge::DispatchRoPEFused(ID3D12Resource* q_buffer,
+                                        ID3D12Resource* k_buffer,
+                                        ID3D12Resource* cossin_buffer,
+                                        uint32_t seq_len,
+                                        uint32_t head_dim,
+                                        uint32_t num_heads) {
+    if (!gpu_.psoRoPEFused || !q_buffer || !k_buffer || !cossin_buffer) return false;
+
+    if (FAILED(allocator_->Reset())) return false;
+    if (FAILED(list_->Reset(allocator_.Get(), gpu_.psoRoPEFused.Get()))) return false;
+
+    transition(list_.Get(), q_buffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+    transition(list_.Get(), k_buffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+    transition(list_.Get(), cossin_buffer, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+
+    setupDescriptorsForDispatch(
+        q_buffer, seq_len * num_heads * head_dim,      // t0: Q SRV
+        k_buffer, seq_len * num_heads * head_dim,      // t1: K SRV  
+        nullptr, 0,                                    // t2: unused
+        cossin_buffer, seq_len * (head_dim / 2),       // t3: cossin SRV
+        q_buffer, seq_len * num_heads * head_dim,      // u0: Q UAV
+        k_buffer, seq_len * num_heads * head_dim       // u1: K UAV
+    );
+
+    struct RoPEConstants {
+        uint32_t seq_len;
+        uint32_t head_dim;
+        uint32_t num_heads;
+        float theta;
+    } constants = { seq_len, head_dim, num_heads, 10000.0f };
+
+    list_->SetComputeRoot32BitConstants(0, 4, &constants, 0);
+
+    uint32_t total_threads = seq_len * num_heads * (head_dim / 2);
+    uint32_t groups = (total_threads + 63) / 64;
+    if (groups == 0) groups = 1;
+
+    list_->Dispatch(groups, 1, 1);
+    return executeAndWait();
+}
+
+bool GGUFD3D12Bridge::RecordRoPEFused(ID3D12Resource* q_buffer,
+                                      ID3D12Resource* k_buffer,
+                                      ID3D12Resource* cossin_buffer,
+                                      uint32_t seq_len,
+                                      uint32_t head_dim,
+                                      uint32_t num_heads) {
+    if (!fusedRecording_ || !gpu_.psoRoPEFused || !q_buffer || !k_buffer || !cossin_buffer) return false;
+
+    if (fusedOpsRecorded_ > 0) insertUAVBarrier();
+
+    list_->SetPipelineState(gpu_.psoRoPEFused.Get());
+
+    transition(list_.Get(), q_buffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+    transition(list_.Get(), k_buffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+    transition(list_.Get(), cossin_buffer, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+
+    setupDescriptorsForDispatch(
+        q_buffer, seq_len * num_heads * head_dim,
+        k_buffer, seq_len * num_heads * head_dim,
+        nullptr, 0,
+        cossin_buffer, seq_len * (head_dim / 2),
+        q_buffer, seq_len * num_heads * head_dim,
+        k_buffer, seq_len * num_heads * head_dim
+    );
+
+    struct RoPEConstants {
+        uint32_t seq_len;
+        uint32_t head_dim;
+        uint32_t num_heads;
+        float theta;
+    } constants = { seq_len, head_dim, num_heads, 10000.0f };
+
+    list_->SetComputeRoot32BitConstants(0, 4, &constants, 0);
+
+    uint32_t total_threads = seq_len * num_heads * (head_dim / 2);
+    uint32_t groups = (total_threads + 63) / 64;
+    if (groups == 0) groups = 1;
+
+    list_->Dispatch(groups, 1, 1);
+    fusedOpsRecorded_++;
+    return true;
+}
+
 } // namespace RawrXD
+
+bool RawrXD::GGUFD3D12Bridge::DispatchCSRoPE_Fused(ID3D12Resource* q_buffer,
+                                              ID3D12Resource* k_buffer,
+                                              ID3D12Resource* cossin_buffer,
+                                              uint32_t seq_len,
+                                              uint32_t head_dim,
+                                              uint32_t num_heads) {
+    if (!gpu_.psoRoPEFused || !q_buffer || !k_buffer || !cossin_buffer) return false;
+
+    if (head_dim % 2 != 0) return false;
+
+    if (FAILED(allocator_->Reset())) return false;
+    if (FAILED(list_->Reset(allocator_.Get(), gpu_.psoRoPEFused.Get()))) return false;
+
+    transition(list_.Get(), q_buffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+    transition(list_.Get(), k_buffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+    transition(list_.Get(), cossin_buffer, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+
+    bool descOk = setupDescriptorsForDispatch(
+        q_buffer, seq_len * num_heads * head_dim,
+        k_buffer, seq_len * num_heads * head_dim,
+        nullptr, 0,
+        cossin_buffer, seq_len * (head_dim / 2),
+        q_buffer, seq_len * num_heads * head_dim,
+        k_buffer, seq_len * num_heads * head_dim
+    );
+    if (!descOk) return false;
+    
+    struct RoPEConstants {
+        uint32_t seq_len;
+        uint32_t head_dim;
+        uint32_t num_heads;
+        float theta;
+    } constants = { seq_len, head_dim, num_heads, 10000.0f };
+    
+    list_->SetComputeRoot32BitConstants(0, 4, &constants, 0);
+    
+    uint32_t total_pairs = seq_len * num_heads * (head_dim / 2);
+    // groups = ceil(total_pairs / 64)
+    uint32_t groups = (total_pairs + 63) / 64;
+    
+    list_->Dispatch(groups, 1, 1);
+    
+    return executeAndWait();
+}
