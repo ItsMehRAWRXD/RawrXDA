@@ -293,6 +293,10 @@ public:
     // Execute with Auto Strategy Selection
     ExecutionResult executeTaskAuto(const std::string& taskDescription,
                                      const std::vector<std::string>& files);
+
+    // Self-Healing Build: capture diagnostics, generate fixes, apply, rebuild
+    ExecutionResult executeAutoFix(const std::string& buildCommand,
+                                   const std::string& workingDirectory);
     
     // Production Audit: Scan entire codebase and generate top 20 tasks
     std::vector<AuditEntry> auditProductionReadiness(const std::string& rootPath);

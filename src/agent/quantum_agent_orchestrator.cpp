@@ -44,6 +44,20 @@ std::string toLowerCopy(const std::string& input) {
     return out;
 }
 
+std::string trimCopy(const std::string& input) {
+    size_t start = 0;
+    while (start < input.size() &&
+           std::isspace(static_cast<unsigned char>(input[start]))) {
+        ++start;
+    }
+    size_t end = input.size();
+    while (end > start &&
+           std::isspace(static_cast<unsigned char>(input[end - 1]))) {
+        --end;
+    }
+    return input.substr(start, end - start);
+}
+
 std::vector<std::string> tokenizeForIndex(const std::string& text) {
     std::vector<std::string> tokens;
     std::string current;
@@ -143,6 +157,245 @@ std::string makeSessionId(const std::string& title, uint64_t ordinal) {
     oss << "sess-" << std::hex << ms << '-' << ordinal << '-'
         << std::hex << (std::hash<std::string>{}(title) & 0xFFFFu);
     return oss.str();
+}
+
+struct CompilerDiagnostic {
+    std::string file;
+    int line = 0;
+    int column = 0;
+    std::string errorCode;
+    std::string severity;
+    std::string message;
+    std::string context;
+};
+
+std::filesystem::path resolveDiagnosticPath(const std::string& file,
+                                            const std::string& workingDirectory) {
+    if (file.empty()) return {};
+
+    std::error_code ec;
+    std::filesystem::path p = file;
+    if (p.is_absolute() && std::filesystem::exists(p, ec)) {
+        return p.lexically_normal();
+    }
+
+    if (!workingDirectory.empty()) {
+        std::filesystem::path candidate = std::filesystem::path(workingDirectory) / p;
+        if (std::filesystem::exists(candidate, ec)) {
+            return candidate.lexically_normal();
+        }
+    }
+
+    if (std::filesystem::exists(p, ec)) {
+        return p.lexically_normal();
+    }
+    return p.lexically_normal();
+}
+
+std::string extractCodeContext(const std::string& file, int line, int contextLines = 3) {
+    if (file.empty() || line <= 0) return {};
+
+    std::ifstream input(file);
+    if (!input.is_open()) return {};
+
+    std::ostringstream oss;
+    std::string sourceLine;
+    int currentLine = 0;
+    while (std::getline(input, sourceLine)) {
+        ++currentLine;
+        if (currentLine < line - contextLines) continue;
+        if (currentLine > line + contextLines) break;
+
+        oss << (currentLine == line ? ">>> " : "    ")
+            << currentLine << ": " << sourceLine << '\n';
+    }
+    return oss.str();
+}
+
+std::vector<CompilerDiagnostic> parseCompilerErrors(const std::string& buildOutput,
+                                                    const std::string& workingDirectory) {
+    std::vector<CompilerDiagnostic> diagnostics;
+    std::istringstream stream(buildOutput);
+    std::string rawLine;
+
+    static const std::regex msvcPattern(
+        R"(^(.+?)\((\d+)(?:,(\d+))?\):\s*(fatal error|error|warning|note)\s+([A-Z]+\d+)?\s*:\s*(.+)$)",
+        std::regex::optimize);
+    static const std::regex gccPattern(
+        R"(^([^:\r\n]+):(\d+):(?:(\d+):)?\s*(fatal error|error|warning|note):\s*(.+)$)",
+        std::regex::optimize);
+    static const std::regex linkerPattern(
+        R"(^.*\b(fatal error|error|warning)\s+(LNK\d+)\s*:\s*(.+)$)",
+        std::regex::optimize);
+
+    while (std::getline(stream, rawLine)) {
+        std::string line = trimCopy(rawLine);
+        if (line.empty()) continue;
+
+        std::smatch match;
+        CompilerDiagnostic diag{};
+
+        if (std::regex_match(line, match, msvcPattern)) {
+            diag.file = trimCopy(match[1].str());
+            diag.line = std::stoi(match[2].str());
+            diag.column = match[3].matched ? std::stoi(match[3].str()) : 0;
+            diag.severity = trimCopy(match[4].str());
+            diag.errorCode = match[5].matched ? trimCopy(match[5].str()) : "MSVC";
+            diag.message = trimCopy(match[6].str());
+        } else if (std::regex_match(line, match, gccPattern)) {
+            diag.file = trimCopy(match[1].str());
+            diag.line = std::stoi(match[2].str());
+            diag.column = match[3].matched ? std::stoi(match[3].str()) : 0;
+            diag.severity = trimCopy(match[4].str());
+            diag.errorCode = "GENERIC";
+            diag.message = trimCopy(match[5].str());
+        } else if (std::regex_match(line, match, linkerPattern)) {
+            diag.severity = trimCopy(match[1].str());
+            diag.errorCode = trimCopy(match[2].str());
+            diag.message = trimCopy(match[3].str());
+        } else {
+            continue;
+        }
+
+        auto resolved = resolveDiagnosticPath(diag.file, workingDirectory);
+        if (!resolved.empty()) {
+            diag.file = resolved.string();
+        }
+        diag.context = extractCodeContext(diag.file, diag.line);
+        diagnostics.push_back(std::move(diag));
+    }
+
+    return diagnostics;
+}
+
+std::string formatSearchHits(const std::vector<CodeSearchHit>& hits) {
+    if (hits.empty()) return {};
+    std::ostringstream oss;
+    for (const auto& hit : hits) {
+        oss << "- " << hit.file << ':' << hit.startLine << '-' << hit.endLine
+            << " [" << hit.kind << ']';
+        if (!hit.symbol.empty()) {
+            oss << ' ' << hit.symbol;
+        }
+        oss << "\n" << hit.snippet << "\n";
+    }
+    return oss.str();
+}
+
+std::string buildHealingPrompt(const CompilerDiagnostic& diag,
+                               const std::vector<CodeSearchHit>& relatedHits) {
+    std::ostringstream prompt;
+    prompt << "Fix this compiler diagnostic. Return only the corrected replacement code for the failing region.\n\n";
+    prompt << "Severity: " << diag.severity << "\n";
+    prompt << "File: " << diag.file << "\n";
+    prompt << "Line: " << diag.line << "\n";
+    prompt << "Column: " << diag.column << "\n";
+    if (!diag.errorCode.empty()) {
+        prompt << "Code: " << diag.errorCode << "\n";
+    }
+    prompt << "Message: " << diag.message << "\n\n";
+
+    if (!diag.context.empty()) {
+        prompt << "Local code context:\n" << diag.context << "\n";
+    }
+
+    if (!relatedHits.empty()) {
+        prompt << "Related workspace symbols and snippets:\n"
+               << formatSearchHits(relatedHits) << "\n";
+    }
+
+    prompt << "Constraints:\n"
+           << "- Preserve surrounding architecture and style.\n"
+           << "- Do not explain.\n"
+           << "- Do not wrap the answer in markdown fences.\n"
+           << "- Return only the corrected code that should replace the failing region.\n";
+    return prompt.str();
+}
+
+std::string sanitizeModelPatch(const std::string& raw) {
+    std::string text = trimCopy(raw);
+    if (text.rfind("```", 0) == 0) {
+        auto firstNewline = text.find('\n');
+        if (firstNewline != std::string::npos) {
+            text = text.substr(firstNewline + 1);
+        }
+        auto lastFence = text.rfind("```");
+        if (lastFence != std::string::npos) {
+            text = text.substr(0, lastFence);
+        }
+    }
+    return trimCopy(text);
+}
+
+std::pair<int, std::string> runCommandWithOutput(const std::string& command,
+                                                 const std::string& workingDirectory) {
+#ifdef _WIN32
+    SECURITY_ATTRIBUTES sa{};
+    sa.nLength = sizeof(sa);
+    sa.lpSecurityDescriptor = nullptr;
+    sa.bInheritHandle = TRUE;
+
+    HANDLE hRead = nullptr;
+    HANDLE hWrite = nullptr;
+    if (!CreatePipe(&hRead, &hWrite, &sa, 0)) {
+        return {-1, "Failed to create output capture pipe"};
+    }
+    SetHandleInformation(hRead, HANDLE_FLAG_INHERIT, 0);
+
+    STARTUPINFOA si{};
+    si.cb = sizeof(si);
+    si.dwFlags = STARTF_USESTDHANDLES;
+    si.hStdOutput = hWrite;
+    si.hStdError = hWrite;
+    si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+
+    PROCESS_INFORMATION pi{};
+    std::string wrapped = "cmd /c \"" + command + "\"";
+    std::vector<char> cmdLine(wrapped.begin(), wrapped.end());
+    cmdLine.push_back('\0');
+
+    BOOL created = CreateProcessA(
+        nullptr,
+        cmdLine.data(),
+        nullptr,
+        nullptr,
+        TRUE,
+        CREATE_NO_WINDOW,
+        nullptr,
+        workingDirectory.empty() ? nullptr : workingDirectory.c_str(),
+        &si,
+        &pi);
+
+    CloseHandle(hWrite);
+    hWrite = nullptr;
+
+    if (!created) {
+        CloseHandle(hRead);
+        return {-1, "Failed to create build process"};
+    }
+
+    std::string output;
+    char buffer[4096];
+    DWORD bytesRead = 0;
+    while (ReadFile(hRead, buffer, sizeof(buffer) - 1, &bytesRead, nullptr) && bytesRead > 0) {
+        buffer[bytesRead] = '\0';
+        output.append(buffer, bytesRead);
+    }
+
+    WaitForSingleObject(pi.hProcess, INFINITE);
+
+    DWORD exitCode = 0;
+    GetExitCodeProcess(pi.hProcess, &exitCode);
+
+    CloseHandle(hRead);
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+    return {static_cast<int>(exitCode), output};
+#else
+    (void)command;
+    (void)workingDirectory;
+    return {-1, "Build capture is currently implemented for Windows only"};
+#endif
 }
 
 } // namespace
@@ -417,6 +670,191 @@ ExecutionResult QuantumOrchestrator::executeTaskAuto(
 {
     ExecutionStrategy autoStrategy = analyzeAndSelectStrategy(taskDescription, files);
     return executeTask(taskDescription, files, autoStrategy);
+}
+
+ExecutionResult QuantumOrchestrator::executeAutoFix(
+    const std::string& buildCommand,
+    const std::string& workingDirectory)
+{
+    auto started = std::chrono::steady_clock::now();
+    if (trimCopy(buildCommand).empty()) {
+        return ExecutionResult::error("Self-healing aborted: empty build command");
+    }
+
+    std::string effectiveWorkingDirectory = workingDirectory;
+    if (effectiveWorkingDirectory.empty()) {
+        effectiveWorkingDirectory = std::filesystem::current_path().string();
+    }
+
+    ExecutionStrategy strategy = getStrategy();
+    auto [initialExitCode, initialOutput] =
+        runCommandWithOutput(buildCommand, effectiveWorkingDirectory);
+    auto diagnostics = parseCompilerErrors(initialOutput, effectiveWorkingDirectory);
+
+    if (initialExitCode == 0 && diagnostics.empty()) {
+        auto result = ExecutionResult::ok("Build clean — no fixes needed");
+        result.totalDurationMs = static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - started).count());
+        return result;
+    }
+
+    if (diagnostics.empty()) {
+        auto result = ExecutionResult::error(
+            "Build failed but no structured diagnostics were parsed\n" + initialOutput);
+        result.totalDurationMs = static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - started).count());
+        return result;
+    }
+
+    if (!buildWorkspaceIndex(effectiveWorkingDirectory, true)) {
+        return ExecutionResult::error("Self-healing failed: workspace index unavailable");
+    }
+
+    std::string sessionId = createEditSession(
+        "Auto-fix: " + std::to_string(diagnostics.size()) + " compiler diagnostics");
+
+    int fixesStaged = 0;
+    int diagnosticsHandled = 0;
+    std::unordered_set<std::string> stagedKeys;
+
+    for (const auto& diag : diagnostics) {
+        if (toLowerCopy(diag.severity) == "warning" && strategy.mode == QualityMode::Auto) {
+            continue;
+        }
+
+        std::vector<CodeSearchHit> relatedHits = searchWorkspace(
+            (diag.errorCode.empty() ? std::string{} : diag.errorCode + " ") + diag.message,
+            6);
+
+        std::vector<std::string> candidateFiles;
+        if (!diag.file.empty()) {
+            candidateFiles.push_back(diag.file);
+        }
+        for (const auto& hit : relatedHits) {
+            if (std::find(candidateFiles.begin(), candidateFiles.end(), hit.file) == candidateFiles.end()) {
+                candidateFiles.push_back(hit.file);
+            }
+        }
+        if (candidateFiles.empty()) {
+            continue;
+        }
+
+        CompilerDiagnostic resolved = diag;
+        if (resolved.file.empty()) {
+            resolved.file = relatedHits.front().file;
+            resolved.line = relatedHits.front().startLine;
+            resolved.column = 1;
+            resolved.context = extractCodeContext(resolved.file, resolved.line);
+        }
+
+        std::string prompt = buildHealingPrompt(resolved, relatedHits);
+        ExecutionStrategy fixStrategy =
+            (toLowerCopy(resolved.severity).find("error") != std::string::npos)
+                ? ExecutionStrategy::quantumStrategy()
+                : strategy;
+
+        auto fixResult = executeTask(prompt, candidateFiles, fixStrategy);
+        if (!fixResult.success) {
+            continue;
+        }
+
+        std::string replacement = sanitizeModelPatch(fixResult.detail);
+        if (replacement.empty()) {
+            continue;
+        }
+
+        int startLine = resolved.line > 0 ? std::max(1, resolved.line - 2)
+                                          : (!relatedHits.empty() ? relatedHits.front().startLine : 1);
+        int endLine = resolved.line > 0 ? std::max(startLine, resolved.line + 2)
+                                        : (!relatedHits.empty() ? relatedHits.front().endLine : startLine);
+
+        std::ostringstream keyBuilder;
+        keyBuilder << resolved.file << '#' << startLine << '-' << endLine;
+        std::string dedupeKey = keyBuilder.str();
+        if (!stagedKeys.insert(dedupeKey).second) {
+            continue;
+        }
+
+        WorkspaceEdit edit{};
+        edit.file = resolved.file;
+        edit.startLine = startLine;
+        edit.endLine = endLine;
+        edit.newText = replacement;
+        edit.label = "Auto-fix " +
+            (resolved.errorCode.empty() ? std::string("diagnostic") : resolved.errorCode);
+        edit.createIfMissing = false;
+
+        if (stageEdit(sessionId, edit)) {
+            ++fixesStaged;
+            ++diagnosticsHandled;
+        }
+    }
+
+    if (fixesStaged == 0) {
+        discardEditSession(sessionId);
+        auto result = ExecutionResult::error("No actionable fixes could be generated from build diagnostics");
+        result.totalDurationMs = static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - started).count());
+        result.todoItemsGenerated = static_cast<int>(diagnostics.size());
+        return result;
+    }
+
+    std::vector<std::string> modifiedFiles;
+    if (!applyEditSession(sessionId, &modifiedFiles)) {
+        auto result = ExecutionResult::error(
+            "Fixes were staged but could not be applied\n" + previewEditSession(sessionId));
+        result.totalDurationMs = static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - started).count());
+        result.todoItemsGenerated = static_cast<int>(diagnostics.size());
+        result.todoItemsCompleted = fixesStaged;
+        return result;
+    }
+
+    auto [rebuildExitCode, rebuildOutput] =
+        runCommandWithOutput(buildCommand, effectiveWorkingDirectory);
+    auto remainingDiagnostics = parseCompilerErrors(rebuildOutput, effectiveWorkingDirectory);
+
+    ComplexityMetrics healingComplexity{};
+    healingComplexity.fileCount = static_cast<int>(modifiedFiles.size());
+    healingComplexity.lineCount = fixesStaged * 5;
+    healingComplexity.functionCount = diagnosticsHandled;
+    healingComplexity.dependencyDepth = static_cast<int>(remainingDiagnostics.size());
+    healingComplexity.requiresRefactoring = fixesStaged > 1;
+    healingComplexity.requiresArchitectureChange = false;
+    healingComplexity.requiresMultiFileEdits = modifiedFiles.size() > 1;
+    healingComplexity.estimatedComplexity = std::min(1.0, 0.2 + fixesStaged * 0.1);
+
+    auto elapsed = static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - started).count());
+    recordExecution("autofix", healingComplexity, elapsed,
+                    rebuildExitCode != 0 || !remainingDiagnostics.empty(),
+                    strategy.mode);
+
+    ExecutionResult result{};
+    result.success = (rebuildExitCode == 0 && remainingDiagnostics.empty());
+    result.detail = result.success
+        ? ("Self-healing complete: build clean after " + std::to_string(fixesStaged) + " staged fixes")
+        : ("Self-healing applied " + std::to_string(fixesStaged) +
+           " fixes but build still reports " + std::to_string(remainingDiagnostics.size()) +
+           " diagnostics\n" + rebuildOutput);
+    result.iterationCount = diagnosticsHandled;
+    result.agentCycleCount = strategy.agentCycleCount;
+    result.modelCount = strategy.modelCount;
+    result.totalDurationMs = elapsed;
+    result.avgModelDurationMs = strategy.modelCount > 0 ? elapsed / static_cast<uint64_t>(strategy.modelCount) : elapsed;
+    result.maxModelDurationMs = elapsed;
+    result.modeUsed = strategy.mode;
+    result.timeoutAdjusted = strategy.autoAdjustTimeout;
+    result.adjustedTimeoutMs = strategy.baseTimeoutMs;
+    result.filesModified = std::move(modifiedFiles);
+    result.todoItemsGenerated = static_cast<int>(diagnostics.size());
+    result.todoItemsCompleted = fixesStaged;
+    return result;
 }
 
 std::vector<AuditEntry> QuantumOrchestrator::auditProductionReadiness(
