@@ -242,3 +242,58 @@ void CSRoPE(uint3 tid : SV_DispatchThreadID) {
     g_inout[reIdx] = re * c - im * s;
     g_inout[imIdx] = re * s + im * c;
 }
+
+// ── Phase D: Fused Layer Kernels ──────────────────────────────────────────────
+
+// ── CSSiLU ────────────────────────────────────────────────────────────────────
+// In-place SiLU (Swish) activation: x * sigmoid(x)
+// g_inout[0..cbDim-1] → activated values.
+[numthreads(256, 1, 1)]
+void CSSiLU(uint3 tid : SV_DispatchThreadID) {
+    const uint idx = tid.x;
+    if (idx >= cbDim) return;
+    const float x = g_inout[idx];
+    g_inout[idx] = x / (1.0f + exp(-x));
+}
+
+// ── CSResidualAdd ─────────────────────────────────────────────────────────────
+// g_inout[i] += g_vec[i] for i in [0..cbDim)
+// Residual connection: adds the skip-connection vector to the current tensor.
+[numthreads(256, 1, 1)]
+void CSResidualAdd(uint3 tid : SV_DispatchThreadID) {
+    const uint idx = tid.x;
+    if (idx >= cbDim) return;
+    g_inout[idx] += g_vec[idx];
+}
+
+// ── CSMatVecFP32 ──────────────────────────────────────────────────────────────
+// Full-precision matrix × vector for Q/K/V/O/FFN projections.
+// g_matrix is reinterpreted as StructuredBuffer<float> (not Q4_0).
+// One thread = one output row. Uses ByteAddressBuffer with float loads.
+// cbRows = output dim, cbCols = input dim.
+[numthreads(256, 1, 1)]
+void CSMatVecFP32(uint3 tid : SV_DispatchThreadID) {
+    const uint row = tid.x;
+    if (row >= cbRows) return;
+
+    float sum = 0.0f;
+    const uint base = row * cbCols;
+
+    // Load from ByteAddressBuffer as float (4 bytes per element)
+    for (uint i = 0; i < cbCols; ++i) {
+        const float mval = asfloat(g_matrix.Load((base + i) * 4u));
+        sum += mval * g_vec[i];
+    }
+
+    g_out[row] = sum;
+}
+
+// ── CSElementwiseMul ──────────────────────────────────────────────────────────
+// g_out[i] = g_inout[i] * g_vec[i] for i in [0..cbDim)
+// Used for gated FFN: gate_proj output * up_proj output
+[numthreads(256, 1, 1)]
+void CSElementwiseMul(uint3 tid : SV_DispatchThreadID) {
+    const uint idx = tid.x;
+    if (idx >= cbDim) return;
+    g_out[idx] = g_inout[idx] * g_vec[idx];
+}

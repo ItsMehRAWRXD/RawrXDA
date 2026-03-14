@@ -3443,6 +3443,7 @@ if(WIN32)
         src/app/cli_entrypoint.cpp
         src/agent/quantum_agent_orchestrator.cpp
         src/inference/gpu_dispatch_gate.cpp
+        src/cpu_inference_engine_autofix_stub.cpp
         src/gguf_d3d12_bridge.cpp
     )
     target_include_directories(RawrXD-AutoFixCLI PRIVATE
@@ -3491,4 +3492,35 @@ if(WIN32)
         OUTPUT_NAME RawrXD-Benchmark
     )
     message(STATUS "[Phase C] GPU Benchmark target: RawrXD-Benchmark")
+
+    # ═══════════════════════════════════════════════════════════════════
+    # Fused Layer Benchmark — v16.3 Phase D Layer Fusion
+    # ═══════════════════════════════════════════════════════════════════
+    add_executable(RawrXD-FusedBenchmark EXCLUDE_FROM_ALL
+        src/tools/fused_layer_benchmark.cpp
+        src/gguf_d3d12_bridge.cpp
+    )
+    target_include_directories(RawrXD-FusedBenchmark PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/include
+    )
+    target_compile_definitions(RawrXD-FusedBenchmark PRIVATE
+        RAWR_BENCHMARK=1
+    )
+    if(MSVC)
+        target_compile_options(RawrXD-FusedBenchmark PRIVATE /EHsc /W0 /O2)
+    endif()
+    target_link_libraries(RawrXD-FusedBenchmark PRIVATE
+        kernel32
+        user32
+        d3d12
+        dxgi
+        d3dcompiler
+        ole32
+    )
+    set_target_properties(RawrXD-FusedBenchmark PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+        OUTPUT_NAME RawrXD-FusedBenchmark
+    )
+    message(STATUS "[Phase D] Fused Layer Benchmark target: RawrXD-FusedBenchmark")
 endif()

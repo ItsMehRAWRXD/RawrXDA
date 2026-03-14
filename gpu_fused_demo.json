@@ -1,0 +1,11 @@
+{
+  "version": "v16.3-FUSED-LAYERS",
+  "phase": "D",
+  "model_dim": 4096,
+  "n_heads": 32,
+  "ffn_dim": 11008,
+  "tokens": 128,
+  "kernels": ["MatVecQ4", "RMSNorm", "Softmax", "RoPE", "SiLU", "ResidualAdd", "MatVecFP32", "ElementwiseMul"],
+  "fused_dispatch": true,
+  "ops_per_layer": 10
+}
