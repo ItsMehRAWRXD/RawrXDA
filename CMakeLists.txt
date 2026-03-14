@@ -3523,4 +3523,35 @@ if(WIN32)
         OUTPUT_NAME RawrXD-FusedBenchmark
     )
     message(STATUS "[Phase D] Fused Layer Benchmark target: RawrXD-FusedBenchmark")
+
+    # ═══════════════════════════════════════════════════════════════════
+    # KV Cache Benchmark — v16.4 Phase E GPU-Resident KV Cache
+    # ═══════════════════════════════════════════════════════════════════
+    add_executable(RawrXD-KVBenchmark EXCLUDE_FROM_ALL
+        src/tools/kv_cache_benchmark.cpp
+        src/gguf_d3d12_bridge.cpp
+    )
+    target_include_directories(RawrXD-KVBenchmark PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/include
+    )
+    target_compile_definitions(RawrXD-KVBenchmark PRIVATE
+        RAWR_BENCHMARK=1
+    )
+    if(MSVC)
+        target_compile_options(RawrXD-KVBenchmark PRIVATE /EHsc /W0 /O2)
+    endif()
+    target_link_libraries(RawrXD-KVBenchmark PRIVATE
+        kernel32
+        user32
+        d3d12
+        dxgi
+        d3dcompiler
+        ole32
+    )
+    set_target_properties(RawrXD-KVBenchmark PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+        OUTPUT_NAME RawrXD-KVBenchmark
+    )
+    message(STATUS "[Phase E] KV Cache Benchmark target: RawrXD-KVBenchmark")
 endif()

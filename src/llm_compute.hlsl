@@ -82,43 +82,18 @@ void CSMatVecQ4(uint3 tid : SV_DispatchThreadID) {
     float sum = 0.0f;
 
     for (uint b = 0; b < cbBlocksPerRow; ++b) {
-        // Byte offset into the matrix buffer for this block
-        const uint blockBase = (row * cbBlocksPerRow + b) * 18u;
+        // Byte offset into the matrix buffer for this block (20 bytes per block, strictly aligned)
+        const uint blockBase = (row * cbBlocksPerRow + b) * 20u;
 
-        // ── Load 16 nibble bytes (4 × uint32, then mask) ──
-        // ByteAddressBuffer.Load4 requires 4-byte aligned addresses.
-        // Block nibble data: bytes 0-15 (unaligned in general → use byte-by-byte Load)
-        // We load as two Load4 at offsets aligned down.
-        const uint alignedBase = blockBase & ~3u;
-        const uint byteShift   = blockBase & 3u;
-
-        // Load the 16 nibble bytes as a uint4 pair (may straddle alignment)
-        // Strategy: load 5 uint32 words covering bytes [blockBase, blockBase+15]
-        uint raw[5];
-        raw[0] = g_matrix.Load(alignedBase);
-        raw[1] = g_matrix.Load(alignedBase + 4u);
-        raw[2] = g_matrix.Load(alignedBase + 8u);
-        raw[3] = g_matrix.Load(alignedBase + 12u);
-        raw[4] = g_matrix.Load(alignedBase + 16u);
-
-        // Extract 16 contiguous bytes starting at byte byteShift within raw[0..4]
-        // Pack them into nibbles[0..3] as packed uint32 (4 bytes per uint)
-        uint nibbles[4];
-        [unroll]
-        for (uint wi = 0; wi < 4u; ++wi) {
-            const uint bitOff = byteShift * 8u + wi * 32u;
-            const uint lo     = raw[bitOff / 32u    ];
-            const uint hi     = raw[bitOff / 32u + 1u];
-            nibbles[wi] = (lo >> (bitOff & 31u)) | (hi << (32u - (bitOff & 31u)));
-        }
+        // ── Load 16 nibble bytes (4 × uint32) ──
+        // Since blockBase is a multiple of 20, it is ALWAYS 4-byte aligned (20 % 4 == 0)
+        uint4 rawNibbles = g_matrix.Load4(blockBase);
+        uint nibbles[4] = { rawNibbles.x, rawNibbles.y, rawNibbles.z, rawNibbles.w };
 
         // ── Read fp16 scale at bytes [16, 17] within block ──
-        const uint scByteOff  = blockBase + 16u;
-        const uint scAligned  = scByteOff & ~3u;
-        const uint scRaw      = g_matrix.Load(scAligned);
-        const uint scShift    = (scByteOff & 3u) * 8u;
-        const uint scHalf     = (scRaw >> scShift) & 0xFFFFu;
-        const float scale     = fp16_to_float(scHalf);
+        // blockBase + 16u is also 4-byte aligned!
+        const uint scRaw = g_matrix.Load(blockBase + 16u);
+        const float scale = fp16_to_float(scRaw & 0xFFFFu);
 
         // ── Dequantize 32 nibbles and accumulate ──
         const uint vecBase = b * 32u;
@@ -296,4 +271,138 @@ void CSElementwiseMul(uint3 tid : SV_DispatchThreadID) {
     const uint idx = tid.x;
     if (idx >= cbDim) return;
     g_out[idx] = g_inout[idx] * g_vec[idx];
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+// Phase E: Persistent KV Cache Kernels
+// ════════════════════════════════════════════════════════════════════════════════
+//
+// GPU KV cache layout (ByteAddressBuffer g_matrix):
+//   Interleaved K/V per head per position:
+//     offset(pos, head, isV) = ((pos * n_heads + head) * 2 + isV) * head_dim * 4
+//
+// Constants mapping for KV cache ops:
+//   cbRows      = seq_len (number of valid positions in cache)
+//   cbCols      = head_dim (dimension per head)
+//   cbDim       = n_heads
+//   cbPosition  = write position (for append) or query position
+//   cbThetaBase = (unused, reserved)
+//   cbEps       = attention scale factor = 1.0/sqrt(head_dim)
+
+// ── CSKVCacheWrite ────────────────────────────────────────────────────────────
+// Write a single head's K or V vector into the GPU KV cache.
+// g_vec[0..cbCols-1] = the vector to write
+// g_inout is used as the KV cache (RW)
+// Writing at: g_inout[offset..offset+cbCols-1]
+// where offset = (cbPosition * cbDim + head_idx) * 2 * cbCols + isV * cbCols
+//
+// We dispatch one thread per head×isV pair: total threads = cbDim * 2
+// Each thread copies cbCols floats from g_vec to the cache position.
+// Actually simpler: one thread per element. Dispatch threads = cbCols.
+// The head index and isV flag come from cbBlocksPerRow:
+//   cbBlocksPerRow = head_idx * 2 + isV
+[numthreads(256, 1, 1)]
+void CSKVCacheWrite(uint3 tid : SV_DispatchThreadID) {
+    const uint elem = tid.x;
+    if (elem >= cbCols) return;
+
+    const uint headAndKV = cbBlocksPerRow; // head_idx * 2 + isV
+    const uint stride    = cbDim * 2u * cbCols; // floats per position
+    const uint offset    = cbPosition * stride + headAndKV * cbCols + elem;
+
+    g_inout[offset] = g_vec[elem];
+}
+
+// ── CSAttentionHead ──────────────────────────────────────────────────────────
+// Single-head attention: computes one head's contribution.
+//   Q vector: g_vec[0..cbCols-1]          (head_dim floats, the query)
+//   KV cache: g_inout[...]                (interleaved K/V for all positions)
+//   Output:   g_out[0..cbCols-1]          (head_dim floats, context vector)
+//
+// Constants:
+//   cbRows      = seq_len (positions to attend over: 0..seq_len-1)
+//   cbCols      = head_dim
+//   cbDim       = n_heads
+//   cbBlocksPerRow = head_index (which head we're computing)
+//   cbEps       = 1.0/sqrt(head_dim) (attention scale)
+//
+// Algorithm:
+//   1. Compute scores[pos] = dot(Q, K[pos]) * scale  for pos in [0..seq_len)
+//   2. Softmax scores
+//   3. Output[d] = sum(scores[pos] * V[pos][d]) for d in [0..head_dim)
+//
+// Thread model: one thread group (1024 threads) handles the full computation.
+// Limitation: seq_len <= 1024 (sufficient for single-token generation context).
+[numthreads(1024, 1, 1)]
+void CSAttentionHead(uint3 tid : SV_DispatchThreadID, uint gtid : SV_GroupIndex) {
+    const uint lane     = gtid;
+    const uint seq_len  = cbRows;
+    const uint head_dim = cbCols;
+    const uint n_heads  = cbDim;
+    const uint head_idx = cbBlocksPerRow;
+    const float scale   = cbEps; // reuse eps as attention scale
+
+    // Cache stride: floats per position = n_heads * 2 * head_dim
+    const uint posStride = n_heads * 2u * head_dim;
+
+    // ── Step 1: Compute attention scores ──
+    // Each lane handles one position (if lane < seq_len)
+    float score = -1e38f;
+    if (lane < seq_len) {
+        // K offset for this head at position `lane`:
+        // (lane * n_heads + head_idx) * 2 * head_dim + 0 (K, not V)
+        const uint kBase = lane * posStride + head_idx * 2u * head_dim;
+
+        float dot = 0.0f;
+        for (uint d = 0; d < head_dim; ++d) {
+            dot += g_vec[d] * g_inout[kBase + d];
+        }
+        score = dot * scale;
+    }
+
+    // ── Step 2: Softmax over scores ──
+    // Tree reduction for max
+    gs_scratch[lane] = score;
+    GroupMemoryBarrierWithGroupSync();
+
+    for (uint stride = 512u; stride > 0u; stride >>= 1u) {
+        if (lane < stride)
+            gs_scratch[lane] = max(gs_scratch[lane], gs_scratch[lane + stride]);
+        GroupMemoryBarrierWithGroupSync();
+    }
+    const float globalMax = gs_scratch[0];
+
+    // Exp + sum reduction
+    float expVal = 0.0f;
+    if (lane < seq_len) {
+        expVal = exp(score - globalMax);
+    }
+    gs_scratch[lane] = expVal;
+    GroupMemoryBarrierWithGroupSync();
+
+    for (uint stride2 = 512u; stride2 > 0u; stride2 >>= 1u) {
+        if (lane < stride2)
+            gs_scratch[lane] += gs_scratch[lane + stride2];
+        GroupMemoryBarrierWithGroupSync();
+    }
+    const float invSum = 1.0f / max(gs_scratch[0], 1e-10f);
+
+    // Normalized attention weight for this lane's position
+    float weight = (lane < seq_len) ? expVal * invSum : 0.0f;
+
+    // Store weight in scratch for step 3
+    gs_scratch[lane] = weight;
+    GroupMemoryBarrierWithGroupSync();
+
+    // ── Step 3: Weighted sum of V vectors ──
+    // Each lane handles one output dimension (if lane < head_dim)
+    if (lane < head_dim) {
+        float acc = 0.0f;
+        for (uint pos = 0; pos < seq_len; ++pos) {
+            // V offset for this head at position `pos`:
+            const uint vBase = pos * posStride + head_idx * 2u * head_dim + head_dim;
+            acc += gs_scratch[pos] * g_inout[vBase + lane];
+        }
+        g_out[lane] = acc;
+    }
 }

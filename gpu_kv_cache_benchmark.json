@@ -1,0 +1,14 @@
+{
+  "version": "v16.4-KV-CACHE",
+  "phase": "E",
+  "model_dim": 4096,
+  "n_heads": 32,
+  "head_dim": 128,
+  "max_seq_len": 512,
+  "gen_tokens": 128,
+  "kv_cache_bytes": 16777216,
+  "gpu_resident": true,
+  "zero_copy": true,
+  "fused_dispatch": true,
+  "kernels": ["CSKVCacheWrite", "CSAttentionHead"]
+}

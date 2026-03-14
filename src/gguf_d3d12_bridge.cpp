@@ -118,6 +118,8 @@ void GGUFD3D12Bridge::Shutdown() {
     gpu_.psoResidualAdd.Reset();
     gpu_.psoMatVecFP32.Reset();
     gpu_.psoElementwiseMul.Reset();
+    gpu_.psoKVCacheWrite.Reset();
+    gpu_.psoAttentionHead.Reset();
     gpu_.rootSig.Reset();
 
     shaders_.matVecQ4.Reset();
@@ -128,6 +130,8 @@ void GGUFD3D12Bridge::Shutdown() {
     shaders_.residualAdd.Reset();
     shaders_.matVecFP32.Reset();
     shaders_.elementwiseMul.Reset();
+    shaders_.kvCacheWrite.Reset();
+    shaders_.attentionHead.Reset();
 
     if (fenceEvent_) {
         CloseHandle(fenceEvent_);
@@ -152,6 +156,8 @@ bool GGUFD3D12Bridge::LoadShadersFromDirectory(const std::string& shaderDirector
     shaders_.residualAdd  = loadBlob(base / "CSResidualAdd.cso");
     shaders_.matVecFP32   = loadBlob(base / "CSMatVecFP32.cso");
     shaders_.elementwiseMul = loadBlob(base / "CSElementwiseMul.cso");
+    shaders_.kvCacheWrite = loadBlob(base / "CSKVCacheWrite.cso");
+    shaders_.attentionHead = loadBlob(base / "CSAttentionHead.cso");
 
     if (!shaders_.matVecQ4) return false;
 
@@ -167,6 +173,8 @@ bool GGUFD3D12Bridge::CompileShadersFromHLSL(const std::wstring& hlslPath) {
     shaders_.residualAdd  = compileFromFile(hlslPath, "CSResidualAdd", "cs_5_1");
     shaders_.matVecFP32   = compileFromFile(hlslPath, "CSMatVecFP32", "cs_5_1");
     shaders_.elementwiseMul = compileFromFile(hlslPath, "CSElementwiseMul", "cs_5_1");
+    shaders_.kvCacheWrite = compileFromFile(hlslPath, "CSKVCacheWrite", "cs_5_1");
+    shaders_.attentionHead = compileFromFile(hlslPath, "CSAttentionHead", "cs_5_1");
 
     if (!shaders_.matVecQ4) return false;
 
@@ -252,6 +260,8 @@ bool GGUFD3D12Bridge::buildRootSignatureAndPSO() {
     createPSO(shaders_.residualAdd.Get(), gpu_.psoResidualAdd);
     createPSO(shaders_.matVecFP32.Get(), gpu_.psoMatVecFP32);
     createPSO(shaders_.elementwiseMul.Get(), gpu_.psoElementwiseMul);
+    createPSO(shaders_.kvCacheWrite.Get(), gpu_.psoKVCacheWrite);
+    createPSO(shaders_.attentionHead.Get(), gpu_.psoAttentionHead);
 
     return true;
 }
@@ -993,6 +1003,151 @@ bool GGUFD3D12Bridge::FlushAndWait() {
     }
 
     return executeAndWait();
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+// PHASE E: GPU-RESIDENT KV CACHE
+// ════════════════════════════════════════════════════════════════════════════════
+
+bool GGUFD3D12Bridge::AllocateKVCache(uint32_t maxSeqLen, uint32_t nHeads,
+                                      uint32_t headDim,
+                                      Microsoft::WRL::ComPtr<ID3D12Resource>& outKVBuffer) {
+    // Layout: [maxSeqLen positions] × [nHeads heads] × [2 (K+V)] × [headDim floats]
+    uint64_t totalFloats = (uint64_t)maxSeqLen * nHeads * 2 * headDim;
+    uint64_t sizeBytes = totalFloats * sizeof(float);
+    return AllocateBuffer(sizeBytes, outKVBuffer);
+}
+
+bool GGUFD3D12Bridge::DispatchKVCacheWrite(ID3D12Resource* kvBuffer,
+                                           ID3D12Resource* vecBuffer,
+                                           uint32_t pos, uint32_t headIdx, bool isValue,
+                                           uint32_t nHeads, uint32_t headDim) {
+    if (!gpu_.psoKVCacheWrite || !kvBuffer || !vecBuffer) return false;
+
+    if (FAILED(allocator_->Reset())) return false;
+    if (FAILED(list_->Reset(allocator_.Get(), gpu_.psoKVCacheWrite.Get()))) return false;
+
+    transition(list_.Get(), kvBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+    transition(list_.Get(), vecBuffer, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+
+    setupDescriptorsForDispatch(
+        nullptr, 0,
+        vecBuffer, headDim,  // t1 = vector to write
+        nullptr, 0,
+        kvBuffer, (uint32_t)(kvBuffer->GetDesc().Width / sizeof(float)),  // u0 = KV cache
+        nullptr, 0);
+
+    MatVecConstants c{};
+    c.cbCols = headDim;
+    c.cbBlocksPerRow = headIdx * 2 + (isValue ? 1 : 0);
+    c.cbDim = nHeads;
+    c.cbPosition = pos;
+    list_->SetComputeRoot32BitConstants(0, 8, &c, 0);
+
+    list_->Dispatch((headDim + 255) / 256, 1, 1);
+    return executeAndWait();
+}
+
+bool GGUFD3D12Bridge::DispatchAttentionHead(ID3D12Resource* kvBuffer,
+                                            ID3D12Resource* queryBuffer,
+                                            ID3D12Resource* outputBuffer,
+                                            uint32_t seqLen, uint32_t headIdx,
+                                            uint32_t nHeads, uint32_t headDim) {
+    if (!gpu_.psoAttentionHead || !kvBuffer || !queryBuffer || !outputBuffer) return false;
+    if (seqLen == 0 || seqLen > 1024) return false; // thread group limit
+
+    if (FAILED(allocator_->Reset())) return false;
+    if (FAILED(list_->Reset(allocator_.Get(), gpu_.psoAttentionHead.Get()))) return false;
+
+    transition(list_.Get(), kvBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+    transition(list_.Get(), queryBuffer, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+    transition(list_.Get(), outputBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+    setupDescriptorsForDispatch(
+        nullptr, 0,
+        queryBuffer, headDim,  // t1 = query vector
+        nullptr, 0,
+        kvBuffer, (uint32_t)(kvBuffer->GetDesc().Width / sizeof(float)),  // u0 = KV cache
+        outputBuffer, headDim);  // u1 = output
+
+    MatVecConstants c{};
+    c.cbRows = seqLen;
+    c.cbCols = headDim;
+    c.cbBlocksPerRow = headIdx;
+    c.cbDim = nHeads;
+    c.cbEps = 1.0f / sqrtf((float)headDim); // attention scale
+    list_->SetComputeRoot32BitConstants(0, 8, &c, 0);
+
+    list_->Dispatch(1, 1, 1); // single thread group, 1024 threads
+    return executeAndWait();
+}
+
+// ── Phase E: Fused Record variants ─────────────────────────────────────────
+
+bool GGUFD3D12Bridge::RecordKVCacheWrite(ID3D12Resource* kvBuffer,
+                                         ID3D12Resource* vecBuffer,
+                                         uint32_t pos, uint32_t headIdx, bool isValue,
+                                         uint32_t nHeads, uint32_t headDim) {
+    if (!fusedRecording_ || !gpu_.psoKVCacheWrite) return false;
+
+    if (fusedOpsRecorded_ > 0) insertUAVBarrier();
+
+    list_->SetPipelineState(gpu_.psoKVCacheWrite.Get());
+    transition(list_.Get(), kvBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+    transition(list_.Get(), vecBuffer, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+
+    setupDescriptorsForDispatch(
+        nullptr, 0,
+        vecBuffer, headDim,
+        nullptr, 0,
+        kvBuffer, (uint32_t)(kvBuffer->GetDesc().Width / sizeof(float)),
+        nullptr, 0);
+
+    MatVecConstants c{};
+    c.cbCols = headDim;
+    c.cbBlocksPerRow = headIdx * 2 + (isValue ? 1 : 0);
+    c.cbDim = nHeads;
+    c.cbPosition = pos;
+    list_->SetComputeRoot32BitConstants(0, 8, &c, 0);
+
+    list_->Dispatch((headDim + 255) / 256, 1, 1);
+    fusedOpsRecorded_++;
+    return true;
+}
+
+bool GGUFD3D12Bridge::RecordAttentionHead(ID3D12Resource* kvBuffer,
+                                          ID3D12Resource* queryBuffer,
+                                          ID3D12Resource* outputBuffer,
+                                          uint32_t seqLen, uint32_t headIdx,
+                                          uint32_t nHeads, uint32_t headDim) {
+    if (!fusedRecording_ || !gpu_.psoAttentionHead) return false;
+    if (seqLen == 0 || seqLen > 1024) return false;
+
+    if (fusedOpsRecorded_ > 0) insertUAVBarrier();
+
+    list_->SetPipelineState(gpu_.psoAttentionHead.Get());
+    transition(list_.Get(), kvBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+    transition(list_.Get(), queryBuffer, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+    transition(list_.Get(), outputBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+    setupDescriptorsForDispatch(
+        nullptr, 0,
+        queryBuffer, headDim,
+        nullptr, 0,
+        kvBuffer, (uint32_t)(kvBuffer->GetDesc().Width / sizeof(float)),
+        outputBuffer, headDim);
+
+    MatVecConstants c{};
+    c.cbRows = seqLen;
+    c.cbCols = headDim;
+    c.cbBlocksPerRow = headIdx;
+    c.cbDim = nHeads;
+    c.cbEps = 1.0f / sqrtf((float)headDim);
+    list_->SetComputeRoot32BitConstants(0, 8, &c, 0);
+
+    list_->Dispatch(1, 1, 1);
+    fusedOpsRecorded_++;
+    return true;
 }
 
 // ════════════════════════════════════════════════════════════════════════════════

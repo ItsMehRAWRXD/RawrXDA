@@ -88,6 +88,49 @@ public:
                                 ID3D12Resource* outputBuffer,
                                 uint32_t dim);
 
+    // ── Phase E: GPU-Resident KV Cache ─────────────────────────────────
+    // KV cache layout: interleaved K/V per head per position
+    //   offset(pos, head, isV) = ((pos * nHeads + head) * 2 + isV) * headDim
+    //   Total size = maxSeqLen * nHeads * 2 * headDim * sizeof(float)
+
+    // Allocate a GPU-resident KV cache buffer for all layers.
+    // Returns a single buffer holding the full cache.
+    bool AllocateKVCache(uint32_t maxSeqLen, uint32_t nHeads, uint32_t headDim,
+                         Microsoft::WRL::ComPtr<ID3D12Resource>& outKVBuffer);
+
+    // Write a single head's K or V vector into the cache at a given position.
+    // kvBuffer: the GPU KV cache
+    // vecBuffer: head_dim floats to write
+    // pos: sequence position to write at
+    // headIdx: which attention head
+    // isValue: false=write K, true=write V
+    bool DispatchKVCacheWrite(ID3D12Resource* kvBuffer,
+                              ID3D12Resource* vecBuffer,
+                              uint32_t pos, uint32_t headIdx, bool isValue,
+                              uint32_t nHeads, uint32_t headDim);
+
+    // Compute single-head attention: Q × K_cache → softmax → × V_cache → output
+    // kvBuffer: GPU KV cache (interleaved K/V)
+    // queryBuffer: head_dim floats (the query vector for this head)
+    // outputBuffer: head_dim floats (result)
+    // seqLen: number of valid positions in cache
+    bool DispatchAttentionHead(ID3D12Resource* kvBuffer,
+                               ID3D12Resource* queryBuffer,
+                               ID3D12Resource* outputBuffer,
+                               uint32_t seqLen, uint32_t headIdx,
+                               uint32_t nHeads, uint32_t headDim);
+
+    // ── Phase E: Fused KV cache Record* variants ──────────────────────
+    bool RecordKVCacheWrite(ID3D12Resource* kvBuffer,
+                            ID3D12Resource* vecBuffer,
+                            uint32_t pos, uint32_t headIdx, bool isValue,
+                            uint32_t nHeads, uint32_t headDim);
+    bool RecordAttentionHead(ID3D12Resource* kvBuffer,
+                             ID3D12Resource* queryBuffer,
+                             ID3D12Resource* outputBuffer,
+                             uint32_t seqLen, uint32_t headIdx,
+                             uint32_t nHeads, uint32_t headDim);
+
     // ── Phase D: Fused dispatch pipeline ───────────────────────────────────
     // Begin a fused recording session (resets command list, no execute).
     bool BeginFusedDispatch();
@@ -140,6 +183,9 @@ private:
         Microsoft::WRL::ComPtr<ID3DBlob> residualAdd;
         Microsoft::WRL::ComPtr<ID3DBlob> matVecFP32;
         Microsoft::WRL::ComPtr<ID3DBlob> elementwiseMul;
+        // Phase E additions
+        Microsoft::WRL::ComPtr<ID3DBlob> kvCacheWrite;
+        Microsoft::WRL::ComPtr<ID3DBlob> attentionHead;
     };
 
     struct RootAndPSO {
@@ -153,6 +199,9 @@ private:
         Microsoft::WRL::ComPtr<ID3D12PipelineState> psoResidualAdd;
         Microsoft::WRL::ComPtr<ID3D12PipelineState> psoMatVecFP32;
         Microsoft::WRL::ComPtr<ID3D12PipelineState> psoElementwiseMul;
+        // Phase E
+        Microsoft::WRL::ComPtr<ID3D12PipelineState> psoKVCacheWrite;
+        Microsoft::WRL::ComPtr<ID3D12PipelineState> psoAttentionHead;
     };
 
     struct ResourceState {
