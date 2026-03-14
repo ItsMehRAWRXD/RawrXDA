@@ -566,7 +566,7 @@ szPESaveFailed          db      "Failed to save output.exe.", 0
 szDefaultPEPath         dw      'o','u','t','p','u','t','.','e','x','e',0
 
 align 8
-PUBLIC WritePEFile
+EXTERN WritePEFile:PROC
 PUBLIC g_peSize
 PUBLIC g_peBuffer
 g_peSize                dq      0
@@ -655,7 +655,6 @@ szQTGDefaultPrompt db 'Generate feature from current context',0
 szQTGDefaultFile   db 'main.asm',0
 szQTGSuccess   dw 'F','e','a','t','u','r','e',' ','g','e','n','e','r','a','t','e','d',' ','s','u','c','c','e','s','s','f','u','l','l','y','!',0
 szQTGFailed    dw 'F','e','a','t','u','r','e',' ','g','e','n','e','r','a','t','i','o','n',' ','f','a','i','l','e','d','.',0
-
 ; Context menu strings
 szCut          dw 'C','u','t',9,'C','t','r','l','+','X',0
 szCopy         dw 'C','o','p','y',9,'C','t','r','l','+','C',0
@@ -2160,7 +2159,20 @@ WndProc PROC FRAME
     lea     r9, szDelete
     call    AppendMenuW
 
-    ; ── Separator + PE actions ──
+    ; ── AI Actions ──
+    mov     rcx, rbx
+    mov     edx, MF_SEPARATOR
+    xor     r8d, r8d
+    xor     r9d, r9d
+    call    AppendMenuW
+
+    mov     rcx, rbx
+    xor     edx, edx
+    mov     r8d, IDM_GENERATE_FEATURE
+    lea     r9, szGenerateFeature
+    call    AppendMenuW
+
+    ; ── PE Actions ──
     mov     rcx, rbx
     mov     edx, MF_SEPARATOR
     xor     r8d, r8d
@@ -2267,7 +2279,7 @@ WndProc PROC FRAME
     jmp     @ret_zero
 
 @cmd_gen_pe:
-    call    WritePEFile
+    call    ExportEditorBufferToPE
     test    rax, rax
     jz      @cmd_gen_fail
     lea     rcx, [szPEGenerated]
@@ -3818,68 +3830,14 @@ UndoPush ENDP
 
 ;-----------------------------------------------------------------------------
 ; WritePEFile — Generates complete PE32+ in memory using shared buffer
-;-----------------------------------------------------------------------------
-WritePEFile PROC FRAME
-    push    rbp
-    .pushreg rbp
-    mov     rbp, rsp
-    .setframe rbp, 0
-    sub     rsp, 32
-    .allocstack 32
-    .endprolog
-    
-    ; Copy DOS header
-    lea     rsi, [g_dosHeader]
-    lea     rdi, [g_peBuffer]
-    mov     rcx, 64
-    rep     movsb
-    
-    ; Copy NT headers (signature + file header + optional header + data directory)
-    lea     rsi, [g_ntHeaders]
-    lea     rdi, [g_peBuffer + 64]
-    mov     rcx, 264
-    rep     movsb
-    
-    ; Copy section headers
-    lea     rsi, [g_sectionHeaders]
-    lea     rdi, [g_peBuffer + 64 + 264]
-    mov     rcx, 120
-    rep     movsb
-    
-    ; Copy .text at offset 0x200 (64-byte multi-import payload)
-    lea     rsi, [g_entryCode]
-    lea     rdi, [g_peBuffer + 200h]
-    mov     rcx, 64
-    rep     movsb
-    
-    ; Copy .data payload at offset 0x400 (stdout message)
-    lea     rsi, [g_dataPayload]
-    lea     rdi, [g_peBuffer + 400h]
-    mov     rcx, 32
-    rep     movsb
-    
-    ; Copy .idata at offset 0x600
-    lea     rsi, [g_importTable]
-    lea     rdi, [g_peBuffer + 600h]
-    mov     rcx, 256
-    rep     movsb
-    
-    mov     g_peSize, 00000A00h
-    mov     rax, 1
-    
-    lea     rsp, [rbp]
-    pop     rbp
-    ret
-WritePEFile ENDP
 
 ; SavePEToDisk moved to pe_writer.asm — no longer duplicated here
 ; (duplicate proc removed to resolve LNK2005)
 
-END
 
 ; --- Ghost Text Token Callback ---
 ; RCX = token string (ptr), RDX = length
-UI_OnTokenStream:
+; UI_OnTokenStream (DUPLICATE REMOVED)
     push    rbp
     mov     rbp, rsp
     sub     rsp, 32
@@ -3894,3 +3852,169 @@ UI_OnTokenStream:
     add     rsp, 32
     pop     rbp
     ret
+; --- Ghost Text Token Callback ---
+; RCX = token string (ptr), RDX = length
+PUBLIC UI_OnTokenStream
+UI_OnTokenStream PROC FRAME
+    push    rbp
+    .pushreg rbp
+    mov     rbp, rsp
+    .setframe rbp, 0
+    sub     rsp, 32
+    .allocstack 32
+    .endprolog
+    
+    test    rcx, rcx
+    jz      @stream_done
+    test    edx, edx
+    jz      @stream_done
+
+    mov     byte ptr [g_ghostActive], 1
+    
+    mov     rcx, [hMainWnd]
+    test    rcx, rcx
+    jz      @stream_done
+    xor     edx, edx
+    mov     r8d, 1
+    call    InvalidateRect
+
+@stream_done:
+    lea     rsp, [rbp]
+    pop     rbp
+    ret
+UI_OnTokenStream ENDP
+
+; =============================================================================
+; GetEditorSelectionBuffer
+; Returns current active line or selection. For now returns global buffer.
+; =============================================================================
+PUBLIC GetEditorSelectionBuffer
+GetEditorSelectionBuffer PROC
+    lea rax, g_textBuf
+    ret
+GetEditorSelectionBuffer ENDP
+
+EXTERN AssembleBufferToX64:PROC
+EXTERN Emit_CompletePE:PROC
+EXTERN GetProcessHeap:PROC
+EXTERN HeapAlloc:PROC
+EXTERN HeapFree:PROC
+EXTERN ShellExecuteA:PROC
+EXTERN CreateFileA:PROC
+EXTERN WriteFile:PROC
+EXTERN CloseHandle:PROC
+
+.data
+szGeneratedExe db ".\bin\generated.exe",0
+szShellOpen db "open",0
+
+.code
+; =============================================================================
+; ExportEditorBufferToPE
+; Copies current editor buffer, assembles to x64, emits to PE, executes
+; =============================================================================
+PUBLIC ExportEditorBufferToPE
+ExportEditorBufferToPE PROC FRAME
+    push rbp
+    .pushreg rbp
+    push rbx
+    .pushreg rbx
+    push r12
+    .pushreg r12
+    mov rbp, rsp
+    .setframe rbp, 0
+    sub rsp, 40h
+    .allocstack 40h
+    .endprolog
+    
+
+
+
+
+    
+    ; Setup locals at standard offsets for clarity or just use RBP directly
+    
+    ; 1. Allocate heap for PE construction
+    call GetProcessHeap
+    mov [rbp-10h], rax  ; hHeap
+    
+    mov rcx, rax        ; hHeap
+    mov rdx, 8          ; HEAP_ZERO_MEMORY
+    mov r8, 4096        ; 4KB PE workspace
+    call HeapAlloc
+    mov [rbp-18h], rax  ; pPE
+    test rax, rax
+    jz @editor_fail
+    
+    ; 2. Get editor buffer content
+    call GetEditorSelectionBuffer 
+    mov [rbp-20h], rax  ; pBuffer
+    
+    ; 3. Assemble buffer to x64 machine code
+    mov rcx, [rbp-20h]                 ; pBuffer
+    mov rdx, [rbp-18h]                 ; pPE
+    add rdx, 200h                      ; Skip headers, point to .text start
+    call AssembleBufferToX64           ; emits to [RDX]
+    mov [rbp-28h], rax                 ; save code size
+    
+    ; 4. Emit complete PE structure
+    mov rcx, [rbp-18h]                 ; pPE
+    mov rdx, rax                       ; Code size from assembler
+    call Emit_CompletePE               ; Your fixed emitter
+    mov [rbp-2Ch], eax                 ; peSize
+    
+    ; 5. Write to disk & execute
+    lea rcx, [szGeneratedExe]
+    mov edx, 40000000h                 ; GENERIC_WRITE
+    xor r8d, r8d                       ; default security
+    xor r9d, r9d                       ; NULL
+    mov qword ptr [rsp+20h], 2         ; CREATE_ALWAYS
+    mov qword ptr [rsp+28h], 80h       ; FILE_ATTRIBUTE_NORMAL
+    mov qword ptr [rsp+30h], 0         ; hTemplateFile NULL
+    call CreateFileA
+    mov r12, rax                       ; r12 = hFile
+    
+    cmp r12, -1                        ; INVALID_HANDLE_VALUE
+    je @editor_cleanup
+    
+    mov rcx, r12
+    mov rdx, [rbp-18h]                 ; pPE
+    mov r8d, [rbp-2Ch]                 ; peSize
+    lea r9, [rbp-30h]                  ; &bytesWritten
+    mov qword ptr [rsp+20h], 0         ; OVERLAPPED NULL
+    call WriteFile
+    
+    mov rcx, r12
+    call CloseHandle
+    
+    ; 6. Execute generated binary
+    xor ecx, ecx                       ; HWND NULL
+    lea rdx, [szShellOpen]             ; "open"
+    lea r8, [szGeneratedExe]           ; ".\bin\generated.exe"
+    xor r9d, r9d                       ; parameters NULL
+    mov qword ptr [rsp+20h], 0         ; working dir NULL
+    mov qword ptr [rsp+28h], 5         ; SW_SHOW
+    call ShellExecuteA
+    
+@editor_cleanup:
+    ; 7. Cleanup
+    mov rcx, [rbp-10h]                 ; hHeap
+    xor edx, edx                       ; flags
+    mov r8, [rbp-18h]                  ; pPE
+    call HeapFree
+
+    mov eax, 1                         ; Success marker
+    jmp @editor_ret
+
+@editor_fail:
+    xor eax, eax                       ; Failure marker
+
+@editor_ret:
+    add rsp, 40h
+    pop r12
+    pop rbx
+    pop rbp
+    ret
+ExportEditorBufferToPE ENDP
+
+END

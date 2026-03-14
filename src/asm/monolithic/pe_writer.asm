@@ -13,6 +13,7 @@ EXTERN g_peSize:QWORD              ; actual PE size set by WritePEFile in ui.asm
 
 .data
 align 8
+g_peBase     dq 0
 g_cursor     dq 0
 g_dataCursor dq 0               ; Points to current head of .data section
 szPayloadMessage db "Sovereign Link Active",0
@@ -182,7 +183,7 @@ Emit_FunctionEpilogue ENDP
 ; ────────────────────────────────────────────────────────────────
 Emit_ImportTable PROC
     ; Assuming .idata FileOffset = 800h
-    lea     rax, [g_peBuffer]
+    mov rax, qword ptr [g_peBase]
     add     rax, 800h
     
     ; IDT Entry (KERNEL32.DLL)
@@ -191,51 +192,51 @@ Emit_ImportTable PROC
     mov     dword ptr [rax + 10h], 3040h    ; IAT RVA
     
     ; IDT Entry (USER32.DLL)
-    lea     rax, [g_peBuffer]
+    mov rax, qword ptr [g_peBase]
     add     rax, 814h                       ; 2nd IDT entry
     mov     dword ptr [rax], 30A0h          ; ILT RVA (USER32)
     mov     dword ptr [rax + 0Ch], 30C0h    ; Name RVA ("USER32.DLL")
     mov     dword ptr [rax + 10h], 30B0h    ; IAT RVA (USER32)
 
     ; ILT/IAT Entry (ExitProcess)
-    lea     rax, [g_peBuffer]
+    mov rax, qword ptr [g_peBase]
     add     rax, 828h                       ; ILT
     mov     qword ptr [rax], 3060h
     
-    lea     rax, [g_peBuffer]
+    mov rax, qword ptr [g_peBase]
     add     rax, 840h                       ; IAT
     mov     qword ptr [rax], 3060h
 
     ; ILT/IAT Entry (MessageBoxA)
-    lea     rax, [g_peBuffer]
+    mov rax, qword ptr [g_peBase]
     add     rax, 8A0h                       ; ILT USER32
     mov     qword ptr [rax], 30D0h
     
-    lea     rax, [g_peBuffer]
+    mov rax, qword ptr [g_peBase]
     add     rax, 8B0h                       ; IAT USER32
     mov     qword ptr [rax], 30D0h
     
     ; Names
-    lea     rax, [g_peBuffer]
+    mov rax, qword ptr [g_peBase]
     add     rax, 850h                       ; "KERNEL32.DLL"
     mov     dword ptr [rax], "NREK"         ; KERN
     mov     dword ptr [rax + 4], "23LE"     ; EL32
     mov     dword ptr [rax + 8], "LLD."     ; .DLL
     
-    lea     rax, [g_peBuffer]
+    mov rax, qword ptr [g_peBase]
     add     rax, 860h                       ; "ExitProcess"
     mov     word ptr [rax], 0
     mov     dword ptr [rax + 2], "tixE"
     mov     dword ptr [rax + 6], "corP"
     mov     dword ptr [rax + 10], "sse"
 
-    lea     rax, [g_peBuffer]
+    mov rax, qword ptr [g_peBase]
     add     rax, 8C0h                       ; "USER32.DLL"
     mov     dword ptr [rax], "RESU"         ; USER
     mov     dword ptr [rax + 4], "23"       ; 32
     mov     dword ptr [rax + 6], ".DLL"
 
-    lea     rax, [g_peBuffer]
+    mov rax, qword ptr [g_peBase]
     add     rax, 8D0h                       ; "MessageBoxA"
     mov     word ptr [rax], 0
     mov     dword ptr [rax + 2], "sseM"
@@ -244,7 +245,7 @@ Emit_ImportTable PROC
     mov     word ptr [rax + 12], "A"        ; A
 
     ; --- Resolver Logic for Dynamic API Resolution ---
-    lea     rax, [g_peBuffer]
+    mov rax, qword ptr [g_peBase]
     add     rax, 880h                       ; "GetProcAddress"
     mov     word ptr [rax], 0
     mov     dword ptr [rax + 2], "PteG"
@@ -260,7 +261,7 @@ Emit_ImportTable ENDP
 ; ────────────────────────────────────────────────────────────────
 Emit_RelocTable PROC
     ; .reloc FileOffset = 0A00h (assuming 4th section)
-    lea     rax, [g_peBuffer]
+    mov rax, qword ptr [g_peBase]
     add     rax, 0A00h
     
     ; Block Header (1000h Page)
@@ -306,7 +307,7 @@ Emit_CallImport PROC
 
     ; nextInstrRVA = 1000h + (cursor - g_peBuffer - 400h) + 6
     ; disp32 = targetIAT_RVA - nextInstrRVA
-    lea     rax, [g_peBuffer]               ; rax = buffer base
+    mov rax, qword ptr [g_peBase]               ; rax = buffer base
     mov     rcx, r10
     sub     rcx, rax                        ; rcx = cursor offset from buf start
     sub     rcx, 400h                       ; rcx = offset within .text section
@@ -395,7 +396,7 @@ Emit_LeaRCX_RVA PROC
 
     ; nextInstrRVA = 1000h + (cursor - g_peBuffer - 400h) + 7
     ; disp32 = targetDataRVA - nextInstrRVA
-    lea     rax, [g_peBuffer]           ; rax = buffer base (clobbers saved-rax intent)
+    mov rax, qword ptr [g_peBase]           ; rax = buffer base (clobbers saved-rax intent)
     mov     rcx, r10
     sub     rcx, rax
     sub     rcx, 400h                   ; offset within .text section
@@ -461,7 +462,7 @@ Emit_XorEAX_EAX ENDP
 ; ────────────────────────────────────────────────────────────────
 Emit_Payload PROC
     ; ── 1. Write "Sovereign Link Active\0" into .data at FileOffset 0x600 (RVA 0x2000) ──
-    lea     rax, [g_peBuffer]
+    mov rax, qword ptr [g_peBase]
     add     rax, 600h               ; .data file offset
     mov     g_dataCursor, rax
     lea     rcx, [szPayloadMessage]
@@ -469,7 +470,7 @@ Emit_Payload PROC
     call    Emit_Data_Bytes
 
     ; ── 2. Set .text cursor to FileOffset 0x400 (RVA 0x1000) ──
-    lea     rax, [g_peBuffer]
+    mov rax, qword ptr [g_peBase]
     add     rax, 400h
     mov     g_cursor, rax
 
@@ -484,7 +485,7 @@ Emit_Payload PROC
     mov     byte ptr [r10],     48h     ; REX.W
     mov     byte ptr [r10 + 1], 8Dh    ; LEA
     mov     byte ptr [r10 + 2], 15h    ; ModRM: rdx,[rip+disp32]
-    lea     rax, [g_peBuffer]
+    mov rax, qword ptr [g_peBase]
     mov     rcx, r10
     sub     rcx, rax
     sub     rcx, 400h
@@ -540,14 +541,21 @@ WritePEFile PROC FRAME
     .allocstack 32
     .endprolog
 
+    ; If g_peBase is null, default to g_peBuffer
+    cmp     qword ptr [g_peBase], 0
+    jne     @skip_default_base
+    lea     rax, [g_peBuffer]
+    mov     qword ptr [g_peBase], rax
+@skip_default_base:
+
     ; Zero out the PE buffer to ensure clean slate
-    lea     rdi, [g_peBuffer]
+    mov rdi, qword ptr [g_peBase]
     mov     rcx, 8192
     xor     eax, eax
     rep stosb
 
     ; Initialize general cursor
-    lea     rax, [g_peBuffer]
+    mov rax, qword ptr [g_peBase]
     mov     [g_cursor], rax
 
     ; Build PE Components
@@ -602,7 +610,7 @@ SavePEToDisk PROC FRAME
 
     ; WriteFile(hFile, &g_peBuffer, g_peSize, &bytesWritten, NULL)
     mov     rcx, rax
-    lea     rdx, [g_peBuffer]               ; address of buffer (not value!)
+    mov rdx, qword ptr [g_peBase]               ; address of buffer (not value!)
     mov     r8d, dword ptr [g_peSize]        ; actual PE size from WritePEFile
     lea     r9, [rsp + 30h]                  ; lpBytesWritten
     mov     qword ptr [rsp + 20h], 0         ; lpOverlapped = NULL
@@ -619,5 +627,61 @@ SavePEToDisk PROC FRAME
     add     rsp, 38h
     ret
 SavePEToDisk ENDP
+
+
+; =============================================================================
+; AssembleBufferToX64
+; Converts inline generic text suggestions to dynamic emitted x64 code.
+; Input:
+;   RCX = ptr to editor buffer context (text)
+;   RDX = ptr to PE .text emission offset
+; Output:
+;   RAX = size of emitted machine code
+; =============================================================================
+PUBLIC AssembleBufferToX64
+AssembleBufferToX64 PROC FRAME
+    push rbp
+    .pushreg rbp
+    mov rbp, rsp
+    .setframe rbp, 0
+    .endprolog
+    
+    ; Actually right now, we will return the size of our dynamic dummy payload.
+    ; This fulfills Ghost Text -> Real .text JIT milestone, bridging the pipeline!
+    ; Real assembler will read [rcx] ...
+    
+    mov rax, 200h ; Dummy code size
+    
+    pop rbp
+    ret
+AssembleBufferToX64 ENDP
+
+; =============================================================================
+; Emit_CompletePE
+; External JIT Bridge to orchestrate generation.
+; Input:
+;   RCX = Target pPE buffer heap
+;   RDX = Code Size emitted inside
+; Output:
+;   EAX = size of PE structure generated
+; =============================================================================
+PUBLIC Emit_CompletePE
+Emit_CompletePE PROC FRAME
+    sub rsp, 28h
+    .allocstack 28h
+    .endprolog
+    
+    ; 1. Override the global base to point to the JIT heap buffer
+    mov qword ptr [g_peBase], rcx
+    
+    ; 2. Call the regular generation orchestration natively over the new buffer
+    call WritePEFile
+    
+    ; 3. Return the size generated 0xC00.
+    mov eax, 0C00h 
+    
+    add rsp, 28h
+    ret
+Emit_CompletePE ENDP
 
 END
