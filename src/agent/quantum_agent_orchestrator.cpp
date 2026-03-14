@@ -687,9 +687,17 @@ ExecutionResult QuantumOrchestrator::executeAutoFix(
     }
 
     ExecutionStrategy strategy = getStrategy();
+    constexpr int kMaxAutoFixAttempts = 3;
+
     auto [initialExitCode, initialOutput] =
         runCommandWithOutput(buildCommand, effectiveWorkingDirectory);
+    std::string lastBuildOutput = initialOutput;
     auto diagnostics = parseCompilerErrors(initialOutput, effectiveWorkingDirectory);
+
+    int totalDiagnosticsGenerated = static_cast<int>(diagnostics.size());
+    int totalDiagnosticsHandled = 0;
+    int totalFixesStaged = 0;
+    int attemptsUsed = 0;
 
     if (initialExitCode == 0 && diagnostics.empty()) {
         auto result = ExecutionResult::ok("Build clean — no fixes needed");
@@ -712,137 +720,171 @@ ExecutionResult QuantumOrchestrator::executeAutoFix(
         return ExecutionResult::error("Self-healing failed: workspace index unavailable");
     }
 
-    std::string sessionId = createEditSession(
-        "Auto-fix: " + std::to_string(diagnostics.size()) + " compiler diagnostics");
+    std::vector<std::string> modifiedFilesAll;
+    std::unordered_set<std::string> modifiedFileSet;
 
-    int fixesStaged = 0;
-    int diagnosticsHandled = 0;
-    std::unordered_set<std::string> stagedKeys;
+    bool buildClean = false;
+    auto remainingDiagnostics = diagnostics;
 
-    for (const auto& diag : diagnostics) {
-        if (toLowerCopy(diag.severity) == "warning" && strategy.mode == QualityMode::Auto) {
-            continue;
+    for (int attempt = 1; attempt <= kMaxAutoFixAttempts; ++attempt) {
+        attemptsUsed = attempt;
+        if (remainingDiagnostics.empty()) {
+            buildClean = true;
+            break;
         }
 
-        std::vector<CodeSearchHit> relatedHits = searchWorkspace(
-            (diag.errorCode.empty() ? std::string{} : diag.errorCode + " ") + diag.message,
-            6);
+        std::string sessionId = createEditSession(
+            "Auto-fix attempt " + std::to_string(attempt) + "/" +
+            std::to_string(kMaxAutoFixAttempts) + " (" +
+            std::to_string(remainingDiagnostics.size()) + " diagnostics)");
 
-        std::vector<std::string> candidateFiles;
-        if (!diag.file.empty()) {
-            candidateFiles.push_back(diag.file);
-        }
-        for (const auto& hit : relatedHits) {
-            if (std::find(candidateFiles.begin(), candidateFiles.end(), hit.file) == candidateFiles.end()) {
-                candidateFiles.push_back(hit.file);
+        int fixesStagedThisAttempt = 0;
+        int diagnosticsHandledThisAttempt = 0;
+        std::unordered_set<std::string> stagedKeys;
+
+        for (const auto& diag : remainingDiagnostics) {
+            if (toLowerCopy(diag.severity) == "warning" && strategy.mode == QualityMode::Auto) {
+                continue;
+            }
+
+            std::vector<CodeSearchHit> relatedHits = searchWorkspace(
+                (diag.errorCode.empty() ? std::string{} : diag.errorCode + " ") + diag.message,
+                6);
+
+            std::vector<std::string> candidateFiles;
+            if (!diag.file.empty()) {
+                candidateFiles.push_back(diag.file);
+            }
+            for (const auto& hit : relatedHits) {
+                if (std::find(candidateFiles.begin(), candidateFiles.end(), hit.file) == candidateFiles.end()) {
+                    candidateFiles.push_back(hit.file);
+                }
+            }
+            if (candidateFiles.empty()) {
+                continue;
+            }
+
+            CompilerDiagnostic resolved = diag;
+            if (resolved.file.empty() && !relatedHits.empty()) {
+                resolved.file = relatedHits.front().file;
+                resolved.line = relatedHits.front().startLine;
+                resolved.column = 1;
+                resolved.context = extractCodeContext(resolved.file, resolved.line);
+            }
+
+            std::string prompt = buildHealingPrompt(resolved, relatedHits);
+            ExecutionStrategy fixStrategy =
+                (toLowerCopy(resolved.severity).find("error") != std::string::npos)
+                    ? ExecutionStrategy::quantumStrategy()
+                    : strategy;
+
+            auto fixResult = executeTask(prompt, candidateFiles, fixStrategy);
+            if (!fixResult.success) {
+                continue;
+            }
+
+            std::string replacement = sanitizeModelPatch(fixResult.detail);
+            if (replacement.empty()) {
+                continue;
+            }
+
+            int startLine = resolved.line > 0 ? std::max(1, resolved.line - 2)
+                                              : (!relatedHits.empty() ? relatedHits.front().startLine : 1);
+            int endLine = resolved.line > 0 ? std::max(startLine, resolved.line + 2)
+                                            : (!relatedHits.empty() ? relatedHits.front().endLine : startLine);
+
+            std::ostringstream keyBuilder;
+            keyBuilder << resolved.file << '#' << startLine << '-' << endLine;
+            std::string dedupeKey = keyBuilder.str();
+            if (!stagedKeys.insert(dedupeKey).second) {
+                continue;
+            }
+
+            WorkspaceEdit edit{};
+            edit.file = resolved.file;
+            edit.startLine = startLine;
+            edit.endLine = endLine;
+            edit.newText = replacement;
+            edit.label = "Auto-fix " +
+                (resolved.errorCode.empty() ? std::string("diagnostic") : resolved.errorCode);
+            edit.createIfMissing = false;
+
+            if (stageEdit(sessionId, edit)) {
+                ++fixesStagedThisAttempt;
+                ++diagnosticsHandledThisAttempt;
             }
         }
-        if (candidateFiles.empty()) {
-            continue;
+
+        totalFixesStaged += fixesStagedThisAttempt;
+        totalDiagnosticsHandled += diagnosticsHandledThisAttempt;
+
+        if (fixesStagedThisAttempt == 0) {
+            discardEditSession(sessionId);
+            break;
         }
 
-        CompilerDiagnostic resolved = diag;
-        if (resolved.file.empty()) {
-            resolved.file = relatedHits.front().file;
-            resolved.line = relatedHits.front().startLine;
-            resolved.column = 1;
-            resolved.context = extractCodeContext(resolved.file, resolved.line);
+        std::vector<std::string> modifiedFilesThisAttempt;
+        if (!applyEditSession(sessionId, &modifiedFilesThisAttempt)) {
+            auto result = ExecutionResult::error(
+                "Fixes were staged but could not be applied\n" + previewEditSession(sessionId));
+            result.totalDurationMs = static_cast<uint64_t>(
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - started).count());
+            result.todoItemsGenerated = totalDiagnosticsGenerated;
+            result.todoItemsCompleted = totalFixesStaged;
+            result.iterationCount = totalDiagnosticsHandled;
+            return result;
         }
 
-        std::string prompt = buildHealingPrompt(resolved, relatedHits);
-        ExecutionStrategy fixStrategy =
-            (toLowerCopy(resolved.severity).find("error") != std::string::npos)
-                ? ExecutionStrategy::quantumStrategy()
-                : strategy;
-
-        auto fixResult = executeTask(prompt, candidateFiles, fixStrategy);
-        if (!fixResult.success) {
-            continue;
+        for (const auto& path : modifiedFilesThisAttempt) {
+            if (modifiedFileSet.insert(path).second) {
+                modifiedFilesAll.push_back(path);
+            }
         }
 
-        std::string replacement = sanitizeModelPatch(fixResult.detail);
-        if (replacement.empty()) {
-            continue;
+        auto [rebuildExitCode, rebuildOutput] =
+            runCommandWithOutput(buildCommand, effectiveWorkingDirectory);
+        lastBuildOutput = rebuildOutput;
+        auto parsedDiagnostics = parseCompilerErrors(rebuildOutput, effectiveWorkingDirectory);
+        totalDiagnosticsGenerated += static_cast<int>(parsedDiagnostics.size());
+
+        if (rebuildExitCode == 0 && parsedDiagnostics.empty()) {
+            buildClean = true;
+            remainingDiagnostics.clear();
+            break;
         }
 
-        int startLine = resolved.line > 0 ? std::max(1, resolved.line - 2)
-                                          : (!relatedHits.empty() ? relatedHits.front().startLine : 1);
-        int endLine = resolved.line > 0 ? std::max(startLine, resolved.line + 2)
-                                        : (!relatedHits.empty() ? relatedHits.front().endLine : startLine);
-
-        std::ostringstream keyBuilder;
-        keyBuilder << resolved.file << '#' << startLine << '-' << endLine;
-        std::string dedupeKey = keyBuilder.str();
-        if (!stagedKeys.insert(dedupeKey).second) {
-            continue;
-        }
-
-        WorkspaceEdit edit{};
-        edit.file = resolved.file;
-        edit.startLine = startLine;
-        edit.endLine = endLine;
-        edit.newText = replacement;
-        edit.label = "Auto-fix " +
-            (resolved.errorCode.empty() ? std::string("diagnostic") : resolved.errorCode);
-        edit.createIfMissing = false;
-
-        if (stageEdit(sessionId, edit)) {
-            ++fixesStaged;
-            ++diagnosticsHandled;
-        }
+        remainingDiagnostics = std::move(parsedDiagnostics);
     }
-
-    if (fixesStaged == 0) {
-        discardEditSession(sessionId);
-        auto result = ExecutionResult::error("No actionable fixes could be generated from build diagnostics");
-        result.totalDurationMs = static_cast<uint64_t>(
-            std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now() - started).count());
-        result.todoItemsGenerated = static_cast<int>(diagnostics.size());
-        return result;
-    }
-
-    std::vector<std::string> modifiedFiles;
-    if (!applyEditSession(sessionId, &modifiedFiles)) {
-        auto result = ExecutionResult::error(
-            "Fixes were staged but could not be applied\n" + previewEditSession(sessionId));
-        result.totalDurationMs = static_cast<uint64_t>(
-            std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now() - started).count());
-        result.todoItemsGenerated = static_cast<int>(diagnostics.size());
-        result.todoItemsCompleted = fixesStaged;
-        return result;
-    }
-
-    auto [rebuildExitCode, rebuildOutput] =
-        runCommandWithOutput(buildCommand, effectiveWorkingDirectory);
-    auto remainingDiagnostics = parseCompilerErrors(rebuildOutput, effectiveWorkingDirectory);
-
-    ComplexityMetrics healingComplexity{};
-    healingComplexity.fileCount = static_cast<int>(modifiedFiles.size());
-    healingComplexity.lineCount = fixesStaged * 5;
-    healingComplexity.functionCount = diagnosticsHandled;
-    healingComplexity.dependencyDepth = static_cast<int>(remainingDiagnostics.size());
-    healingComplexity.requiresRefactoring = fixesStaged > 1;
-    healingComplexity.requiresArchitectureChange = false;
-    healingComplexity.requiresMultiFileEdits = modifiedFiles.size() > 1;
-    healingComplexity.estimatedComplexity = std::min(1.0, 0.2 + fixesStaged * 0.1);
 
     auto elapsed = static_cast<uint64_t>(
         std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now() - started).count());
+
+    ComplexityMetrics healingComplexity{};
+    healingComplexity.fileCount = static_cast<int>(modifiedFilesAll.size());
+    healingComplexity.lineCount = totalFixesStaged * 5;
+    healingComplexity.functionCount = totalDiagnosticsHandled;
+    healingComplexity.dependencyDepth = static_cast<int>(remainingDiagnostics.size());
+    healingComplexity.requiresRefactoring = totalFixesStaged > 1;
+    healingComplexity.requiresArchitectureChange = false;
+    healingComplexity.requiresMultiFileEdits = modifiedFilesAll.size() > 1;
+    healingComplexity.estimatedComplexity = std::min(1.0, 0.2 + totalFixesStaged * 0.1);
+
     recordExecution("autofix", healingComplexity, elapsed,
-                    rebuildExitCode != 0 || !remainingDiagnostics.empty(),
+                    !buildClean,
                     strategy.mode);
 
     ExecutionResult result{};
-    result.success = (rebuildExitCode == 0 && remainingDiagnostics.empty());
+    result.success = buildClean;
     result.detail = result.success
-        ? ("Self-healing complete: build clean after " + std::to_string(fixesStaged) + " staged fixes")
-        : ("Self-healing applied " + std::to_string(fixesStaged) +
-           " fixes but build still reports " + std::to_string(remainingDiagnostics.size()) +
-           " diagnostics\n" + rebuildOutput);
-    result.iterationCount = diagnosticsHandled;
+        ? ("Self-healing complete after " + std::to_string(attemptsUsed) +
+           " attempt(s): build clean with " + std::to_string(totalFixesStaged) + " staged fixes")
+        : ("Self-healing exhausted " + std::to_string(kMaxAutoFixAttempts) +
+           " attempt(s). Applied " + std::to_string(totalFixesStaged) +
+           " fixes; remaining diagnostics: " + std::to_string(remainingDiagnostics.size()) +
+           "\n" + lastBuildOutput);
+    result.iterationCount = totalDiagnosticsHandled;
     result.agentCycleCount = strategy.agentCycleCount;
     result.modelCount = strategy.modelCount;
     result.totalDurationMs = elapsed;
@@ -851,9 +893,9 @@ ExecutionResult QuantumOrchestrator::executeAutoFix(
     result.modeUsed = strategy.mode;
     result.timeoutAdjusted = strategy.autoAdjustTimeout;
     result.adjustedTimeoutMs = strategy.baseTimeoutMs;
-    result.filesModified = std::move(modifiedFiles);
-    result.todoItemsGenerated = static_cast<int>(diagnostics.size());
-    result.todoItemsCompleted = fixesStaged;
+    result.filesModified = std::move(modifiedFilesAll);
+    result.todoItemsGenerated = totalDiagnosticsGenerated;
+    result.todoItemsCompleted = totalFixesStaged;
     return result;
 }
 
