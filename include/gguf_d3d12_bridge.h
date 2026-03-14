@@ -75,6 +75,13 @@ public:
                            uint32_t head_dim,
                            uint32_t num_heads);
 
+    bool DispatchGEMM(ID3D12Resource* bufferA,
+                      ID3D12Resource* bufferB,
+                      ID3D12Resource* bufferC,
+                      uint32_t M,
+                      uint32_t K,
+                      uint32_t N);
+
     // SiLU in-place: inoutBuffer[0..dim-1] = x * sigmoid(x)
     bool DispatchSiLU(ID3D12Resource* inoutBuffer,
                       uint32_t dim);
@@ -199,6 +206,7 @@ private:
         Microsoft::WRL::ComPtr<ID3DBlob> residualAdd;
         Microsoft::WRL::ComPtr<ID3DBlob> matVecFP32;
         Microsoft::WRL::ComPtr<ID3DBlob> elementwiseMul;
+        Microsoft::WRL::ComPtr<ID3DBlob> gemm;
         // Phase E additions
         Microsoft::WRL::ComPtr<ID3DBlob> kvCacheWrite;
         Microsoft::WRL::ComPtr<ID3DBlob> attentionHead;
@@ -216,6 +224,7 @@ private:
         Microsoft::WRL::ComPtr<ID3D12PipelineState> psoResidualAdd;
         Microsoft::WRL::ComPtr<ID3D12PipelineState> psoMatVecFP32;
         Microsoft::WRL::ComPtr<ID3D12PipelineState> psoElementwiseMul;
+        Microsoft::WRL::ComPtr<ID3D12PipelineState> psoGEMM;
         // Phase E
         Microsoft::WRL::ComPtr<ID3D12PipelineState> psoKVCacheWrite;
         Microsoft::WRL::ComPtr<ID3D12PipelineState> psoAttentionHead;

@@ -118,6 +118,7 @@ void GGUFD3D12Bridge::Shutdown() {
     gpu_.psoSiLU.Reset();
     gpu_.psoResidualAdd.Reset();
     gpu_.psoMatVecFP32.Reset();
+    gpu_.psoGEMM.Reset();
     gpu_.psoElementwiseMul.Reset();
     gpu_.psoKVCacheWrite.Reset();
     gpu_.psoAttentionHead.Reset();
@@ -131,6 +132,7 @@ void GGUFD3D12Bridge::Shutdown() {
     shaders_.silu.Reset();
     shaders_.residualAdd.Reset();
     shaders_.matVecFP32.Reset();
+    shaders_.gemm.Reset();
     shaders_.elementwiseMul.Reset();
     shaders_.kvCacheWrite.Reset();
     shaders_.attentionHead.Reset();
@@ -158,6 +160,7 @@ bool GGUFD3D12Bridge::LoadShadersFromDirectory(const std::string& shaderDirector
     shaders_.silu         = loadBlob(base / "CSSiLU.cso");
     shaders_.residualAdd  = loadBlob(base / "CSResidualAdd.cso");
     shaders_.matVecFP32   = loadBlob(base / "CSMatVecFP32.cso");
+    shaders_.gemm         = loadBlob(base / "CSGemm.cso");
     shaders_.elementwiseMul = loadBlob(base / "CSElementwiseMul.cso");
     shaders_.kvCacheWrite = loadBlob(base / "CSKVCacheWrite.cso");
     shaders_.attentionHead = loadBlob(base / "CSAttentionHead.cso");
@@ -176,6 +179,15 @@ bool GGUFD3D12Bridge::CompileShadersFromHLSL(const std::wstring& hlslPath) {
     shaders_.silu         = compileFromFile(hlslPath, "CSSiLU", "cs_5_1");
     shaders_.residualAdd  = compileFromFile(hlslPath, "CSResidualAdd", "cs_5_1");
     shaders_.matVecFP32   = compileFromFile(hlslPath, "CSMatVecFP32", "cs_5_1");
+    shaders_.gemm         = compileFromFile(hlslPath, "CSGemm", "cs_5_1");
+    if (!shaders_.gemm) {
+        std::wstring gemmPath(hlslPath);
+        size_t lastSlash = gemmPath.find_last_of(L"/\\");
+        if (lastSlash != std::wstring::npos) {
+            gemmPath = gemmPath.substr(0, lastSlash + 1) + L"cs_gemm.hlsl";
+            shaders_.gemm = compileFromFile(gemmPath, "main", "cs_5_1");
+        }
+    }
     shaders_.elementwiseMul = compileFromFile(hlslPath, "CSElementwiseMul", "cs_5_1");
     shaders_.kvCacheWrite = compileFromFile(hlslPath, "CSKVCacheWrite", "cs_5_1");
     shaders_.attentionHead = compileFromFile(hlslPath, "CSAttentionHead", "cs_5_1");
@@ -264,6 +276,7 @@ bool GGUFD3D12Bridge::buildRootSignatureAndPSO() {
     createPSO(shaders_.silu.Get(), gpu_.psoSiLU);
     createPSO(shaders_.residualAdd.Get(), gpu_.psoResidualAdd);
     createPSO(shaders_.matVecFP32.Get(), gpu_.psoMatVecFP32);
+    createPSO(shaders_.gemm.Get(), gpu_.psoGEMM);
     createPSO(shaders_.elementwiseMul.Get(), gpu_.psoElementwiseMul);
     createPSO(shaders_.kvCacheWrite.Get(), gpu_.psoKVCacheWrite);
     createPSO(shaders_.attentionHead.Get(), gpu_.psoAttentionHead);
@@ -1326,49 +1339,56 @@ bool GGUFD3D12Bridge::RecordRoPEFused(ID3D12Resource* q_buffer,
     return true;
 }
 
-} // namespace RawrXD
+bool GGUFD3D12Bridge::DispatchCSRoPE_Fused(ID3D12Resource* q_buffer,
+                                           ID3D12Resource* k_buffer,
+                                           ID3D12Resource* cossin_buffer,
+                                           uint32_t seq_pos,
+                                           uint32_t head_dim,
+                                           uint32_t num_heads) {
+    return DispatchRoPEFused(q_buffer, k_buffer, cossin_buffer, seq_pos, head_dim, num_heads);
+}
 
-bool RawrXD::GGUFD3D12Bridge::DispatchCSRoPE_Fused(ID3D12Resource* q_buffer,
-                                              ID3D12Resource* k_buffer,
-                                              ID3D12Resource* cossin_buffer,
-                                              uint32_t seq_len,
-                                              uint32_t head_dim,
-                                              uint32_t num_heads) {
-    if (!gpu_.psoRoPEFused || !q_buffer || !k_buffer || !cossin_buffer) return false;
-
-    if (head_dim % 2 != 0) return false;
+bool GGUFD3D12Bridge::DispatchGEMM(ID3D12Resource* bufferA,
+                                   ID3D12Resource* bufferB,
+                                   ID3D12Resource* bufferC,
+                                   uint32_t M, uint32_t K, uint32_t N) {
+    if (!gpu_.psoGEMM || !bufferA || !bufferB || !bufferC || M == 0 || K == 0 || N == 0)
+        return false;
 
     if (FAILED(allocator_->Reset())) return false;
-    if (FAILED(list_->Reset(allocator_.Get(), gpu_.psoRoPEFused.Get()))) return false;
+    if (FAILED(list_->Reset(allocator_.Get(), gpu_.psoGEMM.Get()))) return false;
 
-    transition(list_.Get(), q_buffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-    transition(list_.Get(), k_buffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-    transition(list_.Get(), cossin_buffer, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+    transition(list_.Get(), bufferA, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+    transition(list_.Get(), bufferB, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+    transition(list_.Get(), bufferC, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
-    bool descOk = setupDescriptorsForDispatch(
-        q_buffer, seq_len * num_heads * head_dim,
-        k_buffer, seq_len * num_heads * head_dim,
+    setupDescriptorsForDispatch(
+        bufferA, (uint32_t)(bufferA->GetDesc().Width / 4ull),
+        bufferB, (uint32_t)(bufferB->GetDesc().Width / 4ull),
         nullptr, 0,
-        cossin_buffer, seq_len * (head_dim / 2),
-        q_buffer, seq_len * num_heads * head_dim,
-        k_buffer, seq_len * num_heads * head_dim
-    );
-    if (!descOk) return false;
-    
-    struct RoPEConstants {
-        uint32_t seq_len;
-        uint32_t head_dim;
-        uint32_t num_heads;
-        float theta;
-    } constants = { seq_len, head_dim, num_heads, 10000.0f };
-    
-    list_->SetComputeRoot32BitConstants(0, 4, &constants, 0);
-    
-    uint32_t total_pairs = seq_len * num_heads * (head_dim / 2);
-    // groups = ceil(total_pairs / 64)
-    uint32_t groups = (total_pairs + 63) / 64;
-    
-    list_->Dispatch(groups, 1, 1);
-    
+        nullptr, 0,
+        bufferC, (uint32_t)(bufferC->GetDesc().Width / 4ull),
+        nullptr, 0);
+
+    struct GemmConstants {
+        uint32_t M;
+        uint32_t K;
+        uint32_t N;
+        uint32_t unused;
+    } c{};
+    c.M = M;
+    c.K = K;
+    c.N = N;
+
+    list_->SetComputeRoot32BitConstants(0, 4, &c, 0);
+
+    // TILE_SIZE is 16. Threads per group: (16, 16, 1)
+    uint32_t dispatchX = (N + 15) / 16;
+    uint32_t dispatchY = (M + 15) / 16;
+
+    list_->Dispatch(dispatchX, dispatchY, 1);
     return executeAndWait();
 }
+
+} // namespace RawrXD
+
