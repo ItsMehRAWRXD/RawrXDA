@@ -19,6 +19,7 @@
 #include <queue>
 #include <stdexcept>
 #include <cctype>
+#include <iomanip>
 #ifdef _WIN32
 #  ifndef WIN32_LEAN_AND_MEAN
 #    define WIN32_LEAN_AND_MEAN
@@ -32,6 +33,120 @@
 namespace RawrXD {
 namespace Quantum {
 
+namespace {
+
+std::string toLowerCopy(const std::string& input) {
+    std::string out = input;
+    std::transform(out.begin(), out.end(), out.begin(),
+                   [](unsigned char ch) {
+                       return static_cast<char>(std::tolower(ch));
+                   });
+    return out;
+}
+
+std::vector<std::string> tokenizeForIndex(const std::string& text) {
+    std::vector<std::string> tokens;
+    std::string current;
+    current.reserve(32);
+
+    for (unsigned char ch : text) {
+        if (std::isalnum(ch) || ch == '_' || ch == ':' || ch == '/' || ch == '.') {
+            current.push_back(static_cast<char>(std::tolower(ch)));
+        } else if (!current.empty()) {
+            tokens.push_back(current);
+            current.clear();
+        }
+    }
+
+    if (!current.empty()) {
+        tokens.push_back(current);
+    }
+    return tokens;
+}
+
+std::array<float, 128> embedForIndex(const std::string& text) {
+    std::array<float, 128> embedding{};
+    embedding.fill(0.0f);
+
+    auto tokens = tokenizeForIndex(text);
+    for (const auto& token : tokens) {
+        size_t seed = std::hash<std::string>{}(token);
+        for (size_t i = 0; i < embedding.size(); ++i) {
+            uint32_t mixed = static_cast<uint32_t>(seed ^ (0x9E3779B9u * (i + 1)));
+            float value = static_cast<float>((mixed & 0xFFu)) / 255.0f;
+            embedding[i] += value;
+        }
+    }
+
+    float norm = 0.0f;
+    for (float v : embedding) {
+        norm += v * v;
+    }
+    norm = std::sqrt(norm);
+    if (norm > 1e-6f) {
+        for (float& v : embedding) {
+            v /= norm;
+        }
+    }
+    return embedding;
+}
+
+double cosineSimilarity(const std::array<float, 128>& a,
+                        const std::array<float, 128>& b) {
+    double dot = 0.0;
+    for (size_t i = 0; i < a.size(); ++i) {
+        dot += static_cast<double>(a[i]) * static_cast<double>(b[i]);
+    }
+    return dot;
+}
+
+std::vector<std::string> splitLinesNormalized(const std::string& text) {
+    std::vector<std::string> lines;
+    std::stringstream ss(text);
+    std::string line;
+    while (std::getline(ss, line)) {
+        if (!line.empty() && line.back() == '\r') {
+            line.pop_back();
+        }
+        lines.push_back(line);
+    }
+    if (lines.empty()) {
+        lines.push_back({});
+    }
+    return lines;
+}
+
+std::string joinLinesNormalized(const std::vector<std::string>& lines) {
+    std::ostringstream oss;
+    for (size_t i = 0; i < lines.size(); ++i) {
+        oss << lines[i];
+        if (i + 1 < lines.size()) {
+            oss << '\n';
+        }
+    }
+    return oss.str();
+}
+
+bool isSourceLikeExtension(const std::filesystem::path& path) {
+    static const std::unordered_set<std::string> kExt = {
+        ".c", ".cc", ".cpp", ".cxx", ".h", ".hpp", ".hh", ".hxx",
+        ".asm", ".inc", ".py", ".js", ".ts", ".tsx", ".cs", ".java",
+        ".rs", ".go", ".php", ".json", ".md", ".txt", ".ps1"
+    };
+    return kExt.contains(toLowerCopy(path.extension().string()));
+}
+
+std::string makeSessionId(const std::string& title, uint64_t ordinal) {
+    auto now = std::chrono::system_clock::now().time_since_epoch();
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now).count();
+    std::ostringstream oss;
+    oss << "sess-" << std::hex << ms << '-' << ordinal << '-'
+        << std::hex << (std::hash<std::string>{}(title) & 0xFFFFu);
+    return oss.str();
+}
+
+} // namespace
+
 // ============================================================================
 // QuantumOrchestrator Implementation
 // ============================================================================
@@ -43,6 +158,8 @@ public:
     std::unique_ptr<TimeoutAdjuster> timeoutAdjuster_;
     std::unique_ptr<ProductionAuditor> auditor_;
     std::unique_ptr<QuantumTaskGenerator> taskGenerator_;
+    std::unique_ptr<WorkspaceSemanticIndex> workspaceIndex_;
+    std::unique_ptr<MultiFileSessionTracker> sessionTracker_;
     
     Statistics stats_;
     std::mutex mutex_;
@@ -52,6 +169,8 @@ public:
         timeoutAdjuster_ = std::make_unique<TimeoutAdjuster>();
         auditor_ = std::make_unique<ProductionAuditor>();
         taskGenerator_ = std::make_unique<QuantumTaskGenerator>();
+        workspaceIndex_ = std::make_unique<WorkspaceSemanticIndex>();
+        sessionTracker_ = std::make_unique<MultiFileSessionTracker>();
         
         stats_ = {};
     }
@@ -175,6 +294,31 @@ ExecutionResult QuantumOrchestrator::executeTask(
     
     // Analyze complexity
     ComplexityMetrics complexity = m_impl->analyzeComplexity(taskDescription, files);
+    std::vector<std::string> executionContext = files;
+
+    if (!files.empty()) {
+        try {
+            std::filesystem::path root = std::filesystem::path(files.front()).parent_path();
+            if (root.empty()) {
+                root = std::filesystem::current_path();
+            }
+            m_impl->workspaceIndex_->indexWorkspace(root.string(), true);
+
+            auto hits = m_impl->workspaceIndex_->semanticSearch(taskDescription, 6);
+            for (const auto& hit : hits) {
+                std::ostringstream ctx;
+                ctx << hit.file << ':' << hit.startLine << '-' << hit.endLine
+                    << ' ' << hit.kind;
+                if (!hit.symbol.empty()) {
+                    ctx << ' ' << hit.symbol;
+                }
+                ctx << "\n" << hit.snippet;
+                executionContext.push_back(ctx.str());
+            }
+        } catch (...) {
+            // Workspace enrichment is best-effort only.
+        }
+    }
     
     // Predict timeout
     uint64_t timeout = strategy.autoAdjustTimeout ?
@@ -203,7 +347,7 @@ ExecutionResult QuantumOrchestrator::executeTask(
         // Execute across multiple models in parallel
         auto parallelResult = m_impl->modelManager_->executeParallel(
             taskDescription,
-            files
+            executionContext
         );
         
         totalIterations += static_cast<int>(parallelResult.outputs.size());
@@ -347,6 +491,57 @@ std::vector<ModelInstance> QuantumOrchestrator::getModelInstances() const {
         instances.push_back(m_impl->modelManager_->getModel(i));
     }
     return instances;
+}
+
+bool QuantumOrchestrator::buildWorkspaceIndex(const std::string& rootPath, bool incremental) {
+    std::lock_guard<std::mutex> lock(m_impl->mutex_);
+    return m_impl->workspaceIndex_->indexWorkspace(rootPath, incremental);
+}
+
+std::vector<CodeSearchHit> QuantumOrchestrator::searchWorkspace(
+    const std::string& query,
+    size_t maxResults) const {
+    std::lock_guard<std::mutex> lock(m_impl->mutex_);
+    return m_impl->workspaceIndex_->semanticSearch(query, maxResults);
+}
+
+std::vector<CodeSearchHit> QuantumOrchestrator::findWorkspaceSymbol(
+    const std::string& symbolName,
+    size_t maxResults) const {
+    std::lock_guard<std::mutex> lock(m_impl->mutex_);
+    return m_impl->workspaceIndex_->findSymbol(symbolName, maxResults);
+}
+
+std::string QuantumOrchestrator::createEditSession(const std::string& title) {
+    std::lock_guard<std::mutex> lock(m_impl->mutex_);
+    return m_impl->sessionTracker_->createSession(title);
+}
+
+bool QuantumOrchestrator::stageEdit(const std::string& sessionId, const WorkspaceEdit& edit) {
+    std::lock_guard<std::mutex> lock(m_impl->mutex_);
+    return m_impl->sessionTracker_->stageEdit(sessionId, edit);
+}
+
+std::string QuantumOrchestrator::previewEditSession(const std::string& sessionId) const {
+    std::lock_guard<std::mutex> lock(m_impl->mutex_);
+    return m_impl->sessionTracker_->previewSession(sessionId);
+}
+
+bool QuantumOrchestrator::applyEditSession(
+    const std::string& sessionId,
+    std::vector<std::string>* modifiedFiles) {
+    std::lock_guard<std::mutex> lock(m_impl->mutex_);
+    return m_impl->sessionTracker_->applySession(sessionId, modifiedFiles);
+}
+
+bool QuantumOrchestrator::discardEditSession(const std::string& sessionId) {
+    std::lock_guard<std::mutex> lock(m_impl->mutex_);
+    return m_impl->sessionTracker_->discardSession(sessionId);
+}
+
+std::vector<EditSession> QuantumOrchestrator::listEditSessions() const {
+    std::lock_guard<std::mutex> lock(m_impl->mutex_);
+    return m_impl->sessionTracker_->listSessions();
 }
 
 void QuantumOrchestrator::setAgentCycleCount(int count) {
@@ -909,6 +1104,403 @@ TimeoutAdjuster::Stats TimeoutAdjuster::getStats() const {
         1.0 - (static_cast<double>(stats.timeoutCount) / stats.totalRecorded) : 0.0;
     
     return stats;
+}
+
+// ============================================================================
+// WorkspaceSemanticIndex Implementation
+// ============================================================================
+
+class WorkspaceSemanticIndex::Impl {
+public:
+    struct IndexedChunk {
+        std::string file;
+        int startLine = 1;
+        int endLine = 1;
+        std::string symbol;
+        std::string kind;
+        std::string snippet;
+        std::array<float, 128> embedding{};
+    };
+
+    std::string rootPath_;
+    std::vector<IndexedChunk> chunks_;
+    std::unordered_map<std::string, std::vector<size_t>> symbolIndex_;
+    std::unordered_map<std::string, uint64_t> fileStamp_;
+    mutable std::mutex mutex_;
+
+    uint64_t stampOf(const std::filesystem::path& path) const {
+        std::error_code ec;
+        auto ft = std::filesystem::last_write_time(path, ec);
+        if (ec) return 0;
+        return static_cast<uint64_t>(ft.time_since_epoch().count());
+    }
+
+    void eraseFileLocked(const std::string& fileKey) {
+        chunks_.erase(std::remove_if(chunks_.begin(), chunks_.end(),
+            [&](const IndexedChunk& chunk) {
+                return chunk.file == fileKey;
+            }), chunks_.end());
+
+        symbolIndex_.clear();
+        for (size_t i = 0; i < chunks_.size(); ++i) {
+            if (!chunks_[i].symbol.empty()) {
+                symbolIndex_[toLowerCopy(chunks_[i].symbol)].push_back(i);
+            }
+        }
+    }
+
+    void indexFileUnlocked(const std::filesystem::path& path) {
+        std::ifstream input(path, std::ios::binary);
+        if (!input.is_open()) return;
+
+        std::string content((std::istreambuf_iterator<char>(input)),
+                            std::istreambuf_iterator<char>());
+        auto lines = splitLinesNormalized(content);
+        auto fileKey = path.lexically_normal().string();
+        eraseFileLocked(fileKey);
+
+        static const std::regex symbolRegex(
+            R"(^\s*(?:(class|struct|enum|namespace)\s+(\w+)|(?:template\s*<[^>]+>\s*)?(?:inline\s+|static\s+|virtual\s+|constexpr\s+|friend\s+|extern\s+)*[\w:<>,~*&\[\]\s]+\s+(\w+)\s*\([^;]*\)\s*(?:const\s*)?(?:\{|$))",
+            std::regex::optimize);
+
+        for (size_t i = 0; i < lines.size(); ++i) {
+            const std::string& line = lines[i];
+            std::smatch m;
+
+            bool addChunk = false;
+            IndexedChunk chunk{};
+            chunk.file = fileKey;
+            chunk.startLine = static_cast<int>(i + 1);
+            chunk.endLine = static_cast<int>(std::min<size_t>(lines.size(), i + 8));
+
+            if (std::regex_search(line, m, symbolRegex)) {
+                if (m[1].matched && m[2].matched) {
+                    chunk.kind = m[1].str();
+                    chunk.symbol = m[2].str();
+                } else if (m[3].matched) {
+                    chunk.kind = "function";
+                    chunk.symbol = m[3].str();
+                }
+                addChunk = true;
+            } else {
+                auto trimmed = toLowerCopy(line);
+                if (trimmed.find("todo") != std::string::npos ||
+                    trimmed.find("fixme") != std::string::npos ||
+                    trimmed.find("error") != std::string::npos ||
+                    trimmed.find("warning") != std::string::npos) {
+                    chunk.kind = "signal";
+                    addChunk = true;
+                }
+            }
+
+            if (!addChunk) continue;
+
+            std::ostringstream snippet;
+            for (int lineNo = chunk.startLine;
+                 lineNo <= chunk.endLine && lineNo <= static_cast<int>(lines.size());
+                 ++lineNo) {
+                snippet << lines[static_cast<size_t>(lineNo - 1)] << '\n';
+            }
+            chunk.snippet = snippet.str();
+            chunk.embedding = embedForIndex(
+                chunk.symbol + " " + chunk.kind + " " + chunk.snippet);
+            chunks_.push_back(std::move(chunk));
+        }
+
+        for (size_t i = 0; i < chunks_.size(); ++i) {
+            if (!chunks_[i].symbol.empty()) {
+                symbolIndex_[toLowerCopy(chunks_[i].symbol)].push_back(i);
+            }
+        }
+        fileStamp_[fileKey] = stampOf(path);
+    }
+};
+
+WorkspaceSemanticIndex::WorkspaceSemanticIndex()
+    : m_impl(std::make_unique<Impl>()) {}
+
+WorkspaceSemanticIndex::~WorkspaceSemanticIndex() = default;
+
+bool WorkspaceSemanticIndex::indexWorkspace(const std::string& rootPath, bool incremental) {
+    std::error_code ec;
+    if (!std::filesystem::exists(rootPath, ec)) return false;
+
+    std::lock_guard<std::mutex> lock(m_impl->mutex_);
+    m_impl->rootPath_ = rootPath;
+
+    for (const auto& entry : std::filesystem::recursive_directory_iterator(
+             rootPath, std::filesystem::directory_options::skip_permission_denied, ec)) {
+        if (ec) continue;
+        if (!entry.is_regular_file()) continue;
+        if (!isSourceLikeExtension(entry.path())) continue;
+
+        auto key = entry.path().lexically_normal().string();
+        uint64_t currentStamp = m_impl->stampOf(entry.path());
+        if (incremental) {
+            auto it = m_impl->fileStamp_.find(key);
+            if (it != m_impl->fileStamp_.end() && it->second == currentStamp) {
+                continue;
+            }
+        }
+        m_impl->indexFileUnlocked(entry.path());
+    }
+    return true;
+}
+
+std::vector<CodeSearchHit> WorkspaceSemanticIndex::semanticSearch(
+    const std::string& query,
+    size_t maxResults) const {
+    std::lock_guard<std::mutex> lock(m_impl->mutex_);
+
+    auto queryEmbedding = embedForIndex(query);
+    auto queryTokens = tokenizeForIndex(query);
+    struct RankedHit {
+        double score = 0.0;
+        size_t index = 0;
+    };
+    std::vector<RankedHit> ranked;
+    ranked.reserve(m_impl->chunks_.size());
+
+    for (size_t i = 0; i < m_impl->chunks_.size(); ++i) {
+        const auto& chunk = m_impl->chunks_[i];
+        double score = cosineSimilarity(queryEmbedding, chunk.embedding);
+        auto haystack = toLowerCopy(chunk.symbol + " " + chunk.kind + " " + chunk.snippet);
+        for (const auto& token : queryTokens) {
+            if (!token.empty() && haystack.find(token) != std::string::npos) {
+                score += 0.12;
+            }
+        }
+        if (!chunk.symbol.empty() && toLowerCopy(chunk.symbol) == toLowerCopy(query)) {
+            score += 0.35;
+        }
+        ranked.push_back({score, i});
+    }
+
+    std::sort(ranked.begin(), ranked.end(), [](const RankedHit& a, const RankedHit& b) {
+        return a.score > b.score;
+    });
+
+    std::vector<CodeSearchHit> hits;
+    for (const auto& hit : ranked) {
+        if (hits.size() >= maxResults) break;
+        const auto& chunk = m_impl->chunks_[hit.index];
+        if (hit.score < 0.08) continue;
+        hits.push_back({
+            chunk.file,
+            chunk.startLine,
+            chunk.endLine,
+            chunk.symbol,
+            chunk.kind,
+            hit.score,
+            chunk.snippet
+        });
+    }
+    return hits;
+}
+
+std::vector<CodeSearchHit> WorkspaceSemanticIndex::findSymbol(
+    const std::string& symbolName,
+    size_t maxResults) const {
+    std::lock_guard<std::mutex> lock(m_impl->mutex_);
+
+    std::vector<CodeSearchHit> hits;
+    auto lowered = toLowerCopy(symbolName);
+    auto exact = m_impl->symbolIndex_.find(lowered);
+    if (exact != m_impl->symbolIndex_.end()) {
+        for (size_t idx : exact->second) {
+            if (hits.size() >= maxResults) break;
+            const auto& chunk = m_impl->chunks_[idx];
+            hits.push_back({chunk.file, chunk.startLine, chunk.endLine,
+                            chunk.symbol, chunk.kind, 1.0, chunk.snippet});
+        }
+    }
+
+    if (!hits.empty()) return hits;
+    return semanticSearch(symbolName, maxResults);
+}
+
+std::string WorkspaceSemanticIndex::summarizeFile(const std::string& path, size_t maxLines) const {
+    std::ifstream input(path);
+    if (!input.is_open()) return {};
+
+    std::ostringstream out;
+    std::string line;
+    size_t lineNo = 0;
+    while (lineNo < maxLines && std::getline(input, line)) {
+        out << line << '\n';
+        ++lineNo;
+    }
+    return out.str();
+}
+
+size_t WorkspaceSemanticIndex::indexedFileCount() const {
+    std::lock_guard<std::mutex> lock(m_impl->mutex_);
+    return m_impl->fileStamp_.size();
+}
+
+// ============================================================================
+// MultiFileSessionTracker Implementation
+// ============================================================================
+
+class MultiFileSessionTracker::Impl {
+public:
+    mutable std::mutex mutex_;
+    std::unordered_map<std::string, EditSession> sessions_;
+    uint64_t nextOrdinal_ = 1;
+};
+
+MultiFileSessionTracker::MultiFileSessionTracker()
+    : m_impl(std::make_unique<Impl>()) {}
+
+MultiFileSessionTracker::~MultiFileSessionTracker() = default;
+
+std::string MultiFileSessionTracker::createSession(const std::string& title) {
+    std::lock_guard<std::mutex> lock(m_impl->mutex_);
+    std::string id = makeSessionId(title, m_impl->nextOrdinal_++);
+    EditSession session{};
+    session.id = id;
+    session.title = title;
+    session.status = "pending";
+    session.createdAt = std::chrono::system_clock::now();
+    m_impl->sessions_[id] = session;
+    return id;
+}
+
+bool MultiFileSessionTracker::stageEdit(const std::string& sessionId, const WorkspaceEdit& edit) {
+    std::lock_guard<std::mutex> lock(m_impl->mutex_);
+    auto it = m_impl->sessions_.find(sessionId);
+    if (it == m_impl->sessions_.end()) return false;
+    it->second.edits.push_back(edit);
+    it->second.status = "pending";
+    return true;
+}
+
+bool MultiFileSessionTracker::removeEdit(const std::string& sessionId, size_t index) {
+    std::lock_guard<std::mutex> lock(m_impl->mutex_);
+    auto it = m_impl->sessions_.find(sessionId);
+    if (it == m_impl->sessions_.end()) return false;
+    if (index >= it->second.edits.size()) return false;
+    it->second.edits.erase(it->second.edits.begin() + static_cast<std::ptrdiff_t>(index));
+    return true;
+}
+
+std::string MultiFileSessionTracker::previewSession(const std::string& sessionId) const {
+    std::lock_guard<std::mutex> lock(m_impl->mutex_);
+    auto it = m_impl->sessions_.find(sessionId);
+    if (it == m_impl->sessions_.end()) return {};
+
+    std::ostringstream oss;
+    oss << "Session " << it->second.id << " — " << it->second.title << "\n";
+    oss << "Status: " << it->second.status << "\n";
+    for (size_t i = 0; i < it->second.edits.size(); ++i) {
+        const auto& edit = it->second.edits[i];
+        oss << "[" << i << "] "
+            << (edit.label.empty() ? "edit" : edit.label)
+            << " -> " << edit.file
+            << " (" << edit.startLine << "-" << edit.endLine << ")\n";
+    }
+    return oss.str();
+}
+
+bool MultiFileSessionTracker::applySession(
+    const std::string& sessionId,
+    std::vector<std::string>* modifiedFiles) {
+    std::lock_guard<std::mutex> lock(m_impl->mutex_);
+    auto it = m_impl->sessions_.find(sessionId);
+    if (it == m_impl->sessions_.end()) return false;
+
+    auto& session = it->second;
+    session.modifiedFiles.clear();
+
+    for (const auto& edit : session.edits) {
+        std::filesystem::path path(edit.file);
+        std::error_code ec;
+        if (edit.createIfMissing) {
+            std::filesystem::create_directories(path.parent_path(), ec);
+        }
+
+        std::string existing;
+        if (std::filesystem::exists(path, ec)) {
+            std::ifstream input(path, std::ios::binary);
+            if (!input.is_open()) {
+                session.status = "failed";
+                return false;
+            }
+            existing.assign((std::istreambuf_iterator<char>(input)),
+                            std::istreambuf_iterator<char>());
+        } else if (!edit.createIfMissing) {
+            session.status = "failed";
+            return false;
+        }
+
+        std::string outputText;
+        if (edit.startLine <= 0 && edit.endLine <= 0) {
+            outputText = edit.newText;
+        } else {
+            auto lines = splitLinesNormalized(existing);
+            auto replacement = splitLinesNormalized(edit.newText);
+            int start = std::max(1, edit.startLine);
+            int end = std::max(start, edit.endLine);
+
+            if (static_cast<size_t>(start) > lines.size() + 1) {
+                lines.resize(static_cast<size_t>(start - 1));
+            }
+
+            size_t eraseBegin = static_cast<size_t>(start - 1);
+            size_t eraseEnd = std::min(lines.size(), static_cast<size_t>(end));
+            if (eraseBegin > lines.size()) eraseBegin = lines.size();
+            if (eraseEnd < eraseBegin) eraseEnd = eraseBegin;
+
+            lines.erase(lines.begin() + static_cast<std::ptrdiff_t>(eraseBegin),
+                        lines.begin() + static_cast<std::ptrdiff_t>(eraseEnd));
+            lines.insert(lines.begin() + static_cast<std::ptrdiff_t>(eraseBegin),
+                         replacement.begin(), replacement.end());
+            outputText = joinLinesNormalized(lines);
+        }
+
+        std::ofstream output(path, std::ios::binary | std::ios::trunc);
+        if (!output.is_open()) {
+            session.status = "failed";
+            return false;
+        }
+        output << outputText;
+        session.modifiedFiles.push_back(path.lexically_normal().string());
+        if (modifiedFiles) {
+            modifiedFiles->push_back(path.lexically_normal().string());
+        }
+    }
+
+    session.status = "applied";
+    return true;
+}
+
+bool MultiFileSessionTracker::discardSession(const std::string& sessionId) {
+    std::lock_guard<std::mutex> lock(m_impl->mutex_);
+    auto it = m_impl->sessions_.find(sessionId);
+    if (it == m_impl->sessions_.end()) return false;
+    it->second.status = "discarded";
+    it->second.edits.clear();
+    return true;
+}
+
+std::vector<EditSession> MultiFileSessionTracker::listSessions() const {
+    std::lock_guard<std::mutex> lock(m_impl->mutex_);
+    std::vector<EditSession> sessions;
+    sessions.reserve(m_impl->sessions_.size());
+    for (const auto& [_, session] : m_impl->sessions_) {
+        sessions.push_back(session);
+    }
+    std::sort(sessions.begin(), sessions.end(), [](const EditSession& a, const EditSession& b) {
+        return a.createdAt > b.createdAt;
+    });
+    return sessions;
+}
+
+EditSession MultiFileSessionTracker::getSession(const std::string& sessionId) const {
+    std::lock_guard<std::mutex> lock(m_impl->mutex_);
+    auto it = m_impl->sessions_.find(sessionId);
+    if (it == m_impl->sessions_.end()) return {};
+    return it->second;
 }
 
 // ============================================================================

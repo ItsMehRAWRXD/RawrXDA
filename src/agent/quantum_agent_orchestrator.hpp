@@ -30,6 +30,7 @@
 #include <chrono>
 #include <atomic>
 #include <mutex>
+#include <algorithm>
 
 namespace RawrXD {
 namespace Quantum {
@@ -196,6 +197,79 @@ struct AuditEntry {
 };
 
 // ============================================================================
+// Workspace Semantic Search + Symbol Hits
+// ============================================================================
+struct CodeSearchHit {
+    std::string file;
+    int startLine;
+    int endLine;
+    std::string symbol;
+    std::string kind;
+    double score;
+    std::string snippet;
+};
+
+class WorkspaceSemanticIndex {
+public:
+    WorkspaceSemanticIndex();
+    ~WorkspaceSemanticIndex();
+
+    bool indexWorkspace(const std::string& rootPath, bool incremental = true);
+    std::vector<CodeSearchHit> semanticSearch(const std::string& query,
+                                              size_t maxResults = 10) const;
+    std::vector<CodeSearchHit> findSymbol(const std::string& symbolName,
+                                          size_t maxResults = 20) const;
+    std::string summarizeFile(const std::string& path,
+                              size_t maxLines = 120) const;
+    size_t indexedFileCount() const;
+
+private:
+    class Impl;
+    std::unique_ptr<Impl> m_impl;
+};
+
+// ============================================================================
+// Multi-File Edit Session Tracking
+// ============================================================================
+struct WorkspaceEdit {
+    std::string file;
+    int startLine;
+    int endLine;
+    std::string newText;
+    std::string label;
+    bool createIfMissing;
+};
+
+struct EditSession {
+    std::string id;
+    std::string title;
+    std::string status; // pending, applied, discarded, failed
+    std::chrono::system_clock::time_point createdAt;
+    std::vector<WorkspaceEdit> edits;
+    std::vector<std::string> modifiedFiles;
+};
+
+class MultiFileSessionTracker {
+public:
+    MultiFileSessionTracker();
+    ~MultiFileSessionTracker();
+
+    std::string createSession(const std::string& title);
+    bool stageEdit(const std::string& sessionId, const WorkspaceEdit& edit);
+    bool removeEdit(const std::string& sessionId, size_t index);
+    std::string previewSession(const std::string& sessionId) const;
+    bool applySession(const std::string& sessionId,
+                      std::vector<std::string>* modifiedFiles = nullptr);
+    bool discardSession(const std::string& sessionId);
+    std::vector<EditSession> listSessions() const;
+    EditSession getSession(const std::string& sessionId) const;
+
+private:
+    class Impl;
+    std::unique_ptr<Impl> m_impl;
+};
+
+// ============================================================================
 // QuantumOrchestrator — Master Multi-Agent Controller
 // ============================================================================
 class QuantumOrchestrator {
@@ -237,6 +311,22 @@ public:
     void setModelCount(int count);  // 1-99
     int getModelCount() const;
     std::vector<ModelInstance> getModelInstances() const;
+
+    // Codebase Understanding
+    bool buildWorkspaceIndex(const std::string& rootPath, bool incremental = true);
+    std::vector<CodeSearchHit> searchWorkspace(const std::string& query,
+                                               size_t maxResults = 10) const;
+    std::vector<CodeSearchHit> findWorkspaceSymbol(const std::string& symbolName,
+                                                   size_t maxResults = 20) const;
+
+    // Multi-file Session State
+    std::string createEditSession(const std::string& title);
+    bool stageEdit(const std::string& sessionId, const WorkspaceEdit& edit);
+    std::string previewEditSession(const std::string& sessionId) const;
+    bool applyEditSession(const std::string& sessionId,
+                          std::vector<std::string>* modifiedFiles = nullptr);
+    bool discardEditSession(const std::string& sessionId);
+    std::vector<EditSession> listEditSessions() const;
     
     // Agent Cycling
     void setAgentCycleCount(int count);  // 1-99
