@@ -62,7 +62,7 @@ Emit_NTHeaders PROC
     
     ; File Header
     mov     word ptr [rax], IMAGE_FILE_MACHINE_AMD64
-    mov     word ptr [rax + 2], 4           ; 4 Sections (.text, .data, .idata, .reloc)
+    mov     word ptr [rax + 2], 5           ; 5 Sections (.text, .data, .idata, .reloc, .edata)
     mov     word ptr [rax + 10h], 0F0h      ; Size of Optional Header
     mov     word ptr [rax + 12h], 22h       ; Characteristics: EXECUTABLE_IMAGE | LARGE_ADDRESS_AWARE
     add     rax, 14h
@@ -78,16 +78,16 @@ Emit_NTHeaders PROC
     mov     dword ptr [rax + 20h], SECTION_ALIGNMENT
     mov     dword ptr [rax + 24h], FILE_ALIGNMENT
     mov     word ptr [rax + 2Ch], 6          ; MajorSubsystemVersion
-    mov     dword ptr [rax + 38h], 5000h    ; SizeOfImage (5 pages: HDR+.text+.data+.idata+.reloc)
+    mov     dword ptr [rax + 38h], 6000h    ; SizeOfImage (6 pages: HDR+.text+.data+.idata+.reloc+.edata)
     mov     dword ptr [rax + 3Ch], 200h     ; SizeOfHeaders
     mov     word ptr [rax + 44h], 3          ; Subsystem: Console
     
     mov     dword ptr [rax + 6Ch], 16        ; NumberOfRvaAndSizes
     
-    ; Data Directories (Import Table at index 1)
+    ; Data Directories (Export Table at index 0, Import Table at index 1)
     lea     rcx, [rax + 70h]
-    mov     dword ptr [rcx + 8], 3000h      ; Import Table RVA
-    mov     dword ptr [rcx + 0Ch], 100h     ; Import Table Size
+    mov     dword ptr [rcx], 5000h          ; Export Table RVA (.edata)
+    mov     dword ptr [rcx + 4], 100h       ; Export Table Size
     
     ; Section 5: Relocation Directory (Index 5)
     mov     dword ptr [rcx + 28h], 4000h    ; Relocation Table RVA
@@ -142,7 +142,17 @@ Emit_SectionHeaders PROC
     mov     dword ptr [rax + 14h], 0A00h
     mov     dword ptr [rax + 24h], 42000040h ; R | DISCARDABLE | DATA
     
-    add     g_cursor, 0A0h                   ; 4 sections
+    ; .edata (RVA 5000h, FileOffset 0C00h)
+    add     rax, 28h
+    mov     rcx, 00000061746164652Eh         ; ".edata"
+    mov     qword ptr [rax], rcx
+    mov     dword ptr [rax + 8], 1000h
+    mov     dword ptr [rax + 0Ch], 5000h
+    mov     dword ptr [rax + 10h], 200h
+    mov     dword ptr [rax + 14h], 0C00h
+    mov     dword ptr [rax + 24h], 40000040h ; R | DATA
+
+    add     g_cursor, 0C8h                   ; 5 sections
     ret
 Emit_SectionHeaders ENDP
 
@@ -255,6 +265,74 @@ Emit_ImportTable PROC
 
     ret
 Emit_ImportTable ENDP
+
+; ────────────────────────────────────────────────────────────────
+; Emit_ExportTable — .edata Symbol Registration
+; ────────────────────────────────────────────────────────────────
+Emit_ExportTable PROC
+    ; .edata FileOffset = 0C00h (5th section)
+    mov rax, qword ptr [g_peBase]
+    add rax, 0C00h
+
+    ; 1. IMAGE_EXPORT_DIRECTORY (40 bytes / 28h)
+    mov dword ptr [rax + 00h], 0          ; Characteristics
+    mov dword ptr [rax + 04h], 0          ; TimeDateStamp
+    mov dword ptr [rax + 08h], 0          ; Major/Minor Version
+    mov dword ptr [rax + 0Ch], 5032h      ; Name RVA ("output.exe\0")
+    mov dword ptr [rax + 10h], 1          ; Base Ordinal
+    mov dword ptr [rax + 14h], 1          ; NumberOfFunctions
+    mov dword ptr [rax + 18h], 1          ; NumberOfNames
+    mov dword ptr [rax + 1Ch], 5028h      ; AddressOfFunctions RVA
+    mov dword ptr [rax + 20h], 502Ch      ; AddressOfNames RVA
+    mov dword ptr [rax + 24h], 5030h      ; AddressOfNameOrdinals RVA
+
+    ; 2. AddressOfFunctions Table (Offset 0C28h) -> RVA 1000h (EntryPoint)
+    mov dword ptr [rax + 28h], 1000h
+    
+    ; 3. AddressOfNames Table (Offset 0C2Ch) -> RVA 5040h ("EditorGenFunction\0")
+    mov dword ptr [rax + 2Ch], 5040h
+
+    ; 4. AddressOfNameOrdinals Table (Offset 0C30h) -> Ordinal 0
+    mov word ptr [rax + 30h], 0
+
+    ; 5. DLL Name String (Offset 0C32h -> RVA 5032h)
+    ; Overwrite string carefully:
+    mov byte ptr [rax + 32h], 'o'
+    mov byte ptr [rax + 33h], 'u'
+    mov byte ptr [rax + 34h], 't'
+    mov byte ptr [rax + 35h], 'p'
+    mov byte ptr [rax + 36h], 'u'
+    mov byte ptr [rax + 37h], 't'
+    mov byte ptr [rax + 38h], '.'
+    mov byte ptr [rax + 39h], 'e'
+    mov byte ptr [rax + 3Ah], 'x'
+    mov byte ptr [rax + 3Bh], 'e'
+    mov byte ptr [rax + 3Ch], 0
+
+    ; 6. Export Function Name String (Offset 0C40h -> RVA 5040h)
+    ; "EditorGenFunction\0"
+    add rax, 40h
+    mov byte ptr [rax], 'E'
+    mov byte ptr [rax+1], 'd'
+    mov byte ptr [rax+2], 'i'
+    mov byte ptr [rax+3], 't'
+    mov byte ptr [rax+4], 'o'
+    mov byte ptr [rax+5], 'r'
+    mov byte ptr [rax+6], 'G'
+    mov byte ptr [rax+7], 'e'
+    mov byte ptr [rax+8], 'n'
+    mov byte ptr [rax+9], 'F'
+    mov byte ptr [rax+10], 'u'
+    mov byte ptr [rax+11], 'n'
+    mov byte ptr [rax+12], 'c'
+    mov byte ptr [rax+13], 't'
+    mov byte ptr [rax+14], 'i'
+    mov byte ptr [rax+15], 'o'
+    mov byte ptr [rax+16], 'n'
+    mov byte ptr [rax+17], 0
+
+    ret
+Emit_ExportTable ENDP
 
 ; ────────────────────────────────────────────────────────────────
 ; Emit_RelocTable — Base Relocations for ASLR
@@ -564,10 +642,11 @@ WritePEFile PROC FRAME
     call    Emit_SectionHeaders
     call    Emit_Payload
     call    Emit_ImportTable
-    call    Emit_RelocTable
+    call    Emit_ExportTable
+      call    Emit_RelocTable
 
     ; Ensure actual PE size covers .reloc down to 0xC00
-    mov     rax, 0C00h
+    mov     rax, 0E00h
     mov     qword ptr [g_peSize], rax
 
     mov     eax, 1
@@ -678,7 +757,7 @@ Emit_CompletePE PROC FRAME
     call WritePEFile
     
     ; 3. Return the size generated 0xC00.
-    mov eax, 0C00h 
+    mov eax, 0E00h 
     
     add rsp, 28h
     ret
