@@ -44,8 +44,52 @@ Emit_Byte ENDP
 ; ────────────────────────────────────────────────────────────────
 Emit_DOSHeader PROC
     mov     rax, g_cursor
-    mov     word ptr [rax], IMAGE_DOS_SIGNATURE
-    mov     word ptr [rax + 3Ch], 80h       ; e_lfanew
+
+    ; ── 1. IMAGE_DOS_HEADER (64 bytes) ──
+    mov     word ptr [rax], IMAGE_DOS_SIGNATURE     ; e_magic (MZ)
+    mov     word ptr [rax + 2h], 0090h              ; e_cblp
+    mov     word ptr [rax + 4h], 0003h              ; e_cp
+    mov     word ptr [rax + 6h], 0000h              ; e_crlc
+    mov     word ptr [rax + 8h], 0004h              ; e_cparhdr
+    mov     word ptr [rax + 0Ah], 0000h             ; e_minalloc
+    mov     word ptr [rax + 0Ch], 0FFFFh            ; e_maxalloc
+    mov     word ptr [rax + 0Eh], 0000h             ; e_ss
+    mov     word ptr [rax + 10h], 00B8h             ; e_sp
+    mov     word ptr [rax + 12h], 0000h             ; e_csum
+    mov     word ptr [rax + 14h], 0000h             ; e_ip
+    mov     word ptr [rax + 16h], 0000h             ; e_cs
+    mov     word ptr [rax + 18h], 0040h             ; e_lfarlc
+    mov     word ptr [rax + 1Ah], 0000h             ; e_ovno
+    mov     dword ptr [rax + 3Ch], 00000080h        ; e_lfanew
+
+    ; ── 2. DOS Stub Program and String (Offset 40h - 7Fh) ──
+    ; Assembly: push cs; pop ds; mov dx,0E; mov ah,9; int 21; mov ax,4C01; int 21
+    mov     dword ptr [rax + 40h], 0EBA1F0Eh
+    mov     dword ptr [rax + 44h], 21CD0900h
+    mov     dword ptr [rax + 48h], 21CD4C01h
+    
+    ; String: "This program cannot be run in DOS mode.$"
+    mov     rcx, 6F72702073696854h ; "This pro"
+    mov     qword ptr [rax + 4Eh], rcx
+    mov     rcx, 06E6163206D617267h ; "gram can"
+    mov     qword ptr [rax + 56h], rcx
+    mov     rcx, 656220746F6E6E6Fh ; "not be "
+    mov     qword ptr [rax + 5Eh], rcx
+    mov     rcx, 206E69206E757220h ; "run in "
+    mov     qword ptr [rax + 66h], rcx
+    mov     rcx, 6D20534F4420h     ; "DOS m"
+    mov     qword ptr [rax + 6Eh], rcx
+    
+    mov     byte ptr [rax + 72h], 6Fh ; 'o'
+    mov     byte ptr [rax + 73h], 64h ; 'd'
+    mov     byte ptr [rax + 74h], 65h ; 'e'
+    mov     byte ptr [rax + 75h], 2Eh ; '.'
+    mov     byte ptr [rax + 76h], 0Dh ; \r
+    mov     byte ptr [rax + 77h], 0Dh ; \r
+    mov     byte ptr [rax + 78h], 0Ah ; \n
+    mov     byte ptr [rax + 79h], 24h ; '$'
+    mov     word ptr [rax + 7Ah], 0000h
+
     add     g_cursor, 80h
     ret
 Emit_DOSHeader ENDP
