@@ -271,7 +271,7 @@ if(RAWR_HAS_MASM)
         src/asm/RawrXD_Emitter_v1.asm
         src/asm/RawrXD_PDBKernel_v3.asm
         src/asm/RawrXD_IPC_Dispatcher.asm
-        # src/asm/RawrXD_AuditSystem_Pure.asm   # excluded: ml64 errors (invalid alignment/register placeholders)
+        src/asm/RawrXD_AuditSystem_Pure.asm
         src/asm/Advanced_Code_Deobfuscator.asm
         src/asm/Code_Pattern_Reconstructor.asm
         src/asm/agentic_deep_thinking_kernels.asm
@@ -305,6 +305,10 @@ set(SOURCES
     src/memory_core.cpp
     src/hot_patcher.cpp
     src/cpu_inference_engine.cpp
+    src/rawrxd_model_loader.cpp
+    src/rawrxd_transformer.cpp
+    src/rawrxd_tokenizer.cpp
+    src/rawrxd_sampler.cpp
     src/complete_server.cpp
     src/agentic_engine.cpp
     src/subagent_core.cpp
@@ -1547,26 +1551,8 @@ if(MSVC)
     set(ASM_STREAM_QBUF_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_Streaming_QuadBuffer.asm")
     set(_ASM_STREAM_QBUF_PREBUILT "${RAWRXD_PREBUILT_GENESIS_DIR}/RawrXD_Streaming_QuadBuffer.obj")
 
-    # Batch 2: Disassembly & Symbols
-    set(ASM_DISASM_KERNEL_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_Disasm_Kernel.asm")
-    set(ASM_DISASM_KERNEL_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_Disasm_Kernel.obj")
-    add_custom_command(
-        OUTPUT ${ASM_DISASM_KERNEL_OBJ}
-        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /I "${CMAKE_CURRENT_SOURCE_DIR}/src/asm" /Fo${ASM_DISASM_KERNEL_OBJ} ${ASM_DISASM_KERNEL_SRC}
-        DEPENDS ${ASM_DISASM_KERNEL_SRC}
-        COMMENT "[MASM] Assembling RawrXD_Disasm_Kernel.asm (Linear Sweep)"
-        VERBATIM
-    )
-
-    set(ASM_SYMBOL_HASH_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_SymbolTable_Hash.asm")
-    set(ASM_SYMBOL_HASH_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_SymbolTable_Hash.obj")
-    add_custom_command(
-        OUTPUT ${ASM_SYMBOL_HASH_OBJ}
-        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /I "${CMAKE_CURRENT_SOURCE_DIR}/src/asm" /Fo${ASM_SYMBOL_HASH_OBJ} ${ASM_SYMBOL_HASH_SRC}
-        DEPENDS ${ASM_SYMBOL_HASH_SRC}
-        COMMENT "[MASM] Assembling RawrXD_SymbolTable_Hash.asm (FNV-1a)"
-        VERBATIM
-    )
+    # Batch 2 kernels are intentionally not manually assembled here.
+    # Keep manual MASM object generation limited to entries wired into MASM_OBJECTS.
 
     if(EXISTS "${_ASM_STREAM_QBUF_PREBUILT}")
         set(ASM_STREAM_QBUF_OBJ "${_ASM_STREAM_QBUF_PREBUILT}")
@@ -2081,6 +2067,10 @@ set(INFERENCE_ENGINE_SOURCES
     src/inference/polymorphic_loader.cpp
     src/inference/ollama_blob_parser.cpp
     src/cpu_inference_engine.cpp
+    src/rawrxd_model_loader.cpp
+    src/rawrxd_transformer.cpp
+    src/rawrxd_tokenizer.cpp
+    src/rawrxd_sampler.cpp
     src/gguf_loader.cpp
     src/gguf_vocab_resolver.cpp
     src/streaming_gguf_loader.cpp
@@ -2203,9 +2193,12 @@ set_target_properties(rawrxd-monaco-gen PROPERTIES
 )
 
 # Win32 GUI IDE - Zero Bloat Track B (v14.6.0)
+# Entry: main_win32.cpp (WinMain) so full IDE createWindow/showWindow/layout and all modules run.
+# Previously entry_point.cpp (wWinMain) created a minimal window and could leave it hidden (nCmdShow=SW_HIDE).
 if(WIN32)
     set(WIN32IDE_SOURCES
-        src/ui/entry_point.cpp
+        src/win32app/main_win32.cpp
+        src/agent/quantum_agent_orchestrator.cpp
         src/ui/RawrXD_MainLoop.cpp
         src/ui/webview2_bridge.cpp
         src/ui/debugger_core.cpp
@@ -2237,6 +2230,7 @@ if(WIN32)
         src/win32app/Win32IDE_ReverseEngineering.cpp
         src/win32app/Win32IDE_Logger.cpp
         src/win32app/Win32IDE_AgenticBridge.cpp
+        src/full_agentic_ide/FullAgenticIDE.cpp
         src/win32app/Win32IDE_AgentCommands.cpp
         src/win32app/Win32IDE_Autonomy.cpp
         src/win32app/Win32IDE_PowerShell.cpp
@@ -2245,6 +2239,8 @@ if(WIN32)
         src/win32app/Win32IDE_FileOps.cpp
         src/win32app/Win32IDE_DecompilerView.cpp
         src/win32app/Win32IDE_NativePipeline.cpp
+        Ship/RawrXD_AutonomousAgenticPipeline.cpp
+        Ship/RawrXD_AgentCoordinator.cpp
 
         src/win32app/Win32IDE_FeatureManifest.cpp
         src/win32app/Win32IDE_GhostText.cpp
@@ -2283,6 +2279,11 @@ if(WIN32)
         
         # Configuration management
         src/config/IDEConfig.cpp
+
+        # LLM adapter + Auth (Qt-free: QtReplacements, no Qt dependency)
+        src/llm_adapter/QuantBackend.cpp
+        src/llm_adapter/GGUFRunner.cpp
+        src/auth/QuantumAuthUI.cpp
         
         # Core engine files needed by IDE
         src/stubs.cpp
@@ -2387,7 +2388,8 @@ if(WIN32)
         src/core/license_anti_tampering.cpp
         src/core/camellia256_bridge.cpp
         src/core/watchdog_service.cpp
-        src/core/multi_response_engine.cpp
+        # Win32IDE uses the win32app multi-response integration unit.
+        # Avoid duplicate symbol emission from parallel multi_response_engine defs.
         src/core/flash_attention.cpp
         src/core/execution_scheduler.cpp
         src/core/execution_governor.cpp
@@ -2569,9 +2571,11 @@ if(WIN32)
         src/core/ssot_handlers_ext_isolated.cpp
         src/core/ssot_validation.cpp
         src/core/win32_ide_link_stubs.cpp
+        src/core/win32ide_asm_fallback.cpp
 
         # Unified Command Dispatch — Zero-drift SSOT dispatch (replaces manual registration)
         src/core/unified_command_dispatch.cpp
+        src/core/startup_phase_registry.cpp
 
         # Phase 21: Distributed Swarm Inference Orchestrator
         src/cli/swarm_orchestrator.cpp
@@ -2979,15 +2983,60 @@ if(WIN32)
         )
     endif()
 
-    # Gold Lane: Exclude stubs from final production build
-    list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*_stubs\\.cpp$")
-    list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/reverse_engineered_stubs\\.cpp$")
-    # Link-graph canonical fallbacks required by currently enabled providers.
+    # Gold Lane: prefer real implementations for Win32IDE agentic/autonomy path.
+    option(RAWRXD_ALLOW_AGENTIC_STUB_FALLBACK
+        "Allow stub/link-fallback units in RawrXD-Win32IDE agentic path"
+        OFF
+    )
+    if(RAWRXD_ALLOW_AGENTIC_STUB_FALLBACK)
+        message(STATUS "[Win32IDE] Agentic stub fallback enabled by RAWRXD_ALLOW_AGENTIC_STUB_FALLBACK=ON")
+    else()
+        list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*_stubs\\.cpp$")
+        list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/reverse_engineered_stubs\\.cpp$")
+        list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/link_stubs_.*\\.cpp$")
+
+        list(REMOVE_ITEM WIN32IDE_SOURCES
+            src/win32app/agentic_bridge_headless.cpp
+            src/win32app/Win32IDE_headless_stubs.cpp
+            src/stubs.cpp
+            src/core/stubs.cpp
+            src/core/universal_stub.cpp
+            src/core/link_stubs_final.cpp
+            src/core/link_stubs_remaining_classes.cpp
+        )
+        # Re-add ai_agent_masm_stubs.cpp: provides masm_agent_failure_detect_simd (required by agentic_failure_detector.cpp)
+        list(APPEND WIN32IDE_SOURCES src/core/ai_agent_masm_stubs.cpp)
+        message(STATUS "[Win32IDE] Agentic real lane enforced (stub/link-fallback units removed)")
+    endif()
+
+    option(RAWRXD_STRICT_AGENTIC_REALITY
+        "Fail CMake configure if Win32IDE sources still include stub/link-fallback units"
+        ON
+    )
+    if(RAWRXD_STRICT_AGENTIC_REALITY AND NOT RAWRXD_ALLOW_AGENTIC_STUB_FALLBACK)
+        set(_RAWRXD_FORBIDDEN_WIN32IDE_SOURCES "")
+        foreach(_rawrxd_src IN LISTS WIN32IDE_SOURCES)
+            # ai_agent_masm_stubs.cpp is required (masm_agent_failure_detect_simd), not a fallback
+            if(NOT _rawrxd_src MATCHES "ai_agent_masm_stubs\\.cpp$" AND _rawrxd_src MATCHES "(_stubs\\.cpp$|/stubs\\.cpp$|/stub_.*\\.cpp$|/link_stubs_.*\\.cpp$|/agentic_bridge_headless\\.cpp$|/Win32IDE_headless_stubs\\.cpp$)")
+                list(APPEND _RAWRXD_FORBIDDEN_WIN32IDE_SOURCES "${_rawrxd_src}")
+            endif()
+        endforeach()
+        if(_RAWRXD_FORBIDDEN_WIN32IDE_SOURCES)
+            list(JOIN _RAWRXD_FORBIDDEN_WIN32IDE_SOURCES "\n  - " _RAWRXD_FORBIDDEN_LIST)
+            message(FATAL_ERROR
+                "[Win32IDE] STRICT AGENTIC REALITY gate failed. Forbidden fallback units detected:\n"
+                "  - ${_RAWRXD_FORBIDDEN_LIST}\n"
+                "Set RAWRXD_ALLOW_AGENTIC_STUB_FALLBACK=ON only for explicit fallback/debug builds."
+            )
+        endif()
+    endif()
+
+    # Mandatory symbol providers for Win32IDE link closure.
+    # Keep these after stub filtering/strict gate so critical externs are always satisfied.
     list(APPEND WIN32IDE_SOURCES
         src/core/subsystem_mode_stubs.cpp
         src/core/analyzer_distiller_stubs.cpp
         src/core/streaming_orchestrator_stubs.cpp
-        src/core/ai_agent_masm_stubs.cpp
         src/core/mesh_brain_asm_stubs.cpp
     )
 
@@ -2997,6 +3046,7 @@ if(WIN32)
         "${CMAKE_CURRENT_SOURCE_DIR}/src/agentic/RawrXD_ToolRegistry.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/agent/DiskRecoveryAgent.cpp"
     )
+    list(REMOVE_DUPLICATES WIN32IDE_SOURCES)
 
     add_executable(RawrXD-Win32IDE WIN32 ${WIN32IDE_SOURCES} ${ASM_KERNEL_SOURCES}
         src/win32app/RawrXD-Win32IDE.rc)
@@ -3004,6 +3054,7 @@ if(WIN32)
     # External infra pack is mirrored into the project tree under D: and wired
     # as include/lib providers for Win32IDE.
     set(RAWRXD_INFRA_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/external/rawr_infra")
+    target_include_directories(RawrXD-Win32IDE PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Ship")
     if(EXISTS "${RAWRXD_INFRA_ROOT}/Headers")
         target_include_directories(RawrXD-Win32IDE PRIVATE
             "${RAWRXD_INFRA_ROOT}/Headers"
@@ -3188,6 +3239,8 @@ if(WIN32)
         ${CMAKE_CURRENT_SOURCE_DIR}/src/lsp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/plugin_system
         ${CMAKE_CURRENT_SOURCE_DIR}/src/ide
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/llm_adapter
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/auth
         ${CMAKE_CURRENT_SOURCE_DIR}/src/context
         ${CMAKE_CURRENT_SOURCE_DIR}/src/multimodal_engine
         ${CMAKE_CURRENT_SOURCE_DIR}/src/telemetry
@@ -3369,4 +3422,73 @@ if(Python3_FOUND)
         COMMENT "Validating command registry (STRICT — all IDM_* must be in COMMAND_TABLE)..."
         VERBATIM
     )
+endif()
+
+# Autonomous Agentic Pipeline unit test (Task 5 — buildable)
+if(WIN32)
+    add_executable(test_autonomous_pipeline
+        tests/test_autonomous_pipeline.cpp
+        Ship/RawrXD_AutonomousAgenticPipeline.cpp
+    )
+    target_include_directories(test_autonomous_pipeline PRIVATE
+        ${CMAKE_SOURCE_DIR}/Ship
+        ${CMAKE_SOURCE_DIR}
+    )
+    target_link_libraries(test_autonomous_pipeline PRIVATE kernel32)
+    set_target_properties(test_autonomous_pipeline PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+    )
+
+    add_executable(RawrXD-AutoFixCLI
+        src/app/cli_entrypoint.cpp
+        src/agent/quantum_agent_orchestrator.cpp
+        src/inference/gpu_dispatch_gate.cpp
+        src/gguf_d3d12_bridge.cpp
+    )
+    target_include_directories(RawrXD-AutoFixCLI PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/include
+    )
+    target_link_libraries(RawrXD-AutoFixCLI PRIVATE
+        kernel32
+        user32
+        winhttp
+        d3d12
+        dxgi
+        d3dcompiler
+    )
+    set_target_properties(RawrXD-AutoFixCLI PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+    )
+
+    # ═══════════════════════════════════════════════════════════════════
+    # GPU Inference Benchmark — v16.2-GPU-HYBRID Phase C
+    # ═══════════════════════════════════════════════════════════════════
+    add_executable(RawrXD-Benchmark EXCLUDE_FROM_ALL
+        src/tools/gpu_benchmark.cpp
+        src/gguf_d3d12_bridge.cpp
+    )
+    target_include_directories(RawrXD-Benchmark PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/include
+    )
+    target_compile_definitions(RawrXD-Benchmark PRIVATE
+        RAWR_BENCHMARK=1
+    )
+    if(MSVC)
+        target_compile_options(RawrXD-Benchmark PRIVATE /EHsc /W0 /O2)
+    endif()
+    target_link_libraries(RawrXD-Benchmark PRIVATE
+        kernel32
+        user32
+        d3d12
+        dxgi
+        d3dcompiler
+        ole32
+    )
+    set_target_properties(RawrXD-Benchmark PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+        OUTPUT_NAME RawrXD-Benchmark
+    )
+    message(STATUS "[Phase C] GPU Benchmark target: RawrXD-Benchmark")
 endif()

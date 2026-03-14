@@ -1,0 +1,14 @@
+{
+  "version": "v16.2-GPU-HYBRID",
+  "matrix_size": [4096, 4096],
+  "tokens": 128,
+  "total_time_s": 1.5803,
+  "tps": 81.00,
+  "cpu_only_tps": 81.87,
+  "gpu_uplift_x": 0.99,
+  "gpu_ops": 128,
+  "cpu_fallbacks": 0,
+  "parity_failures": 0,
+  "gpu_enabled": true,
+  "parity_check": true
+}
