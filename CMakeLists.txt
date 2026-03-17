@@ -2292,6 +2292,8 @@ if(WIN32)
         src/win32app/RawrXD-Win32IDE.rc
         src/bridge/Win32SwarmBridge.cpp
         src/bridge/SwarmIATRegistration.cpp
+        src/agentic/SubAgentManager.cpp
+        src/agentic/RobustOllamaParser.cpp
     )
 
     # MASM64 UI Dispatcher

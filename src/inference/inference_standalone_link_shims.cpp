@@ -193,4 +193,12 @@ int asm_pyre_embedding_lookup(const float* table, const uint32_t* ids,
     return 0;
 }
 
+// deflate_brutal_masm — InferenceEngine doesn't link full zlib;
+// provide a minimal no-op that returns nullptr with out_len = 0.
+void* deflate_brutal_masm(const void* src, size_t len, size_t* out_len) {
+    (void)src; (void)len;
+    if (out_len) *out_len = 0;
+    return nullptr;
+}
+
 } // extern "C"

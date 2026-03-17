@@ -94,8 +94,8 @@ int InitializeSwarmSystem(SwarmInitConfig* config) {
 } // namespace RawrXD::Bridge
 
 // C-export for IAT binding (slot 20)
-extern "C" __declspec(dllexport) void Win32IDE_shutdownSwarmSystem() {
-    RawrXD::Bridge::ShutdownSwarmSystem();
+extern "C" __declspec(dllexport) int Win32IDE_initializeSwarmSystem(void* config) {
+    return RawrXD::Bridge::InitializeSwarmSystemImpl(config);
 }
 
 // AgenticBridge/SubAgent Implementation (Slots 48-51)
@@ -114,16 +114,16 @@ extern "C" __declspec(dllexport) const char* SubAgentManager_getStatusSummary(vo
     return summary;
 }
 
-extern "C" __declspec(dllexport) int SubAgentManager_getAgentCount(void* pMgr) {
+extern "C" __declspec(dllexport) uint32_t SubAgentManager_getAgentCount(void* pMgr) {
     if (!pMgr) return 0;
     auto* mgr = static_cast<RawrXD::Agentic::SubAgentManager*>(pMgr);
-    return (int)mgr->getActiveShardCount();
+    return (uint32_t)mgr->getActiveShardCount();
 }
 
-extern "C" __declspec(dllexport) bool SubAgentManager_isHealthy(void* pMgr) {
-    if (!pMgr) return false;
+extern "C" __declspec(dllexport) int SubAgentManager_isHealthy(void* pMgr) {
+    if (!pMgr) return 0;
     auto* mgr = static_cast<RawrXD::Agentic::SubAgentManager*>(pMgr);
-    return mgr->isSwarmActive();
+    return mgr->isSwarmActive() ? 1 : 0;
 }
 
 // SLOTS 52-53
@@ -252,16 +252,5 @@ extern "C" __declspec(dllexport) uint32_t Win32IDE_executeSwarmTask(const char* 
 
 extern "C" __declspec(dllexport) void Win32IDE_shutdownSwarmSystem() {
     OutputDebugStringA("[Win32SwarmBridge] Shutting down Swarm System (Slot 55)\n");
-    RawrXD::Bridge::ShutdownSwarmSystem();
-}
-
-// C-export for IAT binding (slot 54) - Task Execution
-extern "C" __declspec(dllexport) uint32_t Win32IDE_executeSwarmTask(const char* taskDescription) {
-    if (!taskDescription) return 0;
-    return RawrXD::Agentic::SubAgentManager::instance().executeSwarmTask(taskDescription);
-}
-
-// C-export for IAT binding (slot 55) - Shutdown
-extern "C" __declspec(dllexport) void Win32IDE_shutdownSwarmSystem() {
     RawrXD::Bridge::ShutdownSwarmSystem();
 }

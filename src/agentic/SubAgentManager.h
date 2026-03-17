@@ -62,3 +62,6 @@ private:
     // Internal methods for properly wired orchestration
     void internal_rebalanceLoad();
     void internal_verifyShardIntegrity();
+};
+
+} // namespace RawrXD::Agentic
