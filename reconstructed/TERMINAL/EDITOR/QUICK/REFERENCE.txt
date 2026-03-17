@@ -1,0 +1,78 @@
+# 🚀 Quick Reference - Terminal & Editor Tabs
+
+## ✅ What's New
+
+### 1. PowerShell Terminals (pwsh.exe)
+- **All terminals now use PowerShell Core**
+- Full scripting and cmdlet support
+- Modern shell with all PS features
+
+### 2. Terminal Tab Closing
+- **Close button (X) on each terminal tab**
+- Click X to close terminal
+- Process terminates gracefully
+- Resources auto-cleaned
+
+### 3. Editor Tab Closing  
+- **Close button (X) on each editor tab**
+- Click X to close file
+- Works like modern editors (VS Code, etc.)
+
+### 4. Open New Terminals
+- **"+ Terminal" button at top of terminal panel**
+- Click to create new PowerShell terminal
+- Each terminal independent
+
+---
+
+## 📝 User Guide
+
+### Terminal Operations
+```
+Open New Terminal:  Click "+ Terminal" button
+Close Terminal:     Click "X" on terminal tab
+Run Command:        Type command → Press Enter
+```
+
+### Editor Operations
+```
+Open File:          File → Open (or drag file)
+Close Tab:          Click "X" on editor tab
+Save File:          File → Save
+```
+
+---
+
+## 🔧 Implementation Details
+
+**Terminal Shell Change**:
+- Changed: `cmd.exe` → `pwsh.exe`
+- File: `src/terminal_pool.cpp`
+
+**Tab Closing for Terminals**:
+- Added: `closeTerminal()` method
+- File: `include/terminal_pool.h`, `src/terminal_pool.cpp`
+
+**Tab Closing for Editor**:
+- Changed: `setTabsClosable(false)` → `setTabsClosable(true)`
+- File: `src/multi_tab_editor.cpp`
+
+---
+
+## ✨ Features
+
+| Feature | Status |
+|---------|--------|
+| PowerShell Terminals | ✅ Working |
+| Close Terminal Tabs | ✅ Working |
+| Close Editor Tabs | ✅ Working |
+| Open New Terminals | ✅ Working |
+| Graceful Shutdown | ✅ Working |
+| Resource Cleanup | ✅ Working |
+
+---
+
+**Build Status**: ✅ 0 errors  
+**Application Status**: ✅ Running  
+**Date**: December 5, 2025
+

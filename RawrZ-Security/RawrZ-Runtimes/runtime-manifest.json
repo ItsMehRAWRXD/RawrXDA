@@ -1,0 +1,22 @@
+{
+  "Philosophy": "Self-contained, portable, zero external dependencies",
+  "Generated": "2025-10-11T13:55:59.9855480-04:00",
+  "Runtimes": {
+    "RawrZ-Lua": {
+      "Status": "Available",
+      "Interpreter": "lua.ps1",
+      "Path": "D:\\RawrZ-Runtimes\\RawrZ-Lua"
+    },
+    "RawrZ-JS": {
+      "Status": "Available",
+      "Interpreter": "node.ps1",
+      "Path": "D:\\RawrZ-Runtimes\\RawrZ-JS"
+    },
+    "RawrZ-Python": {
+      "Status": "Available",
+      "Interpreter": "python.ps1",
+      "Path": "D:\\RawrZ-Runtimes\\RawrZ-Python"
+    }
+  },
+  "Version": "1.0.0"
+}

@@ -264,6 +264,12 @@ public:
     void setFailureCallback(RouterFailureCallback cb, void* userData);
     void setThermalCallback(RouterThermalCallback cb, void* userData);
 
+    // AVX-512 Flash Attention Integration (v14.7.0-ATTN)
+    RouterResult dispatchFlashAttention(void* q, void* k, void* v, void* o,
+                                         uint32_t seqM, uint32_t seqN,
+                                         uint32_t headDim, uint32_t numHeads,
+                                         float scale = -1.0f);
+
     // ===== Stats & JSON =====
     const RouterStats& getStats() const { return m_stats; }
     void               resetStats();

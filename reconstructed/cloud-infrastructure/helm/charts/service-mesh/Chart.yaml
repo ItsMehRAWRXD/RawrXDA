@@ -1,0 +1,14 @@
+apiVersion: v2
+name: service-mesh
+description: Helm chart for service mesh infrastructure
+type: application
+version: 1.0.0
+appVersion: "1.19.0"
+
+keywords:
+  - istio
+  - service-mesh
+
+maintainers:
+  - name: Platform Team
+    email: platform@example.com

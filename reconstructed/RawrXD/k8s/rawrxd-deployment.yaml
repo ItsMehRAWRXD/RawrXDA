@@ -1,0 +1,323 @@
+# ================================================================
+# rawrxd-deployment.yaml — Kubernetes Production Deployment
+# RawrXD AI Toolkit with GPU scheduling, health probes, and HPA
+# ================================================================
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rawrxd-ai
+  labels:
+    app.kubernetes.io/name: rawrxd
+    app.kubernetes.io/part-of: ai-toolkit
+
+---
+# ================================================================
+# ConfigMap — Runtime configuration
+# ================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rawrxd-config
+  namespace: rawrxd-ai
+data:
+  RAWRXD_ENV: "production"
+  RAWRXD_CONTEXT_LENGTH: "4096"
+  RAWRXD_BATCH_SIZE: "512"
+  RAWRXD_GPU_LAYERS: "80"
+  RAWRXD_API_PORT: "8080"
+  RAWRXD_METRICS_PORT: "9090"
+  RAWRXD_MAX_CONNECTIONS: "256"
+  RAWRXD_VULKAN_COMPUTE: "true"
+  RAWRXD_FLASH_ATTENTION: "true"
+  RAWRXD_KV_CACHE_COMPRESSION: "true"
+  RAWRXD_SPECULATIVE_DECODING: "true"
+  RAWRXD_QUANTIZATION_LEVEL: "Q4_K"
+
+---
+# ================================================================
+# Secret — Sensitive configuration
+# ================================================================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rawrxd-secrets
+  namespace: rawrxd-ai
+type: Opaque
+stringData:
+  RAWRXD_API_KEY: "change-me-in-production"
+
+---
+# ================================================================
+# PersistentVolumeClaim — Model storage
+# ================================================================
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rawrxd-models
+  namespace: rawrxd-ai
+spec:
+  accessModes:
+    - ReadOnlyMany
+  resources:
+    requests:
+      storage: 200Gi
+  storageClassName: fast-ssd
+
+---
+# ================================================================
+# Deployment — Main production workload
+# ================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rawrxd-server
+  namespace: rawrxd-ai
+  labels:
+    app: rawrxd
+    component: inference-server
+    version: v1.0.0
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: rawrxd
+      component: inference-server
+  template:
+    metadata:
+      labels:
+        app: rawrxd
+        component: inference-server
+        version: v1.0.0
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+    spec:
+      terminationGracePeriodSeconds: 60
+      
+      # Node affinity for GPU nodes
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: nvidia.com/gpu.present
+                    operator: In
+                    values: ["true"]
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values: ["rawrxd"]
+                topologyKey: kubernetes.io/hostname
+
+      containers:
+        - name: rawrxd
+          image: rawrxd/ai-toolkit:1.0.0
+          imagePullPolicy: Always
+          
+          ports:
+            - name: api
+              containerPort: 8080
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          
+          envFrom:
+            - configMapRef:
+                name: rawrxd-config
+            - secretRef:
+                name: rawrxd-secrets
+          
+          env:
+            - name: RAWRXD_MODEL_PATH
+              value: "/models/current.gguf"
+            - name: RAWRXD_LOG_LEVEL
+              value: "INFO"
+            - name: RAWRXD_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: RAWRXD_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          
+          # Resource limits — critical for 120B model on 64GB
+          resources:
+            requests:
+              cpu: "4"
+              memory: "48Gi"
+              nvidia.com/gpu: "1"
+            limits:
+              cpu: "8"
+              memory: "64Gi"
+              nvidia.com/gpu: "1"
+          
+          # Health probes
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: api
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: api
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
+          
+          startupProbe:
+            httpGet:
+              path: /health
+              port: api
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30    # Give up to 5 minutes for model loading
+          
+          volumeMounts:
+            - name: models
+              mountPath: /models
+              readOnly: true
+            - name: logs
+              mountPath: /app/logs
+            - name: cache
+              mountPath: /app/cache
+      
+      volumes:
+        - name: models
+          persistentVolumeClaim:
+            claimName: rawrxd-models
+        - name: logs
+          emptyDir:
+            sizeLimit: 2Gi
+        - name: cache
+          emptyDir:
+            medium: Memory
+            sizeLimit: 8Gi
+
+---
+# ================================================================
+# Service — Internal cluster service
+# ================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: rawrxd-api
+  namespace: rawrxd-ai
+  labels:
+    app: rawrxd
+spec:
+  type: ClusterIP
+  ports:
+    - name: api
+      port: 8080
+      targetPort: api
+      protocol: TCP
+    - name: metrics
+      port: 9090
+      targetPort: metrics
+      protocol: TCP
+  selector:
+    app: rawrxd
+    component: inference-server
+
+---
+# ================================================================
+# Service — Metrics (for Prometheus ServiceMonitor)
+# ================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: rawrxd-metrics
+  namespace: rawrxd-ai
+  labels:
+    app: rawrxd
+    monitoring: "true"
+spec:
+  type: ClusterIP
+  ports:
+    - name: metrics
+      port: 9090
+      targetPort: metrics
+  selector:
+    app: rawrxd
+    component: inference-server
+
+---
+# ================================================================
+# HorizontalPodAutoscaler — Scale on GPU utilization
+# ================================================================
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rawrxd-hpa
+  namespace: rawrxd-ai
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rawrxd-server
+  minReplicas: 2
+  maxReplicas: 8
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Pods
+      pods:
+        metric:
+          name: rawrxd_inference_latency_seconds
+        target:
+          type: AverageValue
+          averageValue: "200m"   # Scale up if avg latency > 200ms
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 120
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 300
+
+---
+# ================================================================
+# PodDisruptionBudget — Maintain availability during upgrades
+# ================================================================
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: rawrxd-pdb
+  namespace: rawrxd-ai
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: rawrxd
+      component: inference-server

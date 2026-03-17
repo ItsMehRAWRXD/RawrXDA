@@ -1,0 +1,49 @@
+name: rawrxd-llama-server
+services:
+- name: llama-server
+  github:
+    repo: ItsMehRAWRXD/RawrXD
+    branch: production-lazy-init
+    deploy_on_push: true
+  build_command: docker build -f deploy/docker/Dockerfile -t rawrxd-llama:latest deploy/docker
+  source_dir: deploy/docker
+  dockerfile_path: Dockerfile
+  http_port: 8080
+  envs:
+  - key: THREADS
+    value: "2"
+  - key: CTX_SIZE
+    value: "2048"
+  - key: BATCH_SIZE
+    value: "512"
+  health_check:
+    http_path: /health
+    initial_delay_seconds: 40
+    period_seconds: 30
+  routes:
+  - path: /
+    http_num_retries: 3
+  resource_type: service
+  run_command: /usr/local/bin/llama-server --host 0.0.0.0 --port 8080 --threads 2
+  volume_mount_path: /models
+  volumes:
+  - name: models
+    source_type: DROPLET_FILESYSTEM
+    filesystem_label: models
+    path: /models
+
+static_sites:
+- name: api-docs
+  source_dir: docs
+  routes:
+  - path: /docs
+
+databases:
+- name: models-cache
+  engine: REDIS
+  version: "7"
+  production: false
+
+functions: []
+
+jobs: []

@@ -288,13 +288,13 @@ std::string ModelInvoker::buildUserMessage(const InvocationParams& params) {
 json ModelInvoker::sendOllamaRequest(const std::string& model,
                                       const std::string& prompt,
                                       int maxTokens, double temperature) {
-    json payload = {
+    json payload = nlohmann::json::object({
         {"model",       model},
         {"prompt",      prompt},
         {"temperature", temperature},
         {"num_predict", maxTokens},
         {"stream",      false}
-    };
+    });
 
     std::string url = m_endpoint + "/api/generate";
     fprintf(stderr, "[INFO] [ModelInvoker] POST %s\n", url.c_str());
@@ -310,12 +310,12 @@ json ModelInvoker::sendOllamaRequest(const std::string& model,
 
 json ModelInvoker::sendClaudeRequest(const std::string& prompt,
                                       int maxTokens, double temperature) {
-    json payload = {
+    json payload = nlohmann::json::object({
         {"model",      m_model},
         {"max_tokens", maxTokens},
         {"temperature", temperature},
-        {"messages",   json::array({{{"role", "user"}, {"content", prompt}}})}
-    };
+        {"messages",   json::array({nlohmann::json::object({{"role", "user"}, {"content", prompt}})}) }
+    });
 
     std::string resp = httpPost("https://api.anthropic.com/v1/messages",
                                 payload.dump(), m_apiKey,
@@ -332,12 +332,12 @@ json ModelInvoker::sendClaudeRequest(const std::string& prompt,
 
 json ModelInvoker::sendOpenAIRequest(const std::string& prompt,
                                       int maxTokens, double temperature) {
-    json payload = {
+    json payload = nlohmann::json::object({
         {"model",      m_model},
         {"max_tokens", maxTokens},
         {"temperature", temperature},
-        {"messages",   json::array({{{"role", "user"}, {"content", prompt}}})}
-    };
+        {"messages",   json::array({nlohmann::json::object({{"role", "user"}, {"content", prompt}})}) }
+    });
 
     std::string resp = httpPost("https://api.openai.com/v1/chat/completions",
                                 payload.dump(), m_apiKey, {}, {}, 30000);
@@ -372,10 +372,10 @@ json ModelInvoker::parsePlan(const std::string& llmOutput) {
 
     // Strategy 3: Fallback
     fprintf(stderr, "[WARN] [ModelInvoker] Failed to parse plan from LLM output\n");
-    return json::array({{
+    return json::array({nlohmann::json::object({
         {"type",        "user_input"},
         {"description", llmOutput.substr(0, 500)}
-    }});
+    })});
 }
 
 bool ModelInvoker::validatePlanSanity(const json& plan) {

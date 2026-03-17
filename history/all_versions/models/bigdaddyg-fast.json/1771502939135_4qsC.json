@@ -1,0 +1,14 @@
+{
+  "model": "bigdaddyg-god-fast",
+  "architecture": "llama-69b",
+  "quantization": "Q4_K_M",
+  "offload_strategy": "balanced",
+  "gpu_layers": 30,
+  "cpu_layers": 50,
+  "vram_budget_gb": 16,
+  "context_size": 4096,
+  "batch_size": 512,
+  "threads": 16,
+  "cpu_mask": "0xFFFF",
+  "speed_estimate": "25 tok/s"
+}

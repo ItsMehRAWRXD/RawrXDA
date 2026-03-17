@@ -1,0 +1,12 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "npm",
+			"script": "audit-local",
+			"problemMatcher": [],
+			"label": "npm: audit-local",
+			"detail": "node scripts/local-audit.js"
+		}
+	]
+}

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package
+    Name="RawrXD v14.6.0"
+    Manufacturer="RawrXD"
+    Version="$(var.ProductVersion)"
+    UpgradeCode="D9D85F18-7A4A-4EDB-9E0D-8E5431F329EE"
+    Scope="perMachine"
+    InstallerVersion="500">
+
+    <SummaryInformation
+      Description="RawrXD v14.6.0 Zero Bloat release"
+      Manufacturer="RawrXD" />
+
+    <MajorUpgrade
+      DowngradeErrorMessage="A newer version of RawrXD is already installed."
+      AllowSameVersionUpgrades="yes" />
+
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <StandardDirectory Id="ProgramFiles6432Folder">
+      <Directory Id="INSTALLFOLDER" Name="RawrXD">
+        <Directory Id="DIR_DOCS" Name="docs" />
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="DIR_STARTMENU" Name="RawrXD" />
+    </StandardDirectory>
+
+    <Icon Id="RawrXD.ico" SourceFile="$(var.SourceDir)\resources\rawrxd.ico" />
+    <Property Id="ARPPRODUCTICON" Value="RawrXD.ico" />
+
+    <ComponentGroup Id="CoreFiles" Directory="INSTALLFOLDER">
+      <Component Id="cmp_GoldExe" Guid="*">
+        <File
+          Id="fil_GoldExe"
+          Source="$(var.BuildDir)\gold\RawrXD_Gold.exe"
+          Name="RawrXD_Gold.exe"
+          KeyPath="yes">
+          <Shortcut
+            Id="sc_Main"
+            Directory="DIR_STARTMENU"
+            Name="RawrXD"
+            Description="RawrXD IDE"
+            WorkingDirectory="INSTALLFOLDER"
+            Icon="RawrXD.ico"
+            Advertise="yes" />
+        </File>
+      </Component>
+
+      <Component Id="cmp_Win32Exe" Guid="*">
+        <File
+          Id="fil_Win32Exe"
+          Source="$(var.BuildDir)\bin\RawrXD-Win32IDE.exe"
+          Name="RawrXD-Win32IDE.exe"
+          KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <ComponentGroup Id="DocsFiles" Directory="DIR_DOCS">
+      <Component Id="cmp_SovGuide" Guid="*">
+        <File
+          Id="fil_SovGuide"
+          Source="$(var.SourceDir)\docs\SOVEREIGN_GUIDE.md"
+          Name="SOVEREIGN_GUIDE.md"
+          KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <Feature Id="MainFeature" Title="RawrXD Core" Level="1" AllowAbsent="no">
+      <ComponentGroupRef Id="CoreFiles" />
+      <ComponentGroupRef Id="DocsFiles" />
+    </Feature>
+  </Package>
+</Wix>

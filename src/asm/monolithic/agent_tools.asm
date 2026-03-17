@@ -57,6 +57,16 @@ TOOL_ID_RUN_COMMAND equ 3
 TOOL_ID_SEARCH_CODE equ 4
 TOOL_ID_GET_DIAG    equ 5
 TOOL_ID_GET_SYMBOLS equ 6
+; Staged expansion IDs (family lanes) to avoid hard aliasing to ID 3.
+TOOL_ID_GIT_OPS     equ 7
+TOOL_ID_BUILD_OPS   equ 8
+TOOL_ID_TEST_OPS    equ 9
+TOOL_ID_PROCESS_OPS equ 10
+TOOL_ID_SHELL_OPS   equ 11
+TOOL_ID_AGENT_OPS   equ 12
+TOOL_ID_MODEL_OPS   equ 13
+TOOL_ID_WEB_OPS     equ 14
+TOOL_ID_SYSTEM_OPS  equ 15
 TOOL_BUF_SIZE       equ 65536
 MAX_TOOLS           equ 16
 FIND_DATA_SIZE      equ 592
@@ -528,28 +538,41 @@ Tool_Init PROC FRAME
         mov     qword ptr [g_toolDynBuf], rax
 
         ; Fill dispatch table with procedure addresses
+        lea     rbx, [g_toolDispatch]              ; RIP-relative base
         lea     rax, Tool_ReadFile
-        mov     qword ptr [g_toolDispatch + 0*8], rax
+        mov     qword ptr [rbx + 0*8], rax
 
         lea     rax, Tool_WriteFile
-        mov     qword ptr [g_toolDispatch + 1*8], rax
+        mov     qword ptr [rbx + 1*8], rax
 
         lea     rax, Tool_ListDir
-        mov     qword ptr [g_toolDispatch + 2*8], rax
+        mov     qword ptr [rbx + 2*8], rax
 
         lea     rax, Tool_RunCommand
-        mov     qword ptr [g_toolDispatch + 3*8], rax
+        mov     qword ptr [rbx + 3*8], rax
 
         lea     rax, Tool_SearchCode
-        mov     qword ptr [g_toolDispatch + 4*8], rax
+        mov     qword ptr [rbx + 4*8], rax
 
         lea     rax, Tool_GetDiagnostics
-        mov     qword ptr [g_toolDispatch + 5*8], rax
+        mov     qword ptr [rbx + 5*8], rax
 
         lea     rax, Tool_GetSymbols
-        mov     qword ptr [g_toolDispatch + 6*8], rax
+        mov     qword ptr [rbx + 6*8], rax
 
-        ; Slots 7-15 remain zero (already zero from .data init)
+        ; Stage-1 family lanes: keep behavior compatible by routing to
+        ; Tool_RunCommand while preserving distinct tool IDs.
+        lea     rax, Tool_RunCommand
+        mov     qword ptr [rbx + TOOL_ID_GIT_OPS*8], rax
+        mov     qword ptr [rbx + TOOL_ID_BUILD_OPS*8], rax
+        mov     qword ptr [rbx + TOOL_ID_TEST_OPS*8], rax
+        mov     qword ptr [rbx + TOOL_ID_PROCESS_OPS*8], rax
+        mov     qword ptr [rbx + TOOL_ID_SHELL_OPS*8], rax
+        mov     qword ptr [rbx + TOOL_ID_AGENT_OPS*8], rax
+        mov     qword ptr [rbx + TOOL_ID_MODEL_OPS*8], rax
+        mov     qword ptr [rbx + TOOL_ID_WEB_OPS*8], rax
+        mov     qword ptr [rbx + TOOL_ID_SYSTEM_OPS*8], rax
+
         ; Set initialized flag
         mov     dword ptr [g_toolInitialized], 1
 
@@ -614,7 +637,8 @@ _te_check_id:
 
 _te_lookup:
         ; Load handler address from dispatch table
-        mov     rax, qword ptr [g_toolDispatch + r12*8]
+        lea     rax, [g_toolDispatch]                  ; RIP-relative base
+        mov     rax, qword ptr [rax + r12*8]           ; register-relative lookup
         test    rax, rax
         jnz     _te_call
         mov     rcx, r14
@@ -969,7 +993,8 @@ _ld_enum:
 
 _ld_loop:
         ; append cFileName (offset 44 in WIN32_FIND_DATAA) + CRLF
-        lea     r8, [g_findData + WFDA_cFileName]
+        lea     r8, [g_findData]
+        add     r8, WFDA_cFileName
         mov     rcx, r12
         mov     rdx, r14
         mov     r9,  r13
@@ -1183,7 +1208,8 @@ _rc_read_pipe:
 _rc_pipe_loop:
         ; ReadFile(hReadPipe, &g_pipeBuf + rbx, TOOL_BUF_SIZE - rbx - 1, &bytesRead, NULL)
         mov     rcx, qword ptr [g_cmdPipe]
-        lea     rdx, [g_pipeBuf + rbx]
+        lea     rdx, [g_pipeBuf]                       ; RIP-relative base
+        add     rdx, rbx                               ; register-relative offset
         mov     r8,  TOOL_BUF_SIZE
         sub     r8,  rbx
         dec     r8
@@ -1201,7 +1227,8 @@ _rc_pipe_loop:
         jmp     _rc_pipe_loop
 
 _rc_pipe_done:
-        mov     byte ptr [g_pipeBuf + rbx], 0
+        lea     rax, [g_pipeBuf]                       ; RIP-relative base
+        mov     byte ptr [rax + rbx], 0                ; register-relative store
 
         ; GetExitCodeProcess
         lea     rdi, [g_toolBytesWritten]   ; reuse as exit code ptr
@@ -1567,17 +1594,20 @@ _sc_enum:
         jnz     _sc_next
 
         ; Check extension match if ext is non-empty
-        lea     rcx, [g_findData + WFDA_cFileName]
+        lea     rcx, [g_findData]
+        add     rcx, WFDA_cFileName
         ; rcx points to file name; find last '.' in it
         call    _StrLen          ; rax = length of filename
         mov     r10d, eax       ; save length
         ; scan backwards for '.'
         dec     r10d
         jl      _sc_next        ; empty name
+        lea     rax, [g_findData]                      ; RIP-relative base for ext scan loop
+        add     rax, WFDA_cFileName
 _sc_ext_scan:
         test    r10d, r10d
         jl      _sc_next
-        movzx   edx, byte ptr [g_findData + WFDA_cFileName + r10]
+        movzx   edx, byte ptr [rax + r10]              ; register-relative byte load
         cmp     dl, '.'
         je      _sc_ext_found
         dec     r10d
@@ -1588,7 +1618,9 @@ _sc_ext_found:
         test    al, al
         jz      _sc_ext_ok
         ; compare extension from filename with r14
-        lea     rcx, [g_findData + WFDA_cFileName + r10]
+        lea     rcx, [g_findData]                      ; RIP-relative base
+        add     rcx, WFDA_cFileName
+        add     rcx, r10                               ; add scan offset
         mov     rdx, r14
 _sc_ext_cmp:
         movzx   eax, byte ptr [rcx]
@@ -1604,18 +1636,23 @@ _sc_ext_cmp:
 _sc_ext_ok:
         ; Build full file path: root + "\" + filename -> g_toolResultBuf as temp area
         ; Use g_toolDynBuf area or just g_pipeBuf+MAX_PATH
-        lea     rcx, [g_pipeBuf + MAX_PATH]     ; use upper half of pipe buf for full path
+        lea     rcx, [g_pipeBuf]               ; use upper half of pipe buf for full path
+        add     rcx, MAX_PATH
         mov     rdx, rsi                         ; root
         call    _StrCopy
         mov     r10, rax                         ; path length
-        mov     byte ptr [g_pipeBuf + MAX_PATH + r10], '\'
+        lea     rax, [g_pipeBuf]                 ; RIP-relative base
+        add     rax, MAX_PATH
+        mov     byte ptr [rax + r10], '\'        ; register-relative store
         inc     r10
-        lea     rcx, [g_pipeBuf + MAX_PATH + r10]
-        lea     rdx, [g_findData + WFDA_cFileName]
+        lea     rcx, [rax + r10]                 ; register-relative address
+        lea     rdx, [g_findData]
+        add     rdx, WFDA_cFileName
         call    _StrCopy
 
         ; Open file
-        lea     rcx, [g_pipeBuf + MAX_PATH]
+        lea     rcx, [g_pipeBuf]
+        add     rcx, MAX_PATH
         mov     edx, GENERIC_READ
         mov     r8d, FILE_SHARE_READ
         xor     r9d, r9d
@@ -1635,7 +1672,8 @@ _sc_ext_ok:
         and     rsp, 0FFFFFFFFFFFFFFF0h     ; realign to 16 before call
         sub     rsp, 32                     ; shadow space
 
-        lea     rcx, [g_pipeBuf + MAX_PATH]
+        lea     rcx, [g_pipeBuf]
+        add     rcx, MAX_PATH
         mov     edx, GENERIC_READ
         mov     r8d, FILE_SHARE_READ
         xor     r9d, r9d
@@ -1653,7 +1691,8 @@ _sc_ext_ok:
         mov     rdx, qword ptr [g_toolDynBuf]
         test    rdx, rdx
         jnz     _sc_has_buf
-        lea     rdx, [g_pipeBuf + MAX_PATH*2]   ; use third quarter of pipe buf
+        lea     rdx, [g_pipeBuf]                ; use third quarter of pipe buf
+        add     rdx, MAX_PATH*2
 _sc_has_buf:
         and     rsp, 0FFFFFFFFFFFFFFF0h
         sub     rsp, 32
@@ -1674,7 +1713,8 @@ _sc_has_buf:
         mov     rdx, qword ptr [g_toolDynBuf]
         test    rdx, rdx
         jnz     _sc_call_search
-        lea     rdx, [g_pipeBuf + MAX_PATH*2]
+        lea     rdx, [g_pipeBuf]
+        add     rdx, MAX_PATH*2
 _sc_call_search:
         ; Call _SearchFileForPattern
         ; Stack args: pResultBuf [rsp+32+32], capacity [rsp+40+32], &writeOffset [rsp+48+32]
@@ -1703,7 +1743,8 @@ _sc_call_search:
         ; Simplify: use a global write offset in g_toolBytesWritten for the duration of this call.
         lea     r8, [g_toolBytesWritten]   ; use this as &writeOffset
         mov     qword ptr [rsp+48], r8
-        lea     rcx, [g_pipeBuf + MAX_PATH]  ; pFilePath
+        lea     rcx, [g_pipeBuf]             ; pFilePath
+        add     rcx, MAX_PATH
         mov     rdx, rdi                     ; pPattern (rdi = pattern buf)
         ; r8 = pContent (set above)
         ; r9 = contentLen (set above as r9d)
@@ -1713,9 +1754,11 @@ _sc_call_search:
         mov     r8, qword ptr [g_toolDynBuf]
         test    r8, r8
         jnz     _sc_cp_ok
-        lea     r8, [g_pipeBuf + MAX_PATH*2]
+        lea     r8, [g_pipeBuf]
+        add     r8, MAX_PATH*2
 _sc_cp_ok:
-        lea     rcx, [g_pipeBuf + MAX_PATH]   ; pFilePath
+        lea     rcx, [g_pipeBuf]              ; pFilePath
+        add     rcx, MAX_PATH
         mov     rdx, rdi                      ; pPattern
         call    _SearchFileForPattern
         add     r13d, eax       ; accumulate match count (r13 was repurposed)
@@ -1876,7 +1919,7 @@ Tool_GetSymbols PROC FRAME
         test    eax, eax
         jnz     _gs_have_file
         xor     eax, eax
-        jmp     _gs_ret
+        jmp     _gs_scan_done
 
 _gs_have_file:
         ; Extract "kind"
@@ -1953,7 +1996,7 @@ _gs_has_buf:
         mov     rcx, rbp
         mov     r14d, dword ptr [g_toolBytesWritten]    ; content length
         mov     byte ptr [rbp + r14], 0                 ; null-terminate
-        movzx   r10d, dword ptr [g_toolBytesWritten]    ; content length
+        mov     r10d, dword ptr [g_toolBytesWritten]    ; content length
         mov     byte ptr [r14 + r10], 0                 ; null-terminate
 
         xor     edi, edi                                 ; symbol count

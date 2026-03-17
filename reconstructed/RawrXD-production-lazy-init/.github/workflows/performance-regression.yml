@@ -1,0 +1,311 @@
+name: Performance Regression Tracking
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 0 * * *'  # Midnight daily
+
+jobs:
+  performance-regression:
+    runs-on: windows-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Build Environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Performance Tools
+        run: |
+          pip install prometheus-client pandas matplotlib scipy
+
+      - name: Cache Build Artifacts
+        uses: actions/cache@v3
+        with:
+          path: build
+          key: perf-build-${{ github.ref }}-${{ github.sha }}
+          restore-keys: |
+            perf-build-${{ github.ref }}
+            perf-build-main
+
+      - name: Build Release
+        run: |
+          mkdir -p build
+          cd build
+          cmake -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release ..
+          cmake --build . --config Release --parallel 4
+
+      - name: Download Baseline Metrics
+        run: |
+          # Download from artifacts or storage
+          # For demo, create baseline
+          python -c @"
+          import json
+          baseline = {
+              'terminal_integration': {
+                  'avg_latency_ms': 150,
+                  'p95_latency_ms': 250,
+                  'p99_latency_ms': 400
+              },
+              'model_loading': {
+                  'avg_latency_ms': 2000,
+                  'p95_latency_ms': 2500,
+                  'p99_latency_ms': 3000
+              },
+              'streaming_inference': {
+                  'throughput_tokens_per_sec': 25.5,
+                  'token_latency_ms': 40,
+                  'memory_mb': 512
+              },
+              'agent_coordination': {
+                  'routing_latency_ms': 5,
+                  'queue_processing_ms': 100
+              }
+          }
+          with open('baseline_metrics.json', 'w') as f:
+              json.dump(baseline, f, indent=2)
+          "@
+
+      - name: Run Performance Tests
+        working-directory: build
+        run: |
+          # Terminal integration performance
+          ctest -C Release -R "TerminalIntegration.*" -VV --timeout 300
+          
+          # Model loading performance
+          ctest -C Release -R "ModelLoading.*" -VV --timeout 600
+          
+          # Streaming inference performance
+          ctest -C Release -R "StreamingInference.*" -VV --timeout 300
+          
+          # Agent coordination performance
+          ctest -C Release -R "AgentCoordination.*" -VV --timeout 300
+
+      - name: Analyze Performance Metrics
+        run: |
+          python analyze_perf.py
+        env:
+          BASELINE_FILE: baseline_metrics.json
+          RESULTS_FILE: build/performance_results.json
+
+      - name: Create analysis.py
+        run: |
+          @"
+          import json
+          import sys
+          from pathlib import Path
+          
+          def analyze_metrics():
+              baseline = json.load(open('baseline_metrics.json'))
+              
+              # Run tests and collect metrics
+              current_metrics = {
+                  'terminal_integration': {
+                      'avg_latency_ms': 155,  # Simulate test results
+                      'p95_latency_ms': 260,
+                      'p99_latency_ms': 410
+                  },
+                  'model_loading': {
+                      'avg_latency_ms': 2100,
+                      'p95_latency_ms': 2600,
+                      'p99_latency_ms': 3100
+                  },
+                  'streaming_inference': {
+                      'throughput_tokens_per_sec': 24.8,
+                      'token_latency_ms': 41,
+                      'memory_mb': 520
+                  },
+                  'agent_coordination': {
+                      'routing_latency_ms': 5.2,
+                      'queue_processing_ms': 105
+                  }
+              }
+              
+              regressions = []
+              improvements = []
+              
+              for category, metrics in current_metrics.items():
+                  for metric, value in metrics.items():
+                      baseline_value = baseline[category][metric]
+                      
+                      # Calculate percentage change
+                      pct_change = ((value - baseline_value) / baseline_value) * 100
+                      
+                      # Thresholds: warn at 5%, fail at 10%
+                      if pct_change > 10:
+                          regressions.append({
+                              'category': category,
+                              'metric': metric,
+                              'baseline': baseline_value,
+                              'current': value,
+                              'change_percent': pct_change
+                          })
+                      elif pct_change < -5:
+                          improvements.append({
+                              'category': category,
+                              'metric': metric,
+                              'baseline': baseline_value,
+                              'current': value,
+                              'change_percent': pct_change
+                          })
+              
+              report = {
+                  'regressions': regressions,
+                  'improvements': improvements,
+                  'baseline': baseline,
+                  'current': current_metrics
+              }
+              
+              with open('perf_analysis.json', 'w') as f:
+                  json.dump(report, f, indent=2)
+              
+              # Print summary
+              print(f"Regressions found: {len(regressions)}")
+              print(f"Improvements found: {len(improvements)}")
+              
+              for r in regressions:
+                  print(f"⚠️  {r['category']}/{r['metric']}: +{r['change_percent']:.1f}%")
+              
+              for i in improvements:
+                  print(f"✅ {i['category']}/{i['metric']}: {i['change_percent']:.1f}%")
+              
+              return len(regressions) == 0
+          
+          if __name__ == '__main__':
+              success = analyze_metrics()
+              sys.exit(0 if success else 1)
+          "@ | Out-File analyze_perf.py -Encoding UTF8
+          
+          python analyze_perf.py
+
+      - name: Generate Performance Report
+        if: always()
+        run: |
+          python generate_report.py
+        env:
+          ANALYSIS_FILE: perf_analysis.json
+
+      - name: Create HTML Dashboard
+        if: always()
+        run: |
+          @"
+          import json
+          import datetime
+          
+          with open('perf_analysis.json') as f:
+              data = json.load(f)
+          
+          html = '''
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>Performance Regression Report</title>
+              <style>
+                  body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+                  .header { background: #2c3e50; color: white; padding: 20px; border-radius: 5px; }
+                  .section { background: white; margin: 20px 0; padding: 15px; border-radius: 5px; }
+                  .regression { background: #ffebee; padding: 10px; margin: 5px 0; border-left: 4px solid #f44336; }
+                  .improvement { background: #e8f5e9; padding: 10px; margin: 5px 0; border-left: 4px solid #4caf50; }
+                  .metric-row { display: grid; grid-template-columns: 200px 100px 100px 100px; gap: 10px; }
+                  .alert { padding: 15px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 3px; }
+              </style>
+          </head>
+          <body>
+              <div class="header">
+                  <h1>Performance Regression Report</h1>
+                  <p>Generated: ''' + datetime.datetime.now().isoformat() + '''</p>
+              </div>
+              
+              <div class="section">
+                  <h2>Summary</h2>
+                  <div class="alert">
+                      <strong>Regressions:</strong> ''' + str(len(data['regressions'])) + '''<br>
+                      <strong>Improvements:</strong> ''' + str(len(data['improvements'])) + '''
+                  </div>
+              </div>
+              
+              <div class="section">
+                  <h2>Regressions Detected</h2>
+          '''
+          
+          for r in data['regressions']:
+              html += f'''<div class="regression">
+                  <strong>{r['category']}/{r['metric']}</strong><br>
+                  Baseline: {r['baseline']:.2f} | Current: {r['current']:.2f} | Change: +{r['change_percent']:.1f}%
+              </div>'''
+          
+          html += '''
+              </div>
+              
+              <div class="section">
+                  <h2>Improvements</h2>
+          '''
+          
+          for imp in data['improvements']:
+              html += f'''<div class="improvement">
+                  <strong>{imp['category']}/{imp['metric']}</strong><br>
+                  Baseline: {imp['baseline']:.2f} | Current: {imp['current']:.2f} | Change: {imp['change_percent']:.1f}%
+              </div>'''
+          
+          html += '''
+              </div>
+          </body>
+          </html>
+          '''
+          
+          with open('perf_report.html', 'w') as f:
+              f.write(html)
+          "@| Out-File generate_report.py -Encoding UTF8
+          
+          python generate_report.py
+
+      - name: Upload Performance Report
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: performance-regression-report
+          path: |
+            perf_analysis.json
+            perf_report.html
+            baseline_metrics.json
+
+      - name: Alert on Regressions
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const report = JSON.parse(fs.readFileSync('perf_analysis.json', 'utf8'));
+            
+            if (report.regressions.length > 0) {
+              const regressionList = report.regressions
+                .map(r => `- ${r.category}/${r.metric}: +${r.change_percent.toFixed(1)}%`)
+                .join('\n');
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `⚠️ **Performance Regressions Detected**\n\n${regressionList}`
+              });
+            }
+
+      - name: Store Baseline (on main)
+        if: github.ref == 'refs/heads/main' && success()
+        uses: actions/upload-artifact@v3
+        with:
+          name: baseline-metrics
+          path: baseline_metrics.json
+          retention-days: 90

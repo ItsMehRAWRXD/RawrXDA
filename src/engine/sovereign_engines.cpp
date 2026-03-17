@@ -27,7 +27,7 @@ static void dequant_tensor(const TensorInfo* t, float* dst, size_t max_floats) {
             size_t nblocks = t->size / sizeof(block_q4_0);
             size_t total = nblocks * 32;
             if (total > max_floats) nblocks = max_floats / 32;
-            GGUFLoader::dequantize_q4_0(dst, (const block_q4_0*)t->data,
+            EngineGGUFLoader::dequantize_q4_0(dst, (const block_q4_0*)t->data,
                                         (int)(nblocks * 32));
             break;
         }
@@ -35,7 +35,7 @@ static void dequant_tensor(const TensorInfo* t, float* dst, size_t max_floats) {
             size_t nblocks = t->size / sizeof(block_q8_0);
             size_t total = nblocks * 32;
             if (total > max_floats) nblocks = max_floats / 32;
-            GGUFLoader::dequantize_q8_0(dst, (const block_q8_0*)t->data,
+            EngineGGUFLoader::dequantize_q8_0(dst, (const block_q8_0*)t->data,
                                         (int)(nblocks * 32));
             break;
         }
@@ -301,7 +301,7 @@ public:
         if (path.empty()) return false;
 
         // Attempt GGUF model load via memory-mapped loader
-        m_loader = std::make_unique<GGUFLoader>();
+        m_loader = std::make_unique<EngineGGUFLoader>();
         if (!m_loader->load(path.c_str())) {
             char msg[512];
             snprintf(msg, sizeof(msg),
@@ -342,7 +342,7 @@ public:
     const char* name() override { return "Sovereign-800B"; }
 
 private:
-    std::unique_ptr<GGUFLoader> m_loader;
+    std::unique_ptr<EngineGGUFLoader> m_loader;
     std::string m_modelPath;
     bool m_loaded = false;
 };
@@ -487,7 +487,7 @@ public:
     bool load_model(const std::string& path) override {
         if (path.empty()) return false;
 
-        m_loader = std::make_unique<GGUFLoader>();
+        m_loader = std::make_unique<EngineGGUFLoader>();
         if (!m_loader->load(path.c_str())) {
             char msg[512];
             snprintf(msg, sizeof(msg),
@@ -517,7 +517,7 @@ public:
     const char* name() override { return "Sovereign-Small"; }
 
 private:
-    std::unique_ptr<GGUFLoader> m_loader;
+    std::unique_ptr<EngineGGUFLoader> m_loader;
     std::string m_modelPath;
     bool m_loaded = false;
 };

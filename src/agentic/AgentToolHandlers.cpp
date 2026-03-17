@@ -161,10 +161,11 @@ ToolCallResult AgentToolHandlers::ToolReadFile(const json& args) {
     file.close();
     std::string content = ss.str();
 
-    ToolCallResult result = ToolCallResult::Ok(content, {
-        {"lines", CountLines(content)},
-        {"size_bytes", content.size()}
-    });
+    nlohmann::json res_metadata = nlohmann::json::object();
+    res_metadata["lines"] = CountLines(content);
+    res_metadata["size_bytes"] = content.size();
+
+    ToolCallResult result = ToolCallResult::Ok(content, res_metadata);
     result.filePath = path;
     result.bytesRead = content.size();
     return result;
@@ -220,9 +221,14 @@ ToolCallResult AgentToolHandlers::WriteFile(const json& args) {
     file.write(content.data(), content.size());
     file.close();
 
+    nlohmann::json res_metadata = nlohmann::json::object();
+    res_metadata["lines"] = CountLines(content);
+    res_metadata["size_bytes"] = content.size();
+    res_metadata["created"] = !existed;
+
     ToolCallResult result = ToolCallResult::Ok(
         existed ? "File overwritten successfully" : "File created successfully",
-        {{"lines", CountLines(content)}, {"size_bytes", content.size()}, {"created", !existed}}
+        res_metadata
     );
     result.filePath = path;
     result.bytesWritten = content.size();
@@ -303,13 +309,14 @@ ToolCallResult AgentToolHandlers::ReplaceInFile(const json& args) {
         msg += " (WARNING: multiple matches found, only first replaced)";
     }
 
-    ToolCallResult result = ToolCallResult::Ok(msg, {
-        {"old_length", oldStr.size()},
-        {"new_length", newStr.size()},
-        {"position", pos},
-        {"multiple_matches", multipleMatches},
-        {"line_delta", linesChanged}
-    });
+    nlohmann::json res_metadata = nlohmann::json::object();
+    res_metadata["old_length"] = oldStr.size();
+    res_metadata["new_length"] = newStr.size();
+    res_metadata["position"] = pos;
+    res_metadata["multiple_matches"] = multipleMatches;
+    res_metadata["line_delta"] = linesChanged;
+
+    ToolCallResult result = ToolCallResult::Ok(msg, res_metadata);
     result.filePath = path;
     result.bytesWritten = newContent.size();
     result.linesAffected = std::abs(linesChanged) + CountLines(newStr);
@@ -352,11 +359,12 @@ ToolCallResult AgentToolHandlers::ListDir(const json& args) {
         return ToolCallResult::Error(std::string("Directory listing failed: ") + ex.what());
     }
 
-    return ToolCallResult::Ok(listing.str(), {
-        {"files", fileCount},
-        {"directories", dirCount},
-        {"total", fileCount + dirCount}
-    });
+    nlohmann::json res_metadata = nlohmann::json::object();
+    res_metadata["files"] = fileCount;
+    res_metadata["directories"] = dirCount;
+    res_metadata["total"] = fileCount + dirCount;
+
+    return ToolCallResult::Ok(listing.str(), res_metadata);
 }
 
 // ============================================================================
@@ -478,16 +486,23 @@ ToolCallResult AgentToolHandlers::ExecuteCommand(const json& args) {
 
     if (!success && exitCode == WAIT_TIMEOUT) {
         ToolCallResult result = ToolCallResult::TimedOut(output);
-        result.metadata = {{"exit_code", exitCode}, {"elapsed_ms", elapsed}};
+        nlohmann::json res_metadata = nlohmann::json::object();
+        res_metadata["exit_code"] = exitCode;
+        res_metadata["elapsed_ms"] = elapsed;
+        result.metadata = res_metadata;
         return result;
     }
 
+    nlohmann::json res_metadata = nlohmann::json::object();
+    res_metadata["exit_code"] = exitCode;
+    res_metadata["elapsed_ms"] = elapsed;
+
     ToolCallResult result = (exitCode == 0)
-        ? ToolCallResult::Ok(output, {{"exit_code", 0}, {"elapsed_ms", elapsed}})
+        ? ToolCallResult::Ok(output, res_metadata)
         : ToolCallResult::Error("Command exited with code " + std::to_string(exitCode) +
                                 "\n" + output, ToolOutcome::ExecutionError);
     if (exitCode != 0) {
-        result.metadata = {{"exit_code", exitCode}, {"elapsed_ms", elapsed}};
+        result.metadata = res_metadata;
         result.output = output; // Include output even on error
     }
     return result;
@@ -593,7 +608,9 @@ ToolCallResult AgentToolHandlers::SearchCode(const json& args) {
     }
 
     if (hitCount == 0) {
-        return ToolCallResult::Ok("No matches found for: " + query, {{"matches", 0}});
+        nlohmann::json zero_matches = nlohmann::json::object();
+        zero_matches["matches"] = 0;
+        return ToolCallResult::Ok("No matches found for: " + query, zero_matches);
     }
 
     std::string truncMsg;
@@ -601,10 +618,11 @@ ToolCallResult AgentToolHandlers::SearchCode(const json& args) {
         truncMsg = "\n[Results truncated at " + std::to_string(maxResults) + " matches]";
     }
 
-    return ToolCallResult::Ok(results.str() + truncMsg, {
-        {"matches", hitCount},
-        {"truncated", hitCount >= maxResults}
-    });
+    nlohmann::json res_metadata = nlohmann::json::object();
+    res_metadata["matches"] = hitCount;
+    res_metadata["truncated"] = (hitCount >= maxResults);
+
+    return ToolCallResult::Ok(results.str() + truncMsg, res_metadata);
 }
 
 // ============================================================================
@@ -627,14 +645,17 @@ ToolCallResult AgentToolHandlers::GetDiagnostics(const json& args) {
         uint32_t exitCode = 0;
         RunProcess(cmdLine, 30000, output, exitCode);
 
-        return ToolCallResult::Ok(output.empty() ? "No diagnostics" : output, {
-            {"file", file},
-            {"exit_code", exitCode},
-            {"has_errors", exitCode != 0}
-        });
+        nlohmann::json res_metadata = nlohmann::json::object();
+        res_metadata["file"] = file;
+        res_metadata["exit_code"] = exitCode;
+        res_metadata["has_errors"] = (exitCode != 0);
+
+        return ToolCallResult::Ok(output.empty() ? "No diagnostics" : output, res_metadata);
     }
 
-    return ToolCallResult::Ok("Diagnostics not available for file type: " + ext);
+    nlohmann::json res_metadata = nlohmann::json::object();
+    res_metadata["file_type"] = ext;
+    return ToolCallResult::Ok("Diagnostics not available for file type: " + ext, res_metadata);
 }
 
 // ============================================================================
@@ -652,121 +673,188 @@ json AgentToolHandlers::GetAllSchemas() {
     };
 
     // read_file
-    tools.push_back({
-        {"type", "function"},
-        {"function", {
-            {"name", "read_file"},
-            {"description", "Read the content of a file at a specific path."},
-            {"parameters", {
-                {"type", "object"},
-                {"properties", {
-                    {"path", {{"type", "string"}, {"description", "Absolute path to the file"}}}
-                }},
-                {"required", jstrArr({"path"})}
-            }}
-        }}
-    });
+    json rf = json::object();
+    rf["type"] = "function";
+    json rf_f = json::object();
+    rf_f["name"] = "read_file";
+    rf_f["description"] = "Read the content of a file at a specific path.";
+    json rf_p = json::object();
+    rf_p["type"] = "object";
+    json rf_prop = json::object();
+    json rf_path = json::object();
+    rf_path["type"] = "string";
+    rf_path["description"] = "Absolute path to the file";
+    nlohmann::json metadata = nlohmann::json::object();
+    metadata["path"] = rf_path;
+    rf_prop["path"] = metadata["path"];
+    rf_p["properties"] = rf_prop;
+    rf_p["required"] = jstrArr({"path"});
+    rf_f["parameters"] = rf_p;
+    rf["function"] = rf_f;
+    tools.push_back(rf);
 
     // write_file
-    tools.push_back({
-        {"type", "function"},
-        {"function", {
-            {"name", "write_file"},
-            {"description", "Create a new file or overwrite an existing one. Backup is created automatically."},
-            {"parameters", {
-                {"type", "object"},
-                {"properties", {
-                    {"path", {{"type", "string"}, {"description", "Absolute path for the file"}}},
-                    {"content", {{"type", "string"}, {"description", "Complete file content to write"}}}
-                }},
-                {"required", jstrArr({"path", "content"})}
-            }}
-        }}
-    });
+    json wf = json::object();
+    wf["type"] = "function";
+    json wf_f = json::object();
+    wf_f["name"] = "write_file";
+    wf_f["description"] = "Create a new file or overwrite an existing one. Backup is created automatically.";
+    json wf_p = json::object();
+    wf_p["type"] = "object";
+    json wf_prop = json::object();
+    json wf_path = json::object();
+    wf_path["type"] = "string";
+    wf_path["description"] = "Absolute path for the file";
+    json wf_cont = json::object();
+    wf_cont["type"] = "string";
+    wf_cont["description"] = "Complete file content to write";
+
+    nlohmann::json wf_metadata = nlohmann::json::object();
+    wf_metadata["path"] = wf_path;
+    wf_metadata["content"] = wf_cont;
+    wf_prop["path"] = wf_metadata["path"];
+    wf_prop["content"] = wf_metadata["content"];
+
+    wf_p["properties"] = wf_prop;
+    wf_p["required"] = jstrArr({"path", "content"});
+    wf_f["parameters"] = wf_p;
+    wf["function"] = wf_f;
+    tools.push_back(wf);
 
     // replace_in_file
-    tools.push_back({
-        {"type", "function"},
-        {"function", {
-            {"name", "replace_in_file"},
-            {"description", "Search and replace a block of text in a file. Include 3+ lines of context in old_string for uniqueness."},
-            {"parameters", {
-                {"type", "object"},
-                {"properties", {
-                    {"path", {{"type", "string"}, {"description", "Absolute path to the file"}}},
-                    {"old_string", {{"type", "string"}, {"description", "Exact text to find (include surrounding context)"}}},
-                    {"new_string", {{"type", "string"}, {"description", "Replacement text"}}}
-                }},
-                {"required", jstrArr({"path", "old_string", "new_string"})}
-            }}
-        }}
-    });
+    json rif = json::object();
+    rif["type"] = "function";
+    json rif_f = json::object();
+    rif_f["name"] = "replace_in_file";
+    rif_f["description"] = "Search and replace a block of text in a file. Include 3+ lines of context in old_string for uniqueness.";
+    json rif_p = json::object();
+    rif_p["type"] = "object";
+    json rif_prop = json::object();
+    json rif_path = json::object();
+    rif_path["type"] = "string";
+    rif_path["description"] = "Absolute path to the file";
+    json rif_old = json::object();
+    rif_old["type"] = "string";
+    rif_old["description"] = "Exact text to find (include surrounding context)";
+    json rif_new = json::object();
+    rif_new["type"] = "string";
+    rif_new["description"] = "Replacement text";
+
+    nlohmann::json rif_metadata = nlohmann::json::object();
+    rif_metadata["path"] = rif_path;
+    rif_metadata["old_string"] = rif_old;
+    rif_metadata["new_string"] = rif_new;
+    rif_prop["path"] = rif_metadata["path"];
+    rif_prop["old_string"] = rif_metadata["old_string"];
+    rif_prop["new_string"] = rif_metadata["new_string"];
+
+    rif_p["properties"] = rif_prop;
+    rif_p["required"] = jstrArr({"path", "old_string", "new_string"});
+    rif_f["parameters"] = rif_p;
+    rif["function"] = rif_f;
+    tools.push_back(rif);
 
     // list_dir
-    tools.push_back({
-        {"type", "function"},
-        {"function", {
-            {"name", "list_dir"},
-            {"description", "List the contents of a directory."},
-            {"parameters", {
-                {"type", "object"},
-                {"properties", {
-                    {"path", {{"type", "string"}, {"description", "Absolute path to the directory"}}}
-                }},
-                {"required", jstrArr({"path"})}
-            }}
-        }}
-    });
+    json ld = json::object();
+    ld["type"] = "function";
+    json ld_f = json::object();
+    ld_f["name"] = "list_dir";
+    ld_f["description"] = "List the contents of a directory.";
+    json ld_p = json::object();
+    ld_p["type"] = "object";
+    json ld_prop = json::object();
+    json ld_path = json::object();
+    ld_path["type"] = "string";
+    ld_path["description"] = "Absolute path to the directory";
+
+    nlohmann::json ld_metadata = nlohmann::json::object();
+    ld_metadata["path"] = ld_path;
+    ld_prop["path"] = ld_metadata["path"];
+
+    ld_p["properties"] = ld_prop;
+    ld_p["required"] = jstrArr({"path"});
+    ld_f["parameters"] = ld_p;
+    ld["function"] = ld_f;
+    tools.push_back(ld);
 
     // execute_command
-    tools.push_back({
-        {"type", "function"},
-        {"function", {
-            {"name", "execute_command"},
-            {"description", "Run a command in the terminal (cmd.exe). Use for builds, tests, git."},
-            {"parameters", {
-                {"type", "object"},
-                {"properties", {
-                    {"command", {{"type", "string"}, {"description", "Command to execute"}}},
-                    {"timeout", {{"type", "number"}, {"description", "Timeout in milliseconds (default 30000, max 300000)"}}}
-                }},
-                {"required", jstrArr({"command"})}
-            }}
-        }}
-    });
+    json ec = json::object();
+    ec["type"] = "function";
+    json ec_f = json::object();
+    ec_f["name"] = "execute_command";
+    ec_f["description"] = "Run a command in the terminal (cmd.exe). Use for builds, tests, git.";
+    json ec_p = json::object();
+    ec_p["type"] = "object";
+    json ec_prop = json::object();
+    json ec_cmd = json::object();
+    ec_cmd["type"] = "string";
+    ec_cmd["description"] = "Command to execute";
+    json ec_to = json::object();
+    ec_to["type"] = "number";
+    ec_to["description"] = "Timeout in milliseconds (default 30000, max 300000)";
+
+    nlohmann::json ec_metadata = nlohmann::json::object();
+    ec_metadata["command"] = ec_cmd;
+    ec_metadata["timeout"] = ec_to;
+    ec_prop["command"] = ec_metadata["command"];
+    ec_prop["timeout"] = ec_metadata["timeout"];
+
+    ec_p["properties"] = ec_prop;
+    ec_p["required"] = jstrArr({"command"});
+    ec_f["parameters"] = ec_p;
+    ec["function"] = ec_f;
+    tools.push_back(ec);
 
     // search_code
-    tools.push_back({
-        {"type", "function"},
-        {"function", {
-            {"name", "search_code"},
-            {"description", "Search the codebase for a text pattern. Returns file:line: context matches."},
-            {"parameters", {
-                {"type", "object"},
-                {"properties", {
-                    {"query", {{"type", "string"}, {"description", "Text pattern to search for"}}},
-                    {"file_pattern", {{"type", "string"}, {"description", "File extension filter (e.g. *.cpp, *.h). Default: *.*"}}}
-                }},
-                {"required", jstrArr({"query"})}
-            }}
-        }}
-    });
+    json sc = json::object();
+    sc["type"] = "function";
+    json sc_f = json::object();
+    sc_f["name"] = "search_code";
+    sc_f["description"] = "Search the codebase for a text pattern. Returns file:line: context matches.";
+    json sc_p = json::object();
+    sc_p["type"] = "object";
+    json sc_prop = json::object();
+    json sc_q = json::object();
+    sc_q["type"] = "string";
+    sc_q["description"] = "Text pattern to search for";
+    json sc_pat = json::object();
+    sc_pat["type"] = "string";
+    sc_pat["description"] = "File extension filter (e.g. *.cpp, *.h). Default: *.*";
+
+    nlohmann::json sc_metadata = nlohmann::json::object();
+    sc_metadata["query"] = sc_q;
+    sc_metadata["file_pattern"] = sc_pat;
+    sc_prop["query"] = sc_metadata["query"];
+    sc_prop["file_pattern"] = sc_metadata["file_pattern"];
+
+    sc_p["properties"] = sc_prop;
+    sc_p["required"] = jstrArr({"query"});
+    sc_f["parameters"] = sc_p;
+    sc["function"] = sc_f;
+    tools.push_back(sc);
 
     // get_diagnostics
-    tools.push_back({
-        {"type", "function"},
-        {"function", {
-            {"name", "get_diagnostics"},
-            {"description", "Get compiler errors and warnings for a source file."},
-            {"parameters", {
-                {"type", "object"},
-                {"properties", {
-                    {"file", {{"type", "string"}, {"description", "Absolute path to the source file"}}}
-                }},
-                {"required", jstrArr({"file"})}
-            }}
-        }}
-    });
+    json gd = json::object();
+    gd["type"] = "function";
+    json gd_f = json::object();
+    gd_f["name"] = "get_diagnostics";
+    gd_f["description"] = "Get compiler errors and warnings for a source file.";
+    json gd_p = json::object();
+    gd_p["type"] = "object";
+    json gd_prop = json::object();
+    json gd_file = json::object();
+    gd_file["type"] = "string";
+    gd_file["description"] = "Absolute path to the source file";
+
+    nlohmann::json gd_metadata = nlohmann::json::object();
+    gd_metadata["file"] = gd_file;
+    gd_prop["file"] = gd_metadata["file"];
+
+    gd_p["properties"] = gd_prop;
+    gd_p["required"] = jstrArr({"file"});
+    gd_f["parameters"] = gd_p;
+    gd["function"] = gd_f;
+    tools.push_back(gd);
 
     return tools;
 }

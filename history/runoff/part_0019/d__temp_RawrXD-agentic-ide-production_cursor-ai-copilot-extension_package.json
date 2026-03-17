@@ -1,0 +1,481 @@
+{
+  "name": "cursor-ai-copilot",
+  "displayName": "Cursor AI Copilot",
+  "description": "Advanced AI-powered code assistant integrated with ChatGPT for VS Code - Generate, explain, refactor, and optimize code with intelligent AI assistance",
+  "version": "1.0.0",
+  "publisher": "RawrXD",
+  "extensionKind": [
+    "ui"
+  ],
+  "icon": "assets/icon.png",
+  "galleryBanner": {
+    "color": "#1E1E1E",
+    "theme": "dark"
+  },
+  "badges": [
+    {
+      "url": "https://img.shields.io/badge/VS%20Code-%3E%3D1.80-blue",
+      "href": "https://code.visualstudio.com",
+      "description": "VS Code Version"
+    },
+    {
+      "url": "https://img.shields.io/badge/OpenAI-GPT--4-green",
+      "href": "https://openai.com",
+      "description": "AI Model"
+    },
+    {
+      "url": "https://img.shields.io/badge/License-MIT-yellow",
+      "href": "https://opensource.org/licenses/MIT",
+      "description": "License"
+    }
+  ],
+  "screenshots": [
+    {
+      "path": "assets/screenshot1.png",
+      "caption": "Chat panel with AI responses"
+    },
+    {
+      "path": "assets/screenshot2.png",
+      "caption": "Hover analysis tooltip"
+    },
+    {
+      "path": "assets/screenshot3.png",
+      "caption": "Code generation interface"
+    },
+    {
+      "path": "assets/screenshot4.png",
+      "caption": "Refactoring workflow"
+    }
+  ],
+  "preview": true,
+  "sponsor": {
+    "url": "https://github.com/sponsors/RawrXD"
+  },
+  "qna": "marketplace",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RawrXD/cursor-ai-copilot.git",
+    "directory": "cursor-ai-copilot-extension"
+  },
+  "bugs": {
+    "url": "https://github.com/RawrXD/cursor-ai-copilot/issues"
+  },
+  "homepage": "https://github.com/RawrXD/cursor-ai-copilot#readme",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "AI",
+    "Code Generators",
+    "Programming Languages",
+    "Formatters",
+    "Education",
+    "Debuggers",
+    "Snippets",
+    "Other"
+  ],
+  "keywords": [
+    "ai",
+    "copilot",
+    "chatgpt",
+    "code-generation",
+    "code-analysis",
+    "refactoring",
+    "optimization",
+    "chat",
+    "completion",
+    "intellisense",
+    "productivity",
+    "openai",
+    "gpt-4",
+    "gpt-3.5",
+    "programming",
+    "development",
+    "coding",
+    "assistant",
+    "helper",
+    "explain",
+    "generate",
+    "refactor",
+    "optimize"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onCommand:cursor-ai-copilot.activate",
+    "onLanguage:javascript",
+    "onLanguage:typescript",
+    "onLanguage:python",
+    "onLanguage:cpp",
+    "onLanguage:java",
+    "onLanguage:csharp",
+    "onLanguage:php",
+    "onLanguage:ruby",
+    "onLanguage:go",
+    "onLanguage:rust",
+    "onLanguage:swift",
+    "onLanguage:kotlin"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "cursor-ai-copilot.activate",
+        "title": "Activate Cursor AI Copilot",
+        "category": "Cursor AI"
+      },
+      {
+        "command": "cursor-ai-copilot.chat",
+        "title": "Open AI Chat",
+        "category": "Cursor AI",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "cursor-ai-copilot.explain",
+        "title": "Explain Code",
+        "category": "Cursor AI",
+        "icon": "$(book)"
+      },
+      {
+        "command": "cursor-ai-copilot.refactor",
+        "title": "Refactor Code",
+        "category": "Cursor AI",
+        "icon": "$(wrench)"
+      },
+      {
+        "command": "cursor-ai-copilot.generate",
+        "title": "Generate Code",
+        "category": "Cursor AI",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "cursor-ai-copilot.optimize",
+        "title": "Optimize Code",
+        "category": "Cursor AI",
+        "icon": "$(rocket)"
+      },
+      {
+        "command": "cursor-ai-copilot.authenticate",
+        "title": "Authenticate with ChatGPT",
+        "category": "Cursor AI"
+      },
+      {
+        "command": "cursor-ai-copilot.logout",
+        "title": "Logout",
+        "category": "Cursor AI"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "cursor-ai-copilot.chat",
+        "key": "ctrl+shift+a",
+        "mac": "cmd+shift+a",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "cursor-ai-copilot.explain",
+        "key": "ctrl+shift+e",
+        "mac": "cmd+shift+e",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "cursor-ai-copilot.refactor",
+        "key": "ctrl+shift+r",
+        "mac": "cmd+shift+r",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "cursor-ai-copilot.optimize",
+        "key": "ctrl+shift+o",
+        "mac": "cmd+shift+o",
+        "when": "editorHasSelection"
+      },
+      {
+        "command": "cursor-ai-copilot.generate",
+        "key": "ctrl+shift+g",
+        "mac": "cmd+shift+g",
+        "when": "editorTextFocus"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "cursor-ai-copilot.explain",
+          "group": "1_modification",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "cursor-ai-copilot.refactor",
+          "group": "1_modification",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "cursor-ai-copilot.optimize",
+          "group": "1_modification",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "cursor-ai-copilot.generate",
+          "group": "1_modification"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "cursor-ai-copilot.chat"
+        },
+        {
+          "command": "cursor-ai-copilot.explain",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "cursor-ai-copilot.refactor",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "cursor-ai-copilot.optimize",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "cursor-ai-copilot.generate"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Cursor AI Copilot",
+      "properties": {
+        "cursor-ai-copilot.apiEndpoint": {
+          "type": "string",
+          "default": "https://api.openai.com/v1",
+          "description": "The API endpoint for ChatGPT integration",
+          "markdownDescription": "The API endpoint for ChatGPT integration. Default is OpenAI's official endpoint."
+        },
+        "cursor-ai-copilot.apiKey": {
+          "type": "string",
+          "description": "Your ChatGPT API key (use secrets manager)",
+          "default": "",
+          "markdownDescription": "Your ChatGPT API key. This is stored securely in VS Code's secret storage."
+        },
+        "cursor-ai-copilot.model": {
+          "type": "string",
+          "default": "gpt-4o",
+          "enum": [
+            "gpt-5.2",
+            "gpt-5.2-pro",
+            "gpt-5.1",
+            "gpt-5",
+            "gpt-4o",
+            "gpt-4o-2024-11-20",
+            "gpt-3.5-turbo",
+            "gpt-3.5-turbo-1106",
+            "o1",
+            "o3-mini",
+            "o3",
+            "gpt-audio",
+            "gpt-audio-mini",
+            "text-embedding-3-large",
+            "text-embedding-3-small",
+            "dall-e-3",
+            "dall-e-2",
+            "sora-2",
+            "sora-2-pro",
+            "whisper-1",
+            "tts-1",
+            "tts-1-hd",
+            "davinci-002",
+            "babbage-002"
+          ],
+          "enumDescriptions": [
+            "GPT-5.2 - Latest flagship model with advanced reasoning",
+            "GPT-5.2 Pro - Enhanced version of GPT-5.2",
+            "GPT-5.1 - Previous generation flagship model",
+            "GPT-5 - Earlier version with strong capabilities",
+            "GPT-4o - Optimized GPT-4 model with vision support",
+            "GPT-4o 2024-11-20 - November 2024 stable version",
+            "GPT-3.5 Turbo - Fast and cost-effective model",
+            "GPT-3.5 Turbo 1106 - Optimized November version",
+            "O1 - Advanced reasoning model for complex problems",
+            "O3-Mini - Lightweight reasoning model",
+            "O3 - Full-featured reasoning model",
+            "GPT Audio - Audio processing and speech model",
+            "GPT Audio Mini - Lightweight audio model",
+            "Text Embedding 3 Large - High-quality embeddings",
+            "Text Embedding 3 Small - Efficient embeddings",
+            "DALL-E 3 - Advanced image generation",
+            "DALL-E 2 - Image generation model",
+            "Sora 2 - Video generation model",
+            "Sora 2 Pro - Professional video generation",
+            "Whisper-1 - Speech-to-text model",
+            "TTS-1 - Text-to-speech fast mode",
+            "TTS-1 HD - Text-to-speech high-quality",
+            "Davinci-002 - Base model",
+            "Babbage-002 - Smaller base model"
+          ],
+          "description": "The model to use for completions",
+          "markdownDescription": "The AI model to use for completions. GPT-5.2 or GPT-4o recommended for best results. December 2025 models available."
+        },
+        "cursor-ai-copilot.temperature": {
+          "type": "number",
+          "default": 0.7,
+          "minimum": 0,
+          "maximum": 2,
+          "description": "Controls randomness in code generation",
+          "markdownDescription": "Controls randomness in code generation. Lower values (0.1-0.5) are more deterministic, higher values (0.8-1.5) are more creative."
+        },
+        "cursor-ai-copilot.maxTokens": {
+          "type": "number",
+          "default": 2048,
+          "minimum": 100,
+          "maximum": 8192,
+          "description": "Maximum tokens for API responses",
+          "markdownDescription": "Maximum tokens for API responses. Higher values allow longer responses but cost more."
+        },
+        "cursor-ai-copilot.enableTelemetry": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable usage telemetry (anonymous)",
+          "markdownDescription": "Enable anonymous usage telemetry to help improve the extension."
+        },
+        "cursor-ai-copilot.completionTriggerCharacters": {
+          "type": "string",
+          "default": ". ",
+          "description": "Characters that trigger code completion",
+          "markdownDescription": "Characters that trigger code completion suggestions. Separate multiple characters with spaces."
+        },
+        "cursor-ai-copilot.requestTimeout": {
+          "type": "number",
+          "default": 30000,
+          "minimum": 5000,
+          "maximum": 120000,
+          "description": "API request timeout in milliseconds",
+          "markdownDescription": "Timeout for API requests in milliseconds. Increase if you experience timeout errors."
+        },
+        "cursor-ai-copilot.enableHoverAnalysis": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable hover analysis tooltips",
+          "markdownDescription": "Enable AI-powered analysis when hovering over code elements."
+        },
+        "cursor-ai-copilot.enableCompletions": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable AI-powered code completions",
+          "markdownDescription": "Enable AI-powered code completion suggestions."
+        },
+        "cursor-ai-copilot.showWelcomeMessage": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show welcome message on first activation",
+          "markdownDescription": "Show welcome message when the extension is activated for the first time."
+        },
+        "cursor-ai-copilot.modelSelectionMode": {
+          "type": "string",
+          "default": "recommended",
+          "enum": [
+            "recommended",
+            "all",
+            "chat",
+            "audio",
+            "vision",
+            "embedding"
+          ],
+          "enumDescriptions": [
+            "Show only recommended models (faster startup)",
+            "Show all available OpenAI models",
+            "Show only chat/completion models",
+            "Show only audio and speech models",
+            "Show only vision and image generation models",
+            "Show only embedding models"
+          ],
+          "description": "Filter available models by category",
+          "markdownDescription": "Control which models are displayed in the model selection. Use 'recommended' for faster startup."
+        },
+        "cursor-ai-copilot.enableModelAutoDetection": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically detect and suggest best model for task",
+          "markdownDescription": "When enabled, the extension will automatically suggest the most appropriate model based on your current task."
+        },
+        "cursor-ai-copilot.apiKeySource": {
+          "type": "string",
+          "default": "vscodeSecrets",
+          "enum": [
+            "vscodeSecrets",
+            "environment",
+            "file"
+          ],
+          "enumDescriptions": [
+            "Store in VS Code's secret storage (recommended)",
+            "Read from OPENAI_API_KEY environment variable",
+            "Read from .env file in workspace root"
+          ],
+          "description": "Where to read the OpenAI API key from",
+          "markdownDescription": "Choose the source for your OpenAI API key. VS Code secrets is the most secure option."
+        },
+        "cursor-ai-copilot.cacheModelList": {
+          "type": "boolean",
+          "default": true,
+          "description": "Cache the model list locally",
+          "markdownDescription": "Cache the list of available models to improve startup performance."
+        }
+      }
+    },
+    "views": {
+      "explorer": [
+        {
+          "id": "cursor-ai-copilot.quickActions",
+          "name": "AI Quick Actions",
+          "when": "config.cursor-ai-copilot.enableTelemetry"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "cursor-ai-copilot.quickActions",
+        "contents": "Welcome to Cursor AI Copilot!\n\n[Authenticate with ChatGPT](command:cursor-ai-copilot.authenticate)\n[Open Chat Panel](command:cursor-ai-copilot.chat)\n[Learn More](command:cursor-ai-copilot.activate)"
+      }
+    ]
+  },
+  "capabilities": {
+    "virtualWorkspaces": false,
+    "untrustedWorkspaces": {
+      "supported": true
+    }
+  },
+  "maintainers": [
+    "RawrXD"
+  ],
+  "scripts": {
+    "vscode:prepublish": "npm run esbuild-base -- --minify",
+    "esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --platform=node --format=cjs",
+    "esbuild": "npm run esbuild-base -- --sourcemap",
+    "esbuild-watch": "npm run esbuild-base -- --sourcemap --watch",
+    "pretest": "npm run esbuild && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "vsce": "vsce",
+    "package": "vsce package",
+    "publish": "vsce publish",
+    "postinstall": "echo 'Cursor AI Copilot extension installed successfully!'",
+    "prepackage": "npm run vscode:prepublish",
+    "validate": "npm run lint && npm run compile"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "@types/vscode": "^1.80.0",
+    "@typescript-eslint/eslint-plugin": "^5.59.0",
+    "@typescript-eslint/parser": "^5.59.0",
+    "esbuild": "^0.17.0",
+    "eslint": "^8.40.0",
+    "typescript": "^5.0.0",
+    "vsce": "^2.15.0",
+    "@types/uuid": "^9.0.0"
+  },
+  "dependencies": {
+    "axios": "^1.4.0",
+    "dotenv": "^16.3.1",
+    "uuid": "^9.0.0",
+    "openai": "^4.0.0"
+  }
+}

@@ -1,0 +1,51 @@
+# WebView2 cache (binary artifacts from RawrXD.exe)
+RawrXD.exe.WebView2/
+RawrXD_*.exe.WebView2/
+
+# Build artifacts
+*.exe
+*.obj
+*.pdb
+build-*/
+.vs/
+
+# IDE settings
+.vscode/
+
+# PowerShell module cache
+Modules/
+Modules-Improved/
+
+# Test projects
+test-projects/
+AgenticTest/
+AgenticTestSandbox/
+test-react-agentic/
+
+# Temporary files
+*.log
+logs/
+temp-*.ps1
+latest.log
+out.txt
+
+# Python artifacts
+__pycache__/
+*.pyc
+training_output/
+
+# Backup files
+*.backup
+*.bak
+*.pre_repair.*
+RawrXD.ps1.PIPELINE-BACKUP
+RawrXD.ps1.config
+
+# Solution files (auto-generated)
+*.slnx
+
+# Sensitive configuration
+settings.json
+RawrXDSettings.json
+.env
+.env.example

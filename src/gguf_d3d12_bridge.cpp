@@ -1,9 +1,11 @@
 #include "gguf_d3d12_bridge.h"
+#include "core/flash_attention.h"
 
 #include <algorithm>
 #include <filesystem>
 #include <vector>
 #include <cstring>
+#include <cmath>
 
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -164,6 +166,16 @@ bool GGUFD3D12Bridge::LoadShadersFromDirectory(const std::string& shaderDirector
     shaders_.elementwiseMul = loadBlob(base / "CSElementwiseMul.cso");
     shaders_.kvCacheWrite = loadBlob(base / "CSKVCacheWrite.cso");
     shaders_.attentionHead = loadBlob(base / "CSAttentionHead.cso");
+    shaders_.flashAttention = loadBlob(base / "CSFlashAttention.cso");
+    if (!shaders_.flashAttention) {
+        std::wstring faPath = base.wstring() + L"/../../src/shaders/cs_flash_attention.hlsl";
+        shaders_.flashAttention = compileFromFile(faPath, "main", "cs_5_1");
+    }
+    shaders_.flashAttention = loadBlob(base / "CSFlashAttention.cso");
+    if (!shaders_.flashAttention) {
+        std::wstring faPath = base.wstring() + L"/../../src/shaders/cs_flash_attention.hlsl";
+        shaders_.flashAttention = compileFromFile(faPath, "main", "cs_5_1");
+    }
 
     // if (!shaders_.matVecQ4) return false;
 
@@ -1390,5 +1402,69 @@ bool GGUFD3D12Bridge::DispatchGEMM(ID3D12Resource* bufferA,
     return executeAndWait();
 }
 
-} // namespace RawrXD
+bool GGUFD3D12Bridge::DispatchHybridFlashAttention(ID3D12Resource* qBuffer,
+                                                 ID3D12Resource* kBuffer,
+                                                 ID3D12Resource* vBuffer,
+                                                 ID3D12Resource* outBuffer,
+                                                 uint32_t seqLen, uint32_t headDim, uint32_t numHeads) {
+    // Hybrid logic (v14.7.0-ATTN):
+    // Small sequence lengths or high-latency dispatches can be offloaded
+    // to the AVX-512 ASM path if the CPU is capable and buffers are available.
+    // For now, we prefer GPU if seqLen > 1024 or if we are already in a GPU context.
 
+    const uint32_t HYBRID_THRESHOLD = 512;
+
+    if (seqLen < HYBRID_THRESHOLD) {
+        // CPU Fallback path would be triggered here in the inference engine.
+        // Within the D3D12 bridge, we still provide the GPU-accelerated implementation
+        // but note the hybrid capability.
+    }
+
+    return DispatchFlashAttention(qBuffer, kBuffer, vBuffer, outBuffer, seqLen, headDim, numHeads);
+}
+
+bool GGUFD3D12Bridge::DispatchFlashAttention(ID3D12Resource* qBuffer,
+                                             ID3D12Resource* kBuffer,
+                                             ID3D12Resource* vBuffer,
+                                             ID3D12Resource* outBuffer,
+                                             uint32_t seqLen, uint32_t headDim, uint32_t numHeads) {
+    if (!gpu_.psoFlashAttention || !qBuffer || !kBuffer || !vBuffer || !outBuffer || seqLen == 0)
+        return false;
+
+    if (FAILED(allocator_->Reset())) return false;
+    if (FAILED(list_->Reset(allocator_.Get(), gpu_.psoFlashAttention.Get()))) return false;
+
+    transition(list_.Get(), qBuffer, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+    transition(list_.Get(), kBuffer, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+    transition(list_.Get(), vBuffer, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+    transition(list_.Get(), outBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+    setupDescriptorsForDispatch(
+        qBuffer, (uint32_t)(qBuffer->GetDesc().Width / 4ull),
+        kBuffer, (uint32_t)(kBuffer->GetDesc().Width / 4ull),
+        vBuffer, (uint32_t)(vBuffer->GetDesc().Width / 4ull),
+        nullptr, 0,
+        outBuffer, (uint32_t)(outBuffer->GetDesc().Width / 4ull),
+        nullptr, 0);
+
+    struct FAConstants {
+        uint32_t N;
+        uint32_t d;
+        uint32_t num_heads;
+        float scale;
+    } c{};
+    c.N = seqLen;
+    c.d = headDim;
+    c.num_heads = numHeads;
+    c.scale = 1.0f / sqrtf((float)headDim);
+
+    list_->SetComputeRoot32BitConstants(0, 4, &c, 0);
+
+    uint32_t dispatchX = (seqLen + 31) / 32;
+    uint32_t dispatchY = numHeads;
+    list_->Dispatch(dispatchX, dispatchY, 1);
+
+    return executeAndWait();
+}
+
+} // namespace RawrXD

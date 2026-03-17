@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyCopilot++ IDE - FIXED EDITION</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            height: 100vh;
+        }
+
+        .menu-bar {
+            background: #2d2d30;
+            border-bottom: 1px solid #3e3e42;
+            padding: 8px 16px;
+            font-weight: bold;
+        }
+
+        .main-container {
+            display: flex;
+            height: calc(100vh - 40px);
+        }
+
+        .sidebar {
+            width: 250px;
+            background: #252526;
+            border-right: 1px solid #3e3e42;
+        }
+
+        .sidebar-header {
+            background: #2d2d30;
+            padding: 8px 16px;
+            border-bottom: 1px solid #3e3e42;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .file-explorer {
+            padding: 8px;
+        }
+
+        .file-item {
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 13px;
+            border-radius: 3px;
+        }
+
+        .file-item:hover {
+            background: #3e3e42;
+        }
+
+        .file-item.selected {
+            background: #007acc;
+            color: white;
+        }
+
+        .editor-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .editor-tabs {
+            background: #2d2d30;
+            border-bottom: 1px solid #3e3e42;
+            display: flex;
+        }
+
+        .tab {
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 13px;
+            border-right: 1px solid #3e3e42;
+        }
+
+        .tab:hover {
+            background: #3e3e42;
+        }
+
+        .tab.active {
+            background: #007acc;
+            color: white;
+        }
+
+        .editor-area {
+            flex: 1;
+            position: relative;
+        }
+
+        .editor {
+            width: 100%;
+            height: 100%;
+            display: none;
+        }
+
+        .editor.active {
+            display: block;
+        }
+
+        .simple-editor {
+            width: 100%;
+            height: 100%;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            border: none;
+            padding: 10px;
+            font-family: monospace;
+            resize: none;
+            font-size: 14px;
+        }
+
+        .terminal {
+            height: 150px;
+            background: #0c0c0c;
+            border-top: 1px solid #3e3e42;
+            padding: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            overflow-y: auto;
+        }
+
+        .status-bar {
+            background: #2d2d30;
+            border-top: 1px solid #3e3e42;
+            padding: 4px 8px;
+            font-size: 11px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .ai-panel {
+            width: 300px;
+            background: #252526;
+            border-left: 1px solid #3e3e42;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .ai-header {
+            background: #2d2d30;
+            padding: 8px 16px;
+            border-bottom: 1px solid #3e3e42;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .ai-content {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+        }
+
+        .ai-input {
+            width: 100%;
+            padding: 8px;
+            background: #3e3e42;
+            border: 1px solid #3e3e42;
+            color: #d4d4d4;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .ai-response {
+            margin-top: 16px;
+            padding: 12px;
+            background: #3e3e42;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .success {
+            color: #51cf66;
+        }
+
+        .error {
+            color: #ff6b6b;
+        }
+
+        .loading {
+            color: #ffa500;
+            font-style: italic;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="menu-bar">MyCopilot++ IDE - FIXED EDITION</div>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="sidebar-header">Explorer</div>
+            <div class="file-explorer" id="file-explorer">
+                <div class="loading">Loading files...</div>
+            </div>
+        </div>
+
+        <div class="editor-container">
+            <div class="editor-tabs">
+                <div class="tab active" data-editor="simple">Simple Editor</div>
+            </div>
+
+            <div class="editor-area">
+                <div id="simple-editor" class="editor active">
+                    <textarea class="simple-editor" placeholder="Start coding here..." id="main-textarea"></textarea>
+                </div>
+            </div>
+
+            <div class="terminal" id="terminal">
+                <div class="success">MyCopilot++ IDE Terminal - FIXED EDITION</div>
+                <div>Type commands below:</div>
+                <div>$ <span id="terminal-input" contenteditable="true" style="outline: none;"></span></div>
+            </div>
+        </div>
+
+        <div class="ai-panel">
+            <div class="ai-header">🤖 AI Assistant</div>
+            <div class="ai-content">
+                <div class="ai-response">
+                    <div class="success">Ready!</div>
+                    <div>Hello! I'm your AI coding assistant. I can help with code explanation, debugging, and more. How
+                        can I assist you today?</div>
+                </div>
+                <input type="text" class="ai-input" placeholder="Ask AI anything..." id="ai-input">
+            </div>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <div>Ready - MyCopilot++ IDE FIXED</div>
+        <div>
+            <span id="current-file">No file selected</span> |
+            <span>Simple Editor</span> |
+            <span>UTF-8</span> |
+            <span id="context-window" onclick="ContextWindowWidget.toggle()" style="cursor:pointer;color:#858585"
+                title="Context Window">Ctx: 0/128K ▪ 0%</span>
+        </div>
+    </div>
+
+    <script>
+        // Fixed IDE - Properly executing JavaScript
+        console.log('[FIXED-IDE] Initializing...');
+
+        let files = {
+            "index.html": "<!DOCTYPE html>\n<html>\n<head>\n    <title>My App</title>\n</head>\n<body>\n    <h1>Hello World!</h1>\n</body>\n</html>",
+            "hello.py": "#!/usr/bin/env python3\n\ndef main():\n    print('Hello from Python!')\n\nif __name__ == '__main__':\n    main()",
+            "hello.js": "console.log('Hello from JavaScript!');\n\nfunction greet(name) {\n    return `Hello, ${name}!`;\n}",
+            "styles.css": "body {\n    font-family: Arial, sans-serif;\n    margin: 0;\n    padding: 20px;\n    background-color: #f0f0f0;\n}\n\nh1 {\n    color: #333;\n    text-align: center;\n}",
+            "README.md": "# My App\n\nThis is my awesome application!"
+        };
+
+        let currentFile = null;
+
+        function updateFileExplorer() {
+            const explorer = document.getElementById('file-explorer');
+            explorer.innerHTML = '';
+
+            Object.keys(files).forEach(filename => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                fileItem.textContent = filename;
+                fileItem.onclick = () => openFile(filename);
+                explorer.appendChild(fileItem);
+            });
+        }
+
+        function openFile(filename) {
+            currentFile = filename;
+            document.getElementById('current-file').textContent = filename;
+
+            // Update file selection
+            document.querySelectorAll('.file-item').forEach(item => {
+                item.classList.remove('selected');
+                if (item.textContent === filename) {
+                    item.classList.add('selected');
+                }
+            });
+
+            // Load content into editor
+            const content = files[filename] || '';
+            document.getElementById('main-textarea').value = content;
+
+            console.log(`[FIXED-IDE] Opened file: ${filename}`);
+        }
+
+        function saveFile() {
+            if (currentFile) {
+                files[currentFile] = document.getElementById('main-textarea').value;
+                showTerminalMessage(`Saved ${currentFile}`, 'success');
+            }
+        }
+
+        function showTerminalMessage(message, type = 'info') {
+            const terminal = document.getElementById('terminal');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = type;
+            messageDiv.textContent = `[${type.toUpperCase()}] ${message}`;
+            terminal.appendChild(messageDiv);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        function handleTerminalCommand(command) {
+            const terminal = document.getElementById('terminal');
+            const commandDiv = document.createElement('div');
+            commandDiv.textContent = `$ ${command}`;
+            terminal.appendChild(commandDiv);
+
+            if (command === 'help') {
+                showTerminalMessage('Available commands: help, list, save, clear');
+            } else if (command === 'list') {
+                showTerminalMessage(`Files: ${Object.keys(files).join(', ')}`);
+            } else if (command === 'save') {
+                saveFile();
+            } else if (command === 'clear') {
+                terminal.innerHTML = '<div class="success">MyCopilot++ IDE Terminal - FIXED EDITION</div><div>Type commands below:</div><div>$ <span id="terminal-input" contenteditable="true" style="outline: none;"></span></div>';
+                setupTerminalInput();
+            } else {
+                showTerminalMessage(`Command not found: ${command}. Type 'help' for available commands.`);
+            }
+        }
+
+        function setupTerminalInput() {
+            document.getElementById('terminal-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    const command = e.target.textContent.trim();
+                    if (command) {
+                        handleTerminalCommand(command);
+                        e.target.textContent = '';
+                    }
+                }
+            });
+        }
+
+        function handleAIQuery(query) {
+            const responseDiv = document.querySelector('.ai-response');
+            responseDiv.innerHTML = '<div class="loading">🤖 Processing your request...</div>';
+
+            // Simple AI responses
+            setTimeout(() => {
+                let response = "I'm a simple AI assistant. ";
+
+                if (query.toLowerCase().includes('error') || query.toLowerCase().includes('bug')) {
+                    response += "I can help debug your code. Please share the error message and I'll suggest solutions.";
+                } else if (query.toLowerCase().includes('help')) {
+                    response += "I can help with code completion, debugging, refactoring, and documentation.";
+                } else {
+                    response += "How can I help you with your coding today?";
+                }
+
+                responseDiv.innerHTML = `
+                    <div class="success">🤖 AI Assistant</div>
+                    <div style="color: #569cd6; font-weight: bold; margin: 8px 0;">You: "${query}"</div>
+                    <div style="margin: 8px 0;">${response}</div>
+                    <div style="color: #6a9955; font-size: 11px; font-style: italic;">${new Date().toLocaleTimeString()}</div>
+                `;
+            }, 1000);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log('[FIXED-IDE] DOM loaded, initializing...');
+
+            updateFileExplorer();
+            setupTerminalInput();
+
+            // Setup keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                    e.preventDefault();
+                    saveFile();
+                }
+            });
+
+            // Setup AI input
+            document.getElementById('ai-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    const query = e.target.value;
+                    if (query.trim()) {
+                        handleAIQuery(query);
+                        e.target.value = '';
+                    }
+                }
+            });
+
+            showTerminalMessage('FIXED IDE initialized successfully!', 'success');
+            console.log('[FIXED-IDE] Initialization complete');
+        });
+
+        console.log('[FIXED-IDE] Script loaded and ready');
+    </script>
+
+    <!-- Context Window Token Usage Widget -->
+    <script src="context-window-widget.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            ContextWindowWidget.init({ maxTokens: 128000, position: 'both' });
+            ContextWindowWidget.update({ system: 4864, tools: 11776, userContext: 2048, messages: 34176, toolResults: 46848 });
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,45 @@
+// ═══════════════════ AUTO-GENERATED ENTRIES ═══════════════════
+// Paste these into COMMAND_TABLE in command_registry.hpp
+// Then implement the handler stubs or map to existing handlers.
+
+    X(212, EDIT_TOGGLE_COMMENT            "edit.edit.toggle.comment", "!edit toggle comment", BOTH, "EDIT", handleEditToggleComment, CMD_NONE) \\
+    X(308, SEL_SELECT_ALL_OCCURRENCES     "sel.sel.select.all.occurrences", "!sel select all occurrences", BOTH, "SEL", handleSelSelectAllOccurrences, CMD_NONE) \\
+    X(410, VIEW_SOURCE_CONTROL            "view.view.source.control", "!view source control", BOTH, "VIEW", handleViewSourceControl, CMD_NONE) \\
+    X(411, VIEW_EXTENSIONS                "view.view.extensions", "!view extensions", BOTH, "VIEW", handleViewExtensions, CMD_NONE) \\
+    X(412, VIEW_PROBLEMS                  "view.view.problems", "!view problems", BOTH, "VIEW", handleViewProblems, CMD_NONE) \\
+    X(413, VIEW_OUTPUT                    "view.view.output", "!view output", BOTH, "VIEW", handleViewOutput, CMD_NONE) \\
+    X(416, VIEW_WORD_WRAP                 "view.view.word.wrap", "!view word wrap", BOTH, "VIEW", handleViewWordWrap, CMD_NONE) \\
+    X(417, VIEW_LINE_NUMBERS              "view.view.line.numbers", "!view line numbers", BOTH, "VIEW", handleViewLineNumbers, CMD_NONE) \\
+    X(507, RUN_STEP_OUT                   "run.run.step.out", "!run step out", BOTH, "RUN", handleRunStepOut, CMD_NONE) \\
+    X(508, RUN_CONTINUE                   "run.run.continue", "!run continue", BOTH, "RUN", handleRunContinue, CMD_NONE) \\
+    X(509, RUN_TOGGLE_BREAKPOINT          "run.run.toggle.breakpoint", "!run toggle breakpoint", BOTH, "RUN", handleRunToggleBreakpoint, CMD_NONE) \\
+    X(510, RUN_CLEAR_BREAKPOINTS          "run.run.clear.breakpoints", "!run clear breakpoints", BOTH, "RUN", handleRunClearBreakpoints, CMD_NONE) \\
+    X(602, TERM_SPLIT                     "term.term.split", "!term split", BOTH, "TERM", handleTermSplit, CMD_NONE) \\
+    X(604, TERM_CLEAR                     "term.term.clear", "!term clear", BOTH, "TERM", handleTermClear, CMD_NONE) \\
+    X(605, TERM_KILL                      "term.term.kill", "!term kill", BOTH, "TERM", handleTermKill, CMD_NONE) \\
+    X(606, TERM_PWSH                      "term.term.pwsh", "!term pwsh", BOTH, "TERM", handleTermPwsh, CMD_NONE) \\
+    X(607, TERM_CMD                       "term.term.cmd", "!term cmd", BOTH, "TERM", handleTermCmd, CMD_NONE) \\
+    X(608, TERM_GITBASH                   "term.term.gitbash", "!term gitbash", BOTH, "TERM", handleTermGitbash, CMD_NONE) \\
+    X(609, TERM_RUN_FILE                  "term.term.run.file", "!term run file", BOTH, "TERM", handleTermRunFile, CMD_NONE) \\
+    X(701, HELP_WELCOME                   "help.help.welcome", "!help welcome", BOTH, "HELP", handleHelpWelcome, CMD_NONE) \\
+    X(704, HELP_RELEASE_NOTES             "help.help.release.notes", "!help release notes", BOTH, "HELP", handleHelpReleaseNotes, CMD_NONE) \\
+    X(705, HELP_CHECK_UPDATES             "help.help.check.updates", "!help check updates", BOTH, "HELP", handleHelpCheckUpdates, CMD_NONE) \\
+    X(707, HELP_REPORT_ISSUE              "help.help.report.issue", "!help report issue", BOTH, "HELP", handleHelpReportIssue, CMD_NONE) \\
+    X(708, HELP_TIPS_TRICKS               "help.help.tips.tricks", "!help tips tricks", BOTH, "HELP", handleHelpTipsTricks, CMD_NONE) \\
+    X(801, MODEL_LOAD                     "model.model.load", "!model load", BOTH, "MODEL", handleModelLoad, CMD_NONE) \\
+    X(802, MODEL_UNLOAD                   "model.model.unload", "!model unload", BOTH, "MODEL", handleModelUnload, CMD_NONE) \\
+    X(803, MODEL_INFO                     "model.model.info", "!model info", BOTH, "MODEL", handleModelInfo, CMD_NONE) \\
+    X(804, MODEL_RELOAD                   "model.model.reload", "!model reload", BOTH, "MODEL", handleModelReload, CMD_NONE) \\
+    X(805, MODEL_SETTINGS                 "model.model.settings", "!model settings", BOTH, "MODEL", handleModelSettings, CMD_NONE) \\
+    X(1040, SOURCEFILE_OPEN_PICKER         "sourcefile.sourcefile.open.picker", "!sourcefile open picker", BOTH, "SOURCEFILE", handleSourcefileOpenPicker, CMD_NONE) \\
+    X(4217, AI_AGENT_CYCLES_SET            "ai.ai.agent.cycles.set", "!ai agent cycles set", BOTH, "AI", handleAiAgentCyclesSet, CMD_NONE) \\
+    X(4218, AI_AGENT_MULTI_ENABLE          "ai.ai.agent.multi.enable", "!ai agent multi enable", BOTH, "AI", handleAiAgentMultiEnable, CMD_NONE) \\
+    X(4219, AI_AGENT_MULTI_DISABLE         "ai.ai.agent.multi.disable", "!ai agent multi disable", BOTH, "AI", handleAiAgentMultiDisable, CMD_NONE) \\
+    X(4220, ENGINE_UNLOCK_800B             "engine.engine.unlock.800b", "!engine unlock 800b", BOTH, "ENGINE", handleEngineUnlock800B, CMD_NONE) \\
+    X(4220, AI_AGENT_MULTI_STATUS          "ai.ai.agent.multi.status", "!ai agent multi status", BOTH, "AI", handleAiAgentMultiStatus, CMD_NONE) \\
+    X(4221, ENGINE_LOAD_800B               "engine.engine.load.800b", "!engine load 800b", BOTH, "ENGINE", handleEngineLoad800B, CMD_NONE) \\
+    X(4221, AI_TITAN_TOGGLE                "ai.ai.titan.toggle", "!ai titan toggle", BOTH, "AI", handleAiTitanToggle, CMD_NONE) \\
+    X(4222, AI_800B_STATUS                 "ai.ai.800b.status", "!ai 800b status", BOTH, "AI", handleAi800BStatus, CMD_NONE) \\
+    X(4230, TITAN_TOGGLE                   "titan.titan.toggle", "!titan toggle", BOTH, "TITAN", handleTitanToggle, CMD_NONE) \\
+    X(5199, BACKEND_SWITCH_NATIVEASM       "backend.backend.switch.nativeasm", "!backend switch nativeasm", BOTH, "BACKEND", handleBackendSwitchNativeasm, CMD_NONE) \\
+    X(9824, QW_ALERT_HAPPENINGS            "qw.qw.alert.happenings", "!qw alert happenings", BOTH, "QW", handleQwAlertHappenings, CMD_NONE) \\

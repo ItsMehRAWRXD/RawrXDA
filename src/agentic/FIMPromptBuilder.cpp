@@ -64,12 +64,12 @@ FIMBuildResult FIMPromptBuilder::Build(const EditorContext& ctx) const {
     prompt.suffix_lines = CountLines(trimmedSuffix);
     prompt.estimated_tokens = EstimateTokens(formatted);
 
-    GetObs().logDebug(kFIMComponent, "FIM prompt built", {
+    GetObs().logDebug(kFIMComponent, "FIM prompt built", nlohmann::json::object({
         {"filename", ctx.filename},
         {"prefixLines", prompt.prefix_lines},
         {"suffixLines", prompt.suffix_lines},
         {"estimatedTokens", prompt.estimated_tokens}
-    });
+    }));
     GetObs().recordHistogram("fim.estimated_tokens", static_cast<float>(prompt.estimated_tokens));
     GetObs().incrementCounter("fim.builds_success");
 

@@ -1,0 +1,178 @@
+{
+  "swarm": {
+    "name": "NASM_IDE_Swarm",
+    "version": "1.0.0",
+    "coordinator_port": 8888,
+    "max_concurrent_agents": 10,
+    "model_cache_dir": "./models",
+    "agent_timeout": 30000
+  },
+  "agents": [
+    {
+      "id": 1,
+      "name": "AI_CodeAssistant",
+      "model": "ai_code_assistant.gguf",
+      "model_size_mb": 350,
+      "role": "code",
+      "port": 8891,
+      "features": [
+        "syntax_analysis",
+        "code_completion",
+        "refactoring",
+        "smart_suggestions"
+      ],
+      "priority": "high",
+      "auto_restart": true
+    },
+    {
+      "id": 2,
+      "name": "TextEditor",
+      "model": "text_editor_engine.gguf",
+      "model_size_mb": 280,
+      "role": "editor",
+      "port": 8892,
+      "features": [
+        "file_management",
+        "syntax_highlighting",
+        "multi_file_support",
+        "search_replace"
+      ],
+      "priority": "critical",
+      "auto_restart": true
+    },
+    {
+      "id": 3,
+      "name": "TeamViewer",
+      "model": "collaboration_engine.gguf",
+      "model_size_mb": 320,
+      "role": "collab",
+      "port": 8893,
+      "features": [
+        "live_sync",
+        "multi_user",
+        "chat",
+        "presence",
+        "screen_share"
+      ],
+      "priority": "medium",
+      "auto_restart": true
+    },
+    {
+      "id": 4,
+      "name": "Marketplace",
+      "model": "extension_manager.gguf",
+      "model_size_mb": 240,
+      "role": "market",
+      "port": 8894,
+      "features": [
+        "plugin_discovery",
+        "install",
+        "update",
+        "dependency_management"
+      ],
+      "priority": "medium",
+      "auto_restart": true
+    },
+    {
+      "id": 5,
+      "name": "BuildSystem",
+      "model": "build_orchestrator.gguf",
+      "model_size_mb": 380,
+      "role": "build",
+      "port": 8895,
+      "features": [
+        "nasm_integration",
+        "gcc_integration",
+        "parallel_builds",
+        "incremental_builds"
+      ],
+      "priority": "high",
+      "auto_restart": true
+    },
+    {
+      "id": 6,
+      "name": "ToolchainDetector",
+      "model": "toolchain_analyzer.gguf",
+      "model_size_mb": 200,
+      "role": "detect",
+      "port": 8896,
+      "features": [
+        "auto_detect",
+        "version_check",
+        "path_resolution",
+        "compatibility"
+      ],
+      "priority": "medium",
+      "auto_restart": true
+    },
+    {
+      "id": 7,
+      "name": "StatusBarAgent",
+      "model": "status_manager.gguf",
+      "model_size_mb": 180,
+      "role": "status",
+      "port": 8897,
+      "features": [
+        "notifications",
+        "progress_tracking",
+        "alerts",
+        "system_metrics"
+      ],
+      "priority": "low",
+      "auto_restart": true
+    },
+    {
+      "id": 8,
+      "name": "ErrorRecovery",
+      "model": "error_handler.gguf",
+      "model_size_mb": 290,
+      "role": "error",
+      "port": 8898,
+      "features": [
+        "error_detection",
+        "auto_recovery",
+        "logging",
+        "diagnostics"
+      ],
+      "priority": "high",
+      "auto_restart": true
+    },
+    {
+      "id": 9,
+      "name": "CrossPlatformAgent",
+      "model": "platform_abstraction.gguf",
+      "model_size_mb": 260,
+      "role": "platform",
+      "port": 8899,
+      "features": [
+        "platform_detect",
+        "path_translation",
+        "api_abstraction"
+      ],
+      "priority": "medium",
+      "auto_restart": true
+    },
+    {
+      "id": 10,
+      "name": "AdvancedFeatures",
+      "model": "advanced_processor.gguf",
+      "model_size_mb": 400,
+      "role": "advanced",
+      "port": 8900,
+      "features": [
+        "multi_threading",
+        "dependency_analysis",
+        "performance_optimization",
+        "analytics"
+      ],
+      "priority": "medium",
+      "auto_restart": true
+    }
+  ],
+  "ipc_config": {
+    "protocol": "http",
+    "timeout_ms": 5000,
+    "retry_attempts": 3,
+    "heartbeat_interval_ms": 1000
+  }
+}

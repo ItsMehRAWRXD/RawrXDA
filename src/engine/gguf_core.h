@@ -5,10 +5,10 @@
 #include <vector>
 #include <unordered_map>
 
-class GGUFLoader {
+class EngineGGUFLoader {
 public:
-    GGUFLoader() = default;
-    ~GGUFLoader();
+    EngineGGUFLoader() = default;
+    ~EngineGGUFLoader();
 
     bool load(const char* path);
     void unload();

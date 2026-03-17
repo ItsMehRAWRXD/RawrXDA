@@ -5,6 +5,18 @@
 
 // SCAFFOLD_284: Core generator Unity scaffolding
 
+namespace {
+UniversalGenerator* EnsureGenerator(std::unique_ptr<UniversalGenerator>& generator) {
+    if (!generator) {
+        try {
+            generator = std::make_unique<UniversalGenerator>();
+        } catch (...) {
+            return nullptr;
+        }
+    }
+    return generator.get();
+}
+}
 
 CoreGenerator* CoreGenerator::instance = nullptr;
 
@@ -33,71 +45,77 @@ void CoreGenerator::Initialize() {
 
 bool CoreGenerator::Generate(const std::string& name, LanguageType language, 
                             const std::filesystem::path& output_dir) {
-    if (generator) return generator->GenerateProject(name, language, output_dir);
-    return false;
+    auto* g = EnsureGenerator(generator);
+    return g ? g->GenerateProject(name, language, output_dir) : false;
 }
 
 bool CoreGenerator::GenerateFromTemplate(const std::string& template_name,
                                         const std::string& project_name,
                                         const std::filesystem::path& output_dir) {
-    if (generator) return generator->GenerateFromTemplate(template_name, project_name, output_dir);
-    return false;
+    auto* g = EnsureGenerator(generator);
+    return g ? g->GenerateFromTemplate(template_name, project_name, output_dir) : false;
 }
 
 bool CoreGenerator::GenerateWebApp(const std::string& name, const std::filesystem::path& output_dir) {
-    if (!generator) return false;
+    auto* g = EnsureGenerator(generator);
+    if (!g) return false;
     // Web app defaults to React/TypeScript
-    return generator->GenerateProject(name, LanguageType::REACT, output_dir);
+    return g->GenerateProject(name, LanguageType::REACT, output_dir);
 }
 
 bool CoreGenerator::GenerateCLI(const std::string& name, const std::filesystem::path& output_dir) {
-    if (!generator) return false;
+    auto* g = EnsureGenerator(generator);
+    if (!g) return false;
     // CLI defaults to Rust (fast, modern, single binary)
-    return generator->GenerateProject(name, LanguageType::RUST, output_dir);
+    return g->GenerateProject(name, LanguageType::RUST, output_dir);
 }
 
 bool CoreGenerator::GenerateLibrary(const std::string& name, LanguageType lang, const std::filesystem::path& output_dir) {
-    if (!generator) return false;
+    auto* g = EnsureGenerator(generator);
+    if (!g) return false;
     // Library uses the specified language
-    return generator->GenerateProject(name, lang, output_dir);
+    return g->GenerateProject(name, lang, output_dir);
 }
 
 bool CoreGenerator::GenerateGame(const std::string& name, const std::filesystem::path& output_dir) {
-    if (!generator) return false;
+    auto* g = EnsureGenerator(generator);
+    if (!g) return false;
     // Game defaults to C# (Unity)
-    return generator->GenerateProject(name, LanguageType::UNITY, output_dir);
+    return g->GenerateProject(name, LanguageType::UNITY, output_dir);
 }
 
 bool CoreGenerator::GenerateEmbedded(const std::string& name, const std::filesystem::path& output_dir) {
-    if (!generator) return false;
+    auto* g = EnsureGenerator(generator);
+    if (!g) return false;
     // Embedded defaults to Arduino (PlatformIO)
-    return generator->GenerateProject(name, LanguageType::ARDUINO, output_dir);
+    return g->GenerateProject(name, LanguageType::ARDUINO, output_dir);
 }
 
 bool CoreGenerator::GenerateDataScience(const std::string& name, const std::filesystem::path& output_dir) {
-    if (!generator) return false;
+    auto* g = EnsureGenerator(generator);
+    if (!g) return false;
     // Data science defaults to Python (Jupyter/numpy/pandas ecosystem)
-    return generator->GenerateProject(name, LanguageType::PYTHON, output_dir);
+    return g->GenerateProject(name, LanguageType::PYTHON, output_dir);
 }
 
 std::vector<std::string> CoreGenerator::ListLanguages() {
-    if (generator) return generator->ListLanguages();
-    return {};
+    auto* g = EnsureGenerator(generator);
+    return g ? g->ListLanguages() : std::vector<std::string>{};
 }
 
 std::vector<std::string> CoreGenerator::ListTemplates() {
-    if (generator) return generator->ListTemplates();
-    return {};
+    auto* g = EnsureGenerator(generator);
+    return g ? g->ListTemplates() : std::vector<std::string>{};
 }
 
 size_t CoreGenerator::GetLanguageCount() const {
-    if (generator) return generator->GetSupportedLanguageCount();
-    return 0;
+    auto* g = EnsureGenerator(const_cast<std::unique_ptr<UniversalGenerator>&>(generator));
+    return g ? g->GetSupportedLanguageCount() : 0;
 }
 
 size_t CoreGenerator::GetTemplateCount() const {
-    if (generator) return generator->GetTemplateCount();
-    return 0;
+    auto* g = EnsureGenerator(const_cast<std::unique_ptr<UniversalGenerator>&>(generator));
+    return g ? g->GetTemplateCount() : 0;
 }
 
 bool CoreGenerator::GenerateWithAllFeatures(const std::string& name, LanguageType language,
@@ -108,12 +126,13 @@ bool CoreGenerator::GenerateWithAllFeatures(const std::string& name, LanguageTyp
         std::cerr << "[Core Generator] Batch Processing requires a Professional license.\n";
         return false;
     }
-    if (!generator) return false;
+    auto* g = EnsureGenerator(generator);
+    if (!g) return false;
     // Generate base project, then layer tests + CI + Docker
-    bool ok = generator->GenerateWithTests(name, language, output_dir);
+    bool ok = g->GenerateWithTests(name, language, output_dir);
     if (!ok) return false;
-    generator->GenerateWithCI(name, language, output_dir);
-    generator->GenerateWithDocker(name, language, output_dir);
+    g->GenerateWithCI(name, language, output_dir);
+    g->GenerateWithDocker(name, language, output_dir);
     return true;
 }
 

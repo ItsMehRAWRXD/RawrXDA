@@ -1,0 +1,17 @@
+[
+  {
+    "name": "1B",
+    "url": "https://example.com/path/to/1b.gguf",
+    "dest": "artifacts/models/1b.gguf"
+  },
+  {
+    "name": "7B",
+    "url": "https://example.com/path/to/7b.gguf",
+    "dest": "artifacts/models/7b.gguf"
+  },
+  {
+    "name": "70B",
+    "url": "https://example.com/path/to/70b.gguf",
+    "dest": "artifacts/models/70b.gguf"
+  }
+]

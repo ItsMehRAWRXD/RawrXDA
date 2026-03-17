@@ -20,6 +20,8 @@
 #include <vector>
 #include <string>
 #include <regex>
+#include <filesystem>
+#include <algorithm>
 
 // SCAFFOLD_032: Test explorer tree population
 
@@ -391,20 +393,192 @@ void Win32IDE::cmdTestExplorerShow() {
 void Win32IDE::cmdTestExplorerRun() {
     appendToOutput("[TestExplorer] Running test suite...\n");
 
-    // Simulate test output (in production, capture from gauntlet or test runner)
-    std::ostringstream testOutput;
-    testOutput << "[PASS] Test  1: Memory hotpatch apply (1.23 ms)\n"
-               << "[PASS] Test  2: Byte search pattern match (0.87 ms)\n"
-               << "[PASS] Test  3: Server request transform (2.10 ms)\n"
-               << "[FAIL] Test  4: GPU compute validation -> shader compilation timeout (5.43 ms)\n"
-               << "[PASS] Test  5: PDB symbol resolution (3.21 ms)\n"
-               << "[PASS] Test  6: LSP integration handshake (1.05 ms)\n"
-               << "[SKIP] Test  7: CUDA acceleration (not available)\n"
-               << "[PASS] Test  8: Streaming inference (4.67 ms)\n"
-               << "[PASS] Test  9: Agent correction loop (2.89 ms)\n"
-               << "[PASS] Test 10: Crash containment (0.12 ms)\n";
+    // ── Real test discovery: find test executables in workspace ─────────
+    std::string workDir;
+    {
+        char cwd[MAX_PATH] = {};
+        GetCurrentDirectoryA(MAX_PATH, cwd);
+        workDir = cwd;
+    }
 
-    parseTestOutput(testOutput.str(), s_testNodes);
+    // Search common build output directories for test executables
+    std::vector<std::string> searchDirs = {
+        workDir + "\\build\\tests",
+        workDir + "\\build\\bin",
+        workDir + "\\build\\Debug",
+        workDir + "\\build\\Release",
+        workDir + "\\build\\monolithic\\bin",
+        workDir + "\\build\\win32ide\\bin",
+        workDir + "\\build",
+        workDir + "\\out\\test",
+        workDir + "\\bin",
+    };
+
+    std::vector<std::string> testExes;
+    for (const auto& dir : searchDirs) {
+        if (!std::filesystem::exists(dir)) continue;
+        for (const auto& entry : std::filesystem::directory_iterator(dir)) {
+            if (!entry.is_regular_file()) continue;
+            std::string name = entry.path().filename().string();
+            std::string ext = entry.path().extension().string();
+            if (ext != ".exe") continue;
+            // Match common test executable patterns
+            std::string lower = name;
+            std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+            if (lower.find("test") != std::string::npos ||
+                lower.find("spec") != std::string::npos ||
+                lower.find("check") != std::string::npos ||
+                lower.find("gauntlet") != std::string::npos ||
+                lower.find("selftest") != std::string::npos) {
+                testExes.push_back(entry.path().string());
+            }
+        }
+    }
+
+    // Also check for CTest (CMake) and pytest
+    bool hasCTest = std::filesystem::exists(workDir + "\\build\\CTestTestfile.cmake");
+    bool hasPytest = std::filesystem::exists(workDir + "\\pytest.ini") ||
+                     std::filesystem::exists(workDir + "\\setup.cfg") ||
+                     std::filesystem::exists(workDir + "\\pyproject.toml");
+
+    std::ostringstream combinedOutput;
+
+    if (testExes.empty() && !hasCTest && !hasPytest) {
+        appendToOutput("[TestExplorer] No test executables found. Checked:\n");
+        for (const auto& d : searchDirs) {
+            appendToOutput("  " + d + "\n");
+        }
+        appendToOutput("[TestExplorer] Build your project with test targets to populate.\n");
+
+        // Generate a diagnostic report as the test output
+        combinedOutput << "[SKIP] No test executables discovered in build directories\n";
+    } else {
+        // ── Run CTest if available ──────────────────────────────────────
+        if (hasCTest) {
+            appendToOutput("[TestExplorer] Running CTest...\n");
+            std::string ctestCmd = "cd /d \"" + workDir + "\\build\" && ctest --output-on-failure 2>&1";
+
+            SECURITY_ATTRIBUTES sa = {};
+            sa.nLength = sizeof(sa);
+            sa.bInheritHandle = TRUE;
+            HANDLE hRead = nullptr, hWrite = nullptr;
+            CreatePipe(&hRead, &hWrite, &sa, 0);
+            SetHandleInformation(hRead, HANDLE_FLAG_INHERIT, 0);
+
+            STARTUPINFOA si = { sizeof(si) };
+            si.dwFlags = STARTF_USESTDHANDLES;
+            si.hStdOutput = hWrite;
+            si.hStdError = hWrite;
+            PROCESS_INFORMATION pi = {};
+            char cmdBuf[2048];
+            snprintf(cmdBuf, sizeof(cmdBuf), "cmd.exe /C %s", ctestCmd.c_str());
+
+            if (CreateProcessA(nullptr, cmdBuf, nullptr, nullptr, TRUE,
+                              CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi)) {
+                CloseHandle(hWrite); hWrite = nullptr;
+                char buf[4096];
+                DWORD bytesRead;
+                while (ReadFile(hRead, buf, sizeof(buf) - 1, &bytesRead, nullptr) && bytesRead > 0) {
+                    buf[bytesRead] = '\0';
+                    combinedOutput << buf;
+                }
+                WaitForSingleObject(pi.hProcess, 30000);
+                CloseHandle(pi.hProcess);
+                CloseHandle(pi.hThread);
+            }
+            if (hWrite) CloseHandle(hWrite);
+            if (hRead) CloseHandle(hRead);
+        }
+
+        // ── Run pytest if available ─────────────────────────────────────
+        if (hasPytest) {
+            appendToOutput("[TestExplorer] Running pytest...\n");
+            std::string pytestCmd = "python -m pytest --tb=short -q 2>&1";
+
+            SECURITY_ATTRIBUTES sa = {};
+            sa.nLength = sizeof(sa);
+            sa.bInheritHandle = TRUE;
+            HANDLE hRead = nullptr, hWrite = nullptr;
+            CreatePipe(&hRead, &hWrite, &sa, 0);
+            SetHandleInformation(hRead, HANDLE_FLAG_INHERIT, 0);
+
+            STARTUPINFOA si = { sizeof(si) };
+            si.dwFlags = STARTF_USESTDHANDLES;
+            si.hStdOutput = hWrite;
+            si.hStdError = hWrite;
+            PROCESS_INFORMATION pi = {};
+            char cmdBuf[2048];
+            snprintf(cmdBuf, sizeof(cmdBuf), "cmd.exe /C %s", pytestCmd.c_str());
+
+            if (CreateProcessA(nullptr, cmdBuf, nullptr, nullptr, TRUE,
+                              CREATE_NO_WINDOW, nullptr, workDir.c_str(), &si, &pi)) {
+                CloseHandle(hWrite); hWrite = nullptr;
+                char buf[4096];
+                DWORD bytesRead;
+                while (ReadFile(hRead, buf, sizeof(buf) - 1, &bytesRead, nullptr) && bytesRead > 0) {
+                    buf[bytesRead] = '\0';
+                    combinedOutput << buf;
+                }
+                WaitForSingleObject(pi.hProcess, 60000);
+                CloseHandle(pi.hProcess);
+                CloseHandle(pi.hThread);
+            }
+            if (hWrite) CloseHandle(hWrite);
+            if (hRead) CloseHandle(hRead);
+        }
+
+        // ── Run discovered test executables ─────────────────────────────
+        for (const auto& exe : testExes) {
+            appendToOutput("[TestExplorer] Running: " + exe + "\n");
+
+            SECURITY_ATTRIBUTES sa = {};
+            sa.nLength = sizeof(sa);
+            sa.bInheritHandle = TRUE;
+            HANDLE hRead = nullptr, hWrite = nullptr;
+            CreatePipe(&hRead, &hWrite, &sa, 0);
+            SetHandleInformation(hRead, HANDLE_FLAG_INHERIT, 0);
+
+            STARTUPINFOA si = { sizeof(si) };
+            si.dwFlags = STARTF_USESTDHANDLES;
+            si.hStdOutput = hWrite;
+            si.hStdError = hWrite;
+            PROCESS_INFORMATION pi = {};
+
+            char cmdBuf[MAX_PATH + 2];
+            snprintf(cmdBuf, sizeof(cmdBuf), "\"%s\"", exe.c_str());
+
+            std::string exeDir = std::filesystem::path(exe).parent_path().string();
+
+            if (CreateProcessA(nullptr, cmdBuf, nullptr, nullptr, TRUE,
+                              CREATE_NO_WINDOW, nullptr, exeDir.c_str(), &si, &pi)) {
+                CloseHandle(hWrite); hWrite = nullptr;
+                char buf[4096];
+                DWORD bytesRead;
+                while (ReadFile(hRead, buf, sizeof(buf) - 1, &bytesRead, nullptr) && bytesRead > 0) {
+                    buf[bytesRead] = '\0';
+                    combinedOutput << buf;
+                }
+                DWORD waitResult = WaitForSingleObject(pi.hProcess, 60000);
+                DWORD exitCode = 0;
+                GetExitCodeProcess(pi.hProcess, &exitCode);
+                CloseHandle(pi.hProcess);
+                CloseHandle(pi.hThread);
+
+                if (waitResult == WAIT_TIMEOUT) {
+                    combinedOutput << "[FAIL] " << std::filesystem::path(exe).filename().string()
+                                   << " -> Timed out after 60 seconds\n";
+                }
+            } else {
+                combinedOutput << "[FAIL] " << std::filesystem::path(exe).filename().string()
+                               << " -> Failed to launch (error " << GetLastError() << ")\n";
+            }
+            if (hWrite) CloseHandle(hWrite);
+            if (hRead) CloseHandle(hRead);
+        }
+    }
+
+    // ── Parse combined output and populate tree ─────────────────────────
+    parseTestOutput(combinedOutput.str(), s_testNodes);
 
     // Refresh the tree view
     if (s_hwndTestTree && IsWindow(s_hwndTestTree)) {

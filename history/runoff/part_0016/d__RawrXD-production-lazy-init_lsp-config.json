@@ -1,0 +1,168 @@
+{
+  "lsp": {
+    "enabled": true,
+    "languages": {
+      "cpp": {
+        "command": "clangd",
+        "arguments": [
+          "--log=verbose",
+          "--completion-style=detailed",
+          "--header-insertion=iwyu",
+          "-j=4"
+        ],
+        "autoStart": true,
+        "env": {
+          "CLANGD_BACKGROUND_INDEX": "1"
+        }
+      },
+      "c": {
+        "command": "clangd",
+        "arguments": [
+          "--log=verbose"
+        ],
+        "autoStart": true
+      },
+      "python": {
+        "command": "pylsp",
+        "arguments": [],
+        "autoStart": false,
+        "plugins": {
+          "pylsp_mypy": {
+            "enabled": true
+          },
+          "pyls_black": {
+            "enabled": true
+          },
+          "pyls_isort": {
+            "enabled": true
+          }
+        }
+      },
+      "typescript": {
+        "command": "typescript-language-server",
+        "arguments": [
+          "--stdio"
+        ],
+        "autoStart": false
+      },
+      "javascript": {
+        "command": "typescript-language-server",
+        "arguments": [
+          "--stdio"
+        ],
+        "autoStart": false
+      },
+      "rust": {
+        "command": "rust-analyzer",
+        "arguments": [],
+        "autoStart": false
+      },
+      "java": {
+        "command": "java",
+        "arguments": [
+          "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=1044",
+          "-Declipse.application=org.eclipse.jdt.ls.core.id1",
+          "-Dosgi.bundles.defaultStartLevel=4",
+          "-Declipse.product=org.eclipse.jdt.ls.core.product",
+          "-Dlog.level=INFO",
+          "-noverify",
+          "-Xmx1G",
+          "-jar",
+          "eclipse-jdt-ls-latest/plugins/org.eclipse.equinox.launcher_*.jar",
+          "-configuration",
+          "eclipse-jdt-ls-latest/config_linux",
+          "-data",
+          "~/.eclipse/workspace_ls"
+        ],
+        "autoStart": false
+      },
+      "terraform": {
+        "command": "python3",
+        "arguments": [
+          "terraform_lsp.py"
+        ],
+        "autoStart": true,
+        "env": {
+          "PYTHONPATH": "."
+        }
+      }
+    },
+    "completion": {
+      "enabled": true,
+      "triggerCharacters": [
+        ".",
+        ",",
+        ":",
+        ";",
+        "(",
+        "[",
+        "{"
+      ],
+      "cachingEnabled": true,
+      "maxCacheSize": 1000,
+      "debounceMs": 100
+    },
+    "hover": {
+      "enabled": true,
+      "maxLength": 5000
+    },
+    "diagnostics": {
+      "enabled": true,
+      "debounceMs": 500,
+      "onSave": true,
+      "onOpen": true,
+      "onChange": true,
+      "filter": {
+        "severity": [
+          "error",
+          "warning",
+          "information"
+        ]
+      }
+    },
+    "rename": {
+      "enabled": true,
+      "prepareSupport": true,
+      "validateChanges": true
+    },
+    "codeActions": {
+      "enabled": true,
+      "kinds": [
+        "quickfix",
+        "refactor",
+        "refactor.extract",
+        "source.organizeImports"
+      ]
+    },
+    "formatting": {
+      "enabled": true,
+      "formatOnSave": false,
+      "formatOnPaste": false,
+      "tabSize": 4,
+      "insertSpaces": true
+    },
+    "signature": {
+      "enabled": true,
+      "triggerCharacters": [
+        "(",
+        ","
+      ]
+    },
+    "logging": {
+      "level": "INFO",
+      "file": "~/.rawrxd/lsp-debug.log",
+      "enableConsole": true,
+      "enableFile": true
+    },
+    "performance": {
+      "maxRequestTimeout": 30000,
+      "requestQueueSize": 100,
+      "diagnosticBatchSize": 10
+    },
+    "experimental": {
+      "enableInlayHints": false,
+      "enableSemanticTokens": false,
+      "enableCallHierarchy": false
+    }
+  }
+}

@@ -1,0 +1,24 @@
+name: local_config
+version: 1.0.0
+schema: v1
+models:
+  - name: Autodetect
+    provider: ollama
+    model: AUTODETECT
+  - name: CustomModel
+    provider: ollama
+    model: CUSTOM_MODEL
+  - name: Autodetect (1)
+    provider: ollama
+    model: AUTODETECT
+  - name: DeepSeek Coder
+    provider: deepseek
+    model: deepseek-coder
+    apiKey: sk-d9e8935df34e49579d24c876a6d7e175
+providers:
+  ollama:
+    api_key: your-real-ollama-api-key
+    base_url: http://localhost:11434
+    timeout_seconds: 30
+    retries: 3
+    log_level: info

@@ -1,0 +1,139 @@
+# Enterprise CMake Configuration for AgenticToolExecutor
+cmake_minimum_required(VERSION 3.20)
+project(AgenticToolExecutor-Enterprise VERSION 1.0.0 LANGUAGES CXX)
+
+# Enterprise C++ standard with latest features
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Enterprise build configurations
+set(CMAKE_BUILD_TYPE Release CACHE STRING "Release build for enterprise")
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON CACHE BOOL "Enable LTO for enterprise")
+
+# Find Qt6 with enterprise modules
+find_package(Qt6 6.7.3 REQUIRED COMPONENTS 
+    Core 
+    Gui 
+    Widgets 
+    Concurrent 
+    Test 
+    Network 
+    Xml 
+    Sql
+)
+
+# Enterprise compiler flags
+if(MSVC)
+    target_compile_options(AgenticToolExecutor-Enterprise PRIVATE
+        /permissive-      # Strict conformance
+        /W4               # Maximum warnings
+        /w44062           # Enable specific warnings
+        /w34189           # Enable more warnings
+        /w35038           # Enable additional warnings
+        /ZH:SHA_256       # SHA-256 for PDB
+    )
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(AgenticToolExecutor-Enterprise PRIVATE
+        -Wall -Wextra -Wpedantic
+        -Wconversion -Wsign-conversion
+        -Wshadow -Wcast-qual -Wcast-align
+        -Wunused -Wunreachable-code
+        -Wold-style-cast -Woverloaded-virtual
+    )
+endif()
+
+# Agentic Tools Enterprise Sources
+set(AGENTIC_TOOLS_ENTERPRISE_SOURCES
+    agentic_tools.cpp
+    agentic_tools.hpp
+    enterprise/EnterpriseAgentBridge.cpp
+    enterprise/EnterpriseAgentBridge.hpp
+    enterprise/EnterpriseMetrics.cpp
+    enterprise/EnterpriseMetrics.hpp
+    enterprise/ToolScheduler.cpp
+    enterprise/ToolScheduler.hpp
+    enterprise/EnterpriseSecurity.cpp
+    enterprise/EnterpriseSecurity.hpp
+    enterprise/EnterpriseAIReasoningEngine.cpp
+    enterprise/EnterpriseAIReasoningEngine.hpp
+    enterprise/EnterpriseWorkflowEngine.cpp
+    enterprise/EnterpriseWorkflowEngine.hpp
+    enterprise/EnterpriseAutonomousMissionExecutor.cpp
+    enterprise/EnterpriseAutonomousMissionExecutor.hpp
+    enterprise/EnterpriseAutonomousCodeReview.cpp
+    enterprise/EnterpriseAutonomousCodeReview.hpp
+    enterprise/EnterpriseTelemetry.cpp
+    enterprise/EnterpriseTelemetry.hpp
+    enterprise/AICodeIntelligence.cpp
+    enterprise/AICodeIntelligence.hpp
+    enterprise/QuantumSafeSecurity.cpp
+    enterprise/QuantumSafeSecurity.hpp
+    enterprise/MLWorkflowOptimizer.cpp
+    enterprise/MLWorkflowOptimizer.hpp
+)
+
+# Enterprise UI Components
+set(AGENTIC_UI_ENTERPRISE_SOURCES
+    ui/enterprise/AgenticToolsWidget.cpp
+    ui/enterprise/AgenticToolsWidget.hpp
+    ui/enterprise/EnterpriseDashboard.cpp
+    ui/enterprise/EnterpriseDashboard.hpp
+    ui/enterprise/ToolExecutionPanel.cpp
+    ui/enterprise/ToolExecutionPanel.hpp
+)
+
+# Main enterprise executable
+add_executable(AgenticToolExecutor-Enterprise
+    ${AGENTIC_TOOLS_ENTERPRISE_SOURCES}
+    ${AGENTIC_UI_ENTERPRISE_SOURCES}
+    main/main_enterprise.cpp
+)
+
+# Enterprise linking with full Qt support
+target_link_libraries(AgenticToolExecutor-Enterprise PRIVATE
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Widgets
+    Qt6::Concurrent
+    Qt6::Network
+    Qt6::Xml
+    Qt6::Sql
+    # Enterprise third-party libraries
+    $<$<PLATFORM_ID:Windows>:ws2_32>
+    $<$<PLATFORM_ID:Windows>:winmm>
+    $<$<PLATFORM_ID:Linux>:pthread>
+    $<$<PLATFORM_ID:Linux>:dl>
+)
+
+# Enterprise compile definitions
+target_compile_definitions(AgenticToolExecutor-Enterprise PRIVATE
+    AGENTIC_TOOLS_ENTERPRISE=1
+    AGENTIC_TOOLS_VERSION="1.0.0"
+    AGENTIC_TOOLS_BUILD_DATE="${CMAKE_BUILD_DATE}"
+    AGENTIC_TOOLS_GIT_COMMIT="${GIT_COMMIT_HASH}"
+    ENTERPRISE_FEATURES_ENABLED=1
+    METRICS_COLLECTION_ENABLED=1
+    SECURITY_AUDIT_ENABLED=1
+)
+
+# Enterprise installation rules
+install(TARGETS AgenticToolExecutor-Enterprise
+    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+)
+
+install(DIRECTORY enterprise/
+    DESTINATION include/enterprise
+    FILES_MATCHING PATTERN "*.hpp"
+)
+
+# Enterprise CPack configuration
+set(CPACK_PACKAGE_NAME "AgenticToolExecutor-Enterprise")
+set(CPACK_PACKAGE_VERSION "1.0.0")
+set(CPACK_PACKAGE_VENDOR "RawrXD Corporation")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Enterprise Autonomous Development Toolkit")
+set(CPACK_GENERATOR "ZIP;DEB;RPM;NSIS")
+
+include(CPack)

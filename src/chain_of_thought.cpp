@@ -3,6 +3,7 @@
 #include <queue>
 #include <algorithm>
 #include <chrono>
+#include <unordered_set>
 
 namespace RawrXD {
 
@@ -142,7 +143,119 @@ nlohmann::json ChainOfThought::getStatus() const {
 }
 
 nlohmann::json ChainOfThought::exportTree() const {
-    return {{"status", "not_implemented"}}; 
+    nlohmann::json tree;
+    tree["status"]       = "complete";
+    tree["config"]       = {
+        {"maxDepth",             m_config.maxDepth},
+        {"branchingFactor",      m_config.branchingFactor},
+        {"confidenceThreshold",  m_config.confidenceThreshold},
+        {"enableReflection",     m_config.enableReflection}
+    };
+
+    if (!m_root) {
+        tree["root"] = nullptr;
+    } else {
+        // Non-recursive DFS with hard depth/node guards.
+        // Prevents stack overflow and protects against malformed cyclic trees.
+        struct PendingNode {
+            std::shared_ptr<CoTNode> node;
+            nlohmann::json* out;
+            int depth;
+        };
+
+        constexpr int kHardDepthCap = 128;
+        constexpr size_t kHardNodeCap = 100000;
+        const int safeDepthLimit = std::max(1, std::min(m_config.maxDepth, kHardDepthCap));
+
+        tree["root"] = {
+            {"content", m_root->content},
+            {"score", m_root->score},
+            {"depth", m_root->depth},
+            {"children", nlohmann::json::array()}
+        };
+
+        std::vector<PendingNode> stack;
+        stack.push_back({m_root, &tree["root"], 0});
+
+        std::unordered_set<const CoTNode*> visited;
+        visited.reserve(1024);
+        visited.insert(m_root.get());
+
+        size_t emittedNodes = 1;
+        bool truncatedByDepth = false;
+        bool truncatedByNodeCap = false;
+        bool cycleDetected = false;
+
+        while (!stack.empty()) {
+            PendingNode cur = stack.back();
+            stack.pop_back();
+
+            if (cur.depth >= safeDepthLimit) {
+                if (!cur.node->children.empty()) {
+                    (*cur.out)["truncated"] = true;
+                    (*cur.out)["truncation_reason"] = "depth_limit";
+                    truncatedByDepth = true;
+                }
+                continue;
+            }
+
+            for (const auto& child : cur.node->children) {
+                if (!child) {
+                    continue;
+                }
+                if (emittedNodes >= kHardNodeCap) {
+                    (*cur.out)["truncated"] = true;
+                    (*cur.out)["truncation_reason"] = "node_cap";
+                    truncatedByNodeCap = true;
+                    break;
+                }
+
+                const CoTNode* raw = child.get();
+                if (visited.find(raw) != visited.end()) {
+                    cycleDetected = true;
+                    continue;
+                }
+                visited.insert(raw);
+
+                nlohmann::json childJson = {
+                    {"content", child->content},
+                    {"score", child->score},
+                    {"depth", child->depth},
+                    {"children", nlohmann::json::array()}
+                };
+                (*cur.out)["children"].push_back(std::move(childJson));
+                nlohmann::json& childRef = (*cur.out)["children"].back();
+                stack.push_back({child, &childRef, cur.depth + 1});
+                ++emittedNodes;
+            }
+
+            if (truncatedByNodeCap) {
+                break;
+            }
+        }
+
+        tree["limits"] = {
+            {"appliedDepthLimit", safeDepthLimit},
+            {"hardDepthCap", kHardDepthCap},
+            {"hardNodeCap", kHardNodeCap},
+            {"emittedNodes", emittedNodes},
+            {"truncatedByDepth", truncatedByDepth},
+            {"truncatedByNodeCap", truncatedByNodeCap},
+            {"cycleDetected", cycleDetected}
+        };
+    }
+
+    // Flatten best path for quick access
+    auto bestPath = traceBestPath();
+    tree["bestPath"] = nlohmann::json::array();
+    for (const auto& step : bestPath) {
+        tree["bestPath"].push_back({
+            {"thought",       step.thought},
+            {"confidence",    step.confidence},
+            {"reasoningType", step.reasoningType}
+        });
+    }
+    return tree;
 }
 
 } // namespace RawrXD

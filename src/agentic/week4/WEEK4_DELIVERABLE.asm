@@ -9,7 +9,7 @@
 ;================================================================================
 
 OPTION CASEMAP:NONE
-OPTION WIN64:3
+
 
 ;================================================================================
 ; EXTERNAL IMPORTS - All System Components
@@ -313,7 +313,7 @@ MOCK_NODE ENDS
 ; DATA SECTION
 ;================================================================================
 .DATA
-ALIGN 64
+ALIGN 16
 
 ; Test names (Unit Tests - 50)
 test_heartbeat_basic    db "Heartbeat: Basic Protocol", 0
@@ -459,7 +459,7 @@ file_log_file           db "test_execution.log", 0
 ; BSS SECTION - Uninitialized Data
 ;================================================================================
 .DATA?
-ALIGN 64
+ALIGN 16
 
 g_test_suite            TEST_SUITE <>
 g_chaos_engine          CHAOS_ENGINE <>
@@ -469,7 +469,7 @@ g_perf_metrics          PERF_METRICS <>
 ; CODE SECTION
 ;================================================================================
 .CODE
-ALIGN 64
+ALIGN 16
 
 ;================================================================================
 ; MACROS FOR TEST HELPERS
@@ -545,7 +545,7 @@ TestFrameworkInitialize PROC FRAME
     call QueryPerformanceFrequency
     
     ; Initialize critical section
-    lea rcx, [rbx].TEST_SUITE.lock
+    lea rcx, [rbx].TEST_SUITE.SpinLock
     call InitializeCriticalSection
     
     ; Register all tests

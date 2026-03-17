@@ -1,0 +1,360 @@
+In file included from telemetry.h:7,
+                 from rawrxd_cli.cpp:4:
+./nlohmann/json.hpp:442:1: error: expected declaration before '}' token
+  442 | } // namespace nlohmann
+      | ^
+./nlohmann/json.hpp:444:66: error: specialization of 'T nlohmann::json::get() const [with T = std::__cxx11::basic_string<char>]' after instantiation
+  444 | template<> inline std::string nlohmann::json::get<std::string>() const { return m_string; }
+      |                                                                  ^~~~~
+telemetry.h:40:108: error: 'nlohmann::json::object' cannot be used as a function
+   40 |     void recordEvent(const std::string& event_name, const nlohmann::json& metadata = nlohmann::json::object());
+      |                                                                                      ~~~~~~~~~~~~~~~~~~~~~~^~
+rawrxd_cli.cpp:26:8: error: redefinition of 'struct AppState'
+   26 | struct AppState {
+      |        ^~~~~~~~
+In file included from api_server.h:10,
+                 from rawrxd_cli.cpp:3:
+gui.h:5:8: note: previous definition of 'struct AppState'
+    5 | struct AppState {
+      |        ^~~~~~~~
+rawrxd_cli.cpp: In function 'int main(int, char**)':
+rawrxd_cli.cpp:92:19: error: 'struct AppState' has no member named 'model_path'
+   92 |             state.model_path = argv[++i];
+      |                   ^~~~~~~~~~
+rawrxd_cli.cpp:99:23: error: 'struct AppState' has no member named 'enable_max_mode'
+   99 |                 state.enable_max_mode = true;
+      |                       ^~~~~~~~~~~~~~~
+rawrxd_cli.cpp:100:23: error: 'struct AppState' has no member named 'enable_overclock_governor'
+  100 |                 state.enable_overclock_governor = true;
+      |                       ^~~~~~~~~~~~~~~~~~~~~~~~~
+rawrxd_cli.cpp:108:19: error: 'struct AppState' has no member named 'enable_max_mode'
+  108 |             state.enable_max_mode = true;
+      |                   ^~~~~~~~~~~~~~~
+rawrxd_cli.cpp:111:19: error: 'struct AppState' has no member named 'enable_deep_thinking'
+  111 |             state.enable_deep_thinking = true;
+      |                   ^~~~~~~~~~~~~~~~~~~~
+rawrxd_cli.cpp:114:19: error: 'struct AppState' has no member named 'enable_deep_research'
+  114 |             state.enable_deep_research = true;
+      |                   ^~~~~~~~~~~~~~~~~~~~
+rawrxd_cli.cpp:117:19: error: 'struct AppState' has no member named 'enable_no_refusal'
+  117 |             state.enable_no_refusal = true;
+      |                   ^~~~~~~~~~~~~~~~~
+rawrxd_cli.cpp:120:19: error: 'struct AppState' has no member named 'enable_autocorrect'
+  120 |             state.enable_autocorrect = true;
+      |                   ^~~~~~~~~~~~~~~~~~
+rawrxd_cli.cpp:133:19: error: 'struct AppState' has no member named 'enable_overclock_governor'
+  133 |             state.enable_overclock_governor = true;
+      |                   ^~~~~~~~~~~~~~~~~~~~~~~~~
+rawrxd_cli.cpp:136:19: error: 'struct AppState' has no member named 'temperature'
+  136 |             state.temperature = std::stof(argv[++i]);
+      |                   ^~~~~~~~~~~
+rawrxd_cli.cpp:139:19: error: 'struct AppState' has no member named 'top_p'
+  139 |             state.top_p = std::stof(argv[++i]);
+      |                   ^~~~~
+rawrxd_cli.cpp:142:19: error: 'struct AppState' has no member named 'max_tokens'
+  142 |             state.max_tokens = std::stoi(argv[++i]);
+      |                   ^~~~~~~~~~
+rawrxd_cli.cpp:147:19: error: 'struct AppState' has no member named 'engine_manager'
+  147 |             state.engine_manager = std::make_unique<EngineManager>();
+      |                   ^~~~~~~~~~~~~~
+rawrxd_cli.cpp:148:19: error: 'struct AppState' has no member named 'engine_manager'
+  148 |             state.engine_manager->LoadEngine("engines/" + engine_id, engine_id);
+      |                   ^~~~~~~~~~~~~~
+rawrxd_cli.cpp:149:19: error: 'struct AppState' has no member named 'engine_manager'
+  149 |             state.engine_manager->SwitchEngine(engine_id);
+      |                   ^~~~~~~~~~~~~~
+rawrxd_cli.cpp:222:11: error: 'struct AppState' has no member named 'engine_manager'
+  222 |     state.engine_manager = std::make_unique<EngineManager>();
+      |           ^~~~~~~~~~~~~~
+rawrxd_cli.cpp:225:11: error: 'struct AppState' has no member named 'engine_manager'
+  225 |     state.engine_manager->LoadEngine("engines/800b-5drive/800b_engine.dll", "800b-5drive");
+      |           ^~~~~~~~~~~~~~
+rawrxd_cli.cpp:226:11: error: 'struct AppState' has no member named 'engine_manager'
+  226 |     state.engine_manager->LoadEngine("engines/codex-ultimate/codex.dll", "codex-ultimate");
+      |           ^~~~~~~~~~~~~~
+rawrxd_cli.cpp:227:11: error: 'struct AppState' has no member named 'engine_manager'
+  227 |     state.engine_manager->LoadEngine("engines/rawrxd-compiler/compiler.dll", "rawrxd-compiler");
+      |           ^~~~~~~~~~~~~~
+rawrxd_cli.cpp:230:11: error: 'struct AppState' has no member named 'vsix_loader'
+  230 |     state.vsix_loader = std::make_unique<VSIXLoader>();
+      |           ^~~~~~~~~~~
+rawrxd_cli.cpp:231:11: error: 'struct AppState' has no member named 'vsix_loader'
+  231 |     state.vsix_loader->Initialize("plugins");
+      |           ^~~~~~~~~~~
+rawrxd_cli.cpp:234:11: error: 'struct AppState' has no member named 'memory_manager'
+  234 |     state.memory_manager = std::make_unique<MemoryManager>();
+      |           ^~~~~~~~~~~~~~
+rawrxd_cli.cpp:235:11: error: 'struct AppState' has no member named 'memory_manager'
+  235 |     state.memory_manager->SetContextSize(state.context_size);
+      |           ^~~~~~~~~~~~~~
+rawrxd_cli.cpp:238:74: error: cannot convert 'std::shared_ptr<RawrXD::CPUInferenceEngine>' to 'void*' in assignment
+  238 |     state.inference_engine = std::make_shared<RawrXD::CPUInferenceEngine>();
+      |                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~
+      |                                                                          |
+      |                                                                          std::shared_ptr<RawrXD::CPUInferenceEngine>
+rawrxd_cli.cpp:242:19: error: 'struct AppState' has no member named 'model_path'
+  242 |         if (state.model_path.empty()) {
+      |                   ^~~~~~~~~~
+rawrxd_cli.cpp:244:42: error: 'struct AppState' has no member named 'model_path'
+  244 |             std::getline(std::cin, state.model_path);
+      |                                          ^~~~~~~~~~
+rawrxd_cli.cpp:245:23: error: 'struct AppState' has no member named 'model_path'
+  245 |             if (state.model_path.empty()) continue;
+      |                       ^~~~~~~~~~
+rawrxd_cli.cpp:249:20: error: 'struct AppState' has no member named 'model_path'
+  249 |         if (!state.model_path.empty() && state.model_path.front() == '"')
+      |                    ^~~~~~~~~~
+rawrxd_cli.cpp:249:48: error: 'struct AppState' has no member named 'model_path'
+  249 |         if (!state.model_path.empty() && state.model_path.front() == '"')
+      |                                                ^~~~~~~~~~
+rawrxd_cli.cpp:250:19: error: 'struct AppState' has no member named 'model_path'
+  250 |             state.model_path.erase(0, 1);
+      |                   ^~~~~~~~~~
+rawrxd_cli.cpp:251:20: error: 'struct AppState' has no member named 'model_path'
+  251 |         if (!state.model_path.empty() && state.model_path.back() == '"')
+      |                    ^~~~~~~~~~
+rawrxd_cli.cpp:251:48: error: 'struct AppState' has no member named 'model_path'
+  251 |         if (!state.model_path.empty() && state.model_path.back() == '"')
+      |                                                ^~~~~~~~~~
+rawrxd_cli.cpp:252:19: error: 'struct AppState' has no member named 'model_path'
+  252 |             state.model_path.pop_back();
+      |                   ^~~~~~~~~~
+rawrxd_cli.cpp:254:44: error: 'struct AppState' has no member named 'model_path'
+  254 |         std::cout << "[Loading] " << state.model_path << "..." << std::endl;
+      |                                            ^~~~~~~~~~
+rawrxd_cli.cpp:255:13: error: 'void*' is not a pointer-to-object type
+  255 |         if (state.inference_engine->loadModel(state.model_path).has_value()) {
+      |             ^~~~~
+rawrxd_cli.cpp:255:53: error: 'struct AppState' has no member named 'model_path'
+  255 |         if (state.inference_engine->loadModel(state.model_path).has_value()) {
+      |                                                     ^~~~~~~~~~
+rawrxd_cli.cpp:256:34: error: cannot convert 'bool' to 'void*' in assignment
+  256 |             state.loaded_model = true;
+      |                                  ^~~~
+rawrxd_cli.cpp:257:62: error: 'struct AppState' has no member named 'model_path'
+  257 |             std::cout << "[Success] Model loaded: " << state.model_path << std::endl;
+      |                                                              ^~~~~~~~~~
+rawrxd_cli.cpp:259:68: error: 'struct AppState' has no member named 'model_path'
+  259 |             std::cerr << "[Error] Failed to load model: " << state.model_path << std::endl;
+      |                                                                    ^~~~~~~~~~
+rawrxd_cli.cpp:260:19: error: 'struct AppState' has no member named 'model_path'
+  260 |             state.model_path.clear();
+      |                   ^~~~~~~~~~
+rawrxd_cli.cpp:265:11: error: 'struct AppState' has no member named 'agent_engine'
+  265 |     state.agent_engine = std::make_shared<AgenticEngine>();
+      |           ^~~~~~~~~~~~
+rawrxd_cli.cpp:266:11: error: 'struct AppState' has no member named 'agent_engine'
+  266 |     state.agent_engine->setInferenceEngine(state.inference_engine.get());
+      |           ^~~~~~~~~~~~
+rawrxd_cli.cpp:266:67: error: request for member 'get' in 'state.AppState::inference_engine', which is of non-class type 'void*'
+  266 |     state.agent_engine->setInferenceEngine(state.inference_engine.get());
+      |                                                                   ^~~
+rawrxd_cli.cpp:269:5: error: 'GenerationConfig' was not declared in this scope
+  269 |     GenerationConfig config;
+      |     ^~~~~~~~~~~~~~~~
+rawrxd_cli.cpp:270:5: error: 'config' was not declared in this scope
+  270 |     config.temperature = state.temperature;
+      |     ^~~~~~
+rawrxd_cli.cpp:270:32: error: 'struct AppState' has no member named 'temperature'
+  270 |     config.temperature = state.temperature;
+      |                                ^~~~~~~~~~~
+rawrxd_cli.cpp:271:26: error: 'struct AppState' has no member named 'top_p'
+  271 |     config.top_p = state.top_p;
+      |                          ^~~~~
+rawrxd_cli.cpp:272:31: error: 'struct AppState' has no member named 'max_tokens'
+  272 |     config.max_tokens = state.max_tokens;
+      |                               ^~~~~~~~~~
+rawrxd_cli.cpp:273:28: error: 'struct AppState' has no member named 'enable_max_mode'
+  273 |     config.maxMode = state.enable_max_mode;
+      |                            ^~~~~~~~~~~~~~~
+rawrxd_cli.cpp:274:33: error: 'struct AppState' has no member named 'enable_deep_thinking'
+  274 |     config.deepThinking = state.enable_deep_thinking;
+      |                                 ^~~~~~~~~~~~~~~~~~~~
+rawrxd_cli.cpp:275:33: error: 'struct AppState' has no member named 'enable_deep_research'
+  275 |     config.deepResearch = state.enable_deep_research;
+      |                                 ^~~~~~~~~~~~~~~~~~~~
+rawrxd_cli.cpp:276:30: error: 'struct AppState' has no member named 'enable_no_refusal'
+  276 |     config.noRefusal = state.enable_no_refusal;
+      |                              ^~~~~~~~~~~~~~~~~
+rawrxd_cli.cpp:277:32: error: 'struct AppState' has no member named 'enable_autocorrect'
+  277 |     config.autoCorrect = state.enable_autocorrect;
+      |                                ^~~~~~~~~~~~~~~~~~
+rawrxd_cli.cpp:278:11: error: 'struct AppState' has no member named 'agent_engine'
+  278 |     state.agent_engine->updateConfig(config);
+      |           ^~~~~~~~~~~~
+rawrxd_cli.cpp:281:11: error: 'struct AppState' has no member named 'api_server'
+  281 |     state.api_server = std::make_unique<APIServer>(state);
+      |           ^~~~~~~~~~
+rawrxd_cli.cpp:282:11: error: 'struct AppState' has no member named 'api_server'
+  282 |     state.api_server->Start(11434);
+      |           ^~~~~~~~~~
+rawrxd_cli.cpp:286:15: error: 'struct AppState' has no member named 'enable_overclock_governor'
+  286 |     if (state.enable_overclock_governor) {
+      |               ^~~~~~~~~~~~~~~~~~~~~~~~~
+rawrxd_cli.cpp:287:15: error: 'struct AppState' has no member named 'governor'
+  287 |         state.governor = std::make_unique<OverclockGovernor>();
+      |               ^~~~~~~~
+rawrxd_cli.cpp:288:15: error: 'struct AppState' has no member named 'governor'
+  288 |         state.governor->Start(state);
+      |               ^~~~~~~~
+rawrxd_cli.cpp:293:11: error: 'struct AppState' has no member named 'codex'
+  293 |     state.codex = std::make_unique<CodexUltimate>();
+      |           ^~~~~
+rawrxd_cli.cpp:304:11: error: 'struct AppState' has no member named 'shell'
+  304 |     state.shell = std::make_unique<InteractiveShell>(shell_config);
+      |           ^~~~~
+rawrxd_cli.cpp:309:15: error: 'struct AppState' has no member named 'agent_engine'
+  309 |         state.agent_engine->generate(chat_prompt, [](const std::string& token) {
+      |               ^~~~~~~~~~~~
+rawrxd_cli.cpp:317:11: error: 'struct AppState' has no member named 'shell'
+  317 |     state.shell->Start(state.agent_engine.get(), state.memory_manager.get(), state.vsix_loader.get(),
+      |           ^~~~~
+rawrxd_cli.cpp:317:30: error: 'struct AppState' has no member named 'agent_engine'
+  317 |     state.shell->Start(state.agent_engine.get(), state.memory_manager.get(), state.vsix_loader.get(),
+      |                              ^~~~~~~~~~~~
+rawrxd_cli.cpp:317:56: error: 'struct AppState' has no member named 'memory_manager'
+  317 |     state.shell->Start(state.agent_engine.get(), state.memory_manager.get(), state.vsix_loader.get(),
+      |                                                        ^~~~~~~~~~~~~~
+rawrxd_cli.cpp:317:84: error: 'struct AppState' has no member named 'vsix_loader'
+  317 |     state.shell->Start(state.agent_engine.get(), state.memory_manager.get(), state.vsix_loader.get(),
+      |                                                                                    ^~~~~~~~~~~
+rawrxd_cli.cpp:329:37: error: 'struct AppState' has no member named 'model_path'
+  329 |     std::cout << "Model: " << state.model_path << "\n";
+      |                                     ^~~~~~~~~~
+rawrxd_cli.cpp:331:38: error: 'struct AppState' has no member named 'engine_manager'
+  331 |     std::cout << "Engine: " << state.engine_manager->GetCurrentEngine() << "\n";
+      |                                      ^~~~~~~~~~~~~~
+rawrxd_cli.cpp:332:38: error: 'struct AppState' has no member named 'enable_max_mode'
+  332 |     std::cout << "Modes: " << (state.enable_max_mode ? "Max " : "")
+      |                                      ^~~~~~~~~~~~~~~
+rawrxd_cli.cpp:333:25: error: 'struct AppState' has no member named 'enable_deep_thinking'
+  333 |               << (state.enable_deep_thinking ? "Thinking " : "")
+      |                         ^~~~~~~~~~~~~~~~~~~~
+rawrxd_cli.cpp:334:25: error: 'struct AppState' has no member named 'enable_deep_research'
+  334 |               << (state.enable_deep_research ? "Research " : "")
+      |                         ^~~~~~~~~~~~~~~~~~~~
+rawrxd_cli.cpp:335:25: error: 'struct AppState' has no member named 'enable_no_refusal'
+  335 |               << (state.enable_no_refusal ? "NoRefusal " : "")
+      |                         ^~~~~~~~~~~~~~~~~
+rawrxd_cli.cpp:336:25: error: 'struct AppState' has no member named 'enable_autocorrect'
+  336 |               << (state.enable_autocorrect ? "AutoCorrect " : "") << "\n";
+      |                         ^~~~~~~~~~~~~~~~~~
+rawrxd_cli.cpp:340:18: error: 'struct AppState' has no member named 'shell'
+  340 |     while (state.shell->IsRunning()) {
+      |                  ^~~~~
+rawrxd_cli.cpp:345:15: error: 'struct AppState' has no member named 'governor'
+  345 |     if (state.governor) {
+      |               ^~~~~~~~
+rawrxd_cli.cpp:346:15: error: 'struct AppState' has no member named 'governor'
+  346 |         state.governor->Stop();
+      |               ^~~~~~~~
+rawrxd_cli.cpp:350:11: error: 'struct AppState' has no member named 'api_server'
+  350 |     state.api_server->Stop();
+      |           ^~~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/vector:66,
+                 from cpu_inference_engine.h:3,
+                 from rawrxd_cli.cpp:1:
+C:/msys64/mingw64/include/c++/15.2.0/bits/stl_construct.h: In instantiation of 'void std::_Construct(_Tp*, _Args&& ...) [with _Tp = RawrXD::CPUInferenceEngine; _Args = {}]':
+C:/msys64/mingw64/include/c++/15.2.0/bits/alloc_traits.h:805:19:   required from 'static void std::allocator_traits<std::allocator<void> >::construct(allocator_type&, _Up*, _Args&& ...) [with _Up = RawrXD::CPUInferenceEngine; _Args = {}; allocator_type = std::allocator<void>]'
+  805 |         { std::_Construct(__p, std::forward<_Args>(__args)...); }
+      |           ~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/shared_ptr_base.h:606:39:   required from 'std::_Sp_counted_ptr_inplace<_Tp, _Alloc, _Lp>::_Sp_counted_ptr_inplace(_Alloc, _Args&& ...) [with _Args = {}; _Tp = RawrXD::CPUInferenceEngine; _Alloc = std::allocator<void>; __gnu_cxx::_Lock_policy _Lp = __gnu_cxx::_S_atomic]'
+  606 |           allocator_traits<_Alloc>::construct(__a, _M_ptr(),
+      |           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~
+  607 |               std::forward<_Args>(__args)...); // might throw
+      |               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+C:/msys64/mingw64/include/c++/15.2.0/bits/shared_ptr_base.h:969:16:   required from 'std::__shared_count<_Lp>::__shared_count(_Tp*&, std::_Sp_alloc_shared_tag<_Alloc>, _Args&& ...) [with _Tp = RawrXD::CPUInferenceEngine; _Alloc = std::allocator<void>; _Args = {}; __gnu_cxx::_Lock_policy _Lp = __gnu_cxx::_S_atomic]'
+  969 |           auto __pi = ::new (__mem)
+      |                       ^~~~~~~~~~~~~
+  970 |             _Sp_cp_type(__a._M_a, std::forward<_Args>(__args)...);
+      |             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/shared_ptr_base.h:1719:14:   required from 'std::__shared_ptr<_Tp, _Lp>::__shared_ptr(std::_Sp_alloc_shared_tag<_Tp>, _Args&& ...) [with _Alloc = std::allocator<void>; _Args = {}; _Tp = RawrXD::CPUInferenceEngine; __gnu_cxx::_Lock_policy _Lp = __gnu_cxx::_S_atomic]'
+ 1719 |         : _M_ptr(), _M_refcount(_M_ptr, __tag, std::forward<_Args>(__args)...)
+      |                     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/shared_ptr.h:463:59:   required from 'std::shared_ptr<_Tp>::shared_ptr(std::_Sp_alloc_shared_tag<_Tp>, _Args&& ...) [with _Alloc = std::allocator<void>; _Args = {}; _Tp = RawrXD::CPUInferenceEngine]'
+  463 |         : __shared_ptr<_Tp>(__tag, std::forward<_Args>(__args)...)
+      |                                                                  ^
+C:/msys64/mingw64/include/c++/15.2.0/bits/shared_ptr.h:1007:14:   required from 'std::shared_ptr<typename std::enable_if<(! std::is_array<_Tp>::value), _Tp>::type> std::make_shared(_Args&& ...) [with _Tp = RawrXD::CPUInferenceEngine; _Args = {}; typename enable_if<(! is_array<_Tp>::value), _Tp>::type = RawrXD::CPUInferenceEngine]'
+ 1007 |       return shared_ptr<_Tp>(_Sp_alloc_shared_tag<_Alloc>{__a},
+      |              ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 1008 |                              std::forward<_Args>(__args)...);
+      |                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+rawrxd_cli.cpp:238:74:   required from here
+  238 |     state.inference_engine = std::make_shared<RawrXD::CPUInferenceEngine>();
+      |                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~
+C:/msys64/mingw64/include/c++/15.2.0/bits/stl_construct.h:133:7: error: invalid new-expression of abstract class type 'RawrXD::CPUInferenceEngine'
+  133 |       ::new(static_cast<void*>(__p)) _Tp(std::forward<_Args>(__args)...);
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+cpu_inference_engine.h:71:7: note:   because the following virtual functions are pure within 'RawrXD::CPUInferenceEngine':
+   71 | class CPUInferenceEngine : public InferenceEngine {
+      |       ^~~~~~~~~~~~~~~~~~
+In file included from cpu_inference_engine.h:12:
+inference_engine.h:35:34: note:     'virtual std::vector<int> RawrXD::InferenceEngine::Generate(const std::vector<int>&, int)'
+   35 |     virtual std::vector<int32_t> Generate(const std::vector<int32_t>& input_tokens, int max_tokens = 100) = 0;
+      |                                  ^~~~~~~~
+cpu_inference_engine.cpp:5:10: fatal error: inference_kernels.h: No such file or directory
+    5 | #include "inference_kernels.h"
+      |          ^~~~~~~~~~~~~~~~~~~~~
+compilation terminated.
+agentic_engine.cpp: In member function 'std::string AgenticEngine::calculateMetrics(const std::string&)':
+agentic_engine.cpp:165:73: error: 'log2' is not a member of 'std'
+  165 |         double halsteadVolume = static_cast<double>(totalTokens) * std::log2(static_cast<double>(totalTokens));
+      |                                                                         ^~~~
+agentic_engine.cpp:167:32: error: 'log' is not a member of 'std'; did you mean 'clog'?
+  167 |             171.0 - 5.2 * std::log(halsteadVolume) - 0.23 * cyclomaticComplexity - 16.2 * std::log(static_cast<double>(codeLines)));
+      |                                ^~~
+      |                                clog
+agentic_engine.cpp:167:96: error: 'log' is not a member of 'std'; did you mean 'clog'?
+  167 |             171.0 - 5.2 * std::log(halsteadVolume) - 0.23 * cyclomaticComplexity - 16.2 * std::log(static_cast<double>(codeLines)));
+      |                                                                                                ^~~
+      |                                                                                                clog
+api_server.cpp:8:10: fatal error: async_logger.hpp: No such file or directory
+    8 | #include "async_logger.hpp"
+      |          ^~~~~~~~~~~~~~~~~~
+compilation terminated.
+In file included from telemetry.h:7,
+                 from telemetry.cpp:1:
+./nlohmann/json.hpp:442:1: error: expected declaration before '}' token
+  442 | } // namespace nlohmann
+      | ^
+./nlohmann/json.hpp:444:66: error: specialization of 'T nlohmann::json::get() const [with T = std::__cxx11::basic_string<char>]' after instantiation
+  444 | template<> inline std::string nlohmann::json::get<std::string>() const { return m_string; }
+      |                                                                  ^~~~~
+telemetry.h:40:108: error: 'nlohmann::json::object' cannot be used as a function
+   40 |     void recordEvent(const std::string& event_name, const nlohmann::json& metadata = nlohmann::json::object());
+      |                                                                                      ~~~~~~~~~~~~~~~~~~~~~~^~
+telemetry.cpp: In constructor 'Telemetry::Telemetry()':
+telemetry.cpp:41:55: error: 'nlohmann::json::array' cannot be used as a function
+   41 |     : is_enabled_(true), events_(nlohmann::json::array()) {
+      |                                  ~~~~~~~~~~~~~~~~~~~~~^~
+telemetry.cpp: In function 'bool telemetry::InitializeHardware()':
+telemetry.cpp:256:75: warning: passing NULL to non-pointer argument 5 of 'virtual HRESULT IWbemLocator::ConnectServer(BSTR, BSTR, BSTR, BSTR, LONG, BSTR, IWbemContext*, IWbemServices**)' [-Wconversion-null]
+  256 |         hr = g_pLocator->ConnectServer(BSTR(L"ROOT\\WMI"), NULL, NULL, 0, NULL, 0, 0, &g_pServices);
+      |                                                                           ^~~~
+In file included from C:/msys64/mingw64/include/wbemidl.h:13,
+                 from telemetry.cpp:12:
+C:/msys64/mingw64/include/wbemcli.h:1538:14: note: declared here
+ 1538 |         LONG lSecurityFlags,
+      |         ~~~~~^~~~~~~~~~~~~~
+settings.cpp: In static member function 'static bool Settings::SaveCompute(const AppState&, const std::string&)':
+settings.cpp:191:36: error: 'const struct AppState' has no member named 'is_gpu_enabled'
+  191 |     ofs << "enable_gpu=" << (state.is_gpu_enabled ? "1" : "0") << "\n";
+      |                                    ^~~~~~~~~~~~~~
+settings.cpp:192:37: error: 'const struct AppState' has no member named 'thread_count'
+  192 |     ofs << "thread_count=" << state.thread_count << "\n";
+      |                                     ^~~~~~~~~~~~
+settings.cpp:193:38: error: 'const struct AppState' has no member named 'vram_limit_mb'
+  193 |     ofs << "vram_limit_mb=" << state.vram_limit_mb << "\n";
+      |                                      ^~~~~~~~~~~~~
+overclock_governor.cpp:5:10: fatal error: baseline_profile.h: No such file or directory
+    5 | #include "baseline_profile.h"
+      |          ^~~~~~~~~~~~~~~~~~~~
+compilation terminated.
+overclock_vendor.cpp: In function 'bool overclock_vendor::ApplyGpuClockOffsetMhz(int)':
+overclock_vendor.cpp:148:25: error: 'my_clamp' was not declared in this scope
+  148 |         int odPercent = my_clamp(offset / 10, -15, 15); // Map MHz to OD%
+      |                         ^~~~~~~~
+modules/vsix_loader.cpp:8:10: fatal error: zip.h: No such file or directory
+    8 | #include <zip.h> // Ensure you have libzip or similar
+      |          ^~~~~~~
+compilation terminated.

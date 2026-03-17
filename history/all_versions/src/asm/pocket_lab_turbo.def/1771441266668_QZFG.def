@@ -1,0 +1,19 @@
+; =============================================================================
+; pocket_lab_turbo.def — Module definition for pocket_lab_turbo.dll
+; =============================================================================
+LIBRARY pocket_lab_turbo
+
+EXPORTS
+    ; === C++ Bridge Exports (primary API for KernelDispatcher) ===
+    PocketLabInit_Export            @1
+    PocketLabGetThermal_Export      @2
+    PocketLabRunCycle_Export        @3
+    PocketLabGetStats_Export        @4
+    PocketLabShutdown_Export        @5
+
+    ; === Raw ASM Exports (direct kernel access) ===
+    PocketLabInit                   @10
+    PocketLabGetThermal             @11
+    PocketLabRunCycle               @12
+    PocketLabGetStats               @13
+    _DllMainCRTStartup              @14

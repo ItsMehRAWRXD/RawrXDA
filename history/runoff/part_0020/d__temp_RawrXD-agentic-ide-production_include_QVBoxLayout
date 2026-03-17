@@ -1,0 +1,10 @@
+#pragma once
+#include "../src/qt_stubs.h"
+class QWidget;
+class QVBoxLayout {
+public:
+    QVBoxLayout(QWidget* parent) { (void)parent; }
+    void setContentsMargins(int, int, int, int) {}
+    void setSpacing(int) {}
+    void addWidget(QWidget*, int = 0, int = 0) {}
+};

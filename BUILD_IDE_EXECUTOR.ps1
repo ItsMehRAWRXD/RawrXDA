@@ -23,18 +23,43 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$ProjectRoot = 'd:\lazy init ide'
-$AsmSource = "$ProjectRoot\itsmehrawrxd-master"
-$CompilerOut = "$ProjectRoot\compilers"
+$ProjectRoot = 'D:\rawrxd'
+$AsmSource = "$ProjectRoot\src"
+$CompilerOut = "$ProjectRoot\build\compilers"
 $BuildOut = "$ProjectRoot\build"
-$DistOut = "$ProjectRoot\dist"
+$DistOut = "$ProjectRoot\build\dist"
 
-# Tool paths
-$MASM = 'C:\masm32\bin\ml64.exe'
+# Tool paths — auto-detect via vswhere
+function Find-MSVCToolchainRoot {
+    $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+    if (Test-Path $vswhere) {
+        $vsPath = & $vswhere -latest -products * `
+            -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+            -property installationPath 2>$null
+        if ($vsPath -and (Test-Path "$vsPath\VC\Tools\MSVC")) {
+            $ver = Get-ChildItem -Directory "$vsPath\VC\Tools\MSVC" |
+                   Sort-Object Name -Descending | Select-Object -First 1
+            if ($ver) { return $ver.FullName }
+        }
+    }
+    # Fallback probes
+    foreach ($base in @("C:\VS2022Enterprise\VC\Tools\MSVC",
+                        "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC",
+                        "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC")) {
+        if (Test-Path $base) {
+            $v = Get-ChildItem -Directory $base | Sort-Object Name -Descending | Select-Object -First 1
+            if ($v) { return $v.FullName }
+        }
+    }
+    throw "MSVC toolchain not found."
+}
+$_msvcRoot = Find-MSVCToolchainRoot
+$MASM = Join-Path $_msvcRoot "bin\Hostx64\x64\ml64.exe"
 $NASM = 'C:\nasm\nasm.exe'
-$Link = 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC\14.39.33519\bin\Hostx64\x64\link.exe'
+$Link = Join-Path $_msvcRoot "bin\Hostx64\x64\link.exe"
 $CMake = 'cmake'
-$MSBuild = 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\MSBuild.exe'
+$MSBuild = (Split-Path (Split-Path $_msvcRoot -Parent) -Parent) + '\MSBuild\Current\Bin\MSBuild.exe'
+if (-not (Test-Path $MSBuild)) { $MSBuild = 'msbuild' }
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # HELPERS

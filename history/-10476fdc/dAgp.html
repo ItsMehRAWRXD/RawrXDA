@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chrome DevTools IDE</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #1e1e1e; color: #fff; height: 100vh; overflow: hidden; }
+        
+        .ide-container { display: grid; grid-template-rows: 50px 1fr 200px; height: 100vh; }
+        .toolbar { background: #2d2d30; display: flex; align-items: center; padding: 0 20px; gap: 15px; border-bottom: 1px solid #3e3e42; }
+        .toolbar button { background: #0e639c; color: #fff; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        .toolbar button:hover { background: #1177bb; }
+        .toolbar select { background: #3c3c3c; color: #fff; border: 1px solid #5a5a5a; padding: 6px 12px; border-radius: 4px; }
+        
+        .main-area { display: grid; grid-template-columns: 1fr 400px; }
+        .editor-panel { background: #1e1e1e; position: relative; }
+        .debug-panel { background: #252526; border-left: 1px solid #3e3e42; display: flex; flex-direction: column; }
+        
+        .editor { width: 100%; height: 100%; background: #1e1e1e; color: #d4d4d4; font-family: 'Consolas', monospace; font-size: 14px; border: none; outline: none; padding: 20px; resize: none; }
+        
+        .debug-tabs { display: flex; background: #2d2d30; }
+        .debug-tab { padding: 10px 15px; cursor: pointer; border-bottom: 2px solid transparent; font-size: 13px; }
+        .debug-tab.active { border-bottom-color: #0e639c; background: #37373d; }
+        .debug-content { flex: 1; padding: 15px; overflow-y: auto; font-size: 12px; }
+        
+        .console-area { background: #1e1e1e; border-top: 1px solid #3e3e42; display: flex; flex-direction: column; }
+        .console-header { background: #2d2d30; padding: 10px 20px; font-size: 14px; font-weight: 600; }
+        .console-output { flex: 1; padding: 10px 20px; font-family: 'Consolas', monospace; font-size: 12px; overflow-y: auto; }
+        
+        .performance-metric { margin-bottom: 10px; padding: 8px; background: #37373d; border-radius: 4px; }
+        .network-request { margin-bottom: 8px; padding: 6px; background: #37373d; border-radius: 3px; font-size: 11px; }
+        .console-log { margin-bottom: 5px; }
+        .console-log.error { color: #f48771; }
+        .console-log.warn { color: #dcdcaa; }
+        .console-log.info { color: #9cdcfe; }
+        
+        .screenshot-container { text-align: center; }
+        .screenshot-container img { max-width: 100%; border-radius: 4px; }
+        
+        .status-bar { position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 4px; font-size: 11px; }
+    </style>
+</head>
+<body>
+    <div class="ide-container">
+        <div class="toolbar">
+            <button onclick="executeCode()">▶ Run</button>
+            <button onclick="takeScreenshot()">📷 Screenshot</button>
+            <button onclick="getPerformance()">⚡ Performance</button>
+            <button onclick="clearConsole()">🗑️ Clear</button>
+            <select id="languageSelect">
+                <option value="javascript">JavaScript</option>
+                <option value="html">HTML</option>
+                <option value="css">CSS</option>
+            </select>
+            <span style="margin-left: auto; font-size: 12px;">Chrome DevTools IDE</span>
+        </div>
+        
+        <div class="main-area">
+            <div class="editor-panel">
+                <textarea id="codeEditor" class="editor" placeholder="// Write your code here...
+console.log('Hello Chrome DevTools IDE!');
+
+// Try some examples:
+// document.body.style.background = 'linear-gradient(45deg, #ff6b6b, #4ecdc4)';
+// performance.mark('test-start');
+// fetch('https://api.github.com/users/octocat').then(r => r.json()).then(console.log);"></textarea>
+                <div class="status-bar" id="statusBar">Ready</div>
+            </div>
+            
+            <div class="debug-panel">
+                <div class="debug-tabs">
+                    <div class="debug-tab active" onclick="switchTab('performance', this)">Performance</div>
+                    <div class="debug-tab" onclick="switchTab('network', this)">Network</div>
+                    <div class="debug-tab" onclick="switchTab('console', this)">Console</div>
+                    <div class="debug-tab" onclick="switchTab('screenshot', this)">Preview</div>
+                </div>
+                <div class="debug-content" id="debugContent">
+                    <div id="performanceTab">
+                        <div class="performance-metric">
+                            <strong>Performance Metrics</strong><br>
+                            Click "⚡ Performance" to analyze page performance
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="console-area">
+            <div class="console-header">Console Output</div>
+            <div class="console-output" id="consoleOutput">
+                <div class="console-log info">Chrome DevTools IDE initialized</div>
+                <div class="console-log info">WebSocket connection established</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // AMD Loader Compatibility Fix
+        (function() {
+            'use strict';
+            
+            // Prevent AMD loader conflicts
+            if (typeof define !== 'undefined' && define.amd) {
+                console.warn('AMD loader detected - using compatibility mode');
+                // Store original AMD define if it exists
+                window._originalDefine = define;
+                window._originalRequire = typeof require !== 'undefined' ? require : null;
+            }
+            
+            // Ensure our code runs in global scope regardless of AMD
+            const globalScope = (function() { return this; })() || window || global || self;
+            
+            let ws;
+            let currentTab = 'performance';
+            
+            function initWebSocket() {
+                // WebSocket disabled - using HTTP API instead
+                updateStatus('Connected via HTTP API');
+                addConsoleLog('HTTP API ready - WebSocket not needed', 'info');
+                
+                // No WebSocket connection needed since buttons work via fetch()
+                ws = null;
+            }
+        
+            function sendWebSocketMessage(type, payload) {
+                // WebSocket disabled - all communication via HTTP fetch()
+                addConsoleLog(`Sending ${type} request via HTTP API`, 'info');
+                return Date.now(); // Return fake ID for compatibility
+            }
+        
+            function handleWebSocketResponse(data) {
+                if (data.error) {
+                    addConsoleLog(`Error: ${data.error}`, 'error');
+                    return;
+                }
+                
+                // Handle different response types
+                if (data.result) {
+                    addConsoleLog(`Result: ${JSON.stringify(data.result)}`, 'info');
+                }
+            }
+        
+            async function executeCode() {
+                const code = document.getElementById('codeEditor').value;
+                const language = document.getElementById('languageSelect').value;
+                
+                if (!code.trim()) return;
+                
+                updateStatus('Executing...');
+                addConsoleLog(`Executing ${language} code...`, 'info');
+                
+                try {
+                    const response = await fetch('/api/execute', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ code, language })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        addConsoleLog(`✅ Execution successful: ${JSON.stringify(result.result)}`, 'info');
+                        updateStatus('Execution complete');
+                    } else {
+                        addConsoleLog(`❌ Execution failed: ${result.error}`, 'error');
+                        updateStatus('Execution failed');
+                    }
+                } catch (error) {
+                    addConsoleLog(`❌ Network error: ${error.message}`, 'error');
+                    updateStatus('Network error');
+                }
+            }
+        
+            async function takeScreenshot() {
+                updateStatus('Taking screenshot...');
+                
+                try {
+                    const response = await fetch('/api/debug', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'screenshot', params: {} })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        showScreenshot(result.result);
+                        switchTab('screenshot');
+                        updateStatus('Screenshot captured');
+                    } else {
+                        addConsoleLog(`Screenshot failed: ${result.error}`, 'error');
+                    }
+                } catch (error) {
+                    addConsoleLog(`Screenshot error: ${error.message}`, 'error');
+                }
+            }
+        
+            async function getPerformance() {
+                updateStatus('Analyzing performance...');
+                
+                try {
+                    const response = await fetch('/api/performance');
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        showPerformanceMetrics(result.metrics);
+                        switchTab('performance');
+                        updateStatus('Performance analysis complete');
+                    } else {
+                        addConsoleLog(`Performance analysis failed: ${result.error}`, 'error');
+                    }
+                } catch (error) {
+                    addConsoleLog(`Performance error: ${error.message}`, 'error');
+                }
+            }
+        
+            function showPerformanceMetrics(metrics) {
+                const html = `
+                    <div class="performance-metric">
+                        <strong>Load Time:</strong> ${metrics.loadTime}ms
+                    </div>
+                    <div class="performance-metric">
+                        <strong>DOM Content Loaded:</strong> ${metrics.domContentLoaded}ms
+                    </div>
+                    <div class="performance-metric">
+                        <strong>JS Heap Used:</strong> ${(metrics.JSHeapUsedSize / 1024 / 1024).toFixed(2)} MB
+                    </div>
+                    <div class="performance-metric">
+                        <strong>JS Heap Total:</strong> ${(metrics.JSHeapTotalSize / 1024 / 1024).toFixed(2)} MB
+                    </div>
+                    <div class="performance-metric">
+                        <strong>Nodes:</strong> ${metrics.Nodes}
+                    </div>
+                `;
+                document.getElementById('debugContent').innerHTML = html;
+            }
+        
+            function showScreenshot(base64Image) {
+                const html = `
+                    <div class="screenshot-container">
+                        <img src="data:image/png;base64,${base64Image}" alt="Page Screenshot">
+                    </div>
+                `;
+                document.getElementById('debugContent').innerHTML = html;
+            }
+        
+        function switchTab(tabName, element) {
+            currentTab = tabName;
+            
+            // Update tab appearance
+            document.querySelectorAll('.debug-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            if (element) element.classList.add('active');
+            else document.querySelector(`[onclick*="${tabName}"]`).classList.add('active');
+            
+            // Show appropriate content
+            const content = document.getElementById('debugContent');
+            switch (tabName) {
+                case 'performance':
+                    content.innerHTML = '<div class="performance-metric"><strong>Performance Metrics</strong><br>Click "⚡ Performance" to analyze</div>';
+                    break;
+                case 'network':
+                    content.innerHTML = '<div class="network-request"><strong>Network Requests</strong><br>Execute code to see network activity</div>';
+                    break;
+                case 'console':
+                    content.innerHTML = '<div class="console-log"><strong>Console Logs</strong><br>Execute JavaScript to see console output</div>';
+                    break;
+                case 'screenshot':
+                    content.innerHTML = '<div class="screenshot-container"><strong>Page Preview</strong><br>Click "📷 Screenshot" to capture</div>';
+                    break;
+            }
+        }
+        
+        function addConsoleLog(message, type = 'info') {
+            const output = document.getElementById('consoleOutput');
+            const logDiv = document.createElement('div');
+            logDiv.className = `console-log ${type}`;
+            logDiv.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            output.appendChild(logDiv);
+            output.scrollTop = output.scrollHeight;
+        }
+        
+        function updateStatus(message) {
+            document.getElementById('statusBar').textContent = message;
+        }
+        
+        function clearConsole() {
+            document.getElementById('consoleOutput').innerHTML = '';
+            addConsoleLog('Console cleared', 'info');
+        }
+        
+            // Initialize
+            globalScope.onload = () => {
+                initWebSocket();
+                addConsoleLog('Chrome DevTools IDE ready', 'info');
+            };
+            
+            // Expose functions globally to ensure they work regardless of AMD
+            globalScope.executeCode = executeCode;
+            globalScope.takeScreenshot = takeScreenshot;
+            globalScope.getPerformance = getPerformance;
+            globalScope.clearConsole = clearConsole;
+            globalScope.switchTab = switchTab;
+            globalScope.addConsoleLog = addConsoleLog;
+            globalScope.updateStatus = updateStatus;
+            
+        })(); // End AMD compatibility wrapper
+    </script>
+</body>
+</html>

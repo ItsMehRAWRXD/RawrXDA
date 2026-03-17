@@ -1,0 +1,221 @@
+// ════════════════════════════════════════════════════════════════════════════════
+//  GGUF METADATA ADAPTER - Vulkan Compute Shader
+//  Reads live-patched GGUF metadata and performs dynamic attention computation
+//  Compiles to SPIR-V with: glslc -O3 gguf_metadata_adapter.comp -o gguf_metadata_adapter.spv
+// ════════════════════════════════════════════════════════════════════════════════
+
+#version 460
+#extension GL_EXT_shader_16bit_storage : enable
+#extension GL_KHR_shader_subgroup_basic : enable
+#extension GL_ARB_separate_shader_objects : enable
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BUFFER LAYOUTS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Binding 0: GGUF metadata (read-only) - Updated live by hotpatch engine
+layout(std430, binding = 0) readonly buffer GGUFMetadataBuffer {
+    uint context_len;           // Patched context length (can change at runtime)
+    uint head_count;            // Attention heads
+    uint head_size;             // Dimension per head (64 or 128)
+    uint rope_freq_base;        // RoPE base frequency
+    uint layer_count;           // Number of transformer layers
+    uint kv_size;               // KV cache size per token
+    uint hidden_size;           // Hidden dimension
+    uint vocab_size;            // Vocabulary size
+    uint _padding[56];          // Cache-line alignment
+} metadata;
+
+// Binding 1: KV cache buffer (read-write)
+// Layout: [layer][token][k_v_cache_data]
+layout(std430, binding = 1) buffer KVCacheBuffer {
+    uint kv_data[];
+} kv_cache;
+
+// Binding 2: Output image (read-write storage)
+// Attention matrix visualization: [context_pos][head_id]
+layout(rgba16f, binding = 2) writeonly uniform image2D output_attention;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SHADER PARAMETERS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HELPER FUNCTIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Compute RoPE (Rotary Position Embedding) angle
+vec2 compute_rope(uint position, uint dim) {
+    float freq = 1.0 / pow(float(metadata.rope_freq_base), 
+                           float(dim) / float(metadata.head_size));
+    float angle = float(position) * freq;
+    return vec2(cos(angle), sin(angle));
+}
+
+// XOR Mixing (placeholder for attention score computation)
+uint xor_mix(uint a, uint b) {
+    return a ^ b ^ (a + b);
+}
+
+// Initialize KV cache entry for new token
+void init_kv_entry(uint token_pos, uint layer_idx) {
+    uint offset = (layer_idx * metadata.context_len + token_pos) * metadata.kv_size;
+    
+    for (uint i = gl_LocalInvocationID.x; i < metadata.kv_size; i += 32) {
+        kv_cache.kv_data[offset + i] = 0;
+    }
+}
+
+// Read from KV cache with bounds checking
+uint read_kv(uint token_pos, uint layer_idx, uint offset) {
+    if (token_pos >= metadata.context_len) return 0;
+    if (offset >= metadata.kv_size) return 0;
+    
+    uint addr = (layer_idx * metadata.context_len + token_pos) * metadata.kv_size + offset;
+    return kv_cache.kv_data[addr];
+}
+
+// Write to KV cache with bounds checking
+void write_kv(uint token_pos, uint layer_idx, uint offset, uint value) {
+    if (token_pos >= metadata.context_len) return;
+    if (offset >= metadata.kv_size) return;
+    
+    uint addr = (layer_idx * metadata.context_len + token_pos) * metadata.kv_size + offset;
+    kv_cache.kv_data[addr] = value;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MAIN COMPUTE SHADER
+// ═══════════════════════════════════════════════════════════════════════════════
+
+void main() {
+    uint global_id = gl_GlobalInvocationID.x;
+    uint group_id_y = gl_GlobalInvocationID.y;
+    
+    // Early exit if beyond dynamic bounds from patched metadata
+    if (global_id >= metadata.context_len) return;
+    if (group_id_y >= metadata.head_count) return;
+    
+    // Coordinates
+    uint token_pos = global_id;
+    uint head_id = group_id_y;
+    uint local_id = gl_LocalInvocationID.x;
+    
+    // ───────────────────────────────────────────────────────────────────────────
+    // PHASE 1: Initialize KV cache for first position
+    // ───────────────────────────────────────────────────────────────────────────
+    
+    if (token_pos == 0) {
+        // Parallel initialization across all 32 threads
+        for (uint layer = 0; layer < metadata.layer_count; layer++) {
+            init_kv_entry(token_pos, layer);
+        }
+    }
+    
+    barrier();
+    
+    // ───────────────────────────────────────────────────────────────────────────
+    // PHASE 2: Compute RoPE embeddings with dynamic frequency base
+    // ───────────────────────────────────────────────────────────────────────────
+    
+    uint dim_per_head = metadata.head_size;
+    float rope_component = 0.0;
+    
+    for (uint d = 0; d < dim_per_head; d += 2) {
+        vec2 rope = compute_rope(token_pos, d);
+        rope_component += rope.x + rope.y;
+    }
+    
+    // ───────────────────────────────────────────────────────────────────────────
+    // PHASE 3: Update KV cache with RoPE embeddings
+    // ───────────────────────────────────────────────────────────────────────────
+    
+    for (uint layer = 0; layer < metadata.layer_count; layer++) {
+        // Write RoPE-encoded position to KV
+        uint encoded = floatBitsToUint(rope_component);
+        write_kv(token_pos, layer, head_id % metadata.kv_size, encoded);
+    }
+    
+    barrier();
+    
+    // ───────────────────────────────────────────────────────────────────────────
+    // PHASE 4: Compute attention scores with KV lookback
+    // ───────────────────────────────────────────────────────────────────────────
+    
+    float attention_score = 0.0;
+    
+    // Lookback: scan all previous tokens in context
+    for (uint past_pos = 0; past_pos < token_pos; past_pos++) {
+        // Read past KV entry
+        uint past_kv = read_kv(past_pos, 0, head_id % metadata.kv_size);
+        
+        // Compute attention similarity (XOR mixing as placeholder)
+        uint current_kv = floatBitsToUint(rope_component);
+        uint similarity = xor_mix(current_kv, past_kv);
+        
+        // Accumulate attention
+        attention_score += float(similarity) / 65536.0;
+    }
+    
+    // Normalize by context length
+    if (metadata.context_len > 0) {
+        attention_score /= float(metadata.context_len);
+    }
+    
+    // ───────────────────────────────────────────────────────────────────────────
+    // PHASE 5: Write attention matrix to output image
+    // ───────────────────────────────────────────────────────────────────────────
+    
+    ivec2 coord = ivec2(token_pos, head_id);
+    
+    // Write as RGBA16F with metadata in alpha
+    vec4 output_color = vec4(
+        attention_score,                           // R: Attention score
+        float(head_id) / float(metadata.head_count),  // G: Head normalized ID
+        float(token_pos) / float(metadata.context_len), // B: Token position normalized
+        1.0                                        // A: Valid pixel
+    );
+    
+    imageStore(output_attention, coord, output_color);
+    
+    // ───────────────────────────────────────────────────────────────────────────
+    // PHASE 6: Subgroup synchronization (for advanced attention patterns)
+    // ───────────────────────────────────────────────────────────────────────────
+    
+    // Optional: Reduce attention scores across subgroup
+    float subgroup_score = subgroupAdd(attention_score);
+    
+    // Optional: Store reduced score for output
+    if (gl_SubgroupInvocationID == 0 && head_id == 0) {
+        // Debug: Write subgroup-level statistics
+        // (Placeholder for future cross-head attention patterns)
+    }
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+// SHADER COMPILATION NOTES
+// ════════════════════════════════════════════════════════════════════════════════
+//
+// Build Command (glslc from Vulkan SDK):
+//   glslc -O3 -fshader-stage=compute gguf_metadata_adapter.comp -o gguf_metadata_adapter.spv
+//
+// Alternative (glslangValidator):
+//   glslangValidator -V -S comp gguf_metadata_adapter.comp -o gguf_metadata_adapter.spv
+//
+// Result: Binary SPIR-V embedded in hotpatch_runtime.cpp
+//
+// Key Optimizations:
+//   1. Local size 32 = standard warp size for GPU efficiency
+//   2. Dynamic context_len from metadata allows runtime reconfiguration
+//   3. RoPE computed with patched rope_freq_base (10k/500k/1M)
+//   4. KV cache laid out for coalesced access patterns
+//   5. Output image supports visualization of attention patterns
+//
+// Metadata Patching Flow:
+//   hotpatch.patch_context_len(65536)  → metadata.context_len updated in GPU memory
+//   dispatch()  → shader re-reads new context_len
+//   No recompilation, no shader reload, instant reconfiguration
+//
+// ════════════════════════════════════════════════════════════════════════════════

@@ -1,0 +1,7 @@
+{
+    "ghost_text_enabled": true,
+    "ghost_text_color": "0x808080",
+    "auto_suggestions": true,
+    "debounce_ms": 300,
+    "default_file_type": "cpp"
+}

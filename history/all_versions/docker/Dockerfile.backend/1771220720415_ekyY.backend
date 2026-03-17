@@ -1,0 +1,12 @@
+FROM python:3.11-slim
+
+WORKDIR /opt/rawrxd
+
+COPY Ship/ /opt/rawrxd/Ship/
+COPY backend/ /opt/rawrxd/backend/
+
+RUN pip install --no-cache-dir flask
+
+EXPOSE 23959
+
+CMD ["python", "/opt/rawrxd/Ship/RawrEngine.py"]

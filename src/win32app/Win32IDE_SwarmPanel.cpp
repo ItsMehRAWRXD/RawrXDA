@@ -111,7 +111,7 @@ static bool extractJsonBool(const std::string& body, const std::string& key) {
 // =============================================================================
 static bool checkSwarmLicense() {
     // Check if DistributedSwarm feature is enabled in the enterprise license
-    return RawrXD::EnterpriseLicense::isFeatureEnabled(RawrXD::LicenseFeature::DistributedSwarm);
+    return RawrXD::License::EnterpriseLicenseV2::Instance().isFeatureEnabled(RawrXD::License::FeatureID::MultiGPULoadBalance);
 }
 
 // =============================================================================

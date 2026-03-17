@@ -9,7 +9,53 @@ const AgentOrchestrator = require(path.join(__dirname, '..', 'src', 'agentic', '
 let mainWindow = null;
 let projectRoot = null;
 const aiManager = new AIProviderManager();
-const agentOrchestrator = new AgentOrchestrator(aiManager);
+const agentRuntime = {
+  getProjectRoot: () => projectRoot,
+  readFile: async (relPath) => {
+    if (!projectRoot) {
+      throw new Error('No project opened');
+    }
+    const resolved = path.resolve(projectRoot, relPath);
+    if (!isPathAllowed(resolved)) {
+      throw new Error('Access denied: path not under project root');
+    }
+    return fs.readFile(resolved, 'utf8');
+  },
+  writeFile: async (relPath, content) => {
+    if (!projectRoot) {
+      throw new Error('No project opened');
+    }
+    const resolved = path.resolve(projectRoot, relPath);
+    if (!isPathAllowed(resolved)) {
+      throw new Error('Access denied: path not under project root');
+    }
+    await fs.mkdir(path.dirname(resolved), { recursive: true });
+    await fs.writeFile(resolved, content, 'utf8');
+  },
+  appendFile: async (relPath, content) => {
+    if (!projectRoot) {
+      throw new Error('No project opened');
+    }
+    const resolved = path.resolve(projectRoot, relPath);
+    if (!isPathAllowed(resolved)) {
+      throw new Error('Access denied: path not under project root');
+    }
+    await fs.mkdir(path.dirname(resolved), { recursive: true });
+    await fs.appendFile(resolved, content, 'utf8');
+  },
+  readDir: async (relPath) => {
+    if (!projectRoot) {
+      throw new Error('No project opened');
+    }
+    const resolved = path.resolve(projectRoot, relPath);
+    if (!isPathAllowed(resolved)) {
+      throw new Error('Access denied: path not under project root');
+    }
+    const entries = await fs.readdir(resolved, { withFileTypes: true });
+    return entries.map((e) => ({ name: e.name, isDirectory: e.isDirectory() }));
+  }
+};
+const agentOrchestrator = new AgentOrchestrator(aiManager, agentRuntime);
 
 function isPathAllowed(filePath) {
   if (!projectRoot) return false;
@@ -69,7 +115,7 @@ function setupIPC() {
 
   ipcMain.handle('ai:set-active', async (_, providerId) => {
     const ok = aiManager.setActiveProvider(providerId);
-    return { success: ok };
+    return ok ? { success: true } : { success: false, error: 'Provider is unavailable or disabled' };
   });
 
   ipcMain.handle('agent:start', async (_, goal) => {

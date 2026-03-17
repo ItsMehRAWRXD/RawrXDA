@@ -474,9 +474,7 @@ Rect DrawingContext::measureText(const std::string& text, const std::string& fon
 }
 
 Point DrawingContext::transformPoint(const Point& p) const {
-    QVector4D v(p.x, p.y, 0, 1);
-    v = m_currentTransform * v;
-    return Point(v.x(), v.y());
+    return m_currentTransform.transformPoint(p);
 }
 
 bool DrawingContext::isPointInClipRegion(const Point& p) const {

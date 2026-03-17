@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IDE Error Fixes</title>
+</head>
+
+<body>
+  <!-- Example usage of the fixed functions -->
+  <div class="toolbar">
+    <button onclick="browseDrives()">Browse Drives</button>
+    <button onclick="navigateToCustomPath()">Navigate to Path</button>
+    <button onclick="runCode()">Run Code</button>
+    <button onclick="askAgent()">Ask Agent</button>
+  </div>
+
+  <div class="panels">
+    <button onclick="toggleFloatAIPanel()">Toggle AI Panel</button>
+    <button onclick="clearAIChat()">Clear AI Chat</button>
+    <div onclick="toggleTuningPanel()">Toggle Tuning Panel</div>
+  </div>
+
+  <div class="context-menu">
+    <div onclick="contextMenuAction('copy')">Copy</div>
+    <div onclick="contextMenuAction('paste')">Paste</div>
+    <div onclick="contextMenuAction('cut')">Cut</div>
+  </div>
+
+  <input type="text" onkeypress="handleQueueInput(event)" placeholder="Enter queue command">
+
+  <!-- Include the fixes BEFORE any other scripts that might use these functions -->
+  <script src="ide-fixes.js"></script>
+
+  <!-- Example of how to fix the AMD loader issue -->
+  <script>
+    // Check if AMD loader is already defined before loading
+    if (typeof _amdLoaderGlobal === 'undefined') {
+      // Load your AMD loader here
+      console.log("Loading AMD loader for the first time");
+    } else {
+      console.log("AMD loader already exists, skipping");
+    }
+  </script>
+
+  <!-- 
+    To fix the "Unexpected end of input" error on line 13863,
+    check your original HTML file for:
+    1. Unclosed script tags
+    2. Unclosed string literals
+    3. Unclosed object/array literals
+    4. Missing closing braces/brackets
+    -->
+
+</body>
+
+</html>

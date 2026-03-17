@@ -1,0 +1,18 @@
+# RawrXD IDE startup phase order — all phases run at boot (no skips).
+# One phase name per line. Empty lines and # comments ignored.
+# Prefix with lazy: to run on first use only (not used by default).
+#
+init_common_controls
+first_run_gauntlet
+vsix_loader
+plugin_signature
+creating_ide_instance
+createWindow
+enterprise_license
+showWindow
+camellia_init
+masm_init
+swarm
+auto_update
+layout
+message_loop_entered

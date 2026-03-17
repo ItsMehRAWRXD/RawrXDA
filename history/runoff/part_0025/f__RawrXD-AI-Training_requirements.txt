@@ -1,0 +1,6 @@
+# RawrXD-AI Training Pipeline
+torch>=2.0.0
+torch-directml
+tokenizers>=0.13.0
+numpy
+tqdm

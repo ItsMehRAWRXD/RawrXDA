@@ -1,0 +1,36 @@
+# MASM Win32 IDE - Minimal Build for Phase 5 & 6
+# Only includes main.asm and its direct dependencies
+
+cmake_minimum_required(VERSION 3.20)
+project(RawrXDWin32MASM LANGUAGES ASM_MASM)
+
+# Essential MASM sources only
+set(MASM_SOURCES
+    src/main.asm
+    src/file_explorer.asm
+    src/error_logging.asm
+    src/perf_metrics.asm
+    src/error_dashboard.asm
+)
+
+# Create executable
+add_executable(${PROJECT_NAME} ${MASM_SOURCES})
+
+# Link Windows libraries
+target_link_libraries(${PROJECT_NAME} PRIVATE
+    user32 gdi32 kernel32 shell32 comctl32 comdlg32 ole32 shlwapi
+)
+
+# Include directories
+target_include_directories(${PROJECT_NAME} PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+# Output
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+    WIN32_EXECUTABLE TRUE
+)
+
+message(STATUS "✅ MASM IDE Configured: ${PROJECT_NAME}")
+message(STATUS "📦 Phase 5 & 6: Logging + Performance")

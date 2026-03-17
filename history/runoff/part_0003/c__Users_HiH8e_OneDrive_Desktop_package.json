@@ -1,0 +1,28 @@
+{
+  "name": "desktop",
+  "version": "1.0.0",
+  "description": "",
+  "main": "agentic-test-suite.js",
+  "directories": {
+    "example": "examples"
+  },
+  "scripts": {
+    "start": "node ide-launcher.js",
+    "audit-local": "node scripts/local-audit.js",
+    "strip-comments": "node scripts/strip-comments.js",
+    "lint": "eslint . --max-warnings=0",
+    "test": "node scripts/local-audit.js && echo \"No tests defined\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "acorn": "^8.15.0",
+    "axios": "^1.13.2",
+    "puppeteer": "^24.30.0"
+  },
+  "devDependencies": {
+    "eslint": "^9.13.0"
+  }
+}

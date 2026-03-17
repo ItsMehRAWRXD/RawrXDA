@@ -1,0 +1,4 @@
+   Creating library .\bin\RawrXD-Win32IDE.lib and object .\bin\RawrXD-Win32IDE.exp
+win32app_Win32IDE_LSP_AI_Bridge.obj : error LNK2001: unresolved external symbol "public: void __cdecl Win32IDE::clearAllAnnotations(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)" (?clearAllAnnotations@Win32IDE@@QEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z)
+win32app_Win32IDE_LSP_AI_Bridge.obj : error LNK2001: unresolved external symbol "public: void __cdecl Win32IDE::addAnnotation(int,enum Win32IDE::AnnotationSeverity,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)" (?addAnnotation@Win32IDE@@QEAAXHW4AnnotationSeverity@1@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@1@Z)
+.\bin\RawrXD-Win32IDE.exe : fatal error LNK1120: 2 unresolved externals

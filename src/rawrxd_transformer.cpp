@@ -86,7 +86,57 @@ void RMSNorm_AVX512(float* out, const float* in, const float* weight, int size, 
 }
 #endif
 
+// =============================================================================
+// Portable AVX-512 exp approximation — replaces SVML _mm512_exp_ps
+// 6th-order minimax polynomial on [-87.3, 88.7], ~1e-6 relative error.
+// Works on ANY AVX-512F capable compiler (GCC, Clang, MSVC) without SVML.
+// =============================================================================
 #ifdef __AVX512F__
+static inline __m512 _rawrxd_exp_ps_avx512(__m512 x) {
+    // Clamp to prevent overflow/underflow
+    const __m512 hi = _mm512_set1_ps(88.3762626647949f);
+    const __m512 lo = _mm512_set1_ps(-87.3365447504f);
+    x = _mm512_min_ps(x, hi);
+    x = _mm512_max_ps(x, lo);
+
+    // exp(x) = 2^(x * log2(e))  →  2^(n + f)  where n=floor, f=fraction
+    const __m512 log2e = _mm512_set1_ps(1.44269504088896341f);
+    const __m512 half  = _mm512_set1_ps(0.5f);
+    __m512 t = _mm512_fmadd_ps(x, log2e, half);  // t = x*log2e + 0.5
+
+    // n = floor(t)
+    __m512 n = _mm512_roundscale_ps(t, _MM_FROUND_TO_NEG_INF | _MM_FROUND_NO_EXC);
+
+    // f = x - n * ln(2)
+    const __m512 c1 = _mm512_set1_ps(0.693359375f);     // ln(2) upper
+    const __m512 c2 = _mm512_set1_ps(-2.12194440e-4f);  // ln(2) lower (Cody-Waite)
+    __m512 f = _mm512_fnmadd_ps(n, c1, x);
+    f = _mm512_fnmadd_ps(n, c2, f);
+
+    // Polynomial approximation of 2^f - 1 on [0, ln2)
+    const __m512 p0 = _mm512_set1_ps(1.0f);
+    const __m512 p1 = _mm512_set1_ps(1.0f);
+    const __m512 p2 = _mm512_set1_ps(0.5f);
+    const __m512 p3 = _mm512_set1_ps(0.1666666666666f);
+    const __m512 p4 = _mm512_set1_ps(0.0416666666666f);
+    const __m512 p5 = _mm512_set1_ps(0.0083333333333f);
+    const __m512 p6 = _mm512_set1_ps(0.0013888888888f);
+
+    __m512 y = _mm512_fmadd_ps(p6, f, p5);
+    y = _mm512_fmadd_ps(y, f, p4);
+    y = _mm512_fmadd_ps(y, f, p3);
+    y = _mm512_fmadd_ps(y, f, p2);
+    y = _mm512_fmadd_ps(y, f, p1);
+    y = _mm512_fmadd_ps(y, f, p0);
+
+    // Scale by 2^n: convert n to integer, shift into float exponent bits
+    __m512i ni = _mm512_cvtps_epi32(n);
+    ni = _mm512_slli_epi32(ni, 23);                 // Shift into exponent field
+    __m512 pow2n = _mm512_castsi512_ps(_mm512_add_epi32(ni, _mm512_set1_epi32(0x3F800000)));
+
+    return _mm512_mul_ps(y, pow2n);
+}
+
 void Softmax_AVX512(float* x, int size) {
     __m512 max_vec = _mm512_loadu_ps(x);
     int i = 16;
@@ -105,7 +155,7 @@ void Softmax_AVX512(float* x, int size) {
     for (; i + 15 < size; i += 16) {
         __m512 curr_vec = _mm512_loadu_ps(x + i);
         curr_vec = _mm512_sub_ps(curr_vec, max_val_vec);
-        curr_vec = _mm512_exp_ps(curr_vec);
+        curr_vec = _rawrxd_exp_ps_avx512(curr_vec);  // Portable replacement
         _mm512_storeu_ps(x + i, curr_vec);
         sum_vec = _mm512_add_ps(sum_vec, curr_vec);
     }
@@ -176,7 +226,7 @@ void Silu_AVX512(float* x, int size) {
     for (; i + 15 < size; i += 16) {
         __m512 val_vec = _mm512_loadu_ps(x + i);
         __m512 neg_val_vec = _mm512_sub_ps(_mm512_setzero_ps(), val_vec);
-        __m512 exp_vec = _mm512_exp_ps(neg_val_vec);
+        __m512 exp_vec = _rawrxd_exp_ps_avx512(neg_val_vec);  // Portable replacement
         __m512 one_vec = _mm512_set1_ps(1.0f);
         __m512 denom_vec = _mm512_add_ps(one_vec, exp_vec);
         __m512 result_vec = _mm512_div_ps(val_vec, denom_vec);

@@ -1,6 +1,0 @@
-@echo off
-echo [RawrXD] Booting Sovereign Enterprise Environment...
-start "" "pocket_lab.exe"
-start "" "RawrXD-AgenticIDE.exe"
-echo [RawrXD] Starting HexMag Swarm (Port 8000)...
-start /b python "services\hexmag\hexmag_engine.py"

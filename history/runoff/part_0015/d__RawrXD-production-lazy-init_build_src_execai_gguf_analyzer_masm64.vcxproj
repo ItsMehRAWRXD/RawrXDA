@@ -1,0 +1,429 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="MinSizeRel|x64">
+      <Configuration>MinSizeRel</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="RelWithDebInfo|x64">
+      <Configuration>RelWithDebInfo</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{5F1994EC-4FE3-3944-9B52-934E6DA397F9}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
+    <Platform>x64</Platform>
+    <ProjectName>gguf_analyzer_masm64</ProjectName>
+    <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <LinkToolExe Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\link.exe</LinkToolExe>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\RawrXD-production-lazy-init\build\src\execai\Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">gguf_analyzer_masm64.dir\Debug\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">gguf_analyzer_masm64</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.exe</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</GenerateManifest>
+    <LinkToolExe Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\link.exe</LinkToolExe>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\RawrXD-production-lazy-init\build\src\execai\Release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">gguf_analyzer_masm64.dir\Release\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">gguf_analyzer_masm64</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.exe</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</GenerateManifest>
+    <LinkToolExe Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\link.exe</LinkToolExe>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">D:\RawrXD-production-lazy-init\build\src\execai\MinSizeRel\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">gguf_analyzer_masm64.dir\MinSizeRel\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">gguf_analyzer_masm64</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">.exe</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">true</GenerateManifest>
+    <LinkToolExe Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\link.exe</LinkToolExe>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">D:\RawrXD-production-lazy-init\build\src\execai\RelWithDebInfo\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">gguf_analyzer_masm64.dir\RelWithDebInfo\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">gguf_analyzer_masm64</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">.exe</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</GenerateManifest>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck></BufferSecurityCheck>
+      <CallingConvention></CallingConvention>
+      <ExceptionHandling>
+      </ExceptionHandling>
+      <FloatingPointModel></FloatingPointModel>
+      <ForceConformanceInForLoopScope></ForceConformanceInForLoopScope>
+      <MinimalRebuild></MinimalRebuild>
+      <Optimization></Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RemoveUnreferencedCodeData></RemoveUnreferencedCodeData>
+      <RuntimeLibrary></RuntimeLibrary>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWChar_tAsBuiltInType></TreatWChar_tAsBuiltInType>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);CMAKE_INTDIR="Debug"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <DebugInformationFormat>
+      </DebugInformationFormat>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;CMAKE_INTDIR=\"Debug\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>D:\RawrXD-production-lazy-init\include;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um;C:\Qt\6.7.3\msvc2022_64\include\QtCore;C:\Qt\6.7.3\msvc2022_64\include;C:\Qt\6.7.3\msvc2022_64\mkspecs\win32-msvc;C:\Qt\6.7.3\msvc2022_64\include\QtGui;C:\VulkanSDK\1.4.328.1\include;C:\Qt\6.7.3\msvc2022_64\include\QtWidgets;C:\Qt\6.7.3\msvc2022_64\include\QtNetwork;C:\Qt\6.7.3\msvc2022_64\include\QtSql;C:\Qt\6.7.3\msvc2022_64\include\QtConcurrent;C:\Qt\6.7.3\msvc2022_64\include\QtTest;C:\Qt\6.7.3\msvc2022_64\include\QtCharts;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGL;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGLWidgets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <MASM>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);CMAKE_INTDIR="Debug"</PreprocessorDefinitions>
+      <IncludePaths>D:\RawrXD-production-lazy-init\include;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um;%(IncludePaths)</IncludePaths>
+      <AdditionalOptions>%(AdditionalOptions) /c</AdditionalOptions>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <NoLogo>true</NoLogo>
+      <PreserveIdentifierCase>1</PreserveIdentifierCase>
+      <WarningLevel>3</WarningLevel>
+    </MASM>
+    <Midl>
+      <AdditionalIncludeDirectories>D:\RawrXD-production-lazy-init\include;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um;C:\Qt\6.7.3\msvc2022_64\include\QtCore;C:\Qt\6.7.3\msvc2022_64\include;C:\Qt\6.7.3\msvc2022_64\mkspecs\win32-msvc;C:\Qt\6.7.3\msvc2022_64\include\QtGui;C:\VulkanSDK\1.4.328.1\include;C:\Qt\6.7.3\msvc2022_64\include\QtWidgets;C:\Qt\6.7.3\msvc2022_64\include\QtNetwork;C:\Qt\6.7.3\msvc2022_64\include\QtSql;C:\Qt\6.7.3\msvc2022_64\include\QtConcurrent;C:\Qt\6.7.3\msvc2022_64\include\QtTest;C:\Qt\6.7.3\msvc2022_64\include\QtCharts;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGL;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGLWidgets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>C:\Qt\6.7.3\msvc2022_64\lib\Qt6Networkd.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Sqld.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Concurrentd.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Testd.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Chartsd.lib;kernel32.lib;shell32.lib;ws2_32.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6OpenGLWidgetsd.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Widgetsd.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6OpenGLd.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Guid.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Cored.lib;mpr.lib;userenv.lib;d3d11.lib;dxgi.lib;dxguid.lib;d3d12.lib;user32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <DataExecutionPrevention></DataExecutionPrevention>
+      <EntryPointSymbol>main</EntryPointSymbol>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImageHasSafeExceptionHandlers></ImageHasSafeExceptionHandlers>
+      <ImportLibrary>D:/RawrXD-production-lazy-init/build/src/execai/Debug/gguf_analyzer_masm64.lib</ImportLibrary>
+      <LinkErrorReporting></LinkErrorReporting>
+      <ProgramDataBaseFile>D:/RawrXD-production-lazy-init/build/src/execai/Debug/gguf_analyzer_masm64.pdb</ProgramDataBaseFile>
+      <RandomizedBaseAddress></RandomizedBaseAddress>
+      <StackReserveSize>0x100000,0x100000</StackReserveSize>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck></BufferSecurityCheck>
+      <CallingConvention></CallingConvention>
+      <ExceptionHandling>
+      </ExceptionHandling>
+      <FloatingPointModel></FloatingPointModel>
+      <ForceConformanceInForLoopScope></ForceConformanceInForLoopScope>
+      <MinimalRebuild></MinimalRebuild>
+      <Optimization></Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RemoveUnreferencedCodeData></RemoveUnreferencedCodeData>
+      <RuntimeLibrary></RuntimeLibrary>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWChar_tAsBuiltInType></TreatWChar_tAsBuiltInType>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);CMAKE_INTDIR="Release"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <DebugInformationFormat>
+      </DebugInformationFormat>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;CMAKE_INTDIR=\"Release\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>D:\RawrXD-production-lazy-init\include;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um;C:\Qt\6.7.3\msvc2022_64\include\QtCore;C:\Qt\6.7.3\msvc2022_64\include;C:\Qt\6.7.3\msvc2022_64\mkspecs\win32-msvc;C:\Qt\6.7.3\msvc2022_64\include\QtGui;C:\VulkanSDK\1.4.328.1\include;C:\Qt\6.7.3\msvc2022_64\include\QtWidgets;C:\Qt\6.7.3\msvc2022_64\include\QtNetwork;C:\Qt\6.7.3\msvc2022_64\include\QtSql;C:\Qt\6.7.3\msvc2022_64\include\QtConcurrent;C:\Qt\6.7.3\msvc2022_64\include\QtTest;C:\Qt\6.7.3\msvc2022_64\include\QtCharts;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGL;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGLWidgets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <MASM>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);CMAKE_INTDIR="Release"</PreprocessorDefinitions>
+      <IncludePaths>D:\RawrXD-production-lazy-init\include;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um;%(IncludePaths)</IncludePaths>
+      <AdditionalOptions>%(AdditionalOptions) /c</AdditionalOptions>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <NoLogo>true</NoLogo>
+      <PreserveIdentifierCase>1</PreserveIdentifierCase>
+      <WarningLevel>3</WarningLevel>
+    </MASM>
+    <Midl>
+      <AdditionalIncludeDirectories>D:\RawrXD-production-lazy-init\include;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um;C:\Qt\6.7.3\msvc2022_64\include\QtCore;C:\Qt\6.7.3\msvc2022_64\include;C:\Qt\6.7.3\msvc2022_64\mkspecs\win32-msvc;C:\Qt\6.7.3\msvc2022_64\include\QtGui;C:\VulkanSDK\1.4.328.1\include;C:\Qt\6.7.3\msvc2022_64\include\QtWidgets;C:\Qt\6.7.3\msvc2022_64\include\QtNetwork;C:\Qt\6.7.3\msvc2022_64\include\QtSql;C:\Qt\6.7.3\msvc2022_64\include\QtConcurrent;C:\Qt\6.7.3\msvc2022_64\include\QtTest;C:\Qt\6.7.3\msvc2022_64\include\QtCharts;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGL;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGLWidgets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>C:\Qt\6.7.3\msvc2022_64\lib\Qt6Network.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Sql.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Concurrent.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Test.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Charts.lib;kernel32.lib;shell32.lib;ws2_32.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6OpenGLWidgets.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Widgets.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6OpenGL.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Gui.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Core.lib;mpr.lib;userenv.lib;d3d11.lib;dxgi.lib;dxguid.lib;d3d12.lib;user32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <DataExecutionPrevention></DataExecutionPrevention>
+      <EntryPointSymbol>main</EntryPointSymbol>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImageHasSafeExceptionHandlers></ImageHasSafeExceptionHandlers>
+      <ImportLibrary>D:/RawrXD-production-lazy-init/build/src/execai/Release/gguf_analyzer_masm64.lib</ImportLibrary>
+      <LinkErrorReporting></LinkErrorReporting>
+      <ProgramDataBaseFile>D:/RawrXD-production-lazy-init/build/src/execai/Release/gguf_analyzer_masm64.pdb</ProgramDataBaseFile>
+      <RandomizedBaseAddress></RandomizedBaseAddress>
+      <StackReserveSize>0x100000,0x100000</StackReserveSize>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">
+    <ClCompile>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck></BufferSecurityCheck>
+      <CallingConvention></CallingConvention>
+      <ExceptionHandling>
+      </ExceptionHandling>
+      <FloatingPointModel></FloatingPointModel>
+      <ForceConformanceInForLoopScope></ForceConformanceInForLoopScope>
+      <MinimalRebuild></MinimalRebuild>
+      <Optimization></Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RemoveUnreferencedCodeData></RemoveUnreferencedCodeData>
+      <RuntimeLibrary></RuntimeLibrary>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWChar_tAsBuiltInType></TreatWChar_tAsBuiltInType>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);CMAKE_INTDIR="MinSizeRel"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <DebugInformationFormat>
+      </DebugInformationFormat>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;CMAKE_INTDIR=\"MinSizeRel\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>D:\RawrXD-production-lazy-init\include;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um;C:\Qt\6.7.3\msvc2022_64\include\QtCore;C:\Qt\6.7.3\msvc2022_64\include;C:\Qt\6.7.3\msvc2022_64\mkspecs\win32-msvc;C:\Qt\6.7.3\msvc2022_64\include\QtGui;C:\VulkanSDK\1.4.328.1\include;C:\Qt\6.7.3\msvc2022_64\include\QtWidgets;C:\Qt\6.7.3\msvc2022_64\include\QtNetwork;C:\Qt\6.7.3\msvc2022_64\include\QtSql;C:\Qt\6.7.3\msvc2022_64\include\QtConcurrent;C:\Qt\6.7.3\msvc2022_64\include\QtTest;C:\Qt\6.7.3\msvc2022_64\include\QtCharts;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGL;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGLWidgets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <MASM>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);CMAKE_INTDIR="MinSizeRel"</PreprocessorDefinitions>
+      <IncludePaths>D:\RawrXD-production-lazy-init\include;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um;%(IncludePaths)</IncludePaths>
+      <AdditionalOptions>%(AdditionalOptions) /c</AdditionalOptions>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <NoLogo>true</NoLogo>
+      <PreserveIdentifierCase>1</PreserveIdentifierCase>
+      <WarningLevel>3</WarningLevel>
+    </MASM>
+    <Midl>
+      <AdditionalIncludeDirectories>D:\RawrXD-production-lazy-init\include;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um;C:\Qt\6.7.3\msvc2022_64\include\QtCore;C:\Qt\6.7.3\msvc2022_64\include;C:\Qt\6.7.3\msvc2022_64\mkspecs\win32-msvc;C:\Qt\6.7.3\msvc2022_64\include\QtGui;C:\VulkanSDK\1.4.328.1\include;C:\Qt\6.7.3\msvc2022_64\include\QtWidgets;C:\Qt\6.7.3\msvc2022_64\include\QtNetwork;C:\Qt\6.7.3\msvc2022_64\include\QtSql;C:\Qt\6.7.3\msvc2022_64\include\QtConcurrent;C:\Qt\6.7.3\msvc2022_64\include\QtTest;C:\Qt\6.7.3\msvc2022_64\include\QtCharts;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGL;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGLWidgets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>C:\Qt\6.7.3\msvc2022_64\lib\Qt6Network.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Sql.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Concurrent.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Test.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Charts.lib;kernel32.lib;shell32.lib;ws2_32.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6OpenGLWidgets.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Widgets.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6OpenGL.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Gui.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Core.lib;mpr.lib;userenv.lib;d3d11.lib;dxgi.lib;dxguid.lib;d3d12.lib;user32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <DataExecutionPrevention></DataExecutionPrevention>
+      <EntryPointSymbol>main</EntryPointSymbol>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImageHasSafeExceptionHandlers></ImageHasSafeExceptionHandlers>
+      <ImportLibrary>D:/RawrXD-production-lazy-init/build/src/execai/MinSizeRel/gguf_analyzer_masm64.lib</ImportLibrary>
+      <LinkErrorReporting></LinkErrorReporting>
+      <ProgramDataBaseFile>D:/RawrXD-production-lazy-init/build/src/execai/MinSizeRel/gguf_analyzer_masm64.pdb</ProgramDataBaseFile>
+      <RandomizedBaseAddress></RandomizedBaseAddress>
+      <StackReserveSize>0x100000,0x100000</StackReserveSize>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
+    <ClCompile>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck></BufferSecurityCheck>
+      <CallingConvention></CallingConvention>
+      <ExceptionHandling>
+      </ExceptionHandling>
+      <FloatingPointModel></FloatingPointModel>
+      <ForceConformanceInForLoopScope></ForceConformanceInForLoopScope>
+      <MinimalRebuild></MinimalRebuild>
+      <Optimization></Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RemoveUnreferencedCodeData></RemoveUnreferencedCodeData>
+      <RuntimeLibrary></RuntimeLibrary>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWChar_tAsBuiltInType></TreatWChar_tAsBuiltInType>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);CMAKE_INTDIR="RelWithDebInfo"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <DebugInformationFormat>
+      </DebugInformationFormat>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;CMAKE_INTDIR=\"RelWithDebInfo\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>D:\RawrXD-production-lazy-init\include;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um;C:\Qt\6.7.3\msvc2022_64\include\QtCore;C:\Qt\6.7.3\msvc2022_64\include;C:\Qt\6.7.3\msvc2022_64\mkspecs\win32-msvc;C:\Qt\6.7.3\msvc2022_64\include\QtGui;C:\VulkanSDK\1.4.328.1\include;C:\Qt\6.7.3\msvc2022_64\include\QtWidgets;C:\Qt\6.7.3\msvc2022_64\include\QtNetwork;C:\Qt\6.7.3\msvc2022_64\include\QtSql;C:\Qt\6.7.3\msvc2022_64\include\QtConcurrent;C:\Qt\6.7.3\msvc2022_64\include\QtTest;C:\Qt\6.7.3\msvc2022_64\include\QtCharts;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGL;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGLWidgets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <MASM>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);CMAKE_INTDIR="RelWithDebInfo"</PreprocessorDefinitions>
+      <IncludePaths>D:\RawrXD-production-lazy-init\include;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um;%(IncludePaths)</IncludePaths>
+      <AdditionalOptions>%(AdditionalOptions) /c</AdditionalOptions>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <NoLogo>true</NoLogo>
+      <PreserveIdentifierCase>1</PreserveIdentifierCase>
+      <WarningLevel>3</WarningLevel>
+    </MASM>
+    <Midl>
+      <AdditionalIncludeDirectories>D:\RawrXD-production-lazy-init\include;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um;C:\Qt\6.7.3\msvc2022_64\include\QtCore;C:\Qt\6.7.3\msvc2022_64\include;C:\Qt\6.7.3\msvc2022_64\mkspecs\win32-msvc;C:\Qt\6.7.3\msvc2022_64\include\QtGui;C:\VulkanSDK\1.4.328.1\include;C:\Qt\6.7.3\msvc2022_64\include\QtWidgets;C:\Qt\6.7.3\msvc2022_64\include\QtNetwork;C:\Qt\6.7.3\msvc2022_64\include\QtSql;C:\Qt\6.7.3\msvc2022_64\include\QtConcurrent;C:\Qt\6.7.3\msvc2022_64\include\QtTest;C:\Qt\6.7.3\msvc2022_64\include\QtCharts;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGL;C:\Qt\6.7.3\msvc2022_64\include\QtOpenGLWidgets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>C:\Qt\6.7.3\msvc2022_64\lib\Qt6Network.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Sql.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Concurrent.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Test.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Charts.lib;kernel32.lib;shell32.lib;ws2_32.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6OpenGLWidgets.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Widgets.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6OpenGL.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Gui.lib;C:\Qt\6.7.3\msvc2022_64\lib\Qt6Core.lib;mpr.lib;userenv.lib;d3d11.lib;dxgi.lib;dxguid.lib;d3d12.lib;user32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <DataExecutionPrevention></DataExecutionPrevention>
+      <EntryPointSymbol>main</EntryPointSymbol>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImageHasSafeExceptionHandlers></ImageHasSafeExceptionHandlers>
+      <ImportLibrary>D:/RawrXD-production-lazy-init/build/src/execai/RelWithDebInfo/gguf_analyzer_masm64.lib</ImportLibrary>
+      <LinkErrorReporting></LinkErrorReporting>
+      <ProgramDataBaseFile>D:/RawrXD-production-lazy-init/build/src/execai/RelWithDebInfo/gguf_analyzer_masm64.pdb</ProgramDataBaseFile>
+      <RandomizedBaseAddress></RandomizedBaseAddress>
+      <StackReserveSize>0x100000,0x100000</StackReserveSize>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="D:\RawrXD-production-lazy-init\src\execai\CMakeLists.txt">
+      <UseUtf8Encoding>Always</UseUtf8Encoding>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule D:/RawrXD-production-lazy-init/src/execai/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SD:/RawrXD-production-lazy-init -BD:/RawrXD-production-lazy-init/build --check-stamp-file D:/RawrXD-production-lazy-init/build/src/execai/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeFindDependencyMacro.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CheckCXXCompilerFlag.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6Config.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6ConfigExtras.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6ConfigVersion.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6ConfigVersionImpl.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6Dependencies.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6Targets.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6VersionlessTargets.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtFeature.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtFeatureCommon.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicAppleHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicCMakeHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicCMakeVersionHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicDependencyHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicExternalProjectHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicFinalizerHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicFindPackageHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicPluginHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicTargetHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicTestHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicToolHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicWalkLibsHelpers.cmake;D:\RawrXD-production-lazy-init\build\CMakeFiles\cmake.verify_globs;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\RawrXD-production-lazy-init\build\src\execai\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule D:/RawrXD-production-lazy-init/src/execai/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SD:/RawrXD-production-lazy-init -BD:/RawrXD-production-lazy-init/build --check-stamp-file D:/RawrXD-production-lazy-init/build/src/execai/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeFindDependencyMacro.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CheckCXXCompilerFlag.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6Config.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6ConfigExtras.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6ConfigVersion.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6ConfigVersionImpl.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6Dependencies.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6Targets.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6VersionlessTargets.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtFeature.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtFeatureCommon.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicAppleHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicCMakeHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicCMakeVersionHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicDependencyHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicExternalProjectHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicFinalizerHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicFindPackageHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicPluginHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicTargetHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicTestHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicToolHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicWalkLibsHelpers.cmake;D:\RawrXD-production-lazy-init\build\CMakeFiles\cmake.verify_globs;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\RawrXD-production-lazy-init\build\src\execai\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Building Custom Rule D:/RawrXD-production-lazy-init/src/execai/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SD:/RawrXD-production-lazy-init -BD:/RawrXD-production-lazy-init/build --check-stamp-file D:/RawrXD-production-lazy-init/build/src/execai/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeFindDependencyMacro.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CheckCXXCompilerFlag.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6Config.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6ConfigExtras.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6ConfigVersion.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6ConfigVersionImpl.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6Dependencies.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6Targets.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6VersionlessTargets.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtFeature.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtFeatureCommon.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicAppleHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicCMakeHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicCMakeVersionHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicDependencyHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicExternalProjectHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicFinalizerHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicFindPackageHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicPluginHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicTargetHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicTestHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicToolHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicWalkLibsHelpers.cmake;D:\RawrXD-production-lazy-init\build\CMakeFiles\cmake.verify_globs;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">D:\RawrXD-production-lazy-init\build\src\execai\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Building Custom Rule D:/RawrXD-production-lazy-init/src/execai/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SD:/RawrXD-production-lazy-init -BD:/RawrXD-production-lazy-init/build --check-stamp-file D:/RawrXD-production-lazy-init/build/src/execai/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeFindDependencyMacro.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CheckCXXCompilerFlag.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6Config.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6ConfigExtras.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6ConfigVersion.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6ConfigVersionImpl.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6Dependencies.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6Targets.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\Qt6VersionlessTargets.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtFeature.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtFeatureCommon.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicAppleHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicCMakeHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicCMakeVersionHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicDependencyHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicExternalProjectHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicFinalizerHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicFindPackageHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicPluginHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicTargetHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicTestHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicToolHelpers.cmake;C:\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6\QtPublicWalkLibsHelpers.cmake;D:\RawrXD-production-lazy-init\build\CMakeFiles\cmake.verify_globs;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">D:\RawrXD-production-lazy-init\build\src\execai\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="D:\RawrXD-production-lazy-init\src\gguf_analyzer\RawrXD-GGUFAnalyzer-Complete.asm" />
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="D:\RawrXD-production-lazy-init\build\ZERO_CHECK.vcxproj">
+      <Project>{204E97F1-BE68-32B3-BFED-2E09E1C9509D}</Project>
+      <Name>ZERO_CHECK</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
+  </ImportGroup>
+</Project>

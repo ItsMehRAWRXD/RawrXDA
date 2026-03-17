@@ -1,0 +1,1 @@
+cmake -B build_test -S . -DCMAKE_CXX_STANDARD=20 -DENABLE_QT=OFF 2>&1 | Select-String -Pattern "Qt|Q[A-Z]" -NotMatch; if($?){ ninja -C build_test 2>&1 | Select-String -Pattern "error:|undefined reference" | Select-Object -First 10 }

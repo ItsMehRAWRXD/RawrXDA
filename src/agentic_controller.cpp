@@ -63,8 +63,8 @@ AgenticResult AgenticController::ensureCoordinator() {
         m_coordinator = std::make_unique<AgenticAgentCoordinator>();
         const std::array<AgenticAgentCoordinator::AgentRole, 3> seedRoles = {
             AgenticAgentCoordinator::AgentRole::Analyzer,
-            AgenticAgentCoordinator::AgentRole::Planner,
-            AgenticAgentCoordinator::AgentRole::Executor
+            AgenticAgentCoordinator::AgentRole::Developer,
+            AgenticAgentCoordinator::AgentRole::Reviewer
         };
 
         for (const auto role : seedRoles) {
@@ -121,8 +121,21 @@ void AgenticController::publishHeartbeat() {
     payload += std::to_string(m_bootTimer.isValid() ? m_bootTimer.elapsed() : 0);
 
     if (m_coordinator) {
-        nlohmann::json statuses = m_coordinator->getAllAgentStatuses();
-        payload += ",\"coordination\":" + statuses.dump();
+        const auto statuses = m_coordinator->getAllAgentStatuses();
+        nlohmann::json coordination = nlohmann::json::object();
+        coordination["total_agents"] = statuses.size();
+        coordination["agents"] = nlohmann::json::array();
+        for (const auto& status : statuses) {
+            coordination["agents"].push_back({
+                {"agent_id", status.agent_id},
+                {"role", status.role},
+                {"available", status.available},
+                {"utilization", status.utilization},
+                {"tasks_completed", status.tasks_completed},
+                {"last_active", status.last_active}
+            });
+        }
+        payload += ",\"coordination\":" + coordination.dump();
     }
 
     payload += "}";
@@ -142,7 +155,7 @@ void AgenticController::handleLayoutRestored(const std::string& snapshotId) {
     LOG_INFO(std::string("Agentic controller acknowledged snapshot " + snapshotId).c_str());
 
     if (m_coordinator) {
-        m_coordinator->synchronizeState();
+        m_coordinator->synchronizeAgentStates();
     }
 }
 
@@ -151,17 +164,14 @@ void AgenticController::handleWindowActivated() {
         return;
     }
 
-    const nlohmann::json metrics = m_coordinator->getAllAgentStatuses();
-    auto findOr = [&](const std::string& key, const std::string& def) -> std::string {
-        if (metrics.contains(key)) {
-            const auto& v = metrics[key];
-            if (v.is_string()) return v.get<std::string>();
-            return v.dump();
-        }
-        return def;
-    };
-    LOG_DEBUG(std::string("Window activation routed to agentic coordinator: agents=" + findOr("total_agents", "0") + " tasks=" + findOr("total_tasks_assigned", "0")).c_str());
+    const auto statuses = m_coordinator->getAllAgentStatuses();
+    int tasksCompleted = 0;
+    for (const auto& status : statuses) {
+        tasksCompleted += status.tasks_completed;
+    }
+
+    LOG_DEBUG(std::string("Window activation routed to agentic coordinator: agents=" +
+        std::to_string(statuses.size()) + " tasks_completed=" + std::to_string(tasksCompleted)).c_str());
 }
 
 } // namespace RawrXD::IDE
-

@@ -1,0 +1,127 @@
+# BPE Merge Rules for Code
+e r
+i n
+t h
+a n
+o n
+r e
+h e
+a t
+e n
+s t
+o r
+i t
+e s
+a l
+o u
+a r
+i s
+o f
+a s
+n d
+o m
+a c
+l e
+i c
+t i
+r a
+l i
+r o
+e d
+o l
+p r
+e l
+t o
+u r
+c o
+e a
+i d
+u n
+a m
+i l
+d e
+s e
+c h
+u t
+e c
+s i
+f o
+w h
+v e
+g e
+o w
+a d
+l o
+t e
+n o
+c a
+s o
+r i
+u s
+e x
+a b
+u l
+l a
+m a
+i m
+t r
+q u
+. .
+/ /
+/ *
+* /
+< <
+> >
+: :
+- >
+= =
+! =
+& &
+| |
++ +
+- -
++ =
+- =
+* =
+/ =
+% =
+& =
+| =
+^ =
+u n s
+u n s i
+u n s i g
+u n s i g n
+u n s i g n e
+u n s i g n e d
+s t d
+c o n
+c o n s
+c o n s t
+r e t
+r e t u
+r e t u r
+r e t u r n
+f u n
+f u n c
+f u n c t
+f u n c t i
+f u n c t i o
+f u n c t i o n
+c l a
+c l a s
+c l a s s
+p u b
+p u b l
+p u b l i
+p u b l i c
+p r i
+p r i v
+p r i v a
+p r i v a t
+p r i v a t e
+i n c
+i n c l
+i n c l u
+i n c l u d
+i n c l u d e

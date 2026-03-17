@@ -1,0 +1,72 @@
+{
+  "name": "star5ide-electron-gui",
+  "version": "1.0.0",
+  "description": "Star5IDE Polymorphic Security Platform - Electron GUI Builder",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder",
+    "dist": "electron-builder --publish=never",
+    "pack": "electron-builder --dir",
+    "postinstall": "electron-builder install-app-deps",
+    "test": "echo \"Star5IDE Polymorphic Builder ready!\" && exit 0"
+  },
+  "keywords": [
+    "security",
+    "polymorphic",
+    "encryption",
+    "builder",
+    "star5ide"
+  ],
+  "author": "Star5IDE Team",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^27.0.0",
+    "electron-builder": "^24.6.4"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  },
+  "build": {
+    "appId": "com.star5ide.gui",
+    "productName": "Star5IDE Polymorphic Builder",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!**/*.ts",
+      "!*.code-workspace",
+      "!LICENSE.md",
+      "!package.json",
+      "!.gitignore",
+      "!.gitkeep",
+      "!README.md",
+      "!yarn.lock",
+      "!.github",
+      "!.vscode",
+      "!src",
+      "!e2e",
+      "!hooks",
+      "!angular.json",
+      "!_config.yml",
+      "!karma.conf.js",
+      "!tsconfig.json",
+      "!tslint.json"
+    ],
+    "win": {
+      "icon": "assets/icon.png",
+      "target": "nsis",
+      "publish": null
+    },
+    "linux": {
+      "icon": "assets/icon.png",
+      "target": "AppImage"
+    },
+    "mac": {
+      "icon": "assets/icon.icns",
+      "target": "dmg"
+    }
+  }
+}

@@ -1,9 +1,0 @@
-{
-	"phpprofiler.openfile.title": "Open Profile File (Xdebug Profiling Output)",
-    "phpprofiler.hotpath.treshold.desc": "(`0`..`100`) Value specifies minimum time (_in percent_) so the line in source code will be highlighted as hot-path.",
-
-    "customeditor.phpprofiler.cachegrind": "CacheGrind (from Xdebug)",
-
-    "capabilities.virtualWorkspaces.description": "Virtual workspaces are supported as long as you can open a remote file.",
-    "capabilities.untrustedWorkspaces.description": "All functionality is enabled as long as you can open a remote file."
-}

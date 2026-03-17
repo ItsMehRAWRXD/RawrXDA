@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RawrZ Stub Generator</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #1a1a1a; color: #fff; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .form-group { margin: 15px 0; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select { width: 100%; padding: 10px; border: none; border-radius: 5px; background: #333; color: #fff; }
+        button { padding: 12px 24px; margin: 10px 5px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .output { background: #000; padding: 15px; border-radius: 5px; margin-top: 20px; font-family: monospace; }
+        .checkbox-group { display: flex; gap: 20px; }
+        .checkbox-group label { display: flex; align-items: center; gap: 5px; }
+        .checkbox-group input { width: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔥 RawrZ Stub Generator</h1>
+        
+        <div class="form-group">
+            <label>Payload File:</label>
+            <input type="text" id="payloadPath" placeholder="Select payload file..." readonly>
+            <button class="btn-secondary" onclick="browsePayload()">Browse</button>
+        </div>
+        
+        <div class="form-group">
+            <label>Stub Type:</label>
+            <select id="stubType" onchange="updateOutputPath()">
+                <option value="cpp">C++ (.cpp)</option>
+                <option value="csharp">C# (.cs)</option>
+                <option value="python">Python (.py)</option>
+                <option value="powershell">PowerShell (.ps1)</option>
+                <option value="java">Java (.java)</option>
+                <option value="go">Go (.go)</option>
+                <option value="rust">Rust (.rs)</option>
+                <option value="javascript">JavaScript (.js)</option>
+                <option value="asm">Assembly (.asm)</option>
+                <option value="advanced">Advanced (.exe)</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label>Encryption:</label>
+            <select id="encryption">
+                <option value="aes-256-gcm">AES-256-GCM</option>
+                <option value="aes-256-cbc">AES-256-CBC</option>
+                <option value="chacha20">ChaCha20-Poly1305</option>
+                <option value="hybrid">Hybrid Encryption</option>
+                <option value="triple">Triple Layer</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label>Output Path:</label>
+            <input type="text" id="outputPath" placeholder="Output file path...">
+            <button class="btn-secondary" onclick="setOutputPath()">Set Path</button>
+        </div>
+        
+        <div class="form-group">
+            <label>Anti-Analysis:</label>
+            <div class="checkbox-group">
+                <label><input type="checkbox" id="antiDebug" checked> Anti-Debug</label>
+                <label><input type="checkbox" id="antiVM" checked> Anti-VM</label>
+                <label><input type="checkbox" id="antiSandbox" checked> Anti-Sandbox</label>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <button class="btn-success" onclick="generateStub()">Generate Stub</button>
+            <button class="btn-secondary" onclick="clearForm()">Clear</button>
+        </div>
+        
+        <div class="output" id="output">Ready to generate stubs...</div>
+    </div>
+
+    <script>
+        function log(message) {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            output.innerHTML += `[${timestamp}] ${message}<br>`;
+            output.scrollTop = output.scrollHeight;
+        }
+        
+        async function browsePayload() {
+            try {
+                const file = await window.electronAPI.selectFile();
+                if (file) {
+                    document.getElementById('payloadPath').value = file;
+                    log(`Selected payload: ${file}`);
+                    updateOutputPath();
+                }
+            } catch (error) {
+                log(`Error: ${error.message}`);
+            }
+        }
+        
+        function updateOutputPath() {
+            const payloadPath = document.getElementById('payloadPath').value;
+            const stubType = document.getElementById('stubType').value;
+            const extensions = {
+                cpp: '.cpp', csharp: '.cs', python: '.py', powershell: '.ps1',
+                java: '.java', go: '.go', rust: '.rs', javascript: '.js',
+                asm: '.asm', advanced: '.exe'
+            };
+            
+            if (payloadPath) {
+                const baseName = payloadPath.split('\\\\').pop().split('.')[0];
+                const outputPath = `${baseName}_${stubType}_stub${extensions[stubType]}`;
+                document.getElementById('outputPath').value = outputPath;
+                log(`Output path updated: ${outputPath}`);
+            }
+        }
+        
+        function setOutputPath() {
+            updateOutputPath();
+        }
+        
+        async function generateStub() {
+            const payloadPath = document.getElementById('payloadPath').value;
+            const stubType = document.getElementById('stubType').value;
+            const encryption = document.getElementById('encryption').value;
+            const outputPath = document.getElementById('outputPath').value;
+            const antiDebug = document.getElementById('antiDebug').checked;
+            const antiVM = document.getElementById('antiVM').checked;
+            const antiSandbox = document.getElementById('antiSandbox').checked;
+            
+            if (!payloadPath) {
+                log('❌ Please select a payload file');
+                return;
+            }
+            
+            try {
+                log(`🔥 Generating ${stubType.toUpperCase()} stub with ${encryption}...`);
+                log(`📁 Payload: ${payloadPath}`);
+                log(`🔒 Encryption: ${encryption}`);
+                log(`🛡️ Anti-Debug: ${antiDebug ? 'ON' : 'OFF'}`);
+                log(`🖥️ Anti-VM: ${antiVM ? 'ON' : 'OFF'}`);
+                log(`📦 Anti-Sandbox: ${antiSandbox ? 'ON' : 'OFF'}`);
+                
+                const result = await window.electronAPI.generateStub(payloadPath, {
+                    stubType,
+                    encryptionMethod: encryption,
+                    outputPath,
+                    includeAntiDebug: antiDebug,
+                    includeAntiVM: antiVM,
+                    includeAntiSandbox: antiSandbox
+                });
+                
+                log(`✅ Stub generated successfully!`);
+                log(`📄 Output: ${result.outputPath}`);
+                log(`📊 Payload size: ${result.payloadSize} bytes`);
+                log(`🔐 Encrypted size: ${result.encryptedSize} bytes`);
+                log(`⏱️ Generation time: ${result.duration}ms`);
+                
+            } catch (error) {
+                log(`❌ Stub generation failed: ${error.message}`);
+            }
+        }
+        
+        function clearForm() {
+            document.getElementById('payloadPath').value = '';
+            document.getElementById('outputPath').value = '';
+            document.getElementById('stubType').selectedIndex = 0;
+            document.getElementById('encryption').selectedIndex = 0;
+            document.getElementById('antiDebug').checked = true;
+            document.getElementById('antiVM').checked = true;
+            document.getElementById('antiSandbox').checked = true;
+            log('🧹 Form cleared');
+        }
+        
+        log('🔥 RawrZ Stub Generator ready!');
+    </script>
+
+    <!-- BigDaddyG Auto-Connection Script -->
+    <script>
+    (function() {
+        console.log('🔗 BigDaddyG Auto-Connection loading...');
+        
+        // Auto-connection configuration
+        const config = {
+            mainServer: 'http://localhost:3000',
+            websocket: 'ws://localhost:8001',
+            fallback: 'http://localhost:3003',
+            timeout: 5000
+        };
+        
+        // Connection manager
+        class BigDaddyGConnection {
+            constructor() {
+                this.connected = false;
+                this.fallbackMode = false;
+                this.ws = null;
+                this.retryCount = 0;
+                this.maxRetries = 3;
+            }
+            
+            async connect() {
+                try {
+                    // Try main WebSocket first
+                    await this.connectWebSocket();
+                } catch (error) {
+                    console.log('⚠️ Main connection failed, trying fallback...');
+                    await this.connectFallback();
+                }
+            }
+            
+            async connectWebSocket() {
+                return new Promise((resolve, reject) => {
+                    this.ws = new WebSocket(config.websocket);
+                    
+                    this.ws.onopen = () => {
+                        console.log('✅ Connected to BigDaddyG WebSocket');
+                        this.connected = true;
+                        this.fallbackMode = false;
+                        resolve();
+                    };
+                    
+                    this.ws.onerror = (error) => {
+                        console.log('❌ WebSocket connection failed:', error);
+                        reject(error);
+                    };
+                    
+                    this.ws.onclose = () => {
+                        this.connected = false;
+                        if (this.retryCount < this.maxRetries) {
+                            this.retryCount++;
+                            console.log(`🔄 Retrying connection (${this.retryCount}/${this.maxRetries})...`);
+                            setTimeout(() => this.connect(), 2000);
+                        }
+                    };
+                    
+                    // Timeout
+                    setTimeout(() => {
+                        if (!this.connected) {
+                            this.ws.close();
+                            reject(new Error('Connection timeout'));
+                        }
+                    }, config.timeout);
+                });
+            }
+            
+            async connectFallback() {
+                try {
+                    const response = await fetch(config.fallback + '/api/fallback/status');
+                    const data = await response.json();
+                    console.log('✅ Connected to BigDaddyG Fallback mode');
+                    this.connected = true;
+                    this.fallbackMode = true;
+                } catch (error) {
+                    console.log('❌ Fallback connection also failed:', error);
+                    throw error;
+                }
+            }
+            
+            send(message) {
+                if (this.connected && !this.fallbackMode && this.ws) {
+                    this.ws.send(JSON.stringify(message));
+                } else if (this.fallbackMode) {
+                    // Handle fallback mode
+                    this.handleFallbackMessage(message);
+                }
+            }
+            
+            handleFallbackMessage(message) {
+                console.log('📤 Fallback mode - message:', message);
+                // Implement fallback message handling
+            }
+        }
+        
+        // Initialize connection
+        window.BigDaddyGConnection = new BigDaddyGConnection();
+        window.BigDaddyGConnection.connect();
+        
+        // Global functions for easy use
+        window.bigdaddyg = {
+            send: (msg) => window.BigDaddyGConnection.send(msg),
+            connected: () => window.BigDaddyGConnection.connected,
+            fallback: () => window.BigDaddyGConnection.fallbackMode
+        };
+        
+        console.log('🎉 BigDaddyG Auto-Connection ready!');
+    })();
+    </script>
+    <!-- End BigDaddyG Auto-Connection Script -->
+</body>
+</html>

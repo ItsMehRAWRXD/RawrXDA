@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self' file: blob:; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' http://localhost:* ws://localhost:* http://127.0.0.1:*; img-src 'self' data: blob:;">
+  <title>CSP Test</title>
+</head>
+
+<body>
+  <button onclick="testFunc()">Click me</button>
+  <div id="result">Not clicked</div>
+  <script>
+    function testFunc() {
+      document.getElementById('result').textContent = 'SUCCESS: function is defined!';
+    }
+    document.getElementById('result').textContent = 'Script block executed OK. testFunc type: ' + typeof testFunc;
+  </script>
+</body>
+
+</html>

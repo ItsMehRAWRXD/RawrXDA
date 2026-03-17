@@ -1,0 +1,236 @@
+/**
+ * @file code_signer.cpp
+ * @brief Windows/macOS code signing utility
+ * Architecture: C++20, no Qt, no exceptions
+ */
+#include "code_signer.hpp"
+#include "process_utils.hpp"
+#include <chrono>
+#include <cstdint>
+#include <cstdio>
+#include <filesystem>
+#include <string>
+#include <vector>
+
+CodeSigner* CodeSigner::s_instance = nullptr;
+
+CodeSigner* CodeSigner::instance() {
+    if (!s_instance) {
+        s_instance = new CodeSigner();
+    }
+    return s_instance;
+}
+
+bool CodeSigner::signWindowsExecutable(const std::string& exePath,
+                                       const std::string& certPath,
+                                       const std::string& certPassword) {
+#ifdef _WIN32
+    auto t0 = std::chrono::steady_clock::now();
+
+    if (!std::filesystem::exists(exePath)) {
+        fprintf(stderr, "[WARN] [CodeSigner] Executable not found: %s\n", exePath.c_str());
+        return false;
+    }
+
+    std::string password = certPassword.empty()
+        ? getEnvVar("CODE_SIGN_PASSWORD")
+        : certPassword;
+
+    std::vector<std::string> args;
+    args.push_back("sign");
+    args.push_back("/fd");
+    args.push_back("SHA256");
+    args.push_back("/tr");
+    args.push_back("http://timestamp.digicert.com");
+    args.push_back("/td");
+    args.push_back("SHA256");
+
+    if (!certPath.empty()) {
+        args.push_back("/f");
+        args.push_back(certPath);
+        if (!password.empty()) {
+            args.push_back("/p");
+            args.push_back(password);
+        }
+    } else {
+        args.push_back("/a");
+    }
+
+    args.push_back(exePath);
+
+    fprintf(stderr, "[INFO] [CodeSigner] SIGN_START | File: %s\n", exePath.c_str());
+
+    bool success = executeCommand("signtool.exe", args);
+
+    auto t1 = std::chrono::steady_clock::now();
+    int64_t latency = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
+
+    if (success) {
+        fprintf(stderr, "[INFO] [CodeSigner] SIGN_SUCCESS | File: %s | Latency: %lldms\n",
+                exePath.c_str(), static_cast<long long>(latency));
+    } else {
+        fprintf(stderr, "[WARN] [CodeSigner] SIGN_FAILED | File: %s | Latency: %lldms\n",
+                exePath.c_str(), static_cast<long long>(latency));
+    }
+
+    if (onSignatureCompleted) onSignatureCompleted(exePath, success);
+    return success;
+#else
+    (void)exePath; (void)certPath; (void)certPassword;
+    fprintf(stderr, "[WARN] [CodeSigner] Windows code signing not supported on this platform\n");
+    return false;
+#endif
+}
+
+bool CodeSigner::signMacOSBundle(const std::string& bundlePath, const std::string& identity) {
+#ifdef __APPLE__
+    auto t0 = std::chrono::steady_clock::now();
+
+    if (!std::filesystem::exists(bundlePath)) {
+        fprintf(stderr, "[WARN] [CodeSigner] Bundle not found: %s\n", bundlePath.c_str());
+        return false;
+    }
+
+    std::string signingIdentity = identity.empty()
+        ? getEnvVar("CODESIGN_IDENTITY", "Developer ID Application")
+        : identity;
+
+    std::vector<std::string> args;
+    args.push_back("--force");
+    args.push_back("--sign");
+    args.push_back(signingIdentity);
+    args.push_back("--options");
+    args.push_back("runtime");
+    args.push_back("--timestamp");
+    args.push_back("--deep");
+    args.push_back(bundlePath);
+
+    fprintf(stderr, "[INFO] [CodeSigner] SIGN_START | Bundle: %s | Identity: %s\n",
+            bundlePath.c_str(), signingIdentity.c_str());
+
+    bool success = executeCommand("codesign", args);
+
+    auto t1 = std::chrono::steady_clock::now();
+    int64_t latency = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
+
+    if (success) {
+        fprintf(stderr, "[INFO] [CodeSigner] SIGN_SUCCESS | Bundle: %s | Latency: %lldms\n",
+                bundlePath.c_str(), static_cast<long long>(latency));
+    } else {
+        fprintf(stderr, "[WARN] [CodeSigner] SIGN_FAILED | Bundle: %s | Latency: %lldms\n",
+                bundlePath.c_str(), static_cast<long long>(latency));
+    }
+
+    if (onSignatureCompleted) onSignatureCompleted(bundlePath, success);
+    return success;
+#else
+    (void)bundlePath; (void)identity;
+    fprintf(stderr, "[WARN] [CodeSigner] macOS code signing not supported on this platform\n");
+    return false;
+#endif
+}
+
+bool CodeSigner::verifySignature(const std::string& exePath) {
+    auto t0 = std::chrono::steady_clock::now();
+
+#ifdef _WIN32
+    std::vector<std::string> args = {"verify", "/pa", exePath};
+    fprintf(stderr, "[INFO] [CodeSigner] VERIFY_START | File: %s\n", exePath.c_str());
+    bool success = executeCommand("signtool.exe", args);
+#elif defined(__APPLE__)
+    std::vector<std::string> args = {"--verify", "--deep", "--strict", exePath};
+    fprintf(stderr, "[INFO] [CodeSigner] VERIFY_START | File: %s\n", exePath.c_str());
+    bool success = executeCommand("codesign", args);
+#else
+    fprintf(stderr, "[WARN] [CodeSigner] Signature verification not supported on this platform\n");
+    (void)exePath;
+    bool success = false;
+#endif
+
+    auto t1 = std::chrono::steady_clock::now();
+    int64_t latency = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
+
+    if (success) {
+        fprintf(stderr, "[INFO] [CodeSigner] VERIFY_SUCCESS | File: %s | Latency: %lldms\n",
+                exePath.c_str(), static_cast<long long>(latency));
+    } else {
+        fprintf(stderr, "[WARN] [CodeSigner] VERIFY_FAILED | File: %s | Latency: %lldms\n",
+                exePath.c_str(), static_cast<long long>(latency));
+    }
+
+    return success;
+}
+
+bool CodeSigner::notarizeMacOSApp(const std::string& bundlePath,
+                                  const std::string& appleId,
+                                  const std::string& password) {
+#ifdef __APPLE__
+    auto t0 = std::chrono::steady_clock::now();
+
+    std::string notarizePassword = password.empty()
+        ? getEnvVar("NOTARIZE_PASSWORD")
+        : password;
+
+    if (appleId.empty() || notarizePassword.empty()) {
+        fprintf(stderr, "[WARN] [CodeSigner] Notarization requires Apple ID and password\n");
+        return false;
+    }
+
+    // Create temporary ZIP
+    std::string zipPath = bundlePath + ".zip";
+    if (!executeCommand("zip", {"-r", zipPath, bundlePath})) {
+        fprintf(stderr, "[WARN] [CodeSigner] Failed to create ZIP for notarization\n");
+        return false;
+    }
+
+    fprintf(stderr, "[INFO] [CodeSigner] NOTARIZE_START | Bundle: %s\n", bundlePath.c_str());
+
+    std::vector<std::string> args = {
+        "notarytool", "submit", zipPath,
+        "--apple-id", appleId,
+        "--password", notarizePassword,
+        "--wait"
+    };
+
+    bool success = executeCommand("xcrun", args);
+
+    auto t1 = std::chrono::steady_clock::now();
+    int64_t latency = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
+
+    if (success) {
+        fprintf(stderr, "[INFO] [CodeSigner] NOTARIZE_SUCCESS | Bundle: %s | Latency: %lldms\n",
+                bundlePath.c_str(), static_cast<long long>(latency));
+        executeCommand("xcrun", {"stapler", "staple", bundlePath});
+    } else {
+        fprintf(stderr, "[WARN] [CodeSigner] NOTARIZE_FAILED | Bundle: %s | Latency: %lldms\n",
+                bundlePath.c_str(), static_cast<long long>(latency));
+    }
+
+    std::filesystem::remove(zipPath);
+
+    if (onNotarizationCompleted) onNotarizationCompleted(bundlePath, success);
+    return success;
+#else
+    (void)bundlePath; (void)appleId; (void)password;
+    fprintf(stderr, "[WARN] [CodeSigner] macOS notarization not supported on this platform\n");
+    return false;
+#endif
+}
+
+bool CodeSigner::executeCommand(const std::string& command,
+                                const std::vector<std::string>& args) {
+    ProcResult pr = proc::run(command, args, 300000);
+
+    if (pr.timedOut) {
+        fprintf(stderr, "[WARN] [CodeSigner] Command timeout: %s\n", command.c_str());
+        return false;
+    }
+
+    if (pr.exitCode != 0) {
+        fprintf(stderr, "[WARN] [CodeSigner] Command failed | Exit code: %d | Error: %s\n",
+                pr.exitCode, pr.stderrStr.c_str());
+        return false;
+    }
+
+    return true;
+}

@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RawrZ Red Killer Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0b1020 0%, #1a1f3a 100%);
+            color: #e6e9ef;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: rgba(17, 22, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #222a45;
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header h1 {
+            color: #dc3545;
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .panel-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .card {
+            background: rgba(18, 25, 47, 0.8);
+            border: 1px solid #20284a;
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            border-color: #dc3545;
+            box-shadow: 0 8px 25px rgba(220, 53, 69, 0.1);
+        }
+        
+        .card h3 {
+            color: #dc3545;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #a0a8b8;
+            font-weight: 500;
+        }
+        
+        .form-control {
+            width: 100%;
+            background: rgba(15, 21, 48, 0.8);
+            color: #e6e9ef;
+            border: 1px solid #263056;
+            border-radius: 8px;
+            padding: 0.75rem;
+            font-size: 0.9rem;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: #dc3545;
+            box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.2);
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            margin: 0.25rem;
+        }
+        
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+            color: #212529;
+        }
+        
+        .btn-info {
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+        }
+        
+        .output-area {
+            background: #0a0f24;
+            border: 1px solid #1d2444;
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-top: 1rem;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            border-bottom: 1px solid #20284a;
+            margin-bottom: 1rem;
+        }
+        
+        .nav-tab {
+            padding: 0.75rem 1.5rem;
+            background: none;
+            border: none;
+            color: #a0a8b8;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-tab.active {
+            color: #dc3545;
+            border-bottom-color: #dc3545;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        
+        .alert-danger {
+            background: rgba(220, 53, 69, 0.1);
+            border: 1px solid #dc3545;
+            color: #dc3545;
+        }
+        
+        .alert-warning {
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid #ffc107;
+            color: #ffc107;
+        }
+        
+        .alert-info {
+            background: rgba(23, 162, 184, 0.1);
+            border: 1px solid #17a2b8;
+            color: #17a2b8;
+        }
+        
+        .threat-item {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid #20284a;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .threat-item:hover {
+            border-color: #dc3545;
+            transform: translateY(-1px);
+        }
+        
+        .threat-level {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-left: 0.5rem;
+        }
+        
+        .level-critical {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .level-high {
+            background: #fd7e14;
+            color: white;
+        }
+        
+        .level-medium {
+            background: #ffc107;
+            color: #212529;
+        }
+        
+        .level-low {
+            background: #28a745;
+            color: white;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .stat-card {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #dc3545;
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            color: #a0a8b8;
+            margin-top: 0.25rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>RawrZ Red Killer Panel</h1>
+    </div>
+    
+    <div class="container">
+        <div class="card">
+            <div class="nav-tabs">
+                <button class="nav-tab active" data-tab="scan">Threat Scan</button>
+                <button class="nav-tab" data-tab="kill">Kill Threats</button>
+                <button class="nav-tab" data-tab="monitor">Monitor</button>
+                <button class="nav-tab" data-tab="defense">Defense</button>
+            </div>
+            
+            <!-- Threat Scan Tab -->
+            <div id="scan" class="tab-content active">
+                <h3>Advanced Threat Scanning</h3>
+                
+                <div class="alert alert-danger">
+                    <strong>Red Killer:</strong> Advanced threat detection and elimination system for maximum security.
+                </div>
+                
+                <div class="form-group">
+                    <label>Scan Target</label>
+                    <input type="text" class="form-control" id="scan-target" placeholder="192.168.1.0/24 or specific IP">
+                </div>
+                
+                <div class="form-group">
+                    <label>Scan Type</label>
+                    <select class="form-control" id="scan-type">
+                        <option value="comprehensive">Comprehensive Scan</option>
+                        <option value="stealth">Stealth Scan</option>
+                        <option value="aggressive">Aggressive Scan</option>
+                        <option value="custom">Custom Scan</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Threat Categories</label>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="scan-malware" checked>
+                            <span>Malware</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="scan-botnets" checked>
+                            <span>Botnets</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="scan-rats" checked>
+                            <span>RATs</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="scan-trojans" checked>
+                            <span>Trojans</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="scan-keyloggers" checked>
+                            <span>Keyloggers</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="scan-rootkits" checked>
+                            <span>Rootkits</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Scan Options</label>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="scan-deep" checked>
+                            <span>Deep Analysis</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="scan-memory" checked>
+                            <span>Memory Scan</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="scan-network">
+                            <span>Network Scan</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="scan-registry" checked>
+                            <span>Registry Scan</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div>
+                    <button class="btn btn-success" onclick="startScan()">Start Scan</button>
+                    <button class="btn" onclick="stopScan()">Stop Scan</button>
+                    <button class="btn btn-info" onclick="exportResults()">Export Results</button>
+                </div>
+                
+                <div class="output-area" id="scan-output">Threat scan results will appear here...</div>
+            </div>
+            
+            <!-- Kill Threats Tab -->
+            <div id="kill" class="tab-content">
+                <h3>Threat Elimination</h3>
+                
+                <div class="alert alert-warning">
+                    <strong>Warning:</strong> Threat elimination is irreversible. Ensure you have backups before proceeding.
+                </div>
+                
+                <div class="form-group">
+                    <label>Threat Selection</label>
+                    <select class="form-control" id="threat-select">
+                        <option value="">Select threat to eliminate...</option>
+                        <option value="threat1">Malware-001 (Critical)</option>
+                        <option value="threat2">Botnet-002 (High)</option>
+                        <option value="threat3">RAT-003 (Medium)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Elimination Method</label>
+                    <select class="form-control" id="kill-method">
+                        <option value="quarantine">Quarantine</option>
+                        <option value="delete">Delete</option>
+                        <option value="neutralize">Neutralize</option>
+                        <option value="burn">Burn (Complete Destruction)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Elimination Options</label>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="kill-backup" checked>
+                            <span>Create Backup</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="kill-log" checked>
+                            <span>Log Action</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="kill-verify">
+                            <span>Verify Elimination</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="kill-stealth">
+                            <span>Stealth Mode</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div>
+                    <button class="btn btn-success" onclick="eliminateThreat()">Eliminate Threat</button>
+                    <button class="btn" onclick="quarantineThreat()">Quarantine</button>
+                    <button class="btn btn-warning" onclick="analyzeThreat()">Analyze First</button>
+                </div>
+                
+                <div class="output-area" id="kill-output">Threat elimination results will appear here...</div>
+            </div>
+            
+            <!-- Monitor Tab -->
+            <div id="monitor" class="tab-content">
+                <h3>Real-time Threat Monitoring</h3>
+                
+                <div class="alert alert-info">
+                    <strong>Live Monitoring:</strong> Real-time threat detection and monitoring system.
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="active-threats">12</div>
+                        <div class="stat-label">Active Threats</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="eliminated-today">8</div>
+                        <div class="stat-label">Eliminated Today</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="scan-count">47</div>
+                        <div class="stat-label">Scans Run</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="uptime">99.8%</div>
+                        <div class="stat-label">System Uptime</div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Monitoring Actions</label>
+                    <div>
+                        <button class="btn" onclick="startMonitoring()">Start Monitoring</button>
+                        <button class="btn" onclick="stopMonitoring()">Stop Monitoring</button>
+                        <button class="btn" onclick="refreshThreats()">Refresh Threats</button>
+                        <button class="btn btn-info" onclick="exportLogs()">Export Logs</button>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Alert Settings</label>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="alert-critical" checked>
+                            <span>Critical Threats</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="alert-high" checked>
+                            <span>High Severity</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="alert-new">
+                            <span>New Threats</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="alert-eliminated">
+                            <span>Elimination Success</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="output-area" id="monitor-output">Monitoring data will appear here...</div>
+            </div>
+            
+            <!-- Defense Tab -->
+            <div id="defense" class="tab-content">
+                <h3>Defense Configuration</h3>
+                
+                <div class="alert alert-info">
+                    <strong>Defense Systems:</strong> Configure proactive defense mechanisms and threat prevention.
+                </div>
+                
+                <div class="form-group">
+                    <label>Defense Level</label>
+                    <select class="form-control" id="defense-level">
+                        <option value="basic">Basic Defense</option>
+                        <option value="standard">Standard Defense</option>
+                        <option value="advanced">Advanced Defense</option>
+                        <option value="maximum">Maximum Defense</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Defense Mechanisms</label>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="defense-firewall" checked>
+                            <span>Firewall</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="defense-ids" checked>
+                            <span>Intrusion Detection</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="defense-ips" checked>
+                            <span>Intrusion Prevention</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="defense-honeypot">
+                            <span>Honeypot</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="defense-sandbox" checked>
+                            <span>Sandboxing</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="defense-encryption" checked>
+                            <span>Encryption</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Response Actions</label>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="response-auto-kill" checked>
+                            <span>Auto-Eliminate</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="response-quarantine" checked>
+                            <span>Auto-Quarantine</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="response-alert">
+                            <span>Send Alerts</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="response-log" checked>
+                            <span>Log Actions</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div>
+                    <button class="btn btn-success" onclick="applyDefense()">Apply Defense</button>
+                    <button class="btn" onclick="testDefense()">Test Defense</button>
+                    <button class="btn btn-info" onclick="viewDefenseStatus()">View Status</button>
+                </div>
+                
+                <div class="output-area" id="defense-output">Defense configuration results will appear here...</div>
+            </div>
+        </div>
+        
+        <!-- Status Panel -->
+        <div class="card">
+            <h3>Red Killer Engine Status</h3>
+            <div class="alert alert-danger">
+                <strong>System Ready:</strong> Red Killer engine is operational and ready for threat elimination.
+            </div>
+            
+            <div class="form-group">
+                <label>Quick Actions</label>
+                <div>
+                    <button class="btn" onclick="testEngine()">Test Engine</button>
+                    <button class="btn" onclick="viewThreats()">View All Threats</button>
+                    <button class="btn" onclick="updateSignatures()">Update Signatures</button>
+                    <button class="btn btn-warning" onclick="clearAll()">Clear All</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let currentTab = 'scan';
+        let monitoringInterval;
+        
+                function showTab(tabName, clickedElement = null) {
+            try {
+                // Wait for DOM to be ready
+                if (document.readyState === 'loading') {
+                    console.log('DOM not ready, retrying tab switch...');
+                    setTimeout(() => showTab(tabName, clickedElement), 100);
+                    return;
+                }
+                
+                // Hide all tab contents
+                const tabContents = document.querySelectorAll('.tab-content');
+                if (tabContents.length === 0) {
+                    console.error('No tab content elements found');
+                    return;
+                }
+                
+                tabContents.forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                
+                // Remove active class from all tabs
+                const navTabs = document.querySelectorAll('.nav-tab');
+                if (navTabs.length === 0) {
+                    console.error('No nav tab elements found');
+                    return;
+                }
+                
+                navTabs.forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                
+                // Show selected tab content
+                const targetContent = document.getElementById(tabName);
+                if (!targetContent) {
+                    console.error(`Tab content element '${tabName}' not found`);
+                    return;
+                }
+                targetContent.classList.add('active');
+                
+                // Add active class to clicked tab
+                if (clickedElement) {
+                    clickedElement.classList.add('active');
+                } else {
+                    // Find the tab button that corresponds to this tab
+                    const targetTab = document.querySelector(`[onclick*="showTab('${tabName}')"]`);
+                    if (targetTab) {
+                        targetTab.classList.add('active');
+                    }
+                }
+                
+                console.log(`Successfully switched to tab: ${tabName}`);
+            } catch (error) {
+                console.error('Error switching tab:', error);
+            }
+        });
+            
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+            
+            currentTab = tabName;
+        }
+        
+        async function apiCall(endpoint, method = 'GET', body = null) {
+            try {
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                
+                const token = localStorage.getItem('authToken');
+                if (token) {
+                    headers.Authorization = `Bearer ${token}`;
+                }
+                
+                const response = await fetch(endpoint, {
+                    method: method,
+                    headers: headers,
+                    body: body ? JSON.stringify(body) : null
+                });
+                
+                const data = await response.text();
+                try {
+                    return { status: response.status, data: JSON.parse(data) };
+                } catch {
+                    return { status: response.status, data: data };
+                }
+            } catch (error) {
+                return { status: 500, data: { error: error.message } };
+            }
+        }
+        
+        async function startScan() {
+            const target = document.getElementById('scan-target').value;
+            const type = document.getElementById('scan-type').value;
+            const malware = document.getElementById('scan-malware').checked;
+            const botnets = document.getElementById('scan-botnets').checked;
+            const rats = document.getElementById('scan-rats').checked;
+            const trojans = document.getElementById('scan-trojans').checked;
+            const keyloggers = document.getElementById('scan-keyloggers').checked;
+            const rootkits = document.getElementById('scan-rootkits').checked;
+            const deep = document.getElementById('scan-deep').checked;
+            const memory = document.getElementById('scan-memory').checked;
+            const network = document.getElementById('scan-network').checked;
+            const registry = document.getElementById('scan-registry').checked;
+            
+            if (!target) {
+                alert('Please enter a scan target.');
+                return;
+            }
+            
+            const output = document.getElementById('scan-output');
+            output.textContent = 'Starting threat scan...';
+            
+            try {
+                const result = await apiCall('/red-killer-scan', 'POST', {
+                    target: target,
+                    type: type,
+                    categories: {
+                        malware: malware,
+                        botnets: botnets,
+                        rats: rats,
+                        trojans: trojans,
+                        keyloggers: keyloggers,
+                        rootkits: rootkits
+                    },
+                    options: {
+                        deep: deep,
+                        memory: memory,
+                        network: network,
+                        registry: registry
+                    }
+                });
+                
+                if (result.status === 200) {
+                    output.textContent = `Threat scan completed!\n\nTarget: ${target}\nType: ${type}\n\nCategories:\n- Malware: ${malware}\n- Botnets: ${botnets}\n- RATs: ${rats}\n- Trojans: ${trojans}\n- Keyloggers: ${keyloggers}\n- Rootkits: ${rootkits}\n\nOptions:\n- Deep Analysis: ${deep}\n- Memory Scan: ${memory}\n- Network Scan: ${network}\n- Registry Scan: ${registry}\n\nThreats Found: ${result.data.threatsFound}`;
+                } else {
+                    output.textContent = `Threat scan failed: ${result.data.error || 'Unknown error'}`;
+                }
+            } catch (error) {
+                output.textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        async function eliminateThreat() {
+            const threatId = document.getElementById('threat-select').value;
+            const method = document.getElementById('kill-method').value;
+            const backup = document.getElementById('kill-backup').checked;
+            const log = document.getElementById('kill-log').checked;
+            const verify = document.getElementById('kill-verify').checked;
+            const stealth = document.getElementById('kill-stealth').checked;
+            
+            if (!threatId) {
+                alert('Please select a threat to eliminate.');
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to ${method} this threat? This action cannot be undone.`)) {
+                return;
+            }
+            
+            const output = document.getElementById('kill-output');
+            output.textContent = 'Eliminating threat...';
+            
+            try {
+                const result = await apiCall('/red-killer-eliminate', 'POST', {
+                    threatId: threatId,
+                    method: method,
+                    options: {
+                        backup: backup,
+                        log: log,
+                        verify: verify,
+                        stealth: stealth
+                    }
+                });
+                
+                if (result.status === 200) {
+                    output.textContent = `Threat eliminated successfully!\n\nThreat ID: ${threatId}\nMethod: ${method}\n\nOptions:\n- Backup: ${backup}\n- Log: ${log}\n- Verify: ${verify}\n- Stealth: ${stealth}\n\nResult: ${result.data.result}`;
+                } else {
+                    output.textContent = `Threat elimination failed: ${result.data.error || 'Unknown error'}`;
+                }
+            } catch (error) {
+                output.textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        async function startMonitoring() {
+            const critical = document.getElementById('alert-critical').checked;
+            const high = document.getElementById('alert-high').checked;
+            const newThreats = document.getElementById('alert-new').checked;
+            const eliminated = document.getElementById('alert-eliminated').checked;
+            
+            const output = document.getElementById('monitor-output');
+            output.textContent = 'Starting threat monitoring...';
+            
+            // Start real-time monitoring
+            monitoringInterval = setInterval(() => {
+                updateMonitoringData();
+            }, 5000);
+            
+            try {
+                const result = await apiCall('/red-killer-monitor', 'POST', {
+                    alerts: {
+                        critical: critical,
+                        high: high,
+                        new: newThreats,
+                        eliminated: eliminated
+                    }
+                });
+                
+                if (result.status === 200) {
+                    output.textContent = `Threat monitoring started successfully!\n\nAlert Settings:\n- Critical: ${critical}\n- High: ${high}\n- New Threats: ${newThreats}\n- Elimination Success: ${eliminated}\n\nMonitoring ID: ${result.data.monitorId}`;
+                } else {
+                    output.textContent = `Monitoring failed: ${result.data.error || 'Unknown error'}`;
+                }
+            } catch (error) {
+                output.textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        function updateMonitoringData() {
+            const output = document.getElementById('monitor-output');
+            const timestamp = new Date().toISOString();
+            const newData = `[${timestamp}] New threat detected: Malware-004
+[${timestamp}] Threat eliminated: Botnet-002
+[${timestamp}] System scan completed: 0 threats found
+[${timestamp}] Defense system active: All shields up
+`;
+            
+            const currentData = output.textContent;
+            const lines = currentData.split('\n').filter(line => line.trim());
+            lines.push(...newData.split('\n').filter(line => line.trim()));
+            if (lines.length > 20) {
+                lines.splice(0, lines.length - 20);
+            }
+            
+            output.textContent = lines.join('\n');
+        }
+        
+        function stopMonitoring() {
+            if (monitoringInterval) {
+                clearInterval(monitoringInterval);
+                monitoringInterval = null;
+            }
+            document.getElementById('monitor-output').textContent = 'Monitoring stopped.';
+        }
+        
+        // Additional functions
+        async function stopScan() {
+            alert('Stopping threat scan...');
+        }
+        
+        function exportResults() {
+            alert('Exporting scan results...');
+        }
+        
+        async function quarantineThreat() {
+            const threatId = document.getElementById('threat-select').value;
+            if (!threatId) {
+                alert('Please select a threat to quarantine.');
+                return;
+            }
+            alert(`Quarantining threat: ${threatId}`);
+        }
+        
+        async function analyzeThreat() {
+            const threatId = document.getElementById('threat-select').value;
+            if (!threatId) {
+                alert('Please select a threat to analyze.');
+                return;
+            }
+            alert(`Analyzing threat: ${threatId}`);
+        }
+        
+        function refreshThreats() {
+            alert('Refreshing threat list...');
+        }
+        
+        function exportLogs() {
+            alert('Exporting monitoring logs...');
+        }
+        
+        async function applyDefense() {
+            const level = document.getElementById('defense-level').value;
+            const firewall = document.getElementById('defense-firewall').checked;
+            const ids = document.getElementById('defense-ids').checked;
+            const ips = document.getElementById('defense-ips').checked;
+            const honeypot = document.getElementById('defense-honeypot').checked;
+            const sandbox = document.getElementById('defense-sandbox').checked;
+            const encryption = document.getElementById('defense-encryption').checked;
+            
+            const output = document.getElementById('defense-output');
+            output.textContent = 'Applying defense configuration...';
+            
+            try {
+                const result = await apiCall('/red-killer-defense', 'POST', {
+                    level: level,
+                    mechanisms: {
+                        firewall: firewall,
+                        ids: ids,
+                        ips: ips,
+                        honeypot: honeypot,
+                        sandbox: sandbox,
+                        encryption: encryption
+                    }
+                });
+                
+                if (result.status === 200) {
+                    output.textContent = `Defense configuration applied successfully!\n\nLevel: ${level}\n\nMechanisms:\n- Firewall: ${firewall}\n- IDS: ${ids}\n- IPS: ${ips}\n- Honeypot: ${honeypot}\n- Sandbox: ${sandbox}\n- Encryption: ${encryption}\n\nStatus: ${result.data.status}`;
+                } else {
+                    output.textContent = `Defense configuration failed: ${result.data.error || 'Unknown error'}`;
+                }
+            } catch (error) {
+                output.textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        async function testDefense() {
+            alert('Testing defense systems...');
+        }
+        
+        function viewDefenseStatus() {
+            alert('Viewing defense status...');
+        }
+        
+        async function testEngine() {
+            alert('Testing Red Killer engine...');
+        }
+        
+        function viewThreats() {
+            alert('Opening threat database...');
+        }
+        
+        function updateSignatures() {
+            alert('Updating threat signatures...');
+        }
+        
+        function clearAll() {
+            if (confirm('Are you sure you want to clear all Red Killer data?')) {
+                document.getElementById('scan-output').textContent = 'Threat scan results will appear here...';
+                document.getElementById('kill-output').textContent = 'Threat elimination results will appear here...';
+                document.getElementById('monitor-output').textContent = 'Monitoring data will appear here...';
+                document.getElementById('defense-output').textContent = 'Defense configuration results will appear here...';
+                stopMonitoring();
+            }
+        }
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (monitoringInterval) clearInterval(monitoringInterval);
+        });
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add a small delay to ensure all elements are fully loaded
+            setTimeout(() => {
+                // Add event listeners to all tab buttons
+                const tabButtons = document.querySelectorAll('.nav-tab[data-tab]');
+                tabButtons.forEach(button => {
+                    button.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        const tabName = this.getAttribute('data-tab');
+                        console.log('Tab button clicked:', tabName);
+                        showTab(tabName, this);
+                    });
+                });
+            }, 100);
+        });
+
+    </script>
+</body>
+</html>

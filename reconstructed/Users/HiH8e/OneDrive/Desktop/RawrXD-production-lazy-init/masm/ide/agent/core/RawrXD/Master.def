@@ -1,0 +1,99 @@
+;  ============================================================================
+;  RawrXD_Master.def  –  Module definition file for all exports
+;  ============================================================================
+
+LIBRARY RawrXD_Master
+
+EXPORTS
+    ; IDE_01_MASTER.asm - Core autonomous loop
+    IDEMaster_Initialize              @1
+    IDEMaster_LoadModel                @2
+    IDEMaster_HotSwapModel            @3
+    IDEMaster_ExecuteAgenticTask      @4
+    AgentPlan_Create                  @200
+    AgentPlan_Resolve                 @201
+    AgentLoop_SingleStep              @202
+    AgentLoop_RunUntilDone            @203
+    
+    ; IDE_13_CACHE.asm - Agent memory
+    AgentMemory_Store                 @210
+    AgentMemory_Recall                @211
+    KVCache_Init                      @212
+    KVCache_Put                       @213
+    KVCache_Get                       @214
+    
+    ; IDE_15_AUTH.asm - Security & policy
+    AgentPolicy_CheckSafety           @220
+    AgentPolicy_Enforce               @221
+    Auth_ValidateJWT                  @222
+    Auth_RateLimitCheck               @223
+    
+    ; IDE_17_PLUGIN.asm - Tool dispatch
+    AgentTool_Dispatch                @230
+    AgentTool_ResultToMemory          @231
+    PluginSystem_Load                 @232
+    PluginSystem_Unload               @233
+    
+    ; IDE_18_COLLAB.asm - A2A communication
+    AgentComm_SendA2A                 @240
+    AgentComm_RecvA2A                 @241
+    CollabSession_Start               @242
+    CollabSession_SendOp              @243
+    
+    ; IDE_19_DEBUG.asm - Self-reflection
+    AgentSelfReflect                  @250
+    AgentCrit_SelfHeal                @251
+    AIDebugger_SetBreakpoint          @252
+    AIDebugger_WatchVariable          @253
+    
+    ; IDE_20_TELEMETRY.asm - Observability
+    AgentTelemetry_Step               @260
+    Telemetry_SendEvent               @261
+    Telemetry_SendMetric              @262
+    
+    ; Additional stubs (IDE_02-12, 14, 16)
+    BrowserAgent_Init                 @10
+    BrowserAgent_Navigate             @11
+    BrowserAgent_GetDOM               @12
+    BrowserAgent_ClickElement         @13
+    BrowserAgent_FillForm             @14
+    
+    HotPatch_Init                     @20
+    HotPatch_RegisterModel            @21
+    HotPatch_SwapModel                @22
+    HotPatch_StreamedLoadModel        @23
+    HotPatch_SetStreamCap             @24
+    HotPatch_CacheModel               @25
+    HotPatch_WarmupModel              @26
+    
+    UIGguf_UpdateLoadingProgress      @30
+    PaneManager_CreatePane            @31
+    PaneManager_RenderAllPanes        @32
+    
+    WinHTTP_DownloadToFileBearerA     @40
+    
+    GgufUnified_LoadModelAutomatic    @50
+    GgufUnified_LoadModel             @51
+    DiscStream_OpenModel              @52
+    DiscStream_ReadChunk              @53
+    
+    PiramHooks_CompressTensor         @60
+    PiramHooks_DecompressTensor       @61
+    
+    ReverseQuant_Init                 @70
+    ReverseQuant_DequantizeBuffer     @71
+    
+    InferenceBackend_CreateInferenceContext @80
+    
+    ErrorLogging_LogEvent             @90
+    IDESettings_ApplyTheme            @91
+    
+    StreamManager_Open                @100
+    StreamManager_Close               @101
+    StreamManager_Read                @102
+    
+    SpeculativeDecoder_Init           @110
+    SpeculativeDecoder_Decode         @111
+    
+    Vulkan_Init                       @120
+    Vulkan_Fallback                   @121

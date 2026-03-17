@@ -1,0 +1,43 @@
+# Standalone Component Test - Minimal CMake Configuration
+# This builds a test executable with ONLY the GUI components, no MainWindow
+
+cmake_minimum_required(VERSION 3.20)
+
+# Suppress pthread warnings on Windows (not needed, uses native threads)
+set(THREADS_PREFER_PTHREAD_FLAG OFF)
+set(CMAKE_THREAD_PREFER_PTHREAD OFF)
+
+# Find Qt6
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets Test)
+
+# Test executable
+add_executable(simple_component_test
+    simple_component_test.cpp
+    
+    # Component sources (ONLY these, no MainWindow)
+    ../src/qtapp/agentic_mode_switcher.cpp
+    ../src/qtapp/model_selector.cpp
+    ../src/qtapp/ai_chat_panel.cpp
+    ../src/qtapp/command_palette.cpp
+)
+
+# Include directories
+target_include_directories(simple_component_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/../src
+    ${CMAKE_SOURCE_DIR}/../src/qtapp
+)
+
+# Link libraries
+target_link_libraries(simple_component_test PRIVATE
+    Qt6::Core
+    Qt6::Widgets
+    Qt6::Test
+)
+
+# Enable MOC
+set_target_properties(simple_component_test PROPERTIES
+    AUTOMOC ON
+)
+
+# Add test
+add_test(NAME simple_component_test COMMAND simple_component_test)

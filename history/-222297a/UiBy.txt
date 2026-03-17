@@ -1,0 +1,50 @@
+cmake_minimum_required(VERSION 3.20)
+project(RawrXD_Agentic_IDE LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
+
+# Find Qt6
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets Gui Network)
+
+# Include directories
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/qtapp
+)
+
+# Minimal working sources - just the essential main window
+set(QT_SOURCES
+    "src/qtapp/main_qt.cpp"
+    "src/qtapp/MainWindow.cpp"
+    "src/qtapp/RawrXDMainWindow.cpp"
+)
+
+# Main executable
+add_executable(RawrXD_Agentic
+    ${QT_SOURCES}
+)
+
+# Link Qt libraries
+target_link_libraries(RawrXD_Agentic
+    Qt6::Core
+    Qt6::Widgets
+    Qt6::Gui
+    Qt6::Network
+)
+
+# Set output directory
+set_target_properties(RawrXD_Agentic PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+)
+
+# Windows specific settings
+if(WIN32)
+    set_target_properties(RawrXD_Agentic PROPERTIES
+        WIN32_EXECUTABLE TRUE
+    )
+endif()

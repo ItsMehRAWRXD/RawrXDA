@@ -26,6 +26,7 @@
 #include "command_registry.hpp"
 #include <cstring>
 #include <cstdio>
+#include <cstdlib>
 
 namespace RawrXD::Dispatch {
 
@@ -40,6 +41,18 @@ enum class DispatchStatus : uint8_t {
     WRONG_EXPOSURE  = 3,   // Command exists but not exposed to this source
     PRECOND_FAIL    = 4,   // Precondition flags not met (no file, no model, etc.)
     NULL_HANDLER    = 5    // Registered but handler is null (link error state)
+};
+
+struct CommandUsageStat {
+    uint32_t        id;
+    const char*     canonicalName;
+    const char*     handlerName;
+    const char*     category;
+    uint64_t        attempts;
+    uint64_t        okCount;
+    uint64_t        errorCount;
+    uint64_t        lastTickMs;
+    DispatchStatus  lastStatus;
 };
 
 struct DispatchResult {
@@ -67,7 +80,23 @@ struct DispatchResult {
     static DispatchResult handlerError(CommandResult cr, const CmdDescriptor* d) {
         return { DispatchStatus::HANDLER_ERROR, cr, cr.detail, d };
     }
+    static DispatchResult precondFail(const CmdDescriptor* d, const char* detail) {
+        return {
+            DispatchStatus::PRECOND_FAIL,
+            CommandResult::error(detail ? detail : "Feature disabled"),
+            detail ? detail : "Feature disabled",
+            d
+        };
+    }
 };
+
+// Runtime feature flags + telemetry services (implemented in unified_command_dispatch.cpp)
+bool isCommandEnabledRuntime(const CmdDescriptor& cmd, const char** reasonOut = nullptr);
+void recordCommandUsage(const CmdDescriptor* cmd, DispatchStatus status, const char* source);
+void resetCommandUsage();
+size_t getCommandUsageStats(CommandUsageStat* out, size_t maxOut);
+bool exportCommandUsageJson(const char* path);
+bool exportCommandMapMarkdown(const char* path, const char* proofTag);
 
 // ============================================================================
 // LOOKUP FUNCTIONS — Find descriptors in g_commandRegistry[]
@@ -151,12 +180,21 @@ inline DispatchResult dispatchByGuiId(uint32_t commandId, CommandContext& ctx) {
     // Verify exposure
     if (desc->exposure != CmdExposure::GUI_ONLY && 
         desc->exposure != CmdExposure::BOTH) {
+        recordCommandUsage(desc, DispatchStatus::WRONG_EXPOSURE, "gui");
         return DispatchResult::wrongExposure(desc);
     }
     
     // Verify handler exists
     if (!desc->handler) {
+        recordCommandUsage(desc, DispatchStatus::NULL_HANDLER, "gui");
         return DispatchResult::nullHandler(desc);
+    }
+
+    // Runtime feature flag gate
+    const char* gateReason = nullptr;
+    if (!isCommandEnabledRuntime(*desc, &gateReason)) {
+        recordCommandUsage(desc, DispatchStatus::PRECOND_FAIL, "gui");
+        return DispatchResult::precondFail(desc, gateReason ? gateReason : "Command disabled by runtime feature flag");
     }
     
     // Set context
@@ -166,8 +204,10 @@ inline DispatchResult dispatchByGuiId(uint32_t commandId, CommandContext& ctx) {
     // Execute
     CommandResult cr = desc->handler(ctx);
     if (cr.success) {
+        recordCommandUsage(desc, DispatchStatus::OK, "gui");
         return DispatchResult::ok(cr, desc);
     }
+    recordCommandUsage(desc, DispatchStatus::HANDLER_ERROR, "gui");
     return DispatchResult::handlerError(cr, desc);
 }
 
@@ -191,12 +231,21 @@ inline DispatchResult dispatchByCli(const char* cliInput, CommandContext& ctx) {
     // Verify exposure
     if (desc->exposure != CmdExposure::CLI_ONLY &&
         desc->exposure != CmdExposure::BOTH) {
+        recordCommandUsage(desc, DispatchStatus::WRONG_EXPOSURE, "cli");
         return DispatchResult::wrongExposure(desc);
     }
     
     // Verify handler exists
     if (!desc->handler) {
+        recordCommandUsage(desc, DispatchStatus::NULL_HANDLER, "cli");
         return DispatchResult::nullHandler(desc);
+    }
+
+    // Runtime feature flag gate
+    const char* gateReason = nullptr;
+    if (!isCommandEnabledRuntime(*desc, &gateReason)) {
+        recordCommandUsage(desc, DispatchStatus::PRECOND_FAIL, "cli");
+        return DispatchResult::precondFail(desc, gateReason ? gateReason : "Command disabled by runtime feature flag");
     }
     
     // Extract args (everything after the alias)
@@ -212,8 +261,10 @@ inline DispatchResult dispatchByCli(const char* cliInput, CommandContext& ctx) {
     // Execute
     CommandResult cr = desc->handler(ctx);
     if (cr.success) {
+        recordCommandUsage(desc, DispatchStatus::OK, "cli");
         return DispatchResult::ok(cr, desc);
     }
+    recordCommandUsage(desc, DispatchStatus::HANDLER_ERROR, "cli");
     return DispatchResult::handlerError(cr, desc);
 }
 
@@ -230,15 +281,24 @@ inline DispatchResult dispatchByCanonical(const char* name, CommandContext& ctx)
     }
     
     if (!desc->handler) {
+        recordCommandUsage(desc, DispatchStatus::NULL_HANDLER, "canonical");
         return DispatchResult::nullHandler(desc);
+    }
+
+    const char* gateReason = nullptr;
+    if (!isCommandEnabledRuntime(*desc, &gateReason)) {
+        recordCommandUsage(desc, DispatchStatus::PRECOND_FAIL, "canonical");
+        return DispatchResult::precondFail(desc, gateReason ? gateReason : "Command disabled by runtime feature flag");
     }
     
     ctx.commandId = desc->id;
     
     CommandResult cr = desc->handler(ctx);
     if (cr.success) {
+        recordCommandUsage(desc, DispatchStatus::OK, "canonical");
         return DispatchResult::ok(cr, desc);
     }
+    recordCommandUsage(desc, DispatchStatus::HANDLER_ERROR, "canonical");
     return DispatchResult::handlerError(cr, desc);
 }
 

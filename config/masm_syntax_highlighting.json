@@ -1,0 +1,301 @@
+{
+  "syntaxHighlighting": {
+    "masm": {
+      "name": "Microsoft Macro Assembler (x64)",
+      "fileExtensions": [
+        ".asm"
+      ],
+      "tokenRules": [
+        {
+          "name": "Comment",
+          "pattern": ";.*$",
+          "color": "#6A9955",
+          "fontStyle": "italic"
+        },
+        {
+          "name": "String",
+          "pattern": "\"[^\"]*\"|'[^']*'",
+          "color": "#CE9178"
+        },
+        {
+          "name": "Directive (Procedural)",
+          "patterns": [
+            "\\bPROC\\b",
+            "\\bENDP\\b",
+            "\\bFRAME\\b",
+            "\\bPUSHREG\\b",
+            "\\bALLOCSTACK\\b",
+            "\\bENDPROLOG\\b",
+            "\\bSAVEREG\\b",
+            "\\bSETFRAME\\b"
+          ],
+          "color": "#C586C0",
+          "fontStyle": "bold"
+        },
+        {
+          "name": "Directive (Data)",
+          "patterns": [
+            "\\bSTRUCT\\b",
+            "\\bENDS\\b",
+            "\\bUNION\\b",
+            "\\bRECORD\\b",
+            "\\bEQU\\b",
+            "\\bDB\\b",
+            "\\bDW\\b",
+            "\\bDD\\b",
+            "\\bDQ\\b",
+            "\\bALIGN\\b"
+          ],
+          "color": "#C586C0"
+        },
+        {
+          "name": "Assembler Directive",
+          "patterns": [
+            "\\b\\.data\\b",
+            "\\b\\.code\\b",
+            "\\b\\.text\\b",
+            "\\bOPTION\\b",
+            "\\bEXTERN\\b",
+            "\\bPUBLIC\\b",
+            "\\bINCLUDE\\b",
+            "\\bMACRO\\b",
+            "\\bENDM\\b"
+          ],
+          "color": "#569CD6",
+          "fontStyle": "bold"
+        },
+        {
+          "name": "Register (64-bit)",
+          "patterns": [
+            "\\bRAX\\b",
+            "\\bRBX\\b",
+            "\\bRCX\\b",
+            "\\bRDX\\b",
+            "\\bRSI\\b",
+            "\\bRDI\\b",
+            "\\bRBP\\b",
+            "\\bRSP\\b",
+            "\\bR8\\b",
+            "\\bR9\\b",
+            "\\bR10\\b",
+            "\\bR11\\b",
+            "\\bR12\\b",
+            "\\bR13\\b",
+            "\\bR14\\b",
+            "\\bR15\\b"
+          ],
+          "color": "#4EC9B0"
+        },
+        {
+          "name": "Register (32-bit)",
+          "patterns": [
+            "\\bEAX\\b",
+            "\\bEBX\\b",
+            "\\bECX\\b",
+            "\\bEDX\\b",
+            "\\bESI\\b",
+            "\\bEDI\\b",
+            "\\bEBP\\b",
+            "\\bESP\\b"
+          ],
+          "color": "#4EC9B0"
+        },
+        {
+          "name": "Register (16-bit)",
+          "patterns": [
+            "\\bAX\\b",
+            "\\bBX\\b",
+            "\\bCX\\b",
+            "\\bDX\\b",
+            "\\bSI\\b",
+            "\\bDI\\b",
+            "\\bBP\\b",
+            "\\bSP\\b"
+          ],
+          "color": "#4EC9B0"
+        },
+        {
+          "name": "Register (8-bit)",
+          "patterns": [
+            "\\bAL\\b",
+            "\\bBL\\b",
+            "\\bCL\\b",
+            "\\bDL\\b",
+            "\\bAH\\b",
+            "\\bBH\\b",
+            "\\bCH\\b",
+            "\\bDH\\b"
+          ],
+          "color": "#4EC9B0"
+        },
+        {
+          "name": "Instruction (Data Movement)",
+          "patterns": [
+            "\\bMOV\\b",
+            "\\bMOVZX\\b",
+            "\\bMOVSX\\b",
+            "\\bLEA\\b",
+            "\\bXCHG\\b",
+            "\\bBSWAP\\b"
+          ],
+          "color": "#569CD6"
+        },
+        {
+          "name": "Instruction (Arithmetic)",
+          "patterns": [
+            "\\bADD\\b",
+            "\\bADC\\b",
+            "\\bSUB\\b",
+            "\\bSBB\\b",
+            "\\bMUL\\b",
+            "\\bIMUL\\b",
+            "\\bDIV\\b",
+            "\\bIDIV\\b",
+            "\\bINC\\b",
+            "\\bDEC\\b",
+            "\\bNEG\\b"
+          ],
+          "color": "#569CD6"
+        },
+        {
+          "name": "Instruction (Logical)",
+          "patterns": [
+            "\\bAND\\b",
+            "\\bOR\\b",
+            "\\bXOR\\b",
+            "\\bNOT\\b",
+            "\\bSHL\\b",
+            "\\bSHR\\b",
+            "\\bROL\\b",
+            "\\bROR\\b",
+            "\\bRCL\\b",
+            "\\bRCR\\b",
+            "\\bSAL\\b",
+            "\\bSAR\\b"
+          ],
+          "color": "#569CD6"
+        },
+        {
+          "name": "Instruction (Comparison/Test)",
+          "patterns": [
+            "\\bCMP\\b",
+            "\\bTEST\\b",
+            "\\bCOMPARE\\b"
+          ],
+          "color": "#569CD6"
+        },
+        {
+          "name": "Instruction (Control Flow)",
+          "patterns": [
+            "\\bJMP\\b",
+            "\\bJZ\\b",
+            "\\bJNZ\\b",
+            "\\bJE\\b",
+            "\\bJNE\\b",
+            "\\bJL\\b",
+            "\\bJLE\\b",
+            "\\bJG\\b",
+            "\\bJGE\\b",
+            "\\bJO\\b",
+            "\\bJNO\\b",
+            "\\bJS\\b",
+            "\\bJNS\\b",
+            "\\bJC\\b",
+            "\\bJNC\\b",
+            "\\bJP\\b",
+            "\\bJNP\\b",
+            "\\bLOOP\\b",
+            "\\bLOOPZ\\b",
+            "\\bLOOPNZ\\b",
+            "\\bCALL\\b",
+            "\\bRET\\b"
+          ],
+          "color": "#569CD6"
+        },
+        {
+          "name": "Instruction (Stack)",
+          "patterns": [
+            "\\bPUSH\\b",
+            "\\bPOP\\b",
+            "\\bPUSHAD\\b",
+            "\\bPOPAD\\b",
+            "\\bPUSHFD\\b",
+            "\\bPOPFD\\b"
+          ],
+          "color": "#569CD6"
+        },
+        {
+          "name": "Instruction (Other)",
+          "patterns": [
+            "\\bNOP\\b",
+            "\\bHLT\\b",
+            "\\bCLC\\b",
+            "\\bSTC\\b",
+            "\\bCLD\\b",
+            "\\bSTD\\b",
+            "\\bCLI\\b",
+            "\\bSTI\\b",
+            "\\bLGDT\\b",
+            "\\bLLDT\\b",
+            "\\bLTR\\b",
+            "\\bLMSW\\b"
+          ],
+          "color": "#569CD6"
+        },
+        {
+          "name": "Constant/Number (Hex)",
+          "pattern": "0[xX][0-9A-Fa-f]+[hH]?",
+          "color": "#B5CEA8"
+        },
+        {
+          "name": "Constant/Number (Decimal)",
+          "pattern": "\\d+[hH]?(?!\\w)",
+          "color": "#B5CEA8"
+        },
+        {
+          "name": "Label",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*:",
+          "color": "#D7BA7D",
+          "fontStyle": "bold"
+        },
+        {
+          "name": "Operator",
+          "patterns": [
+            "\\+",
+            "\\-",
+            "\\*",
+            "/",
+            "\\.",
+            ",",
+            ":",
+            "\\[",
+            "\\]",
+            "\\(",
+            "\\)",
+            "\\{",
+            "\\}"
+          ],
+          "color": "#D4D4D4"
+        }
+      ]
+    }
+  },
+  "colorTheme": {
+    "name": "RawrXD Assembly Dark",
+    "type": "dark",
+    "colors": {
+      "editor.background": "#1E1E1E",
+      "editor.foreground": "#D4D4D4",
+      "editor.lineNumberColor": "#858585",
+      "editor.selectionBackground": "#264F78",
+      "keyword": "#569CD6",
+      "comment": "#6A9955",
+      "string": "#CE9178",
+      "register": "#4EC9B0",
+      "number": "#B5CEA8",
+      "directive": "#C586C0",
+      "label": "#D7BA7D",
+      "instruction": "#569CD6"
+    }
+  }
+}

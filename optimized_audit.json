@@ -1,0 +1,25 @@
+{
+  "optimized": true,
+  "workers": 8,
+  "elapsed_sec": 0.501,
+  "cmake_refs": 540,
+  "disk_files": 530,
+  "include_edges": 3551,
+  "active": 530,
+  "needed": 0,
+  "orphan": 0,
+  "missing": [
+    "ContextManager.h",
+    "Telemetry_Kernel.asm",
+    "cutils.c",
+    "libbf.c",
+    "libregexp.c",
+    "libunicode.c",
+    "model_llm_harvester.asm",
+    "quickjs-libc.c",
+    "quickjs.c",
+    "windows.h"
+  ],
+  "duplicate_pairs": 0,
+  "archived": 0
+}

@@ -1,0 +1,166 @@
+
+File        : asm_monolithic_ui.obj
+SizeKB      : 23.44
+Sections    : 7
+Symbols     : 0
+TextSizeKB  : 0
+DataSizeKB  : 0
+RDataSizeKB : 0
+BigObjFlag  : False
+Issues      : 
+
+
+File        : asm_monolithic_swarm.obj
+SizeKB      : 12.72
+Sections    : 6
+Symbols     : 0
+TextSizeKB  : 0
+DataSizeKB  : 0
+RDataSizeKB : 0
+BigObjFlag  : False
+Issues      : 
+
+
+File        : asm_monolithic_tasks.obj
+SizeKB      : 6.03
+Sections    : 7
+Symbols     : 0
+TextSizeKB  : 0
+DataSizeKB  : 0
+RDataSizeKB : 0
+BigObjFlag  : False
+Issues      : 
+
+
+File        : asm_monolithic_swarm_coordinator.obj
+SizeKB      : 5.69
+Sections    : 6
+Symbols     : 0
+TextSizeKB  : 0
+DataSizeKB  : 0
+RDataSizeKB : 0
+BigObjFlag  : False
+Issues      : 
+
+
+File        : asm_monolithic_testing.obj
+SizeKB      : 5.59
+Sections    : 7
+Symbols     : 0
+TextSizeKB  : 0
+DataSizeKB  : 0
+RDataSizeKB : 0
+BigObjFlag  : False
+Issues      : 
+
+
+File        : asm_monolithic_dap.obj
+SizeKB      : 4.31
+Sections    : 7
+Symbols     : 0
+TextSizeKB  : 0
+DataSizeKB  : 0
+RDataSizeKB : 0
+BigObjFlag  : False
+Issues      : 
+
+
+File        : asm_monolithic_model_loader.obj
+SizeKB      : 2.45
+Sections    : 7
+Symbols     : 0
+TextSizeKB  : 0
+DataSizeKB  : 0
+RDataSizeKB : 0
+BigObjFlag  : False
+Issues      : 
+
+
+File        : asm_monolithic_main.obj
+SizeKB      : 1.62
+Sections    : 6
+Symbols     : 0
+TextSizeKB  : 0
+DataSizeKB  : 0
+RDataSizeKB : 0
+BigObjFlag  : False
+Issues      : 
+
+
+File        : asm_monolithic_agent.obj
+SizeKB      : 1.46
+Sections    : 7
+Symbols     : 0
+TextSizeKB  : 0
+DataSizeKB  : 0
+RDataSizeKB : 0
+BigObjFlag  : False
+Issues      : 
+
+
+File        : asm_monolithic_inference.obj
+SizeKB      : 1.31
+Sections    : 7
+Symbols     : 0
+TextSizeKB  : 0
+DataSizeKB  : 0
+RDataSizeKB : 0
+BigObjFlag  : False
+Issues      : 
+
+
+File        : asm_monolithic_beacon.obj
+SizeKB      : 1.27
+Sections    : 6
+Symbols     : 0
+TextSizeKB  : 0
+DataSizeKB  : 0
+RDataSizeKB : 0
+BigObjFlag  : False
+Issues      : 
+
+
+File        : asm_monolithic_lsp.obj
+SizeKB      : 0.71
+Sections    : 5
+Symbols     : 0
+TextSizeKB  : 0
+DataSizeKB  : 0
+RDataSizeKB : 0
+BigObjFlag  : False
+Issues      : 
+
+
+File                                 SizeKB Sections Symbols TextSizeKB DataSize
+                                                                              KB
+----                                 ------ -------- ------- ---------- --------
+asm_monolithic_ui.obj                 23.44        7       0       0.00     0.00
+asm_monolithic_swarm.obj              12.72        6       0       0.00     0.00
+asm_monolithic_tasks.obj               6.03        7       0       0.00     0.00
+asm_monolithic_swarm_coordinator.obj   5.69        6       0       0.00     0.00
+asm_monolithic_testing.obj             5.59        7       0       0.00     0.00
+asm_monolithic_dap.obj                 4.31        7       0       0.00     0.00
+asm_monolithic_model_loader.obj        2.45        7       0       0.00     0.00
+asm_monolithic_main.obj                1.62        6       0       0.00     0.00
+asm_monolithic_agent.obj               1.46        7       0       0.00     0.00
+asm_monolithic_inference.obj           1.31        7       0       0.00     0.00
+asm_monolithic_beacon.obj              1.27        6       0       0.00     0.00
+asm_monolithic_lsp.obj                 0.71        5       0       0.00     0.00
+
+
+Source                     Object                     Status  SizeKB Errors
+------                     ------                     ------  ------ ------
+agent.asm                  agent.obj                  SUCCESS   2.75 
+beacon.asm                 beacon.obj                 SUCCESS   3.23 
+dap.asm                    dap.obj                    SUCCESS  10.16 
+inference.asm              inference.obj              SUCCESS   3.19 
+lsp.asm                    lsp.obj                    SUCCESS   5.38 
+main.asm                   main.obj                   SUCCESS   6.77 
+model_loader.asm           model_loader.obj           SUCCESS   7.36 
+ollama_sovereign_proxy.asm ollama_sovereign_proxy.obj SUCCESS   7.54 
+swarm_coordinator.asm      swarm_coordinator.obj      SUCCESS  12.84 
+swarm.asm                  swarm.obj                  SUCCESS  19.50 
+tasks.asm                  tasks.obj                  SUCCESS  14.79 
+testing.asm                testing.obj                SUCCESS  14.23 
+ui.asm                     ui.obj                     SUCCESS  48.26 
+

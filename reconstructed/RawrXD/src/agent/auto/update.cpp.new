@@ -1,0 +1,132 @@
+/**
+ * @file auto_update.cpp
+ * @brief Auto-update checker using HTTP manifest
+ * Architecture: C++20, no Qt, no exceptions
+ */
+#include "auto_update.hpp"
+#include "json_types.hpp"
+#include "process_utils.hpp"
+#include <chrono>
+#include <cstdint>
+#include <cstdio>
+#include <filesystem>
+#include <fstream>
+#include <string>
+#include <vector>
+
+static std::string getUpdateURL() {
+    std::string envUrl = getEnvVar("RAWRXD_UPDATE_URL");
+    return envUrl.empty()
+        ? "https://rawrxd.blob.core.windows.net/updates/update_manifest.json"
+        : envUrl;
+}
+
+static void logUpdateEvent(const std::string& event,
+                           const std::string& detail = {},
+                           int64_t latencyMs = -1) {
+    fprintf(stderr, "[AutoUpdate] %s", event.c_str());
+    if (!detail.empty()) fprintf(stderr, " | Detail: %s", detail.c_str());
+    if (latencyMs >= 0) fprintf(stderr, " | Latency: %lldms", static_cast<long long>(latencyMs));
+    fprintf(stderr, "\n");
+}
+
+bool AutoUpdate::checkAndInstall() {
+    auto t0 = std::chrono::steady_clock::now();
+
+    // Feature toggle
+    std::string enabled = getEnvVar("RAWRXD_AUTOUPDATE_ENABLED", "1");
+    if (enabled == "0") {
+        logUpdateEvent("SKIPPED", "Auto-update disabled via env");
+        return true;
+    }
+
+    std::string updateUrl = getUpdateURL();
+    logUpdateEvent("CHECK_START", "URL: " + updateUrl);
+
+    http::Response resp = http::get(updateUrl, {
+        {"Accept", "application/json"}
+    });
+
+    auto t1 = std::chrono::steady_clock::now();
+    int64_t checkLatency = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
+
+    if (!resp.ok()) {
+        logUpdateEvent("CHECK_FAILED", resp.error.empty() ? "HTTP " + std::to_string(resp.statusCode) : resp.error, checkLatency);
+        return false;
+    }
+
+    // Parse manifest
+    JsonDoc doc = JsonDoc::fromJson(resp.body);
+    JsonObject root = doc.object();
+    std::string remoteVer = root["version"].toString();
+    std::string remoteURL = root["url"].toString();
+    std::string remoteSHA = root["sha256"].toString();
+
+    // Get local version from env or hardcoded
+    std::string localVer = getEnvVar("RAWRXD_VERSION", "v1.0.0");
+
+    logUpdateEvent("VERSION_CHECK",
+                   "Local: " + localVer + ", Remote: " + remoteVer, checkLatency);
+
+    if (remoteVer == localVer) {
+        logUpdateEvent("UP_TO_DATE", remoteVer);
+        return true;
+    }
+
+    // Prepare download path
+#ifdef _WIN32
+    std::string appData = getEnvVar("LOCALAPPDATA");
+    if (appData.empty()) appData = getEnvVar("APPDATA");
+#else
+    std::string appData = getEnvVar("HOME") + "/.local/share";
+#endif
+    std::string downloadDir = appData + "/RawrXD/updates";
+    std::filesystem::create_directories(downloadDir);
+    std::string localPath = downloadDir + "/RawrXD-Shell-" + remoteVer + ".exe";
+
+    logUpdateEvent("DOWNLOAD_START", "Version: " + remoteVer + ", URL: " + remoteURL);
+
+    auto t2 = std::chrono::steady_clock::now();
+
+    http::Response dlResp = http::get(remoteURL);
+
+    auto t3 = std::chrono::steady_clock::now();
+    int64_t downloadLatency = std::chrono::duration_cast<std::chrono::milliseconds>(t3 - t2).count();
+
+    if (!dlResp.ok()) {
+        logUpdateEvent("DOWNLOAD_FAILED",
+                       dlResp.error.empty() ? "HTTP " + std::to_string(dlResp.statusCode) : dlResp.error,
+                       downloadLatency);
+        return false;
+    }
+
+    // Integrity check
+    std::string sha256 = crypto::sha256hex(dlResp.body);
+    if (sha256 != remoteSHA) {
+        logUpdateEvent("INTEGRITY_FAILED",
+                       "Expected: " + remoteSHA + ", Got: " + sha256,
+                       downloadLatency);
+        return false;
+    }
+    logUpdateEvent("INTEGRITY_OK", "SHA256: " + sha256);
+
+    // Write file
+    if (!fileutil::writeAll(localPath, dlResp.body)) {
+        logUpdateEvent("WRITE_FAILED", "Path: " + localPath);
+        return false;
+    }
+
+    logUpdateEvent("DOWNLOAD_COMPLETE",
+                   "Path: " + localPath + ", Size: " + std::to_string(dlResp.body.size()) + " bytes",
+                   downloadLatency);
+
+    // Schedule restart
+    logUpdateEvent("RESTART_SCHEDULED", "New version: " + remoteVer + ", Delay: 3s");
+#ifdef _WIN32
+    proc::startDetached("cmd.exe", {"/C", "timeout", "/t", "3", "&&", localPath});
+#else
+    proc::startDetached("sh", {"-c", "sleep 3 && " + localPath});
+#endif
+
+    return true;
+}

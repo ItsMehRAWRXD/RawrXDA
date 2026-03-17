@@ -1,0 +1,53 @@
+﻿{
+  "autoLoadEnabled": true,
+  "preferredModel": "",
+  "searchPaths": [
+    "D:/OllamaModels",
+    "./models",
+    "../models"
+  ],
+  "maxRetries": 3,
+  "retryDelayMs": 1000,
+  "discoveryTimeoutMs": 30000,
+  "loadTimeoutMs": 60000,
+  "enableCaching": true,
+  "enableHealthChecks": true,
+  "enableMetrics": true,
+  "enableAsyncLoading": true,
+  "maxCacheSize": 10,
+  "logLevel": "INFO",
+  "circuitBreakerThreshold": 5,
+  "circuitBreakerTimeoutMs": 60000,
+  "enableAISelection": true,
+  "enableGitHubCopilot": true,
+  "enablePredictivePreloading": true,
+  "predictivePreloading": {
+    "enabled": true,
+    "historyFile": "./usage_patterns.json",
+    "predictionCount": 3,
+    "minConfidenceScore": 0.6
+  },
+  "ensemble": {
+    "enabled": true,
+    "maxParallelLoads": 3,
+    "defaultVotingStrategy": "weighted",
+    "enableFallback": true
+  },
+  "abTesting": {
+    "enabled": true,
+    "testsFile": "./ab_tests.json",
+    "minSampleSize": 30,
+    "defaultConfidenceLevel": 0.95
+  },
+  "zeroShot": {
+    "enabled": true,
+    "knowledgeBaseFile": "./model_knowledge_base.json",
+    "enableProbing": true,
+    "minConfidenceThreshold": 0.5
+  },
+  "features": {
+    "enableFuzzing": false,
+    "enableDistributedTracing": false,
+    "enablePrometheusMetrics": true
+  }
+}

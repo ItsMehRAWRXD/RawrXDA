@@ -1,0 +1,108 @@
+
+==============================================================================
+  RawrXD v278 — Orchestration-Collapsed Speculative Benchmark
+==============================================================================
+
+  DLL:          D:\rawrxd\bin\RawrXD_Singularity_120B_v270.dll
+  Draft:        gemma3:1b
+  Verifier:     qwen2.5:7b
+  Burst:        16 x1 = 16 draft/verify
+  Target:       64 tokens x 3 runs
+  v277 ref:     1.13 wall t/s, 141.42 infer t/s
+    DLL verified: 54.5 KB
+
+==============================================================================
+  PHASE 0: PRE-LOAD — Concurrent VRAM
+==============================================================================
+  [21:53:32] Loading gemma3:1b (keep_alive=-1)...
+    gemma3:1b loaded: load=204.2ms
+  [21:53:34] Loading qwen2.5:7b (keep_alive=-1)...
+    qwen2.5:7b loaded: load=80.2ms
+    Both models in VRAM: 5.74 GB used
+
+==============================================================================
+  PHASE 1: BASELINE — qwen2.5:7b (verifier-only)
+==============================================================================
+  [21:53:38] Warmup...
+  [21:53:40]   Warmup: tg=92.17 t/s, load=80.6ms
+  [21:53:40] Baseline run 1/3 (64 tokens)...
+    Run 1: tg=89.56 t/s, pp=5726.03 t/s, wall=2904ms
+  [21:53:43] Baseline run 2/3 (64 tokens)...
+    Run 2: tg=89.42 t/s, pp=5782.76 t/s, wall=2897ms
+  [21:53:46] Baseline run 3/3 (64 tokens)...
+    Run 3: tg=89.73 t/s, pp=6002.72 t/s, wall=2919ms
+    BASELINE: tg=89.57 ±0.16 t/s, pp=5837.17 t/s, wall=2906.7 ms
+
+  ┌─────────────────────────────────────────┐
+  │ BASELINE: 89.57 ±0.16 t/s (verifier-only) │
+  └─────────────────────────────────────────┘
+
+==============================================================================
+  PHASE 2: SPECULATIVE — gemma3:1b -> qwen2.5:7b (burst=16 x1)
+==============================================================================
+  [SPEC] Run 1: burst=16 x1 = 16 draft/verify, target=64
+  [SPEC]   Cycle 1: draft=16, committed=17, accept=1, infer=187.22 t/s, session=3.7 t/s, d_wall=2418ms, v_wall=2180ms, total=4600ms
+  [SPEC]   Cycle 2: draft=16, committed=17, accept=1, infer=184.4 t/s, session=3.7 t/s, d_wall=2423ms, v_wall=2174ms, total=4597ms
+  [SPEC]   Cycle 3: draft=16, committed=17, accept=1, infer=185.54 t/s, session=3.66 t/s, d_wall=2458ms, v_wall=2184ms, total=4643ms
+  [SPEC]   Cycle 4: draft=16, committed=17, accept=1, infer=175.65 t/s, session=3.74 t/s, d_wall=2377ms, v_wall=2172ms, total=4550ms
+    Run 1: infer=183.09 t/s, session=3.7 t/s, committed=68, accept=100%, cycles=4, http=8, overhead=98%
+  [SPEC] Run 2: burst=16 x1 = 16 draft/verify, target=64
+  [SPEC]   Cycle 1: draft=16, committed=17, accept=1, infer=204.42 t/s, session=3.73 t/s, d_wall=2385ms, v_wall=2174ms, total=4560ms
+  [SPEC]   Cycle 2: draft=16, committed=17, accept=1, infer=183.69 t/s, session=3.69 t/s, d_wall=2427ms, v_wall=2175ms, total=4603ms
+  [SPEC]   Cycle 3: draft=16, committed=17, accept=1, infer=182.85 t/s, session=3.7 t/s, d_wall=2393ms, v_wall=2195ms, total=4589ms
+  [SPEC]   Cycle 4: draft=16, committed=17, accept=1, infer=178.82 t/s, session=3.71 t/s, d_wall=2423ms, v_wall=2163ms, total=4587ms
+    Run 2: infer=186.94 t/s, session=3.71 t/s, committed=68, accept=100%, cycles=4, http=8, overhead=98%
+  [SPEC] Run 3: burst=16 x1 = 16 draft/verify, target=64
+  [SPEC]   Cycle 1: draft=16, committed=17, accept=1, infer=207 t/s, session=3.8 t/s, d_wall=2321ms, v_wall=2155ms, total=4477ms
+  [SPEC]   Cycle 2: draft=16, committed=17, accept=1, infer=181.69 t/s, session=3.7 t/s, d_wall=2404ms, v_wall=2184ms, total=4589ms
+  [SPEC]   Cycle 3: draft=16, committed=17, accept=1, infer=176.81 t/s, session=3.71 t/s, d_wall=2389ms, v_wall=2189ms, total=4578ms
+  [SPEC]   Cycle 4: draft=16, committed=17, accept=1, infer=177.12 t/s, session=3.75 t/s, d_wall=2379ms, v_wall=2158ms, total=4538ms
+    Run 3: infer=184.87 t/s, session=3.74 t/s, committed=68, accept=100%, cycles=4, http=8, overhead=98%
+
+==============================================================================
+  PHASE 3: ANALYSIS — v278 Orchestration Collapse
+==============================================================================
+
+  ┌──────────────────────────────────────────────────────────┐
+  │           v278 ORCHESTRATION-COLLAPSED RESULTS           │
+  ├──────────────────────────────────────────────────────────┤
+  │  Pair:                            gemma3:1b -> qwen2.5:7b  │
+  │  Burst:                                       16 x1 = 16  │
+  │  Runs x Cycles:                                   3 x 12  │
+  │  Total HTTP Calls:                                    24  │
+  │  Tokens/HTTP Call:                                   8.5  │
+  │  HTTP Overhead:                                      98%  │
+  ├──────────────────────────────────────────────────────────┤
+  │  Baseline TPS:                                 89.57 t/s  │
+  │  Median Infer TPS:                  184.87 t/s (+106.4%)  │
+  │  Median Session TPS:              3.71 t/s (+228.3% vs v277)  │
+  │  Best Session TPS:                              3.74 t/s  │
+  │  v277 Session TPS:                  1.13 t/s (reference)  │
+  │  Accept Rate:                                       100%  │
+  │  Fallback Rate:                                       0%  │
+  ├──────────────────────────────────────────────────────────┤
+  │  VERDICT:                                        HEALTHY  │
+  └──────────────────────────────────────────────────────────┘
+
+  Health Gate:
+    sample_count >= 3: PASS
+    median_accept >= 0.55: PASS (1)
+    fallback_rate <= 0.15: PASS (0)
+    infer_gain >= 20%: PASS (+106.4%)
+    session_tps vs v277: PASS (+228.3%)
+
+  Planner Score Delta: 100
+
+  Per-Run Breakdown:
+    RUN         INFER    SESSION    ACCEPT%   CYCLES    HTTP#   TOK/HTTP    OVHD%
+    ------------------------------------------------------------------------------
+    Run 1      183.09        3.7       100%        4        8        8.5      98%
+    Run 2      186.94       3.71       100%        4        8        8.5      98%
+    Run 3      184.87       3.74       100%        4        8        8.5      98%
+
+  Session log: D:\rawrxd\logs\speculative_v278_log.jsonl
+  Cycle log:   D:\rawrxd\logs\speculative_v278_cycle_log.jsonl
+
+==============================================================================
+  v278 Benchmark Complete — 72.6s elapsed
+==============================================================================

@@ -1,0 +1,76 @@
+
+==============================================================================
+  RawrXD Sovereign Smoke Test Harness v259
+==============================================================================
+
+  DLL:       D:\rawrxd\bin\RawrXD_Singularity_120B_v270.dll
+  Backend:   rocm
+  Models:    gemma3:1b, phi3:mini, qwen2.5-coder:latest, qwen2.5:7b, gemma3:12b
+  Warmup:    1  |  Runs: 3
+  Log:       D:\rawrxd\logs\smoke_v270.jsonl
+  Quick:     False  |  Compare: False
+  DLL verified: 54.5 KB
+
+==============================================================================
+  Backend: ROCM
+==============================================================================
+
+==============================================================================
+  [1/5] gemma3:1b @ ROCM
+==============================================================================
+  [21:55:09] Warmup 1/1 (long prompt)...
+  [21:55:12]   Warmup: pp=5067.46 t/s, tg=238.2 t/s, load=293.5ms
+  [21:55:12] Run 1/3 (long prompt, 128 tokens)...
+  Run 1 : pp=16181.58 t/s, tg=246.22 t/s, wall=2823ms
+  [21:55:14] Run 2/3 (long prompt, 128 tokens)...
+  Run 2 : pp=14663.33 t/s, tg=258.92 t/s, wall=2822ms
+  [21:55:17] Run 3/3 (long prompt, 128 tokens)...
+  Run 3 : pp=16239.39 t/s, tg=267.55 t/s, wall=2844ms
+
+model       : gemma3:1b
+created_at  : 3/16/2026 1:55:22 AM
+response    : 
+done        : True
+done_reason : unload
+
+
+==============================================================================
+  [2/5] phi3:mini @ ROCM
+==============================================================================
+  [21:55:27] Warmup 1/1 (long prompt)...
+  [21:55:32]   Warmup: pp=2109.29 t/s, tg=175.02 t/s, load=2790.3ms
+  [21:55:32] Run 1/3 (long prompt, 128 tokens)...
+  Run 1 : pp=14253.82 t/s, tg=172.57 t/s, wall=2816ms
+  [21:55:35] Run 2/3 (long prompt, 128 tokens)...
+  Run 2 : pp=13360.59 t/s, tg=176.38 t/s, wall=2797ms
+  [21:55:38] Run 3/3 (long prompt, 128 tokens)...
+  Run 3 : pp=13463.32 t/s, tg=176.07 t/s, wall=2807ms
+model       : phi3:mini
+created_at  : 3/16/2026 1:55:42 AM
+response    : 
+done        : True
+done_reason : unload
+
+
+==============================================================================
+  [3/5] qwen2.5-coder:latest @ ROCM
+==============================================================================
+  [21:55:47] Warmup 1/1 (long prompt)...
+  [21:55:53]   Warmup: pp=1644.07 t/s, tg=87.6 t/s, load=2761.6ms
+  [21:55:53] Run 1/3 (long prompt, 128 tokens)...
+  Run 1 : pp=6378.28 t/s, tg=88.37 t/s, wall=3676ms
+  [21:55:56] Run 2/3 (long prompt, 128 tokens)...
+  Run 2 : pp=8045.73 t/s, tg=89.44 t/s, wall=3650ms
+  [21:56:00] Run 3/3 (long prompt, 128 tokens)...
+  Run 3 : pp=7370.34 t/s, tg=88.83 t/s, wall=3672ms
+model       : qwen2.5-coder:latest
+created_at  : 3/16/2026 1:56:06 AM
+response    : 
+done        : True
+done_reason : unload
+
+
+==============================================================================
+  [4/5] qwen2.5:7b @ ROCM
+==============================================================================
+  [21:56:10] Warmup 1/1 (long prompt)...

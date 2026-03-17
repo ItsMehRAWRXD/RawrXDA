@@ -41,18 +41,30 @@ std::wstring Utf8ToWide(const std::string& s) {
 // Build request body: list (target VS Code) or search by extension name
 std::string BuildRequestBody(const std::string& searchTerm, int pageSize, int pageNumber) {
     nlohmann::json criteria = nlohmann::json::array();
-    criteria.push_back({{"filterType", 8}, {"value", "Microsoft.VisualStudio.Code"}});
-    if (!searchTerm.empty())
-        criteria.push_back({{"filterType", 7}, {"value", searchTerm}});
-    nlohmann::json filter = {
-        {"criteria", criteria},
-        {"pageSize", pageSize},
-        {"pageNumber", pageNumber}
-    };
-    nlohmann::json body = {
-        {"filters", nlohmann::json::array({filter})},
-        {"flags", 0x201}  // IncludeVersions (1) + IncludeLatestVersionOnly (0x200)
-    };
+    
+    nlohmann::json c1 = nlohmann::json::object();
+    c1["filterType"] = 8;
+    c1["value"] = "Microsoft.VisualStudio.Code";
+    criteria.push_back(c1);
+
+    if (!searchTerm.empty()) {
+        nlohmann::json c2 = nlohmann::json::object();
+        c2["filterType"] = 7;
+        c2["value"] = searchTerm;
+        criteria.push_back(c2);
+    }
+
+    nlohmann::json filter = nlohmann::json::object();
+    filter["criteria"] = criteria;
+    filter["pageSize"] = pageSize;
+    filter["pageNumber"] = pageNumber;
+
+    nlohmann::json body = nlohmann::json::object();
+    nlohmann::json filters = nlohmann::json::array();
+    filters.push_back(filter);
+    body["filters"] = filters;
+    body["flags"] = 0x201;  // IncludeVersions (1) + IncludeLatestVersionOnly (0x200)
+
     return body.dump();
 }
 

@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyCopilot++ IDE - FINAL COMPLETE EDITION (SECURE) - v3.0 - CACHE CLEARED</title>
+
+    <!-- Monaco Editor -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <!-- Quill Editor with fallback -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"
+        onerror="console.warn('Quill CDN failed, using fallback')"></script>
+
+    <!-- CodeMirror -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/css/css.min.js"></script>
+
+    <!-- Embedded AI System -->
+    <script src="embedded-ai-system.js"></script>
+    <script src="model-loader.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1e1e1e;
+            color: #ffffff;
+            overflow: auto;
+            height: 100vh;
+        }
+
+        .menu-bar {
+            background: rgba(45, 45, 48, 0.95);
+            border-bottom: 1px solid #3e3e42;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            height: 32px;
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            position: relative;
+            z-index: 1000;
+        }
+
+        .main-container {
+            display: flex;
+            height: calc(100vh - 32px);
+        }
+
+        .sidebar {
+            width: 300px;
+            background: rgba(37, 37, 38, 0.95);
+            border-right: 1px solid #3e3e42;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-header {
+            background: rgba(45, 45, 48, 0.95);
+            padding: 8px 16px;
+            border-bottom: 1px solid #3e3e42;
+            font-weight: bold;
+            font-size: 12px;
+            text-transform: uppercase;
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+        }
+
+        .file-explorer {
+            flex: 1;
+            padding: 8px;
+        }
+
+        .file-item {
+            padding: 4px 8px;
+            cursor: pointer;
+            color: #ffffff;
+            font-size: 13px;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            transition: background 0.2s;
+        }
+
+        .file-item:hover {
+            background: rgba(62, 62, 66, 0.8);
+        }
+
+        .file-item.selected {
+            background: rgba(0, 122, 204, 0.8);
+            color: white;
+        }
+
+        .editor-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #1e1e1e;
+        }
+
+        .editor-tabs {
+            background: rgba(45, 45, 48, 0.95);
+            border-bottom: 1px solid #3e3e42;
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+            backdrop-filter: blur(10px);
+        }
+
+        .tab {
+            padding: 8px 16px;
+            cursor: pointer;
+            color: #d4d4d4;
+            font-size: 13px;
+            border-right: 1px solid #3e3e42;
+            transition: background 0.2s;
+        }
+
+        .tab:hover {
+            background: rgba(62, 62, 66, 0.8);
+        }
+
+        .tab.active {
+            background: rgba(0, 122, 204, 0.8);
+            color: white;
+        }
+
+        .editor-area {
+            flex: 1;
+            position: relative;
+        }
+
+        .editor {
+            width: 100%;
+            height: 100%;
+            display: none;
+        }
+
+        .editor.active {
+            display: block;
+        }
+
+        .terminal {
+            height: 200px;
+            background: rgba(12, 12, 12, 0.95);
+            border-top: 1px solid #3e3e42;
+            padding: 8px;
+            font-family: 'Consolas', monospace;
+            font-size: 12px;
+            overflow-y: auto;
+            backdrop-filter: blur(10px);
+        }
+
+        .status-bar {
+            background: rgba(45, 45, 48, 0.95);
+            border-top: 1px solid #3e3e42;
+            padding: 4px 8px;
+            font-size: 11px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .ai-panel {
+            width: 300px;
+            background: rgba(37, 37, 38, 0.95);
+            border-left: 1px solid #3e3e42;
+            display: flex;
+            flex-direction: column;
+            backdrop-filter: blur(10px);
+        }
+
+        .ai-header {
+            background: rgba(45, 45, 48, 0.95);
+            padding: 8px 16px;
+            border-bottom: 1px solid #3e3e42;
+            font-weight: bold;
+            font-size: 12px;
+            text-transform: uppercase;
+            backdrop-filter: blur(10px);
+        }
+
+        .ai-content {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+        }
+
+        .ai-input {
+            width: 100%;
+            padding: 8px;
+            background: rgba(62, 62, 66, 0.8);
+            border: 1px solid #3e3e42;
+            color: #d4d4d4;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .ai-response {
+            margin-top: 16px;
+            padding: 12px;
+            background: rgba(62, 62, 66, 0.5);
+            border-radius: 4px;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .loading {
+            color: #ffa500;
+            font-style: italic;
+        }
+
+        .error {
+            color: #ff6b6b;
+        }
+
+        .success {
+            color: #51cf66;
+        }
+
+        .ai-query {
+            color: #569cd6;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .ai-response-text {
+            color: #ffffff;
+            white-space: pre-wrap;
+            margin-bottom: 8px;
+        }
+
+        .ai-timestamp {
+            color: #6a9955;
+            font-size: 11px;
+            font-style: italic;
+        }
+
+        .retry {
+            color: #4ec9b0;
+            cursor: pointer;
+            text-decoration: underline;
+            margin-top: 8px;
+        }
+
+        .retry:hover {
+            color: #6ec9b0;
+        }
+
+        .model-info {
+            background: rgba(45, 45, 48, 0.95);
+            border: 1px solid #3e3e42;
+            border-radius: 4px;
+            padding: 8px;
+            margin: 4px 0;
+            font-size: 11px;
+            color: #6a9955;
+        }
+
+        .warning {
+            color: #ffa500;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="menu-bar">
+        <div style="padding: 0 16px; font-weight: bold;">MyCopilot++ IDE - FINAL COMPLETE EDITION (SECURE)</div>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="sidebar-header">Explorer</div>
+            <div class="file-explorer" id="file-explorer">
+                <div class="loading">Loading files...</div>
+            </div>
+        </div>
+
+        <div class="editor-container">
+            <div class="editor-tabs">
+                <div class="tab active" data-editor="monaco">Monaco</div>
+                <div class="tab" data-editor="quill">Quill</div>
+                <div class="tab" data-editor="codemirror">CodeMirror</div>
+            </div>
+
+            <div class="editor-area">
+                <div id="monaco-editor" class="editor active"></div>
+                <div id="quill-editor" class="editor"></div>
+                <div id="codemirror-editor" class="editor"></div>
+            </div>
+
+            <div class="terminal" id="terminal">
+                <div class="success">MyCopilot++ IDE Terminal v3.0 - FINAL COMPLETE EDITION (SECURE)</div>
+                <div>Type commands below or use the menu:</div>
+                <div>$ <span id="terminal-input" contenteditable="true" style="outline: none;"></span></div>
+            </div>
+        </div>
+
+        <div class="ai-panel">
+            <div class="ai-header">🤖 Embedded AI Assistant</div>
+            <div class="ai-content">
+                <div class="model-info" id="model-info">
+                    <div>Loading AI system...</div>
+                </div>
+                <div class="ai-response">
+                    <div class="success">Ready</div>
+                    <div>Hello! I'm your EMBEDDED AI coding assistant. I run entirely within the IDE - no external
+                        services needed! I can help with code explanation, debugging, optimization, and more. How can I
+                        assist you today?</div>
+                </div>
+                <input type="text" class="ai-input" placeholder="Ask AI anything..." id="ai-input">
+            </div>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <div id="status-line">Ready - MyCopilot++ IDE v3.0 - FINAL COMPLETE EDITION (SECURE)</div>
+        <div id="status-info">
+            <span id="current-file">No file selected</span> |
+            <span id="editor-mode">Monaco</span> |
+            <span id="encoding">UTF-8</span> |
+            <span id="language">HTML</span> |
+            <span id="git-status">Git: main</span> |
+            <span id="debug-status">Debug: Off</span> |
+            <span id="theme-status">Theme: vs-dark</span> |
+            <span id="plugins-status">Plugins: 0</span> |
+            <span id="context-window" class="ctx-status-inline" onclick="ContextWindowWidget.toggle()"
+                title="Context Window Token Usage" style="cursor:pointer">Ctx: 0/128K ▪ 0%</span>
+        </div>
+    </div>
+
+    <script>
+        // SECURE IDE - No embedded file data - CACHE BUST v2.0
+        console.log('[SECURE-IDE] Initializing secure IDE v2.0...');
+
+        // Global variables
+        let files = {};
+        let currentFile = null;
+        let currentEditor = 'monaco';
+        let monacoEditor = null;
+        let quillEditor = null;
+        let codemirrorEditor = null;
+
+        // File loading system - Embedded for CORS compatibility
+        function loadFiles() {
+            // Use template literals to avoid escaping issues
+            files = {
+                "index.html": `<!DOCTYPE html>
+<html>
+<head>
+    <title>My App</title>
+</head>
+<body>
+    <h1>Hello World!</h1>
+    <script src="script.js"></script>
+</body>
+
+</html>`,
+"hello.py": `#!/usr/bin/env python3
+
+def main():
+print("Hello from Python!")
+
+if __name__ == "__main__":
+main()`,
+"hello.js": `console.log('Hello from JavaScript!');
+
+function greet(name) {
+return \`Hello, \${name}!\`;
+}`,
+"styles.css": `body {
+font-family: Arial, sans-serif;
+margin: 0;
+padding: 20px;
+background-color: #f0f0f0;
+}
+
+h1 {
+color: #333;
+text-align: center;
+}`,
+"README.md": `# My App
+
+This is my awesome application!`
+};
+console.log(`[SECURE-IDE] Loaded ${Object.keys(files).length} files`);
+updateFileExplorer();
+return true;
+}
+
+function updateFileExplorer() {
+const explorer = document.getElementById('file-explorer');
+explorer.innerHTML = '';
+
+Object.keys(files).forEach(filename => {
+const fileItem = document.createElement('div');
+fileItem.className = 'file-item';
+fileItem.textContent = filename;
+fileItem.onclick = () => openFile(filename);
+explorer.appendChild(fileItem);
+});
+}
+
+function openFile(filename) {
+currentFile = filename;
+document.getElementById('current-file').textContent = filename;
+
+// Update file selection
+document.querySelectorAll('.file-item').forEach(item => {
+item.classList.remove('selected');
+if (item.textContent === filename) {
+item.classList.add('selected');
+}
+});
+
+// Load content into current editor
+const content = files[filename] || '';
+setCurrentEditorContent(content);
+
+console.log(`[SECURE-IDE] Opened file: ${filename}`);
+}
+
+function setCurrentEditorContent(content) {
+switch(currentEditor) {
+case 'monaco':
+if (monacoEditor) {
+monacoEditor.setValue(content);
+}
+break;
+case 'quill':
+if (quillEditor && quillEditor.root) {
+quillEditor.root.innerHTML = content;
+} else {
+const fallbackEditor = document.querySelector('#quill-editor textarea');
+if (fallbackEditor) {
+fallbackEditor.value = content;
+}
+}
+break;
+case 'codemirror':
+if (codemirrorEditor) {
+codemirrorEditor.setValue(content);
+}
+break;
+}
+}
+
+function getCurrentEditorContent() {
+switch(currentEditor) {
+case 'monaco':
+return monacoEditor ? monacoEditor.getValue() : '';
+case 'quill':
+if (quillEditor && quillEditor.root) {
+return quillEditor.root.innerHTML;
+} else {
+const fallbackEditor = document.querySelector('#quill-editor textarea');
+return fallbackEditor ? fallbackEditor.value : '';
+}
+case 'codemirror':
+return codemirrorEditor ? codemirrorEditor.getValue() : '';
+default:
+return '';
+}
+}
+
+function saveFile() {
+if (currentFile) {
+files[currentFile] = getCurrentEditorContent();
+console.log(`[SECURE-IDE] Saved file: ${currentFile}`);
+showSuccess(`Saved ${currentFile}`);
+}
+}
+
+function showError(message) {
+const terminal = document.getElementById('terminal');
+const errorDiv = document.createElement('div');
+errorDiv.className = 'error';
+errorDiv.textContent = `[ERROR] ${message}`;
+terminal.appendChild(errorDiv);
+terminal.scrollTop = terminal.scrollHeight;
+}
+
+function showSuccess(message) {
+const terminal = document.getElementById('terminal');
+const successDiv = document.createElement('div');
+successDiv.className = 'success';
+successDiv.textContent = `[SUCCESS] ${message}`;
+terminal.appendChild(successDiv);
+terminal.scrollTop = terminal.scrollHeight;
+}
+
+function showInfo(message) {
+const terminal = document.getElementById('terminal');
+const infoDiv = document.createElement('div');
+infoDiv.textContent = `[INFO] ${message}`;
+terminal.appendChild(infoDiv);
+terminal.scrollTop = terminal.scrollHeight;
+}
+
+// Editor switching
+function switchEditor(editorName) {
+currentEditor = editorName;
+
+// Update tabs
+document.querySelectorAll('.tab').forEach(tab => {
+tab.classList.remove('active');
+if (tab.dataset.editor === editorName) {
+tab.classList.add('active');
+}
+});
+
+// Update editors
+document.querySelectorAll('.editor').forEach(editor => {
+editor.classList.remove('active');
+});
+document.getElementById(`${editorName}-editor`).classList.add('active');
+
+// Update status
+document.getElementById('editor-mode').textContent = editorName.charAt(0).toUpperCase() + editorName.slice(1);
+
+// Load current file content
+if (currentFile) {
+setCurrentEditorContent(files[currentFile] || '');
+}
+
+console.log(`[SECURE-IDE] Switched to ${editorName} editor`);
+}
+
+// Initialize editors
+function initializeEditors() {
+console.log('[SECURE-IDE] Initializing editors...');
+
+// Initialize Monaco Editor with improved error handling
+setTimeout(() => {
+try {
+if (typeof require !== 'undefined') {
+require.config({
+paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' }
+});
+
+require(['vs/editor/editor.main'], function () {
+monacoEditor = monaco.editor.create(document.getElementById('monaco-editor'), {
+value: '',
+language: 'html',
+theme: 'vs-dark',
+automaticLayout: true,
+fontSize: 14,
+lineNumbers: 'on',
+wordWrap: 'on'
+});
+
+monacoEditor.onDidChangeModelContent(() => {
+if (currentFile) {
+files[currentFile] = monacoEditor.getValue();
+}
+});
+
+console.log('[SECURE-IDE] Monaco Editor initialized successfully');
+}, function (error) {
+console.warn('[SECURE-IDE] Monaco module load failed, using fallback:', error);
+createMonacoFallback();
+});
+} else {
+throw new Error('RequireJS not available');
+}
+} catch (error) {
+console.error('[SECURE-IDE] Monaco initialization failed:', error);
+createMonacoFallback();
+}
+}, 1000);
+
+// Initialize Quill Editor with fallback
+try {
+if (typeof Quill !== 'undefined') {
+quillEditor = new Quill('#quill-editor', {
+theme: 'snow',
+modules: {
+toolbar: [
+['bold', 'italic', 'underline'],
+['blockquote', 'code-block'],
+[{ 'list': 'ordered'}, { 'list': 'bullet' }],
+['link', 'image'],
+['clean']
+]
+}
+});
+
+quillEditor.on('text-change', () => {
+if (currentFile) {
+files[currentFile] = quillEditor.root.innerHTML;
+}
+});
+
+console.log('[SECURE-IDE] Quill Editor initialized');
+} else {
+createQuillFallback();
+}
+} catch (error) {
+console.error('[SECURE-IDE] Quill Editor failed:', error);
+createQuillFallback();
+}
+
+// Initialize CodeMirror Editor
+try {
+codemirrorEditor = CodeMirror(document.getElementById('codemirror-editor'), {
+value: '',
+mode: 'htmlmixed',
+theme: 'default',
+lineNumbers: true,
+indentUnit: 4,
+tabSize: 4,
+lineWrapping: true
+});
+
+codemirrorEditor.on('change', () => {
+if (currentFile) {
+files[currentFile] = codemirrorEditor.getValue();
+}
+});
+
+console.log('[SECURE-IDE] CodeMirror Editor initialized');
+} catch (error) {
+console.error('[SECURE-IDE] CodeMirror Editor failed:', error);
+}
+}
+
+function createMonacoFallback() {
+const monacoContainer = document.getElementById('monaco-editor');
+monacoContainer.innerHTML = `
+<textarea id="monaco-fallback"
+    style="width: 100%; height: 100%; background: #1e1e1e; color: #d4d4d4; border: none; padding: 10px; font-family: monospace; resize: none; font-size: 14px; line-height: 1.4;"
+    placeholder="Code Editor - Ready to use!"></textarea>
+`;
+
+const fallbackEditor = document.getElementById('monaco-fallback');
+fallbackEditor.addEventListener('input', () => {
+if (currentFile) {
+files[currentFile] = fallbackEditor.value;
+}
+});
+
+monacoEditor = {
+getValue: () => fallbackEditor.value,
+setValue: (value) => { fallbackEditor.value = value; }
+};
+
+console.log('[SECURE-IDE] Monaco fallback editor created');
+}
+
+function createQuillFallback() {
+const quillContainer = document.getElementById('quill-editor');
+quillContainer.innerHTML = `
+<div style="width: 100%; height: 100%; background: #1e1e1e; color: #d4d4d4; border: 1px solid #3e3e42;">
+    <div style="color: #ff6b6b; margin: 10px;">[INFO] Rich text editor (Quill not available)</div>
+    <textarea
+        style="width: calc(100% - 20px); height: calc(100% - 60px); background: #1e1e1e; color: #d4d4d4; border: none; padding: 10px; font-family: monospace; resize: none; margin: 10px;"
+        placeholder="Rich text content..."></textarea>
+</div>
+`;
+console.log('[SECURE-IDE] Quill fallback editor created');
+}
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', async function() {
+console.log('[SECURE-IDE] DOM loaded, initializing...');
+
+// Load files first
+loadFiles();
+
+// Initialize editors
+initializeEditors();
+
+// Setup tab switching
+document.querySelectorAll('.tab').forEach(tab => {
+tab.addEventListener('click', () => {
+switchEditor(tab.dataset.editor);
+});
+});
+
+// Setup keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+e.preventDefault();
+saveFile();
+}
+});
+
+// Setup AI input
+document.getElementById('ai-input').addEventListener('keypress', (e) => {
+if (e.key === 'Enter') {
+const query = e.target.value;
+if (query.trim()) {
+handleAIQuery(query);
+e.target.value = '';
+}
+}
+});
+
+// Setup terminal input
+document.getElementById('terminal-input').addEventListener('keypress', (e) => {
+if (e.key === 'Enter') {
+const command = e.target.textContent.trim();
+if (command) {
+handleTerminalCommand(command);
+e.target.textContent = '';
+}
+}
+});
+
+// Initialize AI system display
+updateModelInfo();
+
+showSuccess('SECURE IDE initialized successfully!');
+console.log('[SECURE-IDE] Initialization complete');
+});
+
+async function handleAIQuery(query) {
+const responseDiv = document.querySelector('.ai-response');
+responseDiv.innerHTML = `
+<div class="loading">🤖 Embedded AI processing your request...</div>
+`;
+
+try {
+// Use the embedded AI system
+if (window.embeddedAI && window.embeddedAI.isInitialized) {
+const result = await window.embeddedAI.generateResponse(query, {
+currentFile: currentFile,
+editorContent: getCurrentEditorContent(),
+editorType: currentEditor
+});
+
+if (result.success) {
+responseDiv.innerHTML = `
+<div class="success">🤖 AI Assistant (${result.model})</div>
+<div class="ai-query">You: "${query}"</div>
+<div class="ai-response-text">${result.response}</div>
+<div class="ai-timestamp">${new Date(result.timestamp).toLocaleTimeString()}</div>
+`;
+} else {
+responseDiv.innerHTML = `
+<div class="error">AI Error</div>
+<div>${result.error || 'Unknown error occurred'}</div>
+<div class="fallback">${result.fallback || ''}</div>
+`;
+}
+} else {
+// Fallback if embedded AI not ready
+responseDiv.innerHTML = `
+<div class="warning">AI System Loading...</div>
+<div>Please wait while the embedded AI system initializes.</div>
+<div class="retry" onclick="handleAIQuery('${query}')">🔄 Retry</div>
+`;
+}
+} catch (error) {
+console.error('[AI] Query failed:', error);
+responseDiv.innerHTML = `
+<div class="error">AI System Error</div>
+<div>Failed to process your request. Please try again.</div>
+<div class="error-details">${error.message}</div>
+`;
+}
+}
+
+function handleTerminalCommand(command) {
+const terminal = document.getElementById('terminal');
+const commandDiv = document.createElement('div');
+commandDiv.textContent = `$ ${command}`;
+terminal.appendChild(commandDiv);
+
+// Handle basic commands
+if (command === 'help') {
+showInfo('Available commands: help, list, save, clear');
+} else if (command === 'list') {
+showInfo(`Files: ${Object.keys(files).join(', ')}`);
+} else if (command === 'save') {
+saveFile();
+} else if (command === 'clear') {
+terminal.innerHTML = '<div class="success">MyCopilot++ IDE Terminal v3.0 - SECURE EDITION</div>
+<div>Type commands below or use the menu:</div>';
+const inputDiv = document.createElement('div');
+inputDiv.innerHTML = '$ <span id="terminal-input-clear" contenteditable="true" style="outline: none;"></span>';
+terminal.appendChild(inputDiv);
+document.getElementById('terminal-input-clear').addEventListener('keypress', (e) => {
+if (e.key === 'Enter') {
+const command = e.target.textContent.trim();
+if (command) {
+handleTerminalCommand(command);
+e.target.textContent = '';
+}
+}
+});
+} else {
+showInfo(`Command not found: ${command}. Type 'help' for available commands.`);
+}
+
+terminal.scrollTop = terminal.scrollHeight;
+}
+
+function updateModelInfo() {
+const modelInfoDiv = document.getElementById('model-info');
+
+if (window.embeddedAI && window.embeddedAI.isInitialized) {
+const info = window.embeddedAI.getModelInfo();
+modelInfoDiv.innerHTML = `
+<div><strong>Model:</strong> ${info.currentModel}</div>
+<div><strong>Status:</strong> ${info.isInitialized ? 'Ready' : 'Loading...'}</div>
+<div><strong>Capabilities:</strong> ${info.capabilities.join(', ')}</div>
+<div><strong>Available Models:</strong> ${info.availableModels.length > 0 ? info.availableModels.join(', ') : 'Built-in
+    only'}</div>
+`;
+} else {
+modelInfoDiv.innerHTML = `
+<div>Initializing embedded AI system...</div>
+<div>No external dependencies required</div>
+`;
+}
+}
+
+// Update model info periodically
+setInterval(updateModelInfo, 5000);
+
+console.log('[SECURE-IDE] Script loaded');
+</script>
+
+<!-- Context Window Token Usage Widget -->
+<script src="context-window-widget.js"></script>
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            ContextWindowWidget.init({
+                maxTokens: 128000,
+                position: 'both',
+                statusBarId: 'status-info'
+            });
+            ContextWindowWidget.update({
+                system: 4864,
+                tools: 11776,
+                userContext: 2048,
+                messages: 34176,
+                toolResults: 46848
+            });
+            ContextWindowWidget.autoTrack({ chatContainerId: 'ai-chat' });
+        });
+</script>
+</body>
+
+</html>

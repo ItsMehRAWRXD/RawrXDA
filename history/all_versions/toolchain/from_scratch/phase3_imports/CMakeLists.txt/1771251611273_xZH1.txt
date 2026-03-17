@@ -1,0 +1,11 @@
+cmake_minimum_required(VERSION 3.16)
+project(rawrxd_phase3_imports C)
+
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+
+# Import builder library test
+add_executable(rawrxd_import_test
+    import_test.c
+    import_builder.c
+)

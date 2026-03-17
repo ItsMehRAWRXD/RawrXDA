@@ -6,8 +6,7 @@
 #include <chrono>
 #include <functional>
 #include <atomic>
-
-#include "agentic_agent_coordinator.h"
+class AgenticAgentCoordinator;
 
 namespace RawrXD::IDE {
 

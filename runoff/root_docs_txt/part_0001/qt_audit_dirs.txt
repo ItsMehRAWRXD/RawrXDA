@@ -1,0 +1,14 @@
+4443 | D:\rawrxd\src\qtapp
+666 | D:\rawrxd\src\qtapp\widgets
+351 | D:\rawrxd\src\qtapp\utils
+138 | D:\rawrxd\src\ui
+115 | D:\rawrxd\src
+65 | D:\rawrxd\src\model_loader
+33 | D:\rawrxd\src\qtapp\interfaces
+30 | D:\rawrxd\src\telemetry
+5 | D:\rawrxd\src\agent
+2 | D:\rawrxd\src\terminal
+1 | D:\rawrxd\src\ai_workers
+1 | D:\rawrxd\src\paint
+1 | D:\rawrxd\src\setup
+1 | D:\rawrxd\src\win32app

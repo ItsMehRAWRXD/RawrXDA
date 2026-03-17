@@ -1,0 +1,58 @@
+{
+  "version": "1.0.0",
+  "theme": "dark",
+  "defaultShell": "pwsh",
+  "autoSave": true,
+  "autoSaveInterval": 30,
+  "fontSize": 12,
+  "fontFamily": "Consolas",
+  "tabSize": 4,
+  "wordWrap": false,
+  "telemetryEnabled": false,
+  "aiProvider": "openai",
+  "logLevel": "info",
+  "performance": {
+    "maxOpenTabs": 20,
+    "terminalScrollbackLines": 10000,
+    "cacheSizeMB": 256,
+    "preloadFiles": false
+  },
+  "ui": {
+    "showLineNumbers": true,
+    "showStatusBar": true,
+    "showMinimap": false,
+    "enableAnimations": true
+  },
+  "editor": {
+    "insertSpaces": true,
+    "trimTrailingWhitespace": true,
+    "detectIndentation": true,
+    "autoCloseBrackets": true,
+    "formatOnSave": false
+  },
+  "terminal": {
+    "fontSize": 11,
+    "fontFamily": "Consolas",
+    "cursorStyle": "block",
+    "cursorBlink": true
+  },
+  "lsp": {
+    "enabled": true,
+    "hoverTimeout": 5000,
+    "diagnosticsDelay": 500,
+    "servers": {
+      "cpp": {
+        "command": "clangd",
+        "args": ["--background-index", "--clang-tidy"]
+      },
+      "python": {
+        "command": "pyright",
+        "args": []
+      },
+      "typescript": {
+        "command": "typescript-language-server",
+        "args": ["--stdio"]
+      }
+    }
+  }
+}

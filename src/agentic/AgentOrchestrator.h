@@ -18,12 +18,15 @@
 #include "ToolRegistry.h"
 #include "AgentOllamaClient.h"
 #include "FIMPromptBuilder.h"
+#include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
 #include <functional>
 #include <mutex>
 #include <atomic>
 #include <thread>
+#include <queue>
+#include <chrono>
 
 namespace RawrXD {
 namespace Agent {
@@ -147,6 +150,20 @@ private:
 
     // Generate session ID
     static std::string GenerateSessionId();
+
+    // Task dispatch (Internal)
+    void DispatchTask(const std::string& task_id, const nlohmann::json& payload);
+    void ProcessTaskQueue();
+    void ExecuteTask(const std::string& id, const nlohmann::json& payload);
+
+private:
+    struct ManagedTask {
+        std::string id;
+        nlohmann::json payload;
+        std::chrono::system_clock::time_point queuedAt;
+    };
+    std::queue<ManagedTask> m_taskQueue;
+    std::condition_variable m_taskCv;
 
     OrchestratorConfig m_config;
     OllamaConfig m_ollamaConfig;

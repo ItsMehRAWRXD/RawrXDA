@@ -1,0 +1,900 @@
+RawrXD-ModelLoader/src/win32app/Win32IDE.cpp
+RawrXD-ModelLoader/src/win32app/Win32IDE.h
+RawrXD-ModelLoader/src/win32app/Win32IDE_AgentCommands.cpp
+RawrXD-ModelLoader/src/win32app/Win32IDE_AgenticBridge.cpp
+RawrXD-ModelLoader/src/win32app/Win32IDE_AgenticBridge.h
+RawrXD-ModelLoader/src/win32app/Win32IDE_Commands.cpp
+RawrXD-ModelLoader/src/win32app/Win32IDE_Debugger.cpp
+RawrXD-ModelLoader/src/win32app/Win32IDE_FileOps.cpp
+Ship/RawrXD_AgenticEngine.exp
+Ship/RawrXD_CLI_Standalone.cpp
+Ship/RawrXD_GUI_Titan.asm
+Ship/RawrXD_IDE_Production.exe.manifest
+Ship/RawrXD_InferenceEngine.exp
+Ship/RawrXD_NativeModelBridge.asm
+Ship/RawrXD_PlanOrchestrator.exp
+Ship/RawrXD_Streaming_Orchestrator.asm
+Ship/RawrXD_TerminalMgr.exp
+Ship/RawrXD_Titan_Kernel.asm
+Ship/Win32_IDE_Complete.cpp
+Ship/build_all.bat
+Ship/test_titan_engine.ps1
+Ship/win64_api.inc
+VALIDATE_BUILD_SYSTEM.ps1
+Verify-Build.ps1
+include/RawrXD_PipeClient.h
+include/benchmark_menu_widget.hpp
+include/benchmark_runner.hpp
+include/hotpatch_telemetry_safety.h
+include/multi_file_search.h
+include/ollama_proxy.h
+include/vulkan_compute_stub.hpp
+itsmehrawrxd-master/Build-PureASM-Compilers.ps1
+itsmehrawrxd-master/Build-Universal-Compilers-Fixed.ps1
+itsmehrawrxd-master/Build-Universal-Compilers.ps1
+itsmehrawrxd-master/Eon-ASM/compilers/eon_ide_monolithic.asm
+itsmehrawrxd-master/generate-monolithic-ide.js
+itsmehrawrxd-master/machine_code_genesis.asm
+itsmehrawrxd-master/monolithic-ide-specification.json
+itsmehrawrxd-master/monolithic_ide.asm
+run_build.bat
+scripts/Build-MASMBridge-NoAdmin.ps1
+scripts/Build-MASMBridge.ps1
+scripts/Build-X64MASM.ps1
+src/LanguageServerIntegration.cpp
+src/LanguageServerIntegration.h
+src/RawrXD_AVX512_Real.asm
+src/RawrXD_CLI.asm
+src/RawrXD_CLI_Main.asm
+src/RawrXD_Complete_Interconnect.asm
+src/RawrXD_IPC_Bridge.asm
+src/RawrXD_PipeClient.cpp
+src/RawrXD_PipeClient.h
+src/RawrXD_PipeServer.asm
+src/RawrXD_Swarm_Orchestrator.asm
+src/RawrXD_Titan_STANDALONE.asm
+src/RawrXD_Titan_UNIFIED.asm
+src/Titan_InferenceCore.asm
+src/Titan_Streaming_Orchestrator_Fixed.asm
+src/Titan_Streaming_Orchestrator_NoHTTP.asm
+src/agent/agent_hot_patcher.cpp
+src/agent/agentic_deep_thinking_engine.cpp
+src/agent/agentic_deep_thinking_engine.hpp
+src/agent/agentic_deep_thinking_engine_stub.cpp
+src/agent/gguf_proxy_server.cpp
+src/agent/gguf_proxy_server.hpp
+src/agent/meta_planner.cpp
+src/agent/quantum_autonomous_todo_system.cpp
+src/agent/quantum_dynamic_time_manager.cpp
+src/agent/quantum_multi_model_agent_cycling.cpp
+src/agent/quantum_multi_model_agent_cycling.hpp
+src/agent/quantum_production_orchestrator.cpp
+src/agent/quantum_production_orchestrator.hpp
+src/agentic/AgentOllamaClient.cpp
+src/agentic/AgentOllamaClient.h
+src/agentic/BoundedAgentLoop.cpp
+src/agentic/BoundedAgentLoop.h
+src/agentic/GPU_DMA_COMPLETE_IMPLEMENTATIONS.asm
+src/agentic/OrchestratorBridge.cpp
+src/agentic/PredictionProvider.h
+src/agentic/RawrXD_Titan_Master_GodSource_REVERSE_ENGINEERED.asm
+src/agentic/ToolRegistry.cpp
+src/agentic/gpu_dma_complete_final.asm
+src/agentic_executor.h
+src/agentic_ide.cpp
+src/ai_completion_real.cpp
+src/ai_model_caller.cpp
+src/ai_model_caller.h
+src/ai_model_caller_real.cpp
+src/asm/Advanced_Code_Deobfuscator.asm
+src/asm/Code_Pattern_Reconstructor.asm
+src/asm/DirectML_Bridge.asm
+src/asm/FlashAttention_AVX512.asm
+src/asm/MASM_STACK_ALIGNMENT_AUDIT_REPORT.asm
+src/asm/RawrCodex.asm
+src/asm/RawrXD-AnalyzerDistiller.asm
+src/asm/RawrXD-StreamingOrchestrator.asm
+src/asm/RawrXD-VulkanKernel.asm
+src/asm/RawrXD_AgentToolExecutor.asm
+src/asm/RawrXD_AgenticOrchestrator.asm
+src/asm/RawrXD_AgenticShellBridge.asm
+src/asm/RawrXD_AuditSystem_Pure.asm
+src/asm/RawrXD_Camellia256.asm
+src/asm/RawrXD_Camellia256_Auth.asm
+src/asm/RawrXD_CodebaseAuditSystem.asm
+src/asm/RawrXD_Common.inc
+src/asm/RawrXD_CopilotGapCloser.asm
+src/asm/RawrXD_Debug_Engine.asm
+src/asm/RawrXD_DiskKernel.asm
+src/asm/RawrXD_DiskRecoveryAgent.asm
+src/asm/RawrXD_DualAgent_Orchestrator.asm
+src/asm/RawrXD_DualEngine_Pure.asm
+src/asm/RawrXD_DualEngine_QuantumBeacon.asm
+src/asm/RawrXD_DynamicPromptEngine.asm
+src/asm/RawrXD_EnterpriseLicense.asm
+src/asm/RawrXD_GGUF_Vulkan_Loader.asm
+src/asm/RawrXD_GSIHash.asm
+src/asm/RawrXD_HardwareSynthesizer.asm
+src/asm/RawrXD_Hotpatch_Kernel.asm
+src/asm/RawrXD_Inference_AVX512.asm
+src/asm/RawrXD_KQuant_Dequant.asm
+src/asm/RawrXD_KQuant_Kernel.asm
+src/asm/RawrXD_LSP_AI_Bridge.asm
+src/asm/RawrXD_LSP_SymbolIndex.asm
+src/asm/RawrXD_Lexer_AVX2.asm
+src/asm/RawrXD_License_Shield.asm
+src/asm/RawrXD_MeshBrain.asm
+src/asm/RawrXD_MonacoCore.asm
+src/asm/RawrXD_MultiWindow_Kernel.asm
+src/asm/RawrXD_NanoDiskBridge.asm
+src/asm/RawrXD_NanoQuant_Engine.asm
+src/asm/RawrXD_NanoQuant_Streaming.asm
+src/asm/RawrXD_NeuralBridge.asm
+src/asm/RawrXD_OllamaTuner.asm
+src/asm/RawrXD_OmegaOrchestrator.asm
+src/asm/RawrXD_OverclockGov_Pure.asm
+src/asm/RawrXD_PDBKernel.asm
+src/asm/RawrXD_PerfCounters.asm
+src/asm/RawrXD_Prometheus_Exporter.asm
+src/asm/RawrXD_Pyre_Compute.asm
+src/asm/RawrXD_QuadBuffer_Streamer.asm
+src/asm/RawrXD_RefProvider.asm
+src/asm/RawrXD_RouterBridge.asm
+src/asm/RawrXD_SelfHost_Engine.asm
+src/asm/RawrXD_SelfPatch_Agent.asm
+src/asm/RawrXD_SelfPatch_Engine.asm
+src/asm/RawrXD_ShellIntegration.asm
+src/asm/RawrXD_Snapshot.asm
+src/asm/RawrXD_SocketResponder.asm
+src/asm/RawrXD_SourceEdit_Kernel.asm
+src/asm/RawrXD_Speciator.asm
+src/asm/RawrXD_StreamingWeights.asm
+src/asm/RawrXD_Streaming_QuadBuffer.asm
+src/asm/RawrXD_StubDetector.asm
+src/asm/RawrXD_Swarm_Network.asm
+src/asm/RawrXD_Telemetry_Kernel.asm
+src/asm/RawrXD_Tokenizer.asm
+src/asm/RawrXD_TridentBeacon.asm
+src/asm/RawrXD_TridentBeacon_GPU.asm
+src/asm/RawrXD_UnifiedOverclockGovernor.asm
+src/asm/RawrXD_UnifiedOverclock_Governor.asm
+src/asm/RawrXD_VulkanBridge.asm
+src/asm/RawrXD_Watchdog.asm
+src/asm/agentic_deep_thinking_kernels.asm
+src/asm/agentic_deep_thinking_kernels_fixed.asm
+src/asm/agentic_puppeteer_byte_ops.asm
+src/asm/agentic_puppeteer_byte_ops_fixed.asm
+src/asm/ai_agent_masm_core.asm
+src/asm/ai_completion_provider_masm.asm
+src/asm/ai_completion_provider_masm_fixed.asm
+src/asm/byte_search.asm
+src/asm/custom_zlib.asm
+src/asm/disk_recovery_scsi.asm
+src/asm/feature_dispatch_bridge.asm
+src/asm/gguf_dump.asm
+src/asm/gpu_requantize_rocm.asm
+src/asm/gui_dispatch_bridge.asm
+src/asm/inference_core.asm
+src/asm/inference_kernels.asm
+src/asm/memory_patch.asm
+src/asm/model_bridge_x64.asm
+src/asm/monolithic/extension_host.asm
+src/asm/monolithic/stream_loader.asm
+src/asm/monolithic/ui.asm
+src/asm/monolithic/webview2_shell.asm
+src/asm/native_speed_kernels.asm
+src/asm/quant_avx2.asm
+src/asm/quantum_autonomous_todo_masm.asm
+src/asm/quantum_beaconism_backend.asm
+src/asm/rawrxd_cot_dll_entry.asm
+src/asm/rawrxd_cot_engine.asm
+src/asm/rawrxd_cot_phase39.asm
+src/asm/rawrxd_link.asm
+src/asm/rawrxd_scc.asm
+src/asm/rawrxd_win64.inc
+src/asm/requantize_q4km_to_q2k_avx512.asm
+src/asm/request_patch.asm
+src/asm/solo_standalone_compiler.asm
+src/asm/swarm_tensor_stream.asm
+src/asm/vision_projection_kernel.asm
+src/autonomous_feature_engine.cpp
+src/autonomous_feature_engine.h
+src/autonomous_intelligence_orchestrator.cpp
+src/benchmark_menu_widget.cpp
+src/benchmark_runner.cpp
+src/cloud_api_client.cpp
+src/collab/crdt_buffer.cpp
+src/complete_server.cpp
+src/core/agentic_task_graph.cpp
+src/core/agentic_task_graph.hpp
+src/core/ai_agent_masm_stubs.cpp
+src/core/analyzer_distiller.h
+src/core/analyzer_distiller_stubs.cpp
+src/core/auto_feature_registry.cpp
+src/core/auto_repair_orchestrator.cpp
+src/core/input_guard_slicer.cpp
+src/core/js_extension_host.cpp
+src/core/local_ai_core.hpp
+src/core/model_memory_hotpatch.hpp
+src/core/ssot_handlers.cpp
+src/core/ssot_handlers.h
+src/core/ssot_handlers_ext.cpp
+src/core/streaming_orchestrator_stubs.cpp
+src/core/subsystem_mode_stubs.cpp
+src/core/unified_hotpatch_manager.cpp
+src/core/unified_hotpatch_manager.hpp
+src/distributed_trainer.cpp
+src/dual_engine_inference.cpp
+src/enhanced_cli.cpp
+src/enhanced_model_loader.cpp
+src/ggml_masm/kv_cache.asm
+src/gguf_api_server.cpp
+src/gguf_loader.cpp
+src/gguf_loader.h
+src/git/CMakeLists.txt
+src/git/ai_merge_resolver.cpp
+src/git/ai_merge_resolver.hpp
+src/git/ai_merge_resolver_impl.cpp
+src/git/git_context.cpp
+src/git/semantic_diff_analyzer.cpp
+src/git/semantic_diff_analyzer.hpp
+src/gpu_masm/deflate_brutal_masm.asm
+src/hf_hub_client.cpp
+src/hybrid_cloud_manager.cpp
+src/inference/CMakeLists.txt
+src/inference/ultra_fast_inference.cpp
+src/intelligent_codebase_engine.cpp
+src/lsp/RawrXD_LSPServer.cpp
+src/lsp/diagnostic_consumer.cpp
+src/lsp/gguf_diagnostic_provider.cpp
+src/lsp/hotpatch_symbol_provider.cpp
+src/lsp/lsp_bridge_protocol.hpp
+src/lsp/lsp_client_unified.cpp
+src/lsp/lsp_hotpatch_bridge.cpp
+src/lsp_client.cpp
+src/main.cpp
+src/model_registry.h
+src/model_router_widget.h
+src/modules/crucible_engine.h
+src/multi_file_search.cpp
+src/ollama_proxy.cpp
+src/orchestration/agent_coordinator.cpp
+src/plan_orchestrator.cpp
+src/production_agentic_ide.cpp
+src/rawrxd_compiler_masm64.asm
+src/rawrxd_kernels.asm
+src/rawrxd_kernels.cpp
+src/rawrxd_model_loader.cpp
+src/rawrxd_model_loader.h
+src/rawrxd_model_loader.hpp
+src/rawrxd_transformer.hpp
+src/real_time_completion_engine.cpp
+src/real_time_completion_engine.h
+src/reverse_engineering/deobfuscator/RawrXD_OmegaDeobfuscator.asm
+src/security/RawrXD_GoogleDork_Scanner.cpp
+src/security/sast_rule_engine.cpp
+src/security_manager.cpp
+src/simple_dumpbin.asm
+src/standalone_web_bridge.cpp
+src/standalone_web_bridge.hpp
+src/stubs.cpp
+src/stubs/production_link_stubs.cpp
+src/swarm_orchestrator.cpp
+src/swarm_orchestrator.h
+src/universal_model_router.cpp
+src/universal_model_router.h
+src/vulkan_compute.cpp
+src/vulkan_compute_stub.cpp
+src/vulkan_stubs.cpp
+src/win32app/HeadlessIDE.cpp
+src/win32app/IDELogger.h
+src/win32app/IDETestAgent.h
+src/win32app/Win32IDE.cpp
+src/win32app/Win32IDE.h
+src/win32app/Win32IDE_AIReverseEngineering.cpp
+src/win32app/Win32IDE_AgentCommands.cpp
+src/win32app/Win32IDE_AgentHistory.cpp
+src/win32app/Win32IDE_AgentPanel.cpp
+src/win32app/Win32IDE_AgenticBridge.cpp
+src/win32app/Win32IDE_AgenticBridge.h
+src/win32app/Win32IDE_Annotations.cpp
+src/win32app/Win32IDE_AutonomousAgent.h
+src/win32app/Win32IDE_Autonomy.h
+src/win32app/Win32IDE_BackendSwitcher.cpp
+src/win32app/Win32IDE_BuildRunner.cpp
+src/win32app/Win32IDE_Commands.cpp
+src/win32app/Win32IDE_Core.cpp
+src/win32app/Win32IDE_FileMenu.cpp
+src/win32app/Win32IDE_LicenseCreator.cpp
+src/win32app/Win32IDE_LocalServer.cpp
+src/win32app/Win32IDE_ProblemsPanel.cpp
+src/win32app/Win32IDE_ReverseEngineering.cpp
+src/win32app/Win32IDE_Tier1Cosmetics.cpp
+src/win32app/Win32IDE_TranscendencePanel.cpp
+src/win32app/Win32IDE_VSCodeUI.cpp
+src/win32app/Win32IDE_WebView2.cpp
+src/win32app/Win32IDE_WebView2.h
+src/win32app/Win32IDE_headless_stubs.cpp
+src/win32app/Win32IDE_logMessage_stub.cpp
+src/win32app/main_win32.cpp
+toolchain/masm/Build-Fortress-Compiler-Linker.ps1
+toolchain/masm/Build-MASM-Standalone.ps1
+toolchain/masm/Unified-PowerShell-Compiler-Fixed.ps1
+toolchain/masm/Unified-PowerShell-Compiler-RawrXD.ps1
+toolchain/masm/Unified-PowerShell-Compiler-Working.ps1
+toolchain/masm/Unified-PowerShell-Compiler.ps1
+.codex_paths.txt
+Full Source/START_HERE.md
+Full Source/START_HERE_BUILD.md
+Full Source/STATUS_IMPLEMENTATION_COMPLETE.md
+Full Source/STRATEGIC_ROADMAP.md
+Full Source/STRATEGIC_TECHNICAL_ANALYSIS.md
+Full Source/STUBS_ELIMINATION_FINAL_DELIVERY.md
+Full Source/STUB_AUDIT_INDEX.md
+Full Source/STUB_DETAILED_TECHNICAL_ANALYSIS.md
+Full Source/STUB_ELIMINATION_CHANGE_INDEX.md
+Full Source/STUB_ELIMINATION_COMPLETE_REPORT.md
+Full Source/STUB_ELIMINATION_FINAL_SUMMARY.md
+Full Source/STUB_ELIMINATION_IMPLEMENTATION_PLAN.md
+Full Source/STUB_ELIMINATION_VERIFICATION_CHECKLIST.md
+Full Source/STUB_FUNCTIONS_AUDIT_REPORT.md
+Full Source/STUB_IMPLEMENTATION_ANALYSIS.md
+Full Source/STUB_QUICK_REFERENCE.md
+Full Source/SYSTEM_DELIVERY_SUMMARY.md
+Full Source/SYSTEM_INTEGRATION_COMPLETE.md
+Full Source/SYSTEM_QUICK_REFERENCE.md
+Full Source/SYSTEM_STATUS_CONFIRMATION.md
+Full Source/TERMINAL_EDITOR_UPDATES.md
+Full Source/TERMINAL_INTEGRATION_QUICK_REF.md
+Full Source/TERMINAL_INVOCATION_INTEGRATION.md
+Full Source/TERMINAL_INVOCATION_SUMMARY.md
+Full Source/TEST-FILE-OPENING.txt
+Full Source/TEST_CONFIGURATION.md
+Full Source/TEST_EVERYTHING.ps1
+Full Source/TEST_NOW.md
+Full Source/TEST_SUITE_COMPLETE.md
+Full Source/TEST_SUITE_COMPLETE_GUIDE.md
+Full Source/TEST_SUITE_README.md
+Full Source/TITAN_BUILD_INTEGRATION_COMPLETE.md
+Full Source/TITAN_BUILD_REPORT.md
+Full Source/TITAN_FEATURES_14-21.md
+Full Source/TITAN_IMPLEMENTATION_REPORT.md
+Full Source/TITAN_QUICK_REFERENCE.md
+Full Source/TITAN_STREAMING_ORCHESTRATOR_COMPLETE.md
+Full Source/TODO_IDE_AUTONOMOUS_AGENT.md
+Full Source/TOOL_REGISTRY_COMPLETION_REPORT.md
+Full Source/TOOL_REGISTRY_IMPLEMENTATION.md
+Full Source/TOOL_REGISTRY_INDEX.md
+Full Source/TOOL_REGISTRY_QUICK_REFERENCE.md
+Full Source/TOP_3_BOTTLENECKS_IMPLEMENTATION_GUIDE.md
+Full Source/TOP_8_PRODUCTION_READINESS.md
+Full Source/TOP_P_SAMPLING_TECHNICAL_GUIDE.md
+Full Source/Test-Agentic-Commands.ps1
+Full Source/Test-Agentic-Execution.ps1
+Full Source/Test-Agentic-Headless.ps1
+Full Source/Test-All-Discovered-Features.ps1
+Full Source/Test-AutonomousAgent.ps1
+Full Source/Test-Deep-Validation.ps1
+Full Source/Test-Instructions-v3.2.0.ps1
+Full Source/Test-Live-Ollama.ps1
+Full Source/Test-Making-Station.ps1
+Full Source/Test-ProductionReadiness.ps1
+Full Source/Test-RawrXD-Full.ps1
+Full Source/Test-Security-Settings-Fix.ps1
+Full Source/Test-Simple-Opening.ps1
+Full Source/Test-ZeroDependencySystem.ps1
+Full Source/Testing/Temporary/CTestCostData.txt
+Full Source/Tiny-Home/CMakeLists.txt
+Full Source/Tiny-Home/include/aes.h
+Full Source/Tiny-Home/include/config.h
+Full Source/Tiny-Home/include/crypto.h
+Full Source/Tiny-Home/include/hotkey.h
+Full Source/Tiny-Home/include/llm.h
+Full Source/Tiny-Home/include/network.h
+Full Source/Tiny-Home/include/viewer.h
+Full Source/Tiny-Home/src/aes.cpp
+Full Source/Tiny-Home/src/config.cpp
+Full Source/Tiny-Home/src/crypto.cpp
+Full Source/Tiny-Home/src/hotkey.cpp
+Full Source/Tiny-Home/src/llm.cpp
+Full Source/Tiny-Home/src/main.cpp
+Full Source/Tiny-Home/src/network.cpp
+Full Source/Tiny-Home/src/viewer.cpp
+Full Source/Tune-Custom-Models.ps1
+Full Source/UNIFIED_SYSTEM_GUIDE.md
+Full Source/UNIVERSAL_ACCESS_DELIVERY_REPORT.md
+Full Source/UNIVERSAL_ACCESS_DEPLOYMENT.md
+Full Source/UNIVERSAL_ACCESS_EXECUTIVE_SUMMARY.md
+Full Source/UNIVERSAL_ACCESS_IMPLEMENTATION_SUMMARY.md
+Full Source/UNIVERSAL_ACCESS_QUICK_START.md
+Full Source/Universal-Reverse-Engineer.ps1
+Full Source/VALIDATE_BUILD_SYSTEM.ps1
+Full Source/VALIDATE_REVERSE_ENGINEERING.ps1
+Full Source/VALUATION_EVALUATION.md
+Full Source/VERIFICATION_CHECKLIST.md
+Full Source/VERIFICATION_PACKAGE_COMPLETE.md
+Full Source/VISUAL_PROJECT_SUMMARY.md
+Full Source/VISUAL_SUMMARY.md
+Full Source/VULKAN_COMPUTE_PRODUCTION_OPTIMIZED.md
+Full Source/Validate-BuildIntegrity.ps1
+Full Source/Validate-License.ps1
+Full Source/Validate-NumericControls.ps1
+Full Source/Validate-RawrXD.ps1
+Full Source/Verify-Build.ps1
+Full Source/WEEK1_DELIVERABLE_COMPLETE.md
+Full Source/WEEK1_DELIVERABLE_GUIDE.md
+Full Source/WEEK1_FINAL_HANDOFF.md
+Full Source/WEEK1_MASTER_INDEX.md
+Full Source/WEEK1_PHASE2_INTEGRATION.md
+Full Source/WEEK1_QUICK_REFERENCE.md
+Full Source/WEEK1_STATUS_REPORT.md
+Full Source/WEEK2_MEMORY_MANAGEMENT_PLAN.md
+Full Source/WEEK4_DELIVERABLE_GUIDE.md
+Full Source/WEEK4_FINAL_HANDOFF.md
+Full Source/WEEK4_MASTER_INDEX.md
+Full Source/WEEK4_QUICK_REFERENCE.md
+Full Source/WEEK4_STATUS_REPORT.md
+Full Source/WEEK5_FINAL_INTEGRATION_GUIDE.md
+Full Source/WEEK5_QUICK_BUILD.md
+Full Source/WIRING_CALL_GRAPH.dot
+Full Source/WIRING_DEPENDENCY_GRAPH.dot
+Full Source/WIRING_DIGEST_REPORT.md
+Full Source/WebView2Shim.ps1
+Full Source/ZERO_DEPENDENCY_MODEL_MAKER_README.md
+Full Source/ZERO_DEPENDENCY_QUICK_REFERENCE.md
+Full Source/ZERO_DEPENDENCY_SYSTEM_SUMMARY.md
+Full Source/ZERO_SCAFFOLDING_DELIVERY.md
+Full Source/src/ARCHITECTURE_OVERVIEW.md
+Full Source/src/BUILD_GUIDE.md
+Full Source/src/CMakeLists.txt
+Full Source/src/COMPILER_ENGINE_COMPLETION_REPORT.md
+Full Source/src/COMPILER_ENGINE_INTEGRATION_GUIDE.md
+Full Source/src/CodebaseContextAnalyzer.cpp
+Full Source/src/CodexPro.asm
+Full Source/src/CodexUltimate.asm
+Full Source/src/CodexUltimate_fixed.asm
+Full Source/src/CodexUltimate_simple.asm
+Full Source/src/CommonTypes.h
+Full Source/src/CompletionEngine.cpp
+Full Source/src/CompletionEngine.h
+Full Source/src/DELIVERY_SUMMARY.md
+Full Source/src/INDEX.md
+Full Source/src/INFERENCE_ENGINE_AUDIT.md
+Full Source/src/LanguageServerIntegration.cpp
+Full Source/src/LanguageServerIntegration.h
+Full Source/src/LazyPagerBridge.hpp
+Full Source/src/MASTER_AUDIT_INDEX.md
+Full Source/src/MultiModalModelRouter.cpp
+Full Source/src/OmegaPro.asm
+Full Source/src/PHASE_2_3_TODOS.md
+Full Source/src/PerformanceOptimizer.cpp
+Full Source/src/QT_FREE_ARCHITECTURE.md
+Full Source/src/QT_REMOVAL_MIGRATION_GUIDE.md
+Full Source/src/QT_REMOVAL_MIGRATION_LAUNCH.txt
+Full Source/src/QT_REMOVAL_SESSION_SUMMARY.md
+Full Source/src/QT_REMOVAL_STRATEGY.md
+Full Source/src/QT_REPLACEMENT_QUICK_REFERENCE.md
+Full Source/src/QUICK_REFERENCE.md
+Full Source/src/QtGUIStubs.hpp
+Full Source/src/README_COMPILER_ENGINE.md
+Full Source/src/RawrXD_AVX512_PatternEngine.asm
+Full Source/src/RawrXD_AVX512_Production.asm
+Full Source/src/RawrXD_AVX512_Real.asm
+Full Source/src/RawrXD_AVX512_SIMD.asm
+Full Source/src/RawrXD_Agentic_Router.asm
+Full Source/src/RawrXD_Application.cpp
+Full Source/src/RawrXD_Application.h
+Full Source/src/RawrXD_CLI.asm
+Full Source/src/RawrXD_CLI_Main.asm
+Full Source/src/RawrXD_Complete_Interconnect.asm
+Full Source/src/RawrXD_Defs.inc
+Full Source/src/RawrXD_Editor.cpp
+Full Source/src/RawrXD_Editor.h
+Full Source/src/RawrXD_Final_Integration.asm
+Full Source/src/RawrXD_Foundation.h
+Full Source/src/RawrXD_GPU_Memory.asm
+Full Source/src/RawrXD_GUI_IDE.asm
+Full Source/src/RawrXD_GlyphAtlas.asm
+Full Source/src/RawrXD_HTTP_Router.asm
+Full Source/src/RawrXD_IPC_Bridge.asm
+Full Source/src/RawrXD_InferenceCore.asm
+Full Source/src/RawrXD_Inference_Engine.asm
+Full Source/src/RawrXD_Interconnect.def
+Full Source/src/RawrXD_JSON_Parser.asm
+Full Source/src/RawrXD_LSP_Core.asm
+Full Source/src/RawrXD_LSP_Handshake_Ext.asm
+Full Source/src/RawrXD_Lexer.cpp
+Full Source/src/RawrXD_Lexer.h
+Full Source/src/RawrXD_Lexer_AVX2.asm
+Full Source/src/RawrXD_Lexer_MASM.cpp
+Full Source/src/RawrXD_Lexer_MASM.h
+Full Source/src/RawrXD_MainIntegration.cpp
+Full Source/src/RawrXD_MetaReverse.asm
+Full Source/src/RawrXD_Model_StateMachine.asm
+Full Source/src/RawrXD_NativeHost.asm
+Full Source/src/RawrXD_NativeModelBridge_Complete.asm
+Full Source/src/RawrXD_OmegaDeobfuscator.asm
+Full Source/src/RawrXD_PatternBridge.asm
+Full Source/src/RawrXD_PatternBridge.def
+Full Source/src/RawrXD_PatternBridgeClient.cpp
+Full Source/src/RawrXD_PatternEngine.cs
+Full Source/src/RawrXD_PipeClient.cpp
+Full Source/src/RawrXD_PipeClient.h
+Full Source/src/RawrXD_PipeServer.asm
+Full Source/src/RawrXD_PipeTest.cpp
+Full Source/src/RawrXD_Renderer_D2D.cpp
+Full Source/src/RawrXD_Renderer_D2D.h
+Full Source/src/RawrXD_RingBuffer_Consumer.asm
+Full Source/src/RawrXD_SIMDClassifier.asm
+Full Source/src/RawrXD_SignalSlot.cpp
+Full Source/src/RawrXD_SignalSlot.h
+Full Source/src/RawrXD_Standalone_Inference.asm
+Full Source/src/RawrXD_Streaming_Formatter.asm
+Full Source/src/RawrXD_StyleManager.cpp
+Full Source/src/RawrXD_StyleManager.h
+Full Source/src/RawrXD_Swarm_Orchestrator.asm
+Full Source/src/RawrXD_System_Primitives.asm
+Full Source/src/RawrXD_TextBuffer.cpp
+Full Source/src/RawrXD_TextBuffer.h
+Full Source/src/RawrXD_Titan.asm
+Full Source/src/RawrXD_Titan_CORE.asm
+Full Source/src/RawrXD_Titan_Kernel.asm
+Full Source/src/RawrXD_Titan_MINIMAL.asm
+Full Source/src/RawrXD_Titan_MetaReverse.asm
+Full Source/src/RawrXD_Titan_STANDALONE.asm
+Full Source/src/RawrXD_Titan_UNIFIED.asm
+Full Source/src/RawrXD_TriggerTest.cpp
+Full Source/src/RawrXD_UndoStack.cpp
+Full Source/src/RawrXD_UndoStack.h
+Full Source/src/RawrXD_Win32_Foundation.h
+Full Source/src/RawrXD_Window.cpp
+Full Source/src/RawrXD_Window.h
+Full Source/src/SmartRewriteEngine.cpp
+Full Source/src/TITAN_DELIVERY_COMPLETE.md
+Full Source/src/TRANSFORMER_AUDIT.md
+Full Source/src/TROUBLESHOOTING.md
+Full Source/src/Titan_Bridge.cpp
+Full Source/src/Titan_InferenceCore.asm
+Full Source/src/Titan_Streaming_Orchestrator_Fixed.asm
+Full Source/src/Titan_Streaming_Orchestrator_NoHTTP.asm
+Full Source/src/VULKAN_MASM_AUDIT.md
+Full Source/src/agentic/BUILD_AND_INTEGRATION_GUIDE.md
+Full Source/src/agentic/BoundedAgentLoop.cpp
+Full Source/src/agentic/BoundedAgentLoop.h
+Full Source/src/agentic/CMakeLists.txt
+Full Source/src/agentic/COMPLETE_LOGIC_SUMMARY.md
+Full Source/src/agentic/CRITICAL_ISSUES_COMPLETE_IMPLEMENTATION.cpp
+Full Source/src/agentic/DeterministicReplayEngine.cpp
+Full Source/src/agentic/DeterministicReplayEngine.h
+Full Source/src/agentic/DiffEngine.cpp
+Full Source/src/agentic/DiffEngine.h
+Full Source/src/agentic/DiskRecoveryAgent.cpp
+Full Source/src/agentic/DiskRecoveryAgent.h
+Full Source/src/agentic/DiskRecoveryToolHandler.cpp
+Full Source/src/agentic/DiskRecoveryToolHandler.h
+Full Source/src/agentic/FIMPromptBuilder.cpp
+Full Source/src/agentic/FIMPromptBuilder.h
+Full Source/src/agentic/GPU_DMA_COMPLETE_IMPLEMENTATIONS.asm
+Full Source/src/agentic/GPU_DMA_QUICKREF.md
+Full Source/src/agentic/IMPLEMENTATION_COMPLETION_SUMMARY.md
+Full Source/src/agentic/INDEX.md
+Full Source/src/agentic/OllamaProvider.cpp
+Full Source/src/agentic/OllamaProvider.h
+Full Source/src/agentic/OrchestratorBridge.cpp
+Full Source/src/agentic/OrchestratorBridge.h
+Full Source/src/agentic/Phase3_Agent_Kernel_Complete.asm
+Full Source/src/agentic/PredictionProvider.h
+Full Source/src/agentic/RawrXD_Absolutely_Complete.asm
+Full Source/src/agentic/RawrXD_AgentLoop.cpp
+Full Source/src/agentic/RawrXD_AgentLoop.h
+Full Source/src/agentic/RawrXD_Compiler_Engine_Complete.asm
+Full Source/src/agentic/RawrXD_Compiler_Engine_Stubs_BACKUP.asm
+Full Source/src/agentic/RawrXD_Complete_Explicit.asm
+Full Source/src/agentic/RawrXD_Complete_Explicit.asm.backup
+Full Source/src/agentic/RawrXD_Complete_Hidden_Logic.asm
+Full Source/src/agentic/RawrXD_Complete_Production_Fix.asm
+Full Source/src/agentic/RawrXD_Complete_Production_System.asm
+Full Source/src/agentic/RawrXD_Complete_ReverseEngineered.asm
+Full Source/src/agentic/RawrXD_Critical_Blockers_P0.asm
+Full Source/src/agentic/RawrXD_High_Priority_P1.asm
+Full Source/src/agentic/RawrXD_Low_Priority_P3.asm
+Full Source/src/agentic/RawrXD_Medium_Priority_P2.asm
+Full Source/src/agentic/RawrXD_Production_ReverseEngineered.asm
+Full Source/src/agentic/RawrXD_Titan_Master_GodSource_REVERSE_ENGINEERED.asm
+Full Source/src/agentic/RawrXD_ToolRegistry.cpp
+Full Source/src/agentic/RawrXD_ToolRegistry.h
+Full Source/src/agentic/Titan_FullLogic_Simplified_vs_Production.asm
+Full Source/src/agentic/Titan_Streaming_Orchestrator.asm
+Full Source/src/agentic/Titan_Streaming_Orchestrator_Complete.asm
+Full Source/src/agentic/ToolCallResult.h
+Full Source/src/agentic/ToolRegistry.cpp
+Full Source/src/agentic/ToolRegistry.h
+Full Source/src/agentic/ToolRegistry.i
+Full Source/src/agentic/autonomous_background_daemon.hpp
+Full Source/src/agentic/autonomous_communicator.cpp
+Full Source/src/agentic/autonomous_communicator.hpp
+Full Source/src/agentic/autonomous_recovery_orchestrator.cpp
+Full Source/src/agentic/autonomous_recovery_orchestrator.hpp
+Full Source/src/agentic/autonomous_verification_loop.cpp
+Full Source/src/agentic/autonomous_verification_loop.hpp
+Full Source/src/agentic/bridge/Win32IDEBridge.cpp
+Full Source/src/agentic/bridge/Win32IDEBridge.hpp
+Full Source/src/agentic/build_agentic/RawrXD-Agentic.dir/Release/RawrXD-Agentic.tlog/CL.command.1.tlog
+Full Source/src/agentic/build_agentic/RawrXD-Agentic.dir/Release/RawrXD-Agentic.tlog/CL.read.1.tlog
+Full Source/src/agentic/build_agentic/RawrXD-Agentic.dir/Release/RawrXD-Agentic.tlog/CL.write.1.tlog
+Full Source/src/agentic/build_agentic/RawrXD-Agentic.dir/Release/RawrXD-Agentic.tlog/CustomBuild.command.1.tlog
+Full Source/src/agentic/build_agentic/RawrXD-Agentic.dir/Release/RawrXD-Agentic.tlog/CustomBuild.read.1.tlog
+Full Source/src/agentic/build_agentic/RawrXD-Agentic.dir/Release/RawrXD-Agentic.tlog/CustomBuild.write.1.tlog
+Full Source/src/agentic/build_agentic/RawrXD-Agentic.dir/Release/RawrXD-Agentic.tlog/Masm.read.1u.tlog
+Full Source/src/agentic/build_agentic/RawrXD-Agentic.dir/Release/RawrXD-Agentic.tlog/Masm.write.1u.tlog
+Full Source/src/agentic/build_agentic/RawrXD-Agentic.dir/Release/RawrXD-Agentic.tlog/RawrXD-Agentic.lastbuildstate
+Full Source/src/agentic/build_agentic/RawrXD-Agentic.dir/Release/RawrXD-Agentic.tlog/unsuccessfulbuild
+Full Source/src/agentic/build_agentic/x64/Release/ZERO_CHECK/ZERO_CHECK.recipe
+Full Source/src/agentic/build_agentic/x64/Release/ZERO_CHECK/ZERO_CHECK.tlog/CustomBuild.command.1.tlog
+Full Source/src/agentic/build_agentic/x64/Release/ZERO_CHECK/ZERO_CHECK.tlog/CustomBuild.read.1.tlog
+Full Source/src/agentic/build_agentic/x64/Release/ZERO_CHECK/ZERO_CHECK.tlog/CustomBuild.write.1.tlog
+Full Source/src/agentic/build_agentic/x64/Release/ZERO_CHECK/ZERO_CHECK.tlog/ZERO_CHECK.lastbuildstate
+Full Source/src/agentic/chain_of_thought.cpp
+Full Source/src/agentic/chain_of_thought.h
+Full Source/src/agentic/context_assembler.cpp
+Full Source/src/agentic/context_assembler.h
+Full Source/src/agentic/coordination/AgentCoordinator.cpp
+Full Source/src/agentic/coordination/AgentCoordinator.hpp
+Full Source/src/agentic/coordination/ConflictResolver.cpp
+Full Source/src/agentic/coordination/ConflictResolver.hpp
+Full Source/src/agentic/coordination/PlanOrchestrator.h
+Full Source/src/agentic/coordination/SwarmOrchestrator.cpp
+Full Source/src/agentic/coordination/SwarmOrchestrator.h
+Full Source/src/agentic/directstorage_real.cpp
+Full Source/src/agentic/fix_asm.py
+Full Source/src/agentic/fix_pushpop.ps1
+Full Source/src/agentic/gpu_dma_complete_final.asm
+Full Source/src/agentic/gpu_dma_complete_production.asm
+Full Source/src/agentic/gpu_dma_complete_production_FIXED.asm
+Full Source/src/agentic/hotpatch/Detour.cpp
+Full Source/src/agentic/hotpatch/Detour.hpp
+Full Source/src/agentic/hotpatch/Engine.cpp
+Full Source/src/agentic/hotpatch/Engine.hpp
+Full Source/src/agentic/hotpatch/ShadowPage.cpp
+Full Source/src/agentic/hotpatch/ShadowPage.hpp
+Full Source/src/agentic/manifestor/CapabilityManifest.cpp
+Full Source/src/agentic/manifestor/CapabilityManifest.hpp
+Full Source/src/agentic/manifestor/PEParser.cpp
+Full Source/src/agentic/manifestor/PEParser.hpp
+Full Source/src/agentic/manifestor/SelfManifestor.cpp
+Full Source/src/agentic/manifestor/SelfManifestor.hpp
+Full Source/src/agentic/memory_cleanup.asm
+Full Source/src/agentic/memory_cleanup_phase_integration.asm
+Full Source/src/agentic/memory_error_real.cpp
+Full Source/src/agentic/model_cascade.cpp
+Full Source/src/agentic/model_cascade.h
+Full Source/src/agentic/monaco/MONACO_EDITOR_CORE.ASM
+Full Source/src/agentic/monaco/MONACO_EDITOR_ENTERPRISE.ASM
+Full Source/src/agentic/monaco/MONACO_EDITOR_ZERO_DEPENDENCY.ASM
+Full Source/src/agentic/monaco/MonacoIntegration.cpp
+Full Source/src/agentic/monaco/MonacoIntegration.hpp
+Full Source/src/agentic/monaco/NEON_MONACO_CORE.ASM
+Full Source/src/agentic/monaco/NEON_MONACO_HACK.ASM
+Full Source/src/agentic/monaco/test_monaco_verification.cpp
+Full Source/src/agentic/multi_file_transaction.cpp
+Full Source/src/agentic/multi_file_transaction.h
+Full Source/src/agentic/nf4_decompressor_real.cpp
+Full Source/src/agentic/phase_integration_real.cpp
+Full Source/src/agentic/planning/ModelGuidedPlanner.cpp
+Full Source/src/agentic/planning/ModelGuidedPlanner.hpp
+Full Source/src/agentic/rawrxd_complete_master_implementation.asm
+Full Source/src/agentic/rawrxd_final_complete_implementation.asm
+Full Source/src/agentic/swarm_orchestrator.cpp
+Full Source/src/agentic/swarm_orchestrator.h
+Full Source/src/agentic/tests/CMakeLists.txt
+Full Source/src/agentic/tests/smoke_test.cpp
+Full Source/src/agentic/tests/test_orchestrator_modules.cpp
+Full Source/src/agentic/titan_gpu_build.bat
+Full Source/src/agentic/titan_masm_real.asm
+Full Source/src/agentic/vulkan/NEON_VULKAN_FABRIC.asm
+Full Source/src/agentic/vulkan/NEON_VULKAN_FABRIC_STUB.asm
+Full Source/src/agentic/vulkan/NeonFabric.cpp
+Full Source/src/agentic/vulkan/NeonFabric.hpp
+Full Source/src/agentic/vulkan/VulkanManager.cpp
+Full Source/src/agentic/vulkan/VulkanManager.hpp
+Full Source/src/agentic/vulkan_compute_real.cpp
+Full Source/src/agentic/week1/BUILD_WEEK1.ps1
+Full Source/src/agentic/week1/WEEK1_BUILD.cmake
+Full Source/src/agentic/week1/WEEK1_COMPLETE.asm
+Full Source/src/agentic/week1/WEEK1_DELIVERABLE.asm
+Full Source/src/agentic/week1/Week1_API.h
+Full Source/src/agentic/week4/WEEK4_DELIVERABLE.asm
+Full Source/src/agentic/week5/WEEK5_COMPLETE_PRODUCTION.asm
+Full Source/src/agentic/wiring/CapabilityRouter.cpp
+Full Source/src/agentic/wiring/CapabilityRouter.hpp
+Full Source/src/agentic/wiring/DependencyGraph.cpp
+Full Source/src/agentic/wiring/DependencyGraph.hpp
+Full Source/src/agentic/wiring/FeatureFlags.cpp
+Full Source/src/agentic/wiring/FeatureFlags.hpp
+Full Source/src/ai/CMakeLists.txt
+Full Source/src/ai/ai_assistant_engine.cpp
+Full Source/src/ai/ai_assistant_engine.h
+Full Source/src/ai/ai_completion_provider_real.cpp
+Full Source/src/ai/ai_completion_provider_real.hpp
+Full Source/src/ai/ai_completion_unified.cpp
+Full Source/src/ai/ai_ide_integration.cpp
+Full Source/src/ai/ai_ide_integration.h
+Full Source/src/ai/ai_inference_real.cpp
+Full Source/src/ai/ai_model_caller_real.cpp
+Full Source/src/ai/ai_model_caller_unified.cpp
+Full Source/src/ai/digestion_engine.cpp
+Full Source/src/ai/digestion_engine.h
+Full Source/src/ai/digestion_scanner.asm
+Full Source/src/ai/gguf_parser.cpp
+Full Source/src/ai/gguf_parser.h
+Full Source/src/ai/memory_mapped_file.cpp
+Full Source/src/ai/memory_mapped_file.h
+Full Source/src/ai/streaming_gguf_loader_qt.cpp
+Full Source/src/ai/streaming_gguf_loader_qt.h
+Full Source/src/ai/test_minimal_streaming.cpp
+Full Source/src/ai/test_streaming_gguf_loader.cpp
+Full Source/src/ai/token_generator.cpp
+Full Source/src/ai/token_generator.h
+Full Source/src/ai/universal_model_router.cpp
+Full Source/src/ai/universal_model_router.h
+Full Source/src/ai_completion_provider.cpp
+Full Source/src/ai_implementation.cpp
+Full Source/src/ai_integration_hub.cpp
+Full Source/src/ai_integration_hub.h
+Full Source/src/ai_model_caller.cpp
+Full Source/src/ai_model_caller.h
+Full Source/src/ai_model_caller_real.cpp
+Full Source/src/ai_model_loader.cpp
+Full Source/src/ai_workers/ai_digestion_engine.cpp
+Full Source/src/ai_workers/ai_digestion_engine.hpp
+Full Source/src/ai_workers/ai_training_pipeline.cpp
+Full Source/src/ai_workers/ai_training_pipeline.hpp
+Full Source/src/ai_workers/ai_types.hpp
+Full Source/src/ai_workers/ai_workers.cpp
+Full Source/src/ai_workers/ai_workers.h
+Full Source/src/api_server.cpp
+Full Source/src/api_server.h
+Full Source/src/api_server_simple.cpp
+Full Source/src/asm/ASM_FOLDER_AUDIT.md
+Full Source/src/asm/DirectML_Bridge.asm
+Full Source/src/asm/DiskKernel.def
+Full Source/src/asm/FlashAttention_AVX512.asm
+Full Source/src/asm/MASM_STACK_ALIGNMENT_AUDIT.inc
+Full Source/src/asm/MASM_STACK_ALIGNMENT_AUDIT_REPORT.asm
+Full Source/src/asm/MultiWindowKernel.def
+Full Source/src/asm/RawrCodex.asm
+Full Source/src/asm/RawrXD-AnalyzerDistiller.asm
+Full Source/src/asm/RawrXD-StreamingOrchestrator.asm
+Full Source/src/asm/RawrXD-VulkanKernel.asm
+Full Source/src/asm/RawrXD_AgentToolExecutor.asm
+Full Source/src/asm/RawrXD_AgenticOrchestrator.asm
+Full Source/src/asm/RawrXD_AgenticShellBridge.asm
+Full Source/src/asm/RawrXD_Camellia256.asm
+Full Source/src/asm/RawrXD_Camellia256_Auth.asm
+Full Source/src/asm/RawrXD_Common.inc
+Full Source/src/asm/RawrXD_CopilotGapCloser.asm
+Full Source/src/asm/RawrXD_Debug_Engine.asm
+Full Source/src/asm/RawrXD_DiskKernel.asm
+Full Source/src/asm/RawrXD_DiskRecoveryAgent.asm
+Full Source/src/asm/RawrXD_DualAgent_Orchestrator.asm
+Full Source/src/asm/RawrXD_DynamicPromptEngine.asm
+Full Source/src/asm/RawrXD_DynamicPromptEngine.def
+Full Source/src/asm/RawrXD_EnterpriseLicense.asm
+Full Source/src/asm/RawrXD_GGUF_Vulkan_Loader.asm
+Full Source/src/asm/RawrXD_GSIHash.asm
+Full Source/src/asm/RawrXD_HardwareSynthesizer.asm
+Full Source/src/asm/RawrXD_Hotpatch_Kernel.asm
+Full Source/src/asm/RawrXD_Inference_AVX512.asm
+Full Source/src/asm/RawrXD_KQuant_Dequant.asm
+Full Source/src/asm/RawrXD_KQuant_Kernel.asm
+Full Source/src/asm/RawrXD_LSP_AI_Bridge.asm
+Full Source/src/asm/RawrXD_LSP_SymbolIndex.asm
+Full Source/src/asm/RawrXD_Lexer_AVX2.asm
+Full Source/src/asm/RawrXD_License_Shield.asm
+Full Source/src/asm/RawrXD_LlamaBridge.asm
+Full Source/src/asm/RawrXD_LlamaCLI.asm
+Full Source/src/asm/RawrXD_MeshBrain.asm
+Full Source/src/asm/RawrXD_MonacoCore.asm
+Full Source/src/asm/RawrXD_MultiWindow_Kernel.asm
+Full Source/src/asm/RawrXD_NanoDiskBridge.asm
+Full Source/src/asm/RawrXD_NanoQuant_Engine.asm
+Full Source/src/asm/RawrXD_NanoQuant_Streaming.asm
+Full Source/src/asm/RawrXD_NeuralBridge.asm
+Full Source/src/asm/RawrXD_OllamaTuner.asm
+Full Source/src/asm/RawrXD_OmegaOrchestrator.asm
+Full Source/src/asm/RawrXD_PDBKernel.asm
+Full Source/src/asm/RawrXD_PerfCounters.asm
+Full Source/src/asm/RawrXD_Prometheus_Exporter.asm
+Full Source/src/asm/RawrXD_Pyre_Compute.asm
+Full Source/src/asm/RawrXD_QuadBuffer_Streamer.asm
+Full Source/src/asm/RawrXD_RefProvider.asm
+Full Source/src/asm/RawrXD_RouterBridge.asm
+Full Source/src/asm/RawrXD_SelfHost_Engine.asm
+Full Source/src/asm/RawrXD_SelfPatch_Agent.asm
+Full Source/src/asm/RawrXD_SelfPatch_Engine.asm
+Full Source/src/asm/RawrXD_ShellIntegration.asm
+Full Source/src/asm/RawrXD_Snapshot.asm
+Full Source/src/asm/RawrXD_SocketResponder.asm
+Full Source/src/asm/RawrXD_SocketResponder.def
+Full Source/src/asm/RawrXD_SourceEdit_Kernel.asm
+Full Source/src/asm/RawrXD_Speciator.asm
+Full Source/src/asm/RawrXD_StreamingWeights.asm
+Full Source/src/asm/RawrXD_Streaming_QuadBuffer.asm
+Full Source/src/asm/RawrXD_StubDetector.asm
+Full Source/src/asm/RawrXD_Swarm_Network.asm
+Full Source/src/asm/RawrXD_Telemetry_Kernel.asm
+Full Source/src/asm/RawrXD_Tokenizer.asm
+Full Source/src/asm/RawrXD_TridentBeacon.asm
+Full Source/src/asm/RawrXD_TridentBeacon.def
+Full Source/src/asm/RawrXD_TridentBeacon_GPU.asm
+Full Source/src/asm/RawrXD_VulkanBridge.asm
+Full Source/src/asm/RawrXD_Watchdog.asm
+Full Source/src/asm/byte_search.asm
+Full Source/src/asm/custom_zlib.asm
+Full Source/src/asm/disk_recovery_scsi.asm
+Full Source/src/asm/feature_dispatch_bridge.asm
+Full Source/src/asm/gguf_dump.asm
+Full Source/src/asm/gpu_requantize_rocm.asm
+Full Source/src/asm/gui_dispatch_bridge.asm
+Full Source/src/asm/inference_core.asm
+Full Source/src/asm/inference_kernels.asm
+Full Source/src/asm/memory_patch.asm
+Full Source/src/asm/model_bridge_x64.asm
+Full Source/src/asm/native_speed_kernels.asm
+Full Source/src/asm/quant_avx2.asm
+Full Source/src/asm/rawrxd_cot_dll_entry.asm
+Full Source/src/asm/rawrxd_cot_engine.asm
+Full Source/src/asm/rawrxd_cot_phase39.asm
+Full Source/src/asm/rawrxd_link.asm
+Full Source/src/asm/rawrxd_scc.asm
+Full Source/src/asm/rawrxd_win64.inc
+Full Source/src/asm/requantize_q4km_to_q2k_avx512.asm
+Full Source/src/asm/request_patch.asm
+Full Source/src/asm/solo_standalone_compiler.asm
+Full Source/src/asm/swarm_tensor_stream.asm
+Full Source/src/asm/vision_projection_kernel.asm
+Full Source/src/auth/AUTH_FOLDER_AUDIT.md
+Full Source/src/auth/CMakeLists.txt
+Full Source/src/auth/QuantumAuthUI.cpp
+Full Source/src/auth/QuantumAuthUI.hpp
+Full Source/src/auth/enterprise_auth_manager.cpp
+Full Source/src/auth/jwt_validator.cpp
+Full Source/src/auth/rbac_engine.cpp
+Full Source/src/auth/rbac_engine.hpp
+Full Source/src/autonomous_feature_engine.cpp
+Full Source/src/autonomous_feature_engine.h
+Full Source/src/autonomous_intelligence_orchestrator.cpp
+Full Source/src/autonomous_intelligence_orchestrator.h
+Full Source/src/autonomous_model_manager.cpp
+Full Source/src/autonomous_model_manager.h
+Full Source/src/autonomous_widgets.cpp
+Full Source/src/autonomous_widgets.h
+Full Source/src/backend/BACKEND_FOLDER_AUDIT.md
+Full Source/src/backend/agentic_tools.cpp
+Full Source/src/backend/agentic_tools.h
+Full Source/src/backend/agentic_tools_part1.cpp
+Full Source/src/backend/ollama_client.cpp
+Full Source/src/backend/ollama_client.h
+Full Source/src/backend/rawrxd_cot_engine.py
+Full Source/src/backend/vulkan_compute.cpp
+Full Source/src/backend/vulkan_compute.h
+Full Source/src/backend/websocket_server.cpp
+Full Source/src/backup_manager.cpp
+Full Source/src/backup_manager.h
+Full Source/src/baseline_profile.cpp
+Full Source/src/bench_main.cpp
+Full Source/src/benchmark_menu_widget.cpp
+Full Source/src/benchmark_runner.cpp
+Full Source/src/benchmark_runner.hpp
+Full Source/src/binary_analyzer.asm
+Full Source/src/binary_analyzer_complete.asm
+Full Source/src/binary_analyzer_final.asm
+Full Source/src/binary_analyzer_final_working.asm
+Full Source/src/binary_analyzer_proper.asm
+Full Source/src/binary_analyzer_working.asm
+Full Source/src/bpe_merge_rules.txt
+Full Source/src/build_output.txt
+Full Source/src/centralized_exception_handler.cpp
+Full Source/src/centralized_exception_handler.h
+Full Source/src/chain_of_thought.cpp
+Full Source/src/chain_of_thought.h

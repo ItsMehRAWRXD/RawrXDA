@@ -1,0 +1,19 @@
+﻿{
+    "build_post_exit_code":  0,
+    "healing_launch_attempts":  1,
+    "build_pre_exit_code":  2,
+    "phase_prefail_verified":  true,
+    "duration_total_seconds":  3.7523176,
+    "demo_timestamp":  "2026-03-14T02:55:51.1116515-04:00",
+    "git_commit":  "1bc01db7d",
+    "healing_executable":  "D:\\rawrxd\\.\\build_prod\\bin\\RawrXD-AutoFixCLI.exe",
+    "log_file":  "self_healing_demo_20260314_025551.log",
+    "phase_break_injected":  true,
+    "healing_diagnostics_initial":  1,
+    "telemetry_file":  "healing_telemetry.json",
+    "healing_attempts_used":  1,
+    "phase_healing_triggered":  true,
+    "rawrxd_version":  "v15.0-AGENTIC",
+    "phase_postbuild_clean":  true,
+    "healing_fixes_applied":  1
+}

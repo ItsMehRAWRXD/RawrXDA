@@ -337,21 +337,21 @@ json MetaPlanner::task(const std::string& type,
         if (it != kTypeToSubsystem.end()) sub = it->second;
     }
 
-    json t = {
-        {"id",                id},
-        {"type",              type},
-        {"target",            target},
+    json t = nlohmann::json::object({
+        {"id",                (json)id},
+        {"type",              (json)type},
+        {"target",            (json)target},
         {"params",            params},
-        {"priority",          priority},
-        {"estimated_seconds", est},
-        {"subsystem",         sub},
-        {"depends_on",        json::array()},
-        {"rollback_strategy", "snapshot"},
-        {"max_retries",       3},
-        {"timeout_seconds",   est * 3},
-        {"state",             "pending"},
-        {"created_at",        isoTimestamp()}
-    };
+        {"priority",          (json)priority},
+        {"estimated_seconds", (json)est},
+        {"subsystem",         (json)sub},
+        {"depends_on",        nlohmann::json::array()},
+        {"rollback_strategy", (json)"snapshot"},
+        {"max_retries",       (json)3},
+        {"timeout_seconds",   (json)(est * 3)},
+        {"state",             (json)"pending"},
+        {"created_at",        (json)isoTimestamp()}
+    });
     return t;
 }
 
@@ -363,13 +363,13 @@ json MetaPlanner::phase(const std::string& name,
                         uint32_t order,
                         const json& tasks,
                         const std::string& gateCondition) {
-    return {
+    return nlohmann::json::object({
         {"phase_name",      name},
         {"phase_order",     order},
         {"gate_condition",  gateCondition},
         {"task_count",      tasks.size()},
         {"tasks",           tasks}
-    };
+    });
 }
 
 
@@ -378,11 +378,11 @@ json MetaPlanner::phase(const std::string& name,
 // ============================================================================
 json MetaPlanner::depEdge(uint32_t from, uint32_t to,
                           const std::string& type) {
-    return {
+    return nlohmann::json::object({
         {"from_task_id", from},
         {"to_task_id",   to},
         {"dep_type",     type}
-    };
+    });
 }
 
 
@@ -393,11 +393,11 @@ json MetaPlanner::plan(const std::string& humanWish) {
     resetTaskIds();
     std::string wish = trim(humanWish);
     if (wish.empty()) {
-        return {
+        return nlohmann::json::object({
             {"status",  "error"},
             {"message", "Empty wish provided"},
             {"phases",  json::array()}
-        };
+        });
     }
 
     IntentSignals sig = extractIntentSignals(wish);
@@ -415,7 +415,7 @@ json MetaPlanner::plan(const std::string& humanWish) {
     else                                       rawPlan = genericPlan(wish);
 
     // Wrap into final plan envelope
-    json planEnvelope = {
+    json planEnvelope = nlohmann::json::object({
         {"status",            "ok"},
         {"wish",              wish},
         {"domain",            sig.primaryDomain},
@@ -430,7 +430,7 @@ json MetaPlanner::plan(const std::string& humanWish) {
         {"phases",            rawPlan["phases"]},
         {"dependencies",      rawPlan["dependencies"]},
         {"cost_estimate",     rawPlan["cost_estimate"]}
-    };
+    });
 
     return planEnvelope;
 }
@@ -447,10 +447,10 @@ json MetaPlanner::quantPlan(const std::string& wish) {
 
     // Phase 1: Analysis & preparation
     json p1tasks = json::array();
-    auto t1 = task("index_symbols", "src/core", {{"scope", "quant_related"}}, 3, 120, "context_analyzer");
-    auto t2 = task("analyze_deps", qtLower + "_module", {{"depth", 3}}, 3, 90, "context_analyzer");
+    auto t1 = task("index_symbols", "src/core", nlohmann::json::object({{"scope", "quant_related"}}), 3, 120, "context_analyzer");
+    auto t2 = task("analyze_deps", qtLower + "_module", nlohmann::json::object({{"depth", 3}}), 3, 90, "context_analyzer");
     auto t3 = task("git_snapshot", "pre_quant_" + qtLower,
-        {{"message", "Snapshot before " + qt + " quantization kernel"}}, 2, 3, "agentic_loop");
+        nlohmann::json::object({{"message", "Snapshot before " + qt + " quantization kernel"}}), 2, 3, "agentic_loop");
     p1tasks.push_back(t1);
     p1tasks.push_back(t2);
     p1tasks.push_back(t3);
@@ -458,66 +458,66 @@ json MetaPlanner::quantPlan(const std::string& wish) {
     // Phase 2: Kernel implementation
     json p2tasks = json::array();
     auto t4 = task("add_comp", "quant_" + qtLower + ".comp",
-        {{"quant_type", qt}, {"template", "quant_vulkan.comp"}, {"block_size", 256}}, 8, 120, "hotpatch_engine");
+        nlohmann::json::object({{"quant_type", qt}, {"template", "quant_vulkan.comp"}, {"block_size", 256}}), 8, 120, "hotpatch_engine");
     auto t5 = task("add_asm", "quant_" + qtLower + "_avx512",
-        {{"quant_type", qt}, {"instruction_set", "AVX-512"}, {"register_width", 512}}, 8, 180, "hotpatch_engine");
+        nlohmann::json::object({{"quant_type", qt}, {"instruction_set", "AVX-512"}, {"register_width", 512}}), 8, 180, "hotpatch_engine");
     auto t6 = task("add_cpp", "quant_" + qtLower + "_wrapper",
-        {{"quant_type", qt}, {"includes", json::array({"quant_" + qtLower + ".comp", "quant_" + qtLower + "_avx512.asm"})}},
+        nlohmann::json::object({{"quant_type", qt}, {"includes", json::array({"quant_" + qtLower + ".comp", "quant_" + qtLower + "_avx512.asm"})}}),
         7, 60, "refactor_engine");
     p2tasks.push_back(t4);
     p2tasks.push_back(t5);
     p2tasks.push_back(t6);
 
     // t4 and t5 depend on t1 (symbols indexed), t6 depends on t4 and t5
-    deps.push_back(depEdge(t1["id"], t4["id"]));
-    deps.push_back(depEdge(t1["id"], t5["id"]));
-    deps.push_back(depEdge(t4["id"], t6["id"]));
-    deps.push_back(depEdge(t5["id"], t6["id"]));
+    deps.push_back(depEdge(t1["id"].get<uint32_t>(), t4["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t1["id"].get<uint32_t>(), t5["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t4["id"].get<uint32_t>(), t6["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t5["id"].get<uint32_t>(), t6["id"].get<uint32_t>()));
     // t3 (snapshot) must complete before any writes
-    deps.push_back(depEdge(t3["id"], t4["id"]));
-    deps.push_back(depEdge(t3["id"], t5["id"]));
+    deps.push_back(depEdge(t3["id"].get<uint32_t>(), t4["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t3["id"].get<uint32_t>(), t5["id"].get<uint32_t>()));
 
     // Phase 3: Validation
     json p3tasks = json::array();
     auto t7 = task("self_test", "quant_" + qtLower + "_regression",
-        {{"cases", 50}, {"quant_type", qt}, {"tolerance", 0.001}}, 6, 180, "swarm_engine");
+        nlohmann::json::object({{"cases", 50}, {"quant_type", qt}, {"tolerance", 0.001}}), 6, 180, "swarm_engine");
     auto t8 = task("bench", "quant_" + qtLower + "_ladder",
-        {{"metric", "tokens/sec"}, {"threshold", 0.95}, {"models", json::array({"7B", "13B", "30B"})}},
+        nlohmann::json::object({{"metric", "tokens/sec"}, {"threshold", 0.95}, {"models", json::array({"7B", "13B", "30B"})}}),
         6, 300, "inference_core");
     auto t9 = task("fuzz_test", "quant_" + qtLower + "_boundary",
-        {{"cases", 1000}, {"targets", json::array({"overflow", "underflow", "denormal", "nan"})}},
+        nlohmann::json::object({{"cases", 1000}, {"targets", json::array({"overflow", "underflow", "denormal", "nan"})}}),
         5, 600, "swarm_engine");
     p3tasks.push_back(t7);
     p3tasks.push_back(t8);
     p3tasks.push_back(t9);
 
     // Validation depends on implementation
-    deps.push_back(depEdge(t6["id"], t7["id"]));
-    deps.push_back(depEdge(t6["id"], t8["id"]));
-    deps.push_back(depEdge(t6["id"], t9["id"]));
+    deps.push_back(depEdge(t6["id"].get<uint32_t>(), t7["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t6["id"].get<uint32_t>(), t8["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t6["id"].get<uint32_t>(), t9["id"].get<uint32_t>()));
 
     // Phase 4: Integration & telemetry
     json p4tasks = json::array();
-    auto t10 = task("hot_reload", "quant_" + qtLower, {{"module", "quant"}}, 7, 5, "hotpatch_engine");
+    auto t10 = task("hot_reload", "quant_" + qtLower, nlohmann::json::object({{"module", "quant"}}), 7, 5, "hotpatch_engine");
     auto t11 = task("meta_learn", "quant_" + qtLower + "_telemetry",
-        {{"quant", qt}, {"kernel", "quant_" + qtLower + "_wrapper"},
-         {"gpu", "autodetect"}, {"tps", 0.0}, {"ppl", 0.0}, {"baseline", true}},
+        nlohmann::json::object({{"quant", qt}, {"kernel", "quant_" + qtLower + "_wrapper"},
+         {"gpu", "autodetect"}, {"tps", 0.0}, {"ppl", 0.0}, {"baseline", true}}),
         4, 30, "inference_core");
     p4tasks.push_back(t10);
     p4tasks.push_back(t11);
 
     // Integration depends on all tests passing
-    deps.push_back(depEdge(t7["id"], t10["id"]));
-    deps.push_back(depEdge(t8["id"], t10["id"]));
-    deps.push_back(depEdge(t9["id"], t10["id"]));
-    deps.push_back(depEdge(t10["id"], t11["id"]));
+    deps.push_back(depEdge(t7["id"].get<uint32_t>(), t10["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t8["id"].get<uint32_t>(), t10["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t9["id"].get<uint32_t>(), t10["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t10["id"].get<uint32_t>(), t11["id"].get<uint32_t>()));
 
     // Cost estimate
     uint32_t totalSeconds = 0;
     for (auto& arr : {p1tasks, p2tasks, p3tasks, p4tasks})
         for (auto& t : arr) totalSeconds += t["estimated_seconds"].get<uint32_t>();
 
-    return {
+    return nlohmann::json::object({
         {"phases", json::array({
             phase("analysis_preparation", 1, p1tasks),
             phase("kernel_implementation", 2, p2tasks),
@@ -525,13 +525,13 @@ json MetaPlanner::quantPlan(const std::string& wish) {
             phase("integration_telemetry", 4, p4tasks)
         })},
         {"dependencies", deps},
-        {"cost_estimate", {
+        {"cost_estimate", nlohmann::json::object({
             {"total_estimated_seconds", totalSeconds},
             {"parallel_critical_path_seconds", totalSeconds / 2},
             {"phase_count", 4},
             {"task_count", 11}
-        }}
-    };
+        })}
+    });
 }
 
 
@@ -547,11 +547,11 @@ json MetaPlanner::kernelPlan(const std::string& wish) {
     // Phase 1: Research & snapshot
     json p1tasks = json::array();
     auto t1 = task("index_symbols", "src/asm",
-        {{"scope", "asm_kernels"}, {"filter", kernelLower}}, 3, 120, "context_analyzer");
+        nlohmann::json::object({{"scope", "asm_kernels"}, {"filter", kernelLower}}), 3, 120, "context_analyzer");
     auto t2 = task("analyze_deps", kernelLower + "_deps",
-        {{"target", kernel}, {"check_isa", true}}, 3, 90, "context_analyzer");
+        nlohmann::json::object({{"target", kernel}, {"check_isa", true}}), 3, 90, "context_analyzer");
     auto t3 = task("git_snapshot", "pre_kernel_" + kernelLower,
-        {{"message", "Snapshot before " + kernel + " kernel development"}}, 2, 3, "agentic_loop");
+        nlohmann::json::object({{"message", "Snapshot before " + kernel + " kernel development"}}), 2, 3, "agentic_loop");
     p1tasks.push_back(t1);
     p1tasks.push_back(t2);
     p1tasks.push_back(t3);
@@ -559,62 +559,62 @@ json MetaPlanner::kernelPlan(const std::string& wish) {
     // Phase 2: Implementation
     json p2tasks = json::array();
     auto t4 = task("add_asm", kernelLower + ".asm",
-        {{"target", kernel}, {"isa", "x86-64"}, {"calling_convention", "ms_abi"},
-         {"registers", json::array({"rax","rbx","rcx","rdx","r8","r9","xmm0","xmm1"})}},
+        nlohmann::json::object({{"target", kernel}, {"isa", "x86-64"}, {"calling_convention", "ms_abi"},
+         {"registers", json::array({"rax","rbx","rcx","rdx","r8","r9","xmm0","xmm1"})}}),
         8, 240, "hotpatch_engine");
     auto t5 = task("add_cpp", kernelLower + "_bridge.cpp",
-        {{"target", kernel}, {"bridge_type", "extern_c"},
-         {"includes", json::array({kernelLower + ".asm"})}},
+        nlohmann::json::object({{"target", kernel}, {"bridge_type", "extern_c"},
+         {"includes", json::array({kernelLower + ".asm"})}}),
         7, 60, "refactor_engine");
     auto t6 = task("add_cpp", kernelLower + "_fallback.cpp",
-        {{"target", kernel}, {"fallback", true}, {"guard_macro", "RAWRXD_LINK_" + toUpper(kernel) + "_ASM"}},
+        nlohmann::json::object({{"target", kernel}, {"fallback", true}, {"guard_macro", "RAWRXD_LINK_" + toUpper(kernel) + "_ASM"}}),
         6, 90, "refactor_engine");
     p2tasks.push_back(t4);
     p2tasks.push_back(t5);
     p2tasks.push_back(t6);
 
-    deps.push_back(depEdge(t1["id"], t4["id"]));
-    deps.push_back(depEdge(t3["id"], t4["id"]));
-    deps.push_back(depEdge(t4["id"], t5["id"]));
+    deps.push_back(depEdge(t1["id"].get<uint32_t>(), t4["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t3["id"].get<uint32_t>(), t4["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t4["id"].get<uint32_t>(), t5["id"].get<uint32_t>()));
     // t6 (fallback) can be parallel with t4/t5
-    deps.push_back(depEdge(t2["id"], t6["id"]));
-    deps.push_back(depEdge(t3["id"], t6["id"]));
+    deps.push_back(depEdge(t2["id"].get<uint32_t>(), t6["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t3["id"].get<uint32_t>(), t6["id"].get<uint32_t>()));
 
     // Phase 3: Validation
     json p3tasks = json::array();
     auto t7 = task("compile", kernelLower,
-        {{"config", "Release"}, {"target", kernelLower}}, 7, 120, "swarm_engine");
+        nlohmann::json::object({{"config", "Release"}, {"target", kernelLower}}), 7, 120, "swarm_engine");
     auto t8 = task("self_test", kernelLower + "_regression",
-        {{"cases", 100}, {"include_edge_cases", true}}, 6, 180, "swarm_engine");
+        nlohmann::json::object({{"cases", 100}, {"include_edge_cases", true}}), 6, 180, "swarm_engine");
     auto t9 = task("bench", kernelLower + "_performance",
-        {{"metric", "tokens/sec"}, {"threshold", 1.05}, {"iterations", 100}}, 6, 300, "inference_core");
+        nlohmann::json::object({{"metric", "tokens/sec"}, {"threshold", 1.05}, {"iterations", 100}}), 6, 300, "inference_core");
     p3tasks.push_back(t7);
     p3tasks.push_back(t8);
     p3tasks.push_back(t9);
 
-    deps.push_back(depEdge(t5["id"], t7["id"]));
-    deps.push_back(depEdge(t6["id"], t7["id"]));
-    deps.push_back(depEdge(t7["id"], t8["id"]));
-    deps.push_back(depEdge(t7["id"], t9["id"]));
+    deps.push_back(depEdge(t5["id"].get<uint32_t>(), t7["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t6["id"].get<uint32_t>(), t7["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t7["id"].get<uint32_t>(), t8["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t7["id"].get<uint32_t>(), t9["id"].get<uint32_t>()));
 
     // Phase 4: Hot-reload integration
     json p4tasks = json::array();
     auto t10 = task("hot_reload", kernelLower,
-        {{"module", kernel}, {"verify_after_reload", true}}, 7, 5, "hotpatch_engine");
+        nlohmann::json::object({{"module", kernel}, {"verify_after_reload", true}}), 7, 5, "hotpatch_engine");
     auto t11 = task("meta_learn", kernelLower + "_baseline",
-        {{"kernel", kernel}, {"gpu", "autodetect"}, {"baseline", true}}, 4, 30, "inference_core");
+        nlohmann::json::object({{"kernel", kernel}, {"gpu", "autodetect"}, {"baseline", true}}), 4, 30, "inference_core");
     p4tasks.push_back(t10);
     p4tasks.push_back(t11);
 
-    deps.push_back(depEdge(t8["id"], t10["id"]));
-    deps.push_back(depEdge(t9["id"], t10["id"]));
-    deps.push_back(depEdge(t10["id"], t11["id"]));
+    deps.push_back(depEdge(t8["id"].get<uint32_t>(), t10["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t9["id"].get<uint32_t>(), t10["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t10["id"].get<uint32_t>(), t11["id"].get<uint32_t>()));
 
     uint32_t totalSeconds = 0;
     for (auto& arr : {p1tasks, p2tasks, p3tasks, p4tasks})
         for (auto& t : arr) totalSeconds += t["estimated_seconds"].get<uint32_t>();
 
-    return {
+    return nlohmann::json::object({
         {"phases", json::array({
             phase("research_snapshot", 1, p1tasks),
             phase("implementation", 2, p2tasks),
@@ -622,13 +622,13 @@ json MetaPlanner::kernelPlan(const std::string& wish) {
             phase("hot_reload_integration", 4, p4tasks)
         })},
         {"dependencies", deps},
-        {"cost_estimate", {
+        {"cost_estimate", nlohmann::json::object({
             {"total_estimated_seconds", totalSeconds},
             {"parallel_critical_path_seconds", totalSeconds * 3 / 5},
             {"phase_count", 4},
             {"task_count", 11}
-        }}
-    };
+        })}
+    });
 }
 
 
@@ -644,14 +644,14 @@ json MetaPlanner::releasePlan(const std::string& wish) {
     // Phase 1: Pre-release validation
     json p1tasks = json::array();
     auto t1 = task("self_test", "all",
-        {{"scope", "full_suite"}, {"fail_fast", false}}, 9, 300, "swarm_engine");
+        nlohmann::json::object({{"scope", "full_suite"}, {"fail_fast", false}}), 9, 300, "swarm_engine");
     auto t2 = task("bench", "release_benchmarks",
-        {{"metric", "tokens/sec"}, {"compare_baseline", true}, {"models", json::array({"7B", "13B"})}},
+        nlohmann::json::object({{"metric", "tokens/sec"}, {"compare_baseline", true}, {"models", json::array({"7B", "13B"})}}),
         8, 300, "inference_core");
     auto t3 = task("scan_security", "release_audit",
-        {{"scan_deps", true}, {"check_cve", true}}, 7, 180, "context_analyzer");
+        nlohmann::json::object({{"scan_deps", true}, {"check_cve", true}}), 7, 180, "context_analyzer");
     auto t4 = task("git_snapshot", "pre_release_" + part,
-        {{"message", "Pre-release snapshot (" + part + ")"}}, 2, 3, "agentic_loop");
+        nlohmann::json::object({{"message", "Pre-release snapshot (" + part + ")"}}), 2, 3, "agentic_loop");
     p1tasks.push_back(t1);
     p1tasks.push_back(t2);
     p1tasks.push_back(t3);
@@ -660,59 +660,59 @@ json MetaPlanner::releasePlan(const std::string& wish) {
     // Phase 2: Build & sign
     json p2tasks = json::array();
     auto t5 = task("bump_version", part,
-        {{"part", part}}, 8, 5, "agentic_loop");
+        nlohmann::json::object({{"part", part}}), 8, 5, "agentic_loop");
     auto t6 = task("compile", "RawrXD-Shell",
-        {{"config", "Release"}, {"static_crt", true}, {"lto", true}}, 9, 180, "swarm_engine");
+        nlohmann::json::object({{"config", "Release"}, {"static_crt", true}, {"lto", true}}), 9, 180, "swarm_engine");
     auto t7 = task("sign_binary", "RawrXD-Shell.exe",
-        {{"certificate", "code_signing"}, {"timestamp", true}}, 8, 15, "agentic_loop");
+        nlohmann::json::object({{"certificate", "code_signing"}, {"timestamp", true}}), 8, 15, "agentic_loop");
     p2tasks.push_back(t5);
     p2tasks.push_back(t6);
     p2tasks.push_back(t7);
 
-    deps.push_back(depEdge(t1["id"], t5["id"]));
-    deps.push_back(depEdge(t2["id"], t5["id"]));
-    deps.push_back(depEdge(t3["id"], t5["id"]));
-    deps.push_back(depEdge(t4["id"], t5["id"]));
-    deps.push_back(depEdge(t5["id"], t6["id"]));
-    deps.push_back(depEdge(t6["id"], t7["id"]));
+    deps.push_back(depEdge(t1["id"].get<uint32_t>(), t5["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t2["id"].get<uint32_t>(), t5["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t3["id"].get<uint32_t>(), t5["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t4["id"].get<uint32_t>(), t5["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t5["id"].get<uint32_t>(), t6["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t6["id"].get<uint32_t>(), t7["id"].get<uint32_t>()));
 
     // Phase 3: Distribution
     json p3tasks = json::array();
     auto t8 = task("upload_cdn", "RawrXD-Shell.exe",
-        {{"targets", json::array({"github_releases", "cdn_primary"})}, {"checksum", "sha256"}},
+        nlohmann::json::object({{"targets", json::array({"github_releases", "cdn_primary"})}, {"checksum", "sha256"}}),
         7, 60, "agentic_loop");
     auto t9 = task("create_release", "v_" + part,
-        {{"changelog", wish}, {"prerelease", false}, {"draft", false}}, 7, 10, "agentic_loop");
+        nlohmann::json::object({{"changelog", wish}, {"prerelease", false}, {"draft", false}}), 7, 10, "agentic_loop");
     auto t10 = task("notify", "release_announcement",
-        {{"channels", json::array({"discord", "twitter"})},
-         {"message", "New " + part + " release shipped"}},
+        nlohmann::json::object({{"channels", json::array({"discord", "twitter"})},
+         {"message", "New " + part + " release shipped"}}),
         3, 5, "custom");
     p3tasks.push_back(t8);
     p3tasks.push_back(t9);
     p3tasks.push_back(t10);
 
-    deps.push_back(depEdge(t7["id"], t8["id"]));
-    deps.push_back(depEdge(t8["id"], t9["id"]));
-    deps.push_back(depEdge(t9["id"], t10["id"]));
+    deps.push_back(depEdge(t7["id"].get<uint32_t>(), t8["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t8["id"].get<uint32_t>(), t9["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t9["id"].get<uint32_t>(), t10["id"].get<uint32_t>()));
 
     uint32_t totalSeconds = 0;
     for (auto& arr : {p1tasks, p2tasks, p3tasks})
         for (auto& t : arr) totalSeconds += t["estimated_seconds"].get<uint32_t>();
 
-    return {
+    return nlohmann::json::object({
         {"phases", json::array({
             phase("pre_release_validation", 1, p1tasks, "all_pass"),
             phase("build_sign", 2, p2tasks),
             phase("distribution", 3, p3tasks)
         })},
         {"dependencies", deps},
-        {"cost_estimate", {
+        {"cost_estimate", nlohmann::json::object({
             {"total_estimated_seconds", totalSeconds},
             {"parallel_critical_path_seconds", 800},
             {"phase_count", 3},
             {"task_count", 10}
-        }}
-    };
+        })}
+    });
 }
 
 
@@ -727,11 +727,11 @@ json MetaPlanner::fixPlan(const std::string& wish) {
     // Phase 1: Diagnosis
     json p1tasks = json::array();
     auto t1 = task("index_symbols", target,
-        {{"scope", "crash_related"}, {"include_callgraph", true}}, 8, 60, "context_analyzer");
+        nlohmann::json::object({{"scope", "crash_related"}, {"include_callgraph", true}}), 8, 60, "context_analyzer");
     auto t2 = task("analyze_deps", target + "_deps",
-        {{"target", target}, {"trace_crash_path", true}}, 7, 90, "context_analyzer");
+        nlohmann::json::object({{"target", target}, {"trace_crash_path", true}}), 7, 90, "context_analyzer");
     auto t3 = task("git_snapshot", "pre_fix_" + target,
-        {{"message", "Pre-fix snapshot: " + wish}}, 9, 3, "agentic_loop");
+        nlohmann::json::object({{"message", "Pre-fix snapshot: " + wish}}), 9, 3, "agentic_loop");
     p1tasks.push_back(t1);
     p1tasks.push_back(t2);
     p1tasks.push_back(t3);
@@ -741,31 +741,31 @@ json MetaPlanner::fixPlan(const std::string& wish) {
     if (sig.isMultiFile) {
         // Multi-file fix: scan and fix across affected files
         auto t4 = task("edit_source", target,
-            {{"strategy", "scan_and_fix"}, {"scope", "all_affected"},
+            nlohmann::json::object({{"strategy", "scan_and_fix"}, {"scope", "all_affected"},
              {"pattern", "error_pattern"}, {"replacement", "fix_pattern"},
-             {"max_files", 50}},
+             {"max_files", 50}}),
             9, 120, "refactor_engine");
         p2tasks.push_back(t4);
-        deps.push_back(depEdge(t1["id"], t4["id"]));
-        deps.push_back(depEdge(t2["id"], t4["id"]));
-        deps.push_back(depEdge(t3["id"], t4["id"]));
+        deps.push_back(depEdge(t1["id"].get<uint32_t>(), t4["id"].get<uint32_t>()));
+        deps.push_back(depEdge(t2["id"].get<uint32_t>(), t4["id"].get<uint32_t>()));
+        deps.push_back(depEdge(t3["id"].get<uint32_t>(), t4["id"].get<uint32_t>()));
     } else {
         auto t4 = task("edit_source", target,
-            {{"strategy", "targeted_fix"}, {"context_lines", 10},
-             {"verify_syntax", true}},
+            nlohmann::json::object({{"strategy", "targeted_fix"}, {"context_lines", 10},
+             {"verify_syntax", true}}),
             9, 30, "refactor_engine");
         p2tasks.push_back(t4);
-        deps.push_back(depEdge(t1["id"], t4["id"]));
-        deps.push_back(depEdge(t2["id"], t4["id"]));
-        deps.push_back(depEdge(t3["id"], t4["id"]));
+        deps.push_back(depEdge(t1["id"].get<uint32_t>(), t4["id"].get<uint32_t>()));
+        deps.push_back(depEdge(t2["id"].get<uint32_t>(), t4["id"].get<uint32_t>()));
+        deps.push_back(depEdge(t3["id"].get<uint32_t>(), t4["id"].get<uint32_t>()));
     }
 
     // Phase 3: Validation
     json p3tasks = json::array();
     auto t5 = task("compile", target,
-        {{"config", "Debug"}, {"warnings_as_errors", true}}, 8, 120, "swarm_engine");
+        nlohmann::json::object({{"config", "Debug"}, {"warnings_as_errors", true}}), 8, 120, "swarm_engine");
     auto t6 = task("self_test", target + "_regression",
-        {{"cases", 30}, {"include_original_repro", true}}, 8, 180, "swarm_engine");
+        nlohmann::json::object({{"cases", 30}, {"include_original_repro", true}}), 8, 180, "swarm_engine");
     p3tasks.push_back(t5);
     p3tasks.push_back(t6);
 
@@ -773,20 +773,20 @@ json MetaPlanner::fixPlan(const std::string& wish) {
     for (auto& pt : p2tasks) {
         deps.push_back(depEdge(pt["id"].get<uint32_t>(), t5["id"].get<uint32_t>()));
     }
-    deps.push_back(depEdge(t5["id"], t6["id"]));
+    deps.push_back(depEdge(t5["id"].get<uint32_t>(), t6["id"].get<uint32_t>()));
 
     // Phase 4: Finalize (only if critical severity)
     json p4tasks = json::array();
     if (sig.severity == "critical") {
         auto t7 = task("hot_reload", target,
-            {{"module", target}, {"verify_after_reload", true}}, 9, 5, "hotpatch_engine");
+            nlohmann::json::object({{"module", target}, {"verify_after_reload", true}}), 9, 5, "hotpatch_engine");
         auto t8 = task("notify", "fix_deployed",
-            {{"severity", "critical"}, {"message", "Critical fix deployed: " + wish}},
+            nlohmann::json::object({{"severity", "critical"}, {"message", "Critical fix deployed: " + wish}}),
             3, 2, "custom");
         p4tasks.push_back(t7);
         p4tasks.push_back(t8);
-        deps.push_back(depEdge(t6["id"], t7["id"]));
-        deps.push_back(depEdge(t7["id"], t8["id"]));
+        deps.push_back(depEdge(t6["id"].get<uint32_t>(), t7["id"].get<uint32_t>()));
+        deps.push_back(depEdge(t7["id"].get<uint32_t>(), t8["id"].get<uint32_t>()));
     }
 
     uint32_t totalSeconds = 0;
@@ -802,16 +802,16 @@ json MetaPlanner::fixPlan(const std::string& wish) {
         phases.push_back(phase("finalize_deploy", 4, p4tasks));
     }
 
-    return {
+    return nlohmann::json::object({
         {"phases", phases},
         {"dependencies", deps},
-        {"cost_estimate", {
+        {"cost_estimate", nlohmann::json::object({
             {"total_estimated_seconds", totalSeconds},
             {"parallel_critical_path_seconds", totalSeconds * 2 / 3},
             {"phase_count", phases.size()},
             {"task_count", p1tasks.size() + p2tasks.size() + p3tasks.size() + p4tasks.size()}
-        }}
-    };
+        })}
+    });
 }
 
 
@@ -828,18 +828,18 @@ json MetaPlanner::perfPlan(const std::string& wish) {
     // Phase 1: Profile & baseline
     json p1tasks = json::array();
     auto t1 = task("profile", target + "_hotspots",
-        {{"metric", metric}, {"profiler", "rdtsc_histogram"},
-         {"sample_count", 10000}, {"warm_up", 100}},
+        nlohmann::json::object({{"metric", metric}, {"profiler", "rdtsc_histogram"},
+         {"sample_count", 10000}, {"warm_up", 100}}),
         7, 240, "inference_core");
     auto t2 = task("bench", target + "_baseline",
-        {{"metric", metric}, {"iterations", 100}, {"record_baseline", true},
-         {"models", json::array({"7B", "13B"})}},
+        nlohmann::json::object({{"metric", metric}, {"iterations", 100}, {"record_baseline", true},
+         {"models", json::array({"7B", "13B"})}}),
         7, 300, "inference_core");
     auto t3 = task("analyze_deps", target + "_bottlenecks",
-        {{"target", target}, {"analysis_type", "performance"}, {"include_cache_analysis", true}},
+        nlohmann::json::object({{"target", target}, {"analysis_type", "performance"}, {"include_cache_analysis", true}}),
         6, 90, "context_analyzer");
     auto t4 = task("git_snapshot", "pre_perf_" + target,
-        {{"message", "Performance baseline snapshot"}}, 2, 3, "agentic_loop");
+        nlohmann::json::object({{"message", "Performance baseline snapshot"}}), 2, 3, "agentic_loop");
     p1tasks.push_back(t1);
     p1tasks.push_back(t2);
     p1tasks.push_back(t3);
@@ -852,54 +852,54 @@ json MetaPlanner::perfPlan(const std::string& wish) {
     searchSpace["thread_count"] = json::array({1, 2, 4, 8});
     searchSpace["prefetch_distance"] = json::array({64, 128, 256, 512});
     auto t5 = task("auto_tune", target + "_quant_params",
-        {{"metric", metric}, {"search_space", searchSpace}},
+        nlohmann::json::object({{"metric", metric}, {"search_space", searchSpace}}),
         8, 600, "inference_core");
     auto t6 = task("hotpatch", target + "_critical_path",
-        {{"strategy", "inline_hot_loops"}, {"threshold_cycles", 1000}},
+        nlohmann::json::object({{"strategy", "inline_hot_loops"}, {"threshold_cycles", 1000}}),
         8, 120, "hotpatch_engine");
     p2tasks.push_back(t5);
     p2tasks.push_back(t6);
 
-    deps.push_back(depEdge(t1["id"], t5["id"]));
-    deps.push_back(depEdge(t2["id"], t5["id"]));
-    deps.push_back(depEdge(t3["id"], t6["id"]));
-    deps.push_back(depEdge(t4["id"], t5["id"]));
-    deps.push_back(depEdge(t4["id"], t6["id"]));
+    deps.push_back(depEdge(t1["id"].get<uint32_t>(), t5["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t2["id"].get<uint32_t>(), t5["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t3["id"].get<uint32_t>(), t6["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t4["id"].get<uint32_t>(), t5["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t4["id"].get<uint32_t>(), t6["id"].get<uint32_t>()));
 
     // Phase 3: Verify improvement
     json p3tasks = json::array();
     auto t7 = task("bench", target + "_post_optimization",
-        {{"metric", metric}, {"threshold", 1.10}, {"compare_baseline", true},
-         {"iterations", 200}},
+        nlohmann::json::object({{"metric", metric}, {"threshold", 1.10}, {"compare_baseline", true},
+         {"iterations", 200}}),
         9, 300, "inference_core");
     auto t8 = task("self_test", target + "_regression",
-        {{"cases", 50}, {"verify_correctness", true}, {"tolerance", 0.0001}},
+        nlohmann::json::object({{"cases", 50}, {"verify_correctness", true}, {"tolerance", 0.0001}}),
         8, 180, "swarm_engine");
     p3tasks.push_back(t7);
     p3tasks.push_back(t8);
 
-    deps.push_back(depEdge(t5["id"], t7["id"]));
-    deps.push_back(depEdge(t6["id"], t7["id"]));
-    deps.push_back(depEdge(t5["id"], t8["id"]));
-    deps.push_back(depEdge(t6["id"], t8["id"]));
+    deps.push_back(depEdge(t5["id"].get<uint32_t>(), t7["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t6["id"].get<uint32_t>(), t7["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t5["id"].get<uint32_t>(), t8["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t6["id"].get<uint32_t>(), t8["id"].get<uint32_t>()));
 
     // Phase 4: Record results
     json p4tasks = json::array();
     auto t9 = task("meta_learn", target + "_perf_record",
-        {{"metric", metric}, {"store_improvement_delta", true}},
+        nlohmann::json::object({{"metric", metric}, {"store_improvement_delta", true}}),
         4, 30, "inference_core");
-    auto t10 = task("hot_reload", target, {{"verify_after_reload", true}}, 6, 5, "hotpatch_engine");
+    auto t10 = task("hot_reload", target, nlohmann::json::object({{"verify_after_reload", true}}), 6, 5, "hotpatch_engine");
     p4tasks.push_back(t9);
     p4tasks.push_back(t10);
 
-    deps.push_back(depEdge(t7["id"], t9["id"]));
-    deps.push_back(depEdge(t8["id"], t10["id"]));
+    deps.push_back(depEdge(t7["id"].get<uint32_t>(), t9["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t8["id"].get<uint32_t>(), t10["id"].get<uint32_t>()));
 
     uint32_t totalSeconds = 0;
     for (auto& arr : {p1tasks, p2tasks, p3tasks, p4tasks})
         for (auto& t : arr) totalSeconds += t["estimated_seconds"].get<uint32_t>();
 
-    return {
+    return nlohmann::json::object({
         {"phases", json::array({
             phase("profile_baseline", 1, p1tasks),
             phase("optimization", 2, p2tasks),
@@ -907,13 +907,13 @@ json MetaPlanner::perfPlan(const std::string& wish) {
             phase("record_results", 4, p4tasks)
         })},
         {"dependencies", deps},
-        {"cost_estimate", {
+        {"cost_estimate", nlohmann::json::object({
             {"total_estimated_seconds", totalSeconds},
             {"parallel_critical_path_seconds", totalSeconds * 3 / 5},
             {"phase_count", 4},
             {"task_count", 10}
-        }}
-    };
+        })}
+    });
 }
 
 
@@ -929,10 +929,10 @@ json MetaPlanner::testPlan(const std::string& wish) {
     // Phase 1: Coverage analysis
     json p1tasks = json::array();
     auto t1 = task("index_symbols", "src",
-        {{"scope", "testable_functions"}, {"exclude", json::array({"vendor", "third_party"})}},
+        nlohmann::json::object({{"scope", "testable_functions"}, {"exclude", json::array({"vendor", "third_party"})}}),
         5, 120, "context_analyzer");
     auto t2 = task("analyze_deps", target + "_test_gaps",
-        {{"analysis_type", "coverage_gaps"}, {"min_coverage", 0.80}},
+        nlohmann::json::object({{"analysis_type", "coverage_gaps"}, {"min_coverage", 0.80}}),
         5, 90, "context_analyzer");
     p1tasks.push_back(t1);
     p1tasks.push_back(t2);
@@ -940,41 +940,41 @@ json MetaPlanner::testPlan(const std::string& wish) {
     // Phase 2: Test generation
     json p2tasks = json::array();
     auto t3 = task("self_test", target + "_unit",
-        {{"cases", 200}, {"generate_missing", true}, {"style", "gtest"}},
+        nlohmann::json::object({{"cases", 200}, {"generate_missing", true}, {"style", "gtest"}}),
         7, 300, "swarm_engine");
     auto t4 = task("integration_test", target + "_integration",
-        {{"test_interactions", true}, {"mock_externals", true}},
+        nlohmann::json::object({{"test_interactions", true}, {"mock_externals", true}}),
         6, 600, "swarm_engine");
     p2tasks.push_back(t3);
     p2tasks.push_back(t4);
 
-    deps.push_back(depEdge(t1["id"], t3["id"]));
-    deps.push_back(depEdge(t2["id"], t3["id"]));
-    deps.push_back(depEdge(t1["id"], t4["id"]));
-    deps.push_back(depEdge(t2["id"], t4["id"]));
+    deps.push_back(depEdge(t1["id"].get<uint32_t>(), t3["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t2["id"].get<uint32_t>(), t3["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t1["id"].get<uint32_t>(), t4["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t2["id"].get<uint32_t>(), t4["id"].get<uint32_t>()));
 
     // Phase 3: Fuzz testing (conditional)
     json p3tasks = json::array();
     if (doFuzz) {
         auto t5 = task("fuzz_test", target + "_fuzz",
-            {{"cases", 10000}, {"corpus_dir", ".rawrxd/fuzz_corpus/" + target},
+            nlohmann::json::object({{"cases", 10000}, {"corpus_dir", ".rawrxd/fuzz_corpus/" + target},
              {"timeout_per_case_ms", 5000},
-             {"targets", json::array({"buffer_overflow", "null_deref", "integer_overflow", "format_string"})}},
+             {"targets", json::array({"buffer_overflow", "null_deref", "integer_overflow", "format_string"})}}),
             6, 900, "swarm_engine");
         p3tasks.push_back(t5);
-        deps.push_back(depEdge(t3["id"], t5["id"]));
+        deps.push_back(depEdge(t3["id"].get<uint32_t>(), t5["id"].get<uint32_t>()));
     }
 
     // Phase 4: Report
     json p4tasks = json::array();
     auto t6 = task("bench", target + "_coverage_report",
-        {{"metric", "coverage"}, {"format", "lcov"}, {"threshold", 0.85}},
+        nlohmann::json::object({{"metric", "coverage"}, {"format", "lcov"}, {"threshold", 0.85}}),
         5, 60, "inference_core");
     p4tasks.push_back(t6);
 
     // Report depends on all prior tests
-    deps.push_back(depEdge(t3["id"], t6["id"]));
-    deps.push_back(depEdge(t4["id"], t6["id"]));
+    deps.push_back(depEdge(t3["id"].get<uint32_t>(), t6["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t4["id"].get<uint32_t>(), t6["id"].get<uint32_t>()));
     if (!p3tasks.empty()) {
         deps.push_back(depEdge(p3tasks[(size_t)0]["id"].get<uint32_t>(), t6["id"].get<uint32_t>()));
     }
@@ -990,16 +990,16 @@ json MetaPlanner::testPlan(const std::string& wish) {
     if (!p3tasks.empty()) phases.push_back(phase("fuzz_testing", 3, p3tasks));
     phases.push_back(phase("report", doFuzz ? 4 : 3, p4tasks));
 
-    return {
+    return nlohmann::json::object({
         {"phases", phases},
         {"dependencies", deps},
-        {"cost_estimate", {
+        {"cost_estimate", nlohmann::json::object({
             {"total_estimated_seconds", totalSeconds},
             {"parallel_critical_path_seconds", totalSeconds * 2 / 3},
             {"phase_count", phases.size()},
             {"task_count", p1tasks.size() + p2tasks.size() + p3tasks.size() + p4tasks.size()}
-        }}
-    };
+        })}
+    });
 }
 
 
@@ -1014,16 +1014,16 @@ json MetaPlanner::refactorPlan(const std::string& wish) {
     // Phase 1: Impact analysis
     json p1tasks = json::array();
     auto t1 = task("index_symbols", target,
-        {{"scope", "all_references"}, {"include_callgraph", true}, {"include_type_hierarchy", true}},
+        nlohmann::json::object({{"scope", "all_references"}, {"include_callgraph", true}, {"include_type_hierarchy", true}}),
         7, 120, "context_analyzer");
     auto t2 = task("analyze_deps", target + "_refactor_impact",
-        {{"target", target}, {"analysis_type", "impact"},
-         {"depth", 5}, {"include_transitive", true}},
+        nlohmann::json::object({{"target", target}, {"analysis_type", "impact"},
+         {"depth", 5}, {"include_transitive", true}}),
         7, 120, "context_analyzer");
     auto t3 = task("git_snapshot", "pre_refactor_" + target,
-        {{"message", "Snapshot before refactoring " + target}, {"tag", true}}, 9, 3, "agentic_loop");
+        nlohmann::json::object({{"message", "Snapshot before refactoring " + target}, {"tag", true}}), 9, 3, "agentic_loop");
     auto t4 = task("self_test", target + "_pre_refactor_baseline",
-        {{"cases", 100}, {"record_baseline", true}}, 6, 180, "swarm_engine");
+        nlohmann::json::object({{"cases", 100}, {"record_baseline", true}}), 6, 180, "swarm_engine");
     p1tasks.push_back(t1);
     p1tasks.push_back(t2);
     p1tasks.push_back(t3);
@@ -1033,24 +1033,24 @@ json MetaPlanner::refactorPlan(const std::string& wish) {
     json p2tasks = json::array();
     if (ci_contains(wish, "extract")) {
         auto t5 = task("extract", target,
-            {{"extract_type", "function"}, {"preserve_semantics", true}}, 8, 60, "refactor_engine");
+            nlohmann::json::object({{"extract_type", "function"}, {"preserve_semantics", true}}), 8, 60, "refactor_engine");
         p2tasks.push_back(t5);
     } else if (ci_contains(wish, "rename")) {
         std::string newName = textAfter(wish, "to");
         if (newName.empty()) newName = textAfter(wish, "rename");
         auto t5 = task("rename", target,
-            {{"new_name", newName}, {"update_all_references", true}, {"update_comments", true}},
+            nlohmann::json::object({{"new_name", newName}, {"update_all_references", true}, {"update_comments", true}}),
             8, 30, "refactor_engine");
         p2tasks.push_back(t5);
     } else if (ci_contains(wish, "inline")) {
         auto t5 = task("inline_fn", target,
-            {{"inline_all_call_sites", true}, {"verify_semantics", true}}, 8, 45, "refactor_engine");
+            nlohmann::json::object({{"inline_all_call_sites", true}, {"verify_semantics", true}}), 8, 45, "refactor_engine");
         p2tasks.push_back(t5);
     } else {
         // Generic structural refactor
         auto t5 = task("refactor", target,
-            {{"strategy", "restructure"}, {"preserve_api", !sig.isBreakingChange},
-             {"update_includes", true}, {"update_cmake", true}},
+            nlohmann::json::object({{"strategy", "restructure"}, {"preserve_api", !sig.isBreakingChange},
+             {"update_includes", true}, {"update_cmake", true}}),
             8, 180, "refactor_engine");
         p2tasks.push_back(t5);
     }
@@ -1064,12 +1064,12 @@ json MetaPlanner::refactorPlan(const std::string& wish) {
     // Phase 3: Validation
     json p3tasks = json::array();
     auto t6 = task("compile", "all",
-        {{"config", "Release"}, {"warnings_as_errors", true}}, 9, 180, "swarm_engine");
+        nlohmann::json::object({{"config", "Release"}, {"warnings_as_errors", true}}), 9, 180, "swarm_engine");
     auto t7 = task("self_test", target + "_post_refactor",
-        {{"cases", 100}, {"compare_baseline", true}, {"tolerance", 0.0}},
+        nlohmann::json::object({{"cases", 100}, {"compare_baseline", true}, {"tolerance", 0.0}}),
         9, 180, "swarm_engine");
     auto t8 = task("self_test", "full_regression",
-        {{"cases", 500}, {"scope", "full_suite"}}, 8, 300, "swarm_engine");
+        nlohmann::json::object({{"cases", 500}, {"scope", "full_suite"}}), 8, 300, "swarm_engine");
     p3tasks.push_back(t6);
     p3tasks.push_back(t7);
     p3tasks.push_back(t8);
@@ -1077,27 +1077,27 @@ json MetaPlanner::refactorPlan(const std::string& wish) {
     for (auto& pt : p2tasks) {
         deps.push_back(depEdge(pt["id"].get<uint32_t>(), t6["id"].get<uint32_t>()));
     }
-    deps.push_back(depEdge(t6["id"], t7["id"]));
-    deps.push_back(depEdge(t6["id"], t8["id"]));
+    deps.push_back(depEdge(t6["id"].get<uint32_t>(), t7["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t6["id"].get<uint32_t>(), t8["id"].get<uint32_t>()));
 
     uint32_t totalSeconds = 0;
     for (auto& arr : {p1tasks, p2tasks, p3tasks})
         for (auto& t : arr) totalSeconds += t["estimated_seconds"].get<uint32_t>();
 
-    return {
+    return nlohmann::json::object({
         {"phases", json::array({
             phase("impact_analysis", 1, p1tasks),
             phase("refactor_execution", 2, p2tasks),
             phase("validation", 3, p3tasks, "all_pass")
         })},
         {"dependencies", deps},
-        {"cost_estimate", {
+        {"cost_estimate", nlohmann::json::object({
             {"total_estimated_seconds", totalSeconds},
             {"parallel_critical_path_seconds", totalSeconds * 2 / 3},
             {"phase_count", 3},
             {"task_count", p1tasks.size() + p2tasks.size() + p3tasks.size()}
-        }}
-    };
+        })}
+    });
 }
 
 
@@ -1112,18 +1112,18 @@ json MetaPlanner::migrationPlan(const std::string& wish) {
     // Phase 1: Assessment
     json p1tasks = json::array();
     auto t1 = task("analyze_deps", target + "_migration_scope",
-        {{"target", target}, {"analysis_type", "migration"},
-         {"detect_breaking_changes", true}, {"depth", 10}},
+        nlohmann::json::object({{"target", target}, {"analysis_type", "migration"},
+         {"detect_breaking_changes", true}, {"depth", 10}}),
         8, 180, "context_analyzer");
     auto t2 = task("index_symbols", "src",
-        {{"scope", "all_references_to_" + target}, {"include_transitive", true}},
+        nlohmann::json::object({{"scope", "all_references_to_" + target}, {"include_transitive", true}}),
         7, 120, "context_analyzer");
     auto t3 = task("git_snapshot", "pre_migration_" + target,
-        {{"message", "Pre-migration snapshot: " + wish}, {"tag", true},
-         {"branch", "migration/" + target}},
+        nlohmann::json::object({{"message", "Pre-migration snapshot: " + wish}, {"tag", true},
+         {"branch", "migration/" + target}}),
         9, 5, "agentic_loop");
     auto t4 = task("self_test", "full_baseline",
-        {{"cases", 500}, {"record_baseline", true}, {"scope", "full_suite"}},
+        nlohmann::json::object({{"cases", 500}, {"record_baseline", true}, {"scope", "full_suite"}}),
         7, 300, "swarm_engine");
     p1tasks.push_back(t1);
     p1tasks.push_back(t2);
@@ -1133,66 +1133,66 @@ json MetaPlanner::migrationPlan(const std::string& wish) {
     // Phase 2: Migration execution (sequential, each step verified)
     json p2tasks = json::array();
     auto t5 = task("migrate", target + "_api_surface",
-        {{"strategy", "incremental"}, {"step", 1},
-         {"update_signatures", true}, {"add_adapters", true}},
+        nlohmann::json::object({{"strategy", "incremental"}, {"step", 1},
+         {"update_signatures", true}, {"add_adapters", true}}),
         9, 240, "agentic_loop");
     auto t6 = task("migrate", target + "_internals",
-        {{"strategy", "incremental"}, {"step", 2},
-         {"update_implementations", true}},
+        nlohmann::json::object({{"strategy", "incremental"}, {"step", 2},
+         {"update_implementations", true}}),
         9, 360, "agentic_loop");
     auto t7 = task("migrate", target + "_tests",
-        {{"strategy", "incremental"}, {"step", 3},
-         {"update_test_expectations", true}},
+        nlohmann::json::object({{"strategy", "incremental"}, {"step", 3},
+         {"update_test_expectations", true}}),
         8, 180, "agentic_loop");
     p2tasks.push_back(t5);
     p2tasks.push_back(t6);
     p2tasks.push_back(t7);
 
-    deps.push_back(depEdge(t1["id"], t5["id"]));
-    deps.push_back(depEdge(t2["id"], t5["id"]));
-    deps.push_back(depEdge(t3["id"], t5["id"]));
-    deps.push_back(depEdge(t5["id"], t6["id"]));  // Sequential: step 1 before step 2
-    deps.push_back(depEdge(t6["id"], t7["id"]));  // Sequential: step 2 before step 3
+    deps.push_back(depEdge(t1["id"].get<uint32_t>(), t5["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t2["id"].get<uint32_t>(), t5["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t3["id"].get<uint32_t>(), t5["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t5["id"].get<uint32_t>(), t6["id"].get<uint32_t>()));  // Sequential: step 1 before step 2
+    deps.push_back(depEdge(t6["id"].get<uint32_t>(), t7["id"].get<uint32_t>()));  // Sequential: step 2 before step 3
 
     // Phase 3: Comprehensive validation
     json p3tasks = json::array();
     auto t8 = task("compile", "all",
-        {{"config", "Release"}, {"warnings_as_errors", true}, {"lto", true}}, 9, 180, "swarm_engine");
+        nlohmann::json::object({{"config", "Release"}, {"warnings_as_errors", true}, {"lto", true}}), 9, 180, "swarm_engine");
     auto t9 = task("self_test", "full_post_migration",
-        {{"cases", 500}, {"compare_baseline", true}, {"tolerance", 0.0}}, 9, 300, "swarm_engine");
+        nlohmann::json::object({{"cases", 500}, {"compare_baseline", true}, {"tolerance", 0.0}}), 9, 300, "swarm_engine");
     auto t10 = task("integration_test", "cross_module",
-        {{"test_interactions", true}, {"focus", target}}, 8, 600, "swarm_engine");
+        nlohmann::json::object({{"test_interactions", true}, {"focus", target}}), 8, 600, "swarm_engine");
     auto t11 = task("bench", "post_migration_perf",
-        {{"metric", "tokens/sec"}, {"compare_baseline", true}, {"regression_threshold", 0.95}},
+        nlohmann::json::object({{"metric", "tokens/sec"}, {"compare_baseline", true}, {"regression_threshold", 0.95}}),
         7, 300, "inference_core");
     p3tasks.push_back(t8);
     p3tasks.push_back(t9);
     p3tasks.push_back(t10);
     p3tasks.push_back(t11);
 
-    deps.push_back(depEdge(t7["id"], t8["id"]));
-    deps.push_back(depEdge(t8["id"], t9["id"]));
-    deps.push_back(depEdge(t8["id"], t10["id"]));
-    deps.push_back(depEdge(t8["id"], t11["id"]));
+    deps.push_back(depEdge(t7["id"].get<uint32_t>(), t8["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t8["id"].get<uint32_t>(), t9["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t8["id"].get<uint32_t>(), t10["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t8["id"].get<uint32_t>(), t11["id"].get<uint32_t>()));
 
     uint32_t totalSeconds = 0;
     for (auto& arr : {p1tasks, p2tasks, p3tasks})
         for (auto& t : arr) totalSeconds += t["estimated_seconds"].get<uint32_t>();
 
-    return {
+    return nlohmann::json::object({
         {"phases", json::array({
             phase("assessment", 1, p1tasks),
             phase("migration_execution", 2, p2tasks, "sequential_pass"),
             phase("comprehensive_validation", 3, p3tasks, "all_pass")
         })},
         {"dependencies", deps},
-        {"cost_estimate", {
+        {"cost_estimate", nlohmann::json::object({
             {"total_estimated_seconds", totalSeconds},
             {"parallel_critical_path_seconds", totalSeconds * 4 / 5},
             {"phase_count", 3},
             {"task_count", p1tasks.size() + p2tasks.size() + p3tasks.size()}
-        }}
-    };
+        })}
+    });
 }
 
 
@@ -1207,19 +1207,19 @@ json MetaPlanner::securityPlan(const std::string& wish) {
     // Phase 1: Security scan
     json p1tasks = json::array();
     auto t1 = task("scan_security", "dependency_audit",
-        {{"scan_deps", true}, {"check_cve", true}, {"severity_threshold", "medium"}},
+        nlohmann::json::object({{"scan_deps", true}, {"check_cve", true}, {"severity_threshold", "medium"}}),
         9, 180, "context_analyzer");
     auto t2 = task("scan_security", "source_audit",
-        {{"scan_source", true}, {"checks", json::array({
+        nlohmann::json::object({{"scan_source", true}, {"checks", json::array({
             "buffer_overflow", "null_deref", "use_after_free", "integer_overflow",
             "format_string", "path_traversal", "injection", "hardcoded_secrets"
-         })}},
+         })}}),
         9, 240, "context_analyzer");
     auto t3 = task("analyze_deps", "attack_surface",
-        {{"target", target}, {"analysis_type", "security"}, {"include_network_endpoints", true}},
+        nlohmann::json::object({{"target", target}, {"analysis_type", "security"}, {"include_network_endpoints", true}}),
         8, 120, "context_analyzer");
     auto t4 = task("git_snapshot", "pre_security_fix",
-        {{"message", "Pre-security-audit snapshot"}}, 5, 3, "agentic_loop");
+        nlohmann::json::object({{"message", "Pre-security-audit snapshot"}}), 5, 3, "agentic_loop");
     p1tasks.push_back(t1);
     p1tasks.push_back(t2);
     p1tasks.push_back(t3);
@@ -1228,60 +1228,60 @@ json MetaPlanner::securityPlan(const std::string& wish) {
     // Phase 2: Remediation
     json p2tasks = json::array();
     auto t5 = task("edit_source", "security_fixes",
-        {{"strategy", "auto_remediate"}, {"severity_min", "medium"},
-         {"add_bounds_checks", true}, {"sanitize_inputs", true}},
+        nlohmann::json::object({{"strategy", "auto_remediate"}, {"severity_min", "medium"},
+         {"add_bounds_checks", true}, {"sanitize_inputs", true}}),
         9, 180, "refactor_engine");
     auto t6 = task("edit_source", "secret_rotation",
-        {{"strategy", "extract_secrets"}, {"target", ".env"},
-         {"remove_hardcoded", true}},
+        nlohmann::json::object({{"strategy", "extract_secrets"}, {"target", ".env"},
+         {"remove_hardcoded", true}}),
         8, 60, "refactor_engine");
     p2tasks.push_back(t5);
     p2tasks.push_back(t6);
 
-    deps.push_back(depEdge(t1["id"], t5["id"]));
-    deps.push_back(depEdge(t2["id"], t5["id"]));
-    deps.push_back(depEdge(t3["id"], t5["id"]));
-    deps.push_back(depEdge(t4["id"], t5["id"]));
-    deps.push_back(depEdge(t4["id"], t6["id"]));
+    deps.push_back(depEdge(t1["id"].get<uint32_t>(), t5["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t2["id"].get<uint32_t>(), t5["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t3["id"].get<uint32_t>(), t5["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t4["id"].get<uint32_t>(), t5["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t4["id"].get<uint32_t>(), t6["id"].get<uint32_t>()));
 
     // Phase 3: Verify fixes
     json p3tasks = json::array();
     auto t7 = task("scan_security", "post_fix_rescan",
-        {{"scan_deps", true}, {"scan_source", true}, {"verify_fixes", true}},
+        nlohmann::json::object({{"scan_deps", true}, {"scan_source", true}, {"verify_fixes", true}}),
         9, 180, "context_analyzer");
     auto t8 = task("fuzz_test", "security_fuzz",
-        {{"cases", 5000}, {"targets", json::array({"buffer_overflow", "null_deref", "injection"})},
-         {"timeout_per_case_ms", 3000}},
+        nlohmann::json::object({{"cases", 5000}, {"targets", json::array({"buffer_overflow", "null_deref", "injection"})},
+         {"timeout_per_case_ms", 3000}}),
         8, 900, "swarm_engine");
     auto t9 = task("self_test", "security_regression",
-        {{"cases", 100}, {"focus", "security"}}, 8, 180, "swarm_engine");
+        nlohmann::json::object({{"cases", 100}, {"focus", "security"}}), 8, 180, "swarm_engine");
     p3tasks.push_back(t7);
     p3tasks.push_back(t8);
     p3tasks.push_back(t9);
 
-    deps.push_back(depEdge(t5["id"], t7["id"]));
-    deps.push_back(depEdge(t6["id"], t7["id"]));
-    deps.push_back(depEdge(t5["id"], t8["id"]));
-    deps.push_back(depEdge(t5["id"], t9["id"]));
+    deps.push_back(depEdge(t5["id"].get<uint32_t>(), t7["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t6["id"].get<uint32_t>(), t7["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t5["id"].get<uint32_t>(), t8["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t5["id"].get<uint32_t>(), t9["id"].get<uint32_t>()));
 
     uint32_t totalSeconds = 0;
     for (auto& arr : {p1tasks, p2tasks, p3tasks})
         for (auto& t : arr) totalSeconds += t["estimated_seconds"].get<uint32_t>();
 
-    return {
+    return nlohmann::json::object({
         {"phases", json::array({
             phase("security_scan", 1, p1tasks),
             phase("remediation", 2, p2tasks),
             phase("verify_fixes", 3, p3tasks, "all_pass")
         })},
         {"dependencies", deps},
-        {"cost_estimate", {
+        {"cost_estimate", nlohmann::json::object({
             {"total_estimated_seconds", totalSeconds},
             {"parallel_critical_path_seconds", totalSeconds * 2 / 3},
             {"phase_count", 3},
             {"task_count", p1tasks.size() + p2tasks.size() + p3tasks.size()}
-        }}
-    };
+        })}
+    });
 }
 
 
@@ -1296,11 +1296,11 @@ json MetaPlanner::genericPlan(const std::string& wish) {
     // Phase 1: Understand scope
     json p1tasks = json::array();
     auto t1 = task("index_symbols", target,
-        {{"scope", "relevant_symbols"}, {"include_callgraph", true}}, 5, 120, "context_analyzer");
+        nlohmann::json::object({{"scope", "relevant_symbols"}, {"include_callgraph", true}}), 5, 120, "context_analyzer");
     auto t2 = task("analyze_deps", target + "_context",
-        {{"target", target}, {"depth", 3}}, 5, 90, "context_analyzer");
+        nlohmann::json::object({{"target", target}, {"depth", 3}}), 5, 90, "context_analyzer");
     auto t3 = task("git_snapshot", "pre_generic_" + target,
-        {{"message", "Snapshot before: " + wish}}, 3, 3, "agentic_loop");
+        nlohmann::json::object({{"message", "Snapshot before: " + wish}}), 3, 3, "agentic_loop");
     p1tasks.push_back(t1);
     p1tasks.push_back(t2);
     p1tasks.push_back(t3);
@@ -1308,45 +1308,45 @@ json MetaPlanner::genericPlan(const std::string& wish) {
     // Phase 2: Execute primary action
     json p2tasks = json::array();
     auto t4 = task("edit_source", target,
-        {{"wish", wish}, {"strategy", "llm_guided"}, {"context_lines", 20},
-         {"verify_syntax", true}},
+        nlohmann::json::object({{"wish", wish}, {"strategy", "llm_guided"}, {"context_lines", 20},
+         {"verify_syntax", true}}),
         7, 120, "agentic_loop");
     p2tasks.push_back(t4);
 
-    deps.push_back(depEdge(t1["id"], t4["id"]));
-    deps.push_back(depEdge(t2["id"], t4["id"]));
-    deps.push_back(depEdge(t3["id"], t4["id"]));
+    deps.push_back(depEdge(t1["id"].get<uint32_t>(), t4["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t2["id"].get<uint32_t>(), t4["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t3["id"].get<uint32_t>(), t4["id"].get<uint32_t>()));
 
     // Phase 3: Validate
     json p3tasks = json::array();
     auto t5 = task("compile", target,
-        {{"config", "Release"}, {"warnings_as_errors", false}}, 7, 120, "swarm_engine");
+        nlohmann::json::object({{"config", "Release"}, {"warnings_as_errors", false}}), 7, 120, "swarm_engine");
     auto t6 = task("self_test", target + "_regression",
-        {{"cases", 20}}, 6, 120, "swarm_engine");
+        nlohmann::json::object({{"cases", 20}}), 6, 120, "swarm_engine");
     p3tasks.push_back(t5);
     p3tasks.push_back(t6);
 
-    deps.push_back(depEdge(t4["id"], t5["id"]));
-    deps.push_back(depEdge(t5["id"], t6["id"]));
+    deps.push_back(depEdge(t4["id"].get<uint32_t>(), t5["id"].get<uint32_t>()));
+    deps.push_back(depEdge(t5["id"].get<uint32_t>(), t6["id"].get<uint32_t>()));
 
     uint32_t totalSeconds = 0;
     for (auto& arr : {p1tasks, p2tasks, p3tasks})
         for (auto& t : arr) totalSeconds += t["estimated_seconds"].get<uint32_t>();
 
-    return {
+    return nlohmann::json::object({
         {"phases", json::array({
             phase("understand_scope", 1, p1tasks),
             phase("execute_action", 2, p2tasks),
             phase("validate", 3, p3tasks, "all_pass")
         })},
         {"dependencies", deps},
-        {"cost_estimate", {
+        {"cost_estimate", nlohmann::json::object({
             {"total_estimated_seconds", totalSeconds},
             {"parallel_critical_path_seconds", totalSeconds * 2 / 3},
             {"phase_count", 3},
             {"task_count", p1tasks.size() + p2tasks.size() + p3tasks.size()}
-        }}
-    };
+        })}
+    });
 }
 
 
@@ -1516,14 +1516,14 @@ json MetaPlanner::estimateCost(const json& planJson) {
         load[k] = v;
     }
 
-    return {
+    return nlohmann::json::object({
         {"total_tasks",                    totalTasks},
         {"total_estimated_seconds",        totalSeconds},
         {"parallel_critical_path_seconds", criticalPathSeconds},
         {"heaviest_phase_seconds",         maxPhaseSeconds},
         {"subsystem_load_seconds",         load},
         {"estimated_wall_clock_minutes",   std::ceil(criticalPathSeconds / 60.0)}
-    };
+    });
 }
 
 
@@ -1598,18 +1598,18 @@ json MetaPlanner::mergePlans(const std::vector<json>& plans) {
         phaseOffset += static_cast<uint32_t>(p["phases"].size());
     }
 
-    return {
+    return nlohmann::json::object({
         {"status",       "ok"},
         {"merged",       true},
         {"plan_count",   plans.size()},
         {"phases",       mergedPhases},
         {"dependencies", mergedDeps},
-        {"cost_estimate", {
+        {"cost_estimate", nlohmann::json::object({
             {"total_tasks",             totalTasks},
             {"total_estimated_seconds", totalSeconds},
             {"phase_count",             mergedPhases.size()}
-        }}
-    };
+        })}
+    });
 }
 
 
@@ -1716,18 +1716,18 @@ json MetaPlanner::validatePlan(const json& planJson) {
         }
         for (uint32_t id : allIds) {
             if (!hasIncoming.count(id) && !hasOutgoing.count(id)) {
-                issues.push_back({{"severity", "info"},
+                issues.push_back(nlohmann::json::object({{"severity", "info"},
                     {"message", "Isolated task (no dependencies): " + std::to_string(id) +
-                                " (" + idToName[id] + ")"}});
+                                " (" + idToName[id] + ")"}}));
             }
         }
     }
 
-    return {
+    return nlohmann::json::object({
         {"valid",       valid},
         {"task_count",  allIds.size()},
         {"dep_count",   planJson.contains("dependencies") ? planJson["dependencies"].size() : 0},
         {"issue_count", issues.size()},
         {"issues",      issues}
-    };
+    });
 }

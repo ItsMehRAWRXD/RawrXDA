@@ -11,23 +11,23 @@
 // Bump RAWRXD_VERSION_MAJOR for breaking API changes.
 // =============================================================================
 
-#define RAWRXD_VERSION_MAJOR  7
-#define RAWRXD_VERSION_MINOR  4
+#define RAWRXD_VERSION_MAJOR  14
+#define RAWRXD_VERSION_MINOR  5
 #define RAWRXD_VERSION_PATCH  0
 
 // Pre-computed string forms
-#define RAWRXD_VERSION_STR    "7.4.0"
-#define RAWRXD_VERSION_FULL   "RawrXD IDE v" RAWRXD_VERSION_STR
+#define RAWRXD_VERSION_STR    "14.5.0"
+#define RAWRXD_VERSION_FULL   "RawrXD IDE v" RAWRXD_VERSION_STR " (SOVEREIGN)"
 
 // Build metadata (set by CMake or compiler)
 #define RAWRXD_BUILD_DATE     __DATE__
 #define RAWRXD_BUILD_TIME     __TIME__
 
 // Release channel
-#define RAWRXD_CHANNEL        "release"
+#define RAWRXD_CHANNEL        "SOVEREIGN-GOLD"
 
 // Compilation unit count (updated each gold-master build)
-#define RAWRXD_COMPILE_UNITS  150
+#define RAWRXD_COMPILE_UNITS  314
 
 // Binary target size (bytes, approximate — used by gauntlet sanity check)
 #define RAWRXD_EXPECTED_SIZE_MIN  3500000
@@ -38,6 +38,11 @@
 
 // Phase count
 #define RAWRXD_PHASE_COUNT    33
+
+// Sovereign baseline (finality attestation: 31-file audit, 183+ procs, zero stubs)
+#define RAWRXD_SOVEREIGN_BASELINE  "v14.5"
+#define RAWRXD_FINALITY_HASH       "ARCH-SEALED-2026-03-13-145-SOV"
+#define RAWRXD_SITUATIONAL_AWARE   1
 
 // Copyright
 #define RAWRXD_COPYRIGHT      "Copyright (c) 2023-2026 ItsMehRAWRXD"

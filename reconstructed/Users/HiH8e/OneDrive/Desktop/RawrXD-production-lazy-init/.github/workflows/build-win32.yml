@@ -1,0 +1,149 @@
+name: build-and-release-win32
+
+on:
+  push:
+    branches: [ main, develop ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  BUILD_TYPE: Release
+  CMAKE_GENERATOR: "Visual Studio 17 2022"
+  ARCH: x64
+  CMAKE_VERSION: 3.20.x
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup CMake
+        uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: ${{ env.CMAKE_VERSION }}
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v1.1
+
+      - name: Cache CMake build
+        uses: actions/cache@v3
+        with:
+          path: build-win32-only
+          key: ${{ runner.os }}-cmake-${{ hashFiles('**/CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-cmake-
+
+      - name: Configure CMake
+        shell: pwsh
+        run: |
+          cmake -S win32_only -B build-win32-only `
+            -G "${{ env.CMAKE_GENERATOR }}" -A ${{ env.ARCH }} `
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
+
+      - name: Build
+        shell: pwsh
+        run: |
+          cmake --build build-win32-only `
+            --config ${{ env.BUILD_TYPE }} `
+            --target AgenticIDEWin `
+            --parallel
+
+      - name: Run file tree acceptance tests (if present)
+        shell: pwsh
+        run: |
+          $testPath = "build-win32-only/bin/${{ env.BUILD_TYPE }}/file_tree_test.exe"
+          if (Test-Path $testPath) {
+            & $testPath
+          } else {
+            Write-Host "file_tree_test.exe not found; skipping"
+          }
+
+      - name: Package artifacts
+        shell: pwsh
+        run: |
+          $deployDir = "RawrXD-Win32-Deploy"
+          New-Item -ItemType Directory -Force -Path "$deployDir/bin","$deployDir/config","$deployDir/docs" | Out-Null
+
+          Copy-Item "build-win32-only/bin/${{ env.BUILD_TYPE }}/AgenticIDEWin.exe" "$deployDir/bin/"
+          if (Test-Path "docs") { Copy-Item "docs/*.md" "$deployDir/docs/" }
+          if (Test-Path "WIN32_README.md") { Copy-Item "WIN32_README.md" "$deployDir/" }
+          if (Test-Path "COMPLETION_SUMMARY.md") { Copy-Item "COMPLETION_SUMMARY.md" "$deployDir/" }
+          if (Test-Path "RawrXD.ps1") { Copy-Item "RawrXD.ps1" "$deployDir/" }
+          if (Test-Path "RawrXD.bat") { Copy-Item "RawrXD.bat" "$deployDir/" }
+
+          $defaultConfig = @'
+          {
+            "version": "1.0.0",
+            "theme": "dark",
+            "defaultShell": "pwsh",
+            "autoSave": true,
+            "telemetryEnabled": false
+          }
+          '@
+          $defaultConfig | Out-File -FilePath "$deployDir/config/config.json" -Encoding utf8
+
+          $archive = "RawrXD-Win32-$($env:GITHUB_REF_NAME).zip"
+          Compress-Archive -Path "$deployDir/*" -DestinationPath $archive -Force
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: RawrXD-Win32-${{ github.ref_name }}
+          path: RawrXD-Win32-${{ github.ref_name }}.zip
+          retention-days: 30
+
+      - name: Calculate checksums
+        shell: pwsh
+        run: |
+          $archive = "RawrXD-Win32-$($env:GITHUB_REF_NAME).zip"
+          $hash = Get-FileHash $archive -Algorithm SHA256
+          "$($hash.Hash)  $archive" | Out-File -FilePath checksums.txt
+
+      - name: Upload checksums
+        uses: actions/upload-artifact@v3
+        with:
+          name: checksums
+          path: checksums.txt
+
+  create-release:
+    needs: build-windows
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            RawrXD-Win32-${{ github.ref_name }}/RawrXD-Win32-${{ github.ref_name }}.zip
+            checksums/checksums.txt
+          body: |
+            ## RawrXD Win32 IDE Release ${{ github.ref_name }}
+
+            ### Installation
+            1. Download `RawrXD-Win32-${{ github.ref_name }}.zip`
+            2. Extract to desired location
+            3. Set `OPENAI_API_KEY` environment variable
+            4. Run `RawrXD.ps1` or `RawrXD.bat`
+
+            ### Requirements
+            - Windows 10/11 (x64)
+            - Visual C++ Redistributable 2022
+            - Node.js v18+ (for AI features)
+
+            ### Documentation
+            See `docs/` in the package.
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

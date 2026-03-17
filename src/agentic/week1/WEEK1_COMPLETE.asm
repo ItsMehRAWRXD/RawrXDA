@@ -14,7 +14,6 @@
 ;==============================================================================
 
 OPTION CASEMAP:NONE
-OPTION WIN64:3
 
 ;==============================================================================
 ; EXTERNAL FUNCTIONS (Windows API Only)
@@ -133,7 +132,7 @@ TASK_STATE_CANCELLED    EQU 3
 ; SRW LOCK STRUCTURE (Windows Internal)
 ;==============================================================================
 SRWLOCK STRUCT
-    Ptr     QWORD ?
+    LockPtr QWORD ?
 SRWLOCK ENDS
 
 ;==============================================================================
@@ -184,7 +183,7 @@ HEARTBEAT_MONITOR STRUCT
     TotalStateChanges   QWORD ?
     
     ; Synchronization
-    Lock                SRWLOCK <>
+    MonitorLock         SRWLOCK <>
     _Padding2           QWORD ?         ; Alignment
 HEARTBEAT_MONITOR ENDS
 
@@ -232,7 +231,7 @@ CONFLICT_DETECTOR STRUCT
     TotalContentions        QWORD ?
     
     ; Synchronization
-    Lock                SRWLOCK <>
+    DetectorLock        SRWLOCK <>
 CONFLICT_DETECTOR ENDS
 
 ;------------------------------------------------------------------------------
@@ -335,7 +334,7 @@ TASK_SCHEDULER STRUCT
     TotalStealAttempts  QWORD ?
     
     ; Synchronization
-    Lock                SRWLOCK <>
+    SchedulerLock       SRWLOCK <>
 TASK_SCHEDULER ENDS
 
 ;------------------------------------------------------------------------------
@@ -700,7 +699,7 @@ HeartbeatMonitorThread PROC FRAME
     mov r15, rax                        ; R15 = timeout threshold (QPC)
     
     ; Acquire shared lock for reading node states
-    lea rcx, [r13+HEARTBEAT_MONITOR.Lock]
+    lea rcx, [r13+HEARTBEAT_MONITOR.MonitorLock]
     call QWORD PTR [__imp_AcquireSRWLockShared]
     
     ; Get node array pointer
@@ -757,10 +756,10 @@ HeartbeatMonitorThread PROC FRAME
     ; Transition HEALTHY -> SUSPECT
     ; Need exclusive lock for write
     push rcx
-    lea rcx, [r13+HEARTBEAT_MONITOR.Lock]
+    lea rcx, [r13+HEARTBEAT_MONITOR.MonitorLock]
     call QWORD PTR [__imp_ReleaseSRWLockShared]
     
-    lea rcx, [r13+HEARTBEAT_MONITOR.Lock]
+    lea rcx, [r13+HEARTBEAT_MONITOR.MonitorLock]
     call QWORD PTR [__imp_AcquireSRWLockExclusive]
     pop rcx
     
@@ -792,10 +791,10 @@ HeartbeatMonitorThread PROC FRAME
     
 @HB_ReacquireShared:
     ; Release exclusive, acquire shared
-    lea rcx, [r13+HEARTBEAT_MONITOR.Lock]
+    lea rcx, [r13+HEARTBEAT_MONITOR.MonitorLock]
     call QWORD PTR [__imp_ReleaseSRWLockExclusive]
     
-    lea rcx, [r13+HEARTBEAT_MONITOR.Lock]
+    lea rcx, [r13+HEARTBEAT_MONITOR.MonitorLock]
     call QWORD PTR [__imp_AcquireSRWLockShared]
     
     jmp @HB_NextNode
@@ -809,10 +808,10 @@ HeartbeatMonitorThread PROC FRAME
     
     ; Transition SUSPECT -> DEAD
     push rcx
-    lea rcx, [r13+HEARTBEAT_MONITOR.Lock]
+    lea rcx, [r13+HEARTBEAT_MONITOR.MonitorLock]
     call QWORD PTR [__imp_ReleaseSRWLockShared]
     
-    lea rcx, [r13+HEARTBEAT_MONITOR.Lock]
+    lea rcx, [r13+HEARTBEAT_MONITOR.MonitorLock]
     call QWORD PTR [__imp_AcquireSRWLockExclusive]
     pop rcx
     
@@ -850,10 +849,10 @@ HeartbeatMonitorThread PROC FRAME
 @HB_IncrementMiss:
     ; Just increment miss counter (need exclusive lock)
     push rcx
-    lea rcx, [r13+HEARTBEAT_MONITOR.Lock]
+    lea rcx, [r13+HEARTBEAT_MONITOR.MonitorLock]
     call QWORD PTR [__imp_ReleaseSRWLockShared]
     
-    lea rcx, [r13+HEARTBEAT_MONITOR.Lock]
+    lea rcx, [r13+HEARTBEAT_MONITOR.MonitorLock]
     call QWORD PTR [__imp_AcquireSRWLockExclusive]
     pop rcx
     
@@ -872,7 +871,7 @@ HeartbeatMonitorThread PROC FRAME
 @HB_NodesDone:
 @HB_NodesSkip:
     ; Release shared lock
-    lea rcx, [r13+HEARTBEAT_MONITOR.Lock]
+    lea rcx, [r13+HEARTBEAT_MONITOR.MonitorLock]
     call QWORD PTR [__imp_ReleaseSRWLockShared]
     
     ; Sleep until next check
@@ -958,7 +957,7 @@ ProcessReceivedHeartbeat PROC EXPORT FRAME
 @HB_Recv_Found:
     ; Found node at RDI
     ; Acquire exclusive lock
-    lea rcx, [rbx+HEARTBEAT_MONITOR.Lock]
+    lea rcx, [rbx+HEARTBEAT_MONITOR.MonitorLock]
     call QWORD PTR [__imp_AcquireSRWLockExclusive]
     
     ; Update node state
@@ -1006,7 +1005,7 @@ ProcessReceivedHeartbeat PROC EXPORT FRAME
     pop rdi
     
 @HB_Recv_NoCallback:
-    lea rcx, [rbx+HEARTBEAT_MONITOR.Lock]
+    lea rcx, [rbx+HEARTBEAT_MONITOR.MonitorLock]
     call QWORD PTR [__imp_ReleaseSRWLockExclusive]
     
     mov eax, 1                          ; Success
@@ -1068,7 +1067,7 @@ Week1RegisterNode PROC EXPORT FRAME
     jz @RegNode_Fail
     
     ; Acquire exclusive lock
-    lea rcx, [rbx+HEARTBEAT_MONITOR.Lock]
+    lea rcx, [rbx+HEARTBEAT_MONITOR.MonitorLock]
     call QWORD PTR [__imp_AcquireSRWLockExclusive]
     
     ; Check if full
@@ -1134,14 +1133,14 @@ Week1RegisterNode PROC EXPORT FRAME
     inc DWORD PTR [rbx+HEARTBEAT_MONITOR.NodeCount]
     
 @RegNode_Success:
-    lea rcx, [rbx+HEARTBEAT_MONITOR.Lock]
+    lea rcx, [rbx+HEARTBEAT_MONITOR.MonitorLock]
     call QWORD PTR [__imp_ReleaseSRWLockExclusive]
     
     mov eax, 1
     jmp @RegNode_Exit
     
 @RegNode_Full:
-    lea rcx, [rbx+HEARTBEAT_MONITOR.Lock]
+    lea rcx, [rbx+HEARTBEAT_MONITOR.MonitorLock]
     call QWORD PTR [__imp_ReleaseSRWLockExclusive]
     
 @RegNode_Fail:
@@ -1260,7 +1259,7 @@ BuildWaitGraph PROC FRAME
     mov r13, rdx                        ; conflict detector
     
     ; Acquire exclusive lock
-    lea rcx, [r13+CONFLICT_DETECTOR.Lock]
+    lea rcx, [r13+CONFLICT_DETECTOR.DetectorLock]
     call QWORD PTR [__imp_AcquireSRWLockExclusive]
     
     ; Clear existing edge count
@@ -1338,7 +1337,7 @@ BuildWaitGraph PROC FRAME
     mov [r13+CONFLICT_DETECTOR.EdgeCount], r15d
     
     ; Release lock
-    lea rcx, [r13+CONFLICT_DETECTOR.Lock]
+    lea rcx, [r13+CONFLICT_DETECTOR.DetectorLock]
     call QWORD PTR [__imp_ReleaseSRWLockExclusive]
     
     add rsp, 64
@@ -1381,7 +1380,7 @@ DetectDeadlocks PROC FRAME
     mov r13, rdx                        ; conflict detector
     
     ; Acquire shared lock
-    lea rcx, [r13+CONFLICT_DETECTOR.Lock]
+    lea rcx, [r13+CONFLICT_DETECTOR.DetectorLock]
     call QWORD PTR [__imp_AcquireSRWLockShared]
     
     ; Get edge count
@@ -1469,16 +1468,16 @@ DetectDeadlocks PROC FRAME
     jz @DD_NoDeadlocks
     
     ; Need exclusive lock to update stats
-    lea rcx, [r13+CONFLICT_DETECTOR.Lock]
+    lea rcx, [r13+CONFLICT_DETECTOR.DetectorLock]
     call QWORD PTR [__imp_ReleaseSRWLockShared]
     
-    lea rcx, [r13+CONFLICT_DETECTOR.Lock]
+    lea rcx, [r13+CONFLICT_DETECTOR.DetectorLock]
     call QWORD PTR [__imp_AcquireSRWLockExclusive]
     
     movzx eax, r15w
     add [r13+CONFLICT_DETECTOR.TotalDeadlocksDetected], rax
     
-    lea rcx, [r13+CONFLICT_DETECTOR.Lock]
+    lea rcx, [r13+CONFLICT_DETECTOR.DetectorLock]
     call QWORD PTR [__imp_ReleaseSRWLockExclusive]
     
     mov eax, r15d
@@ -1486,7 +1485,7 @@ DetectDeadlocks PROC FRAME
     
 @DD_NoDeadlocks:
 @DD_NoCycles:
-    lea rcx, [r13+CONFLICT_DETECTOR.Lock]
+    lea rcx, [r13+CONFLICT_DETECTOR.DetectorLock]
     call QWORD PTR [__imp_ReleaseSRWLockShared]
     
     xor eax, eax
@@ -1539,7 +1538,7 @@ Week1RegisterResource PROC EXPORT FRAME
     jz @RR_Fail
     
     ; Acquire exclusive lock
-    lea rcx, [rbx+CONFLICT_DETECTOR.Lock]
+    lea rcx, [rbx+CONFLICT_DETECTOR.DetectorLock]
     call QWORD PTR [__imp_AcquireSRWLockExclusive]
     
     ; Check capacity
@@ -1602,14 +1601,14 @@ Week1RegisterResource PROC EXPORT FRAME
     inc DWORD PTR [rbx+CONFLICT_DETECTOR.ResourceCount]
     
 @RR_Success:
-    lea rcx, [rbx+CONFLICT_DETECTOR.Lock]
+    lea rcx, [rbx+CONFLICT_DETECTOR.DetectorLock]
     call QWORD PTR [__imp_ReleaseSRWLockExclusive]
     
     mov eax, 1
     jmp @RR_Exit
     
 @RR_Full:
-    lea rcx, [rbx+CONFLICT_DETECTOR.Lock]
+    lea rcx, [rbx+CONFLICT_DETECTOR.DetectorLock]
     call QWORD PTR [__imp_ReleaseSRWLockExclusive]
     
 @RR_Fail:
@@ -2436,13 +2435,13 @@ Week1Initialize PROC EXPORT FRAME
     call GetQPFrequency
     
     ; Initialize all SRW locks
-    lea rcx, [r12+WEEK1_INFRASTRUCTURE.Heartbeat.Lock]
+    lea rcx, [r12+WEEK1_INFRASTRUCTURE.Heartbeat.MonitorLock]
     call QWORD PTR [__imp_InitializeSRWLock]
     
-    lea rcx, [r12+WEEK1_INFRASTRUCTURE.ConflictDetector.Lock]
+    lea rcx, [r12+WEEK1_INFRASTRUCTURE.ConflictDetector.DetectorLock]
     call QWORD PTR [__imp_InitializeSRWLock]
     
-    lea rcx, [r12+WEEK1_INFRASTRUCTURE.Scheduler.Lock]
+    lea rcx, [r12+WEEK1_INFRASTRUCTURE.Scheduler.SchedulerLock]
     call QWORD PTR [__imp_InitializeSRWLock]
     
     lea rcx, [r12+WEEK1_INFRASTRUCTURE.Scheduler.GlobalQueueLock]

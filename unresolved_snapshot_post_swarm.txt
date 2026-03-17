@@ -1,0 +1,44 @@
+[1/1228] Verify SSOT EXT ownership artifacts are consistent
+SSOT ownership verify OK: ext=572 ext_dedicated=53 beacons=572
+[2/1228] Sync + regenerate SSOT beacon ownership artifacts
+Synced D:\rawrxd\src\core\ssot_beacon.symbols.txt from ssot_handlers_ext.cpp (572 symbols)
+Generated D:\rawrxd\src\core\ssot_beacon_table.inc (572 symbols)
+[3/1228] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_GhostText.cpp.obj
+[4/1228] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Breadcrumbs.cpp.obj
+[5/1228] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FailureDetector.cpp.obj
+[6/1228] Building CXX object CMakeFiles\RawrEngine.dir\src\core\ssot_beacon.cpp.obj
+[7/1228] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_OutlinePanel.cpp.obj
+[8/1228] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_RenamePreview.cpp.obj
+[9/1228] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_StreamingUX.cpp.obj
+[10/1228] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Tier2Cosmetics.cpp.obj
+[11/1228] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_PlanExecutor.cpp.obj
+[12/1228] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_DecompilerView.cpp.obj
+[13/1228] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Settings.cpp.obj
+[14/1228] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FeatureManifest.cpp.obj
+[15/1228] Building CXX object CMakeFiles\RawrEngine.dir\src\core\ssot_handlers.cpp.obj
+[16/1228] Building CXX object CMakeFiles\RawrEngine.dir\src\core\unified_command_dispatch.cpp.obj
+[17/1228] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Commands.cpp.obj
+[18/1228] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FailureIntelligence.cpp.obj
+[19/1228] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Tier1Cosmetics.cpp.obj
+[20/1228] Building CXX object CMakeFiles\RawrEngine.dir\src\core\missing_handler_stubs.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/core/missing_handler_stubs.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ADVANCED_DEOBFUSCATOR_ASM=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=0 -DRAWRXD_LINK_CODEBASE_AUDIT_SYSTEM_ASM=0 -DRAWRXD_LINK_DUAL_ENGINE_QUANTUM_BEACON_ASM=0 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PATTERN_RECONSTRUCTOR_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=0 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_UNIFIED_OVERCLOCK_GOVERNOR_ASM=0 -DRAWRXD_LINK_VISION_PROJECTION_ASM=0 -DRAWR_HAS_MASM=1 -DRAWR_HAS_QUICKJS=1 -DRAWR_HAS_SOVEREIGN_ENGINES=1 -DRAWR_HAS_VULKAN=1 -DRAWR_SSOT_AUTO=0 -DRAWR_SSOT_CORE=0 -DRAWR_SSOT_EXT=1 -DRAWR_SSOT_FEATURES=0 -DRAWR_SSOT_STUBS=0 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\security -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\modules -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\3rdparty\quickjs_ng\.. -ID:\rawrxd\src\reverse_engineering\pe_tools -ID:\rawrxd\3rdparty\quickjs_ng -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\core\missing_handler_stubs.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\core\missing_handler_stubs.cpp
+D:\rawrxd\src\core\missing_handler_stubs.cpp(9686): fatal error C1004: unexpected end-of-file found
+[21/1228] Building CXX object CMakeFiles\RawrEngine.dir\src\core\ssot_validation.cpp.obj
+[22/1228] Building CXX object CMakeFiles\RawrEngine.dir\src\telemetry\replay_telemetry_fusion.cpp.obj
+[23/1228] Building CXX object CMakeFiles\RawrEngine.dir\src\inference\ultra_fast_inference.cpp.obj
+[24/1228] Building CXX object CMakeFiles\RawrEngine.dir\src\telemetry\hotpatch_telemetry_safety.cpp.obj
+[25/1228] Building CXX object CMakeFiles\RawrEngine.dir\src\telemetry\completion_feedback.cpp.obj
+[26/1228] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic\agentic_transaction.cpp.obj
+[27/1228] Building CXX object CMakeFiles\RawrEngine.dir\src\git\git_context.cpp.obj
+[28/1228] Building CXX object CMakeFiles\RawrEngine.dir\src\lsp\diagnostic_consumer.cpp.obj
+[29/1228] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Core.cpp.obj
+[30/1228] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_ReverseEngineering.cpp.obj
+[31/1228] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic_controller.cpp.obj
+[32/1228] Building CXX object CMakeFiles\RawrEngine.dir\src\ui\phase2_integration_example.cpp.obj
+[33/1228] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic_agent_coordinator.cpp.obj
+[34/1228] Building CXX object CMakeFiles\RawrEngine.dir\src\telemetry\UnifiedTelemetryCore.cpp.obj
+[35/1228] Building CXX object CMakeFiles\RawrEngine.dir\src\production_config_manager.cpp.obj
+[36/1228] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_LocalServer.cpp.obj
+[37/1228] Building C object CMakeFiles\RawrEngine.dir\src\core\sqlite3.c.obj
+ninja: build stopped: subcommand failed.

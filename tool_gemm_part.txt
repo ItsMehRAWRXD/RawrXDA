@@ -1,0 +1,104 @@
+void CPU_GEMM(const float* A, const float* B, float* C, uint32_t M, uint32_t K, uint32_t N) {
+    for (uint32_t i = 0; i < M; ++i) {
+        for (uint32_t j = 0; j < N; ++j) {
+            float sum = 0.0f;
+            for (uint32_t k = 0; k < K; ++k) {
+                sum += A[i * K + k] * B[k * N + j];
+            }
+            C[i * N + j] = sum;
+        }
+    }
+}
+
+void RunGEMMParityTest(uint32_t M, uint32_t K, uint32_t N)
+{
+    std::cout << "==========================================\n";
+    std::cout << "GEMM Parity Test (M=" << M << ", K=" << K << ", N=" << N << ")\n";
+
+    // Initialize D3D12
+    Microsoft::WRL::ComPtr<ID3D12Device> device;
+    Microsoft::WRL::ComPtr<ID3D12CommandQueue> queue;
+    D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&device));
+    D3D12_COMMAND_QUEUE_DESC qDesc{};
+    qDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+    device->CreateCommandQueue(&qDesc, IID_PPV_ARGS(&queue));
+
+    GGUFD3D12Bridge bridge;
+    bridge.Initialize(device.Get(), queue.Get());
+    bridge.CompileShadersFromHLSL(L"src/shaders/cs_gemm.hlsl");
+
+    std::vector<float> A(M * K);
+    std::vector<float> B(K * N);
+    std::vector<float> C_cpu(M * N, 0.0f);
+    std::vector<float> C_gpu(M * N, 0.0f);
+
+    std::mt19937 gen(42);
+    auto dist = std::uniform_real_distribution<float>(-1.0f, 1.0f);
+    for (auto& x : A) x = dist(gen);
+    for (auto& x : B) x = dist(gen);
+
+    auto start_cpu = std::chrono::high_resolution_clock::now();
+    CPU_GEMM(A.data(), B.data(), C_cpu.data(), M, K, N);
+    auto end_cpu = std::chrono::high_resolution_clock::now();
+
+    Microsoft::WRL::ComPtr<ID3D12Resource> bufA, bufB, bufC;
+    bridge.UploadTensor(A.data(), A.size() * sizeof(float), GGML_TYPE_F32, bufA);
+    bridge.UploadTensor(B.data(), B.size() * sizeof(float), GGML_TYPE_F32, bufB);
+    bridge.UploadTensor(C_gpu.data(), C_gpu.size() * sizeof(float), GGML_TYPE_F32, bufC);
+
+    auto start_gpu = std::chrono::high_resolution_clock::now();
+    bridge.DispatchGEMM(bufA.Get(), bufB.Get(), bufC.Get(), M, K, N);
+    auto end_gpu = std::chrono::high_resolution_clock::now();
+
+    // Readback
+    Microsoft::WRL::ComPtr<ID3D12Resource> readback;
+    D3D12_HEAP_PROPERTIES rbHeapProps{ D3D12_HEAP_TYPE_READBACK };
+    D3D12_RESOURCE_DESC rbDesc = bufC->GetDesc();
+    device->CreateCommittedResource(&rbHeapProps, D3D12_HEAP_FLAG_NONE, &rbDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&readback));
+
+    Microsoft::WRL::ComPtr<ID3D12CommandAllocator> alloc;
+    Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> cmd;
+    device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&alloc));
+    device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, alloc.Get(), nullptr, IID_PPV_ARGS(&cmd));
+
+    D3D12_RESOURCE_BARRIER rb = {};
+    rb.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    rb.Transition.pResource = bufC.Get();
+    rb.Transition.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+    rb.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
+    rb.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+    cmd->ResourceBarrier(1, &rb);
+    cmd->CopyResource(readback.Get(), bufC.Get());
+    cmd->Close();
+    ID3D12CommandList* lists[] = { cmd.Get() };
+    queue->ExecuteCommandLists(1, lists);
+
+    Microsoft::WRL::ComPtr<ID3D12Fence> fence;
+    device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
+    queue->Signal(fence.Get(), 1);
+    HANDLE evt = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+    fence->SetEventOnCompletion(1, evt);
+    WaitForSingleObject(evt, INFINITE);
+    CloseHandle(evt);
+
+    float* mappedData;
+    readback->Map(0, nullptr, (void**)&mappedData);
+    memcpy(C_gpu.data(), mappedData, M * N * sizeof(float));
+    readback->Unmap(0, nullptr);
+
+    float max_err = 0.0f;
+    for (uint32_t i = 0; i < C_cpu.size(); ++i) {
+        float err = std::abs(C_cpu[i] - C_gpu[i]);
+        if (err > max_err) max_err = err;
+    }
+
+    std::cout << "CPU MatMul Time: " << std::chrono::duration_cast<std::chrono::microseconds>(end_cpu - start_cpu).count() << " us\n";
+    std::cout << "GPU MatMul Time: " << std::chrono::duration_cast<std::chrono::microseconds>(end_gpu - start_gpu).count() << " us\n";
+    std::cout << "Max Error Margin: " << max_err << "\n";
+
+    if (max_err < 0.001f) {
+        std::cout << "[PASS] GEMM output matches exactly.\n";
+    } else {
+        std::cout << "[FAIL] Error exceeds margin!\n";
+    }
+}

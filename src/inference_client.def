@@ -1,0 +1,7 @@
+LIBRARY inference_client
+EXPORTS
+    Infer_Init          @1
+    Infer_Shutdown      @2
+    Infer_Complete      @3
+    Infer_Stream        @4
+    Infer_DefaultConfig @5

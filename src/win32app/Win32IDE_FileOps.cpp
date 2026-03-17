@@ -44,32 +44,40 @@ void Win32IDE::openFileDialog() {
         std::string filePath = szFile;
         LOG_INFO("File selected: " + filePath);
         
-        // Check if it's a GGUF model file FIRST - DON'T load as text, bypass size limits!
-        if (filePath.find(".gguf") != std::string::npos || filePath.find(".GGUF") != std::string::npos) {
-            LOG_INFO("Detected GGUF file, loading as model");
-            // GGUF files can be multi-GB, they use streaming loader
-            // Add safety check to prevent crashes on corrupted/invalid files
+        // Check if it's a model file (GGUF or other) - load as model and into agentic bridge for chat/agentic
+        auto isModelFile = [](const std::string& p) {
+            if (p.empty()) return false;
+            std::string lower = p;
+            std::transform(lower.begin(), lower.end(), lower.begin(), [](unsigned char c) { return (char)std::tolower(c); });
+            return lower.find(".gguf") != std::string::npos || lower.find(".gguf2") != std::string::npos
+                || lower.find(".bin") != std::string::npos || lower.find(".safetensors") != std::string::npos
+                || lower.find(".onnx") != std::string::npos;
+        };
+        if (isModelFile(filePath)) {
+            LOG_INFO("Detected model file, loading as model and into agentic bridge");
             try {
-                if (loadGGUFModel(filePath)) {
-                    std::string message = "✅ Model loaded: " + filePath + "\n\n" + getModelInfo();
+                bool ggufOk = loadGGUFModel(filePath);
+                bool bridgeOk = loadModelForInference(filePath);
+                if (ggufOk || bridgeOk) {
+                    std::string message = "✅ Model loaded: " + filePath + "\n\n" + (ggufOk ? getModelInfo() : "Ready for chat and agentic.");
                     appendToOutput(message, "Output", OutputSeverity::Info);
-                    MessageBoxA(m_hwndMain, "Model loaded successfully! Check Output panel and Copilot Chat for agentic features.", "Model Loaded", MB_OK | MB_ICONINFORMATION);
-                    LOG_INFO("GGUF model loaded successfully");
+                    MessageBoxA(m_hwndMain, "Model loaded. Chat and agentic features use this model.", "Model Loaded", MB_OK | MB_ICONINFORMATION);
+                    LOG_INFO("Model loaded successfully");
                 } else {
-                    LOG_ERROR("Failed to load GGUF model: " + filePath);
-                    MessageBoxA(m_hwndMain, "Failed to load GGUF model. Check Output/Errors panel for details.", "Model Load Failed", MB_OK | MB_ICONERROR);
+                    LOG_ERROR("Failed to load model: " + filePath);
+                    MessageBoxA(m_hwndMain, "Failed to load model. Check Output/Errors panel for details.", "Model Load Failed", MB_OK | MB_ICONERROR);
                 }
             } catch (const std::exception& e) {
-                std::string error = "Exception while loading GGUF: " + std::string(e.what());
+                std::string error = "Exception while loading model: " + std::string(e.what());
                 LOG_ERROR(error);
                 appendToOutput(error, "Errors", OutputSeverity::Error);
                 MessageBoxA(m_hwndMain, error.c_str(), "Model Load Error", MB_OK | MB_ICONERROR);
             } catch (...) {
-                LOG_ERROR("Unknown exception while loading GGUF file");
-                appendToOutput("Unknown exception while loading GGUF file", "Errors", OutputSeverity::Error);
-                MessageBoxA(m_hwndMain, "Unknown error loading GGUF file.", "Model Load Error", MB_OK | MB_ICONERROR);
+                LOG_ERROR("Unknown exception while loading model file");
+                appendToOutput("Unknown exception while loading model file", "Errors", OutputSeverity::Error);
+                MessageBoxA(m_hwndMain, "Unknown error loading model file.", "Model Load Error", MB_OK | MB_ICONERROR);
             }
-            return;  // Exit early - GGUF files never load into editor
+            return;  // Exit early - model files never load into editor
         }
         
         // For text files only: check for unsaved changes

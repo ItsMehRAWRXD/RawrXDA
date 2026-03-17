@@ -484,9 +484,14 @@ FormatEnforcerPuppeteer::FormatEnforcerPuppeteer()
 CorrectionResult FormatEnforcerPuppeteer::enforceJsonFormat(const std::string& response)
 {
     // Try to parse the response as JSON (non-throwing)
-    nlohmann::json doc = nlohmann::json::parse(response, nullptr, false);
+    nlohmann::json doc;
+    try {
+        doc = nlohmann::json::parse(response);
+    } catch (...) {
+        // doc remains null/initial value
+    }
 
-    if (!doc.is_discarded()) {
+    if (!doc.is_null()) {
         // Already valid JSON
         return CorrectionResult::ok(response, FailureType::None);
     }
@@ -502,10 +507,12 @@ CorrectionResult FormatEnforcerPuppeteer::enforceJsonFormat(const std::string& r
     }
 
     // Verify it's now valid
-    nlohmann::json fixedDoc = nlohmann::json::parse(corrected, nullptr, false);
-    if (!fixedDoc.is_discarded()) {
-        return CorrectionResult::ok(corrected, FailureType::FormatViolation);
-    }
+    try {
+        nlohmann::json fixedDoc = nlohmann::json::parse(corrected);
+        if (!fixedDoc.is_null()) {
+            return CorrectionResult::ok(corrected, FailureType::FormatViolation);
+        }
+    } catch (...) {}
 
     return CorrectionResult::error(FailureType::FormatViolation, "Could not repair JSON");
 }

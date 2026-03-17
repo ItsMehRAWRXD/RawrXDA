@@ -1,0 +1,183 @@
+/**
+ * \file agentic_text_edit.h
+ * \brief Agentic text editor with LSP completions and ghost text
+ * \author RawrXD Team
+ * \date 2025-12-07
+ */
+
+#pragma once
+
+#include <QPlainTextEdit>
+#include <QLineEdit>
+#include <QTimer>
+#include "lsp_client.h"
+#include "ghost_text_renderer.h"
+#include "qtapp/ai_completion_provider.h"
+
+namespace RawrXD {
+
+/**
+ * \brief Enhanced text editor with LSP integration and ghost text
+ * 
+ * Features:
+ * - Two-phase initialization (lightweight constructor + explicit initialize())
+ * - LSP client integration for real-time completions
+ * - Ghost text overlay for inline suggestions
+ * - Tab to accept, Esc to dismiss
+ * - Auto-trigger completions on typing pause (300ms debounce)
+ * - Multi-language support (C++, Python, JavaScript, etc.)
+ */
+class AgenticTextEdit : public QPlainTextEdit
+{
+    Q_OBJECT
+
+public:
+    explicit AgenticTextEdit(QWidget* parent = nullptr);
+    ~AgenticTextEdit() override = default;
+
+    /**
+     * Two-phase initialization
+     * Call after QApplication is ready
+     */
+    void initialize();
+
+    /**
+     * Set LSP client for this editor
+     */
+    void setLSPClient(LSPClient* client);
+
+    /**
+     * Get current LSP client
+     */
+    LSPClient* lspClient() const { return m_lspClient; }
+
+    /**
+     * Set AI completion provider for this editor
+     * Enables Cursor-style AI completions powered by local GGUF models
+     */
+    void setAICompletionProvider(AICompletionProvider* provider);
+
+    /**
+     * Get current AI completion provider
+     */
+    AICompletionProvider* aiCompletionProvider() const { return m_aiProvider; }
+
+    /**
+     * Enable/disable AI completions (separate from LSP)
+     */
+    void setAICompletionsEnabled(bool enabled);
+
+    /**
+     * Check if AI completions are enabled
+     */
+    bool aiCompletionsEnabled() const { return m_aiCompletionsEnabled; }
+
+    /**
+     * Get ghost text renderer
+     */
+    GhostTextRenderer* ghostRenderer() const { return m_ghostRenderer; }
+
+    /**
+     * Set document URI (for LSP communication)
+     */
+    void setDocumentUri(const QString& uri);
+
+    /**
+     * Get document URI
+     */
+    QString documentUri() const { return m_documentUri; }
+
+    /**
+     * Enable/disable auto-completions
+     */
+    void setAutoCompletionsEnabled(bool enabled);
+
+    /**
+     * Check if auto-completions are enabled
+     */
+    bool autoCompletionsEnabled() const { return m_autoCompletionsEnabled; }
+
+    /**
+     * Set completion debounce delay (milliseconds)
+     */
+    void setCompletionDelay(int ms);
+
+    /**
+     * Insert code at cursor position (for inline edits)
+     */
+    void insertCode(const QString& code);
+
+    /**
+     * LSP go-to-definition request
+     */
+    void goToDefinition();
+
+    /**
+     * LSP find-references request
+     */
+    void findReferences();
+
+    /**
+     * LSP rename-symbol request
+     */
+    void renameSymbol();
+
+signals:
+    /**
+     * Emitted when ghost text is accepted
+     */
+    void completionAccepted(const QString& text);
+
+    /**
+     * Emitted when ghost text is dismissed
+     */
+    void completionDismissed();
+
+    /**
+     * Emitted when Ctrl+K is pressed for inline edit
+     */
+    void inlineEditRequested(const QString& prompt, const QString& selectedText);
+
+protected:
+    void keyPressEvent(QKeyEvent* event) override;
+    void contextMenuEvent(QContextMenuEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
+
+private slots:
+    void onTextChanged();
+    void onCursorPositionChanged();
+    void onCompletionTimeout();
+    void onCompletionsReceived(const QString& uri, int line, int character, const QVector<CompletionItem>& items);
+    void onAICompletionsReceived(const QVector<AICompletion>& completions);
+    void onAICompletionError(const QString& error);
+    void onGhostTextAccepted(const QString& text);
+    void onGhostTextDismissed();
+    void showInlinePrompt();
+    void onInlinePromptFinished();
+    void updateInlinePromptPosition();
+
+private:
+    void triggerCompletion();
+    void syncDocumentToLSP();
+    QString getCurrentLineText() const;
+    bool shouldTriggerCompletion(const QString& lineText) const;
+
+    LSPClient* m_lspClient{};
+    AICompletionProvider* m_aiProvider{};
+    GhostTextRenderer* m_ghostRenderer{};
+    QLineEdit* m_inlinePrompt{};
+    QTextCursor m_lastSelection;
+    
+    QString m_documentUri;
+    QString m_languageId = "cpp";
+    int m_documentVersion = 0;
+    
+    QTimer* m_completionTimer{};
+    int m_completionDelay = 300;  // 300ms debounce
+    bool m_autoCompletionsEnabled = true;
+    bool m_aiCompletionsEnabled = true;  // AI completions enabled by default
+    
+    bool m_documentOpened = false;
+};
+
+} // namespace RawrXD

@@ -9,7 +9,7 @@
 #include <unordered_map>
 #include <chrono>
 #include <iostream>
-#include "../src/nlohmann/json.hpp"
+#include <nlohmann/json.hpp>
 
 // ===== TimePoint alias =====
 using TimePoint = std::chrono::system_clock::time_point;

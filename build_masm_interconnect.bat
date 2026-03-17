@@ -4,10 +4,26 @@ setlocal enabledelayedexpansion
 echo Building RawrXD Interconnect Assembly Components...
 echo.
 
-REM Set paths to MASM64
-set ML64="C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.40.33807\bin\Hostx64\x64\ml64.exe"
-if not exist %ML64% set ML64="C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC\14.40.33807\bin\Hostx64\x64\ml64.exe"
-if not exist %ML64% set ML64=ml64.exe
+REM Set paths to MASM64 — Auto-detect via vswhere, then probe known locations
+set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
+set ML64=
+if exist "%VSWHERE%" (
+    for /f "usebackq delims=" %%I in (`"%VSWHERE%" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do (
+        for /f "delims=" %%V in ('dir /b /o-n "%%I\VC\Tools\MSVC" 2^>nul') do (
+            if not defined ML64 (
+                if exist "%%I\VC\Tools\MSVC\%%V\bin\Hostx64\x64\ml64.exe" (
+                    set "ML64=%%I\VC\Tools\MSVC\%%V\bin\Hostx64\x64\ml64.exe"
+                )
+            )
+        )
+    )
+)
+if not defined ML64 if exist "C:\VS2022Enterprise\VC\Tools\MSVC" (
+    for /f "delims=" %%V in ('dir /b /o-n "C:\VS2022Enterprise\VC\Tools\MSVC" 2^>nul') do (
+        if not defined ML64 set "ML64=C:\VS2022Enterprise\VC\Tools\MSVC\%%V\bin\Hostx64\x64\ml64.exe"
+    )
+)
+if not defined ML64 set ML64=ml64.exe
 
 REM Check if ml64.exe exists anywhere
 where %ML64% >nul 2>nul

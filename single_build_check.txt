@@ -1,0 +1,94 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                                                                            ║
+║        🔥 MONOLITHIC MASM IDE BUILD - COMPLETE ORCHESTRATION 🔥            ║
+║                                                                            ║,.
+║  Executing parallel remediation to fix section overflow and link the      ║
+║  complete RawrXD IDE from monolithic MASM + C++ components                ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+⏭️  Skipping forensics phase
+
+⏭️  Skipping rebuild phase
+
+ + ================================================================================
+PHASE 3: EXECUTE PARALLEL LINKING STRATEGIES
+================================================================================
+🚀 MONOLITHIC LINKING STRATEGIES
+= * 80
+
+ℹ️  Falling back to custom strategies (CMake truth link not available or failed)
+⚠️  ATL/MFC lib dir missing: C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\atlmfc\lib\x64
+   Using fallback MSVC CRT lib dir: C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\lib\x64
+   Using C++ entrypoint: win32ide_main.obj (excluding ASM main.obj)
+   Replacing asm_monolithic_beacon.obj with rebuilt beacon.obj
+   Replacing asm_monolithic_inference.obj with rebuilt inference.obj
+   Replacing asm_monolithic_model_loader.obj with rebuilt model_loader.obj
+   Replacing asm_monolithic_swarm_coordinator.obj with rebuilt swarm_coordinator.obj
+   Replacing asm_monolithic_swarm.obj with rebuilt swarm.obj
+   Excluding asm_monolithic_main.obj (duplicate WinMain vs win32ide_main.obj)
+
+📊 Object Inventory:
+   ASM Objects (combined): 11 files
+   Rebuilt ASM: 5 files
+   Main Entry: True
+   C++ Objects: 248 files
+
+ + ================================================================================
+📘 DETERMINISTIC LINK MODE (archive partitioning)
+   Building core_asm.lib (11 objects)...
+   ✅ core_asm.lib ready (89.93 KB)
+   Building core_cpp.lib (148 objects)...
+   ✅ core_cpp.lib ready (526578.42 KB)
+   Building feature_cpp.lib (248 objects)...
+   ✅ feature_cpp.lib ready (1313250.51 KB)
+   Building agents.lib (21 objects)...
+   ✅ agents.lib ready (90563.47 KB)
+   Building ui.lib (33 objects)...
+   ✅ ui.lib ready (309661.79 KB)
+   Building inference.lib (14 objects)...
+   ✅ inference.lib ready (51367.97 KB)
+
+   Archive set: 6 libraries
+   - core_asm.lib
+   - core_cpp.lib
+   - feature_cpp.lib
+   - agents.lib
+   - ui.lib
+   - inference.lib
+
+   Linking deterministic executable...
+
+ + ================================================================================
+📊 LINKING RESULTS SUMMARY
+= * 80
+✅ SUCCESS - Deterministic: 0 MB
+🏆 OUTPUT: D:\rawrxd\build\RawrXD_Deterministic.exe
+
+✅ Linking strategies complete
+
+ + ================================================================================
+PHASE 4: VERIFICATION & OUTPUT
+================================================================================
+
+❌ ALL LINKING STRATEGIES FAILED
+   Check logs in: D:\rawrxd\build
+   Common issues:
+     • Missing monolithic ASM sources
+     • Section overflow in large C++ objects
+     • Symbol collisions
+     • Incomplete MSVC toolchain setup
+
+📄 Log excerpts (last 10 lines each):
+
+   --- final_build.log ---
+   ssot_validation.cpp.obj : error LNK2001: unresolved external symbol "struct CommandResult __cdecl handleVoiceAutoStop(struct CommandContext const &)" (?handleVoiceAutoStop@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+   
+   unified_command_dispatch.cpp.obj : error LNK2001: unresolved external symbol "struct CommandResult __cdecl handleVoiceAutoStop(struct CommandContext const &)" (?handleVoiceAutoStop@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+   
+   agentic_transaction.cpp.obj : error LNK2001: unresolved external symbol "struct CommandResult __cdecl handleVoiceAutoStop(struct CommandContext const &)" (?handleVoiceAutoStop@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+   
+   gold\RawrXD_Gold.exe : fatal error LNK1120: 14 unresolved externals
+   
+   
+   ninja: build stopped: subcommand failed.

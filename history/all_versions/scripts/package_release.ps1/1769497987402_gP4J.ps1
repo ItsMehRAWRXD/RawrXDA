@@ -1,0 +1,87 @@
+Write-Host "[RawrXD] Packaging Release..." -ForegroundColor Cyan
+
+$DistDir = "$PSScriptRoot\..\dist\RawrXD_Enterprise_v3.0"
+$BuildDir = "$PSScriptRoot\..\build\bin\Release"
+$KernelDir = "$PSScriptRoot\..\build"
+
+# Clean Setup
+if (Test-Path $DistDir) { Remove-Item -Recurse -Force $DistDir }
+New-Item -ItemType Directory -Force -Path $DistDir | Out-Null
+
+# 1. Copy Main IDE & Dependencies
+Write-Host " -> Copying Agentic IDE..."
+Copy-Item "$BuildDir\RawrXD-AgenticIDE.exe" -Destination $DistDir
+Copy-Item "$BuildDir\*.dll" -Destination $DistDir
+if (Test-Path "$BuildDir\platforms") { Copy-Item -Recurse "$BuildDir\platforms" -Destination $DistDir }
+if (Test-Path "$BuildDir\multimedia") { Copy-Item -Recurse "$BuildDir\multimedia" -Destination $DistDir }
+
+# 2. Copy Pocket Lab Kernel & Manifest
+Write-Host " -> Copying Pocket Lab Kernel..."
+if (Test-Path "$KernelDir\pocket_lab.exe") {
+    Copy-Item "$KernelDir\pocket_lab.exe" -Destination $DistDir
+} else {
+    Write-Warning "pocket_lab.exe not found in build dir!"
+}
+
+# 2b. Copy HexMag Swarm Service
+Write-Host " -> Copying HexMag Swarm..."
+$HexMagDir = "$PSScriptRoot\..\services\hexmag"
+$DestServices = "$DistDir\services\hexmag"
+if (Test-Path $HexMagDir) {
+    if (-not (Test-Path $DestServices)) { New-Item -ItemType Directory -Force -Path $DestServices | Out-Null }
+    Copy-Item "$HexMagDir\*" -Destination $DestServices
+    Write-Host "    [+] HexMag Engine & SQLite DB Included" -ForegroundColor Green
+}
+
+# 2c. Copy Desktop Copilot & Assistance Modules
+Write-Host " -> Copying Desktop Copilot & Assistance Suites..."
+$AssistanceDir = "$DistDir\extras\assistance_suite"
+New-Item -ItemType Directory -Force -Path $AssistanceDir | Out-Null
+
+# Copilot Scripts
+Copy-Item "$PSScriptRoot\..\dist\desktop_copilot_enhanced.ps1" -Destination $AssistanceDir
+Copy-Item "$PSScriptRoot\..\dist\voice_assistant_full.ps1" -Destination $AssistanceDir
+Copy-Item "$PSScriptRoot\..\dist\voice_assistant_launcher.ps1" -Destination $AssistanceDir
+
+# Language Models (Modelfiles)
+$ModelDest = "$DistDir\models"
+New-Item -ItemType Directory -Force -Path $ModelDest | Out-Null
+if (Test-Path "$PSScriptRoot\..\Modelfiles") {
+    Copy-Item "$PSScriptRoot\..\Modelfiles\*" -Destination $ModelDest
+    Write-Host "    [+] Language Modelfiles Included" -ForegroundColor Green
+}
+
+# 3. Copy Documentation
+Write-Host " -> Copying Documentation..."
+Copy-Item "$PSScriptRoot\..\RELEASENOTES.md" -Destination $DistDir
+Copy-Item "$PSScriptRoot\..\audit\interface_manifest.json" -Destination $DistDir
+
+# 3b. Copy Cursor Heritage Data
+Write-Host " -> Copying Cursor Compatibility Pack..."
+$CursorExtras = "$DistDir\extras\cursor_compat"
+New-Item -ItemType Directory -Force -Path $CursorExtras | Out-Null
+Copy-Item "$PSScriptRoot\..\CURSOR-STYLE-IDE-GUIDE.md" -Destination $CursorExtras
+Copy-Item "$PSScriptRoot\..\Cursor_Features_Accurate.json" -Destination $CursorExtras
+if (Test-Path "$PSScriptRoot\..\REVERSE_ENGINEERING_REPORT.md") {
+    Copy-Item "$PSScriptRoot\..\REVERSE_ENGINEERING_REPORT.md" -Destination $CursorExtras
+}
+
+# 4. Create Launcher Script
+$Launcher = @"
+@echo off
+echo [RawrXD] Booting Sovereign Enterprise Environment...
+start "" "pocket_lab.exe"
+start "" "RawrXD-AgenticIDE.exe"
+echo [RawrXD] Starting HexMag Swarm (Port 8000)...
+start /b python "services\hexmag\hexmag_engine.py"
+"@
+Set-Content -Path "$DistDir\Launch_Sovereign_IDE.bat" -Value $Launcher
+
+# 5. Zip it
+Write-Host " -> Zipping Archive..."
+$ZipFile = "$PSScriptRoot\..\dist\RawrXD_Enterprise_v3.0.zip"
+if (Test-Path $ZipFile) { Remove-Item -Force $ZipFile }
+Compress-Archive -Path "$DistDir\*" -DestinationPath $ZipFile
+
+Write-Host "SUCCESS: Package created at $ZipFile" -ForegroundColor Green
+Get-Item $ZipFile | Select-Object Name, Length, LastWriteTime

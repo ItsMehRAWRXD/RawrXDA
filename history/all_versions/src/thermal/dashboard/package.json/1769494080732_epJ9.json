@@ -1,0 +1,12 @@
+{
+  "name": "sovereign-dashboard",
+  "version": "1.0.0",
+  "description": "Sovereign Thermal Real-time HUD",
+  "main": "bridge.js",
+  "scripts": {
+    "start": "node bridge.js"
+  },
+  "dependencies": {
+    "ws": "^8.0.0"
+  }
+}

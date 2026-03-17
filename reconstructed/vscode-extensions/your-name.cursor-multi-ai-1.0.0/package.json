@@ -1,0 +1,180 @@
+{
+	"name": "cursor-multi-ai",
+	"displayName": "Cursor Multi-AI Assistant",
+	"description": "Access multiple AI services directly in Cursor/VS Code with fallback support",
+	"version": "1.0.0",
+	"publisher": "your-name",
+	"engines": {
+		"vscode": "^1.105.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"main": "./out/extension.js",
+	"contributes": {
+		"commands": [
+			{
+				"command": "cursor-multi-ai.askQuestion",
+				"title": "Ask AI Question",
+				"category": "Multi-AI"
+			},
+			{
+				"command": "cursor-multi-ai.explainCode",
+				"title": "Explain This Code",
+				"category": "Multi-AI"
+			},
+			{
+				"command": "cursor-multi-ai.optimizeCode",
+				"title": "Optimize This Code",
+				"category": "Multi-AI"
+			},
+			{
+				"command": "cursor-multi-ai.debugCode",
+				"title": "Debug This Code",
+				"category": "Multi-AI"
+			},
+			{
+				"command": "cursor-multi-ai.addComments",
+				"title": "Add Comments to Code",
+				"category": "Multi-AI"
+			},
+			{
+				"command": "cursor-multi-ai.generateTests",
+				"title": "Generate Unit Tests",
+				"category": "Multi-AI"
+			},
+			{
+				"command": "cursor-multi-ai.askAmazonQ",
+				"title": "Ask Amazon Q",
+				"category": "Multi-AI"
+			},
+			{
+				"command": "cursor-multi-ai.askClaude",
+				"title": "Ask Claude",
+				"category": "Multi-AI"
+			},
+			{
+				"command": "cursor-multi-ai.askChatGPT",
+				"title": "Ask ChatGPT",
+				"category": "Multi-AI"
+			},
+			{
+				"command": "cursor-multi-ai.askGemini",
+				"title": "Ask Gemini",
+				"category": "Multi-AI"
+			},
+			{
+				"command": "cursor-multi-ai.askKimi",
+				"title": "Ask Kimi",
+				"category": "Multi-AI"
+			},
+			{
+				"command": "cursor-multi-ai.askAll",
+				"title": "Ask All AIs",
+				"category": "Multi-AI"
+			}
+		],
+		"keybindings": [
+			{
+				"command": "cursor-multi-ai.askQuestion",
+				"key": "ctrl+shift+i",
+				"mac": "cmd+shift+i"
+			},
+			{
+				"command": "cursor-multi-ai.explainCode",
+				"key": "ctrl+shift+e",
+				"mac": "cmd+shift+e",
+				"when": "editorHasSelection"
+			},
+			{
+				"command": "cursor-multi-ai.askAmazonQ",
+				"key": "ctrl+shift+q",
+				"mac": "cmd+shift+q"
+			},
+			{
+				"command": "cursor-multi-ai.askAll",
+				"key": "ctrl+shift+a",
+				"mac": "cmd+shift+a"
+			}
+		],
+		"menus": {
+			"editor/context": [
+				{
+					"when": "editorHasSelection",
+					"command": "cursor-multi-ai.explainCode",
+					"group": "multi-ai@1"
+				},
+				{
+					"when": "editorHasSelection",
+					"command": "cursor-multi-ai.optimizeCode",
+					"group": "multi-ai@2"
+				},
+				{
+					"when": "editorHasSelection",
+					"command": "cursor-multi-ai.debugCode",
+					"group": "multi-ai@3"
+				},
+				{
+					"when": "editorHasSelection",
+					"command": "cursor-multi-ai.addComments",
+					"group": "multi-ai@4"
+				},
+				{
+					"when": "editorHasSelection",
+					"command": "cursor-multi-ai.generateTests",
+					"group": "multi-ai@5"
+				}
+			]
+		},
+		"configuration": {
+			"title": "Multi-AI Assistant",
+			"properties": {
+				"multiAI.serverUrl": {
+					"type": "string",
+					"default": "http://localhost:3003",
+					"description": "Multi-AI Aggregator server URL"
+				},
+				"multiAI.fallbackMode": {
+					"type": "boolean",
+					"default": true,
+					"description": "Use built-in AI when server is unavailable"
+				},
+				"multiAI.preferredAI": {
+					"type": "string",
+					"default": "amazonq",
+					"enum": [
+						"amazonq",
+						"claude",
+						"chatgpt",
+						"gemini",
+						"kimi"
+					],
+					"description": "Preferred AI service"
+				},
+				"multiAI.timeout": {
+					"type": "number",
+					"default": 30000,
+					"description": "Request timeout in milliseconds"
+				}
+			}
+		}
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -p ./",
+		"watch": "tsc -watch -p ./"
+	},
+	"devDependencies": {
+		"@types/node": "16.x",
+		"@types/vscode": "^1.105.0",
+		"typescript": "^4.9.4"
+	},
+	"dependencies": {
+		"axios": "^1.6.0"
+	},
+	"__metadata": {
+		"installedTimestamp": 1759685970856,
+		"targetPlatform": "undefined",
+		"size": 2954693
+	}
+}

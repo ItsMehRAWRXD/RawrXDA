@@ -1,0 +1,282 @@
+{
+  "schema_version": "1.1",
+  "generated_at": "2026-02-20",
+  "goal": "Compare two repair strategies for a large (~2,000-file) codebase: a minimal <100-line 'instant fix' vs a ~500–1k-line comprehensive fixer, grounded in the provided scripts, with explicit NOC (non-compilation) framing.",
+  "noc_definition": {
+    "term": "NOC",
+    "meaning": "non-compilation",
+    "notes": [
+      "In this context, NOC refers to workflows where changes can be applied/validated without a full rebuild (e.g., runtime/JIT, live reload, or targeted test execution).",
+      "This deliverable treats NOC as an operational goal: reduce rebuild friction while still maintaining verification gates."
+    ]
+  },
+  "evidence": {
+    "artifacts": [
+      {
+        "name": "instant_fix_2000",
+        "path": "d:/instant_fix_2000.py",
+        "measured_line_count": 78
+      },
+      {
+        "name": "slow_fix_2000",
+        "path": "d:/slow_fix_2000.py",
+        "measured_line_count": 507
+      },
+      {
+        "name": "code_length_comparator",
+        "path": "d:/compare_code_length.sh",
+        "purpose": "Counts script line lengths via wc/bc (bash)."
+      }
+    ],
+    "line_count_method": "PowerShell: (Get-Content <file> | Measure-Object -Line).Lines"
+  },
+  "assumptions": {
+    "target_repo_root": "d:/rawrxd",
+    "execution_base_dir": "Run scripts with the repository root as the single argument.",
+    "safety_mode": "full_apply",
+    "notes": [
+      "Full apply means the scripts write changes directly into the repository.",
+      "Although 'no setup required' is stated, best practice is to ensure the git working tree is clean and you have a rollback path (branch/commit) before running automation."
+    ]
+  },
+  "approaches": {
+    "under_100_lines_instant_fix": {
+      "intent": "Fast, targeted changes to address a small number of high-impact issues quickly (triage/hotfix style).",
+      "noc_alignment": {
+        "how_it_supports_noc": [
+          "Minimizes time spent in rebuild loops by applying narrowly scoped edits.",
+          "Uses a quick test invocation (pytest) instead of full project rebuilds."
+        ],
+        "limits": [
+          "Still relies on running tests; not a true runtime hot-reload system.",
+          "Coverage is intentionally shallow (samples only a small subset of files)."
+        ]
+      },
+      "scope": {
+        "files_covered": "Python only; scans for *.py but then samples only the first 10 files for issue detection.",
+        "issue_types_detected": [
+          "TODO/FIXME markers (string search)",
+          "Heuristic: 'import os' present but 'import sys' absent"
+        ],
+        "changes_applied": [
+          "Insert 'import sys' immediately after an 'import os' line (only when missing)."
+        ]
+      },
+      "workflow": [
+        "Glob for Python files and take a small sample",
+        "Identify a short list of issues (top 5)",
+        "Apply a narrow fix (sys import insertion)",
+        "Run quick pytest with short timeout"
+      ],
+      "verification": {
+        "tests": {
+          "command": "python -m pytest --tb=short",
+          "timeout_seconds": 30,
+          "coverage_characteristic": "Smoke-level; may miss slow or integration tests"
+        }
+      },
+      "outputs": [
+        "Console summary only (no reports written to disk)"
+      ],
+      "strengths": [
+        "Very low implementation surface area (78 LOC) => easy to audit and modify",
+        "Low time-to-first-result; good for emergency unblocking",
+        "Reduced blast radius because it performs very few transformations"
+      ],
+      "weaknesses": [
+        "Not actually comprehensive for a ~2,000-file project (samples only 10 files)",
+        "Issue detection is heuristic and may miss most real defects",
+        "Fix logic is brittle (assumes import placement and file structure)"
+      ],
+      "risk_profile": {
+        "primary_risks": [
+          "False confidence: passing quick tests may not reflect real health",
+          "Misses non-Python sources and most Python files",
+          "May introduce stylistic or ordering issues in imports"
+        ],
+        "mitigations_suggested": [
+          "Expand file coverage from sample to full set before applying changes",
+          "Add a dry-run mode and a unified diff output",
+          "Gate changes behind a real test suite and CI"
+        ]
+      },
+      "expected_time_cost": {
+        "human_time": "Minutes",
+        "machine_time": "Seconds to a few minutes (depending on pytest discovery)"
+      }
+    },
+    "500_to_1k_lines_comprehensive_fix": {
+      "intent": "Exhaustive analysis plus automated repair steps with backup, reporting, and broader validation (maintenance/refactor style).",
+      "noc_alignment": {
+        "how_it_supports_noc": [
+          "Emphasizes analysis + targeted transformations rather than manual rebuild cycles.",
+          "Produces reports/metrics so you can prioritize runtime-friendly fixes (e.g., hotspots) without recompiling everything repeatedly.",
+          "Runs verification tools to validate changes without needing full product builds (depending on project structure)."
+        ],
+        "limits": [
+          "Touches many files and can increase iteration time if test suites are large.",
+          "Some transformations are mechanical and may require rebuild-level verification anyway."
+        ]
+      },
+      "scope": {
+        "files_covered": "Multiple languages by extension scan (*.py, *.js, *.ts, *.java, *.cpp, *.c); loads full contents into memory.",
+        "analysis_features": [
+          "Dependency extraction (Python AST imports; JS/TS regex imports)",
+          "TODO/FIXME detection across all loaded files",
+          "Python cyclomatic complexity heuristic (>10) via AST walk",
+          "Regex security checks (eval/exec/shell-ish patterns)",
+          "Regex performance checks (range(len()) style loops, etc.)",
+          "Python style checks (line length > 100, trailing whitespace)"
+        ],
+        "changes_applied": [
+          "TODO resolver inserts placeholder implementation ('pass') after TODO lines (naive)",
+          "Breaks long lines with a backslash continuation (naive)",
+          "Strips trailing whitespace",
+          "Replaces 'eval(' with 'ast.literal_eval(' and prepends 'import ast' if missing",
+          "Regex rewrite for some loop patterns",
+          "Adds a 'TODO: Refactor' comment for high-complexity functions (placeholder)"
+        ]
+      },
+      "workflow": [
+        "Scan all matching source files",
+        "Load all file contents",
+        "Analyze dependencies",
+        "Identify issues (multi-category)",
+        "Compute metrics and write analysis_report.md",
+        "Create a full backup tree in a temp directory",
+        "Apply fixes across all identified issues",
+        "Write fix_report.md (including backup location)",
+        "Run tests + lint + optional type checks",
+        "Run placeholder documentation generation"
+      ],
+      "verification": {
+        "tests_and_checks": [
+          {
+            "type": "unit_tests",
+            "command": "python -m pytest -v",
+            "timeout_seconds": 300,
+            "pass_condition": "pytest return code == 0"
+          },
+          {
+            "type": "lint",
+            "command": "python -m flake8 <root_dir>",
+            "timeout_seconds": 120,
+            "pass_condition": "flake8 return code == 0 (logged; not used as global pass condition)"
+          },
+          {
+            "type": "type_check_optional",
+            "command": "python -m mypy <root_dir>",
+            "timeout_seconds": 180,
+            "pass_condition": "logged; continues if unavailable"
+          }
+        ]
+      },
+      "outputs": [
+        "analysis_report.md written into project root",
+        "fix_report.md written into project root",
+        "A complete backup copy of all scanned files under a temp directory"
+      ],
+      "strengths": [
+        "Wider file coverage and multi-dimensional issue inventory",
+        "Backups provide rollback capability",
+        "Produces artifacts (reports) useful for audit and handoff",
+        "Runs broader verification steps (tests + lint + optional typing)"
+      ],
+      "weaknesses": [
+        "Automated fixes are simplistic and can be semantically unsafe (especially TODO insertion and eval replacement)",
+        "Loads entire project contents into memory (can be heavy on large repos)",
+        "Security/performance detections are regex-based and may produce false positives/negatives",
+        "Documentation generator is placeholder (no real docs output)"
+      ],
+      "risk_profile": {
+        "primary_risks": [
+          "Semantic breakage from mechanical rewrites (eval->literal_eval, line splitting, loop regex)",
+          "Large blast radius: many files can be touched quickly",
+          "Test suite coverage may still be insufficient to detect subtle regressions"
+        ],
+        "mitigations_suggested": [
+          "Add strict dry-run + patch output before writing changes",
+          "Restrict fix application to high-confidence transformations",
+          "Apply fixes in staged phases with commit checkpoints",
+          "Require green CI and run targeted integration tests"
+        ]
+      },
+      "expected_time_cost": {
+        "human_time": "Tens of minutes to hours (review + iteration)",
+        "machine_time": "Minutes to tens of minutes (scan + tests), depending on repo size and tooling"
+      }
+    }
+  },
+  "side_by_side_comparison": {
+    "dimensions": [
+      {
+        "dimension": "Coverage",
+        "instant_fix": "Low (samples first 10 Python files for issue detection)",
+        "comprehensive_fix": "High (scans many files across multiple languages)"
+      },
+      {
+        "dimension": "Safety / Blast radius",
+        "instant_fix": "Small and predictable changes",
+        "comprehensive_fix": "Large potential change set; higher regression risk"
+      },
+      {
+        "dimension": "Confidence building",
+        "instant_fix": "Quick smoke test only",
+        "comprehensive_fix": "Reports + backups + broader checks"
+      },
+      {
+        "dimension": "Engineering effort (script complexity)",
+        "instant_fix": "Very low (78 LOC)",
+        "comprehensive_fix": "Moderate (507 LOC)"
+      },
+      {
+        "dimension": "Best use case",
+        "instant_fix": "Emergency unblocking / rapid triage",
+        "comprehensive_fix": "Systematic cleanup with review and rollback"
+      }
+    ],
+    "decision_matrix": {
+      "choose_instant_fix_if": [
+        "You need a quick, minimal change to unblock work",
+        "You have a narrow known issue class and can accept partial coverage",
+        "You want minimal automation risk"
+      ],
+      "choose_comprehensive_fix_if": [
+        "You need a broad inventory of issues and metrics",
+        "You can budget time for review and rollback",
+        "You want backups and written reports as deliverables"
+      ],
+      "avoid_both_if": [
+        "The project requires domain-aware fixes (business logic, protocol correctness) where automated heuristics are unsafe without strong guardrails"
+      ]
+    }
+  },
+  "non_architectural_engineer_guidance": {
+    "purpose": "Use script insights to guide where to spend effort, without prematurely re-architecting.",
+    "playbook": [
+      "Start with metrics (issue counts by type, hotspots by file/function).",
+      "Pick the smallest safe automation first (whitespace/import fixes) to reduce noise.",
+      "Use the slow script's reports to choose 3–5 high-impact targets (tests failing, security flags, extreme complexity).",
+      "Only after stabilizing, consider architectural changes (module boundaries, dependency inversion) informed by dependency graph findings."
+    ]
+  },
+  "run_instructions": {
+    "instant_fix": {
+      "command": "python d:/instant_fix_2000.py d:/rawrxd",
+      "writes_files": true
+    },
+    "slow_fix": {
+      "command": "python d:/slow_fix_2000.py d:/rawrxd",
+      "writes_files": true,
+      "expected_outputs": [
+        "d:/rawrxd/analysis_report.md",
+        "d:/rawrxd/fix_report.md"
+      ]
+    },
+    "preflight_checks": [
+      "Ensure git working tree is clean",
+      "Create a rollback point (commit or branch)",
+      "Confirm pytest/flake8 are available if you want verification to run"
+    ]
+  }
+}

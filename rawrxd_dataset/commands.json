@@ -1,0 +1,8148 @@
+{
+  "Dispatchers": [],
+  "MenuItems": [],
+  "Handlers": [
+    {
+      "Type": "CommandHandler",
+      "Name": "handleFileEdit"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleSearchFiles"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleRunBuild"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleExecuteTests"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleCommitGit"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleInvokeCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleRecursiveAgent"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleQueryUser"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleLayoutRestored"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleWindowActivated"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleCopilotSendWithNavigation"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleCopilotClearWithNavigation"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleCopilotStreamUpdateWithNavigation"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "OnInlineSuggestion"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "OnChatResponse"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "OnEditComplete"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "OnAgentUpdate"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "OnError"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleTrainingOutput"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleTrainingError"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleTrainingFinished"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleEpochComplete"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleBatchComplete"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleValidation"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "OnDigestionHotkeyPressed"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "OnDigestionQueued"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "OnDigestionThreadSpawned"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "OnDigestionEngineInvoked"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "OnDigestionProgress"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "OnDigestionComplete"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "OnDigestionError"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleClient"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleTerminate"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleUnhandledException"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "cmd_safety"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "cmd_confidence"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "cmd_replay"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "cmd_governor"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "cmd_multi_response"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "cmd_history"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "cmd_explain"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "cmd_policy"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "cmd_tools"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "cmd_model"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "cmd_swarm_orchestrator"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleTaskCompletion"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleTaskFailure"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleProcessFailure"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleNodeFailure"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "OnLicenseChange"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleItemClicked"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleItemExpanded"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleMessage"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleIncomingConnection"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleRequest"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleGenerateRequest"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleChatCompletionsRequest"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleTagsRequest"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handlePullRequest"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handlePushRequest"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleShowRequest"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleDeleteRequest"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleHealthRequest"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleNotFound"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleCorsPreflightRequest"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleMessageInternal"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleHallucinationDetected"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleHallucinationCorrected"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleNavigationErrorFixed"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleBehaviorPatchApplied"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleResponse"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleDebugEvent"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleModelFailure"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleHotpatchList"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleHotpatchApply"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleHotpatchRevert"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleHotpatchDiagnostics"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleGGUFModelInfo"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleGGUFTensorList"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleGGUFValidate"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleWorkspaceSymbols"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleWorkspaceStats"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleNotification"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleInitialized"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleExit"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleDidOpen"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleDidChange"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleDidClose"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleDidSave"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleMenuCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleChatResponse"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "OnToken"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleTaskSplitResponse"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleModelResponse"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleExtensionCrash"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleNewConnection"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleClientData"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleInferenceRequest"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleChatRequest"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleAnalyzeRequest"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleStreamError"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleGenerateStream"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleGenerateSSE"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleBatchGenerate"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleTokenize"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleDetokenize"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleStatus"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleHeartbeat"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleTaskPull"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleResultPush"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleAttestResponse"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleCapsReport"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleConsensusVote"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleLogStream"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleMetricReport"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleDiscoveryPing"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleDiscoveryPong"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleWorkerResult"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleNodeJoin"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleLayerRequest"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handlePressureUpdate"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleRebalanceCmd"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleTaskPush"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleAttestRequest"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleShutdownRequest"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleAudioStateChanged"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "OnReadMessage"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "OnWriteMessage"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "OnSocketData"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "OnWebSocketFrame"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleAgenticMessage"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleHotkeyMessage"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleCustomMessage"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "CmdList_Dispatch"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "CmdList_SetComputeRootSignature"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "CmdList_SetPipelineState"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "CmdList_CopyBufferRegion"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "CmdList_ResourceBarrier"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleKeystroke"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleInlineEditShortcut"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleNewlineSmartIndent"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleSmartTab"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleGoalSubmit"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleAgentMockProgress"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleGenerationFinished"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleQShellReturn"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleArchitectChunk"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleArchitectFinished"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleTaskStatusUpdate"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleTaskCompleted"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleWorkflowFinished"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleTaskStreaming"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleSaveState"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleLoadState"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleNewChat"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleNewEditor"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleNewWindow"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleAddFile"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleAddFolder"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleAddSymbol"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleTabClose"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handlePwshCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleCmdCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleBackendSelection"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleSaveAs"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleSaveAll"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleCloseEditor"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleCloseAllEditors"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleCloseFolder"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handlePrint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleExport"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleUndo"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleRedo"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleCut"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleCopy"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handlePaste"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleDelete"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleSelectAll"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleFind"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleFindReplace"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleFindInFiles"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleGoToLine"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleGoToSymbol"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleGoToDefinition"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleGoToReferences"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleToggleComment"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleFormatDocument"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleFormatSelection"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleFoldAll"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleUnfoldAll"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleStartDebug"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleRunNoDebug"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleStopDebug"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleRestartDebug"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleStepOver"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleStepInto"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleStepOut"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleToggleBreakpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleAddRunConfig"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleNewTerminal"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleSplitTerminal"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleKillTerminal"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleClearTerminal"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleRunActiveFile"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleRunSelection"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleSplitRight"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleSplitDown"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleSingleGroup"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleFullScreen"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleZenMode"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleToggleSidebar"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleResetLayout"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleSaveLayout"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleExternalTools"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleOpenDocs"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handlePlayground"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleShowShortcuts"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleCheckUpdates"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleReleaseNotes"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleReportIssue"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleJoinCommunity"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleViewLicense"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleDevTools"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "OnDestroy"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "OnValidate"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "OnInspectorGUI"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "OnGUI"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleCustomDraw"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handlers"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleGauntletCustomDraw"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleMarketplaceCustomDraw"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleNetworkCustomDraw"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleTelCustomDraw"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleTranscendenceCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleAgentCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleMonacoCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleFileCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleEditCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleViewCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleTerminalCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleToolsCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleModulesCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleHelpCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleGitCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleReverseEngineeringAnalyze"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleReverseEngineeringDisassemble"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleReverseEngineeringDumpBin"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleReverseEngineeringCompile"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleReverseEngineeringCompare"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleReverseEngineeringDetectVulns"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleReverseEngineeringExportIDA"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleReverseEngineeringExportGhidra"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleReverseEngineeringCFG"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleReverseEngineeringFunctions"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleReverseEngineeringDemangle"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleReverseEngineeringSSA"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleReverseEngineeringRecursiveDisasm"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleReverseEngineeringTypeRecovery"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleReverseEngineeringDataFlow"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleReverseEngineeringLicenseInfo"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleReverseEngineeringDecompilerView"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleExplorerContextMenu"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handlePluginCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleGhostTextKey"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleRecoveryCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleRouterWhyEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleRouterPinsEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleRouterHeatmapEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleRouterEnsembleEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleRouterSimulateEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleLSPStatusEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleLSPDiagnosticsEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleLocalServerClient"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleOllamaApiTags"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleOllamaApiGenerate"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleOpenAIChatCompletions"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleModelsEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleAskEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleServeGui"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleReadFileEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleWriteFileEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleListDirEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleDeleteFileEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleRenameFileEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleMkdirEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleSearchFilesEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleStatFileEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleCopyFileEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleMoveFileEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleToolDispatchEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleCliEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleHotpatchEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleAgentHistoryEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleAgentStatusEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleAgentReplayEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleFailuresEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleBackendsListEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleBackendActiveEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleBackendSwitchEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleRouterStatusEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleRouterDecisionEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleRouterCapabilitiesEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleRouterRouteEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleCoTStatusEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleCoTPresetsEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleCoTStepsEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleCoTApplyPresetEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleCoTSetStepsEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleCoTExecuteEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleCoTCancelEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleCoTRolesEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleAsmSymbolsEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleAsmNavigateEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleAsmAnalyzeEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleHybridCompleteEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleHybridDiagnosticsEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleHybridSmartRenameEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleHybridAnalyzeEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleHybridStatusEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleHybridSymbolUsageEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleMultiResponseStatusEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleMultiResponseTemplatesEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleMultiResponseGenerateEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleMultiResponseResultsEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleMultiResponsePreferEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleMultiResponseStatsEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleMultiResponsePreferencesEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleGovernorStatusEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleGovernorSubmitEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleGovernorKillEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleGovernorResultEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleSafetyStatusEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleSafetyCheckEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleSafetyViolationsEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleSafetyRollbackEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleReplayStatusEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleReplayRecordsEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleReplaySessionsEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleConfidenceStatusEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleConfidenceEvaluateEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleConfidenceHistoryEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handlePhase10StatusEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleSwarmStatusEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleSwarmNodesEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleSwarmTaskGraphEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleSwarmStatsEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleSwarmEventsEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleSwarmConfigEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleSwarmWorkerEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleSwarmStartEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleSwarmStopEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleSwarmAddNodeEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleSwarmBuildEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleSwarmCancelEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleSwarmCacheClearEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handlePhase11StatusEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleDualAgentInitEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleDualAgentShutdownEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleDualAgentStatusEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleDualAgentHandoffEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleDualAgentSubmitEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handlePhase41StatusEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleDbgStatusEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleDbgBreakpointsEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleDbgRegistersEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleDbgStackEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleDbgMemoryEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleDbgDisasmEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleDbgModulesEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleDbgThreadsEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleDbgEventsEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleDbgWatchesEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleDbgLaunchEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleDbgAttachEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleDbgGoEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handlePhase12StatusEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleHotpatchCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handlePDBCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleLSPServerCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleLSPServerStatusEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleEditorEngineCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleVSCExtAPICommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleQuickJSHostCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleAuditCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleGauntletCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleVoiceChatCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleQuickWinCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleTelemetryCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleFlightRecorderCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleInstructionsEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleInstructionsContentEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleInstructionsReloadEndpoint"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleGameEngineCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleCrucibleCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handlePipelineCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleHotpatchCtrlCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleStaticAnalysisCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleSemanticCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleCopilotGapCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleTelemetryExportCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleComposerUXCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleMentionParserCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleVisionEncoderCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleRefactoringCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleLanguageCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleSemanticIndexCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleResourceGenCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleCursorParityCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleTier2Command"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleTier3Timer"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleStatusBarClick"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleTier3CosmeticsCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleTier3CosmeticsTimer"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleTier1Command"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleTier1Timer"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleTier1MouseWheel"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleWelcomeCloneRepo"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleWelcomeOpenFolder"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleWelcomeNewFile"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleFlagshipCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleProvableAgentCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleAIReverseEngCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleAirgappedCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleTier5Command"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleLineEndingCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleNetworkCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleTestExplorerCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleDebugWatchCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleCallStackCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleMarketplaceCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleTelemetryDashboardCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleShortcutEditorCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleColorPickerCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleEmojiCommand"
+    },
+    {
+      "Type": "CommandHandler",
+      "Name": "handleCrashReporterCommand"
+    }
+  ],
+  "TableEntries": [
+    {
+      "Name": "IDM_EDITOR_ENGINE_RICHEDIT",
+      "Value": "9300",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDITOR_ENGINE_WEBVIEW2",
+      "Value": "9301",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDITOR_ENGINE_MONACOCORE",
+      "Value": "9302",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDITOR_ENGINE_CYCLE",
+      "Value": "9303",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDITOR_ENGINE_STATUS",
+      "Value": "9304",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_NEW",
+      "Value": "101",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_OPEN",
+      "Value": "102",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_SAVE",
+      "Value": "103",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_SAVEAS",
+      "Value": "104",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_AUTOSAVE",
+      "Value": "105",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_CLOSE_FOLDER",
+      "Value": "106",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_EXIT",
+      "Value": "107",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_OPEN_FOLDER",
+      "Value": "108",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_NEW_WINDOW",
+      "Value": "109",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_CLOSE_TAB",
+      "Value": "110",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_UNDO",
+      "Value": "201",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_REDO",
+      "Value": "202",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_CUT",
+      "Value": "203",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_COPY",
+      "Value": "204",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_PASTE",
+      "Value": "205",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_FIND",
+      "Value": "206",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_REPLACE",
+      "Value": "207",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_SELECTALL",
+      "Value": "208",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_MULTICURSOR_ADD",
+      "Value": "209",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_MULTICURSOR_REMOVE",
+      "Value": "210",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_GOTO_LINE",
+      "Value": "211",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_TOGGLE_SIDEBAR",
+      "Value": "301",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_TOGGLE_TERMINAL",
+      "Value": "302",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_TOGGLE_OUTPUT",
+      "Value": "303",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_TOGGLE_FULLSCREEN",
+      "Value": "304",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_ZOOM_IN",
+      "Value": "305",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_ZOOM_OUT",
+      "Value": "306",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_ZOOM_RESET",
+      "Value": "307",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_INLINE_COMPLETE",
+      "Value": "401",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_CHAT_MODE",
+      "Value": "402",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_EXPLAIN_CODE",
+      "Value": "403",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_REFACTOR",
+      "Value": "404",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_GENERATE_TESTS",
+      "Value": "405",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_GENERATE_DOCS",
+      "Value": "406",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_FIX_ERRORS",
+      "Value": "407",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_OPTIMIZE_CODE",
+      "Value": "408",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_MODEL_SELECT",
+      "Value": "409",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TOOLS_COMMAND_PALETTE",
+      "Value": "501",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TOOLS_SETTINGS",
+      "Value": "502",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TOOLS_EXTENSIONS",
+      "Value": "503",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TOOLS_TERMINAL",
+      "Value": "504",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TOOLS_BUILD",
+      "Value": "505",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TOOLS_DEBUG",
+      "Value": "506",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HELP_DOCS",
+      "Value": "601",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HELP_ABOUT",
+      "Value": "602",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HELP_SHORTCUTS",
+      "Value": "603",
+      "Type": "Constant"
+    },
+    {
+      "Name": "ID_EDITOR_CONTROL",
+      "Value": "1001",
+      "Type": "Constant"
+    },
+    {
+      "Name": "ID_FILE_EXPLORER",
+      "Value": "1002",
+      "Type": "Constant"
+    },
+    {
+      "Name": "ID_TERMINAL_PANEL",
+      "Value": "1003",
+      "Type": "Constant"
+    },
+    {
+      "Name": "ID_OUTPUT_PANEL",
+      "Value": "1004",
+      "Type": "Constant"
+    },
+    {
+      "Name": "ID_TAB_CONTROL",
+      "Value": "1005",
+      "Type": "Constant"
+    },
+    {
+      "Name": "ID_TOOLBAR",
+      "Value": "1006",
+      "Type": "Constant"
+    },
+    {
+      "Name": "ID_STATUSBAR",
+      "Value": "1007",
+      "Type": "Constant"
+    },
+    {
+      "Name": "ID_COMMAND_PALETTE",
+      "Value": "1008",
+      "Type": "Constant"
+    },
+    {
+      "Name": "ID_AI_CHAT_PANEL",
+      "Value": "1009",
+      "Type": "Constant"
+    },
+    {
+      "Name": "ID_AUTOCOMPLETE_LIST",
+      "Value": "1010",
+      "Type": "Constant"
+    },
+    {
+      "Name": "ID_PARAMETER_HINT",
+      "Value": "1011",
+      "Type": "Constant"
+    },
+    {
+      "Name": "ID_MARKETPLACE_PANEL",
+      "Value": "1012",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_NEW",
+      "Value": "100",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_NEW_WINDOW",
+      "Value": "101",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_OPEN",
+      "Value": "102",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_OPEN_FOLDER",
+      "Value": "103",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_SAVE",
+      "Value": "104",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_SAVEAS",
+      "Value": "105",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_AUTOSAVE",
+      "Value": "106",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_CLOSE_TAB",
+      "Value": "107",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_CLOSE_FOLDER",
+      "Value": "108",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_EXIT",
+      "Value": "109",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_UNDO",
+      "Value": "200",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_REDO",
+      "Value": "201",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_CUT",
+      "Value": "202",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_COPY",
+      "Value": "203",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_PASTE",
+      "Value": "204",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_FIND",
+      "Value": "205",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_REPLACE",
+      "Value": "206",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_GOTO_LINE",
+      "Value": "207",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_SELECTALL",
+      "Value": "208",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_TOGGLE_COMMENT",
+      "Value": "209",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_MULTICURSOR_ADD",
+      "Value": "210",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_MULTICURSOR_REMOVE",
+      "Value": "211",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SEL_ALL",
+      "Value": "300",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SEL_EXPAND",
+      "Value": "301",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SEL_SHRINK",
+      "Value": "302",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SEL_COLUMN_MODE",
+      "Value": "303",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SEL_ADD_CURSOR_ABOVE",
+      "Value": "304",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SEL_ADD_CURSOR_BELOW",
+      "Value": "305",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SEL_ADD_NEXT_OCCURRENCE",
+      "Value": "306",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SEL_SELECT_ALL_OCCURRENCES",
+      "Value": "307",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_COMMAND_PALETTE",
+      "Value": "400",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_ACTIVITY_BAR",
+      "Value": "401",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_PRIMARY_SIDEBAR",
+      "Value": "402",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_SECONDARY_SIDEBAR",
+      "Value": "403",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_PANEL",
+      "Value": "404",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_STATUS_BAR",
+      "Value": "405",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_ZEN_MODE",
+      "Value": "406",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_EXPLORER",
+      "Value": "407",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_SEARCH",
+      "Value": "408",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_SOURCE_CONTROL",
+      "Value": "409",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_EXTENSIONS",
+      "Value": "410",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_PROBLEMS",
+      "Value": "411",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_OUTPUT",
+      "Value": "412",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_TERMINAL",
+      "Value": "413",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_MINIMAP",
+      "Value": "414",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_WORD_WRAP",
+      "Value": "415",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_LINE_NUMBERS",
+      "Value": "416",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_RUN_START_DEBUG",
+      "Value": "500",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_RUN_WITHOUT_DEBUG",
+      "Value": "501",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_RUN_STOP",
+      "Value": "502",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_RUN_RESTART",
+      "Value": "503",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_RUN_STEP_OVER",
+      "Value": "504",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_RUN_STEP_INTO",
+      "Value": "505",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_RUN_STEP_OUT",
+      "Value": "506",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_RUN_CONTINUE",
+      "Value": "507",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_RUN_TOGGLE_BREAKPOINT",
+      "Value": "508",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_RUN_CLEAR_BREAKPOINTS",
+      "Value": "509",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERM_NEW",
+      "Value": "600",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERM_SPLIT",
+      "Value": "601",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERM_PWSH",
+      "Value": "602",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERM_CMD",
+      "Value": "603",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERM_GITBASH",
+      "Value": "604",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERM_RUN_TASK",
+      "Value": "605",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERM_RUN_FILE",
+      "Value": "606",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERM_CLEAR",
+      "Value": "607",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERM_KILL",
+      "Value": "608",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MODEL_LOAD",
+      "Value": "700",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MODEL_UNLOAD",
+      "Value": "701",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MODEL_INFO",
+      "Value": "702",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MODEL_RELOAD",
+      "Value": "703",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MODEL_SETTINGS",
+      "Value": "704",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HELP_WELCOME",
+      "Value": "800",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HELP_DOCS",
+      "Value": "801",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HELP_TIPS_TRICKS",
+      "Value": "802",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HELP_SHORTCUTS",
+      "Value": "803",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HELP_RELEASE_NOTES",
+      "Value": "804",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HELP_REPORT_ISSUE",
+      "Value": "805",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HELP_CHECK_UPDATES",
+      "Value": "806",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HELP_ABOUT",
+      "Value": "807",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_QUICKJS_HOST_STATUS",
+      "Value": "10020",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_QUICKJS_HOST_INSTALL_VSIX",
+      "Value": "10021",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_QUICKJS_HOST_LIST_EXTENSIONS",
+      "Value": "10022",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_QUICKJS_HOST_ACTIVATE",
+      "Value": "10023",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_QUICKJS_HOST_DEACTIVATE",
+      "Value": "10024",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_QUICKJS_HOST_RELOAD",
+      "Value": "10025",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_QUICKJS_HOST_SANDBOX_CONFIG",
+      "Value": "10026",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_QUICKJS_HOST_KILL_RUNTIME",
+      "Value": "10027",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SRCFILE_BASE",
+      "Value": "60000",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SRCFILE_COUNT",
+      "Value": "3488",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SRCFILE_MAX",
+      "Value": "63487",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_STATUS",
+      "Value": "10000",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_RELOAD",
+      "Value": "10001",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_LIST_COMMANDS",
+      "Value": "10002",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_LIST_PROVIDERS",
+      "Value": "10003",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_DIAGNOSTICS",
+      "Value": "10004",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_EXTENSIONS",
+      "Value": "10005",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_STATS",
+      "Value": "10006",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_LOAD_NATIVE",
+      "Value": "10007",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_DEACTIVATE_ALL",
+      "Value": "10008",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_EXPORT_CONFIG",
+      "Value": "10009",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERMINAL_CLEAR",
+      "Value": "4010",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_AGENT_CYCLES_SET",
+      "Value": "4217",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_AGENT_MULTI_ENABLE",
+      "Value": "4218",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_AGENT_MULTI_DISABLE",
+      "Value": "4219",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_AGENT_MULTI_STATUS",
+      "Value": "4220",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LOCAL_ANALYZE",
+      "Value": "4221",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LOCAL_ANALYZE_DEEP",
+      "Value": "4222",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LOCAL_ANALYZE_STATUS",
+      "Value": "4223",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_KERNEL_ANALYZE",
+      "Value": "4224",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PERF_ANALYZE",
+      "Value": "4225",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_AUTOSAVE",
+      "Value": "105",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_CLOSE_FOLDER",
+      "Value": "106",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_OPEN_FOLDER",
+      "Value": "108",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_NEW_WINDOW",
+      "Value": "109",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_CLOSE_TAB",
+      "Value": "110",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_SELECTALL",
+      "Value": "208",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_MULTICURSOR_ADD",
+      "Value": "209",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_MULTICURSOR_REMOVE",
+      "Value": "210",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_GOTO_LINE",
+      "Value": "211",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_TOGGLE_SIDEBAR",
+      "Value": "301",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_TOGGLE_TERMINAL",
+      "Value": "302",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_TOGGLE_OUTPUT",
+      "Value": "303",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_TOGGLE_FULLSCREEN",
+      "Value": "304",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_ZOOM_IN",
+      "Value": "305",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_ZOOM_OUT",
+      "Value": "306",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_ZOOM_RESET",
+      "Value": "307",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_INLINE_COMPLETE",
+      "Value": "401",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_CHAT_MODE",
+      "Value": "402",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_EXPLAIN_CODE",
+      "Value": "403",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_REFACTOR",
+      "Value": "404",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_GENERATE_TESTS",
+      "Value": "405",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_GENERATE_DOCS",
+      "Value": "406",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_FIX_ERRORS",
+      "Value": "407",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_OPTIMIZE_CODE",
+      "Value": "408",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_MODEL_SELECT",
+      "Value": "409",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TOOLS_COMMAND_PALETTE",
+      "Value": "501",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TOOLS_SETTINGS",
+      "Value": "502",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TOOLS_EXTENSIONS",
+      "Value": "503",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TOOLS_TERMINAL",
+      "Value": "504",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TOOLS_BUILD",
+      "Value": "505",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TOOLS_DEBUG",
+      "Value": "506",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HELP_DOCS",
+      "Value": "601",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HELP_SHORTCUTS",
+      "Value": "603",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_SAVEALL",
+      "Value": "1005",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_CLOSE",
+      "Value": "1006",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_RECENT_CLEAR",
+      "Value": "1020",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_LOAD_MODEL",
+      "Value": "1030",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_MODEL_FROM_HF",
+      "Value": "1031",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_MODEL_FROM_OLLAMA",
+      "Value": "1032",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_MODEL_FROM_URL",
+      "Value": "1033",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_MODEL_UNIFIED",
+      "Value": "1034",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_MODEL_QUICK_LOAD",
+      "Value": "1035",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_NEW",
+      "Value": "2001",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_OPEN",
+      "Value": "2002",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_SAVE",
+      "Value": "2003",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_SAVEAS",
+      "Value": "2004",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_EXIT",
+      "Value": "2005",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_SELECT_ALL",
+      "Value": "2006",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_UNDO",
+      "Value": "2007",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_REDO",
+      "Value": "2008",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_CUT",
+      "Value": "2009",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_COPY",
+      "Value": "2010",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_PASTE",
+      "Value": "2011",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_SNIPPET",
+      "Value": "2012",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_COPY_FORMAT",
+      "Value": "2013",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_PASTE_PLAIN",
+      "Value": "2014",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_CLIPBOARD_HISTORY",
+      "Value": "2015",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_FIND",
+      "Value": "2016",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_REPLACE",
+      "Value": "2017",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_FIND_NEXT",
+      "Value": "2018",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_FIND_PREV",
+      "Value": "2019",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_MINIMAP",
+      "Value": "2020",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_OUTPUT_TABS",
+      "Value": "2021",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_MODULE_BROWSER",
+      "Value": "2022",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_THEME_EDITOR",
+      "Value": "2023",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_FLOATING_PANEL",
+      "Value": "2024",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_OUTPUT_PANEL",
+      "Value": "2025",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_USE_STREAMING_LOADER",
+      "Value": "2026",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_USE_VULKAN_RENDERER",
+      "Value": "2027",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_SIDEBAR",
+      "Value": "2028",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_TERMINAL",
+      "Value": "2029",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERMINAL_POWERSHELL",
+      "Value": "3001",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERMINAL_CMD",
+      "Value": "3002",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERMINAL_STOP",
+      "Value": "3003",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERMINAL_CLEAR_ALL",
+      "Value": "3006",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TOOLS_PROFILE_START",
+      "Value": "3010",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TOOLS_PROFILE_STOP",
+      "Value": "3011",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TOOLS_PROFILE_RESULTS",
+      "Value": "3012",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TOOLS_ANALYZE_SCRIPT",
+      "Value": "3013",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_GIT_STATUS",
+      "Value": "3020",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_GIT_COMMIT",
+      "Value": "3021",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_GIT_PUSH",
+      "Value": "3022",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_GIT_PULL",
+      "Value": "3023",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_GIT_PANEL",
+      "Value": "3024",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MODULES_REFRESH",
+      "Value": "3050",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MODULES_IMPORT",
+      "Value": "3051",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MODULES_EXPORT",
+      "Value": "3052",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_THEME_DARK_PLUS",
+      "Value": "3101",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_THEME_LIGHT_PLUS",
+      "Value": "3102",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_THEME_MONOKAI",
+      "Value": "3103",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_THEME_DRACULA",
+      "Value": "3104",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_THEME_NORD",
+      "Value": "3105",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_THEME_SOLARIZED_DARK",
+      "Value": "3106",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_THEME_SOLARIZED_LIGHT",
+      "Value": "3107",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_THEME_CYBERPUNK_NEON",
+      "Value": "3108",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_THEME_GRUVBOX_DARK",
+      "Value": "3109",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_THEME_CATPPUCCIN_MOCHA",
+      "Value": "3110",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_THEME_TOKYO_NIGHT",
+      "Value": "3111",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_THEME_RAWRXD_CRIMSON",
+      "Value": "3112",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_THEME_HIGH_CONTRAST",
+      "Value": "3113",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_THEME_ONE_DARK_PRO",
+      "Value": "3114",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_THEME_SYNTHWAVE84",
+      "Value": "3115",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_THEME_ABYSS",
+      "Value": "3116",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TRANSPARENCY_100",
+      "Value": "3200",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TRANSPARENCY_90",
+      "Value": "3201",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TRANSPARENCY_80",
+      "Value": "3202",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TRANSPARENCY_70",
+      "Value": "3203",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TRANSPARENCY_60",
+      "Value": "3204",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TRANSPARENCY_50",
+      "Value": "3205",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TRANSPARENCY_40",
+      "Value": "3206",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TRANSPARENCY_CUSTOM",
+      "Value": "3210",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TRANSPARENCY_TOGGLE",
+      "Value": "3211",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HELP_ABOUT",
+      "Value": "4001",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HELP_CMDREF",
+      "Value": "4002",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HELP_PSDOCS",
+      "Value": "4003",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HELP_SEARCH",
+      "Value": "4004",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERMINAL_KILL",
+      "Value": "4006",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERMINAL_SPLIT_H",
+      "Value": "4007",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERMINAL_SPLIT_V",
+      "Value": "4008",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERMINAL_SPLIT_CODE",
+      "Value": "4009",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AGENT_START_LOOP",
+      "Value": "4100",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AGENT_EXECUTE_CMD",
+      "Value": "4101",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AGENT_CONFIGURE_MODEL",
+      "Value": "4102",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AGENT_VIEW_TOOLS",
+      "Value": "4103",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AGENT_VIEW_STATUS",
+      "Value": "4104",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AGENT_STOP",
+      "Value": "4105",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AGENT_MEMORY",
+      "Value": "4106",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AGENT_MEMORY_VIEW",
+      "Value": "4107",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AGENT_MEMORY_CLEAR",
+      "Value": "4108",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AGENT_MEMORY_EXPORT",
+      "Value": "4109",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SUBAGENT_CHAIN",
+      "Value": "4110",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SUBAGENT_SWARM",
+      "Value": "4111",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SUBAGENT_TODO_LIST",
+      "Value": "4112",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SUBAGENT_TODO_CLEAR",
+      "Value": "4113",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SUBAGENT_STATUS",
+      "Value": "4114",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AGENT_BOUNDED_LOOP",
+      "Value": "4120",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AUTONOMY_TOGGLE",
+      "Value": "4150",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AUTONOMY_START",
+      "Value": "4151",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AUTONOMY_STOP",
+      "Value": "4152",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AUTONOMY_SET_GOAL",
+      "Value": "4153",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AUTONOMY_STATUS",
+      "Value": "4154",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AUTONOMY_MEMORY",
+      "Value": "4155",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_MODE_MAX",
+      "Value": "4200",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_MODE_DEEP_THINK",
+      "Value": "4201",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_MODE_DEEP_RESEARCH",
+      "Value": "4202",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_MODE_NO_REFUSAL",
+      "Value": "4203",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_CONTEXT_4K",
+      "Value": "4210",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_CONTEXT_32K",
+      "Value": "4211",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_CONTEXT_64K",
+      "Value": "4212",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_CONTEXT_128K",
+      "Value": "4213",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_CONTEXT_256K",
+      "Value": "4214",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_CONTEXT_512K",
+      "Value": "4215",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_CONTEXT_1M",
+      "Value": "4216",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_ANALYZE",
+      "Value": "4300",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_DISASM",
+      "Value": "4301",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_DUMPBIN",
+      "Value": "4302",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_COMPILE",
+      "Value": "4303",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_COMPARE",
+      "Value": "4304",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_DETECT_VULNS",
+      "Value": "4305",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_EXPORT_IDA",
+      "Value": "4306",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_EXPORT_GHIDRA",
+      "Value": "4307",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_CFG",
+      "Value": "4308",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_FUNCTIONS",
+      "Value": "4309",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_DEMANGLE",
+      "Value": "4310",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_SSA",
+      "Value": "4311",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_RECURSIVE_DISASM",
+      "Value": "4312",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_TYPE_RECOVERY",
+      "Value": "4313",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_DATA_FLOW",
+      "Value": "4314",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_LICENSE_INFO",
+      "Value": "4315",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_DECOMPILER_VIEW",
+      "Value": "4316",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_DECOMP_RENAME",
+      "Value": "4317",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_DECOMP_SYNC",
+      "Value": "4318",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_DECOMP_CLOSE",
+      "Value": "4319",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_BACKEND_SWITCH_LOCAL",
+      "Value": "5037",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_BACKEND_SWITCH_OLLAMA",
+      "Value": "5038",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_BACKEND_SWITCH_OPENAI",
+      "Value": "5039",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_BACKEND_SWITCH_CLAUDE",
+      "Value": "5040",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_BACKEND_SWITCH_GEMINI",
+      "Value": "5041",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_BACKEND_SHOW_STATUS",
+      "Value": "5042",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_BACKEND_SHOW_SWITCHER",
+      "Value": "5043",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_BACKEND_CONFIGURE",
+      "Value": "5044",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_BACKEND_HEALTH_CHECK",
+      "Value": "5045",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_BACKEND_SET_API_KEY",
+      "Value": "5046",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_BACKEND_SAVE_CONFIGS",
+      "Value": "5047",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_ENABLE",
+      "Value": "5048",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_DISABLE",
+      "Value": "5049",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_SHOW_STATUS",
+      "Value": "5050",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_SHOW_DECISION",
+      "Value": "5051",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_SET_POLICY",
+      "Value": "5052",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_SHOW_CAPABILITIES",
+      "Value": "5053",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_SHOW_FALLBACKS",
+      "Value": "5054",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_SAVE_CONFIG",
+      "Value": "5055",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_ROUTE_PROMPT",
+      "Value": "5056",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_RESET_STATS",
+      "Value": "5057",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_START_ALL",
+      "Value": "5058",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_STOP_ALL",
+      "Value": "5059",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_SHOW_STATUS",
+      "Value": "5060",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_GOTO_DEFINITION",
+      "Value": "5061",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_FIND_REFERENCES",
+      "Value": "5062",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_RENAME_SYMBOL",
+      "Value": "5063",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_HOVER_INFO",
+      "Value": "5064",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_SHOW_DIAGNOSTICS",
+      "Value": "5065",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_RESTART_SERVER",
+      "Value": "5066",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_CLEAR_DIAGNOSTICS",
+      "Value": "5067",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_SHOW_SYMBOL_INFO",
+      "Value": "5068",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_CONFIGURE",
+      "Value": "5069",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_SAVE_CONFIG",
+      "Value": "5070",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_WHY_BACKEND",
+      "Value": "5071",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_PIN_TASK",
+      "Value": "5072",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_UNPIN_TASK",
+      "Value": "5073",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_SHOW_PINS",
+      "Value": "5074",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_SHOW_HEATMAP",
+      "Value": "5075",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_ENSEMBLE_ENABLE",
+      "Value": "5076",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_ENSEMBLE_DISABLE",
+      "Value": "5077",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_ENSEMBLE_STATUS",
+      "Value": "5078",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_SIMULATE",
+      "Value": "5079",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_SHOW_COST_STATS",
+      "Value": "5081",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ASM_PARSE_SYMBOLS",
+      "Value": "5082",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ASM_GOTO_LABEL",
+      "Value": "5083",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ASM_FIND_LABEL_REFS",
+      "Value": "5084",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ASM_SHOW_SYMBOL_TABLE",
+      "Value": "5085",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ASM_INSTRUCTION_INFO",
+      "Value": "5086",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ASM_REGISTER_INFO",
+      "Value": "5087",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ASM_ANALYZE_BLOCK",
+      "Value": "5088",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ASM_SHOW_CALL_GRAPH",
+      "Value": "5089",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ASM_SHOW_DATA_FLOW",
+      "Value": "5090",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ASM_DETECT_CONVENTION",
+      "Value": "5091",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ASM_SHOW_SECTIONS",
+      "Value": "5092",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ASM_CLEAR_SYMBOLS",
+      "Value": "5093",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HYBRID_COMPLETE",
+      "Value": "5094",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HYBRID_DIAGNOSTICS",
+      "Value": "5095",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HYBRID_SMART_RENAME",
+      "Value": "5096",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HYBRID_ANALYZE_FILE",
+      "Value": "5097",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HYBRID_AUTO_PROFILE",
+      "Value": "5098",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HYBRID_STATUS",
+      "Value": "5099",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HYBRID_SYMBOL_USAGE",
+      "Value": "5100",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HYBRID_EXPLAIN_SYMBOL",
+      "Value": "5101",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HYBRID_ANNOTATE_DIAG",
+      "Value": "5102",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HYBRID_STREAM_ANALYZE",
+      "Value": "5103",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HYBRID_SEMANTIC_PREFETCH",
+      "Value": "5104",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HYBRID_CORRECTION_LOOP",
+      "Value": "5105",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MULTI_RESP_GENERATE",
+      "Value": "5106",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MULTI_RESP_SELECT_PREFERRED",
+      "Value": "5108",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MULTI_RESP_COMPARE",
+      "Value": "5109",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MULTI_RESP_SHOW_STATS",
+      "Value": "5110",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MULTI_RESP_SHOW_TEMPLATES",
+      "Value": "5111",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MULTI_RESP_TOGGLE_TEMPLATE",
+      "Value": "5112",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MULTI_RESP_SHOW_PREFS",
+      "Value": "5113",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MULTI_RESP_SHOW_LATEST",
+      "Value": "5114",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MULTI_RESP_SHOW_STATUS",
+      "Value": "5115",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MULTI_RESP_CLEAR_HISTORY",
+      "Value": "5116",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MULTI_RESP_APPLY_PREFERRED",
+      "Value": "5117",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_GOV_STATUS",
+      "Value": "5118",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_GOV_SUBMIT_COMMAND",
+      "Value": "5119",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_GOV_KILL_ALL",
+      "Value": "5120",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_GOV_TASK_LIST",
+      "Value": "5121",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SAFETY_STATUS",
+      "Value": "5122",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SAFETY_RESET_BUDGET",
+      "Value": "5123",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SAFETY_SHOW_VIOLATIONS",
+      "Value": "5125",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REPLAY_STATUS",
+      "Value": "5126",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REPLAY_EXPORT_SESSION",
+      "Value": "5128",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REPLAY_CHECKPOINT",
+      "Value": "5129",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_CONFIDENCE_STATUS",
+      "Value": "5130",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_CONFIDENCE_SET_POLICY",
+      "Value": "5131",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_STATUS",
+      "Value": "5132",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_START_LEADER",
+      "Value": "5133",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_START_WORKER",
+      "Value": "5134",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_START_HYBRID",
+      "Value": "5135",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_STOP",
+      "Value": "5136",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_LIST_NODES",
+      "Value": "5137",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_ADD_NODE",
+      "Value": "5138",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_REMOVE_NODE",
+      "Value": "5139",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_BLACKLIST_NODE",
+      "Value": "5140",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_BUILD_SOURCES",
+      "Value": "5141",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_BUILD_CMAKE",
+      "Value": "5142",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_START_BUILD",
+      "Value": "5143",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_CANCEL_BUILD",
+      "Value": "5144",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_CACHE_STATUS",
+      "Value": "5145",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_CACHE_CLEAR",
+      "Value": "5146",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_SHOW_CONFIG",
+      "Value": "5147",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_TOGGLE_DISCOVERY",
+      "Value": "5148",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_SHOW_TASK_GRAPH",
+      "Value": "5149",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_SHOW_EVENTS",
+      "Value": "5150",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_SHOW_STATS",
+      "Value": "5151",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_RESET_STATS",
+      "Value": "5152",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_WORKER_STATUS",
+      "Value": "5153",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_WORKER_CONNECT",
+      "Value": "5154",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_WORKER_DISCONNECT",
+      "Value": "5155",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_FITNESS_TEST",
+      "Value": "5156",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_LAUNCH",
+      "Value": "5157",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_ATTACH",
+      "Value": "5158",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_DETACH",
+      "Value": "5159",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_GO",
+      "Value": "5160",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_STEP_OVER",
+      "Value": "5161",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_STEP_INTO",
+      "Value": "5162",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_STEP_OUT",
+      "Value": "5163",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_BREAK",
+      "Value": "5164",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_KILL",
+      "Value": "5165",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_ADD_BP",
+      "Value": "5166",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_REMOVE_BP",
+      "Value": "5167",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_ENABLE_BP",
+      "Value": "5168",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_CLEAR_BPS",
+      "Value": "5169",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_LIST_BPS",
+      "Value": "5170",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_ADD_WATCH",
+      "Value": "5171",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_REMOVE_WATCH",
+      "Value": "5172",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_REGISTERS",
+      "Value": "5173",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_STACK",
+      "Value": "5174",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_MEMORY",
+      "Value": "5175",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_DISASM",
+      "Value": "5176",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_MODULES",
+      "Value": "5177",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_THREADS",
+      "Value": "5178",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_SWITCH_THREAD",
+      "Value": "5179",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_EVALUATE",
+      "Value": "5180",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_SET_REGISTER",
+      "Value": "5181",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_SEARCH_MEMORY",
+      "Value": "5182",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_SYMBOL_PATH",
+      "Value": "5183",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_STATUS",
+      "Value": "5184",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PLUGIN_SHOW_PANEL",
+      "Value": "5200",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PLUGIN_LOAD",
+      "Value": "5201",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PLUGIN_UNLOAD",
+      "Value": "5202",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PLUGIN_UNLOAD_ALL",
+      "Value": "5203",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PLUGIN_REFRESH",
+      "Value": "5204",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PLUGIN_SCAN_DIR",
+      "Value": "5205",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PLUGIN_SHOW_STATUS",
+      "Value": "5206",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PLUGIN_TOGGLE_HOTLOAD",
+      "Value": "5207",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PLUGIN_CONFIGURE",
+      "Value": "5208",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DECOMP_RENAME_VAR",
+      "Value": "8001",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DECOMP_GOTO_DEF",
+      "Value": "8002",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DECOMP_FIND_REFS",
+      "Value": "8003",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DECOMP_COPY_LINE",
+      "Value": "8004",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DECOMP_COPY_ALL",
+      "Value": "8005",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DECOMP_GOTO_ADDR",
+      "Value": "8006",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HOTPATCH_SHOW_STATUS",
+      "Value": "9001",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HOTPATCH_MEMORY_APPLY",
+      "Value": "9002",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HOTPATCH_MEMORY_REVERT",
+      "Value": "9003",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HOTPATCH_BYTE_APPLY",
+      "Value": "9004",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HOTPATCH_BYTE_SEARCH",
+      "Value": "9005",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HOTPATCH_SERVER_ADD",
+      "Value": "9006",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HOTPATCH_SERVER_REMOVE",
+      "Value": "9007",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HOTPATCH_PROXY_BIAS",
+      "Value": "9008",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HOTPATCH_PROXY_REWRITE",
+      "Value": "9009",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HOTPATCH_PROXY_TERMINATE",
+      "Value": "9010",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HOTPATCH_PROXY_VALIDATE",
+      "Value": "9011",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HOTPATCH_PRESET_SAVE",
+      "Value": "9012",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HOTPATCH_PRESET_LOAD",
+      "Value": "9013",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HOTPATCH_SHOW_EVENT_LOG",
+      "Value": "9014",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HOTPATCH_RESET_STATS",
+      "Value": "9015",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HOTPATCH_TOGGLE_ALL",
+      "Value": "9016",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HOTPATCH_SHOW_PROXY_STATS",
+      "Value": "9017",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_TOGGLE_MONACO",
+      "Value": "9100",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_MONACO_DEVTOOLS",
+      "Value": "9101",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_MONACO_RELOAD",
+      "Value": "9102",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_MONACO_ZOOM_IN",
+      "Value": "9103",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_MONACO_ZOOM_OUT",
+      "Value": "9104",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_MONACO_SYNC_THEME",
+      "Value": "9105",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_SERVER_START",
+      "Value": "9200",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_SERVER_STOP",
+      "Value": "9201",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_SERVER_STATUS",
+      "Value": "9202",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_SERVER_REINDEX",
+      "Value": "9203",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_SERVER_STATS",
+      "Value": "9204",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_SERVER_PUBLISH_DIAG",
+      "Value": "9205",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_SERVER_CONFIG",
+      "Value": "9206",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_SERVER_EXPORT_SYMBOLS",
+      "Value": "9207",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_SERVER_LAUNCH_STDIO",
+      "Value": "9208",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDITOR_ENGINE_RICHEDIT_CMD",
+      "Value": "9300",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDITOR_ENGINE_WEBVIEW2_CMD",
+      "Value": "9301",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDITOR_ENGINE_MONACOCORE_CMD",
+      "Value": "9302",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDITOR_ENGINE_CYCLE_CMD",
+      "Value": "9303",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDITOR_ENGINE_STATUS_CMD",
+      "Value": "9304",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PDB_LOAD",
+      "Value": "9400",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PDB_FETCH",
+      "Value": "9401",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PDB_STATUS",
+      "Value": "9402",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PDB_CACHE_CLEAR",
+      "Value": "9403",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PDB_ENABLE",
+      "Value": "9404",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PDB_RESOLVE",
+      "Value": "9405",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PDB_IMPORTS",
+      "Value": "9410",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PDB_EXPORTS",
+      "Value": "9411",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PDB_IAT_STATUS",
+      "Value": "9412",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AUDIT_SHOW_DASHBOARD",
+      "Value": "9500",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AUDIT_RUN_FULL",
+      "Value": "9501",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AUDIT_DETECT_STUBS",
+      "Value": "9502",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AUDIT_CHECK_MENUS",
+      "Value": "9503",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AUDIT_RUN_TESTS",
+      "Value": "9504",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AUDIT_EXPORT_REPORT",
+      "Value": "9505",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AUDIT_QUICK_STATS",
+      "Value": "9506",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_GAUNTLET_RUN",
+      "Value": "9600",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_GAUNTLET_EXPORT",
+      "Value": "9601",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_RECORD",
+      "Value": "9700",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_PTT",
+      "Value": "9701",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_SPEAK",
+      "Value": "9702",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_JOIN_ROOM",
+      "Value": "9703",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_SHOW_DEVICES",
+      "Value": "9704",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_METRICS",
+      "Value": "9705",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_TOGGLE_PANEL",
+      "Value": "9706",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_MODE_PTT",
+      "Value": "9707",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_MODE_CONTINUOUS",
+      "Value": "9708",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_MODE_DISABLED",
+      "Value": "9709",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_QW_SHORTCUT_EDITOR",
+      "Value": "9800",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_QW_SHORTCUT_RESET",
+      "Value": "9801",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_QW_BACKUP_CREATE",
+      "Value": "9810",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_QW_BACKUP_RESTORE",
+      "Value": "9811",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_QW_BACKUP_AUTO_TOGGLE",
+      "Value": "9812",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_QW_BACKUP_LIST",
+      "Value": "9813",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_QW_BACKUP_PRUNE",
+      "Value": "9814",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_QW_ALERT_TOGGLE_MONITOR",
+      "Value": "9820",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_QW_ALERT_SHOW_HISTORY",
+      "Value": "9821",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_QW_ALERT_DISMISS_ALL",
+      "Value": "9822",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_QW_ALERT_RESOURCE_STATUS",
+      "Value": "9823",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_QW_SLO_DASHBOARD",
+      "Value": "9830",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TELEMETRY_TOGGLE",
+      "Value": "9900",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TELEMETRY_EXPORT_JSON",
+      "Value": "9901",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TELEMETRY_EXPORT_CSV",
+      "Value": "9902",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TELEMETRY_SHOW_DASHBOARD",
+      "Value": "9903",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TELEMETRY_CLEAR",
+      "Value": "9904",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TELEMETRY_SNAPSHOT",
+      "Value": "9905",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_STATUS",
+      "Value": "10000",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_RELOAD",
+      "Value": "10001",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_LIST_COMMANDS",
+      "Value": "10002",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_LIST_PROVIDERS",
+      "Value": "10003",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_DIAGNOSTICS",
+      "Value": "10004",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_EXTENSIONS",
+      "Value": "10005",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_STATS",
+      "Value": "10006",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_LOAD_NATIVE",
+      "Value": "10007",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_DEACTIVATE_ALL",
+      "Value": "10008",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_EXPORT_CONFIG",
+      "Value": "10009",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_AUTO_TOGGLE",
+      "Value": "10200",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_AUTO_SETTINGS",
+      "Value": "10201",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_AUTO_NEXT_VOICE",
+      "Value": "10202",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_AUTO_PREV_VOICE",
+      "Value": "10203",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_AUTO_RATE_UP",
+      "Value": "10204",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_AUTO_RATE_DOWN",
+      "Value": "10205",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_AUTO_STOP",
+      "Value": "10206",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MODEL_BF_SCAN_ALL",
+      "Value": "10300",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MODEL_BF_PROBE_SINGLE",
+      "Value": "10301",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MODEL_BF_SHOW_RESULTS",
+      "Value": "10302",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MODEL_BF_CANCEL",
+      "Value": "10303",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MODEL_BF_EXPORT_JSON",
+      "Value": "10304",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MODEL_BF_EXPORT_HTML",
+      "Value": "10305",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MODEL_BF_STATUS",
+      "Value": "10306",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MODEL_BF_HOTPATCH_ENABLE",
+      "Value": "10307",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MODEL_BF_HOTPATCH_DISABLE",
+      "Value": "10308",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MODEL_BF_HOTPATCH_APPLY",
+      "Value": "10309",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MODEL_BF_HOTPATCH_ROLLBACK",
+      "Value": "10310",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MODEL_BF_HOTPATCH_STATUS",
+      "Value": "10311",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_START",
+      "Value": "0",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_STOP",
+      "Value": "0",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_STATUS",
+      "Value": "0",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_GOTODEF",
+      "Value": "0",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_FINDREFS",
+      "Value": "0",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_RENAME",
+      "Value": "0",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_HOVER",
+      "Value": "0",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_DIAG",
+      "Value": "0",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_RESTART",
+      "Value": "0",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_CLEARDIAG",
+      "Value": "0",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_SYMBOLS",
+      "Value": "0",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_CONFIGURE",
+      "Value": "0",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_SAVECONFIG",
+      "Value": "0",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_NEW",
+      "Value": "101",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_OPEN",
+      "Value": "102",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_SAVE",
+      "Value": "103",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_SAVEAS",
+      "Value": "104",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_AUTOSAVE",
+      "Value": "105",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_CLOSE_FOLDER",
+      "Value": "106",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_EXIT",
+      "Value": "107",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_OPEN_FOLDER",
+      "Value": "108",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_NEW_WINDOW",
+      "Value": "109",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_CLOSE_TAB",
+      "Value": "110",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_UNDO",
+      "Value": "201",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_REDO",
+      "Value": "202",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_CUT",
+      "Value": "203",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_COPY",
+      "Value": "204",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_PASTE",
+      "Value": "205",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_FIND",
+      "Value": "206",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_REPLACE",
+      "Value": "207",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_SELECTALL",
+      "Value": "208",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_MULTICURSOR_ADD",
+      "Value": "209",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_MULTICURSOR_REMOVE",
+      "Value": "210",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_GOTO_LINE",
+      "Value": "211",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_TOGGLE_SIDEBAR",
+      "Value": "301",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_TOGGLE_TERMINAL",
+      "Value": "302",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_TOGGLE_OUTPUT",
+      "Value": "303",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_TOGGLE_FULLSCREEN",
+      "Value": "304",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_ZOOM_IN",
+      "Value": "305",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_ZOOM_OUT",
+      "Value": "306",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_ZOOM_RESET",
+      "Value": "307",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_INLINE_COMPLETE",
+      "Value": "401",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_CHAT_MODE",
+      "Value": "402",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_EXPLAIN_CODE",
+      "Value": "403",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_REFACTOR",
+      "Value": "404",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_GENERATE_TESTS",
+      "Value": "405",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_GENERATE_DOCS",
+      "Value": "406",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_FIX_ERRORS",
+      "Value": "407",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_OPTIMIZE_CODE",
+      "Value": "408",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_MODEL_SELECT",
+      "Value": "409",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TOOLS_COMMAND_PALETTE",
+      "Value": "501",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TOOLS_SETTINGS",
+      "Value": "502",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TOOLS_EXTENSIONS",
+      "Value": "503",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TOOLS_TERMINAL",
+      "Value": "504",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TOOLS_BUILD",
+      "Value": "505",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TOOLS_DEBUG",
+      "Value": "506",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HELP_DOCS",
+      "Value": "601",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HELP_ABOUT",
+      "Value": "602",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HELP_SHORTCUTS",
+      "Value": "603",
+      "Type": "Constant"
+    },
+    {
+      "Name": "ID_EDITOR_CONTROL",
+      "Value": "1001",
+      "Type": "Constant"
+    },
+    {
+      "Name": "ID_FILE_EXPLORER",
+      "Value": "1002",
+      "Type": "Constant"
+    },
+    {
+      "Name": "ID_TERMINAL_PANEL",
+      "Value": "1003",
+      "Type": "Constant"
+    },
+    {
+      "Name": "ID_OUTPUT_PANEL",
+      "Value": "1004",
+      "Type": "Constant"
+    },
+    {
+      "Name": "ID_TAB_CONTROL",
+      "Value": "1005",
+      "Type": "Constant"
+    },
+    {
+      "Name": "ID_TOOLBAR",
+      "Value": "1006",
+      "Type": "Constant"
+    },
+    {
+      "Name": "ID_STATUSBAR",
+      "Value": "1007",
+      "Type": "Constant"
+    },
+    {
+      "Name": "ID_COMMAND_PALETTE",
+      "Value": "1008",
+      "Type": "Constant"
+    },
+    {
+      "Name": "ID_AI_CHAT_PANEL",
+      "Value": "1009",
+      "Type": "Constant"
+    },
+    {
+      "Name": "ID_AUTOCOMPLETE_LIST",
+      "Value": "1010",
+      "Type": "Constant"
+    },
+    {
+      "Name": "ID_PARAMETER_HINT",
+      "Value": "1011",
+      "Type": "Constant"
+    },
+    {
+      "Name": "ID_MARKETPLACE_PANEL",
+      "Value": "1012",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_NEW",
+      "Value": "100",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_NEW_WINDOW",
+      "Value": "101",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_OPEN",
+      "Value": "102",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_OPEN_FOLDER",
+      "Value": "103",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_SAVE",
+      "Value": "104",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_SAVEAS",
+      "Value": "105",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_AUTOSAVE",
+      "Value": "106",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_CLOSE_TAB",
+      "Value": "107",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_CLOSE_FOLDER",
+      "Value": "108",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_EXIT",
+      "Value": "109",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_UNDO",
+      "Value": "200",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_REDO",
+      "Value": "201",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_CUT",
+      "Value": "202",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_COPY",
+      "Value": "203",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_PASTE",
+      "Value": "204",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_FIND",
+      "Value": "205",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_REPLACE",
+      "Value": "206",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_GOTO_LINE",
+      "Value": "207",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_SELECTALL",
+      "Value": "208",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_TOGGLE_COMMENT",
+      "Value": "209",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_MULTICURSOR_ADD",
+      "Value": "210",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_MULTICURSOR_REMOVE",
+      "Value": "211",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SEL_ALL",
+      "Value": "300",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SEL_EXPAND",
+      "Value": "301",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SEL_SHRINK",
+      "Value": "302",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SEL_COLUMN_MODE",
+      "Value": "303",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SEL_ADD_CURSOR_ABOVE",
+      "Value": "304",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SEL_ADD_CURSOR_BELOW",
+      "Value": "305",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SEL_ADD_NEXT_OCCURRENCE",
+      "Value": "306",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SEL_SELECT_ALL_OCCURRENCES",
+      "Value": "307",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_COMMAND_PALETTE",
+      "Value": "400",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_ACTIVITY_BAR",
+      "Value": "401",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_PRIMARY_SIDEBAR",
+      "Value": "402",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_SECONDARY_SIDEBAR",
+      "Value": "403",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_PANEL",
+      "Value": "404",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_STATUS_BAR",
+      "Value": "405",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_ZEN_MODE",
+      "Value": "406",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_EXPLORER",
+      "Value": "407",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_SEARCH",
+      "Value": "408",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_SOURCE_CONTROL",
+      "Value": "409",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_EXTENSIONS",
+      "Value": "410",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_PROBLEMS",
+      "Value": "411",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_OUTPUT",
+      "Value": "412",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_TERMINAL",
+      "Value": "413",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_MINIMAP",
+      "Value": "414",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_WORD_WRAP",
+      "Value": "415",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_LINE_NUMBERS",
+      "Value": "416",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_RUN_START_DEBUG",
+      "Value": "500",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_RUN_WITHOUT_DEBUG",
+      "Value": "501",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_RUN_STOP",
+      "Value": "502",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_RUN_RESTART",
+      "Value": "503",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_RUN_STEP_OVER",
+      "Value": "504",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_RUN_STEP_INTO",
+      "Value": "505",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_RUN_STEP_OUT",
+      "Value": "506",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_RUN_CONTINUE",
+      "Value": "507",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_RUN_TOGGLE_BREAKPOINT",
+      "Value": "508",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_RUN_CLEAR_BREAKPOINTS",
+      "Value": "509",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERM_NEW",
+      "Value": "600",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERM_SPLIT",
+      "Value": "601",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERM_PWSH",
+      "Value": "602",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERM_CMD",
+      "Value": "603",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERM_GITBASH",
+      "Value": "604",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERM_RUN_TASK",
+      "Value": "605",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERM_RUN_FILE",
+      "Value": "606",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERM_CLEAR",
+      "Value": "607",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERM_KILL",
+      "Value": "608",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MODEL_LOAD",
+      "Value": "700",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MODEL_UNLOAD",
+      "Value": "701",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MODEL_INFO",
+      "Value": "702",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MODEL_RELOAD",
+      "Value": "703",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MODEL_SETTINGS",
+      "Value": "704",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HELP_WELCOME",
+      "Value": "800",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HELP_DOCS",
+      "Value": "801",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HELP_TIPS_TRICKS",
+      "Value": "802",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HELP_SHORTCUTS",
+      "Value": "803",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HELP_RELEASE_NOTES",
+      "Value": "804",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HELP_REPORT_ISSUE",
+      "Value": "805",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HELP_CHECK_UPDATES",
+      "Value": "806",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HELP_ABOUT",
+      "Value": "807",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_STATUS",
+      "Value": "10000",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_RELOAD",
+      "Value": "10001",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_LIST_COMMANDS",
+      "Value": "10002",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_LIST_PROVIDERS",
+      "Value": "10003",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_DIAGNOSTICS",
+      "Value": "10004",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_EXTENSIONS",
+      "Value": "10005",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_STATS",
+      "Value": "10006",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_LOAD_NATIVE",
+      "Value": "10007",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_DEACTIVATE_ALL",
+      "Value": "10008",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_EXPORT_CONFIG",
+      "Value": "10009",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SRCFILE_BASE",
+      "Value": "60000",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SRCFILE_COUNT",
+      "Value": "3488",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SRCFILE_MAX",
+      "Value": "63487",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_STATUS",
+      "Value": "10000",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_RELOAD",
+      "Value": "10001",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_LIST_COMMANDS",
+      "Value": "10002",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_LIST_PROVIDERS",
+      "Value": "10003",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_DIAGNOSTICS",
+      "Value": "10004",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_EXTENSIONS",
+      "Value": "10005",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_STATS",
+      "Value": "10006",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_LOAD_NATIVE",
+      "Value": "10007",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_DEACTIVATE_ALL",
+      "Value": "10008",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VSCEXT_API_EXPORT_CONFIG",
+      "Value": "10009",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DEBUG_TEST_AI",
+      "Value": "5190",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_NEW",
+      "Value": "2001",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_OPEN",
+      "Value": "2002",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_SAVE",
+      "Value": "2003",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_SAVEAS",
+      "Value": "2004",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_SAVEALL",
+      "Value": "1005",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_CLOSE",
+      "Value": "1006",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_RECENT_BASE",
+      "Value": "1010",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_RECENT_CLEAR",
+      "Value": "1020",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_LOAD_MODEL",
+      "Value": "1030",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_MODEL_FROM_HF",
+      "Value": "1031",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_MODEL_FROM_OLLAMA",
+      "Value": "1032",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_MODEL_FROM_URL",
+      "Value": "1033",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_MODEL_UNIFIED",
+      "Value": "1034",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_MODEL_QUICK_LOAD",
+      "Value": "1035",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_EXIT",
+      "Value": "2005",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SOURCEFILE_OPEN_PICKER",
+      "Value": "1040",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_UNDO",
+      "Value": "2001",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_REDO",
+      "Value": "2002",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_CUT",
+      "Value": "2003",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_COPY",
+      "Value": "2004",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_PASTE",
+      "Value": "2005",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_SELECT_ALL",
+      "Value": "2006",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_FIND",
+      "Value": "2007",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_REPLACE",
+      "Value": "2008",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_NEW",
+      "Value": "2001",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_OPEN",
+      "Value": "2002",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_SAVE",
+      "Value": "2003",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_SAVEAS",
+      "Value": "2004",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_FIND",
+      "Value": "2016",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_REPLACE",
+      "Value": "2017",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DECOMP_RENAME_VAR",
+      "Value": "8001",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DECOMP_GOTO_DEF",
+      "Value": "8002",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DECOMP_FIND_REFS",
+      "Value": "8003",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DECOMP_COPY_LINE",
+      "Value": "8004",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DECOMP_COPY_ALL",
+      "Value": "8005",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DECOMP_GOTO_ADDR",
+      "Value": "8006",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SOURCEFILE_OPEN_PICKER",
+      "Value": "1040",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_T1_SMOOTH_SCROLL_TOGGLE",
+      "Value": "12000",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_T1_SMOOTH_SCROLL_SPEED",
+      "Value": "12001",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_T1_MINIMAP_TOGGLE",
+      "Value": "12010",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_T1_MINIMAP_HIGHLIGHT",
+      "Value": "12011",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_T1_MINIMAP_SLIDER",
+      "Value": "12012",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_T1_BREADCRUMBS_TOGGLE",
+      "Value": "12020",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_T1_BREADCRUMBS_CLICK",
+      "Value": "12021",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_T1_FUZZY_PALETTE",
+      "Value": "12030",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_T1_FUZZY_FILES",
+      "Value": "12031",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_T1_FUZZY_SYMBOLS",
+      "Value": "12032",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_T1_SETTINGS_GUI",
+      "Value": "12040",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_T1_SETTINGS_SEARCH",
+      "Value": "12041",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_T1_SETTINGS_RESET",
+      "Value": "12042",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_T1_WELCOME_SHOW",
+      "Value": "12050",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_T1_WELCOME_CLONE",
+      "Value": "12051",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_T1_WELCOME_OPEN_FOLDER",
+      "Value": "12052",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_T1_WELCOME_NEW_FILE",
+      "Value": "12053",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_T1_ICON_THEME_SET",
+      "Value": "12060",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_T1_ICON_THEME_SETI",
+      "Value": "12061",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_T1_ICON_THEME_MATERIAL",
+      "Value": "12062",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_T1_TAB_DRAG_ENABLE",
+      "Value": "12070",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_T1_TAB_TEAROFF",
+      "Value": "12071",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_T1_TAB_MERGE",
+      "Value": "12072",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_T1_SPLIT_VERTICAL",
+      "Value": "12080",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_T1_SPLIT_HORIZONTAL",
+      "Value": "12081",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_T1_SPLIT_GRID_2X2",
+      "Value": "12082",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_T1_SPLIT_CLOSE",
+      "Value": "12083",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_T1_SPLIT_FOCUS_NEXT",
+      "Value": "12084",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_T1_UPDATE_CHECK",
+      "Value": "12090",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_T1_UPDATE_INSTALL",
+      "Value": "12091",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_T1_UPDATE_DISMISS",
+      "Value": "12092",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_T1_UPDATE_RELEASE_NOTES",
+      "Value": "12093",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_AUTO_TOGGLE",
+      "Value": "10200",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_AUTO_SETTINGS",
+      "Value": "10201",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_AUTO_NEXT_VOICE",
+      "Value": "10202",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_AUTO_PREV_VOICE",
+      "Value": "10203",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_AUTO_RATE_UP",
+      "Value": "10204",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_AUTO_RATE_DOWN",
+      "Value": "10205",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_AUTO_STOP",
+      "Value": "10206",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AUTONOMY_TOGGLE",
+      "Value": "4150",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_NEW",
+      "Value": "2001",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_OPEN",
+      "Value": "2002",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_SAVE",
+      "Value": "2003",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_SAVEAS",
+      "Value": "2004",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_LOAD_MODEL",
+      "Value": "1030",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_FILE_EXIT",
+      "Value": "2005",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_AUTO_TOGGLE",
+      "Value": "10200",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_AUTO_STOP",
+      "Value": "10206",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_AUTO_NEXT",
+      "Value": "10202",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_AUTO_PREV",
+      "Value": "10203",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_AUTO_RATE_UP",
+      "Value": "10204",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_AUTO_RATE_DOWN",
+      "Value": "10205",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_UNDO",
+      "Value": "2007",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_REDO",
+      "Value": "2008",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_CUT",
+      "Value": "2009",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_COPY",
+      "Value": "2010",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_PASTE",
+      "Value": "2011",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_SNIPPET",
+      "Value": "2012",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_COPY_FORMAT",
+      "Value": "2013",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_PASTE_PLAIN",
+      "Value": "2014",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_CLIPBOARD_HISTORY",
+      "Value": "2015",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_FIND",
+      "Value": "2016",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_REPLACE",
+      "Value": "2017",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_FIND_NEXT",
+      "Value": "2018",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDIT_FIND_PREV",
+      "Value": "2019",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_MINIMAP",
+      "Value": "2020",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_OUTPUT_TABS",
+      "Value": "2021",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_MODULE_BROWSER",
+      "Value": "2022",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_THEME_EDITOR",
+      "Value": "2023",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_FLOATING_PANEL",
+      "Value": "2024",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_OUTPUT_PANEL",
+      "Value": "2025",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_USE_STREAMING_LOADER",
+      "Value": "2026",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_USE_VULKAN_RENDERER",
+      "Value": "2027",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_SIDEBAR",
+      "Value": "2028",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_TERMINAL",
+      "Value": "2029",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERMINAL_POWERSHELL",
+      "Value": "3001",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERMINAL_CMD",
+      "Value": "3002",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERMINAL_STOP",
+      "Value": "3003",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERMINAL_SPLIT_H",
+      "Value": "3004",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERMINAL_SPLIT_V",
+      "Value": "3005",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERMINAL_CLEAR_ALL",
+      "Value": "3006",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TOOLS_PROFILE_START",
+      "Value": "3010",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TOOLS_PROFILE_STOP",
+      "Value": "3011",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TOOLS_PROFILE_RESULTS",
+      "Value": "3012",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TOOLS_ANALYZE_SCRIPT",
+      "Value": "3013",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_GIT_STATUS",
+      "Value": "3020",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_GIT_COMMIT",
+      "Value": "3021",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_GIT_PUSH",
+      "Value": "3022",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_GIT_PULL",
+      "Value": "3023",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_GIT_PANEL",
+      "Value": "3024",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MODULES_REFRESH",
+      "Value": "3050",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MODULES_IMPORT",
+      "Value": "3051",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MODULES_EXPORT",
+      "Value": "3052",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HELP_ABOUT",
+      "Value": "4001",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HELP_CMDREF",
+      "Value": "4002",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HELP_PSDOCS",
+      "Value": "4003",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HELP_SEARCH",
+      "Value": "4004",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AGENT_START_LOOP",
+      "Value": "4100",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AGENT_EXECUTE_CMD",
+      "Value": "4101",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AGENT_CONFIGURE_MODEL",
+      "Value": "4102",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AGENT_VIEW_TOOLS",
+      "Value": "4103",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AGENT_VIEW_STATUS",
+      "Value": "4104",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AGENT_STOP",
+      "Value": "4105",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AGENT_BOUNDED_LOOP",
+      "Value": "4120",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AGENT_START_LOOP",
+      "Value": "4100",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AGENT_EXECUTE_CMD",
+      "Value": "4101",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AGENT_CONFIGURE_MODEL",
+      "Value": "4102",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AGENT_VIEW_TOOLS",
+      "Value": "4103",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AGENT_VIEW_STATUS",
+      "Value": "4104",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AGENT_STOP",
+      "Value": "4105",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AGENT_MEMORY",
+      "Value": "4106",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AGENT_MEMORY_VIEW",
+      "Value": "4107",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AGENT_MEMORY_CLEAR",
+      "Value": "4108",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AGENT_MEMORY_EXPORT",
+      "Value": "4109",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SUBAGENT_CHAIN",
+      "Value": "4110",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SUBAGENT_SWARM",
+      "Value": "4111",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SUBAGENT_TODO_LIST",
+      "Value": "4112",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SUBAGENT_TODO_CLEAR",
+      "Value": "4113",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SUBAGENT_STATUS",
+      "Value": "4114",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERMINAL_KILL",
+      "Value": "4006",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERMINAL_SPLIT_H",
+      "Value": "4007",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERMINAL_SPLIT_V",
+      "Value": "4008",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERMINAL_SPLIT_CODE",
+      "Value": "4009",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TERMINAL_CLEAR",
+      "Value": "4010",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AUTONOMY_TOGGLE",
+      "Value": "4150",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AUTONOMY_START",
+      "Value": "4151",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AUTONOMY_STOP",
+      "Value": "4152",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AUTONOMY_SET_GOAL",
+      "Value": "4153",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AUTONOMY_STATUS",
+      "Value": "4154",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AUTONOMY_MEMORY",
+      "Value": "4155",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_MODE_MAX",
+      "Value": "4200",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_MODE_DEEP_THINK",
+      "Value": "4201",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_MODE_DEEP_RESEARCH",
+      "Value": "4202",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_MODE_NO_REFUSAL",
+      "Value": "4203",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ENGINE_UNLOCK_800B",
+      "Value": "4220",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ENGINE_LOAD_800B",
+      "Value": "4221",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TITAN_TOGGLE",
+      "Value": "4230",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_CONTEXT_4K",
+      "Value": "4210",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_CONTEXT_32K",
+      "Value": "4211",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_CONTEXT_64K",
+      "Value": "4212",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_CONTEXT_128K",
+      "Value": "4213",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_CONTEXT_256K",
+      "Value": "4214",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_CONTEXT_512K",
+      "Value": "4215",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_CONTEXT_1M",
+      "Value": "4216",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_AGENT_CYCLES_SET",
+      "Value": "4217",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_AGENT_MULTI_ENABLE",
+      "Value": "4218",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_AGENT_MULTI_DISABLE",
+      "Value": "4219",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_AGENT_MULTI_STATUS",
+      "Value": "4220",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_TITAN_TOGGLE",
+      "Value": "4221",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AI_800B_STATUS",
+      "Value": "4222",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_ANALYZE",
+      "Value": "4300",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_DISASM",
+      "Value": "4301",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_DUMPBIN",
+      "Value": "4302",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_COMPILE",
+      "Value": "4303",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_COMPARE",
+      "Value": "4304",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_DETECT_VULNS",
+      "Value": "4305",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_EXPORT_IDA",
+      "Value": "4306",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_EXPORT_GHIDRA",
+      "Value": "4307",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_CFG",
+      "Value": "4308",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_FUNCTIONS",
+      "Value": "4309",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_DEMANGLE",
+      "Value": "4310",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_SSA",
+      "Value": "4311",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_RECURSIVE_DISASM",
+      "Value": "4312",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_TYPE_RECOVERY",
+      "Value": "4313",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_DATA_FLOW",
+      "Value": "4314",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_LICENSE_INFO",
+      "Value": "4315",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_DECOMPILER_VIEW",
+      "Value": "4316",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_DECOMP_RENAME",
+      "Value": "4317",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_DECOMP_SYNC",
+      "Value": "4318",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REVENG_DECOMP_CLOSE",
+      "Value": "4319",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DEBUG_TEST_AI",
+      "Value": "5190",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_THEME_BASE",
+      "Value": "3100",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_THEME_DARK_PLUS",
+      "Value": "3101",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_THEME_LIGHT_PLUS",
+      "Value": "3102",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_THEME_MONOKAI",
+      "Value": "3103",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_THEME_DRACULA",
+      "Value": "3104",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_THEME_NORD",
+      "Value": "3105",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_THEME_SOLARIZED_DARK",
+      "Value": "3106",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_THEME_SOLARIZED_LIGHT",
+      "Value": "3107",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_THEME_CYBERPUNK_NEON",
+      "Value": "3108",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_THEME_GRUVBOX_DARK",
+      "Value": "3109",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_THEME_CATPPUCCIN_MOCHA",
+      "Value": "3110",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_THEME_TOKYO_NIGHT",
+      "Value": "3111",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_THEME_RAWRXD_CRIMSON",
+      "Value": "3112",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_THEME_HIGH_CONTRAST",
+      "Value": "3113",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_THEME_ONE_DARK_PRO",
+      "Value": "3114",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_THEME_SYNTHWAVE84",
+      "Value": "3115",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_THEME_ABYSS",
+      "Value": "3116",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_THEME_END",
+      "Value": "3117",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LANGMODE_FIRST",
+      "Value": "9100",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LANGMODE_LAST",
+      "Value": "9199",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ENCODING_REOPEN_FIRST",
+      "Value": "9200",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ENCODING_REOPEN_LAST",
+      "Value": "9249",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ENCODING_SAVE_FIRST",
+      "Value": "9300",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ENCODING_SAVE_LAST",
+      "Value": "9349",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TRANSPARENCY_100",
+      "Value": "3200",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TRANSPARENCY_90",
+      "Value": "3201",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TRANSPARENCY_80",
+      "Value": "3202",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TRANSPARENCY_70",
+      "Value": "3203",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TRANSPARENCY_60",
+      "Value": "3204",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TRANSPARENCY_50",
+      "Value": "3205",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TRANSPARENCY_40",
+      "Value": "3206",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TRANSPARENCY_CUSTOM",
+      "Value": "3210",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TRANSPARENCY_TOGGLE",
+      "Value": "3211",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_BACKEND_SWITCH_LOCAL",
+      "Value": "5037",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_BACKEND_SWITCH_OLLAMA",
+      "Value": "5038",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_BACKEND_SWITCH_OPENAI",
+      "Value": "5039",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_BACKEND_SWITCH_CLAUDE",
+      "Value": "5040",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_BACKEND_SWITCH_GEMINI",
+      "Value": "5041",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_BACKEND_SWITCH_NATIVEASM",
+      "Value": "5199",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_BACKEND_SHOW_STATUS",
+      "Value": "5042",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_BACKEND_SHOW_SWITCHER",
+      "Value": "5043",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_BACKEND_CONFIGURE",
+      "Value": "5044",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_BACKEND_HEALTH_CHECK",
+      "Value": "5045",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_BACKEND_SET_API_KEY",
+      "Value": "5046",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_BACKEND_SAVE_CONFIGS",
+      "Value": "5047",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_ENABLE",
+      "Value": "5048",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_DISABLE",
+      "Value": "5049",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_SHOW_STATUS",
+      "Value": "5050",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_SHOW_DECISION",
+      "Value": "5051",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_SET_POLICY",
+      "Value": "5052",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_SHOW_CAPABILITIES",
+      "Value": "5053",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_SHOW_FALLBACKS",
+      "Value": "5054",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_SAVE_CONFIG",
+      "Value": "5055",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_ROUTE_PROMPT",
+      "Value": "5056",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_RESET_STATS",
+      "Value": "5057",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_START_ALL",
+      "Value": "5058",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_STOP_ALL",
+      "Value": "5059",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_SHOW_STATUS",
+      "Value": "5060",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_GOTO_DEFINITION",
+      "Value": "5061",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_FIND_REFERENCES",
+      "Value": "5062",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_RENAME_SYMBOL",
+      "Value": "5063",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_HOVER_INFO",
+      "Value": "5064",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_SHOW_DIAGNOSTICS",
+      "Value": "5065",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_RESTART_SERVER",
+      "Value": "5066",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_CLEAR_DIAGNOSTICS",
+      "Value": "5067",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_SHOW_SYMBOL_INFO",
+      "Value": "5068",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_CONFIGURE",
+      "Value": "5069",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_SAVE_CONFIG",
+      "Value": "5070",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_WHY_BACKEND",
+      "Value": "5071",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_PIN_TASK",
+      "Value": "5072",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_UNPIN_TASK",
+      "Value": "5073",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_SHOW_PINS",
+      "Value": "5074",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_SHOW_HEATMAP",
+      "Value": "5075",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_ENSEMBLE_ENABLE",
+      "Value": "5076",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_ENSEMBLE_DISABLE",
+      "Value": "5077",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_ENSEMBLE_STATUS",
+      "Value": "5078",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_SIMULATE",
+      "Value": "5079",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_SIMULATE_LAST",
+      "Value": "5080",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ROUTER_SHOW_COST_STATS",
+      "Value": "5081",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PLUGIN_SHOW_PANEL",
+      "Value": "5200",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PLUGIN_LOAD",
+      "Value": "5201",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PLUGIN_UNLOAD",
+      "Value": "5202",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PLUGIN_UNLOAD_ALL",
+      "Value": "5203",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PLUGIN_REFRESH",
+      "Value": "5204",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PLUGIN_SCAN_DIR",
+      "Value": "5205",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PLUGIN_SHOW_STATUS",
+      "Value": "5206",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PLUGIN_TOGGLE_HOTLOAD",
+      "Value": "5207",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PLUGIN_CONFIGURE",
+      "Value": "5208",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ASM_PARSE_SYMBOLS",
+      "Value": "5082",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ASM_GOTO_LABEL",
+      "Value": "5083",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ASM_FIND_LABEL_REFS",
+      "Value": "5084",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ASM_SHOW_SYMBOL_TABLE",
+      "Value": "5085",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ASM_INSTRUCTION_INFO",
+      "Value": "5086",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ASM_REGISTER_INFO",
+      "Value": "5087",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ASM_ANALYZE_BLOCK",
+      "Value": "5088",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ASM_SHOW_CALL_GRAPH",
+      "Value": "5089",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ASM_SHOW_DATA_FLOW",
+      "Value": "5090",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ASM_DETECT_CONVENTION",
+      "Value": "5091",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ASM_SHOW_SECTIONS",
+      "Value": "5092",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_ASM_CLEAR_SYMBOLS",
+      "Value": "5093",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HYBRID_COMPLETE",
+      "Value": "5094",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HYBRID_DIAGNOSTICS",
+      "Value": "5095",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HYBRID_SMART_RENAME",
+      "Value": "5096",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HYBRID_ANALYZE_FILE",
+      "Value": "5097",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HYBRID_AUTO_PROFILE",
+      "Value": "5098",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HYBRID_STATUS",
+      "Value": "5099",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HYBRID_SYMBOL_USAGE",
+      "Value": "5100",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HYBRID_EXPLAIN_SYMBOL",
+      "Value": "5101",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HYBRID_ANNOTATE_DIAG",
+      "Value": "5102",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HYBRID_STREAM_ANALYZE",
+      "Value": "5103",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HYBRID_SEMANTIC_PREFETCH",
+      "Value": "5104",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HYBRID_CORRECTION_LOOP",
+      "Value": "5105",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MULTI_RESP_GENERATE",
+      "Value": "5106",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MULTI_RESP_SET_MAX",
+      "Value": "5107",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MULTI_RESP_SELECT_PREFERRED",
+      "Value": "5108",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MULTI_RESP_COMPARE",
+      "Value": "5109",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MULTI_RESP_SHOW_STATS",
+      "Value": "5110",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MULTI_RESP_SHOW_TEMPLATES",
+      "Value": "5111",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MULTI_RESP_TOGGLE_TEMPLATE",
+      "Value": "5112",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MULTI_RESP_SHOW_PREFS",
+      "Value": "5113",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MULTI_RESP_SHOW_LATEST",
+      "Value": "5114",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MULTI_RESP_SHOW_STATUS",
+      "Value": "5115",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MULTI_RESP_CLEAR_HISTORY",
+      "Value": "5116",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_MULTI_RESP_APPLY_PREFERRED",
+      "Value": "5117",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_GOV_STATUS",
+      "Value": "5118",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_GOV_SUBMIT_COMMAND",
+      "Value": "5119",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_GOV_KILL_ALL",
+      "Value": "5120",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_GOV_TASK_LIST",
+      "Value": "5121",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SAFETY_STATUS",
+      "Value": "5122",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SAFETY_RESET_BUDGET",
+      "Value": "5123",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SAFETY_ROLLBACK_LAST",
+      "Value": "5124",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SAFETY_SHOW_VIOLATIONS",
+      "Value": "5125",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REPLAY_STATUS",
+      "Value": "5126",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REPLAY_SHOW_LAST",
+      "Value": "5127",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REPLAY_EXPORT_SESSION",
+      "Value": "5128",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_REPLAY_CHECKPOINT",
+      "Value": "5129",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_CONFIDENCE_STATUS",
+      "Value": "5130",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_CONFIDENCE_SET_POLICY",
+      "Value": "5131",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_STATUS",
+      "Value": "5132",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_START_LEADER",
+      "Value": "5133",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_START_WORKER",
+      "Value": "5134",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_START_HYBRID",
+      "Value": "5135",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_STOP",
+      "Value": "5136",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_LIST_NODES",
+      "Value": "5137",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_ADD_NODE",
+      "Value": "5138",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_REMOVE_NODE",
+      "Value": "5139",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_BLACKLIST_NODE",
+      "Value": "5140",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_BUILD_SOURCES",
+      "Value": "5141",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_BUILD_CMAKE",
+      "Value": "5142",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_START_BUILD",
+      "Value": "5143",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_CANCEL_BUILD",
+      "Value": "5144",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_CACHE_STATUS",
+      "Value": "5145",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_CACHE_CLEAR",
+      "Value": "5146",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_SHOW_CONFIG",
+      "Value": "5147",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_TOGGLE_DISCOVERY",
+      "Value": "5148",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_SHOW_TASK_GRAPH",
+      "Value": "5149",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_SHOW_EVENTS",
+      "Value": "5150",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_SHOW_STATS",
+      "Value": "5151",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_RESET_STATS",
+      "Value": "5152",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_WORKER_STATUS",
+      "Value": "5153",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_WORKER_CONNECT",
+      "Value": "5154",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_WORKER_DISCONNECT",
+      "Value": "5155",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_SWARM_FITNESS_TEST",
+      "Value": "5156",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_LAUNCH",
+      "Value": "5157",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_ATTACH",
+      "Value": "5158",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_DETACH",
+      "Value": "5159",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_GO",
+      "Value": "5160",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_STEP_OVER",
+      "Value": "5161",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_STEP_INTO",
+      "Value": "5162",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_STEP_OUT",
+      "Value": "5163",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_BREAK",
+      "Value": "5164",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_KILL",
+      "Value": "5165",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_ADD_BP",
+      "Value": "5166",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_REMOVE_BP",
+      "Value": "5167",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_ENABLE_BP",
+      "Value": "5168",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_CLEAR_BPS",
+      "Value": "5169",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_LIST_BPS",
+      "Value": "5170",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_ADD_WATCH",
+      "Value": "5171",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_REMOVE_WATCH",
+      "Value": "5172",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_REGISTERS",
+      "Value": "5173",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_STACK",
+      "Value": "5174",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_MEMORY",
+      "Value": "5175",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_DISASM",
+      "Value": "5176",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_MODULES",
+      "Value": "5177",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_THREADS",
+      "Value": "5178",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_SWITCH_THREAD",
+      "Value": "5179",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_EVALUATE",
+      "Value": "5180",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_SET_REGISTER",
+      "Value": "5181",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_SEARCH_MEMORY",
+      "Value": "5182",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_SYMBOL_PATH",
+      "Value": "5183",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_DBG_STATUS",
+      "Value": "5184",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HOTPATCH_SHOW_STATUS",
+      "Value": "9001",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HOTPATCH_MEMORY_APPLY",
+      "Value": "9002",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HOTPATCH_MEMORY_REVERT",
+      "Value": "9003",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HOTPATCH_BYTE_APPLY",
+      "Value": "9004",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HOTPATCH_BYTE_SEARCH",
+      "Value": "9005",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HOTPATCH_SERVER_ADD",
+      "Value": "9006",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HOTPATCH_SERVER_REMOVE",
+      "Value": "9007",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HOTPATCH_PROXY_BIAS",
+      "Value": "9008",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HOTPATCH_PROXY_REWRITE",
+      "Value": "9009",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HOTPATCH_PROXY_TERMINATE",
+      "Value": "9010",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HOTPATCH_PROXY_VALIDATE",
+      "Value": "9011",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HOTPATCH_PRESET_SAVE",
+      "Value": "9012",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HOTPATCH_PRESET_LOAD",
+      "Value": "9013",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HOTPATCH_SHOW_EVENT_LOG",
+      "Value": "9014",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HOTPATCH_RESET_STATS",
+      "Value": "9015",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HOTPATCH_TOGGLE_ALL",
+      "Value": "9016",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_HOTPATCH_SHOW_PROXY_STATS",
+      "Value": "9017",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_TOGGLE_MONACO",
+      "Value": "9100",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_MONACO_DEVTOOLS",
+      "Value": "9101",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_MONACO_RELOAD",
+      "Value": "9102",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_MONACO_ZOOM_IN",
+      "Value": "9103",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_MONACO_ZOOM_OUT",
+      "Value": "9104",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VIEW_MONACO_SYNC_THEME",
+      "Value": "9105",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_SERVER_START",
+      "Value": "9200",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_SERVER_STOP",
+      "Value": "9201",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_SERVER_STATUS",
+      "Value": "9202",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_SERVER_REINDEX",
+      "Value": "9203",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_SERVER_STATS",
+      "Value": "9204",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_SERVER_PUBLISH_DIAG",
+      "Value": "9205",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_SERVER_CONFIG",
+      "Value": "9206",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_SERVER_EXPORT_SYMBOLS",
+      "Value": "9207",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_LSP_SERVER_LAUNCH_STDIO",
+      "Value": "9208",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDITOR_ENGINE_RICHEDIT_CMD",
+      "Value": "9300",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDITOR_ENGINE_WEBVIEW2_CMD",
+      "Value": "9301",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDITOR_ENGINE_MONACOCORE_CMD",
+      "Value": "9302",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDITOR_ENGINE_CYCLE_CMD",
+      "Value": "9303",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_EDITOR_ENGINE_STATUS_CMD",
+      "Value": "9304",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PDB_LOAD",
+      "Value": "9400",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PDB_FETCH",
+      "Value": "9401",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PDB_STATUS",
+      "Value": "9402",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PDB_CACHE_CLEAR",
+      "Value": "9403",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PDB_ENABLE",
+      "Value": "9404",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PDB_RESOLVE",
+      "Value": "9405",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PDB_IMPORTS",
+      "Value": "9410",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PDB_EXPORTS",
+      "Value": "9411",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_PDB_IAT_STATUS",
+      "Value": "9412",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TELEMETRY_TOGGLE",
+      "Value": "9900",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TELEMETRY_EXPORT_JSON",
+      "Value": "9901",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TELEMETRY_EXPORT_CSV",
+      "Value": "9902",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TELEMETRY_SHOW_DASHBOARD",
+      "Value": "9903",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TELEMETRY_CLEAR",
+      "Value": "9904",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_TELEMETRY_SNAPSHOT",
+      "Value": "9905",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AUDIT_SHOW_DASHBOARD",
+      "Value": "9500",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AUDIT_RUN_FULL",
+      "Value": "9501",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AUDIT_DETECT_STUBS",
+      "Value": "9502",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AUDIT_CHECK_MENUS",
+      "Value": "9503",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AUDIT_RUN_TESTS",
+      "Value": "9504",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AUDIT_EXPORT_REPORT",
+      "Value": "9505",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_AUDIT_QUICK_STATS",
+      "Value": "9506",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_GAUNTLET_RUN",
+      "Value": "9600",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_GAUNTLET_EXPORT",
+      "Value": "9601",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_RECORD",
+      "Value": "9700",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_PTT",
+      "Value": "9701",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_SPEAK",
+      "Value": "9702",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_JOIN_ROOM",
+      "Value": "9703",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_SHOW_DEVICES",
+      "Value": "9704",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_METRICS",
+      "Value": "9705",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_TOGGLE_PANEL",
+      "Value": "9706",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_MODE_PTT",
+      "Value": "9707",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_MODE_CONTINUOUS",
+      "Value": "9708",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_VOICE_MODE_DISABLED",
+      "Value": "9709",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_QW_SHORTCUT_EDITOR",
+      "Value": "9800",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_QW_SHORTCUT_RESET",
+      "Value": "9801",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_QW_BACKUP_CREATE",
+      "Value": "9810",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_QW_BACKUP_RESTORE",
+      "Value": "9811",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_QW_BACKUP_AUTO_TOGGLE",
+      "Value": "9812",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_QW_BACKUP_LIST",
+      "Value": "9813",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_QW_BACKUP_PRUNE",
+      "Value": "9814",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_QW_ALERT_TOGGLE_MONITOR",
+      "Value": "9820",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_QW_ALERT_SHOW_HISTORY",
+      "Value": "9821",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_QW_ALERT_DISMISS_ALL",
+      "Value": "9822",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_QW_ALERT_RESOURCE_STATUS",
+      "Value": "9823",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_QW_ALERT_HAPPENINGS",
+      "Value": "9824",
+      "Type": "Constant"
+    },
+    {
+      "Name": "IDM_QW_SLO_DASHBOARD",
+      "Value": "9830",
+      "Type": "Constant"
+    }
+  ],
+  "KeyBindings": [
+    {
+      "Status": "Present",
+      "Message": "WM_CREATE"
+    },
+    {
+      "Status": "Present",
+      "Message": "WM_PAINT"
+    },
+    {
+      "Status": "Present",
+      "Message": "WM_DESTROY"
+    },
+    {
+      "Status": "Present",
+      "Message": "WM_COMMAND"
+    },
+    {
+      "Status": "Present",
+      "Message": "WM_SIZE"
+    },
+    {
+      "Status": "Present",
+      "Message": "WM_CLOSE"
+    }
+  ]
+}

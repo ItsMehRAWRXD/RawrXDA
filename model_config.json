@@ -1,11 +1,39 @@
 {
   "models": {
-    "quantumide-q4km": {
-      "backend": "LOCAL_GGUF",
-      "model_id": "C:/Users/HiH8e/.ollama/blobs/quantumide-q4km.gguf",
+    "llama2-70b": {
+      "backend": "OLLAMA_LOCAL",
+      "model_id": "huihui_ai/llama3.3-abliterated:latest",
       "api_key": "",
-      "endpoint": "",
-      "description": "Local QuantumIDE Q4 model (GGUF format)",
+      "endpoint": "http://localhost:11434",
+      "description": "Llama 3.3 70B abliterated via Ollama — 42GB Q4_K_M quantized 70B model",
+      "parameters": {
+        "max_tokens": "4096",
+        "temperature": "0.7",
+        "num_gpu": "40",
+        "num_thread": "8",
+        "mmap": "true"
+      }
+    },
+    "gpt-oss-120b": {
+      "backend": "OLLAMA_LOCAL",
+      "model_id": "gpt-oss:120b",
+      "api_key": "",
+      "endpoint": "http://localhost:11434",
+      "description": "GPT-OSS 120B via Ollama — 65GB full parameter model",
+      "parameters": {
+        "max_tokens": "4096",
+        "temperature": "0.7",
+        "num_gpu": "40",
+        "num_thread": "8",
+        "mmap": "true"
+      }
+    },
+    "quantumide-q4km": {
+      "backend": "OLLAMA_LOCAL",
+      "model_id": "quantumide-q4km",
+      "api_key": "",
+      "endpoint": "http://localhost:11434",
+      "description": "Local QuantumIDE Q4 model via Ollama",
       "parameters": {
         "max_tokens": "4096",
         "temperature": "0.7",
@@ -159,7 +187,7 @@
     }
   },
   "defaults": {
-    "default_model": "quantumide-q4km",
+    "default_model": "llama2-70b",
     "prefer_local": true,
     "timeout_seconds": 30,
     "retry_attempts": 3,

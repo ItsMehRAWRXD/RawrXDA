@@ -1,0 +1,31 @@
+; ────────────────────────────────────────────────────────────────
+; fully dynamic PE generation
+PUBLIC WritePEFile
+WritePEFile PROC FRAME
+    push    rbp
+    .pushreg rbp
+    mov     rbp, rsp
+    .setframe rbp, 0
+    sub     rsp, 32
+    .allocstack 32
+    .endprolog
+
+    ; Initialize g_cursor to g_peBuffer
+    lea     rax, [g_peBuffer]
+    mov     g_cursor, rax
+
+    ; Build PE Components
+    call    Emit_DOSHeader
+    call    Emit_NTHeaders
+    call    Emit_SectionHeaders
+    call    Emit_Payload
+    call    Emit_ImportTable
+
+    ; Set size
+    mov     qword ptr [g_peSize], 0A00h
+    mov     rax, 1
+
+    lea     rsp, [rbp]
+    pop     rbp
+    ret
+WritePEFile ENDP

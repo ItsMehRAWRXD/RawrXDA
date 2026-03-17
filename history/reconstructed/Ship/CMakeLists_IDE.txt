@@ -1,0 +1,79 @@
+# =============================================================================
+# RawrXD IDE - Consolidated Single-File Build
+# =============================================================================
+# Builds Win32_IDE_Complete.cpp into RawrXD_IDE.exe
+# Pure Win32 / C++20 - No Qt, No SDKs beyond Windows Kit
+# =============================================================================
+
+cmake_minimum_required(VERSION 3.20)
+project(RawrXD_IDE VERSION 2.0.0 LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Windows definitions
+add_definitions(
+    -DUNICODE
+    -D_UNICODE
+    -DWIN32_LEAN_AND_MEAN
+    -DNOMINMAX
+    -D_WIN32_WINNT=0x0A00
+    -DRAWRXD_CONSOLIDATED_MASTER=1
+)
+
+# Static runtime so exe has no CRT DLL dependency
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
+# Single source file - everything consolidated
+add_executable(RawrXD_IDE WIN32
+    Win32_IDE_Complete.cpp
+)
+
+# Compiler flags
+if(MSVC)
+    target_compile_options(RawrXD_IDE PRIVATE
+        /W3           # Warning level 3
+        /EHsc         # C++ exceptions
+        /bigobj       # Large object file support (needed for 470k lines)
+        /MP           # Multi-processor compilation
+        /permissive-  # Standards conformance
+        /Zc:__cplusplus  # Report correct __cplusplus value
+        $<$<CONFIG:Release>:/O2 /GL>   # Optimize + whole program opt
+        $<$<CONFIG:Debug>:/Od /Zi>     # No opt + debug info
+    )
+    target_link_options(RawrXD_IDE PRIVATE
+        $<$<CONFIG:Release>:/LTCG>     # Link-time code gen
+        /SUBSYSTEM:WINDOWS             # Win32 GUI app
+        /LARGEADDRESSAWARE             # >2GB address space
+    )
+endif()
+
+# System libraries
+target_link_libraries(RawrXD_IDE PRIVATE
+    kernel32
+    user32
+    gdi32
+    shell32
+    ole32
+    oleaut32
+    comdlg32
+    comctl32
+    advapi32
+    shlwapi
+    winhttp
+    ws2_32
+    wininet
+    psapi
+    dbghelp
+    imm32
+    version
+    uuid
+    crypt32
+    winspool
+    mswsock
+    iphlpapi
+)
+
+# Installation
+install(TARGETS RawrXD_IDE RUNTIME DESTINATION bin)

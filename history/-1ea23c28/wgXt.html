@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IDE Swarm Controller - Right-Click Interface</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #333;
+      overflow: hidden;
+    }
+
+    .container {
+      display: flex;
+      height: 100vh;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 250px;
+      background: rgba(255, 255, 255, 0.95);
+      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(10px);
+      box-shadow: 2px 0 20px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .logo h1 {
+      font-size: 24px;
+      color: #4a5568;
+      margin-bottom: 5px;
+    }
+
+    .logo p {
+      font-size: 12px;
+      color: #718096;
+    }
+
+    .agent-section {
+      margin-bottom: 25px;
+    }
+
+    .agent-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #2d3748;
+      margin-bottom: 10px;
+      padding-bottom: 5px;
+      border-bottom: 2px solid #e2e8f0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .agent-title:hover {
+      color: #4a5568;
+    }
+
+    .agent-status {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #48bb78;
+      animation: pulse 2s infinite;
+    }
+
+    .agent-status.error {
+      background: #f56565;
+      animation: none;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.5;
+      }
+    }
+
+    .agent-actions {
+      display: none;
+    }
+
+    .agent-actions.active {
+      display: block;
+    }
+
+    .action-item {
+      padding: 8px 12px;
+      margin: 2px 0;
+      background: #f7fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+
+    .action-item:hover {
+      background: #edf2f7;
+      transform: translateX(2px);
+    }
+
+    .action-item::before {
+      content: "▶";
+      margin-right: 8px;
+      color: #4a5568;
+      font-size: 10px;
+    }
+
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: rgba(255, 255, 255, 0.1);
+      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(10px);
+      margin: 10px;
+      border-radius: 15px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+
+    .header {
+      background: rgba(255, 255, 255, 0.9);
+      padding: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .header h2 {
+      color: #2d3748;
+      margin-bottom: 5px;
+    }
+
+    .workspace-info {
+      display: flex;
+      gap: 20px;
+      font-size: 12px;
+      color: #718096;
+    }
+
+    .workspace-info span {
+      background: rgba(113, 128, 150, 0.1);
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+
+    .content-area {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .console {
+      background: #1a202c;
+      color: #68d391;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      padding: 20px;
+      height: 300px;
+      overflow-y: auto;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .console-line {
+      margin-bottom: 5px;
+      opacity: 0;
+      animation: fadeIn 0.3s ease forwards;
+    }
+
+    @keyframes fadeIn {
+      to {
+        opacity: 1;
+      }
+    }
+
+    .command-input {
+      display: flex;
+      gap: 10px;
+    }
+
+    .command-input input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 14px;
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .command-input input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .command-input button {
+      padding: 12px 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: transform 0.2s;
+    }
+
+    .command-input button:hover {
+      transform: translateY(-1px);
+    }
+
+        /* Context Menu */
+        .context-menu {
+            position: fixed;
+            background: rgba(255, 255, 255, 0.95);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            display: none;
+            min-width: 200px;
+        }    .context-menu-item {
+      padding: 10px 16px;
+      cursor: pointer;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      transition: background 0.2s;
+      font-size: 14px;
+    }
+
+    .context-menu-item:hover {
+      background: rgba(102, 126, 234, 0.1);
+    }
+
+    .context-menu-item:last-child {
+      border-bottom: none;
+    }
+
+    .context-menu-separator {
+      height: 1px;
+      background: rgba(0, 0, 0, 0.1);
+      margin: 5px 0;
+    }
+
+    /* Status Indicator */
+    .status-indicator {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(10px);
+      padding: 10px 15px;
+      border-radius: 20px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+      font-size: 12px;
+      color: #4a5568;
+    }
+
+    .status-indicator.active {
+      background: rgba(72, 187, 120, 0.9);
+      color: white;
+    }
+
+    /* Quick Actions */
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .quick-action {
+      background: rgba(255, 255, 255, 0.9);
+      padding: 15px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: transform 0.2s;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .quick-action:hover {
+      transform: translateY(-2px);
+    }
+
+    .quick-action h4 {
+      color: #2d3748;
+      margin-bottom: 5px;
+    }
+
+    .quick-action p {
+      color: #718096;
+      font-size: 12px;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .sidebar {
+        width: 200px;
+      }
+
+      .workspace-info {
+        flex-direction: column;
+        gap: 5px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="logo">
+        <h1>🎯 IDE Swarm</h1>
+        <p>Right-Click Control</p>
+      </div>
+
+      <!-- Explorer Agent -->
+      <div class="agent-section">
+        <div class="agent-title" onclick="toggleAgentActions('explorer')">
+          📁 File Explorer
+          <span class="agent-status"></span>
+        </div>
+        <div class="agent-actions" id="explorer-actions">
+          <div class="action-item" onclick="executeAction('explorer', 'open')">Open</div>
+          <div class="action-item" onclick="executeAction('explorer', 'open-with')">Open with...</div>
+          <div class="action-item" onclick="executeAction('explorer', 'new-file')">New File</div>
+          <div class="action-item" onclick="executeAction('explorer', 'new-folder')">New Folder</div>
+          <div class="action-item" onclick="executeAction('explorer', 'rename')">Rename</div>
+          <div class="action-item" onclick="executeAction('explorer', 'delete')">Delete</div>
+          <div class="action-item" onclick="executeAction('explorer', 'copy-path')">Copy Path</div>
+          <div class="action-item" onclick="executeAction('explorer', 'reveal')">Show in Explorer</div>
+        </div>
+      </div>
+
+      <!-- Editor Agent -->
+      <div class="agent-section">
+        <div class="agent-title" onclick="toggleAgentActions('editor')">
+          ✏️ Code Editor
+          <span class="agent-status"></span>
+        </div>
+        <div class="agent-actions" id="editor-actions">
+          <div class="action-item" onclick="executeAction('editor', 'cut')">Cut</div>
+          <div class="action-item" onclick="executeAction('editor', 'copy')">Copy</div>
+          <div class="action-item" onclick="executeAction('editor', 'paste')">Paste</div>
+          <div class="action-item" onclick="executeAction('editor', 'find')">Find</div>
+          <div class="action-item" onclick="executeAction('editor', 'replace')">Replace</div>
+          <div class="action-item" onclick="executeAction('editor', 'format')">Format Document</div>
+          <div class="action-item" onclick="executeAction('editor', 'comment')">Toggle Comment</div>
+          <div class="action-item" onclick="executeAction('editor', 'goto-def')">Go to Definition</div>
+          <div class="action-item" onclick="executeAction('editor', 'rename')">Rename Symbol</div>
+        </div>
+      </div>
+
+      <!-- Git Agent -->
+      <div class="agent-section">
+        <div class="agent-title" onclick="toggleAgentActions('git')">
+          🌿 Git Integration
+          <span class="agent-status"></span>
+        </div>
+        <div class="agent-actions" id="git-actions">
+          <div class="action-item" onclick="executeAction('git', 'status')">Git Status</div>
+          <div class="action-item" onclick="executeAction('git', 'stage')">Stage Changes</div>
+          <div class="action-item" onclick="executeAction('git', 'commit')">Commit</div>
+          <div class="action-item" onclick="executeAction('git', 'push')">Push</div>
+          <div class="action-item" onclick="executeAction('git', 'pull')">Pull</div>
+          <div class="action-item" onclick="executeAction('git', 'log')">View History</div>
+          <div class="action-item" onclick="executeAction('git', 'diff')">Compare</div>
+          <div class="action-item" onclick="executeAction('git', 'branch')">Create Branch</div>
+          <div class="action-item" onclick="showGitLogin()">Git Login</div>
+        </div>
+      </div>
+
+      <!-- Chat Agent -->
+      <div class="agent-section">
+        <div class="agent-title" onclick="toggleAgentActions('chat')">
+          🤖 AI Assistant
+          <span class="agent-status"></span>
+        </div>
+        <div class="agent-actions" id="chat-actions">
+          <div class="action-item" onclick="executeAction('chat', 'ask')">Ask AI</div>
+          <div class="action-item" onclick="executeAction('chat', 'explain')">Explain Selection</div>
+          <div class="action-item" onclick="executeAction('chat', 'generate')">Generate Code</div>
+          <div class="action-item" onclick="executeAction('chat', 'debug')">Debug Help</div>
+          <div class="action-item" onclick="executeAction('chat', 'review')">Review Code</div>
+          <div class="action-item" onclick="executeAction('chat', 'document')">Document</div>
+        </div>
+      </div>
+
+      <!-- Settings Agent -->
+      <div class="agent-section">
+        <div class="agent-title" onclick="toggleAgentActions('settings')">
+          ⚙️ Workspace Settings
+          <span class="agent-status"></span>
+        </div>
+        <div class="agent-actions" id="settings-actions">
+          <div class="action-item" onclick="executeAction('settings', 'open')">Settings</div>
+          <div class="action-item" onclick="executeAction('settings', 'extensions')">Extensions</div>
+          <div class="action-item" onclick="executeAction('settings', 'shortcuts')">Keyboard Shortcuts</div>
+          <div class="action-item" onclick="executeAction('settings', 'themes')">Themes</div>
+          <div class="action-item" onclick="executeAction('settings', 'configure')">Configure</div>
+        </div>
+      </div>
+
+      <!-- Logger Agent -->
+      <div class="agent-section">
+        <div class="agent-title" onclick="toggleAgentActions('logger')">
+          📊 Activity Logger
+          <span class="agent-status"></span>
+        </div>
+        <div class="agent-actions" id="logger-actions">
+          <div class="action-item" onclick="executeAction('logger', 'history')">View History</div>
+          <div class="action-item" onclick="executeAction('logger', 'export')">Export Logs</div>
+          <div class="action-item" onclick="executeAction('logger', 'clear')">Clear Logs</div>
+          <div class="action-item" onclick="executeAction('logger', 'stats')">Performance Stats</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <div class="header">
+        <h2>🚀 Swarm Controller</h2>
+        <div class="workspace-info">
+          <span>📁 Workspace: d:\professional-nasm-ide</span>
+          <span>🗂️ Current: swarm_config.json</span>
+          <span>🌿 Git: master</span>
+        </div>
+      </div>
+
+      <div class="content-area">
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+          <div class="quick-action" onclick="showStatus()">
+            <h4>📊 Status</h4>
+            <p>View swarm status</p>
+          </div>
+          <div class="quick-action" onclick="showHelp()">
+            <h4>❓ Help</h4>
+            <p>Show help commands</p>
+          </div>
+          <div class="quick-action" onclick="startSwarm()">
+            <h4>🚀 Start Swarm</h4>
+            <p>Start all agents</p>
+          </div>
+          <div class="quick-action" onclick="showContextMenu('explorer')">
+            <h4>🖱️ Context Menu</h4>
+            <p>Right-click actions</p>
+          </div>
+        </div>
+
+        <!-- Console -->
+        <div class="console" id="console">
+          <div class="console-line">🎯 IDE Swarm Controller Ready</div>
+          <div class="console-line">📡 Right-click interface active</div>
+          <div class="console-line">⚡ Select an action from the sidebar</div>
+        </div>
+
+        <!-- Command Input -->
+        <div class="command-input">
+          <input type="text" id="commandInput"
+            placeholder="Enter command... (help, status, menu explorer, context git status, etc.)"
+            onkeypress="handleCommandKeyPress(event)">
+          <button onclick="executeCommand()">Execute</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Indicator -->
+  <div class="status-indicator active" id="statusIndicator">
+    🟢 Swarm Active
+  </div>
+
+  <!-- Context Menu (Right-Click) -->
+  <div class="context-menu" id="contextMenu">
+    <div class="context-menu-item" onclick="executeAction('explorer', 'open')">📁 Open</div>
+    <div class="context-menu-item" onclick="executeAction('explorer', 'copy')">📋 Copy</div>
+    <div class="context-menu-separator"></div>
+    <div class="context-menu-item" onclick="executeAction('editor', 'find')">🔍 Find</div>
+    <div class="context-menu-item" onclick="executeAction('git', 'status')">🌿 Git Status</div>
+    <div class="context-menu-separator"></div>
+    <div class="context-menu-item" onclick="executeAction('chat', 'ask')">🤖 Ask AI</div>
+    <div class="context-menu-separator"></div>
+    <div class="context-menu-item" onclick="executeAction('settings', 'open')">⚙️ Settings</div>
+  </div>
+
+  <script>
+    // Global variables
+    let swarmActive = false;
+    let commandHistory = [];
+    let historyIndex = -1;
+
+    // Initialize the interface
+    function init() {
+      logMessage("🎯 IDE Swarm Interface Initialized");
+      logMessage("🖱️ Right-click anywhere for context menu");
+      logMessage("💡 Click agent sections in sidebar to expand actions");
+
+      // Simulate agent startup
+      setTimeout(() => {
+        logMessage("✅ File Explorer: Active");
+        logMessage("✅ Code Editor: Active");
+        logMessage("✅ Git Integration: Active");
+        logMessage("✅ AI Assistant: Active");
+        logMessage("✅ Workspace Settings: Active");
+        logMessage("✅ Activity Logger: Active");
+        swarmActive = true;
+        updateStatusIndicator();
+      }, 1000);
+    }
+
+    // Console logging
+    function logMessage(message, type = 'info') {
+      const console = document.getElementById('console');
+      const line = document.createElement('div');
+      line.className = 'console-line';
+
+      const timestamp = new Date().toLocaleTimeString();
+      const color = type === 'error' ? '#f56565' : type === 'success' ? '#68d391' : '#68d391';
+
+      line.innerHTML = `<span style="color: #718096">[${timestamp}]</span> ${message}`;
+      console.appendChild(line);
+      console.scrollTop = console.scrollHeight;
+    }
+
+    // Toggle agent actions
+    function toggleAgentActions(agentType) {
+      const actions = document.getElementById(`${agentType}-actions`);
+      const isActive = actions.classList.contains('active');
+
+      // Close all other agent actions
+      document.querySelectorAll('.agent-actions').forEach(action => {
+        action.classList.remove('active');
+      });
+
+      // Toggle current action
+      if (!isActive) {
+        actions.classList.add('active');
+        logMessage(`📋 Showing ${agentType} context menu`);
+      }
+    }
+
+    // Execute action
+    function executeAction(agentType, action) {
+      if (!swarmActive) {
+        logMessage("❌ Swarm not active. Start swarm first.", 'error');
+        return;
+      }
+
+      const fullAction = `${agentType}_${action}`;
+      logMessage(`⚡ Executing: ${fullAction}`);
+
+      // Simulate action execution
+      setTimeout(() => {
+        switch (fullAction) {
+          case 'explorer_open':
+            logMessage("📁 Opening file/folder...", 'success');
+            break;
+          case 'explorer_new_file':
+            logMessage("📝 Creating new file...", 'success');
+            break;
+          case 'explorer_new_folder':
+            logMessage("📁 Creating new folder...", 'success');
+            break;
+          case 'explorer_rename':
+            logMessage("✏️ Renaming item...", 'success');
+            break;
+          case 'explorer_delete':
+            logMessage("🗑️ Deleting item...", 'success');
+            break;
+          case 'explorer_copy_path':
+            logMessage("📋 Path copied to clipboard", 'success');
+            break;
+          case 'explorer_reveal':
+            logMessage("👁️ Revealing in system explorer", 'success');
+            break;
+
+          case 'editor_cut':
+            logMessage("✂️ Cutting selection", 'success');
+            break;
+          case 'editor_copy':
+            logMessage("📋 Copying selection", 'success');
+            break;
+          case 'editor_paste':
+            logMessage("📋 Pasting from clipboard", 'success');
+            break;
+          case 'editor_find':
+            logMessage("🔍 Opening Find dialog", 'success');
+            break;
+          case 'editor_replace':
+            logMessage("🔄 Opening Replace dialog", 'success');
+            break;
+          case 'editor_format':
+            logMessage("🎨 Formatting document...", 'success');
+            break;
+          case 'editor_comment':
+            logMessage("💬 Toggling comment", 'success');
+            break;
+          case 'editor_goto_def':
+            logMessage("🎯 Going to definition...", 'success');
+            break;
+          case 'editor_rename':
+            logMessage("🏷️ Opening Rename dialog", 'success');
+            break;
+
+          case 'git_status':
+            logMessage("📊 Git Status:", 'info');
+            logMessage("  📝 Modified: src/main.asm", 'info');
+            logMessage("  📄 Untracked: README.md", 'info');
+            break;
+          case 'git_stage':
+            logMessage("➕ Staging changes...", 'success');
+            break;
+          case 'git_commit':
+            logMessage("💾 Opening Commit dialog", 'success');
+            break;
+          case 'git_push':
+            logMessage("⬆️ Pushing to remote...", 'success');
+            break;
+          case 'git_pull':
+            logMessage("⬇️ Pulling from remote...", 'success');
+            break;
+          case 'git_log':
+            logMessage("📜 Recent commits:", 'info');
+            logMessage("  abc1234 - Fixed bug in parser", 'info');
+            logMessage("  def5678 - Added new features", 'info');
+            break;
+          case 'git_diff':
+            logMessage("📋 Opening diff viewer", 'success');
+            break;
+          case 'git_branch':
+            logMessage("🌿 Opening Branch dialog", 'success');
+            break;
+
+          case 'chat_ask':
+            logMessage("🤖 AI Assistant: I'm here to help! Ask me anything.", 'success');
+            break;
+          case 'chat_explain':
+            logMessage("📖 Explaining selected code...", 'success');
+            break;
+          case 'chat_generate':
+            logMessage("⚡ Generating code...", 'success');
+            break;
+          case 'chat_debug':
+            logMessage("🐛 Debugging assistance activated", 'success');
+            break;
+          case 'chat_review':
+            logMessage("👀 Running code review...", 'success');
+            break;
+          case 'chat_document':
+            logMessage("📚 Generating documentation...", 'success');
+            break;
+
+          case 'settings_open':
+            logMessage("⚙️ Opening Workspace Settings", 'success');
+            break;
+          case 'settings_extensions':
+            logMessage("🔌 Opening Extension Manager", 'success');
+            break;
+          case 'settings_shortcuts':
+            logMessage("⌨️ Opening Keyboard Shortcuts", 'success');
+            break;
+          case 'settings_themes':
+            logMessage("🎨 Opening Theme Settings", 'success');
+            break;
+          case 'settings_configure':
+            logMessage("🔧 Opening Configuration", 'success');
+            break;
+
+          case 'logger_history':
+            logMessage("📊 Activity history loaded", 'success');
+            break;
+          case 'logger_export':
+            logMessage("📁 Exporting logs...", 'success');
+            break;
+          case 'logger_clear':
+            logMessage("🗑️ Clearing logs...", 'success');
+            break;
+          case 'logger_stats':
+            logMessage("📈 Performance statistics:", 'info');
+            logMessage("  - Total commands: 47", 'info');
+            logMessage("  - Average response: 0.3s", 'info');
+            logMessage("  - Success rate: 98.5%", 'info');
+            break;
+
+          default:
+            logMessage(`⚡ Action executed: ${fullAction}`, 'success');
+        }
+      }, 300);
+    }
+
+    // Command execution
+    function executeCommand() {
+      const input = document.getElementById('commandInput');
+      const command = input.value.trim();
+
+      if (!command) return;
+
+      // Add to history
+      commandHistory.unshift(command);
+      historyIndex = -1;
+
+      // Clear input
+      input.value = '';
+
+      // Execute command
+      logMessage(`💻 Command: ${command}`);
+
+      if (command.toLowerCase() === 'quit' || command.toLowerCase() === 'exit') {
+        logMessage("🛑 Stopping swarm...", 'error');
+        setTimeout(() => {
+          logMessage("👋 Swarm stopped. Goodbye!", 'error');
+          swarmActive = false;
+          updateStatusIndicator();
+        }, 1000);
+        return;
+      }
+
+      if (command.toLowerCase() === 'help') {
+        showHelp();
+        return;
+      }
+
+      if (command.toLowerCase() === 'status') {
+        showStatus();
+        return;
+      }
+
+      if (command.startsWith('menu ')) {
+        const contextType = command.split(' ')[1];
+        logMessage(`📋 Showing ${contextType} menu`);
+        toggleAgentActions(contextType);
+        return;
+      }
+
+      if (command.startsWith('context ')) {
+        const parts = command.split(' ');
+        if (parts.length >= 2) {
+          const action = parts[1];
+          const target = parts.slice(2).join(' ');
+          executeAction(action.split('_')[0], action.split('_')[1]);
+        } else {
+          logMessage("❌ Usage: context <action> [target]", 'error');
+        }
+        return;
+      }
+
+      // Default command handling
+      setTimeout(() => {
+        logMessage("✅ Command executed successfully", 'success');
+      }, 500);
+    }
+
+    // Handle command key press
+    function handleCommandKeyPress(event) {
+      if (event.key === 'Enter') {
+        executeCommand();
+      } else if (event.key === 'ArrowUp') {
+        // Command history navigation
+        if (historyIndex < commandHistory.length - 1) {
+          historyIndex++;
+          document.getElementById('commandInput').value = commandHistory[historyIndex];
+        }
+      } else if (event.key === 'ArrowDown') {
+        if (historyIndex > 0) {
+          historyIndex--;
+          document.getElementById('commandInput').value = commandHistory[historyIndex];
+        } else if (historyIndex === 0) {
+          historyIndex = -1;
+          document.getElementById('commandInput').value = '';
+        }
+      }
+    }
+
+    // Status functions
+    function showStatus() {
+      logMessage("📊 Swarm Status Report", 'info');
+      logMessage("  📁 File Explorer: Active", 'info');
+      logMessage("  ✏️ Code Editor: Active", 'info');
+      logMessage("  🌿 Git Integration: Active", 'info');
+      logMessage("  🤖 AI Assistant: Active", 'info');
+      logMessage("  ⚙️ Workspace Settings: Active", 'info');
+      logMessage("  📊 Activity Logger: Active", 'info');
+      logMessage("  🗂️ Open Files: 3", 'info');
+      logMessage("  🌿 Git Branch: master", 'info');
+      logMessage("  📝 Changes: 2 modified", 'info');
+    }
+
+    function showHelp() {
+      logMessage("📚 IDE Swarm Commands:", 'info');
+      logMessage("  help              - Show this help", 'info');
+      logMessage("  status            - Show swarm status", 'info');
+      logMessage("  menu <type>       - Show context menu", 'info');
+      logMessage("    Types: explorer, editor, git, chat, settings, logger", 'info');
+      logMessage("  context <action>  - Execute context action", 'info');
+      logMessage("  quit              - Stop swarm", 'info');
+      logMessage("  💡 Tip: Use sidebar for right-click actions!", 'info');
+    }
+
+    function startSwarm() {
+      if (swarmActive) {
+        logMessage("⚠️ Swarm already active", 'error');
+        return;
+      }
+
+      logMessage("🚀 Starting IDE Swarm...", 'info');
+      swarmActive = true;
+      updateStatusIndicator();
+
+      setTimeout(() => {
+        logMessage("✅ All agents started successfully", 'success');
+      }, 2000);
+    }
+
+    function updateStatusIndicator() {
+      const indicator = document.getElementById('statusIndicator');
+      if (swarmActive) {
+        indicator.className = 'status-indicator active';
+        indicator.textContent = '🟢 Swarm Active';
+      } else {
+        indicator.className = 'status-indicator';
+        indicator.textContent = '🔴 Swarm Inactive';
+      }
+    }
+
+    // Right-click context menu
+    document.addEventListener('contextmenu', function (event) {
+      event.preventDefault();
+      const contextMenu = document.getElementById('contextMenu');
+      contextMenu.style.display = 'block';
+      contextMenu.style.left = event.pageX + 'px';
+      contextMenu.style.top = event.pageY + 'px';
+    });
+
+    document.addEventListener('click', function (event) {
+      const contextMenu = document.getElementById('contextMenu');
+      if (!contextMenu.contains(event.target)) {
+        contextMenu.style.display = 'none';
+      }
+    });
+
+    // Show context menu for specific types
+    function showContextMenu(type) {
+      toggleAgentActions(type);
+      logMessage(`🖱️ ${type} context menu activated`);
+    }
+
+    // Git login simulation
+    function showGitLogin() {
+      logMessage("🔐 Git Login Required", 'info');
+      logMessage("  📧 Email: user@example.com", 'info');
+      logMessage("  🔑 Token: ****************", 'info');
+      logMessage("  ✅ Authentication successful", 'success');
+    }
+
+    // Initialize on load
+    window.addEventListener('load', init);
+
+    // Auto-expand explorer section by default
+    setTimeout(() => {
+      toggleAgentActions('explorer');
+    }, 2000);
+  </script>
+</body>
+
+</html>

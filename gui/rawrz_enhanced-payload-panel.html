@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RawrZ Enhanced Payload Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.2em;
+        }
+
+        .nav-tabs {
+            display: flex;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            overflow-x: auto;
+        }
+
+        .nav-tab {
+            flex: 1;
+            padding: 15px 20px;
+            background: transparent;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #7f8c8d;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .nav-tab:hover {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+
+        .nav-tab.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .tab-content {
+            display: none;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .feature-card {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+            border-color: #667eea;
+        }
+
+        .feature-card h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.4em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .feature-icon {
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .feature-description {
+            color: #7f8c8d;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            border-color: #27ae60;
+            color: #155724;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            border-color: #f39c12;
+            color: #856404;
+        }
+
+        .alert-danger {
+            background: #f8d7da;
+            border-color: #e74c3c;
+            color: #721c24;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            border-color: #3498db;
+            color: #0c5460;
+        }
+
+        .code-block {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+            margin: 15px 0;
+            white-space: pre-wrap;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            transition: width 0.3s ease;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+
+        .payload-list {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .payload-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #e9ecef;
+            transition: background-color 0.3s ease;
+        }
+
+        .payload-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .payload-item:last-child {
+            border-bottom: none;
+        }
+
+        .payload-info {
+            flex: 1;
+        }
+
+        .payload-name {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .payload-meta {
+            font-size: 0.9em;
+            color: #7f8c8d;
+        }
+
+        .payload-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-active {
+            background: #27ae60;
+            box-shadow: 0 0 10px rgba(39, 174, 96, 0.5);
+        }
+
+        .status-inactive {
+            background: #e74c3c;
+            box-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
+        }
+
+        .status-pending {
+            background: #f39c12;
+            box-shadow: 0 0 10px rgba(243, 156, 18, 0.5);
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+
+        .checkbox-item label {
+            margin: 0;
+            font-weight: normal;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .nav-tabs {
+                flex-direction: column;
+            }
+            
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 RawrZ Enhanced Payload Panel</h1>
+            <p>Advanced Payload Creation, Management & Deployment</p>
+        </div>
+
+        <div class="nav-tabs">
+            <button class="nav-tab active" data-tab="builder">Payload Builder</button>
+            <button class="nav-tab" data-tab="templates">Templates</button>
+            <button class="nav-tab" data-tab="deployment">Deployment</button>
+            <button class="nav-tab" data-tab="management">Management</button>
+            <button class="nav-tab" data-tab="analytics">Analytics</button>
+        </div>
+
+        <!-- Payload Builder Tab -->
+        <div id="builder" class="tab-content active">
+            <h2>🔧 Advanced Payload Builder</h2>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="payload-name">Payload Name:</label>
+                    <input type="text" class="form-control" id="payload-name" placeholder="Enter payload name">
+                </div>
+                <div class="form-group">
+                    <label for="payload-type">Payload Type:</label>
+                    <select class="form-control" id="payload-type">
+                        <option value="executable">Executable (.exe)</option>
+                        <option value="dll">Dynamic Library (.dll)</option>
+                        <option value="script">Script (.ps1, .bat, .sh)</option>
+                        <option value="document">Document (.docx, .pdf)</option>
+                        <option value="archive">Archive (.zip, .rar)</option>
+                        <option value="custom">Custom Format</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="payload-description">Description:</label>
+                <textarea class="form-control" id="payload-description" rows="3" placeholder="Describe the payload functionality..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Payload Features:</label>
+                <div class="checkbox-group">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="feature-encryption" checked>
+                        <label for="feature-encryption">Encryption</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="feature-obfuscation" checked>
+                        <label for="feature-obfuscation">Code Obfuscation</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="feature-polymorphic">
+                        <label for="feature-polymorphic">Polymorphic</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="feature-stealth" checked>
+                        <label for="feature-stealth">Stealth Mode</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="feature-persistence">
+                        <label for="feature-persistence">Persistence</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="feature-anti-analysis" checked>
+                        <label for="feature-anti-analysis">Anti-Analysis</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="encryption-algorithm">Encryption Algorithm:</label>
+                    <select class="form-control" id="encryption-algorithm">
+                        <option value="aes-256-gcm">AES-256-GCM</option>
+                        <option value="aria-256-cbc">ARIA-256-CBC</option>
+                        <option value="chacha20">ChaCha20</option>
+                        <option value="dual-layer">Dual Layer (AES + ARIA)</option>
+                        <option value="burner-mode">Burner Mode (Multi-Layer)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="obfuscation-level">Obfuscation Level:</label>
+                    <select class="form-control" id="obfuscation-level">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                        <option value="maximum">Maximum</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="payload-code">Payload Code:</label>
+                <textarea class="form-control" id="payload-code" rows="10" placeholder="Enter your payload code here..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <button class="btn" onclick="buildPayload()">Build Payload</button>
+                <button class="btn btn-secondary" onclick="validatePayload()">Validate Code</button>
+                <button class="btn btn-warning" onclick="testPayload()">Test Payload</button>
+                <button class="btn btn-success" onclick="saveTemplate()">Save as Template</button>
+            </div>
+
+            <div id="build-progress" style="display: none;">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+                </div>
+                <p id="build-status">Building payload...</p>
+            </div>
+        </div>
+
+        <!-- Templates Tab -->
+        <div id="templates" class="tab-content">
+            <h2>📋 Payload Templates</h2>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h3><span class="feature-icon">🔐</span>Encrypted Executable</h3>
+                    <div class="feature-description">
+                        Standard executable with AES-256 encryption and anti-analysis features.
+                    </div>
+                    <button class="btn" onclick="loadTemplate('encrypted-exe')">Load Template</button>
+                    <button class="btn btn-secondary" onclick="previewTemplate('encrypted-exe')">Preview</button>
+                </div>
+
+                <div class="feature-card">
+                    <h3><span class="feature-icon">🛡️</span>Stealth DLL</h3>
+                    <div class="feature-description">
+                        Dynamic library with stealth capabilities and polymorphic code.
+                    </div>
+                    <button class="btn" onclick="loadTemplate('stealth-dll')">Load Template</button>
+                    <button class="btn btn-secondary" onclick="previewTemplate('stealth-dll')">Preview</button>
+                </div>
+
+                <div class="feature-card">
+                    <h3><span class="feature-icon">📄</span>Document Payload</h3>
+                    <div class="feature-description">
+                        Malicious document with embedded payload and social engineering.
+                    </div>
+                    <button class="btn" onclick="loadTemplate('document-payload')">Load Template</button>
+                    <button class="btn btn-secondary" onclick="previewTemplate('document-payload')">Preview</button>
+                </div>
+
+                <div class="feature-card">
+                    <h3><span class="feature-icon">🌐</span>Web Payload</h3>
+                    <div class="feature-description">
+                        Web-based payload with JavaScript obfuscation and C2 communication.
+                    </div>
+                    <button class="btn" onclick="loadTemplate('web-payload')">Load Template</button>
+                    <button class="btn btn-secondary" onclick="previewTemplate('web-payload')">Preview</button>
+                </div>
+
+                <div class="feature-card">
+                    <h3><span class="feature-icon">📱</span>Mobile Payload</h3>
+                    <div class="feature-description">
+                        Mobile application payload with cross-platform compatibility.
+                    </div>
+                    <button class="btn" onclick="loadTemplate('mobile-payload')">Load Template</button>
+                    <button class="btn btn-secondary" onclick="previewTemplate('mobile-payload')">Preview</button>
+                </div>
+
+                <div class="feature-card">
+                    <h3><span class="feature-icon">🔧</span>Custom Template</h3>
+                    <div class="feature-description">
+                        Create and save your own custom payload templates.
+                    </div>
+                    <button class="btn" onclick="createCustomTemplate()">Create Template</button>
+                    <button class="btn btn-secondary" onclick="manageTemplates()">Manage Templates</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="template-search">Search Templates:</label>
+                <input type="text" class="form-control" id="template-search" placeholder="Search templates by name or type...">
+            </div>
+        </div>
+
+        <!-- Deployment Tab -->
+        <div id="deployment" class="tab-content">
+            <h2>🚀 Payload Deployment</h2>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h3><span class="feature-icon">📧</span>Email Delivery</h3>
+                    <div class="feature-description">
+                        Deploy payloads via email with social engineering templates.
+                    </div>
+                    <button class="btn" onclick="configureEmailDelivery()">Configure Email</button>
+                    <button class="btn btn-secondary" onclick="sendTestEmail()">Send Test</button>
+                </div>
+
+                <div class="feature-card">
+                    <h3><span class="feature-icon">🌐</span>Web Delivery</h3>
+                    <div class="feature-description">
+                        Host payloads on web servers with automatic download links.
+                    </div>
+                    <button class="btn" onclick="configureWebDelivery()">Configure Web</button>
+                    <button class="btn btn-secondary" onclick="generateDownloadLink()">Generate Link</button>
+                </div>
+
+                <div class="feature-card">
+                    <h3><span class="feature-icon">💾</span>USB Delivery</h3>
+                    <div class="feature-description">
+                        Create USB-based delivery mechanisms with autorun capabilities.
+                    </div>
+                    <button class="btn" onclick="configureUSBDelivery()">Configure USB</button>
+                    <button class="btn btn-secondary" onclick="createUSBPayload()">Create USB</button>
+                </div>
+
+                <div class="feature-card">
+                    <h3><span class="feature-icon">📱</span>Mobile Delivery</h3>
+                    <div class="feature-description">
+                        Deploy payloads through mobile channels and QR codes.
+                    </div>
+                    <button class="btn" onclick="configureMobileDelivery()">Configure Mobile</button>
+                    <button class="btn btn-secondary" onclick="generateQRCode()">Generate QR</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="deployment-targets">Target List:</label>
+                <textarea class="form-control" id="deployment-targets" rows="5" placeholder="Enter target information (one per line):&#10;email@example.com&#10;192.168.1.100&#10;https://target.com"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="deployment-schedule">Deployment Schedule:</label>
+                <select class="form-control" id="deployment-schedule">
+                    <option value="immediate">Immediate</option>
+                    <option value="scheduled">Scheduled</option>
+                    <option value="staggered">Staggered (Random Delay)</option>
+                    <option value="conditional">Conditional (Based on Events)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <button class="btn btn-success" onclick="deployPayloads()">Deploy Payloads</button>
+                <button class="btn btn-secondary" onclick="previewDeployment()">Preview Deployment</button>
+                <button class="btn btn-warning" onclick="cancelDeployment()">Cancel Deployment</button>
+            </div>
+        </div>
+
+        <!-- Management Tab -->
+        <div id="management" class="tab-content">
+            <h2>📊 Payload Management</h2>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" id="total-payloads">47</div>
+                    <div class="stat-label">Total Payloads</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="active-payloads">12</div>
+                    <div class="stat-label">Active</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="deployed-payloads">8</div>
+                    <div class="stat-label">Deployed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="success-rate">94.2%</div>
+                    <div class="stat-label">Success Rate</div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="payload-filter">Filter Payloads:</label>
+                <select class="form-control" id="payload-filter">
+                    <option value="all">All Payloads</option>
+                    <option value="active">Active Only</option>
+                    <option value="deployed">Deployed Only</option>
+                    <option value="template">Templates Only</option>
+                    <option value="custom">Custom Only</option>
+                </select>
+            </div>
+
+            <div class="payload-list" id="payload-list">
+                <div class="payload-item">
+                    <div class="payload-info">
+                        <div class="payload-name">
+                            <span class="status-indicator status-active"></span>
+                            Encrypted_Backdoor_v2.1.exe
+                        </div>
+                        <div class="payload-meta">Type: Executable | Size: 2.4MB | Created: 2024-01-15</div>
+                    </div>
+                    <div class="payload-actions">
+                        <button class="btn btn-secondary" onclick="editPayload('payload1')">Edit</button>
+                        <button class="btn" onclick="deployPayload('payload1')">Deploy</button>
+                        <button class="btn btn-danger" onclick="deletePayload('payload1')">Delete</button>
+                    </div>
+                </div>
+
+                <div class="payload-item">
+                    <div class="payload-info">
+                        <div class="payload-name">
+                            <span class="status-indicator status-pending"></span>
+                            Stealth_DLL_Injector.dll
+                        </div>
+                        <div class="payload-meta">Type: DLL | Size: 1.8MB | Created: 2024-01-14</div>
+                    </div>
+                    <div class="payload-actions">
+                        <button class="btn btn-secondary" onclick="editPayload('payload2')">Edit</button>
+                        <button class="btn" onclick="deployPayload('payload2')">Deploy</button>
+                        <button class="btn btn-danger" onclick="deletePayload('payload2')">Delete</button>
+                    </div>
+                </div>
+
+                <div class="payload-item">
+                    <div class="payload-info">
+                        <div class="payload-name">
+                            <span class="status-indicator status-active"></span>
+                            Document_Exploit.docx
+                        </div>
+                        <div class="payload-meta">Type: Document | Size: 3.2MB | Created: 2024-01-13</div>
+                    </div>
+                    <div class="payload-actions">
+                        <button class="btn btn-secondary" onclick="editPayload('payload3')">Edit</button>
+                        <button class="btn" onclick="deployPayload('payload3')">Deploy</button>
+                        <button class="btn btn-danger" onclick="deletePayload('payload3')">Delete</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <button class="btn" onclick="refreshPayloadList()">Refresh List</button>
+                <button class="btn btn-secondary" onclick="exportPayloads()">Export Payloads</button>
+                <button class="btn btn-warning" onclick="bulkOperations()">Bulk Operations</button>
+            </div>
+        </div>
+
+        <!-- Analytics Tab -->
+        <div id="analytics" class="tab-content">
+            <h2>📈 Payload Analytics</h2>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h3><span class="feature-icon">📊</span>Deployment Statistics</h3>
+                    <div class="feature-description">
+                        Track payload deployment success rates and performance metrics.
+                    </div>
+                    <button class="btn" onclick="viewDeploymentStats()">View Stats</button>
+                    <button class="btn btn-secondary" onclick="exportStats()">Export Data</button>
+                </div>
+
+                <div class="feature-card">
+                    <h3><span class="feature-icon">🎯</span>Target Analysis</h3>
+                    <div class="feature-description">
+                        Analyze target responses and engagement patterns.
+                    </div>
+                    <button class="btn" onclick="viewTargetAnalysis()">View Analysis</button>
+                    <button class="btn btn-secondary" onclick="generateReport()">Generate Report</button>
+                </div>
+
+                <div class="feature-card">
+                    <h3><span class="feature-icon">⏱️</span>Performance Metrics</h3>
+                    <div class="feature-description">
+                        Monitor payload execution times and resource usage.
+                    </div>
+                    <button class="btn" onclick="viewPerformanceMetrics()">View Metrics</button>
+                    <button class="btn btn-secondary" onclick="optimizePerformance()">Optimize</button>
+                </div>
+
+                <div class="feature-card">
+                    <h3><span class="feature-icon">🔍</span>Threat Intelligence</h3>
+                    <div class="feature-description">
+                        Correlate payload data with threat intelligence feeds.
+                    </div>
+                    <button class="btn" onclick="viewThreatIntel()">View Intelligence</button>
+                    <button class="btn btn-secondary" onclick="updateThreatFeeds()">Update Feeds</button>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" id="deployment-success">94.2%</div>
+                    <div class="stat-label">Deployment Success</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="avg-execution-time">1.3s</div>
+                    <div class="stat-label">Avg Execution Time</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="detection-rate">2.1%</div>
+                    <div class="stat-label">Detection Rate</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="total-targets">1,247</div>
+                    <div class="stat-label">Total Targets</div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="analytics-timeframe">Time Frame:</label>
+                <select class="form-control" id="analytics-timeframe">
+                    <option value="24h">Last 24 Hours</option>
+                    <option value="7d" selected>Last 7 Days</option>
+                    <option value="30d">Last 30 Days</option>
+                    <option value="90d">Last 90 Days</option>
+                    <option value="custom">Custom Range</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <button class="btn" onclick="refreshAnalytics()">Refresh Analytics</button>
+                <button class="btn btn-secondary" onclick="scheduleReport()">Schedule Report</button>
+                <button class="btn btn-warning" onclick="configureAlerts()">Configure Alerts</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTab = 'builder';
+        let payloads = [];
+        let buildProgress = 0;
+
+        // Initialize dashboard
+                // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add a small delay to ensure all elements are fully loaded
+            setTimeout(() => {
+                // Add event listeners to all tab buttons
+                const tabButtons = document.querySelectorAll('.nav-tab[data-tab]');
+                tabButtons.forEach(button => {
+                    button.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        const tabName = this.getAttribute('data-tab');
+                        console.log('Tab button clicked:', tabName);
+                        showTab(tabName, this);
+                    });
+                });
+            }, 100);
+        }););
+
+                function showTab(tabName, clickedElement = null) {
+            try {
+                // Wait for DOM to be ready
+                if (document.readyState === 'loading') {
+                    console.log('DOM not ready, retrying tab switch...');
+                    setTimeout(() => showTab(tabName, clickedElement), 100);
+                    return;
+                }
+                
+                // Hide all tab contents
+                const tabContents = document.querySelectorAll('.tab-content');
+                if (tabContents.length === 0) {
+                    console.error('No tab content elements found');
+                    return;
+                }
+                
+                tabContents.forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                
+                // Remove active class from all tabs
+                const navTabs = document.querySelectorAll('.nav-tab');
+                if (navTabs.length === 0) {
+                    console.error('No nav tab elements found');
+                    return;
+                }
+                
+                navTabs.forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                
+                // Show selected tab content
+                const targetContent = document.getElementById(tabName);
+                if (!targetContent) {
+                    console.error(`Tab content element '${tabName}' not found`);
+                    return;
+                }
+                targetContent.classList.add('active');
+                
+                // Add active class to clicked tab
+                if (clickedElement) {
+                    clickedElement.classList.add('active');
+                } else {
+                    // Find the tab button that corresponds to this tab
+                    const targetTab = document.querySelector(`[onclick*="showTab('${tabName}')"]`);
+                    if (targetTab) {
+                        targetTab.classList.add('active');
+                    }
+                }
+                
+                console.log(`Successfully switched to tab: ${tabName}`);
+            } catch (error) {
+                console.error('Error switching tab:', error);
+            }
+        });
+            
+            // Remove active class from all nav tabs
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+            
+            currentTab = tabName;
+        }
+
+        function initializeEnhancedPayloadPanel() {
+            updateAnalytics();
+            loadPayloadTemplates();
+        }
+
+        function startRealTimeUpdates() {
+            setInterval(() => {
+                updateAnalytics();
+            }, 5000);
+        }
+
+        function updateAnalytics() {
+            // Update deployment success rate
+            const successRate = (94.2 + Math.random() * 2 - 1).toFixed(1);
+            document.getElementById('deployment-success').textContent = successRate + '%';
+            
+            // Update execution time
+            const execTime = (1.3 + Math.random() * 0.4 - 0.2).toFixed(1);
+            document.getElementById('avg-execution-time').textContent = execTime + 's';
+            
+            // Update detection rate
+            const detectionRate = (2.1 + Math.random() * 0.5 - 0.25).toFixed(1);
+            document.getElementById('detection-rate').textContent = detectionRate + '%';
+        }
+
+        // Payload Builder Functions
+        function buildPayload() {
+            const name = document.getElementById('payload-name').value;
+            const type = document.getElementById('payload-type').value;
+            const code = document.getElementById('payload-code').value;
+            
+            if (!name || !code) {
+                showAlert('Please enter payload name and code.', 'warning');
+                return;
+            }
+            
+            showBuildProgress();
+            simulateBuildProcess();
+        }
+
+        function showBuildProgress() {
+            document.getElementById('build-progress').style.display = 'block';
+            buildProgress = 0;
+            updateProgress();
+        }
+
+        function simulateBuildProcess() {
+            const progressInterval = setInterval(() => {
+                buildProgress += Math.random() * 15;
+                if (buildProgress >= 100) {
+                    buildProgress = 100;
+                    clearInterval(progressInterval);
+                    showAlert('Payload built successfully!', 'success');
+                    document.getElementById('build-progress').style.display = 'none';
+                }
+                updateProgress();
+            }, 200);
+        }
+
+        function updateProgress() {
+            document.getElementById('progress-fill').style.width = buildProgress + '%';
+            document.getElementById('build-status').textContent = 
+                buildProgress < 100 ? `Building payload... ${Math.round(buildProgress)}%` : 'Build complete!';
+        }
+
+        function validatePayload() {
+            const code = document.getElementById('payload-code').value;
+            if (code.trim()) {
+                showAlert('Payload validation completed successfully!', 'success');
+            } else {
+                showAlert('Please enter payload code to validate.', 'warning');
+            }
+        }
+
+        function testPayload() {
+            showAlert('Testing payload in sandbox environment...', 'info');
+        }
+
+        function saveTemplate() {
+            const name = document.getElementById('payload-name').value;
+            if (name) {
+                showAlert(`Template "${name}" saved successfully!`, 'success');
+            } else {
+                showAlert('Please enter a payload name to save as template.', 'warning');
+            }
+        }
+
+        // Template Functions
+        function loadTemplate(templateType) {
+            showAlert(`Loading ${templateType} template...`, 'info');
+        }
+
+        function previewTemplate(templateType) {
+            showAlert(`Previewing ${templateType} template...`, 'info');
+        }
+
+        function createCustomTemplate() {
+            showAlert('Opening custom template creator...', 'info');
+        }
+
+        function manageTemplates() {
+            showAlert('Opening template management...', 'info');
+        }
+
+        // Deployment Functions
+        function configureEmailDelivery() {
+            showAlert('Opening email delivery configuration...', 'info');
+        }
+
+        function sendTestEmail() {
+            showAlert('Sending test email...', 'info');
+        }
+
+        function configureWebDelivery() {
+            showAlert('Opening web delivery configuration...', 'info');
+        }
+
+        function generateDownloadLink() {
+            showAlert('Generating download link...', 'info');
+        }
+
+        function configureUSBDelivery() {
+            showAlert('Opening USB delivery configuration...', 'info');
+        }
+
+        function createUSBPayload() {
+            showAlert('Creating USB payload...', 'info');
+        }
+
+        function configureMobileDelivery() {
+            showAlert('Opening mobile delivery configuration...', 'info');
+        }
+
+        function generateQRCode() {
+            showAlert('Generating QR code...', 'info');
+        }
+
+        function deployPayloads() {
+            showAlert('Starting payload deployment...', 'info');
+        }
+
+        function previewDeployment() {
+            showAlert('Generating deployment preview...', 'info');
+        }
+
+        function cancelDeployment() {
+            showAlert('Deployment cancelled.', 'warning');
+        }
+
+        // Management Functions
+        function editPayload(payloadId) {
+            showAlert(`Editing payload ${payloadId}...`, 'info');
+        }
+
+        function deployPayload(payloadId) {
+            showAlert(`Deploying payload ${payloadId}...`, 'info');
+        }
+
+        function deletePayload(payloadId) {
+            if (confirm('Are you sure you want to delete this payload?')) {
+                showAlert(`Payload ${payloadId} deleted.`, 'warning');
+            }
+        }
+
+        function refreshPayloadList() {
+            showAlert('Refreshing payload list...', 'info');
+        }
+
+        function exportPayloads() {
+            showAlert('Exporting payloads...', 'info');
+        }
+
+        function bulkOperations() {
+            showAlert('Opening bulk operations panel...', 'info');
+        }
+
+        // Analytics Functions
+        function viewDeploymentStats() {
+            showAlert('Loading deployment statistics...', 'info');
+        }
+
+        function exportStats() {
+            showAlert('Exporting statistics...', 'info');
+        }
+
+        function viewTargetAnalysis() {
+            showAlert('Loading target analysis...', 'info');
+        }
+
+        function generateReport() {
+            showAlert('Generating analysis report...', 'info');
+        }
+
+        function viewPerformanceMetrics() {
+            showAlert('Loading performance metrics...', 'info');
+        }
+
+        function optimizePerformance() {
+            showAlert('Running performance optimization...', 'info');
+        }
+
+        function viewThreatIntel() {
+            showAlert('Loading threat intelligence...', 'info');
+        }
+
+        function updateThreatFeeds() {
+            showAlert('Updating threat intelligence feeds...', 'info');
+        }
+
+        function refreshAnalytics() {
+            showAlert('Refreshing analytics data...', 'info');
+        }
+
+        function scheduleReport() {
+            showAlert('Opening report scheduling...', 'info');
+        }
+
+        function configureAlerts() {
+            showAlert('Opening alert configuration...', 'info');
+        }
+
+        function loadPayloadTemplates() {
+            // Simulate loading templates
+            console.log('Loading payload templates...');
+        }
+
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+            
+            const container = document.querySelector('.container');
+            container.insertBefore(alertDiv, container.firstChild);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

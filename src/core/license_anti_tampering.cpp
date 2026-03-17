@@ -2,7 +2,7 @@
 // license_anti_tampering.cpp — Enterprise License Anti-Tampering Implementation
 // ============================================================================
 
-#include "../include/license_anti_tampering.h"
+#include "license_anti_tampering.h"
 #include <cstring>
 #include <ctime>
 #include <algorithm>

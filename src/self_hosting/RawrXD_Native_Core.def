@@ -1,0 +1,9 @@
+LIBRARY RawrXD_Native_Core
+EXPORTS
+    NativeIO_ReadFile
+    NativeIO_WriteFile
+    NativeIO_FreeBuffer
+
+    Core_InitializeUI
+    Core_RunMessageLoop
+

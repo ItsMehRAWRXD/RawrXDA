@@ -25,6 +25,7 @@
 #include "../cpu_inference_engine.h"
 #include "perf_telemetry.hpp"
 #include "../agent/telemetry_collector.hpp"
+#include "../../include/PathResolver.h"
 
 #ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN
@@ -541,14 +542,19 @@ void ModelBruteForceEngine::ScanOllamaBlobs(std::vector<ModelProbeResult>& out,
 
     std::vector<std::string> blobDirs = {
         std::string(userProfile) + "\\.ollama\\models\\blobs",
+        PathResolver::getModelsPath() + "\\blobs",
         "D:\\OllamaModels\\blobs",
         "C:\\OllamaModels\\blobs",
     };
 
-    // Also check OLLAMA_MODELS env var
+    // Also check OLLAMA_MODELS / RAWRXD_OLLAMA_PATH env vars
     char ollamaModels[MAX_PATH]{};
     if (GetEnvironmentVariableA("OLLAMA_MODELS", ollamaModels, MAX_PATH) > 0) {
         blobDirs.push_back(std::string(ollamaModels) + "\\blobs");
+    }
+    char rawrxdOllama[MAX_PATH]{};
+    if (GetEnvironmentVariableA("RAWRXD_OLLAMA_PATH", rawrxdOllama, MAX_PATH) > 0) {
+        blobDirs.push_back(std::string(rawrxdOllama) + "\\blobs");
     }
 
     for (const auto& blobDir : blobDirs) {
@@ -696,11 +702,8 @@ void ModelBruteForceEngine::ProbeWithCPU(ModelProbeResult& result,
 
     // Enrich metadata from GGUFLoader if our header parse missed anything
     GGUFMetadata meta = loader.GetMetadata();
-    if (result.architecture.empty() && meta.architecture_type != 0) {
-        // Map architecture_type enum to a readable string
-        static const char* archNames[] = { "unknown", "llama", "gpt2", "gptj", "gptneox", "mpt", "starcoder", "falcon", "rwkv", "bloom", "phi", "gemma", "qwen", "command-r", "mistral" };
-        uint32_t idx = meta.architecture_type < 15 ? meta.architecture_type : 0;
-        result.architecture = archNames[idx];
+    if (result.architecture.empty() && !meta.architecture_type.empty()) {
+        result.architecture = meta.architecture_type;
     }
     if (result.vocab_size == 0 && meta.vocab_size > 0)
         result.vocab_size = meta.vocab_size;
@@ -837,12 +840,19 @@ std::vector<ModelProbeResult> ModelBruteForceEngine::DiscoverAllModels(
         ScanDirectory(dir, "local", results, config);
     }
 
-    // 3. Standard model locations
+    // 3. Standard model locations (PathResolver + env, then fallbacks)
     std::vector<std::string> stdDirs = {
+        PathResolver::getModelsPath(),
         "D:\\OllamaModels",
         "D:\\models",
         "C:\\models",
     };
+    char rawrxdOllamaPath[MAX_PATH]{};
+    if (GetEnvironmentVariableA("RAWRXD_OLLAMA_PATH", rawrxdOllamaPath, MAX_PATH) > 0)
+        stdDirs.insert(stdDirs.begin(), rawrxdOllamaPath);
+    char ollamaModelsEnv[MAX_PATH]{};
+    if (GetEnvironmentVariableA("OLLAMA_MODELS", ollamaModelsEnv, MAX_PATH) > 0)
+        stdDirs.insert(stdDirs.begin(), std::string(ollamaModelsEnv));
 
     char userProfile[MAX_PATH]{};
     if (GetEnvironmentVariableA("USERPROFILE", userProfile, MAX_PATH) > 0) {

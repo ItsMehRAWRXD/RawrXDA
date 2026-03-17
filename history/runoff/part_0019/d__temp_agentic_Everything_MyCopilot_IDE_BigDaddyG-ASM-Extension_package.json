@@ -1,0 +1,89 @@
+{
+  "name": "bigdaddyg-cursor-chat",
+  "displayName": "BigDaddyG Assembly Agent",
+  "description": "Agentic AI-powered x86/x64 assembly development environment",
+  "version": "1.0.2",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "bigdaddyg.beaconChat",
+        "title": "BigDaddyG: Beacon Chat"
+      },
+      {
+        "command": "bigdaddyg.startCursorChat",
+        "title": "BigDaddyG: Start Cursor Chat"
+      },
+      {
+        "command": "bigdaddyg.stopCursorChat",
+        "title": "BigDaddyG: Stop Cursor Chat"
+      },
+      {
+        "command": "bigdaddyg.selectModel",
+        "title": "BigDaddyG: Select Model"
+      },
+      {
+        "command": "bigdaddyg.openChat",
+        "title": "BigDaddyG: Open Chat"
+      },
+      {
+        "command": "bigdaddyg.analyzeProject",
+        "title": "BigDaddyG: Analyze Project"
+      },
+      {
+        "command": "bigdaddyg.toggleBypass",
+        "title": "BigDaddyG: Toggle Bypass"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "bigdaddyg.chat",
+        "key": "ctrl+shift+space",
+        "when": "editorTextFocus"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "bigdaddyg.chatView",
+          "name": "BigDaddyG AI Chat",
+          "when": "resourceExtname == .asm"
+        }
+      ]
+    },
+    "languages": [
+      {
+        "id": "asm",
+        "aliases": [
+          "Assembly",
+          "asm"
+        ],
+        "extensions": [
+          ".asm",
+          ".s",
+          ".S"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@secretlint/node": "^11.2.5",
+    "@types/node": "16.x",
+    "@types/vscode": "^1.74.0",
+    "typescript": "^4.9.4"
+  }
+}

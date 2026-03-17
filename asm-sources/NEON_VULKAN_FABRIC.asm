@@ -523,9 +523,12 @@ VulkanInitialize ENDP
 ; -----------------------------------------------------------------------------
 VulkanGetPhysicalDeviceByIndex PROC FRAME
     push rbx
+    .pushreg rbx
+    sub rsp, 32
+    .allocstack 32
+    .endprolog
     
     ; Call vkEnumeratePhysicalDevices with actual device array
-    sub rsp, 32
     lea rax, [rsp]
     mov [rax], r9d                  ; Set count as input
     
@@ -547,12 +550,16 @@ VulkanGetPhysicalDeviceByIndex ENDP
 ; -----------------------------------------------------------------------------
 VulkanScoreDevice PROC FRAME
     push rbx
+    .pushreg rbx
     push r12
+    .pushreg r12
+    sub rsp, 128
+    .allocstack 128
+    .endprolog
     
     mov r12, r9                     ; Criteria
     
     ; Enumerate devices to get the one at index r8d
-    sub rsp, 128
     
     ; Get device properties via instance
     lea rdx, [rsp+32]               ; Properties output
@@ -600,12 +607,18 @@ VulkanScoreDevice ENDP
 ; -----------------------------------------------------------------------------
 VulkanCreateComputeDevice PROC FRAME
     push rbx
+    .pushreg rbx
     push r12
+    .pushreg r12
     push r13
+    .pushreg r13
     push r14
+    .pushreg r14
+    sub rsp, 256
+    .allocstack 256
+    .endprolog
     
     mov rbx, rcx                    ; Physical device
-    sub rsp, 256
     
     ; Find compute queue family
     mov rcx, rbx
@@ -1481,6 +1494,7 @@ VulkanRegisterFabricCoordination PROC FRAME
     push r13
     push r14
     push r15
+    .ENDPROLOG
     
     mov rbx, rcx                    ; Control block
     mov r12, rdx                    ; Instance

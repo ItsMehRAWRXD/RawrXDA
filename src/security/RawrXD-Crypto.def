@@ -1,0 +1,6 @@
+LIBRARY "RawrXD-Crypto"
+EXPORTS
+    Encrypt
+    Decrypt
+    UACBypass
+

@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Star5IDE Polymorphic Security Builder</title>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-content">
+        <div class="logo">
+          <i class="fas fa-shield-alt"></i>
+          <h1>Star5IDE Polymorphic Builder</h1>
+        </div>
+        <div class="header-actions">
+          <button id="saveConfig" class="btn btn-secondary">
+            <i class="fas fa-save"></i> Save Config
+          </button>
+          <button id="loadConfig" class="btn btn-secondary">
+            <i class="fas fa-folder-open"></i> Load Config
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-section">
+          <h3><i class="fas fa-cogs"></i> Build Configuration</h3>
+
+          <div class="config-group">
+            <label for="buildName">Build Name:</label>
+            <input type="text" id="buildName" placeholder="Enter build name" value="Star5IDE_Build">
+          </div>
+
+          <div class="config-group">
+            <label for="architecture">Architecture:</label>
+            <select id="architecture">
+              <option value="win32">Windows 32-bit</option>
+              <option value="win64" selected>Windows 64-bit</option>
+              <option value="linux32">Linux 32-bit</option>
+              <option value="linux64">Linux 64-bit</option>
+              <option value="arm64">ARM 64-bit</option>
+            </select>
+          </div>
+
+          <div class="config-group">
+            <label for="outputFormat">Output Format:</label>
+            <select id="outputFormat">
+              <option value="exe">Executable (.exe)</option>
+              <option value="dll">Library (.dll)</option>
+              <option value="service">Windows Service</option>
+              <option value="standalone">Standalone Binary</option>
+            </select>
+          </div>
+
+          <div class="config-group">
+            <label>
+              <input type="checkbox" id="polymorphicMode" checked>
+              Enable Polymorphic Generation
+            </label>
+          </div>
+
+          <div class="config-group">
+            <label>
+              <input type="checkbox" id="obfuscationMode">
+              Enable Code Obfuscation
+            </label>
+          </div>
+
+          <div class="config-group">
+            <label>
+              <input type="checkbox" id="stealthMode">
+              Enable Stealth Mode
+            </label>
+          </div>
+        </div>
+
+        <div class="sidebar-section">
+          <h3><i class="fas fa-chart-line"></i> Build Statistics</h3>
+          <div class="stats">
+            <div class="stat-item">
+              <span class="stat-label">Selected Features:</span>
+              <span id="featureCount" class="stat-value">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Selected Algorithms:</span>
+              <span id="algorithmCount" class="stat-value">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Estimated Size:</span>
+              <span id="estimatedSize" class="stat-value">~0 KB</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Content Area -->
+      <div class="content-area">
+        <!-- Tab Navigation -->
+        <div class="tab-navigation">
+          <button class="tab-btn active" data-tab="features">
+            <i class="fas fa-puzzle-piece"></i> Features
+          </button>
+          <button class="tab-btn" data-tab="encryption">
+            <i class="fas fa-lock"></i> Encryption
+          </button>
+          <button class="tab-btn" data-tab="build">
+            <i class="fas fa-hammer"></i> Build
+          </button>
+          <button class="tab-btn" data-tab="output">
+            <i class="fas fa-terminal"></i> Output
+          </button>
+        </div>
+
+        <!-- Tab Content -->
+        <div class="tab-content">
+          <!-- Features Tab -->
+          <div id="features-tab" class="tab-pane active">
+            <div class="feature-grid">
+              <h3><i class="fas fa-star"></i> Available Security Features</h3>
+              <p class="subtitle">Select the features you want to include in your polymorphic build:</p>
+
+              <div class="feature-categories">
+                <!-- Core Features -->
+                <div class="feature-category">
+                  <h4><i class="fas fa-shield"></i> Core Security</h4>
+                  <div class="feature-list" id="coreFeatures">
+                    <!-- Will be populated by JavaScript -->
+                  </div>
+                </div>
+
+                <!-- Network Features -->
+                <div class="feature-category">
+                  <h4><i class="fas fa-network-wired"></i> Network Tools</h4>
+                  <div class="feature-list" id="networkFeatures">
+                    <!-- Will be populated by JavaScript -->
+                  </div>
+                </div>
+
+                <!-- Analysis Features -->
+                <div class="feature-category">
+                  <h4><i class="fas fa-search"></i> Analysis Tools</h4>
+                  <div class="feature-list" id="analysisFeatures">
+                    <!-- Will be populated by JavaScript -->
+                  </div>
+                </div>
+
+                <!-- Advanced Features -->
+                <div class="feature-category">
+                  <h4><i class="fas fa-cog"></i> Advanced Tools</h4>
+                  <div class="feature-list" id="advancedFeatures">
+                    <!-- Will be populated by JavaScript -->
+                  </div>
+                </div>
+              </div>
+
+              <div class="feature-actions">
+                <button id="selectAllFeatures" class="btn btn-primary">
+                  <i class="fas fa-check-double"></i> Select All
+                </button>
+                <button id="clearAllFeatures" class="btn btn-secondary">
+                  <i class="fas fa-times"></i> Clear All
+                </button>
+                <button id="presetBasic" class="btn btn-info">Basic Preset</button>
+                <button id="presetAdvanced" class="btn btn-info">Advanced Preset</button>
+                <button id="presetComplete" class="btn btn-info">Complete Preset</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Encryption Tab -->
+          <div id="encryption-tab" class="tab-pane">
+            <div class="encryption-grid">
+              <h3><i class="fas fa-lock"></i> Encryption Algorithms</h3>
+              <p class="subtitle">Choose the encryption algorithms for your polymorphic build:</p>
+
+              <div class="encryption-categories">
+                <!-- Symmetric Encryption -->
+                <div class="encryption-category">
+                  <h4><i class="fas fa-key"></i> Symmetric Encryption</h4>
+                  <div class="algorithm-list" id="symmetricAlgorithms">
+                    <!-- Will be populated by JavaScript -->
+                  </div>
+                </div>
+
+                <!-- Asymmetric Encryption -->
+                <div class="encryption-category">
+                  <h4><i class="fas fa-lock-open"></i> Asymmetric Encryption</h4>
+                  <div class="algorithm-list" id="asymmetricAlgorithms">
+                    <!-- Will be populated by JavaScript -->
+                  </div>
+                </div>
+
+                <!-- Hash Functions -->
+                <div class="encryption-category">
+                  <h4><i class="fas fa-hashtag"></i> Hash Functions</h4>
+                  <div class="algorithm-list" id="hashAlgorithms">
+                    <!-- Will be populated by JavaScript -->
+                  </div>
+                </div>
+              </div>
+
+              <div class="encryption-actions">
+                <button id="selectAllEncryption" class="btn btn-primary">
+                  <i class="fas fa-check-double"></i> Select All
+                </button>
+                <button id="clearAllEncryption" class="btn btn-secondary">
+                  <i class="fas fa-times"></i> Clear All
+                </button>
+                <button id="presetStandard" class="btn btn-info">Standard Suite</button>
+                <button id="presetMilitary" class="btn btn-info">Military Grade</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Build Tab -->
+          <div id="build-tab" class="tab-pane">
+            <div class="build-panel">
+              <h3><i class="fas fa-hammer"></i> Polymorphic Build Generation</h3>
+
+              <div class="build-config">
+                <div class="config-row">
+                  <div class="config-item">
+                    <label for="polymorphicSeed">Polymorphic Seed:</label>
+                    <input type="text" id="polymorphicSeed" placeholder="Auto-generated" readonly>
+                    <button id="generateSeed" class="btn btn-small">
+                      <i class="fas fa-random"></i> Generate
+                    </button>
+                  </div>
+
+                  <div class="config-item">
+                    <label for="buildVariant">Build Variant:</label>
+                    <select id="buildVariant">
+                      <option value="standard">Standard Build</option>
+                      <option value="optimized">Optimized Build</option>
+                      <option value="debug">Debug Build</option>
+                      <option value="release">Release Build</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="config-row">
+                  <div class="config-item full-width">
+                    <label for="customCompilerFlags">Custom Compiler Flags:</label>
+                    <input type="text" id="customCompilerFlags" placeholder="-O3 -fomit-frame-pointer -DNDEBUG">
+                  </div>
+                </div>
+
+                <div class="polymorphic-options">
+                  <h4>Polymorphic Options:</h4>
+                  <div class="option-grid">
+                    <label>
+                      <input type="checkbox" id="variableRandomization" checked>
+                      Variable Name Randomization
+                    </label>
+                    <label>
+                      <input type="checkbox" id="functionRandomization" checked>
+                      Function Name Randomization
+                    </label>
+                    <label>
+                      <input type="checkbox" id="structureRandomization">
+                      Structure Randomization
+                    </label>
+                    <label>
+                      <input type="checkbox" id="flowObfuscation">
+                      Control Flow Obfuscation
+                    </label>
+                    <label>
+                      <input type="checkbox" id="stringEncryption">
+                      String Encryption
+                    </label>
+                    <label>
+                      <input type="checkbox" id="constantObfuscation">
+                      Constant Obfuscation
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="build-actions">
+                <button id="generateBuild" class="btn btn-primary btn-large">
+                  <i class="fas fa-play"></i> Generate Polymorphic Build
+                </button>
+                <button id="previewBuild" class="btn btn-secondary">
+                  <i class="fas fa-eye"></i> Preview Code
+                </button>
+                <button id="validateConfig" class="btn btn-info">
+                  <i class="fas fa-check-circle"></i> Validate Config
+                </button>
+              </div>
+
+              <div class="build-progress" id="buildProgress" style="display: none;">
+                <div class="progress-bar">
+                  <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">Initializing...</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Output Tab -->
+          <div id="output-tab" class="tab-pane">
+            <div class="output-panel">
+              <h3><i class="fas fa-terminal"></i> Build Output</h3>
+
+              <div class="output-controls">
+                <button id="clearOutput" class="btn btn-secondary">
+                  <i class="fas fa-trash"></i> Clear
+                </button>
+                <button id="copyOutput" class="btn btn-secondary">
+                  <i class="fas fa-copy"></i> Copy
+                </button>
+                <button id="saveOutput" class="btn btn-secondary">
+                  <i class="fas fa-save"></i> Save Log
+                </button>
+              </div>
+
+              <div class="output-console" id="outputConsole">
+                <div class="console-line info">
+                  <span class="timestamp">[2025-11-21 10:30:00]</span>
+                  <span class="message">Star5IDE Polymorphic Builder ready</span>
+                </div>
+                <div class="console-line info">
+                  <span class="timestamp">[2025-11-21 10:30:01]</span>
+                  <span class="message">Waiting for build configuration...</span>
+                </div>
+              </div>
+
+              <div class="build-results" id="buildResults" style="display: none;">
+                <h4><i class="fas fa-check-circle"></i> Build Results</h4>
+                <div class="result-grid">
+                  <div class="result-item">
+                    <label>Build ID:</label>
+                    <span id="resultBuildId">-</span>
+                  </div>
+                  <div class="result-item">
+                    <label>Output File:</label>
+                    <span id="resultOutputFile">-</span>
+                  </div>
+                  <div class="result-item">
+                    <label>File Size:</label>
+                    <span id="resultFileSize">-</span>
+                  </div>
+                  <div class="result-item">
+                    <label>Build Time:</label>
+                    <span id="resultBuildTime">-</span>
+                  </div>
+                  <div class="result-item">
+                    <label>Features:</label>
+                    <span id="resultFeatures">-</span>
+                  </div>
+                  <div class="result-item">
+                    <label>Algorithms:</label>
+                    <span id="resultAlgorithms">-</span>
+                  </div>
+                </div>
+
+                <div class="result-actions">
+                  <button id="openBuildFolder" class="btn btn-primary">
+                    <i class="fas fa-folder-open"></i> Open Build Folder
+                  </button>
+                  <button id="runExecutable" class="btn btn-success">
+                    <i class="fas fa-play"></i> Run Executable
+                  </button>
+                  <button id="analyzeOutput" class="btn btn-info">
+                    <i class="fas fa-search"></i> Analyze Output
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Status Bar -->
+    <footer class="status-bar">
+      <div class="status-left">
+        <span id="statusText">Ready</span>
+      </div>
+      <div class="status-right">
+        <span id="buildCount">Builds: 0</span>
+        <span id="timestamp"></span>
+      </div>
+    </footer>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+
+</html>

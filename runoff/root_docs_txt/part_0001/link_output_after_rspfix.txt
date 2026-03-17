@@ -1,0 +1,18 @@
+win32app_Win32IDE_AIReverseEngineering.obj : error LNK2005: "private: bool __cdecl Win32IDE::handleAIReverseEngCommand(int)" (?handleAIReverseEngCommand@Win32IDE@@AEAA_NH@Z) already defined in link_stubs_win32ide_methods.obj
+win32app_Win32IDE_AIReverseEngineering.obj : error LNK2005: "private: void __cdecl Win32IDE::initAIReverseEngineering(void)" (?initAIReverseEngineering@Win32IDE@@AEAAXXZ) already defined in link_stubs_win32ide_methods.obj
+   Creating library .\bin\RawrXD-Win32IDE.lib and object .\bin\RawrXD-Win32IDE.exp
+win32app_Win32IDE_AsmSemantic.obj : error LNK2001: unresolved external symbol "private: void __cdecl Win32IDE::openFile(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)" (?openFile@Win32IDE@@AEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z)
+win32app_Win32IDE_Commands.obj : error LNK2001: unresolved external symbol "private: bool __cdecl Win32IDE::saveFileAs(void)" (?saveFileAs@Win32IDE@@AEAA_NXZ)
+win32app_Win32IDE_Commands.obj : error LNK2001: unresolved external symbol "private: bool __cdecl Win32IDE::saveFile(void)" (?saveFile@Win32IDE@@AEAA_NXZ)
+win32app_Win32IDE_Commands.obj : error LNK2001: unresolved external symbol "private: void __cdecl Win32IDE::openFile(void)" (?openFile@Win32IDE@@AEAAXXZ)
+win32app_Win32IDE_Commands.obj : error LNK2001: unresolved external symbol "private: void __cdecl Win32IDE::newFile(void)" (?newFile@Win32IDE@@AEAAXXZ)
+win32app_Win32IDE_FileOps.obj : error LNK2001: unresolved external symbol "private: void __cdecl Win32IDE::setCurrentDirectoryFromFile(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)" (?setCurrentDirectoryFromFile@Win32IDE@@AEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z)
+win32app_Win32IDE_LSP_AI_Bridge.obj : error LNK2001: unresolved external symbol __std_find_first_not_of_trivial_pos_1
+win32app_Win32IDE_Tier3Polish.obj : error LNK2001: unresolved external symbol "private: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl Win32IDE::extractLeafName(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)const " (?extractLeafName@Win32IDE@@AEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBV23@@Z)
+msvcrt.lib(utility.obj) : error LNK2001: unresolved external symbol _is_c_termination_complete
+msvcrt.lib(utility.obj) : error LNK2001: unresolved external symbol __acrt_initialize
+msvcrt.lib(utility.obj) : error LNK2001: unresolved external symbol __acrt_uninitialize
+msvcrt.lib(utility.obj) : error LNK2001: unresolved external symbol __acrt_uninitialize_critical
+msvcrt.lib(utility.obj) : error LNK2001: unresolved external symbol __acrt_thread_attach
+msvcrt.lib(utility.obj) : error LNK2001: unresolved external symbol __acrt_thread_detach
+.\bin\RawrXD-Win32IDE.exe : fatal error LNK1120: 14 unresolved externals

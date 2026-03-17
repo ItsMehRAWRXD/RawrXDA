@@ -1,0 +1,110 @@
+{
+  "architecture": "AMD64",
+  "subsystem": "WINDOWS_GUI",
+  "entryPointRVA": 4096,
+  "imageBase": 4194304,
+  "sectionAlignment": 4096,
+  "fileAlignment": 512,
+  "majorOSVersion": 6,
+  "minorOSVersion": 0,
+  "majorImageVersion": 1,
+  "minorImageVersion": 0,
+  "majorSubsystemVersion": 6,
+  "minorSubsystemVersion": 0,
+  "sizeOfStackReserve": 1048576,
+  "sizeOfStackCommit": 4096,
+  "sizeOfHeapReserve": 1048576,
+  "sizeOfHeapCommit": 4096,
+  "dllCharacteristics": [
+    "DYNAMIC_BASE",
+    "NX_COMPAT",
+    "NO_SEH",
+    "TERMINAL_SERVER_AWARE"
+  ],
+  "imports": [
+    {
+      "dll": "kernel32.dll",
+      "symbols": [
+        "ExitProcess",
+        "GetModuleHandleA",
+        "GetProcAddress"
+      ]
+    },
+    {
+      "dll": "user32.dll",
+      "symbols": [
+        "MessageBoxA",
+        "CreateWindowExA",
+        "ShowWindow",
+        "UpdateWindow",
+        "GetMessageA",
+        "TranslateMessage",
+        "DispatchMessageA",
+        "PostQuitMessage"
+      ]
+    }
+  ],
+  "sections": [
+    {
+      "name": ".text",
+      "characteristics": [
+        "CNT_CODE",
+        "MEM_EXECUTE",
+        "MEM_READ"
+      ],
+      "data": "base64_encoded_machine_code_here"
+    },
+    {
+      "name": ".data",
+      "characteristics": [
+        "CNT_INITIALIZED_DATA",
+        "MEM_READ",
+        "MEM_WRITE"
+      ],
+      "data": "base64_encoded_data_here"
+    },
+    {
+      "name": ".rdata",
+      "characteristics": [
+        "CNT_INITIALIZED_DATA",
+        "MEM_READ"
+      ],
+      "data": "base64_encoded_readonly_data_here"
+    }
+  ],
+  "resources": [
+    {
+      "type": "RT_VERSION",
+      "id": 1,
+      "data": {
+        "fileVersion": "1.0.0.0",
+        "productVersion": "1.0.0.0",
+        "fileFlags": 0,
+        "fileOS": "VOS_NT_WINDOWS32",
+        "fileType": "VFT_APP",
+        "fileSubtype": 0,
+        "companyName": "PE Writer Example",
+        "productName": "Sample Application",
+        "fileDescription": "A sample PE file created with PE Writer",
+        "internalName": "sample.exe",
+        "originalFilename": "sample.exe",
+        "legalCopyright": "Copyright (C) 2024"
+      }
+    }
+  ],
+  "relocations": [
+    {
+      "section": ".text",
+      "offset": 1234,
+      "type": "IMAGE_REL_AMD64_ADDR64"
+    }
+  ],
+  "exportSymbols": [
+    "MyFunction",
+    "AnotherFunction"
+  ],
+  "debugInfo": {
+    "type": "CODEVIEW",
+    "pdbPath": "sample.pdb"
+  }
+}

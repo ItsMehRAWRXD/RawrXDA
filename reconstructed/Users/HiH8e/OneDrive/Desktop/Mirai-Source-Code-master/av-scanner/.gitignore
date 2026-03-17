@@ -1,0 +1,58 @@
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+database/*.db
+
+# Uploads
+uploads/
+uploads/*
+!uploads/.gitkeep
+
+# Reports
+backend/reports/
+backend/reports/*
+!backend/reports/.gitkeep
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build
+dist/
+build/
+.cache/
+
+# Temporary
+tmp/
+temp/
+*.tmp
+
+# Test
+coverage/
+.nyc_output/

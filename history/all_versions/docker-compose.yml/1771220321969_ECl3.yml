@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  rawrxd-backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.backend
+    ports:
+      - "23959:23959"
+    volumes:
+      - models:/opt/rawrxd/models:ro
+      - workspace:/workspace
+    environment:
+      - RAWRXD_HOST=0.0.0.0
+      - RAWRXD_PORT=23959
+      - RAWRXD_MODEL_PATH=/opt/rawrxd/models
+    networks:
+      - rawrxd-net
+    restart: unless-stopped
+
+  rawrxd-web:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ../web_interface:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - rawrxd-backend
+    networks:
+      - rawrxd-net
+    restart: unless-stopped
+
+  # Optional: Full IDE via browser (noVNC)
+  rawrxd-desktop:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.full
+    ports:
+      - "8080:8080"  # noVNC
+      - "23960:23959"  # Backend API (mapped to avoid conflict)
+    volumes:
+      - models:/opt/rawrxd/models:ro
+    environment:
+      - VNC_PASSWORD=${VNC_PASSWORD:-rawrxd}
+    profiles:
+      - desktop
+    networks:
+      - rawrxd-net
+
+volumes:
+  models:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${MODEL_PATH:-./models}
+  workspace:
+
+networks:
+  rawrxd-net:
+    driver: bridge

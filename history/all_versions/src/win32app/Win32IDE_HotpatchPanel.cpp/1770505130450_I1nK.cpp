@@ -1,0 +1,393 @@
+// Win32IDE_HotpatchPanel.cpp — Hotpatch UI Integration (Phase 14.2)
+// Wires the three-layer hotpatch system into the Win32IDE command palette
+// and menu bar. Handles all IDM_HOTPATCH_* commands (9001–9030).
+//
+// Rule: NO SOURCE FILE IS TO BE SIMPLIFIED
+#include "Win32IDE.h"
+#include "../core/unified_hotpatch_manager.hpp"
+#include "../core/proxy_hotpatcher.hpp"
+#include <sstream>
+#include <iomanip>
+#include <commdlg.h>
+
+// ============================================================================
+// Initialization
+// ============================================================================
+
+void Win32IDE::initHotpatchUI() {
+    if (m_hotpatchUIInitialized) return;
+    m_hotpatchEnabled = true;
+    m_hotpatchUIInitialized = true;
+    appendOutput("[Hotpatch] Three-layer hotpatch system initialized.\n");
+}
+
+// ============================================================================
+// Command Router
+// ============================================================================
+
+void Win32IDE::handleHotpatchCommand(int commandId) {
+    // Lazy-init the hotpatch subsystem on first command
+    if (!m_hotpatchUIInitialized) {
+        initHotpatchUI();
+    }
+
+    switch (commandId) {
+        case IDM_HOTPATCH_SHOW_STATUS:      cmdHotpatchShowStatus();      break;
+        case IDM_HOTPATCH_TOGGLE_ALL:        cmdHotpatchToggleAll();       break;
+        case IDM_HOTPATCH_SHOW_EVENT_LOG:   cmdHotpatchShowEventLog();    break;
+        case IDM_HOTPATCH_RESET_STATS:      cmdHotpatchResetStats();      break;
+        case IDM_HOTPATCH_MEMORY_APPLY:     cmdHotpatchMemoryApply();     break;
+        case IDM_HOTPATCH_MEMORY_REVERT:    cmdHotpatchMemoryRevert();    break;
+        case IDM_HOTPATCH_BYTE_APPLY:       cmdHotpatchByteApply();       break;
+        case IDM_HOTPATCH_BYTE_SEARCH:      cmdHotpatchByteSearch();      break;
+        case IDM_HOTPATCH_SERVER_ADD:       cmdHotpatchServerAdd();       break;
+        case IDM_HOTPATCH_SERVER_REMOVE:    cmdHotpatchServerRemove();    break;
+        case IDM_HOTPATCH_PROXY_BIAS:       cmdHotpatchProxyBias();       break;
+        case IDM_HOTPATCH_PROXY_REWRITE:    cmdHotpatchProxyRewrite();    break;
+        case IDM_HOTPATCH_PROXY_TERMINATE:  cmdHotpatchProxyTerminate();  break;
+        case IDM_HOTPATCH_PROXY_VALIDATE:   cmdHotpatchProxyValidate();   break;
+        case IDM_HOTPATCH_SHOW_PROXY_STATS: cmdHotpatchShowProxyStats();  break;
+        case IDM_HOTPATCH_PRESET_SAVE:      cmdHotpatchPresetSave();      break;
+        case IDM_HOTPATCH_PRESET_LOAD:      cmdHotpatchPresetLoad();      break;
+        default:
+            appendOutput("[Hotpatch] Unknown hotpatch command: " + std::to_string(commandId) + "\n");
+            break;
+    }
+}
+
+// ============================================================================
+// Status & Toggle
+// ============================================================================
+
+void Win32IDE::cmdHotpatchShowStatus() {
+    auto& mgr = UnifiedHotpatchManager::instance();
+    const auto& stats = mgr.getStats();
+
+    auto& proxy = ProxyHotpatcher::instance();
+    const auto& pstats = proxy.getStats();
+
+    auto& memStats = get_memory_patch_stats();
+
+    std::ostringstream ss;
+    ss << "=== RawrXD Hotpatch System Status ===\n";
+    ss << "  System Enabled:    " << (m_hotpatchEnabled ? "YES" : "NO") << "\n";
+    ss << "\n--- Unified Manager ---\n";
+    ss << "  Memory Patches:    " << stats.memoryPatchCount.load()  << "\n";
+    ss << "  Byte Patches:      " << stats.bytePatchCount.load()    << "\n";
+    ss << "  Server Patches:    " << stats.serverPatchCount.load()  << "\n";
+    ss << "  Total Operations:  " << stats.totalOperations.load()   << "\n";
+    ss << "  Total Failures:    " << stats.totalFailures.load()     << "\n";
+    ss << "\n--- Memory Layer (Layer 1) ---\n";
+    ss << "  Applied:           " << memStats.totalApplied.load()   << "\n";
+    ss << "  Reverted:          " << memStats.totalReverted.load()  << "\n";
+    ss << "  Failed:            " << memStats.totalFailed.load()    << "\n";
+    ss << "  Protect Changes:   " << memStats.protectionChanges.load() << "\n";
+    ss << "\n--- Proxy Hotpatcher ---\n";
+    ss << "  Tokens Processed:  " << pstats.tokensProcessed.load()  << "\n";
+    ss << "  Biases Applied:    " << pstats.biasesApplied.load()    << "\n";
+    ss << "  Streams Terminated:" << pstats.streamsTerminated.load() << "\n";
+    ss << "  Rewrites Applied:  " << pstats.rewritesApplied.load()  << "\n";
+    ss << "  Valid. Passed:     " << pstats.validationsPassed.load() << "\n";
+    ss << "  Valid. Failed:     " << pstats.validationsFailed.load() << "\n";
+    ss << "=====================================\n";
+
+    appendOutput(ss.str());
+    MessageBoxA(m_hwndMain, ss.str().c_str(), "Hotpatch System Status", MB_OK | MB_ICONINFORMATION);
+}
+
+void Win32IDE::cmdHotpatchToggleAll() {
+    m_hotpatchEnabled = !m_hotpatchEnabled;
+    std::string msg = std::string("[Hotpatch] System ") +
+                      (m_hotpatchEnabled ? "ENABLED" : "DISABLED") + "\n";
+    appendOutput(msg);
+
+    // Update status bar
+    if (m_hwndStatusBar) {
+        std::string sbText = std::string("Hotpatch: ") +
+                             (m_hotpatchEnabled ? "ON" : "OFF");
+        SendMessageA(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)sbText.c_str());
+    }
+}
+
+void Win32IDE::cmdHotpatchResetStats() {
+    UnifiedHotpatchManager::instance().resetStats();
+    ProxyHotpatcher::instance().resetStats();
+    reset_memory_patch_stats();
+    appendOutput("[Hotpatch] All statistics reset.\n");
+}
+
+// ============================================================================
+// Event Log
+// ============================================================================
+
+void Win32IDE::cmdHotpatchShowEventLog() {
+    auto& mgr = UnifiedHotpatchManager::instance();
+    std::ostringstream ss;
+    ss << "=== Hotpatch Event Log ===\n";
+
+    HotpatchEvent evt;
+    int count = 0;
+    while (mgr.poll_event(&evt) && count < 64) {
+        static const char* typeNames[] = {
+            "MemPatchApplied", "MemPatchReverted", "BytePatchApplied",
+            "BytePatchFailed", "ServerPatchAdded", "ServerPatchRemoved",
+            "PresetLoaded", "PresetSaved"
+        };
+        const char* tname = (evt.type < 8) ? typeNames[evt.type] : "Unknown";
+        ss << "  [" << evt.sequenceId << "] " << tname
+           << " @ tick " << evt.timestamp;
+        if (evt.detail) ss << " — " << evt.detail;
+        ss << "\n";
+        ++count;
+    }
+
+    if (count == 0) {
+        ss << "  (No events in ring buffer)\n";
+    }
+    ss << "==========================\n";
+
+    appendOutput(ss.str());
+}
+
+// ============================================================================
+// Memory Layer (Layer 1)
+// ============================================================================
+
+void Win32IDE::cmdHotpatchMemoryApply() {
+    if (!m_hotpatchEnabled) {
+        appendOutput("[Hotpatch] System is disabled. Toggle on first.\n");
+        return;
+    }
+
+    // Prompt for hex address + hex data
+    char addrBuf[64] = {};
+    char dataBuf[512] = {};
+
+    // Simple input dialog — address
+    if (MessageBoxA(m_hwndMain,
+        "Memory Patch: Enter the target virtual address (hex) in the chat input,\n"
+        "then the patch bytes (hex pairs, e.g. 90 90 90).\n\n"
+        "This will apply a VirtualProtect-wrapped memory patch.\n"
+        "Use with caution — this modifies live process memory.",
+        "Hotpatch: Apply Memory Patch", MB_OKCANCEL | MB_ICONWARNING) == IDCANCEL) {
+        return;
+    }
+
+    appendOutput("[Hotpatch] Memory patch dialog ready. Use CLI '!hotpatch_apply' for scripted access.\n");
+    appendOutput("[Hotpatch] Format: !hotpatch_apply <hex_addr> <hex_bytes>\n");
+}
+
+void Win32IDE::cmdHotpatchMemoryRevert() {
+    if (!m_hotpatchEnabled) {
+        appendOutput("[Hotpatch] System is disabled. Toggle on first.\n");
+        return;
+    }
+    appendOutput("[Hotpatch] Memory revert: Use CLI '!hotpatch_revert <index>' to revert tracked patches.\n");
+    appendOutput("[Hotpatch] View tracked patches with '!hotpatch_status'.\n");
+}
+
+// ============================================================================
+// Byte Layer (Layer 2)
+// ============================================================================
+
+void Win32IDE::cmdHotpatchByteApply() {
+    if (!m_hotpatchEnabled) {
+        appendOutput("[Hotpatch] System is disabled. Toggle on first.\n");
+        return;
+    }
+
+    // Open file dialog for GGUF selection
+    char filename[MAX_PATH] = {};
+    OPENFILENAMEA ofn = {};
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = m_hwndMain;
+    ofn.lpstrFilter = "GGUF Models (*.gguf)\0*.gguf\0All Files (*.*)\0*.*\0";
+    ofn.lpstrFile = filename;
+    ofn.nMaxFile = MAX_PATH;
+    ofn.lpstrTitle = "Select GGUF File for Byte Patching";
+    ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+
+    if (GetOpenFileNameA(&ofn)) {
+        appendOutput(std::string("[Hotpatch] Byte-level target: ") + filename + "\n");
+        appendOutput("[Hotpatch] Use CLI '!hotpatch_byte <offset> <hex_bytes>' to apply byte patches.\n");
+        appendOutput("[Hotpatch] Uses CreateFileMapping for zero-copy I/O — no full file load.\n");
+    }
+}
+
+void Win32IDE::cmdHotpatchByteSearch() {
+    if (!m_hotpatchEnabled) {
+        appendOutput("[Hotpatch] System is disabled. Toggle on first.\n");
+        return;
+    }
+
+    char filename[MAX_PATH] = {};
+    OPENFILENAMEA ofn = {};
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = m_hwndMain;
+    ofn.lpstrFilter = "GGUF Models (*.gguf)\0*.gguf\0All Files (*.*)\0*.*\0";
+    ofn.lpstrFile = filename;
+    ofn.nMaxFile = MAX_PATH;
+    ofn.lpstrTitle = "Select File for Pattern Search & Replace";
+    ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+
+    if (GetOpenFileNameA(&ofn)) {
+        appendOutput(std::string("[Hotpatch] Search target: ") + filename + "\n");
+        appendOutput("[Hotpatch] Use CLI '!hotpatch_search <hex_pattern> <hex_replacement>'\n");
+        appendOutput("[Hotpatch] Uses SIMD-accelerated pattern matching (SSE2 + Boyer-Moore ASM).\n");
+    }
+}
+
+// ============================================================================
+// Server Layer (Layer 3)
+// ============================================================================
+
+void Win32IDE::cmdHotpatchServerAdd() {
+    if (!m_hotpatchEnabled) {
+        appendOutput("[Hotpatch] System is disabled. Toggle on first.\n");
+        return;
+    }
+    appendOutput("[Hotpatch] Server patch injection points:\n");
+    appendOutput("  PreRequest  — Modify request before inference\n");
+    appendOutput("  PostRequest — Modify request after preprocessing\n");
+    appendOutput("  PreResponse — Modify response before delivery\n");
+    appendOutput("  PostResponse— Modify response after delivery\n");
+    appendOutput("  StreamChunk — Intercept streaming tokens\n");
+    appendOutput("[Hotpatch] Use CLI '!hotpatch_server add <name> <point>' to register a patch.\n");
+}
+
+void Win32IDE::cmdHotpatchServerRemove() {
+    if (!m_hotpatchEnabled) {
+        appendOutput("[Hotpatch] System is disabled. Toggle on first.\n");
+        return;
+    }
+    appendOutput("[Hotpatch] Use CLI '!hotpatch_server remove <name>' to unregister a patch.\n");
+}
+
+// ============================================================================
+// Proxy Hotpatcher
+// ============================================================================
+
+void Win32IDE::cmdHotpatchProxyBias() {
+    if (!m_hotpatchEnabled) {
+        appendOutput("[Hotpatch] System is disabled. Toggle on first.\n");
+        return;
+    }
+    appendOutput("[Hotpatch] Token Bias Injection:\n");
+    appendOutput("  Adjusts logit scores before sampling to boost/suppress tokens.\n");
+    appendOutput("  Positive bias = boost token probability\n");
+    appendOutput("  Negative bias = suppress token probability\n");
+    appendOutput("[Hotpatch] Use CLI '!hotpatch_bias <token_id> <bias_value> [permanent]'\n");
+}
+
+void Win32IDE::cmdHotpatchProxyRewrite() {
+    if (!m_hotpatchEnabled) {
+        appendOutput("[Hotpatch] System is disabled. Toggle on first.\n");
+        return;
+    }
+    appendOutput("[Hotpatch] Output Rewrite Rules:\n");
+    appendOutput("  Pattern-based text replacement applied to inference output.\n");
+    appendOutput("[Hotpatch] Use CLI '!hotpatch_rewrite add <pattern> <replacement>'\n");
+    appendOutput("[Hotpatch] Use CLI '!hotpatch_rewrite remove <name>'\n");
+}
+
+void Win32IDE::cmdHotpatchProxyTerminate() {
+    if (!m_hotpatchEnabled) {
+        appendOutput("[Hotpatch] System is disabled. Toggle on first.\n");
+        return;
+    }
+    appendOutput("[Hotpatch] Stream Termination Rules:\n");
+    appendOutput("  Stop sequences and max-token limits for output streams.\n");
+    appendOutput("[Hotpatch] Use CLI '!hotpatch_terminate add <name> <stop_seq> [max_tokens]'\n");
+    appendOutput("[Hotpatch] Use CLI '!hotpatch_terminate remove <name>'\n");
+}
+
+void Win32IDE::cmdHotpatchProxyValidate() {
+    if (!m_hotpatchEnabled) {
+        appendOutput("[Hotpatch] System is disabled. Toggle on first.\n");
+        return;
+    }
+    appendOutput("[Hotpatch] Custom Validators:\n");
+    appendOutput("  Function-pointer validators run against all output.\n");
+    appendOutput("  All validators must pass for output to be accepted.\n");
+    appendOutput("[Hotpatch] Built-in validators: length_check, json_syntax, safety_filter\n");
+    appendOutput("[Hotpatch] Use CLI '!hotpatch_validate add <name>' to enable a built-in.\n");
+}
+
+void Win32IDE::cmdHotpatchShowProxyStats() {
+    auto& proxy = ProxyHotpatcher::instance();
+    const auto& ps = proxy.getStats();
+
+    std::ostringstream ss;
+    ss << "=== Proxy Hotpatcher Statistics ===\n";
+    ss << "  Tokens Processed:     " << ps.tokensProcessed.load()  << "\n";
+    ss << "  Biases Applied:       " << ps.biasesApplied.load()    << "\n";
+    ss << "  Streams Terminated:   " << ps.streamsTerminated.load() << "\n";
+    ss << "  Rewrites Applied:     " << ps.rewritesApplied.load()  << "\n";
+    ss << "  Validations Passed:   " << ps.validationsPassed.load() << "\n";
+    ss << "  Validations Failed:   " << ps.validationsFailed.load() << "\n";
+    ss << "===================================\n";
+
+    appendOutput(ss.str());
+}
+
+// ============================================================================
+// Presets
+// ============================================================================
+
+void Win32IDE::cmdHotpatchPresetSave() {
+    if (!m_hotpatchEnabled) {
+        appendOutput("[Hotpatch] System is disabled. Toggle on first.\n");
+        return;
+    }
+
+    char filename[MAX_PATH] = {};
+    OPENFILENAMEA ofn = {};
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = m_hwndMain;
+    ofn.lpstrFilter = "Hotpatch Presets (*.json)\0*.json\0All Files (*.*)\0*.*\0";
+    ofn.lpstrFile = filename;
+    ofn.nMaxFile = MAX_PATH;
+    ofn.lpstrTitle = "Save Hotpatch Preset";
+    ofn.Flags = OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST;
+    ofn.lpstrDefExt = "json";
+
+    if (GetSaveFileNameA(&ofn)) {
+        HotpatchPreset preset = {};
+        strncpy(preset.name, "IDE Preset", sizeof(preset.name) - 1);
+
+        PatchResult r = UnifiedHotpatchManager::instance().save_preset(filename, preset);
+        if (r.success) {
+            appendOutput(std::string("[Hotpatch] Preset saved: ") + filename + "\n");
+        } else {
+            appendOutput(std::string("[Hotpatch] Save failed: ") + r.detail + "\n");
+        }
+    }
+}
+
+void Win32IDE::cmdHotpatchPresetLoad() {
+    if (!m_hotpatchEnabled) {
+        appendOutput("[Hotpatch] System is disabled. Toggle on first.\n");
+        return;
+    }
+
+    char filename[MAX_PATH] = {};
+    OPENFILENAMEA ofn = {};
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = m_hwndMain;
+    ofn.lpstrFilter = "Hotpatch Presets (*.json)\0*.json\0All Files (*.*)\0*.*\0";
+    ofn.lpstrFile = filename;
+    ofn.nMaxFile = MAX_PATH;
+    ofn.lpstrTitle = "Load Hotpatch Preset";
+    ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+
+    if (GetOpenFileNameA(&ofn)) {
+        HotpatchPreset preset = {};
+        PatchResult r = UnifiedHotpatchManager::instance().load_preset(filename, &preset);
+        if (r.success) {
+            appendOutput(std::string("[Hotpatch] Preset loaded: ") + filename + "\n");
+            appendOutput(std::string("[Hotpatch] Preset name: ") + preset.name + "\n");
+        } else {
+            appendOutput(std::string("[Hotpatch] Load failed: ") + r.detail + "\n");
+        }
+    }
+}

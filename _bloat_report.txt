@@ -1,0 +1,15 @@
+UNTRACKED`t1900 MB`tFull Source\dist\RawrXD_Enterprise_v3.0.zip.part01
+TRACKED`t1900 MB`tdist\RawrXD_Enterprise_v3.0.zip.part01
+TRACKED`t686.04 MB`tdist\v1.0.0\RawrXD-v1.0.0.zip
+UNTRACKED`t686.04 MB`tFull Source\dist\v1.0.0\RawrXD-v1.0.0.zip
+TRACKED`t670.83 MB`tdist\v1.0.0\RawrXD-v1.0.0.tar.gz
+UNTRACKED`t670.83 MB`tFull Source\dist\v1.0.0\RawrXD-v1.0.0.tar.gz
+UNTRACKED`t608.16 MB`tFull Source\build\llama_cli\models\model.gguf
+UNTRACKED`t556.33 MB`tipc_results.csv
+UNTRACKED`t451.61 MB`tdist\RawrXD_Enterprise_v3.0\extras\powershield\tools\cublasLt64_12.dll
+TRACKED`t373.31 MB`tdist\RawrXD_Enterprise_v3.0\extras\powershield\tools\llama-cpp.zip
+UNTRACKED`t373.31 MB`tFull Source\dist\RawrXD_Enterprise_v3.0\extras\powershield\tools\llama-cpp.zip
+UNTRACKED`t330.86 MB`tartifacts-backup-20260221.zip
+UNTRACKED`t274.31 MB`tbuild_replacement_check\bin\RawrXD_Gold.ilk
+TRACKED`t261.7 MB`treports\todo-scan-20260126-065921.json
+TRACKED`t261.7 MB`tFull Source\reports\todo-scan-20260126-065921.json

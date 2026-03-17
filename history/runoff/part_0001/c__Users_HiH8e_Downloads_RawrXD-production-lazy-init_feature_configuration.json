@@ -1,0 +1,527 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2025-12-27T00:00:00Z",
+  "configuration": {
+    "features": [
+      {
+        "id": 1,
+        "name": "Advanced Reasoning",
+        "description": "Enable multi-step reasoning and chain-of-thought processing",
+        "enabled": true,
+        "category": "AI Features",
+        "dependencies": [],
+        "conflictsWith": [],
+        "policyFlags": 1,
+        "performanceImpact": 3,
+        "securityLevel": 2,
+        "version": "1.0",
+        "telemetry": {
+          "trackUsage": true,
+          "trackErrors": true,
+          "trackPerformance": true
+        }
+      },
+      {
+        "id": 2,
+        "name": "Memory Patching",
+        "description": "Enable runtime memory patching for model optimization",
+        "enabled": true,
+        "category": "Hotpatching",
+        "dependencies": [],
+        "conflictsWith": [],
+        "policyFlags": 8,
+        "performanceImpact": 5,
+        "securityLevel": 4,
+        "version": "2.1",
+        "telemetry": {
+          "trackUsage": true,
+          "trackErrors": true,
+          "trackPerformance": true
+        }
+      },
+      {
+        "id": 3,
+        "name": "Byte-Level Patching",
+        "description": "Enable GGUF binary patching for tensor modification",
+        "enabled": true,
+        "category": "Hotpatching",
+        "dependencies": [],
+        "conflictsWith": [],
+        "policyFlags": 8,
+        "performanceImpact": 4,
+        "securityLevel": 4,
+        "version": "1.5",
+        "telemetry": {
+          "trackUsage": true,
+          "trackErrors": true,
+          "trackPerformance": true
+        }
+      },
+      {
+        "id": 4,
+        "name": "Server-Side Hotpatching",
+        "description": "Enable server-layer request/response transformation",
+        "enabled": true,
+        "category": "Hotpatching",
+        "dependencies": [],
+        "conflictsWith": [],
+        "policyFlags": 8,
+        "performanceImpact": 2,
+        "securityLevel": 3,
+        "version": "1.0",
+        "telemetry": {
+          "trackUsage": true,
+          "trackErrors": true,
+          "trackPerformance": true
+        }
+      },
+      {
+        "id": 5,
+        "name": "Performance Monitoring",
+        "description": "Enable real-time performance metrics collection",
+        "enabled": true,
+        "category": "Monitoring",
+        "dependencies": [],
+        "conflictsWith": [],
+        "policyFlags": 0,
+        "performanceImpact": 1,
+        "securityLevel": 1,
+        "version": "1.0",
+        "telemetry": {
+          "trackUsage": true,
+          "trackErrors": false,
+          "trackPerformance": true
+        }
+      },
+      {
+        "id": 6,
+        "name": "Security Monitoring",
+        "description": "Enable security event logging and audit trail",
+        "enabled": true,
+        "category": "Monitoring",
+        "dependencies": [],
+        "conflictsWith": [],
+        "policyFlags": 4,
+        "performanceImpact": 2,
+        "securityLevel": 5,
+        "version": "1.2",
+        "telemetry": {
+          "trackUsage": true,
+          "trackErrors": true,
+          "trackPerformance": false
+        }
+      },
+      {
+        "id": 7,
+        "name": "Telemetry Collection",
+        "description": "Enable usage telemetry and analytics",
+        "enabled": true,
+        "category": "Monitoring",
+        "dependencies": [],
+        "conflictsWith": [],
+        "policyFlags": 0,
+        "performanceImpact": 1,
+        "securityLevel": 2,
+        "version": "1.0",
+        "telemetry": {
+          "trackUsage": false,
+          "trackErrors": true,
+          "trackPerformance": false
+        }
+      },
+      {
+        "id": 8,
+        "name": "Ask Mode",
+        "description": "Question answering mode with explanation",
+        "enabled": true,
+        "category": "Agent Modes",
+        "dependencies": [
+          1
+        ],
+        "conflictsWith": [],
+        "policyFlags": 0,
+        "performanceImpact": 2,
+        "securityLevel": 1,
+        "version": "1.0",
+        "telemetry": {
+          "trackUsage": true,
+          "trackErrors": true,
+          "trackPerformance": true
+        }
+      },
+      {
+        "id": 9,
+        "name": "Edit Mode",
+        "description": "Code modification with diff explanations",
+        "enabled": true,
+        "category": "Agent Modes",
+        "dependencies": [
+          1
+        ],
+        "conflictsWith": [],
+        "policyFlags": 0,
+        "performanceImpact": 3,
+        "securityLevel": 2,
+        "version": "1.0",
+        "telemetry": {
+          "trackUsage": true,
+          "trackErrors": true,
+          "trackPerformance": true
+        }
+      },
+      {
+        "id": 10,
+        "name": "Plan Mode",
+        "description": "Multi-step planning with backtracking",
+        "enabled": true,
+        "category": "Agent Modes",
+        "dependencies": [
+          1
+        ],
+        "conflictsWith": [],
+        "policyFlags": 0,
+        "performanceImpact": 4,
+        "securityLevel": 1,
+        "version": "1.0",
+        "telemetry": {
+          "trackUsage": true,
+          "trackErrors": true,
+          "trackPerformance": true
+        }
+      },
+      {
+        "id": 11,
+        "name": "Debug Mode",
+        "description": "Issue debugging with root cause analysis",
+        "enabled": true,
+        "category": "Agent Modes",
+        "dependencies": [
+          1
+        ],
+        "conflictsWith": [],
+        "policyFlags": 0,
+        "performanceImpact": 5,
+        "securityLevel": 1,
+        "version": "1.0",
+        "telemetry": {
+          "trackUsage": true,
+          "trackErrors": true,
+          "trackPerformance": true
+        }
+      },
+      {
+        "id": 12,
+        "name": "Optimize Mode",
+        "description": "Performance optimization with metrics",
+        "enabled": true,
+        "category": "Agent Modes",
+        "dependencies": [
+          1,
+          5
+        ],
+        "conflictsWith": [],
+        "policyFlags": 0,
+        "performanceImpact": 6,
+        "securityLevel": 1,
+        "version": "1.0",
+        "telemetry": {
+          "trackUsage": true,
+          "trackErrors": true,
+          "trackPerformance": true
+        }
+      },
+      {
+        "id": 13,
+        "name": "Teach Mode",
+        "description": "Educational explanation with examples",
+        "enabled": true,
+        "category": "Agent Modes",
+        "dependencies": [
+          1
+        ],
+        "conflictsWith": [],
+        "policyFlags": 0,
+        "performanceImpact": 2,
+        "securityLevel": 1,
+        "version": "1.0",
+        "telemetry": {
+          "trackUsage": true,
+          "trackErrors": true,
+          "trackPerformance": true
+        }
+      },
+      {
+        "id": 14,
+        "name": "Architect Mode",
+        "description": "System design with architectural diagrams",
+        "enabled": true,
+        "category": "Agent Modes",
+        "dependencies": [
+          1
+        ],
+        "conflictsWith": [],
+        "policyFlags": 0,
+        "performanceImpact": 4,
+        "securityLevel": 1,
+        "version": "1.0",
+        "telemetry": {
+          "trackUsage": true,
+          "trackErrors": true,
+          "trackPerformance": true
+        }
+      },
+      {
+        "id": 15,
+        "name": "Real-time Streaming",
+        "description": "Enable streaming token output for responses",
+        "enabled": true,
+        "category": "Inference",
+        "dependencies": [],
+        "conflictsWith": [],
+        "policyFlags": 0,
+        "performanceImpact": 3,
+        "securityLevel": 1,
+        "version": "1.0",
+        "telemetry": {
+          "trackUsage": true,
+          "trackErrors": true,
+          "trackPerformance": true
+        }
+      },
+      {
+        "id": 16,
+        "name": "Quantization Support",
+        "description": "Enable model quantization (4-bit, 8-bit)",
+        "enabled": true,
+        "category": "Model Loading",
+        "dependencies": [],
+        "conflictsWith": [],
+        "policyFlags": 0,
+        "performanceImpact": 2,
+        "securityLevel": 1,
+        "version": "1.0",
+        "telemetry": {
+          "trackUsage": true,
+          "trackErrors": true,
+          "trackPerformance": true
+        }
+      },
+      {
+        "id": 17,
+        "name": "GPU Acceleration",
+        "description": "Enable GPU inference acceleration",
+        "enabled": true,
+        "category": "Inference",
+        "dependencies": [],
+        "conflictsWith": [],
+        "policyFlags": 0,
+        "performanceImpact": 8,
+        "securityLevel": 1,
+        "version": "1.0",
+        "telemetry": {
+          "trackUsage": true,
+          "trackErrors": true,
+          "trackPerformance": true
+        }
+      },
+      {
+        "id": 18,
+        "name": "Flash Attention",
+        "description": "Enable Flash Attention algorithm for faster inference",
+        "enabled": true,
+        "category": "Optimization",
+        "dependencies": [],
+        "conflictsWith": [],
+        "policyFlags": 0,
+        "performanceImpact": 7,
+        "securityLevel": 1,
+        "version": "1.0",
+        "telemetry": {
+          "trackUsage": true,
+          "trackErrors": true,
+          "trackPerformance": true
+        }
+      },
+      {
+        "id": 19,
+        "name": "Context Caching",
+        "description": "Enable intelligent context window caching",
+        "enabled": true,
+        "category": "Optimization",
+        "dependencies": [],
+        "conflictsWith": [],
+        "policyFlags": 0,
+        "performanceImpact": 6,
+        "securityLevel": 1,
+        "version": "1.0",
+        "telemetry": {
+          "trackUsage": true,
+          "trackErrors": true,
+          "trackPerformance": true
+        }
+      },
+      {
+        "id": 20,
+        "name": "Structured Output",
+        "description": "Enable JSON/YAML structured output generation",
+        "enabled": true,
+        "category": "Inference",
+        "dependencies": [],
+        "conflictsWith": [],
+        "policyFlags": 0,
+        "performanceImpact": 2,
+        "securityLevel": 2,
+        "version": "1.0",
+        "telemetry": {
+          "trackUsage": true,
+          "trackErrors": true,
+          "trackPerformance": true
+        }
+      },
+      {
+        "id": 21,
+        "name": "Model Ensemble",
+        "description": "Enable multi-model ensemble inference",
+        "enabled": false,
+        "category": "Inference",
+        "dependencies": [],
+        "conflictsWith": [],
+        "policyFlags": 0,
+        "performanceImpact": 9,
+        "securityLevel": 1,
+        "version": "1.0",
+        "telemetry": {
+          "trackUsage": true,
+          "trackErrors": true,
+          "trackPerformance": true
+        }
+      },
+      {
+        "id": 22,
+        "name": "Fine-tuning Support",
+        "description": "Enable model fine-tuning capabilities",
+        "enabled": false,
+        "category": "Training",
+        "dependencies": [],
+        "conflictsWith": [],
+        "policyFlags": 4,
+        "performanceImpact": 10,
+        "securityLevel": 3,
+        "version": "1.0",
+        "telemetry": {
+          "trackUsage": true,
+          "trackErrors": true,
+          "trackPerformance": true
+        }
+      },
+      {
+        "id": 23,
+        "name": "Eval Framework",
+        "description": "Enable evaluation and benchmarking framework",
+        "enabled": false,
+        "category": "Tools",
+        "dependencies": [],
+        "conflictsWith": [],
+        "policyFlags": 0,
+        "performanceImpact": 3,
+        "securityLevel": 1,
+        "version": "1.0",
+        "telemetry": {
+          "trackUsage": true,
+          "trackErrors": true,
+          "trackPerformance": true
+        }
+      },
+      {
+        "id": 24,
+        "name": "Advanced Analytics",
+        "description": "Enable advanced analytics and reporting",
+        "enabled": true,
+        "category": "Enterprise",
+        "dependencies": [
+          5,
+          6,
+          7
+        ],
+        "conflictsWith": [],
+        "policyFlags": 2,
+        "performanceImpact": 4,
+        "securityLevel": 3,
+        "version": "1.0",
+        "telemetry": {
+          "trackUsage": true,
+          "trackErrors": true,
+          "trackPerformance": true
+        }
+      }
+    ],
+    "policies": {
+      "license_based": {
+        "restrictions": {
+          "community": [
+            21,
+            22
+          ],
+          "professional": [],
+          "enterprise": []
+        }
+      },
+      "department_control": {
+        "restrictions": {
+          "engineering": [],
+          "research": [
+            22
+          ],
+          "operations": [
+            2,
+            3,
+            4
+          ]
+        }
+      },
+      "security_level": {
+        "minimum": 1,
+        "maximum": 5,
+        "restricted_features": [
+          2,
+          3,
+          4
+        ]
+      },
+      "compliance": {
+        "gdpr_compliant": true,
+        "audit_required": [
+          2,
+          3,
+          4,
+          6
+        ],
+        "data_retention_days": 90
+      }
+    },
+    "dependencies": {
+      "hard": {
+        "12": [
+          1,
+          5
+        ],
+        "24": [
+          5,
+          6,
+          7
+        ]
+      },
+      "soft": {
+        "17": [
+          16
+        ],
+        "18": [
+          17
+        ]
+      }
+    },
+    "conflicts": {
+      "mutually_exclusive": []
+    }
+  }
+}

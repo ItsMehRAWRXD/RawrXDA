@@ -188,11 +188,11 @@ nlohmann::json ModelCaller::ParseStructuredResponse(const std::string& response)
     try {
         return nlohmann::json::parse(response);
     } catch (...) {
-        return nlohmann::json{
-            {"ok", false},
-            {"error", "Failed to parse structured response"},
-            {"raw", response},
-        };
+        nlohmann::json err = nlohmann::json::object();
+        err["ok"] = false;
+        err["error"] = "Failed to parse structured response";
+        err["raw"] = response;
+        return err;
     }
 }
 

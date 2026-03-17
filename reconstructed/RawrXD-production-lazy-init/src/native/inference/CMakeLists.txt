@@ -1,0 +1,76 @@
+cmake_minimum_required(VERSION 3.20)
+project(NativeInferenceEngine VERSION 1.0.0 LANGUAGES CXX ASM_MASM)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Set Windows SDK version
+set(CMAKE_SYSTEM_VERSION 10.0.22621.0)
+
+# Source files
+set(SOURCES
+    native_inference_engine.cpp
+    native_gguf_loader.cpp
+    native_tokenizer.cpp
+)
+
+set(ASM_SOURCES
+    native_quant_q4_0.asm
+    native_quant_q8_0.asm
+    native_matmul_dx12.asm
+    native_tokenizer_masm.asm
+)
+
+# Test executable
+add_executable(test_terraform_integration test_terraform_integration.cpp)
+target_link_libraries(test_terraform_integration PRIVATE native_inference)
+
+# Create library
+add_library(native_inference STATIC ${SOURCES} ${ASM_SOURCES})
+
+# Include directories
+target_include_directories(native_inference
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+# Compiler flags
+if(MSVC)
+    # Enable AVX/AVX2
+    target_compile_options(native_inference PRIVATE /arch:AVX2)
+
+    # MASM flags
+    set(CMAKE_ASM_MASM_FLAGS "${CMAKE_ASM_MASM_FLAGS} /c")
+
+    # Additional MSVC flags
+    target_compile_options(native_inference PRIVATE
+        /W4
+        /permissive-
+        /Zc:__cplusplus
+    )
+endif()
+
+# Create executable for testing
+add_executable(native_inference_test
+    test_main.cpp
+)
+
+target_link_libraries(native_inference_test
+    PRIVATE
+        native_inference
+)
+
+# Installation
+install(TARGETS native_inference
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+)
+
+install(FILES
+    native_inference_engine.h
+    native_gguf_loader.h
+    native_tokenizer.hpp
+    DESTINATION include/native_inference
+)

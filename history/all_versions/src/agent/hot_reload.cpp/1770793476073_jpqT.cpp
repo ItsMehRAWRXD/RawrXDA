@@ -1,0 +1,56 @@
+#include "hot_reload.hpp"
+#include "process_utils.hpp"
+#include <cstdio>
+#include <string>
+
+HotReload::HotReload() {}
+
+bool HotReload::reloadQuant(const std::string& quantType) {
+    fprintf(stderr, "[INFO] Hot-reloading quantization: %s\n", quantType.c_str());
+
+    ProcResult pr = proc::run("cmake", {
+        "--build", "build",
+        "--config", "Release",
+        "--target", "quant_ladder_avx2"
+    }, 30000);
+
+    if (pr.timedOut) {
+        if (onReloadFailed) onReloadFailed("Build timeout for quant_ladder_avx2");
+        return false;
+    }
+
+    if (pr.exitCode != 0) {
+        fprintf(stderr, "[WARN] Quant rebuild failed: %s\n", pr.stderrStr.c_str());
+        if (onReloadFailed) onReloadFailed("Build failed: " + pr.stderrStr);
+        return false;
+    }
+
+    fprintf(stderr, "[INFO] Quant library rebuilt successfully\n");
+    if (onQuantReloaded) onQuantReloaded(quantType);
+    return true;
+}
+
+bool HotReload::reloadModule(const std::string& moduleName) {
+    fprintf(stderr, "[INFO] Hot-reloading module: %s\n", moduleName.c_str());
+
+    ProcResult pr = proc::run("cmake", {
+        "--build", "build",
+        "--config", "Release",
+        "--target", moduleName
+    }, 60000);
+
+    if (pr.timedOut) {
+        if (onReloadFailed) onReloadFailed("Build timeout for " + moduleName);
+        return false;
+    }
+
+    if (pr.exitCode != 0) {
+        fprintf(stderr, "[WARN] Module rebuild failed: %s\n", pr.stderrStr.c_str());
+        if (onReloadFailed) onReloadFailed("Build failed: " + pr.stderrStr);
+        return false;
+    }
+
+    fprintf(stderr, "[INFO] Module rebuilt successfully: %s\n", moduleName.c_str());
+    if (onModuleReloaded) onModuleReloaded(moduleName);
+    return true;
+}

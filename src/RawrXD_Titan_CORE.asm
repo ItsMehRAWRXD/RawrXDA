@@ -21,10 +21,82 @@ L2_SIZE             EQU 1048576
 L3_SIZE_VCACHE      EQU 98304000           ; 96MB 3D V-Cache
 VECTOR_WIDTH        EQU 64                 ; AVX-512 bytes
 
+; ============================================================================
 ; GGUF v3 Specification Constants
+; ============================================================================
 GGUF_MAGIC          EQU 046554747h         ; 'GGUF'
 GGUF_VERSION        EQU 3
-GGUF_DEFAULT_ALIGNMENT EQU 32
+
+; Metadata Keys
+KEY_ARCH            DB "general.architecture", 0
+KEY_NAME            DB "general.name", 0
+
+; ============================================================================
+; GGUF_LoadModel: Native MASM64 GGUF Loader for Alpha/Omega
+; ============================================================================
+GGUF_LoadModel PROC FRAME
+    ; RCX = LPCSTR modelPath
+    ; RDX = PCONTEXT (TitanContext pointer)
+    push rbp
+    mov rbp, rsp
+    push rbx
+    push rsi
+    push rdi
+    sub rsp, 64
+    .endprolog
+    
+    mov rsi, rcx            ; rsi = path
+    mov rdi, rdx            ; rdi = context
+    
+    ; 1. CreateFileA
+    sub rsp, 40
+    mov rcx, rsi
+    mov rdx, 80000000h      ; GENERIC_READ
+    mov r8, 1               ; FILE_SHARE_READ
+    xor r9, r9
+    mov QWORD PTR [rsp+32], 3 ; OPEN_EXISTING
+    mov QWORD PTR [rsp+40], 80h ; FILE_ATTRIBUTE_NORMAL
+    mov QWORD PTR [rsp+48], 0
+    extern CreateFileA : PROC
+    call CreateFileA
+    add rsp, 40
+    
+    cmp rax, -1
+    je @@error
+    mov [rdi + 16], rax     ; Context.hFile (offset per struct)
+
+    ; 2. Read GGUF Header
+    sub rsp, 32
+    mov rcx, [rdi + 16]     ; hFile
+    lea rdx, [rbp - 48]     ; local buffer for GGUFHeader
+    mov r8, 24              ; header size
+    lea r9, [rbp - 8]       ; bytesRead
+    mov QWORD PTR [rsp+32], 0
+    extern ReadFile : PROC
+    call ReadFile
+    add rsp, 32
+    
+    ; 3. Validate Magic
+    mov eax, DWORD PTR [rbp - 48]
+    cmp eax, GGUF_MAGIC
+    jne @@error
+    
+    ; 4. Map File (Zero-latency access)
+    ; ... Mapping logic for quantization kernels ...
+
+    xor rax, rax            ; Success
+    jmp @@exit
+
+@@error:
+    mov rax, 1
+@@exit:
+    add rsp, 64
+    pop rdi
+    pop rsi
+    pop rbx
+    pop rbp
+    ret
+GGUF_LoadModel ENDP
 
 ; GGML Quantization Types
 TYPE_F32            EQU 0

@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RawrXD v14.6 Sovereign Dashboard</title>
+  <style>
+    body {
+      background: #0d1117;
+      color: #c9d1d9;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      overflow: hidden;
+      display: flex;
+      height: 100vh;
+    }
+
+    #sidebar {
+      width: 250px;
+      background: #161b22;
+      border-right: 1px solid #30363d;
+      padding: 20px;
+    }
+
+    #main {
+      flex-grow: 1;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      font-size: 24px;
+      margin-bottom: 20px;
+      color: #58a6ff;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+    }
+
+    .stat-card {
+      background: #21262d;
+      padding: 20px;
+      border-radius: 6px;
+      border: 1px solid #30363d;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #8b949e;
+      text-transform: uppercase;
+    }
+
+    .stat-value {
+      font-size: 20px;
+      font-weight: bold;
+      margin-top: 5px;
+    }
+
+    #module-list {
+      margin-top: 20px;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      overflow-y: auto;
+      max-height: 400px;
+    }
+
+    .module-row {
+      display: grid;
+      grid-template-columns: 140px 100px 1fr;
+      padding: 8px 12px;
+      border-bottom: 1px solid #30363d;
+      font-family: 'Consolas', monospace;
+      font-size: 13px;
+    }
+
+    .module-header {
+      font-weight: bold;
+      background: #21262d;
+      position: sticky;
+      top: 0;
+    }
+
+    .addr {
+      color: #d2a8ff;
+    }
+
+    .size {
+      color: #79c0ff;
+    }
+
+    /* Registers & Disassembly Panel */
+    #debug-panel {
+      display: grid;
+      grid-template-columns: 300px 1fr 300px;
+      gap: 20px;
+    }
+
+    #watcher-panel {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .watch-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 0;
+      border-bottom: 1px solid #21262d;
+      font-family: 'Consolas', monospace;
+      font-size: 13px;
+    }
+
+    .watch-label {
+      color: #8b949e;
+    }
+
+    .watch-value {
+      color: #aff5b4;
+      font-weight: bold;
+    }
+
+    .watch-input-grid {
+      display: grid;
+      grid-template-columns: 1fr 60px 40px;
+      gap: 5px;
+      margin-top: 10px;
+    }
+
+    .watch-input-grid input {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      padding: 4px;
+      font-size: 12px;
+    }
+
+    .watch-input-grid button {
+      background: #238636;
+      border: none;
+      color: white;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+
+    .watch-input-grid button:hover {
+      background: #2ea043;
+    }
+
+    gap: 20px;
+    margin-top: 20px;
+    height: 300px;
+    }
+
+    .reg-grid {
+      display: grid;
+      grid-template-columns: 60px 1fr;
+      background: #161b22;
+      border: 1px solid #30363d;
+      padding: 10px;
+      border-radius: 6px;
+      font-family: 'Consolas', monospace;
+      font-size: 12px;
+      overflow-y: auto;
+    }
+
+    .reg-label {
+      color: #8b949e;
+    }
+
+    .reg-value {
+      color: #d2a8ff;
+      text-align: right;
+    }
+
+    #disasm-view {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 10px;
+      font-family: 'Consolas', monospace;
+      font-size: 13px;
+      overflow-y: auto;
+      white-space: pre;
+    }
+
+    .disasm-line {
+      display: flex;
+      gap: 15px;
+      border-bottom: 1px solid #21262d;
+      padding: 2px 0;
+    }
+
+    .disasm-addr {
+      color: #8b949e;
+      width: 140px;
+    }
+
+    .disasm-bytes {
+      color: #79c0ff;
+      width: 120px;
+    }
+
+    .disasm-instr {
+      color: #f2cc60;
+    }
+
+    .disasm-hit {
+      background: #3e311a;
+      border-left: 3px solid #f2cc60;
+    }
+
+    #memory-explorer {
+      margin-top: 20px;
+      display: grid;
+      grid-template-columns: 200px 1fr 120px;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .hex-input {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      padding: 8px;
+      border-radius: 4px;
+      font-family: 'Consolas', monospace;
+    }
+
+    .patch-btn {
+      background: #238636;
+      border: 1px solid #30363d;
+      color: #ffffff;
+      padding: 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .patch-btn:hover {
+      background: #2ea043;
+    }
+
+    #memory-data-view {
+      font-family: 'Consolas', monospace;
+      font-size: 13px;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 15px;
+      min-height: 100px;
+      color: #79c0ff;
+    }
+
+    /* Watch List Styles */
+    #watch-panel {
+      margin-top: 20px;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 12px;
+    }
+
+    .watch-header {
+      display: grid;
+      grid-template-columns: 100px 120px 1fr;
+      padding: 6px;
+      background: #21262d;
+      font-weight: bold;
+      font-size: 11px;
+      color: #58a6ff;
+      border-bottom: 1px solid #30363d;
+    }
+
+    .watch-row {
+      display: grid;
+      grid-template-columns: 100px 120px 1fr;
+      padding: 6px;
+      border-bottom: 1px solid #21262d;
+      font-family: 'Consolas', monospace;
+      font-size: 12px;
+      align-items: center;
+    }
+
+    .watch-name {
+      color: #8b949e;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .watch-addr {
+      color: #d2a8ff;
+      text-align: center;
+    }
+
+    .watch-val {
+      color: #79c0ff;
+      text-align: right;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="sidebar">
+    <div class="header">RawrXD</div>
+    <div>v14.6.0</div>
+    <div id="watch-panel">
+      <div style="font-weight:bold; margin-bottom:10px; color: #58a6ff; display: flex; justify-content: space-between;">
+        <span>Watch List</span>
+        <span style="font-size: 10px; color: #8b949e;">LIVE</span>
+      </div>
+      <div class="watch-header">
+        <div>Name</div>
+        <div>Address</div>
+        <div style="text-align: right;">Value</div>
+      </div>
+      <div id="watch-list-container">
+        <!-- Rows added here -->
+      </div>
+      <div style="display:flex; margin-top:10px; gap:5px;">
+        <input type="text" id="watch-input" class="hex-input" style="width:100%; padding: 4px;"
+          placeholder="Symbol or 0xAddr">
+        <button class="patch-btn" style="padding: 2px 8px;" onclick="addWatch()">Watch</button>
+        <button class="patch-btn" style="padding: 2px 8px; background: #8b1d1d;" onclick="removeWatch()">Del</button>
+      </div>
+      <div style="display:flex; margin-top:5px; gap:5px;">
+        <input type="text" id="resolve-input" class="hex-input" style="width:100%; padding: 4px;"
+          placeholder="Resolve Name...">
+        <button class="patch-btn" style="padding: 2px 8px; background: #1f6feb;" onclick="resolveSymbol()">Go</button>
+      </div>
+    </div>
+  </div>
+  <div id="main">
+    <div class="header">Sovereign Dashboard</div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">RAM Footprint</div>
+        <div id="ram-usage" class="stat-value">--- MB</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Swarm TPS</div>
+        <div id="swarm-tps" class="stat-value">---</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Active Shards</div>
+        <div id="active-shards" class="stat-value">800B Swarm</div>
+      </div>
+    </div>
+
+    <div class="header" style="margin-top:40px">Memory Explorer & Hot-Patching</div>
+    <div id="memory-explorer">
+      <input id="mem-addr" class="hex-input" placeholder="Address (0xAB12...)" />
+      <input id="mem-data" class="hex-input" placeholder="New Opcode Bytes (Hex, space-separated e.g. 90 90)" />
+      <button class="patch-btn" onclick="requestPatch()">Patch Memory</button>
+    </div>
+    <div id="memory-data-view">Ready. Enter address to peek or patch.</div>
+
+    <div id="debug-panel">
+      <div id="reg-view" class="reg-grid">
+        <!-- Registers populated here -->
+      </div>
+      <div style="display: flex; flex-direction: column;">
+        <div id="disasm-view">
+          <!-- Disassembly populated here -->
+        </div>
+        <div
+          style="display: flex; gap: 5px; margin-top: 5px; background: #161b22; padding: 5px; border: 1px solid #30363d; border-radius: 4px;">
+          <input type="text" id="asm-input" class="hex-input" style="flex-grow: 1; padding: 4px;"
+            placeholder="Assemble (e.g. nop, int3, mov rax, 0x123)">
+          <button class="patch-btn" style="padding: 2px 10px;" onclick="requestAssemble()">Assemble</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="header" style="margin-top:20px">Loaded Modules (PEB)</div>
+    <div id="module-list">
+      <div class="module-row module-header">
+        <div>Base Address</div>
+        <div>Size</div>
+        <div>Name</div>
+      </div>
+    </div>
+  </div>
+  <script>
+    const IPC_MAGIC = 0x52415752;
+
+    window.addEventListener('load', () => {
+      console.log('RawrXD Dashboard Ready');
+      if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.addEventListener('message', handleIPCMessage);
+        window.chrome.webview.postMessage({ type: 'ready' });
+      }
+    });
+
+    function handleIPCMessage(event) {
+      // event.data can be a string (JSON) or an ArrayBuffer
+      if (typeof event.data === 'string') {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg && msg.kind === 'rawr-ipc-b16' && typeof msg.data === 'string') {
+            parseBinaryIPC(hexToArrayBuffer(msg.data));
+            return;
+          }
+          updateStats(msg);
+        } catch (e) { }
+      } else if (event.data instanceof ArrayBuffer) {
+        parseBinaryIPC(event.data);
+      }
+    }
+
+    function hexToArrayBuffer(hex) {
+      const clean = (hex || '').trim();
+      if ((clean.length % 2) !== 0) return new ArrayBuffer(0);
+      const bytes = new Uint8Array(clean.length / 2);
+      for (let i = 0; i < bytes.length; i++) {
+        bytes[i] = parseInt(clean.substr(i * 2, 2), 16);
+      }
+      return bytes.buffer;
+    }
+
+    function parseBinaryIPC(buffer) {
+      const view = new DataView(buffer);
+      const magic = view.getUint32(0, true);
+      if (magic !== IPC_MAGIC) return;
+
+      const type = view.getUint16(6, true);
+      const payloadLen = view.getUint32(20, true);
+
+      console.log(`Binary IPC: Type 0x${type.toString(16)}, Len ${payloadLen}`);
+
+      // Dispatch based on Type
+      switch (type) {
+        case 0x2001: // MOD_LOAD
+          handleModuleLoad(buffer.slice(32));
+          break;
+        case 0x2000: // DBG_EVT
+          handleDebugEvent(buffer.slice(32));
+          break;
+        case 0x2003: // DATA_MEM
+          handleMemoryResponse(buffer.slice(32));
+          break;
+        case 0x2006: // DATA_EMIT_RESULT
+          handleEmitResult(buffer.slice(32));
+          break;
+        case 0x3001: // DATA_SYMBOL
+          handleSymbolUpdate(buffer.slice(32));
+          break;
+      }
+    }
+
+    function handleEmitResult(payload) {
+      const view = new DataView(payload);
+      const addr = view.getBigUint64(0, true);
+      const bytesWritten = view.getUint32(8, true);
+      const status = view.getUint32(12, true);
+
+      const display = document.getElementById('memory-data-view');
+      if (status === 0) {
+        display.style.color = '#aff5b4';
+        display.innerText = `SUCCESS: Emitted ${bytesWritten} bytes to 0x${addr.toString(16).toUpperCase()}`;
+      } else {
+        display.style.color = '#f85149';
+        display.innerText = `FAILURE: Could not emit code to 0x${addr.toString(16).toUpperCase()}. Check permissions or syntax.`;
+      }
+      // Reset color after 3 seconds
+      setTimeout(() => { display.style.color = '#79c0ff'; }, 3000);
+    }
+
+    function addWatch() {
+      const name = document.getElementById('watch-input').value;
+      if (!name) return;
+
+      const buffer = new ArrayBuffer(32 + 10 + name.length);
+      const view = new DataView(buffer);
+      view.setUint32(0, IPC_MAGIC, true);
+      view.setUint16(4, 0x01, true);
+      view.setUint16(6, 0x1006, true); // REQ_WATCH
+      view.setUint32(20, 10 + name.length, true);
+
+      // Payload: uint64 base, uint16 len, char[] name
+      view.setBigUint64(32, 0n, true);
+      view.setUint16(40, name.length, true);
+      const uint8 = new Uint8Array(buffer, 42, name.length);
+      for (let i = 0; i < name.length; i++) uint8[i] = name.charCodeAt(i);
+
+      window.chrome.webview.postMessage(buffer);
+
+      const container = document.getElementById('watch-list-container');
+      const row = document.createElement('div');
+      row.className = 'watch-row';
+      row.innerHTML = `<div class="watch-name">${name}</div><div class="watch-addr" id="addr-${name}">Resolving...</div><div class="watch-val" id="val-${name}">--</div>`;
+      container.appendChild(row);
+      document.getElementById('watch-input').value = '';
+    }
+
+    function resolveSymbol() {
+      const name = document.getElementById('resolve-input').value;
+      if (!name) return;
+
+      // We'll use the memory explorer as the target for resolution
+      const display = document.getElementById('memory-data-view');
+      display.innerText = `Resolving '${name}'...`;
+
+      // Construct REQ_SYMBOL_RESOLVE (using 0x1002 from protocol)
+      const buffer = new ArrayBuffer(32 + 10 + name.length);
+      const view = new DataView(buffer);
+      view.setUint32(0, IPC_MAGIC, true);
+      view.setUint16(6, 0x1002, true);
+      view.setUint32(20, 10 + name.length, true);
+
+      view.setBigUint64(32, 0n, true); // Module base (0 = search all)
+      view.setUint16(40, name.length, true);
+      const uint8 = new Uint8Array(buffer, 42, name.length);
+      for (let i = 0; i < name.length; i++) uint8[i] = name.charCodeAt(i);
+
+      window.chrome.webview.postMessage(buffer);
+    }
+
+    function handleSymbolUpdate(payload) {
+      const view = new DataView(payload);
+      const addr = view.getBigUint64(0, true);
+      const nameLen = view.getUint16(8, true); // Based on MsgResolveResult
+
+      if (addr !== 0n) {
+        // Auto-populate memory view address field
+        document.getElementById('mem-addr').value = `0x${addr.toString(16).toUpperCase()}`;
+        document.getElementById('memory-data-view').innerText = `Resolved to 0x${addr.toString(16).toUpperCase()}`;
+        // Also trigger a peek
+        peekMemory();
+      } else {
+        document.getElementById('memory-data-view').innerText = `Resolution Failed for given symbol.`;
+      }
+
+      const resolvers = document.querySelectorAll('.watch-addr');
+      // ... existing watch logic ...
+    }
+
+    function peekMemory() {
+      const addrStr = document.getElementById('mem-addr').value;
+      if (!addrStr) return;
+      const addr = BigInt(addrStr.startsWith('0x') ? addrStr : '0x' + addrStr);
+
+      const buffer = new ArrayBuffer(32 + 12);
+      const view = new DataView(buffer);
+      view.setUint32(0, IPC_MAGIC, true);
+      view.setUint16(6, 0x1004, true); // REQ_READ_MEM
+      view.setUint32(20, 12, true);
+      view.setBigUint64(32, addr, true);
+      view.setUint32(40, 64, true); // Read 64 bytes
+
+      window.chrome.webview.postMessage(buffer);
+    }
+
+    function requestPatch() {
+      const addrStr = document.getElementById('mem-addr').value;
+      const dataStr = document.getElementById('mem-data').value;
+      const addr = BigInt(addrStr.startsWith('0x') ? addrStr : '0x' + addrStr);
+      const bytes = dataStr.split(' ').map(b => parseInt(b, 16));
+
+      // Construct Binary Request REQ_WRITE_MEM (0x1005)
+      const buffer = new ArrayBuffer(32 + 12 + bytes.length);
+      const view = new DataView(buffer);
+      view.setUint32(0, IPC_MAGIC, true);
+      view.setUint16(6, 0x1005, true); // Type
+      view.setUint32(20, 12 + bytes.length, true); // Payload len
+
+      view.setBigUint64(32, addr, true);
+      view.setUint32(40, bytes.length, true);
+      const uint8 = new Uint8Array(buffer, 44, bytes.length);
+      uint8.set(bytes);
+
+      window.chrome.webview.postMessage(buffer);
+      document.getElementById('memory-data-view').innerText = `Patching ${bytes.length} bytes at 0x${addr.toString(16)}...`;
+    }
+
+    function requestAssemble() {
+      const asmText = document.getElementById('asm-input').value;
+      const addrStr = document.getElementById('mem-addr').value; // Use current mem-addr for simplicity
+      if (!asmText || !addrStr) return;
+
+      const addr = BigInt(addrStr.startsWith('0x') ? addrStr : '0x' + addrStr);
+
+      const buffer = new ArrayBuffer(32 + 12 + asmText.length);
+      const view = new DataView(buffer);
+      view.setUint32(0, IPC_MAGIC, true);
+      view.setUint16(6, 0x100B, true); // REQ_EMIT_CODE
+      view.setUint32(20, 12 + asmText.length, true);
+
+      view.setBigUint64(32, addr, true);
+      view.setUint32(40, asmText.length, true);
+      const uint8 = new Uint8Array(buffer, 44, asmText.length);
+      for (let i = 0; i < asmText.length; i++) uint8[i] = asmText.charCodeAt(i);
+
+      window.chrome.webview.postMessage(buffer);
+      document.getElementById('memory-data-view').innerText = `Assembling '${asmText}' at 0x${addr.toString(16)}...`;
+    }
+
+    function handleMemoryResponse(payload) {
+      const view = new DataView(payload);
+      const addr = view.getBigUint64(0, true);
+      const size = view.getUint32(8, true);
+      const bytes = new Uint8Array(payload, 12, size);
+
+      let hex = '';
+      bytes.forEach(b => hex += b.toString(16).padStart(2, '0').toUpperCase() + ' ');
+      document.getElementById('memory-data-view').innerText = `Address: 0x${addr.toString(16).toUpperCase()}\nBytes: ${hex}`;
+    }
+
+    function handleDebugEvent(payload) {
+      const view = new DataView(payload);
+      const rip = view.getBigUint64(16, true); // Offset of rip in MsgDebugEvent
+
+      // Populate Mock Registers
+      const regs = ['RAX', 'RBX', 'RCX', 'RDX', 'RSI', 'RDI', 'RBP', 'RSP', 'R8', 'R9', 'RIP'];
+      const regView = document.getElementById('reg-view');
+      regView.innerHTML = '';
+
+      regs.forEach(r => {
+        const label = document.createElement('div');
+        label.className = 'reg-label';
+        label.innerText = r;
+        const val = document.createElement('div');
+        val.className = 'reg-value';
+        val.innerText = (r === 'RIP') ? `0x${rip.toString(16).toUpperCase()}` : '0x0000000000000000';
+        regView.appendChild(label);
+        regView.appendChild(val);
+      });
+
+      // Populate Mock Disassembly
+      const disasm = document.getElementById('disasm-view');
+      disasm.innerHTML = `
+        <div class="disasm-line disasm-hit">
+          <div class="disasm-addr">0x${rip.toString(16).toUpperCase()}</div>
+          <div class="disasm-bytes">CC</div>
+          <div class="disasm-instr">int 3 ; Software Breakpoint Hit</div>
+        </div>
+        <div class="disasm-line">
+          <div class="disasm-addr">0x${(rip + 1n).toString(16).toUpperCase()}</div>
+          <div class="disasm-bytes">90</div>
+          <div class="disasm-instr">nop</div>
+        </div>
+      `;
+    }
+
+    function handleModuleLoad(payload) {
+      const view = new DataView(payload);
+      const base = view.getBigUint64(0, true);
+      const size = view.getUint32(8, true); // payload.size is u32 in struct
+      const nameLen = view.getUint16(16, true);
+
+      const nameArr = new Uint16Array(payload, 18, nameLen / 2);
+      const name = String.fromCharCode.apply(null, nameArr);
+
+      const list = document.getElementById('module-list');
+      const row = document.createElement('div');
+      row.className = 'module-row';
+      row.innerHTML = `
+                <div class="addr">0x${base.toString(16).toUpperCase()}</div>
+                <div class="size">${(size / 1024 / 1024).toFixed(2)} MB</div>
+                <div>${name}</div>
+            `;
+      list.appendChild(row);
+    }
+
+    function updateStats(msg) {
+      if (msg.ram) document.getElementById('ram-usage').innerText = msg.ram + ' MB';
+      if (msg.tps) document.getElementById('swarm-tps').innerText = msg.tps;
+    }
+
+    function addWatch() {
+      const expr = document.getElementById('watch-input').value;
+      if (!expr) return;
+
+      if (expr.startsWith('0x')) {
+        const addr = BigInt(expr);
+        // REQ_WATCH_ADD (0x1009)
+        const label = expr;
+        const size = 8;
+        const labelBytes = new TextEncoder().encode(label);
+        const buffer = new ArrayBuffer(32 + 14 + labelBytes.length);
+        const view = new DataView(buffer);
+        view.setUint32(0, 0x52415752, true); // RAWR
+        view.setUint16(6, 0x1009, true);
+        view.setUint32(20, 14 + labelBytes.length, true);
+
+        view.setBigUint64(32, addr, true);
+        view.setUint32(40, size, true);
+        view.setUint16(44, labelBytes.length, true);
+        new Uint8Array(buffer, 46).set(labelBytes);
+        window.chrome.webview.postMessage(buffer);
+      }
+      document.getElementById('watch-input').value = '';
+    }
+
+    function handleWatchUpdate(payload) {
+      const view = new DataView(payload);
+      const addr = view.getBigUint64(0, true);
+      const size = view.getUint32(8, true);
+      const labelLen = view.getUint16(12, true);
+
+      const labelBytes = new Uint8Array(payload, 14, labelLen);
+      const label = new TextDecoder().decode(labelBytes);
+
+      const dataOffset = 14 + labelLen;
+      const dataBytes = new Uint8Array(payload, dataOffset, size);
+
+      // Auto-format based on size and context
+      let formatted = '';
+      if (size === 8) {
+        formatted = '0x' + view.getBigUint64(dataOffset, true).toString(16).toUpperCase().padStart(16, '0');
+      } else if (size === 4) {
+        formatted = '0x' + view.getUint32(dataOffset, true).toString(16).toUpperCase().padStart(8, '0');
+      } else {
+        dataBytes.forEach(b => formatted += b.toString(16).padStart(2, '0').toUpperCase());
+      }
+
+      const container = document.getElementById('watch-list-container');
+      let row = document.getElementById(`watch-${addr}`);
+      if (!row) {
+        row = document.createElement('div');
+        row.id = `watch-${addr}`;
+        row.className = 'watch-row';
+        row.style.cursor = 'pointer';
+        row.onclick = () => { document.getElementById('mem-addr').value = '0x' + addr.toString(16); };
+        container.appendChild(row);
+      }
+      row.innerHTML = `
+        <div class="watch-name">${label}</div>
+        <div class="watch-addr">0x${addr.toString(16).toUpperCase()}</div>
+        <div class="watch-val">${formatted}</div>
+      `;
+    }
+
+    function addWatch() {
+      const expr = document.getElementById('watch-input').value;
+      if (!expr) return;
+
+      // Send REQ_WATCH_ADD (0x1009)
+      const labelBytes = new TextEncoder().encode(expr);
+      const buffer = new ArrayBuffer(32 + 14 + labelBytes.length);
+      const view = new DataView(buffer);
+      view.setUint32(0, 0x52415752, true);
+      view.setUint16(6, 0x1009, true);
+      view.setUint32(20, 14 + labelBytes.length, true);
+
+      // We'll let the backend resolve the string 'expr' which might be Hex or Symbol
+      // In this proto, we send a 'resolve request' as part of the watch
+      // For now, if it's hex, use it. If not, backend will resolve.
+      let addr = 0n;
+      if (expr.startsWith('0x')) addr = BigInt(expr);
+
+      view.setBigUint64(32, addr, true);
+      view.setUint32(40, 8, true); // Default size 8
+      view.setUint16(44, labelBytes.length, true);
+      new Uint8Array(buffer, 46).set(labelBytes);
+      window.chrome.webview.postMessage(buffer);
+
+      document.getElementById('watch-input').value = '';
+    }
+
+    function removeWatch() {
+      const expr = document.getElementById('watch-input').value;
+      if (!expr) return;
+
+      // Send REQ_WATCH_REMOVE (0x100A)
+      // Logic: If it matched an existing watch's label or addr
+      const labelBytes = new TextEncoder().encode(expr);
+      const buffer = new ArrayBuffer(32 + labelBytes.length);
+      const view = new DataView(buffer);
+      view.setUint32(0, 0x52415752, true);
+      view.setUint16(6, 0x100A, true);
+      view.setUint32(20, labelBytes.length, true);
+      new Uint8Array(buffer, 32).set(labelBytes);
+      window.chrome.webview.postMessage(buffer);
+
+      // Visual cleanup (backend will confirm, but let's be snappy)
+      const rows = document.querySelectorAll('.watch-row');
+      rows.forEach(r => { if (r.innerText.includes(expr)) r.remove(); });
+    }
+
+    function resolveSymbol() {
+      const name = document.getElementById('resolve-input').value;
+      if (!name) return;
+
+      const labelBytes = new TextEncoder().encode(name);
+      const buffer = new ArrayBuffer(32 + 10 + labelBytes.length);
+      const view = new DataView(buffer);
+      view.setUint32(0, 0x52415752, true);
+      view.setUint16(6, 0x1007, true); // REQ_RESOLVE_NAME
+      view.setUint32(20, 10 + labelBytes.length, true);
+      view.setBigUint64(32, 0n, true);
+      view.setUint16(40, labelBytes.length, true);
+      new Uint8Array(buffer, 42).set(labelBytes);
+      window.chrome.webview.postMessage(buffer);
+    }
+
+    function handleResolveResult(payload) {
+      const view = new DataView(payload);
+      const addr = view.getBigUint64(0, true);
+      const nameLen = view.getUint16(8, true);
+      const nameBytes = new Uint8Array(payload, 10, nameLen);
+      const name = new TextDecoder().decode(nameBytes);
+
+      if (addr !== 0n) {
+        document.getElementById('mem-addr').value = '0x' + addr.toString(16).toUpperCase();
+        requestMemory(addr);
+        document.getElementById('memory-data-view').innerText = `Resolved ${name} to 0x${addr.toString(16).toUpperCase()}`;
+      } else {
+        document.getElementById('memory-data-view').innerText = `Failed to resolve symbol: ${name}`;
+      }
+    }
+
+    function requestMemory(addr) {
+      const buffer = new ArrayBuffer(32 + 12);
+      const view = new DataView(buffer);
+      view.setUint32(0, 0x52415752, true);
+      view.setUint16(6, 0x1004, true); // REQ_READ_MEM
+      view.setUint32(20, 12, true);
+      view.setBigUint64(32, addr, true);
+      view.setUint32(40, 0x100, true);
+      window.chrome.webview.postMessage(buffer);
+    }
+
+    window.chrome.webview.addEventListener('message', event => {
+      const buffer = event.data;
+      if (!(buffer instanceof ArrayBuffer)) return;
+      const view = new DataView(buffer);
+      if (view.getUint32(0, true) !== 0x52415752) return;
+
+      const type = view.getUint16(6, true);
+      const payload = buffer.slice(32);
+
+      switch (type) {
+        case 0x2003: handleMemoryResponse(payload); break;
+        case 0x2000: handleDebugEvent(payload); break;
+        case 0x2001: handleModuleLoad(payload); break;
+        case 0x2004: handleResolveResult(payload); break; // Add result handler
+        case 0x2005: handleWatchUpdate(payload); break;
+      }
+    });
+</body >
+
+</html >

@@ -84,16 +84,13 @@ ENTERPRISE_CONTEXT ENDS
 ; =============================================================================
 ;                          GLOBAL DATA
 ; =============================================================================
+; g_800B_Unlocked, g_EnterpriseFeatures — now in rawr_globals.asm
+INCLUDE rawr_globals.inc
+
 .data
 ALIGN 16
 g_EntCtx                ENTERPRISE_CONTEXT <>
 
-; Unlocked engine flags (read by C++ engine registry)
-PUBLIC g_800B_Unlocked
-PUBLIC g_EnterpriseFeatures
-
-g_800B_Unlocked         DD 0
-g_EnterpriseFeatures    DQ 0
 ALIGN 8
 
 ; Embedded RSA-4096 Public Key Blob (CryptoAPI PUBLICKEYBLOB format)

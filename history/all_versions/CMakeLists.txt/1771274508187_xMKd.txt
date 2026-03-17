@@ -1,0 +1,107 @@
+# CMakeLists_native.txt - Pure Native RawrXD Build
+cmake_minimum_required(VERSION 3.20)
+project(RawrXD-Native VERSION 14.2.0 LANGUAGES CXX ASM_MASM)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# No find_package calls - pure native only
+# No Qt, no Vulkan, no ggml, no external deps
+
+# Compiler flags for native performance
+if(MSVC)
+    # C/C++ compile flags only (excludes ASM_MASM)
+    add_compile_options(
+        $<$<COMPILE_LANGUAGE:CXX,C>:/O2>
+        $<$<COMPILE_LANGUAGE:CXX,C>:/Ob2>
+        $<$<COMPILE_LANGUAGE:CXX,C>:/Oi>
+        $<$<COMPILE_LANGUAGE:CXX,C>:/Ot>
+        $<$<COMPILE_LANGUAGE:CXX,C>:/GL>
+        $<$<COMPILE_LANGUAGE:CXX,C>:/arch:AVX2>
+        $<$<COMPILE_LANGUAGE:CXX,C>:/fp:fast>
+        $<$<COMPILE_LANGUAGE:CXX,C>:/W4>
+        $<$<COMPILE_LANGUAGE:CXX,C>:/WX->
+        $<$<COMPILE_LANGUAGE:CXX,C>:/Zc:__cplusplus>
+        $<$<COMPILE_LANGUAGE:CXX,C>:/permissive->
+        $<$<COMPILE_LANGUAGE:CXX,C>:/Zc:inline>
+    )
+
+    # MASM-specific flags (ml64 only understands /c, /Fo, /nologo, /W, /Zi)
+    # Add SDK shared include for ksamd64.inc
+    set(SDK_SHARED_INC "C:/Program Files (x86)/Windows Kits/10/Include/10.0.22621.0/shared")
+    set(CMAKE_ASM_MASM_FLAGS "${CMAKE_ASM_MASM_FLAGS} /nologo /Zi /I\"${SDK_SHARED_INC}\" /I\"${CMAKE_CURRENT_SOURCE_DIR}/src\"")
+
+    add_link_options(
+        /LTCG                          # Link-time code generation
+        /OPT:REF /OPT:ICF              # Remove dead code, fold identical
+        /SUBSYSTEM:CONSOLE             # Console app for debugging
+    )
+endif()
+
+# Native source files only
+set(NATIVE_SOURCES
+    # Core native loader
+    native/gguf_native_loader.cpp
+
+    # Observability
+    telemetry/async_logger.cpp
+    telemetry/metrics_server.cpp
+
+    # Toolchain integration (MASM64 assembler + linker → IDE)
+    src/compiler/toolchain_bridge.cpp
+    src/compiler/toolchain_bridge_session.cpp
+    src/diagnostics_provider.cpp
+    src/build_task_provider.cpp
+    src/toolchain_integration.cpp
+
+    # Utils - no .cpp files, just headers
+    # config/production_config.hpp - header only
+)
+
+# Include MASM components
+add_subdirectory(src/masm)
+
+# MASM assembly kernels (syntax fixed for ml64)
+set(ASM_SOURCES
+    native_inference/native_q4_kernels.asm
+    RawrXD_NetworkRelay.asm
+)
+
+set_source_files_properties(${ASM_SOURCES} PROPERTIES LANGUAGE ASM_MASM)
+
+# Create library for native components
+add_library(RawrXD_Native STATIC ${NATIVE_SOURCES} ${ASM_SOURCES})
+
+target_include_directories(RawrXD_Native PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/native
+    ${CMAKE_CURRENT_SOURCE_DIR}/telemetry
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/toolchain
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/compiler
+)
+
+# Windows native libs only (kernel32, user32, etc. - part of OS)
+target_link_libraries(RawrXD_Native PUBLIC
+    kernel32
+    user32
+    gdi32
+    advapi32
+    shell32
+    ole32
+    ws2_32          # Winsock for HTTP server
+    crypt32         # Cryptography for secure port tokens
+    shlwapi         # Toolchain bridge path utilities
+    masm_components  # MASM tensor engine
+)
+
+# Main executable
+add_executable(RawrXD-Native main_native.cpp)
+target_link_libraries(RawrXD-Native PRIVATE RawrXD_Native)
+
+# Tests - temporarily disabled
+# enable_testing()
+# add_subdirectory(tests/native)

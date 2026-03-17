@@ -511,7 +511,9 @@ obf_loop:
     movzx rax, byte ptr [rbx + r10]
     
     ; Transform byte using Mirage algorithm (low-diffusion)
-    mov cl, byte ptr [r13 + r10 mod 32]
+    mov r11d, r10d
+    and r11d, 31
+    mov cl, byte ptr [r13 + r11]
     xor al, cl
     
     ; Apply minimal transformation to reduce entropy
@@ -552,7 +554,9 @@ enc_loop:
     
     ; Simple XOR encryption (would be full Camellia in production)
     movzx rax, byte ptr [rbx + r10]
-    mov cl, byte ptr [r13 + r10 mod 32]
+    mov r11d, r10d
+    and r11d, 31
+    mov cl, byte ptr [r13 + r11]
     xor al, cl
     rol al, 3
     mov byte ptr [rbx + r10], al
@@ -587,7 +591,9 @@ dec_loop:
     ; Reverse of encryption
     movzx rax, byte ptr [rbx + r10]
     ror al, 3
-    mov cl, byte ptr [r13 + r10 mod 32]
+    mov r11d, r10d
+    and r11d, 31
+    mov cl, byte ptr [r13 + r11]
     xor al, cl
     mov byte ptr [rbx + r10], al
     
@@ -1084,4 +1090,4 @@ main PROC
     ret
 main ENDP
 
-END main
+END

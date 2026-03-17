@@ -1,0 +1,13 @@
+LIBRARY RawrXD_Omniscient_Overdrive
+EXPORTS
+    SwarmV150_VNNI_Dequant_Core
+    SwarmV150_Direct_P2P_DMA_Fetch
+    SwarmV150_Zero_Latency_KV_Switch
+    SwarmV150_Core_Affinity_Lock
+    SwarmV150_Speculative_TopK_Pruning
+    SwarmV150_Parallel_Batch_Prefill
+    SwarmV150_AVX512_FMA_Unroll
+    SwarmV28_Ternary_Quant
+    SwarmV28_Medusa_Draft
+    SwarmV28_Batch_Verify
+    SwarmV28_TPS150_Lock

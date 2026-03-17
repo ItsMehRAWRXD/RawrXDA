@@ -1,0 +1,141 @@
+
+==============================================================================
+  RawrXD v279 — Second-Family Speculative Validation (Phi)
+==============================================================================
+
+  DLL:          D:\rawrxd\bin\RawrXD_Singularity_120B_v270.dll
+  Draft:        phi:latest
+  Verifier:     phi3:mini
+  Init Burst:   8 (escalate to 16 if qualified)
+  Target:       64 tokens x 3 runs
+  v278 ref:     3.71 session t/s, 184.87 infer t/s (gemma pair)
+    DLL verified: 54.5 KB
+
+==============================================================================
+  PHASE 0: PRE-LOAD — Phi Family Concurrent VRAM
+==============================================================================
+  [22:07:15] Evicting previous models...
+  [22:07:19] Loading phi:latest (keep_alive=-1)...
+    phi:latest loaded: load=1834.2ms, tg=0 t/s
+  [22:07:23] Loading phi3:mini (keep_alive=-1)...
+    phi3:mini loaded: load=2792.9ms, tg=0 t/s
+  [22:07:30] Models in VRAM:
+      phi3:mini: 3.72GB
+      phi:latest: 2.2GB
+    Total VRAM: 5.92 GB
+
+==============================================================================
+  PHASE 1: BASELINE — phi3:mini (verifier-only decode)
+==============================================================================
+  [22:07:30] Warmup...
+  [22:07:32]   Warmup: tg=173.38 t/s, load=20.3ms
+  [22:07:32] Baseline run 1/3 (64 tokens)...
+    Run 1: tg=178.55 t/s, pp=9693.78 t/s, wall=2418ms
+  [22:07:35] Baseline run 2/3 (64 tokens)...
+    Run 2: tg=179.16 t/s, pp=6075.6 t/s, wall=2433ms
+  [22:07:37] Baseline run 3/3 (64 tokens)...
+    Run 3: tg=178.29 t/s, pp=9622.49 t/s, wall=2429ms
+    BASELINE: tg=178.67 ±0.45 t/s, pp=8463.96 t/s, wall=2426.7 ms
+
+  ┌─────────────────────────────────────────┐
+  │ BASELINE: 178.67 ±0.45 t/s (phi3:mini) │
+  └─────────────────────────────────────────┘
+
+==============================================================================
+  PHASE 2: SPECULATIVE — phi:latest -> phi3:mini (burst=8)
+==============================================================================
+  [SPEC] Run 1: burst=8, target=64
+  [SPEC]   Cycle 1: draft=8, committed=9, accept=1, infer=197.73 t/s, session=2.14 t/s, d_wall=2129ms, v_wall=2073ms, total=4203ms
+  [SPEC]   Cycle 2: draft=8, committed=9, accept=1, infer=146.52 t/s, session=2.13 t/s, d_wall=2133ms, v_wall=2088ms, total=4223ms
+  [SPEC]   Cycle 3: draft=8, committed=9, accept=1, infer=181.88 t/s, session=2.15 t/s, d_wall=2123ms, v_wall=2065ms, total=4189ms
+  [SPEC]   Cycle 4: draft=8, committed=9, accept=1, infer=202.66 t/s, session=2.14 t/s, d_wall=2125ms, v_wall=2074ms, total=4199ms
+  [SPEC]   Cycle 5: draft=8, committed=9, accept=1, infer=154.87 t/s, session=2.15 t/s, d_wall=2113ms, v_wall=2077ms, total=4191ms
+  [SPEC]   Cycle 6: draft=8, committed=9, accept=1, infer=161.75 t/s, session=2.13 t/s, d_wall=2126ms, v_wall=2093ms, total=4220ms
+  [SPEC]   Cycle 7: draft=8, committed=9, accept=1, infer=166.65 t/s, session=2.15 t/s, d_wall=2101ms, v_wall=2081ms, total=4182ms
+  [SPEC]   Cycle 8: draft=8, committed=9, accept=1, infer=187.97 t/s, session=2.14 t/s, d_wall=2124ms, v_wall=2077ms, total=4203ms
+    Run 1: infer=172.88 t/s, session=2.14 t/s, committed=72, accept=100%, cycles=8, http=16
+  [SPEC] Run 2: burst=8, target=64
+  [SPEC]   Cycle 1: draft=8, committed=9, accept=1, infer=208.6 t/s, session=2.16 t/s, d_wall=2114ms, v_wall=2049ms, total=4164ms
+  [SPEC]   Cycle 2: draft=8, committed=9, accept=1, infer=165.74 t/s, session=2.13 t/s, d_wall=2123ms, v_wall=2092ms, total=4216ms
+  [SPEC]   Cycle 3: draft=8, committed=9, accept=1, infer=192.98 t/s, session=2.16 t/s, d_wall=2112ms, v_wall=2054ms, total=4167ms
+  [SPEC]   Cycle 4: draft=8, committed=9, accept=1, infer=196.94 t/s, session=2.16 t/s, d_wall=2115ms, v_wall=2053ms, total=4169ms
+  [SPEC]   Cycle 5: draft=8, committed=9, accept=1, infer=160.34 t/s, session=2.15 t/s, d_wall=2107ms, v_wall=2085ms, total=4193ms
+  [SPEC]   Cycle 6: draft=8, committed=9, accept=1, infer=159.97 t/s, session=2.16 t/s, d_wall=2103ms, v_wall=2069ms, total=4173ms
+  [SPEC]   Cycle 7: draft=8, committed=9, accept=1, infer=156.05 t/s, session=2.15 t/s, d_wall=2112ms, v_wall=2080ms, total=4194ms
+  [SPEC]   Cycle 8: draft=8, committed=9, accept=1, infer=192.35 t/s, session=2.16 t/s, d_wall=2110ms, v_wall=2061ms, total=4172ms
+    Run 2: infer=177.06 t/s, session=2.15 t/s, committed=72, accept=100%, cycles=8, http=16
+  [SPEC] Run 3: burst=8, target=64
+  [SPEC]   Cycle 1: draft=8, committed=9, accept=1, infer=209.77 t/s, session=2.16 t/s, d_wall=2105ms, v_wall=2060ms, total=4166ms
+  [SPEC]   Cycle 2: draft=8, committed=9, accept=1, infer=160.77 t/s, session=2.16 t/s, d_wall=2111ms, v_wall=2059ms, total=4171ms
+  [SPEC]   Cycle 3: draft=8, committed=9, accept=1, infer=197.23 t/s, session=2.15 t/s, d_wall=2136ms, v_wall=2059ms, total=4195ms
+  [SPEC]   Cycle 4: draft=8, committed=9, accept=1, infer=191.74 t/s, session=2.14 t/s, d_wall=2131ms, v_wall=2076ms, total=4207ms
+  [SPEC]   Cycle 5: draft=8, committed=9, accept=1, infer=161.06 t/s, session=2.15 t/s, d_wall=2107ms, v_wall=2079ms, total=4187ms
+  [SPEC]   Cycle 6: draft=8, committed=9, accept=1, infer=160.08 t/s, session=2.15 t/s, d_wall=2123ms, v_wall=2057ms, total=4181ms
+  [SPEC]   Cycle 7: draft=8, committed=9, accept=1, infer=166.2 t/s, session=2.14 t/s, d_wall=2117ms, v_wall=2082ms, total=4200ms
+  [SPEC]   Cycle 8: draft=8, committed=9, accept=1, infer=204.54 t/s, session=2.14 t/s, d_wall=2127ms, v_wall=2067ms, total=4196ms
+    Run 3: infer=179.24 t/s, session=2.15 t/s, committed=72, accept=100%, cycles=8, http=16
+
+==============================================================================
+  PHASE 2 ANALYSIS — Burst 8
+==============================================================================
+
+  ┌──────────────────────────────────────────────────────────┐
+  │    v279 BURST-8 RESULTS    │
+  ├──────────────────────────────────────────────────────────┤
+  │  Pair:                            phi:latest -> phi3:mini  │
+  │  Burst:                                                8  │
+  │  Runs x Cycles:                                   3 x 24  │
+  │  Tokens/HTTP Call:                                   4.5  │
+  │  HTTP Overhead:                                    98.8%  │
+  ├──────────────────────────────────────────────────────────┤
+  │  Baseline TPS:                                178.67 t/s  │
+  │  Median Infer TPS:                   177.06 t/s (+-0.9%)  │
+  │  Median Session TPS:                            2.15 t/s  │
+  │  Best Session TPS:                              2.15 t/s  │
+  │  v278 Ref Session TPS:             3.71 t/s (gemma pair)  │
+  │  Accept Rate:                                       100%  │
+  │  Fallback Rate:                                       0%  │
+  ├──────────────────────────────────────────────────────────┤
+  │  VERDICT:                                     QUARANTINE  │
+  │  PROMOTE:                                             NO  │
+  │  ESCALATE to 16:                                 NOT YET  │
+  └──────────────────────────────────────────────────────────┘
+
+  Health Gate:
+    sample_count >= 3: PASS (3)
+    median_accept >= 0.55: PASS (1)
+    fallback_rate <= 0.15: PASS (0)
+    infer_gain >= 20%: FAIL (+-0.9%)
+
+  Planner Score Delta: 10
+
+  Per-Run Breakdown:
+    RUN         INFER    SESSION    ACCEPT%   CYCLES    HTTP#   TOK/HTTP    OVHD%
+    ------------------------------------------------------------------------------
+    Run 1      172.88       2.14       100%        8       16        4.5    98.8%
+    Run 2      177.06       2.15       100%        8       16        4.5    98.8%
+    Run 3      179.24       2.15       100%        8       16        4.5    98.8%
+  [22:09:20] Escalation NOT qualified: accept=1, gain=+-0.9%
+  [22:09:20]   Need: accept >= 0.9 AND gain >= 35%
+
+==============================================================================
+  CROSS-FAMILY COMPARISON
+==============================================================================
+                                            Pair #1 (v278)       Pair #2 (v279)
+                                               gemma->qwen            phi->phi3
+  -----------------------------------------------------------------------------
+  Baseline TPS                                   89.57 t/s           178.67 t/s
+  Burst                                                 16                    8
+  Median Infer TPS                              184.87 t/s           177.06 t/s
+  Median Session TPS                              3.71 t/s             2.15 t/s
+  Accept Rate                                         100%                 100%
+  Verdict                                 HEALTHY (sealed)           QUARANTINE
+
+  CROSS-FAMILY VERDICT: PAIR-SPECIFIC ONLY
+
+  Session log: D:\rawrxd\logs\speculative_v279_log.jsonl
+  Cycle log:   D:\rawrxd\logs\speculative_v279_cycle_log.jsonl
+
+==============================================================================
+  v279 Second-Family Validation Complete — 125s elapsed
+==============================================================================

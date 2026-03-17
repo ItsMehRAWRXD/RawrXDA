@@ -1,0 +1,120 @@
+version: '3.8'
+
+services:
+  rawrxd-core:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rawrxd-core
+    hostname: rawrxd-core
+    restart: unless-stopped
+    ports:
+      - "8080:8080"   # Main HTTP API
+      - "9090:9090"   # Metrics endpoint
+    volumes:
+      - rawrxd-data:/app/data
+      - rawrxd-logs:/app/logs
+      - rawrxd-models:/app/models
+      - ./config:/app/config:ro
+    environment:
+      - LAZY_INIT_IDE_ROOT=/app
+      - RAWRXD_ENV=production
+      - RAWRXD_LOG_LEVEL=INFO
+    networks:
+      - rawrxd-network
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 8G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+    healthcheck:
+      test: ["CMD", "pwsh", "-NoProfile", "-c", "Import-Module /app/modules/RawrXD.Core.psm1 -ErrorAction Stop; Write-Output 'healthy'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  rawrxd-ollama:
+    image: ollama/ollama:latest
+    container_name: rawrxd-ollama
+    hostname: ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - rawrxd-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  rawrxd-prometheus:
+    image: prom/prometheus:latest
+    container_name: rawrxd-prometheus
+    hostname: prometheus
+    restart: unless-stopped
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+    networks:
+      - rawrxd-network
+    depends_on:
+      - rawrxd-core
+
+  rawrxd-grafana:
+    image: grafana/grafana:latest
+    container_name: rawrxd-grafana
+    hostname: grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana-dashboards:/etc/grafana/provisioning/dashboards:ro
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    networks:
+      - rawrxd-network
+    depends_on:
+      - rawrxd-prometheus
+
+volumes:
+  rawrxd-data:
+    driver: local
+  rawrxd-logs:
+    driver: local
+  rawrxd-models:
+    driver: local
+  ollama-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+
+networks:
+  rawrxd-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16

@@ -1,0 +1,581 @@
+ rawrxd_monolith.exe
+
+ Timestamp is 69b397ff (Fri Mar 13 00:52:15 2026)
+
+ Preferred load address is 0000000000400000
+
+ Start         Length     Name                   Class
+ 0001:00000000 00003d83H .text                   CODE
+ 0001:00003d90 0000633dH .text$mn                CODE
+ 0002:00000000 00000641H .rdata                  DATA
+ 0002:00000648 00000734H .xdata                  DATA
+ 0003:00000000 00000780H .pdata                  DATA
+ 0004:00000000 0001cbc0H .data                   DATA
+ 0004:0001cbc0 0000008cH .idata$2                DATA
+ 0004:0001cc4c 00000014H .idata$3                DATA
+ 0004:0001cc60 00000448H .idata$4                DATA
+ 0004:0001d0a8 00000448H .idata$5                DATA
+ 0004:0001d4f0 000007f0H .idata$6                DATA
+ 0004:0001dce0 000ac730H .bss                    DATA
+
+  Address         Publics by Value              Rva+Base             Lib:Object
+
+ 0001:00000000       WinMain                    0000000000401000 f   main.obj
+ 0001:000001d2       ParseCommandLine           00000000004011d2 f   main.obj
+ 0001:00000346       WinMainCRTStartup          0000000000401346 f   main.obj
+ 0001:00000380       Bridge_SubmitCompletion    0000000000401380 f   bridge.obj
+ 0001:000003c2       Bridge_GetSuggestionText   00000000004013c2 f   bridge.obj
+ 0001:000003d2       Bridge_ClearSuggestion     00000000004013d2 f   bridge.obj
+ 0001:00000405       Bridge_RequestSuggestion   0000000000401405 f   bridge.obj
+ 0001:000004c5       Bridge_WorkerThread        00000000004014c5 f   bridge.obj
+ 0001:0000066a       Bridge_AbortInference      000000000040166a f   bridge.obj
+ 0001:000006a0       DAP_Init                   00000000004016a0 f   dap.obj
+ 0001:00000705       DAP_Launch                 0000000000401705 f   dap.obj
+ 0001:00000810       DAP_EventLoop              0000000000401810 f   dap.obj
+ 0001:0000096c       DAP_Step                   000000000040196c f   dap.obj
+ 0001:00000a22       DAP_StackTrace             0000000000401a22 f   dap.obj
+ 0001:00000b98       DAP_Evaluate               0000000000401b98 f   dap.obj
+ 0001:00000ce0       ExtHostInit                0000000000401ce0 f   exthost.obj
+ 0001:00000d15       ExtHostLoad                0000000000401d15 f   exthost.obj
+ 0001:00000e0d       ExtHostUnload              0000000000401e0d f   exthost.obj
+ 0001:00000eab       ExtHostSendMessage         0000000000401eab f   exthost.obj
+ 0001:00000ef1       ExtHostGetCount            0000000000401ef1 f   exthost.obj
+ 0001:00000ef9       ExtHostShutdown            0000000000401ef9 f   exthost.obj
+ 0001:00000f70       InferenceRouter_Init       0000000000401f70 f   inference_router.obj
+ 0001:00001067       InferenceRouter_LoadVocab  0000000000402067 f   inference_router.obj
+ 0001:0000125a       InferenceRouter_Generate   000000000040225a f   inference_router.obj
+ 0001:000014f8       InferenceRouter_Abort      00000000004024f8 f   inference_router.obj
+ 0001:00001509       InferenceRouter_SetBackend 0000000000402509 f   inference_router.obj
+ 0001:00001526       InferenceRouter_GetStats   0000000000402526 f   inference_router.obj
+ 0001:00001580       Mesh_Init                  0000000000402580 f   mesh.obj
+ 0001:000015d5       Mesh_AccumulateGradient    00000000004025d5 f   mesh.obj
+ 0001:00001614       Mesh_BroadcastUpdate       0000000000402614 f   mesh.obj
+ 0001:00001683       Mesh_SyncEpoch             0000000000402683 f   mesh.obj
+ 0001:00001690       Emit_Byte                  0000000000402690 f   pe_writer.obj
+ 0001:000016a3       Emit_DOSHeader             00000000004026a3 f   pe_writer.obj
+ 0001:000016c3       Emit_NTHeaders             00000000004026c3 f   pe_writer.obj
+ 0001:00001766       Emit_SectionHeaders        0000000000402766 f   pe_writer.obj
+ 0001:00001847       Emit_FunctionPrologue      0000000000402847 f   pe_writer.obj
+ 0001:00001868       Emit_FunctionEpilogue      0000000000402868 f   pe_writer.obj
+ 0001:0000188d       Emit_ImportTable           000000000040288d f   pe_writer.obj
+ 0001:000019ee       Emit_RelocTable            00000000004029ee f   pe_writer.obj
+ 0001:00001a16       Emit_CallIndirect          0000000000402a16 f   pe_writer.obj
+ 0001:00001a34       Emit_CallImport            0000000000402a34 f   pe_writer.obj
+ 0001:00001a54       Emit_MovRCX_Imm32          0000000000402a54 f   pe_writer.obj
+ 0001:00001a6d       Emit_LeaRAX_RIP_Rel        0000000000402a6d f   pe_writer.obj
+ 0001:00001a8e       Emit_XorRCX_RCX            0000000000402a8e f   pe_writer.obj
+ 0001:00001aab       Emit_CMP_RAX_RCX           0000000000402aab f   pe_writer.obj
+ 0001:00001ac8       Emit_Data_Bytes            0000000000402ac8 f   pe_writer.obj
+ 0001:00001ae4       Emit_LeaRCX_RVA            0000000000402ae4 f   pe_writer.obj
+ 0001:00001b36       Emit_JZ_Rel8               0000000000402b36 f   pe_writer.obj
+ 0001:00001b4f       Emit_JNZ_Rel8              0000000000402b4f f   pe_writer.obj
+ 0001:00001b68       Emit_JMP_Rel8              0000000000402b68 f   pe_writer.obj
+ 0001:00001b81       Emit_XorEAX_EAX            0000000000402b81 f   pe_writer.obj
+ 0001:00001b98       Emit_Payload               0000000000402b98 f   pe_writer.obj
+ 0001:00001c46       SavePEToDisk               0000000000402c46 f   pe_writer.obj
+ 0001:00001cd0       StressTest_Run             0000000000402cd0 f   stress_test.obj
+ 0001:00001df8       StressTest_LogStats        0000000000402df8 f   stress_test.obj
+ 0001:00002079       PrintQword                 0000000000403079 f   stress_test.obj
+ 0001:00002100       SwarmNet_Init              0000000000403100 f   swarm_network.obj
+ 0001:0000217f       SwarmNet_Listen            000000000040317f f   swarm_network.obj
+ 0001:00002299       SwarmNet_Connect           0000000000403299 f   swarm_network.obj
+ 0001:000023c1       SwarmNet_BroadcastDiscovery 00000000004033c1 f   swarm_network.obj
+ 0001:00002473       SwarmNet_SendShard         0000000000403473 f   swarm_network.obj
+ 0001:00002550       SwarmNet_RecvShard         0000000000403550 f   swarm_network.obj
+ 0001:0000260d       SwarmNet_SyncKVCache       000000000040360d f   swarm_network.obj
+ 0001:000026dc       SwarmNet_ExchangeLoadInfo  00000000004036dc f   swarm_network.obj
+ 0001:0000280d       SwarmNet_Shutdown          000000000040380d f   swarm_network.obj
+ 0001:000028b0       Swarm_Init                 00000000004038b0 f   swarm.obj
+ 0001:00002b13       Swarm_EnumGPUs             0000000000403b13 f   swarm.obj
+ 0001:00002c4e       Swarm_AllocShard           0000000000403c4e f   swarm.obj
+ 0001:00002cdb       Swarm_DispatchCompute      0000000000403cdb f   swarm.obj
+ 0001:00002dce       Swarm_P2PCopy              0000000000403dce f   swarm.obj
+ 0001:00002f6b       Swarm_GetDeviceCount       0000000000403f6b f   swarm.obj
+ 0001:00002f73       Swarm_Shutdown             0000000000403f73 f   swarm.obj
+ 0001:000030a2       Swarm_StealShardWork       00000000004040a2 f   swarm.obj
+ 0001:00003130       WebView2Init               0000000000404130 f   webview2.obj
+ 0001:000031fc       WebView2CreateEnvironment  00000000004041fc f   webview2.obj
+ 0001:00003243       WebView2Navigate           0000000000404243 f   webview2.obj
+ 0001:00003273       WebView2NavigateToString   0000000000404273 f   webview2.obj
+ 0001:000032a3       WebView2PostMessage        00000000004042a3 f   webview2.obj
+ 0001:000032d6       WebView2Resize             00000000004042d6 f   webview2.obj
+ 0001:00003306       WebView2ExecuteScript      0000000000404306 f   webview2.obj
+ 0001:0000333c       WebView2IsReady            000000000040433c f   webview2.obj
+ 0001:00003344       WebView2Shutdown           0000000000404344 f   webview2.obj
+ 0001:000033f0       WorkSteal_Init             00000000004043f0 f   work_steal.obj
+ 0001:000034df       RebuildLoadCounters        00000000004044df f   work_steal.obj
+ 0001:0000354e       WorkSteal_SelectVictim     000000000040454e f   work_steal.obj
+ 0001:000035a2       WorkSteal_AtomicClaim      00000000004045a2 f   work_steal.obj
+ 0001:000035ed       WorkSteal_MigrateShard     00000000004045ed f   work_steal.obj
+ 0001:0000370d       WorkSteal_IdleProbe        000000000040470d f   work_steal.obj
+ 0001:0000382e       WorkSteal_GetStats         000000000040482e f   work_steal.obj
+ 0001:0000388f       WorkSteal_Shutdown         000000000040488f f   work_steal.obj
+ 0001:000038d8       WorkSteal_ExchangeAllLoads 00000000004048d8 f   work_steal.obj
+ 0001:0000394a       WorkSteal_CrossNodeProbe   000000000040494a f   work_steal.obj
+ 0001:00003a77       HeapCreate                 0000000000404a77     kernel32:KERNEL32.dll
+ 0001:00003a7d       HeapAlloc                  0000000000404a7d     kernel32:KERNEL32.dll
+ 0001:00003a83       GetTickCount64             0000000000404a83     kernel32:KERNEL32.dll
+ 0001:00003a89       ExitProcess                0000000000404a89     kernel32:KERNEL32.dll
+ 0001:00003a8f       lstrcmpiW                  0000000000404a8f     kernel32:KERNEL32.dll
+ 0001:00003a95       GetModuleHandleW           0000000000404a95     kernel32:KERNEL32.dll
+ 0001:00003a9b       GetCommandLineW            0000000000404a9b     kernel32:KERNEL32.dll
+ 0001:00003aa1       CreateFileW                0000000000404aa1     kernel32:KERNEL32.dll
+ 0001:00003aa7       WriteFile                  0000000000404aa7     kernel32:KERNEL32.dll
+ 0001:00003aad       CloseHandle                0000000000404aad     kernel32:KERNEL32.dll
+ 0001:00003ab3       GlobalLock                 0000000000404ab3     kernel32:KERNEL32.dll
+ 0001:00003ab9       GlobalUnlock               0000000000404ab9     kernel32:KERNEL32.dll
+ 0001:00003abf       GlobalAlloc                0000000000404abf     kernel32:KERNEL32.dll
+ 0001:00003ac5       GlobalFree                 0000000000404ac5     kernel32:KERNEL32.dll
+ 0001:00003acb       ReadFile                   0000000000404acb     kernel32:KERNEL32.dll
+ 0001:00003ad1       GetFileSizeEx              0000000000404ad1     kernel32:KERNEL32.dll
+ 0001:00003ad7       CreateEventW               0000000000404ad7     kernel32:KERNEL32.dll
+ 0001:00003add       CreateThread               0000000000404add     kernel32:KERNEL32.dll
+ 0001:00003ae3       SetThreadPriority          0000000000404ae3     kernel32:KERNEL32.dll
+ 0001:00003ae9       SetEvent                   0000000000404ae9     kernel32:KERNEL32.dll
+ 0001:00003aef       WaitForSingleObject        0000000000404aef     kernel32:KERNEL32.dll
+ 0001:00003af5       Sleep                      0000000000404af5     kernel32:KERNEL32.dll
+ 0001:00003afb       VirtualAlloc               0000000000404afb     kernel32:KERNEL32.dll
+ 0001:00003b01       VirtualFree                0000000000404b01     kernel32:KERNEL32.dll
+ 0001:00003b07       ResetEvent                 0000000000404b07     kernel32:KERNEL32.dll
+ 0001:00003b0d       WideCharToMultiByte        0000000000404b0d     kernel32:KERNEL32.dll
+ 0001:00003b13       MultiByteToWideChar        0000000000404b13     kernel32:KERNEL32.dll
+ 0001:00003b19       CreateProcessA             0000000000404b19     kernel32:KERNEL32.dll
+ 0001:00003b1f       WaitForDebugEvent          0000000000404b1f     kernel32:KERNEL32.dll
+ 0001:00003b25       ContinueDebugEvent         0000000000404b25     kernel32:KERNEL32.dll
+ 0001:00003b2b       OpenThread                 0000000000404b2b     kernel32:KERNEL32.dll
+ 0001:00003b31       SuspendThread              0000000000404b31     kernel32:KERNEL32.dll
+ 0001:00003b37       GetThreadContext           0000000000404b37     kernel32:KERNEL32.dll
+ 0001:00003b3d       SetThreadContext           0000000000404b3d     kernel32:KERNEL32.dll
+ 0001:00003b43       ResumeThread               0000000000404b43     kernel32:KERNEL32.dll
+ 0001:00003b49       ReadProcessMemory          0000000000404b49     kernel32:KERNEL32.dll
+ 0001:00003b4f       lstrcpyA                   0000000000404b4f     kernel32:KERNEL32.dll
+ 0001:00003b55       LoadLibraryW               0000000000404b55     kernel32:KERNEL32.dll
+ 0001:00003b5b       GetProcAddress             0000000000404b5b     kernel32:KERNEL32.dll
+ 0001:00003b61       FreeLibrary                0000000000404b61     kernel32:KERNEL32.dll
+ 0001:00003b67       CreatePipe                 0000000000404b67     kernel32:KERNEL32.dll
+ 0001:00003b6d       CreateProcessW             0000000000404b6d     kernel32:KERNEL32.dll
+ 0001:00003b73       InitializeSRWLock          0000000000404b73     kernel32:KERNEL32.dll
+ 0001:00003b79       CreateFileMappingW         0000000000404b79     kernel32:KERNEL32.dll
+ 0001:00003b7f       MapViewOfFile              0000000000404b7f     kernel32:KERNEL32.dll
+ 0001:00003b85       UnmapViewOfFile            0000000000404b85     kernel32:KERNEL32.dll
+ 0001:00003b8b       AcquireSRWLockExclusive    0000000000404b8b     kernel32:KERNEL32.dll
+ 0001:00003b91       lstrcpyW                   0000000000404b91     kernel32:KERNEL32.dll
+ 0001:00003b97       ReleaseSRWLockExclusive    0000000000404b97     kernel32:KERNEL32.dll
+ 0001:00003b9d       GetStdHandle               0000000000404b9d     kernel32:KERNEL32.dll
+ 0001:00003ba3       HeapFree                   0000000000404ba3     kernel32:KERNEL32.dll
+ 0001:00003ba9       MapViewOfFileEx            0000000000404ba9     kernel32:KERNEL32.dll
+ 0001:00003baf       WaitForMultipleObjects     0000000000404baf     kernel32:KERNEL32.dll
+ 0001:00003bb5       LoadLibraryA               0000000000404bb5     kernel32:KERNEL32.dll
+ 0001:00003bbb       GetProcessHeap             0000000000404bbb     kernel32:KERNEL32.dll
+ 0001:00003bc1       CreateFileA                0000000000404bc1     kernel32:KERNEL32.dll
+ 0001:00003bc7       GetFileSize                0000000000404bc7     kernel32:KERNEL32.dll
+ 0001:00003bcd       lstrcatA                   0000000000404bcd     kernel32:KERNEL32.dll
+ 0001:00003bd3       GetExitCodeProcess         0000000000404bd3     kernel32:KERNEL32.dll
+ 0001:00003bd9       TerminateProcess           0000000000404bd9     kernel32:KERNEL32.dll
+ 0001:00003bdf       lstrlenA                   0000000000404bdf     kernel32:KERNEL32.dll
+ 0001:00003be5       lstrcmpA                   0000000000404be5     kernel32:KERNEL32.dll
+ 0001:00003beb       RegisterClassExW           0000000000404beb     User32:USER32.dll
+ 0001:00003bf1       CreateWindowExW            0000000000404bf1     User32:USER32.dll
+ 0001:00003bf7       GetMessageW                0000000000404bf7     User32:USER32.dll
+ 0001:00003bfd       TranslateMessage           0000000000404bfd     User32:USER32.dll
+ 0001:00003c03       DispatchMessageW           0000000000404c03     User32:USER32.dll
+ 0001:00003c09       DefWindowProcW             0000000000404c09     User32:USER32.dll
+ 0001:00003c0f       SetFocus                   0000000000404c0f     User32:USER32.dll
+ 0001:00003c15       CreateCaret                0000000000404c15     User32:USER32.dll
+ 0001:00003c1b       ShowCaret                  0000000000404c1b     User32:USER32.dll
+ 0001:00003c21       DestroyCaret               0000000000404c21     User32:USER32.dll
+ 0001:00003c27       InvalidateRect             0000000000404c27     User32:USER32.dll
+ 0001:00003c2d       SetTimer                   0000000000404c2d     User32:USER32.dll
+ 0001:00003c33       MessageBoxA                0000000000404c33     User32:USER32.dll
+ 0001:00003c39       GetKeyState                0000000000404c39     User32:USER32.dll
+ 0001:00003c3f       KillTimer                  0000000000404c3f     User32:USER32.dll
+ 0001:00003c45       PostMessageW               0000000000404c45     User32:USER32.dll
+ 0001:00003c4b       GetCursorPos               0000000000404c4b     User32:USER32.dll
+ 0001:00003c51       CreatePopupMenu            0000000000404c51     User32:USER32.dll
+ 0001:00003c57       AppendMenuW                0000000000404c57     User32:USER32.dll
+ 0001:00003c5d       TrackPopupMenu             0000000000404c5d     User32:USER32.dll
+ 0001:00003c63       DestroyMenu                0000000000404c63     User32:USER32.dll
+ 0001:00003c69       OpenClipboard              0000000000404c69     User32:USER32.dll
+ 0001:00003c6f       GetClipboardData           0000000000404c6f     User32:USER32.dll
+ 0001:00003c75       CloseClipboard             0000000000404c75     User32:USER32.dll
+ 0001:00003c7b       EmptyClipboard             0000000000404c7b     User32:USER32.dll
+ 0001:00003c81       SetClipboardData           0000000000404c81     User32:USER32.dll
+ 0001:00003c87       LoadCursorW                0000000000404c87     User32:USER32.dll
+ 0001:00003c8d       SetCursor                  0000000000404c8d     User32:USER32.dll
+ 0001:00003c93       BeginPaint                 0000000000404c93     User32:USER32.dll
+ 0001:00003c99       FillRect                   0000000000404c99     User32:USER32.dll
+ 0001:00003c9f       EndPaint                   0000000000404c9f     User32:USER32.dll
+ 0001:00003ca5       PostQuitMessage            0000000000404ca5     User32:USER32.dll
+ 0001:00003cab       SetCaretPos                0000000000404cab     User32:USER32.dll
+ 0001:00003cb1       SetScrollInfo              0000000000404cb1     User32:USER32.dll
+ 0001:00003cb7       GetClientRect              0000000000404cb7     User32:USER32.dll
+ 0001:00003cbd       HideCaret                  0000000000404cbd     User32:USER32.dll
+ 0001:00003cc3       GetScrollInfo              0000000000404cc3     User32:USER32.dll
+ 0001:00003cc9       InsertMenuW                0000000000404cc9     User32:USER32.dll
+ 0001:00003ccf       ScreenToClient             0000000000404ccf     User32:USER32.dll
+ 0001:00003cd5       wsprintfA                  0000000000404cd5     User32:USER32.dll
+ 0001:00003cdb       DeleteObject               0000000000404cdb     Gdi32:GDI32.dll
+ 0001:00003ce1       CreateFontIndirectW        0000000000404ce1     Gdi32:GDI32.dll
+ 0001:00003ce7       CreateSolidBrush           0000000000404ce7     Gdi32:GDI32.dll
+ 0001:00003ced       SetBkColor                 0000000000404ced     Gdi32:GDI32.dll
+ 0001:00003cf3       SetTextColor               0000000000404cf3     Gdi32:GDI32.dll
+ 0001:00003cf9       SelectObject               0000000000404cf9     Gdi32:GDI32.dll
+ 0001:00003cff       TextOutW                   0000000000404cff     Gdi32:GDI32.dll
+ 0001:00003d05       SetBkMode                  0000000000404d05     Gdi32:GDI32.dll
+ 0001:00003d0b       GetStockObject             0000000000404d0b     Gdi32:GDI32.dll
+ 0001:00003d11       WSAStartup                 0000000000404d11     WS2_32:WS2_32.dll
+ 0001:00003d17       closesocket                0000000000404d17     WS2_32:WS2_32.dll
+ 0001:00003d1d       socket                     0000000000404d1d     WS2_32:WS2_32.dll
+ 0001:00003d23       htons                      0000000000404d23     WS2_32:WS2_32.dll
+ 0001:00003d29       inet_addr                  0000000000404d29     WS2_32:WS2_32.dll
+ 0001:00003d2f       connect                    0000000000404d2f     WS2_32:WS2_32.dll
+ 0001:00003d35       send                       0000000000404d35     WS2_32:WS2_32.dll
+ 0001:00003d3b       recv                       0000000000404d3b     WS2_32:WS2_32.dll
+ 0001:00003d41       WSACleanup                 0000000000404d41     WS2_32:WS2_32.dll
+ 0001:00003d47       bind                       0000000000404d47     WS2_32:WS2_32.dll
+ 0001:00003d4d       listen                     0000000000404d4d     WS2_32:WS2_32.dll
+ 0001:00003d53       accept                     0000000000404d53     WS2_32:WS2_32.dll
+ 0001:00003d59       setsockopt                 0000000000404d59     WS2_32:WS2_32.dll
+ 0001:00003d5f       ioctlsocket                0000000000404d5f     WS2_32:WS2_32.dll
+ 0001:00003d65       CommandLineToArgvW         0000000000404d65     shell32:SHELL32.dll
+ 0001:00003d6b       GetSaveFileNameW           0000000000404d6b     ComDlg32:COMDLG32.dll
+ 0001:00003d71       GetOpenFileNameW           0000000000404d71     ComDlg32:COMDLG32.dll
+ 0001:00003d77       CoInitializeEx             0000000000404d77     Ole32:ole32.dll
+ 0001:00003d7d       CoUninitialize             0000000000404d7d     Ole32:ole32.dll
+ 0001:00003d90       UIMainLoop                 0000000000404d90 f   ui.obj
+ 0001:00003ec1       WndProc                    0000000000404ec1 f   ui.obj
+ 0001:00005a7e       RebuildLineTable           0000000000406a7e f   ui.obj
+ 0001:00005ac5       GetCurLineLen              0000000000406ac5 f   ui.obj
+ 0001:00005af0       PositionCaret              0000000000406af0 f   ui.obj
+ 0001:00005b21       EnsureCursorVisible        0000000000406b21 f   ui.obj
+ 0001:00005b6f       UpdateScrollBar            0000000000406b6f f   ui.obj
+ 0001:00005bde       FormatLineNum              0000000000406bde f   ui.obj
+ 0001:00005c2d       Bridge_OnSuggestionReady   0000000000406c2d f   ui.obj
+ 0001:00005cff       ScoreCandidate             0000000000406cff f   ui.obj
+ 0001:00005f90       PruneCandidates            0000000000406f90 f   ui.obj
+ 0001:00006030       CreateEditorPane           0000000000407030 f   ui.obj
+ 0001:0000607f       DeleteSelection            000000000040707f f   ui.obj
+ 0001:00006154       UndoPush                   0000000000407154 f   ui.obj
+ 0001:000061f0       WritePEFile                00000000004071f0 f   ui.obj
+ 0001:000062a0       AgentCoreInit              00000000004072a0 f   agent.obj
+ 0001:000062d6       SpawnTask                  00000000004072d6 f   agent.obj
+ 0001:000062e4       ProcessOneAgentMessage     00000000004072e4 f   agent.obj
+ 0001:00006340       AsyncPage_Init             0000000000407340 f   async_pager.obj
+ 0001:00006431       AsyncPage_Shutdown         0000000000407431 f   async_pager.obj
+ 0001:000064a2       AsyncPage_Submit           00000000004074a2 f   async_pager.obj
+ 0001:0000654b       AsyncPage_Poll             000000000040754b f   async_pager.obj
+ 0001:0000657f       AsyncPage_Flush            000000000040757f f   async_pager.obj
+ 0001:000065a1       AsyncPage_GetStats         00000000004075a1 f   async_pager.obj
+ 0001:000065de       AsyncPage_Worker           00000000004075de f   async_pager.obj
+ 0001:000066e0       Batch_Init                 00000000004076e0 f   batch_decoder.obj
+ 0001:00006708       Batch_AddSlot              0000000000407708 f   batch_decoder.obj
+ 0001:00006749       Batch_Step                 0000000000407749 f   batch_decoder.obj
+ 0001:000067c1       Batch_GetOutput            00000000004077c1 f   batch_decoder.obj
+ 0001:000067d0       BeaconRouterInit           00000000004077d0 f   beacon.obj
+ 0001:00006816       BeaconSend                 0000000000407816 f   beacon.obj
+ 0001:0000684b       BeaconRecv                 000000000040784b f   beacon.obj
+ 0001:00006886       TryBeaconRecv              0000000000407886 f   beacon.obj
+ 0001:000068c7       RegisterAgent              00000000004078c7 f   beacon.obj
+ 0001:000068e0       InferenceEngineInit        00000000004078e0 f   inference.obj
+ 0001:00006941       RunInference               0000000000407941 f   inference.obj
+ 0001:000069ac       TokenGenerate              00000000004079ac f   inference.obj
+ 0001:000069c1       ClearKVCache               00000000004079c1 f   inference.obj
+ 0001:000069ea       PruneKVCache               00000000004079ea f   inference.obj
+ 0001:00006a4e       UpdateImportanceScores     0000000000407a4e f   inference.obj
+ 0001:00006a89       GetTopKIndices             0000000000407a89 f   inference.obj
+ 0001:00006af1       KVPage_Init                0000000000407af1 f   inference.obj
+ 0001:00006b29       KVPage_Grow                0000000000407b29 f   inference.obj
+ 0001:00006b82       KVPage_GetSegment          0000000000407b82 f   inference.obj
+ 0001:00006bb4       KVPage_Shrink              0000000000407bb4 f   inference.obj
+ 0001:00006c01       KVPage_PinWorkingSet       0000000000407c01 f   inference.obj
+ 0001:00006c3a       KVBlock_Init               0000000000407c3a f   inference.obj
+ 0001:00006ca6       KVBlock_AllocBlock         0000000000407ca6 f   inference.obj
+ 0001:00006d33       KVBlock_FreeBlock          0000000000407d33 f   inference.obj
+ 0001:00006dad       KVBlock_MapToken           0000000000407dad f   inference.obj
+ 0001:00006dc6       KVBlock_GetTokenPtr        0000000000407dc6 f   inference.obj
+ 0001:00006e32       KVBlock_ReuseBlock         0000000000407e32 f   inference.obj
+ 0001:00006ea4       KVHM_WriteToken            0000000000407ea4 f   inference.obj
+ 0001:00006f44       KVHM_GetHeadPtr            0000000000407f44 f   inference.obj
+ 0001:00006f60       LSPBridgeInit              0000000000407f60 f   lsp.obj
+ 0001:000070f8       LSPSendRequest             00000000004080f8 f   lsp.obj
+ 0001:0000713b       LSPBridgeShutdown          000000000040813b f   lsp.obj
+ 0001:000071a0       ModelLoaderInit            00000000004081a0 f   model_loader.obj
+ 0001:000071b7       LoadModel                  00000000004081b7 f   model_loader.obj
+ 0001:000072bd       GetTensor                  00000000004082bd f   model_loader.obj
+ 0001:000072d3       UnloadModel                00000000004082d3 f   model_loader.obj
+ 0001:00007334       HotSwapModel               0000000000408334 f   model_loader.obj
+ 0001:0000745f       GetCurrentModelPath        000000000040845f f   model_loader.obj
+ 0001:00007467       GetModelLoadTimestamp      0000000000408467 f   model_loader.obj
+ 0001:0000746f       ValidateModelCompat        000000000040846f f   model_loader.obj
+ 0001:000074a0       OllamaClient_Init          00000000004084a0 f   ollama_client.obj
+ 0001:00007512       OllamaClient_Connect       0000000000408512 f   ollama_client.obj
+ 0001:000075a6       OllamaClient_Generate      00000000004085a6 f   ollama_client.obj
+ 0001:0000764b       OllamaClient_Generate2     000000000040864b f   ollama_client.obj
+ 0001:000078fd       OllamaClient_Chat          00000000004088fd f   ollama_client.obj
+ 0001:00007c04       OllamaClient_Abort         0000000000408c04 f   ollama_client.obj
+ 0001:00007c0f       OllamaClient_SetModel      0000000000408c0f f   ollama_client.obj
+ 0001:00007c3c       OllamaClient_Shutdown      0000000000408c3c f   ollama_client.obj
+ 0001:00007c7e       OllamaClient_IsConnected   0000000000408c7e f   ollama_client.obj
+ 0001:00007c90       main                       0000000000408c90 f   ollama_sovereign_proxy.obj
+ 0001:00007ddd       handle_client              0000000000408ddd f   ollama_sovereign_proxy.obj
+ 0001:00007f1d       inject_capabilities        0000000000408f1d f   ollama_sovereign_proxy.obj
+ 0001:0000800e       memmem                     000000000040900e f   ollama_sovereign_proxy.obj
+ 0001:00008060       SIMD_RMSNorm               0000000000409060 f   simd_kernels.obj
+ 0001:0000814c       SIMD_Softmax               000000000040914c f   simd_kernels.obj
+ 0001:00008202       SIMD_DotProduct            0000000000409202 f   simd_kernels.obj
+ 0001:00008277       SIMD_ScaledDotBatch        0000000000409277 f   simd_kernels.obj
+ 0001:000082e4       SIMD_VAccumulate           00000000004092e4 f   simd_kernels.obj
+ 0001:00008350       SIMD_MatVecQ4              0000000000409350 f   simd_kernels.obj
+ 0001:00008432       SIMD_RoPE                  0000000000409432 f   simd_kernels.obj
+ 0001:000084e0       SIMD_SiLU                  00000000004094e0 f   simd_kernels.obj
+ 0001:00008540       SlotRing_Init              0000000000409540 f   slot_ring.obj
+ 0001:000085dc       SlotRing_Destroy           00000000004095dc f   slot_ring.obj
+ 0001:0000860f       SlotRing_Attach            000000000040960f f   slot_ring.obj
+ 0001:000086a1       SlotRing_Detach            00000000004096a1 f   slot_ring.obj
+ 0001:00008715       SlotRing_GetTensor         0000000000409715 f   slot_ring.obj
+ 0001:00008830       SlotRing_Tick              0000000000409830 f   slot_ring.obj
+ 0001:00008857       SlotRing_ClockEvict        0000000000409857 f   slot_ring.obj
+ 0001:000088fb       SlotRing_SetBudget         00000000004098fb f   slot_ring.obj
+ 0001:00008903       SlotRing_GetSlotStats      0000000000409903 f   slot_ring.obj
+ 0001:00008962       SlotRing_EvictAll          0000000000409962 f   slot_ring.obj
+ 0001:0000899a       SlotRing_Pin               000000000040999a f   slot_ring.obj
+ 0001:000089c7       SlotRing_Unpin             00000000004099c7 f   slot_ring.obj
+ 0001:000089ee       SlotRing_Prefetch          00000000004099ee f   slot_ring.obj
+ 0001:00008a8b       SlotRing_BatchEvict        0000000000409a8b f   slot_ring.obj
+ 0001:00008aa5       SlotRing_PredictivePrefetch 0000000000409aa5 f   slot_ring.obj
+ 0001:00008b10       StreamLoaderInit           0000000000409b10 f   stream_loader.obj
+ 0001:00008b57       StreamMapModel             0000000000409b57 f   stream_loader.obj
+ 0001:00008b96       StreamUnmap                0000000000409b96 f   stream_loader.obj
+ 0001:00008ba4       StreamPrefetch             0000000000409ba4 f   stream_loader.obj
+ 0001:00008be8       StreamEvictCold            0000000000409be8 f   stream_loader.obj
+ 0001:00008c0a       StreamGetStats             0000000000409c0a f   stream_loader.obj
+ 0001:00008c30       Consensus_Init             0000000000409c30 f   swarm_consensus.obj
+ 0001:00008c50       Consensus_Propose          0000000000409c50 f   swarm_consensus.obj
+ 0001:00008c69       Consensus_Vote             0000000000409c69 f   swarm_consensus.obj
+ 0001:00008c6c       Consensus_GetState         0000000000409c6c f   swarm_consensus.obj
+ 0001:00008c80       SwarmCoord_Init            0000000000409c80 f   swarm_coordinator.obj
+ 0001:00008dcd       WorkerThreadProc           0000000000409dcd f   swarm_coordinator.obj
+ 0001:00008ede       HeartbeatThreadProc        0000000000409ede f   swarm_coordinator.obj
+ 0001:00008f59       SwarmCoord_DistributeWork  0000000000409f59 f   swarm_coordinator.obj
+ 0001:00008fd0       SwarmCoord_AllReduce       0000000000409fd0 f   swarm_coordinator.obj
+ 0001:000090c9       SwarmCoord_GetWorkerStatus 000000000040a0c9 f   swarm_coordinator.obj
+ 0001:000090e8       SwarmCoord_Shutdown        000000000040a0e8 f   swarm_coordinator.obj
+ 0001:000091d0       Task_Init                  000000000040a1d0 f   tasks.obj
+ 0001:0000926d       Task_RegisterDefaults      000000000040a26d f   tasks.obj
+ 0001:000093b2       Task_LoadConfig            000000000040a3b2 f   tasks.obj
+ 0001:00009533       Task_SkipToValue           000000000040a533 f   tasks.obj
+ 0001:00009560       Task_CopyValue             000000000040a560 f   tasks.obj
+ 0001:00009584       Task_Run                   000000000040a584 f   tasks.obj
+ 0001:000097c1       Task_OutputReader          000000000040a7c1 f   tasks.obj
+ 0001:000098b4       Task_Kill                  000000000040a8b4 f   tasks.obj
+ 0001:00009930       Task_GetOutput             000000000040a930 f   tasks.obj
+ 0001:00009973       Task_GetCount              000000000040a973 f   tasks.obj
+ 0001:00009980       Test_Init                  000000000040a980 f   testing.obj
+ 0001:00009a42       Test_AddNode               000000000040aa42 f   testing.obj
+ 0001:00009b08       Test_Discover              000000000040ab08 f   testing.obj
+ 0001:00009c46       Test_Run                   000000000040ac46 f   testing.obj
+ 0001:00009ead       Test_ParseOutput           000000000040aead f   testing.obj
+ 0001:0000a0aa       Test_GetResults            000000000040b0aa f   testing.obj
+ 0004:00000000       g_hInstance                000000000040e000     main.obj
+ 0004:00000008       g_hHeap                    000000000040e008     main.obj
+ 0004:00000010       g_cmdShow                  000000000040e010     main.obj
+ 0004:00000014       g_benchMode                000000000040e014     main.obj
+ 0004:0000001c       g_pModelPath               000000000040e01c     main.obj
+ 0004:00000024       g_pPrompt                  000000000040e024     main.obj
+ 0004:00000160       hMainWnd                   000000000040e160     ui.obj
+ 0004:00000178       g_cursorLine               000000000040e178     ui.obj
+ 0004:0000017c       g_cursorCol                000000000040e17c     ui.obj
+ 0004:00000190       g_totalChars               000000000040e190     ui.obj
+ 0004:000001a8       g_lineOff                  000000000040e1a8     ui.obj
+ 0004:00004030       g_ghostTextBuffer          0000000000412030     ui.obj
+ 0004:000048b0       g_ghostLineCount           00000000004128b0     ui.obj
+ 0004:000048b4       g_ghostTextLen             00000000004128b4     ui.obj
+ 0004:000048b8       g_ghostActive              00000000004128b8     ui.obj
+ 0004:000048c2       g_inferencePending         00000000004128c2     ui.obj
+ 0004:000048d0       g_candidates               00000000004128d0     ui.obj
+ 0004:000058d0       g_candidateLens            00000000004138d0     ui.obj
+ 0004:000058f0       g_candidateScores          00000000004138f0     ui.obj
+ 0004:00005910       g_candidateCount           0000000000413910     ui.obj
+ 0004:00005914       g_bestCandidate            0000000000413914     ui.obj
+ 0004:00005918       g_rlhfAcceptCount          0000000000413918     ui.obj
+ 0004:0000591c       g_rlhfRejectCount          000000000041391c     ui.obj
+ 0004:00016558       g_peSize                   0000000000424558     ui.obj
+ 0004:00016560       g_peBuffer                 0000000000424560     ui.obj
+ 0004:00018f30       g_routerBackend            0000000000426f30     inference_router.obj
+ 0004:00018f34       g_routerReady              0000000000426f34     inference_router.obj
+ 0004:00018f38       g_routerAbort              0000000000426f38     inference_router.obj
+ 0004:00018f94       g_hasAVX512                0000000000426f94     inference.obj
+ 0004:00018fac       g_accumulatedSteps         0000000000426fac     mesh.obj
+ 0004:00019410       g_cursor                   0000000000427410     pe_writer.obj
+ 0004:00019418       g_dataCursor               0000000000427418     pe_writer.obj
+ 0004:000194b0       g_vmm_base                 00000000004274b0     stream_loader.obj
+ 0004:000194b8       g_vmm_size                 00000000004274b8     stream_loader.obj
+ 0004:00019630       g_consensusTerm            0000000000427630     swarm_consensus.obj
+ 0004:00019638       g_consensusLeader          0000000000427638     swarm_consensus.obj
+ 0004:00019650       g_coordReady               0000000000427650     swarm_coordinator.obj
+ 0004:00019654       g_workerCount              0000000000427654     swarm_coordinator.obj
+ 0004:00019ec8       g_netReady                 0000000000427ec8     swarm_network.obj
+ 0004:00019ed0       g_remoteNodes              0000000000427ed0     swarm_network.obj
+ 0004:0001a6d0       g_remoteCount              00000000004286d0     swarm_network.obj
+ 0004:0001a6e0       g_swarmDeviceCount         00000000004286e0     swarm.obj
+ 0004:0001a6e4       g_swarmReady               00000000004286e4     swarm.obj
+ 0004:0001a820       g_shardDescs               0000000000428820     swarm.obj
+ 0004:0001c820       g_shardCount               000000000042a820     swarm.obj
+ 0004:0001ca00       g_stealReady               000000000042aa00     work_steal.obj
+ 0004:0001ca70       g_totalSteals              000000000042aa70     work_steal.obj
+ 0004:0001ca78       g_totalMigrations          000000000042aa78     work_steal.obj
+ 0004:0001ca80       g_stealFailures            000000000042aa80     work_steal.obj
+ 0004:0001ca98       g_crossNodeSteals          000000000042aa98     work_steal.obj
+ 0004:0001cbc0       __IMPORT_DESCRIPTOR_KERNEL32 000000000042abc0     kernel32:KERNEL32.dll
+ 0004:0001cbd4       __IMPORT_DESCRIPTOR_USER32 000000000042abd4     User32:USER32.dll
+ 0004:0001cbe8       __IMPORT_DESCRIPTOR_GDI32  000000000042abe8     Gdi32:GDI32.dll
+ 0004:0001cbfc       __IMPORT_DESCRIPTOR_WS2_32 000000000042abfc     WS2_32:WS2_32.dll
+ 0004:0001cc10       __IMPORT_DESCRIPTOR_SHELL32 000000000042ac10     shell32:SHELL32.dll
+ 0004:0001cc24       __IMPORT_DESCRIPTOR_COMDLG32 000000000042ac24     ComDlg32:COMDLG32.dll
+ 0004:0001cc38       __IMPORT_DESCRIPTOR_ole32  000000000042ac38     Ole32:ole32.dll
+ 0004:0001cc4c       __NULL_IMPORT_DESCRIPTOR   000000000042ac4c     kernel32:KERNEL32.dll
+ 0004:0001d0a8       __imp_HeapCreate           000000000042b0a8     kernel32:KERNEL32.dll
+ 0004:0001d0b0       __imp_HeapAlloc            000000000042b0b0     kernel32:KERNEL32.dll
+ 0004:0001d0b8       __imp_GetTickCount64       000000000042b0b8     kernel32:KERNEL32.dll
+ 0004:0001d0c0       __imp_ExitProcess          000000000042b0c0     kernel32:KERNEL32.dll
+ 0004:0001d0c8       __imp_lstrcmpiW            000000000042b0c8     kernel32:KERNEL32.dll
+ 0004:0001d0d0       __imp_GetModuleHandleW     000000000042b0d0     kernel32:KERNEL32.dll
+ 0004:0001d0d8       __imp_GetCommandLineW      000000000042b0d8     kernel32:KERNEL32.dll
+ 0004:0001d0e0       __imp_CreateFileW          000000000042b0e0     kernel32:KERNEL32.dll
+ 0004:0001d0e8       __imp_WriteFile            000000000042b0e8     kernel32:KERNEL32.dll
+ 0004:0001d0f0       __imp_CloseHandle          000000000042b0f0     kernel32:KERNEL32.dll
+ 0004:0001d0f8       __imp_GlobalLock           000000000042b0f8     kernel32:KERNEL32.dll
+ 0004:0001d100       __imp_GlobalUnlock         000000000042b100     kernel32:KERNEL32.dll
+ 0004:0001d108       __imp_GlobalAlloc          000000000042b108     kernel32:KERNEL32.dll
+ 0004:0001d110       __imp_GlobalFree           000000000042b110     kernel32:KERNEL32.dll
+ 0004:0001d118       __imp_ReadFile             000000000042b118     kernel32:KERNEL32.dll
+ 0004:0001d120       __imp_GetFileSizeEx        000000000042b120     kernel32:KERNEL32.dll
+ 0004:0001d128       __imp_CreateEventW         000000000042b128     kernel32:KERNEL32.dll
+ 0004:0001d130       __imp_CreateThread         000000000042b130     kernel32:KERNEL32.dll
+ 0004:0001d138       __imp_SetThreadPriority    000000000042b138     kernel32:KERNEL32.dll
+ 0004:0001d140       __imp_SetEvent             000000000042b140     kernel32:KERNEL32.dll
+ 0004:0001d148       __imp_WaitForSingleObject  000000000042b148     kernel32:KERNEL32.dll
+ 0004:0001d150       __imp_Sleep                000000000042b150     kernel32:KERNEL32.dll
+ 0004:0001d158       __imp_VirtualAlloc         000000000042b158     kernel32:KERNEL32.dll
+ 0004:0001d160       __imp_VirtualFree          000000000042b160     kernel32:KERNEL32.dll
+ 0004:0001d168       __imp_ResetEvent           000000000042b168     kernel32:KERNEL32.dll
+ 0004:0001d170       __imp_WideCharToMultiByte  000000000042b170     kernel32:KERNEL32.dll
+ 0004:0001d178       __imp_MultiByteToWideChar  000000000042b178     kernel32:KERNEL32.dll
+ 0004:0001d180       __imp_CreateProcessA       000000000042b180     kernel32:KERNEL32.dll
+ 0004:0001d188       __imp_WaitForDebugEvent    000000000042b188     kernel32:KERNEL32.dll
+ 0004:0001d190       __imp_ContinueDebugEvent   000000000042b190     kernel32:KERNEL32.dll
+ 0004:0001d198       __imp_OpenThread           000000000042b198     kernel32:KERNEL32.dll
+ 0004:0001d1a0       __imp_SuspendThread        000000000042b1a0     kernel32:KERNEL32.dll
+ 0004:0001d1a8       __imp_GetThreadContext     000000000042b1a8     kernel32:KERNEL32.dll
+ 0004:0001d1b0       __imp_SetThreadContext     000000000042b1b0     kernel32:KERNEL32.dll
+ 0004:0001d1b8       __imp_ResumeThread         000000000042b1b8     kernel32:KERNEL32.dll
+ 0004:0001d1c0       __imp_ReadProcessMemory    000000000042b1c0     kernel32:KERNEL32.dll
+ 0004:0001d1c8       __imp_lstrcpyA             000000000042b1c8     kernel32:KERNEL32.dll
+ 0004:0001d1d0       __imp_LoadLibraryW         000000000042b1d0     kernel32:KERNEL32.dll
+ 0004:0001d1d8       __imp_GetProcAddress       000000000042b1d8     kernel32:KERNEL32.dll
+ 0004:0001d1e0       __imp_FreeLibrary          000000000042b1e0     kernel32:KERNEL32.dll
+ 0004:0001d1e8       __imp_CreatePipe           000000000042b1e8     kernel32:KERNEL32.dll
+ 0004:0001d1f0       __imp_CreateProcessW       000000000042b1f0     kernel32:KERNEL32.dll
+ 0004:0001d1f8       __imp_InitializeSRWLock    000000000042b1f8     kernel32:KERNEL32.dll
+ 0004:0001d200       __imp_CreateFileMappingW   000000000042b200     kernel32:KERNEL32.dll
+ 0004:0001d208       __imp_MapViewOfFile        000000000042b208     kernel32:KERNEL32.dll
+ 0004:0001d210       __imp_UnmapViewOfFile      000000000042b210     kernel32:KERNEL32.dll
+ 0004:0001d218       __imp_AcquireSRWLockExclusive 000000000042b218     kernel32:KERNEL32.dll
+ 0004:0001d220       __imp_lstrcpyW             000000000042b220     kernel32:KERNEL32.dll
+ 0004:0001d228       __imp_ReleaseSRWLockExclusive 000000000042b228     kernel32:KERNEL32.dll
+ 0004:0001d230       __imp_GetStdHandle         000000000042b230     kernel32:KERNEL32.dll
+ 0004:0001d238       __imp_HeapFree             000000000042b238     kernel32:KERNEL32.dll
+ 0004:0001d240       __imp_MapViewOfFileEx      000000000042b240     kernel32:KERNEL32.dll
+ 0004:0001d248       __imp_WaitForMultipleObjects 000000000042b248     kernel32:KERNEL32.dll
+ 0004:0001d250       __imp_LoadLibraryA         000000000042b250     kernel32:KERNEL32.dll
+ 0004:0001d258       __imp_GetProcessHeap       000000000042b258     kernel32:KERNEL32.dll
+ 0004:0001d260       __imp_CreateFileA          000000000042b260     kernel32:KERNEL32.dll
+ 0004:0001d268       __imp_GetFileSize          000000000042b268     kernel32:KERNEL32.dll
+ 0004:0001d270       __imp_lstrcatA             000000000042b270     kernel32:KERNEL32.dll
+ 0004:0001d278       __imp_GetExitCodeProcess   000000000042b278     kernel32:KERNEL32.dll
+ 0004:0001d280       __imp_TerminateProcess     000000000042b280     kernel32:KERNEL32.dll
+ 0004:0001d288       __imp_lstrlenA             000000000042b288     kernel32:KERNEL32.dll
+ 0004:0001d290       __imp_lstrcmpA             000000000042b290     kernel32:KERNEL32.dll
+ 0004:0001d298       KERNEL32_NULL_THUNK_DATA  000000000042b298     kernel32:KERNEL32.dll
+ 0004:0001d2a0       __imp_RegisterClassExW     000000000042b2a0     User32:USER32.dll
+ 0004:0001d2a8       __imp_CreateWindowExW      000000000042b2a8     User32:USER32.dll
+ 0004:0001d2b0       __imp_GetMessageW          000000000042b2b0     User32:USER32.dll
+ 0004:0001d2b8       __imp_TranslateMessage     000000000042b2b8     User32:USER32.dll
+ 0004:0001d2c0       __imp_DispatchMessageW     000000000042b2c0     User32:USER32.dll
+ 0004:0001d2c8       __imp_DefWindowProcW       000000000042b2c8     User32:USER32.dll
+ 0004:0001d2d0       __imp_SetFocus             000000000042b2d0     User32:USER32.dll
+ 0004:0001d2d8       __imp_CreateCaret          000000000042b2d8     User32:USER32.dll
+ 0004:0001d2e0       __imp_ShowCaret            000000000042b2e0     User32:USER32.dll
+ 0004:0001d2e8       __imp_DestroyCaret         000000000042b2e8     User32:USER32.dll
+ 0004:0001d2f0       __imp_InvalidateRect       000000000042b2f0     User32:USER32.dll
+ 0004:0001d2f8       __imp_SetTimer             000000000042b2f8     User32:USER32.dll
+ 0004:0001d300       __imp_MessageBoxA          000000000042b300     User32:USER32.dll
+ 0004:0001d308       __imp_GetKeyState          000000000042b308     User32:USER32.dll
+ 0004:0001d310       __imp_KillTimer            000000000042b310     User32:USER32.dll
+ 0004:0001d318       __imp_PostMessageW         000000000042b318     User32:USER32.dll
+ 0004:0001d320       __imp_GetCursorPos         000000000042b320     User32:USER32.dll
+ 0004:0001d328       __imp_CreatePopupMenu      000000000042b328     User32:USER32.dll
+ 0004:0001d330       __imp_AppendMenuW          000000000042b330     User32:USER32.dll
+ 0004:0001d338       __imp_TrackPopupMenu       000000000042b338     User32:USER32.dll
+ 0004:0001d340       __imp_DestroyMenu          000000000042b340     User32:USER32.dll
+ 0004:0001d348       __imp_OpenClipboard        000000000042b348     User32:USER32.dll
+ 0004:0001d350       __imp_GetClipboardData     000000000042b350     User32:USER32.dll
+ 0004:0001d358       __imp_CloseClipboard       000000000042b358     User32:USER32.dll
+ 0004:0001d360       __imp_EmptyClipboard       000000000042b360     User32:USER32.dll
+ 0004:0001d368       __imp_SetClipboardData     000000000042b368     User32:USER32.dll
+ 0004:0001d370       __imp_LoadCursorW          000000000042b370     User32:USER32.dll
+ 0004:0001d378       __imp_SetCursor            000000000042b378     User32:USER32.dll
+ 0004:0001d380       __imp_BeginPaint           000000000042b380     User32:USER32.dll
+ 0004:0001d388       __imp_FillRect             000000000042b388     User32:USER32.dll
+ 0004:0001d390       __imp_EndPaint             000000000042b390     User32:USER32.dll
+ 0004:0001d398       __imp_PostQuitMessage      000000000042b398     User32:USER32.dll
+ 0004:0001d3a0       __imp_SetCaretPos          000000000042b3a0     User32:USER32.dll
+ 0004:0001d3a8       __imp_SetScrollInfo        000000000042b3a8     User32:USER32.dll
+ 0004:0001d3b0       __imp_GetClientRect        000000000042b3b0     User32:USER32.dll
+ 0004:0001d3b8       __imp_HideCaret            000000000042b3b8     User32:USER32.dll
+ 0004:0001d3c0       __imp_GetScrollInfo        000000000042b3c0     User32:USER32.dll
+ 0004:0001d3c8       __imp_InsertMenuW          000000000042b3c8     User32:USER32.dll
+ 0004:0001d3d0       __imp_ScreenToClient       000000000042b3d0     User32:USER32.dll
+ 0004:0001d3d8       __imp_wsprintfA            000000000042b3d8     User32:USER32.dll
+ 0004:0001d3e0       USER32_NULL_THUNK_DATA    000000000042b3e0     User32:USER32.dll
+ 0004:0001d3e8       __imp_DeleteObject         000000000042b3e8     Gdi32:GDI32.dll
+ 0004:0001d3f0       __imp_CreateFontIndirectW  000000000042b3f0     Gdi32:GDI32.dll
+ 0004:0001d3f8       __imp_CreateSolidBrush     000000000042b3f8     Gdi32:GDI32.dll
+ 0004:0001d400       __imp_SetBkColor           000000000042b400     Gdi32:GDI32.dll
+ 0004:0001d408       __imp_SetTextColor         000000000042b408     Gdi32:GDI32.dll
+ 0004:0001d410       __imp_SelectObject         000000000042b410     Gdi32:GDI32.dll
+ 0004:0001d418       __imp_TextOutW             000000000042b418     Gdi32:GDI32.dll
+ 0004:0001d420       __imp_SetBkMode            000000000042b420     Gdi32:GDI32.dll
+ 0004:0001d428       __imp_GetStockObject       000000000042b428     Gdi32:GDI32.dll
+ 0004:0001d430       GDI32_NULL_THUNK_DATA     000000000042b430     Gdi32:GDI32.dll
+ 0004:0001d438       __imp_WSAStartup           000000000042b438     WS2_32:WS2_32.dll
+ 0004:0001d440       __imp_closesocket          000000000042b440     WS2_32:WS2_32.dll
+ 0004:0001d448       __imp_socket               000000000042b448     WS2_32:WS2_32.dll
+ 0004:0001d450       __imp_htons                000000000042b450     WS2_32:WS2_32.dll
+ 0004:0001d458       __imp_inet_addr            000000000042b458     WS2_32:WS2_32.dll
+ 0004:0001d460       __imp_connect              000000000042b460     WS2_32:WS2_32.dll
+ 0004:0001d468       __imp_send                 000000000042b468     WS2_32:WS2_32.dll
+ 0004:0001d470       __imp_recv                 000000000042b470     WS2_32:WS2_32.dll
+ 0004:0001d478       __imp_WSACleanup           000000000042b478     WS2_32:WS2_32.dll
+ 0004:0001d480       __imp_bind                 000000000042b480     WS2_32:WS2_32.dll
+ 0004:0001d488       __imp_listen               000000000042b488     WS2_32:WS2_32.dll
+ 0004:0001d490       __imp_accept               000000000042b490     WS2_32:WS2_32.dll
+ 0004:0001d498       __imp_setsockopt           000000000042b498     WS2_32:WS2_32.dll
+ 0004:0001d4a0       __imp_ioctlsocket          000000000042b4a0     WS2_32:WS2_32.dll
+ 0004:0001d4a8       WS2_32_NULL_THUNK_DATA    000000000042b4a8     WS2_32:WS2_32.dll
+ 0004:0001d4b0       __imp_CommandLineToArgvW   000000000042b4b0     shell32:SHELL32.dll
+ 0004:0001d4b8       SHELL32_NULL_THUNK_DATA   000000000042b4b8     shell32:SHELL32.dll
+ 0004:0001d4c0       __imp_GetSaveFileNameW     000000000042b4c0     ComDlg32:COMDLG32.dll
+ 0004:0001d4c8       __imp_GetOpenFileNameW     000000000042b4c8     ComDlg32:COMDLG32.dll
+ 0004:0001d4d0       COMDLG32_NULL_THUNK_DATA  000000000042b4d0     ComDlg32:COMDLG32.dll
+ 0004:0001d4d8       __imp_CoInitializeEx       000000000042b4d8     Ole32:ole32.dll
+ 0004:0001d4e0       __imp_CoUninitialize       000000000042b4e0     Ole32:ole32.dll
+ 0004:0001d4e8       ole32_NULL_THUNK_DATA     000000000042b4e8     Ole32:ole32.dll
+ 0004:0001dce0       g_textBuf                  000000000042bce0     ui.obj
+ 0004:0005a180       g_modelbase                0000000000468180     inference.obj
+ 0004:0005a18c       g_kv_len                   000000000046818c     inference.obj
+
+ entry point at        0001:00000346
+
+ Static symbols
+

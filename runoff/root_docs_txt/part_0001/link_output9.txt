@@ -1,0 +1,27 @@
+   Creating library .\bin\RawrXD-Win32IDE.lib and object .\bin\RawrXD-Win32IDE.exp
+Generating code
+Finished generating code
+libucrt.lib(exit.obj) : warning LNK4006: _cexit already defined in ucrt.lib(api-ms-win-crt-runtime-l1-1-0.dll); second definition ignored
+libucrt.lib(exit.obj) : warning LNK4006: exit already defined in ucrt.lib(api-ms-win-crt-runtime-l1-1-0.dll); second definition ignored
+libucrt.lib(onexit.obj) : warning LNK4006: _crt_at_quick_exit already defined in ucrt.lib(api-ms-win-crt-runtime-l1-1-0.dll); second definition ignored
+libucrt.lib(onexit.obj) : warning LNK4006: _crt_atexit already defined in ucrt.lib(api-ms-win-crt-runtime-l1-1-0.dll); second definition ignored
+libucrt.lib(onexit.obj) : warning LNK4006: _execute_onexit_table already defined in ucrt.lib(api-ms-win-crt-runtime-l1-1-0.dll); second definition ignored
+libucrt.lib(onexit.obj) : warning LNK4006: _initialize_onexit_table already defined in ucrt.lib(api-ms-win-crt-runtime-l1-1-0.dll); second definition ignored
+libucrt.lib(onexit.obj) : warning LNK4006: _register_onexit_function already defined in ucrt.lib(api-ms-win-crt-runtime-l1-1-0.dll); second definition ignored
+libucrt.lib(invalid_parameter.obj) : warning LNK4006: _invoke_watson already defined in ucrt.lib(api-ms-win-crt-runtime-l1-1-0.dll); second definition ignored
+libucrt.lib(new_handler.obj) : warning LNK4006: _callnewh already defined in ucrt.lib(api-ms-win-crt-heap-l1-1-0.dll); second definition ignored
+libucrt.lib(environment_initialization.obj) : warning LNK4006: _initialize_narrow_environment already defined in ucrt.lib(api-ms-win-crt-runtime-l1-1-0.dll); second definition ignored
+libucrt.lib(fflush.obj) : warning LNK4006: fflush already defined in ucrt.lib(api-ms-win-crt-stdio-l1-1-0.dll); second definition ignored
+libucrt.lib(_file.obj) : warning LNK4006: __acrt_iob_func already defined in ucrt.lib(api-ms-win-crt-stdio-l1-1-0.dll); second definition ignored
+libucrt.lib(_file.obj) : warning LNK4006: _get_stream_buffer_pointers already defined in ucrt.lib(api-ms-win-crt-stdio-l1-1-0.dll); second definition ignored
+libucrt.lib(_file.obj) : warning LNK4006: _lock_file already defined in ucrt.lib(api-ms-win-crt-filesystem-l1-1-0.dll); second definition ignored
+libucrt.lib(_file.obj) : warning LNK4006: _unlock_file already defined in ucrt.lib(api-ms-win-crt-filesystem-l1-1-0.dll); second definition ignored
+libucrt.lib(exception_filter.obj) : warning LNK4006: _seh_filter_dll already defined in ucrt.lib(api-ms-win-crt-runtime-l1-1-0.dll); second definition ignored
+libucrt.lib(errno.obj) : warning LNK4006: _errno already defined in ucrt.lib(api-ms-win-crt-runtime-l1-1-0.dll); second definition ignored
+libucrt.lib(strnlen.obj) : warning LNK4006: strnlen already defined in ucrt.lib(api-ms-win-crt-string-l1-1-0.dll); second definition ignored
+libucrt.lib(strnlen.obj) : warning LNK4006: wcslen already defined in ucrt.lib(api-ms-win-crt-string-l1-1-0.dll); second definition ignored
+libucrt.lib(initctype.obj) : warning LNK4006: ___lc_codepage_func already defined in ucrt.lib(api-ms-win-crt-locale-l1-1-0.dll); second definition ignored
+libucrt.lib(atox.obj) : warning LNK4006: atoi already defined in ucrt.lib(api-ms-win-crt-convert-l1-1-0.dll); second definition ignored
+libucrt.lib(atox.obj) : warning LNK4006: atoll already defined in ucrt.lib(api-ms-win-crt-convert-l1-1-0.dll); second definition ignored
+libucrt.lib(strnicmp.obj) : warning LNK4006: _strnicmp already defined in ucrt.lib(api-ms-win-crt-string-l1-1-0.dll); second definition ignored
+.\bin\RawrXD-Win32IDE.exe : warning LNK4088: image being generated due to /FORCE option; image may not run

@@ -1,0 +1,6 @@
+﻿Total files: 314584
+completed_non_stub: 144001
+undefined_or_stub: 170583
+Inventory CSV: D:\rawrxd\RAWRXD_INVENTORY\inventory.csv
+Completed list: D:\rawrxd\RAWRXD_INVENTORY\completed_non_stub\paths.txt
+Undefined list: D:\rawrxd\RAWRXD_INVENTORY\undefined_or_stub\paths.txt

@@ -14,6 +14,7 @@
 #include <chrono>
 #include <ctime>
 #include <psapi.h>
+#include <set>
 
 #ifdef _WIN32
 #include <richedit.h>
@@ -25,6 +26,16 @@
 #endif
 
 namespace fs = std::filesystem;
+
+namespace {
+std::vector<long> g_multiCursorCarets;
+std::set<int> g_breakpointLines;
+int g_severityFilterMode = 0; // 0=all,1=error,2=warning,3=info
+bool g_agentDiffPanelVisible = true;
+bool g_debuggerContainerVisible = true;
+int g_debuggerTabIndex = 0; // 0=breakpoints,1=watch,2=variables,3=stack
+std::vector<std::string> g_debugWatchExpressions;
+}
 
 MainWindow::MainWindow()
     : m_hwnd(nullptr), m_editorHwnd(nullptr), m_terminalHwnd(nullptr),
@@ -392,6 +403,35 @@ void MainWindow::handleMenuCommand(WORD cmdId)
         // Production toggle comment implementation
         ToggleCommentForCurrentLanguage();
         break;
+    case IDM_EDIT_MULTICURSOR_ADD:
+        if (m_editorHwnd) {
+            DWORD selStart = 0;
+            DWORD selEnd = 0;
+            SendMessageA(m_editorHwnd, EM_GETSEL, (WPARAM)&selStart, (LPARAM)&selEnd);
+            const long caret = static_cast<long>(std::max(selStart, selEnd));
+            const auto it = std::find(g_multiCursorCarets.begin(), g_multiCursorCarets.end(), caret);
+            if (it == g_multiCursorCarets.end()) {
+                g_multiCursorCarets.push_back(caret);
+            }
+            std::ostringstream ss;
+            ss << "[Edit] Multi-cursor anchors: " << g_multiCursorCarets.size() << " (active caret=" << caret << ")\n";
+            sendToTerminal(ss.str());
+        }
+        break;
+    case IDM_EDIT_MULTICURSOR_REMOVE:
+        if (!g_multiCursorCarets.empty()) {
+            g_multiCursorCarets.pop_back();
+        }
+        if (m_editorHwnd && !g_multiCursorCarets.empty()) {
+            const long caret = g_multiCursorCarets.back();
+            SendMessageA(m_editorHwnd, EM_SETSEL, (WPARAM)caret, (LPARAM)caret);
+        }
+        {
+            std::ostringstream ss;
+            ss << "[Edit] Multi-cursor anchors: " << g_multiCursorCarets.size() << "\n";
+            sendToTerminal(ss.str());
+        }
+        break;
 
     // ========== SELECTION COMMANDS ==========
     case IDM_SEL_EXPAND:
@@ -405,6 +445,63 @@ void MainWindow::handleMenuCommand(WORD cmdId)
     case IDM_SEL_COLUMN_MODE:
         m_columnSelectionMode = !m_columnSelectionMode;
         CheckMenuItem(m_menuBar, IDM_SEL_COLUMN_MODE, m_columnSelectionMode ? MF_CHECKED : MF_UNCHECKED);
+        break;
+    case IDM_SEL_ADD_CURSOR_ABOVE:
+    case IDM_SEL_ADD_CURSOR_BELOW:
+        if (m_editorHwnd) {
+            DWORD selStart = 0;
+            DWORD selEnd = 0;
+            SendMessageA(m_editorHwnd, EM_GETSEL, (WPARAM)&selStart, (LPARAM)&selEnd);
+            const int currentLine = static_cast<int>(SendMessageA(m_editorHwnd, EM_LINEFROMCHAR, selStart, 0));
+            const int targetLine = (cmdId == IDM_SEL_ADD_CURSOR_ABOVE) ? (currentLine - 1) : (currentLine + 1);
+            if (targetLine >= 0) {
+                const long targetPos = static_cast<long>(SendMessageA(m_editorHwnd, EM_LINEINDEX, targetLine, 0));
+                if (targetPos >= 0) {
+                    g_multiCursorCarets.push_back(targetPos);
+                    SendMessageA(m_editorHwnd, EM_SETSEL, (WPARAM)targetPos, (LPARAM)targetPos);
+                    std::ostringstream ss;
+                    ss << "[Select] Added cursor " << (cmdId == IDM_SEL_ADD_CURSOR_ABOVE ? "above" : "below")
+                       << " at line " << (targetLine + 1) << "\n";
+                    sendToTerminal(ss.str());
+                }
+            }
+        }
+        break;
+    case IDM_SEL_ADD_NEXT_OCCURRENCE:
+    case IDM_SEL_SELECT_ALL_OCCURRENCES:
+        if (m_editorHwnd) {
+            DWORD selStart = 0;
+            DWORD selEnd = 0;
+            SendMessageA(m_editorHwnd, EM_GETSEL, (WPARAM)&selStart, (LPARAM)&selEnd);
+            std::string content = getWindowText(m_editorHwnd);
+            if (selEnd > selStart && selEnd <= content.size()) {
+                const std::string needle = content.substr(selStart, selEnd - selStart);
+                if (!needle.empty()) {
+                    if (cmdId == IDM_SEL_ADD_NEXT_OCCURRENCE) {
+                        const size_t next = content.find(needle, selEnd);
+                        if (next != std::string::npos) {
+                            const long p = static_cast<long>(next);
+                            g_multiCursorCarets.push_back(p);
+                            SendMessageA(m_editorHwnd, EM_SETSEL, (WPARAM)p, (LPARAM)(p + static_cast<long>(needle.size())));
+                        }
+                    } else {
+                        g_multiCursorCarets.clear();
+                        size_t pos = 0;
+                        while ((pos = content.find(needle, pos)) != std::string::npos) {
+                            g_multiCursorCarets.push_back(static_cast<long>(pos));
+                            pos += needle.size();
+                        }
+                        if (!g_multiCursorCarets.empty()) {
+                            const long p = g_multiCursorCarets.front();
+                            SendMessageA(m_editorHwnd, EM_SETSEL, (WPARAM)p, (LPARAM)(p + static_cast<long>(needle.size())));
+                        }
+                    }
+                    std::ostringstream ss;
+                    ss << "[Select] Tracked occurrences for '" << needle << "': " << g_multiCursorCarets.size() << "\n";
+                    sendToTerminal(ss.str());
+                }
+            }
+        }
         break;
 
     // ========== VIEW COMMANDS ==========
@@ -427,6 +524,11 @@ void MainWindow::handleMenuCommand(WORD cmdId)
         m_secondarySidebarVisible = !m_secondarySidebarVisible;
         CheckMenuItem(m_menuBar, IDM_VIEW_SECONDARY_SIDEBAR, m_secondarySidebarVisible ? MF_CHECKED : MF_UNCHECKED);
         break;
+    case 1200: // IDC_SECONDARY_SIDEBAR
+        m_secondarySidebarVisible = !m_secondarySidebarVisible;
+        CheckMenuItem(m_menuBar, IDM_VIEW_SECONDARY_SIDEBAR, m_secondarySidebarVisible ? MF_CHECKED : MF_UNCHECKED);
+        sendToTerminal(m_secondarySidebarVisible ? "# Secondary sidebar enabled\n" : "# Secondary sidebar disabled\n");
+        break;
     case IDM_VIEW_PANEL:
         m_panelVisible = !m_panelVisible;
         CheckMenuItem(m_menuBar, IDM_VIEW_PANEL, m_panelVisible ? MF_CHECKED : MF_UNCHECKED);
@@ -436,6 +538,257 @@ void MainWindow::handleMenuCommand(WORD cmdId)
         m_statusBarVisible = !m_statusBarVisible;
         CheckMenuItem(m_menuBar, IDM_VIEW_STATUS_BAR, m_statusBarVisible ? MF_CHECKED : MF_UNCHECKED);
         if (m_statusBarHwnd) ShowWindow(m_statusBarHwnd, m_statusBarVisible ? SW_SHOW : SW_HIDE);
+        break;
+    case 2000: // IDC_STATUS_BAR
+        m_statusBarVisible = !m_statusBarVisible;
+        CheckMenuItem(m_menuBar, IDM_VIEW_STATUS_BAR, m_statusBarVisible ? MF_CHECKED : MF_UNCHECKED);
+        if (m_statusBarHwnd) ShowWindow(m_statusBarHwnd, m_statusBarVisible ? SW_SHOW : SW_HIDE);
+        break;
+    case 1018: // IDC_TITLE_TEXT
+        if (!m_tabs.empty() && m_currentTab < m_tabs.size() && !m_tabs[m_currentTab].filename.empty()) {
+            std::string title = "RawrXD IDE - " + m_tabs[m_currentTab].filename;
+            SetWindowTextA(m_hwnd, title.c_str());
+            m_windowTitle = title;
+        } else {
+            m_windowTitle = "RawrXD IDE";
+            SetWindowTextA(m_hwnd, m_windowTitle.c_str());
+        }
+        break;
+    case 1203: // IDC_COPILOT_CHAT_OUTPUT
+        if (m_topChatHwnd) {
+            ShowWindow(m_topChatHwnd, SW_SHOW);
+            SetFocus(m_topChatHwnd);
+            appendTopChat("System", "Copilot output focused.");
+            sendToTerminal("# Copilot chat output focused\n");
+        }
+        break;
+    case 1202: // IDC_COPILOT_CHAT_INPUT
+        if (m_userChatInputHwnd) {
+            ShowWindow(m_userChatInputHwnd, SW_SHOW);
+            SetFocus(m_userChatInputHwnd);
+            sendToTerminal("# Copilot chat input focused\n");
+        }
+        break;
+    case 14002: // IDC_AGENT_STATUS_LABEL
+        {
+            std::ostringstream st;
+            st << "Agent: " << (m_chatBusy ? "Busy" : "Idle")
+               << " | Model: " << (m_modelLoaded ? "Loaded" : "Not loaded")
+               << " | Turns: " << m_chatHistory.size();
+            if (m_statusBarHwnd) {
+                SetWindowTextA(m_statusBarHwnd, st.str().c_str());
+            }
+            sendToTerminal(std::string("# ") + st.str() + "\n");
+        }
+        break;
+    case 14001: // IDC_AGENT_DIFF_PANEL
+        g_agentDiffPanelVisible = !g_agentDiffPanelVisible;
+        if (m_problemsPanelHwnd) {
+            ShowWindow(m_problemsPanelHwnd, g_agentDiffPanelVisible ? SW_SHOW : SW_HIDE);
+            if (g_agentDiffPanelVisible) {
+                std::string currentText = getWindowText(m_editorHwnd);
+                std::string baseline;
+                if (!m_tabs.empty() && m_currentTab < m_tabs.size() && !m_tabs[m_currentTab].filename.empty()) {
+                    std::ifstream in(m_tabs[m_currentTab].filename, std::ios::binary);
+                    if (in) {
+                        baseline.assign((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+                    }
+                }
+                size_t changed = 0;
+                const size_t maxLen = (std::max)(currentText.size(), baseline.size());
+                for (size_t i = 0; i < maxLen; ++i) {
+                    const char a = (i < currentText.size()) ? currentText[i] : '\0';
+                    const char b = (i < baseline.size()) ? baseline[i] : '\0';
+                    if (a != b) {
+                        ++changed;
+                    }
+                }
+                std::ostringstream diff;
+                diff << "Agent Diff Panel\r\n"
+                     << "Current file: "
+                     << ((!m_tabs.empty() && m_currentTab < m_tabs.size() && !m_tabs[m_currentTab].filename.empty())
+                             ? m_tabs[m_currentTab].filename
+                             : "Untitled")
+                     << "\r\nChanged chars vs disk: " << changed << "\r\n";
+                SetWindowTextA(m_problemsPanelHwnd, diff.str().c_str());
+            }
+        }
+        sendToTerminal(g_agentDiffPanelVisible ? "# Agent diff panel shown\n" : "# Agent diff panel hidden\n");
+        break;
+    case 14006: // IDC_AGENT_SUMMARY_EDIT
+        {
+            std::ostringstream summary;
+            summary << "Summary: tabs=" << m_tabs.size()
+                    << ", active=" << (m_tabs.empty() ? 0 : (m_currentTab + 1))
+                    << ", problems=" << m_problems.size()
+                    << ", breakpoints=" << g_breakpointLines.size()
+                    << ", chat_turns=" << m_chatHistory.size();
+            appendTopChat("Agent", summary.str());
+            sendToTerminal(std::string("# ") + summary.str() + "\n");
+        }
+        break;
+    case 7607: // IDC_CRASH_TRACE_EDIT
+        {
+            fs::create_directories("logs/crash");
+            const auto now = std::chrono::system_clock::now();
+            const std::time_t t = std::chrono::system_clock::to_time_t(now);
+            std::tm tmNow{};
+#ifdef _WIN32
+            localtime_s(&tmNow, &t);
+#else
+            tmNow = *std::localtime(&t);
+#endif
+            std::ostringstream fileName;
+            fileName << "logs/crash/trace_" << std::put_time(&tmNow, "%Y%m%d_%H%M%S") << ".log";
+            std::ofstream out(fileName.str(), std::ios::trunc | std::ios::binary);
+            if (out) {
+                out << "RawrXD Crash Trace Snapshot\n";
+                out << "tabs=" << m_tabs.size() << "\n";
+                out << "chat_busy=" << (m_chatBusy ? 1 : 0) << "\n";
+                out << "terminal_running=" << (m_terminalRunning ? 1 : 0) << "\n";
+                out << "breakpoints=" << g_breakpointLines.size() << "\n";
+                out << "problems=" << m_problems.size() << "\n";
+                out.close();
+                sendToTerminal(std::string("# Crash trace exported: ") + fileName.str() + "\n");
+            } else {
+                sendToTerminal("# Failed to export crash trace\n");
+            }
+        }
+        break;
+    case 2100: // IDC_DEBUGGER_CONTAINER
+        g_debuggerContainerVisible = !g_debuggerContainerVisible;
+        if (m_terminalHwnd) {
+            ShowWindow(m_terminalHwnd, g_debuggerContainerVisible ? SW_SHOW : SW_HIDE);
+            if (g_debuggerContainerVisible) {
+                SetFocus(m_terminalHwnd);
+            }
+        }
+        sendToTerminal(g_debuggerContainerVisible ? "# Debugger container shown\n" : "# Debugger container hidden\n");
+        break;
+    case 2101: // IDC_DEBUGGER_TOOLBAR
+        {
+            static int actionIndex = 0;
+            const int action = actionIndex++ % 5;
+            switch (action) {
+                case 0:
+                    sendToTerminal("c\n");
+                    sendToTerminal("# Debugger toolbar: continue\n");
+                    break;
+                case 1:
+                    sendToTerminal("v\n");
+                    sendToTerminal("# Debugger toolbar: step over\n");
+                    break;
+                case 2:
+                    sendToTerminal("s\n");
+                    sendToTerminal("# Debugger toolbar: step into\n");
+                    break;
+                case 3:
+                    sendToTerminal("o\n");
+                    sendToTerminal("# Debugger toolbar: step out\n");
+                    break;
+                default:
+                    sendToTerminal("q\n");
+                    sendToTerminal("# Debugger toolbar: stop\n");
+                    break;
+            }
+        }
+        break;
+    case 2109: // IDC_DEBUGGER_STATUS_TEXT
+        {
+            const char* tabName = "breakpoints";
+            if (g_debuggerTabIndex == 1) tabName = "watch";
+            else if (g_debuggerTabIndex == 2) tabName = "variables";
+            else if (g_debuggerTabIndex == 3) tabName = "stack";
+            std::ostringstream st;
+            st << "Debugger | tab=" << tabName
+               << " | breakpoints=" << g_breakpointLines.size()
+               << " | watches=" << g_debugWatchExpressions.size();
+            if (m_statusBarHwnd) {
+                SetWindowTextA(m_statusBarHwnd, st.str().c_str());
+            }
+            sendToTerminal(std::string("# ") + st.str() + "\n");
+        }
+        break;
+    case 2102: // IDC_DEBUGGER_TABS
+        g_debuggerTabIndex = (g_debuggerTabIndex + 1) % 4;
+        {
+            const char* tabName = "Breakpoints";
+            if (g_debuggerTabIndex == 1) tabName = "Watch";
+            else if (g_debuggerTabIndex == 2) tabName = "Variables";
+            else if (g_debuggerTabIndex == 3) tabName = "Stack";
+            std::ostringstream ss;
+            ss << "# Debugger tab switched: " << tabName << "\n";
+            sendToTerminal(ss.str());
+        }
+        break;
+    case 2110: // IDC_DEBUGGER_BREAKPOINT_LIST
+        {
+            std::ostringstream out;
+            out << "Breakpoints (" << g_breakpointLines.size() << ")\r\n";
+            for (int bp : g_breakpointLines) {
+                out << "  - line " << bp << "\r\n";
+            }
+            if (m_problemsPanelHwnd) {
+                ShowWindow(m_problemsPanelHwnd, SW_SHOW);
+                SetWindowTextA(m_problemsPanelHwnd, out.str().c_str());
+            }
+            sendToTerminal("# Breakpoint list refreshed\n");
+        }
+        break;
+    case 2111: // IDC_DEBUGGER_WATCH_LIST
+        if (m_editorHwnd) {
+            DWORD selStart = 0;
+            DWORD selEnd = 0;
+            SendMessageA(m_editorHwnd, EM_GETSEL, (WPARAM)&selStart, (LPARAM)&selEnd);
+            if (selEnd > selStart) {
+                const DWORD len = selEnd - selStart;
+                std::string buf;
+                buf.resize(static_cast<size_t>(len) + 1);
+                SendMessageA(m_editorHwnd, EM_GETSELTEXT, 0, (LPARAM)buf.data());
+                buf.resize(strnlen(buf.c_str(), static_cast<size_t>(len)));
+                if (!buf.empty()) {
+                    const bool exists = std::find(g_debugWatchExpressions.begin(), g_debugWatchExpressions.end(), buf) != g_debugWatchExpressions.end();
+                    if (!exists) {
+                        g_debugWatchExpressions.push_back(buf);
+                    }
+                    std::ostringstream ps;
+                    ps << "Get-Variable -Name '" << buf << "' -ErrorAction SilentlyContinue\n";
+                    sendToTerminal(ps.str());
+                }
+            }
+            std::ostringstream out;
+            out << "Watch List (" << g_debugWatchExpressions.size() << ")\r\n";
+            for (const auto& w : g_debugWatchExpressions) {
+                out << "  - " << w << "\r\n";
+            }
+            if (m_problemsPanelHwnd) {
+                ShowWindow(m_problemsPanelHwnd, SW_SHOW);
+                SetWindowTextA(m_problemsPanelHwnd, out.str().c_str());
+            }
+            sendToTerminal("# Watch list refreshed\n");
+        }
+        break;
+    case 2112: // IDC_DEBUGGER_VARIABLE_TREE
+        {
+            std::ostringstream tree;
+            tree << "Variables\r\n";
+            tree << "  Session\r\n";
+            tree << "    breakpoints: " << g_breakpointLines.size() << "\r\n";
+            tree << "    watchCount: " << g_debugWatchExpressions.size() << "\r\n";
+            tree << "  Watches\r\n";
+            for (const auto& w : g_debugWatchExpressions) {
+                tree << "    " << w << " = <pending>\r\n";
+            }
+            if (m_problemsPanelHwnd) {
+                ShowWindow(m_problemsPanelHwnd, SW_SHOW);
+                SetWindowTextA(m_problemsPanelHwnd, tree.str().c_str());
+            }
+            sendToTerminal("# Variable tree refreshed\n");
+        }
+        break;
+    case 2113: // IDC_DEBUGGER_STACK_LIST
+        sendToTerminal("Get-PSCallStack\n");
+        sendToTerminal("# Stack list requested\n");
         break;
     case IDM_VIEW_ZEN_MODE:
         m_zenModeEnabled = !m_zenModeEnabled;
@@ -465,15 +818,45 @@ void MainWindow::handleMenuCommand(WORD cmdId)
             SetFocus(m_fileBrowserHwnd);
         }
         break;
+    case IDM_VIEW_SEARCH:
+        if (m_findPanelHwnd) {
+            ShowWindow(m_findPanelHwnd, SW_SHOW);
+            if (m_findEditHwnd) {
+                SetFocus(m_findEditHwnd);
+            }
+            sendToTerminal("# Search panel opened\n");
+        }
+        break;
     case IDM_VIEW_TERMINAL:
         if (m_terminalHwnd) {
             ShowWindow(m_terminalHwnd, SW_SHOW);
             SetFocus(m_terminalHwnd);
         }
         break;
+    case IDM_VIEW_OUTPUT:
+        if (m_terminalHwnd) {
+            m_panelVisible = true;
+            CheckMenuItem(m_menuBar, IDM_VIEW_PANEL, MF_CHECKED);
+            ShowWindow(m_terminalHwnd, SW_SHOW);
+            SetFocus(m_terminalHwnd);
+            sendToTerminal("# Output panel focused\n");
+        }
+        break;
     case IDM_VIEW_PROBLEMS:
         toggleProblemsPanel();
         break;
+    case 1017: // IDC_SEVERITY_FILTER
+    {
+        g_severityFilterMode = (g_severityFilterMode + 1) % 4;
+        const char* mode = "all";
+        if (g_severityFilterMode == 1) mode = "error";
+        else if (g_severityFilterMode == 2) mode = "warning";
+        else if (g_severityFilterMode == 3) mode = "info";
+        filterProblemsByType(mode);
+        std::string msg = std::string("# Problems severity filter: ") + mode + "\n";
+        sendToTerminal(msg);
+        break;
+    }
     case IDM_VIEW_MINIMAP:
         toggleMinimap();
         CheckMenuItem(m_menuBar, IDM_VIEW_MINIMAP, m_minimapEnabled ? MF_CHECKED : MF_UNCHECKED);
@@ -504,6 +887,121 @@ void MainWindow::handleMenuCommand(WORD cmdId)
         break;
     case IDM_RUN_RESTART:
         sendToTerminal("# Restart debugging\n");
+        break;
+    case IDM_RUN_STEP_OVER:
+        sendToTerminal("v\n"); // PowerShell debugger: step over
+        sendToTerminal("# Debugger: step over\n");
+        break;
+    case IDM_RUN_STEP_INTO:
+        sendToTerminal("s\n"); // PowerShell debugger: step into
+        sendToTerminal("# Debugger: step into\n");
+        break;
+    case IDM_RUN_STEP_OUT:
+        sendToTerminal("o\n"); // PowerShell debugger: step out
+        sendToTerminal("# Debugger: step out\n");
+        break;
+    case IDM_RUN_TOGGLE_BREAKPOINT:
+        if (m_editorHwnd) {
+            DWORD selStart = 0;
+            DWORD selEnd = 0;
+            SendMessageA(m_editorHwnd, EM_GETSEL, (WPARAM)&selStart, (LPARAM)&selEnd);
+            const int line = static_cast<int>(SendMessageA(m_editorHwnd, EM_LINEFROMCHAR, selStart, 0)) + 1;
+            const bool adding = (g_breakpointLines.find(line) == g_breakpointLines.end());
+            if (adding) {
+                g_breakpointLines.insert(line);
+            } else {
+                g_breakpointLines.erase(line);
+            }
+
+            std::string filePath;
+            if (!m_tabs.empty() && m_currentTab < m_tabs.size()) {
+                filePath = m_tabs[m_currentTab].filename;
+            }
+            if (!filePath.empty() && filePath.find(".ps1") != std::string::npos) {
+                std::string escaped = filePath;
+                size_t pos = 0;
+                while ((pos = escaped.find('\'', pos)) != std::string::npos) {
+                    escaped.insert(pos, "'");
+                    pos += 2;
+                }
+                std::ostringstream ps;
+                if (adding) {
+                    ps << "Set-PSBreakpoint -Script '" << escaped << "' -Line " << line << "\n";
+                } else {
+                    ps << "Get-PSBreakpoint | Where-Object { $_.Script -eq '" << escaped
+                       << "' -and $_.Line -eq " << line << " } | Remove-PSBreakpoint\n";
+                }
+                sendToTerminal(ps.str());
+            }
+
+            std::ostringstream status;
+            status << "# Breakpoint " << (adding ? "set" : "cleared")
+                   << " at line " << line << " (tracked=" << g_breakpointLines.size() << ")\n";
+            sendToTerminal(status.str());
+        }
+        break;
+    case IDM_RUN_CLEAR_BREAKPOINTS:
+        g_breakpointLines.clear();
+        if (!m_tabs.empty() && m_currentTab < m_tabs.size()) {
+            const std::string filePath = m_tabs[m_currentTab].filename;
+            if (!filePath.empty() && filePath.find(".ps1") != std::string::npos) {
+                std::string escaped = filePath;
+                size_t pos = 0;
+                while ((pos = escaped.find('\'', pos)) != std::string::npos) {
+                    escaped.insert(pos, "'");
+                    pos += 2;
+                }
+                std::ostringstream ps;
+                ps << "Get-PSBreakpoint | Where-Object { $_.Script -eq '" << escaped
+                   << "' } | Remove-PSBreakpoint\n";
+                sendToTerminal(ps.str());
+            }
+        }
+        sendToTerminal("# All tracked breakpoints cleared\n");
+        break;
+
+    // Snippet manager button command wiring (shared ID from snippet panel)
+    case 6020: // IDC_BTN_INSERT_SNIPPET
+        if (m_editorHwnd) {
+            const char* snippet = "#region RawrXD Snippet\n# TODO: implement\n#endregion\n";
+            SendMessageA(m_editorHwnd, EM_REPLACESEL, TRUE, (LPARAM)snippet);
+            sendToTerminal("# Snippet inserted at caret\n");
+        }
+        break;
+    case 6021: // IDC_BTN_NEW_SNIPPET
+        if (m_editorHwnd) {
+            const char* snippet = "# New Snippet\nfunction Invoke-RawrSnippet {\n    param()\n    # TODO\n}\n";
+            SendMessageA(m_editorHwnd, EM_REPLACESEL, TRUE, (LPARAM)snippet);
+            sendToTerminal("# New snippet template created\n");
+        }
+        break;
+    case 6022: // IDC_BTN_DELETE_SNIPPET
+        if (m_editorHwnd) {
+            DWORD selStart = 0;
+            DWORD selEnd = 0;
+            SendMessageA(m_editorHwnd, EM_GETSEL, (WPARAM)&selStart, (LPARAM)&selEnd);
+            if (selEnd > selStart) {
+                SendMessageA(m_editorHwnd, EM_REPLACESEL, TRUE, (LPARAM)"");
+                sendToTerminal("# Snippet selection deleted\n");
+            } else {
+                sendToTerminal("# Delete snippet skipped: select text first\n");
+            }
+        }
+        break;
+    case 6023: // IDC_BTN_SAVE_SNIPPETS
+        if (m_editorHwnd) {
+            std::string content = getWindowText(m_editorHwnd);
+            fs::create_directories(".rawrxd/snippets");
+            const std::string outPath = ".rawrxd/snippets/quick_snippet.txt";
+            std::ofstream out(outPath, std::ios::trunc | std::ios::binary);
+            if (out) {
+                out.write(content.data(), static_cast<std::streamsize>(content.size()));
+                out.close();
+                sendToTerminal(std::string("# Snippet saved: ") + outPath + "\n");
+            } else {
+                sendToTerminal("# Failed to save snippet file\n");
+            }
+        }
         break;
 
     // ========== TERMINAL COMMANDS ==========
@@ -2441,6 +2939,71 @@ void MainWindow::loadSettings() {
     std::string theme = findVal("theme"); if(!theme.empty()){ if(theme.find("dark")!=std::string::npos) m_currentTheme=0; else m_currentTheme=1; }
     std::string fontSize = findVal("fontSize"); if(!fontSize.empty()) m_fontSize = atoi(fontSize.c_str());
     std::string tabSz = findVal("tabSize"); if(!tabSz.empty()) m_tabSize = atoi(tabSz.c_str());
+    std::string secondarySidebarVisible = findVal("secondarySidebarVisible");
+    if (!secondarySidebarVisible.empty()) {
+        m_secondarySidebarVisible = (secondarySidebarVisible.find("true") != std::string::npos || secondarySidebarVisible.find("1") != std::string::npos);
+    }
+    std::string statusBarVisible = findVal("statusBarVisible");
+    if (!statusBarVisible.empty()) {
+        m_statusBarVisible = (statusBarVisible.find("true") != std::string::npos || statusBarVisible.find("1") != std::string::npos);
+    }
+    std::string severityFilterMode = findVal("severityFilterMode");
+    if (!severityFilterMode.empty()) {
+        const int v = atoi(severityFilterMode.c_str());
+        if (v >= 0 && v <= 3) {
+            g_severityFilterMode = v;
+        }
+    }
+    std::string agentDiffPanelVisible = findVal("agentDiffPanelVisible");
+    if (!agentDiffPanelVisible.empty()) {
+        g_agentDiffPanelVisible = (agentDiffPanelVisible.find("true") != std::string::npos || agentDiffPanelVisible.find("1") != std::string::npos);
+    }
+    std::string debuggerContainerVisible = findVal("debuggerContainerVisible");
+    if (!debuggerContainerVisible.empty()) {
+        g_debuggerContainerVisible = (debuggerContainerVisible.find("true") != std::string::npos || debuggerContainerVisible.find("1") != std::string::npos);
+    }
+    std::string debuggerTabIndex = findVal("debuggerTabIndex");
+    if (!debuggerTabIndex.empty()) {
+        const int v = atoi(debuggerTabIndex.c_str());
+        if (v >= 0 && v <= 3) {
+            g_debuggerTabIndex = v;
+        }
+    }
+    const size_t watchKey = content.find("\"debugWatchExpressions\"");
+    if (watchKey != std::string::npos) {
+        const size_t lb = content.find('[', watchKey);
+        const size_t rb = (lb == std::string::npos) ? std::string::npos : content.find(']', lb);
+        if (lb != std::string::npos && rb != std::string::npos && rb > lb) {
+            std::string raw = content.substr(lb + 1, rb - lb - 1);
+            g_debugWatchExpressions.clear();
+            size_t pos = 0;
+            while (pos < raw.size()) {
+                const size_t q1 = raw.find('"', pos);
+                if (q1 == std::string::npos) break;
+                const size_t q2 = raw.find('"', q1 + 1);
+                if (q2 == std::string::npos) break;
+                std::string item = raw.substr(q1 + 1, q2 - q1 - 1);
+                if (!item.empty()) g_debugWatchExpressions.push_back(item);
+                pos = q2 + 1;
+            }
+        }
+    }
+    const size_t bpKey = content.find("\"breakpoints\"");
+    if (bpKey != std::string::npos) {
+        const size_t lb = content.find('[', bpKey);
+        const size_t rb = (lb == std::string::npos) ? std::string::npos : content.find(']', lb);
+        if (lb != std::string::npos && rb != std::string::npos && rb > lb) {
+            std::istringstream ss(content.substr(lb + 1, rb - lb - 1));
+            std::string token;
+            g_breakpointLines.clear();
+            while (std::getline(ss, token, ',')) {
+                const int v = atoi(token.c_str());
+                if (v > 0) {
+                    g_breakpointLines.insert(v);
+                }
+            }
+        }
+    }
 }
 
 void MainWindow::saveSettings() {
@@ -2448,7 +3011,37 @@ void MainWindow::saveSettings() {
     out << "{\n";
     out << "  \"theme\": \"" << (m_currentTheme < m_themes.size()? m_themes[m_currentTheme].name: "dark") << "\",\n";
     out << "  \"fontSize\": " << m_fontSize << ",\n";
-    out << "  \"tabSize\": " << m_tabSize << "\n";
+    out << "  \"tabSize\": " << m_tabSize << ",\n";
+    out << "  \"secondarySidebarVisible\": " << (m_secondarySidebarVisible ? "true" : "false") << ",\n";
+    out << "  \"statusBarVisible\": " << (m_statusBarVisible ? "true" : "false") << ",\n";
+    out << "  \"severityFilterMode\": " << g_severityFilterMode << ",\n";
+    out << "  \"agentDiffPanelVisible\": " << (g_agentDiffPanelVisible ? "true" : "false") << ",\n";
+    out << "  \"debuggerContainerVisible\": " << (g_debuggerContainerVisible ? "true" : "false") << ",\n";
+    out << "  \"debuggerTabIndex\": " << g_debuggerTabIndex << ",\n";
+    out << "  \"debugWatchExpressions\": [";
+    for (size_t i = 0; i < g_debugWatchExpressions.size(); ++i) {
+        std::string item = g_debugWatchExpressions[i];
+        size_t p = 0;
+        while ((p = item.find('"', p)) != std::string::npos) {
+            item.insert(p, "\\");
+            p += 2;
+        }
+        out << "\"" << item << "\"";
+        if (i + 1 < g_debugWatchExpressions.size()) {
+            out << ", ";
+        }
+    }
+    out << "],\n";
+    out << "  \"breakpoints\": [";
+    bool first = true;
+    for (int bp : g_breakpointLines) {
+        if (!first) {
+            out << ", ";
+        }
+        out << bp;
+        first = false;
+    }
+    out << "]\n";
     out << "}\n";
     out.close();
 }
@@ -2488,4 +3081,3 @@ void MainWindow::toggleFloatingPanel() {
     }
 }
 #endif
-

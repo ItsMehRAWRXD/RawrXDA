@@ -1,0 +1,43 @@
+{
+  "name": "RawrXD-Win32-IDE",
+  "version": "1.0.0",
+  "description": "Production-ready native Win32 IDE with AI integration",
+  "main": "AgenticIDEWin.exe",
+  "author": "RawrXD Team",
+  "license": "Proprietary",
+  "buildDate": "2025-12-18",
+  "platform": "win32",
+  "architecture": "x64",
+  "dependencies": {
+    "runtime": [
+      "Visual C++ Redistributable 2022 (x64)",
+      "Node.js v18+"
+    ],
+    "optional": [
+      "LSP servers (clangd, pyright, etc.)"
+    ]
+  },
+  "features": {
+    "fileManagement": true,
+    "codeEditor": true,
+    "terminal": true,
+    "aiChat": true,
+    "paint": true,
+    "lsp": true,
+    "agenticTools": true,
+    "enterprise": true,
+    "voice": true
+  },
+  "performance": {
+    "coldStart": "~2s",
+    "warmStart": "~0.8s",
+    "memoryIdle": "~180MB",
+    "memoryHeavy": "~850MB"
+  },
+  "buildInfo": {
+    "compiler": "MSVC 2022",
+    "cxxStandard": "20",
+    "optimization": "Release",
+    "binarySize": "2.5MB"
+  }
+}

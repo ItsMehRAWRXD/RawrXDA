@@ -1,0 +1,56 @@
+# CMake configuration for MASM Production Systems
+# Integrates pipeline_executor, telemetry_visualization, and theme_animation into RawrXD-QtShell build
+
+# Enable ASM_MASM language for x64 assembler support
+set(CMAKE_ASM_MASM_COMPILE_OBJECT "<CMAKE_ASM_MASM_COMPILER> <DEFINES> <INCLUDES> <FLAGS> /c <SOURCE> /Fo<OBJECT>")
+set(CMAKE_ASM_MASM_LINK_EXECUTABLE "<CMAKE_LINKER> <OBJECTS> <LINK_FLAGS> <LINK_LIBRARIES> /OUT:<TARGET>")
+
+# Verify MASM assembler availability (ml64.exe on Windows x64)
+if(NOT CMAKE_ASM_MASM_COMPILER)
+    message(FATAL_ERROR "MASM assembler not found. Please install Visual Studio 2022 with C++ toolset.")
+endif()
+
+# Production Systems MASM source files
+set(MASM_PRODUCTION_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/masm/final-ide/pipeline_executor_complete.asm
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/masm/final-ide/telemetry_visualization.asm
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/masm/final-ide/theme_animation_system.asm
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/masm/final-ide/production_systems_unified.asm
+)
+
+# Create static library from MASM modules
+add_library(production_systems_masm STATIC ${MASM_PRODUCTION_SOURCES})
+
+# Configure MASM compilation flags
+set_target_properties(production_systems_masm PROPERTIES
+    LANGUAGE ASM_MASM
+    ASM_MASM_FLAGS "/W4 /nologo /DMASM=1"
+    LINKER_LANGUAGE C
+)
+
+# Set output directory for MASM-generated object files
+set_target_properties(production_systems_masm PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+)
+
+# Add include directories for MASM modules
+target_include_directories(production_systems_masm PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/masm/final-ide
+)
+
+# Export MASM library for use in RawrXD-QtShell target
+target_link_libraries(RawrXD-QtShell PRIVATE production_systems_masm)
+
+# Add production systems library to test executable if available
+if(BUILD_TESTS)
+    target_link_libraries(self_test_gate PRIVATE production_systems_masm)
+endif()
+
+# Print MASM build status
+message(STATUS "MASM Production Systems configured:")
+message(STATUS "  - pipeline_executor_complete.asm")
+message(STATUS "  - telemetry_visualization.asm")
+message(STATUS "  - theme_animation_system.asm")
+message(STATUS "  - production_systems_unified.asm")
+message(STATUS "  Output: ${CMAKE_BINARY_DIR}/lib/production_systems_masm.lib")

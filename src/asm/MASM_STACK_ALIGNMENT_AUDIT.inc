@@ -1,6 +1,10 @@
 ; =============================================================================
 ; MASM_STACK_ALIGNMENT_AUDIT.inc — Reference Guide & Validation Rules
 ; =============================================================================
+
+NIFNDEF MASM_STACK_ALIGNMENT_AUDIT_INC
+MASM_STACK_ALIGNMENT_AUDIT_INC EQU 1
+
 ; Include this file in any new RawrXD MASM module to get compile-time
 ; alignment verification macros and canonical prolog/epilog templates.
 ;
@@ -68,3 +72,5 @@
 ; Stack alignment verification constant
 ; =============================================================================
 SHADOW_SPACE    EQU 20h     ; 32 bytes — minimum reserved above CALL target
+
+ENDIF ; MASM_STACK_ALIGNMENT_AUDIT_INC

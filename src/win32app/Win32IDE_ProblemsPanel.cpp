@@ -1,5 +1,6 @@
 // Win32IDE_ProblemsPanel.cpp — Unified Problems Panel (P0)
 // Aggregates: LSP, SAST, SCA, Secrets, Build. Reads from ProblemsAggregator.
+// Auto-refreshes on timer when panel is visible (polls LSP diagnostics).
 #include "Win32IDE.h"
 #include "core/problems_aggregator.hpp"
 #include <commctrl.h>
@@ -8,6 +9,27 @@
 #include <string>
 
 #pragma comment(lib, "comctl32.lib")
+
+// Timer ID for auto-refresh (2-second polling for LSP diagnostic changes)
+#define TIMER_PROBLEMS_AUTO_REFRESH  9050
+#define PROBLEMS_REFRESH_INTERVAL_MS 2000
+
+// Forward — used in ProblemsPanelProc before the definition point
+static Win32IDE* g_pProblemsIDE = nullptr;
+
+// Track last aggregator state hash to avoid redundant ListView rebuilds
+static size_t s_lastProblemsHash = 0;
+
+static size_t computeProblemsHash(const std::vector<RawrXD::ProblemEntry>& entries) {
+    size_t h = entries.size();
+    for (const auto& e : entries) {
+        h ^= std::hash<int>{}(e.severity) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        h ^= std::hash<std::string>{}(e.message) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        h ^= std::hash<std::string>{}(e.path) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        h ^= std::hash<int>{}(e.line) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    }
+    return h;
+}
 
 namespace {
 
@@ -45,10 +67,88 @@ static inline int LV_InsertColumnW(HWND hwnd, int iCol, const LVCOLUMNW* col) {
 }
 
 LRESULT CALLBACK ProblemsPanelProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-    if (msg == WM_COMMAND && g_hwndProblemsMain) {
-        SendMessageW(g_hwndProblemsMain, WM_COMMAND, wParam, lParam);
+    switch (msg) {
+    case WM_COMMAND:
+        if (g_hwndProblemsMain) {
+            SendMessageW(g_hwndProblemsMain, WM_COMMAND, wParam, lParam);
+        }
+        return 0;
+
+    case WM_TIMER:
+        if (wParam == TIMER_PROBLEMS_AUTO_REFRESH && g_pProblemsIDE) {
+            // Poll aggregator — only rebuild ListView if data changed
+            auto& agg = RawrXD::ProblemsAggregator::instance();
+            auto all = agg.getProblems("", "");
+            size_t newHash = computeProblemsHash(all);
+            if (newHash != s_lastProblemsHash) {
+                s_lastProblemsHash = newHash;
+                g_pProblemsIDE->refreshProblemsView();
+            }
+            return 0;
+        }
+        break;
+
+    case WM_NOTIFY: {
+        NMHDR* nmh = (NMHDR*)lParam;
+        if (nmh && nmh->code == NM_CUSTOMDRAW) {
+            LPNMLVCUSTOMDRAW lpcd = (LPNMLVCUSTOMDRAW)lParam;
+            switch (lpcd->nmcd.dwDrawStage) {
+            case CDDS_PREPAINT:
+                return CDRF_NOTIFYITEMDRAW;
+
+            case CDDS_ITEMPREPAINT:
+                return CDRF_NOTIFYSUBITEMDRAW;
+
+            case CDDS_ITEMPREPAINT | CDDS_SUBITEM: {
+                int item = (int)lpcd->nmcd.dwItemSpec;
+                int subItem = lpcd->iSubItem;
+                if (g_pProblemsIDE && item >= 0 &&
+                    item < (int)g_pProblemsIDE->problemsViewCache().size()) {
+                    int sev = g_pProblemsIDE->problemsViewCache()[item].severity;
+
+                    // Severity column (0): color-code the text
+                    if (subItem == 0) {
+                        switch (sev) {
+                            case 1: // Error — red
+                                lpcd->clrText = RGB(255, 80, 80);
+                                break;
+                            case 2: // Warning — yellow
+                                lpcd->clrText = RGB(255, 200, 50);
+                                break;
+                            case 3: // Info — blue
+                                lpcd->clrText = RGB(80, 180, 255);
+                                break;
+                            case 4: // Hint — green
+                                lpcd->clrText = RGB(120, 220, 120);
+                                break;
+                            default:
+                                lpcd->clrText = RGB(200, 200, 200);
+                                break;
+                        }
+                    } else {
+                        // Non-severity columns: tint row background by severity
+                        switch (sev) {
+                            case 1: lpcd->clrTextBk = RGB(50, 25, 25); break;  // Error row
+                            case 2: lpcd->clrTextBk = RGB(50, 45, 20); break;  // Warning row
+                            default: lpcd->clrTextBk = RGB(30, 30, 30); break;
+                        }
+                        lpcd->clrText = RGB(200, 200, 200);
+                    }
+                }
+                return CDRF_DODEFAULT;
+            }
+            default:
+                return CDRF_DODEFAULT;
+            }
+        }
+        break;
+    }
+
+    case WM_DESTROY:
+        KillTimer(hWnd, TIMER_PROBLEMS_AUTO_REFRESH);
         return 0;
     }
+
     return CallWindowProcW(g_origProblemsPanelProc, hWnd, msg, wParam, lParam);
 }
 
@@ -61,8 +161,9 @@ std::wstring utf8ToWide(const std::string& s) {
     return out;
 }
 
-Win32IDE* g_pProblemsIDE = nullptr;
+// g_pProblemsIDE declared at file top (before anonymous namespace)
 // Note: g_pMainIDE is declared extern in Win32IDE.h — do not re-declare here
+// computeProblemsHash and s_lastProblemsHash also at file top
 
 LRESULT CALLBACK ProblemsListSubclassProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam,
                                           UINT_PTR uIdSubclass, DWORD_PTR dwRefData) {
@@ -152,6 +253,11 @@ void Win32IDE::initProblemsPanel() {
 
     m_problemsPanelInitialized = true;
     refreshProblemsView();
+
+    // Start auto-refresh timer (polls ProblemsAggregator every 2 seconds)
+    SetTimer(m_hwndProblemsPanel, TIMER_PROBLEMS_AUTO_REFRESH,
+             PROBLEMS_REFRESH_INTERVAL_MS, nullptr);
+    OutputDebugStringA("[ProblemsPanel] Auto-refresh timer started (2s interval).\n");
 }
 
 void Win32IDE::refreshProblemsView() {
@@ -182,7 +288,7 @@ void Win32IDE::refreshProblemsView() {
 
     ListView_DeleteAllItems(m_hwndProblemsListView);
 
-    const wchar_t* sevStr[] = { L"", L"Error", L"Warning", L"Info", L"Hint" };
+    const wchar_t* sevStr[] = { L"", L"\u274C Error", L"\u26A0 Warning", L"\u2139 Info", L"\U0001F4A1 Hint" };
     for (size_t i = 0; i < m_problemsViewCache.size(); i++) {
         const auto& p = m_problemsViewCache[i];
         LVITEMW item = {};

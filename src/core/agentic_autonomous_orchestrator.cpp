@@ -17,7 +17,7 @@
 #include "agentic_engine.h"
 #include "inference_engine.h"
 #include "license_enforcement.h"
-#include "nlohmann/json.hpp"
+#include <nlohmann/json.hpp>
 #include <algorithm>
 #include <random>
 #include <thread>

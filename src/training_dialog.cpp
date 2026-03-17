@@ -1,20 +1,26 @@
 #include "training_dialog.h"
 #include "model_trainer.h"
+#include "win32_file_dialog.h"
+#include <any>
+#include <unordered_map>
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
 
 
-TrainingDialog::TrainingDialog(ModelTrainer* trainer, void* parent)
-    : void(parent)
-    , m_trainer(trainer)
+TrainingDialog::TrainingDialog(ModelTrainer* trainer, void* parent) : DialogBase(parent), m_trainer(trainer)
 {
-    // Lightweight constructor - defer Qt widget creation
     setWindowTitle("Configure Model Training");
     setMinimumSize(700, 600);
     setModal(true);
 }
 
-void TrainingDialog::initialize() {
-    if (m_datasetPathEdit) return;  // Already initialized
-    
+void TrainingDialog::initialize()
+{
+    if (m_datasetPathEdit)
+        return;  // Already initialized
+
     setupUI();
     setupConnections();
     loadDefaultSettings();
@@ -22,24 +28,23 @@ void TrainingDialog::initialize() {
 
 void TrainingDialog::setupUI()
 {
-    void* mainLayout = new void(this);
+    VerticalLayout* mainLayout = new VerticalLayout(this);
 
-    // ===== Dataset Selection Group =====
-    void* datasetGroup = new void("Dataset Configuration", this);
-    void* datasetLayout = new void(datasetGroup);
+    GroupBox* datasetGroup = new GroupBox("Dataset Configuration", this);
+    VerticalLayout* datasetLayout = new VerticalLayout(datasetGroup);
 
-    void* datasetPathLayout = new void();
-    void* datasetLabel = new void("Dataset Path:", this);
-    m_datasetPathEdit = new void(this);
+    HorizontalLayout* datasetPathLayout = new HorizontalLayout();
+    Label* datasetLabel = new Label("Dataset Path:", this);
+    m_datasetPathEdit = new LineEdit(this);
     m_datasetPathEdit->setPlaceholderText("Path to training dataset (CSV, JSON-L, or plain text)");
-    m_browseDatasetBtn = new void("Browse...", this);
+    m_browseDatasetBtn = new PushButton("Browse...", this);
     datasetPathLayout->addWidget(datasetLabel, 0);
     datasetPathLayout->addWidget(m_datasetPathEdit, 1);
     datasetPathLayout->addWidget(m_browseDatasetBtn, 0);
 
-    void* formatLayout = new void();
-    void* formatLabel = new void("Dataset Format:", this);
-    m_datasetFormatCombo = new void(this);
+    HorizontalLayout* formatLayout = new HorizontalLayout();
+    Label* formatLabel = new Label("Dataset Format:", this);
+    m_datasetFormatCombo = new ComboBox(this);
     m_datasetFormatCombo->addItem("Auto-detect", -1);
     m_datasetFormatCombo->addItem("Plain Text", 0);
     m_datasetFormatCombo->addItem("JSON Lines", 1);
@@ -48,54 +53,50 @@ void TrainingDialog::setupUI()
     formatLayout->addWidget(m_datasetFormatCombo);
     formatLayout->addStretch();
 
-    m_datasetInfoLabel = new void("", this);
-    m_datasetInfoLabel->setStyleSheet("void { color: gray; font-style: italic; }");
+    m_datasetInfoLabel = new Label("", this);
+    m_datasetInfoLabel->setStyleSheet("Label { color: gray; font-style: italic; }");
 
     datasetLayout->addLayout(datasetPathLayout);
     datasetLayout->addLayout(formatLayout);
     datasetLayout->addWidget(m_datasetInfoLabel);
 
-    // ===== Model Selection Group =====
-    void* modelGroup = new void("Base Model Configuration", this);
-    void* modelLayout = new void(modelGroup);
+    GroupBox* modelGroup = new GroupBox("Base Model Configuration", this);
+    VerticalLayout* modelLayout = new VerticalLayout(modelGroup);
 
-    void* modelPathLayout = new void();
-    void* modelLabel = new void("Model Path:", this);
-    m_modelPathEdit = new void(this);
+    HorizontalLayout* modelPathLayout = new HorizontalLayout();
+    Label* modelLabel = new Label("Model Path:", this);
+    m_modelPathEdit = new LineEdit(this);
     m_modelPathEdit->setPlaceholderText("Path to base GGUF model");
-    m_browseModelBtn = new void("Browse...", this);
+    m_browseModelBtn = new PushButton("Browse...", this);
     modelPathLayout->addWidget(modelLabel, 0);
     modelPathLayout->addWidget(m_modelPathEdit, 1);
     modelPathLayout->addWidget(m_browseModelBtn, 0);
 
-    m_modelInfoLabel = new void("", this);
-    m_modelInfoLabel->setStyleSheet("void { color: gray; font-style: italic; }");
+    m_modelInfoLabel = new Label("", this);
+    m_modelInfoLabel->setStyleSheet("Label { color: gray; font-style: italic; }");
 
     modelLayout->addLayout(modelPathLayout);
     modelLayout->addWidget(m_modelInfoLabel);
 
-    // ===== Output Configuration Group =====
-    void* outputGroup = new void("Output Configuration", this);
-    void* outputLayout = new void(outputGroup);
+    GroupBox* outputGroup = new GroupBox("Output Configuration", this);
+    VerticalLayout* outputLayout = new VerticalLayout(outputGroup);
 
-    void* outputPathLayout = new void();
-    void* outputLabel = new void("Output Path:", this);
-    m_outputPathEdit = new void(this);
+    HorizontalLayout* outputPathLayout = new HorizontalLayout();
+    Label* outputLabel = new Label("Output Path:", this);
+    m_outputPathEdit = new LineEdit(this);
     m_outputPathEdit->setPlaceholderText("Path to save fine-tuned model (will create .gguf file)");
-    m_browseOutputBtn = new void("Browse...", this);
+    m_browseOutputBtn = new PushButton("Browse...", this);
     outputPathLayout->addWidget(outputLabel, 0);
     outputPathLayout->addWidget(m_outputPathEdit, 1);
     outputPathLayout->addWidget(m_browseOutputBtn, 0);
 
     outputLayout->addLayout(outputPathLayout);
 
-    // ===== Hyperparameters Group =====
-    void* hyperparamsGroup = new void("Training Hyperparameters", this);
-    void* hyperparamsLayout = new void(hyperparamsGroup);
+    GroupBox* hyperparamsGroup = new GroupBox("Training Hyperparameters", this);
+    GridLayout* hyperparamsLayout = new GridLayout(hyperparamsGroup);
 
-    // Epochs
-    void* epochsLabel = new void("Epochs:", this);
-    m_epochsSpinBox = nullptr;
+    Label* epochsLabel = new Label("Epochs:", this);
+    m_epochsSpinBox = new SpinBox(this);
     m_epochsSpinBox->setMinimum(1);
     m_epochsSpinBox->setMaximum(1000);
     m_epochsSpinBox->setValue(3);
@@ -103,9 +104,8 @@ void TrainingDialog::setupUI()
     hyperparamsLayout->addWidget(epochsLabel, 0, 0);
     hyperparamsLayout->addWidget(m_epochsSpinBox, 0, 1);
 
-    // Learning Rate
-    void* lrLabel = new void("Learning Rate:", this);
-    m_learningRateSpinBox = nullptr;
+    Label* lrLabel = new Label("Learning Rate:", this);
+    m_learningRateSpinBox = new DoubleSpinBox(this);
     m_learningRateSpinBox->setMinimum(0.000001);
     m_learningRateSpinBox->setMaximum(1.0);
     m_learningRateSpinBox->setDecimals(6);
@@ -115,9 +115,8 @@ void TrainingDialog::setupUI()
     hyperparamsLayout->addWidget(lrLabel, 0, 2);
     hyperparamsLayout->addWidget(m_learningRateSpinBox, 0, 3);
 
-    // Batch Size
-    void* batchLabel = new void("Batch Size:", this);
-    m_batchSizeSpinBox = nullptr;
+    Label* batchLabel = new Label("Batch Size:", this);
+    m_batchSizeSpinBox = new SpinBox(this);
     m_batchSizeSpinBox->setMinimum(1);
     m_batchSizeSpinBox->setMaximum(256);
     m_batchSizeSpinBox->setValue(4);
@@ -125,9 +124,8 @@ void TrainingDialog::setupUI()
     hyperparamsLayout->addWidget(batchLabel, 1, 0);
     hyperparamsLayout->addWidget(m_batchSizeSpinBox, 1, 1);
 
-    // Sequence Length
-    void* seqLenLabel = new void("Sequence Length:", this);
-    m_sequenceLengthSpinBox = nullptr;
+    Label* seqLenLabel = new Label("Sequence Length:", this);
+    m_sequenceLengthSpinBox = new SpinBox(this);
     m_sequenceLengthSpinBox->setMinimum(128);
     m_sequenceLengthSpinBox->setMaximum(4096);
     m_sequenceLengthSpinBox->setSingleStep(128);
@@ -136,9 +134,8 @@ void TrainingDialog::setupUI()
     hyperparamsLayout->addWidget(seqLenLabel, 1, 2);
     hyperparamsLayout->addWidget(m_sequenceLengthSpinBox, 1, 3);
 
-    // Gradient Clipping
-    void* gradClipLabel = new void("Gradient Clip:", this);
-    m_gradientClipSpinBox = nullptr;
+    Label* gradClipLabel = new Label("Gradient Clip:", this);
+    m_gradientClipSpinBox = new DoubleSpinBox(this);
     m_gradientClipSpinBox->setMinimum(0.1);
     m_gradientClipSpinBox->setMaximum(10.0);
     m_gradientClipSpinBox->setDecimals(2);
@@ -148,9 +145,8 @@ void TrainingDialog::setupUI()
     hyperparamsLayout->addWidget(gradClipLabel, 2, 0);
     hyperparamsLayout->addWidget(m_gradientClipSpinBox, 2, 1);
 
-    // Weight Decay
-    void* weightDecayLabel = new void("Weight Decay:", this);
-    m_weightDecaySpinBox = nullptr;
+    Label* weightDecayLabel = new Label("Weight Decay:", this);
+    m_weightDecaySpinBox = new DoubleSpinBox(this);
     m_weightDecaySpinBox->setMinimum(0.0);
     m_weightDecaySpinBox->setMaximum(1.0);
     m_weightDecaySpinBox->setDecimals(4);
@@ -160,9 +156,8 @@ void TrainingDialog::setupUI()
     hyperparamsLayout->addWidget(weightDecayLabel, 2, 2);
     hyperparamsLayout->addWidget(m_weightDecaySpinBox, 2, 3);
 
-    // Warmup Steps
-    void* warmupLabel = new void("Warmup Ratio:", this);
-    m_warmupStepsSpinBox = nullptr;
+    Label* warmupLabel = new Label("Warmup Ratio:", this);
+    m_warmupStepsSpinBox = new DoubleSpinBox(this);
     m_warmupStepsSpinBox->setMinimum(0.0);
     m_warmupStepsSpinBox->setMaximum(0.5);
     m_warmupStepsSpinBox->setDecimals(2);
@@ -172,12 +167,11 @@ void TrainingDialog::setupUI()
     hyperparamsLayout->addWidget(warmupLabel, 3, 0);
     hyperparamsLayout->addWidget(m_warmupStepsSpinBox, 3, 1);
 
-    // ===== Validation Options Group =====
-    void* validationGroup = new void("Validation Options", this);
-    void* validationLayout = new void(validationGroup);
+    GroupBox* validationGroup = new GroupBox("Validation Options", this);
+    VerticalLayout* validationLayout = new VerticalLayout(validationGroup);
 
-    void* valSplitLabel = new void("Validation Split:", this);
-    m_validationSplitSpinBox = nullptr;
+    Label* valSplitLabel = new Label("Validation Split:", this);
+    m_validationSplitSpinBox = new DoubleSpinBox(this);
     m_validationSplitSpinBox->setMinimum(0.0);
     m_validationSplitSpinBox->setMaximum(0.5);
     m_validationSplitSpinBox->setDecimals(2);
@@ -185,7 +179,7 @@ void TrainingDialog::setupUI()
     m_validationSplitSpinBox->setValue(0.1);
     m_validationSplitSpinBox->setToolTip("Fraction of data reserved for validation (e.g., 0.1 = 10%)");
 
-    m_validateEveryEpochCheckBox = nullptr;
+    m_validateEveryEpochCheckBox = new CheckBox(this);
     m_validateEveryEpochCheckBox->setChecked(true);
     m_validateEveryEpochCheckBox->setToolTip("Run validation after each training epoch");
 
@@ -195,13 +189,11 @@ void TrainingDialog::setupUI()
     validationLayout->addWidget(m_validateEveryEpochCheckBox);
     validationLayout->addStretch();
 
-    // ===== Action Buttons =====
-    void* buttonLayout = new void();
+    HorizontalLayout* buttonLayout = new HorizontalLayout();
     buttonLayout->addStretch();
-    m_startTrainingBtn = new void("Start Training", this);
-    m_startTrainingBtn->setDefault(true);
-    m_startTrainingBtn->setEnabled(false); // Disabled until valid config
-    m_cancelBtn = new void("Cancel", this);
+    m_startTrainingBtn = new PushButton("Start Training", this);
+    m_startTrainingBtn->setEnabled(false);
+    m_cancelBtn = new PushButton("Cancel", this);
     buttonLayout->addWidget(m_startTrainingBtn);
     buttonLayout->addWidget(m_cancelBtn);
 
@@ -216,24 +208,12 @@ void TrainingDialog::setupUI()
 
 void TrainingDialog::setupConnections()
 {
-    // Browse buttons
-// Qt connect removed
-// Qt connect removed
-// Qt connect removed
-    // Dataset format combo
-// Qt connect removed
-    // Action buttons
-// Qt connect removed
-// Qt connect removed
-    // Validation triggers
-// Qt connect removed
-// Qt connect removed
-// Qt connect removed
+    // Event wiring: connect browse buttons, combo, start/cancel to handlers (Win32: subclass or ID-based dispatch).
 }
 
 void TrainingDialog::loadDefaultSettings()
 {
-    void* settings("RawrXD", "AgenticIDE");
+    SimpleSettings settings("RawrXD", "AgenticIDE");
 
     // Load last used paths
     m_datasetPathEdit->setText(settings.value("training/lastDatasetPath", "").toString());
@@ -256,7 +236,7 @@ void TrainingDialog::loadDefaultSettings()
 
 void TrainingDialog::saveSettings()
 {
-    void* settings("RawrXD", "AgenticIDE");
+    SimpleSettings settings("RawrXD", "AgenticIDE");
 
     // Save paths
     settings.setValue("training/lastDatasetPath", m_datasetPathEdit->text());
@@ -277,14 +257,12 @@ void TrainingDialog::saveSettings()
 
 void TrainingDialog::onBrowseDataset()
 {
-    std::string path = QFileDialog::getOpenFileName(
-        this,
-        "Select Training Dataset",
-        "",
-        "Dataset Files (*.csv *.jsonl *.txt);;CSV Files (*.csv);;JSON Lines (*.jsonl);;Text Files (*.txt);;All Files (*)"
-    );
+    const char* filter = "Dataset (*.csv;*.jsonl;*.txt)\0*.csv;*.jsonl;*.txt\0CSV (*.csv)\0*.csv\0JSON Lines "
+                         "(*.jsonl)\0*.jsonl\0Text (*.txt)\0*.txt\0All (*.*)\0*.*\0";
+    std::string path = RawrXD::getOpenFileName(this, "Select Training Dataset", filter);
 
-    if (!path.empty()) {
+    if (!path.empty())
+    {
         m_datasetPathEdit->setText(path);
 
         // Auto-detect format
@@ -292,54 +270,52 @@ void TrainingDialog::onBrowseDataset()
         m_datasetInfoLabel->setText("Detected format: " + format);
 
         // Update combo box
-        if (format == "Plain Text") {
+        if (format == "Plain Text")
+        {
             m_datasetFormatCombo->setCurrentIndex(1);
-        } else if (format == "JSON Lines") {
+        }
+        else if (format == "JSON Lines")
+        {
             m_datasetFormatCombo->setCurrentIndex(2);
-        } else if (format == "CSV") {
+        }
+        else if (format == "CSV")
+        {
             m_datasetFormatCombo->setCurrentIndex(3);
         }
 
         // Show file info
         std::filesystem::path info(path);
-        m_datasetInfoLabel->setText(std::string("Format: %1 | Size: %2 MB")
-            
-             / (1024.0 * 1024.0), 0, 'f', 2));
+        double sizeMb = std::filesystem::file_size(info) / (1024.0 * 1024.0);
+        m_datasetInfoLabel->setText("Format: " + format + " | Size: " + std::to_string(sizeMb) + " MB");
     }
 }
 
 void TrainingDialog::onBrowseModel()
 {
-    std::string path = QFileDialog::getOpenFileName(
-        this,
-        "Select Base Model",
-        "",
-        "GGUF Files (*.gguf);;All Files (*)"
-    );
+    const char* filter = "GGUF (*.gguf)\0*.gguf\0All (*.*)\0*.*\0";
+    std::string path = RawrXD::getOpenFileName(this, "Select Base Model", filter);
 
-    if (!path.empty()) {
+    if (!path.empty())
+    {
         m_modelPathEdit->setText(path);
 
         // Show file info
         std::filesystem::path info(path);
-        m_modelInfoLabel->setText(std::string("Size: %1 MB | %2")
-             / (1024.0 * 1024.0), 0, 'f', 2)
-            ));
+        double sizeMb = std::filesystem::file_size(info) / (1024.0 * 1024.0);
+        m_modelInfoLabel->setText("Size: " + std::to_string(sizeMb) + " MB");
     }
 }
 
 void TrainingDialog::onBrowseOutputPath()
 {
-    std::string path = QFileDialog::getSaveFileName(
-        this,
-        "Save Fine-Tuned Model",
-        "",
-        "GGUF Files (*.gguf);;All Files (*)"
-    );
+    const char* filter = "GGUF (*.gguf)\0*.gguf\0All (*.*)\0*.*\0";
+    std::string path = RawrXD::getSaveFileName(this, "Save Fine-Tuned Model", filter, "gguf");
 
-    if (!path.empty()) {
+    if (!path.empty())
+    {
         // Ensure .gguf extension
-        if (!path.endsWith(".gguf", //CaseInsensitive)) {
+        if (!path.ends_with(".gguf"))
+        {
             path += ".gguf";
         }
         m_outputPathEdit->setText(path);
@@ -348,7 +324,8 @@ void TrainingDialog::onBrowseOutputPath()
 
 void TrainingDialog::onStartTraining()
 {
-    if (!validateConfiguration()) {
+    if (!validateConfiguration())
+    {
         return;
     }
 
@@ -357,7 +334,7 @@ void TrainingDialog::onStartTraining()
     void* config = getTrainingConfig();
     trainingStartRequested(config);
 
-    accept(); // Close dialog
+    accept();  // Close dialog
 }
 
 void TrainingDialog::onCancel()
@@ -374,27 +351,37 @@ void TrainingDialog::onDatasetFormatChanged(int index)
 
 void TrainingDialog::validateInputs()
 {
-    bool isValid = !m_datasetPathEdit->text().empty() &&
-                   !m_modelPathEdit->text().empty() &&
-                   !m_outputPathEdit->text().empty() &&
-                   std::filesystem::path::exists(m_datasetPathEdit->text()) &&
-                   std::filesystem::path::exists(m_modelPathEdit->text());
+    bool isValid = !m_datasetPathEdit->text().empty() && !m_modelPathEdit->text().empty() &&
+                   !m_outputPathEdit->text().empty() && std::filesystem::exists(m_datasetPathEdit->text()) &&
+                   std::filesystem::exists(m_modelPathEdit->text());
 
     m_startTrainingBtn->setEnabled(isValid);
 
     // Update status
-    if (isValid) {
+    if (isValid)
+    {
         m_startTrainingBtn->setToolTip("Start training with current configuration");
-    } else {
-        if (m_datasetPathEdit->text().empty()) {
+    }
+    else
+    {
+        if (m_datasetPathEdit->text().empty())
+        {
             m_startTrainingBtn->setToolTip("Please select a dataset file");
-        } else if (m_modelPathEdit->text().empty()) {
+        }
+        else if (m_modelPathEdit->text().empty())
+        {
             m_startTrainingBtn->setToolTip("Please select a base model file");
-        } else if (m_outputPathEdit->text().empty()) {
+        }
+        else if (m_outputPathEdit->text().empty())
+        {
             m_startTrainingBtn->setToolTip("Please specify output path");
-        } else if (!std::filesystem::path::exists(m_datasetPathEdit->text())) {
+        }
+        else if (!std::filesystem::exists(m_datasetPathEdit->text()))
+        {
             m_startTrainingBtn->setToolTip("Dataset file does not exist");
-        } else if (!std::filesystem::path::exists(m_modelPathEdit->text())) {
+        }
+        else if (!std::filesystem::exists(m_modelPathEdit->text()))
+        {
             m_startTrainingBtn->setToolTip("Model file does not exist");
         }
     }
@@ -403,53 +390,54 @@ void TrainingDialog::validateInputs()
 bool TrainingDialog::validateConfiguration() const
 {
     // Check required fields
-    if (m_datasetPathEdit->text().empty()) {
-        QMessageBox::warning(const_cast<TrainingDialog*>(this), "Missing Dataset",
-            "Please select a training dataset file.");
+    if (m_datasetPathEdit->text().empty())
+    {
+        MessageBoxA(nullptr, "Please select a training dataset file.", "Missing Dataset", MB_OK | MB_ICONWARNING);
         return false;
     }
 
-    if (m_modelPathEdit->text().empty()) {
-        QMessageBox::warning(const_cast<TrainingDialog*>(this), "Missing Model",
-            "Please select a base model file.");
+    if (m_modelPathEdit->text().empty())
+    {
+        MessageBoxA(nullptr, "Please select a base model file.", "Missing Model", MB_OK | MB_ICONWARNING);
         return false;
     }
 
-    if (m_outputPathEdit->text().empty()) {
-        QMessageBox::warning(const_cast<TrainingDialog*>(this), "Missing Output Path",
-            "Please specify where to save the fine-tuned model.");
+    if (m_outputPathEdit->text().empty())
+    {
+        MessageBoxA(nullptr, "Please specify where to save the fine-tuned model.", "Missing Output Path",
+                    MB_OK | MB_ICONWARNING);
         return false;
     }
 
-    // Check file existence
-    if (!std::filesystem::path::exists(m_datasetPathEdit->text())) {
-        QMessageBox::warning(const_cast<TrainingDialog*>(this), "Dataset Not Found",
-            std::string("Dataset file does not exist:\n%1")));
+    if (!std::filesystem::exists(m_datasetPathEdit->text()))
+    {
+        std::string msg = "Dataset file does not exist:\n" + m_datasetPathEdit->text();
+        MessageBoxA(nullptr, msg.c_str(), "Dataset Not Found", MB_OK | MB_ICONWARNING);
         return false;
     }
 
-    if (!std::filesystem::path::exists(m_modelPathEdit->text())) {
-        QMessageBox::warning(const_cast<TrainingDialog*>(this), "Model Not Found",
-            std::string("Model file does not exist:\n%1")));
+    if (!std::filesystem::exists(m_modelPathEdit->text()))
+    {
+        std::string msg = "Model file does not exist:\n" + m_modelPathEdit->text();
+        MessageBoxA(nullptr, msg.c_str(), "Model Not Found", MB_OK | MB_ICONWARNING);
         return false;
     }
 
-    // Validate hyperparameters
-    if (m_epochsSpinBox->value() < 1) {
-        QMessageBox::warning(const_cast<TrainingDialog*>(this), "Invalid Epochs",
-            "Number of epochs must be at least 1.");
+    if (m_epochsSpinBox->value() < 1)
+    {
+        MessageBoxA(nullptr, "Number of epochs must be at least 1.", "Invalid Epochs", MB_OK | MB_ICONWARNING);
         return false;
     }
 
-    if (m_learningRateSpinBox->value() <= 0.0) {
-        QMessageBox::warning(const_cast<TrainingDialog*>(this), "Invalid Learning Rate",
-            "Learning rate must be greater than 0.");
+    if (m_learningRateSpinBox->value() <= 0.0)
+    {
+        MessageBoxA(nullptr, "Learning rate must be greater than 0.", "Invalid Learning Rate", MB_OK | MB_ICONWARNING);
         return false;
     }
 
-    if (m_batchSizeSpinBox->value() < 1) {
-        QMessageBox::warning(const_cast<TrainingDialog*>(this), "Invalid Batch Size",
-            "Batch size must be at least 1.");
+    if (m_batchSizeSpinBox->value() < 1)
+    {
+        MessageBoxA(nullptr, "Batch size must be at least 1.", "Invalid Batch Size", MB_OK | MB_ICONWARNING);
         return false;
     }
 
@@ -458,11 +446,16 @@ bool TrainingDialog::validateConfiguration() const
 
 std::string TrainingDialog::detectDatasetFormat(const std::string& path) const
 {
-    if (path.endsWith(".csv", //CaseInsensitive)) {
+    if (path.ends_with(".csv"))
+    {
         return "CSV";
-    } else if (path.endsWith(".jsonl", //CaseInsensitive) || path.endsWith(".json", //CaseInsensitive)) {
+    }
+    else if (path.ends_with(".jsonl") || path.ends_with(".json"))
+    {
         return "JSON Lines";
-    } else if (path.endsWith(".txt", //CaseInsensitive)) {
+    }
+    else if (path.ends_with(".txt"))
+    {
         return "Plain Text";
     }
     return "Unknown";
@@ -470,40 +463,43 @@ std::string TrainingDialog::detectDatasetFormat(const std::string& path) const
 
 void* TrainingDialog::getTrainingConfig() const
 {
-    void* config;
+    auto* config = new std::unordered_map<std::string, std::any>();
 
     // Paths
-    config["datasetPath"] = m_datasetPathEdit->text();
-    config["modelPath"] = m_modelPathEdit->text();
-    config["outputPath"] = m_outputPathEdit->text();
+    (*config)["datasetPath"] = m_datasetPathEdit->text();
+    (*config)["modelPath"] = m_modelPathEdit->text();
+    (*config)["outputPath"] = m_outputPathEdit->text();
 
     // Dataset format
     int formatIndex = m_datasetFormatCombo->currentData().toInt();
-    if (formatIndex >= 0) {
-        config["datasetFormat"] = formatIndex;
-    } else {
-        // Auto-detect
+    if (formatIndex >= 0)
+    {
+        (*config)["datasetFormat"] = formatIndex;
+    }
+    else
+    {
         std::string format = detectDatasetFormat(m_datasetPathEdit->text());
-        if (format == "Plain Text") config["datasetFormat"] = 0;
-        else if (format == "JSON Lines") config["datasetFormat"] = 1;
-        else if (format == "CSV") config["datasetFormat"] = 2;
-        else config["datasetFormat"] = 0; // Default to plain text
+        if (format == "Plain Text")
+            (*config)["datasetFormat"] = 0;
+        else if (format == "JSON Lines")
+            (*config)["datasetFormat"] = 1;
+        else if (format == "CSV")
+            (*config)["datasetFormat"] = 2;
+        else
+            (*config)["datasetFormat"] = 0;
     }
 
     // Hyperparameters
-    config["epochs"] = m_epochsSpinBox->value();
-    config["learningRate"] = m_learningRateSpinBox->value();
-    config["batchSize"] = m_batchSizeSpinBox->value();
-    config["sequenceLength"] = m_sequenceLengthSpinBox->value();
-    config["gradientClip"] = m_gradientClipSpinBox->value();
-    config["weightDecay"] = m_weightDecaySpinBox->value();
-    config["warmupSteps"] = m_warmupStepsSpinBox->value();
+    (*config)["epochs"] = m_epochsSpinBox->value();
+    (*config)["learningRate"] = m_learningRateSpinBox->value();
+    (*config)["batchSize"] = m_batchSizeSpinBox->value();
+    (*config)["sequenceLength"] = m_sequenceLengthSpinBox->value();
+    (*config)["gradientClip"] = m_gradientClipSpinBox->value();
+    (*config)["weightDecay"] = m_weightDecaySpinBox->value();
+    (*config)["warmupSteps"] = m_warmupStepsSpinBox->value();
 
-    // Validation options
-    config["validationSplit"] = m_validationSplitSpinBox->value();
-    config["validateEveryEpoch"] = m_validateEveryEpochCheckBox->isChecked();
+    (*config)["validationSplit"] = m_validationSplitSpinBox->value();
+    (*config)["validateEveryEpoch"] = m_validateEveryEpochCheckBox->isChecked();
 
-    return config;
+    return static_cast<void*>(config);
 }
-
-

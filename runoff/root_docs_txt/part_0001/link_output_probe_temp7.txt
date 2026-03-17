@@ -1,0 +1,10 @@
+   Creating library .\bin\RawrXD-Win32IDE.lib and object .\bin\RawrXD-Win32IDE.exp
+Generating code
+Finished generating code
+msvcprt.lib(locale0_implib.obj) : warning LNK4210: .CRT section exists; there may be unhandled static initializers or terminators
+core_directml_compute.obj : warning LNK4210: .CRT section exists; there may be unhandled static initializers or terminators
+msvcrt.lib(tlsdyn.obj) : warning LNK4210: .CRT section exists; there may be unhandled static initializers or terminators
+msvcrt.lib(tlssup.obj) : warning LNK4210: .CRT section exists; there may be unhandled static initializers or terminators
+msvcrt.lib(tlsdyn.obj) : warning LNK4210: .CRT section exists; there may be unhandled static initializers or terminators
+msvcrt.lib(tlsdtor.obj) : warning LNK4210: .CRT section exists; there may be unhandled static initializers or terminators
+msvcrt.lib(tlssup.obj) : warning LNK4210: .CRT section exists; there may be unhandled static initializers or terminators

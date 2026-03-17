@@ -1,0 +1,3121 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' http://localhost:* ws://localhost:*; img-src 'self' data:;">
+  <title>RawrXD IDE // AGENTIC INTERFACE</title>
+  <!-- DOMPurify: XSS sanitization for all backend/assistant HTML output -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js" crossorigin="anonymous"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Inter:wght@400;500;600;700&display=swap');
+
+    :root {
+      --bg-primary: #0a0a0f;
+      --bg-secondary: #12121a;
+      --bg-tertiary: #1a1a25;
+      --bg-panel: #151520;
+      --accent-primary: #ff6b35;
+      --accent-secondary: #f7931e;
+      --accent-glow: rgba(255, 107, 53, 0.4);
+      --accent-cyan: #00d9ff;
+      --accent-purple: #b829dd;
+      --accent-green: #00ff88;
+      --accent-red: #ff3366;
+      --text-primary: #f0f0f5;
+      --text-secondary: #a0a0b0;
+      --text-muted: #606070;
+      --border-subtle: #2a2a35;
+      --border-active: #ff6b35;
+      --shadow-glow: 0 0 20px rgba(255, 107, 53, 0.15);
+      --font-mono: 'JetBrains Mono', 'Consolas', monospace;
+      --font-sans: 'Inter', -apple-system, sans-serif;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      overflow: hidden;
+      line-height: 1.5;
+    }
+
+    /* CRT Scanline Effect */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: repeating-linear-gradient(0deg,
+          rgba(0, 0, 0, 0.03) 0px,
+          rgba(0, 0, 0, 0.03) 1px,
+          transparent 1px,
+          transparent 2px);
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.5;
+    }
+
+    /* Main Grid Layout */
+    .ide-container {
+      display: grid;
+      grid-template-columns: 280px 1fr 320px;
+      grid-template-rows: 48px 1fr 200px;
+      grid-template-areas:
+        "header header header"
+        "sidebar main rightbar"
+        "terminal terminal terminal";
+      height: 100vh;
+      gap: 1px;
+      background: var(--bg-primary);
+    }
+
+    /* Header Bar */
+    .header-bar {
+      grid-area: header;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      position: relative;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-family: var(--font-mono);
+      font-weight: 800;
+      font-size: 16px;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 0 15px var(--accent-glow);
+    }
+
+    .brand-text {
+      background: linear-gradient(90deg, var(--text-primary), var(--accent-primary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      font-size: 12px;
+      font-family: var(--font-mono);
+      transition: all 0.2s;
+    }
+
+    .status-pill.online {
+      border-color: var(--accent-green);
+      background: rgba(0, 255, 136, 0.1);
+    }
+
+    .status-pill.offline {
+      border-color: var(--accent-red);
+      background: rgba(255, 51, 102, 0.1);
+    }
+
+    .status-pill.connecting {
+      border-color: var(--accent-secondary);
+      background: rgba(247, 147, 30, 0.1);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      animation: pulse 2s infinite;
+    }
+
+    .status-pill.online .status-dot {
+      background: var(--accent-green);
+      box-shadow: 0 0 8px var(--accent-green);
+    }
+
+    .status-pill.offline .status-dot {
+      background: var(--accent-red);
+      animation: none;
+    }
+
+    .status-pill.connecting .status-dot {
+      background: var(--accent-secondary);
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.4;
+      }
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .icon-btn {
+      width: 32px;
+      height: 32px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+      font-size: 14px;
+    }
+
+    .icon-btn:hover {
+      background: var(--accent-primary);
+      border-color: var(--accent-primary);
+      color: var(--bg-primary);
+      transform: translateY(-1px);
+    }
+
+    /* Left Sidebar */
+    .sidebar {
+      grid-area: sidebar;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    .sidebar-section {
+      padding: 16px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .sidebar-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      font-family: var(--font-mono);
+    }
+
+    .tool-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .tool-btn {
+      padding: 12px 8px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .tool-btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 107, 53, 0.1), transparent);
+      transition: left 0.5s;
+    }
+
+    .tool-btn:hover::before {
+      left: 100%;
+    }
+
+    .tool-btn:hover {
+      border-color: var(--accent-primary);
+      color: var(--text-primary);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-glow);
+    }
+
+    .tool-btn.active {
+      background: rgba(255, 107, 53, 0.15);
+      border-color: var(--accent-primary);
+      color: var(--accent-primary);
+    }
+
+    .tool-btn .icon {
+      font-size: 20px;
+    }
+
+    .model-selector {
+      margin-top: 8px;
+    }
+
+    .select-wrapper {
+      position: relative;
+    }
+
+    .model-select {
+      width: 100%;
+      padding: 10px 32px 10px 12px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      cursor: pointer;
+      appearance: none;
+      transition: border-color 0.15s;
+    }
+
+    .model-select:hover {
+      border-color: var(--accent-primary);
+    }
+
+    .select-wrapper::after {
+      content: '\25BC';
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 10px;
+      pointer-events: none;
+    }
+
+    .model-select optgroup {
+      color: var(--accent-primary);
+      font-weight: 700;
+      font-size: 11px;
+    }
+
+    .model-select option {
+      color: var(--text-primary);
+      background: var(--bg-primary);
+      padding: 4px;
+    }
+
+    /* Generation Settings */
+    .gen-settings {
+      margin-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .setting-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .setting-label {
+      font-size: 11px;
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+    }
+
+    .setting-value {
+      font-size: 11px;
+      color: var(--accent-cyan);
+      font-family: var(--font-mono);
+      min-width: 40px;
+      text-align: right;
+    }
+
+    .setting-slider {
+      width: 100%;
+      height: 4px;
+      background: var(--bg-tertiary);
+      border-radius: 2px;
+      outline: none;
+      -webkit-appearance: none;
+      margin-top: 4px;
+    }
+
+    .setting-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 12px;
+      background: var(--accent-primary);
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 0 8px var(--accent-glow);
+    }
+
+    /* Backend Info Panel */
+    .backend-info {
+      font-size: 12px;
+      line-height: 1.8;
+      color: var(--text-muted);
+    }
+
+    .backend-info .label {
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+
+    .backend-info .val-online {
+      color: var(--accent-green);
+    }
+
+    .backend-info .val-offline {
+      color: var(--accent-red);
+    }
+
+    .backend-info .val-neutral {
+      color: var(--accent-cyan);
+    }
+
+    /* Main Chat Area */
+    .main-area {
+      grid-area: main;
+      background: var(--bg-primary);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      position: relative;
+    }
+
+    .chat-header {
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .chat-context {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .context-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .context-badge.active {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+      background: rgba(0, 217, 255, 0.1);
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-height: 0;
+      scroll-behavior: smooth;
+    }
+
+    .message {
+      display: flex;
+      gap: 12px;
+      max-width: 85%;
+      animation: messageIn 0.3s ease;
+    }
+
+    @keyframes messageIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .message.user {
+      align-self: flex-end;
+      flex-direction: row-reverse;
+    }
+
+    .message-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .message.assistant .message-avatar {
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      box-shadow: 0 0 15px var(--accent-glow);
+    }
+
+    .message.user .message-avatar {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .message.system .message-avatar {
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+    }
+
+    .message-content {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 14px 18px;
+      position: relative;
+      overflow-wrap: break-word;
+      word-break: break-word;
+    }
+
+    .message.user .message-content {
+      background: var(--accent-primary);
+      border-color: var(--accent-primary);
+      color: var(--bg-primary);
+    }
+
+    .message.system .message-content {
+      background: rgba(184, 41, 221, 0.1);
+      border-color: var(--accent-purple);
+      font-size: 13px;
+    }
+
+    .message-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .message.assistant .message-header {
+      color: var(--accent-primary);
+    }
+
+    .message.system .message-header {
+      color: var(--accent-purple);
+    }
+
+    .message-time {
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 400;
+    }
+
+    .message.user .message-time {
+      color: rgba(10, 10, 15, 0.6);
+    }
+
+    .message-text {
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    .message.user .message-text {
+      font-weight: 500;
+    }
+
+    .message-meta {
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      display: flex;
+      gap: 12px;
+    }
+
+    .message.user .message-meta {
+      color: rgba(10, 10, 15, 0.5);
+    }
+
+    /* Code Blocks */
+    .code-block {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      margin: 12px 0;
+      overflow: hidden;
+    }
+
+    .code-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .code-lang {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--accent-cyan);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .code-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .code-btn {
+      padding: 4px 10px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .code-btn:hover {
+      background: var(--accent-primary);
+      border-color: var(--accent-primary);
+      color: var(--bg-primary);
+    }
+
+    .code-content {
+      padding: 16px;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--text-primary);
+    }
+
+    .code-content pre {
+      margin: 0;
+      white-space: pre-wrap;
+    }
+
+    /* Chat Input */
+    .chat-input-container {
+      padding: 16px 20px;
+      border-top: 1px solid var(--border-subtle);
+      background: var(--bg-secondary);
+      flex-shrink: 0;
+    }
+
+    .input-wrapper {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 12px;
+      transition: border-color 0.15s;
+    }
+
+    .input-wrapper:focus-within {
+      border-color: var(--accent-primary);
+      box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+    }
+
+    .chat-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      line-height: 1.5;
+      resize: none;
+      outline: none;
+      min-height: 24px;
+      max-height: 120px;
+    }
+
+    .chat-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .input-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .input-btn {
+      width: 36px;
+      height: 36px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+      font-size: 16px;
+    }
+
+    .input-btn:hover {
+      background: var(--accent-primary);
+      border-color: var(--accent-primary);
+      color: var(--bg-primary);
+    }
+
+    .input-btn.send {
+      background: var(--accent-primary);
+      border-color: var(--accent-primary);
+      color: var(--bg-primary);
+    }
+
+    .input-btn.send:hover {
+      background: var(--accent-secondary);
+      box-shadow: 0 0 15px var(--accent-glow);
+    }
+
+    .input-btn.send:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .input-toolbar {
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+      padding: 0 4px;
+    }
+
+    .toolbar-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+
+    .toolbar-item:hover {
+      color: var(--accent-primary);
+    }
+
+    /* Right Sidebar */
+    .rightbar {
+      grid-area: rightbar;
+      background: var(--bg-secondary);
+      border-left: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    .file-drop-zone {
+      margin: 16px;
+      padding: 24px;
+      border: 2px dashed var(--border-subtle);
+      border-radius: 8px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 12px;
+      transition: all 0.15s;
+      cursor: pointer;
+    }
+
+    .file-drop-zone:hover,
+    .file-drop-zone.dragover {
+      border-color: var(--accent-primary);
+      background: rgba(255, 107, 53, 0.05);
+      color: var(--accent-primary);
+    }
+
+    .file-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 16px;
+    }
+
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      margin-bottom: 8px;
+      font-size: 12px;
+      font-family: var(--font-mono);
+      transition: all 0.15s;
+    }
+
+    .file-item:hover {
+      border-color: var(--accent-primary);
+      background: rgba(255, 107, 53, 0.05);
+    }
+
+    .file-icon {
+      font-size: 16px;
+    }
+
+    .file-info {
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .file-name {
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .file-meta {
+      color: var(--text-muted);
+      font-size: 11px;
+    }
+
+    .file-remove {
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      transition: all 0.15s;
+    }
+
+    .file-remove:hover {
+      color: var(--accent-red);
+      background: rgba(255, 51, 102, 0.1);
+    }
+
+    /* Debug Panel */
+    .debug-panel {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      z-index: 50;
+      flex-direction: column;
+    }
+
+    .debug-panel.active {
+      display: flex;
+    }
+
+    .debug-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--bg-panel);
+      flex-shrink: 0;
+    }
+
+    .debug-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--accent-purple);
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .debug-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .debug-grid {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      flex: 1;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .debug-sidebar {
+      background: var(--bg-tertiary);
+      border-right: 1px solid var(--border-subtle);
+      padding: 16px;
+      overflow-y: auto;
+    }
+
+    .debug-section {
+      margin-bottom: 20px;
+    }
+
+    .debug-section-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+
+    .debug-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px;
+      margin-bottom: 6px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .debug-option:hover {
+      background: var(--bg-secondary);
+    }
+
+    .debug-option input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--accent-primary);
+    }
+
+    .debug-option label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      flex: 1;
+    }
+
+    .debug-main {
+      padding: 16px;
+      overflow-y: auto;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .debug-log {
+      color: var(--text-secondary);
+    }
+
+    .debug-log .timestamp {
+      color: var(--accent-cyan);
+    }
+
+    .debug-log .level-info {
+      color: var(--accent-green);
+    }
+
+    .debug-log .level-warn {
+      color: var(--accent-secondary);
+    }
+
+    .debug-log .level-error {
+      color: var(--accent-red);
+    }
+
+    /* Terminal Panel */
+    .terminal {
+      grid-area: terminal;
+      background: var(--bg-primary);
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: grid-template-rows 0.2s ease;
+    }
+
+    .terminal.minimized .terminal-content,
+    .terminal.minimized .terminal-input-line {
+      display: none;
+    }
+
+    .terminal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 16px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .terminal-tabs {
+      display: flex;
+      gap: 4px;
+    }
+
+    .terminal-tab {
+      padding: 6px 16px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-bottom: none;
+      border-radius: 6px 6px 0 0;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.15s;
+    }
+
+    .terminal-tab.active {
+      background: var(--bg-primary);
+      color: var(--accent-primary);
+      border-color: var(--accent-primary);
+    }
+
+    .terminal-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .terminal-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 16px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.6;
+      min-height: 0;
+    }
+
+    .terminal-line {
+      margin-bottom: 4px;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .terminal-line.command {
+      color: var(--accent-cyan);
+    }
+
+    .terminal-line.output {
+      color: var(--text-secondary);
+    }
+
+    .terminal-line.error {
+      color: var(--accent-red);
+    }
+
+    .terminal-line.system {
+      color: var(--accent-purple);
+    }
+
+    .terminal-line.success {
+      color: var(--accent-green);
+    }
+
+    .terminal-input-line {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .terminal-prompt {
+      color: var(--accent-green);
+      font-weight: 600;
+      white-space: nowrap;
+      font-family: var(--font-mono);
+      font-size: 13px;
+    }
+
+    .terminal-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      outline: none;
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-primary);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-subtle);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+
+    /* Typing Indicator */
+    .typing-indicator {
+      display: flex;
+      gap: 4px;
+      padding: 12px 16px;
+    }
+
+    .typing-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--accent-primary);
+      border-radius: 50%;
+      animation: typingBounce 1.4s infinite ease-in-out both;
+    }
+
+    .typing-dot:nth-child(1) {
+      animation-delay: -0.32s;
+    }
+
+    .typing-dot:nth-child(2) {
+      animation-delay: -0.16s;
+    }
+
+    @keyframes typingBounce {
+
+      0%,
+      80%,
+      100% {
+        transform: scale(0);
+      }
+
+      40% {
+        transform: scale(1);
+      }
+    }
+
+    /* Streaming cursor */
+    .streaming-cursor::after {
+      content: '\25CB';
+      animation: blink 1s infinite;
+      color: var(--accent-primary);
+    }
+
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0;
+      }
+    }
+
+    /* Failure Panel */
+    .failure-panel {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      z-index: 50;
+      flex-direction: column;
+    }
+
+    .failure-panel.active {
+      display: flex;
+    }
+
+    .failure-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--bg-panel);
+      flex-shrink: 0;
+    }
+
+    .failure-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--accent-red);
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .failure-body {
+      display: grid;
+      grid-template-columns: 1fr 260px;
+      flex: 1;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .failure-timeline {
+      overflow-y: auto;
+      padding: 12px;
+    }
+
+    .failure-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--font-mono);
+      font-size: 12px;
+    }
+
+    .failure-table th {
+      padding: 8px 10px;
+      text-align: left;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 10px;
+      letter-spacing: 0.5px;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    .failure-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      vertical-align: top;
+    }
+
+    .failure-table tr:hover td {
+      background: rgba(255, 107, 53, 0.05);
+    }
+
+    .failure-table tr.selected td {
+      background: rgba(255, 107, 53, 0.1);
+      border-color: var(--accent-primary);
+    }
+
+    .outcome-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
+    .outcome-badge.detected {
+      background: rgba(255, 51, 102, 0.15);
+      color: var(--accent-red);
+    }
+
+    .outcome-badge.corrected {
+      background: rgba(0, 255, 136, 0.15);
+      color: var(--accent-green);
+    }
+
+    .outcome-badge.failed {
+      background: rgba(255, 107, 53, 0.15);
+      color: var(--accent-secondary);
+    }
+
+    .outcome-badge.declined {
+      background: rgba(160, 160, 176, 0.15);
+      color: var(--text-muted);
+    }
+
+    .failure-stats-panel {
+      border-left: 1px solid var(--border-subtle);
+      background: var(--bg-tertiary);
+      padding: 16px;
+      overflow-y: auto;
+    }
+
+    .stat-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+
+    .stat-card-title {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 0;
+      font-size: 12px;
+    }
+
+    .stat-label {
+      color: var(--text-secondary);
+    }
+
+    .stat-value {
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+
+    .stat-value.red {
+      color: var(--accent-red);
+    }
+
+    .stat-value.green {
+      color: var(--accent-green);
+    }
+
+    .stat-value.orange {
+      color: var(--accent-secondary);
+    }
+
+    .stat-value.cyan {
+      color: var(--accent-cyan);
+    }
+
+    .stat-bar {
+      height: 6px;
+      background: var(--bg-primary);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+
+    .stat-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.3s;
+    }
+
+    /* Inline failure badges on messages */
+    .failure-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      cursor: help;
+      margin-left: 8px;
+    }
+
+    .failure-badge.retried {
+      background: rgba(0, 255, 136, 0.12);
+      color: var(--accent-green);
+      border: 1px solid rgba(0, 255, 136, 0.3);
+    }
+
+    .failure-badge.failed-retry {
+      background: rgba(255, 51, 102, 0.12);
+      color: var(--accent-red);
+      border: 1px solid rgba(255, 51, 102, 0.3);
+    }
+
+    .failure-badge.detected {
+      background: rgba(247, 147, 30, 0.12);
+      color: var(--accent-secondary);
+      border: 1px solid rgba(247, 147, 30, 0.3);
+    }
+
+    .failure-detail-drawer {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      margin: 8px 12px;
+      padding: 14px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      display: none;
+    }
+
+    .failure-detail-drawer.active {
+      display: block;
+    }
+
+    .failure-detail-row {
+      display: flex;
+      gap: 12px;
+      padding: 4px 0;
+    }
+
+    .failure-detail-key {
+      color: var(--text-muted);
+      min-width: 100px;
+      flex-shrink: 0;
+    }
+
+    .failure-detail-val {
+      color: var(--text-primary);
+      word-break: break-word;
+    }
+
+    /* Responsive */
+    @media (max-width: 1400px) {
+      .ide-container {
+        grid-template-columns: 240px 1fr 280px;
+      }
+    }
+
+    @media (max-width: 1200px) {
+      .ide-container {
+        grid-template-columns: 200px 1fr 0;
+      }
+
+      .rightbar {
+        display: none;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .ide-container {
+        grid-template-columns: 0 1fr 0;
+        grid-template-rows: 48px 1fr 160px;
+      }
+
+      .sidebar,
+      .rightbar {
+        display: none;
+      }
+    }
+
+    /* System Prompt Editor */
+    .system-prompt-section {
+      position: relative;
+    }
+
+    .system-prompt-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .system-prompt-toggle .toggle-arrow {
+      font-size: 10px;
+      color: var(--text-muted);
+      transition: transform 0.2s;
+    }
+
+    .system-prompt-toggle .toggle-arrow.open {
+      transform: rotate(180deg);
+    }
+
+    .system-prompt-body {
+      display: none;
+      margin-top: 10px;
+    }
+
+    .system-prompt-body.open {
+      display: block;
+    }
+
+    .system-prompt-textarea {
+      width: 100%;
+      min-height: 80px;
+      max-height: 200px;
+      padding: 10px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      line-height: 1.5;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .system-prompt-textarea:focus {
+      border-color: var(--accent-primary);
+    }
+
+    .system-prompt-textarea::placeholder {
+      color: var(--text-muted);
+    }
+
+    .sys-prompt-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .sys-prompt-btn {
+      flex: 1;
+      padding: 6px 10px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .sys-prompt-btn:hover {
+      background: var(--accent-primary);
+      border-color: var(--accent-primary);
+      color: var(--bg-primary);
+    }
+
+    .sys-prompt-btn.danger:hover {
+      background: var(--accent-red);
+      border-color: var(--accent-red);
+    }
+
+    /* Conversation Memory Indicator */
+    .memory-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      background: rgba(0, 217, 255, 0.1);
+      border: 1px solid rgba(0, 217, 255, 0.3);
+      border-radius: 10px;
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--accent-cyan);
+    }
+
+    /* Session restored indicator */
+    .restored-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      margin: 8px 20px;
+      background: rgba(0, 255, 136, 0.08);
+      border: 1px solid rgba(0, 255, 136, 0.2);
+      border-radius: 8px;
+      font-size: 12px;
+      color: var(--accent-green);
+      font-family: var(--font-mono);
+    }
+
+    .restored-indicator button {
+      margin-left: auto;
+      padding: 4px 10px;
+      background: transparent;
+      border: 1px solid rgba(0, 255, 136, 0.3);
+      border-radius: 4px;
+      color: var(--accent-green);
+      font-size: 11px;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .restored-indicator button:hover {
+      background: rgba(0, 255, 136, 0.15);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="ide-container">
+    <!-- Header -->
+    <header class="header-bar">
+      <div class="brand">
+        <div class="brand-icon">&#x1F996;</div>
+        <span class="brand-text">RAWRXD IDE</span>
+        <span style="color: var(--text-muted); font-size: 12px; font-weight: 400;">// AGENTIC INTERFACE v2.1</span>
+      </div>
+
+      <div class="header-controls">
+        <div class="status-pill offline" id="backendStatus">
+          <span class="status-dot"></span>
+          <span id="statusText">DISCONNECTED</span>
+        </div>
+
+        <div class="header-actions">
+          <button class="icon-btn" onclick="connectBackend()" title="Connect to Backend">&#x26A1;</button>
+          <button class="icon-btn" onclick="refreshModels()" title="Refresh Models">&#x21BB;</button>
+          <button class="icon-btn" onclick="showDebug()" title="Debug Panel">&#x1F527;</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Left Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-title">// Tools</div>
+        <div class="tool-grid">
+          <button class="tool-btn" onclick="checkServerStatus()">
+            <span class="icon">&#x1F4E1;</span>
+            <span>Status</span>
+          </button>
+          <button class="tool-btn" onclick="showDebug()">
+            <span class="icon">&#x1F527;</span>
+            <span>Debug</span>
+          </button>
+          <button class="tool-btn" onclick="showEndpoints()">
+            <span class="icon">&#x1F310;</span>
+            <span>API</span>
+          </button>
+          <button class="tool-btn" onclick="showFailures()">
+            <span class="icon">&#x26A0;</span>
+            <span>Failures</span>
+          </button>
+          <button class="tool-btn" onclick="clearChat()">
+            <span class="icon">&#x1F5D1;</span>
+            <span>Clear</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-title">// Model</div>
+        <div class="model-selector">
+          <div class="select-wrapper">
+            <select class="model-select" id="modelSelect" onchange="changeModel()">
+              <option value="">Connecting...</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="gen-settings">
+          <div>
+            <div class="setting-row">
+              <span class="setting-label">Context Window</span>
+              <span class="setting-value" id="ctxVal">4,096</span>
+            </div>
+            <input type="range" class="setting-slider" min="512" max="131072" value="4096" step="512" id="ctxSlider"
+              oninput="State.gen.context=parseInt(this.value); document.getElementById('ctxVal').textContent=parseInt(this.value).toLocaleString()">
+          </div>
+          <div>
+            <div class="setting-row">
+              <span class="setting-label">Max Tokens</span>
+              <span class="setting-value" id="maxTokVal">512</span>
+            </div>
+            <input type="range" class="setting-slider" min="32" max="4096" value="512" step="32" id="maxTokSlider"
+              oninput="State.gen.maxTokens=parseInt(this.value); document.getElementById('maxTokVal').textContent=this.value">
+          </div>
+          <div>
+            <div class="setting-row">
+              <span class="setting-label">Temperature</span>
+              <span class="setting-value" id="tempVal">0.7</span>
+            </div>
+            <input type="range" class="setting-slider" min="0" max="200" value="70" step="5" id="tempSlider"
+              oninput="State.gen.temperature=parseInt(this.value)/100; document.getElementById('tempVal').textContent=(parseInt(this.value)/100).toFixed(1)">
+          </div>
+          <div class="debug-option" style="padding: 4px 0;">
+            <input type="checkbox" id="streamToggle" checked onchange="State.gen.stream=this.checked">
+            <label for="streamToggle" style="font-size: 11px;">Stream responses</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-section system-prompt-section">
+        <div class="system-prompt-toggle" onclick="toggleSystemPrompt()">
+          <div class="sidebar-title" style="margin-bottom: 0;">// System Prompt</div>
+          <span class="toggle-arrow" id="sysPromptArrow">&#x25BC;</span>
+        </div>
+        <div class="system-prompt-body" id="sysPromptBody">
+          <textarea class="system-prompt-textarea" id="systemPromptInput"
+            placeholder="You are RawrXD Assistant, an expert in low-level programming..."
+            oninput="Conversation.systemPrompt=this.value; Conversation.persist();"></textarea>
+          <div class="sys-prompt-actions">
+            <button class="sys-prompt-btn" onclick="resetSystemPrompt()" title="Reset to default">&#x21BA; Reset</button>
+            <button class="sys-prompt-btn danger" onclick="clearConversation()" title="Clear all chat history">&#x1F5D1; Clear Memory</button>
+          </div>
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 8px; font-family: var(--font-mono);">
+            Memory: <span id="memoryCount" style="color: var(--accent-cyan);">0</span> turns
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-section" style="flex: 1;">
+        <div class="sidebar-title">// Backend</div>
+        <div class="backend-info" id="backendInfo">
+          <p><span class="label">Server:</span> <span class="val-offline">not connected</span></p>
+          <p><span class="label">Model:</span> <span class="val-neutral">none</span></p>
+          <p><span class="label">Requests:</span> <span class="val-neutral">&mdash;</span></p>
+          <p><span class="label">Tokens:</span> <span class="val-neutral">&mdash;</span></p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Chat Area -->
+    <main class="main-area">
+      <div class="chat-header">
+        <div class="chat-context">
+          <div class="context-badge active" id="modeBadge">
+            <span>&#x1F4BB;</span>
+            <span id="modeText">Disconnected</span>
+          </div>
+          <div class="context-badge" id="fileBadge" style="display: none;">
+            <span>&#x1F4CE;</span>
+            <span id="fileCount">0 files</span>
+          </div>
+          <div class="context-badge" id="modelBadge" style="display: none;">
+            <span>&#x1F9E0;</span>
+            <span id="modelBadgeText">&mdash;</span>
+          </div>
+          <div class="context-badge" id="memoryBadge" style="display: none;">
+            <span>&#x1F4AC;</span>
+            <span id="memoryBadgeText">0 turns</span>
+          </div>
+        </div>
+        <div style="font-size: 12px; color: var(--text-muted); font-family: var(--font-mono);" id="chatStatus">
+          <span style="color: var(--accent-red);">&#x25CF;</span> Offline
+        </div>
+      </div>
+
+      <div class="chat-messages" id="chatMessages">
+        <!-- Welcome message inserted by JS on load -->
+      </div>
+
+      <div class="chat-input-container">
+        <div class="input-wrapper">
+          <textarea class="chat-input" id="chatInput" placeholder="Connect to backend first, or type to chat locally..."
+            rows="1" onkeydown="handleInput(event)"></textarea>
+          <div class="input-actions">
+            <button class="input-btn" onclick="attachFile()" title="Attach File">&#x1F4CE;</button>
+            <button class="input-btn send" id="sendBtn" onclick="sendMessage()" title="Send">&#x27A4;</button>
+          </div>
+        </div>
+        <div class="input-toolbar">
+          <div class="toolbar-item" onclick="insertSnippet('code')">
+            <span>{}</span> Code
+          </div>
+          <div class="toolbar-item" onclick="insertSnippet('bash')">
+            <span>$</span> Terminal
+          </div>
+          <div class="toolbar-item" onclick="clearChat()">
+            <span>&#x232B;</span> Clear
+          </div>
+          <div class="toolbar-item" style="margin-left: auto; opacity: 0.6;">
+            <span>&#x21B5;</span> Enter to send
+          </div>
+        </div>
+      </div>
+
+      <!-- Debug Overlay -->
+      <div class="debug-panel" id="debugPanel">
+        <div class="debug-header">
+          <span class="debug-title">&#x1F527; Debug Log</span>
+          <div class="debug-controls">
+            <button class="code-btn" onclick="runDiagnostics()">Diagnostics</button>
+            <button class="code-btn" onclick="testAllEndpoints()">Test API</button>
+            <button class="code-btn" onclick="exportDebug()">Export</button>
+            <button class="code-btn" onclick="closeDebug()">Close</button>
+          </div>
+        </div>
+        <div class="debug-grid">
+          <div class="debug-sidebar">
+            <div class="debug-section">
+              <div class="debug-section-title">Connection</div>
+              <div class="debug-option">
+                <input type="checkbox" id="dbgAutoReconnect" checked>
+                <label for="dbgAutoReconnect">Auto-reconnect</label>
+              </div>
+              <div class="debug-option">
+                <input type="checkbox" id="dbgShowTiming" checked>
+                <label for="dbgShowTiming">Show latency</label>
+              </div>
+            </div>
+            <div class="debug-section">
+              <div class="debug-section-title">Logging</div>
+              <div class="debug-option">
+                <input type="checkbox" id="dbgLogRequests" checked>
+                <label for="dbgLogRequests">Log requests</label>
+              </div>
+              <div class="debug-option">
+                <input type="checkbox" id="dbgLogResponses">
+                <label for="dbgLogResponses">Log full responses</label>
+              </div>
+            </div>
+            <div class="debug-section">
+              <div class="debug-section-title">Backend URL</div>
+              <input type="text" id="dbgBackendUrl" value="http://localhost:11435"
+                style="width:100%; padding:6px 8px; background:var(--bg-primary); border:1px solid var(--border-subtle);
+                border-radius:4px; color:var(--text-primary); font-family:var(--font-mono); font-size:11px; outline:none;"
+                onchange="State.backend.url=this.value; logDebug('Backend URL changed to '+this.value,'info')">
+            </div>
+          </div>
+          <div class="debug-main" id="debugLog">
+            <div class="debug-log">
+              <span class="timestamp">[--:--:--]</span> <span class="level-info">[INFO]</span> Debug panel ready. Click
+              Diagnostics or Test API to begin.<br>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Failure Intelligence Panel -->
+      <div class="failure-panel" id="failurePanel">
+        <div class="failure-header">
+          <span class="failure-title">&#x26A0; Failure Intelligence</span>
+          <div class="debug-controls">
+            <button class="code-btn" onclick="fetchFailures()">Refresh</button>
+            <button class="code-btn" onclick="exportFailures()">Export</button>
+            <button class="code-btn" onclick="closeFailures()">Close</button>
+          </div>
+        </div>
+        <div class="failure-body">
+          <div class="failure-timeline">
+            <table class="failure-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Type</th>
+                  <th>Evidence</th>
+                  <th>Strategy</th>
+                  <th>Outcome</th>
+                </tr>
+              </thead>
+              <tbody id="failureTableBody">
+                <tr>
+                  <td colspan="5" style="text-align:center; color:var(--text-muted); padding:40px;">Click Refresh to
+                    load failure data</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="failure-detail-drawer" id="failureDetailDrawer"></div>
+          </div>
+          <div class="failure-stats-panel" id="failureStatsPanel">
+            <div class="stat-card">
+              <div class="stat-card-title">Summary</div>
+              <div id="failureSummaryStats">
+                <div class="stat-row"><span class="stat-label">Total Failures</span><span class="stat-value cyan"
+                    id="fsTotalFailures">&mdash;</span></div>
+                <div class="stat-row"><span class="stat-label">Total Retries</span><span class="stat-value orange"
+                    id="fsTotalRetries">&mdash;</span></div>
+                <div class="stat-row"><span class="stat-label">Retry Success</span><span class="stat-value green"
+                    id="fsRetrySuccess">&mdash;</span></div>
+                <div class="stat-row"><span class="stat-label">Declined</span><span class="stat-value" id="fsDeclined"
+                    style="color:var(--text-muted);">&mdash;</span></div>
+              </div>
+              <div class="stat-bar" style="margin-top:10px;">
+                <div class="stat-bar-fill" id="fsRetryBar" style="width:0%; background:var(--accent-green);"></div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-title">Top Failure Reasons</div>
+              <div id="failureReasonList">
+                <div class="stat-row"><span class="stat-label" style="color:var(--text-muted);">No data yet</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Right Sidebar -->
+    <aside class="rightbar">
+      <div class="sidebar-section">
+        <div class="sidebar-title">// Attached Files</div>
+        <div class="file-drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+          <div style="font-size: 24px; margin-bottom: 8px;">&#x1F4C1;</div>
+          <div>Drop files here or click to browse</div>
+          <div style="font-size: 11px; margin-top: 4px; color: var(--text-muted);">Sent as context with your messages
+          </div>
+          <input type="file" id="fileInput" multiple style="display: none;" onchange="handleFiles(this.files)">
+        </div>
+      </div>
+
+      <div class="file-list" id="fileList"></div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-title">// Session</div>
+        <div style="font-size: 12px; color: var(--text-muted); line-height: 1.8;">
+          <p>Messages: <span id="msgCount" style="color: var(--accent-cyan);">0</span></p>
+          <p>Files: <span id="attachCount" style="color: var(--accent-cyan);">0</span></p>
+          <p>Model: <span id="rightModel" style="color: var(--accent-green);">&mdash;</span></p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Terminal -->
+    <div class="terminal" id="terminalPanel">
+      <div class="terminal-header">
+        <div class="terminal-tabs">
+          <div class="terminal-tab active">
+            <span>&#x26A1;</span> Terminal
+          </div>
+        </div>
+        <div class="terminal-actions">
+          <button class="icon-btn" onclick="clearTerminal()" title="Clear">&#x1F5D1;</button>
+          <button class="icon-btn" onclick="toggleTerminal()" title="Toggle" id="termToggleBtn">&#x2B07;</button>
+        </div>
+      </div>
+      <div class="terminal-content" id="terminalOutput">
+        <div class="terminal-line system">RawrXD IDE Terminal v2.1 &mdash; Type 'help' for commands</div>
+      </div>
+      <div class="terminal-input-line">
+        <span class="terminal-prompt">rawrxd&gt;</span>
+        <input type="text" class="terminal-input" id="terminalInput" onkeydown="handleTerminal(event)"
+          autocomplete="off" spellcheck="false" placeholder="help">
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ======================================================================
+    // STATE
+    // ======================================================================
+    const State = {
+      backend: {
+        online: false,
+        url: 'http://localhost:11435',
+        lastPing: 0,
+        serverType: null,         // 'rawrxd-win32ide' or 'RawrXD-serve.py'
+      },
+      model: { current: null, list: [] },
+      gen: { context: 4096, maxTokens: 512, temperature: 0.7, stream: true },
+      files: [],                // attached File objects
+      fileContents: {},           // name -> text content (read via FileReader)
+      debug: { open: false },
+      chat: { sending: false, messageCount: 0 },
+      terminal: { history: [], index: -1, minimized: false },
+      reconnectTimer: null,
+      failureData: [],
+    };
+
+    // ======================================================================
+    // INIT
+    // ======================================================================
+    document.addEventListener('DOMContentLoaded', async () => {
+      setupDragDrop();
+      autoResizeInput();
+      addWelcomeMessage();
+      await connectBackend();
+    });
+
+    function addWelcomeMessage() {
+      addMessage('system',
+        '<strong>RawrXD Agentic Interface v2.1</strong><br><br>' +
+        'This interface connects to the RawrXD backend on <code>localhost:11435</code>.<br><br>' +
+        '<strong>Quick start:</strong><br>' +
+        '1. Click <strong>\u26A1</strong> to connect to the backend<br>' +
+        '2. Select a model from the sidebar dropdown<br>' +
+        '3. Type your message and press Enter<br><br>' +
+        '<strong>Backend options:</strong><br>' +
+        '\u2022 Win32 IDE built-in server (start from IDE menu)<br>' +
+        '\u2022 <code>python gui/serve.py</code> (standalone, proxies to Ollama)');
+    }
+
+    // ======================================================================
+    // BACKEND CONNECTION
+    // ======================================================================
+    async function connectBackend() {
+      const status = document.getElementById('backendStatus');
+      const text = document.getElementById('statusText');
+
+      status.className = 'status-pill connecting';
+      text.textContent = 'CONNECTING...';
+
+      try {
+        const t0 = performance.now();
+        const ctrl = new AbortController();
+        setTimeout(() => ctrl.abort(), 3000);
+
+        // Try /status first — gives us richer info from the Win32IDE C++ server
+        let statusData = null;
+        try {
+          const res = await fetch(State.backend.url + '/status', { signal: ctrl.signal });
+          if (res.ok) statusData = await res.json();
+        } catch (_) { /* fall through */ }
+
+        if (!statusData) {
+          const res = await fetch(State.backend.url + '/health', { signal: AbortSignal.timeout(3000) });
+          if (res.ok) statusData = await res.json();
+        }
+
+        const latency = Math.round(performance.now() - t0);
+
+        if (statusData) {
+          State.backend.online = true;
+          State.backend.lastPing = Date.now();
+          State.backend.serverType = statusData.backend || statusData.server || 'unknown';
+
+          status.className = 'status-pill online';
+          text.textContent = 'ONLINE';
+
+          updateBackendInfo(statusData, latency);
+          updateModeBadge(true);
+          logDebug('Connected to ' + State.backend.serverType + ' (' + latency + 'ms)', 'info');
+
+          await fetchModels();
+          return;
+        }
+      } catch (e) {
+        logDebug('Connection failed: ' + e.message, 'error');
+      }
+
+      // Offline
+      State.backend.online = false;
+      status.className = 'status-pill offline';
+      text.textContent = 'OFFLINE';
+      updateModeBadge(false);
+      updateBackendInfo(null, 0);
+      populateModelsFallback();
+
+      if (document.getElementById('dbgAutoReconnect') && document.getElementById('dbgAutoReconnect').checked) {
+        clearTimeout(State.reconnectTimer);
+        State.reconnectTimer = setTimeout(connectBackend, 10000);
+        logDebug('Will retry in 10 s...', 'warn');
+      }
+    }
+
+    function updateBackendInfo(data, latency) {
+      const el = document.getElementById('backendInfo');
+      if (!data) {
+        el.innerHTML =
+          '<p><span class="label">Server:</span> <span class="val-offline">not connected</span></p>' +
+          '<p><span class="label">Model:</span> <span class="val-neutral">none</span></p>' +
+          '<p><span class="label">Requests:</span> <span class="val-neutral">&mdash;</span></p>' +
+          '<p><span class="label">Tokens:</span> <span class="val-neutral">&mdash;</span></p>';
+        return;
+      }
+      var server = data.backend || data.server || 'unknown';
+      var loaded = data.model_loaded ? 'yes' : 'no';
+      var reqs = data.total_requests != null ? data.total_requests : (data.available_models != null ? data.available_models : '\u2014');
+      var toks = data.total_tokens != null ? data.total_tokens : '\u2014';
+
+      el.innerHTML =
+        '<p><span class="label">Server:</span> <span class="val-online">' + esc(server) + '</span></p>' +
+        '<p><span class="label">Model:</span> <span class="' + (loaded === 'yes' ? 'val-online' : 'val-neutral') + '">' + loaded + '</span></p>' +
+        '<p><span class="label">Latency:</span> <span class="val-neutral">' + latency + 'ms</span></p>' +
+        '<p><span class="label">Requests:</span> <span class="val-neutral">' + reqs + '</span></p>' +
+        '<p><span class="label">Tokens:</span> <span class="val-neutral">' + toks + '</span></p>';
+    }
+
+    function updateModeBadge(online) {
+      var badge = document.getElementById('modeBadge');
+      var txt = document.getElementById('modeText');
+      var sEl = document.getElementById('chatStatus');
+      if (online) {
+        badge.classList.add('active');
+        txt.textContent = 'Backend Connected';
+        sEl.innerHTML = '<span style="color:var(--accent-green);">\u25CF</span> Ready';
+      } else {
+        badge.classList.remove('active');
+        txt.textContent = 'Disconnected';
+        sEl.innerHTML = '<span style="color:var(--accent-red);">\u25CF</span> Offline';
+      }
+    }
+
+    // ======================================================================
+    // MODELS
+    // ======================================================================
+    async function fetchModels() {
+      if (!State.backend.online) return;
+      try {
+        var res = await fetch(State.backend.url + '/models', { signal: AbortSignal.timeout(5000) });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        var data = await res.json();
+        if (data.models && Array.isArray(data.models)) {
+          State.model.list = data.models;
+          populateModelSelect(data.models);
+          logDebug('Loaded ' + data.models.length + ' models from /models', 'info');
+        }
+      } catch (e) {
+        logDebug('Fetch models failed: ' + e.message, 'error');
+        populateModelsFallback();
+      }
+    }
+
+    function populateModelSelect(models) {
+      var sel = document.getElementById('modelSelect');
+      sel.innerHTML = '';
+
+      if (models.length === 0) {
+        sel.innerHTML = '<option value="">No models found</option>';
+        return;
+      }
+      sel.innerHTML = '<option value="">Select Model...</option>';
+
+      // Group by type
+      var groups = {};
+      models.forEach(function (m) {
+        var t = m.type || 'unknown';
+        if (!groups[t]) groups[t] = [];
+        groups[t].push(m);
+      });
+
+      var labels = {
+        gguf: '\uD83D\uDCE6 Local GGUF',
+        ollama: '\uD83E\uDD99 Ollama',
+        blob: '\uD83D\uDCBE Blobs',
+        cloud: '\u2601\uFE0F Cloud',
+        unknown: '\u2753 Other',
+      };
+
+      Object.keys(groups).forEach(function (type) {
+        var grp = document.createElement('optgroup');
+        grp.label = labels[type] || type.toUpperCase();
+        groups[type].forEach(function (m) {
+          var opt = document.createElement('option');
+          opt.value = m.name;
+          opt.textContent = m.name + ' (' + (m.size || '?') + ')';
+          grp.appendChild(opt);
+        });
+        sel.appendChild(grp);
+      });
+    }
+
+    function populateModelsFallback() {
+      var sel = document.getElementById('modelSelect');
+      sel.innerHTML = '<option value="">Backend offline</option>';
+    }
+
+    async function refreshModels() {
+      if (!State.backend.online) {
+        addMessage('system', 'Cannot refresh: backend offline. Click \u26A1 to connect.');
+        return;
+      }
+      logDebug('Refreshing models...', 'info');
+      await fetchModels();
+    }
+
+    function changeModel() {
+      var name = document.getElementById('modelSelect').value;
+      State.model.current = name || null;
+
+      var badge = document.getElementById('modelBadge');
+      var badgeText = document.getElementById('modelBadgeText');
+      var rightModel = document.getElementById('rightModel');
+
+      if (name) {
+        badge.style.display = 'flex';
+        badgeText.textContent = name.length > 25 ? name.substring(0, 22) + '...' : name;
+        rightModel.textContent = name.length > 20 ? name.substring(0, 17) + '...' : name;
+        logDebug('Model selected: ' + name, 'info');
+      } else {
+        badge.style.display = 'none';
+        rightModel.textContent = '\u2014';
+      }
+    }
+
+    // ======================================================================
+    // CHAT
+    // ======================================================================
+    function handleInput(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+      setTimeout(autoResizeInput, 0);
+    }
+
+    function autoResizeInput() {
+      var el = document.getElementById('chatInput');
+      el.style.height = 'auto';
+      el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+    }
+
+    async function sendMessage() {
+      if (State.chat.sending) return;
+      var el = document.getElementById('chatInput');
+      var text = el.value.trim();
+      if (!text) return;
+
+      addMessage('user', text);
+      el.value = '';
+      el.style.height = 'auto';
+
+      State.chat.sending = true;
+      document.getElementById('sendBtn').disabled = true;
+
+      if (State.backend.online) {
+        await sendToBackend(text);
+      } else {
+        showTyping();
+        await sleep(400);
+        hideTyping();
+        addMessage('assistant', getOfflineResponse(text));
+      }
+
+      State.chat.sending = false;
+      document.getElementById('sendBtn').disabled = false;
+    }
+
+    async function sendToBackend(query) {
+      var model = State.model.current;
+      var t0 = performance.now();
+
+      // Build file context
+      var fileContext = '';
+      if (State.files.length > 0) {
+        var parts = [];
+        State.files.forEach(function (f) {
+          var content = State.fileContents[f.name];
+          if (content) parts.push('--- ' + f.name + ' ---\n' + content);
+          else parts.push('[Attached: ' + f.name + ' (' + formatBytes(f.size) + ')]');
+        });
+        fileContext = parts.join('\n\n');
+      }
+
+      var fullPrompt = fileContext
+        ? 'Context files:\n' + fileContext + '\n\nUser question: ' + query
+        : query;
+
+      if (State.gen.stream) {
+        await sendStreaming(fullPrompt, model, t0);
+      } else {
+        await sendNonStreaming(fullPrompt, model, t0);
+      }
+    }
+
+    async function sendNonStreaming(prompt, model, t0) {
+      showTyping();
+      try {
+        var res = await fetch(State.backend.url + '/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            question: prompt,
+            model: model || undefined,
+            context: State.gen.context,
+            stream: false,
+          }),
+        });
+
+        hideTyping();
+        var latency = Math.round(performance.now() - t0);
+
+        if (!res.ok) {
+          addMessage('system', 'Backend returned HTTP ' + res.status);
+          logDebug('/ask failed: HTTP ' + res.status, 'error');
+          return;
+        }
+
+        var data = await res.json();
+        var answer = data.answer || data.response || '[No response]';
+        addMessage('assistant', answer, { latency: latency, model: model });
+
+        if (el('dbgLogRequests') && el('dbgLogRequests').checked) {
+          logDebug('/ask \u2192 ' + answer.length + ' chars in ' + latency + 'ms', 'info');
+        }
+      } catch (e) {
+        hideTyping();
+        addMessage('system', 'Request failed: ' + e.message);
+        logDebug('Request error: ' + e.message, 'error');
+        markOffline();
+      }
+    }
+
+    async function sendStreaming(prompt, model, t0) {
+      var msgDiv = addMessage('assistant', '', { streaming: true });
+      var textEl = msgDiv.querySelector('.message-text');
+
+      try {
+        var res = await fetch(State.backend.url + '/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: model || 'rawrxd',
+            prompt: prompt,
+            stream: true,
+            num_predict: State.gen.maxTokens,
+            options: { temperature: State.gen.temperature },
+          }),
+        });
+
+        if (!res.ok) {
+          // Fall back to non-streaming /ask
+          msgDiv.remove();
+          State.chat.messageCount--;
+          await sendNonStreaming(prompt, model, t0);
+          return;
+        }
+
+        var reader = res.body.getReader();
+        var decoder = new TextDecoder();
+        var fullText = '';
+        var tokenCount = 0;
+
+        textEl.classList.add('streaming-cursor');
+
+        while (true) {
+          var result = await reader.read();
+          if (result.done) break;
+
+          var chunk = decoder.decode(result.value, { stream: true });
+          var lines = chunk.split('\n').filter(function (l) { return l.trim(); });
+
+          for (var i = 0; i < lines.length; i++) {
+            try {
+              var obj = JSON.parse(lines[i]);
+              if (obj.response) {
+                fullText += obj.response;
+                tokenCount++;
+                textEl.innerHTML = formatMessage(fullText);
+              }
+              if (obj.done) break;
+            } catch (_) { /* skip non-JSON */ }
+          }
+
+          // Auto-scroll during streaming
+          var container = document.getElementById('chatMessages');
+          container.scrollTop = container.scrollHeight;
+        }
+
+        textEl.classList.remove('streaming-cursor');
+        textEl.innerHTML = formatMessage(fullText);
+
+        var latency = Math.round(performance.now() - t0);
+        var tps = tokenCount > 0 && latency > 0 ? (tokenCount / (latency / 1000)).toFixed(1) : '\u2014';
+
+        var metaEl = msgDiv.querySelector('.message-meta');
+        if (metaEl) {
+          metaEl.innerHTML = '<span>' + latency + 'ms</span><span>' + tokenCount + ' tokens</span><span>' + tps + ' t/s</span>';
+        }
+
+        if (el('dbgLogRequests') && el('dbgLogRequests').checked) {
+          logDebug('Stream: ' + tokenCount + ' tokens in ' + latency + 'ms (' + tps + ' t/s)', 'info');
+        }
+      } catch (e) {
+        textEl.classList.remove('streaming-cursor');
+        if (!textEl.textContent) {
+          // Streaming endpoint not available — fallback
+          msgDiv.remove();
+          State.chat.messageCount--;
+          await sendNonStreaming(prompt, model, t0);
+        } else {
+          logDebug('Stream interrupted: ' + e.message, 'error');
+        }
+      }
+    }
+
+    function getOfflineResponse(q) {
+      var lower = q.toLowerCase();
+      if (lower.indexOf('help') >= 0 || lower === '?') {
+        return '**Offline Mode \u2014 Help**\n\nThe backend is not running. To use AI:\n\n' +
+          '1. **Start the Win32 IDE** \u2014 it has a built-in server on port 11435\n' +
+          '2. **Or run the Python server:**\n' +
+          '```powershell\ncd D:\\rawrxd\npython gui/serve.py\n```\n\n' +
+          'Then click the \u26A1 button to connect.';
+      }
+      if (lower.indexOf('endpoint') >= 0 || lower.indexOf('api') >= 0) {
+        return '**API Endpoints** (when backend is online):\n\n' +
+          '\u2022 `GET /health` \u2014 Health check\n' +
+          '\u2022 `GET /status` \u2014 Server status + stats\n' +
+          '\u2022 `GET /models` \u2014 List all models\n' +
+          '\u2022 `POST /ask` \u2014 Send question\n' +
+          '\u2022 `POST /api/generate` \u2014 Ollama-compatible streaming\n' +
+          '\u2022 `POST /v1/chat/completions` \u2014 OpenAI-compatible\n' +
+          '\u2022 `GET /gui` \u2014 Serve this HTML';
+      }
+      return '**Offline Mode**\n\nBackend not reachable at `' + State.backend.url + '`.\n\n' +
+        'Type `help` for setup instructions, or click \u26A1 to retry.';
+    }
+
+    function markOffline() {
+      State.backend.online = false;
+      updateModeBadge(false);
+      document.getElementById('backendStatus').className = 'status-pill offline';
+      document.getElementById('statusText').textContent = 'OFFLINE';
+    }
+
+    // ======================================================================
+    // MESSAGES
+    // ======================================================================
+    function addMessage(role, text, opts) {
+      opts = opts || {};
+      var container = document.getElementById('chatMessages');
+      var time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      var div = document.createElement('div');
+      div.className = 'message ' + role;
+
+      var icon = role === 'user' ? '\uD83D\uDC64' : (role === 'system' ? '\u2699' : '\uD83E\uDD96');
+      var label = role === 'user' ? 'You' : (role === 'system' ? 'System' : 'RawrXD');
+
+      var metaHtml = '';
+      if (opts.latency || opts.model) {
+        var parts = [];
+        if (opts.latency) parts.push(opts.latency + 'ms');
+        if (opts.model) parts.push(esc(opts.model));
+        metaHtml = '<div class="message-meta">' + parts.map(function (p) { return '<span>' + p + '</span>'; }).join('') + '</div>';
+      } else if (role === 'assistant') {
+        metaHtml = '<div class="message-meta"></div>';
+      }
+
+      // Inline failure badge
+      var badgeHtml = '';
+      if (opts.failureBadge) {
+        var fb = opts.failureBadge;
+        var cls = fb.outcome === 'Corrected' ? 'retried' : (fb.outcome === 'Failed' ? 'failed-retry' : 'detected');
+        var icon = fb.outcome === 'Corrected' ? '\u2714' : (fb.outcome === 'Failed' ? '\u2718' : '\u26A0');
+        badgeHtml = '<span class="failure-badge ' + cls + '" title="' + esc(fb.detail || '') + '">' + icon + ' ' + esc(fb.type) + '</span>';
+      }
+
+      div.innerHTML =
+        '<div class="message-avatar">' + icon + '</div>' +
+        '<div class="message-content">' +
+        '<div class="message-header">' + label + ' <span class="message-time">' + time + '</span>' + badgeHtml + '</div>' +
+        '<div class="message-text">' + (role === 'user' ? esc(text) : formatMessage(text)) + '</div>' +
+        metaHtml +
+        '</div>';
+
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+
+      State.chat.messageCount++;
+      document.getElementById('msgCount').textContent = State.chat.messageCount;
+
+      return div;
+    }
+
+    function formatMessage(text) {
+      if (!text) return '';
+      // Code blocks
+      text = text.replace(/```(\w+)?\n([\s\S]*?)```/g, function (match, lang, code) {
+        return '<div class="code-block">' +
+          '<div class="code-header">' +
+          '<span class="code-lang">' + esc(lang || 'text') + '</span>' +
+          '<div class="code-actions"><button class="code-btn" onclick="copyCode(this)">Copy</button></div>' +
+          '</div>' +
+          '<div class="code-content"><pre>' + esc(code.trim()) + '</pre></div>' +
+          '</div>';
+      });
+      // Inline code
+      text = text.replace(/`([^`]+)`/g,
+        '<code style="background:var(--bg-tertiary);padding:2px 6px;border-radius:4px;font-family:var(--font-mono);font-size:12px;">$1</code>');
+      // Bold
+      text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      // Bullet points
+      text = text.replace(/^\u2022 /gm, '\u2022 ');
+      // Line breaks
+      text = text.replace(/\n/g, '<br>');
+      return text;
+    }
+
+    function showTyping() {
+      var container = document.getElementById('chatMessages');
+      var div = document.createElement('div');
+      div.className = 'message assistant';
+      div.id = 'typingIndicator';
+      div.innerHTML =
+        '<div class="message-avatar">\uD83E\uDD96</div>' +
+        '<div class="message-content">' +
+        '<div class="typing-indicator">' +
+        '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>' +
+        '</div>' +
+        '</div>';
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function hideTyping() {
+      var x = document.getElementById('typingIndicator');
+      if (x) x.remove();
+    }
+
+    // ======================================================================
+    // STATUS / ENDPOINTS
+    // ======================================================================
+    async function checkServerStatus() {
+      if (!State.backend.online) {
+        addMessage('system', 'Backend offline. Click \u26A1 to connect first.');
+        return;
+      }
+      try {
+        var t0 = performance.now();
+        var res = await fetch(State.backend.url + '/status', { signal: AbortSignal.timeout(3000) });
+        var lat = Math.round(performance.now() - t0);
+        var data = await res.json();
+
+        var msg = '**Server Status** (' + lat + 'ms)\n\n';
+        Object.keys(data).forEach(function (k) {
+          msg += '\u2022 **' + k + '**: `' + JSON.stringify(data[k]) + '`\n';
+        });
+        addMessage('assistant', msg);
+      } catch (e) {
+        addMessage('system', 'Status check failed: ' + e.message);
+      }
+    }
+
+    function showEndpoints() {
+      addMessage('assistant',
+        '**API Endpoints** \u2014 `' + State.backend.url + '`\n\n' +
+        '`GET  /health` \u2014 Health check\n' +
+        '`GET  /status` \u2014 Server status + stats\n' +
+        '`GET  /models` \u2014 List all models (GGUF + Ollama + blobs)\n' +
+        '`POST /ask` \u2014 Send question, get answer\n' +
+        '`POST /api/generate` \u2014 Ollama-compatible (streaming)\n' +
+        '`POST /v1/chat/completions` \u2014 OpenAI-compatible chat\n' +
+        '`GET  /gui` \u2014 Serve this HTML interface\n\n' +
+        '**curl example:**\n' +
+        '```bash\ncurl -X POST ' + State.backend.url + '/ask \\\n' +
+        '  -H "Content-Type: application/json" \\\n' +
+        '  -d \'{"question":"Hello","model":"dolphin3:latest"}\'\n```');
+    }
+
+    // ======================================================================
+    // FILES
+    // ======================================================================
+    function setupDragDrop() {
+      var zone = document.getElementById('dropZone');
+      zone.addEventListener('dragover', function (e) { e.preventDefault(); zone.classList.add('dragover'); });
+      zone.addEventListener('dragleave', function () { zone.classList.remove('dragover'); });
+      zone.addEventListener('drop', function (e) { e.preventDefault(); zone.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
+    }
+
+    function handleFiles(fileList) {
+      Array.from(fileList).forEach(function (file) {
+        if (State.files.find(function (f) { return f.name === file.name; })) return;
+        State.files.push(file);
+        renderFile(file);
+        // Read text content for context
+        if (file.size < 1024 * 1024) {
+          var reader = new FileReader();
+          reader.onload = function (e) { State.fileContents[file.name] = e.target.result; };
+          reader.readAsText(file);
+        }
+      });
+      updateFileBadge();
+    }
+
+    function renderFile(file) {
+      var list = document.getElementById('fileList');
+      var div = document.createElement('div');
+      div.className = 'file-item';
+      div.id = 'file-' + file.name.replace(/[^a-zA-Z0-9]/g, '_');
+      div.innerHTML =
+        '<span class="file-icon">' + getFileIcon(file.name) + '</span>' +
+        '<div class="file-info">' +
+        '<div class="file-name">' + esc(file.name) + '</div>' +
+        '<div class="file-meta">' + formatBytes(file.size) + '</div>' +
+        '</div>' +
+        '<span class="file-remove" onclick="removeFile(\'' + esc(file.name) + '\')">\u00D7</span>';
+      list.appendChild(div);
+    }
+
+    function getFileIcon(name) {
+      var ext = name.split('.').pop().toLowerCase();
+      var map = {
+        js: '📜', py: '🐍', cpp: '⚙', c: '⚙', h: '📋', hpp: '📋',
+        rs: '🦀', go: '🐹', java: '☕', ts: '📘',
+        html: '🌐', css: '🎨', json: '📋', md: '📝', txt: '📄',
+        gguf: '🧠', bin: '💾', asm: '⚡', ps1: '💠',
+      };
+      return map[ext] || '📄';
+    }
+
+    function formatBytes(b) {
+      if (b === 0) return '0 B';
+      var k = 1024, sizes = ['B', 'KB', 'MB', 'GB'];
+      var i = Math.floor(Math.log(b) / Math.log(k));
+      return parseFloat((b / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    function removeFile(name) {
+      State.files = State.files.filter(function (f) { return f.name !== name; });
+      delete State.fileContents[name];
+      var x = document.getElementById('file-' + name.replace(/[^a-zA-Z0-9]/g, '_'));
+      if (x) x.remove();
+      updateFileBadge();
+    }
+
+    function updateFileBadge() {
+      var badge = document.getElementById('fileBadge');
+      var count = document.getElementById('fileCount');
+      var ac = document.getElementById('attachCount');
+      ac.textContent = State.files.length;
+      if (State.files.length > 0) {
+        badge.style.display = 'flex';
+        count.textContent = State.files.length + ' file' + (State.files.length > 1 ? 's' : '');
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+
+    function attachFile() { document.getElementById('fileInput').click(); }
+
+    // ======================================================================
+    // DEBUG PANEL
+    // ======================================================================
+    function showDebug() {
+      State.debug.open = true;
+      document.getElementById('debugPanel').classList.add('active');
+    }
+    function closeDebug() {
+      State.debug.open = false;
+      document.getElementById('debugPanel').classList.remove('active');
+    }
+
+    async function runDiagnostics() {
+      logDebug('=== Running Diagnostics ===', 'info');
+
+      logDebug('Testing /health...', 'info');
+      try {
+        var t0 = performance.now();
+        var res = await fetch(State.backend.url + '/health', { signal: AbortSignal.timeout(3000) });
+        var lat = Math.round(performance.now() - t0);
+        var data = await res.json();
+        logDebug('Health: OK (' + lat + 'ms) \u2014 ' + JSON.stringify(data), 'info');
+      } catch (e) {
+        logDebug('Health: FAILED \u2014 ' + e.message, 'error');
+      }
+
+      logDebug('Testing /status...', 'info');
+      try {
+        var res2 = await fetch(State.backend.url + '/status', { signal: AbortSignal.timeout(3000) });
+        var d2 = await res2.json();
+        logDebug('Status: ' + JSON.stringify(d2), 'info');
+      } catch (e) {
+        logDebug('Status: FAILED \u2014 ' + e.message, 'error');
+      }
+
+      logDebug('Testing /models...', 'info');
+      try {
+        var t1 = performance.now();
+        var res3 = await fetch(State.backend.url + '/models', { signal: AbortSignal.timeout(5000) });
+        var d3 = await res3.json();
+        var lt = Math.round(performance.now() - t1);
+        logDebug('Models: ' + (d3.models ? d3.models.length : 0) + ' found (' + lt + 'ms)', 'info');
+      } catch (e) {
+        logDebug('Models: FAILED \u2014 ' + e.message, 'error');
+      }
+
+      logDebug('=== Diagnostics Complete ===', 'info');
+    }
+
+    async function testAllEndpoints() {
+      var eps = [
+        { method: 'GET', path: '/health' },
+        { method: 'GET', path: '/status' },
+        { method: 'GET', path: '/models' },
+        { method: 'GET', path: '/api/tags' },
+        { method: 'POST', path: '/ask', body: { question: 'ping', model: '' } },
+      ];
+
+      logDebug('=== Testing All Endpoints ===', 'info');
+
+      for (var i = 0; i < eps.length; i++) {
+        var ep = eps[i];
+        try {
+          var t0 = performance.now();
+          var opts = { method: ep.method, signal: AbortSignal.timeout(5000) };
+          if (ep.body) {
+            opts.headers = { 'Content-Type': 'application/json' };
+            opts.body = JSON.stringify(ep.body);
+          }
+          var res = await fetch(State.backend.url + ep.path, opts);
+          var latency = Math.round(performance.now() - t0);
+          var text = await res.text();
+          var preview = text.length > 80 ? text.substring(0, 80) + '...' : text;
+          logDebug(ep.method + ' ' + ep.path + ' \u2192 ' + res.status + ' (' + latency + 'ms) ' + preview, res.ok ? 'info' : 'warn');
+        } catch (e) {
+          logDebug(ep.method + ' ' + ep.path + ' \u2192 FAILED: ' + e.message, 'error');
+        }
+      }
+
+      logDebug('=== Endpoint Test Complete ===', 'info');
+    }
+
+    function exportDebug() {
+      var data = {
+        timestamp: new Date().toISOString(),
+        state: {
+          backend: State.backend,
+          model: State.model,
+          gen: State.gen,
+          files: State.files.map(function (f) { return f.name; }),
+          chatMessages: State.chat.messageCount,
+        },
+        debugLog: document.getElementById('debugLog').innerText,
+      };
+      var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = 'rawrxd-debug-' + Date.now() + '.json'; a.click();
+      URL.revokeObjectURL(url);
+      logDebug('Debug data exported', 'info');
+    }
+
+    function logDebug(msg, level) {
+      level = level || 'info';
+      var log = document.getElementById('debugLog');
+      var time = new Date().toLocaleTimeString([], { hour12: false });
+      var line = document.createElement('div');
+      line.className = 'debug-log';
+      line.innerHTML = '<span class="timestamp">[' + time + ']</span> <span class="level-' + level + '">[' + level.toUpperCase() + ']</span> ' + esc(msg) + '<br>';
+      log.appendChild(line);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    // ======================================================================
+    // TERMINAL
+    // ======================================================================
+    function handleTerminal(e) {
+      if (e.key === 'Enter') executeCommand();
+      else if (e.key === 'ArrowUp') { e.preventDefault(); navigateHistory(-1); }
+      else if (e.key === 'ArrowDown') { e.preventDefault(); navigateHistory(1); }
+    }
+
+    function executeCommand() {
+      var input = document.getElementById('terminalInput');
+      var cmd = input.value.trim();
+      if (!cmd) return;
+
+      addTerminalLine('rawrxd> ' + cmd, 'command');
+      State.terminal.history.push(cmd);
+      State.terminal.index = State.terminal.history.length;
+      input.value = '';
+
+      var args = cmd.toLowerCase().split(/\s+/);
+
+      switch (args[0]) {
+        case 'help':
+          addTerminalLine('Available commands:', 'output');
+          addTerminalLine('  help             \u2014 Show this help', 'output');
+          addTerminalLine('  status           \u2014 Backend connection status', 'output');
+          addTerminalLine('  connect          \u2014 Connect to backend', 'output');
+          addTerminalLine('  models           \u2014 List available models', 'output');
+          addTerminalLine('  use <model>      \u2014 Select a model', 'output');
+          addTerminalLine('  ask <question>   \u2014 Send a question', 'output');
+          addTerminalLine('  endpoints        \u2014 List API endpoints', 'output');
+          addTerminalLine('  curl <path>      \u2014 GET an endpoint', 'output');
+          addTerminalLine('  failures         \u2014 Show failure summary', 'output');
+          addTerminalLine('  clear            \u2014 Clear terminal', 'output');
+          break;
+
+        case 'clear': case 'cls':
+          document.getElementById('terminalOutput').innerHTML = '';
+          break;
+
+        case 'status':
+          addTerminalLine('Backend: ' + (State.backend.online ? 'ONLINE' : 'OFFLINE'), State.backend.online ? 'success' : 'error');
+          addTerminalLine('URL:     ' + State.backend.url, 'output');
+          addTerminalLine('Server:  ' + (State.backend.serverType || '\u2014'), 'output');
+          addTerminalLine('Model:   ' + (State.model.current || 'none'), 'output');
+          addTerminalLine('Models:  ' + State.model.list.length + ' available', 'output');
+          addTerminalLine('Files:   ' + State.files.length + ' attached', 'output');
+          break;
+
+        case 'connect':
+          addTerminalLine('Connecting to ' + State.backend.url + '...', 'system');
+          connectBackend().then(function () {
+            addTerminalLine(State.backend.online ? 'Connected!' : 'Connection failed.', State.backend.online ? 'success' : 'error');
+          });
+          break;
+
+        case 'models':
+          if (State.model.list.length === 0) {
+            addTerminalLine('No models. Connect to backend first.', 'error');
+          } else {
+            State.model.list.forEach(function (m) {
+              addTerminalLine('  [' + (m.type || '?') + '] ' + m.name + ' (' + (m.size || '?') + ')', 'output');
+            });
+            addTerminalLine('Total: ' + State.model.list.length + ' models', 'system');
+          }
+          break;
+
+        case 'use':
+          if (args.length < 2) {
+            addTerminalLine('Usage: use <model-name>', 'error');
+          } else {
+            var modelName = cmd.substring(4).trim();
+            var found = State.model.list.find(function (m) {
+              return m.name.toLowerCase() === modelName.toLowerCase() ||
+                m.name.toLowerCase().indexOf(modelName.toLowerCase()) >= 0;
+            });
+            if (found) {
+              State.model.current = found.name;
+              document.getElementById('modelSelect').value = found.name;
+              changeModel();
+              addTerminalLine('Selected: ' + found.name, 'success');
+            } else {
+              addTerminalLine('Not found: ' + modelName, 'error');
+              addTerminalLine("Try 'models' to list available models.", 'output');
+            }
+          }
+          break;
+
+        case 'ask':
+          if (args.length < 2) {
+            addTerminalLine('Usage: ask <question>', 'error');
+          } else {
+            var question = cmd.substring(4).trim();
+            if (!State.backend.online) {
+              addTerminalLine('Backend offline. Run "connect" first.', 'error');
+            } else {
+              addTerminalLine('Sending...', 'system');
+              fetch(State.backend.url + '/ask', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question: question, model: State.model.current || '' }),
+              })
+                .then(function (r) { return r.json(); })
+                .then(function (d) { addTerminalLine(d.answer || d.response || 'No response', 'output'); })
+                .catch(function (e) { addTerminalLine('Error: ' + e.message, 'error'); });
+            }
+          }
+          break;
+
+        case 'endpoints':
+          addTerminalLine('GET  /health              \u2014 Health check', 'output');
+          addTerminalLine('GET  /status              \u2014 Server status', 'output');
+          addTerminalLine('GET  /models              \u2014 List models', 'output');
+          addTerminalLine('POST /ask                 \u2014 Chat (frontend)', 'output');
+          addTerminalLine('POST /api/generate        \u2014 Ollama-compatible', 'output');
+          addTerminalLine('POST /v1/chat/completions \u2014 OpenAI-compatible', 'output');
+          addTerminalLine('GET  /gui                 \u2014 This HTML interface', 'output');
+          addTerminalLine('GET  /api/failures        \u2014 Failure timeline + stats', 'output');
+          addTerminalLine('GET  /api/agents/status   \u2014 Agent & failure status', 'output');
+          addTerminalLine('GET  /api/agents/history  \u2014 Agent event history', 'output');
+          addTerminalLine('POST /api/agents/replay   \u2014 Replay agent events', 'output');
+          break;
+
+        case 'curl':
+          if (args.length < 2) {
+            addTerminalLine('Usage: curl <path>  e.g. curl /health', 'error');
+          } else {
+            var path = args[1].charAt(0) === '/' ? args[1] : '/' + args[1];
+            addTerminalLine('GET ' + State.backend.url + path + ' ...', 'system');
+            fetch(State.backend.url + path, { signal: AbortSignal.timeout(5000) })
+              .then(function (r) { return r.text(); })
+              .then(function (text) {
+                try {
+                  var pretty = JSON.stringify(JSON.parse(text), null, 2);
+                  pretty.split('\n').forEach(function (line) { addTerminalLine(line, 'output'); });
+                } catch (_) {
+                  addTerminalLine(text.substring(0, 500), 'output');
+                }
+              })
+              .catch(function (e) { addTerminalLine('Error: ' + e.message, 'error'); });
+          }
+          break;
+
+        case 'failures':
+          if (!State.backend.online) {
+            addTerminalLine('Backend offline. Run "connect" first.', 'error');
+          } else {
+            addTerminalLine('Fetching failure data...', 'system');
+            fetch(State.backend.url + '/api/failures?limit=50', { signal: AbortSignal.timeout(5000) })
+              .then(function (r) { return r.json(); })
+              .then(function (data) {
+                var s = data.stats || {};
+                addTerminalLine('\u2500\u2500\u2500 Failure Intelligence \u2500\u2500\u2500', 'output');
+                addTerminalLine('  Total Failures:    ' + (s.totalFailures || 0), s.totalFailures > 0 ? 'error' : 'success');
+                addTerminalLine('  Total Retries:     ' + (s.totalRetries || 0), 'output');
+                addTerminalLine('  Retry Successes:   ' + (s.successAfterRetry || 0), 'success');
+                addTerminalLine('  Retries Declined:  ' + (s.retriesDeclined || 0), 'output');
+                var reasons = (s.topReasons || []).filter(function (r) { return r.count > 0; });
+                if (reasons.length > 0) {
+                  addTerminalLine('  Top Reasons:', 'output');
+                  reasons.slice(0, 5).forEach(function (r) {
+                    addTerminalLine('    ' + r.type + ': ' + r.count, 'error');
+                  });
+                } else {
+                  addTerminalLine('  No failure reasons recorded.', 'success');
+                }
+                addTerminalLine('\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500', 'output');
+              })
+              .catch(function (e) { addTerminalLine('Error: ' + e.message, 'error'); });
+          }
+          break;
+
+        default:
+          addTerminalLine("Unknown: " + args[0] + ". Type 'help' for commands.", 'error');
+      }
+    }
+
+    function addTerminalLine(text, type) {
+      var output = document.getElementById('terminalOutput');
+      var div = document.createElement('div');
+      div.className = 'terminal-line ' + type;
+      div.textContent = text;
+      output.appendChild(div);
+      output.scrollTop = output.scrollHeight;
+    }
+
+    function navigateHistory(dir) {
+      var input = document.getElementById('terminalInput');
+      State.terminal.index += dir;
+      if (State.terminal.index < 0) State.terminal.index = 0;
+      if (State.terminal.index >= State.terminal.history.length) {
+        State.terminal.index = State.terminal.history.length;
+        input.value = '';
+        return;
+      }
+      input.value = State.terminal.history[State.terminal.index] || '';
+    }
+
+    function clearTerminal() {
+      document.getElementById('terminalOutput').innerHTML = '';
+    }
+
+    function toggleTerminal() {
+      State.terminal.minimized = !State.terminal.minimized;
+      document.getElementById('terminalPanel').classList.toggle('minimized', State.terminal.minimized);
+      document.getElementById('termToggleBtn').textContent = State.terminal.minimized ? '\u2B06' : '\u2B07';
+    }
+
+    // ======================================================================
+    // UTILS
+    // ======================================================================
+    function copyCode(btn) {
+      var code = btn.closest('.code-block').querySelector('pre').textContent;
+      navigator.clipboard.writeText(code).then(function () {
+        btn.textContent = 'Copied!';
+        setTimeout(function () { btn.textContent = 'Copy'; }, 2000);
+      });
+    }
+
+    function insertSnippet(type) {
+      var snippets = {
+        code: '```cpp\n// Your code here\n```',
+        bash: '```powershell\n# Command here\n```',
+      };
+      var input = document.getElementById('chatInput');
+      input.value += (input.value ? '\n' : '') + (snippets[type] || '');
+      autoResizeInput();
+      input.focus();
+    }
+
+    function clearChat() {
+      document.getElementById('chatMessages').innerHTML = '';
+      State.chat.messageCount = 0;
+      document.getElementById('msgCount').textContent = '0';
+      addWelcomeMessage();
+    }
+
+    // ======================================================================
+    // FAILURE INTELLIGENCE PANEL
+    // ======================================================================
+    function showFailures() {
+      document.getElementById('failurePanel').classList.add('active');
+      fetchFailures();
+    }
+
+    function closeFailures() {
+      document.getElementById('failurePanel').classList.remove('active');
+    }
+
+    async function fetchFailures() {
+      if (!State.backend.online) {
+        logDebug('Cannot fetch failures: backend offline', 'warn');
+        return;
+      }
+
+      try {
+        var t0 = performance.now();
+        var res = await fetch(State.backend.url + '/api/failures?limit=200', { signal: AbortSignal.timeout(5000) });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        var data = await res.json();
+        var lat = Math.round(performance.now() - t0);
+
+        renderFailureTimeline(data.failures || []);
+        renderFailureStats(data.stats || {});
+        logDebug('Failures loaded: ' + (data.failures || []).length + ' records (' + lat + 'ms)', 'info');
+      } catch (e) {
+        logDebug('Fetch failures failed: ' + e.message, 'error');
+        document.getElementById('failureTableBody').innerHTML =
+          '<tr><td colspan="5" style="text-align:center; color:var(--accent-red); padding:20px;">Failed to load: ' + esc(e.message) + '</td></tr>';
+      }
+    }
+
+    function renderFailureTimeline(failures) {
+      var tbody = document.getElementById('failureTableBody');
+
+      if (!failures || failures.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:40px;">No failures recorded yet \u2014 that\'s a good thing!</td></tr>';
+        return;
+      }
+
+      // Sort by timestamp descending (most recent first)
+      failures.sort(function (a, b) { return (b.timestampMs || 0) - (a.timestampMs || 0); });
+
+      var html = '';
+      failures.forEach(function (f, idx) {
+        var timeStr = f.timestampMs ? new Date(f.timestampMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '\u2014';
+        var typeStr = esc(f.type || 'Unknown');
+        var evidence = esc((f.evidence || '').substring(0, 60));
+        if ((f.evidence || '').length > 60) evidence += '\u2026';
+        var strategy = esc(f.strategy || '\u2014');
+        var outcome = f.outcome || 'Unknown';
+
+        var outClass = outcome.toLowerCase();
+        if (outClass === 'corrected') outClass = 'corrected';
+        else if (outClass === 'failed') outClass = 'failed';
+        else if (outClass === 'declined') outClass = 'declined';
+        else outClass = 'detected';
+
+        html += '<tr onclick="showFailureDetail(' + idx + ')" style="cursor:pointer;" data-idx="' + idx + '">';
+        html += '<td>' + timeStr + '</td>';
+        html += '<td style="color:var(--accent-red);">' + typeStr + '</td>';
+        html += '<td>' + evidence + '</td>';
+        html += '<td>' + strategy + '</td>';
+        html += '<td><span class="outcome-badge ' + outClass + '">' + outcome + '</span></td>';
+        html += '</tr>';
+      });
+
+      tbody.innerHTML = html;
+
+      // Store failures for detail view
+      State.failureData = failures;
+    }
+
+    function showFailureDetail(idx) {
+      var f = State.failureData && State.failureData[idx];
+      if (!f) return;
+
+      // Highlight selected row
+      var rows = document.querySelectorAll('.failure-table tbody tr');
+      rows.forEach(function (r) { r.classList.remove('selected'); });
+      var sel = document.querySelector('.failure-table tbody tr[data-idx="' + idx + '"]');
+      if (sel) sel.classList.add('selected');
+
+      var drawer = document.getElementById('failureDetailDrawer');
+      drawer.classList.add('active');
+
+      var timeStr = f.timestampMs ? new Date(f.timestampMs).toLocaleString() : '\u2014';
+
+      drawer.innerHTML =
+        '<div class="failure-detail-row"><span class="failure-detail-key">Time</span><span class="failure-detail-val">' + esc(timeStr) + '</span></div>' +
+        '<div class="failure-detail-row"><span class="failure-detail-key">Type</span><span class="failure-detail-val" style="color:var(--accent-red);">' + esc(f.type || '') + '</span></div>' +
+        '<div class="failure-detail-row"><span class="failure-detail-key">Outcome</span><span class="failure-detail-val">' + esc(f.outcome || '') + '</span></div>' +
+        '<div class="failure-detail-row"><span class="failure-detail-key">Strategy</span><span class="failure-detail-val">' + esc(f.strategy || 'None') + '</span></div>' +
+        '<div class="failure-detail-row"><span class="failure-detail-key">Evidence</span><span class="failure-detail-val">' + esc(f.evidence || '') + '</span></div>' +
+        '<div class="failure-detail-row"><span class="failure-detail-key">Prompt</span><span class="failure-detail-val" style="color:var(--text-muted);">' + esc((f.promptSnippet || '').substring(0, 200)) + '</span></div>' +
+        '<div class="failure-detail-row"><span class="failure-detail-key">Attempt</span><span class="failure-detail-val">' + (f.attempt || 0) + '</span></div>' +
+        '<div class="failure-detail-row"><span class="failure-detail-key">Session</span><span class="failure-detail-val" style="font-size:11px;">' + esc(f.sessionId || '') + '</span></div>';
+    }
+
+    function renderFailureStats(stats) {
+      // Summary
+      document.getElementById('fsTotalFailures').textContent = stats.totalFailures != null ? stats.totalFailures : '\u2014';
+      document.getElementById('fsTotalRetries').textContent = stats.totalRetries != null ? stats.totalRetries : '\u2014';
+      document.getElementById('fsRetrySuccess').textContent = stats.successAfterRetry != null ? stats.successAfterRetry : '\u2014';
+      document.getElementById('fsDeclined').textContent = stats.retriesDeclined != null ? stats.retriesDeclined : '\u2014';
+
+      // Retry success bar
+      var pct = 0;
+      if (stats.totalRetries > 0) {
+        pct = Math.round((stats.successAfterRetry / stats.totalRetries) * 100);
+      }
+      document.getElementById('fsRetryBar').style.width = pct + '%';
+
+      // Top reasons
+      var reasons = stats.topReasons || [];
+      // Filter to non-zero and sort descending
+      reasons = reasons.filter(function (r) { return r.count > 0; });
+      reasons.sort(function (a, b) { return b.count - a.count; });
+
+      var el = document.getElementById('failureReasonList');
+      if (reasons.length === 0) {
+        el.innerHTML = '<div class="stat-row"><span class="stat-label" style="color:var(--accent-green);">\u2714 No failures recorded</span></div>';
+        return;
+      }
+
+      // Take top 5
+      var top = reasons.slice(0, 5);
+      var maxCount = top[0].count;
+      var html = '';
+      top.forEach(function (r) {
+        var barPct = maxCount > 0 ? Math.round((r.count / maxCount) * 100) : 0;
+        html += '<div style="margin-bottom:8px;">';
+        html += '<div class="stat-row"><span class="stat-label">' + esc(r.type) + '</span><span class="stat-value red">' + r.count + '</span></div>';
+        html += '<div class="stat-bar"><div class="stat-bar-fill" style="width:' + barPct + '%; background:var(--accent-red);"></div></div>';
+        html += '</div>';
+      });
+      el.innerHTML = html;
+    }
+
+    function exportFailures() {
+      var data = {
+        timestamp: new Date().toISOString(),
+        failures: State.failureData || [],
+        backendUrl: State.backend.url,
+      };
+      var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = 'rawrxd-failures-' + Date.now() + '.json'; a.click();
+      URL.revokeObjectURL(url);
+      logDebug('Failure data exported', 'info');
+    }
+
+    function el(id) { return document.getElementById(id); }
+    function esc(t) { var d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+    function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,106 @@
+# RawrXD Agentic Kernel CMake - Pure Win32/C++20 (ZERO QT)
+cmake_minimum_required(VERSION 3.20)
+
+project(RawrXD-Agent)
+
+# Compile options for C++20 and Win32
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+if(MSVC)
+    add_compile_options(/std:c++20 /W4 /permissive-)
+    add_definitions(-DUNICODE -D_UNICODE -DNOMINMAX -D_CRT_SECURE_NO_WARNINGS)
+endif()
+
+# ==============================================================================
+# RAWRXD SOVEREIGN AGENT KERNEL - Pure Win32/C++20 (ZERO Qt Dependencies)
+# ==============================================================================
+# Production-ready kernel implementing:
+# - Platform abstraction (ThreadPool, Process, FastMutex - all Win32 native)
+# - LLM communication (WinHTTP-based model invoker)
+# - GGUF model proxy server (Winsock2 native TCP)
+# - Agentic failure detection (pattern matching with retry logic)
+# - Response auto-healing (puppeteer correction system)
+# - MCP protocol server (Model Context Protocol)
+# - Workspace indexer (semantic code search)
+# - Error self-healing (compile error auto-fix)
+# - Tool registry (extensible tool execution)
+# - UI bridge (Win32 message passing - no signals/slots)
+# ==============================================================================
+
+add_library(rawrxd_agent_kernel_win32 STATIC
+    # Core Kernel
+    RawrXD_AgentKernel.cpp
+    RawrXD_AgentKernel.hpp
+    
+    # LLM Communication
+    RawrXD_ModelInvoker.cpp
+    RawrXD_ModelInvoker.hpp
+    
+    # GGUF Proxy Server
+    RawrXD_GGUFProxyServer.cpp
+    RawrXD_GGUFProxyServer.hpp
+    
+    # Failure Detection & Response Correction
+    RawrXD_AgenticFailureDetector.cpp
+    RawrXD_AgenticFailureDetector.hpp
+    RawrXD_AgenticPuppeteer.cpp
+    RawrXD_AgenticPuppeteer.hpp
+    
+    # Workspace Indexer
+    RawrXD_WorkspaceIndexer.cpp
+    RawrXD_WorkspaceIndexer.hpp
+    
+    # Error Self-Healing
+    RawrXD_ErrorHealer.cpp
+    
+    # Extended Tools
+    RawrXD_Tools.cpp
+    
+    # MCP Protocol Server
+    RawrXD_MCP.cpp
+    
+    # LIVE SCHEMATIC APPROVAL SYSTEM - Pure Win32 GDI rendering
+    λ_live_schematic.hpp
+    λ_live_schematic.cpp
+    μ_live_controller.hpp
+    μ_live_controller.cpp
+)
+
+target_include_directories(rawrxd_agent_kernel_win32 
+    PUBLIC 
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/..
+        ${CMAKE_CURRENT_SOURCE_DIR}/../../include
+        ${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/json/include
+)
+
+target_link_libraries(rawrxd_agent_kernel_win32 
+    PUBLIC 
+        ws2_32
+        winhttp
+        crypt32
+        rpcrt4
+        shlwapi
+        shell32
+        psapi
+)
+
+# Standalone Agent CLI (for testing)
+add_executable(RawrXD-Agent
+    agent_main.cpp
+)
+
+target_link_libraries(RawrXD-Agent 
+    PRIVATE 
+        rawrxd_agent_kernel_win32
+)
+
+target_include_directories(RawrXD-Agent
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/..
+)
+
+message(STATUS "RawrXD Agent Kernel: Pure Win32/C++20 (ZERO Qt) - Production Ready")
+

@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PowerShell IDE - Monaco Editor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            overflow: hidden;
+        }
+        
+        #toolbar {
+            background: #2d2d30;
+            padding: 8px;
+            border-bottom: 1px solid #3e3e42;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        button {
+            background: #0e639c;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        
+        button:hover { background: #1177bb; }
+        button:active { background: #0d5a8f; }
+        
+        select, input[type="text"] {
+            background: #3c3c3c;
+            color: #cccccc;
+            border: 1px solid #3e3e42;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 13px;
+        }
+        
+        #editor-container {
+            height: calc(100vh - 45px);
+            width: 100%;
+        }
+        
+        #status-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #007acc;
+            color: white;
+            padding: 4px 10px;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+    <div id="toolbar">
+        <button onclick="newFile()">📄 New</button>
+        <button onclick="openFile()">📂 Open</button>
+        <button onclick="saveFile()">💾 Save</button>
+        <button onclick="saveAsFile()">💾 Save As</button>
+        |
+        <select id="language" onchange="changeLanguage()">
+            <option value="powershell">PowerShell</option>
+            <option value="javascript">JavaScript</option>
+            <option value="typescript">TypeScript</option>
+            <option value="python">Python</option>
+            <option value="html">HTML</option>
+            <option value="css">CSS</option>
+            <option value="json">JSON</option>
+            <option value="markdown">Markdown</option>
+        </select>
+        <select id="theme" onchange="changeTheme()">
+            <option value="vs-dark">Dark</option>
+            <option value="vs">Light</option>
+            <option value="hc-black">High Contrast</option>
+        </select>
+        |
+        <button onclick="runCode()">▶️ Run</button>
+        <span id="filename" style="margin-left: auto; color: #cccccc;">Untitled</span>
+    </div>
+    
+    <div id="editor-container"></div>
+    
+    <div id="status-bar">
+        <span id="status-left">Ready</span>
+        <span id="status-right">Ln 1, Col 1</span>
+    </div>
+
+    <!-- Monaco Editor from CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+    <script>
+        let editor;
+        let currentFile = null;
+        let currentContent = '';
+        
+        require.config({ 
+            paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' }
+        });
+        
+        require(['vs/editor/editor.main'], function() {
+            editor = monaco.editor.create(document.getElementById('editor-container'), {
+                value: `# PowerShell IDE with Monaco Editor
+# Start coding here!
+
+Write-Host "Hello from Monaco Editor!" -ForegroundColor Cyan
+`,
+                language: 'powershell',
+                theme: 'vs-dark',
+                fontSize: 14,
+                automaticLayout: true,
+                minimap: { enabled: true },
+                scrollBeyondLastLine: false,
+                wordWrap: 'on',
+                lineNumbers: 'on',
+                folding: true,
+                renderWhitespace: 'selection',
+                cursorStyle: 'line',
+                fontFamily: 'Consolas, "Courier New", monospace',
+                tabSize: 4,
+                insertSpaces: true
+            });
+            
+            // Update status bar on cursor position change
+            editor.onDidChangeCursorPosition(e => {
+                document.getElementById('status-right').textContent = 
+                    `Ln ${e.position.lineNumber}, Col ${e.position.column}`;
+            });
+            
+            // Track content changes
+            editor.onDidChangeModelContent(() => {
+                currentContent = editor.getValue();
+            });
+            
+            // Keyboard shortcuts
+            editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, saveFile);
+            editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyS, saveAsFile);
+            editor.addCommand(monaco.KeyCode.F5, runCode);
+            
+            currentContent = editor.getValue();
+            updateStatus('Editor ready');
+        });
+        
+        function updateStatus(message) {
+            document.getElementById('status-left').textContent = message;
+        }
+        
+        function newFile() {
+            if (currentContent !== editor.getValue() && 
+                confirm('Unsaved changes will be lost. Continue?')) {
+                editor.setValue('');
+                currentFile = null;
+                document.getElementById('filename').textContent = 'Untitled';
+                currentContent = '';
+                updateStatus('New file created');
+            }
+        }
+        
+        async function openFile() {
+            try {
+                const [fileHandle] = await window.showOpenFilePicker({
+                    types: [
+                        {
+                            description: 'All Files',
+                            accept: { '*/*': ['*'] }
+                        },
+                        {
+                            description: 'PowerShell Scripts',
+                            accept: { 'text/plain': ['.ps1', '.psm1', '.psd1'] }
+                        }
+                    ]
+                });
+                
+                const file = await fileHandle.getFile();
+                const text = await file.text();
+                
+                editor.setValue(text);
+                currentFile = fileHandle;
+                document.getElementById('filename').textContent = file.name;
+                currentContent = text;
+                
+                // Auto-detect language
+                const ext = file.name.split('.').pop().toLowerCase();
+                const langMap = {
+                    'ps1': 'powershell', 'psm1': 'powershell', 'psd1': 'powershell',
+                    'js': 'javascript', 'ts': 'typescript', 'py': 'python',
+                    'html': 'html', 'css': 'css', 'json': 'json', 'md': 'markdown'
+                };
+                if (langMap[ext]) {
+                    document.getElementById('language').value = langMap[ext];
+                    changeLanguage();
+                }
+                
+                updateStatus(`Opened: ${file.name}`);
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    updateStatus(`Error: ${err.message}`);
+                }
+            }
+        }
+        
+        async function saveFile() {
+            if (!currentFile) {
+                return saveAsFile();
+            }
+            
+            try {
+                const writable = await currentFile.createWritable();
+                await writable.write(editor.getValue());
+                await writable.close();
+                currentContent = editor.getValue();
+                updateStatus('File saved');
+            } catch (err) {
+                updateStatus(`Error saving: ${err.message}`);
+            }
+        }
+        
+        async function saveAsFile() {
+            try {
+                const fileHandle = await window.showSaveFilePicker({
+                    suggestedName: 'script.ps1',
+                    types: [
+                        {
+                            description: 'PowerShell Script',
+                            accept: { 'text/plain': ['.ps1'] }
+                        },
+                        {
+                            description: 'All Files',
+                            accept: { '*/*': ['*'] }
+                        }
+                    ]
+                });
+                
+                const writable = await fileHandle.createWritable();
+                await writable.write(editor.getValue());
+                await writable.close();
+                
+                currentFile = fileHandle;
+                const fileName = (await fileHandle.getFile()).name;
+                document.getElementById('filename').textContent = fileName;
+                currentContent = editor.getValue();
+                updateStatus(`Saved as: ${fileName}`);
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    updateStatus(`Error: ${err.message}`);
+                }
+            }
+        }
+        
+        function changeLanguage() {
+            const lang = document.getElementById('language').value;
+            monaco.editor.setModelLanguage(editor.getModel(), lang);
+            updateStatus(`Language changed to: ${lang}`);
+        }
+        
+        function changeTheme() {
+            const theme = document.getElementById('theme').value;
+            monaco.editor.setTheme(theme);
+            updateStatus(`Theme changed to: ${theme}`);
+        }
+        
+        function runCode() {
+            const code = editor.getValue();
+            const lang = document.getElementById('language').value;
+            
+            if (lang === 'powershell') {
+                // Copy to clipboard for execution
+                navigator.clipboard.writeText(code).then(() => {
+                    updateStatus('Code copied to clipboard - paste into PowerShell terminal to run');
+                    alert('PowerShell code copied to clipboard!\\n\\nPaste into a PowerShell terminal to execute.');
+                });
+            } else {
+                updateStatus(`Run not implemented for ${lang} (use F12 console for JavaScript)`);
+            }
+        }
+    </script>
+</body>
+</html>

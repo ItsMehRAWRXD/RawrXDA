@@ -1,0 +1,257 @@
+﻿# Agentic Reality Audit (Auto)
+
+Generated: 2026-03-07T00:55:25Z
+
+## Summary
+- Total hits: 9982
+- High severity hits: 4561
+- Medium severity hits: 5421
+- Files with hits: 452
+
+## Top Files
+- D:\rawrxd\src\core\link_stubs_remaining_classes.cpp: hits=209, high=22, medium=187
+- D:\rawrxd\src\agentic\gpu_dma_complete_production.asm: hits=193, high=147, medium=46
+- D:\rawrxd\src\agentic\gpu_dma_complete_production_FIXED.asm: hits=193, high=147, medium=46
+- D:\rawrxd\src\agentic\memory_cleanup.asm: hits=193, high=147, medium=46
+- D:\rawrxd\src\agentic\memory_cleanup_phase_integration.asm: hits=193, high=147, medium=46
+- D:\rawrxd\src\agentic\Phase3_Agent_Kernel_Complete.asm: hits=193, high=147, medium=46
+- D:\rawrxd\src\agentic\RawrXD_Absolutely_Complete.asm: hits=193, high=147, medium=46
+- D:\rawrxd\src\agentic\RawrXD_Compiler_Engine_Complete.asm: hits=193, high=147, medium=46
+- D:\rawrxd\src\agentic\RawrXD_Compiler_Engine_Stubs_BACKUP.asm: hits=193, high=147, medium=46
+- D:\rawrxd\src\agentic\RawrXD_Complete_Explicit.asm: hits=193, high=147, medium=46
+- D:\rawrxd\src\agentic\RawrXD_Complete_Hidden_Logic.asm: hits=193, high=147, medium=46
+- D:\rawrxd\src\agentic\rawrxd_complete_master_implementation.asm: hits=193, high=147, medium=46
+- D:\rawrxd\src\agentic\RawrXD_Complete_Production_Fix.asm: hits=193, high=147, medium=46
+- D:\rawrxd\src\agentic\RawrXD_Complete_Production_System.asm: hits=193, high=147, medium=46
+- D:\rawrxd\src\agentic\RawrXD_Complete_ReverseEngineered.asm: hits=193, high=147, medium=46
+- D:\rawrxd\src\agentic\RawrXD_Critical_Blockers_P0.asm: hits=193, high=147, medium=46
+- D:\rawrxd\src\agentic\rawrxd_final_complete_implementation.asm: hits=193, high=147, medium=46
+- D:\rawrxd\src\agentic\RawrXD_High_Priority_P1.asm: hits=193, high=147, medium=46
+- D:\rawrxd\src\agentic\RawrXD_Low_Priority_P3.asm: hits=193, high=147, medium=46
+- D:\rawrxd\src\agentic\RawrXD_Medium_Priority_P2.asm: hits=193, high=147, medium=46
+- D:\rawrxd\src\agentic\RawrXD_Production_ReverseEngineered.asm: hits=193, high=147, medium=46
+- D:\rawrxd\src\agentic\Titan_FullLogic_Simplified_vs_Production.asm: hits=193, high=147, medium=46
+- D:\rawrxd\src\agentic\titan_masm_real.asm: hits=193, high=147, medium=46
+- D:\rawrxd\src\agentic\Titan_Streaming_Orchestrator.asm: hits=193, high=147, medium=46
+- D:\rawrxd\src\agentic\Titan_Streaming_Orchestrator_Complete.asm: hits=193, high=147, medium=46
+- D:\rawrxd\src\win32app\mcp_hooks.asm: hits=193, high=147, medium=46
+- D:\rawrxd\src\agentic\RawrXD_Titan_Master_GodSource_REVERSE_ENGINEERED.asm: hits=192, high=146, medium=46
+- D:\rawrxd\src\agentic\GPU_DMA_COMPLETE_IMPLEMENTATIONS.asm: hits=170, high=129, medium=41
+- D:\rawrxd\src\agentic\gpu_dma_complete_final.asm: hits=156, high=123, medium=33
+- D:\rawrxd\src\core\ssot_handlers_ext.cpp: hits=105, high=6, medium=99
+- D:\rawrxd\src\core\ssot_handlers.cpp: hits=100, high=5, medium=95
+- D:\rawrxd\src\core\sqlite3.c: hits=90, high=40, medium=50
+- D:\rawrxd\src\core\link_stubs_final.cpp: hits=83, high=9, medium=74
+- D:\rawrxd\src\win32app\OSExplorerInterceptor.cpp: hits=80, high=0, medium=80
+- D:\rawrxd\src\win32app\Win32IDE_Sidebar_PathOps.cpp: hits=79, high=0, medium=79
+- D:\rawrxd\src\win32app\Win32IDE_CursorParity.cpp: hits=61, high=4, medium=57
+- D:\rawrxd\src\win32app\AutonomousAgent.cpp: hits=60, high=0, medium=60
+- D:\rawrxd\src\win32app\Win32IDE.cpp: hits=50, high=3, medium=47
+- D:\rawrxd\src\core\stubs.cpp: hits=48, high=17, medium=31
+- D:\rawrxd\src\core\link_stubs_win32ide_widgets.cpp: hits=47, high=16, medium=31
+
+## Sample Findings (First 200)
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\action_executor.cpp:97 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\action_executor.cpp:206 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\action_executor.cpp:214 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\action_executor.cpp:219 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\action_executor.cpp:266 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\action_executor.cpp:271 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\action_executor.cpp:289 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\action_executor.cpp:294 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\action_executor.cpp:301 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\action_executor.cpp:306 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\action_executor.cpp:313 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\action_executor.cpp:318 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\action_executor.cpp:325 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\action_executor.cpp:328 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\action_executor.cpp:332 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\action_executor.cpp:348 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\action_executor.cpp:423 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\action_executor.cpp:483 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\action_executor.cpp:528 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\action_executor.cpp:537 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\action_executor.cpp:555 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\action_executor.cpp:576 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\action_executor.cpp:609 :: return true; // No need to backup non-existent file
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\action_executor.cpp:630 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\action_executor.cpp:637 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\action_executor.cpp:641 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\action_executor.cpp:686 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\action_executor.cpp:693 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\action_executor.cpp:696 :: return true;
+- high [stub_marker] D:\rawrxd\src\agent\ACTION_REPORT.md:32 :: The agent codebase now contains all explicit logic required for the "Hot Patching" feature to function, compile, and execute tasks without stubs or missing placeholders.
+- high [stub_marker] D:\rawrxd\src\agent\ACTION_REPORT_FINAL.md:34 :: - **Problem**: Methods like `generateCodeCompletion`, `suggestRefactoring`, and `generateTestsForCode` were returning hardcoded string stubs (e.g., "Scanning code... Done").
+- high [stub_marker] D:\rawrxd\src\agent\ACTION_REPORT_FINAL.md:36 :: - Replaced stubs with calls to `m_modelInvoker->queryRaw()`.
+- high [stub_marker] D:\rawrxd\src\agent\ACTION_REPORT_FINAL.md:45 :: All core subsystems (`ModelInvoker`, `ActionExecutor`, `GGUFProxyServer`, `AgentHotPatcher`) are now fully implemented with C++ logic suitable for production usage. No simulation stubs remain in the critical path.
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\advanced_autonomous_task_manager.cpp:85 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\advanced_autonomous_task_manager.cpp:151 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\advanced_autonomous_task_manager.cpp:155 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\advanced_autonomous_task_manager.cpp:369 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\advanced_autonomous_task_manager.cpp:380 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\advanced_autonomous_task_manager.cpp:534 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\advanced_autonomous_task_manager.cpp:548 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\advanced_autonomous_task_manager.cpp:865 :: if (!quantum_config_.quantum_acceleration_enabled) return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\advanced_autonomous_task_manager.cpp:876 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\advanced_autonomous_task_manager.cpp:925 :: if (task_queue_.empty()) return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\advanced_autonomous_task_manager.cpp:932 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_hot_patcher.cpp:57 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_hot_patcher.cpp:69 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_hot_patcher.cpp:76 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_hot_patcher.cpp:602 :: if (path.empty()) return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_hot_patcher.cpp:606 :: path.find("\\\\") != std::string::npos) return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_hot_patcher.cpp:607 :: if (path.find("...") != std::string::npos) return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_hot_patcher.cpp:608 :: if (strutil::countOccurrences(path, "..") > 5) return false; // Too many parent traversals
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_hot_patcher.cpp:611 :: if (path.starts_with("/sys") || path.starts_with("/proc") || path.starts_with("/dev")) return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_hot_patcher.cpp:613 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_hot_patcher.cpp:691 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_hot_patcher.cpp:720 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_hot_patcher.cpp:723 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_hot_patcher.cpp:764 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_hot_patcher.cpp:774 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_hot_patcher.cpp:782 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_hot_patcher.cpp:791 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_hot_patcher.cpp:798 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_hot_patcher.cpp:811 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_hot_patcher.cpp:818 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_hot_patcher.cpp:837 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_hot_patcher.cpp:895 :: if (path.empty()) return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_hot_patcher.cpp:896 :: if (path.find("//") != std::string::npos) return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_hot_patcher.cpp:897 :: if (path.find("...") != std::string::npos) return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_hot_patcher.cpp:898 :: if (path.starts_with("/sys") || path.starts_with("/proc") || path.starts_with("/dev")) return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_hot_patcher.cpp:899 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_self_repair.cpp:117 :: if (!hModule) return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_self_repair.cpp:120 :: if (dosHeader->e_magic != IMAGE_DOS_SIGNATURE) return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_self_repair.cpp:125 :: if (ntHeaders->Signature != IMAGE_NT_SIGNATURE) return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_self_repair.cpp:134 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_self_repair.cpp:143 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_self_repair.cpp:147 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_self_repair.cpp:358 :: if (snapshot == INVALID_HANDLE_VALUE) return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_self_repair.cpp:382 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_self_repair.cpp:401 :: if (snapshot == INVALID_HANDLE_VALUE) return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_self_repair.cpp:837 :: if (!m_initialized) return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agent_self_repair.cpp:840 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_copilot_bridge.cpp:373 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_copilot_bridge.cpp:376 :: return false;
+- medium [todo_marker] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:386 :: // Check for TODO/FIXME
+- medium [todo_marker] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:460 :: analysis << "TODO/FIXME markers: " << todoCount << "\n";
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:551 :: if (answer.empty()) return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:554 :: if (answer.length() < 10) return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:559 :: if (lowerAnswer.find("error during thinking") != std::string::npos) return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:560 :: if (lowerAnswer.find("not implemented") != std::string::npos) return false;
+- medium [todo_marker] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:560 :: if (lowerAnswer.find("not implemented") != std::string::npos) return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:561 :: if (lowerAnswer.find("failed to") != std::string::npos && answer.length() < 50) return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:579 :: if (problemWords > 0 && matchedWords == 0) return false;
+- high [stub_marker] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:1014 :: {"stub",                 "Stub/unfinished implementation"},
+- high [stub_marker] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:1090 :: {"Technical Debt",           {"todo", "fixme", "hack", "stub", "hardcoded",
+- medium [todo_marker] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:1177 :: // Phase 4: Search for related TODO/FIXME markers
+- medium [todo_marker] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:1178 :: auto todoMatches = searchInFiles("TODO|FIXME|HACK|XXX", "src");
+- medium [todo_marker] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:1180 :: std::string todoContext = "Found " + std::to_string(todoMatches.size()) + " TODO/FIXME markers";
+- medium [todo_marker] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:1396 :: auto todoMatches = searchInFiles("TODO|FIXME|HACK", "src");
+- medium [todo_marker] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:1399 :: " outstanding TODO/FIXME markers that may relate to root cause");
+- medium [todo_marker] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:1489 :: auto patterns = searchInFiles("TODO|FIXME|BUG|HACK", "src");
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:1717 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:1728 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:1740 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:1758 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:1769 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:1773 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:2458 :: if (l.empty()) return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:2461 :: if (start == std::string::npos) return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:2465 :: if (trimmed.find("//") == 0) return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:2466 :: if (trimmed.find('#') == 0) return true;  // preprocessor
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:2467 :: if (trimmed.find("return ") == 0) return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:2468 :: if (trimmed.find("if (") == 0 || trimmed.find("if(") == 0) return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:2469 :: if (trimmed.find("for (") == 0 || trimmed.find("for(") == 0) return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:2470 :: if (trimmed.find("while (") == 0 || trimmed.find("while(") == 0) return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:2471 :: if (trimmed.find("class ") == 0 || trimmed.find("struct ") == 0) return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:2473 :: trimmed.find("bool ") == 0 || trimmed.find("auto ") == 0) return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:2474 :: if (trimmed.back() == ';' || trimmed.back() == '{' || trimmed.back() == '}') return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:2475 :: if (trimmed.find("->") != std::string::npos) return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:2476 :: if (trimmed.find("::") != std::string::npos) return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:2477 :: return false;
+- medium [todo_marker] D:\rawrxd\src\agent\agentic_deep_thinking_engine.cpp:2983 :: return (code.find("TODO") == std::string::npos && code.find("FIXME") == std::string::npos) ? 0.84f : 0.68f;
+- high [placeholder_marker] D:\rawrxd\src\agent\agentic_deep_thinking_engine_fallback.cpp:137 :: "Preserve existing interfaces; replace placeholder internals with deterministic behavior.",
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector.cpp:313 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector.cpp:317 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector.cpp:341 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector.cpp:348 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector.cpp:352 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector.cpp:360 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector.cpp:371 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector.cpp:375 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector.cpp:390 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector.cpp:394 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector.cpp:403 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector.cpp:407 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector.cpp:414 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector.cpp:418 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector.cpp:521 :: if (!m_enabled || !m_enableToolValidation) return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector.cpp:526 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector.cpp:539 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector.cpp:542 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector.cpp:551 :: if (containsCi(c, p)) return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector.cpp:555 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector.cpp:557 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector.cpp:568 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector.cpp:570 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector.cpp:572 :: if (type == "file_delete" || type == "delete_file") return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector.cpp:574 :: if (isDangerousCommand(target + " " + action.params)) return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector.cpp:576 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector_new.cpp:110 :: if (output.find(pattern) != std::string::npos) return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector_new.cpp:112 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector_new.cpp:117 :: if (output.find(pattern) != std::string::npos) return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector_new.cpp:119 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector_new.cpp:124 :: if (output.empty()) return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector_new.cpp:128 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector_new.cpp:130 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector_new.cpp:135 :: if (output.find(pattern) != std::string::npos) return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector_new.cpp:137 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector_new.cpp:142 :: if (output.find(pattern) != std::string::npos) return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_failure_detector_new.cpp:144 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_hotpatch_orchestrator.cpp:237 :: if (needleLen == 0 || haystackLen < needleLen) return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_hotpatch_orchestrator.cpp:248 :: if (match) return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_hotpatch_orchestrator.cpp:250 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_puppeteer.cpp:61 :: if (!input_buffer || !output_buffer) return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\agentic_puppeteer.cpp:65 :: return true;
+- high [stub_marker] D:\rawrxd\src\agent\AUDIT.md:39 :: - No stubs or placeholders found in any file.
+- high [placeholder_marker] D:\rawrxd\src\agent\AUDIT.md:41 :: - No external or placeholder dependencies remain.
+- high [stub_marker] D:\rawrxd\src\agent\AUDIT.md:52 :: - Document what is implemented, what is missing, and what is still a stub or dependency.
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\auto_bootstrap.cpp:164 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\auto_bootstrap.cpp:177 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\auto_update.cpp:149 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\auto_update.cpp:158 :: if (hs == std::string::npos) return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\auto_update.cpp:168 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\auto_update.cpp:176 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\auto_update.cpp:189 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\auto_update.cpp:197 :: if (dhs == std::string::npos) return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\auto_update.cpp:209 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\auto_update.cpp:218 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\auto_update.cpp:227 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\auto_update.cpp:246 :: return false;
+- medium [todo_marker] D:\rawrxd\src\agent\autonomous_orchestrator.cpp:558 :: std::regex todoPattern(R"(\[TODO\]\s*(.+?)\s*\[/TODO\])");
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\autonomous_orchestrator.cpp:668 :: if (m_running.load()) return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\autonomous_orchestrator.cpp:688 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\autonomous_orchestrator.cpp:740 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\autonomous_orchestrator.cpp:815 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\autonomous_orchestrator.cpp:817 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\autonomous_orchestrator.cpp:839 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\autonomous_orchestrator.cpp:841 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\autonomous_orchestrator.cpp:1079 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\autonomous_orchestrator.cpp:1082 :: return true;
+- medium [todo_marker] D:\rawrxd\src\agent\autonomous_orchestrator.cpp:1224 :: // Check for TODO/FIXME/BUG comments
+- medium [todo_marker] D:\rawrxd\src\agent\autonomous_orchestrator.cpp:1225 :: if (line.find("TODO") != std::string::npos ||
+- medium [todo_marker] D:\rawrxd\src\agent\autonomous_orchestrator.cpp:1226 :: line.find("FIXME") != std::string::npos ||
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\autonomous_subagent.cpp:308 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\autonomous_subagent.cpp:383 :: return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\autonomous_subagent.cpp:394 :: return false;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\autonomous_subagent.cpp:430 :: if (m_strategy.verificationPrompt.empty()) return true;
+- medium [hardcoded_bool_return] D:\rawrxd\src\agent\autonomous_subagent.cpp:455 :: return true; // Can't verify, assume ok
+- high [stub_marker] D:\rawrxd\src\agent\autonomous_subagent.cpp:676 :: s.description = "Replace stubs with real implementations";
+- high [stub_marker] D:\rawrxd\src\agent\autonomous_subagent.cpp:678 :: "Implement the stub function(s) in this file with real, production-quality logic.\n"
+- high [stub_marker] D:\rawrxd\src\agent\autonomous_subagent.cpp:680 :: "Target stub: {{target}}\n"
+- high [stub_marker] D:\rawrxd\src\agent\autonomous_subagent.cpp:685 :: "- Full working implementation, not another stub\n"
+
+## Notes
+- This report is lexical/static and intentionally conservative.
+- Presence of a marker does not always mean runtime execution path is active.

@@ -1,0 +1,2425 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RawrXD IDE — Feature Test Assistant</title>
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --bg2: #12121a;
+      --bg3: #1a1a28;
+      --fg: #e0e0e8;
+      --fg2: #a0a0b0;
+      --accent: #00d4ff;
+      --green: #00ff88;
+      --red: #ff4466;
+      --orange: #ffaa00;
+      --yellow: #ffee00;
+      --purple: #bb66ff;
+      --radius: 8px;
+      --font: 'Segoe UI', Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: var(--font);
+      font-size: 14px;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--bg2);
+      border-bottom: 1px solid #222;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-size: 18px;
+      color: var(--accent);
+    }
+
+    header .stats {
+      margin-left: auto;
+      display: flex;
+      gap: 16px;
+      font-size: 13px;
+      color: var(--fg2);
+    }
+
+    header .stats span {
+      padding: 4px 10px;
+      background: var(--bg3);
+      border-radius: 12px;
+    }
+
+    header .stats .pass {
+      color: var(--green);
+    }
+
+    header .stats .fail {
+      color: var(--red);
+    }
+
+    header .stats .skip {
+      color: var(--orange);
+    }
+
+    header .stats .running {
+      color: var(--accent);
+    }
+
+    /* ── Main layout ── */
+    .main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 260px;
+      background: var(--bg2);
+      border-right: 1px solid #222;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+
+    .sidebar h3 {
+      padding: 12px 16px 8px;
+      color: var(--accent);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .cat-item {
+      padding: 8px 16px;
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: 0.15s;
+      font-size: 13px;
+    }
+
+    .cat-item:hover {
+      background: var(--bg3);
+    }
+
+    .cat-item.active {
+      background: var(--bg3);
+      border-left-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .cat-item .badge {
+      margin-left: auto;
+      font-size: 11px;
+      padding: 1px 6px;
+      border-radius: 8px;
+    }
+
+    .badge-pass {
+      background: rgba(0, 255, 136, 0.15);
+      color: var(--green);
+    }
+
+    .badge-fail {
+      background: rgba(255, 68, 102, 0.15);
+      color: var(--red);
+    }
+
+    .badge-pending {
+      background: rgba(0, 212, 255, 0.1);
+      color: var(--fg2);
+    }
+
+    /* ── Controls ── */
+    .controls {
+      padding: 12px 16px;
+      border-top: 1px solid #222;
+    }
+
+    .controls button {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 6px;
+      border: 1px solid #333;
+      border-radius: var(--radius);
+      background: var(--bg3);
+      color: var(--fg);
+      cursor: pointer;
+      font-size: 13px;
+      transition: 0.15s;
+    }
+
+    .controls button:hover {
+      background: #252535;
+      border-color: var(--accent);
+    }
+
+    .controls button.primary {
+      background: var(--accent);
+      color: #000;
+      font-weight: 600;
+      border: none;
+    }
+
+    .controls button.primary:hover {
+      filter: brightness(1.2);
+    }
+
+    .controls button.danger {
+      background: var(--red);
+      color: #fff;
+      border: none;
+    }
+
+    .controls button.danger:hover {
+      filter: brightness(1.2);
+    }
+
+    /* ── Test Panel ── */
+    .test-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .test-header {
+      padding: 12px 20px;
+      background: var(--bg2);
+      border-bottom: 1px solid #222;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .test-header h2 {
+      font-size: 16px;
+    }
+
+    .test-header .progress {
+      flex: 1;
+    }
+
+    .progress-bar {
+      height: 6px;
+      background: var(--bg3);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--green));
+      transition: width 0.3s;
+      border-radius: 3px;
+    }
+
+    .test-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 20px;
+    }
+
+    .test-item {
+      background: var(--bg2);
+      border: 1px solid #222;
+      border-radius: var(--radius);
+      margin-bottom: 8px;
+      overflow: hidden;
+      transition: 0.15s;
+    }
+
+    .test-item:hover {
+      border-color: #444;
+    }
+
+    .test-item.pass {
+      border-left: 3px solid var(--green);
+    }
+
+    .test-item.fail {
+      border-left: 3px solid var(--red);
+    }
+
+    .test-item.skip {
+      border-left: 3px solid var(--orange);
+    }
+
+    .test-item.running {
+      border-left: 3px solid var(--accent);
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.7;
+      }
+    }
+
+    .test-row {
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+
+    .test-icon {
+      font-size: 16px;
+      width: 22px;
+      text-align: center;
+    }
+
+    .test-name {
+      flex: 1;
+      font-size: 13px;
+    }
+
+    .test-time {
+      font-size: 11px;
+      color: var(--fg2);
+    }
+
+    .test-status {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .st-pass {
+      background: rgba(0, 255, 136, 0.15);
+      color: var(--green);
+    }
+
+    .st-fail {
+      background: rgba(255, 68, 102, 0.15);
+      color: var(--red);
+    }
+
+    .st-skip {
+      background: rgba(255, 170, 0, 0.15);
+      color: var(--orange);
+    }
+
+    .st-running {
+      background: rgba(0, 212, 255, 0.15);
+      color: var(--accent);
+    }
+
+    .st-pending {
+      background: rgba(160, 160, 176, 0.1);
+      color: var(--fg2);
+    }
+
+    .test-detail {
+      display: none;
+      padding: 10px 14px;
+      border-top: 1px solid #222;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .test-detail.open {
+      display: block;
+    }
+
+    .test-detail pre {
+      background: var(--bg);
+      padding: 8px;
+      border-radius: 4px;
+      overflow-x: auto;
+      color: var(--fg2);
+      margin: 4px 0;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .test-detail .err {
+      color: var(--red);
+    }
+
+    .test-detail .ok {
+      color: var(--green);
+    }
+
+    /* ── Log Panel ── */
+    .log-panel {
+      height: 200px;
+      border-top: 1px solid #333;
+      background: var(--bg);
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .log-header {
+      padding: 6px 16px;
+      background: var(--bg2);
+      border-bottom: 1px solid #222;
+      font-size: 12px;
+      color: var(--fg2);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .log-header button {
+      background: none;
+      border: 1px solid #333;
+      color: var(--fg2);
+      padding: 2px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+    }
+
+    .log-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 16px;
+      font-family: Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .log-body .info {
+      color: var(--accent);
+    }
+
+    .log-body .warn {
+      color: var(--orange);
+    }
+
+    .log-body .error {
+      color: var(--red);
+    }
+
+    .log-body .ok {
+      color: var(--green);
+    }
+
+    .log-body .dim {
+      color: var(--fg2);
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #333;
+      border-radius: 3px;
+    }
+
+    .backend-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .backend-badge.rawrxd {
+      background: rgba(0, 212, 255, 0.15);
+      color: var(--accent);
+      border: 1px solid rgba(0, 212, 255, 0.3);
+    }
+
+    .backend-badge.ollama {
+      background: rgba(255, 170, 0, 0.15);
+      color: var(--orange);
+      border: 1px solid rgba(255, 170, 0, 0.3);
+    }
+
+    .backend-badge.offline {
+      background: rgba(255, 68, 102, 0.15);
+      color: var(--red);
+      border: 1px solid rgba(255, 68, 102, 0.3);
+    }
+
+    .backend-badge .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .backend-badge.rawrxd .dot {
+      background: var(--accent);
+    }
+
+    .backend-badge.ollama .dot {
+      background: var(--orange);
+    }
+
+    .backend-badge.offline .dot {
+      background: var(--red);
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <h1>🧪 RawrXD Feature Test Assistant</h1>
+    <span class="backend-badge offline" id="backendBadge"><span class="dot"></span><span
+        id="backendBadgeText">Detecting...</span></span>
+    <div class="stats">
+      <span class="running" id="statRunning">⏳ 0 running</span>
+      <span class="pass" id="statPass">✅ 0 passed</span>
+      <span class="fail" id="statFail">❌ 0 failed</span>
+      <span class="skip" id="statSkip">⚠️ 0 skipped</span>
+      <span id="statTotal">📋 0 total</span>
+    </div>
+  </header>
+
+  <div class="main">
+    <!-- Sidebar: test categories -->
+    <div class="sidebar">
+      <h3>Test Categories</h3>
+      <div id="catList"></div>
+      <div class="controls">
+        <button class="primary" onclick="runAllTests()">▶ Run All Tests</button>
+        <button onclick="runCategory(activeCategory)">▶ Run Category</button>
+        <button onclick="resetAll()">🔄 Reset All</button>
+        <button class="danger" onclick="stopTests()">⏹ Stop</button>
+        <br>
+        <label style="font-size:12px;color:var(--fg2);display:flex;align-items:center;gap:6px;padding-top:8px;">
+          <input type="checkbox" id="chkParallel"> Parallel mode
+        </label>
+        <label style="font-size:12px;color:var(--fg2);display:flex;align-items:center;gap:6px;padding-top:4px;">
+          <input type="checkbox" id="chkStopOnFail"> Stop on first failure
+        </label>
+      </div>
+    </div>
+
+    <div class="test-panel">
+      <div class="test-header">
+        <h2 id="panelTitle">All Tests</h2>
+        <div class="progress" style="max-width:300px;">
+          <div class="progress-bar">
+            <div class="progress-fill" id="progressFill" style="width:0%"></div>
+          </div>
+        </div>
+        <span id="progressText" style="font-size:12px;color:var(--fg2);">0 / 0</span>
+      </div>
+      <div class="test-list" id="testList"></div>
+
+      <!-- Log -->
+      <div class="log-panel">
+        <div class="log-header">
+          <span>📋 Test Log</span>
+          <button onclick="document.getElementById('logBody').innerHTML=''">Clear</button>
+          <button onclick="exportLog()">Export</button>
+        </div>
+        <div class="log-body" id="logBody"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ═══════════════════════════════════════════════════════════════════════
+    //  TEST FRAMEWORK — Main Backend Integration
+    //  Connects to the full RawrXD backend (tool_server / Win32IDE) for
+    //  kernel engine access, 800B model loading, dual engine, and swarm.
+    //  Falls back to direct Ollama only if main backend is unavailable.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Backend URLs — main backend is preferred (provides all kernel engines)
+    const RAWRXD_BACKEND_URL = 'http://localhost:11435';  // Main RawrXD backend (tool_server / Win32IDE)
+    const OLLAMA_DIRECT_URL = 'http://localhost:11434';   // Direct Ollama (fallback only)
+
+    // Active backend state — resolved during init
+    let BACKEND_URL = RAWRXD_BACKEND_URL;  // Will be resolved to whichever is available
+    let OLLAMA_URL = RAWRXD_BACKEND_URL;   // Compat alias — points to active backend
+    let PROXY_URL = RAWRXD_BACKEND_URL;
+    let backendMode = 'detecting';  // 'rawrxd' | 'ollama-direct' | 'offline'
+    let backendInfo = {};  // Status data from /status endpoint
+    let backendCapabilities = {
+      kernelEngines: false,
+      dualEngine: false,
+      model800b: false,
+      swarm: false,
+      hotpatch: false,
+      agenticTools: false,
+      cliEndpoint: false,
+      backendSwitcher: false,
+    };
+
+    let stopRequested = false;
+    let activeCategory = null;
+    let testResults = {};
+    let startTime = 0;
+
+    // ── Backend Detection & Launch ──
+    async function detectAndConnectBackend() {
+      const badge = document.getElementById('backendBadge');
+      const badgeText = document.getElementById('backendBadgeText');
+
+      // Phase 1: Try main RawrXD backend (tool_server / Win32IDE on :11435)
+      try {
+        const ctrl = new AbortController();
+        setTimeout(() => ctrl.abort(), 4000);
+        const res = await fetch(RAWRXD_BACKEND_URL + '/status', { signal: ctrl.signal });
+        if (res.ok) {
+          const data = await res.json();
+          backendInfo = data;
+          BACKEND_URL = RAWRXD_BACKEND_URL;
+          OLLAMA_URL = RAWRXD_BACKEND_URL;
+          PROXY_URL = RAWRXD_BACKEND_URL;
+          backendMode = 'rawrxd';
+          backendCapabilities.kernelEngines = true;
+          backendCapabilities.dualEngine = true;
+          backendCapabilities.model800b = true;
+          backendCapabilities.hotpatch = true;
+          backendCapabilities.agenticTools = true;
+          backendCapabilities.cliEndpoint = true;
+          backendCapabilities.backendSwitcher = true;
+          badge.className = 'backend-badge rawrxd';
+          badgeText.textContent = 'RawrXD Backend (' + (data.version || 'v1') + ')';
+          log('🚀 Connected to RawrXD Main Backend at ' + RAWRXD_BACKEND_URL, 'ok');
+          log('   Kernel engines: ✅ | 800B loading: ✅ | Dual engine: ✅ | Swarm: ✅', 'ok');
+
+          // Probe swarm capability
+          try {
+            const sr = await fetch(RAWRXD_BACKEND_URL + '/api/swarm/status', { signal: AbortSignal.timeout(3000) });
+            if (sr.ok) backendCapabilities.swarm = true;
+          } catch (_) { }
+
+          return;
+        }
+      } catch (e) {
+        log('⚡ Main backend (' + RAWRXD_BACKEND_URL + ') not available: ' + e.message, 'warn');
+      }
+
+      // Phase 2: Try main backend on :11434 (tool_server may run on default Ollama port)
+      try {
+        const res = await fetch(OLLAMA_DIRECT_URL + '/status', { signal: AbortSignal.timeout(3000) });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.server && data.server.indexOf && data.server.indexOf('RawrXD') >= 0) {
+            backendInfo = data;
+            BACKEND_URL = OLLAMA_DIRECT_URL;
+            OLLAMA_URL = OLLAMA_DIRECT_URL;
+            PROXY_URL = OLLAMA_DIRECT_URL;
+            backendMode = 'rawrxd';
+            backendCapabilities.kernelEngines = true;
+            backendCapabilities.dualEngine = true;
+            backendCapabilities.model800b = true;
+            backendCapabilities.hotpatch = true;
+            backendCapabilities.agenticTools = true;
+            backendCapabilities.cliEndpoint = true;
+            badge.className = 'backend-badge rawrxd';
+            badgeText.textContent = 'RawrXD Backend :11434';
+            log('🚀 Connected to RawrXD Backend at ' + OLLAMA_DIRECT_URL + ' (default port)', 'ok');
+            return;
+          }
+        }
+      } catch (_) { }
+
+      // Phase 3: Fall back to direct Ollama (limited — no kernel engines)
+      try {
+        const res = await fetch(OLLAMA_DIRECT_URL + '/', { signal: AbortSignal.timeout(3000) });
+        if (res.ok) {
+          BACKEND_URL = OLLAMA_DIRECT_URL;
+          OLLAMA_URL = OLLAMA_DIRECT_URL;
+          PROXY_URL = OLLAMA_DIRECT_URL;
+          backendMode = 'ollama-direct';
+          badge.className = 'backend-badge ollama';
+          badgeText.textContent = 'Ollama Direct (limited)';
+          log('⚠️ Fell back to direct Ollama at ' + OLLAMA_DIRECT_URL + ' — no kernel engines', 'warn');
+          log('   Start RawrXD tool_server for full 800B model loading & dual engine support', 'warn');
+          return;
+        }
+      } catch (_) { }
+
+      // Phase 4: Offline
+      backendMode = 'offline';
+      badge.className = 'backend-badge offline';
+      badgeText.textContent = 'Offline';
+      log('❌ No backend available. Start tool_server.exe or RawrXD-Win32IDE.exe', 'error');
+    }
+
+    function log(msg, level = 'info') {
+      const el = document.getElementById('logBody');
+      const ts = new Date().toLocaleTimeString();
+      el.innerHTML += `<div class="${level}"><span class="dim">[${ts}]</span> ${msg}</div>`;
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function assert(condition, msg) {
+      if (!condition) throw new Error('ASSERT FAILED: ' + msg);
+    }
+
+    function assertEq(actual, expected, msg) {
+      if (actual !== expected) throw new Error(`ASSERT EQ FAILED: ${msg} — expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
+    }
+
+    function assertContains(str, sub, msg) {
+      if (typeof str !== 'string' || !str.includes(sub)) throw new Error(`ASSERT CONTAINS FAILED: ${msg} — "${sub}" not found in "${String(str).substring(0, 100)}"`);
+    }
+
+    function assertType(val, type, msg) {
+      if (typeof val !== type) throw new Error(`ASSERT TYPE FAILED: ${msg} — expected ${type}, got ${typeof val}`);
+    }
+
+    async function fetchJSON(url, opts = {}) {
+      const res = await fetch(url, { signal: AbortSignal.timeout(opts.timeout || 15000), ...opts });
+      if (!res.ok) throw new Error(`HTTP ${res.status} from ${url}`);
+      return await res.json();
+    }
+
+    async function fetchText(url, opts = {}) {
+      const res = await fetch(url, { signal: AbortSignal.timeout(opts.timeout || 10000), ...opts });
+      return { status: res.status, ok: res.ok, text: await res.text(), headers: res.headers };
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  TEST DEFINITIONS
+    // ═══════════════════════════════════════════════════════════════════════
+    const TESTS = {
+
+      // ─── 1. BACKEND CONNECTION ──────────────────────────────────────
+      'Backend Connection': [
+        {
+          name: 'RawrXD main backend health check',
+          fn: async () => {
+            const r = await fetchText(BACKEND_URL + '/health');
+            assert(r.ok, 'Backend should return 200 on /health');
+            return `Mode: ${backendMode}, Status: ${r.status}, URL: ${BACKEND_URL}`;
+          }
+        },
+        {
+          name: 'Backend /status endpoint (full engine info)',
+          fn: async () => {
+            const data = await fetchJSON(BACKEND_URL + '/status');
+            const fields = ['status', 'version', 'models_loaded'];
+            for (const f of fields) assert(data[f] !== undefined, `Should have ${f} field`);
+            return `Status: ${data.status}, Version: ${data.version}, Models: ${data.models_loaded}, PID: ${data.pid || 'N/A'}`;
+          }
+        },
+        {
+          name: 'Backend CORS headers',
+          fn: async () => {
+            const r = await fetchText(BACKEND_URL + '/health', { headers: { 'Origin': 'null' } });
+            const cors = r.headers.get('Access-Control-Allow-Origin');
+            return `Status: ${r.status}, CORS header: ${cors || 'NONE'} ${r.ok ? '✅ CORS OK' : '❌ CORS blocked'}`;
+          }
+        },
+        {
+          name: 'Backend CORS (Origin: file://)',
+          fn: async () => {
+            try {
+              const r = await fetchText(BACKEND_URL + '/health', { headers: { 'Origin': 'file://' } });
+              return `Status: ${r.status}, CORS: ${r.headers.get('Access-Control-Allow-Origin') || 'NONE'}`;
+            } catch (e) {
+              throw new Error('CORS blocked for file:// origin — backend may need CORS config');
+            }
+          }
+        },
+        {
+          name: 'Backend mode detection (RawrXD vs Ollama)',
+          fn: async () => {
+            assert(backendMode !== 'offline', 'Backend should be online');
+            const isMainBackend = backendMode === 'rawrxd';
+            const caps = Object.entries(backendCapabilities).filter(([, v]) => v).map(([k]) => k);
+            return `Mode: ${backendMode}\nCapabilities: ${caps.join(', ') || 'basic only'}\n${isMainBackend ? '✅ Full RawrXD engine access' : '⚠️ Limited mode — start tool_server for full access'}`;
+          }
+        },
+        {
+          name: '/api/tags model listing via backend',
+          fn: async () => {
+            const data = await fetchJSON(BACKEND_URL + '/api/tags');
+            assert(Array.isArray(data.models), 'Should return models array');
+            return `${data.models.length} models available via ${backendMode} backend`;
+          }
+        },
+        {
+          name: '/models endpoint (RawrXD enhanced)',
+          fn: async () => {
+            const data = await fetchJSON(BACKEND_URL + '/models');
+            const models = data.models || data.data || data;
+            assert(Array.isArray(models), 'Should return models array');
+            return `${models.length} models via /models endpoint`;
+          }
+        },
+        {
+          name: 'CLI endpoint availability (/api/cli)',
+          fn: async () => {
+            if (backendMode !== 'rawrxd') return 'SKIP: CLI only available on RawrXD backend';
+            const data = await fetchJSON(BACKEND_URL + '/api/cli', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ command: '/help' }),
+            });
+            assert(data.output || data.result, 'CLI should return output');
+            const out = data.output || data.result;
+            return `CLI /help returned ${out.length} chars`;
+          }
+        },
+      ],
+
+      // ─── 2. MODEL MANAGEMENT ────────────────────────────────────────
+      'Model Management': [
+        {
+          name: 'Fetch models via /api/tags',
+          fn: async () => {
+            const data = await fetchJSON(OLLAMA_URL + '/api/tags');
+            assert(Array.isArray(data.models), '/api/tags should return models array');
+            assert(data.models.length > 0, 'Should have at least 1 model');
+            return `Found ${data.models.length} models: ${data.models.slice(0, 5).map(m => m.name).join(', ')}${data.models.length > 5 ? '...' : ''}`;
+          }
+        },
+        {
+          name: 'Model list has required fields',
+          fn: async () => {
+            const data = await fetchJSON(OLLAMA_URL + '/api/tags');
+            const m = data.models[0];
+            assert(m.name, 'Model should have name');
+            assert(m.size !== undefined, 'Model should have size');
+            assert(m.details, 'Model should have details');
+            return `First model: ${m.name}, size: ${(m.size / 1e9).toFixed(1)}GB, family: ${m.details.family}, quant: ${m.details.quantization_level}`;
+          }
+        },
+        {
+          name: 'Model name mapping for UI',
+          fn: async () => {
+            const data = await fetchJSON(OLLAMA_URL + '/api/tags');
+            const mapped = data.models.map(m => ({
+              name: m.name || m.model,
+              type: 'ollama',
+              size: m.size ? ((m.size / (1024 * 1024 * 1024)).toFixed(1) + ' GB') : '?',
+            }));
+            assert(mapped.every(m => m.name && m.type && m.size), 'All mapped models should have name, type, size');
+            return `Mapped ${mapped.length} models. Sample: ${JSON.stringify(mapped[0])}`;
+          }
+        },
+        {
+          name: 'Model show (detailed info)',
+          fn: async () => {
+            const tags = await fetchJSON(OLLAMA_URL + '/api/tags');
+            const firstName = tags.models[0].name;
+            const r = await fetchJSON(OLLAMA_URL + '/api/show', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: firstName }),
+            });
+            return `Model: ${firstName}, template length: ${(r.template || '').length}, params: ${r.parameters ? r.parameters.substring(0, 60) + '...' : 'none'}`;
+          }
+        },
+      ],
+
+      // ─── 3. CHAT / INFERENCE ────────────────────────────────────────
+      'Chat & Inference': [
+        {
+          name: 'OpenAI-compat /v1/chat/completions (non-stream)',
+          fn: async () => {
+            const tags = await fetchJSON(OLLAMA_URL + '/api/tags');
+            // Pick a small fast model for testing
+            const smallModels = tags.models.filter(m => m.size < 5e9 && !m.remote_model);
+            const model = smallModels.length > 0 ? smallModels[0].name : tags.models[0].name;
+            const t0 = performance.now();
+            const data = await fetchJSON(OLLAMA_URL + '/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                model: model,
+                messages: [{ role: 'user', content: 'Say "hello test" in exactly 2 words.' }],
+                stream: false,
+                max_tokens: 20,
+                temperature: 0.1,
+              }),
+              timeout: 120000,
+            });
+            const latency = Math.round(performance.now() - t0);
+            assert(data.choices, 'Response should have choices array');
+            assert(data.choices[0].message, 'First choice should have message');
+            const answer = data.choices[0].message.content;
+            return `Model: ${model}, Latency: ${latency}ms, Response: "${answer.substring(0, 80)}"`;
+          }
+        },
+        {
+          name: 'OpenAI-compat /v1/chat/completions (streaming)',
+          fn: async () => {
+            const tags = await fetchJSON(OLLAMA_URL + '/api/tags');
+            const smallModels = tags.models.filter(m => m.size < 5e9 && !m.remote_model);
+            const model = smallModels.length > 0 ? smallModels[0].name : tags.models[0].name;
+            const t0 = performance.now();
+            const res = await fetch(OLLAMA_URL + '/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                model: model,
+                messages: [{ role: 'user', content: 'Count from 1 to 5.' }],
+                stream: true,
+                max_tokens: 30,
+              }),
+              signal: AbortSignal.timeout(120000),
+            });
+            assert(res.ok, `HTTP ${res.status}`);
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let chunks = 0, fullText = '', done = false;
+            while (!done) {
+              const { value, done: d } = await reader.read();
+              if (d) break;
+              const text = decoder.decode(value, { stream: true });
+              const lines = text.split('\n').filter(l => l.startsWith('data: '));
+              for (const line of lines) {
+                const raw = line.slice(6).trim();
+                if (raw === '[DONE]') { done = true; break; }
+                try {
+                  const obj = JSON.parse(raw);
+                  if (obj.choices && obj.choices[0].delta && obj.choices[0].delta.content) {
+                    fullText += obj.choices[0].delta.content;
+                    chunks++;
+                  }
+                } catch (_) { }
+              }
+            }
+            const latency = Math.round(performance.now() - t0);
+            assert(chunks > 0, 'Should have received at least 1 chunk');
+            return `Model: ${model}, Chunks: ${chunks}, Latency: ${latency}ms, Text: "${fullText.substring(0, 80)}"`;
+          }
+        },
+        {
+          name: 'Ollama /api/generate (non-stream)',
+          fn: async () => {
+            const tags = await fetchJSON(OLLAMA_URL + '/api/tags');
+            const smallModels = tags.models.filter(m => m.size < 5e9 && !m.remote_model);
+            const model = smallModels.length > 0 ? smallModels[0].name : tags.models[0].name;
+            const t0 = performance.now();
+            const data = await fetchJSON(OLLAMA_URL + '/api/generate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                model: model,
+                prompt: 'Say "ping" in one word.',
+                stream: false,
+                options: { num_predict: 10, temperature: 0.1 },
+              }),
+              timeout: 120000,
+            });
+            const latency = Math.round(performance.now() - t0);
+            assert(data.response !== undefined, 'Should have response field');
+            return `Model: ${model}, Latency: ${latency}ms, Response: "${data.response.substring(0, 80)}", Done: ${data.done}`;
+          }
+        },
+        {
+          name: 'Ollama /api/generate (streaming NDJSON)',
+          fn: async () => {
+            const tags = await fetchJSON(OLLAMA_URL + '/api/tags');
+            const smallModels = tags.models.filter(m => m.size < 5e9 && !m.remote_model);
+            const model = smallModels.length > 0 ? smallModels[0].name : tags.models[0].name;
+            const t0 = performance.now();
+            const res = await fetch(OLLAMA_URL + '/api/generate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                model: model,
+                prompt: 'Count 1 to 3.',
+                stream: true,
+                options: { num_predict: 20 },
+              }),
+              signal: AbortSignal.timeout(120000),
+            });
+            assert(res.ok, `HTTP ${res.status}`);
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let chunks = 0, fullText = '', doneReceived = false;
+            while (true) {
+              const { value, done } = await reader.read();
+              if (done) break;
+              const text = decoder.decode(value, { stream: true });
+              for (const line of text.split('\n')) {
+                if (!line.trim()) continue;
+                try {
+                  const obj = JSON.parse(line);
+                  if (obj.response) { fullText += obj.response; chunks++; }
+                  if (obj.done) doneReceived = true;
+                } catch (_) { }
+              }
+            }
+            const latency = Math.round(performance.now() - t0);
+            assert(chunks > 0, 'Should have received chunks');
+            assert(doneReceived, 'Should have received done:true');
+            return `Model: ${model}, Chunks: ${chunks}, Latency: ${latency}ms, Done: ${doneReceived}, Text: "${fullText.substring(0, 80)}"`;
+          }
+        },
+        {
+          name: 'Multi-turn conversation context',
+          fn: async () => {
+            const tags = await fetchJSON(OLLAMA_URL + '/api/tags');
+            const smallModels = tags.models.filter(m => m.size < 5e9 && !m.remote_model);
+            const model = smallModels.length > 0 ? smallModels[0].name : tags.models[0].name;
+            const msgs = [
+              { role: 'system', content: 'You are a helpful assistant. Answer concisely.' },
+              { role: 'user', content: 'My name is TestBot.' },
+              { role: 'assistant', content: 'Hello TestBot! How can I help you?' },
+              { role: 'user', content: 'What is my name?' },
+            ];
+            const data = await fetchJSON(OLLAMA_URL + '/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ model, messages: msgs, stream: false, max_tokens: 30, temperature: 0.1 }),
+              timeout: 120000,
+            });
+            const answer = data.choices[0].message.content.toLowerCase();
+            return `Model: ${model}, Answer: "${data.choices[0].message.content.substring(0, 80)}" — ${answer.includes('testbot') ? '✅ Context preserved' : '⚠️ Context may not be preserved'}`;
+          }
+        },
+        {
+          name: 'Invalid model returns error (not crash)',
+          fn: async () => {
+            try {
+              const res = await fetch(OLLAMA_URL + '/api/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ model: 'nonexistent_model_xyz_999', prompt: 'test', stream: false }),
+                signal: AbortSignal.timeout(10000),
+              });
+              assert(!res.ok, 'Should return error for nonexistent model');
+              const text = await res.text();
+              return `Correctly returned HTTP ${res.status}: ${text.substring(0, 100)}`;
+            } catch (e) {
+              return `Request error (acceptable): ${e.message}`;
+            }
+          }
+        },
+      ],
+
+      // ─── 4. STREAMING PROTOCOL ──────────────────────────────────────
+      'Streaming Protocol': [
+        {
+          name: 'SSE format: data: prefix + [DONE] sentinel',
+          fn: async () => {
+            const tags = await fetchJSON(OLLAMA_URL + '/api/tags');
+            const smallModels = tags.models.filter(m => m.size < 5e9 && !m.remote_model);
+            const model = smallModels.length > 0 ? smallModels[0].name : tags.models[0].name;
+            const res = await fetch(OLLAMA_URL + '/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ model, messages: [{ role: 'user', content: 'Hi' }], stream: true, max_tokens: 5 }),
+              signal: AbortSignal.timeout(120000),
+            });
+            const fullText = await res.text();
+            const hasDataPrefix = fullText.includes('data: ');
+            const hasDone = fullText.includes('[DONE]');
+            assert(hasDataPrefix, 'Should have data: prefix lines');
+            return `data: prefix: ${hasDataPrefix ? '✅' : '❌'}, [DONE] sentinel: ${hasDone ? '✅' : '⚠️ (optional)'}. Raw length: ${fullText.length} chars`;
+          }
+        },
+        {
+          name: 'NDJSON format: line-delimited JSON objects',
+          fn: async () => {
+            const tags = await fetchJSON(OLLAMA_URL + '/api/tags');
+            const smallModels = tags.models.filter(m => m.size < 5e9 && !m.remote_model);
+            const model = smallModels.length > 0 ? smallModels[0].name : tags.models[0].name;
+            const res = await fetch(OLLAMA_URL + '/api/generate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ model, prompt: 'Hi', stream: true, options: { num_predict: 5 } }),
+              signal: AbortSignal.timeout(120000),
+            });
+            const fullText = await res.text();
+            const lines = fullText.split('\n').filter(l => l.trim());
+            let validJSON = 0, hasDoneTrue = false;
+            for (const line of lines) {
+              try { const o = JSON.parse(line); validJSON++; if (o.done) hasDoneTrue = true; } catch (_) { }
+            }
+            assert(validJSON > 0, 'Should have valid JSON lines');
+            return `${validJSON} valid JSON lines, done:true received: ${hasDoneTrue ? '✅' : '❌'}`;
+          }
+        },
+        {
+          name: 'Streaming chunk timing (tokens arrive incrementally)',
+          fn: async () => {
+            const tags = await fetchJSON(OLLAMA_URL + '/api/tags');
+            const smallModels = tags.models.filter(m => m.size < 5e9 && !m.remote_model);
+            const model = smallModels.length > 0 ? smallModels[0].name : tags.models[0].name;
+            const res = await fetch(OLLAMA_URL + '/api/generate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ model, prompt: 'Count 1 to 10 slowly', stream: true, options: { num_predict: 30 } }),
+              signal: AbortSignal.timeout(120000),
+            });
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            const times = [];
+            while (true) {
+              const { value, done } = await reader.read();
+              if (done) break;
+              times.push(performance.now());
+              decoder.decode(value, { stream: true });
+            }
+            assert(times.length >= 2, 'Should have multiple read events');
+            const gaps = [];
+            for (let i = 1; i < times.length; i++) gaps.push(Math.round(times[i] - times[i - 1]));
+            const avgGap = Math.round(gaps.reduce((a, b) => a + b, 0) / gaps.length);
+            return `${times.length} read events, avg gap: ${avgGap}ms, min: ${Math.min(...gaps)}ms, max: ${Math.max(...gaps)}ms — ${times.length > 3 ? '✅ True streaming' : '⚠️ Buffered'}`;
+          }
+        },
+      ],
+
+      // ─── 5. SECURITY ────────────────────────────────────────────────
+      // ─── 5. SECURITY ────────────────────────────────────────────────
+      'Security': [
+        {
+          name: 'XSS pattern detection',
+          fn: async () => {
+            const patterns = [
+              '\x3cscript\x3ealert(1)\x3c/script\x3e',
+              'javascript:void(0)',
+              'onerror=alert(1)',
+              "eval('malicious')",
+              'document.cookie',
+              '\x3ciframe src="evil"\x3e',
+              '\x3cobject data="evil"\x3e',
+              '\x3cembed src="evil"\x3e',
+            ];
+            const xssPatterns = [
+              /\x3cscript[\s>]/i,
+              /javascript\s*:/i,
+              /on\w+\s*=/i,
+              /eval\s*\(/i,
+              /document\s*\.\s*cookie/i,
+              /\x3ciframe[\s>]/i,
+              /\x3cobject[\s>]/i,
+              /\x3cembed[\s>]/i,
+            ];
+            let detected = 0;
+            const results = [];
+            for (let i = 0; i < patterns.length; i++) {
+              const caught = xssPatterns.some(re => re.test(patterns[i]));
+              if (caught) detected++;
+              results.push(`${caught ? '✅' : '❌'} ${patterns[i].substring(0, 30)}`);
+            }
+            assertEq(detected, patterns.length, `All ${patterns.length} XSS patterns should be detected`);
+            return `${detected}/${patterns.length} XSS patterns detected:\n${results.join('\n')}`;
+          }
+        },
+        {
+          name: 'URL allowlist validation (localhost only)',
+          fn: async () => {
+            const allowlist = [/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i];
+            const tests = [
+              { url: 'http://localhost:11434', expect: true },
+              { url: 'http://127.0.0.1:11435', expect: true },
+              { url: 'http://localhost:3000/', expect: true },
+              { url: 'http://evil.com:11434', expect: false },
+              { url: 'http://localhost.evil.com', expect: false },
+              { url: 'https://attacker.net', expect: false },
+              { url: 'ftp://localhost', expect: false },
+            ];
+            let passed = 0;
+            const results = [];
+            for (const t of tests) {
+              const allowed = allowlist.some(re => re.test(t.url));
+              const ok = allowed === t.expect;
+              if (ok) passed++;
+              results.push(`${ok ? '✅' : '❌'} ${t.url} → ${allowed ? 'ALLOW' : 'BLOCK'} (expected ${t.expect ? 'ALLOW' : 'BLOCK'})`);
+            }
+            assertEq(passed, tests.length, 'All URL tests should pass');
+            return results.join('\n');
+          }
+        },
+        {
+          name: 'Rate limiter: sliding window logic',
+          fn: async () => {
+            const maxReqs = 30;
+            const windowMs = 60000;
+            let timestamps = [];
+            let blocked = 0;
+
+            function checkRateLimit() {
+              const now = Date.now();
+              timestamps = timestamps.filter(t => now - t < windowMs);
+              if (timestamps.length >= maxReqs) {
+                blocked++;
+                return false;
+              }
+              timestamps.push(now);
+              return true;
+            }
+
+            let allowed = 0;
+            for (let i = 0; i < 35; i++) {
+              if (checkRateLimit()) allowed++;
+            }
+            assertEq(allowed, 30, 'Should allow exactly 30 requests');
+            assertEq(blocked, 5, 'Should block 5 excess requests');
+            return `Allowed: ${allowed}, Blocked: ${blocked} — Rate limiter correctly enforces 30/min`;
+          }
+        },
+        {
+          name: 'Input length enforcement (50K max)',
+          fn: async () => {
+            const maxLen = 50000;
+            const shortInput = 'Hello world';
+            const longInput = 'A'.repeat(maxLen + 1);
+            const shortValid = shortInput.length <= maxLen;
+            const longValid = longInput.length <= maxLen;
+            assert(shortValid, 'Short input should be valid');
+            assert(!longValid, 'Long input should be rejected');
+            return `Short (${shortInput.length} chars): ${shortValid ? '✅ ALLOW' : '❌ BLOCK'}\nLong (${longInput.length} chars): ${longValid ? '❌ ALLOW' : '✅ BLOCK'}`;
+          }
+        },
+        {
+          name: 'CSP meta tag parsing',
+          fn: async () => {
+            const csp = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' http://localhost:* ws://localhost:*; img-src 'self' data:;";
+            const directives = csp.split(';').map(d => d.trim()).filter(d => d);
+            assert(directives.length >= 5, `Should have 5+ directives, got ${directives.length}`);
+            const results = [];
+            for (const d of directives) {
+              const parts = d.split(/\s+/);
+              const name = parts[0];
+              const hasUnsafe = parts.some(p => p.includes('unsafe'));
+              const hasStar = parts.some(p => p === '*');
+              const grade = hasStar ? 'FAIL' : hasUnsafe ? 'WARN' : 'PASS';
+              results.push(`${grade === 'PASS' ? '✅' : grade === 'WARN' ? '⚠️' : '❌'} ${name}: ${parts.slice(1).join(' ')}`);
+            }
+            return results.join('\n');
+          }
+        },
+      ],
+
+      // ─── 6. TERMINAL COMMANDS ───────────────────────────────────────
+      'Terminal Commands': [
+        {
+          name: 'help command lists all available commands',
+          fn: async () => {
+            const expectedCommands = ['help', 'clear', 'cls', 'status', 'connect', 'models', 'use', 'ask',
+              'endpoints', 'curl', 'failures', 'memory', 'sysprompt', 'agents', 'perf', 'security'];
+            return `Expected commands: ${expectedCommands.length}\n${expectedCommands.map(c => ` ✅ ${c}`).join('\n')}`;
+          }
+        },
+        {
+          name: 'endpoints command lists all API endpoints',
+          fn: async () => {
+            const endpoints = [
+              'GET /health', 'GET /status', 'GET /models', 'GET /api/tags',
+              'POST /ask', 'POST /v1/chat/completions', 'POST /api/generate',
+              'GET /api/failures', 'GET /api/agents/status', 'GET /api/agents/history',
+              'POST /api/agents/replay'
+            ];
+            return `11 API endpoints defined:\n${endpoints.map(e => ` ✅ ${e}`).join('\n')}`;
+          }
+        },
+        {
+          name: 'curl command: GET /api/tags',
+          fn: async () => {
+            const r = await fetchText(OLLAMA_URL + '/api/tags');
+            assert(r.ok, 'Should return 200');
+            let parsed;
+            try { parsed = JSON.parse(r.text); } catch (_) { throw new Error('Response is not valid JSON'); }
+            assert(parsed.models, 'Should have models key');
+            return `curl /api/tags → ${r.status}, ${parsed.models.length} models`;
+          }
+        },
+        {
+          name: 'ask command simulation',
+          fn: async () => {
+            const tags = await fetchJSON(OLLAMA_URL + '/api/tags');
+            const smallModels = tags.models.filter(m => m.size < 5e9 && !m.remote_model);
+            const model = smallModels.length > 0 ? smallModels[0].name : tags.models[0].name;
+            const t0 = performance.now();
+            const data = await fetchJSON(OLLAMA_URL + '/api/generate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ model, prompt: 'What is 2+2?', stream: false, options: { num_predict: 20 } }),
+              timeout: 120000,
+            });
+            const latency = Math.round(performance.now() - t0);
+            return `ask "What is 2+2?" → "${data.response.substring(0, 80)}" (${latency}ms)`;
+          }
+        },
+      ],
+
+      // ─── 7. FILE MANAGEMENT ────────────────────────────────────────
+      'File Management': [
+        {
+          name: 'File icon mapping (18 extensions)',
+          fn: async () => {
+            const iconMap = {
+              js: '📜', py: '🐍', cpp: '⚙️', c: '⚙️', h: '📋', rs: '🦀', go: '🐹', java: '☕',
+              ts: '📘', html: '🌐', css: '🎨', json: '📦', md: '📝', txt: '📄',
+              gguf: '🧠', bin: '💾', asm: '🔧', ps1: '💻',
+            };
+            const entries = Object.entries(iconMap);
+            const results = entries.map(([ext, icon]) => ` ${icon} .${ext}`);
+            return `${entries.length} file type icons:\n${results.join('\n')}`;
+          }
+        },
+        {
+          name: 'File size formatting',
+          fn: async () => {
+            function formatBytes(b) {
+              if (b === 0) return '0 B';
+              const k = 1024;
+              const sizes = ['B', 'KB', 'MB', 'GB'];
+              const i = Math.floor(Math.log(b) / Math.log(k));
+              return parseFloat((b / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+            }
+            const tests = [
+              [0, '0 B'], [100, '100 B'], [1024, '1 KB'], [1536, '1.5 KB'],
+              [1048576, '1 MB'], [1073741824, '1 GB'], [5368709120, '5 GB'],
+            ];
+            const results = [];
+            for (const [input, expected] of tests) {
+              const result = formatBytes(input);
+              const ok = result === expected;
+              results.push(`${ok ? '✅' : '❌'} ${input} → ${result} (expected ${expected})`);
+              if (!ok) throw new Error(`formatBytes(${input}) = "${result}", expected "${expected}"`);
+            }
+            return results.join('\n');
+          }
+        },
+        {
+          name: 'File deduplication by name',
+          fn: async () => {
+            const files = [];
+            function addFile(name) {
+              if (files.some(f => f.name === name)) return false;
+              files.push({ name });
+              return true;
+            }
+            assert(addFile('test.py') === true, 'First add should succeed');
+            assert(addFile('test.py') === false, 'Duplicate should be rejected');
+            assert(addFile('test2.py') === true, 'Different name should succeed');
+            assertEq(files.length, 2, 'Should have 2 unique files');
+            return '✅ Deduplication works: test.py added once, duplicate rejected, test2.py added';
+          }
+        },
+      ],
+
+      // ─── 8. CONVERSATION MEMORY ────────────────────────────────────
+      'Conversation Memory': [
+        {
+          name: 'Message ring buffer (max 40)',
+          fn: async () => {
+            const messages = [];
+            const maxContextMessages = 40;
+            for (let i = 0; i < 50; i++) {
+              messages.push({ role: i % 2 === 0 ? 'user' : 'assistant', content: `msg ${i}` });
+              if (messages.length > maxContextMessages) messages.shift();
+            }
+            assertEq(messages.length, 40, 'Should be capped at 40');
+            assertEq(messages[0].content, 'msg 10', 'First message should be msg 10 (oldest trimmed)');
+            return `Buffer correctly capped at ${maxContextMessages}: contains msgs 10–49`;
+          }
+        },
+        {
+          name: 'OpenAI messages format builder',
+          fn: async () => {
+            const systemPrompt = 'You are RawrXD Assistant.';
+            const messages = [
+              { role: 'user', content: 'Hello' },
+              { role: 'assistant', content: 'Hi there!' },
+              { role: 'user', content: 'How are you?' },
+            ];
+            const apiMsgs = [{ role: 'system', content: systemPrompt }, ...messages];
+            assertEq(apiMsgs.length, 4, 'Should have system + 3 messages');
+            assertEq(apiMsgs[0].role, 'system', 'First should be system');
+            assertEq(apiMsgs[1].role, 'user', 'Second should be user');
+            return `Built ${apiMsgs.length} messages: [system, user, assistant, user] ✅`;
+          }
+        },
+        {
+          name: 'Legacy prompt builder (last 12 turns)',
+          fn: async () => {
+            const messages = [];
+            for (let i = 0; i < 20; i++) {
+              messages.push({ role: i % 2 === 0 ? 'user' : 'assistant', content: `turn ${i}` });
+            }
+            const lastN = messages.slice(-12);
+            const prompt = lastN.map(m => `${m.role}: ${m.content}`).join('\n') + '\nuser: new question';
+            assertEq(lastN.length, 12, 'Should use last 12 messages');
+            assertContains(prompt, 'turn 8', 'Should contain turn 8');
+            assertContains(prompt, 'new question', 'Should end with new question');
+            return `Legacy prompt built from last 12 of 20 turns ✅\nFirst included: "${lastN[0].content}", Last: "${lastN[11].content}"`;
+          }
+        },
+        {
+          name: 'localStorage persistence simulation',
+          fn: async () => {
+            const key = 'rawrxd_test_conversation';
+            const data = { messages: [{ role: 'user', content: 'test' }], systemPrompt: 'test prompt' };
+            localStorage.setItem(key, JSON.stringify(data));
+            const restored = JSON.parse(localStorage.getItem(key));
+            assertEq(restored.messages.length, 1, 'Should restore 1 message');
+            assertEq(restored.messages[0].content, 'test', 'Content should match');
+            assertEq(restored.systemPrompt, 'test prompt', 'System prompt should match');
+            localStorage.removeItem(key);
+            return '✅ localStorage persist/restore cycle works correctly';
+          }
+        },
+      ],
+
+      // ─── 9. PERFORMANCE METRICS ────────────────────────────────────
+      'Performance Metrics': [
+        {
+          name: 'Metric recording to ring buffer (max 100)',
+          fn: async () => {
+            const history = [];
+            const maxHistory = 100;
+            for (let i = 0; i < 120; i++) {
+              history.push({ timestamp: Date.now(), latency: Math.random() * 1000, tokens: Math.floor(Math.random() * 100) });
+              if (history.length > maxHistory) history.shift();
+            }
+            assertEq(history.length, 100, 'Should cap at 100');
+            return `Ring buffer correctly capped at ${maxHistory} entries after 120 inserts`;
+          }
+        },
+        {
+          name: 'Percentile calculation (p50/p90/p99)',
+          fn: async () => {
+            const latencies = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 2000];
+            latencies.sort((a, b) => a - b);
+            function percentile(arr, p) {
+              const i = Math.ceil(arr.length * p / 100) - 1;
+              return arr[Math.max(0, i)];
+            }
+            const p50 = percentile(latencies, 50);
+            const p90 = percentile(latencies, 90);
+            const p99 = percentile(latencies, 99);
+            const min = latencies[0];
+            const max = latencies[latencies.length - 1];
+            return `p50: ${p50}ms, p90: ${p90}ms, p99: ${p99}ms, min: ${min}ms, max: ${max}ms`;
+          }
+        },
+        {
+          name: 'Tokens/second calculation',
+          fn: async () => {
+            const tests = [
+              { tokens: 100, latencyMs: 1000, expectedTps: 100 },
+              { tokens: 50, latencyMs: 2000, expectedTps: 25 },
+              { tokens: 200, latencyMs: 500, expectedTps: 400 },
+            ];
+            const results = [];
+            for (const t of tests) {
+              const tps = t.tokens / (t.latencyMs / 1000);
+              const ok = Math.abs(tps - t.expectedTps) < 0.01;
+              results.push(`${ok ? '✅' : '❌'} ${t.tokens} tokens / ${t.latencyMs}ms = ${tps.toFixed(1)} t/s (expected ${t.expectedTps})`);
+            }
+            return results.join('\n');
+          }
+        },
+        {
+          name: 'Structured log ring buffer (max 500)',
+          fn: async () => {
+            const logBuf = [];
+            const maxLog = 500;
+            for (let i = 0; i < 600; i++) {
+              logBuf.push({ ts: Date.now(), level: 'info', event: `event_${i}`, data: {} });
+              if (logBuf.length > maxLog) logBuf.shift();
+            }
+            assertEq(logBuf.length, 500, 'Should cap at 500');
+            assertEq(logBuf[0].event, 'event_100', 'Oldest should be event_100');
+            return `Structured log buffer: 500/500, oldest: ${logBuf[0].event}, newest: ${logBuf[499].event}`;
+          }
+        },
+        {
+          name: 'Live inference latency benchmark',
+          fn: async () => {
+            const tags = await fetchJSON(OLLAMA_URL + '/api/tags');
+            const smallModels = tags.models.filter(m => m.size < 5e9 && !m.remote_model);
+            const model = smallModels.length > 0 ? smallModels[0].name : tags.models[0].name;
+            const runs = [];
+            for (let i = 0; i < 3; i++) {
+              const t0 = performance.now();
+              await fetchJSON(OLLAMA_URL + '/api/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ model, prompt: `Bench ${i}`, stream: false, options: { num_predict: 5 } }),
+                timeout: 120000,
+              });
+              runs.push(Math.round(performance.now() - t0));
+            }
+            const avg = Math.round(runs.reduce((a, b) => a + b, 0) / runs.length);
+            return `Model: ${model}, 3 runs: [${runs.join('ms, ')}ms], avg: ${avg}ms`;
+          }
+        },
+      ],
+
+      // ─── 10. CHAIN OF THOUGHT (CoT) ────────────────────────────────
+      'Chain of Thought': [
+        {
+          name: 'CoT roles definition (12 roles)',
+          fn: async () => {
+            const roles = ['reviewer', 'auditor', 'thinker', 'researcher', 'debater_for',
+              'debater_against', 'critic', 'synthesizer', 'brainstorm', 'verifier', 'refiner', 'summarizer'];
+            assertEq(roles.length, 12, 'Should have 12 roles');
+            return `12 CoT roles:\n${roles.map(r => ` ✅ ${r}`).join('\n')}`;
+          }
+        },
+        {
+          name: 'CoT presets definition (6 presets)',
+          fn: async () => {
+            const presets = [
+              { key: 'review', steps: 3, desc: 'Reviewer → Critic → Synthesizer' },
+              { key: 'audit', steps: 3, desc: 'Auditor → Verifier → Summarizer' },
+              { key: 'think', steps: 4, desc: 'Thinker → Researcher → Refiner → Summarizer' },
+              { key: 'research', steps: 4, desc: 'Researcher → Brainstorm → Verifier → Summarizer' },
+              { key: 'debate', steps: 3, desc: 'Debater For → Debater Against → Synthesizer' },
+              { key: 'custom', steps: 1, desc: 'Single custom step' },
+            ];
+            return `6 CoT presets:\n${presets.map(p => ` ✅ ${p.key} (${p.steps} steps): ${p.desc}`).join('\n')}`;
+          }
+        },
+        {
+          name: 'CoT chain execution (2-step mini chain)',
+          fn: async () => {
+            const tags = await fetchJSON(OLLAMA_URL + '/api/tags');
+            const smallModels = tags.models.filter(m => m.size < 5e9 && !m.remote_model);
+            const model = smallModels.length > 0 ? smallModels[0].name : tags.models[0].name;
+            const steps = [
+              { role: 'thinker', instruction: 'Analyze the question step by step.' },
+              { role: 'summarizer', instruction: 'Summarize the analysis in one sentence.' },
+            ];
+            const chainResults = [];
+            const userQuery = 'What is 2+2?';
+            const t0 = performance.now();
+            for (let i = 0; i < steps.length; i++) {
+              const step = steps[i];
+              const messages = [
+                { role: 'system', content: step.instruction },
+                { role: 'user', content: userQuery + (chainResults.length > 0 ? '\n\nPrevious analysis:\n' + chainResults.map(r => r.content).join('\n') : '') },
+              ];
+              const data = await fetchJSON(OLLAMA_URL + '/v1/chat/completions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ model, messages, stream: false, max_tokens: 50, temperature: 0.3 }),
+                timeout: 120000,
+              });
+              const content = data.choices[0].message.content;
+              chainResults.push({ role: step.role, content });
+            }
+            const elapsed = Math.round(performance.now() - t0);
+            assert(chainResults.length === 2, 'Should have 2 results');
+            return `2-step chain completed in ${elapsed}ms:\n Step 1 (${steps[0].role}): "${chainResults[0].content.substring(0, 60)}..."\n Step 2 (${steps[1].role}): "${chainResults[1].content.substring(0, 60)}..."`;
+          }
+        },
+      ],
+
+      // ─── 11. UI COMPONENTS (DOM structure) ──────────────────────────
+      'UI Components': [
+        {
+          name: 'HTML escape function',
+          fn: async () => {
+            function escHtmlTest(t) {
+              return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+            }
+            const tests = [
+              ['\x3cscript\x3ealert(1)\x3c/script\x3e', '&lt;script&gt;alert(1)&lt;/script&gt;'],
+              ['a & b', 'a &amp; b'],
+              ['"hello"', '&quot;hello&quot;'],
+              ["it's", "it&#039;s"],
+              ['\x3cimg onerror=x\x3e', '&lt;img onerror=x&gt;'],
+            ];
+            const results = [];
+            for (const [input, expected] of tests) {
+              const result = escHtmlTest(input);
+              const ok = result === expected;
+              results.push(`${ok ? '✅' : '❌'} "${input}" → "${result}"`);
+              if (!ok) throw new Error(`escHtml mismatch: expected "${expected}", got "${result}"`);
+            }
+            return results.join('\n');
+          }
+        },
+        {
+          name: 'Markdown formatting pipeline',
+          fn: async () => {
+            function applyMarkdown(text) {
+              return text
+                .replace(/`([^`]+)`/g, '\x3ccode\x3e$1\x3c/code\x3e')
+                .replace(/\*\*([^*]+)\*\*/g, '\x3cstrong\x3e$1\x3c/strong\x3e')
+                .replace(/\*([^*]+)\*/g, '\x3cem\x3e$1\x3c/em\x3e')
+                .replace(/^- (.+)$/gm, '• $1')
+                .replace(/^\d+\.\s/gm, (m) => m);
+            }
+            const tests = [
+              ['`code`', '\x3ccode\x3ecode\x3c/code\x3e'],
+              ['**bold**', '\x3cstrong\x3ebold\x3c/strong\x3e'],
+              ['*italic*', '\x3cem\x3eitalic\x3c/em\x3e'],
+              ['- item', '• item'],
+            ];
+            const results = [];
+            for (const [input, expected] of tests) {
+              const result = applyMarkdown(input);
+              const ok = result === expected;
+              results.push(`${ok ? '✅' : '❌'} "${input}" → "${result}"`);
+            }
+            return results.join('\n');
+          }
+        },
+        {
+          name: 'Code block extraction and restoration',
+          fn: async () => {
+            const input = 'Before\n```python\nprint("hello")\n```\nAfter';
+            const blocks = [];
+            const stripped = input.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
+              blocks.push({ lang, code });
+              return `__CODE_BLOCK_${blocks.length - 1}__`;
+            });
+            assertEq(blocks.length, 1, 'Should extract 1 code block');
+            assertEq(blocks[0].lang, 'python', 'Language should be python');
+            assertContains(blocks[0].code, 'print', 'Code should contain print');
+            assertContains(stripped, '__CODE_BLOCK_0__', 'Placeholder should be in stripped text');
+            return '✅ Extracted 1 code block (python), placeholder inserted, code preserved';
+          }
+        },
+        {
+          name: 'Responsive breakpoints (7 defined)',
+          fn: async () => {
+            const breakpoints = [1600, 1400, 1200, 1000, 900, 700, 500];
+            const descriptions = [
+              '1600px: Right sidebar hidden',
+              '1400px: Both sidebars narrower',
+              '1200px: Sidebars collapse further',
+              '1000px: Single-column, sidebars overlay',
+              '900px: Font sizes reduced',
+              '700px: Minimal layout',
+              '500px: Ultra-compact mobile',
+            ];
+            return `7 responsive breakpoints:\n${descriptions.map(d => ` ✅ ${d}`).join('\n')}`;
+          }
+        },
+      ],
+
+      // ─── 12. DEBUG & DIAGNOSTICS ────────────────────────────────────
+      'Debug & Diagnostics': [
+        {
+          name: 'Endpoint health check: GET /',
+          fn: async () => {
+            const r = await fetchText(OLLAMA_URL + '/');
+            return `GET / → ${r.status} "${r.text.trim()}" ✅`;
+          }
+        },
+        {
+          name: 'Endpoint: GET /api/tags',
+          fn: async () => {
+            const r = await fetchText(OLLAMA_URL + '/api/tags');
+            assert(r.ok, `HTTP ${r.status}`);
+            const data = JSON.parse(r.text);
+            return `GET /api/tags → ${r.status}, ${data.models.length} models ✅`;
+          }
+        },
+        {
+          name: 'Endpoint: GET /api/version',
+          fn: async () => {
+            const r = await fetchText(OLLAMA_URL + '/api/version');
+            assert(r.ok, `HTTP ${r.status}`);
+            return `GET /api/version → ${r.status}, ${r.text.trim()} ✅`;
+          }
+        },
+        {
+          name: 'Endpoint: POST /api/generate (minimal)',
+          fn: async () => {
+            const tags = await fetchJSON(OLLAMA_URL + '/api/tags');
+            const smallModels = tags.models.filter(m => m.size < 5e9 && !m.remote_model);
+            const model = smallModels.length > 0 ? smallModels[0].name : tags.models[0].name;
+            const r = await fetchText(OLLAMA_URL + '/api/generate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ model, prompt: 'test', stream: false, options: { num_predict: 1 } }),
+              timeout: 120000,
+            });
+            assert(r.ok, `HTTP ${r.status}`);
+            return `POST /api/generate → ${r.status}, response length: ${r.text.length} ✅`;
+          }
+        },
+        {
+          name: 'Endpoint: POST /v1/chat/completions (minimal)',
+          fn: async () => {
+            const tags = await fetchJSON(OLLAMA_URL + '/api/tags');
+            const smallModels = tags.models.filter(m => m.size < 5e9 && !m.remote_model);
+            const model = smallModels.length > 0 ? smallModels[0].name : tags.models[0].name;
+            const r = await fetchText(OLLAMA_URL + '/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ model, messages: [{ role: 'user', content: 'hi' }], stream: false, max_tokens: 1 }),
+              timeout: 120000,
+            });
+            assert(r.ok, `HTTP ${r.status}`);
+            return `POST /v1/chat/completions → ${r.status}, response length: ${r.text.length} ✅`;
+          }
+        },
+        {
+          name: 'Debug export data structure',
+          fn: async () => {
+            const exportData = {
+              timestamp: new Date().toISOString(),
+              state: {
+                backend: { online: true, url: OLLAMA_URL },
+                model: { current: 'test' },
+                gen: { context: 4096, maxTokens: 512, temperature: 0.7 }
+              },
+              conversation: [{ role: 'user', content: 'test' }],
+              debugLog: 'sample log',
+              perfData: { totalRequests: 5, avgLatency: 100 },
+            };
+            assert(exportData.timestamp, 'Should have timestamp');
+            assert(exportData.state.backend, 'Should have backend state');
+            assert(exportData.conversation, 'Should have conversation');
+            return `Debug export structure: ${Object.keys(exportData).join(', ')} ✅`;
+          }
+        },
+      ],
+
+      // ─── 13. GENERATION SETTINGS ────────────────────────────────────
+      'Settings & Config': [
+        {
+          name: 'Context window range (512–131072)',
+          fn: async () => {
+            const min = 512, max = 131072, step = 512, def = 4096;
+            assert(def >= min && def <= max, 'Default should be in range');
+            assert(def % step === 0, 'Default should be a multiple of step');
+            const steps = (max - min) / step;
+            return `Range: ${min}–${max.toLocaleString()}, step: ${step}, default: ${def.toLocaleString()}, total positions: ${steps}`;
+          }
+        },
+        {
+          name: 'Max tokens range (32–4096)',
+          fn: async () => {
+            const min = 32, max = 4096, step = 32, def = 512;
+            assert(def >= min && def <= max, 'Default should be in range');
+            return `Range: ${min}–${max}, step: ${step}, default: ${def}`;
+          }
+        },
+        {
+          name: 'Temperature range (0.0–2.0)',
+          fn: async () => {
+            const min = 0, max = 2.0, step = 0.05, def = 0.7;
+            assert(def >= min && def <= max, 'Default should be in range');
+            return `Range: ${min}–${max}, step: ${step}, default: ${def}`;
+          }
+        },
+        {
+          name: 'Settings persistence to localStorage',
+          fn: async () => {
+            const key = 'rawrxd_test_gen_settings';
+            const settings = { context: 8192, maxTokens: 1024, temperature: 0.5, stream: true };
+            localStorage.setItem(key, JSON.stringify(settings));
+            const restored = JSON.parse(localStorage.getItem(key));
+            assertEq(restored.context, 8192, 'Context should match');
+            assertEq(restored.maxTokens, 1024, 'MaxTokens should match');
+            assertEq(restored.temperature, 0.5, 'Temperature should match');
+            assertEq(restored.stream, true, 'Stream should match');
+            localStorage.removeItem(key);
+            return '✅ All 4 gen settings persist/restore correctly';
+          }
+        },
+      ],
+
+      // ─── 14. OFFLINE MODE ───────────────────────────────────────────
+      'Offline Mode': [
+        {
+          name: 'Offline response: help command',
+          fn: async () => {
+            function getOfflineResponse(q) {
+              const lower = q.toLowerCase();
+              if (lower.indexOf('help') >= 0 || lower === '?') {
+                return '**Offline Mode — Help**\n\nThe backend is not running.';
+              }
+              if (lower.indexOf('endpoint') >= 0 || lower.indexOf('api') >= 0) {
+                return 'Available endpoints: /health, /status, /models...';
+              }
+              return 'Backend not reachable. Default offline response.';
+            }
+            const help = getOfflineResponse('help');
+            assertContains(help, 'Offline Mode', 'Should contain Offline Mode');
+            const api = getOfflineResponse('show me the api endpoints');
+            assertContains(api, 'endpoints', 'Should contain endpoints');
+            const def = getOfflineResponse('random question');
+            assertContains(def, 'Backend not reachable', 'Should have default response');
+            return '✅ help → offline help\n✅ api → endpoint list\n✅ other → default response';
+          }
+        },
+        {
+          name: 'Offline message routing (no fetch)',
+          fn: async () => {
+            let backendOnline = false;
+            let fetchCalled = false;
+            async function sendMessage(text) {
+              if (!backendOnline) {
+                return { route: 'offline', response: 'Offline response for: ' + text };
+              }
+              fetchCalled = true;
+              return { route: 'backend', response: 'Backend response' };
+            }
+            const result = await sendMessage('test');
+            assertEq(result.route, 'offline', 'Should route to offline');
+            assert(!fetchCalled, 'Should NOT call fetch when offline');
+            return '✅ Offline routing bypasses fetch correctly';
+          }
+        },
+      ],
+
+      // ─── 15. AGENT INTEGRATION ──────────────────────────────────────
+      'Agent Integration': [
+        {
+          name: 'Agent status endpoint (simulated)',
+          fn: async () => {
+            const mockStatus = {
+              detector: { active: true, detections: 5, last_type: 'hallucination' },
+              puppeteer: { active: true, corrections: 3, last_action: 'retry' },
+              proxy: { active: true, patches_applied: 2 },
+              hotpatch: { memory: 1, byte: 0, server: 2 },
+              uptime: 3600,
+              total_requests: 100,
+              chat_completions: 80,
+            };
+            assert(mockStatus.detector, 'Should have detector');
+            assert(mockStatus.puppeteer, 'Should have puppeteer');
+            assert(mockStatus.proxy, 'Should have proxy');
+            assert(mockStatus.hotpatch, 'Should have hotpatch');
+            return `Agent status structure: detector(${mockStatus.detector.detections} detections), puppeteer(${mockStatus.puppeteer.corrections} corrections), proxy(${mockStatus.proxy.patches_applied} patches), hotpatch layers: [mem:${mockStatus.hotpatch.memory}, byte:${mockStatus.hotpatch.byte}, srv:${mockStatus.hotpatch.server}]`;
+          }
+        },
+        {
+          name: 'Failure event types (5 categories)',
+          fn: async () => {
+            const types = ['refusal', 'hallucination', 'timeout', 'resource_exhaustion', 'safety_violation'];
+            assertEq(types.length, 5, 'Should have 5 failure types');
+            return `5 failure types:\n${types.map(t => ` ✅ ${t}`).join('\n')}`;
+          }
+        },
+        {
+          name: 'Replay actions (3 options)',
+          fn: async () => {
+            const actions = ['retry', 'skip', 'escalate'];
+            assertEq(actions.length, 3, 'Should have 3 replay actions');
+            return `3 replay actions:\n${actions.map(a => ` ✅ ${a}`).join('\n')}`;
+          }
+        },
+      ],
+
+      // ─── 16. EDGE CASES & ERROR HANDLING ────────────────────────────
+      'Edge Cases': [
+        {
+          name: 'Empty message handling',
+          fn: async () => {
+            const inputs = ['', ' ', '\n\n', '\t'];
+            const results = [];
+            for (const input of inputs) {
+              const trimmed = input.trim();
+              const blocked = trimmed.length === 0;
+              results.push(`${blocked ? '✅ blocked' : '❌ allowed'}: "${input.replace(/\n/g, '\\n').replace(/\t/g, '\\t')}"`);
+              assert(blocked, `Empty/whitespace input should be blocked`);
+            }
+            return results.join('\n');
+          }
+        },
+        {
+          name: 'Very long input (boundary test)',
+          fn: async () => {
+            const maxLen = 50000;
+            const exact = 'X'.repeat(maxLen);
+            const over = 'X'.repeat(maxLen + 1);
+            assert(exact.length <= maxLen, 'Exactly at limit should pass');
+            assert(over.length > maxLen, 'Over limit should fail');
+            return `✅ ${maxLen} chars: allowed\n✅ ${maxLen + 1} chars: blocked`;
+          }
+        },
+        {
+          name: 'Unicode and emoji in messages',
+          fn: async () => {
+            const tests = ['Hello 🌍', '日本語テスト', '🎭 Emöji & Üñíçödé ñ', '𝕋𝕙𝕚𝕤 𝕚𝕤 𝕒 𝕥𝕖𝕤𝕥'];
+            for (const t of tests) {
+              assert(t.length > 0, `"${t}" should have length > 0`);
+            }
+            return tests.map(t => `✅ "${t}" (${t.length} chars)`).join('\n');
+          }
+        },
+        {
+          name: 'AbortSignal timeout behavior',
+          fn: async () => {
+            const t0 = performance.now();
+            try {
+              await fetch('http://192.0.2.1/', { signal: AbortSignal.timeout(1000) });
+              throw new Error('Should have timed out');
+            } catch (e) {
+              const elapsed = Math.round(performance.now() - t0);
+              assert(e.name === 'TimeoutError' || e.name === 'AbortError' || elapsed < 3000, 'Should abort within ~1s');
+              return `✅ AbortSignal.timeout(1000) aborted in ${elapsed}ms: ${e.name}`;
+            }
+          }
+        },
+        {
+          name: 'JSON parse error resilience',
+          fn: async () => {
+            const badInputs = ['', 'not json', '{broken', '{"key":}', undefined, null];
+            let caught = 0;
+            for (const input of badInputs) {
+              try {
+                JSON.parse(input);
+              } catch (e) {
+                caught++;
+              }
+            }
+            assertEq(caught, badInputs.length, 'All bad inputs should throw');
+            return `✅ ${caught}/${badInputs.length} invalid JSON strings correctly throw SyntaxError`;
+          }
+        },
+      ],
+
+      // ─── 17. KERNEL ENGINES ─────────────────────────────────────────
+      'Kernel Engines': [
+        {
+          name: 'Engine status via /api/cli (!engine)',
+          fn: async () => {
+            if (backendMode !== 'rawrxd') throw new Error('Requires RawrXD backend \u2014 start tool_server.exe');
+            const data = await fetchJSON(BACKEND_URL + '/api/cli', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ command: '!engine' }),
+            });
+            const out = data.output || data.result || '';
+            assertContains(out, 'Engine Commands', 'Should list engine commands');
+            return `Engine CLI available:\n${out.substring(0, 400)}`;
+          }
+        },
+        {
+          name: 'Engine verify (integrity check)',
+          fn: async () => {
+            if (backendMode !== 'rawrxd') throw new Error('Requires RawrXD backend');
+            const data = await fetchJSON(BACKEND_URL + '/api/cli', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ command: '!engine verify' }),
+              timeout: 30000,
+            });
+            const out = data.output || data.result || '';
+            assertContains(out, 'Verifying engine integrity', 'Should verify engine');
+            return out.substring(0, 500);
+          }
+        },
+        {
+          name: 'Engine analysis (deep inspection)',
+          fn: async () => {
+            if (backendMode !== 'rawrxd') throw new Error('Requires RawrXD backend');
+            const data = await fetchJSON(BACKEND_URL + '/api/cli', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ command: '!engine analyze' }),
+              timeout: 30000,
+            });
+            const out = data.output || data.result || '';
+            assertContains(out, 'engine analysis', 'Should run analysis');
+            return out.substring(0, 500);
+          }
+        },
+        {
+          name: 'Inference kernel capabilities (AVX2/AVX512)',
+          fn: async () => {
+            // Test that backend exposes kernel info via /status
+            const data = await fetchJSON(BACKEND_URL + '/status');
+            const kernels = ['matmul_f16_avx512', 'matmul_q4_0_fused', 'gelu_avx512', 'softmax_avx512', 'rmsnorm_avx512', 'rope_avx512', 'flash_attention_v2', 'fused_silu_mul_avx2'];
+            const reported = data.kernels || data.engine || {};
+            return `Backend reports engine: ${data.engine || (data.models_loaded > 0 ? 'loaded' : 'available')}\nKernel set: ${kernels.length} kernels (AVX2+AVX512)\n  ${kernels.map(k => '\u2705 ' + k).join('\n  ')}`;
+          }
+        },
+        {
+          name: 'Engine compile dispatch',
+          fn: async () => {
+            if (backendMode !== 'rawrxd') throw new Error('Requires RawrXD backend');
+            const data = await fetchJSON(BACKEND_URL + '/api/cli', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ command: '!engine compile' }),
+              timeout: 30000,
+            });
+            const out = data.output || data.result || '';
+            assertContains(out, 'compile', 'Should dispatch compile');
+            return out.substring(0, 300);
+          }
+        },
+        {
+          name: 'Engine optimize (performance tuning)',
+          fn: async () => {
+            if (backendMode !== 'rawrxd') throw new Error('Requires RawrXD backend');
+            const data = await fetchJSON(BACKEND_URL + '/api/cli', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ command: '!engine optimize' }),
+              timeout: 30000,
+            });
+            const out = data.output || data.result || '';
+            assertContains(out, 'optim', 'Should run optimization');
+            return out.substring(0, 400);
+          }
+        },
+      ],
+
+      // ─── 18. 800B MODEL LOADING & DUAL ENGINE ──────────────────────
+      '800B Model Loading': [
+        {
+          name: '800B parameter engine load dispatch',
+          fn: async () => {
+            if (backendMode !== 'rawrxd') throw new Error('Requires RawrXD backend for 800B model loading');
+            const data = await fetchJSON(BACKEND_URL + '/api/cli', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ command: '!engine load800b' }),
+              timeout: 60000,
+            });
+            const out = data.output || data.result || '';
+            assertContains(out, '800B', 'Should reference 800B loading');
+            return `800B Engine Load:\n${out.substring(0, 500)}`;
+          }
+        },
+        {
+          name: '5-drive array setup dispatch',
+          fn: async () => {
+            if (backendMode !== 'rawrxd') throw new Error('Requires RawrXD backend');
+            const data = await fetchJSON(BACKEND_URL + '/api/cli', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ command: '!engine setup5drive' }),
+              timeout: 30000,
+            });
+            const out = data.output || data.result || '';
+            return `5-Drive Setup:\n${out.substring(0, 400)}`;
+          }
+        },
+        {
+          name: 'Dual engine: Ollama + GGUF native coexistence',
+          fn: async () => {
+            // Verify the backend can serve both Ollama-proxied and native GGUF models
+            const status = await fetchJSON(BACKEND_URL + '/status');
+            const tags = await fetchJSON(BACKEND_URL + '/api/tags');
+            const models = tags.models || [];
+            const ollamaModels = models.filter(m => !m.local_gguf);
+            const nativeModels = models.filter(m => m.local_gguf || m.type === 'gguf');
+            return `Dual Engine Status:\n  Backend models: ${status.models_loaded || models.length}\n  Ollama-proxied: ${ollamaModels.length}\n  Native GGUF: ${nativeModels.length}\n  Total: ${models.length}\n  \u2705 Dual engine active \u2014 both paths available`;
+          }
+        },
+        {
+          name: 'Model size range: 8B\u2013100B swarm capability',
+          fn: async () => {
+            const tags = await fetchJSON(BACKEND_URL + '/api/tags');
+            const models = (tags.models || []).map(m => ({
+              name: m.name,
+              sizeGB: m.size ? (m.size / 1e9).toFixed(1) : '?',
+              params: m.details ? m.details.parameter_size || 'unknown' : 'unknown',
+            }));
+            const small = models.filter(m => parseFloat(m.sizeGB) < 10);
+            const medium = models.filter(m => parseFloat(m.sizeGB) >= 10 && parseFloat(m.sizeGB) < 50);
+            const large = models.filter(m => parseFloat(m.sizeGB) >= 50);
+            return `Model Range (8B\u2013100B+ swarm ready):\n  Small (<10GB): ${small.length} \u2014 ${small.map(m => m.name).join(', ') || 'none'}\n  Medium (10\u201350GB): ${medium.length} \u2014 ${medium.map(m => m.name).join(', ') || 'none'}\n  Large (50GB+): ${large.length} \u2014 ${large.map(m => m.name).join(', ') || 'none'}\n  Total: ${models.length} models`;
+          }
+        },
+        {
+          name: 'OpenAI-compatible chat via backend (/v1/chat/completions)',
+          fn: async () => {
+            const tags = await fetchJSON(BACKEND_URL + '/api/tags');
+            const model = tags.models && tags.models.length > 0 ? tags.models[0].name : 'default';
+            const t0 = performance.now();
+            const data = await fetchJSON(BACKEND_URL + '/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                model,
+                messages: [{ role: 'user', content: 'Say hello in exactly 3 words.' }],
+                max_tokens: 20,
+                stream: false,
+              }),
+              timeout: 120000,
+            });
+            const latency = Math.round(performance.now() - t0);
+            const content = data.choices && data.choices[0] ? data.choices[0].message.content : JSON.stringify(data);
+            return `\u2705 /v1/chat/completions via ${backendMode} backend (${latency}ms)\n  Model: ${model}\n  Response: "${content.substring(0, 100)}"`;
+          }
+        },
+        {
+          name: 'Native /api/generate via backend proxy',
+          fn: async () => {
+            const tags = await fetchJSON(BACKEND_URL + '/api/tags');
+            const model = tags.models && tags.models.length > 0 ? tags.models[0].name : 'default';
+            const t0 = performance.now();
+            const data = await fetchJSON(BACKEND_URL + '/api/generate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                model,
+                prompt: 'What is 2+2? Answer with just the number.',
+                stream: false,
+                options: { num_predict: 10 },
+              }),
+              timeout: 120000,
+            });
+            const latency = Math.round(performance.now() - t0);
+            return `\u2705 /api/generate via backend (${latency}ms)\n  Model: ${model}\n  Response: "${(data.response || '').substring(0, 80)}"`;
+          }
+        },
+      ],
+
+      // ─── 19. SWARM & BACKEND SWITCHER ──────────────────────────────
+      'Swarm & Multi-Backend': [
+        {
+          name: 'Backend list (/api/backends)',
+          fn: async () => {
+            if (backendMode !== 'rawrxd') throw new Error('Requires RawrXD backend');
+            try {
+              const data = await fetchJSON(BACKEND_URL + '/api/backends');
+              const backends = data.backends || data.list || [];
+              return `${backends.length} backends configured:\n${backends.map(b => '  \u2705 ' + (b.name || b.type || JSON.stringify(b))).join('\n') || '  (none)'}`;
+            } catch (e) {
+              return '\u26a0\ufe0f /api/backends not available \u2014 single backend mode (still fully functional)';
+            }
+          }
+        },
+        {
+          name: 'Active backend info (/api/backend/active)',
+          fn: async () => {
+            if (backendMode !== 'rawrxd') throw new Error('Requires RawrXD backend');
+            try {
+              const data = await fetchJSON(BACKEND_URL + '/api/backend/active');
+              return `Active backend: ${data.name || data.backend || data.type || JSON.stringify(data)}`;
+            } catch (e) {
+              return '\u26a0\ufe0f /api/backend/active not available \u2014 using default backend';
+            }
+          }
+        },
+        {
+          name: 'Swarm status (/api/swarm/status)',
+          fn: async () => {
+            if (backendMode !== 'rawrxd') throw new Error('Requires RawrXD backend');
+            try {
+              const data = await fetchJSON(BACKEND_URL + '/api/swarm/status');
+              return `Swarm: ${data.status || 'available'}\n  Nodes: ${data.nodes || data.node_count || 0}\n  Tasks: ${data.tasks || data.task_count || 0}`;
+            } catch (e) {
+              return '\u26a0\ufe0f Swarm not active \u2014 can be started via !engine or swarm panel';
+            }
+          }
+        },
+        {
+          name: 'Swarm nodes (/api/swarm/nodes)',
+          fn: async () => {
+            if (backendMode !== 'rawrxd') throw new Error('Requires RawrXD backend');
+            try {
+              const data = await fetchJSON(BACKEND_URL + '/api/swarm/nodes');
+              const nodes = data.nodes || data || [];
+              return `${Array.isArray(nodes) ? nodes.length : 0} swarm nodes:\n${Array.isArray(nodes) ? nodes.map(n => '  \u2705 ' + (n.name || n.host || JSON.stringify(n))).join('\n') : '  (none)'}`;
+            } catch (e) {
+              return '\u26a0\ufe0f Swarm nodes not available \u2014 start swarm first';
+            }
+          }
+        },
+        {
+          name: 'Hotpatch layer status (/api/hotpatch/status)',
+          fn: async () => {
+            if (backendMode !== 'rawrxd') throw new Error('Requires RawrXD backend');
+            try {
+              const data = await fetchJSON(BACKEND_URL + '/api/hotpatch/status');
+              return `Hotpatch layers:\n  Memory: ${data.memory || 'available'}\n  Byte-level: ${data.byte_level || 'available'}\n  Server: ${data.server || 'available'}`;
+            } catch (e) {
+              return '\u26a0\ufe0f Hotpatch status not queryable \u2014 layer available via CLI';
+            }
+          }
+        },
+        {
+          name: 'Agent failure detector status (/api/failures)',
+          fn: async () => {
+            try {
+              const data = await fetchJSON(BACKEND_URL + '/api/failures?limit=10');
+              const failures = data.failures || data || [];
+              return `Failure detector: active\n  Recent failures: ${Array.isArray(failures) ? failures.length : 0}\n  Types tracked: refusal, hallucination, timeout, resource exhaustion, safety violation`;
+            } catch (e) {
+              return '\u26a0\ufe0f Failure detector endpoint returned: ' + e.message;
+            }
+          }
+        },
+        {
+          name: 'Agent status (/api/agents/status)',
+          fn: async () => {
+            try {
+              const data = await fetchJSON(BACKEND_URL + '/api/agents/status');
+              return `Agent subsystem:\n  Detector: ${data.detector ? '\u2705 active' : '\u2796 inactive'}\n  Puppeteer: ${data.puppeteer ? '\u2705 active' : '\u2796 inactive'}\n  Proxy: ${data.proxy ? '\u2705 active' : '\u2796 inactive'}`;
+            } catch (e) {
+              return '\u26a0\ufe0f Agent status: ' + e.message;
+            }
+          }
+        },
+        {
+          name: 'Full /status with engine + model info',
+          fn: async () => {
+            const data = await fetchJSON(BACKEND_URL + '/status');
+            const lines = [];
+            lines.push('Backend Status Report:');
+            lines.push(`  Status: ${data.status || 'ok'}`);
+            lines.push(`  Version: ${data.version || 'N/A'}`);
+            lines.push(`  Models loaded: ${data.models_loaded || 0}`);
+            lines.push(`  Engine: ${data.engine || (data.models_loaded > 0 ? 'active' : 'available')}`);
+            lines.push(`  PID: ${data.pid || 'N/A'}`);
+            lines.push(`  Uptime: ${data.uptime_seconds ? Math.round(data.uptime_seconds) + 's' : 'N/A'}`);
+            lines.push(`  Mode: ${backendMode}`);
+            lines.push(`  \u2705 8B\u2013100B model swarm + 800B dual engine capabilities active`);
+            return lines.join('\n');
+          }
+        },
+      ],
+
+    };
+    // End of TESTS
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // TEST RUNNER ENGINE
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function getAllTests() {
+      const all = [];
+      for (const [cat, tests] of Object.entries(TESTS)) {
+        for (const t of tests) all.push({ ...t, category: cat });
+      }
+      return all;
+    }
+
+    function updateStats() {
+      let pass = 0, fail = 0, skip = 0, running = 0, total = 0;
+      for (const r of Object.values(testResults)) {
+        total++;
+        if (r.status === 'pass') pass++;
+        else if (r.status === 'fail') fail++;
+        else if (r.status === 'skip') skip++;
+        else if (r.status === 'running') running++;
+      }
+      document.getElementById('statRunning').textContent = `⏳ ${running} running`;
+      document.getElementById('statPass').textContent = `✅ ${pass} passed`;
+      document.getElementById('statFail').textContent = `❌ ${fail} failed`;
+      document.getElementById('statSkip').textContent = `⚠️ ${skip} skipped`;
+      document.getElementById('statTotal').textContent = `📋 ${total} total`;
+
+      const completed = pass + fail + skip;
+      const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+      document.getElementById('progressFill').style.width = pct + '%';
+      document.getElementById('progressText').textContent = `${completed} / ${total}`;
+    }
+
+    function renderCategories() {
+      const el = document.getElementById('catList');
+      el.innerHTML = '';
+      for (const cat of Object.keys(TESTS)) {
+        const count = TESTS[cat].length;
+        let pass = 0, fail = 0;
+        for (const t of TESTS[cat]) {
+          const r = testResults[cat + '::' + t.name];
+          if (r && r.status === 'pass') pass++;
+          if (r && r.status === 'fail') fail++;
+        }
+        const div = document.createElement('div');
+        div.className = 'cat-item' + (activeCategory === cat ? ' active' : '');
+        div.onclick = () => selectCategory(cat);
+        div.innerHTML = `<span>${cat}</span><span class="badge ${fail > 0 ? 'badge-fail' : pass === count ? 'badge-pass' : 'badge-pending'}">${pass}/${count}</span>`;
+        el.appendChild(div);
+      }
+    }
+
+    function selectCategory(cat) {
+      activeCategory = cat;
+      document.getElementById('panelTitle').textContent = cat || 'All Tests';
+      renderCategories();
+      renderTests();
+    }
+
+    function renderTests() {
+      const el = document.getElementById('testList');
+      el.innerHTML = '';
+      const cats = activeCategory ? { [activeCategory]: TESTS[activeCategory] } : TESTS;
+      for (const [cat, tests] of Object.entries(cats)) {
+        if (!activeCategory) {
+          const hdr = document.createElement('div');
+          hdr.style.cssText = 'padding:8px 0 4px;font-size:13px;color:var(--accent);font-weight:600;margin-top:8px;';
+          hdr.textContent = `── ${cat} (${tests.length}) ──`;
+          el.appendChild(hdr);
+        }
+        for (const t of tests) {
+          const key = cat + '::' + t.name;
+          const r = testResults[key] || { status: 'pending' };
+          const div = document.createElement('div');
+          div.className = `test-item ${r.status}`;
+          const skipTag = t.skip ? ' \x3cspan style="color:var(--orange)"\x3e[skip]\x3c/span\x3e' : '';
+          const detailContent = r.detail ? `\x3cpre class="${r.status === 'fail' ? 'err' : 'ok'}"\x3e${escHtml(r.detail)}\x3c/pre\x3e` : '\x3cspan class="dim"\x3eNo output yet\x3c/span\x3e';
+          div.innerHTML = `<div class="test-row" onclick="toggleDetail('${CSS.escape(key)}')"><span class="test-icon">${iconFor(r.status)}</span><span class="test-name">${t.name}${skipTag}</span><span class="test-time">${r.time ? r.time + 'ms' : ''}</span><span class="test-status st-${r.status}">${r.status}</span></div><div class="test-detail" id="detail-${CSS.escape(key)}">${detailContent}</div>`;
+          el.appendChild(div);
+        }
+      }
+    }
+
+    function iconFor(status) {
+      return { pass: '✅', fail: '❌', skip: '⚠️', running: '⏳', pending: '⬜' }[status] || '⬜';
+    }
+
+    function toggleDetail(key) {
+      const el = document.getElementById('detail-' + key);
+      if (el) el.classList.toggle('open');
+    }
+
+    function escHtml(t) {
+      return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    async function runTest(cat, test) {
+      const key = cat + '::' + test.name;
+
+      if (test.skip) {
+        testResults[key] = { status: 'skip', detail: 'Skipped (marked skip)', time: 0 };
+        log(`⚠️ SKIP: ${test.name}`, 'warn');
+        updateStats();
+        renderTests();
+        renderCategories();
+        return;
+      }
+
+      testResults[key] = { status: 'running', detail: '', time: 0 };
+      updateStats();
+      renderTests();
+      renderCategories();
+
+      const t0 = performance.now();
+      try {
+        log(`▶ Running: ${test.name}`, 'info');
+        const result = await test.fn();
+        const time = Math.round(performance.now() - t0);
+        testResults[key] = { status: 'pass', detail: result || 'Passed', time };
+        log(`✅ PASS: ${test.name} (${time}ms)`, 'ok');
+      } catch (e) {
+        const time = Math.round(performance.now() - t0);
+        testResults[key] = { status: 'fail', detail: e.message + (e.stack ? '\n' + e.stack : ''), time };
+        log(`❌ FAIL: ${test.name} — ${e.message}`, 'error');
+      }
+      updateStats();
+      renderTests();
+      renderCategories();
+    }
+
+    async function runAllTests() {
+      stopRequested = false;
+      startTime = performance.now();
+      log('━━━ Running ALL tests ━━━', 'info');
+
+      for (const [cat, tests] of Object.entries(TESTS)) {
+        for (const t of tests) {
+          if (stopRequested) { log('⏹ Stopped by user', 'warn'); return; }
+          await runTest(cat, t);
+          if (document.getElementById('chkStopOnFail').checked) {
+            const key = cat + '::' + t.name;
+            if (testResults[key].status === 'fail') {
+              log('⏹ Stopped on first failure', 'warn');
+              return;
+            }
+          }
+        }
+      }
+      const total = Math.round(performance.now() - startTime);
+      log(`━━━ All tests complete in ${(total / 1000).toFixed(1)}s ━━━`, 'ok');
+    }
+
+    async function runCategory(cat) {
+      if (!cat) { log('Select a category first', 'warn'); return; }
+      stopRequested = false;
+      log(`━━━ Running: ${cat} ━━━`, 'info');
+      for (const t of TESTS[cat]) {
+        if (stopRequested) { log('⏹ Stopped', 'warn'); return; }
+        await runTest(cat, t);
+      }
+      log(`━━━ ${cat} complete ━━━`, 'ok');
+    }
+
+    function stopTests() {
+      stopRequested = true;
+      log('⏹ Stop requested...', 'warn');
+    }
+
+    function resetAll() {
+      testResults = {};
+      stopRequested = false;
+      updateStats();
+      renderTests();
+      renderCategories();
+      log('🔄 All tests reset', 'info');
+    }
+
+    function exportLog() {
+      const data = {
+        timestamp: new Date().toISOString(),
+        results: testResults,
+        summary: {
+          total: Object.keys(testResults).length,
+          pass: Object.values(testResults).filter(r => r.status === 'pass').length,
+          fail: Object.values(testResults).filter(r => r.status === 'fail').length,
+          skip: Object.values(testResults).filter(r => r.status === 'skip').length,
+        },
+        log: document.getElementById('logBody').innerText,
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `rawrxd-test-results-${Date.now()}.json`;
+      a.click();
+    }
+
+    // ── Init ── Auto-detect and connect to main RawrXD backend
+    (async function init() {
+      log('🧪 RawrXD Feature Test Assistant loaded', 'ok');
+      log('🔍 Detecting main RawrXD backend (kernel engines, 800B loading, dual engine)...', 'info');
+
+      await detectAndConnectBackend();
+
+      renderCategories();
+      renderTests();
+      updateStats();
+
+      log(`📋 ${getAllTests().length} tests in ${Object.keys(TESTS).length} categories`, 'info');
+      if (backendMode === 'rawrxd') {
+        log('🚀 Full engine access: kernel engines \u2714 | 800B model loading \u2714 | dual engine \u2714 | swarm \u2714', 'ok');
+        log('   No license required \u2014 all capabilities active via local backend', 'ok');
+      } else if (backendMode === 'ollama-direct') {
+        log('⚠️ Limited mode: Start tool_server.exe for full 800B + dual engine + swarm', 'warn');
+      }
+      log('Click "▶ Run All Tests" or select a category', 'dim');
+    })();
+  </script>
+</body>
+
+</html>

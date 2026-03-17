@@ -1,0 +1,159 @@
+# Build-Clean.ps1
+# Execute clean build of RawrXD after Qt removal
+# Supports Release and Debug configurations
+
+param(
+    [ValidateSet("Release", "Debug")]
+    [string]$Config = "Release"
+)
+
+Write-Host "╔════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+Write-Host "║              RAWRXD CLEAN BUILD - $Config" -ForegroundColor Cyan
+Write-Host "╚════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+
+$startTime = Get-Date
+$logFile = "D:\RawrXD\build_clean\logs\build_$Config`_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
+
+# Initialize MSVC environment
+Write-Host "`n🔧 Initializing MSVC environment..." -ForegroundColor Yellow
+
+$vsInstallPaths = @(
+    "C:\Program Files\Microsoft Visual Studio\2022\Community",
+    "C:\Program Files\Microsoft Visual Studio\2022\Professional",
+    "C:\Program Files\Microsoft Visual Studio\2022\Enterprise",
+    "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
+)
+
+$vcvarsPath = $null
+foreach ($vsPath in $vsInstallPaths) {
+    $candidate = Join-Path $vsPath "VC\Auxiliary\Build\vcvars64.bat"
+    if (Test-Path $candidate) {
+        $vcvarsPath = $candidate
+        break
+    }
+}
+
+if (-not $vcvarsPath) {
+    Write-Host "❌ MSVC environment script not found!" -ForegroundColor Red
+    exit 1
+}
+
+# Import MSVC environment
+cmd /c "`"$vcvarsPath`" && set" | ForEach-Object {
+    if ($_ -match "^(.*?)=(.*)$") {
+        [Environment]::SetEnvironmentVariable($matches[1], $matches[2])
+    }
+}
+
+# Verify cl.exe is available
+$clTest = cmd /c "cl.exe 2>&1" | Select-String "Microsoft"
+if (-not $clTest) {
+    Write-Host "❌ cl.exe not found in PATH!" -ForegroundColor Red
+    exit 1
+}
+Write-Host "  ✅ Compiler ready: $($clTest[0])" -ForegroundColor Green
+
+# Create/clear build directory
+$buildDir = "D:\RawrXD\build_clean\$Config"
+if (-not (Test-Path $buildDir)) {
+    New-Item -ItemType Directory -Path $buildDir -Force | Out-Null
+}
+
+# Check if CMake is available
+$cmakeVersion = cmake --version 2>&1 | Select-String "cmake version"
+if (-not $cmakeVersion) {
+    Write-Host "`n❌ CMake not found! Install CMake 3.20+" -ForegroundColor Red
+    exit 1
+}
+Write-Host "  ✅ CMake ready: $($cmakeVersion[0])" -ForegroundColor Green
+
+# Change to build directory
+Push-Location $buildDir
+
+# Run CMake
+Write-Host "`n📝 Running CMake configuration..." -ForegroundColor Yellow
+
+$cmakeArgs = @(
+    "../.."
+    "-G", "Visual Studio 17 2022"
+    "-A", "x64"
+    "-DCMAKE_BUILD_TYPE=$Config"
+    "-DCMAKE_CONFIGURATION_TYPES=$Config"
+)
+
+Write-Host "  Command: cmake $($cmakeArgs -join ' ')" -ForegroundColor DarkGray
+
+$cmakeOutput = @()
+$process = Start-Process -FilePath "cmake" -ArgumentList $cmakeArgs -NoNewWindow -RedirectStandardOutput $logFile -RedirectStandardError $logFile -PassThru
+$process.WaitForExit()
+$cmakeExit = $process.ExitCode
+
+if ($cmakeExit -ne 0) {
+    Write-Host "`n❌ CMake configuration failed! (Exit code: $cmakeExit)" -ForegroundColor Red
+    Write-Host "📄 Log file: $logFile" -ForegroundColor Yellow
+    
+    # Show last 20 lines of log
+    $errors = Get-Content $logFile -Tail 20
+    Write-Host "`nLast 20 lines of log:" -ForegroundColor Red
+    $errors | ForEach-Object { Write-Host "  $_" -ForegroundColor DarkRed }
+    
+    Pop-Location
+    exit 1
+}
+
+Write-Host "  ✅ CMake configuration successful" -ForegroundColor Green
+
+# Build
+Write-Host "`n🔨 Building ($Config) - parallel..." -ForegroundColor Yellow
+
+$buildOutput = cmake --build . --config $Config --parallel 2>&1
+$buildOutput | Tee-Object -FilePath $logFile -Append
+$buildExit = $LASTEXITCODE
+
+$endTime = Get-Date
+$duration = $endTime - $startTime
+
+Pop-Location
+
+# Analyze results
+Write-Host "`n═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "BUILD RESULTS" -ForegroundColor Cyan
+Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+
+if ($buildExit -eq 0) {
+    Write-Host "Status: ✅ BUILD SUCCESSFUL" -ForegroundColor Green
+    Write-Host "Duration: $($duration.ToString('mm\:ss'))" -ForegroundColor Gray
+    Write-Host "Config: $Config" -ForegroundColor Gray
+    Write-Host "Output: $buildDir" -ForegroundColor Gray
+    
+    # Check output binary
+    $exePath = "$buildDir\Release\RawrXD_IDE.exe"
+    if (-not (Test-Path $exePath)) {
+        $exePath = "$buildDir\Debug\RawrXD_IDE.exe"
+    }
+    if (-not (Test-Path $exePath)) {
+        $exePath = "$buildDir\RawrXD_IDE.exe"
+    }
+    
+    if (Test-Path $exePath) {
+        $exeSize = (Get-Item $exePath).Length / 1MB
+        Write-Host "Executable: $(Split-Path $exePath -Leaf)" -ForegroundColor Gray
+        Write-Host "Size: $([math]::Round($exeSize, 2)) MB" -ForegroundColor Gray
+    }
+    
+    Write-Host "`n✅ Ready for verification!" -ForegroundColor Green
+    exit 0
+} else {
+    Write-Host "Status: ❌ BUILD FAILED" -ForegroundColor Red
+    Write-Host "Duration: $($duration.ToString('mm\:ss'))" -ForegroundColor Gray
+    Write-Host "Log: $logFile" -ForegroundColor Yellow
+    
+    # Parse errors
+    $errorLines = Get-Content $logFile -ErrorAction SilentlyContinue | Select-String "error" | Select-Object -First 20
+    if ($errorLines) {
+        Write-Host "`nFirst 20 errors:" -ForegroundColor Red
+        $errorLines | ForEach-Object { Write-Host "  $($_.Line)" -ForegroundColor DarkRed }
+    }
+    
+    exit 1
+}

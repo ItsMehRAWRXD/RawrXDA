@@ -30,6 +30,108 @@ SECTION_ALIGNMENT           EQU 1000h
 FILE_ALIGNMENT              EQU 200h
 
 ; ────────────────────────────────────────────────────────────────
+; PE STRUCT / TEMPLATES (Backend Designer Edition)
+; ────────────────────────────────────────────────────────────────
+IMAGE_DOS_HEADER STRUCT
+    e_magic    WORD ?
+    e_cblp     WORD ?
+    e_cp       WORD ?
+    e_crlc     WORD ?
+    e_cparhdr  WORD ?
+    e_minalloc WORD ?
+    e_maxalloc WORD ?
+    e_ss       WORD ?
+    e_sp       WORD ?
+    e_csum     WORD ?
+    e_ip       WORD ?
+    e_cs       WORD ?
+    e_lfarlc   WORD ?
+    e_ovno     WORD ?
+    e_res      WORD 4 DUP(?)
+    e_oemid    WORD ?
+    e_oeminfo  WORD ?
+    e_res2_0   WORD ?
+    e_res2_1   WORD ?
+    e_res2_2   WORD ?
+    e_res2_3   WORD ?
+    e_res2_4   WORD ?
+    e_res2_5   WORD ?
+    e_res2_6   WORD ?
+    e_res2_7   WORD ?
+    e_res2_8   WORD ?
+    e_res2_9   WORD ?
+    e_lfanew   DWORD ?
+IMAGE_DOS_HEADER ENDS
+
+IMAGE_FILE_HEADER STRUCT
+    Machine              WORD ?
+    NumberOfSections     WORD ?
+    TimeDateStamp        DWORD ?
+    PointerToSymbolTable DWORD ?
+    NumberOfSymbols      DWORD ?
+    SizeOfOptionalHeader WORD ?
+    Characteristics      WORD ?
+IMAGE_FILE_HEADER ENDS
+
+IMAGE_DATA_DIRECTORY STRUCT
+    VirtualAddress DWORD ?
+    Size           DWORD ?
+IMAGE_DATA_DIRECTORY ENDS
+
+IMAGE_OPTIONAL_HEADER64 STRUCT
+    Magic                       WORD ?
+    MajorLinkerVersion          BYTE ?
+    MinorLinkerVersion          BYTE ?
+    SizeOfCode                  DWORD ?
+    SizeOfInitializedData       DWORD ?
+    SizeOfUninitializedData     DWORD ?
+    AddressOfEntryPoint         DWORD ?
+    BaseOfCode                  DWORD ?
+    ImageBase                   QWORD ?
+    SectionAlignment            DWORD ?
+    FileAlignment               DWORD ?
+    MajorOperatingSystemVersion WORD ?
+    MinorOperatingSystemVersion WORD ?
+    MajorImageVersion           WORD ?
+    MinorImageVersion           WORD ?
+    MajorSubsystemVersion       WORD ?
+    MinorSubsystemVersion       WORD ?
+    Win32VersionValue           DWORD ?
+    SizeOfImage                 DWORD ?
+    SizeOfHeaders               DWORD ?
+    CheckSum                    DWORD ?
+    Subsystem                   WORD ?
+    DllCharacteristics          WORD ?
+    SizeOfStackReserve          QWORD ?
+    SizeOfStackCommit           QWORD ?
+    SizeOfHeapReserve           QWORD ?
+    SizeOfHeapCommit            QWORD ?
+    LoaderFlags                 DWORD ?
+    NumberOfRvaAndSizes         DWORD ?
+    DataDirectory               IMAGE_DATA_DIRECTORY 16 DUP(<>)
+IMAGE_OPTIONAL_HEADER64 ENDS
+
+IMAGE_NT_HEADERS64 STRUCT
+    Signature      DWORD ?
+    FileHeader     IMAGE_FILE_HEADER <>
+    OptionalHeader IMAGE_OPTIONAL_HEADER64 <>
+IMAGE_NT_HEADERS64 ENDS
+
+IMAGE_SECTION_HEADER STRUCT
+    Name1                BYTE 8 DUP(?)
+    VirtualSize          DWORD ?
+    VirtualAddress       DWORD ?
+    SizeOfRawData        DWORD ?
+    PointerToRawData     DWORD ?
+    PointerToRelocations DWORD ?
+    PointerToLinenumbers DWORD ?
+    NumberOfRelocations  WORD ?
+    NumberOfLinenumbers  WORD ?
+    Characteristics      DWORD ?
+IMAGE_SECTION_HEADER ENDS
+
+
+; ────────────────────────────────────────────────────────────────
 ; Emit_Byte — Simple byte emitter
 ; ────────────────────────────────────────────────────────────────
 Emit_Byte PROC
@@ -575,78 +677,7 @@ Emit_XorEAX_EAX PROC
     ret
 Emit_XorEAX_EAX ENDP
 
-; ────────────────────────────────────────────────────────────────
-; Emit_Payload — Emits a complete PE32+ .text program:
-;   MessageBoxA(NULL, "Sovereign Link Active", same_caption, MB_OK)
-;   ExitProcess(0)
-; Uses Emit_* helpers + inline encoding for full correctness.
-; All RIP-relative displacements are computed dynamically.
-; ────────────────────────────────────────────────────────────────
-Emit_Payload PROC
-    ; ── 1. Write "Sovereign Link Active\0" into .data at FileOffset 0x600 (RVA 0x2000) ──
-    mov rax, qword ptr [g_peBase]
-    add     rax, 600h               ; .data file offset
-    mov     g_dataCursor, rax
-    lea     rcx, [szPayloadMessage]
-    mov     edx, 23                 ; len("Sovereign Link Active") + null = 23 bytes
-    call    Emit_Data_Bytes
 
-    ; ── 2. Set .text cursor to FileOffset 0x400 (RVA 0x1000) ──
-    mov rax, qword ptr [g_peBase]
-    add     rax, 400h
-    mov     g_cursor, rax
-
-    ; sub rsp, 28h
-    call    Emit_FunctionPrologue
-
-    ; xor ecx, ecx   (hWnd = NULL)  — 48 31 C9
-    call    Emit_XorRCX_RCX
-
-    ; lea rdx, [rip+disp]  (lpText → "Sovereign Link Active")  — 48 8D 15 [disp32]
-    mov     r10, g_cursor
-    mov     byte ptr [r10],     48h     ; REX.W
-    mov     byte ptr [r10 + 1], 8Dh    ; LEA
-    mov     byte ptr [r10 + 2], 15h    ; ModRM: rdx,[rip+disp32]
-    mov rax, qword ptr [g_peBase]
-    mov     rcx, r10
-    sub     rcx, rax
-    sub     rcx, 400h
-    add     rcx, 1000h
-    add     rcx, 7
-    mov     edx, 2000h                  ; .data RVA
-    sub     edx, ecx                    ; displacement
-    mov     dword ptr [r10 + 3], edx
-    add     g_cursor, 7
-
-    ; mov r8, rdx  (lpCaption = same string)  — 4D 8B C2
-    mov     r10, g_cursor
-    mov     byte ptr [r10],     4Dh     ; REX.WR
-    mov     byte ptr [r10 + 1], 8Bh    ; MOV r64,r/m64
-    mov     byte ptr [r10 + 2], 0C2h   ; ModRM: r8 ← rdx
-    add     g_cursor, 3
-
-    ; xor r9d, r9d  (uType = MB_OK = 0)  — 45 31 C9
-    mov     r10, g_cursor
-    mov     byte ptr [r10],     45h     ; REX.R+B
-    mov     byte ptr [r10 + 1], 31h    ; XOR r/m32, r32
-    mov     byte ptr [r10 + 2], 0C9h   ; ModRM: r9d, r9d
-    add     g_cursor, 3
-
-    ; call [MessageBoxA IAT at RVA 30B0h]  — FF 15 [disp32]
-    mov     r8d, 30B0h
-    call    Emit_CallImport
-
-    ; xor ecx, ecx  (ExitProcess exit code = 0)
-    call    Emit_XorRCX_RCX
-
-    ; call [ExitProcess IAT at RVA 3040h]  — FF 15 [disp32]
-    mov     r8d, 3040h
-    call    Emit_CallImport
-
-    ; add rsp, 28h; ret  (epilogue — defensive, ExitProcess doesn't return)
-    call    Emit_FunctionEpilogue
-    ret
-Emit_Payload ENDP
 
 ; ────────────────────────────────────────────────────────────────
 ; WritePEFile — Fully dynamic PE generation
@@ -684,7 +715,7 @@ WritePEFile PROC FRAME
     call    Emit_DOSHeader
     call    Emit_NTHeaders
     call    Emit_SectionHeaders
-    call    Emit_Payload
+    ; Emit_Payload removed in favor of completely un-stubbed ASM bridging
     call    Emit_ImportTable
     call    Emit_ExportTable
       call    Emit_RelocTable

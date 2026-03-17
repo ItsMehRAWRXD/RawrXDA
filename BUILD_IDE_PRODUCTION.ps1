@@ -26,7 +26,9 @@ param(
     [switch]$Clean,
     [switch]$Test,
     [switch]$Verbose,
-    [switch]$Interactive
+    [switch]$Interactive,
+    [ValidateSet('Auto', 'Visual Studio 17 2022', 'Ninja')]
+    [string]$Generator = 'Auto'
 )
 
 Set-StrictMode -Version Latest
@@ -36,19 +38,48 @@ $ErrorActionPreference = "Stop"
 # PATHS & CONFIGURATION
 # ═══════════════════════════════════════════════════════════════════════════════
 
-$ProjectRoot = 'd:\lazy init ide'
+$ProjectRoot = Split-Path -Parent $PSCommandPath
 $BuildDir = Join-Path $ProjectRoot 'build'
 $OutputDir = Join-Path $ProjectRoot 'dist'
 $CompilerDir = Join-Path $ProjectRoot 'compilers'
 $SourceDir = Join-Path $ProjectRoot 'src'
 $AssemblyDir = Join-Path $ProjectRoot 'itsmehrawrxd-master'
 
-# Tools
+# Tools — auto-detect MSVC via vswhere
+function _FindMSVCRoot {
+    $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+    if (Test-Path $vswhere) {
+        $vsPath = & $vswhere -latest -products * `
+            -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+            -property installationPath 2>$null
+        if ($vsPath -and (Test-Path "$vsPath\VC\Tools\MSVC")) {
+            $v = Get-ChildItem -Directory "$vsPath\VC\Tools\MSVC" |
+                 Sort-Object Name -Descending | Select-Object -First 1
+            if ($v) { return @{ Root = $v.FullName; VS = $vsPath } }
+        }
+    }
+    foreach ($b in @("C:\VS2022Enterprise\VC\Tools\MSVC",
+                     "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC",
+                     "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC")) {
+        if (Test-Path $b) {
+            $v = Get-ChildItem -Directory $b | Sort-Object Name -Descending | Select-Object -First 1
+            if ($v) {
+                $vcTools = Split-Path $b -Parent
+                $vcRoot = Split-Path $vcTools -Parent
+                $vsRoot = Split-Path $vcRoot -Parent
+                return @{ Root = $v.FullName; VS = $vsRoot }
+            }
+        }
+    }
+    throw "MSVC not found."
+}
+$_tc = _FindMSVCRoot
 $CMake = 'cmake'
-$MSBuild = 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\MSBuild.exe'
-$MASM = 'C:\masm32\bin\ml64.exe'
+$MSBuild = Join-Path $_tc.VS "MSBuild\Current\Bin\MSBuild.exe"
+if (-not (Test-Path $MSBuild)) { $MSBuild = 'msbuild' }
+$MASM = Join-Path $_tc.Root "bin\Hostx64\x64\ml64.exe"
 $NASM = 'C:\nasm\nasm.exe'
-$Linker = 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC\14.39.33519\bin\Hostx64\x64\link.exe'
+$Linker = Join-Path $_tc.Root "bin\Hostx64\x64\link.exe"
 
 # Colors
 $Colors = @{
@@ -280,24 +311,75 @@ if ($Target -in @('Full', 'IDE')) {
         Write-Status "Configuring with CMake..." -Status 'INFO'
         Push-Location $BuildDir
         try {
-            $configCmd = @(
-                'cmake',
-                '..',
-                '-G "Visual Studio 17 2022"',
-                '-DCMAKE_BUILD_TYPE=' + $Config,
-                '-DCMAKE_CONFIGURATION_TYPES=' + $Config
-            ) -join ' '
-            
-            Invoke-Build $configCmd "CMake Configuration" -Required $true
+            $generatorsToTry = if ($Generator -eq 'Auto') {
+                @('Visual Studio 17 2022', 'Ninja')
+            } else {
+                @($Generator)
+            }
+
+            $selectedGenerator = $null
+            foreach ($gen in $generatorsToTry) {
+                $configArgs = @(
+                    '..',
+                    '-G', "`"$gen`"",
+                    "-DCMAKE_BUILD_TYPE=$Config"
+                )
+
+                if (Test-Path (Join-Path $BuildDir "CMakeCache.txt")) {
+                    Remove-Item (Join-Path $BuildDir "CMakeCache.txt") -Force -ErrorAction SilentlyContinue
+                }
+                if (Test-Path (Join-Path $BuildDir "CMakeFiles")) {
+                    Remove-Item (Join-Path $BuildDir "CMakeFiles") -Recurse -Force -ErrorAction SilentlyContinue
+                }
+
+                if ($gen -like 'Visual Studio*' -and $_tc.VS) {
+                    $configArgs += "-DCMAKE_CONFIGURATION_TYPES=$Config"
+                    $configArgs += "-DCMAKE_GENERATOR_INSTANCE=$($_tc.VS)"
+                }
+
+                if ($gen -eq 'Ninja') {
+                    $clPath = Join-Path $_tc.Root "bin\Hostx64\x64\cl.exe"
+                    if (Test-Path $clPath) {
+                        $configArgs += "-DCMAKE_C_COMPILER=$clPath"
+                        $configArgs += "-DCMAKE_CXX_COMPILER=$clPath"
+                    }
+                }
+
+                $configCmd = "cmake " + ($configArgs -join ' ')
+                Write-Status "Running: CMake Configuration ($gen)"
+                Write-Host $configCmd -ForegroundColor Gray
+                $configureOutput = Invoke-Expression $configCmd 2>&1
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Status "SUCCESS: CMake Configuration ($gen)" -Status 'OK'
+                    $selectedGenerator = $gen
+                    break
+                }
+
+                Write-Status "FAILED: CMake Configuration ($gen) (exit code $LASTEXITCODE)" -Status 'WARNING'
+                Write-Host $configureOutput
+            }
+
+            if (-not $selectedGenerator) {
+                throw "Build failed at: CMake Configuration"
+            }
             
             # Build with MSBuild
-            if (Test-Path $MSBuild) {
+            if ($selectedGenerator -like 'Visual Studio*' -and (Test-Path $MSBuild)) {
                 Write-Status "Building with MSBuild..." -Status 'INFO'
-                $buildCmd = "& `"$MSBuild`" RawrXD.sln /p:Configuration=$Config /p:Platform=x64 /v:minimal"
+                $targetArg = if ($Target -eq 'IDE') { '/t:RawrXD-Win32IDE' } else { '' }
+                $buildCmd = "& `"$MSBuild`" RawrXD.sln $targetArg /p:Configuration=$Config /p:Platform=x64 /v:minimal"
                 Invoke-Build $buildCmd "MSBuild Compilation" -Required $true
             } else {
-                Write-Status "MSBuild not found, trying cmake --build..." -Status 'WARNING'
-                $buildCmd = "cmake --build . --config $Config"
+                Write-Status "Building with cmake --build..." -Status 'INFO'
+                $buildCmd = if ($selectedGenerator -eq 'Ninja') {
+                    if ($Target -eq 'IDE') { "cmake --build . --target RawrXD-Win32IDE" } else { "cmake --build ." }
+                } else {
+                    if ($Target -eq 'IDE') {
+                        "cmake --build . --config $Config --target RawrXD-Win32IDE"
+                    } else {
+                        "cmake --build . --config $Config"
+                    }
+                }
                 Invoke-Build $buildCmd "CMake Build" -Required $true
             }
         } finally {
@@ -382,7 +464,7 @@ if ($Test) {
     }
     
     # Test IDE if built
-    $ideExe = Get-ChildItem $BuildDir -Filter 'RawrXD.exe' -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+    $ideExe = Get-ChildItem $BuildDir -Recurse -Filter '*.exe' -ErrorAction SilentlyContinue | Where-Object { $_.Name -in 'RawrXD-Win32IDE.exe','rawrxd.exe' } | Select-Object -First 1
     if ($ideExe) {
         Write-Status "IDE binary found: $($ideExe.FullName)" -Status 'OK'
         if ($Interactive) {
@@ -405,7 +487,7 @@ $report = @{
     'Build Directory' = $BuildDir
     'Output Directory' = $OutputDir
     'Compiler Count' = (Get-ChildItem $CompilerDir -Filter '*.exe' -ErrorAction SilentlyContinue | Measure-Object).Count
-    'IDE Built' = if (Get-ChildItem $BuildDir -Filter 'RawrXD.exe' -Recurse -ErrorAction SilentlyContinue) { 'Yes' } else { 'No' }
+    'IDE Built' = if (Get-ChildItem $BuildDir -Recurse -Filter '*.exe' -ErrorAction SilentlyContinue | Where-Object { $_.Name -in 'RawrXD-Win32IDE.exe','rawrxd.exe' }) { 'Yes' } else { 'No' }
     'Total Artifacts' = $buildArtifacts.Count
 }
 
@@ -438,8 +520,9 @@ NEXT STEPS:
    $OutputDir
 
 4. TO LAUNCH IDE:
-   • Look for RawrXD.exe in build directory
-   • Or run: & '$OutputDir\RawrXD.exe'
+   • Full IDE: build\bin\RawrXD-Win32IDE.exe
+   • Minimal: build\bin\rawrxd.exe
+   • Or run: .\LAUNCH_RAW RXD.ps1
 
 5. TO REBUILD:
    • Run with -Clean flag: .\BUILD_IDE_PRODUCTION.ps1 -Target Full -Clean

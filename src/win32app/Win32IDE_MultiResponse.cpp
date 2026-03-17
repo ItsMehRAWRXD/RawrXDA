@@ -15,6 +15,10 @@
 
 #include <sstream>
 #include <algorithm>
+#include <cstdlib>
+#include <cctype>
+#include <cstdint>
+#include <limits>
 
 // ============================================================================
 // Local HTTP utility (mirrors LocalServerUtil from Win32IDE_LocalServer.cpp)
@@ -57,6 +61,120 @@ static std::string escapeJson(const std::string& value) {
     }
     return out;
 }
+
+static std::string trim(const std::string& value) {
+    size_t first = 0;
+    while (first < value.size() && std::isspace(static_cast<unsigned char>(value[first]))) {
+        ++first;
+    }
+    if (first == value.size()) {
+        return {};
+    }
+
+    size_t last = value.size();
+    while (last > first && std::isspace(static_cast<unsigned char>(value[last - 1]))) {
+        --last;
+    }
+    return value.substr(first, last - first);
+}
+
+static std::string buildErrorJson(const std::string& error, const std::string& message) {
+    return std::string("{\"error\":\"") + escapeJson(error) +
+           "\",\"message\":\"" + escapeJson(message) + "\"}";
+}
+
+static size_t skipWhitespace(const std::string& body, size_t pos) {
+    while (pos < body.size() && std::isspace(static_cast<unsigned char>(body[pos]))) {
+        ++pos;
+    }
+    return pos;
+}
+
+static bool findJsonValueStart(const std::string& body, const std::string& key, size_t& valueStart) {
+    const std::string quotedKey = "\"" + key + "\"";
+    size_t pos = body.find(quotedKey);
+    if (pos == std::string::npos) {
+        return false;
+    }
+
+    size_t colon = body.find(':', pos + quotedKey.size());
+    if (colon == std::string::npos) {
+        return false;
+    }
+
+    valueStart = skipWhitespace(body, colon + 1);
+    return valueStart < body.size();
+}
+
+static bool tryExtractJsonString(const std::string& body, const std::string& key, std::string& value) {
+    size_t pos = 0;
+    if (!findJsonValueStart(body, key, pos) || body[pos] != '"') {
+        return false;
+    }
+
+    ++pos;
+    std::string out;
+    out.reserve(64);
+    bool escaped = false;
+    for (; pos < body.size(); ++pos) {
+        const char c = body[pos];
+        if (escaped) {
+            switch (c) {
+                case '"': out.push_back('"'); break;
+                case '\\': out.push_back('\\'); break;
+                case '/': out.push_back('/'); break;
+                case 'b': out.push_back('\b'); break;
+                case 'f': out.push_back('\f'); break;
+                case 'n': out.push_back('\n'); break;
+                case 'r': out.push_back('\r'); break;
+                case 't': out.push_back('\t'); break;
+                default: out.push_back(c); break;
+            }
+            escaped = false;
+            continue;
+        }
+
+        if (c == '\\') {
+            escaped = true;
+            continue;
+        }
+
+        if (c == '"') {
+            value = std::move(out);
+            return true;
+        }
+
+        out.push_back(c);
+    }
+
+    return false;
+}
+
+static bool tryExtractJsonInt64(const std::string& body, const std::string& key, int64_t& value) {
+    size_t pos = 0;
+    if (!findJsonValueStart(body, key, pos)) {
+        return false;
+    }
+
+    size_t end = pos;
+    if (end < body.size() && (body[end] == '-' || body[end] == '+')) {
+        ++end;
+    }
+    const size_t digitsStart = end;
+    while (end < body.size() && std::isdigit(static_cast<unsigned char>(body[end]))) {
+        ++end;
+    }
+    if (digitsStart == end) {
+        return false;
+    }
+
+    try {
+        value = std::stoll(body.substr(pos, end - pos));
+    } catch (...) {
+        return false;
+    }
+    return true;
+}
 } // namespace LocalServerUtil
 
 // ============================================================================
@@ -76,7 +194,7 @@ void Win32IDE::initMultiResponse() {
 
     m_multiResponseInitialized = true;
     appendToOutput("[MultiResponse] Engine initialized — 4 templates ready "
-                   "(Strategic, Grounded, Creative, Concise).",
+                   "(Concise, Detailed, Creative, Technical).",
                    "General", OutputSeverity::Info);
 }
 
@@ -93,6 +211,11 @@ void Win32IDE::shutdownMultiResponse() {
 
 void Win32IDE::cmdMultiResponseGenerate() {
     if (!m_multiResponseInitialized) initMultiResponse();
+    if (!m_multiResponseInitialized || !m_multiResponseEngine) {
+        appendToOutput("[MultiResponse] Engine is unavailable.",
+                       "General", OutputSeverity::Error);
+        return;
+    }
 
     // Use whatever is in the chat input or last user message
     std::string prompt;
@@ -102,15 +225,20 @@ void Win32IDE::cmdMultiResponseGenerate() {
             break;
         }
     }
+    prompt = LocalServerUtil::trim(prompt);
     if (prompt.empty()) {
         appendToOutput("[MultiResponse] No prompt available. Type a question first.",
                        "General", OutputSeverity::Warning);
         return;
     }
 
+    std::string preview = prompt.substr(0, 80);
+    if (prompt.size() > 80) {
+        preview += "...";
+    }
     int maxResp = m_multiResponseEngine->getMaxChainResponses();
     appendToOutput("[MultiResponse] Generating " + std::to_string(maxResp) +
-                   " responses for: \"" + prompt.substr(0, 80) + "...\"",
+                   " responses for: \"" + preview + "\"",
                    "General", OutputSeverity::Info);
 
     uint64_t sid = m_multiResponseEngine->startSession(prompt, maxResp);
@@ -120,13 +248,17 @@ void Win32IDE::cmdMultiResponseGenerate() {
         const auto* session = m_multiResponseEngine->getSession(sid);
         if (session) {
             std::ostringstream oss;
+            double totalMs = 0.0;
+            for (const auto& resp : session->responses) totalMs += resp.latencyMs;
             oss << "[MultiResponse] Session #" << sid << " complete — "
                 << session->responses.size() << " responses generated in "
-                << (int)session->totalMs << "ms\n";
-            for (const auto& resp : session->responses) {
-                oss << "  [" << resp.index << "] " << resp.templateName
+                << (int)totalMs << "ms\n";
+            for (size_t i = 0; i < session->responses.size(); ++i) {
+                const auto& resp = session->responses[i];
+                const auto& tmpl = m_multiResponseEngine->getTemplate(resp.templateId);
+                oss << "  [" << i << "] " << tmpl.name
                     << " — " << (int)resp.latencyMs << "ms"
-                    << (resp.error ? " (ERROR)" : " OK") << "\n";
+                    << (resp.success ? " OK" : " (ERROR)") << "\n";
             }
             oss << "Use 'MultiResp: Select Preferred' to pick your favorite.";
             appendToOutput(oss.str(), "General", OutputSeverity::Info);
@@ -139,10 +271,17 @@ void Win32IDE::cmdMultiResponseGenerate() {
 
 void Win32IDE::cmdMultiResponseSetMax() {
     if (!m_multiResponseInitialized) initMultiResponse();
+    if (!m_multiResponseInitialized || !m_multiResponseEngine) {
+        appendToOutput("[MultiResponse] Engine is unavailable.",
+                       "General", OutputSeverity::Error);
+        return;
+    }
 
-    // Cycle: 1 → 2 → 3 → 4 → 1
+    // Cycle according to currently enabled templates.
     int current = m_multiResponseEngine->getMaxChainResponses();
-    int next = (current % 4) + 1;
+    int enabled = m_multiResponseEngine->getEnabledTemplateCount();
+    if (enabled <= 0) enabled = 1;
+    int next = (current % enabled) + 1;
     m_multiResponseEngine->setMaxChainResponses(next);
     appendToOutput("[MultiResponse] Max chain responses set to " + std::to_string(next),
                    "General", OutputSeverity::Info);
@@ -172,8 +311,10 @@ void Win32IDE::cmdMultiResponseSelectPreferred() {
     if (next >= (int)session->responses.size()) next = 0;
 
     m_multiResponseEngine->setPreference(session->sessionId, next);
+    const auto& selected = session->responses[next];
+    const auto& tmpl = m_multiResponseEngine->getTemplate(selected.templateId);
     appendToOutput("[MultiResponse] Preferred response: #" + std::to_string(next) +
-                   " (" + session->responses[next].templateName + ")",
+                   " (" + std::string(tmpl.name) + ")",
                    "General", OutputSeverity::Info);
 }
 
@@ -188,18 +329,22 @@ void Win32IDE::cmdMultiResponseCompare() {
     }
 
     std::ostringstream oss;
+    double totalMs = 0.0;
+    for (const auto& resp : session->responses) totalMs += resp.latencyMs;
     oss << "══════════ Multi-Response Comparison (Session #"
         << session->sessionId << ") ══════════\n";
     oss << "Prompt: \"" << session->prompt.substr(0, 100) << "\"\n";
     oss << "Responses: " << session->responses.size() << " | Total: "
-        << (int)session->totalMs << "ms\n\n";
+        << (int)totalMs << "ms\n\n";
 
-    for (const auto& resp : session->responses) {
-        oss << "──── Response #" << resp.index << ": " << resp.templateName;
-        if (session->preferredIndex == resp.index) oss << " ★ PREFERRED";
+    for (size_t i = 0; i < session->responses.size(); ++i) {
+        const auto& resp = session->responses[i];
+        const auto& tmpl = m_multiResponseEngine->getTemplate(resp.templateId);
+        oss << "──── Response #" << i << ": " << tmpl.name;
+        if (session->preferredIndex == static_cast<int>(i)) oss << " ★ PREFERRED";
         oss << " ────\n";
-        oss << "Latency: " << (int)resp.latencyMs << "ms | Tokens: " << resp.tokenCount;
-        if (resp.error) oss << " | ERROR: " << resp.errorDetail;
+        oss << "Latency: " << (int)resp.latencyMs << "ms";
+        if (!resp.success) oss << " | ERROR";
         oss << "\n";
         // Show first 200 chars of content preview
         std::string preview = resp.content.substr(0, 200);
@@ -219,16 +364,8 @@ void Win32IDE::cmdMultiResponseShowStats() {
     std::ostringstream oss;
     oss << "══════════ Multi-Response Statistics ══════════\n";
     oss << "Total sessions:   " << stats.totalSessions << "\n";
-    oss << "Total responses:  " << stats.totalResponsesGenerated << "\n";
-    oss << "Total prefs:      " << stats.totalPreferencesRecorded << "\n";
-    oss << "Errors:           " << stats.errorCount << "\n\n";
-    oss << "Preference breakdown:\n";
-
-    const char* names[] = {"Strategic", "Grounded", "Creative", "Concise"};
-    for (int i = 0; i < 4; ++i) {
-        oss << "  " << names[i] << ": " << stats.preferenceCount[i]
-            << " picks (avg " << (int)stats.avgLatencyMs[i] << "ms)\n";
-    }
+    oss << "Total responses:  " << stats.totalResponses << "\n";
+    oss << "Total prefs:      " << stats.preferenceSelections << "\n\n";
     oss << "\nRecommended template: " << recommended << "\n";
 
     appendToOutput(oss.str(), "General", OutputSeverity::Info);
@@ -241,32 +378,54 @@ void Win32IDE::cmdMultiResponseShowTemplates() {
     std::ostringstream oss;
     oss << "══════════ Response Templates ══════════\n";
     for (const auto& t : templates) {
-        oss << "[" << t.shortLabel << "] " << t.name
-            << (t.enabled ? " ✓" : " ✗")
-            << " | temp=" << t.temperature
-            << " | maxTok=" << t.maxTokens << "\n"
-            << "    " << t.description << "\n\n";
+        oss << "[" << t.id << "] " << t.name
+            << (t.enabled ? " ✓" : " ✗") << "\n"
+            << "    " << t.systemPrompt << "\n\n";
     }
-    oss << "Enabled: " << m_multiResponseEngine->getEnabledTemplateCount() << "/4\n";
+    oss << "Enabled: " << m_multiResponseEngine->getEnabledTemplateCount()
+        << "/" << templates.size() << "\n";
     oss << "Max chain: " << m_multiResponseEngine->getMaxChainResponses() << "\n";
     appendToOutput(oss.str(), "General", OutputSeverity::Info);
 }
 
 void Win32IDE::cmdMultiResponseToggleTemplate() {
     if (!m_multiResponseInitialized) initMultiResponse();
+    if (!m_multiResponseInitialized || !m_multiResponseEngine) {
+        appendToOutput("[MultiResponse] Engine is unavailable.",
+                       "General", OutputSeverity::Error);
+        return;
+    }
 
     // Cycle through templates and toggle the next one
     static int toggleIdx = 0;
-    auto tmplId = static_cast<ResponseTemplateId>(toggleIdx);
-    const auto& tmpl = m_multiResponseEngine->getTemplate(tmplId);
-    bool newState = !tmpl.enabled;
-    m_multiResponseEngine->setTemplateEnabled(tmplId, newState);
+    auto templates = m_multiResponseEngine->getAllTemplates();
+    if (templates.empty()) {
+        appendToOutput("[MultiResponse] No templates available.",
+                       "General", OutputSeverity::Warning);
+        return;
+    }
+    if (toggleIdx < 0 || toggleIdx >= static_cast<int>(templates.size())) {
+        toggleIdx = 0;
+    }
 
-    appendToOutput("[MultiResponse] Template '" + std::string(tmpl.name) + "' " +
-                   (newState ? "ENABLED" : "DISABLED"),
-                   "General", OutputSeverity::Info);
+    const auto& current = templates[static_cast<size_t>(toggleIdx)];
+    const uint32_t tmplId = current.id;
+    const std::string tmplName = current.name;
+    const bool desiredState = !current.enabled;
+    m_multiResponseEngine->setTemplateEnabled(tmplId, desiredState);
+    const auto& updated = m_multiResponseEngine->getTemplate(tmplId);
 
-    toggleIdx = (toggleIdx + 1) % 4;
+    if (updated.enabled != desiredState) {
+        appendToOutput("[MultiResponse] Template '" + tmplName +
+                       "' could not be disabled (at least one template must stay enabled).",
+                       "General", OutputSeverity::Warning);
+    } else {
+        appendToOutput("[MultiResponse] Template '" + tmplName + "' " +
+                       (updated.enabled ? "ENABLED" : "DISABLED"),
+                       "General", OutputSeverity::Info);
+    }
+
+    toggleIdx = (toggleIdx + 1) % static_cast<int>(templates.size());
 }
 
 void Win32IDE::cmdMultiResponseShowPreferences() {
@@ -279,14 +438,20 @@ void Win32IDE::cmdMultiResponseShowPreferences() {
         return;
     }
 
-    const char* names[] = {"Strategic", "Grounded", "Creative", "Concise"};
     std::ostringstream oss;
     oss << "══════════ Preference History (last " << history.size() << ") ══════════\n";
     for (const auto& rec : history) {
-        int tidx = static_cast<int>(rec.preferredTemplate);
-        oss << "Session #" << rec.sessionId << " → "
-            << (tidx >= 0 && tidx < 4 ? names[tidx] : "?")
-            << " | \"" << rec.promptSnippet.substr(0, 60) << "...\"\n";
+        uint64_t sid = rec.first;
+        int preferred = rec.second;
+        std::string tmplName = "?";
+        if (const auto* session = m_multiResponseEngine->getSession(sid)) {
+            if (preferred >= 0 && preferred < static_cast<int>(session->responses.size())) {
+                const auto& resp = session->responses[preferred];
+                tmplName = m_multiResponseEngine->getTemplate(resp.templateId).name;
+            }
+        }
+        oss << "Session #" << sid << " → #" << preferred
+            << " (" << tmplName << ")\n";
     }
     appendToOutput(oss.str(), "General", OutputSeverity::Info);
 }
@@ -317,16 +482,32 @@ void Win32IDE::cmdMultiResponseShowStatus() {
 
 void Win32IDE::cmdMultiResponseClearHistory() {
     if (!m_multiResponseInitialized) initMultiResponse();
+    if (!m_multiResponseInitialized || !m_multiResponseEngine) {
+        appendToOutput("[MultiResponse] Engine is unavailable.",
+                       "General", OutputSeverity::Error);
+        return;
+    }
 
     // Re-initialize to clear all state
     m_multiResponseEngine->shutdown();
-    m_multiResponseEngine->initialize();
+    MultiResponseResult r = m_multiResponseEngine->initialize();
+    if (!r.success) {
+        appendToOutput(std::string("[MultiResponse] Failed to clear history: ") + r.detail,
+                       "General", OutputSeverity::Error);
+        return;
+    }
+    m_multiResponseInitialized = true;
     appendToOutput("[MultiResponse] All sessions and preferences cleared.",
                    "General", OutputSeverity::Info);
 }
 
 void Win32IDE::cmdMultiResponseApplyPreferred() {
     if (!m_multiResponseInitialized) initMultiResponse();
+    if (!m_multiResponseInitialized || !m_multiResponseEngine) {
+        appendToOutput("[MultiResponse] Engine is unavailable.",
+                       "General", OutputSeverity::Error);
+        return;
+    }
 
     const auto* session = m_multiResponseEngine->getLatestSession();
     if (!session || session->preferredIndex < 0) {
@@ -334,14 +515,20 @@ void Win32IDE::cmdMultiResponseApplyPreferred() {
                        "General", OutputSeverity::Warning);
         return;
     }
+    if (session->preferredIndex >= static_cast<int>(session->responses.size())) {
+        appendToOutput("[MultiResponse] Preferred response index is out of range.",
+                       "General", OutputSeverity::Warning);
+        return;
+    }
 
     const auto& resp = session->responses[session->preferredIndex];
+    const auto& tmpl = m_multiResponseEngine->getTemplate(resp.templateId);
     appendToOutput("[MultiResponse] Applying preferred response #" +
-                   std::to_string(resp.index) + " (" + resp.templateName + ")...",
+                   std::to_string(session->preferredIndex) + " (" + tmpl.name + ")...",
                    "General", OutputSeverity::Info);
 
     // Insert the preferred response content into the chat output
-    appendToOutput("\n═══ Preferred Response (" + resp.templateName + ") ═══\n" +
+    appendToOutput("\n═══ Preferred Response (" + std::string(tmpl.name) + ") ═══\n" +
                    resp.content, "General", OutputSeverity::Info);
 }
 
@@ -352,15 +539,27 @@ void Win32IDE::cmdMultiResponseApplyPreferred() {
 // GET /api/multi-response/status — engine overview
 void Win32IDE::handleMultiResponseStatusEndpoint(SOCKET client) {
     if (!m_multiResponseInitialized) initMultiResponse();
+    if (!m_multiResponseInitialized || !m_multiResponseEngine) {
+        const std::string response = LocalServerUtil::buildHttpResponse(
+            500, LocalServerUtil::buildErrorJson("init_failed", "Multi-response engine unavailable"));
+        send(client, response.c_str(), (int)response.size(), 0);
+        return;
+    }
 
-    std::string json = m_multiResponseEngine->toJson();
-    std::string response = LocalServerUtil::buildHttpResponse(200, json);
+    const std::string json = m_multiResponseEngine->toJson();
+    const std::string response = LocalServerUtil::buildHttpResponse(200, json);
     send(client, response.c_str(), (int)response.size(), 0);
 }
 
 // GET /api/multi-response/templates — list all templates
 void Win32IDE::handleMultiResponseTemplatesEndpoint(SOCKET client) {
     if (!m_multiResponseInitialized) initMultiResponse();
+    if (!m_multiResponseInitialized || !m_multiResponseEngine) {
+        const std::string response = LocalServerUtil::buildHttpResponse(
+            500, LocalServerUtil::buildErrorJson("init_failed", "Multi-response engine unavailable"));
+        send(client, response.c_str(), (int)response.size(), 0);
+        return;
+    }
 
     auto templates = m_multiResponseEngine->getAllTemplates();
     std::ostringstream o;
@@ -370,9 +569,7 @@ void Win32IDE::handleMultiResponseTemplatesEndpoint(SOCKET client) {
         const auto& t = templates[i];
         o << "{\"id\":" << (int)t.id
           << ",\"name\":\"" << t.name << "\""
-          << ",\"shortLabel\":\"" << t.shortLabel << "\""
-          << ",\"temperature\":" << t.temperature
-          << ",\"maxTokens\":" << t.maxTokens
+          << ",\"systemPrompt\":\"" << LocalServerUtil::escapeJson(t.systemPrompt) << "\""
           << ",\"enabled\":" << (t.enabled ? "true" : "false")
           << "}";
     }
@@ -386,124 +583,179 @@ void Win32IDE::handleMultiResponseTemplatesEndpoint(SOCKET client) {
 // POST /api/multi-response/generate — start a multi-response session
 void Win32IDE::handleMultiResponseGenerateEndpoint(SOCKET client, const std::string& body) {
     if (!m_multiResponseInitialized) initMultiResponse();
+    if (!m_multiResponseInitialized || !m_multiResponseEngine) {
+        const std::string response = LocalServerUtil::buildHttpResponse(
+            500, LocalServerUtil::buildErrorJson("init_failed", "Multi-response engine unavailable"));
+        send(client, response.c_str(), (int)response.size(), 0);
+        return;
+    }
 
     // Parse prompt and maxResponses from body
     std::string prompt;
     int maxResp = m_multiResponseEngine->getMaxChainResponses();
     std::string context;
 
-    // Simple JSON parsing (project convention — manual parse)
-    auto extractStr = [&](const std::string& key) -> std::string {
-        std::string search = "\"" + key + "\":\"";
-        auto pos = body.find(search);
-        if (pos == std::string::npos) return "";
-        pos += search.size();
-        auto end = body.find("\"", pos);
-        if (end == std::string::npos) return "";
-        return body.substr(pos, end - pos);
-    };
-    auto extractInt = [&](const std::string& key) -> int {
-        std::string search = "\"" + key + "\":";
-        auto pos = body.find(search);
-        if (pos == std::string::npos) return -1;
-        pos += search.size();
-        return std::atoi(body.c_str() + pos);
-    };
+    (void)LocalServerUtil::tryExtractJsonString(body, "prompt", prompt);
+    (void)LocalServerUtil::tryExtractJsonString(body, "context", context);
+    prompt = LocalServerUtil::trim(prompt);
+    context = LocalServerUtil::trim(context);
 
-    prompt  = extractStr("prompt");
-    context = extractStr("context");
-    int mr  = extractInt("maxResponses");
-    if (mr > 0) maxResp = mr;
+    int64_t mr = 0;
+    if (LocalServerUtil::tryExtractJsonInt64(body, "maxResponses", mr)) {
+        if (mr <= 0 || mr > static_cast<int64_t>(std::numeric_limits<int>::max())) {
+            const std::string response = LocalServerUtil::buildHttpResponse(
+                400, LocalServerUtil::buildErrorJson("invalid_maxResponses",
+                "'maxResponses' must be a positive integer"));
+            send(client, response.c_str(), (int)response.size(), 0);
+            return;
+        }
+        maxResp = static_cast<int>(mr);
+    }
 
     if (prompt.empty()) {
-        std::string errResp = LocalServerUtil::buildHttpResponse(400,
-            "{\"error\":\"missing_prompt\",\"message\":\"'prompt' field is required\"}");
-        send(client, errResp.c_str(), (int)errResp.size(), 0);
+        const std::string response = LocalServerUtil::buildHttpResponse(
+            400, LocalServerUtil::buildErrorJson("missing_prompt", "'prompt' field is required"));
+        send(client, response.c_str(), (int)response.size(), 0);
         return;
     }
 
-    uint64_t sid = m_multiResponseEngine->startSession(prompt, maxResp, context);
-    MultiResponseResult r = m_multiResponseEngine->generateAll(sid);
+    const uint64_t sid = m_multiResponseEngine->startSession(prompt, maxResp, context);
+    const MultiResponseResult r = m_multiResponseEngine->generateAll(sid);
 
-    std::string json = m_multiResponseEngine->sessionToJson(sid);
-    int code = r.success ? 200 : 500;
-    std::string response = LocalServerUtil::buildHttpResponse(code, json);
+    std::string json;
+    int code = 200;
+    if (!r.success) {
+        code = 422;
+        json = LocalServerUtil::buildErrorJson(
+            "generation_failed", r.detail ? r.detail : "Failed to generate responses");
+    } else {
+        json = m_multiResponseEngine->sessionToJson(sid);
+    }
+    const std::string response = LocalServerUtil::buildHttpResponse(code, json);
     send(client, response.c_str(), (int)response.size(), 0);
 }
 
 // GET /api/multi-response/results — get latest session results
-void Win32IDE::handleMultiResponseResultsEndpoint(SOCKET client, const std::string& /*sessionId*/) {
+void Win32IDE::handleMultiResponseResultsEndpoint(SOCKET client, const std::string& sessionId) {
     if (!m_multiResponseInitialized) initMultiResponse();
+    if (!m_multiResponseInitialized || !m_multiResponseEngine) {
+        const std::string response = LocalServerUtil::buildHttpResponse(
+            500, LocalServerUtil::buildErrorJson("init_failed", "Multi-response engine unavailable"));
+        send(client, response.c_str(), (int)response.size(), 0);
+        return;
+    }
 
-    const auto* session = m_multiResponseEngine->getLatestSession();
-    std::string json = session
-        ? m_multiResponseEngine->sessionToJson(session->sessionId)
-        : "{\"error\":\"no_sessions\",\"message\":\"No multi-response sessions yet\"}";
+    const std::string sidParam = LocalServerUtil::trim(sessionId);
+    const MultiResponseSession* session = nullptr;
+    if (!sidParam.empty()) {
+        uint64_t sid = 0;
+        try {
+            sid = std::stoull(sidParam);
+        } catch (...) {
+            const std::string response = LocalServerUtil::buildHttpResponse(
+                400, LocalServerUtil::buildErrorJson("invalid_sessionId", "sessionId must be numeric"));
+            send(client, response.c_str(), (int)response.size(), 0);
+            return;
+        }
+        session = m_multiResponseEngine->getSession(sid);
+        if (!session) {
+            const std::string response = LocalServerUtil::buildHttpResponse(
+                404, LocalServerUtil::buildErrorJson("session_not_found", "Requested session does not exist"));
+            send(client, response.c_str(), (int)response.size(), 0);
+            return;
+        }
+    } else {
+        session = m_multiResponseEngine->getLatestSession();
+    }
 
-    int code = session ? 200 : 404;
-    std::string response = LocalServerUtil::buildHttpResponse(code, json);
+    std::string json;
+    int code = 200;
+    if (!session) {
+        code = 404;
+        json = LocalServerUtil::buildErrorJson("no_sessions", "No multi-response sessions yet");
+    } else {
+        json = m_multiResponseEngine->sessionToJson(session->sessionId);
+    }
+    const std::string response = LocalServerUtil::buildHttpResponse(code, json);
     send(client, response.c_str(), (int)response.size(), 0);
 }
 
 // POST /api/multi-response/prefer — set preferred response
 void Win32IDE::handleMultiResponsePreferEndpoint(SOCKET client, const std::string& body) {
     if (!m_multiResponseInitialized) initMultiResponse();
-
-    // Parse sessionId and responseIndex
-    auto extractInt = [&](const std::string& key) -> int {
-        std::string search = "\"" + key + "\":";
-        auto pos = body.find(search);
-        if (pos == std::string::npos) return -1;
-        pos += search.size();
-        return std::atoi(body.c_str() + pos);
-    };
-    auto extractStr = [&](const std::string& key) -> std::string {
-        std::string search = "\"" + key + "\":\"";
-        auto pos = body.find(search);
-        if (pos == std::string::npos) return "";
-        pos += search.size();
-        auto end = body.find("\"", pos);
-        if (end == std::string::npos) return "";
-        return body.substr(pos, end - pos);
-    };
-
-    int sessionId     = extractInt("sessionId");
-    int responseIndex = extractInt("responseIndex");
-    std::string reason = extractStr("reason");
-
-    if (sessionId < 0 || responseIndex < 0) {
-        std::string errResp = LocalServerUtil::buildHttpResponse(400,
-            "{\"error\":\"invalid_params\",\"message\":\"Need sessionId and responseIndex\"}");
-        send(client, errResp.c_str(), (int)errResp.size(), 0);
+    if (!m_multiResponseInitialized || !m_multiResponseEngine) {
+        const std::string response = LocalServerUtil::buildHttpResponse(
+            500, LocalServerUtil::buildErrorJson("init_failed", "Multi-response engine unavailable"));
+        send(client, response.c_str(), (int)response.size(), 0);
         return;
     }
 
-    MultiResponseResult r = m_multiResponseEngine->setPreference(
-        (uint64_t)sessionId, responseIndex, reason);
+    int64_t sessionId = -1;
+    int64_t responseIndex = -1;
+    const bool hasSessionId = LocalServerUtil::tryExtractJsonInt64(body, "sessionId", sessionId);
+    const bool hasResponseIndex =
+        LocalServerUtil::tryExtractJsonInt64(body, "responseIndex", responseIndex);
+    std::string reason;
+    (void)LocalServerUtil::tryExtractJsonString(body, "reason", reason);
+    reason = LocalServerUtil::trim(reason);
 
-    std::string json = r.success
-        ? "{\"success\":true,\"message\":\"Preference recorded\"}"
-        : ("{\"success\":false,\"message\":\"" + std::string(r.detail) + "\"}");
+    if (!hasSessionId || !hasResponseIndex ||
+        sessionId < 0 || responseIndex < 0 ||
+        responseIndex > static_cast<int64_t>(std::numeric_limits<int>::max())) {
+        const std::string response = LocalServerUtil::buildHttpResponse(
+            400, LocalServerUtil::buildErrorJson(
+                "invalid_params", "Need non-negative numeric sessionId and responseIndex"));
+        send(client, response.c_str(), (int)response.size(), 0);
+        return;
+    }
 
-    int code = r.success ? 200 : (r.errorCode == 404 ? 404 : 400);
-    std::string response = LocalServerUtil::buildHttpResponse(code, json);
+    const MultiResponseResult r = m_multiResponseEngine->setPreference(
+        static_cast<uint64_t>(sessionId), static_cast<int>(responseIndex));
+    if (r.success && !reason.empty()) {
+        appendToOutput("[MultiResponse] Preference reason: " + reason,
+                       "General", OutputSeverity::Info);
+    }
+
+    std::string json;
+    int code = 200;
+    if (r.success) {
+        json = "{\"success\":true,\"message\":\"Preference recorded\"}";
+    } else {
+        const std::string detail = (r.detail != nullptr) ? r.detail : "Preference update failed";
+        code = (detail.find("Session not found") != std::string::npos) ? 404 : 400;
+        json = LocalServerUtil::buildErrorJson("set_preference_failed", detail);
+    }
+
+    const std::string response = LocalServerUtil::buildHttpResponse(code, json);
     send(client, response.c_str(), (int)response.size(), 0);
 }
 
 // GET /api/multi-response/stats — statistics and preference breakdown
 void Win32IDE::handleMultiResponseStatsEndpoint(SOCKET client) {
     if (!m_multiResponseInitialized) initMultiResponse();
+    if (!m_multiResponseInitialized || !m_multiResponseEngine) {
+        const std::string response = LocalServerUtil::buildHttpResponse(
+            500, LocalServerUtil::buildErrorJson("init_failed", "Multi-response engine unavailable"));
+        send(client, response.c_str(), (int)response.size(), 0);
+        return;
+    }
 
-    std::string json = m_multiResponseEngine->statsToJson();
-    std::string response = LocalServerUtil::buildHttpResponse(200, json);
+    const std::string json = m_multiResponseEngine->statsToJson();
+    const std::string response = LocalServerUtil::buildHttpResponse(200, json);
     send(client, response.c_str(), (int)response.size(), 0);
 }
 
 // GET /api/multi-response/preferences — preference history
 void Win32IDE::handleMultiResponsePreferencesEndpoint(SOCKET client) {
     if (!m_multiResponseInitialized) initMultiResponse();
+    if (!m_multiResponseInitialized || !m_multiResponseEngine) {
+        const std::string response = LocalServerUtil::buildHttpResponse(
+            500, LocalServerUtil::buildErrorJson("init_failed", "Multi-response engine unavailable"));
+        send(client, response.c_str(), (int)response.size(), 0);
+        return;
+    }
 
-    std::string json = m_multiResponseEngine->preferencesToJson();
-    std::string response = LocalServerUtil::buildHttpResponse(200, json);
+    const std::string json = m_multiResponseEngine->preferencesToJson();
+    const std::string response = LocalServerUtil::buildHttpResponse(200, json);
     send(client, response.c_str(), (int)response.size(), 0);
 }

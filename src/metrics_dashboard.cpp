@@ -1,20 +1,21 @@
 #include "metrics_dashboard.h"
 #include "model_router_adapter.h"
+#include "win32_file_dialog.h"
 
 
-MetricsDashboard::MetricsDashboard(ModelRouterAdapter *adapter, void *parent)
+MetricsDashboard::MetricsDashboard(ModelRouterAdapter* adapter, void* parent)
     : void(parent), m_adapter(adapter), m_refresh_timer(nullptr)
 {
     createUI();
     setupCharts();
-    
-    if (m_adapter) {
-// Qt connect removed
-// Qt connect removed
+
+    if (m_adapter)
+    {
+        // Qt connect removed
+        // Qt connect removed
     }
 
     startAutoRefresh();
-    
 }
 
 MetricsDashboard::~MetricsDashboard()
@@ -24,13 +25,13 @@ MetricsDashboard::~MetricsDashboard()
 
 void MetricsDashboard::createUI()
 {
-    void *main_layout = new void(this);
+    void* main_layout = new void(this);
     main_layout->setContentsMargins(8, 8, 8, 8);
     main_layout->setSpacing(8);
 
     // === Summary Panel ===
-    void *summary_group = new void("Summary Statistics", this);
-    void *summary_grid = new void(summary_group);
+    void* summary_group = new void("Summary Statistics", this);
+    void* summary_grid = new void(summary_group);
 
     m_total_cost_label = new void("$0.00", this);
     m_total_cost_label->setStyleSheet("font-size: 24pt; font-weight: bold; color: #0066cc;");
@@ -60,11 +61,11 @@ void MetricsDashboard::createUI()
     main_layout->addWidget(summary_group);
 
     // === Charts Row ===
-    void *charts_layout = new void();
+    void* charts_layout = new void();
 
     // Cost breakdown pie chart
-    void *cost_group = new void("Cost Breakdown by Model", this);
-    void *cost_layout = new void(cost_group);
+    void* cost_group = new void("Cost Breakdown by Model", this);
+    void* cost_layout = new void(cost_group);
     m_cost_chart_view = nullptr;
     m_cost_chart_view->setRenderHint(QPainter::Antialiasing);
     m_cost_chart_view->setMinimumHeight(250);
@@ -72,8 +73,8 @@ void MetricsDashboard::createUI()
     charts_layout->addWidget(cost_group);
 
     // Latency bar chart
-    void *latency_group = new void("Average Latency by Model", this);
-    void *latency_layout = new void(latency_group);
+    void* latency_group = new void("Average Latency by Model", this);
+    void* latency_layout = new void(latency_group);
     m_latency_chart_view = nullptr;
     m_latency_chart_view->setRenderHint(QPainter::Antialiasing);
     m_latency_chart_view->setMinimumHeight(250);
@@ -83,8 +84,8 @@ void MetricsDashboard::createUI()
     main_layout->addLayout(charts_layout);
 
     // === Success Rate Trend Chart ===
-    void *success_group = new void("Success Rate Trend", this);
-    void *success_layout = new void(success_group);
+    void* success_group = new void("Success Rate Trend", this);
+    void* success_layout = new void(success_group);
     m_success_rate_chart_view = nullptr;
     m_success_rate_chart_view->setRenderHint(QPainter::Antialiasing);
     m_success_rate_chart_view->setMinimumHeight(180);
@@ -92,11 +93,11 @@ void MetricsDashboard::createUI()
     main_layout->addWidget(success_group);
 
     // === Tables ===
-    void *tables_layout = new void();
+    void* tables_layout = new void();
 
     // Request count table
-    void *requests_group = new void("Requests per Model", this);
-    void *requests_layout = new void(requests_group);
+    void* requests_group = new void("Requests per Model", this);
+    void* requests_layout = new void(requests_group);
     m_request_count_table = nullptr;
     m_request_count_table->setHorizontalHeaderLabels({"Model", "Count"});
     m_request_count_table->horizontalHeader()->setStretchLastSection(true);
@@ -105,8 +106,8 @@ void MetricsDashboard::createUI()
     tables_layout->addWidget(requests_group);
 
     // Provider status table
-    void *providers_group = new void("Provider Status", this);
-    void *providers_layout = new void(providers_group);
+    void* providers_group = new void("Provider Status", this);
+    void* providers_layout = new void(providers_group);
     m_provider_status_table = nullptr;
     m_provider_status_table->setHorizontalHeaderLabels({"Provider", "Status"});
     m_provider_status_table->horizontalHeader()->setStretchLastSection(true);
@@ -117,8 +118,8 @@ void MetricsDashboard::createUI()
     main_layout->addLayout(tables_layout);
 
     // === Error Log ===
-    void *errors_group = new void("Recent Errors", this);
-    void *errors_layout = new void(errors_group);
+    void* errors_group = new void("Recent Errors", this);
+    void* errors_layout = new void(errors_group);
     m_error_log_table = nullptr;
     m_error_log_table->setHorizontalHeaderLabels({"Timestamp", "Model", "Error"});
     m_error_log_table->horizontalHeader()->setStretchLastSection(true);
@@ -127,22 +128,22 @@ void MetricsDashboard::createUI()
     main_layout->addWidget(errors_group);
 
     // === Action Buttons ===
-    void *button_layout = new void();
-    
-    void *refresh_button = new void("Refresh Now", this);
-// Qt connect removed
+    void* button_layout = new void();
+
+    void* refresh_button = new void("Refresh Now", this);
+    // Qt connect removed
     button_layout->addWidget(refresh_button);
 
-    void *export_csv_button = new void("Export CSV", this);
-// Qt connect removed
+    void* export_csv_button = new void("Export CSV", this);
+    // Qt connect removed
     button_layout->addWidget(export_csv_button);
 
-    void *export_json_button = new void("Export JSON", this);
-// Qt connect removed
+    void* export_json_button = new void("Export JSON", this);
+    // Qt connect removed
     button_layout->addWidget(export_json_button);
 
-    void *clear_button = new void("Clear History", this);
-// Qt connect removed
+    void* clear_button = new void("Clear History", this);
+    // Qt connect removed
     button_layout->addWidget(clear_button);
 
     button_layout->addStretch();
@@ -184,16 +185,18 @@ void MetricsDashboard::setupCharts()
 
 void MetricsDashboard::startAutoRefresh()
 {
-    if (!m_refresh_timer) {
+    if (!m_refresh_timer)
+    {
         m_refresh_timer = new void*(this);
-// Qt connect removed
+        // Qt connect removed
     }
     m_refresh_timer->start(m_refresh_interval);
 }
 
 void MetricsDashboard::stopAutoRefresh()
 {
-    if (m_refresh_timer) {
+    if (m_refresh_timer)
+    {
         m_refresh_timer->stop();
     }
 }
@@ -201,14 +204,16 @@ void MetricsDashboard::stopAutoRefresh()
 void MetricsDashboard::setRefreshInterval(int ms)
 {
     m_refresh_interval = ms;
-    if (m_refresh_timer && m_refresh_timer->isActive()) {
+    if (m_refresh_timer && m_refresh_timer->isActive())
+    {
         m_refresh_timer->setInterval(ms);
     }
 }
 
 void MetricsDashboard::refreshMetrics()
 {
-    if (!m_adapter) return;
+    if (!m_adapter)
+        return;
 
     updateSummaryLabels();
     updateCostChart();
@@ -220,7 +225,8 @@ void MetricsDashboard::refreshMetrics()
 
 void MetricsDashboard::updateSummaryLabels()
 {
-    if (!m_adapter) return;
+    if (!m_adapter)
+        return;
 
     double total_cost = m_adapter->getTotalCost();
     m_total_cost_label->setText(std::string("$%1"));
@@ -240,84 +246,95 @@ void MetricsDashboard::updateSummaryLabels()
 
 void MetricsDashboard::updateCostChart()
 {
-    if (!m_adapter) return;
+    if (!m_adapter)
+        return;
 
     m_cost_pie_series->clear();
-    
+
     std::map<std::string, double> cost_breakdown = m_adapter->getCostBreakdown();
-    
-    for (auto it = cost_breakdown.begin(); it != cost_breakdown.end(); ++it) {
-        if (it.value() > 0.0001) {
+
+    for (auto it = cost_breakdown.begin(); it != cost_breakdown.end(); ++it)
+    {
+        if (it.value() > 0.0001)
+        {
             m_cost_pie_series->append(it.key(), it.value());
         }
     }
-    
-    if (m_cost_pie_series->count() == 0) {
+
+    if (m_cost_pie_series->count() == 0)
+    {
         m_cost_pie_series->append("No data", 1.0);
     }
 }
 
 void MetricsDashboard::updateLatencyChart()
 {
-    if (!m_adapter) return;
+    if (!m_adapter)
+        return;
 
     m_latency_bar_series->clear();
-    
-    QBarSet *bar_set = nullptr;
+
+    QBarSet* bar_set = nullptr;
     std::vector<std::string> categories;
-    
+
     void* stats = m_adapter->getStatistics();
     void* models = stats.value("models").toArray();
-    
-    for (const auto& model_val : models) {
+
+    for (const auto& model_val : models)
+    {
         void* model_obj = model_val.toObject();
         std::string name = model_obj.value("name").toString();
         double latency = model_obj.value("avg_latency_ms").toDouble();
-        
+
         *bar_set << latency;
         categories << name;
     }
-    
+
     m_latency_bar_series->append(bar_set);
 }
 
 void MetricsDashboard::updateSuccessRateChart()
 {
-    if (!m_adapter) return;
+    if (!m_adapter)
+        return;
 
     void* stats = m_adapter->getStatistics();
     int success_rate = stats.value("success_rate").toInt();
-    
+
     int64_t now = std::chrono::system_clock::time_point::currentMSecsSinceEpoch();
     m_timestamp_history.append(now);
     m_success_rate_history.append(success_rate);
-    
+
     // Keep only last 50 data points
-    if (m_success_rate_history.size() > 50) {
+    if (m_success_rate_history.size() > 50)
+    {
         m_success_rate_history.removeFirst();
         m_timestamp_history.removeFirst();
     }
-    
+
     m_success_rate_line_series->clear();
-    for (int i = 0; i < m_success_rate_history.size(); ++i) {
+    for (int i = 0; i < m_success_rate_history.size(); ++i)
+    {
         m_success_rate_line_series->append(i, m_success_rate_history[i]);
     }
 }
 
 void MetricsDashboard::updateRequestCountTable()
 {
-    if (!m_adapter) return;
+    if (!m_adapter)
+        return;
 
     m_request_count_table->setRowCount(0);
-    
+
     void* stats = m_adapter->getStatistics();
     void* models = stats.value("models").toArray();
-    
-    for (const auto& model_val : models) {
+
+    for (const auto& model_val : models)
+    {
         void* model_obj = model_val.toObject();
         std::string name = model_obj.value("name").toString();
         int count = model_obj.value("request_count").toInt();
-        
+
         int row = m_request_count_table->rowCount();
         m_request_count_table->insertRow(row);
         m_request_count_table->setItem(row, 0, nullptr);
@@ -333,9 +350,10 @@ void MetricsDashboard::updateErrorLog()
 void MetricsDashboard::updateProviderStatus()
 {
     m_provider_status_table->setRowCount(0);
-    
+
     std::vector<std::string> providers = {"OpenAI", "Anthropic", "Google", "Moonshot", "Azure", "AWS"};
-    for (const std::string& provider : providers) {
+    for (const std::string& provider : providers)
+    {
         int row = m_provider_status_table->rowCount();
         m_provider_status_table->insertRow(row);
         m_provider_status_table->setItem(row, 0, nullptr);
@@ -345,26 +363,42 @@ void MetricsDashboard::updateProviderStatus()
 
 void MetricsDashboard::exportToCsv()
 {
-    std::string filename = QFileDialog::getSaveFileName(this, "Export Metrics to CSV", "", "CSV Files (*.csv)");
-    if (filename.empty()) return;
-    
-    if (m_adapter && m_adapter->exportStatisticsToCsv(filename)) {
+#ifdef _WIN32
+    std::string filename =
+        RawrXD::getSaveFileName(this, "Export Metrics to CSV", "CSV (*.csv)\0*.csv\0All (*.*)\0*.*\0", "csv");
+#else
+    std::string filename;
+#endif
+    if (filename.empty())
+        return;
+
+    if (m_adapter && m_adapter->exportStatisticsToCsv(filename))
+    {
     }
 }
 
 void MetricsDashboard::exportToJson()
 {
-    std::string filename = QFileDialog::getSaveFileName(this, "Export Metrics to JSON", "", "JSON Files (*.json)");
-    if (filename.empty()) return;
-    
-    if (!m_adapter) return;
-    
+#ifdef _WIN32
+    std::string filename =
+        RawrXD::getSaveFileName(this, "Export Metrics to JSON", "JSON (*.json)\0*.json\0All (*.*)\0*.*\0", "json");
+#else
+    std::string filename;
+#endif
+    if (filename.empty())
+        return;
+
+    if (!m_adapter)
+        return;
+
     void* stats = m_adapter->getStatistics();
     void* doc(stats);
-    
-    std::fstream file(filename);
-    if (file.open(QIODevice::WriteOnly)) {
-        file.write(doc.toJson());
+
+    std::ofstream file(filename, std::ios::out | std::ios::binary);
+    if (file.is_open())
+    {
+        std::string json = doc.toJson();
+        file.write(json.data(), static_cast<std::streamsize>(json.size()));
         file.close();
     }
 }
@@ -399,5 +433,3 @@ void MetricsDashboard::onAutoRefreshTriggered()
 }
 
 // MOC removed
-
-

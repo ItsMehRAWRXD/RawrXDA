@@ -196,7 +196,8 @@ private:
         try {
             out = nlohmann::json::parse(body);
         } catch (...) {
-            out = nlohmann::json{{"raw", body}};
+            out = nlohmann::json::object();
+            out["raw"] = body;
         }
         return true;
     }
@@ -267,62 +268,113 @@ std::future<nlohmann::json> LSPClient::initialize() {
         }
 
         std::lock_guard<std::mutex> lock(m_mutex);
-        m_transport->send(createRequest(
-            "initialize",
-            {{"processId", static_cast<int>(GetCurrentProcessId())},
-             {"rootPath", m_config.rootPath},
-             {"capabilities", nlohmann::json::object()}}));
+        nlohmann::json params = nlohmann::json::object();
+        params["processId"] = static_cast<int>(GetCurrentProcessId());
+        params["rootPath"] = m_config.rootPath;
+        params["capabilities"] = nlohmann::json::object();
+        m_transport->send(createRequest("initialize", params));
         const auto response = m_transport->receive();
         m_initialized = true;
         if (response.contains("result")) return response["result"];
 
-        return nlohmann::json{
-            {"capabilities",
-             {{"completionProvider", {{"resolveProvider", false}}},
-              {"definitionProvider", true},
-              {"hoverProvider", true},
-              {"textDocumentSync", 2}}},
-            {"serverInfo", {{"name", "RawrXD-LSP-Bridge"}, {"version", "1.2"}}}};
+        nlohmann::json capabilities = nlohmann::json::object();
+        nlohmann::json completionProvider = nlohmann::json::object();
+        nlohmann::json resolveProvider = nlohmann::json::object();
+        resolveProvider["resolveProvider"] = false;
+        completionProvider["completionProvider"] = resolveProvider;
+        capabilities["capabilities"] = completionProvider;
+        capabilities["definitionProvider"] = true;
+        capabilities["hoverProvider"] = true;
+        capabilities["textDocumentSync"] = 2;
+
+        nlohmann::json serverInfo = nlohmann::json::object();
+        serverInfo["name"] = "RawrXD-LSP-Bridge";
+        serverInfo["version"] = "1.2";
+
+        nlohmann::json fallback = nlohmann::json::object();
+        fallback["capabilities"] = capabilities;
+        fallback["serverInfo"] = serverInfo;
+        return fallback;
     });
 }
 
 void LSPClient::didOpen(const std::string& uri, const std::string& text) {
     std::lock_guard<std::mutex> lock(m_mutex);
     if (!m_transport || !m_transport->isConnected()) return;
-    m_transport->send(createNotification(
-        "textDocument/didOpen",
-        {{"textDocument",
-          {{"uri", uri}, {"languageId", m_config.languageId}, {"version", 1}, {"text", text}}}}));
+
+    nlohmann::json td = nlohmann::json::object();
+    td["uri"] = uri;
+    td["languageId"] = m_config.languageId;
+    td["version"] = 1;
+    td["text"] = text;
+
+    nlohmann::json params = nlohmann::json::object();
+    params["textDocument"] = td;
+
+    m_transport->send(createNotification("textDocument/didOpen", params));
 }
 
 void LSPClient::didChange(const std::string& uri, const std::string& text) {
     std::lock_guard<std::mutex> lock(m_mutex);
     if (!m_transport || !m_transport->isConnected()) return;
-    m_transport->send(createNotification(
-        "textDocument/didChange",
-        {{"textDocument", {{"uri", uri}, {"version", 1}}},
-         {"contentChanges", {{{"text", text}}}}}));
+
+    nlohmann::json td = nlohmann::json::object();
+    td["uri"] = uri;
+    td["version"] = 1;
+
+    nlohmann::json change = nlohmann::json::object();
+    change["text"] = text;
+
+    nlohmann::json cc = nlohmann::json::array();
+    cc.push_back(change);
+
+    nlohmann::json params = nlohmann::json::object();
+    params["textDocument"] = td;
+    params["contentChanges"] = cc;
+
+    m_transport->send(createNotification("textDocument/didChange", params));
 }
 
 std::future<nlohmann::json> LSPClient::completion(const std::string& uri, int line, int character) {
     return std::async(std::launch::deferred, [this, uri, line, character]() {
         std::lock_guard<std::mutex> lock(m_mutex);
         if (!m_initialized || !m_transport || !m_transport->isConnected()) {
-            return nlohmann::json{{"items", nlohmann::json::array()}};
+            nlohmann::json empty = nlohmann::json::object();
+            empty["items"] = nlohmann::json::array();
+            return empty;
         }
 
-        m_transport->send(createRequest(
-            "textDocument/completion",
-            {{"textDocument", {{"uri", uri}}}, {"position", {{"line", line}, {"character", character}}}}));
+        nlohmann::json td = nlohmann::json::object();
+        td["uri"] = uri;
+        nlohmann::json pos = nlohmann::json::object();
+        pos["line"] = line;
+        pos["character"] = character;
+        nlohmann::json params = nlohmann::json::object();
+        params["textDocument"] = td;
+        params["position"] = pos;
+
+        m_transport->send(createRequest("textDocument/completion", params));
         const auto response = m_transport->receive();
         if (response.contains("result")) return response["result"];
 
-        return nlohmann::json{
-            {"isIncomplete", false},
-            {"items",
-             {{{"label", "if"}, {"kind", 14}, {"detail", "keyword"}},
-              {{"label", "for"}, {"kind", 14}, {"detail", "keyword"}},
-              {{"label", "while"}, {"kind", 14}, {"detail", "keyword"}}}}};
+        nlohmann::json fallback = nlohmann::json::object();
+        fallback["isIncomplete"] = false;
+        nlohmann::json items = nlohmann::json::array();
+
+        nlohmann::json i1 = nlohmann::json::object();
+        i1["label"] = "if"; i1["kind"] = 14; i1["detail"] = "keyword";
+        items.push_back(i1);
+
+        nlohmann::json i2 = nlohmann::json::object();
+        i2["label"] = "for"; i2["kind"] = 14; i2["detail"] = "keyword";
+        items.push_back(i2);
+
+        nlohmann::json i3 = nlohmann::json::object();
+        i3["label"] = "while"; i3["kind"] = 14; i3["detail"] = "keyword";
+        items.push_back(i3);
+
+        fallback["items"] = items;
+        return fallback;
     });
 }
 
@@ -333,9 +385,16 @@ std::future<nlohmann::json> LSPClient::definition(const std::string& uri, int li
             return nlohmann::json::array();
         }
 
-        m_transport->send(createRequest(
-            "textDocument/definition",
-            {{"textDocument", {{"uri", uri}}}, {"position", {{"line", line}, {"character", character}}}}));
+        nlohmann::json td = nlohmann::json::object();
+        td["uri"] = uri;
+        nlohmann::json pos = nlohmann::json::object();
+        pos["line"] = line;
+        pos["character"] = character;
+        nlohmann::json params = nlohmann::json::object();
+        params["textDocument"] = td;
+        params["position"] = pos;
+
+        m_transport->send(createRequest("textDocument/definition", params));
         const auto response = m_transport->receive();
         if (response.contains("result")) return response["result"];
         return nlohmann::json::array();
@@ -343,11 +402,20 @@ std::future<nlohmann::json> LSPClient::definition(const std::string& uri, int li
 }
 
 nlohmann::json LSPClient::createRequest(const std::string& method, const nlohmann::json& params) {
-    return nlohmann::json{{"jsonrpc", "2.0"}, {"id", ++m_requestId}, {"method", method}, {"params", params}};
+    nlohmann::json req = nlohmann::json::object();
+    req["jsonrpc"] = "2.0";
+    req["id"] = ++m_requestId;
+    req["method"] = method;
+    req["params"] = params;
+    return req;
 }
 
 nlohmann::json LSPClient::createNotification(const std::string& method, const nlohmann::json& params) {
-    return nlohmann::json{{"jsonrpc", "2.0"}, {"method", method}, {"params", params}};
+    nlohmann::json req = nlohmann::json::object();
+    req["jsonrpc"] = "2.0";
+    req["method"] = method;
+    req["params"] = params;
+    return req;
 }
 
 }  // namespace RawrXD

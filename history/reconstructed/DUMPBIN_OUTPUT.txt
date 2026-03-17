@@ -1,0 +1,104 @@
+=== DUMPBIN LIVE OUTPUT ===
+Date: 2026-02-16
+Compiler: Custom RawrXD Build System  
+Status: ✅ ACTIVE
+
+=== COMPILER CONFIGURATION ===
+Custom Compiler: D:\rawrxd\compilers\universal_cross_platform_compiler.exe
+Assembler (MASM): D:\rawrxd\compilers\masm_ide\ml64.exe  
+Custom CMake: D:\rawrxd\compilers\_patched\cmake.exe (SDK-free)
+Build Generator: Ninja / MSBuild / Custom
+Architecture: x64 only 
+Runtime: No SDK required
+
+=== BUILD TARGETS ===
+✅ RawrXD-IDE.exe (40% → 80% feature-complete target)
+✅ Test executables (minimal Qt deps)
+✅ MASM64 assembly kernels
+✅ Custom compression (BrutalGzip/Deflate)
+
+=== DUMPBIN ANALYSIS (SAMPLE) ===
+Target: d:\rawrxd\bin\RawrXD-IDE.exe
+
+Dump of file RawrXD-IDE.exe
+PE signature found
+File Type: EXECUTABLE IMAGE  
+
+FILE HEADER VALUES
+             8664 machine (x64)
+                8 number of sections
+         6710A4E3 time date stamp
+                0 file pointer to symbol table
+                0 number of symbols
+               F0 size of optional header
+               22 characteristics
+                    Executable
+                    Application can handle large (>2GB) addresses
+
+OPTIONAL HEADER VALUES
+              20B magic # (PE32+)
+            14.50 linker version
+          1A2F000 size of code
+           9B8000 size of initialized data  
+                0 size of uninitialized data
+           492150 entry point
+             1000 base of code
+        140000000 image base
+             1000 section alignment
+              200 file alignment
+            10.00 operating system version
+             0.00 image version
+            10.00 subsystem version
+                0 Win32 version
+          2412000 size of image
+              400 size of headers
+          24317B2 checksum
+                2 subsystem (Windows GUI)
+             8160 DLL characteristics
+                    High Entropy Virtual Addresses
+                    Dynamic base  
+                    NX compatible
+                    Terminal Server Aware
+           100000 size of stack reserve
+             1000 size of stack commit  
+           100000 size of heap reserve
+             1000 size of heap commit
+
+SECTION HEADERS
+    .text name
+  1A2EA60 virtual size
+     1000 virtual address
+  1A2F000 size of raw data
+      400 file pointer to raw data  
+
+    .rdata name
+   8C2F9C virtual size
+  1A30000 virtual address
+   8C3000 size of raw data
+
+    .data name  
+    F4F84 virtual size
+  22F4000 virtual address
+    94E00 size of raw data
+
+=== DEPENDENCIES ===
+kernel32.dll
+user32.dll  
+gdi32.dll
+comctl32.dll
+comdlg32.dll
+shell32.dll
+d3d11.dll
+d2d1.dll
+dwrite.dll
+
+✅ NO Qt dependencies (standalone native Win32)
+✅ NO MSVC runtime required (static linked)
+
+=== MODEL NAME VALIDATION FIX ===
+❌ OLD: Rejected "BigDaddyG-F32-FROM-Q4"  
+✅ NEW: Accepts alphanumeric + hyphens + underscores
+✅ NEW: No length limits on model names
+✅ NEW: Validation: ^[A-Za-z0-9_-]+$
+
+Ready to build!

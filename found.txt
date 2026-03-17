@@ -1,0 +1,10 @@
+D:\rawrxd\gguf_d3d12_bridge.obj
+D:\rawrxd\build\CMakeFiles\RawrXD-Benchmark.dir\src\gguf_d3d12_bridge.cpp.obj
+D:\rawrxd\build\CMakeFiles\RawrXD-Benchmark.dir\src\gguf_d3d12_bridge.cpp.obj.d
+D:\rawrxd\build\CMakeFiles\RawrXD-FusedBenchmark.dir\src\gguf_d3d12_bridge.cpp.obj
+D:\rawrxd\build\CMakeFiles\RawrXD-FusedBenchmark.dir\src\gguf_d3d12_bridge.cpp.obj.d
+D:\rawrxd\build_prod\CMakeFiles\RawrXD-AutoFixCLI.dir\src\gguf_d3d12_bridge.cpp.obj
+D:\rawrxd\build_test\CMakeFiles\RawrXD-FusedBenchmark.dir\src\gguf_d3d12_bridge.cpp.obj
+D:\rawrxd\build_test\CMakeFiles\RawrXD-FusedBenchmark.dir\src\gguf_d3d12_bridge.cpp.obj.d
+D:\rawrxd\include\gguf_d3d12_bridge.h
+D:\rawrxd\src\gguf_d3d12_bridge.cpp

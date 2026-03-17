@@ -1,0 +1,20 @@
+BATCH5_CLEAN 2026-03-02T18:03:19.3053945-05:00
+BUILD1_EXIT=1
+
+ssot_handlers_ext_isolated.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleDecompCopyAll(struct CommandContext const &)" (?handleDecompCopyAll@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in missing_handler_stubs.cpp.obj
+ssot_handlers_ext_isolated.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleDecompCopyLine(struct CommandContext const &)" (?handleDecompCopyLine@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in missing_handler_stubs.cpp.obj
+ssot_handlers_ext_isolated.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleDecompFindRefs(struct CommandContext const &)" (?handleDecompFindRefs@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in missing_handler_stubs.cpp.obj
+
+BUILD2_EXIT=1
+
+ssot_handlers_ext_isolated.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleDecompCopyAll(struct CommandContext const &)" (?handleDecompCopyAll@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in missing_handler_stubs.cpp.obj
+ssot_handlers_ext_isolated.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleDecompCopyLine(struct CommandContext const &)" (?handleDecompCopyLine@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in missing_handler_stubs.cpp.obj
+ssot_handlers_ext_isolated.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleDecompFindRefs(struct CommandContext const &)" (?handleDecompFindRefs@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in missing_handler_stubs.cpp.obj
+
+BUILD3_EXIT=1
+
+ssot_handlers_ext_isolated.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleDecompCopyAll(struct CommandContext const &)" (?handleDecompCopyAll@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in missing_handler_stubs.cpp.obj
+ssot_handlers_ext_isolated.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleDecompCopyLine(struct CommandContext const &)" (?handleDecompCopyLine@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in missing_handler_stubs.cpp.obj
+ssot_handlers_ext_isolated.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleDecompFindRefs(struct CommandContext const &)" (?handleDecompFindRefs@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in missing_handler_stubs.cpp.obj
+
+SHA256=133B5A0AF5493110BADADE4C7B017046CF0729AFAAF27AB04462C8A3351D01E7

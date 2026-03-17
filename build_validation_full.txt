@@ -1,0 +1,487 @@
+=== BUILD VALIDATION (TRIPLE) ===
+DATE=2026-03-02T12:42:46
+HEAD=5c3c4d2f59098497cd9fd6f20bbfca3b6bb6d759
+BRANCH=codex/single-repo-batched-sync
+
+--- BUILD 1 ---
+╔════════════════════════════════════════════════════════════════════════════╗
+║                                                                            ║
+║        🔥 MONOLITHIC MASM IDE BUILD - COMPLETE ORCHESTRATION 🔥            ║
+║                                                                            ║,.
+║  Executing parallel remediation to fix section overflow and link the      ║
+║  complete RawrXD IDE from monolithic MASM + C++ components                ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+⏭️  Skipping forensics phase
+
+⏭️  Skipping rebuild phase
+
+ + ================================================================================
+PHASE 3: EXECUTE PARALLEL LINKING STRATEGIES
+================================================================================
+🚀 MONOLITHIC LINKING STRATEGIES
+= * 80
+
+ℹ️  Falling back to custom strategies (CMake truth link not available or failed)
+⚠️  ATL/MFC lib dir missing: C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\atlmfc\lib\x64
+   Using fallback MSVC CRT lib dir: C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\lib\x64
+   Using C++ entrypoint: win32ide_main.obj (excluding ASM main.obj)
+   Replacing asm_monolithic_beacon.obj with rebuilt beacon.obj
+   Replacing asm_monolithic_inference.obj with rebuilt inference.obj
+   Replacing asm_monolithic_model_loader.obj with rebuilt model_loader.obj
+   Replacing asm_monolithic_swarm_coordinator.obj with rebuilt swarm_coordinator.obj
+   Replacing asm_monolithic_swarm.obj with rebuilt swarm.obj
+   Excluding asm_monolithic_main.obj (duplicate WinMain vs win32ide_main.obj)
+
+📊 Object Inventory:
+   ASM Objects (combined): 11 files
+   Rebuilt ASM: 5 files
+   Main Entry: True
+   C++ Objects: 248 files
+
+ + ================================================================================
+📘 DETERMINISTIC LINK MODE (archive partitioning)
+   Building core_asm.lib (11 objects)...
+   ✅ core_asm.lib ready (89.93 KB)
+   Building core_cpp.lib (148 objects)...
+   ✅ core_cpp.lib ready (526578.42 KB)
+   Building feature_cpp.lib (248 objects)...
+   ✅ feature_cpp.lib ready (1313250.51 KB)
+   Building agents.lib (21 objects)...
+   ✅ agents.lib ready (90563.47 KB)
+   Building ui.lib (33 objects)...
+   ✅ ui.lib ready (309661.79 KB)
+   Building inference.lib (14 objects)...
+   ✅ inference.lib ready (51367.97 KB)
+
+   Archive set: 6 libraries
+   - core_asm.lib
+   - core_cpp.lib
+   - feature_cpp.lib
+   - agents.lib
+   - ui.lib
+   - inference.lib
+
+   Linking deterministic executable...
+
+ + ================================================================================
+📊 LINKING RESULTS SUMMARY
+= * 80
+✅ SUCCESS - Deterministic: 0 MB
+🏆 OUTPUT: D:\rawrxd\build\RawrXD_Deterministic.exe
+
+✅ Linking strategies complete
+
+ + ================================================================================
+PHASE 4: VERIFICATION & OUTPUT
+================================================================================
+
+❌ ALL LINKING STRATEGIES FAILED
+   Check logs in: D:\rawrxd\build
+   Common issues:
+     • Missing monolithic ASM sources
+     • Section overflow in large C++ objects
+     • Symbol collisions
+     • Incomplete MSVC toolchain setup
+
+📄 Log excerpts (last 10 lines each):
+
+   --- final_build.log ---
+   ssot_validation.cpp.obj : error LNK2001: unresolved external symbol "struct CommandResult __cdecl handleVoiceAutoStop(struct CommandContext const &)" (?handleVoiceAutoStop@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+   
+   unified_command_dispatch.cpp.obj : error LNK2001: unresolved external symbol "struct CommandResult __cdecl handleVoiceAutoStop(struct CommandContext const &)" (?handleVoiceAutoStop@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+   
+   agentic_transaction.cpp.obj : error LNK2001: unresolved external symbol "struct CommandResult __cdecl handleVoiceAutoStop(struct CommandContext const &)" (?handleVoiceAutoStop@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+   
+   gold\RawrXD_Gold.exe : fatal error LNK1120: 14 unresolved externals
+   
+   
+   ninja: build stopped: subcommand failed.
+BUILD1_EXIT=1
+
+--- BUILD 2 ---
+╔════════════════════════════════════════════════════════════════════════════╗
+║                                                                            ║
+║        🔥 MONOLITHIC MASM IDE BUILD - COMPLETE ORCHESTRATION 🔥            ║
+║                                                                            ║,.
+║  Executing parallel remediation to fix section overflow and link the      ║
+║  complete RawrXD IDE from monolithic MASM + C++ components                ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+⏭️  Skipping forensics phase
+
+⏭️  Skipping rebuild phase
+
+ + ================================================================================
+PHASE 3: EXECUTE PARALLEL LINKING STRATEGIES
+================================================================================
+🚀 MONOLITHIC LINKING STRATEGIES
+= * 80
+
+ℹ️  Falling back to custom strategies (CMake truth link not available or failed)
+⚠️  ATL/MFC lib dir missing: C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\atlmfc\lib\x64
+   Using fallback MSVC CRT lib dir: C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\lib\x64
+   Using C++ entrypoint: win32ide_main.obj (excluding ASM main.obj)
+   Replacing asm_monolithic_beacon.obj with rebuilt beacon.obj
+   Replacing asm_monolithic_inference.obj with rebuilt inference.obj
+   Replacing asm_monolithic_model_loader.obj with rebuilt model_loader.obj
+   Replacing asm_monolithic_swarm_coordinator.obj with rebuilt swarm_coordinator.obj
+   Replacing asm_monolithic_swarm.obj with rebuilt swarm.obj
+   Excluding asm_monolithic_main.obj (duplicate WinMain vs win32ide_main.obj)
+
+📊 Object Inventory:
+   ASM Objects (combined): 11 files
+   Rebuilt ASM: 5 files
+   Main Entry: True
+   C++ Objects: 248 files
+
+ + ================================================================================
+📘 DETERMINISTIC LINK MODE (archive partitioning)
+   Building core_asm.lib (11 objects)...
+   ✅ core_asm.lib ready (89.93 KB)
+   Building core_cpp.lib (148 objects)...
+   ✅ core_cpp.lib ready (526578.42 KB)
+   Building feature_cpp.lib (248 objects)...
+   ✅ feature_cpp.lib ready (1313250.51 KB)
+   Building agents.lib (21 objects)...
+   ✅ agents.lib ready (90563.47 KB)
+   Building ui.lib (33 objects)...
+   ✅ ui.lib ready (309661.79 KB)
+   Building inference.lib (14 objects)...
+   ✅ inference.lib ready (51367.97 KB)
+
+   Archive set: 6 libraries
+   - core_asm.lib
+   - core_cpp.lib
+   - feature_cpp.lib
+   - agents.lib
+   - ui.lib
+   - inference.lib
+
+   Linking deterministic executable...
+
+ + ================================================================================
+📊 LINKING RESULTS SUMMARY
+= * 80
+✅ SUCCESS - Deterministic: 0 MB
+🏆 OUTPUT: D:\rawrxd\build\RawrXD_Deterministic.exe
+
+✅ Linking strategies complete
+
+ + ================================================================================
+PHASE 4: VERIFICATION & OUTPUT
+================================================================================
+
+❌ ALL LINKING STRATEGIES FAILED
+   Check logs in: D:\rawrxd\build
+   Common issues:
+     • Missing monolithic ASM sources
+     • Section overflow in large C++ objects
+     • Symbol collisions
+     • Incomplete MSVC toolchain setup
+
+📄 Log excerpts (last 10 lines each):
+
+   --- final_build.log ---
+   ssot_validation.cpp.obj : error LNK2001: unresolved external symbol "struct CommandResult __cdecl handleVoiceAutoStop(struct CommandContext const &)" (?handleVoiceAutoStop@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+   
+   unified_command_dispatch.cpp.obj : error LNK2001: unresolved external symbol "struct CommandResult __cdecl handleVoiceAutoStop(struct CommandContext const &)" (?handleVoiceAutoStop@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+   
+   agentic_transaction.cpp.obj : error LNK2001: unresolved external symbol "struct CommandResult __cdecl handleVoiceAutoStop(struct CommandContext const &)" (?handleVoiceAutoStop@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+   
+   gold\RawrXD_Gold.exe : fatal error LNK1120: 14 unresolved externals
+   
+   
+   ninja: build stopped: subcommand failed.
+BUILD2_EXIT=1
+
+--- BUILD 3 ---
+╔════════════════════════════════════════════════════════════════════════════╗
+║                                                                            ║
+║        🔥 MONOLITHIC MASM IDE BUILD - COMPLETE ORCHESTRATION 🔥            ║
+║                                                                            ║,.
+║  Executing parallel remediation to fix section overflow and link the      ║
+║  complete RawrXD IDE from monolithic MASM + C++ components                ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+⏭️  Skipping forensics phase
+
+⏭️  Skipping rebuild phase
+
+ + ================================================================================
+PHASE 3: EXECUTE PARALLEL LINKING STRATEGIES
+================================================================================
+🚀 MONOLITHIC LINKING STRATEGIES
+= * 80
+
+ℹ️  Falling back to custom strategies (CMake truth link not available or failed)
+⚠️  ATL/MFC lib dir missing: C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\atlmfc\lib\x64
+   Using fallback MSVC CRT lib dir: C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\lib\x64
+   Using C++ entrypoint: win32ide_main.obj (excluding ASM main.obj)
+   Replacing asm_monolithic_beacon.obj with rebuilt beacon.obj
+   Replacing asm_monolithic_inference.obj with rebuilt inference.obj
+   Replacing asm_monolithic_model_loader.obj with rebuilt model_loader.obj
+   Replacing asm_monolithic_swarm_coordinator.obj with rebuilt swarm_coordinator.obj
+   Replacing asm_monolithic_swarm.obj with rebuilt swarm.obj
+   Excluding asm_monolithic_main.obj (duplicate WinMain vs win32ide_main.obj)
+
+📊 Object Inventory:
+   ASM Objects (combined): 11 files
+   Rebuilt ASM: 5 files
+   Main Entry: True
+   C++ Objects: 248 files
+
+ + ================================================================================
+📘 DETERMINISTIC LINK MODE (archive partitioning)
+   Building core_asm.lib (11 objects)...
+   ✅ core_asm.lib ready (89.93 KB)
+   Building core_cpp.lib (148 objects)...
+   ✅ core_cpp.lib ready (526578.42 KB)
+   Building feature_cpp.lib (248 objects)...
+   ✅ feature_cpp.lib ready (1313250.51 KB)
+   Building agents.lib (21 objects)...
+   ✅ agents.lib ready (90563.47 KB)
+   Building ui.lib (33 objects)...
+   ✅ ui.lib ready (309661.79 KB)
+   Building inference.lib (14 objects)...
+   ✅ inference.lib ready (51367.97 KB)
+
+   Archive set: 6 libraries
+   - core_asm.lib
+   - core_cpp.lib
+   - feature_cpp.lib
+   - agents.lib
+   - ui.lib
+   - inference.lib
+
+   Linking deterministic executable...
+
+ + ================================================================================
+📊 LINKING RESULTS SUMMARY
+= * 80
+✅ SUCCESS - Deterministic: 0 MB
+🏆 OUTPUT: D:\rawrxd\build\RawrXD_Deterministic.exe
+
+✅ Linking strategies complete
+
+ + ================================================================================
+PHASE 4: VERIFICATION & OUTPUT
+================================================================================
+
+❌ ALL LINKING STRATEGIES FAILED
+   Check logs in: D:\rawrxd\build
+   Common issues:
+     • Missing monolithic ASM sources
+     • Section overflow in large C++ objects
+     • Symbol collisions
+     • Incomplete MSVC toolchain setup
+
+📄 Log excerpts (last 10 lines each):
+
+   --- final_build.log ---
+   ssot_validation.cpp.obj : error LNK2001: unresolved external symbol "struct CommandResult __cdecl handleVoiceAutoStop(struct CommandContext const &)" (?handleVoiceAutoStop@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+   
+   unified_command_dispatch.cpp.obj : error LNK2001: unresolved external symbol "struct CommandResult __cdecl handleVoiceAutoStop(struct CommandContext const &)" (?handleVoiceAutoStop@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+   
+   agentic_transaction.cpp.obj : error LNK2001: unresolved external symbol "struct CommandResult __cdecl handleVoiceAutoStop(struct CommandContext const &)" (?handleVoiceAutoStop@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+   
+   gold\RawrXD_Gold.exe : fatal error LNK1120: 14 unresolved externals
+   
+   
+   ninja: build stopped: subcommand failed.
+BUILD3_EXIT=1
+
+=== ARTIFACT IDENTITY ===
+Win32IDE_SIZE_MB=27.03
+
+Algorithm       Hash
+---------       ----                    
+SHA256          4CC1FD2F7B3C8F47C7898E7…
+
+
+GOLD_SIZE_MB=9.32
+
+Algorithm       Hash
+---------       ----                    
+SHA256          CF6F059BE69CAF6207DDB1E…
+
+
+
+=== GIT TAGS (LOCAL) ===
+v1.0-stable-lazy
+v1.0.0
+v1.0.1
+v1.1-lazy-telemetry
+v1.10-lazy-aicodeassistantpanel
+v1.11-lazy-tokenizerselector
+v1.12-lazy-settingsdialog
+v1.13-lazy-trainingdialog
+v1.14-lazy-sentencepiece
+v1.15-lazy-trainingprogressdock
+v1.16-lazy-chatworkspace
+v1.2-lazy-settings
+v1.3-lazy-multitab
+v1.4-lazy-chatinterface
+v1.5-lazy-agenticengine
+v1.6-lazy-observability
+v1.7-lazy-terminalpool
+v1.8-lazy-filebrowser
+v1.9-lazy-tododock
+
+--- BUILD 2 ---
+╔════════════════════════════════════════════════════════════════════════════╗
+║                                                                            ║
+║        🔥 MONOLITHIC MASM IDE BUILD - COMPLETE ORCHESTRATION 🔥            ║
+║                                                                            ║,.
+║  Executing parallel remediation to fix section overflow and link the      ║
+║  complete RawrXD IDE from monolithic MASM + C++ components                ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+⏭️  Skipping forensics phase
+
+⏭️  Skipping rebuild phase
+
+ + ================================================================================
+PHASE 3: EXECUTE PARALLEL LINKING STRATEGIES
+================================================================================
+At 
+D:\rawrxd\tools\link_strategies.ps1:22 
+char:73
++ ... omPath = (Get-Command link.exe 
+-ErrorAction SilentlyContinue)?.Source
++                                      
+                            ~~~~~~~~
+Unexpected token '?.Source' in 
+expression or statement.
+At D:\rawrxd\tools\link_strategies.ps1:
+177 char:75
++ ... nmake = (Get-Command nmake.exe 
+-ErrorAction SilentlyContinue)?.Source
++                                      
+                            ~~~~~~~~
+Unexpected token '?.Source' in 
+expression or statement.
+At D:\rawrxd\tools\link_strategies.ps1:
+242 char:119
++ ... ake = (Get-Command nmake.exe 
+-ErrorAction SilentlyContinue)?.Source 
+}
++                                      
+                          ~~~~~~~~
+Unexpected token '?.Source' in 
+expression or statement.
+    + CategoryInfo          : ParserEr 
+   ror: (:) [], ParseException
+    + FullyQualifiedErrorId : Unexpect 
+   edToken
+ 
+
+ + ================================================================================
+PHASE 4: VERIFICATION & OUTPUT
+================================================================================
+
+❌ ALL LINKING STRATEGIES FAILED
+   Check logs in: D:\rawrxd\build
+   Common issues:
+     • Missing monolithic ASM sources
+     • Section overflow in large C++ objects
+     • Symbol collisions
+     • Incomplete MSVC toolchain setup
+
+📄 Log excerpts (last 10 lines each):
+
+   --- final_build.log ---
+   ssot_validation.cpp.obj : error LNK2001: unresolved external symbol "struct CommandResult __cdecl handleVoiceAutoStop(struct CommandContext const &)" (?handleVoiceAutoStop@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+   
+   unified_command_dispatch.cpp.obj : error LNK2001: unresolved external symbol "struct CommandResult __cdecl handleVoiceAutoStop(struct CommandContext const &)" (?handleVoiceAutoStop@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+   
+   agentic_transaction.cpp.obj : error LNK2001: unresolved external symbol "struct CommandResult __cdecl handleVoiceAutoStop(struct CommandContext const &)" (?handleVoiceAutoStop@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+   
+   gold\RawrXD_Gold.exe : fatal error LNK1120: 14 unresolved externals
+   
+   
+   ninja: build stopped: subcommand failed.
+BUILD2_EXIT=1
+
+--- BUILD 3 ---
+╔════════════════════════════════════════════════════════════════════════════╗
+║                                                                            ║
+║        🔥 MONOLITHIC MASM IDE BUILD - COMPLETE ORCHESTRATION 🔥            ║
+║                                                                            ║,.
+║  Executing parallel remediation to fix section overflow and link the      ║
+║  complete RawrXD IDE from monolithic MASM + C++ components                ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+⏭️  Skipping forensics phase
+
+⏭️  Skipping rebuild phase
+
+ + ================================================================================
+PHASE 3: EXECUTE PARALLEL LINKING STRATEGIES
+================================================================================
+At 
+D:\rawrxd\tools\link_strategies.ps1:22 
+char:73
++ ... omPath = (Get-Command link.exe 
+-ErrorAction SilentlyContinue)?.Source
++                                      
+                            ~~~~~~~~
+Unexpected token '?.Source' in 
+expression or statement.
+At D:\rawrxd\tools\link_strategies.ps1:
+177 char:75
++ ... nmake = (Get-Command nmake.exe 
+-ErrorAction SilentlyContinue)?.Source
++                                      
+                            ~~~~~~~~
+Unexpected token '?.Source' in 
+expression or statement.
+At D:\rawrxd\tools\link_strategies.ps1:
+242 char:119
++ ... ake = (Get-Command nmake.exe 
+-ErrorAction SilentlyContinue)?.Source 
+}
++                                      
+                          ~~~~~~~~
+Unexpected token '?.Source' in 
+expression or statement.
+    + CategoryInfo          : ParserEr 
+   ror: (:) [], ParseException
+    + FullyQualifiedErrorId : Unexpect 
+   edToken
+ 
+
+ + ================================================================================
+PHASE 4: VERIFICATION & OUTPUT
+================================================================================
+
+❌ ALL LINKING STRATEGIES FAILED
+   Check logs in: D:\rawrxd\build
+   Common issues:
+     • Missing monolithic ASM sources
+     • Section overflow in large C++ objects
+     • Symbol collisions
+     • Incomplete MSVC toolchain setup
+
+📄 Log excerpts (last 10 lines each):
+
+   --- final_build.log ---
+   ssot_validation.cpp.obj : error LNK2001: unresolved external symbol "struct CommandResult __cdecl handleVoiceAutoStop(struct CommandContext const &)" (?handleVoiceAutoStop@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+   
+   unified_command_dispatch.cpp.obj : error LNK2001: unresolved external symbol "struct CommandResult __cdecl handleVoiceAutoStop(struct CommandContext const &)" (?handleVoiceAutoStop@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+   
+   agentic_transaction.cpp.obj : error LNK2001: unresolved external symbol "struct CommandResult __cdecl handleVoiceAutoStop(struct CommandContext const &)" (?handleVoiceAutoStop@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+   
+   gold\RawrXD_Gold.exe : fatal error LNK1120: 14 unresolved externals
+   
+   
+   ninja: build stopped: subcommand failed.
+BUILD3_EXIT=1
+
+WIN32IDE_SHA256=4CC1FD2F7B3C8F47C7898E7A39AC0D189F0305180455A7C2685BFC8E6D06B822
+GOLD_SHA256=CF6F059BE69CAF6207DDB1E075C470B7C1E7A181451CB85FEB36F6C46567024E

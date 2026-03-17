@@ -400,6 +400,7 @@ class ToolActionStatusFormatter {
 public:
     // ---- Icon lookups ----
     static const char* iconForKind(ToolActionKind kind);
+    static const char* nameForKind(ToolActionKind kind);
     static const char* stateIcon(ToolActionState state);
     static const char* cssClassForState(ToolActionState state);
 

@@ -1,0 +1,36 @@
+{
+	"folders": [
+		{
+			"path": "D:/"
+		},
+		{
+			"path": "E:/Everything/Security Research aka GitHub Repos/carmilla-encryption-system/ItsMehRAWRXD-carmilla-encryption-system-cdbfdfe"
+		},
+		{
+			"path": "G:/Everything/Security Research aka GitHub Repos"
+		},
+		{
+			"path": "D:/BigDaddyG-Part4-RawrZ-Security-master"
+		},
+		{
+			"path": "D:/Stash House"
+		},
+		{
+			"path": "../../../../../../.."
+		},
+		{
+			"path": "E:/"
+		},
+		{
+			"path": "F:/"
+		},
+		{
+			"path": "G:/"
+		}
+	],
+	"settings": {
+		"git.ignoreLimitWarning": true,
+		"chatgpt.followUpQueueMode": "interrupt",
+		"chatgpt.commentCodeLensEnabled": false
+	}
+}

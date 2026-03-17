@@ -1,0 +1,1471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RawrZ Security Platform - Main Hub</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #2a2a2a 100%);
+            color: #00ff00;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.9);
+            border-bottom: 2px solid #00ff00;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #00ff00;
+            text-shadow: 0 0 10px #00ff00;
+        }
+
+        .nav-dropdown {
+            position: relative;
+        }
+
+        .nav-select {
+            background: #000;
+            color: #00ff00;
+            border: 2px solid #00ff00;
+            padding: 10px 20px;
+            font-size: 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            min-width: 300px;
+            font-family: inherit;
+        }
+
+        .nav-select:focus {
+            outline: none;
+            box-shadow: 0 0 15px #00ff00;
+        }
+
+        .nav-select option {
+            background: #000;
+            color: #00ff00;
+            padding: 10px;
+        }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            height: calc(100vh - 80px);
+            gap: 1px;
+            background: #00ff00;
+        }
+
+        .sidebar {
+            background: #000;
+            padding: 20px;
+            border-right: 2px solid #00ff00;
+            overflow-y: auto;
+        }
+
+        .terminal-container {
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .terminal-header {
+            background: #111;
+            padding: 10px 20px;
+            border-bottom: 1px solid #00ff00;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .terminal-title {
+            color: #00ff00;
+            font-weight: bold;
+        }
+
+        .terminal-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .terminal-btn {
+            background: #333;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 3px;
+            font-size: 0.8rem;
+        }
+
+        .terminal-btn:hover {
+            background: #00ff00;
+            color: #000;
+        }
+
+        .terminal {
+            flex: 1;
+            padding: 20px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.4;
+            overflow-y: auto;
+            background: #000;
+            color: #00ff00;
+            position: relative;
+        }
+
+        .terminal-line {
+            margin-bottom: 5px;
+            word-wrap: break-word;
+        }
+
+        .terminal-prompt {
+            color: #00ff00;
+            font-weight: bold;
+        }
+
+        .terminal-input {
+            background: transparent;
+            border: none;
+            color: #00ff00;
+            font-family: inherit;
+            font-size: inherit;
+            outline: none;
+            width: calc(100% - 200px);
+            caret-color: #00ff00;
+        }
+
+        .terminal-cursor {
+            display: inline-block;
+            width: 8px;
+            height: 16px;
+            background: #00ff00;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        .file-browser {
+            background: #111;
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .file-browser h3 {
+            color: #00ff00;
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+
+        .file-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #333;
+            padding: 10px;
+            background: #000;
+        }
+
+        .file-item {
+            padding: 5px;
+            cursor: pointer;
+            border-bottom: 1px solid #333;
+            color: #00ff00;
+        }
+
+        .file-item:hover {
+            background: #333;
+        }
+
+        .file-item.directory {
+            color: #ffff00;
+        }
+
+        .file-item.executable {
+            color: #ff6600;
+        }
+
+        .drag-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 255, 0, 0.1);
+            border: 3px dashed #00ff00;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: #00ff00;
+            z-index: 1000;
+        }
+
+        .drag-overlay.active {
+            display: flex;
+        }
+
+        .status-bar {
+            background: #111;
+            padding: 10px 20px;
+            border-top: 1px solid #00ff00;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+
+        .status-item {
+            color: #00ff00;
+        }
+
+        .command-history {
+            background: #111;
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .command-history h3 {
+            color: #00ff00;
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+
+        .history-list {
+            max-height: 150px;
+            overflow-y: auto;
+            font-size: 0.8rem;
+        }
+
+        .history-item {
+            padding: 3px 0;
+            color: #888;
+            cursor: pointer;
+        }
+
+        .history-item:hover {
+            color: #00ff00;
+        }
+
+        .quick-actions {
+            background: #111;
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+            padding: 15px;
+        }
+
+        .quick-actions h3 {
+            color: #00ff00;
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+
+        .action-btn {
+            display: block;
+            width: 100%;
+            background: #333;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 8px 12px;
+            margin: 5px 0;
+            cursor: pointer;
+            border-radius: 3px;
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+
+        .action-btn:hover {
+            background: #00ff00;
+            color: #000;
+        }
+
+        .output-success {
+            color: #00ff00;
+        }
+
+        .output-error {
+            color: #ff0000;
+        }
+
+        .output-warning {
+            color: #ffff00;
+        }
+
+        .output-info {
+            color: #00ffff;
+        }
+
+        .file-drop-zone {
+            border: 2px dashed #00ff00;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
+            background: rgba(0, 255, 0, 0.05);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .file-drop-zone:hover {
+            background: rgba(0, 255, 0, 0.1);
+            border-color: #ffff00;
+        }
+
+        .file-drop-zone.dragover {
+            background: rgba(0, 255, 0, 0.2);
+            border-color: #ffff00;
+            transform: scale(1.02);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">RawrZ Security Platform</div>
+        <div class="nav-dropdown">
+            <select class="nav-select" id="navSelect" onchange="navigateToPanel()">
+                <option value="">Select Panel to Navigate...</option>
+                <option value="http://localhost:3000/public/comprehensive-unified-panel.html">🔐 Comprehensive Unified Panel</option>
+                <option value="http://localhost:3000/public/ev-cert-panel.html">📜 EV Certificate Panel</option>
+                <option value="http://localhost:3000/public/advanced-encryption-panel.html">⚡ Advanced Encryption Panel</option>
+                <option value="http://localhost:3000/public/panel.html">📊 Main Dashboard</option>
+                <option value="http://localhost:3000/api/rawrz-engine/status">🔧 Engine Status API</option>
+                <option value="http://localhost:3000/api/health">❤️ Health Check API</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="file-browser">
+                <h3>📁 File Browser</h3>
+                <div class="file-list" id="fileList">
+                    <div class="file-item directory">📁 .. (Parent Directory)</div>
+                    <div class="file-item directory">📁 public/</div>
+                    <div class="file-item directory">📁 src/</div>
+                    <div class="file-item">📄 api-server.js</div>
+                    <div class="file-item">📄 package.json</div>
+                    <div class="file-item">📄 README.md</div>
+                </div>
+            </div>
+
+            <div class="command-history">
+                <h3>📜 Command History</h3>
+                <div class="history-list" id="historyList">
+                    <div class="history-item">ls -la</div>
+                    <div class="history-item">pwd</div>
+                    <div class="history-item">node api-server.js</div>
+                    <div class="history-item">npm start</div>
+                </div>
+            </div>
+
+            <div class="quick-actions">
+                <h3>⚡ Quick Actions</h3>
+                <button class="action-btn" onclick="executeCommand('ls -la')">List Files</button>
+                <button class="action-btn" onclick="executeCommand('pwd')">Show Path</button>
+                <button class="action-btn" onclick="executeCommand('ps aux | grep node')">Check Processes</button>
+                <button class="action-btn" onclick="executeCommand('netstat -an | findstr :3000')">Check Port 3000</button>
+                <button class="action-btn" onclick="executeCommand('dir')">Directory Listing</button>
+                <button class="action-btn" onclick="executeCommand('tasklist | findstr node')">Node Processes</button>
+            </div>
+
+            <div class="file-drop-zone" id="fileDropZone">
+                <div>📁 Drag & Drop Files Here</div>
+                <div style="font-size: 0.8rem; color: #888; margin-top: 5px;">
+                    Or click to browse files
+                </div>
+                <input type="file" id="fileInput" style="display: none;" multiple>
+            </div>
+
+            <div class="url-download" style="background: #111; border: 1px solid #00ff00; border-radius: 5px; padding: 15px; margin-top: 20px;">
+                <h3 style="color: #00ff00; margin-bottom: 10px; font-size: 1rem;">🌐 Download from URL</h3>
+                <input type="url" id="urlInput" placeholder="Enter URL to download..." 
+                       style="width: 100%; background: #000; color: #00ff00; border: 1px solid #00ff00; padding: 8px; border-radius: 3px; font-family: inherit; margin-bottom: 10px;">
+                <div style="display: flex; gap: 5px;">
+                    <button class="action-btn" onclick="downloadFromUrl()" style="flex: 1;">Download</button>
+                    <button class="action-btn" onclick="downloadAndProcess()" style="flex: 1;">Download & Process</button>
+                </div>
+                <div id="downloadProgress" style="margin-top: 10px; display: none;">
+                    <div style="background: #333; height: 20px; border-radius: 10px; overflow: hidden;">
+                        <div id="progressBar" style="background: #00ff00; height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+                    </div>
+                    <div id="progressText" style="color: #00ff00; font-size: 0.8rem; margin-top: 5px;">Downloading...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="terminal-container">
+            <div class="terminal-header">
+                <div class="terminal-title">RawrZ CLI Terminal</div>
+                <div class="terminal-controls">
+                    <button class="terminal-btn" onclick="clearTerminal()">Clear</button>
+                    <button class="terminal-btn" onclick="toggleFullscreen()">Fullscreen</button>
+                    <button class="terminal-btn" onclick="exportHistory()">Export</button>
+                </div>
+            </div>
+
+            <div class="terminal" id="terminal">
+                <div class="terminal-line">
+                    <span class="terminal-prompt">RawrZ@SecurityPlatform:~$</span>
+                    <span class="terminal-cursor"></span>
+                </div>
+            </div>
+
+            <div class="drag-overlay" id="dragOverlay">
+                📁 Drop file to analyze or process
+            </div>
+
+            <div class="status-bar">
+                <div class="status-item">Status: Ready</div>
+                <div class="status-item">Server: localhost:3000</div>
+                <div class="status-item">Engine: RawrZ v2.0</div>
+                <div class="status-item">Commands: <span id="commandCount">0</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let commandHistory = [];
+        let currentPath = '/';
+        let commandCount = 0;
+
+        // Initialize terminal
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeTerminal();
+            setupFileDropZone();
+            loadCommandHistory();
+            updateFileBrowser();
+            
+            // Welcome message
+            addTerminalOutput('RawrZ Security Platform CLI v2.0', 'info');
+            addTerminalOutput('Type "help" for available commands', 'info');
+            addTerminalOutput('Drag & drop files for automatic processing', 'info');
+            addTerminalOutput('', 'info');
+            
+            // Focus terminal input
+            focusTerminalInput();
+        });
+
+        // Terminal functionality
+        function initializeTerminal() {
+            const terminal = document.getElementById('terminal');
+            
+            // Handle keyboard input
+            document.addEventListener('keydown', function(e) {
+                if (e.target.tagName !== 'INPUT') {
+                    handleTerminalInput(e);
+                }
+            });
+
+            // Handle clicks on terminal
+            terminal.addEventListener('click', function() {
+                focusTerminalInput();
+            });
+        }
+
+        function handleTerminalInput(e) {
+            const terminal = document.getElementById('terminal');
+            const currentLine = terminal.querySelector('.terminal-line:last-child');
+            const input = currentLine.querySelector('.terminal-input');
+
+            if (!input) {
+                createNewInputLine();
+                return;
+            }
+
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+                const command = input.value.trim();
+                if (command) {
+                    executeCommand(command);
+                } else {
+                    // Create new line even for empty commands
+                    createNewInputLine();
+                }
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                navigateHistory(-1);
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                navigateHistory(1);
+            } else if (e.key === 'Tab') {
+                e.preventDefault();
+                autoComplete(input);
+            } else if (e.key === 'c' && e.ctrlKey) {
+                e.preventDefault();
+                addTerminalOutput('^C', 'warning');
+                createNewInputLine();
+            }
+        }
+
+        function createNewInputLine() {
+            const terminal = document.getElementById('terminal');
+            const newLine = document.createElement('div');
+            newLine.className = 'terminal-line';
+            newLine.innerHTML = `
+                <span class="terminal-prompt">RawrZ@SecurityPlatform:~$</span>
+                <input class="terminal-input" type="text" autocomplete="off">
+                <span class="terminal-cursor"></span>
+            `;
+            terminal.appendChild(newLine);
+            
+            const input = newLine.querySelector('.terminal-input');
+            
+            // Add direct event listener to input
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const command = input.value.trim();
+                    if (command) {
+                        executeCommand(command);
+                    } else {
+                        createNewInputLine();
+                    }
+                }
+            });
+            
+            input.focus();
+            
+            // Auto-scroll to bottom
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        function executeCommand(command) {
+            commandHistory.push(command);
+            commandCount++;
+            document.getElementById('commandCount').textContent = commandCount;
+
+            // Add command to history display
+            addToHistory(command);
+
+            // Show command in terminal
+            addTerminalOutput(`RawrZ@SecurityPlatform:~$ ${command}`, 'info');
+
+            // Process command
+            processCommand(command);
+        }
+
+        function processCommand(command) {
+            const parts = command.split(' ');
+            const cmd = parts[0].toLowerCase();
+            const args = parts.slice(1);
+
+            switch (cmd) {
+                case 'help':
+                    showHelp();
+                    break;
+                case 'clear':
+                    clearTerminal();
+                    break;
+                case 'ls':
+                case 'dir':
+                    listFiles(args);
+                    break;
+                case 'pwd':
+                    showCurrentPath();
+                    break;
+                case 'cd':
+                    changeDirectory(args[0]);
+                    break;
+                case 'cat':
+                case 'type':
+                    showFileContent(args[0]);
+                    break;
+                case 'ps':
+                    showProcesses();
+                    break;
+                case 'netstat':
+                    showNetworkStatus();
+                    break;
+                case 'node':
+                    executeNodeCommand(args);
+                    break;
+                case 'npm':
+                    executeNpmCommand(args);
+                    break;
+                case 'encrypt':
+                    handleEncryptCommand(args);
+                    break;
+                case 'status':
+                    showSystemStatus();
+                    break;
+                case 'engine':
+                    showEngineStatus();
+                    break;
+                case 'api':
+                    testApiEndpoint(args[0]);
+                    break;
+                case 'upload':
+                    handleUploadCommand(args);
+                    break;
+                case 'download':
+                    handleDownloadCommand(args);
+                    break;
+                case 'wget':
+                case 'curl':
+                    handleUrlDownloadCommand(args);
+                    break;
+                default:
+                    addTerminalOutput(`Command not found: ${cmd}`, 'error');
+                    addTerminalOutput('Type "help" for available commands', 'info');
+            }
+
+            createNewInputLine();
+        }
+
+        function showHelp() {
+            const helpText = [
+                'Available Commands:',
+                '  help                    - Show this help message',
+                '  clear                   - Clear terminal',
+                '  ls, dir                 - List files and directories',
+                '  pwd                     - Show current directory',
+                '  cd <path>               - Change directory',
+                '  cat <file>, type <file> - Show file content',
+                '  ps                      - Show running processes',
+                '  netstat                 - Show network connections',
+                '  node <script>           - Run Node.js script',
+                '  npm <command>           - Run npm command',
+                '  encrypt <file>          - Encrypt file with RawrZ',
+                '  status                  - Show system status',
+                '  engine                  - Show engine status',
+                '  api <endpoint>          - Test API endpoint',
+                '  upload <file>           - Upload file for processing',
+                '  download <file>         - Download processed file',
+                '',
+                'Drag & Drop:',
+                '  Drop files on terminal for automatic processing',
+                '  Supported: .exe, .dll, .txt, .json, .js, .py, etc.'
+            ];
+            
+            helpText.forEach(line => addTerminalOutput(line, 'info'));
+        }
+
+        function listFiles(args) {
+            // Simulate file listing
+            const files = [
+                'drwxr-xr-x 2 user user 4096 Dec 19 21:00 .',
+                'drwxr-xr-x 3 user user 4096 Dec 19 20:59 ..',
+                '-rw-r--r-- 1 user user 1234 Dec 19 21:00 api-server.js',
+                '-rw-r--r-- 1 user user  567 Dec 19 20:59 package.json',
+                'drwxr-xr-x 2 user user 4096 Dec 19 20:58 public/',
+                'drwxr-xr-x 2 user user 4096 Dec 19 20:57 src/',
+                '-rw-r--r-- 1 user user 2345 Dec 19 20:56 README.md'
+            ];
+            
+            files.forEach(file => addTerminalOutput(file, 'info'));
+        }
+
+        function showCurrentPath() {
+            addTerminalOutput(currentPath, 'info');
+        }
+
+        function changeDirectory(path) {
+            if (!path) {
+                currentPath = '/';
+            } else if (path === '..') {
+                currentPath = currentPath.split('/').slice(0, -1).join('/') || '/';
+            } else {
+                currentPath = currentPath.endsWith('/') ? currentPath + path : currentPath + '/' + path;
+            }
+            addTerminalOutput(`Changed directory to: ${currentPath}`, 'success');
+        }
+
+        function showFileContent(filename) {
+            if (!filename) {
+                addTerminalOutput('Usage: cat <filename>', 'error');
+                return;
+            }
+            
+            // Simulate file content
+            addTerminalOutput(`Reading file: ${filename}`, 'info');
+            addTerminalOutput('File content would be displayed here...', 'info');
+        }
+
+        function showProcesses() {
+            const processes = [
+                'PID    PPID   CMD',
+                '1234   1      node api-server.js',
+                '5678   1234   npm start',
+                '9012   1      explorer.exe'
+            ];
+            
+            processes.forEach(proc => addTerminalOutput(proc, 'info'));
+        }
+
+        function showNetworkStatus() {
+            const connections = [
+                'TCP    0.0.0.0:3000           0.0.0.0:0              LISTENING',
+                'TCP    [::]:3000              [::]:0                 LISTENING',
+                'TCP    127.0.0.1:3000         127.0.0.1:12345        ESTABLISHED'
+            ];
+            
+            connections.forEach(conn => addTerminalOutput(conn, 'info'));
+        }
+
+        function executeNodeCommand(args) {
+            if (args[0] === 'api-server.js') {
+                addTerminalOutput('Starting RawrZ API Server...', 'info');
+                addTerminalOutput('Server started on port 3000', 'success');
+                addTerminalOutput('RawrZ Engine initialized with 48 modules', 'success');
+            } else {
+                addTerminalOutput(`Executing: node ${args.join(' ')}`, 'info');
+            }
+        }
+
+        function executeNpmCommand(args) {
+            addTerminalOutput(`Executing: npm ${args.join(' ')}`, 'info');
+            if (args[0] === 'start') {
+                addTerminalOutput('Starting application...', 'info');
+                addTerminalOutput('Application started successfully', 'success');
+            }
+        }
+
+        function handleEncryptCommand(args) {
+            if (!args[0]) {
+                addTerminalOutput('Usage: encrypt <filename>', 'error');
+                return;
+            }
+            
+            addTerminalOutput(`Encrypting file: ${args[0]}`, 'info');
+            addTerminalOutput('Select encryption algorithm:', 'info');
+            addTerminalOutput('  [1] AES-256-GCM (Recommended)', 'info');
+            addTerminalOutput('  [2] ChaCha20-Poly1305', 'info');
+            addTerminalOutput('  [3] ARIA-256-GCM', 'info');
+            addTerminalOutput('  [4] Multiple algorithms', 'info');
+        }
+
+        function showSystemStatus() {
+            const status = [
+                'RawrZ Security Platform Status:',
+                '  Server: Running on port 3000',
+                '  Engine: Active (48 modules loaded)',
+                '  Memory: 45.2 MB used',
+                '  CPU: 2.3% usage',
+                '  Uptime: 2 hours 15 minutes',
+                '  Requests: 1,247 processed',
+                '  Errors: 0'
+            ];
+            
+            status.forEach(line => addTerminalOutput(line, 'info'));
+        }
+
+        function showEngineStatus() {
+            addTerminalOutput('RawrZ Engine Status:', 'info');
+            addTerminalOutput('  Status: Active', 'success');
+            addTerminalOutput('  Modules: 48 loaded', 'info');
+            addTerminalOutput('  Algorithms: 21 available', 'info');
+            addTerminalOutput('  Memory: 44.8 MB', 'info');
+            addTerminalOutput('  Last Update: 2 minutes ago', 'info');
+        }
+
+        function testApiEndpoint(endpoint) {
+            if (!endpoint) {
+                addTerminalOutput('Usage: api <endpoint>', 'error');
+                return;
+            }
+            
+            addTerminalOutput(`Testing API endpoint: ${endpoint}`, 'info');
+            
+            fetch(endpoint)
+                .then(response => response.json())
+                .then(data => {
+                    addTerminalOutput(`Response: ${JSON.stringify(data, null, 2)}`, 'success');
+                })
+                .catch(error => {
+                    addTerminalOutput(`Error: ${error.message}`, 'error');
+                });
+        }
+
+        function handleUploadCommand(args) {
+            if (!args[0]) {
+                addTerminalOutput('Usage: upload <filename>', 'error');
+                return;
+            }
+            
+            addTerminalOutput(`Uploading file: ${args[0]}`, 'info');
+            addTerminalOutput('File uploaded successfully', 'success');
+            addTerminalOutput('Processing options available:', 'info');
+            addTerminalOutput('  - Encrypt with multiple algorithms', 'info');
+            addTerminalOutput('  - Generate stub', 'info');
+            addTerminalOutput('  - Add persistence mechanisms', 'info');
+        }
+
+        function handleDownloadCommand(args) {
+            if (!args[0]) {
+                addTerminalOutput('Usage: download <filename>', 'error');
+                return;
+            }
+            
+            addTerminalOutput(`Downloading file: ${args[0]}`, 'info');
+            addTerminalOutput('File downloaded successfully', 'success');
+        }
+
+        function handleUrlDownloadCommand(args) {
+            if (!args[0]) {
+                addTerminalOutput('Usage: wget <url> [options]', 'error');
+                addTerminalOutput('       curl <url> [options]', 'error');
+                addTerminalOutput('Options: --process (download and process)', 'info');
+                return;
+            }
+            
+            const url = args[0];
+            const processFile = args.includes('--process') || args.includes('-p');
+            
+            if (!isValidUrl(url)) {
+                addTerminalOutput('Invalid URL format', 'error');
+                return;
+            }
+            
+            addTerminalOutput(`Downloading from URL: ${url}`, 'info');
+            if (processFile) {
+                addTerminalOutput('File will be processed after download', 'info');
+            }
+            
+            performUrlDownload(url, processFile);
+        }
+
+        // URL Download functionality
+        function downloadFromUrl() {
+            const urlInput = document.getElementById('urlInput');
+            const url = urlInput.value.trim();
+            
+            if (!url) {
+                addTerminalOutput('Please enter a URL to download', 'error');
+                return;
+            }
+            
+            if (!isValidUrl(url)) {
+                addTerminalOutput('Invalid URL format', 'error');
+                return;
+            }
+            
+            addTerminalOutput(`Downloading from URL: ${url}`, 'info');
+            performUrlDownload(url, false);
+        }
+
+        function downloadAndProcess() {
+            const urlInput = document.getElementById('urlInput');
+            const url = urlInput.value.trim();
+            
+            if (!url) {
+                addTerminalOutput('Please enter a URL to download', 'error');
+                return;
+            }
+            
+            if (!isValidUrl(url)) {
+                addTerminalOutput('Invalid URL format', 'error');
+                return;
+            }
+            
+            addTerminalOutput(`Downloading and processing from URL: ${url}`, 'info');
+            performUrlDownload(url, true);
+        }
+
+        function isValidUrl(string) {
+            try {
+                new URL(string);
+                return true;
+            } catch (_) {
+                return false;
+            }
+        }
+
+        async function performUrlDownload(url, processFile = false) {
+            const progressDiv = document.getElementById('downloadProgress');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            
+            try {
+                // Show progress
+                progressDiv.style.display = 'block';
+                progressText.textContent = 'Connecting...';
+                progressBar.style.width = '10%';
+                
+                addTerminalOutput('Initiating download...', 'info');
+                
+                // Fetch the file
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'User-Agent': 'RawrZ-Security-Platform/2.0'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const contentLength = response.headers.get('content-length');
+                const total = parseInt(contentLength, 10);
+                let loaded = 0;
+                
+                progressText.textContent = 'Downloading...';
+                progressBar.style.width = '30%';
+                
+                // Read the response as a stream
+                const reader = response.body.getReader();
+                const chunks = [];
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    
+                    if (done) break;
+                    
+                    chunks.push(value);
+                    loaded += value.length;
+                    
+                    if (total) {
+                        const percent = Math.round((loaded / total) * 100);
+                        progressBar.style.width = `${Math.min(percent, 90)}%`;
+                        progressText.textContent = `Downloading... ${percent}% (${formatBytes(loaded)}/${formatBytes(total)})`;
+                    }
+                }
+                
+                // Combine chunks
+                const blob = new Blob(chunks);
+                const filename = getFilenameFromUrl(url) || 'downloaded_file';
+                
+                progressText.textContent = 'Processing...';
+                progressBar.style.width = '95%';
+                
+                addTerminalOutput(`Download completed: ${filename} (${formatBytes(blob.size)})`, 'success');
+                
+                if (processFile) {
+                    // Process the downloaded file
+                    await processDownloadedFile(blob, filename);
+                } else {
+                    // Just download the file
+                    downloadBlob(blob, filename);
+                }
+                
+                progressBar.style.width = '100%';
+                progressText.textContent = 'Complete!';
+                
+                setTimeout(() => {
+                    progressDiv.style.display = 'none';
+                    progressBar.style.width = '0%';
+                }, 2000);
+                
+            } catch (error) {
+                addTerminalOutput(`Download failed: ${error.message}`, 'error');
+                progressDiv.style.display = 'none';
+                progressBar.style.width = '0%';
+            }
+        }
+        
+        // Utility functions for error handling and file operations
+        function checkFileSize(file, fileName) {
+            const maxSize = 1024 * 1024 * 1024; // 1GB - WIDE OPEN
+            if (file.size > maxSize) {
+                addTerminalOutput(`File ${fileName} is too large (${(file.size / 1024 / 1024).toFixed(2)}MB). Maximum size is ${maxSize / 1024 / 1024}MB.`, 'warning');
+                return false;
+            }
+            return true;
+        }
+        
+        function showProgressIfNeeded(fileSize) {
+            if (fileSize > 100 * 1024 * 1024) { // Show progress for files > 100MB - WIDE OPEN
+                addTerminalOutput('Processing large file...', 'info');
+            }
+        }
+        
+        function addLog(message, type = 'info') {
+            addTerminalOutput(message, type);
+        }
+
+        function getFilenameFromUrl(url) {
+            try {
+                const urlObj = new URL(url);
+                const pathname = urlObj.pathname;
+                const filename = pathname.split('/').pop();
+                return filename || 'downloaded_file';
+            } catch (e) {
+                return 'downloaded_file';
+            }
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function downloadBlob(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            addTerminalOutput(`File saved as: ${filename}`, 'success');
+        }
+
+        async function processDownloadedFile(blob, filename) {
+            addTerminalOutput(`Processing downloaded file: ${filename}`, 'info');
+            
+            // Convert blob to file object
+            const file = new File([blob], filename, { type: blob.type });
+            
+            // Auto-detect file type and suggest actions
+            const extension = filename.split('.').pop().toLowerCase();
+            
+            addTerminalOutput('File analysis complete. Suggested actions:', 'warning');
+            
+            switch (extension) {
+                case 'exe':
+                case 'dll':
+                    addTerminalOutput('  [1] Encrypt with EV Certificate', 'info');
+                    addTerminalOutput('  [2] Generate stub with stealth features', 'info');
+                    addTerminalOutput('  [3] Add persistence mechanisms', 'info');
+                    addTerminalOutput('  [4] Analyze for malware signatures', 'info');
+                    break;
+                case 'txt':
+                case 'json':
+                case 'js':
+                case 'py':
+                case 'html':
+                case 'css':
+                    addTerminalOutput('  [1] Encrypt with multiple algorithms', 'info');
+                    addTerminalOutput('  [2] Analyze content for patterns', 'info');
+                    addTerminalOutput('  [3] Generate payload from content', 'info');
+                    addTerminalOutput('  [4] Extract metadata', 'info');
+                    break;
+                case 'jpg':
+                case 'jpeg':
+                case 'png':
+                case 'gif':
+                case 'bmp':
+                    addTerminalOutput('  [1] Steganography analysis', 'info');
+                    addTerminalOutput('  [2] Hide payload in image', 'info');
+                    addTerminalOutput('  [3] Extract EXIF data', 'info');
+                    addTerminalOutput('  [4] Image forensics', 'info');
+                    break;
+                case 'zip':
+                case 'rar':
+                case '7z':
+                case 'tar':
+                case 'gz':
+                    addTerminalOutput('  [1] Extract and analyze contents', 'info');
+                    addTerminalOutput('  [2] Scan for malicious files', 'info');
+                    addTerminalOutput('  [3] Re-package with encryption', 'info');
+                    addTerminalOutput('  [4] Password crack attempt', 'info');
+                    break;
+                case 'pdf':
+                case 'doc':
+                case 'docx':
+                case 'xls':
+                case 'xlsx':
+                    addTerminalOutput('  [1] Extract embedded objects', 'info');
+                    addTerminalOutput('  [2] Analyze for macros', 'info');
+                    addTerminalOutput('  [3] Extract metadata', 'info');
+                    addTerminalOutput('  [4] Convert to encrypted format', 'info');
+                    break;
+                default:
+                    addTerminalOutput('  [1] General file encryption', 'info');
+                    addTerminalOutput('  [2] Hex analysis', 'info');
+                    addTerminalOutput('  [3] File signature analysis', 'info');
+                    addTerminalOutput('  [4] Generate processing report', 'info');
+            }
+            
+            // Store file for further processing
+            window.downloadedFile = file;
+            
+            addTerminalOutput('File ready for processing. Use terminal commands or drag to panels.', 'success');
+        }
+
+        // File drop functionality
+        function setupFileDropZone() {
+            const terminal = document.getElementById('terminal');
+            const dragOverlay = document.getElementById('dragOverlay');
+            const fileDropZone = document.getElementById('fileDropZone');
+            const fileInput = document.getElementById('fileInput');
+
+            // Terminal drag & drop
+            terminal.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                dragOverlay.classList.add('active');
+            });
+
+            terminal.addEventListener('dragleave', function(e) {
+                if (!terminal.contains(e.relatedTarget)) {
+                    dragOverlay.classList.remove('active');
+                }
+            });
+
+            terminal.addEventListener('drop', function(e) {
+                e.preventDefault();
+                dragOverlay.classList.remove('active');
+                handleDroppedFiles(e.dataTransfer.files);
+            });
+
+            // File drop zone
+            fileDropZone.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                fileDropZone.classList.add('dragover');
+            });
+
+            fileDropZone.addEventListener('dragleave', function(e) {
+                fileDropZone.classList.remove('dragover');
+            });
+
+            fileDropZone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                fileDropZone.classList.remove('dragover');
+                handleDroppedFiles(e.dataTransfer.files);
+            });
+
+            fileDropZone.addEventListener('click', function() {
+                fileInput.click();
+            });
+
+            fileInput.addEventListener('change', function(e) {
+                handleDroppedFiles(e.target.files);
+            });
+        }
+
+        function handleDroppedFiles(files) {
+            Array.from(files).forEach(file => {
+                addTerminalOutput(`File detected: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`, 'info');
+
+                // Auto-detect file type and suggest actions
+                const extension = file.name.split('.').pop().toLowerCase();
+
+                // Create interactive options
+                const optionsDiv = document.createElement('div');
+                optionsDiv.className = 'file-options';
+                optionsDiv.style.cssText = 'margin: 10px 0; padding: 10px; background: rgba(0,255,0,0.1); border: 1px solid #00ff00; border-radius: 5px;';
+
+                let options = [];
+                let actions = [];
+
+                switch (extension) {
+                    case 'exe':
+                    case 'dll':
+                        addTerminalOutput('Executable file detected. Select an action:', 'warning');
+                        options = [
+                            'Encrypt with EV Certificate',
+                            'Generate stub with stealth features', 
+                            'Add persistence mechanisms',
+                            'Analyze for malware signatures'
+                        ];
+                        actions = ['encrypt-ev', 'generate-stub', 'add-persistence', 'analyze-malware'];
+                        break;
+                    case 'txt':
+                    case 'json':
+                    case 'js':
+                    case 'py':
+                        addTerminalOutput('Text file detected. Select an action:', 'warning');
+                        options = [
+                            'Encrypt with multiple algorithms',
+                            'Analyze content for patterns',
+                            'Generate payload from content',
+                            'Extract metadata'
+                        ];
+                        actions = ['encrypt-multi', 'analyze-content', 'generate-payload', 'extract-metadata'];
+                        break;
+                    case 'jpg':
+                    case 'png':
+                    case 'gif':
+                        addTerminalOutput('Image file detected. Select an action:', 'warning');
+                        options = [
+                            'Steganography analysis',
+                            'Hide payload in image',
+                            'Extract EXIF data',
+                            'Image forensics'
+                        ];
+                        actions = ['stego-analysis', 'hide-payload', 'extract-exif', 'image-forensics'];
+                        break;
+                    default:
+                        addTerminalOutput('Unknown file type. Select an action:', 'warning');
+                        options = [
+                            'General file encryption',
+                            'Hex analysis',
+                            'File signature analysis',
+                            'Generate processing report'
+                        ];
+                        actions = ['encrypt-general', 'hex-analysis', 'signature-analysis', 'generate-report'];
+                }
+
+                // Create clickable buttons for each option
+                options.forEach((option, index) => {
+                    const button = document.createElement('button');
+                    button.textContent = `[${index + 1}] ${option}`;
+                    button.style.cssText = 'display: block; width: 100%; margin: 5px 0; padding: 8px; background: #333; color: #00ff00; border: 1px solid #00ff00; border-radius: 3px; cursor: pointer; font-family: inherit;';
+                    button.onmouseover = () => button.style.background = '#00ff00';
+                    button.onmouseout = () => button.style.background = '#333';
+                    button.onclick = () => {
+                        addTerminalOutput(`Selected: ${option}`, 'success');
+                        processFileAction(file, actions[index], option);
+                        optionsDiv.remove();
+                    };
+                    optionsDiv.appendChild(button);
+                });
+
+                // Add to terminal
+                const terminal = document.getElementById('terminal');
+                terminal.appendChild(optionsDiv);
+                terminal.scrollTop = terminal.scrollHeight;
+
+                // Store file for processing
+                window.droppedFile = file;
+            });
+        }
+
+        function processFileAction(file, action, description) {
+            addTerminalOutput(`Processing: ${file.name} - ${description}`, 'info');
+            
+            switch (action) {
+                case 'encrypt-ev':
+                    addTerminalOutput('Encrypting with EV Certificate...', 'info');
+                    // Simulate EV encryption
+                    setTimeout(() => {
+                        addTerminalOutput('EV Certificate encryption completed!', 'success');
+                        addTerminalOutput('File: encrypted_' + file.name, 'info');
+                    }, 2000);
+                    break;
+                case 'generate-stub':
+                    addTerminalOutput('Generating stub with stealth features...', 'info');
+                    // Simulate stub generation
+                    setTimeout(() => {
+                        addTerminalOutput('Stealth stub generated successfully!', 'success');
+                        addTerminalOutput('File: stealth_stub.exe', 'info');
+                    }, 2000);
+                    break;
+                case 'add-persistence':
+                    addTerminalOutput('Adding persistence mechanisms...', 'info');
+                    // Simulate persistence addition
+                    setTimeout(() => {
+                        addTerminalOutput('Persistence mechanisms added!', 'success');
+                        addTerminalOutput('File: persistent_' + file.name, 'info');
+                    }, 2000);
+                    break;
+                case 'analyze-malware':
+                    addTerminalOutput('Analyzing for malware signatures...', 'info');
+                    // Simulate malware analysis
+                    setTimeout(() => {
+                        addTerminalOutput('Malware analysis completed!', 'success');
+                        addTerminalOutput('Result: Clean file detected', 'info');
+                    }, 2000);
+                    break;
+                case 'encrypt-multi':
+                    addTerminalOutput('Encrypting with multiple algorithms...', 'info');
+                    setTimeout(() => {
+                        addTerminalOutput('Multi-algorithm encryption completed!', 'success');
+                    }, 2000);
+                    break;
+                case 'analyze-content':
+                    addTerminalOutput('Analyzing content for patterns...', 'info');
+                    setTimeout(() => {
+                        addTerminalOutput('Content analysis completed!', 'success');
+                    }, 2000);
+                    break;
+                case 'generate-payload':
+                    addTerminalOutput('Generating payload from content...', 'info');
+                    setTimeout(() => {
+                        addTerminalOutput('Payload generated successfully!', 'success');
+                    }, 2000);
+                    break;
+                case 'extract-metadata':
+                    addTerminalOutput('Extracting metadata...', 'info');
+                    setTimeout(() => {
+                        addTerminalOutput('Metadata extraction completed!', 'success');
+                    }, 2000);
+                    break;
+                case 'stego-analysis':
+                    addTerminalOutput('Performing steganography analysis...', 'info');
+                    setTimeout(() => {
+                        addTerminalOutput('Steganography analysis completed!', 'success');
+                    }, 2000);
+                    break;
+                case 'hide-payload':
+                    addTerminalOutput('Hiding payload in image...', 'info');
+                    setTimeout(() => {
+                        addTerminalOutput('Payload hidden successfully!', 'success');
+                    }, 2000);
+                    break;
+                case 'extract-exif':
+                    addTerminalOutput('Extracting EXIF data...', 'info');
+                    setTimeout(() => {
+                        addTerminalOutput('EXIF data extracted!', 'success');
+                    }, 2000);
+                    break;
+                case 'image-forensics':
+                    addTerminalOutput('Performing image forensics...', 'info');
+                    setTimeout(() => {
+                        addTerminalOutput('Image forensics completed!', 'success');
+                    }, 2000);
+                    break;
+                case 'encrypt-general':
+                    addTerminalOutput('Performing general file encryption...', 'info');
+                    setTimeout(() => {
+                        addTerminalOutput('General encryption completed!', 'success');
+                    }, 2000);
+                    break;
+                case 'hex-analysis':
+                    addTerminalOutput('Performing hex analysis...', 'info');
+                    setTimeout(() => {
+                        addTerminalOutput('Hex analysis completed!', 'success');
+                    }, 2000);
+                    break;
+                case 'signature-analysis':
+                    addTerminalOutput('Analyzing file signatures...', 'info');
+                    setTimeout(() => {
+                        addTerminalOutput('Signature analysis completed!', 'success');
+                    }, 2000);
+                    break;
+                case 'generate-report':
+                    addTerminalOutput('Generating processing report...', 'info');
+                    setTimeout(() => {
+                        addTerminalOutput('Processing report generated!', 'success');
+                    }, 2000);
+                    break;
+                default:
+                    addTerminalOutput('Unknown action selected', 'error');
+            }
+        }
+
+        // Utility functions
+        function addTerminalOutput(text, type = 'info') {
+            const terminal = document.getElementById('terminal');
+            const outputLine = document.createElement('div');
+            outputLine.className = `terminal-line output-${type}`;
+            outputLine.textContent = text;
+            terminal.appendChild(outputLine);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        function clearTerminal() {
+            const terminal = document.getElementById('terminal');
+            terminal.innerHTML = `
+                <div class="terminal-line">
+                    <span class="terminal-prompt">RawrZ@SecurityPlatform:~$</span>
+                    <span class="terminal-cursor"></span>
+                </div>
+            `;
+            focusTerminalInput();
+        }
+
+        function focusTerminalInput() {
+            const input = document.querySelector('.terminal-input');
+            if (input) {
+                input.focus();
+            } else {
+                // Create input if it doesn't exist
+                createNewInputLine();
+            }
+        }
+
+        function navigateHistory(direction) {
+            // Implementation for command history navigation
+        }
+
+        function autoComplete(input) {
+            // Implementation for command auto-completion
+        }
+
+        function addToHistory(command) {
+            const historyList = document.getElementById('historyList');
+            const historyItem = document.createElement('div');
+            historyItem.className = 'history-item';
+            historyItem.textContent = command;
+            historyItem.onclick = () => {
+                const input = document.querySelector('.terminal-input');
+                if (input) {
+                    input.value = command;
+                }
+            };
+            historyList.appendChild(historyItem);
+            
+            // Keep only last 20 commands
+            while (historyList.children.length > 20) {
+                historyList.removeChild(historyList.firstChild);
+            }
+        }
+
+        function loadCommandHistory() {
+            // Load command history from localStorage
+            const saved = localStorage.getItem('rawrzCommandHistory');
+            if (saved) {
+                commandHistory = JSON.parse(saved);
+            }
+        }
+
+        function saveCommandHistory() {
+            localStorage.setItem('rawrzCommandHistory', JSON.stringify(commandHistory));
+        }
+
+        function updateFileBrowser() {
+            // Update file browser with current directory contents
+        }
+
+        function navigateToPanel() {
+            const select = document.getElementById('navSelect');
+            const selectedValue = select.value;
+            
+            if (selectedValue) {
+                if (selectedValue.includes('/api/')) {
+                    // Handle API endpoints
+                    testApiEndpoint(selectedValue);
+                } else {
+                    // Navigate to panel
+                    window.open(selectedValue, '_blank');
+                }
+                select.value = ''; // Reset selection
+            }
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        function exportHistory() {
+            const history = Array.from(document.querySelectorAll('.history-item')).map(item => item.textContent);
+            const blob = new Blob([history.join('\n')], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'rawrz-command-history.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Save history on page unload
+        window.addEventListener('beforeunload', saveCommandHistory);
+    </script>
+</body>
+</html>

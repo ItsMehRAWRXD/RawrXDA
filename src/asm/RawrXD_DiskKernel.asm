@@ -516,11 +516,11 @@ FAT32_VOLUME_CTX ENDS
     g_AsyncIoPoolCount          DWORD   ?
 
     ; Temporary sector buffer (page-aligned for DMA)
-    align 4096
+    align 8
     g_TempSector                db 4096 dup(?)
 
     ; Secondary sector buffer (for GPT entry reads, etc.)
-    align 4096
+    align 8
     g_TempSector2               db 4096 dup(?)
 
     ; NTFS volume context cache (current mounted NTFS)
@@ -532,15 +532,15 @@ FAT32_VOLUME_CTX ENDS
     g_Fat32Ctx                  FAT32_VOLUME_CTX <>
 
     ; MFT record buffer (for NTFS file enumeration)
-    align 4096
+    align 8
     g_MftRecordBuf              db 4096 dup(?)
 
     ; FAT sector buffer (for FAT32 table lookups)
-    align 4096
+    align 8
     g_FatSectorBuf              db 4096 dup(?)
 
     ; Index record buffer (for NTFS directory listing)
-    align 4096
+    align 8
     g_IndexRecordBuf            db 4096 dup(?)
 
     ; Console handle cache

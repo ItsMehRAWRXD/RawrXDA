@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RawrZ Security Platform - Main Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.2em;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #3498db;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+
+        .engines-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .engine-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border-left: 5px solid #3498db;
+        }
+
+        .engine-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .engine-card.restored {
+            border-left-color: #e74c3c;
+            background: linear-gradient(135deg, rgba(231, 76, 60, 0.1) 0%, rgba(255, 255, 255, 0.95) 100%);
+        }
+
+        .engine-title {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .engine-description {
+            color: #7f8c8d;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .engine-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #229954;
+            transform: translateY(-2px);
+        }
+
+        .btn-warning {
+            background: #f39c12;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #e67e22;
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+            transform: translateY(-2px);
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        .status-online {
+            background: #27ae60;
+            box-shadow: 0 0 10px rgba(39, 174, 96, 0.5);
+        }
+
+        .status-offline {
+            background: #e74c3c;
+        }
+
+        .status-loading {
+            background: #f39c12;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .restored-badge {
+            background: #e74c3c;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 15px;
+            width: 80%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        .log-output {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .footer {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.8);
+            margin-top: 40px;
+            padding: 20px;
+        }
+
+        /* Achievement Badge System */
+        .achievement-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            color: #333;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: bold;
+            margin: 2px;
+            box-shadow: 0 2px 4px rgba(255, 215, 0, 0.3);
+            animation: badgeGlow 2s ease-in-out infinite alternate;
+        }
+
+        .achievement-badge.platinum {
+            background: linear-gradient(135deg, #e5e4e2, #f7f7f7);
+            color: #333;
+            box-shadow: 0 2px 4px rgba(229, 228, 226, 0.3);
+        }
+
+        .achievement-badge.gold {
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            color: #333;
+            box-shadow: 0 2px 4px rgba(255, 215, 0, 0.3);
+        }
+
+        .achievement-badge.silver {
+            background: linear-gradient(135deg, #c0c0c0, #e8e8e8);
+            color: #333;
+            box-shadow: 0 2px 4px rgba(192, 192, 192, 0.3);
+        }
+
+        .achievement-badge.bronze {
+            background: linear-gradient(135deg, #cd7f32, #daa520);
+            color: white;
+            box-shadow: 0 2px 4px rgba(205, 127, 50, 0.3);
+        }
+
+        .achievement-badge.legendary {
+            background: linear-gradient(135deg, #8a2be2, #ff69b4);
+            color: white;
+            box-shadow: 0 2px 4px rgba(138, 43, 226, 0.3);
+            animation: legendaryGlow 1.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes badgeGlow {
+            from { box-shadow: 0 2px 4px rgba(255, 215, 0, 0.3); }
+            to { box-shadow: 0 4px 8px rgba(255, 215, 0, 0.6); }
+        }
+
+        @keyframes legendaryGlow {
+            from { box-shadow: 0 2px 4px rgba(138, 43, 226, 0.3); }
+            to { box-shadow: 0 6px 12px rgba(138, 43, 226, 0.8); }
+        }
+
+        .engine-achievements {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛡️ RawrZ Security Platform</h1>
+            <p>Advanced Security Tools & Analysis Engine</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" id="totalModules">48</div>
+                <div class="stat-label">Total Modules</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="loadedModules">0</div>
+                <div class="stat-label">Loaded Modules</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="restoredEngines">8</div>
+                <div class="stat-label">Restored Engines</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="activeOperations">0</div>
+                <div class="stat-label">Active Operations</div>
+            </div>
+        </div>
+
+        <div class="action-buttons" style="margin: 30px 0; text-align: center;">
+            <a href="/public/comprehensive-unified-panel.html" class="btn btn-primary" style="margin: 10px; padding: 15px 30px; font-size: 1.2em; text-decoration: none; display: inline-block;">
+                🎛️ Complete Unified Panel
+            </a>
+            <a href="/public/advanced-encryption-panel.html" class="btn btn-secondary" style="margin: 10px; padding: 15px 30px; font-size: 1.2em; text-decoration: none; display: inline-block;">
+                🔐 Advanced Encryption
+            </a>
+            <a href="/public/ev-cert-panel.html" class="btn btn-success" style="margin: 10px; padding: 15px 30px; font-size: 1.2em; text-decoration: none; display: inline-block;">
+                📜 EV Certificates
+            </a>
+        </div>
+
+        <div class="engines-grid" id="enginesGrid">
+            <!-- Engines will be loaded dynamically -->
+        </div>
+
+        <div class="footer">
+            <p>RawrZ Security Platform v2.0 - All engines restored and operational</p>
+        </div>
+    </div>
+
+    <!-- Modal for engine details -->
+    <div id="engineModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="modalTitle">Engine Details</h2>
+            <div id="modalContent">
+                <!-- Content will be loaded dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Engine definitions
+        const engines = [
+            // Restored Engines (highlighted)
+            {
+                id: 'cve-analysis-engine',
+                name: 'CVE Analysis Engine',
+                description: 'Real vulnerability detection and analysis for legitimate CVEs',
+                category: 'Security Analysis',
+                restored: true,
+                actions: [
+                    { name: 'Analyze CVE', action: 'analyzeCVE', params: { target: 'test-target' } },
+                    { name: 'Get Status', action: 'getStatus' },
+                    { name: 'Load Database', action: 'loadDatabase' }
+                ]
+            },
+            {
+                id: 'http-bot-manager',
+                name: 'HTTP Bot Manager',
+                description: 'Full RAT functionality and bot control system',
+                category: 'Bot Management',
+                restored: true,
+                actions: [
+                    { name: 'List Bots', action: 'manageHTTPBot', params: { action: 'getBots' } },
+                    { name: 'Register Bot', action: 'manageHTTPBot', params: { action: 'register', botData: { botId: 'test-bot', botInfo: {} } } },
+                    { name: 'Get Stats', action: 'getStats' }
+                ]
+            },
+            {
+                id: 'payload-manager',
+                name: 'Payload Manager',
+                description: 'Comprehensive payload management system',
+                category: 'Payload Management',
+                restored: true,
+                actions: [
+                    { name: 'List Payloads', action: 'managePayload', params: { action: 'list', payloadData: { filter: {} } } },
+                    { name: 'Create Payload', action: 'managePayload', params: { action: 'create', payloadData: { name: 'Test Payload' } } },
+                    { name: 'Get Stats', action: 'getStats' }
+                ]
+            },
+            {
+                id: 'plugin-architecture',
+                name: 'Plugin Architecture',
+                description: 'Extensible plugin system for the platform',
+                category: 'System Architecture',
+                restored: true,
+                actions: [
+                    { name: 'List Plugins', action: 'managePlugin', params: { action: 'list' } },
+                    { name: 'Get Stats', action: 'getPluginStats' },
+                    { name: 'Get Status', action: 'getStatus' }
+                ]
+            },
+            {
+                id: 'startup-persistence',
+                name: 'Startup Persistence',
+                description: 'System startup and persistence management',
+                category: 'System Management',
+                restored: true,
+                actions: [
+                    { name: 'List Methods', action: 'managePersistence', params: { action: 'methods', persistenceData: { platform: 'windows' } } },
+                    { name: 'List Entries', action: 'managePersistence', params: { action: 'list', persistenceData: { filter: {} } } },
+                    { name: 'Get Status', action: 'getStatus' }
+                ]
+            },
+            {
+                id: 'template-generator',
+                name: 'Template Generator',
+                description: 'Comprehensive stub and cryptor templates',
+                category: 'Code Generation',
+                restored: true,
+                actions: [
+                    { name: 'Generate Stub', action: 'generateTemplate', params: { templateType: 'stub', options: { template: 'basic_cpp' } } },
+                    { name: 'Generate Cryptor', action: 'generateTemplate', params: { templateType: 'cryptor', options: { template: 'aes_cryptor' } } },
+                    { name: 'Get Templates', action: 'getAvailableTemplates' }
+                ]
+            },
+            {
+                id: 'advanced-fud-engine',
+                name: 'Advanced FUD Engine',
+                description: 'Fully undetectable code generation with advanced evasion',
+                category: 'Code Generation',
+                restored: true,
+                actions: [
+                    { name: 'Generate FUD', action: 'generateFUDCode', params: { sourceCode: 'console.log("test");', options: { technique: 'polymorphic' } } },
+                    { name: 'Get Techniques', action: 'getFUDTechniques' },
+                    { name: 'Get Stats', action: 'getStats' }
+                ]
+            },
+            {
+                id: 'rawrz-engine2',
+                name: 'RawrZ Engine 2',
+                description: 'Central hub for all security tools and analysis',
+                category: 'Core Engine',
+                restored: true,
+                actions: [
+                    { name: 'Execute Operation', action: 'executeEngine2Operation', params: { operationType: 'compression', operationData: 'test data' } },
+                    { name: 'Get Status', action: 'getSystemStatus' },
+                    { name: 'List Modules', action: 'getModuleList' }
+                ]
+            },
+            // Original Engines
+            {
+                id: 'reverse-engineering',
+                name: 'Reverse Engineering',
+                description: 'Binary analysis and reverse engineering tools',
+                category: 'Analysis',
+                restored: false,
+                actions: [
+                    { name: 'Analyze Binary', action: 'reverseEngineer', params: { target: 'test.exe' } },
+                    { name: 'Get Status', action: 'getStatus' }
+                ]
+            },
+            {
+                id: 'advanced-analytics',
+                name: 'Advanced Analytics',
+                description: 'Data analysis and reporting engine',
+                category: 'Analytics',
+                restored: false,
+                actions: [
+                    { name: 'Run Analytics', action: 'runAdvancedAnalytics', params: { dataType: 'security', options: {} } },
+                    { name: 'Get Dashboard', action: 'getAnalyticsDashboard' }
+                ]
+            },
+            {
+                id: 'advanced-anti-analysis',
+                name: 'Advanced Anti-Analysis',
+                description: 'Environment detection and anti-analysis tools',
+                category: 'Security',
+                restored: false,
+                actions: [
+                    { name: 'Detect Environment', action: 'runAdvancedAntiAnalysis', params: { target: 'system' } },
+                    { name: 'Get Status', action: 'getStatus' }
+                ]
+            },
+            {
+                id: 'red-shells',
+                name: 'Red Shells',
+                description: 'Interactive shell management system',
+                category: 'Shell Management',
+                restored: false,
+                actions: [
+                    { name: 'Create Shell', action: 'createRedShell', params: { shellType: 'powershell' } },
+                    { name: 'List Shells', action: 'getActiveShells' },
+                    { name: 'Get Stats', action: 'getShellStats' }
+                ]
+            },
+            {
+                id: 'private-virus-scanner',
+                name: 'Private Virus Scanner',
+                description: 'Multi-engine private scanning system',
+                category: 'Security',
+                restored: false,
+                actions: [
+                    { name: 'Scan File', action: 'scanFileWithPrivateScanner', params: { filePath: 'test.exe' } },
+                    { name: 'Get Status', action: 'getScannerEngineStatus' },
+                    { name: 'Get Stats', action: 'getScannerStats' }
+                ]
+            },
+            {
+                id: 'ai-threat-detector',
+                name: 'AI Threat Detector',
+                description: 'AI-powered threat detection and analysis',
+                category: 'AI Security',
+                restored: false,
+                actions: [
+                    { name: 'Analyze Threat', action: 'analyzeThreatWithAI', params: { threatData: 'test' } },
+                    { name: 'Train Models', action: 'trainAIModels' },
+                    { name: 'Get Status', action: 'getAIThreatDetectorStatus' }
+                ]
+            }
+        ];
+
+        let engineStatuses = {};
+        let activeOperations = 0;
+
+        // Initialize the panel
+        async function initializePanel() {
+            console.log('Initializing panel...');
+            await loadEngineStatuses();
+            console.log('Engine statuses loaded:', engineStatuses);
+            renderEngines();
+            console.log('Engines rendered');
+            updateStats();
+            
+            // Auto-refresh every 30 seconds
+            setInterval(updateStats, 30000);
+        }
+
+        // Standardized API call function
+        async function apiCall(endpoint, method = 'GET', body = null) {
+            try {
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                
+                const token = localStorage.getItem('authToken');
+                if (token) {
+                    headers.Authorization = `Bearer ${token}`;
+                }
+                
+                const response = await fetch(endpoint, {
+                    method: method,
+                    headers: headers,
+                    body: body ? JSON.stringify(body) : null
+                });
+                
+                const data = await response.text();
+                try {
+                    return { status: response.status, data: JSON.parse(data) };
+                } catch {
+                    return { status: response.status, data: data };
+                }
+            } catch (error) {
+                return { status: 500, data: { error: error.message } };
+            }
+        }
+
+        // Load engine statuses
+        async function loadEngineStatuses() {
+            try {
+                const result = await apiCall('/api/rawrz-engine/status');
+                
+                if (result.status === 200 && result.data.success) {
+                    const status = result.data.data;
+                    
+                    // Update loaded modules count
+                    document.getElementById('loadedModules').textContent = status.modules.loaded || 0;
+                    document.getElementById('activeOperations').textContent = status.activeOperations || 0;
+                    
+                    // Update engine statuses - set all to online since they're available
+                    engines.forEach(engine => {
+                        engineStatuses[engine.id] = 'online';
+                    });
+                } else {
+                    console.error('Failed to load engine statuses:', result.data.error);
+                    // Set default statuses
+                    engines.forEach(engine => {
+                        engineStatuses[engine.id] = 'offline';
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to load engine statuses:', error);
+                // Set default statuses
+                engines.forEach(engine => {
+                    engineStatuses[engine.id] = 'offline';
+                });
+            }
+        }
+
+        // Render engines
+        function renderEngines() {
+            const grid = document.getElementById('enginesGrid');
+            console.log('Rendering engines, grid element:', grid);
+            console.log('Number of engines to render:', engines.length);
+            grid.innerHTML = '';
+
+            engines.forEach(engine => {
+                console.log('Rendering engine:', engine.id);
+                const card = document.createElement('div');
+                card.className = `engine-card ${engine.restored ? 'restored' : ''}`;
+                
+                const statusClass = engineStatuses[engine.id] || 'offline';
+                
+                // Generate achievement badges for each engine
+                const getEngineBadges = (engineId) => {
+                    const badgeMap = {
+                        'cve-analysis-engine': ['<span class="achievement-badge legendary">CVE EXPERT</span>', '<span class="achievement-badge platinum">VULNERABILITY</span>'],
+                        'http-bot-manager': ['<span class="achievement-badge gold">BOT MASTER</span>', '<span class="achievement-badge silver">HTTP</span>'],
+                        'payload-manager': ['<span class="achievement-badge platinum">PAYLOAD PRO</span>', '<span class="achievement-badge gold">MANAGER</span>'],
+                        'plugin-architecture': ['<span class="achievement-badge legendary">ARCHITECT</span>', '<span class="achievement-badge platinum">PLUGIN</span>'],
+                        'startup-persistence': ['<span class="achievement-badge legendary">PERSISTENCE</span>', '<span class="achievement-badge gold">STARTUP</span>'],
+                        'template-generator': ['<span class="achievement-badge gold">TEMPLATE</span>', '<span class="achievement-badge silver">GENERATOR</span>'],
+                        'advanced-fud-engine': ['<span class="achievement-badge legendary">FUD MASTER</span>', '<span class="achievement-badge platinum">STEALTH</span>'],
+                        'rawrz-engine2': ['<span class="achievement-badge legendary">CORE ENGINE</span>', '<span class="achievement-badge platinum">CENTRAL</span>'],
+                        'reverse-engineering': ['<span class="achievement-badge gold">REVERSE</span>', '<span class="achievement-badge silver">ANALYSIS</span>'],
+                        'advanced-analytics': ['<span class="achievement-badge platinum">ANALYTICS</span>', '<span class="achievement-badge gold">DATA</span>'],
+                        'advanced-anti-analysis': ['<span class="achievement-badge legendary">ANTI-ANALYSIS</span>', '<span class="achievement-badge platinum">EVASION</span>'],
+                        'red-shells': ['<span class="achievement-badge gold">SHELL</span>', '<span class="achievement-badge silver">RED</span>'],
+                        'private-virus-scanner': ['<span class="achievement-badge platinum">SCANNER</span>', '<span class="achievement-badge gold">VIRUS</span>'],
+                        'ai-threat-detector': ['<span class="achievement-badge legendary">AI THREAT</span>', '<span class="achievement-badge platinum">DETECTOR</span>']
+                    };
+                    return badgeMap[engineId] || ['<span class="achievement-badge bronze">ENGINE</span>'];
+                };
+
+                card.innerHTML = `
+                    <div class="engine-title">
+                        <span class="status-indicator status-${statusClass}"></span>
+                        ${engine.name}
+                        ${engine.restored ? '<span class="restored-badge">RESTORED</span>' : ''}
+                    </div>
+                    <div class="engine-description">${engine.description}</div>
+                    <div class="engine-achievements">
+                        ${getEngineBadges(engine.id).join('')}
+                    </div>
+                    <div class="engine-actions">
+                        ${engine.actions.map(action => `
+                            <button class="btn btn-primary" onclick="executeAction('${engine.id}', '${action.action}', ${JSON.stringify(action.params || {}).replace(/"/g, '&quot;')})">
+                                ${action.name}
+                            </button>
+                        `).join('')}
+                        <button class="btn btn-success" onclick="showEngineDetails('${engine.id}')">Details</button>
+                    </div>
+                `;
+                
+                grid.appendChild(card);
+            });
+        }
+
+        // Execute engine action
+        async function executeAction(engineId, action, params) {
+            const button = event.target;
+            const originalText = button.textContent;
+            
+            try {
+                button.innerHTML = '<div class="loading"></div>';
+                button.disabled = true;
+                
+                activeOperations++;
+                updateStats();
+                
+                const response = await fetch('/api/rawrz-engine/execute', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        engineId: engineId,
+                        action: action,
+                        params: params
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showResult(engineId, action, result.data);
+                } else {
+                    showError(engineId, action, result.error);
+                }
+                
+            } catch (error) {
+                showError(engineId, action, error.message);
+            } finally {
+                button.textContent = originalText;
+                button.disabled = false;
+                activeOperations--;
+                updateStats();
+            }
+        }
+
+        // Show engine details
+        function showEngineDetails(engineId) {
+            const engine = engines.find(e => e.id === engineId);
+            if (!engine) return;
+            
+            const modal = document.getElementById('engineModal');
+            const title = document.getElementById('modalTitle');
+            const content = document.getElementById('modalContent');
+            
+            title.textContent = engine.name;
+            content.innerHTML = `
+                <h3>Description</h3>
+                <p>${engine.description}</p>
+                
+                <h3>Category</h3>
+                <p>${engine.category}</p>
+                
+                <h3>Status</h3>
+                <p>Status: <span class="status-indicator status-${engineStatuses[engineId] || 'offline'}"></span> ${engineStatuses[engineId] || 'offline'}</p>
+                
+                <h3>Available Actions</h3>
+                <ul>
+                    ${engine.actions.map(action => `<li><strong>${action.name}</strong>: ${action.action}</li>`).join('')}
+                </ul>
+                
+                ${engine.restored ? '<p><strong>Note:</strong> This engine was recently restored from corruption.</p>' : ''}
+            `;
+            
+            modal.style.display = 'block';
+        }
+
+        // Show result
+        function showResult(engineId, action, data) {
+            const modal = document.getElementById('engineModal');
+            const title = document.getElementById('modalTitle');
+            const content = document.getElementById('modalContent');
+            
+            title.textContent = `${engineId} - ${action} Result`;
+            content.innerHTML = `
+                <h3>Operation Successful</h3>
+                <div class="log-output">${JSON.stringify(data, null, 2)}</div>
+            `;
+            
+            modal.style.display = 'block';
+        }
+
+        // Show error
+        function showError(engineId, action, error) {
+            const modal = document.getElementById('engineModal');
+            const title = document.getElementById('modalTitle');
+            const content = document.getElementById('modalContent');
+            
+            title.textContent = `${engineId} - ${action} Error`;
+            content.innerHTML = `
+                <h3>Operation Failed</h3>
+                <div class="log-output" style="color: #e74c3c;">${error}</div>
+            `;
+            
+            modal.style.display = 'block';
+        }
+
+        // Update stats
+        function updateStats() {
+            document.getElementById('activeOperations').textContent = activeOperations;
+        }
+
+        // Close modal
+        document.querySelector('.close').onclick = function() {
+            document.getElementById('engineModal').style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('engineModal');
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initializePanel);
+    </script>
+</body>
+</html>

@@ -1,15 +1,18 @@
 #pragma once
 
-
+#include "BinaryStream.hpp"
+#include "QuantBackend.h"
+#include <algorithm>
 #include <cstddef>
+#include <string>
+#include <unordered_map>
 #include <vector>
 
-  // Quantization backend switcher
-
 // GGML tensor types
-enum class GgmlType : uint32_t {
-    F32  = 0,
-    F16  = 1,
+enum class GgmlType : uint32_t
+{
+    F32 = 0,
+    F16 = 1,
     Q4_0 = 2,
     Q4_1 = 3,
     Q5_0 = 6,
@@ -19,53 +22,43 @@ enum class GgmlType : uint32_t {
 };
 
 // Q4_0 block: 32 weights in 16 bytes + 1 float16 delta
-struct BlockQ4_0 {
-    quint16 d;      // delta (float16)
+struct BlockQ4_0
+{
+    uint16_t d;      // delta (float16)
     uint8_t qs[16];  // 32 nibbles (2 per byte)
 };
 
 // Q8_0 block: 32 weights in 32 bytes + 1 float16 delta
-struct BlockQ8_0 {
-    quint16 d;      // delta (float16)
-    int8_t qs[32];   // 32 signed bytes
+struct BlockQ8_0
+{
+    uint16_t d;     // delta (float16)
+    int8_t qs[32];  // 32 signed bytes
 };
 
-/**
- * @brief GGUFRunner manages the high-performance execution of GGUF language models.
- */
-class GGUFRunner : public void {
-
-public:
+/** GGUFRunner — GGUF model load and inference. Win32 + STL only. */
+class GGUFRunner
+{
+  public:
     explicit GGUFRunner(void* parent = nullptr);
     ~GGUFRunner();
 
-    /**
-     * @brief Executes a full inference pass using the raw text prompt.
-     * @param prompt Raw UTF-8 prompt that will be tokenized and embedded internally.
-     * @param outputBuffer Buffer that will receive the logits (size must match vocab).
-     */
     bool runInference(const std::string& prompt, float* outputBuffer);
-    
-    // Model loading
     bool loadModel(const std::string& filePath);
-    
-    // Generation parameter setters
+
     void setMaxTokens(int max) { context_.maxTokens = max; }
-    void setTemperature(float temp) { context_.temperature = qMax(0.0f, temp); }
-    void setTopP(float p) { context_.topP = qBound(0.0f, p, 1.0f); }
-    void setRepeatPenalty(float penalty) { context_.repeatPenalty = qMax(1.0f, penalty); }
-    
-    // Quantization control
+    void setTemperature(float temp) { context_.temperature = std::max(0.0f, temp); }
+    void setTopP(float p) { context_.topP = std::clamp(p, 0.0f, 1.0f); }
+    void setRepeatPenalty(float penalty) { context_.repeatPenalty = std::max(1.0f, penalty); }
+
     bool setQuantizationMode(QuantMode mode);
     QuantMode currentQuantMode() const;
     float getCompressionRatio() const;
-    
-    // Model info getters
+
     std::string modelPath() const { return context_.modelPath; }
     std::string modelName() const { return context_.modelName; }
     std::string architecture() const { return context_.architecture; }
-    qsizetype vocabularySize() const { return context_.vocabSize; }
-    qsizetype embeddingDim() const { return context_.embedDim; }
+    size_t vocabularySize() const { return context_.vocabSize; }
+    size_t embeddingDim() const { return context_.embedDim; }
     bool isLoaded() const { return context_.mappedData != nullptr; }
 
     /**
@@ -84,66 +77,69 @@ public:
     void modelLoaded(const std::string& path, int64_t sizeBytes);
     void loadingProgress(int percent);
 
-private:
-    enum class QuantType {
-        F32,      // Full precision (13 GB for 7B)
-        F16,      // Half precision (6.5 GB)
-        Q4_0,     // 4-bit quantization (3.5 GB) - llama.cpp standard
-        Q4_1,     // 4-bit with min/max (slightly better quality)
-        Q5_0,     // 5-bit quantization (4.3 GB)
-        Q5_1,     // 5-bit with min/max
-        Q8_0      // 8-bit quantization (6.7 GB)
+  private:
+    enum class QuantType
+    {
+        F32,   // Full precision (13 GB for 7B)
+        F16,   // Half precision (6.5 GB)
+        Q4_0,  // 4-bit quantization (3.5 GB) - llama.cpp standard
+        Q4_1,  // 4-bit with min/max (slightly better quality)
+        Q5_0,  // 5-bit quantization (4.3 GB)
+        Q5_1,  // 5-bit with min/max
+        Q8_0   // 8-bit quantization (6.7 GB)
     };
 
-    struct ModelContext {
+    struct ModelContext
+    {
         // Hardware features
         bool hasAVX2{false};
         bool hasAVX512{false};
         bool hasFMA{false};
-        
+
         // Memory management
         float* mappedData{nullptr};
         bool usesMmap{false};
-        qsizetype embedDim{0};
-        qsizetype vocabSize{0};
-        qsizetype nLayers{0};
-        qsizetype nHeads{0};
-        qsizetype nKVHeads{0};
-        qsizetype headDim{0};       // embedDim / nHeads
-        float ropeBase{10000.0f};   // RoPE frequency base
-        std::vector<float> invFreq; // Precomputed inverse frequencies for RoPE [headDim/2]
+        size_t embedDim{0};
+        size_t vocabSize{0};
+        size_t nLayers{0};
+        size_t nHeads{0};
+        size_t nKVHeads{0};
+        size_t headDim{0};
+        float ropeBase{10000.0f};    // RoPE frequency base
+        std::vector<float> invFreq;  // Precomputed inverse frequencies for RoPE [headDim/2]
         int64_t modelFileSize{0};
-        
+
         // Inference state
         std::vector<float> logits;
         std::vector<std::string> vocabulary;
         std::string modelPath;
-        
+
         // Generation parameters
         int maxTokens{64};
         int eosTokenId{-1};
-        float temperature{0.8f};     // 0.0 = greedy, 1.0 = creative, 2.0 = chaos
-        float topP{0.95f};           // nucleus sampling threshold
-        float repeatPenalty{1.1f};   // penalize token repetition
-        
+        float temperature{0.8f};    // 0.0 = greedy, 1.0 = creative, 2.0 = chaos
+        float topP{0.95f};          // nucleus sampling threshold
+        float repeatPenalty{1.1f};  // penalize token repetition
+
         // Quantization
         QuantType quantType{QuantType::F32};
-        
+
         // GGUF metadata
         uint32_t ggufVersion{0};
         std::string modelName;
         std::string architecture;
 
         // GGUF tensors (essential weights)
-        std::vector<float> tok_embeddings;           // [vocabSize, embedDim]
-        std::vector<float> output_norm_w;            // output norm weight
-        std::vector<float> output_w;                 // output projection weight
-        std::vector<uint8_t> raw_q4_output;          // raw Q4_0 bytes for output.weight (optional)
-        std::vector<int8_t> raw_q8_output;           // raw Q8_0 bytes for output.weight (optional)
-        std::vector<float> ln_f_g;                   // final layernorm gamma [embedDim]
-        std::vector<float> ln_f_b;                   // final layernorm beta [embedDim]
+        std::vector<float> tok_embeddings;   // [vocabSize, embedDim]
+        std::vector<float> output_norm_w;    // output norm weight
+        std::vector<float> output_w;         // output projection weight
+        std::vector<uint8_t> raw_q4_output;  // raw Q4_0 bytes for output.weight (optional)
+        std::vector<int8_t> raw_q8_output;   // raw Q8_0 bytes for output.weight (optional)
+        std::vector<float> ln_f_g;           // final layernorm gamma [embedDim]
+        std::vector<float> ln_f_b;           // final layernorm beta [embedDim]
 
-        struct Layer {
+        struct Layer
+        {
             // Attention projections: [embedDim, embedDim]
             std::vector<float> attn_q_w;
             std::vector<float> attn_k_w;
@@ -162,12 +158,18 @@ private:
         std::vector<Layer> layers;
 
         // KV-cache: per layer K/V for past tokens (multi-head GQA)
-        std::vector<float> keyCache;   // [nLayers, nKVHeads, maxTokens, headDim]
-        std::vector<float> valueCache; // [nLayers, nKVHeads, maxTokens, headDim]
+        std::vector<float> keyCache;    // [nLayers, nKVHeads, maxTokens, headDim]
+        std::vector<float> valueCache;  // [nLayers, nKVHeads, maxTokens, headDim]
         size_t kvLen{0};
 
         // Tensor directory
-        struct TensorDesc { std::string name; std::vector<uint32_t> dims; GgmlType type; uint64_t offset; };
+        struct TensorDesc
+        {
+            std::string name;
+            std::vector<uint32_t> dims;
+            GgmlType type;
+            uint64_t offset;
+        };
         std::unordered_map<std::string, TensorDesc> tensorTable;
     };
 
@@ -185,22 +187,20 @@ private:
     void fallback_matrix_multiply(float* A, float* B, float* C, int N, int M, int K);
     void detectExtendedCpuFeatures();
 
-    // GGUF tensor parsing
-    bool parseGgufTensors(class std::fstream& file);
-    bool parseGgufTensorTable(class std::fstream& file);
-    bool readTensorFloat32(class std::fstream& file, int64_t offset, int64_t count, std::vector<float>& out);
-    bool loadTensor(class std::fstream& file, const std::string& name, std::vector<float>& weights);
+    bool parseGgufTensors(RawrXD::NativeFile& file);
+    bool parseGgufTensorTable(RawrXD::NativeFile& file);
+    bool readTensorFloat32(RawrXD::NativeFile& file, int64_t offset, int64_t count, std::vector<float>& out);
+    bool loadTensor(RawrXD::NativeFile& file, const std::string& name, std::vector<float>& weights);
     size_t ggmlTypeSize(GgmlType type);
-    std::vector<uint8_t> readTensorData(class std::fstream& file, uint64_t offset, uint64_t numBytes);
+    std::vector<uint8_t> readTensorData(RawrXD::NativeFile& file, uint64_t offset, uint64_t numBytes);
 
     // Transformer forward (scalar)
-private:
-    void layerNorm(const float* x, float* y, const std::vector<float>& gamma, const std::vector<float>& beta, qsizetype dim);
+  private:
+    void layerNorm(const float* x, float* y, const std::vector<float>& gamma, const std::vector<float>& beta,
+                   size_t dim);
     void matmul(const float* A, const float* B, float* C, int N, int M, int K);
     void attentionForward(int layerIdx, const float* x, float* y);
     void mlpForward(int layerIdx, const float* x, float* y);
 
     ModelContext context_;
 };
-
-

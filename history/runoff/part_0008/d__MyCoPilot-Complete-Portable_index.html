@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyCoPilot - Systems Engineering IDE</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/material-darker.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1e1e1e; color: #fff; }
+        #toolbar { background: #2d2d30; padding: 10px; display: flex; gap: 5px; }
+        #toolbar button { background: #0e639c; color: #fff; border: none; padding: 8px 16px; cursor: pointer; border-radius: 3px; }
+        #toolbar button:hover { background: #1177bb; }
+        #main-container { display: flex; height: calc(100vh - 50px); }
+        #sidebar { width: 350px; background: #252526; padding: 10px; overflow-y: auto; }
+        #editor-container { flex: 1; }
+        #editor { height: 100%; }
+        #ai-panel { width: 300px; background: #1e1e1e; border-left: 1px solid #333; display: flex; flex-direction: column; }
+        #ai-chat { flex: 1; overflow-y: auto; padding: 10px; }
+        #ai-input { background: #3c3c3c; color: #fff; border: none; padding: 10px; }
+        .CodeMirror { height: 100%; font-size: 14px; }
+        
+        /* Drive Explorer Styles */
+        #drive-explorer { margin-bottom: 20px; }
+        #drive-tabs { display: flex; margin-bottom: 10px; }
+        .drive-tab { background: #404040; color: #ccc; border: none; padding: 5px 10px; cursor: pointer; margin-right: 2px; }
+        .drive-tab.active { background: #0e639c; color: #fff; }
+        #search-box { width: 100%; background: #3c3c3c; color: #fff; border: none; padding: 8px; margin-bottom: 10px; }
+        #current-path { background: #404040; color: #ccc; padding: 5px; font-size: 11px; margin-bottom: 10px; word-break: break-all; }
+        .file-item, .folder-item { 
+            padding: 4px 8px; cursor: pointer; border-radius: 3px; display: flex; align-items: center; font-size: 13px; 
+        }
+        .file-item:hover, .folder-item:hover { background: #404040; }
+        .folder-item { color: #ffeb9c; }
+        .file-item { color: #ccc; }
+        .folder-icon::before { content: "📁 "; }
+        .file-icon::before { content: "📄 "; }
+        .back-button { color: #569cd6; }
+        .back-button::before { content: "⬆️ "; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div id="toolbar">
+            <button onclick="ide.createNewFile()">New</button>
+            <button onclick="ide.openFile(prompt('File path:'))">Open</button>
+            <button onclick="ide.saveFile()">Save</button>
+            <button onclick="ide.compileCode()">Compile (F9)</button>
+            <button onclick="ide.runCode()">Run (F5)</button>
+        </div>
+        <div id="main-container">
+            <div id="sidebar">
+                <div id="drive-explorer">
+                    <div id="drive-tabs">
+                        <button class="drive-tab active" onclick="driveExplorer.switchDrive('D:')">D: Drive</button>
+                        <button class="drive-tab" onclick="driveExplorer.switchDrive('C:')">C: Drive</button>
+                    </div>
+                    <input id="search-box" type="text" placeholder="Search files..." oninput="driveExplorer.search(this.value)">
+                    <div id="current-path">D:\</div>
+                    <div id="file-list"></div>
+                </div>
+            </div>
+            <div id="editor-container">
+                <div id="editor"></div>
+            </div>
+            <div id="ai-panel">
+                <div id="ai-chat"></div>
+                <input id="ai-input" placeholder="Ask AI..." />
+            </div>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/clike/clike.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/closebrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/matchbrackets.min.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+# CMakeLists.txt for Feedback System Component
+# RawrXD IDE - Community Feedback and Telemetry
+
+cmake_minimum_required(VERSION 3.16)
+
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets Network)
+
+set(FEEDBACK_SOURCES
+    FeedbackSystem.cpp
+)
+
+set(FEEDBACK_HEADERS
+    FeedbackSystem.hpp
+)
+
+add_library(rawrxd_feedback STATIC
+    ${FEEDBACK_SOURCES}
+    ${FEEDBACK_HEADERS}
+)
+
+set_target_properties(rawrxd_feedback PROPERTIES
+    AUTOMOC ON
+    CXX_STANDARD 20
+    CXX_STANDARD_REQUIRED ON
+)
+
+target_link_libraries(rawrxd_feedback PUBLIC
+    Qt6::Core
+    Qt6::Widgets
+    Qt6::Network
+)
+
+target_include_directories(rawrxd_feedback PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/include
+)
+
+target_compile_definitions(rawrxd_feedback PRIVATE
+    RAWRXD_FEEDBACK_ENABLED
+)
+
+message(STATUS "✓ Feedback System component configured")

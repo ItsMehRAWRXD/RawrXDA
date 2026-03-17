@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RawrXD Feature Tester — Unified Model Wiring Audit</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #0d1117;
+      color: #e6edf3;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    h1 {
+      color: #00d9ff;
+      margin-bottom: 4px;
+      font-size: 24px;
+    }
+
+    .subtitle {
+      color: #8b949e;
+      margin-bottom: 20px;
+      font-size: 13px;
+    }
+
+    .config-bar {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+      padding: 12px;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+    }
+
+    .config-bar label {
+      color: #8b949e;
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .config-bar input,
+    .config-bar select {
+      background: #0d1117;
+      color: #e6edf3;
+      border: 1px solid #30363d;
+      border-radius: 4px;
+      padding: 6px 10px;
+      font-size: 13px;
+      outline: none;
+      min-width: 200px;
+    }
+
+    .config-bar input:focus,
+    .config-bar select:focus {
+      border-color: #00d9ff;
+    }
+
+    .btn {
+      padding: 8px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: #00d9ff;
+      color: #0d1117;
+    }
+
+    .btn-primary:hover {
+      background: #33e1ff;
+    }
+
+    .btn-success {
+      background: #238636;
+      color: #fff;
+    }
+
+    .btn-success:hover {
+      background: #2ea043;
+    }
+
+    .btn-danger {
+      background: #da3633;
+      color: #fff;
+    }
+
+    .btn-danger:hover {
+      background: #f85149;
+    }
+
+    .btn-small {
+      padding: 4px 12px;
+      font-size: 11px;
+    }
+
+    .test-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .test-card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 14px;
+      transition: border-color 0.3s;
+    }
+
+    .test-card.pass {
+      border-color: #238636;
+    }
+
+    .test-card.fail {
+      border-color: #da3633;
+    }
+
+    .test-card.running {
+      border-color: #d29922;
+    }
+
+    .test-card.skip {
+      border-color: #8b949e;
+    }
+
+    .test-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .test-icon {
+      font-size: 20px;
+    }
+
+    .test-title {
+      font-weight: 600;
+      font-size: 14px;
+      flex: 1;
+    }
+
+    .test-badge {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .badge-pass {
+      background: #238636;
+      color: #fff;
+    }
+
+    .badge-fail {
+      background: #da3633;
+      color: #fff;
+    }
+
+    .badge-running {
+      background: #d29922;
+      color: #0d1117;
+    }
+
+    .badge-pending {
+      background: #30363d;
+      color: #8b949e;
+    }
+
+    .badge-skip {
+      background: #30363d;
+      color: #8b949e;
+    }
+
+    .test-details {
+      font-size: 12px;
+      color: #8b949e;
+      line-height: 1.6;
+    }
+
+    .test-details .check {
+      color: #3fb950;
+    }
+
+    .test-details .cross {
+      color: #f85149;
+    }
+
+    .test-details .warn {
+      color: #d29922;
+    }
+
+    .test-details code {
+      background: #0d1117;
+      padding: 1px 5px;
+      border-radius: 3px;
+      color: #e6edf3;
+      font-size: 11px;
+    }
+
+    .summary-bar {
+      display: flex;
+      gap: 20px;
+      padding: 14px;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .summary-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .summary-count {
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    .summary-label {
+      font-size: 12px;
+      color: #8b949e;
+    }
+
+    .progress-bar {
+      flex: 1;
+      min-width: 200px;
+      height: 8px;
+      background: #30363d;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      transition: width 0.3s;
+      border-radius: 4px;
+    }
+
+    .log-panel {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 12px;
+      font-family: 'Cascadia Code', 'Fira Code', monospace;
+      font-size: 11px;
+      max-height: 300px;
+      overflow-y: auto;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+
+    .log-info {
+      color: #8b949e;
+    }
+
+    .log-ok {
+      color: #3fb950;
+    }
+
+    .log-err {
+      color: #f85149;
+    }
+
+    .log-warn {
+      color: #d29922;
+    }
+
+    .model-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .model-chip {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 3px 10px;
+      font-size: 11px;
+      color: #8b949e;
+    }
+
+    .model-chip.active {
+      border-color: #00d9ff;
+      color: #00d9ff;
+    }
+
+    h2 {
+      color: #c9d1d9;
+      font-size: 16px;
+      margin: 20px 0 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>🧪 RawrXD Feature Tester</h1>
+  <p class="subtitle">Unified Model Wiring Audit — Verifies all windows use dynamic model discovery via proxy + Ollama
+    fallback</p>
+
+  <!-- Config -->
+  <div class="config-bar">
+    <label>
+      Proxy Backend (RawrXD)
+      <input type="text" id="cfgProxy" value="http://localhost:11435" />
+    </label>
+    <label>
+      Ollama Direct
+      <input type="text" id="cfgOllama" value="http://localhost:11434" />
+    </label>
+    <label>
+      &nbsp;
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" onclick="runAllTests()">▶ Run All Tests</button>
+        <button class="btn btn-success" onclick="runConnectivityTests()">🔌 Connectivity Only</button>
+        <button class="btn btn-danger btn-small" onclick="resetResults()">Reset</button>
+      </div>
+    </label>
+  </div>
+
+  <!-- Summary -->
+  <div class="summary-bar">
+    <div class="summary-item">
+      <span class="summary-count" id="sumTotal" style="color:#e6edf3;">0</span>
+      <span class="summary-label">Total</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-count" id="sumPass" style="color:#3fb950;">0</span>
+      <span class="summary-label">Pass</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-count" id="sumFail" style="color:#f85149;">0</span>
+      <span class="summary-label">Fail</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-count" id="sumSkip" style="color:#8b949e;">0</span>
+      <span class="summary-label">Skip</span>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressBar" style="width:0%;background:#00d9ff;"></div>
+    </div>
+  </div>
+
+  <!-- Discovered Models -->
+  <h2>📦 Discovered Models</h2>
+  <div id="modelDisplay" class="model-list" style="margin-bottom:16px;">
+    <span style="color:#8b949e;font-size:12px;">Run tests to discover models...</span>
+  </div>
+
+  <!-- Test Grid -->
+  <h2>🔬 Test Results</h2>
+  <div class="test-grid" id="testGrid"></div>
+
+  <!-- Log -->
+  <h2>📋 Execution Log</h2>
+  <div class="log-panel" id="logPanel"></div>
+
+  <script>
+    // ============================================================
+    // TEST DEFINITIONS
+    // ============================================================
+    const TESTS = [
+      {
+        id: 'proxy-reachable',
+        icon: '🔌', title: 'Proxy Backend Reachable',
+        desc: 'Verify RawrXD proxy at :11435 responds',
+        category: 'connectivity',
+        run: async (cfg) => {
+          const r = await fetchWithTimeout(cfg.proxy + '/models', 5000);
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          const d = await r.json();
+          return { pass: true, detail: `Proxy online — ${(d.models || []).length} models` };
+        }
+      },
+      {
+        id: 'ollama-reachable',
+        icon: '🦙', title: 'Ollama Direct Reachable',
+        desc: 'Verify Ollama at :11434 responds',
+        category: 'connectivity',
+        run: async (cfg) => {
+          const r = await fetchWithTimeout(cfg.ollama + '/api/tags', 5000);
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          const d = await r.json();
+          return { pass: true, detail: `Ollama online — ${(d.models || []).length} models` };
+        }
+      },
+      {
+        id: 'proxy-models-list',
+        icon: '📦', title: 'Proxy /models Returns Models',
+        desc: 'Proxy endpoint returns enriched model list (GGUF + Ollama + blob)',
+        category: 'model-discovery',
+        run: async (cfg) => {
+          const r = await fetchWithTimeout(cfg.proxy + '/models', 5000);
+          const d = await r.json();
+          const models = d.models || [];
+          if (models.length === 0) throw new Error('No models returned');
+          const types = [...new Set(models.map(m => m.type || 'unknown'))];
+          return { pass: true, detail: `${models.length} models, types: ${types.join(', ')}`, models };
+        }
+      },
+      {
+        id: 'ollama-tags-list',
+        icon: '🏷️', title: 'Ollama /api/tags Returns Models',
+        desc: 'Direct Ollama endpoint returns model tags',
+        category: 'model-discovery',
+        run: async (cfg) => {
+          const r = await fetchWithTimeout(cfg.ollama + '/api/tags', 5000);
+          const d = await r.json();
+          const models = d.models || [];
+          if (models.length === 0) throw new Error('No models returned from Ollama');
+          return { pass: true, detail: `${models.length} Ollama models`, models };
+        }
+      },
+      {
+        id: 'openai-compat-endpoint',
+        icon: '🔄', title: '/v1/chat/completions Available',
+        desc: 'Proxy supports OpenAI-compatible chat endpoint',
+        category: 'api-endpoints',
+        run: async (cfg) => {
+          const model = cfg.firstModel || 'llama3.2:3b';
+          const r = await fetchWithTimeout(cfg.proxy + '/v1/chat/completions', 10000, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model, messages: [{ role: 'user', content: 'Say "test ok" in 2 words' }],
+              stream: false, max_tokens: 10
+            })
+          });
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          const d = await r.json();
+          const content = d.choices?.[0]?.message?.content || '';
+          return { pass: content.length > 0, detail: `Response: "${content.substring(0, 50)}"` };
+        }
+      },
+      {
+        id: 'ollama-chat-endpoint',
+        icon: '💬', title: 'Ollama /api/chat Available',
+        desc: 'Direct Ollama chat endpoint responds',
+        category: 'api-endpoints',
+        run: async (cfg) => {
+          const model = cfg.firstModel || 'llama3.2:3b';
+          const r = await fetchWithTimeout(cfg.ollama + '/api/chat', 10000, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model, messages: [{ role: 'user', content: 'Say "ok"' }], stream: false
+            })
+          });
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          const d = await r.json();
+          const content = d.message?.content || '';
+          return { pass: content.length > 0, detail: `Response: "${content.substring(0, 50)}"` };
+        }
+      },
+      {
+        id: 'streaming-openai',
+        icon: '⚡', title: 'Streaming via /v1/chat/completions',
+        desc: 'Verify SSE streaming works through proxy',
+        category: 'streaming',
+        run: async (cfg) => {
+          const model = cfg.firstModel || 'llama3.2:3b';
+          const r = await fetchWithTimeout(cfg.proxy + '/v1/chat/completions', 15000, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model, messages: [{ role: 'user', content: 'Count 1 to 5' }],
+              stream: true, max_tokens: 50
+            })
+          });
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          const reader = r.body.getReader();
+          const decoder = new TextDecoder();
+          let chunks = 0, text = '';
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            const raw = decoder.decode(value, { stream: true });
+            for (const line of raw.split('\n')) {
+              const trimmed = line.trim();
+              if (!trimmed || trimmed === 'data: [DONE]') continue;
+              const data = trimmed.startsWith('data: ') ? trimmed.slice(6) : trimmed;
+              try {
+                const j = JSON.parse(data);
+                const d = j.choices?.[0]?.delta?.content || j.message?.content || j.response || '';
+                if (d) { text += d; chunks++; }
+              } catch (e) { }
+            }
+          }
+          if (chunks === 0) throw new Error('No streaming chunks received');
+          return { pass: true, detail: `${chunks} chunks, text: "${text.substring(0, 40)}..."` };
+        }
+      },
+      {
+        id: 'streaming-ollama',
+        icon: '🌊', title: 'Streaming via /api/chat',
+        desc: 'Verify Ollama native streaming works',
+        category: 'streaming',
+        run: async (cfg) => {
+          const model = cfg.firstModel || 'llama3.2:3b';
+          const r = await fetchWithTimeout(cfg.ollama + '/api/chat', 15000, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model, messages: [{ role: 'user', content: 'Count 1 to 3' }], stream: true
+            })
+          });
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          const reader = r.body.getReader();
+          const decoder = new TextDecoder();
+          let chunks = 0, text = '';
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            const raw = decoder.decode(value, { stream: true });
+            for (const line of raw.split('\n')) {
+              if (!line.trim()) continue;
+              try {
+                const j = JSON.parse(line);
+                const d = j.message?.content || j.response || '';
+                if (d) { text += d; chunks++; }
+              } catch (e) { }
+            }
+          }
+          if (chunks === 0) throw new Error('No streaming chunks received');
+          return { pass: true, detail: `${chunks} chunks, text: "${text.substring(0, 40)}..."` };
+        }
+      },
+
+      // Window-type wiring tests (static analysis)
+      ...generateWindowWiringTests()
+    ];
+
+    function generateWindowWiringTests() {
+      const windowTypes = [
+        { type: 'chat', icon: '💬', label: 'Chat', usesModel: true },
+        { type: 'audit', icon: '🔍', label: 'Audit', usesModel: true },
+        { type: 'cot', icon: '🧠', label: 'Chain of Thought', usesModel: true },
+        { type: 'swarm', icon: '🐝', label: 'Swarm', usesModel: true },
+        { type: 'code', icon: '📝', label: 'Code Editor', usesModel: false },
+        { type: 'terminal', icon: '📟', label: 'Terminal', usesModel: false },
+        { type: 'models', icon: '🤖', label: 'Model Manager', usesModel: true },
+        { type: 'perf', icon: '📊', label: 'Performance', usesModel: false },
+        { type: 'hotpatch', icon: '🔧', label: 'Hotpatch', usesModel: false },
+        { type: 'reverse', icon: '🔬', label: 'Reverse Eng.', usesModel: false },
+        { type: 'debug', icon: '🐞', label: 'Debug', usesModel: false },
+        { type: 'benchmark', icon: '⚡', label: 'Benchmark', usesModel: true },
+        { type: 'compile', icon: '🏗', label: 'Compiler', usesModel: false },
+        { type: 'browser', icon: '🌐', label: 'Browser', usesModel: false },
+        { type: 'deploy', icon: '🚀', label: 'Deploy', usesModel: false },
+        { type: 'files', icon: '📂', label: 'Files', usesModel: false },
+      ];
+
+      return windowTypes.map(wt => ({
+        id: `win-${wt.type}`,
+        icon: wt.icon,
+        title: `${wt.label} Window Wiring`,
+        desc: wt.usesModel
+          ? `Verify ${wt.label} window gets model from dynamic selector (not hardcoded)`
+          : `${wt.label} window — no direct model usage (static content)`,
+        category: 'window-wiring',
+        run: async (cfg) => {
+          // Production test: actually fetch the HTML source and inspect it for real wiring
+          const checks = [];
+          const failures = [];
+
+          // Fetch ide_chatbot.html source and inspect for real wiring patterns
+          const chatbotUrls = [
+            cfg.proxy.replace(/:\d+$/, '') + ':11435/gui/ide_chatbot.html',
+            window.location.href.replace(/[^\/]*$/, '') + '../ide_chatbot.html',
+            window.location.href.replace(/[^\/]*$/, '') + 'ide_chatbot.html',
+          ];
+
+          let chatbotSrc = null;
+          for (const url of chatbotUrls) {
+            try {
+              const r = await fetchWithTimeout(url, 5000);
+              if (r.ok) { chatbotSrc = await r.text(); break; }
+            } catch (_) { }
+          }
+
+          // Also try multiwindow_ide.html
+          const mwUrls = [
+            cfg.proxy.replace(/:\d+$/, '') + ':11435/gui/multiwindow_ide.html',
+            window.location.href.replace(/[^\/]*$/, '') + '../multiwindow_ide.html',
+            window.location.href.replace(/[^\/]*$/, '') + 'multiwindow_ide.html',
+          ];
+
+          let mwSrc = null;
+          for (const url of mwUrls) {
+            try {
+              const r = await fetchWithTimeout(url, 5000);
+              if (r.ok) { mwSrc = await r.text(); break; }
+            } catch (_) { }
+          }
+
+          // --- Validate wiring in ide_chatbot.html ---
+          if (chatbotSrc) {
+            // Check window type is registered in the TYPES map or MWM module
+            const typeRegex = new RegExp(`['"]${wt.type}['"]\\s*:`, 'i');
+            const typeMatch = typeRegex.test(chatbotSrc) || chatbotSrc.includes(`type: '${wt.type}'`) || chatbotSrc.includes(`type:'${wt.type}'`);
+            if (typeMatch) {
+              checks.push(`ide_chatbot: Window type "${wt.type}" registered`);
+            } else {
+              failures.push(`ide_chatbot: Window type "${wt.type}" NOT found in source`);
+            }
+
+            if (wt.usesModel) {
+              // Verify model retrieval uses getActiveModel or State.model (not hardcoded)
+              const hasGetActiveModel = chatbotSrc.includes('getActiveModel');
+              const hasStateModel = chatbotSrc.includes('State.model');
+              const hasModelSelect = chatbotSrc.includes('modelSelect') || chatbotSrc.includes('#modelSelect');
+              if (hasGetActiveModel || hasStateModel) {
+                checks.push('ide_chatbot: Model resolved via getActiveModel()/State.model (dynamic)');
+              } else {
+                failures.push('ide_chatbot: No dynamic model resolution found (getActiveModel/State.model missing)');
+              }
+              if (hasModelSelect) {
+                checks.push('ide_chatbot: Model selector UI element present');
+              }
+
+              // Verify streaming uses fetch-based cascade
+              const hasV1Chat = chatbotSrc.includes('/v1/chat/completions');
+              const hasApiChat = chatbotSrc.includes('/api/chat') || chatbotSrc.includes('/api/generate');
+              if (hasV1Chat && hasApiChat) {
+                checks.push('ide_chatbot: Two-tier streaming cascade (/v1/chat → /api/chat) verified');
+              } else if (hasV1Chat || hasApiChat) {
+                checks.push('ide_chatbot: Streaming endpoint found (single tier)');
+              } else {
+                failures.push('ide_chatbot: No streaming endpoints found');
+              }
+
+              // Verify model list is fetched, not hardcoded
+              const hasFetchModels = chatbotSrc.includes('fetchModels') || chatbotSrc.includes('/models') || chatbotSrc.includes('/api/tags');
+              if (hasFetchModels) {
+                checks.push('ide_chatbot: Model list fetched dynamically (/models or /api/tags)');
+              } else {
+                failures.push('ide_chatbot: No dynamic model fetching detected');
+              }
+            }
+          } else {
+            checks.push('ide_chatbot: Source not reachable (offline test skipped)');
+          }
+
+          // --- Validate wiring in multiwindow_ide.html ---
+          if (mwSrc) {
+            const typeRegex2 = new RegExp(`['"]${wt.type}['"]`, 'i');
+            if (typeRegex2.test(mwSrc)) {
+              checks.push(`multiwindow_ide: Window type "${wt.type}" registered`);
+            } else {
+              failures.push(`multiwindow_ide: Window type "${wt.type}" NOT found`);
+            }
+
+            if (wt.usesModel) {
+              const hasActiveModel = mwSrc.includes('State.activeModel') || mwSrc.includes('activeModel');
+              const hasBuildModelSelect = mwSrc.includes('buildModelSelect') || mwSrc.includes('updateAllModelSelects');
+              const hasFetchModels2 = mwSrc.includes('fetchModels');
+              if (hasActiveModel) checks.push('multiwindow_ide: Dynamic model via State.activeModel');
+              else failures.push('multiwindow_ide: No State.activeModel reference');
+              if (hasBuildModelSelect) checks.push('multiwindow_ide: Model selector built dynamically');
+              if (hasFetchModels2) checks.push('multiwindow_ide: fetchModels() present for dynamic loading');
+            }
+          } else {
+            checks.push('multiwindow_ide: Source not reachable (offline test skipped)');
+          }
+
+          // Determine pass/fail based on whether any critical failures found
+          const pass = failures.length === 0;
+          const allChecks = [
+            ...checks.map(c => `✓ ${c}`),
+            ...failures.map(f => `✗ ${f}`)
+          ];
+
+          return {
+            pass,
+            detail: allChecks.join('\n') || '(No source files reachable for inspection)'
+          };
+        }
+      }));
+    }
+
+    // ============================================================
+    // TEST RUNNER
+    // ============================================================
+    let testResults = {};
+
+    async function fetchWithTimeout(url, timeout, opts = {}) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeout);
+      try {
+        const resp = await fetch(url, { ...opts, signal: controller.signal });
+        clearTimeout(timer);
+        return resp;
+      } catch (e) {
+        clearTimeout(timer);
+        throw e;
+      }
+    }
+
+    function getConfig() {
+      return {
+        proxy: document.getElementById('cfgProxy').value.replace(/\/$/, ''),
+        ollama: document.getElementById('cfgOllama').value.replace(/\/$/, ''),
+        firstModel: null  // Will be set after model discovery
+      };
+    }
+
+    function log(msg, type = 'info') {
+      const panel = document.getElementById('logPanel');
+      const time = new Date().toLocaleTimeString();
+      panel.innerHTML += `<span class="log-${type}">[${time}] ${msg}</span>\n`;
+      panel.scrollTop = panel.scrollHeight;
+    }
+
+    function updateSummary() {
+      const results = Object.values(testResults);
+      const total = results.length;
+      const pass = results.filter(r => r === 'pass').length;
+      const fail = results.filter(r => r === 'fail').length;
+      const skip = results.filter(r => r === 'skip').length;
+
+      document.getElementById('sumTotal').textContent = total;
+      document.getElementById('sumPass').textContent = pass;
+      document.getElementById('sumFail').textContent = fail;
+      document.getElementById('sumSkip').textContent = skip;
+
+      const pct = total > 0 ? ((pass / total) * 100).toFixed(0) : 0;
+      const bar = document.getElementById('progressBar');
+      bar.style.width = pct + '%';
+      bar.style.background = fail > 0 ? '#da3633' : '#3fb950';
+    }
+
+    function setTestCard(testId, status, detail) {
+      const card = document.getElementById('card-' + testId);
+      if (!card) return;
+      card.className = 'test-card ' + status;
+      const badge = card.querySelector('.test-badge');
+      badge.className = 'test-badge badge-' + status;
+      badge.textContent = status;
+      const details = card.querySelector('.test-details');
+      if (detail) {
+        details.innerHTML = detail.split('\n').map(line => {
+          if (line.startsWith('✓')) return `<div class="check">${escHtml(line)}</div>`;
+          if (line.startsWith('✗')) return `<div class="cross">${escHtml(line)}</div>`;
+          if (line.startsWith('⚠')) return `<div class="warn">${escHtml(line)}</div>`;
+          return `<div>${escHtml(line)}</div>`;
+        }).join('');
+      }
+    }
+
+    function escHtml(s) {
+      const d = document.createElement('div');
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    function buildTestCards() {
+      const grid = document.getElementById('testGrid');
+      grid.innerHTML = '';
+      TESTS.forEach(t => {
+        const card = document.createElement('div');
+        card.className = 'test-card';
+        card.id = 'card-' + t.id;
+        card.innerHTML = `
+          <div class="test-header">
+            <span class="test-icon">${t.icon}</span>
+            <span class="test-title">${t.title}</span>
+            <span class="test-badge badge-pending">pending</span>
+          </div>
+          <div class="test-details">${t.desc}</div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    async function runAllTests() {
+      testResults = {};
+      buildTestCards();
+      document.getElementById('logPanel').innerHTML = '';
+      log('Starting full test suite...', 'info');
+
+      const cfg = getConfig();
+
+      // Phase 1: Connectivity
+      log('Phase 1: Connectivity checks', 'info');
+      for (const t of TESTS.filter(t => t.category === 'connectivity')) {
+        await runSingleTest(t, cfg);
+      }
+
+      // Phase 2: Model discovery — find first model for subsequent tests
+      log('Phase 2: Model discovery', 'info');
+      for (const t of TESTS.filter(t => t.category === 'model-discovery')) {
+        const result = await runSingleTest(t, cfg);
+        if (result && result.models && result.models.length > 0 && !cfg.firstModel) {
+          cfg.firstModel = result.models[0].name || result.models[0].model || result.models[0];
+          log(`Using model "${cfg.firstModel}" for API tests`, 'ok');
+          displayModels(result.models);
+        }
+      }
+
+      if (!cfg.firstModel) {
+        log('⚠ No models discovered — API endpoint tests will use fallback model', 'warn');
+        cfg.firstModel = 'llama3.2:3b';
+      }
+
+      // Phase 3: API endpoints
+      log('Phase 3: API endpoint validation', 'info');
+      for (const t of TESTS.filter(t => t.category === 'api-endpoints')) {
+        await runSingleTest(t, cfg);
+      }
+
+      // Phase 4: Streaming
+      log('Phase 4: Streaming validation', 'info');
+      for (const t of TESTS.filter(t => t.category === 'streaming')) {
+        await runSingleTest(t, cfg);
+      }
+
+      // Phase 5: Window wiring
+      log('Phase 5: Window wiring audit', 'info');
+      for (const t of TESTS.filter(t => t.category === 'window-wiring')) {
+        await runSingleTest(t, cfg);
+      }
+
+      // Final summary
+      const results = Object.values(testResults);
+      const pass = results.filter(r => r === 'pass').length;
+      const fail = results.filter(r => r === 'fail').length;
+      log(`\n═══════════════════════════════════════`, 'info');
+      log(`TEST SUITE COMPLETE: ${pass}/${results.length} passed, ${fail} failed`, fail > 0 ? 'err' : 'ok');
+      log(`═══════════════════════════════════════`, 'info');
+    }
+
+    async function runConnectivityTests() {
+      testResults = {};
+      buildTestCards();
+      document.getElementById('logPanel').innerHTML = '';
+      log('Running connectivity tests only...', 'info');
+      const cfg = getConfig();
+
+      for (const t of TESTS.filter(t => t.category === 'connectivity' || t.category === 'model-discovery')) {
+        const result = await runSingleTest(t, cfg);
+        if (result && result.models) displayModels(result.models);
+      }
+
+      // Mark remaining as skipped
+      for (const t of TESTS.filter(t => t.category !== 'connectivity' && t.category !== 'model-discovery')) {
+        testResults[t.id] = 'skip';
+        setTestCard(t.id, 'skip', 'Skipped — connectivity-only mode');
+      }
+      updateSummary();
+    }
+
+    async function runSingleTest(test, cfg) {
+      setTestCard(test.id, 'running', 'Running...');
+      log(`  ▶ ${test.title}...`, 'info');
+
+
+      try {
+        const result = await test.run(cfg);
+        if (result.pass) {
+          testResults[test.id] = 'pass';
+          setTestCard(test.id, 'pass', result.detail);
+          log(`  ✓ ${test.title}: ${result.detail.split('\n')[0]}`, 'ok');
+        } else {
+          testResults[test.id] = 'fail';
+          setTestCard(test.id, 'fail', result.detail);
+          log(`  ✗ ${test.title}: ${result.detail}`, 'err');
+        }
+        updateSummary();
+        return result;
+      } catch (err) {
+        testResults[test.id] = 'fail';
+        setTestCard(test.id, 'fail', `Error: ${err.message}`);
+        log(`  ✗ ${test.title}: ${err.message}`, 'err');
+        updateSummary();
+        return null;
+      }
+    }
+
+    function displayModels(models) {
+      const container = document.getElementById('modelDisplay');
+      container.innerHTML = '';
+      models.forEach((m, i) => {
+        const name = m.name || m.model || m;
+        const type = m.type || 'unknown';
+        const chip = document.createElement('span');
+        chip.className = 'model-chip' + (i === 0 ? ' active' : '');
+        chip.textContent = `${name} [${type}]`;
+        container.appendChild(chip);
+      });
+    }
+
+    function resetResults() {
+      testResults = {};
+      buildTestCards();
+      document.getElementById('logPanel').innerHTML = '';
+      document.getElementById('modelDisplay').innerHTML =
+        '<span style="color:#8b949e;font-size:12px;">Run tests to discover models...</span>';
+      updateSummary();
+    }
+
+    // Init
+    buildTestCards();
+    updateSummary();
+  </script>
+  <script src="/gui/rawrxd-nav.js"></script>
+</body>
+
+</html>

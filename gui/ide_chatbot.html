@@ -7872,6 +7872,11 @@
               <option value="">Connecting...</option>
             </select>
           </div>
+          <div style="margin-top:8px; display:flex; gap:8px; align-items:center;">
+            <button class="pill-btn" style="flex:1;" onclick="browseLocalModels()">Browse Local Models</button>
+            <span style="font-size:11px; color:var(--text-muted);">F:\\OllamaModels</span>
+            <input type="file" id="localModelDirInput" webkitdirectory directory multiple style="display:none" onchange="handleLocalModelFiles(this.files)">
+          </div>
         </div>
 
         <div class="gen-settings">

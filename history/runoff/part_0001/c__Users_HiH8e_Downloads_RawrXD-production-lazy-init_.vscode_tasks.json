@@ -1,0 +1,10 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Build RawrXD IDE",
+			"type": "shell",
+			"command": "cmake --build \"${workspaceFolder}\\build_masm\" --config Release --target brutal_gzip && cmake --build \"${workspaceFolder}\\build_masm\" --config Release --target RawrXD-QtShell"
+		}
+	]
+}

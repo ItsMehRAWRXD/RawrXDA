@@ -39,7 +39,9 @@ static std::vector<std::string> g_avoidPatterns;
 static bool g_prefVerbose = false;
 static std::string g_prefLanguage = "en";
 
-AgenticEngine::AgenticEngine() : m_inferenceEngine(nullptr) {}
+AgenticEngine::AgenticEngine() : m_inferenceEngine(nullptr), m_ideConfig(nullptr), m_modelLoaded(false) {
+    m_config = GenerationConfig();
+}
 
 AgenticEngine::~AgenticEngine() {}
 
@@ -81,12 +83,12 @@ std::string AgenticEngine::calculateMetrics(const std::string& code) {
         
         // Trim whitespace
         std::string trimmed = line;
-        size_t start = trimmed.find_first_not_of(" \t\r\n");
-        if (start == std::string::npos) {
+        size_t startTrim = trimmed.find_first_not_of(" \t\r\n");
+        if (startTrim == std::string::npos) {
             blankLines++;
             continue;
         }
-        trimmed = trimmed.substr(start);
+        trimmed = trimmed.substr(startTrim);
 
         // Handle block comments
         if (inBlockComment) {
@@ -206,24 +208,28 @@ std::string AgenticEngine::generateCode(const std::string& prompt) {
     return chat("Generate code: " + prompt);
 }
 
-std::string AgenticEngine::generateFunction(const std::string& signature, const std::string& description) {
-    return chat("Generate function " + signature + ": " + description);
+std::string AgenticEngine::generateFunction(const std::string& spec, const std::string& lang) {
+    return chat("Generate function " + spec + " in " + lang);
 }
 
-std::string AgenticEngine::generateClass(const std::string& className, const std::string& spec) {
-    return chat("Generate class " + className + " with spec: " + spec);
+std::string AgenticEngine::generateClass(const std::string& spec, const std::string& lang) {
+    return chat("Generate class " + spec + " in " + lang);
 }
 
 std::string AgenticEngine::generateTests(const std::string& code) {
     return chat("Generate unit tests for:\n" + code);
 }
 
-std::string AgenticEngine::refactorCode(const std::string& code, const std::string& refactoringType) {
-    return chat("Refactor code (" + refactoringType + "):\n" + code);
+std::string AgenticEngine::refactorCode(const std::string& code, const std::string& instruction) {
+    return chat("Refactor code (" + instruction + "):\n" + instruction);
 }
 
-std::string AgenticEngine::planTask(const std::string& goal) {
-    return chat("Plan task: " + goal);
+json AgenticEngine::planTask(const std::string& goal) {
+    std::string response = chat("Plan task: " + goal);
+    json plan;
+    plan["goal"] = goal;
+    plan["steps"] = { response };
+    return plan;
 }
 
 std::string AgenticEngine::decomposeTask(const std::string& task) {
@@ -711,12 +717,6 @@ std::string AgenticEngine::referenceSymbol(const std::string& symbol) {
 
 void AgenticEngine::updateConfig(const GenerationConfig& config) {
     m_config = config;
-    if (m_inferenceEngine) {
-        m_inferenceEngine->SetMaxMode(config.maxMode);
-        m_inferenceEngine->SetDeepThinking(config.deepThinking);
-        m_inferenceEngine->SetDeepResearch(config.deepResearch);
-        // noRefusal is handled in the agent prompt builder
-    }
 }
 
 std::string AgenticEngine::runDumpbin(const std::string& filePath, const std::string& mode) {
@@ -771,10 +771,15 @@ std::string AgenticEngine::runCompiler(const std::string& sourceFile, const std:
     }
 }
 
-std::string AgenticEngine::chat(const std::string& message) {
+// chat() and chatStream() implementations removed here, already covered by aliases or removed duplicate bodies.
+// Using processQuery for the actual logic.
+
+std::string AgenticEngine::processQuery(const std::string& query) {
     if (!m_inferenceEngine) return "[Error: No Inference Engine]";
     
-    RawrXD::NativeAgent agent(static_cast<RawrXD::CPUInferenceEngine*>(m_inferenceEngine));
+    // Cast to CPUInferenceEngine as required by NativeAgent constructor
+    RawrXD::CPUInferenceEngine* cpuEngine = static_cast<RawrXD::CPUInferenceEngine*>(m_inferenceEngine);
+    RawrXD::NativeAgent agent(cpuEngine);
     
     // Configure Agent from Engine config
     agent.SetMaxMode(m_config.maxMode);
@@ -787,14 +792,15 @@ std::string AgenticEngine::chat(const std::string& message) {
         response += token;
     });
     
-    agent.Ask(message);
+    agent.Ask(query);
     return response;
 }
 
 std::string AgenticEngine::chatStream(const std::string& message, const std::function<void(const std::string&)>& onToken) {
     if (!m_inferenceEngine) return "[Error: No Inference Engine]";
 
-    RawrXD::NativeAgent agent(static_cast<RawrXD::CPUInferenceEngine*>(m_inferenceEngine));
+    RawrXD::CPUInferenceEngine* cpuEngine = static_cast<RawrXD::CPUInferenceEngine*>(m_inferenceEngine);
+    RawrXD::NativeAgent agent(cpuEngine);
 
     agent.SetMaxMode(m_config.maxMode);
     agent.SetDeepThink(m_config.deepThinking);

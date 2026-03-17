@@ -1,0 +1,21 @@
+{
+  "product": "RawrXD",
+  "channel": "stable",
+  "version": "14.6.0",
+  "generatedUtc": "2026-03-04T22:48:21.0898297Z",
+  "artifacts": [
+    {
+      "name": "RawrXD-Win32IDE.exe",
+      "size": 50904576,
+      "sha256": "740e9dc658f84449eb0ed942afc8c7790c52e379ba97a948f244b003be8eedec",
+      "url": "https://releases.rawrxd.dev/v14.6.0/RawrXD-Win32IDE.exe"
+    },
+    {
+      "name": "RawrXD_Gold.exe",
+      "size": 38255104,
+      "sha256": "cb1f1566c1989cc5b9e3e98b6c698c418365a53c8093a11cfcae42e98dfed5c1",
+      "url": "https://releases.rawrxd.dev/v14.6.0/RawrXD_Gold.exe"
+    }
+  ]
+}
+

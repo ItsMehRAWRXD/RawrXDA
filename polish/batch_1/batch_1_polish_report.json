@@ -1,0 +1,94 @@
+{
+  "deliverable": "batch_polish_alignment",
+  "no_mixing": "YES",
+  "policy": {
+    "uses_only_existing_sources": true,
+    "does_not_delete_sources": true,
+    "does_not_recode_sources": true,
+    "does_not_move_sources": true,
+    "writes_only": [
+      "D:\\rawrxd\\cmake\\polish_batches\\batch_1_sources.cmake",
+      "D:\\rawrxd\\cmake\\polish_batches\\batch_1_source_groups.cmake",
+      "D:\\rawrxd\\polish\\batch_1\\batch_1_polish_report.json"
+    ]
+  },
+  "generated": "2026-02-20T18:50:47Z",
+  "project_root": "D:\\rawrxd",
+  "batch": {
+    "batch_id": 1,
+    "requested_count": 50,
+    "exists_on_disk": 50,
+    "missing_on_disk": 0
+  },
+  "cmake_alignment": {
+    "cmake_file": "D:\\rawrxd\\CMakeLists.txt",
+    "cmake_tokens_found": 1248,
+    "batch_files_referenced_by_cmake": 50,
+    "batch_files_not_referenced_by_cmake": 0
+  },
+  "lists": {
+    "missing_on_disk": [],
+    "not_referenced_by_cmake": [],
+    "referenced_by_cmake": [
+      "src/agent_explainability.cpp",
+      "src/agent_history.cpp",
+      "src/agent_policy.cpp",
+      "src/agent/agent_self_healing_orchestrator.cpp",
+      "src/agent/agent_self_repair.cpp",
+      "src/agent/agentic_deep_thinking_engine_stub.cpp",
+      "src/agent/agentic_deep_thinking_engine.cpp",
+      "src/agent/agentic_failure_detector.cpp",
+      "src/agent/agentic_hotpatch_orchestrator.cpp",
+      "src/agent/agentic_puppeteer.cpp",
+      "src/agent/autonomous_subagent.cpp",
+      "src/agent/DiskRecoveryAgent.cpp",
+      "src/agent/eval_framework.cpp",
+      "src/agent/llm_http_client.cpp",
+      "src/agent/local_reasoning_engine.cpp",
+      "src/agent/model_invoker.cpp",
+      "src/agent/planner.cpp",
+      "src/agent/telemetry_collector.cpp",
+      "src/agentic_agent_coordinator.cpp",
+      "src/agentic_controller.cpp",
+      "src/agentic_engine.cpp",
+      "src/agentic_loop_state.cpp",
+      "src/agentic_observability.cpp",
+      "src/agentic/agent_tool_quantize.cpp",
+      "src/agentic/agentic_composer_ux.cpp",
+      "src/agentic/agentic_executor.cpp",
+      "src/agentic/agentic_transaction.cpp",
+      "src/agentic/AgenticNavigator.cpp",
+      "src/agentic/AgentOllamaClient.cpp",
+      "src/agentic/AgentOrchestrator.cpp",
+      "src/agentic/AgentToolHandlers.cpp",
+      "src/agentic/autonomous_background_daemon.cpp",
+      "src/agentic/autonomous_communicator.cpp",
+      "src/agentic/autonomous_recovery_orchestrator.cpp",
+      "src/agentic/autonomous_verification_loop.cpp",
+      "src/agentic/BoundedAgentLoop.cpp",
+      "src/agentic/context_assembler.cpp",
+      "src/agentic/DeterministicReplayEngine.cpp",
+      "src/agentic/DiffEngine.cpp",
+      "src/agentic/DiskRecoveryAgent.cpp",
+      "src/agentic/DiskRecoveryToolHandler.cpp",
+      "src/agentic/FIMPromptBuilder.cpp",
+      "src/agentic/model_cascade.cpp",
+      "src/agentic/multi_file_transaction.cpp",
+      "src/agentic/OllamaProvider.cpp",
+      "src/agentic/OrchestratorBridge.cpp",
+      "src/agentic/Phase3_Agent_Kernel_Bridge.cpp",
+      "src/agentic/RawrXD_AgentLoop.cpp",
+      "src/agentic/RawrXD_ToolRegistry.cpp",
+      "src/agentic/ToolRegistry.cpp"
+    ]
+  },
+  "cmake_outputs": {
+    "batch_sources_cmake": "D:\\rawrxd\\cmake\\polish_batches\\batch_1_sources.cmake",
+    "batch_source_groups_cmake": "D:\\rawrxd\\cmake\\polish_batches\\batch_1_source_groups.cmake",
+    "include_hint": [
+      "include(cmake/polish_batches/batch_1_sources.cmake)",
+      "include(cmake/polish_batches/batch_1_source_groups.cmake)",
+      "# Then add ${RAWRXD_BATCH_<id>_SOURCES} to your target_sources(...) as desired."
+    ]
+  }
+}

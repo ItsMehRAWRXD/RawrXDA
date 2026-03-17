@@ -1,0 +1,3 @@
+[IDEConfig] Loaded 69 config keys from: rawrxd.config.json
+[IDEConfig] Env override: RAWRXD_LOG_LEVEL -> logging.level = INFO
+[EnterpriseLicense] v2 — Initializing defense shield...

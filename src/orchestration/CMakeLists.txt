@@ -8,6 +8,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_library(RawrXDOrchestration STATIC
     llm_router.hpp
     llm_router.cpp
+    llm_router_deep_thinking_bridge.cpp
+    shard_router_metadata.hpp
+    swarm_load_balancer.cpp
+    swarm_balancer_redundancy.hpp
+    k_replica_manager.hpp
+    quadbuffer_pipeline.hpp
+    global_consistency_auditor.hpp
     agent_coordinator.hpp
     agent_coordinator.cpp
     voice_processor.hpp

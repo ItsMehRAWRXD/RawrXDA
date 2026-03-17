@@ -31,6 +31,7 @@
 #include <atomic>
 #include <mutex>
 #include <algorithm>
+#include <array>
 
 namespace RawrXD {
 namespace Quantum {
@@ -182,6 +183,36 @@ struct ModelInstance {
     uint64_t totalDurationMs;
     int successCount;
     int failureCount;
+
+    ModelInstance()
+        : modelId(), provider(), parallelIndex(0), active(false), executing(false),
+          totalTokens(0), totalDurationMs(0), successCount(0), failureCount(0) {}
+
+    ModelInstance(const ModelInstance& other)
+        : modelId(other.modelId),
+          provider(other.provider),
+          parallelIndex(other.parallelIndex),
+          active(other.active),
+          executing(other.executing.load()),
+          totalTokens(other.totalTokens),
+          totalDurationMs(other.totalDurationMs),
+          successCount(other.successCount),
+          failureCount(other.failureCount) {}
+
+    ModelInstance& operator=(const ModelInstance& other) {
+        if (this != &other) {
+            modelId = other.modelId;
+            provider = other.provider;
+            parallelIndex = other.parallelIndex;
+            active = other.active;
+            executing.store(other.executing.load());
+            totalTokens = other.totalTokens;
+            totalDurationMs = other.totalDurationMs;
+            successCount = other.successCount;
+            failureCount = other.failureCount;
+        }
+        return *this;
+    }
 };
 
 // ============================================================================
@@ -296,7 +327,8 @@ public:
 
     // Self-Healing Build: capture diagnostics, generate fixes, apply, rebuild
     ExecutionResult executeAutoFix(const std::string& buildCommand,
-                                   const std::string& workingDirectory);
+                                   const std::string& workingDirectory,
+                                   int maxAttempts = 3);
     
     // Production Audit: Scan entire codebase and generate top 20 tasks
     std::vector<AuditEntry> auditProductionReadiness(const std::string& rootPath);
@@ -305,6 +337,10 @@ public:
     ExecutionResult executeAuditItems(const std::vector<AuditEntry>& items,
                                       int maxItems,
                                       const ExecutionStrategy& strategy);
+    
+    // GPU-Accelerated Inference Layer with CPU Fallback
+    bool RunInferenceLayer(const float* matrix, const float* vector, float* output,
+                          uint32_t rows, uint32_t cols, bool enableParityCheck = true);
     
     // Timeout Management
     uint64_t predictTimeout(const std::string& taskType, const ComplexityMetrics& complexity);

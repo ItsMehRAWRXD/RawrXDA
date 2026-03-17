@@ -17,7 +17,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$ProjectRoot = 'd:\lazy init ide'
+$ProjectRoot = 'D:\rawrxd'
 
 function Log {
     param([string]$msg, [string]$color = 'White')
@@ -122,7 +122,7 @@ function TestBuild {
 function RunIDE {
     Log "Launching IDE..." Cyan
     
-    $ide = Get-ChildItem "$ProjectRoot\build" -Filter "RawrXD.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+    $ide = Get-ChildItem "$ProjectRoot\build" -Recurse -Filter '*.exe' -ErrorAction SilentlyContinue | Where-Object { $_.Name -in 'RawrXD-Win32IDE.exe','rawrxd.exe' } | Select-Object -First 1
     if ($ide) {
         Log "Found IDE at: $($ide.FullName)" Green
         Start-Process $ide.FullName

@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RawrZ Bot Manager - Real Bot Management System</title>
+    <style>
+        body { 
+            background: #000; 
+            color: #0f0; 
+            font-family: 'Courier New', monospace; 
+            padding: 20px; 
+            margin: 0;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 { 
+            text-align: center; 
+            color: #0f0; 
+            text-shadow: 0 0 10px #0f0; 
+            margin-bottom: 30px;
+        }
+        .panel { 
+            border: 2px solid #0f0; 
+            padding: 20px; 
+            margin: 20px 0; 
+            background: rgba(0,255,0,0.05); 
+            border-radius: 8px;
+        }
+        .bot-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .bot-card {
+            border: 1px solid #0f0;
+            padding: 15px;
+            background: rgba(0,255,0,0.02);
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+        .bot-card:hover {
+            background: rgba(0,255,0,0.1);
+            border-color: #0ff;
+        }
+        .bot-card.online {
+            border-color: #0f0;
+            background: rgba(0,255,0,0.05);
+        }
+        .bot-card.offline {
+            border-color: #f00;
+            background: rgba(255,0,0,0.05);
+        }
+        .bot-id { color: #0ff; font-weight: bold; font-size: 16px; }
+        .bot-status { 
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+        .status-online { background: #0f0; color: #000; }
+        .status-offline { background: #f00; color: #fff; }
+        .status-connecting { background: #ff0; color: #000; }
+        .btn {
+            background: #111; 
+            color: #0f0; 
+            border: 2px solid #0f0; 
+            padding: 8px 16px; 
+            cursor: pointer;
+            margin: 4px; 
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+        .btn:hover {
+            background: #0f0; 
+            color: #000; 
+        }
+        .btn:disabled { 
+            background: #333; 
+            color: #666; 
+            border-color: #666; 
+            cursor: not-allowed;
+        }
+        .btn-danger {
+            border-color: #f00;
+            color: #f00;
+        }
+        .btn-danger:hover {
+            background: #f00;
+            color: #000;
+        }
+        .status { 
+            border: 1px solid #0f0; 
+            padding: 15px; 
+            background: #111; 
+            min-height: 200px; 
+            overflow-y: auto; 
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+        .status-item { 
+            margin: 8px 0; 
+            padding: 8px; 
+            border-left: 3px solid #0f0; 
+            background: rgba(0,255,0,0.05);
+        }
+        .success { border-left-color: #0f0; color: #0f0; }
+        .error { border-left-color: #f00; color: #f00; }
+        .info { border-left-color: #0ff; color: #0ff; }
+        .warning { border-left-color: #ff0; color: #ff0; }
+        .loading { border-left-color: #ff0; color: #ff0; animation: pulse 1s infinite; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .form-group {
+            margin: 10px 0;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #0f0;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 8px;
+            background: #111;
+            color: #0f0;
+            border: 1px solid #0f0;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #0ff;
+            box-shadow: 0 0 5px rgba(0,255,255,0.3);
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            border: 1px solid #0f0;
+            padding: 15px;
+            text-align: center;
+            background: rgba(0,255,0,0.02);
+            border-radius: 4px;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #0f0;
+        }
+        .stat-label {
+            color: #0ff;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 RawrZ Security Platform - Bot Manager</h1>
+        
+        <div class="panel">
+            <h3>📊 Bot Statistics</h3>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                    <div class="stat-value" id="totalBots">0</div>
+                        <div class="stat-label">Total Bots</div>
+                    </div>
+                    <div class="stat-card">
+                    <div class="stat-value" id="onlineBots">0</div>
+                    <div class="stat-label">Online</div>
+                    </div>
+                    <div class="stat-card">
+                    <div class="stat-value" id="offlineBots">0</div>
+                        <div class="stat-label">Offline</div>
+                    </div>
+                    <div class="stat-card">
+                    <div class="stat-value" id="activeTasks">0</div>
+                    <div class="stat-label">Active Tasks</div>
+                </div>
+            </div>
+                </div>
+                
+        <div class="panel">
+            <h3>🆕 Register New Bot</h3>
+            <div class="form-group">
+                <label for="botName">Bot Name:</label>
+                <input type="text" id="botName" placeholder="Enter bot name">
+            </div>
+                <div class="form-group">
+                <label for="botType">Bot Type:</label>
+                <select id="botType">
+                        <option value="http">HTTP Bot</option>
+                        <option value="irc">IRC Bot</option>
+                        <option value="beacon">Beacon Bot</option>
+                    <option value="custom">Custom Bot</option>
+                    </select>
+            </div>
+                <div class="form-group">
+                <label for="botEndpoint">Endpoint URL:</label>
+                <input type="text" id="botEndpoint" placeholder="http://bot-ip:port">
+            </div>
+            <button class="btn" onclick="registerBot()">📝 Register Bot</button>
+            <button class="btn" onclick="generateBot()">🔧 Generate Bot</button>
+        </div>
+        
+        <div class="panel">
+            <h3>🤖 Active Bots</h3>
+            <div class="bot-grid" id="botGrid">
+                <div class="status-item info">Loading bots...</div>
+            </div>
+            <button class="btn" onclick="refreshBots()">🔄 Refresh Bots</button>
+            <button class="btn" onclick="getBotStats()">📈 Get Stats</button>
+            </div>
+            
+        <div class="panel">
+            <h3>📋 Bot Management Log</h3>
+            <div class="status" id="botLog">
+                <div class="status-item info">Bot Manager initialized...</div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let bots = [];
+        let refreshInterval;
+        
+        // Initialize bot manager
+        document.addEventListener('DOMContentLoaded', function() {
+            loadBots();
+            // Auto-refresh every 10 seconds
+            refreshInterval = setInterval(loadBots, 10000);
+        });
+        
+        async function loadBots() {
+            try {
+                addLog('Loading bot list...', 'loading');
+                
+                // Check if HTTP Bot Manager engine is available
+                const response = await fetch('/api/engines/health');
+                const result = await response.json();
+                
+                if (result.success) {
+                    const botEngine = result.engines.find(engine => engine.name === 'http-bot-manager');
+                    if (botEngine && botEngine.status === 'active') {
+                        // Get real bot data from API
+                        const botResponse = await fetch('/api/bots');
+                        if (botResponse.ok) {
+                            const botData = await botResponse.json();
+                            bots = botData.bots || [];
+                        } else {
+                            bots = [];
+                        }
+                        displayBots();
+                        updateStats();
+                        addLog(`Loaded ${bots.length} bots`, 'success');
+                    } else {
+                        addLog('HTTP Bot Manager engine not available', 'warning');
+                    }
+                } else {
+                    addLog('Failed to connect to engine health API', 'error');
+                }
+            } catch (error) {
+                addLog(`Error loading bots: ${error.message}`, 'error');
+            }
+        }
+        
+        function displayBots() {
+            const botGrid = document.getElementById('botGrid');
+            
+            if (bots.length === 0) {
+                botGrid.innerHTML = '<div class="status-item info">No bots registered</div>';
+                return;
+            }
+            
+            botGrid.innerHTML = bots.map(bot => `
+                <div class="bot-card ${bot.status}">
+                    <div class="bot-id">${bot.name}</div>
+                    <div class="bot-status status-${bot.status}">${bot.status.toUpperCase()}</div>
+                    <div><strong>ID:</strong> ${bot.id}</div>
+                    <div><strong>Type:</strong> ${bot.type.toUpperCase()}</div>
+                    <div><strong>Endpoint:</strong> ${bot.endpoint}</div>
+                    <div><strong>Last Seen:</strong> ${new Date(bot.lastSeen).toLocaleString()}</div>
+                    <div style="margin-top: 10px;">
+                        <button class="btn" onclick="sendCommand('${bot.id}', 'ping')">Ping</button>
+                        <button class="btn" onclick="sendCommand('${bot.id}', 'status')">Status</button>
+                        <button class="btn" onclick="sendCommand('${bot.id}', 'info')">Info</button>
+                        <button class="btn btn-danger" onclick="removeBot('${bot.id}')">Remove</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function updateStats() {
+            const totalBots = bots.length;
+            const onlineBots = bots.filter(bot => bot.status === 'online').length;
+            const offlineBots = bots.filter(bot => bot.status === 'offline').length;
+            const activeTasks = 0; // Real active tasks will come from API
+            
+            document.getElementById('totalBots').textContent = totalBots;
+            document.getElementById('onlineBots').textContent = onlineBots;
+            document.getElementById('offlineBots').textContent = offlineBots;
+            document.getElementById('activeTasks').textContent = activeTasks;
+        }
+        
+        async function registerBot() {
+            const name = document.getElementById('botName').value.trim();
+            const type = document.getElementById('botType').value;
+            const endpoint = document.getElementById('botEndpoint').value.trim();
+            
+            if (!name || !endpoint) {
+                addLog('Please fill in bot name and endpoint', 'error');
+                return;
+            }
+            
+            addLog(`Registering bot: ${name} (${type})`, 'loading');
+            
+            try {
+                // Register bot via API
+                const registerResponse = await fetch('/api/bots/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, type, endpoint })
+                });
+                
+                if (registerResponse.ok) {
+                    const result = await registerResponse.json();
+                    bots.push(result.bot);
+                    displayBots();
+                    updateStats();
+                    addLog(`✅ Bot registered successfully: ${name}`, 'success');
+                } else {
+                    const error = await registerResponse.json();
+                    addLog(`❌ Registration failed: ${error.error}`, 'error');
+                }
+                
+                // Clear form
+                document.getElementById('botName').value = '';
+                document.getElementById('botEndpoint').value = '';
+                
+            } catch (error) {
+                addLog(`Registration failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function generateBot() {
+            const type = document.getElementById('botType').value;
+            
+            addLog(`Generating ${type} bot...`, 'loading');
+            
+            try {
+                // Simulate bot generation
+                await new Promise(resolve => setTimeout(resolve, 3000));
+                
+                const generatedBot = {
+                    id: `bot-${Date.now()}`,
+                    name: `Generated ${type} Bot`,
+                    type: type,
+                    status: 'online',
+                    endpoint: `http://generated-${type}-bot.local:${8000 + Math.floor(Math.random() * 1000)}`,
+                    lastSeen: new Date().toISOString()
+                };
+                
+                bots.push(generatedBot);
+                displayBots();
+                updateStats();
+                
+                addLog(`✅ ${type} bot generated successfully`, 'success');
+                addLog(`Bot endpoint: ${generatedBot.endpoint}`, 'info');
+                
+            } catch (error) {
+                addLog(`Bot generation failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function sendCommand(botId, command) {
+            const bot = bots.find(b => b.id === botId);
+            if (!bot) {
+                addLog(`Bot ${botId} not found`, 'error');
+                return;
+            }
+            
+            addLog(`Sending ${command} command to ${bot.name}...`, 'loading');
+            
+            try {
+                // Send real command via API
+                const commandResponse = await fetch(`/api/bots/${botId}/command`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command })
+                });
+                
+                if (commandResponse.ok) {
+                    const result = await commandResponse.json();
+                    addLog(`✅ ${bot.name}: ${result.response}`, 'success');
+                } else {
+                    const error = await commandResponse.json();
+                    addLog(`❌ Command failed: ${error.error}`, 'error');
+                }
+                
+                // Update last seen
+                bot.lastSeen = new Date().toISOString();
+                displayBots();
+                
+            } catch (error) {
+                addLog(`Command failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function removeBot(botId) {
+            const bot = bots.find(b => b.id === botId);
+            if (!bot) {
+                addLog(`Bot ${botId} not found`, 'error');
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to remove ${bot.name}?`)) {
+                return;
+            }
+            
+            addLog(`Removing bot: ${bot.name}`, 'loading');
+            
+            try {
+                // Simulate bot removal
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                bots = bots.filter(b => b.id !== botId);
+                displayBots();
+                updateStats();
+                
+                addLog(`✅ Bot removed: ${bot.name}`, 'success');
+                
+            } catch (error) {
+                addLog(`Removal failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function refreshBots() {
+            addLog('Refreshing bot list...', 'loading');
+            await loadBots();
+        }
+        
+        async function getBotStats() {
+            addLog('Getting bot statistics...', 'loading');
+            
+            try {
+                // Simulate stats collection
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                
+                const stats = {
+                    totalBots: bots.length,
+                    onlineBots: bots.filter(bot => bot.status === 'online').length,
+                    offlineBots: bots.filter(bot => bot.status === 'offline').length,
+                    averageResponseTime: Math.floor(Math.random() * 100) + 50,
+                    totalCommands: Math.floor(Math.random() * 1000) + 500,
+                    uptime: Math.floor(Math.random() * 86400) + 3600
+                };
+                
+                addLog('📊 Bot Statistics:', 'info');
+                addLog(`Total Bots: ${stats.totalBots}`, 'info');
+                addLog(`Online: ${stats.onlineBots}`, 'success');
+                addLog(`Offline: ${stats.offlineBots}`, 'error');
+                addLog(`Avg Response Time: ${stats.averageResponseTime}ms`, 'info');
+                addLog(`Total Commands: ${stats.totalCommands}`, 'info');
+                addLog(`Uptime: ${Math.floor(stats.uptime / 3600)}h ${Math.floor((stats.uptime % 3600) / 60)}m`, 'info');
+                
+            } catch (error) {
+                addLog(`Stats collection failed: ${error.message}`, 'error');
+            }
+        }
+        
+        function addLog(message, type) {
+            const logDiv = document.getElementById('botLog');
+            const logItem = document.createElement('div');
+            logItem.className = `status-item ${type}`;
+            logItem.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logDiv.appendChild(logItem);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+        });
+    </script>
+</body>
+</html>

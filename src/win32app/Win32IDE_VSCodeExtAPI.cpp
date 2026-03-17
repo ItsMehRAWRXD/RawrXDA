@@ -142,6 +142,30 @@ void Win32IDE::initVSCodeExtensionAPI() {
                 }
             }
 
+            // Ecosystem: install any .vsix in extensions/ that is not yet unpacked (marketplace persistence)
+            std::string marketplaceExtDir = "extensions";
+            if (std::filesystem::is_directory(marketplaceExtDir, ec)) {
+                for (const auto& entry : std::filesystem::directory_iterator(marketplaceExtDir, ec)) {
+                    if (!entry.is_regular_file()) continue;
+                    std::string ext = entry.path().extension().string();
+                    for (auto& c : ext) c = (char)std::tolower((unsigned char)c);
+                    if (ext != ".vsix") continue;
+                    std::string stem = entry.path().stem().string();
+                    std::string alreadyUnpacked = jsExtDir + "/" + stem;
+                    if (std::filesystem::exists(alreadyUnpacked, ec))
+                        continue;  // already loaded from extensions/js/<stem>
+                    std::string path = entry.path().string();
+                    auto installResult = jsHost.installVSIX(path.c_str());
+                    if (installResult.success) {
+                        appendToOutput(std::string("[Phase 36] Installed persisted VSIX: ") +
+                                       entry.path().filename().string() + " — " + installResult.detail + "\r\n");
+                    } else {
+                        appendToOutput(std::string("[Phase 36] VSIX install failed: ") +
+                                       entry.path().filename().string() + " — " + installResult.detail + "\r\n");
+                    }
+                }
+            }
+
             auto jsStats = jsHost.getStats();
             std::ostringstream jsSS;
             jsSS << "[Phase 36] QuickJS Host: "

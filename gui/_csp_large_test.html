@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self' file: blob:; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com blob:; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:* ws://localhost:* http://127.0.0.1:*; img-src 'self' data: blob:;">
+  <title>CSP + Large Script Test</title>
+</head>
+
+<body>
+  <h2>CSP + Large Inline Script Test</h2>
+  <button onclick="testFunction()">Test Function Call</button>
+  <div id="output">Waiting...</div>
+  <div id="status">Script not yet executed</div>
+
+  <script>
+    // This generates ~800KB of script content to simulate the large inline block
+    document.getElementById('status').textContent = 'Script block STARTED executing';
+
+    function testFunction() {
+      document.getElementById('output').textContent = 'SUCCESS: testFunction is defined! Time: ' + new Date().toISOString();
+    }
+
+    function anotherFunction() { return 42; }
+    function yetAnother() { return 'hello'; }
+
+    // Pad the script to ~800KB with comments
+    /*
+PADDING_START
+    */
+
+    document.getElementById('status').textContent = 'Script block FULLY executed. testFunction type: ' + typeof testFunction;
+  </script>
+</body>
+
+</html>

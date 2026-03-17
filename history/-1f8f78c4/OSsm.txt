@@ -1,0 +1,315 @@
+# ⚡ MISSING FEATURES - QUICK REFERENCE CARD
+
+**Print this for your desk while implementing fixes!**
+
+---
+
+## 🔴 BUILD BLOCKERS (Fix First!)
+
+```
+ChatInterface::displayResponse()  [src/chat_interface.cpp]
+  └─ Add: void displayResponse(const QString& response);
+  └─ 3 lines of code
+  
+ChatInterface::addMessage()  [src/chat_interface.cpp]
+  └─ Add: void addMessage(const QString& sender, const QString& message);
+  └─ 3 lines of code
+  
+ChatInterface::focusInput()  [src/chat_interface.cpp]
+  └─ Add: void focusInput() { message_input_->setFocus(); }
+  └─ 1 line of code
+  
+MultiTabEditor::getCurrentText()  [src/multi_tab_editor.cpp]
+  └─ Add: return qobject_cast<QTextEdit*>(...)->toPlainText();
+  └─ 4 lines of code
+  
+Dock Widget Toggles  [src/agentic_ide.cpp]
+  └─ Store: QDockWidget *m_fileBrowserDock;
+  └─ Fix: toggleFileBrowser() to use pointer
+  └─ 3 changes needed
+```
+
+**Total Time**: ~45 minutes  
+**Result**: ✅ Application compiles
+
+---
+
+## 🟠 RUNTIME FAILURES (Fix Second!)
+
+```
+Settings Dialog  [src/agentic_ide.cpp:showSettings()]
+  └─ Replace: QMessageBox with QDialog
+  └─ 25 lines of code
+  └─ Time: 15 min
+  
+File Browser Expansion  [src/file_browser.cpp:handleItemExpanded()]
+  └─ Load: QDir::entryInfoList() on expand
+  └─ 15 lines of code  
+  └─ Time: 20 min
+  
+HotPatchModel()  [src/inference_engine_stub.cpp]
+  └─ Implement: Call LoadModelFromGGUF() + error handling
+  └─ 12 lines of code
+  └─ Time: 20 min
+  
+Editor Replace  [src/multi_tab_editor.cpp:replace()]
+  └─ Implement: text.replace(search, replace)
+  └─ 8 lines of code
+  └─ Time: 10 min
+```
+
+**Total Time**: ~65 minutes  
+**Result**: ✅ All menu items work
+
+---
+
+## 🟡 INCOMPLETE FEATURES (Fix Third!)
+
+```
+Terminal Output  [src/terminal_pool.cpp]
+  └─ Implement: readProcessOutput()/readProcessError()
+  └─ 20 lines of code
+  └─ Time: 30 min
+  
+Settings Persistence  [src/settings.cpp]
+  └─ Init: QSettings in constructor
+  └─ Implement: setValue()/getValue()
+  └─ 10 lines of code
+  └─ Time: 15 min
+  
+Model Loading  [src/agentic_engine.cpp]
+  └─ Call: Real GGUF loader instead of flag
+  └─ 20 lines of code
+  └─ Time: 45 min
+  
+TodoManager  [src/todo_manager.cpp]
+  └─ Implement: Full CRUD operations
+  └─ 30 lines of code
+  └─ Time: 20 min
+```
+
+**Total Time**: ~110 minutes  
+**Result**: ✅ All features complete
+
+---
+
+## 📊 IMPACT MATRIX
+
+```
+┌─────────────────────────────┬──────────┬──────────────┐
+│ Feature                     │ Impact   │ Fix Time     │
+├─────────────────────────────┼──────────┼──────────────┤
+│ ChatInterface display       │ 🔴 BUILD │ 15 min       │
+│ getCurrentText()            │ 🔴 BUILD │ 5 min        │
+│ Dock toggles                │ 🔴 BUILD │ 10 min       │
+│ Settings dialog             │ 🟠 CRASH │ 15 min       │
+│ File browser                │ 🟠 FAIL  │ 20 min       │
+│ HotPatchModel()             │ 🟠 FAIL  │ 20 min       │
+│ Editor replace              │ 🟠 FAIL  │ 10 min       │
+│ Terminal output             │ 🟡 LIMITED│ 30 min      │
+│ Settings persist            │ 🟡 LIMITED│ 15 min      │
+│ Model loading               │ 🟡 FAKE  │ 45 min       │
+│ TodoManager                 │ 🟡 SKELETON│ 20 min     │
+└─────────────────────────────┴──────────┴──────────────┘
+
+Legend:
+🔴 = Unresolved symbol (won't compile)
+🟠 = Crashes or fails completely
+🟡 = Partially works, limited
+🟢 = Works well
+```
+
+---
+
+## 🎯 THE PLAN
+
+### Step 1: Copy-Paste Phase (30 min)
+```bash
+1. Open: CRITICAL_MISSING_FEATURES_FIX_GUIDE.md
+2. Copy: Section 1 (ChatInterface) → src/chat_interface.cpp
+3. Copy: Section 2 (getCurrentText) → src/multi_tab_editor.cpp
+4. Copy: Section 3 (Dock fixes) → include/agentic_ide.h + src/agentic_ide.cpp
+5. Save all files
+```
+
+### Step 2: Build Phase (15 min)
+```bash
+cd "D:\temp\RawrXD-q8-wire\RawrXD-ModelLoader\build"
+cmake --build . --target RawrXD-AgenticIDE --config Release -j8
+```
+
+Expected output:
+```
+✅ Build succeeded
+❌ Build failed → Check error messages and compare with fix guide
+```
+
+### Step 3: Test Phase (15 min)
+```bash
+# Launch app
+D:\temp\RawrXD-q8-wire\RawrXD-ModelLoader\build\bin\Release\RawrXD-AgenticIDE.exe
+
+# Test checklist:
+✓ Application launches
+✓ File → New works
+✓ Chat shows responses
+✓ View → Toggle File Browser works
+✓ Settings dialog opens (not message)
+✓ No crashes
+```
+
+### Step 4: Continue Phase (60 min)
+```
+Repeat copy-paste for fixes #4-7 (Settings, FileBrowser, etc.)
+```
+
+---
+
+## 📋 CHECKLIST
+
+### Before You Start
+- [ ] Downloaded CRITICAL_MISSING_FEATURES_FIX_GUIDE.md
+- [ ] Have VS Code open with 2 files visible
+- [ ] Coffee/tea nearby
+- [ ] Phone on silent
+
+### Phase 1: Build Blockers (30 min)
+- [ ] Added ChatInterface::displayResponse()
+- [ ] Added ChatInterface::addMessage()
+- [ ] Added ChatInterface::focusInput()
+- [ ] Added MultiTabEditor::getCurrentText()
+- [ ] Stored dock pointers in agentic_ide.h
+- [ ] Fixed toggleFileBrowser/Chat/Terminals methods
+- [ ] Application compiles (no linker errors)
+- [ ] Application launches
+
+### Phase 2: Core Features (60 min)
+- [ ] Implemented Settings dialog
+- [ ] Fixed File browser lazy loading
+- [ ] Implemented HotPatchModel()
+- [ ] Completed Editor::replace()
+- [ ] All menu items clickable and work
+
+### Phase 3: Polish (60 min)
+- [ ] Terminal output displays
+- [ ] Settings persist (test close/reopen)
+- [ ] Real model loading works
+- [ ] TodoManager shows items
+- [ ] No crashes or errors
+
+---
+
+## 🚨 COMMON MISTAKES
+
+❌ **Don't**: Copy code and paste as-is without reading  
+✅ **Do**: Read each snippet and understand the context
+
+❌ **Don't**: Forget to add method declarations to headers  
+✅ **Do**: Add signature to .h BEFORE implementation in .cpp
+
+❌ **Don't**: Ignore compiler errors  
+✅ **Do**: Check compilation output line-by-line
+
+❌ **Don't**: Assume all fixes take 5 minutes  
+✅ **Do**: Budget 45 minutes for Phase 1, 60 for Phase 2
+
+❌ **Don't**: Test without rebuilding  
+✅ **Do**: Rebuild after every change
+
+---
+
+## 💡 TIPS
+
+**Tip #1**: Use Find & Replace to locate method calls
+```
+Search: "displayResponse"
+Result: Shows all 4 places to add implementation
+```
+
+**Tip #2**: Copy entire code blocks, not individual lines
+```
+Better: Copy the whole method body
+Worse: Type out individual lines
+```
+
+**Tip #3**: Compile after each phase, not each fix
+```
+Phase 1 → Build → Test → Phase 2 → Build → Test
+```
+
+**Tip #4**: Keep both documents open
+```
+Left: CRITICAL_MISSING_FEATURES_FIX_GUIDE.md
+Right: Source file being edited
+```
+
+---
+
+## 📞 TROUBLESHOOTING
+
+**Problem**: "Unresolved external symbol"  
+**Solution**: Check if method is in .h file AND has body in .cpp
+
+**Problem**: "Method does not name a type"  
+**Solution**: Check declaration in header before implementation
+
+**Problem**: Application still crashes  
+**Solution**: Check for nullptr pointers (m_fileBrowserDock, etc.)
+
+**Problem**: Menu item doesn't work  
+**Solution**: Verify signal/slot connection (already done, check logic)
+
+**Problem**: "Cannot find file chat_interface.h"  
+**Solution**: Use correct include path (src/ vs include/)
+
+---
+
+## ⏰ TIME BREAKDOWN
+
+```
+Phase 1: Build Blockers        30 min  ← Priority #1
+Phase 2: Core Features         60 min  ← Priority #2  
+Phase 3: Polish/Optional       60 min  ← Priority #3
+
+TOTAL:                         150 min (~2.5 hours)
+
+Alternative: Just Phase 1+2 = 90 min to working app
+```
+
+---
+
+## 🎓 KEY LEARNING
+
+**Why these are missing?**
+- Methods declared but implementation incomplete
+- Placeholder dialogs used as stubs
+- Real functionality deferred to "later"
+- Model loading set to fake flag
+
+**What does this teach?**
+- Always implement declared methods
+- Test before assuming it works
+- Replace placeholders early
+- Use stubs intentionally, not accidentally
+
+---
+
+## ✅ SUCCESS CRITERIA
+
+**Phase 1 Success** = Application compiles & launches  
+**Phase 2 Success** = All menu items work without crashes  
+**Phase 3 Success** = All features complete & persistent  
+
+---
+
+**Total Pages to Read**: 4  
+**Start Here**: CRITICAL_MISSING_FEATURES_FIX_GUIDE.md  
+**Current Status**: READY TO IMPLEMENT  
+
+**Generated**: December 5, 2025  
+**Estimated Completion**: ~2.5 hours from now
+
+---
+
+*Pin this card above your monitor for quick reference!*
+

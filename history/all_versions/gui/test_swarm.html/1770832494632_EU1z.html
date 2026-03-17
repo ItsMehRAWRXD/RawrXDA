@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RawrXD Swarm &amp; Integration Test Suite</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #0d1117;
+      color: #c9d1d9;
+      padding: 24px;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 8px;
+      color: #58a6ff;
+    }
+
+    .subtitle {
+      color: #8b949e;
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+
+    .test-section {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+
+    .section-header {
+      padding: 12px 16px;
+      font-weight: 600;
+      font-size: 14px;
+      border-bottom: 1px solid #30363d;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .test-result {
+      padding: 10px 16px;
+      border-bottom: 1px solid #21262d;
+      font-size: 13px;
+      font-family: 'Cascadia Code', 'Consolas', monospace;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .test-result:last-child {
+      border-bottom: none;
+    }
+
+    .pass {
+      color: #3fb950;
+    }
+
+    .fail {
+      color: #f85149;
+    }
+
+    .skip {
+      color: #d29922;
+    }
+
+    .badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+
+    .badge-pass {
+      background: #1b4332;
+      color: #3fb950;
+    }
+
+    .badge-fail {
+      background: #4a1d1d;
+      color: #f85149;
+    }
+
+    .badge-skip {
+      background: #3d2e00;
+      color: #d29922;
+    }
+
+    .summary {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 16px;
+      display: flex;
+      gap: 24px;
+      align-items: center;
+      font-size: 14px;
+    }
+
+    .summary-stat {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .progress-bar {
+      flex: 1;
+      height: 8px;
+      background: #21262d;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-left: 16px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.5s ease;
+    }
+
+    #runBtn {
+      background: #238636;
+      color: #fff;
+      border: none;
+      padding: 10px 24px;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      margin-bottom: 16px;
+    }
+
+    #runBtn:hover {
+      background: #2ea043;
+    }
+
+    #runBtn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .backend-input {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 13px;
+      width: 280px;
+      margin-right: 12px;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>🐉 RawrXD Integration Test Suite</h1>
+  <p class="subtitle">Enterprise-grade validation of backend connectivity, swarm orchestration, model loading,
+    hotpatching, and agentic systems</p>
+
+  <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+    <input type="text" class="backend-input" id="backendUrl" value="http://localhost:11435" placeholder="Backend URL">
+    <button id="runBtn" onclick="runAllTests()">▶ Run All Tests</button>
+  </div>
+
+  <div class="summary" id="summary" style="margin-bottom:16px; display:none;">
+    <span class="summary-stat pass" id="passCount">0 passed</span>
+    <span class="summary-stat fail" id="failCount">0 failed</span>
+    <span class="summary-stat skip" id="skipCount">0 skipped</span>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+    <span id="duration" style="color:#8b949e;font-size:12px;"></span>
+  </div>
+
+  <div id="results"></div>
+
+  <script>
+    const State = { passed: 0, failed: 0, skipped: 0, total: 0, results: [] };
+
+    function backendUrl() { return document.getElementById('backendUrl').value.replace(/\/+$/, ''); }
+
+    function addSection(title) {
+      const sec = document.createElement('div');
+      sec.className = 'test-section';
+      sec.innerHTML = `<div class="section-header"><span>${title}</span><span class="badge" id="sec-${title.replace(/\s/g, '_')}"></span></div>`;
+      sec._body = sec;
+      document.getElementById('results').appendChild(sec);
+      return sec;
+    }
+
+    function addResult(section, name, status, detail) {
+      State.total++;
+      if (status === 'pass') State.passed++;
+      else if (status === 'fail') State.failed++;
+      else State.skipped++;
+
+      const div = document.createElement('div');
+      div.className = 'test-result';
+      const icon = status === 'pass' ? '✅' : status === 'fail' ? '❌' : '⏭️';
+      const cls = status === 'pass' ? 'pass' : status === 'fail' ? 'fail' : 'skip';
+      div.innerHTML = `<span class="${cls}">${icon}</span><span>${name}</span>${detail ? `<span style="color:#8b949e;margin-left:auto;font-size:11px;">${detail}</span>` : ''}`;
+      section.appendChild(div);
+      updateSummary();
+    }
+
+    function updateSummary() {
+      const el = document.getElementById('summary');
+      el.style.display = 'flex';
+      document.getElementById('passCount').textContent = State.passed + ' passed';
+      document.getElementById('failCount').textContent = State.failed + ' failed';
+      document.getElementById('skipCount').textContent = State.skipped + ' skipped';
+      const pct = State.total > 0 ? (State.passed / State.total * 100) : 0;
+      const fill = document.getElementById('progressFill');
+      fill.style.width = pct + '%';
+      fill.style.background = State.failed > 0 ? '#f85149' : '#3fb950';
+    }
+
+    async function fetchJSON(path, opts) {
+      const ctrl = new AbortController();
+      setTimeout(() => ctrl.abort(), 5000);
+      const res = await fetch(backendUrl() + path, { signal: ctrl.signal, ...opts });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return await res.json();
+    }
+
+    async function fetchOk(path, opts) {
+      const ctrl = new AbortController();
+      setTimeout(() => ctrl.abort(), 5000);
+      const res = await fetch(backendUrl() + path, { signal: ctrl.signal, ...opts });
+      return res;
+    }
+
+    async function runAllTests() {
+      const btn = document.getElementById('runBtn');
+      btn.disabled = true;
+      btn.textContent = '⏳ Running...';
+      document.getElementById('results').innerHTML = '';
+      State.passed = State.failed = State.skipped = State.total = 0;
+      const t0 = performance.now();
+
+      // ── Section 1: Backend Health ──
+      const sec1 = addSection('🔌 Backend Connectivity');
+      let backendOnline = false;
+      try {
+        const t1 = performance.now();
+        const data = await fetchJSON('/health');
+        const lat = Math.round(performance.now() - t1);
+        backendOnline = true;
+        addResult(sec1, '/health endpoint responds', 'pass', lat + 'ms');
+      } catch (e) {
+        addResult(sec1, '/health endpoint responds', 'fail', e.message);
+      }
+
+      try {
+        const data = await fetchJSON('/status');
+        addResult(sec1, '/status returns valid JSON', 'pass', JSON.stringify(data).substring(0, 80));
+        if (data.backend || data.server) addResult(sec1, 'Server type identified', 'pass', data.backend || data.server);
+        else addResult(sec1, 'Server type identified', 'fail', 'missing backend/server field');
+      } catch (e) {
+        addResult(sec1, '/status returns valid JSON', backendOnline ? 'fail' : 'skip', e.message);
+      }
+
+      // ── Section 2: Model Management ──
+      const sec2 = addSection('🧠 Model Management');
+      let models = [];
+      try {
+        const data = await fetchJSON('/models');
+        const list = data.models || data;
+        models = Array.isArray(list) ? list : [];
+        addResult(sec2, '/models returns model list', 'pass', models.length + ' models');
+      } catch (e) {
+        addResult(sec2, '/models returns model list', backendOnline ? 'fail' : 'skip', e.message);
+      }
+
+      if (models.length > 0) {
+        const modelName = models[0].name || models[0];
+        addResult(sec2, 'First model has valid name', typeof modelName === 'string' && modelName.length > 0 ? 'pass' : 'fail', modelName);
+      } else {
+        addResult(sec2, 'First model has valid name', 'skip', 'no models available');
+      }
+
+      // ── Section 3: Chat / Inference ──
+      const sec3 = addSection('💬 Chat & Inference');
+      try {
+        const t1 = performance.now();
+        const data = await fetchJSON('/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: models.length > 0 ? (models[0].name || models[0]) : 'rawrxd',
+            messages: [{ role: 'user', content: 'Reply with exactly: PING' }],
+            stream: false, max_tokens: 16, temperature: 0
+          })
+        });
+        const lat = Math.round(performance.now() - t1);
+        const answer = data.choices?.[0]?.message?.content || '';
+        addResult(sec3, 'OpenAI /v1/chat/completions returns response', 'pass', lat + 'ms, ' + answer.length + ' chars');
+        addResult(sec3, 'Response has choices[0].message.content', answer.length > 0 ? 'pass' : 'fail');
+      } catch (e) {
+        addResult(sec3, 'OpenAI /v1/chat/completions returns response', backendOnline ? 'fail' : 'skip', e.message);
+      }
+
+      try {
+        const res = await fetchOk('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: 'rawrxd', prompt: 'Reply PONG', stream: false, num_predict: 8 })
+        });
+        addResult(sec3, 'Ollama /api/generate responds', res.ok ? 'pass' : 'fail', 'HTTP ' + res.status);
+      } catch (e) {
+        addResult(sec3, 'Ollama /api/generate responds', backendOnline ? 'fail' : 'skip', e.message);
+      }
+
+      try {
+        const res = await fetchOk('/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: 'PING', model: 'rawrxd' })
+        });
+        addResult(sec3, 'Legacy /ask endpoint responds', res.ok ? 'pass' : 'fail', 'HTTP ' + res.status);
+      } catch (e) {
+        addResult(sec3, 'Legacy /ask endpoint responds', backendOnline ? 'fail' : 'skip', e.message);
+      }
+
+      // ── Section 4: Streaming ──
+      const sec4 = addSection('🌊 Streaming');
+      try {
+        const streamModel = models.length > 0 ? (models[0].name || models[0]) : 'rawrxd';
+        const res = await fetchOk('/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: streamModel,
+            messages: [{ role: 'user', content: 'Count to 3' }],
+            stream: true, max_tokens: 32
+          })
+        });
+        if (res.ok && res.body) {
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let chunks = 0, fullText = '';
+          const timeout = setTimeout(() => reader.cancel(), 8000);
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              chunks++;
+              const text = decoder.decode(value, { stream: true });
+              fullText += text;
+            }
+          } catch (_) { }
+          clearTimeout(timeout);
+          addResult(sec4, 'SSE streaming produces chunks', chunks > 1 ? 'pass' : 'fail', chunks + ' chunks received');
+          addResult(sec4, 'Stream contains data: prefix (SSE format)', fullText.includes('data:') ? 'pass' : 'fail');
+        } else {
+          addResult(sec4, 'SSE streaming produces chunks', 'fail', 'HTTP ' + res.status);
+        }
+      } catch (e) {
+        addResult(sec4, 'SSE streaming produces chunks', backendOnline ? 'fail' : 'skip', e.message);
+      }
+
+      // ── Section 5: Hotpatch System ──
+      const sec5 = addSection('🩹 Hotpatch System');
+      try {
+        const data = await fetchJSON('/api/hotpatch/list');
+        addResult(sec5, '/api/hotpatch/list responds', 'pass', JSON.stringify(data).substring(0, 60));
+      } catch (e) {
+        addResult(sec5, '/api/hotpatch/list responds', backendOnline ? 'fail' : 'skip', e.message);
+      }
+
+      try {
+        const data = await fetchJSON('/api/hotpatch/stats');
+        addResult(sec5, '/api/hotpatch/stats responds', 'pass');
+      } catch (e) {
+        addResult(sec5, '/api/hotpatch/stats responds', backendOnline ? 'fail' : 'skip', e.message);
+      }
+
+      // ── Section 6: Agentic System ──
+      const sec6 = addSection('🤖 Agentic Framework');
+      try {
+        const data = await fetchJSON('/api/agents/status');
+        addResult(sec6, '/api/agents/status responds', 'pass');
+        if (data.agents || data.active_agents !== undefined) addResult(sec6, 'Agent status has agent info', 'pass');
+      } catch (e) {
+        addResult(sec6, '/api/agents/status responds', backendOnline ? 'fail' : 'skip', e.message);
+      }
+
+      try {
+        const data = await fetchJSON('/api/policies');
+        addResult(sec6, '/api/policies responds', 'pass');
+      } catch (e) {
+        addResult(sec6, '/api/policies responds', backendOnline ? 'fail' : 'skip', e.message);
+      }
+
+      try {
+        const data = await fetchJSON('/api/agents/explain');
+        addResult(sec6, '/api/agents/explain responds', 'pass');
+      } catch (e) {
+        addResult(sec6, '/api/agents/explain responds', backendOnline ? 'fail' : 'skip', e.message);
+      }
+
+      // ── Section 7: Swarm Orchestration ──
+      const sec7 = addSection('🐝 Swarm Orchestration');
+      try {
+        const data = await fetchJSON('/api/swarm/status');
+        addResult(sec7, '/api/swarm/status responds', 'pass', JSON.stringify(data).substring(0, 80));
+        if (data.nodes !== undefined || data.agents !== undefined) addResult(sec7, 'Swarm reports node/agent count', 'pass');
+        else addResult(sec7, 'Swarm reports node/agent count', 'fail', 'missing nodes/agents field');
+      } catch (e) {
+        addResult(sec7, '/api/swarm/status responds', backendOnline ? 'fail' : 'skip', e.message);
+      }
+
+      try {
+        const data = await fetchJSON('/api/swarm/deploy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ task: 'test_ping', agents: 1 })
+        });
+        addResult(sec7, 'Swarm deploy accepts task', 'pass');
+      } catch (e) {
+        addResult(sec7, 'Swarm deploy accepts task', backendOnline ? 'fail' : 'skip', e.message);
+      }
+
+      // ── Section 8: Security ──
+      const sec8 = addSection('🛡️ Security');
+      try {
+        const res = await fetchOk('/health');
+        const csp = res.headers.get('Content-Security-Policy');
+        addResult(sec8, 'CSP header present', csp ? 'pass' : 'fail', csp ? csp.substring(0, 60) + '...' : 'missing');
+      } catch (e) {
+        addResult(sec8, 'CSP header present', backendOnline ? 'fail' : 'skip', e.message);
+      }
+
+      try {
+        const res = await fetchOk('/health');
+        const xframe = res.headers.get('X-Frame-Options');
+        addResult(sec8, 'X-Frame-Options header', xframe ? 'pass' : 'skip', xframe || 'not set');
+      } catch (e) {
+        addResult(sec8, 'X-Frame-Options header', 'skip', e.message);
+      }
+
+      // Finish
+      const duration = Math.round(performance.now() - t0);
+      document.getElementById('duration').textContent = duration + 'ms';
+      btn.disabled = false;
+      btn.textContent = '▶ Run All Tests';
+    }
+  </script>
+</body>
+
+</html>

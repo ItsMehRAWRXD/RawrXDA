@@ -3,6 +3,8 @@
 // =============================================================================
 #include "AgentOllamaClient.h"
 #include <chrono>
+#include <iomanip>
+#include <iostream>
 #include <sstream>
 
 #ifdef _WIN32
@@ -26,6 +28,259 @@ namespace {
         if (!out.empty() && out.back() == L'\0') out.pop_back();
         return out;
     }
+
+    class MiniJSON {
+    public:
+        enum Type { NULL_TYPE, BOOL, NUMBER, STRING, ARRAY, OBJECT };
+        
+        Type type = NULL_TYPE;
+        std::string string_val;
+        double number_val = 0;
+        bool bool_val = false;
+        std::vector<MiniJSON> array_val;
+        std::map<std::string, MiniJSON> object_val;
+        
+        static MiniJSON parse(const std::string& s) {
+            size_t pos = 0;
+            return parse_value(s, pos);
+        }
+        
+        bool contains(const std::string& key) const {
+            return type == OBJECT && object_val.count(key);
+        }
+        
+        const MiniJSON& operator[](const std::string& key) const {
+            static MiniJSON null;
+            if (type != OBJECT) return null;
+            auto it = object_val.find(key);
+            return (it != object_val.end()) ? it->second : null;
+        }
+        
+        std::string get_string() const {
+            return (type == STRING) ? string_val : "";
+        }
+        
+        double get_number() const {
+            return (type == NUMBER) ? number_val : 0;
+        }
+        
+        bool get_bool() const {
+            return (type == BOOL) ? bool_val : false;
+        }
+        
+        bool is_array() const { return type == ARRAY; }
+        bool is_object() const { return type == OBJECT; }
+        bool is_string() const { return type == STRING; }
+        
+        // nlohmann compatibility
+        template<typename T> T get() const;
+        bool is_null() const { return type == NULL_TYPE; }
+        size_t size() const {
+            if (type == ARRAY) return array_val.size();
+            if (type == OBJECT) return object_val.size();
+            return 0;
+        }
+        const MiniJSON& operator[](size_t idx) const {
+            static MiniJSON null;
+            return (type == ARRAY && idx < array_val.size()) ? array_val[idx] : null;
+        }
+        
+    private:
+        static void skip_ws(const std::string& s, size_t& pos) {
+            while (pos < s.size() && isspace((unsigned char)s[pos])) pos++;
+        }
+        
+        static MiniJSON parse_value(const std::string& s, size_t& pos) {
+            skip_ws(s, pos);
+            if (pos >= s.size()) return MiniJSON();
+            
+            char c = s[pos];
+            if (c == '"') return parse_string(s, pos);
+            if (c == '{') return parse_object(s, pos);
+            if (c == '[') return parse_array(s, pos);
+            if (c == 't') return parse_true(s, pos);
+            if (c == 'f') return parse_false(s, pos);
+            if (c == 'n') return parse_null(s, pos);
+            if (c == '-' || isdigit((unsigned char)c)) return parse_number(s, pos);
+            return MiniJSON();
+        }
+
+        static void log_parse_error(const std::string& msg, const std::string& s, size_t pos) {
+            std::cerr << "[MiniJSON] " << msg << " at pos " << pos << ": '" 
+                      << s.substr(pos, std::min((size_t)20, s.size() - pos)) << "'\n";
+        }
+        
+        static MiniJSON parse_string(const std::string& s, size_t& pos) {
+            MiniJSON j;
+            j.type = STRING;
+            if (pos >= s.size() || s[pos] != '"') {
+                log_parse_error("Expected quote", s, pos);
+                return j;
+            }
+            pos++; // skip opening "
+            std::string result;
+            while (pos < s.size() && s[pos] != '"') {
+                if (s[pos] == '\\' && pos + 1 < s.size()) {
+                    char next = s[++pos];
+                    switch (next) {
+                        case '"': result += '"'; break;
+                        case '\\': result += '\\'; break;
+                        case '/': result += '/'; break;
+                        case 'b': result += '\b'; break;
+                        case 'f': result += '\f'; break;
+                        case 'n': result += '\n'; break;
+                        case 'r': result += '\r'; break;
+                        case 't': result += '\t'; break;
+                        case 'u': if (pos + 4 < s.size()) { pos += 4; result += '?'; } break;
+                        default: result += next;
+                    }
+                } else {
+                    result += s[pos];
+                }
+                pos++;
+            }
+            if (pos < s.size()) pos++; // skip closing "
+            else log_parse_error("Unterminated string", s, pos);
+            j.string_val = result;
+            return j;
+        }
+        
+        static MiniJSON parse_object(const std::string& s, size_t& pos) {
+            MiniJSON j;
+            j.type = OBJECT;
+            if (pos >= s.size() || s[pos] != '{') {
+                log_parse_error("Expected {", s, pos);
+                return j;
+            }
+            pos++; // skip {
+            skip_ws(s, pos);
+            if (pos < s.size() && s[pos] == '}') { pos++; return j; }
+            while (pos < s.size()) {
+                skip_ws(s, pos);
+                if (pos >= s.size() || s[pos] != '"') {
+                    log_parse_error("Expected key", s, pos);
+                    break;
+                }
+                MiniJSON key = parse_string(s, pos);
+                skip_ws(s, pos);
+                if (pos >= s.size() || s[pos] != ':') {
+                    log_parse_error("Expected :", s, pos);
+                    break;
+                }
+                pos++; // skip :
+                j.object_val[key.string_val] = parse_value(s, pos);
+                skip_ws(s, pos);
+                if (pos >= s.size()) break;
+                if (s[pos] == ',') { pos++; continue; }
+                if (s[pos] == '}') { pos++; break; }
+                log_parse_error("Expected , or }", s, pos);
+                break;
+            }
+            return j;
+        }
+        
+        static MiniJSON parse_array(const std::string& s, size_t& pos) {
+            MiniJSON j;
+            j.type = ARRAY;
+            pos++; // skip [
+            skip_ws(s, pos);
+            if (pos < s.size() && s[pos] == ']') { pos++; return j; }
+            while (pos < s.size()) {
+                j.array_val.push_back(parse_value(s, pos));
+                skip_ws(s, pos);
+                if (pos >= s.size()) break;
+                if (s[pos] == ',') { pos++; continue; }
+                if (s[pos] == ']') { pos++; break; }
+            }
+            return j;
+        }
+        
+        static MiniJSON parse_number(const std::string& s, size_t& pos) {
+            MiniJSON j;
+            j.type = NUMBER;
+            size_t start = pos;
+            if (s[pos] == '-') pos++;
+            while (pos < s.size() && isdigit((unsigned char)s[pos])) pos++;
+            if (pos < s.size() && s[pos] == '.') {
+                pos++;
+                while (pos < s.size() && isdigit((unsigned char)s[pos])) pos++;
+            }
+            if (pos < s.size() && (s[pos] == 'e' || s[pos] == 'E')) {
+                pos++;
+                if (pos < s.size() && (s[pos] == '+' || s[pos] == '-')) pos++;
+                while (pos < s.size() && isdigit((unsigned char)s[pos])) pos++;
+            }
+            j.number_val = std::stod(s.substr(start, pos - start));
+            return j;
+        }
+        
+        static MiniJSON parse_true(const std::string& s, size_t& pos) {
+            MiniJSON j;
+            if (s.substr(pos, 4) == "true") { j.type = BOOL; j.bool_val = true; pos += 4; }
+            return j;
+        }
+        
+        static MiniJSON parse_false(const std::string& s, size_t& pos) {
+            MiniJSON j;
+            if (s.substr(pos, 5) == "false") { j.type = BOOL; j.bool_val = false; pos += 5; }
+            return j;
+        }
+        
+        static MiniJSON parse_null(const std::string& s, size_t& pos) {
+            MiniJSON j; j.type = NULL_TYPE;
+            if (s.substr(pos, 4) == "null") pos += 4;
+            return j;
+        }
+    };
+    
+    template<> std::string MiniJSON::get<std::string>() const { return get_string(); }
+    template<> double MiniJSON::get<double>() const { return get_number(); }
+    template<> bool MiniJSON::get<bool>() const { return get_bool(); }
+
+    using json_alias = MiniJSON;
+
+    static json_alias manual_parse_models(const std::string& s) {
+        std::cerr << "[MiniJSON] manual_parse_models starting, input size=" << s.size() << "\n";
+        json_alias j;
+        j.type = MiniJSON::OBJECT;
+        json_alias arr;
+        arr.type = MiniJSON::ARRAY;
+
+        // Ollama tags response structure:
+        // {"models":[{"name":"phi3:mini","modified_at":"...","size":...,"digest":"...","details":{...}},...]}
+        
+        std::string needle = "\"name\":";
+        size_t pos = s.find(needle);
+        while (pos != std::string::npos) {
+            // Find the character following "name":
+            size_t val_start = pos + needle.length();
+            while (val_start < s.size() && isspace((unsigned char)s[val_start])) val_start++;
+            
+            if (val_start < s.size() && s[val_start] == '\"') {
+                size_t q1 = val_start;
+                size_t q2 = s.find('\"', q1 + 1);
+                if (q2 != std::string::npos) {
+                    std::string mname = s.substr(q1 + 1, q2 - q1 - 1);
+                    std::cerr << "[MiniJSON] manual_parse_models: found model name: " << mname << "\n";
+                    
+                    json_alias mobj;
+                    mobj.type = MiniJSON::OBJECT;
+                    json_alias nameVal;
+                    nameVal.type = MiniJSON::STRING;
+                    nameVal.string_val = mname;
+                    mobj.object_val["name"] = nameVal;
+                    arr.array_val.push_back(mobj);
+                    
+                    pos = s.find(needle, q2 + 1);
+                } else break;
+            } else {
+                pos = s.find(needle, val_start);
+            }
+        }
+        std::cerr << "[MiniJSON] manual_parse_models: finished, found " << arr.array_val.size() << " models\n";
+        j.object_val["models"] = arr;
+        return j;
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -38,16 +293,6 @@ AgentOllamaClient::AgentOllamaClient(const OllamaConfig& config)
 #ifdef _WIN32
     InitWinHTTP();
 #endif
-    // Auto-detect models from Ollama /api/tags if not explicitly configured
-    if (m_config.chat_model.empty() || m_config.fim_model.empty()) {
-        auto models = ListModels();
-        if (!models.empty()) {
-            if (m_config.chat_model.empty())
-                m_config.chat_model = models[0];
-            if (m_config.fim_model.empty())
-                m_config.fim_model = models.size() > 1 ? models[1] : models[0];
-        }
-    }
 }
 
 AgentOllamaClient::~AgentOllamaClient() {
@@ -66,6 +311,8 @@ void AgentOllamaClient::InitWinHTTP() {
     if (m_hSession) {
         DWORD timeout = static_cast<DWORD>(m_config.timeout_ms);
         WinHttpSetTimeouts(m_hSession, timeout, timeout, timeout, timeout);
+    } else {
+        std::cerr << "[AgentOllamaClient] WinHttpOpen failed: " << GetLastError() << "\n";
     }
 }
 
@@ -82,18 +329,38 @@ void AgentOllamaClient::CleanupWinHTTP() {
 // ---------------------------------------------------------------------------
 
 bool AgentOllamaClient::TestConnection() {
-    std::string ver = GetVersion();
-    return !ver.empty();
+    // A quick sanity check: the /api/version endpoint should return something.
+    std::string resp = MakeGetRequest(kVersionEndpoint);
+    return !resp.empty();
 }
 
 std::string AgentOllamaClient::GetVersion() {
     std::string resp = MakeGetRequest(kVersionEndpoint);
-    if (resp.empty()) return "";
+    if (resp.empty()) return "unknown";
+    
+    std::cerr << "[AgentOllamaClient] GetVersion: raw resp='" << resp << "'\n";
     try {
-        json j = json::parse(resp);
-        return j.value("version", "");
-    } catch (...) {
-        return "";
+        const char* key = "\"version\"";
+        size_t vpos = resp.find(key);
+        if (vpos != std::string::npos) {
+            size_t val_start = vpos + 9;
+            while (val_start < resp.size() && (isspace((unsigned char)resp[val_start]) || resp[val_start] == ':')) val_start++;
+            
+            if (val_start < resp.size() && resp[val_start] == '\"') {
+                size_t q1 = val_start;
+                size_t q2 = resp.find('\"', q1 + 1);
+                if (q2 != std::string::npos) {
+                    std::string v = resp.substr(q1 + 1, q2 - q1 - 1);
+                    std::cerr << "[AgentOllamaClient] GetVersion found: " << v << "\n";
+                    return v;
+                }
+            }
+        }
+        std::cerr << "[AgentOllamaClient] GetVersion: Manual search failed despite presence in hex logs.\n";
+        return "unknown";
+    } catch (const std::exception& e) {
+        std::cerr << "[AgentOllamaClient] GetVersion Exception: " << e.what() << "\n";
+        return "unknown";
     }
 }
 
@@ -103,15 +370,22 @@ std::vector<std::string> AgentOllamaClient::ListModels() {
     if (resp.empty()) return models;
 
     try {
-        json j = json::parse(resp);
+        json_alias j = manual_parse_models(resp);
         if (j.contains("models") && j["models"].is_array()) {
-            auto& arr = j["models"];
-            for (size_t i = 0; i < arr.size(); ++i) {
-                models.push_back(arr[i].value("name", ""));
+            const json_alias& models_array = j["models"];
+            for (size_t i = 0; i < models_array.size(); ++i) {
+                const auto& model = models_array[i];
+                if (model.contains("name")) {
+                    std::string name = model["name"].get<std::string>();
+                    models.push_back(name);
+                    std::cerr << "[AgentOllamaClient] ListModels: Found model: " << name << "\n";
+                }
             }
         }
-    } catch (...) {}
-
+        std::cerr << "[AgentOllamaClient] ListModels: Successfully parsed " << models.size() << " models\n";
+    } catch (const std::exception& e) {
+        std::cerr << "[AgentOllamaClient] ListModels: Exception: " << e.what() << "\n";
+    }
     return models;
 }
 
@@ -121,25 +395,31 @@ std::vector<std::string> AgentOllamaClient::ListModels() {
 
 InferenceResult AgentOllamaClient::ChatSync(
     const std::vector<ChatMessage>& messages,
-    const json& tools)
+    const nlohmann::json& tools)
 {
-    json payload = BuildChatPayload(messages, tools, false);
+    nlohmann::json payload = BuildChatPayload(messages, tools, false);
     std::string resp = MakePostRequest(kChatEndpoint, payload.dump());
     m_totalRequests.fetch_add(1, std::memory_order_relaxed);
 
-    if (resp.empty()) return InferenceResult::error("Empty response from Ollama");
-    return ParseChatResponse(resp);
+    if (resp.empty()) {
+        std::cerr << "[AgentOllamaClient] ChatSync: MakePostRequest returned an empty string!\n";
+        return InferenceResult::error("Empty response from Ollama");
+    }
+    
+    InferenceResult parsed = ParseChatResponse(resp);
+    std::cerr << "[AgentOllamaClient] ChatSync: ParseChatResponse returned response_len=" << parsed.response.size() << "\n";
+    return parsed;
 }
 
 bool AgentOllamaClient::ChatStream(
     const std::vector<ChatMessage>& messages,
-    const json& tools,
+    const nlohmann::json& tools,
     TokenCallback on_token,
     ToolCallCallback on_tool_call,
     DoneCallback on_done,
     ErrorCallback on_error)
 {
-    json payload = BuildChatPayload(messages, tools, true);
+    nlohmann::json payload = BuildChatPayload(messages, tools, true);
     m_streaming.store(true);
     m_cancelRequested.store(false);
     m_totalRequests.fetch_add(1, std::memory_order_relaxed);
@@ -154,29 +434,37 @@ bool AgentOllamaClient::ChatStream(
             if (line.empty()) return true;
 
             try {
-                json j = json::parse(line);
+                nlohmann::json j = nlohmann::json::parse(line);
+                if (j.is_string()) {
+                    // Some servers wrap the JSON in a string value.
+                    try {
+                        j = nlohmann::json::parse(j.get<std::string>());
+                    } catch (...) {
+                        // fall back to raw string
+                    }
+                }
+
                 bool done = j.value("done", false);
 
-                if (j.contains("message")) {
-                    auto& msg = j["message"];
-                    std::string content = msg.value("content", "");
-                    if (!content.empty()) {
-                        fullResponse += content;
-                        if (on_token) on_token(content);
+                // Extract possible text fields (Ollama uses "response" in some cases)
+                std::string content;
+                if (j.contains("message") && j["message"].is_object()) {
+                    content = j["message"].value("content", "");
+                }
+                if (content.empty() && j.contains("response")) {
+                    if (j["response"].is_string()) {
+                        content = j["response"].get<std::string>();
+                    } else if (j["response"].is_object()) {
+                        content = j["response"].value("content", "");
                     }
+                }
+                if (content.empty() && j.contains("content")) {
+                    content = j.value("content", "");
+                }
 
-                    // Check for tool calls
-                    if (msg.contains("tool_calls") && msg["tool_calls"].is_array()) {
-                        auto& tcs = msg["tool_calls"];
-                        for (size_t ti = 0; ti < tcs.size(); ++ti) {
-                            auto& tc = tcs[ti];
-                            if (tc.contains("function")) {
-                                std::string fname = tc["function"].value("name", "");
-                                json fargs = tc["function"].value("arguments", json::object());
-                                if (on_tool_call) on_tool_call(fname, fargs);
-                            }
-                        }
-                    }
+                if (!content.empty()) {
+                    fullResponse += content;
+                    if (on_token) on_token(content);
                 }
 
                 if (done) {
@@ -215,7 +503,7 @@ InferenceResult AgentOllamaClient::FIMSync(
     const std::string& suffix,
     const std::string& filename)
 {
-    json payload = BuildFIMPayload(prefix, suffix, filename, false);
+    nlohmann::json payload = BuildFIMPayload(prefix, suffix, filename, false);
     std::string resp = MakePostRequest(kGenerateEndpoint, payload.dump());
     m_totalRequests.fetch_add(1, std::memory_order_relaxed);
 
@@ -231,7 +519,7 @@ bool AgentOllamaClient::FIMStream(
     DoneCallback on_done,
     ErrorCallback on_error)
 {
-    json payload = BuildFIMPayload(prefix, suffix, filename, true);
+    nlohmann::json payload = BuildFIMPayload(prefix, suffix, filename, true);
     m_streaming.store(true);
     m_cancelRequested.store(false);
     m_totalRequests.fetch_add(1, std::memory_order_relaxed);
@@ -246,7 +534,7 @@ bool AgentOllamaClient::FIMStream(
             if (line.empty()) return true;
 
             try {
-                json j = json::parse(line);
+                nlohmann::json j = nlohmann::json::parse(line);
                 bool done = j.value("done", false);
 
                 std::string token = j.value("response", "");
@@ -302,19 +590,19 @@ double AgentOllamaClient::GetAvgTokensPerSec() const {
 // JSON Payload Builders
 // ---------------------------------------------------------------------------
 
-json AgentOllamaClient::BuildChatPayload(
+nlohmann::json AgentOllamaClient::BuildChatPayload(
     const std::vector<ChatMessage>& messages,
-    const json& tools,
+    const nlohmann::json& tools,
     bool stream) const
 {
-    json payload;
+    nlohmann::json payload;
     payload["model"] = m_config.chat_model;
     payload["stream"] = stream;
 
     // Messages
-    json msgs = json::array();
+    nlohmann::json msgs = nlohmann::json::array();
     for (const auto& m : messages) {
-        json msg;
+        nlohmann::json msg;
         msg["role"] = m.role;
         msg["content"] = m.content;
         if (!m.tool_call_id.empty()) {
@@ -333,7 +621,7 @@ json AgentOllamaClient::BuildChatPayload(
     }
 
     // Options
-    json options;
+    nlohmann::json options;
     options["temperature"] = m_config.temperature;
     options["top_p"] = m_config.top_p;
     options["num_predict"] = m_config.max_tokens;
@@ -346,13 +634,13 @@ json AgentOllamaClient::BuildChatPayload(
     return payload;
 }
 
-json AgentOllamaClient::BuildFIMPayload(
+nlohmann::json AgentOllamaClient::BuildFIMPayload(
     const std::string& prefix,
     const std::string& suffix,
     const std::string& filename,
     bool stream) const
 {
-    json payload;
+    nlohmann::json payload;
     payload["model"] = m_config.fim_model;
     payload["stream"] = stream;
     payload["raw"] = true;
@@ -373,13 +661,13 @@ json AgentOllamaClient::BuildFIMPayload(
     payload["prompt"] = prompt;
 
     // FIM-specific options
-    json options;
+    nlohmann::json options;
     options["temperature"] = 0.0f;  // Deterministic for completions
     options["top_p"] = 0.95f;
     options["num_predict"] = m_config.fim_max_tokens;
     options["num_ctx"] = m_config.num_ctx;
     {
-        json stopArr = json::array();
+        nlohmann::json stopArr = nlohmann::json::array();
         stopArr.push_back("<|fim_pad|>");
         stopArr.push_back("<|endoftext|>");
         stopArr.push_back("\n\n\n");
@@ -398,56 +686,96 @@ json AgentOllamaClient::BuildFIMPayload(
 // ---------------------------------------------------------------------------
 
 InferenceResult AgentOllamaClient::ParseChatResponse(const std::string& json_str) {
-    try {
-        json j = json::parse(json_str);
+    InferenceResult result;
+    result.success = true;
+    result.has_tool_calls = false;
+    result.response = "";
+    result.prompt_tokens = 0;
+    result.completion_tokens = 0;
 
-        if (j.contains("error")) {
-            return InferenceResult::error(j["error"].get<std::string>());
+    // MANUAL SCAN for "content":"..."
+    size_t c_start = json_str.find("\"content\":\"");
+    if (c_start != std::string::npos) {
+        c_start += 11;
+        size_t c_end = json_str.find("\"", c_start);
+        if (c_end != std::string::npos) {
+            result.response = json_str.substr(c_start, c_end - c_start);
+            std::cerr << "[AgentOllamaClient] ParseChatResponse: MANUAL SCAN EXTRACTED: " << result.response << "\n";
+        }
+    }
+
+    try {
+        nlohmann::json j = nlohmann::json::parse(json_str);
+        
+        // Ollama uses these fields for token counts in /api/chat
+        if (j.contains("prompt_eval_count")) {
+            result.prompt_tokens = j["prompt_eval_count"].get<uint64_t>();
+        } else if (j.contains("prompt_tokens")) {
+            result.prompt_tokens = j["prompt_tokens"].get<uint64_t>();
         }
 
-        InferenceResult result;
-        result.success = true;
-        result.has_tool_calls = false;
+        if (j.contains("eval_count")) {
+            result.completion_tokens = j["eval_count"].get<uint64_t>();
+        } else if (j.contains("completion_tokens")) {
+            result.completion_tokens = j["completion_tokens"].get<uint64_t>();
+        }
 
-        if (j.contains("message")) {
-            result.response = j["message"].value("content", "");
-
-            // Parse tool calls
-            if (j["message"].contains("tool_calls") && j["message"]["tool_calls"].is_array()) {
-                result.has_tool_calls = true;
-                auto& tcs = j["message"]["tool_calls"];
-                for (size_t ti = 0; ti < tcs.size(); ++ti) {
-                    auto& tc = tcs[ti];
-                    if (tc.contains("function")) {
-                        std::string tname = tc["function"].value("name", "");
-                        json targs = tc["function"].value("arguments", json::object());
-                        result.tool_calls.emplace_back(tname, targs);
-                    }
-                }
+        if (j.contains("eval_duration")) {
+            uint64_t eval_ns = j["eval_duration"].get<uint64_t>();
+            if (eval_ns > 0 && result.completion_tokens > 0) {
+                result.tokens_per_sec = (double)result.completion_tokens / ((double)eval_ns / 1e9);
             }
         }
-
-        // Perf metrics
-        result.prompt_tokens = j.value("prompt_eval_count", 0ULL);
-        result.completion_tokens = j.value("eval_count", 0ULL);
-        uint64_t evalDuration = j.value("eval_duration", 0ULL);
-        result.total_duration_ms = j.value("total_duration", 0ULL) / 1e6;
-        if (evalDuration > 0) {
-            result.tokens_per_sec = static_cast<double>(result.completion_tokens) /
-                                    (static_cast<double>(evalDuration) / 1e9);
+        
+        if (j.contains("total_duration")) {
+            result.total_duration_ms = j["total_duration"].get<uint64_t>() / 1000000;
         }
 
-        return result;
+        std::cerr << "[AgentOllamaClient] ParseChatResponse: JSON stats p=" << result.prompt_tokens 
+                  << " c=" << result.completion_tokens << " tps=" << result.tokens_per_sec << "\n";
+        
+        // Final sanity check: if tokens are still 0, try the manual scanner on the raw string
+        if (result.prompt_tokens == 0 || result.completion_tokens == 0) {
+             std::cerr << "[AgentOllamaClient] ParseChatResponse: Tokens were zero in JSON, trying manual number scan...\n";
+             auto manualIntScan = [&](const std::string& key) -> uint64_t {
+                size_t pos = json_str.find("\"" + key + "\":");
+                if (pos != std::string::npos) {
+                    size_t start = json_str.find_first_of("0123456789", pos + key.length());
+                    if (start != std::string::npos) {
+                        size_t end = json_str.find_first_not_of("0123456789", start);
+                        return std::stoull(json_str.substr(start, end - start));
+                    }
+                }
+                return 0;
+             };
+             if (result.prompt_tokens == 0) result.prompt_tokens = manualIntScan("prompt_eval_count");
+             if (result.completion_tokens == 0) result.completion_tokens = manualIntScan("eval_count");
+        }
+
     } catch (const std::exception& e) {
-        return InferenceResult::error(std::string("JSON parse error: ") + e.what());
-    } catch (...) {
-        return InferenceResult::error("Unknown JSON parse error");
+        std::cerr << "[AgentOllamaClient] ParseChatResponse: JSON stats parse error: " << e.what() << "\n";
+        // Manual fallback for tokens if JSON fails
+        auto scanToken = [&](const std::string& key) -> uint64_t {
+            size_t pos = json_str.find("\"" + key + "\":");
+            if (pos != std::string::npos) {
+                size_t val_start = json_str.find_first_of("0123456789", pos + key.length() + 2);
+                if (val_start != std::string::npos) {
+                    size_t val_end = json_str.find_first_not_of("0123456789", val_start);
+                    return std::stoull(json_str.substr(val_start, val_end - val_start));
+                }
+            }
+            return 0;
+        };
+        result.prompt_tokens = scanToken("prompt_eval_count");
+        result.completion_tokens = scanToken("eval_count");
     }
+
+    return result;
 }
 
 InferenceResult AgentOllamaClient::ParseFIMResponse(const std::string& json_str) {
     try {
-        json j = json::parse(json_str);
+        nlohmann::json j = nlohmann::json::parse(json_str);
 
         if (j.contains("error")) {
             return InferenceResult::error(j["error"].get<std::string>());
@@ -481,18 +809,29 @@ InferenceResult AgentOllamaClient::ParseFIMResponse(const std::string& json_str)
 #ifdef _WIN32
 
 std::string AgentOllamaClient::MakeGetRequest(const std::string& endpoint) {
-    if (!m_hSession) return "";
+    std::cerr << "[AgentOllamaClient] MakeGetRequest: host=" << m_config.host
+              << " port=" << m_config.port << " endpoint=" << endpoint << "\n";
+    if (!m_hSession) {
+        std::cerr << "[AgentOllamaClient] MakeGetRequest: no WinHTTP session\n";
+        return "";
+    }
 
     std::wstring wHost = ToWide(m_config.host);
     HINTERNET hConnect = WinHttpConnect(m_hSession, wHost.c_str(),
                                         static_cast<INTERNET_PORT>(m_config.port), 0);
-    if (!hConnect) return "";
+    if (!hConnect) {
+        std::cerr << "[AgentOllamaClient] MakeGetRequest: WinHttpConnect failed: "
+                  << GetLastError() << "\n";
+        return "";
+    }
 
     std::wstring wEndpoint = ToWide(endpoint);
     HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"GET", wEndpoint.c_str(),
                                             nullptr, WINHTTP_NO_REFERER,
                                             WINHTTP_DEFAULT_ACCEPT_TYPES, 0);
     if (!hRequest) {
+        std::cerr << "[AgentOllamaClient] MakeGetRequest: WinHttpOpenRequest failed: "
+                  << GetLastError() << "\n";
         WinHttpCloseHandle(hConnect);
         return "";
     }
@@ -500,16 +839,60 @@ std::string AgentOllamaClient::MakeGetRequest(const std::string& endpoint) {
     BOOL sent = WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0,
                                    WINHTTP_NO_REQUEST_DATA, 0, 0, 0);
     if (!sent || !WinHttpReceiveResponse(hRequest, nullptr)) {
+        DWORD err = GetLastError();
+        std::cerr << "[AgentOllamaClient] MakeGetRequest: WinHttpSendRequest/Receive failed: "
+                  << err << "\n";
         WinHttpCloseHandle(hRequest);
         WinHttpCloseHandle(hConnect);
         return "";
     }
 
+    DWORD statusCode = 0;
+    DWORD statusSize = sizeof(statusCode);
+    if (WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
+                             WINHTTP_HEADER_NAME_BY_INDEX, &statusCode, &statusSize,
+                             WINHTTP_NO_HEADER_INDEX)) {
+        if (statusCode != 200) {
+            std::cerr << "[AgentOllamaClient] MakeGetRequest: HTTP status " << statusCode << "\n";
+        }
+    } else {
+        std::cerr << "[AgentOllamaClient] MakeGetRequest: failed to query status code\n";
+    }
+
     std::string response;
     char buffer[4096];
-    DWORD bytesRead;
-    while (WinHttpReadData(hRequest, buffer, sizeof(buffer), &bytesRead) && bytesRead > 0) {
-        response.append(buffer, bytesRead);
+
+    DWORD bytesRead = 0;
+    while (true) {
+        BOOL ok = WinHttpReadData(hRequest, buffer, sizeof(buffer), &bytesRead);
+        if (!ok) {
+            DWORD err = GetLastError();
+            std::cerr << "[AgentOllamaClient] MakeGetRequest: WinHttpReadData failed: " << err << "\n";
+            break;
+        }
+        if (bytesRead == 0) {
+            break;
+        }
+        std::cerr << "[AgentOllamaClient] MakeGetRequest: read " << bytesRead << " bytes\n";
+        for (DWORD i = 0; i < bytesRead; ++i) {
+            if (buffer[i] != 0) {
+                response.push_back(buffer[i]);
+            } else {
+                std::cerr << "[AgentOllamaClient] MakeGetRequest: STRIPPING NULL BYTE at index " << response.size() << "\n";
+            }
+        }
+    }
+
+    std::cerr << "[AgentOllamaClient] MakeGetRequest: final response size=" << response.size() << "\n";
+    if (!response.empty()) {
+        std::string snippet = response.substr(0, std::min<size_t>(response.size(), 128));
+        std::cerr << "[AgentOllamaClient] MakeGetRequest: response snippet='" << snippet << "'\n";
+        std::cerr << "[AgentOllamaClient] MakeGetRequest: response hex=";
+        for (size_t i = 0; i < response.size() && i < 64; ++i) {
+            std::cerr << " " << std::hex << std::setw(2) << std::setfill('0')
+                      << (static_cast<unsigned int>(static_cast<unsigned char>(response[i])));
+        }
+        std::cerr << std::dec << "\n";
     }
 
     WinHttpCloseHandle(hRequest);
@@ -519,6 +902,9 @@ std::string AgentOllamaClient::MakeGetRequest(const std::string& endpoint) {
 
 std::string AgentOllamaClient::MakePostRequest(const std::string& endpoint,
                                                 const std::string& body) {
+    std::cerr << "[AgentOllamaClient] MakePostRequest: host=" << m_config.host 
+              << " port=" << m_config.port << " endpoint=" << endpoint << "\n";
+    std::cerr << "[AgentOllamaClient] MakePostRequest: body='" << body << "'\n";
     if (!m_hSession) return "";
 
     std::wstring wHost = ToWide(m_config.host);
@@ -540,10 +926,18 @@ std::string AgentOllamaClient::MakePostRequest(const std::string& endpoint,
                                    (LPVOID)body.data(), static_cast<DWORD>(body.size()),
                                    static_cast<DWORD>(body.size()), 0);
     if (!sent || !WinHttpReceiveResponse(hRequest, nullptr)) {
+        DWORD err = GetLastError();
+        std::cerr << "[AgentOllamaClient] MakePostRequest: WinHttpSendRequest/Receive failed: " << err << "\n";
         WinHttpCloseHandle(hRequest);
         WinHttpCloseHandle(hConnect);
         return "";
     }
+
+    DWORD statusCode = 0;
+    DWORD statusSize = sizeof(statusCode);
+    WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
+                        WINHTTP_HEADER_NAME_BY_INDEX, &statusCode, &statusSize, WINHTTP_NO_HEADER_INDEX);
+    std::cerr << "[AgentOllamaClient] MakePostRequest: HTTP status " << statusCode << "\n";
 
     std::string response;
     char buffer[4096];
@@ -551,6 +945,9 @@ std::string AgentOllamaClient::MakePostRequest(const std::string& endpoint,
     while (WinHttpReadData(hRequest, buffer, sizeof(buffer), &bytesRead) && bytesRead > 0) {
         response.append(buffer, bytesRead);
     }
+
+    std::cerr << "[AgentOllamaClient] MakePostRequest: resp size=" << response.size() << " snippet='"
+              << response.substr(0, std::min<size_t>(response.size(), 128)) << "'\n";
 
     WinHttpCloseHandle(hRequest);
     WinHttpCloseHandle(hConnect);
@@ -618,7 +1015,7 @@ bool AgentOllamaClient::MakeStreamingPost(
                     lineBuffer.clear();
                     if (!cont) goto done;
                 }
-            } else if (buffer[i] != '\r') {
+            } else {
                 lineBuffer += buffer[i];
             }
         }

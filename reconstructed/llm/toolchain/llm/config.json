@@ -1,0 +1,82 @@
+{
+  "provider": "simulated",
+  "api_key": "",
+  "model": "gpt-4",
+  "max_tokens": 1000,
+  "temperature": 0.7,
+  "languages": {
+    "python": {
+      "extension": ".py",
+      "syntax": "python"
+    },
+    "javascript": {
+      "extension": ".js",
+      "syntax": "javascript"
+    },
+    "c": {
+      "extension": ".c",
+      "syntax": "c"
+    },
+    "cpp": {
+      "extension": ".cpp",
+      "syntax": "cpp"
+    },
+    "java": {
+      "extension": ".java",
+      "syntax": "java"
+    },
+    "go": {
+      "extension": ".go",
+      "syntax": "go"
+    },
+    "rust": {
+      "extension": ".rs",
+      "syntax": "rust"
+    }
+  },
+  "native_converters": {
+    "python": {
+      "tool": "pyinstaller",
+      "path": "D:\\portable-toolchains\\python-portable\\Scripts\\pyinstaller.exe",
+      "command": "\"D:\\portable-toolchains\\python-portable\\Scripts\\pyinstaller.exe\" {input} --onefile --distpath {output_dir}"
+    },
+    "javascript": {
+      "tool": "pkg",
+      "path": "D:\\portable-toolchains\\nodejs-portable\\pkg.cmd",
+      "command": "\"D:\\portable-toolchains\\nodejs-portable\\pkg.cmd\" {input} --targets node20-win-x64 --output {output}"
+    },
+    "java": {
+      "tool": "native-image",
+      "path": "D:\\portable-toolchains\\graalvm-portable\\graalvm-community-openjdk-21.0.1+12.1\\bin\\native-image.cmd",
+      "command": "\"D:\\portable-toolchains\\graalvm-portable\\graalvm-community-openjdk-21.0.1+12.1\\bin\\native-image.cmd\" -jar {input} {output}"
+    },
+    "c": {
+      "tool": "gcc",
+      "path": "D:\\portable-toolchains\\gcc-portable\\bin\\gcc.exe",
+      "command": "\"D:\\portable-toolchains\\gcc-portable\\bin\\gcc.exe\" {input} -o {output}"
+    },
+    "cpp": {
+      "tool": "g++",
+      "path": "D:\\portable-toolchains\\gcc-portable\\bin\\g++.exe",
+      "command": "\"D:\\portable-toolchains\\gcc-portable\\bin\\g++.exe\" {input} -o {output}"
+    },
+    "rust": {
+      "tool": "rustc",
+      "path": "D:\\portable-toolchains\\rust-portable\\Rust\\bin\\rustc.exe",
+      "command": "\"D:\\portable-toolchains\\rust-portable\\Rust\\bin\\rustc.exe\" {input} -o {output}"
+    },
+    "go": {
+      "tool": "go",
+      "path": "D:\\portable-toolchains\\go-portable\\bin\\go.exe",
+      "command": "\"D:\\portable-toolchains\\go-portable\\bin\\go.exe\" build -o {output} {input}"
+    }
+  },
+  "prompts": {
+    "code_generation": "Generate {language} code for: {prompt}",
+    "code_analysis": "Analyze this {language} code and provide insights: {code}",
+    "code_debugging": "Debug this {language} code and provide fixes: {code}",
+    "code_optimization": "Optimize this {language} code for better performance: {code}",
+    "documentation": "Generate documentation for this {language} code: {code}",
+    "testing": "Generate unit tests for this {language} code: {code}"
+  }
+}

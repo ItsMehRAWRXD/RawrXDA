@@ -1,0 +1,8 @@
+LIBRARY RawrXD_Singularity_120B
+EXPORTS
+    SwarmV_Sovereign_Omnipotent_Seal_v2026
+    SwarmV36_Tiered_L1_VRAM_BAR_Controller
+    SwarmV36_Tiered_L2_DDR5_DMAReader
+    SwarmV36_Tiered_L3_NVMe_RAID0_Fetch
+    SwarmV36_MoE_4_16_Expert_Pruning
+    SwarmV36_120B_Tiered_Singularity_Seal

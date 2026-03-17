@@ -1,0 +1,69 @@
+# Build configuration for RawrXD Standalone Web Bridge (Qt-free)
+# This creates a standalone HTTP/WebSocket server that bypasses browser TCP limitations
+
+cmake_minimum_required(VERSION 3.16)
+project(RawrXD-Standalone-WebBridge VERSION 1.0.0 LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Find required packages (no Qt dependency!)
+find_package(Threads REQUIRED)
+
+# MSVC: force static runtime (/MT, /MTd). This makes the standalone exe self-contained.
+if(MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
+# Source files for standalone version
+set(STANDALONE_SOURCES
+    src/standalone_web_bridge.cpp
+    src/standalone_main.cpp
+    src/gguf_proxy_server.cpp
+    # Add other required source files here
+)
+
+# Include directories
+include_directories(
+    src
+    3rdparty
+    3rdparty/nlohmann
+)
+
+# Create standalone executable
+add_executable(rawrxd-standalone ${STANDALONE_SOURCES})
+
+# Link libraries
+target_link_libraries(rawrxd-standalone
+    Threads::Threads
+    ${CMAKE_THREAD_LIBS_INIT}
+)
+
+# Platform-specific libraries
+if(WIN32)
+    target_link_libraries(rawrxd-standalone ws2_32 advapi32 crypt32)
+endif()
+
+# Compiler flags
+if(MSVC)
+    target_compile_options(rawrxd-standalone PRIVATE /W4)
+else()
+    target_compile_options(rawrxd-standalone PRIVATE -Wall -Wextra)
+endif()
+
+# Installation
+install(TARGETS rawrxd-standalone
+    RUNTIME DESTINATION bin
+)
+
+# Copy web interface to build directory
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/web)
+configure_file(standalone_interface.html ${CMAKE_BINARY_DIR}/web/standalone_interface.html COPYONLY)
+
+# Custom target to build and run
+add_custom_target(run-standalone
+    COMMAND rawrxd-standalone
+    DEPENDS rawrxd-standalone
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMENT "Running RawrXD Standalone Web Bridge Server"
+)

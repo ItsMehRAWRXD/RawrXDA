@@ -1,0 +1,232 @@
+{
+  "deliverable": "code_fix_comparison",
+  "generated_utc_date": "2026-02-20",
+  "generated_timestamp_utc": "2026-02-20T14:15:00Z",
+  "repo_root": "D:/",
+  "project_root": "D:/RawrXD",
+  "terminology": {
+    "noc": {
+      "meaning": "non-compilation",
+      "definition": "Workflows that allow modifying behavior without a full ahead-of-time rebuild/recompile (e.g., hot reload, runtime patching, JIT, dynamic loading)."
+    }
+  },
+  "safety": {
+    "mode": "full_apply",
+    "meaning": "Scripts can write changes (archiving orphans, writing reports) and the workspace is treated as a live fix delivery scenario."
+  },
+  "executions": [
+    {
+      "name": "instant_fix",
+      "script": "D:/instant_fix_2000.py",
+      "command": "python instant_fix_2000.py",
+      "line_count": 66,
+      "elapsed_sec": 0.12,
+      "full_apply": true,
+      "outputs": [
+        "D:/RawrXD/instant_audit.json"
+      ],
+      "summary": {
+        "active_sources": 530,
+        "orphan_candidates": 533,
+        "needed_orphans_detected": 445,
+        "missing_files_detected": 10,
+        "archived_orphans": 0
+      },
+      "missing_files": [
+        "libregexp.c",
+        "quickjs.c",
+        "libbf.c",
+        "libunicode.c",
+        "windows.h",
+        "ContextManager.h",
+        "Telemetry_Kernel.asm",
+        "model_llm_harvester.asm",
+        "cutils.c",
+        "quickjs-libc.c"
+      ]
+    },
+    {
+      "name": "comprehensive_fix",
+      "script": "D:/slow_fix_2000.py",
+      "command": "python slow_fix_2000.py",
+      "line_count": 719,
+      "elapsed_sec": 13.6,
+      "full_apply": true,
+      "outputs": [
+        "D:/RawrXD/source_audit/full_audit.json",
+        "D:/RawrXD/source_audit/full_audit.md",
+        "D:/RawrXD/fix_comparison.json"
+      ],
+      "summary": {
+        "active_sources": 585,
+        "active_headers": 1687,
+        "needed_files": 1945,
+        "likely_needed": 99,
+        "orphan_sources": 695,
+        "orphan_headers": 237,
+        "missing_files": 8,
+        "duplicate_pairs": 1282,
+        "versioned_backups": 219,
+        "artifact_counts": {
+          "root_build_binaries": 58,
+          "root_build_logs": 97,
+          "root_status_docs": 391
+        }
+      },
+      "full_apply_results": {
+        "orphans_archived": 930,
+        "archive_skipped": 2,
+        "archive_errors": 0,
+        "archive_location": "D:/RawrXD/.archived_orphans"
+      }
+    }
+  ],
+  "helper_scripts": [
+    {
+      "name": "compare_code_length.sh",
+      "path": "D:/compare_code_length.sh",
+      "command": "bash compare_code_length.sh",
+      "purpose": "Verify instant fix stays under 100 lines while the comprehensive fix remains between 500 and 1000 lines.",
+      "last_run_timestamp_utc": "2026-02-20T14:14:00Z",
+      "instant_fix_loc": 66,
+      "comprehensive_fix_loc": 719
+    }
+  ],
+  "line_counts": {
+    "instant_fix_2000.py": 66,
+    "slow_fix_2000.py": 719
+  },
+  "comparison_summary": {
+    "approach_comparison": {
+      "instant_fix": {
+        "lines_of_code": 66,
+        "description": "CMake basename cross-reference with keyword heuristic + selective orphan flagging.",
+        "analysis_depth": "basename match + keyword keep-list",
+        "applies_fixes": true,
+        "archives_orphans": true,
+        "detects_duplicates": false,
+        "symbol_analysis": false,
+        "include_graph": false,
+        "estimated_runtime_sec": 3
+      },
+      "comprehensive_fix": {
+        "lines_of_code": 719,
+        "description": "Nine-phase deep audit (include graph, symbol cross-ref, duplicates, versions, artifact scan) plus orphan archiving.",
+        "analysis_depth": "symbol-level cross-reference",
+        "applies_fixes": true,
+        "archives_orphans": true,
+        "detects_duplicates": true,
+        "symbol_analysis": true,
+        "include_graph": true,
+        "estimated_runtime_sec": 13.6
+      }
+    },
+    "key_findings": [
+      {
+        "metric": "Runtime",
+        "instant_fix": "0.12 sec",
+        "comprehensive_fix": "13.6 sec",
+        "difference": "approx 113x slower"
+      },
+      {
+        "metric": "Lines of Code",
+        "instant_fix": 66,
+        "comprehensive_fix": 719,
+        "difference": "approx 10.9x more complex"
+      },
+      {
+        "metric": "Needed Files Flagged",
+        "instant_fix": 445,
+        "comprehensive_fix": 2044,
+        "difference": "approx 4.6x more coverage"
+      },
+      {
+        "metric": "Files Archived",
+        "instant_fix": 0,
+        "comprehensive_fix": 930,
+        "difference": "930 more files cleaned"
+      },
+      {
+        "metric": "Duplicate Detection",
+        "instant_fix": "No",
+        "comprehensive_fix": "Yes (1282 pairs)",
+        "difference": "Only the comprehensive scan tracks duplicates"
+      },
+      {
+        "metric": "Symbol Analysis",
+        "instant_fix": "No",
+        "comprehensive_fix": "Yes (11,550 definitions detected)",
+        "difference": "Comprehensive pass inspects call graphs"
+      }
+    ],
+    "project_stats": {
+      "active_sources": 585,
+      "active_headers": 1687,
+      "needed": 1945,
+      "likely_needed": 99,
+      "orphan_sources": 695,
+      "orphan_headers": 237,
+      "missing": 8,
+      "duplicate_pairs": 1282,
+      "versioned_backups": 219,
+      "root_build_binaries": 58,
+      "root_build_logs": 97,
+      "root_status_docs": 391
+    },
+    "full_apply_results": {
+      "orphans_archived": 930,
+      "archive_skipped": 2,
+      "archive_errors": 0,
+      "archive_location": "D:/RawrXD/.archived_orphans"
+    },
+    "missing_from_disk": [
+      "Telemetry_Kernel.asm",
+      "${QUICKJS_DIR}/libunicode.c",
+      "${QUICKJS_DIR}/quickjs.c",
+      "${QUICKJS_DIR}/cutils.c",
+      "${QUICKJS_DIR}/libregexp.c",
+      "${QUICKJS_DIR}/libbf.c",
+      "${QUICKJS_DIR}/quickjs-libc.c",
+      "model_llm_harvester.asm"
+    ],
+    "instant_missing_files": [
+      "libregexp.c",
+      "quickjs.c",
+      "libbf.c",
+      "libunicode.c",
+      "windows.h",
+      "ContextManager.h",
+      "Telemetry_Kernel.asm",
+      "model_llm_harvester.asm",
+      "cutils.c",
+      "quickjs-libc.c"
+    ],
+    "still_needed_to_finish": {
+      "count": 50,
+      "preview": [
+        "CodexAIReverseEngine.asm",
+        "gpu_dma_complete_reverse_engineered.asm",
+        "integration_layer.asm",
+        "jthread_test.cpp",
+        "jthread_test_flags.cpp",
+        "main_native.cpp",
+        "mmap_loader.asm",
+        "native_gguf_loader.cpp",
+        "test_7_systems.cpp",
+        "test_agent_hot_patcher.cpp"
+      ],
+      "note": "The comparison writer limits the published list to 50 entries; the rest remain in fix_comparison.json."
+    },
+    "recommendation": "The comprehensive approach found significantly more NEEDED files via symbol cross-referencing than the instant keyword heuristic. Preserve all files labeled as NEEDED/LIKELY_NEEDED, and procure or stub any MISSING files before shipping."
+  },
+  "artifacts": {
+    "instant_audit": "D:/RawrXD/instant_audit.json",
+    "full_audit_json": "D:/RawrXD/source_audit/full_audit.json",
+    "full_audit_md": "D:/RawrXD/source_audit/full_audit.md",
+    "comparison_report": "D:/RawrXD/fix_comparison.json"
+  },
+  "notes": [
+    "Use these results to guide non-architectural engineer decisions: instant fixes serve emergency triage, while the comprehensive scan supports stabilization and hardening.",
+    "The 'noc' (non-compilation) workflow here relies on runtime-friendly audits and archiving rather than heavyweight rebuilds or architecture rewrites."
+  ]
+}

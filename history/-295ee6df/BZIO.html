@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Diggz Streamer</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: linear-gradient(135deg, #1e3c72, #2a5298); color: #fff; font-family: 'Segoe UI', Arial; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .header { text-align: center; margin-bottom: 40px; }
+        .header h1 { font-size: 3em; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+        .categories { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 40px; }
+        .category { background: rgba(255,255,255,0.1); padding: 20px; border-radius: 15px; text-align: center; cursor: pointer; transition: all 0.3s; }
+        .category:hover { background: rgba(255,255,255,0.2); transform: translateY(-5px); }
+        .search-bar { background: rgba(255,255,255,0.1); padding: 20px; border-radius: 15px; margin-bottom: 30px; }
+        .search-bar input { width: 100%; padding: 15px; background: rgba(255,255,255,0.1); border: none; border-radius: 10px; color: #fff; font-size: 16px; margin-bottom: 10px; }
+        .search-bar input::placeholder { color: rgba(255,255,255,0.7); }
+        .api-btn { background: #27ae60; border: none; padding: 10px 20px; color: white; border-radius: 5px; cursor: pointer; }
+        .results { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .result-item { background: rgba(255,255,255,0.1); border-radius: 15px; overflow: hidden; transition: all 0.3s; }
+        .result-item:hover { transform: scale(1.05); }
+        .result-poster { height: 200px; background: #333; display: flex; align-items: center; justify-content: center; font-size: 3em; }
+        .result-info { padding: 15px; }
+        .result-title { font-size: 1.2em; margin-bottom: 10px; }
+        .result-meta { color: rgba(255,255,255,0.7); margin-bottom: 15px; }
+        .play-btn { background: #e74c3c; color: #fff; border: none; padding: 10px 20px; border-radius: 25px; cursor: pointer; font-weight: bold; }
+        .play-btn:hover { background: #c0392b; }
+        .player { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; z-index: 1000; }
+        .player video { width: 100%; height: 100%; }
+        .close-btn { position: absolute; top: 20px; right: 20px; background: #e74c3c; color: #fff; border: none; padding: 10px 15px; border-radius: 50%; cursor: pointer; font-size: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎬 Diggz Streamer</h1>
+            <p>Premium streaming without the premium price</p>
+        </div>
+
+        <div class="search-bar">
+            <input type="password" id="apiKey" placeholder="Real-Debrid API Key">
+            <button class="api-btn" onclick="setApiKey()">Set API Key</button>
+            <input type="text" id="searchInput" placeholder="Search movies, TV shows, anime..." onkeypress="if(event.key==='Enter') search()">
+        </div>
+
+        <div class="categories">
+            <div class="category" onclick="loadCategory('movies')">
+                <h3>🎬 Movies</h3>
+                <p>Latest blockbusters</p>
+            </div>
+            <div class="category" onclick="loadCategory('tv')">
+                <h3>📺 TV Shows</h3>
+                <p>Binge-worthy series</p>
+            </div>
+            <div class="category" onclick="loadCategory('anime')">
+                <h3>🎌 Anime</h3>
+                <p>Japanese animation</p>
+            </div>
+            <div class="category" onclick="loadCategory('sports')">
+                <h3>⚽ Sports</h3>
+                <p>Live & replays</p>
+            </div>
+        </div>
+
+        <div id="results" class="results"></div>
+    </div>
+
+    <div id="player" class="player">
+        <button class="close-btn" onclick="closePlayer()">×</button>
+        <video id="videoPlayer" controls></video>
+    </div>
+
+    <script>
+        const diggzContent = {
+            movies: [
+                { title: 'Avatar: The Way of Water', year: '2022', genre: 'Sci-Fi', poster: '🌊', stream: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4' },
+                { title: 'Top Gun: Maverick', year: '2022', genre: 'Action', poster: '✈️', stream: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4' },
+                { title: 'Black Panther: Wakanda Forever', year: '2022', genre: 'Action', poster: '🐾', stream: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4' }
+            ],
+            tv: [
+                { title: 'House of the Dragon', year: '2022', genre: 'Fantasy', poster: '🐉', stream: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4' },
+                { title: 'The Bear', year: '2022', genre: 'Comedy', poster: '🐻', stream: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4' },
+                { title: 'Stranger Things 4', year: '2022', genre: 'Horror', poster: '👾', stream: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4' }
+            ],
+            anime: [
+                { title: 'Demon Slayer', year: '2022', genre: 'Action', poster: '⚔️', stream: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4' },
+                { title: 'Attack on Titan', year: '2022', genre: 'Action', poster: '🏰', stream: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4' }
+            ],
+            sports: [
+                { title: 'Premier League Live', year: '2023', genre: 'Sports', poster: '⚽', stream: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4' },
+                { title: 'NBA Finals', year: '2023', genre: 'Sports', poster: '🏀', stream: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4' }
+            ]
+        };
+
+        let RD_API_KEY = localStorage.getItem('rdApiKey') || '';
+
+        function setApiKey() {
+            const key = document.getElementById('apiKey').value;
+            if (!key) return alert('Enter API key');
+            RD_API_KEY = key;
+            localStorage.setItem('rdApiKey', key);
+            alert('API key saved! Click categories to browse content.');
+        }
+
+        function loadCategory(category) {
+            const results = document.getElementById('results');
+            const content = diggzContent[category] || [];
+            
+            results.innerHTML = content.map(item => `
+                <div class="result-item">
+                    <div class="result-poster">${item.poster}</div>
+                    <div class="result-info">
+                        <div class="result-title">${item.title}</div>
+                        <div class="result-meta">${item.year} • ${item.genre}</div>
+                        <button class="play-btn" onclick="playStream('${item.stream}', '${item.title}')">▶ Play</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function search() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            if (!query) return;
+            
+            const allContent = [...diggzContent.movies, ...diggzContent.tv, ...diggzContent.anime, ...diggzContent.sports];
+            const filtered = allContent.filter(item => item.title.toLowerCase().includes(query));
+            
+            const results = document.getElementById('results');
+            results.innerHTML = filtered.map(item => `
+                <div class="result-item">
+                    <div class="result-poster">${item.poster}</div>
+                    <div class="result-info">
+                        <div class="result-title">${item.title}</div>
+                        <div class="result-meta">${item.year} • ${item.genre}</div>
+                        <button class="play-btn" onclick="playStream('${item.stream}', '${item.title}')">▶ Play</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function playStream(url, title) {
+            if (!RD_API_KEY) return alert('Set Real-Debrid API key first');
+            
+            const player = document.getElementById('player');
+            const video = document.getElementById('videoPlayer');
+            
+            player.style.display = 'block';
+            video.src = url;
+            video.play();
+        }
+
+        function closePlayer() {
+            const player = document.getElementById('player');
+            const video = document.getElementById('videoPlayer');
+            
+            player.style.display = 'none';
+            video.pause();
+            video.src = '';
+        }
+
+        // Health-check the local Multi-AI server and show a banner if unavailable
+        (async function checkServer(){
+            try {
+                const res = await fetch('http://localhost:3003/health', { method: 'GET', mode: 'cors' });
+                if (!res.ok) throw new Error('unhealthy');
+            } catch (e) {
+                const container = document.querySelector('.container');
+                const banner = document.createElement('div');
+                banner.style.background = '#ff5555';
+                banner.style.padding = '12px';
+                banner.style.borderRadius = '8px';
+                banner.style.marginBottom = '12px';
+                banner.style.textAlign = 'center';
+                banner.style.fontWeight = '600';
+                banner.innerText = 'Multi-AI server not available at http://localhost:3003 — some features will be disabled.';
+                container.insertBefore(banner, container.firstChild);
+            }
+        })();
+
+        // Load saved API key and movies by default
+        window.onload = () => {
+            if (RD_API_KEY) {
+                document.getElementById('apiKey').value = RD_API_KEY;
+            }
+            loadCategory('movies');
+        };
+    </script>
+</body>
+</html>

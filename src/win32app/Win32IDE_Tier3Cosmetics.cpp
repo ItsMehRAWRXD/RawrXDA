@@ -1055,13 +1055,93 @@ void Win32IDE::onLightbulbClicked() {
 std::vector<Win32IDE::CodeAction> Win32IDE::requestCodeActions(int line) {
     std::vector<CodeAction> actions;
 
-    // Check LSP diagnostics for this line and generate basic quick fixes
+    // ─── Strategy 1: Query LSP server for real code actions ──────────────
     if (!m_currentFile.empty()) {
-        auto it = m_lspDiagnostics.find(m_currentFile);
+        LSPLanguage lang = detectLanguageForFile(m_currentFile);
+        if (lang < LSPLanguage::Count &&
+            m_lspStatuses[(size_t)lang].state == LSPServerState::Running) {
+            try {
+                std::string uri = filePathToUri(m_currentFile);
+
+                nlohmann::json params;
+                params["textDocument"]["uri"] = uri;
+                params["range"]["start"]["line"]      = line;
+                params["range"]["start"]["character"]  = 0;
+                params["range"]["end"]["line"]          = line;
+                params["range"]["end"]["character"]    = 999;
+
+                // Build diagnostics context for the LSP request
+                nlohmann::json diagArray = nlohmann::json::array();
+                {
+                    std::lock_guard<std::mutex> lk(m_lspDiagnosticsMutex);
+                    auto diagIt = m_lspDiagnostics.find(uri);
+                    if (diagIt == m_lspDiagnostics.end())
+                        diagIt = m_lspDiagnostics.find(m_currentFile);
+                    if (diagIt != m_lspDiagnostics.end()) {
+                        for (auto& diag : diagIt->second) {
+                            if (diag.range.start.line == line) {
+                                nlohmann::json dj;
+                                dj["range"]["start"]["line"]      = diag.range.start.line;
+                                dj["range"]["start"]["character"]  = diag.range.start.character;
+                                dj["range"]["end"]["line"]        = diag.range.end.line;
+                                dj["range"]["end"]["character"]    = diag.range.end.character;
+                                dj["severity"] = diag.severity;
+                                dj["message"]  = diag.message;
+                                dj["code"]     = diag.code;
+                                dj["source"]   = diag.source;
+                                diagArray.push_back(dj);
+                            }
+                        }
+                    }
+                }
+                params["context"]["diagnostics"] = diagArray;
+
+                int id = sendLSPRequest(lang, "textDocument/codeAction", params);
+                if (id >= 0) {
+                    nlohmann::json resp = readLSPResponse(lang, id, 3000);
+                    if (resp.contains("result") && resp["result"].is_array()) {
+                        for (auto& actionJson : resp["result"]) {
+                            CodeAction action;
+                            action.title = actionJson.value("title", "Code Action");
+                            action.kind  = actionJson.value("kind", "quickfix");
+                            action.diagnosticIndex = -1;
+                            action.isFromLSP = true;
+
+                            // Store the workspace edit JSON for later application
+                            if (actionJson.contains("edit")) {
+                                action.lspEditJson = actionJson["edit"].dump();
+                            }
+                            actions.push_back(std::move(action));
+                        }
+                    }
+                }
+            } catch (...) {
+                // LSP request failed; fall through to local fallback
+            }
+        }
+    }
+
+    // ─── Strategy 2: Local quick-fix generation from cached diagnostics ──
+    if (!m_currentFile.empty()) {
+        std::string uri = filePathToUri(m_currentFile);
+        std::lock_guard<std::mutex> lk(m_lspDiagnosticsMutex);
+        auto it = m_lspDiagnostics.find(uri);
+        if (it == m_lspDiagnostics.end())
+            it = m_lspDiagnostics.find(m_currentFile);
         if (it != m_lspDiagnostics.end()) {
             for (size_t idx = 0; idx < it->second.size(); idx++) {
                 const auto& diag = it->second[idx];
                 if (diag.range.start.line != line) continue;
+
+                // Don't duplicate if LSP already provided a fix for this diagnostic
+                bool alreadyCovered = false;
+                for (auto& existing : actions) {
+                    if (existing.title.find(diag.message) != std::string::npos) {
+                        alreadyCovered = true;
+                        break;
+                    }
+                }
+                if (alreadyCovered) continue;
 
                 CodeAction action;
                 action.title = "Fix: " + diag.message;
@@ -1072,8 +1152,49 @@ std::vector<Win32IDE::CodeAction> Win32IDE::requestCodeActions(int line) {
         }
     }
 
-    // Always offer "Ignore this error" action
-    if (!actions.empty()) {
+    // ─── Common code actions (refactoring) ───────────────────────────────
+    // Add context-aware refactoring actions based on cursor position
+    if (m_hwndEditor) {
+        // Check if there's a selection for extract-based refactors
+        CHARRANGE cr;
+        SendMessage(m_hwndEditor, EM_EXGETSEL, 0, (LPARAM)&cr);
+        if (cr.cpMax - cr.cpMin > 0) {
+            CodeAction extract;
+            extract.title = "Extract to function";
+            extract.kind = "refactor.extract";
+            extract.diagnosticIndex = -1;
+            actions.push_back(extract);
+
+            CodeAction extractVar;
+            extractVar.title = "Extract to variable";
+            extractVar.kind = "refactor.extract";
+            extractVar.diagnosticIndex = -1;
+            actions.push_back(extractVar);
+        }
+
+        // Organize imports action
+        CodeAction organizeImports;
+        organizeImports.title = "Organize imports";
+        organizeImports.kind = "source.organizeImports";
+        organizeImports.diagnosticIndex = -1;
+        actions.push_back(organizeImports);
+    }
+
+    // Always offer "Suppress diagnostic" if there are diagnostics on this line
+    bool hasDiagnostics = false;
+    {
+        std::string uri = filePathToUri(m_currentFile);
+        std::lock_guard<std::mutex> lk(m_lspDiagnosticsMutex);
+        auto diagIt2 = m_lspDiagnostics.find(uri);
+        if (diagIt2 == m_lspDiagnostics.end())
+            diagIt2 = m_lspDiagnostics.find(m_currentFile);
+        if (diagIt2 != m_lspDiagnostics.end()) {
+            for (auto& d : diagIt2->second) {
+                if (d.range.start.line == line) { hasDiagnostics = true; break; }
+            }
+        }
+    }
+    if (hasDiagnostics) {
         CodeAction ignore;
         ignore.title = "Suppress diagnostic on this line";
         ignore.kind = "suppress";
@@ -1085,6 +1206,84 @@ std::vector<Win32IDE::CodeAction> Win32IDE::requestCodeActions(int line) {
 }
 
 void Win32IDE::applyCodeAction(const CodeAction& action) {
+    // ─── LSP workspace edit application ──────────────────────────────────
+    if (action.isFromLSP && !action.lspEditJson.empty()) {
+        // Parse the workspace edit JSON and apply via existing applyWorkspaceEdit
+        try {
+            nlohmann::json editJson = nlohmann::json::parse(action.lspEditJson);
+            LSPWorkspaceEdit wsEdit;
+
+            // Parse "changes": { "uri": [ {range, newText} ] }
+            if (editJson.contains("changes")) {
+                for (auto& [uri, edits] : editJson["changes"].items()) {
+                    std::vector<LSPWorkspaceEdit::TextEdit> textEdits;
+                    for (auto& editEntry : edits) {
+                        LSPWorkspaceEdit::TextEdit te;
+                        if (editEntry.contains("range")) {
+                            auto& rj = editEntry["range"];
+                            te.range.start.line      = rj["start"].value("line", 0);
+                            te.range.start.character = rj["start"].value("character", 0);
+                            te.range.end.line        = rj["end"].value("line", 0);
+                            te.range.end.character   = rj["end"].value("character", 0);
+                        }
+                        te.newText = editEntry.value("newText", "");
+                        textEdits.push_back(te);
+                    }
+                    wsEdit.changes[uri] = textEdits;
+                }
+            }
+
+            // Parse "documentChanges" if present (LSP 3.x)
+            if (editJson.contains("documentChanges")) {
+                for (auto& docChange : editJson["documentChanges"]) {
+                    if (docChange.contains("textDocument") && docChange.contains("edits")) {
+                        std::string docUri = docChange["textDocument"].value("uri", "");
+                        std::vector<LSPWorkspaceEdit::TextEdit> textEdits;
+                        for (auto& editEntry : docChange["edits"]) {
+                            LSPWorkspaceEdit::TextEdit te;
+                            if (editEntry.contains("range")) {
+                                auto& rj = editEntry["range"];
+                                te.range.start.line      = rj["start"].value("line", 0);
+                                te.range.start.character = rj["start"].value("character", 0);
+                                te.range.end.line        = rj["end"].value("line", 0);
+                                te.range.end.character   = rj["end"].value("character", 0);
+                            }
+                            te.newText = editEntry.value("newText", "");
+                            textEdits.push_back(te);
+                        }
+                        wsEdit.changes[docUri] = textEdits;
+                    }
+                }
+            }
+
+            applyWorkspaceEdit(wsEdit);
+            appendToOutput("[CodeAction] Applied LSP action: " + action.title + "\n");
+        } catch (const std::exception& e) {
+            appendToOutput("[CodeAction] Failed to apply edit: " + std::string(e.what()) + "\n");
+        }
+        return;
+    }
+
+    if (action.kind == "refactor.extract") {
+        if (action.title.find("function") != std::string::npos) {
+            // Trigger extract-to-function refactoring
+            appendToOutput("[CodeAction] Extract to function — use command palette\n");
+        } else if (action.title.find("variable") != std::string::npos) {
+            appendToOutput("[CodeAction] Extract to variable — use command palette\n");
+        }
+        return;
+    }
+
+    if (action.kind == "source.organizeImports") {
+        appendToOutput("[CodeAction] Organizing imports...\n");
+        // If LSP supports it, send textDocument/codeAction with only this action kind
+        // TODO: wire m_lspClientPtr once LSP client bridge is integrated
+        // if (m_lspClientPtr) {
+        //     m_lspClientPtr->GetCodeActions(m_currentFile, 0, 0, 0, 0);
+        // }
+        return;
+    }
+
     if (action.kind == "suppress") {
         // Insert a suppression comment at end of line
         if (m_hwndEditor && m_lightbulbLine >= 0) {

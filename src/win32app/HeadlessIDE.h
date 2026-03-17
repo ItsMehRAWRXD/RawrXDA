@@ -48,6 +48,8 @@
 #include "Win32IDE_AgenticBridge.h"
 #include "Win32IDE_Autonomy.h"
 #include "Win32IDE_SubAgent.h"
+#include "../core/multi_response_engine.h"
+#include "../agentic_engine.h"
 #include "../gguf_loader.h"
 #include "../streaming_gguf_loader.h"
 #include "../model_source_resolver.h"
@@ -327,7 +329,9 @@ private:
 
     // Real subsystem instances (owned by HeadlessIDE)
     std::unique_ptr<MultiResponseEngine> m_multiResponse;
-    std::unique_ptr<AgentHistoryRecorder> m_historyRecorder;
+    std::unique_ptr<AgentHistoryRecorder, void(*)(AgentHistoryRecorder*)> m_historyRecorder{
+        nullptr, +[](AgentHistoryRecorder*) {}
+    };
 
     // Agentic stack (101% parity with Win32 — chat, tool dispatch, subagent, chain, swarm)
     std::unique_ptr<AgenticEngine>     m_agenticEngine;

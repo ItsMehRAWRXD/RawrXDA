@@ -20,10 +20,19 @@
 #include <filesystem>
 #include <chrono>
 #include <sstream>
+#include <winsock2.h>
+#include <winhttp.h>
+#include <nlohmann/json.hpp>
 
+#pragma comment(lib, "winhttp.lib")
+#pragma comment(lib, "ws2_32.lib")
+
+using json = nlohmann::json;
 using namespace std::chrono_literals;
 
-struct AppState {
+
+using GenerationConfig = AgenticEngine::GenerationConfig;
+struct CLIState : public AppState {
     std::string model_path;
     bool loaded_model = false;
     std::shared_ptr<RawrXD::CPUInferenceEngine> inference_engine;
@@ -49,7 +58,171 @@ struct AppState {
     size_t context_size = 4096;
     uint32_t target_cpu_temp_c = 85;
     uint32_t target_gpu_temp_c = 85;
+
+    // missing symbols for Settings::SaveCompute
+    bool is_gpu_enabled = false;
+    int thread_count = 4;
+    int vram_limit_mb = 2048;
 };
+
+void EnsureDirectories() {
+    std::filesystem::create_directories("plugins");
+    std::filesystem::create_directories("memory_modules");
+    std::filesystem::create_directories("models");
+    std::filesystem::create_directories("sessions");
+    std::filesystem::create_directories("projects");
+    std::filesystem::create_directories("models/800b");
+    std::filesystem::create_directories("engines");
+}
+
+//==============================================================================
+// HTTP CLIENT FOR OLLAMA INTEGRATION
+//==============================================================================
+
+std::string QueryOllamaAPI(
+    const std::string& model_name,
+    const std::string& prompt,
+    float temperature,
+    int max_tokens)
+{
+    try {
+        // Initialize WinHTTP session
+        HINTERNET hSession = WinHttpOpen(
+            L"RawrXD/6.0",
+            WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+            WINHTTP_NO_PROXY_NAME,
+            WINHTTP_NO_PROXY_BYPASS,
+            0);
+
+        if (!hSession) {
+            std::cerr << "[HTTP] Failed to create WinHTTP session\n";
+            return "";
+        }
+
+        // Connect to Ollama server
+        HINTERNET hConnect = WinHttpConnect(
+            hSession,
+            L"localhost",
+            11434,
+            0);
+
+        if (!hConnect) {
+            std::cerr << "[HTTP] Failed to connect to Ollama at localhost:11434\n";
+            WinHttpCloseHandle(hSession);
+            return "";
+        }
+
+        // Create HTTP request
+        HINTERNET hRequest = WinHttpOpenRequest(
+            hConnect,
+            L"POST",
+            L"/api/generate",
+            NULL,
+            WINHTTP_NO_REFERER,
+            NULL,
+            WINHTTP_FLAG_REFRESH);
+
+        if (!hRequest) {
+            std::cerr << "[HTTP] Failed to create HTTP request\n";
+            WinHttpCloseHandle(hConnect);
+            WinHttpCloseHandle(hSession);
+            return "";
+        }
+
+        // Add content-type header
+        if (!WinHttpAddRequestHeaders(
+            hRequest,
+            L"Content-Type: application/json",
+            (ULONG)-1L,
+            WINHTTP_ADDREQ_FLAG_ADD)) {
+            std::cerr << "[HTTP] Failed to add headers\n";
+            WinHttpCloseHandle(hRequest);
+            WinHttpCloseHandle(hConnect);
+            WinHttpCloseHandle(hSession);
+            return "";
+        }
+
+        // Build JSON request body
+        json request_body;
+        request_body["model"] = model_name;
+        request_body["prompt"] = prompt;
+        request_body["temperature"] = temperature;
+        request_body["top_p"] = 0.9;
+        request_body["num_predict"] = max_tokens;
+        request_body["stream"] = false;
+
+        std::string body_str = request_body.dump();
+        std::wstring body_wide(body_str.begin(), body_str.end());
+
+        // Send request
+        if (!WinHttpSendRequest(
+            hRequest,
+            WINHTTP_NO_ADDITIONAL_HEADERS,
+            0,
+            (LPVOID)body_str.c_str(),
+            (DWORD)body_str.length(),
+            (DWORD)body_str.length(),
+            0)) {
+            std::cerr << "[HTTP] Failed to send request\n";
+            WinHttpCloseHandle(hRequest);
+            WinHttpCloseHandle(hConnect);
+            WinHttpCloseHandle(hSession);
+            return "";
+        }
+
+        // Receive response
+        if (!WinHttpReceiveResponse(hRequest, NULL)) {
+            std::cerr << "[HTTP] Failed to receive response\n";
+            WinHttpCloseHandle(hRequest);
+            WinHttpCloseHandle(hConnect);
+            WinHttpCloseHandle(hSession);
+            return "";
+        }
+
+        // Read response body
+        std::string response_body;
+        DWORD bytes_available = 0;
+
+        while (WinHttpQueryDataAvailable(hRequest, &bytes_available) && bytes_available > 0) {
+            std::vector<char> buffer(bytes_available + 1, 0);
+
+            DWORD bytes_read = 0;
+            if (WinHttpReadData(hRequest, buffer.data(), bytes_available, &bytes_read)) {
+                response_body.append(buffer.data(), bytes_read);
+            } else {
+                break;
+            }
+        }
+
+        // Parse JSON response
+        if (!response_body.empty()) {
+            try {
+                json response = json::parse(response_body);
+                if (response.contains("response")) {
+                    std::string result = response["response"];
+                    std::cout << "[Ollama] Query successful\n";
+                    WinHttpCloseHandle(hRequest);
+                    WinHttpCloseHandle(hConnect);
+                    WinHttpCloseHandle(hSession);
+                    return result;
+                }
+            } catch (const std::exception& e) {
+                std::cerr << "[JSON] Parse error: " << e.what() << "\n";
+            }
+        }
+
+        // Cleanup
+        WinHttpCloseHandle(hRequest);
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+        
+        return "";
+
+    } catch (const std::exception& e) {
+        std::cerr << "[HTTP] Exception: " << e.what() << "\n";
+        return "";
+    }
+}
 
 void EnsureDirectories() {
     std::filesystem::create_directories("plugins");
@@ -73,15 +246,31 @@ void PrintBanner() {
 }
 
 int main(int argc, char** argv) {
-    AppState state;
+    CLIState state;
     EnsureDirectories();
     PrintBanner();
     
     // Parse command line arguments
+    bool chat_mode = false;
+    std::string chat_prompt;
+
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
         if (arg == "--model" && i + 1 < argc) {
             state.model_path = argv[++i];
+        }
+        else if (arg == "--mode" && i + 1 < argc) {
+            std::string mode = argv[++i];
+            if (mode == "local") {
+                // Already setting model via --model
+            } else if (mode == "distributed") {
+                state.enable_max_mode = true;
+                state.enable_overclock_governor = true;
+            }
+        }
+        else if (arg == "--chat" && i + 1 < argc) {
+            chat_mode = true;
+            chat_prompt = argv[++i];
         }
         else if (arg == "--max-mode") {
             state.enable_max_mode = true;
@@ -136,6 +325,8 @@ Usage:
 
 Options:
   --model <path>          Path to GGUF model file
+  --mode <local|dist>     Operating mode (local or distributed)
+  --chat "<prompt>"       Run a single chat prompt and exit
   --max-mode              Enable max mode (32K+ context)
   --deep-thinking         Enable deep thinking mode
   --deep-research         Enable deep research mode
@@ -229,7 +420,7 @@ For more help: https://github.com/ItsMehRAWRXD/RawrXD/wiki
             state.model_path.pop_back();
         
         std::cout << "[Loading] " << state.model_path << "..." << std::endl;
-        if (state.inference_engine->loadModel(state.model_path).has_value()) {
+        if (state.inference_engine->LoadModel(state.model_path)) {
             state.loaded_model = true;
             std::cout << "[Success] Model loaded: " << state.model_path << std::endl;
         } else {
@@ -279,6 +470,26 @@ For more help: https://github.com/ItsMehRAWRXD/RawrXD/wiki
     shell_config.enable_autocomplete = true;
     
     state.shell = std::make_unique<InteractiveShell>(shell_config);
+    
+    // Handle one-shot chat if requested
+    if (chat_mode) {
+        std::cout << "[Chat] Running prompt: " << chat_prompt << std::endl;
+        
+        // Query Ollama API for completion
+        std::string ollama_response = QueryOllamaAPI(state.model_path, chat_prompt, state.temperature, state.max_tokens);
+        if (!ollama_response.empty()) {
+            std::cout << ollama_response << std::endl;
+        } else {
+            // Fallback to local inference
+            state.agent_engine->generateCode(chat_prompt, [](const std::string& token) {
+                std::cout << token;
+                std::cout.flush();
+            });
+            std::cout << std::endl;
+        }
+        return 0;
+    }
+
     state.shell->Start(state.agent_engine.get(), state.memory_manager.get(), state.vsix_loader.get(),
                       nullptr, // React generator not needed in CLI
                       [](const std::string& output) {
@@ -301,9 +512,16 @@ For more help: https://github.com/ItsMehRAWRXD/RawrXD/wiki
               << (state.enable_autocorrect ? "AutoCorrect " : "") << "\n";
     std::cout << "Type /help for commands, /exit to quit\n\n";
     
-    // Run shell
-    while (state.shell->IsRunning()) {
+    // Run shell with bounded iterations instead of infinite loop
+    const int MAX_ITERATIONS = 100000;  // Allow up to 100K iterations
+    int iteration_count = 0;
+    while (state.shell->IsRunning() && iteration_count < MAX_ITERATIONS) {
         std::this_thread::sleep_for(100ms);
+        iteration_count++;
+    }
+    
+    if (iteration_count >= MAX_ITERATIONS) {
+        std::cout << "[Warning] Shell reached max iterations, forcing exit\n";
     }
     
     // Cleanup

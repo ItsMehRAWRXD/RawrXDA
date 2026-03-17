@@ -1,0 +1,72 @@
+# CMakeLists.txt for src directory
+
+# Build internal modules in a Qt-free configuration. These are implemented
+# in a platform-agnostic manner and do not link against Qt.
+
+# Set MSVC-specific compile options for all targets
+if(MSVC)
+    add_compile_options(/permissive- /Zc:__cplusplus /std:c++17 /utf-8)
+endif()
+
+# Paint Module Build (headless rendering and logic)
+add_library(paint-module OBJECT
+    paint/paint_app.cpp
+)
+
+target_include_directories(paint-module PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/image_generator
+)
+
+# Features Module Build (headless features panel)
+add_library(features-module OBJECT
+    features_view_menu.cpp
+)
+
+target_include_directories(features-module PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include
+)
+
+# Main Window Build (headless entry points)
+add_library(main-window-module OBJECT
+    enhanced_main_window.cpp
+)
+
+target_include_directories(main-window-module PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include
+)
+
+# Paint Chat Editor Build
+add_library(paint-chat-editor-module OBJECT
+    paint_chat_editor.cpp
+)
+
+target_include_directories(paint-chat-editor-module PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include
+)
+
+# Ghost Text / AI Code Completion Integration Build
+add_library(editor-agent-integration-module OBJECT
+    editor_agent_integration_win32.cpp
+    code_suggestion_engine.cpp
+)
+
+target_include_directories(editor-agent-integration-module PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/agentic
+)
+
+# Production IDE Main Build - object module used by other targets
+add_library(production-ide-module OBJECT
+    production_agentic_ide.cpp
+)
+
+target_include_directories(production-ide-module PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/enterprise
+)
+
+target_link_libraries(production-ide-module PUBLIC
+    editor-agent-integration-module
+)
+

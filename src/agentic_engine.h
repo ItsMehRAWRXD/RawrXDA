@@ -80,9 +80,7 @@ public:
     void setInferenceEngine(RawrXD::InferenceEngine* engine) { m_inferenceEngine = engine; }
     RawrXD::InferenceEngine* inferenceEngine() const { return m_inferenceEngine; }
 
-    /// Headless/CLI: inject a chat provider (e.g. Ollama via routeInferenceRequest).
-    /// When set, chat() uses this instead of NativeAgent. Enables full agentic parity
-    /// in headless mode without requiring CPUInferenceEngine.
+
     void setChatProvider(std::function<std::string(const std::string&)> fn) { m_chatProvider = std::move(fn); }
     void clearChatProvider() { m_chatProvider = nullptr; }
 
@@ -101,6 +99,7 @@ public:
         bool deepThinking = false;
         bool deepResearch = false;
         bool noRefusal = false;
+        bool autoCorrect = false;
     };
 
     void updateConfig(const GenerationConfig& config);
@@ -119,6 +118,8 @@ public:
 private:
     std::string m_currentModelPath;
     RawrXD::InferenceEngine* m_inferenceEngine = nullptr;
-    std::function<std::string(const std::string&)> m_chatProvider;
+
+
     GenerationConfig m_config;
+    std::function<std::string(const std::string&)> m_chatProvider;
 };

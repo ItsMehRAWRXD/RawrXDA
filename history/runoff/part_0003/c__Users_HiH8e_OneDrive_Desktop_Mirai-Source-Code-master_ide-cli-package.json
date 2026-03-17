@@ -1,0 +1,29 @@
+{
+  "name": "ide-agentic-cli",
+  "version": "0.1.0",
+  "description": "CLI tools to serve the IDE, run UI checks, manage git and todos, and set model permissions",
+  "main": "cli.js",
+  "bin": {
+    "ide-cli": "cli.js"
+  },
+  "scripts": {
+    "start": "node cli.js serve",
+    "test": "node cli.js help"
+  },
+  "keywords": [
+    "ide",
+    "cli",
+    "puppeteer",
+    "ui-check",
+    "manifest",
+    "git",
+    "todo"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^11.0.0",
+    "express": "^4.18.2",
+    "puppeteer": "^21.0.0"
+  }
+}

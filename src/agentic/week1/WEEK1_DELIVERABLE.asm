@@ -9,7 +9,7 @@
 ;================================================================================
 
 OPTION CASEMAP:NONE
-OPTION WIN64:3
+
 
 ;================================================================================
 ; EXTERNAL IMPORTS - Windows APIs
@@ -137,7 +137,7 @@ TASK STRUCT
     result              dq ?
     next                dq ?
     stealing_thread     dd ?
-    padding2            db 128-((($-TASK) MOD 128)) DUP(?)
+    padding2 db 128 DUP(?)
 TASK ENDS
 
 ; Thread context (aligned to 64 bytes for cache efficiency)
@@ -157,7 +157,7 @@ THREAD_CONTEXT STRUCT
     steal_successes     dq ?
     current_task        dq ?
     task_start_time     dq ?
-    padding             db 64-((($-THREAD_CONTEXT) MOD 64)) DUP(?)
+    padding             db 64 DUP(?)
 THREAD_CONTEXT ENDS
 
 ; Conflict entry
@@ -169,7 +169,7 @@ CONFLICT_ENTRY STRUCT
     waiter_count        dd ?
     conflict_count      dq ?
     state               dd ?
-    padding             db 64-((($-CONFLICT_ENTRY) MOD 64)) DUP(?)
+    padding db 64 DUP(?)
 CONFLICT_ENTRY ENDS
 
 ; Heartbeat monitor (main structure)

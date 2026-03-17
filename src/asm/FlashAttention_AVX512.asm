@@ -57,8 +57,8 @@ PUBLIC FlashAttention_Forward
 PUBLIC FlashAttention_CheckAVX512
 PUBLIC FlashAttention_Init
 PUBLIC FlashAttention_GetTileConfig
-PUBLIC g_FlashAttnCalls
-PUBLIC g_FlashAttnTiles
+; g_FlashAttnCalls, g_FlashAttnTiles — now in rawr_globals.asm
+INCLUDE rawr_globals.inc
 
 ; =============================================================================
 ;                        CONFIGURATION STRUCT
@@ -98,19 +98,8 @@ CFG_CAUSAL      EQU 60
 ; =============================================================================
 ;                             DATA
 ; =============================================================================
-_DATA64 SEGMENT ALIGN(64) 'DATA'
-
-; Broadcast-ready constants (64-byte aligned for ZMM loads)
-g_NegInf            DD 16 DUP(0FF800000h)      ; -inf × 16 (one ZMM)
-
-; AVX-512 capability flag (set by FlashAttention_Init)
-g_AVX512Ready       DD 0
-
-; Performance counters
-g_FlashAttnCalls    DQ 0
-g_FlashAttnTiles    DQ 0
-
-_DATA64 ENDS
+; g_NegInf, g_AVX512Ready, g_FlashAttnCalls, g_FlashAttnTiles
+; are now defined in rawr_globals.asm — accessed via EXTERNDEF (rawr_globals.inc)
 
 ; =============================================================================
 ;                             CODE

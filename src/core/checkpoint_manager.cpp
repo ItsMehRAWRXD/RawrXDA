@@ -615,7 +615,7 @@ std::vector<CheckpointManager::CheckpointIndex> CheckpointManager::listCheckpoin
 }
 
 void CheckpointManager::setShowCallback(ShowCallback cb, void* ctx) {
-    m_showCb = std::move(cb);
+    m_showCb = cb;
     m_showCtx = ctx;
 }
 

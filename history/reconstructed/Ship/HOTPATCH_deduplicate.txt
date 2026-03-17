@@ -1,0 +1,56 @@
+HOTPATCH REQUIRED: Remove Duplicate Code Sections
+
+The RawrXD_Win32_IDE.cpp file has extensive code duplication from lines ~3220 onwards.
+
+DUPLICATE SECTIONS TO REMOVE:
+- Lines ~3220-4400: Contains duplicate implementations of:
+  * ChatInputSubclassProc
+  * EditorSubclassProc  
+  * HideAICompletion
+  * AcceptAICompletion
+  * AppendWindowText
+  * RefreshCodeIssues
+  * AddCodeIssue
+  * ClearCodeIssues
+  * RunCodeAnalysis
+  * WideToUtf8
+  * Utf8ToWide
+  * Various other helper functions
+
+CLEAN IMPLEMENTATIONS EXIST AT:
+- EditorSubclassProc: Line ~1927 (working implementation)
+- ChatInputSubclassProc: Line ~1957 (working implementation)  
+- AI Completion functions: Lines ~1430-1500 (working implementations)
+- AppendWindowText: Line ~1798 (working implementation)
+- Code Issues functions: Lines ~1486-1590 (working implementations)
+- WideToUtf8/Utf8ToWide: Lines ~2915+ (working implementations)
+
+RECOMMENDED ACTION:
+Delete everything from line 3220 (after the main() function) to approximately line 4400,
+keeping only the FIRST occurrence of each function.
+
+ALTERNATIVELY:
+Use this PowerShell command to create a deduplicated version:
+```powershell
+$content = Get-Content RawrXD_Win32_IDE.cpp -Raw
+# Remove lines 3220-4400 (the duplicate section)
+$lines = $content -split "`r?`n"
+$clean = ($lines[0..3219] + $lines[4401..$lines.Count]) -join "`r`n"
+$clean | Set-Content RawrXD_Win32_IDE_clean.cpp
+```
+
+CRITICAL FIXES APPLIED:
+✅ Added WndProc forward declaration
+✅ Added Button_SetCheck and Button_GetCheck macros  
+✅ Fixed CreateNewTab signature (removed duplicate default argument)
+✅ Fixed WideToUtf8 return type (std::string not std::wstring)
+✅ Fixed file I/O to convert wide strings to narrow for std::ifstream/ofstream
+✅ Reverse-engineered MonacoIntegration.hpp/cpp - compiles cleanly
+✅ Reverse-engineered TerminalEmulator.hpp/cpp - compiles cleanly
+
+REMAINING WORK:
+- Remove duplicate code sections
+- Verify full IDE compilation
+- Test runtime behavior
+
+STATUS: Headers 100% complete. Main IDE file needs deduplication cleanup.

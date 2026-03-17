@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Creator - Model Management</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #1e1e1e;
+      color: #fff;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .section {
+      background: #2d2d2d;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+    }
+
+    .btn {
+      background: #007acc;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .btn:hover {
+      background: #005999;
+    }
+
+    .form-group {
+      margin: 15px 0;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #555;
+      background: #3c3c3c;
+      color: #fff;
+      border-radius: 4px;
+    }
+
+    .model-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    .model-card {
+      background: #3c3c3c;
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid #555;
+    }
+
+    .status {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+
+    .status.created {
+      background: #4a90e2;
+    }
+
+    .status.deployed {
+      background: #7ed321;
+    }
+
+    .status.training {
+      background: #f5a623;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>AI Creator - Model Management</h1>
+
+    <div class="section">
+      <h2>Create New Model</h2>
+      <form id="createModelForm">
+        <div class="form-group">
+          <label>Model Name:</label>
+          <input type="text" id="modelName" required>
+        </div>
+        <div class="form-group">
+          <label>Base Model:</label>
+          <select id="baseModel">
+            <option value="llama3.1:8b">Llama 3.1 8B</option>
+            <option value="qwen2.5-coder:14b">Qwen 2.5 Coder 14B</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Configuration (JSON):</label>
+          <textarea id="modelConfig" rows="4">{"temperature": 0.7, "max_tokens": 2048}</textarea>
+        </div>
+        <button type="submit" class="btn">Create Model</button>
+      </form>
+    </div>
+
+    <div class="section">
+      <h2>Your Models</h2>
+      <button onclick="loadModels()" class="btn">Refresh Models</button>
+      <div id="modelsList" class="model-list"></div>
+    </div>
+
+    <div class="section">
+      <h2>Fine-Tune Model</h2>
+      <form id="fineTuneForm">
+        <div class="form-group">
+          <label>Select Model:</label>
+          <select id="fineTuneModelId"></select>
+        </div>
+        <div class="form-group">
+          <label>Training Data (JSON Lines):</label>
+          <textarea id="trainingData" rows="6"
+            placeholder='{"input": "What is AI?", "output": "AI is artificial intelligence..."}&#10;{"input": "Explain ML", "output": "Machine learning is..."}'></textarea>
+        </div>
+        <button type="submit" class="btn">Start Fine-Tuning</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const ws = new WebSocket('ws://localhost:3000');
+
+    ws.onopen = () => console.log('Connected to AI Creator backend');
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'ai_response') {
+        handleAIResponse(data.response);
+      }
+    };
+
+    let currentRequest = null;
+
+    function sendAIRequest(message) {
+      currentRequest = Date.now();
+      ws.send(JSON.stringify({
+        type: 'ai_request',
+        provider: 'ai-creator',
+        message: JSON.stringify(message),
+        requestId: currentRequest
+      }));
+    }
+
+    function handleAIResponse(response) {
+      console.log('AI Response:', response);
+      if (response.success) {
+        if (response.models) {
+          displayModels(response.models);
+        } else if (response.modelId) {
+          alert('Model created successfully!');
+          loadModels();
+        } else if (response.jobId) {
+          alert('Fine-tuning started!');
+        }
+      } else {
+        alert('Error: ' + response.error);
+      }
+    }
+
+    document.getElementById('createModelForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = document.getElementById('modelName').value;
+      const baseModel = document.getElementById('baseModel').value;
+      const config = JSON.parse(document.getElementById('modelConfig').value);
+
+      sendAIRequest({
+        action: 'create_model',
+        data: { name, baseModel, config }
+      });
+    });
+
+    document.getElementById('fineTuneForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const modelId = document.getElementById('fineTuneModelId').value;
+      const trainingData = document.getElementById('trainingData').value;
+
+      sendAIRequest({
+        action: 'fine_tune',
+        data: {
+          modelId,
+          trainingData: trainingData.split('\n').filter(line => line.trim()),
+          hyperparameters: { epochs: 3, learning_rate: 0.001 }
+        }
+      });
+    });
+
+    function loadModels() {
+      sendAIRequest({ action: 'list_models' });
+    }
+
+    function displayModels(models) {
+      const container = document.getElementById('modelsList');
+      const select = document.getElementById('fineTuneModelId');
+
+      container.innerHTML = '';
+      select.innerHTML = '';
+
+      models.forEach(model => {
+        // Model card
+        const card = document.createElement('div');
+        card.className = 'model-card';
+        card.innerHTML = `
+                    <h3>${model.name}</h3>
+                    <p><strong>Base:</strong> ${model.baseModel}</p>
+                    <p><strong>Status:</strong> <span class="status ${model.status}">${model.status}</span></p>
+                    <p><strong>Created:</strong> ${new Date(model.createdAt).toLocaleDateString()}</p>
+                    ${model.endpoint ? `<p><strong>Endpoint:</strong> ${model.endpoint}</p>` : ''}
+                    <button class="btn" onclick="deployModel('${model.id}')">Deploy</button>
+                `;
+        container.appendChild(card);
+
+        // Select option
+        const option = document.createElement('option');
+        option.value = model.id;
+        option.textContent = model.name;
+        select.appendChild(option);
+      });
+    }
+
+    function deployModel(modelId) {
+      sendAIRequest({
+        action: 'deploy_model',
+        data: { modelId }
+      });
+    }
+
+    // Load models on page load
+    window.addEventListener('load', loadModels);
+  </script>
+</body>
+
+</html>

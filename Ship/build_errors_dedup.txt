@@ -1,0 +1,480 @@
+RawrXD_Win32_IDE.cpp:49:5: error: 'Titan_Initialize_t' does not name a type
+RawrXD_Win32_IDE.cpp:50:5: error: 'Titan_LoadModelPersistent_t' does not name a type
+RawrXD_Win32_IDE.cpp:51:5: error: 'Titan_RunInference_t' does not name a type
+RawrXD_Win32_IDE.cpp:52:5: error: 'Titan_Shutdown_t' does not name a type
+RawrXD_Win32_IDE.cpp:54:5: error: 'LoadModel_t' does not name a type
+RawrXD_Win32_IDE.cpp:55:5: error: 'UnloadModel_t' does not name a type
+RawrXD_Win32_IDE.cpp:56:5: error: 'ForwardPassInfer_t' does not name a type
+RawrXD_Win32_IDE.cpp:57:5: error: 'SampleNext_t' does not name a type
+RawrXD_Win32_IDE.cpp:59:5: error: 'LoadModelNative_t' does not name a type
+RawrXD_Win32_IDE.cpp:60:5: error: 'GetTokenEmbedding_t' does not name a type
+RawrXD_Win32_IDE.cpp:61:5: error: 'ForwardPassASM_t' does not name a type
+RawrXD_Win32_IDE.cpp:62:5: error: 'CleanupMathTables_t' does not name a type
+RawrXD_Win32_IDE.cpp:228:5: error: expected unqualified-id before 'if'
+RawrXD_Win32_IDE.cpp:233:15: error: expected constructor, destructor, or type conversion before '(' token
+RawrXD_Win32_IDE.cpp:234:17: error: expected constructor, destructor, or type conversion before '(' token
+RawrXD_Win32_IDE.cpp:238:5: error: expected unqualified-id before 'while'
+RawrXD_Win32_IDE.cpp:243:5: error: expected unqualified-id before 'return'
+RawrXD_Win32_IDE.cpp:244:1: error: expected declaration before '}' token
+RawrXD_Win32_IDE.cpp:244:2: error: expected unqualified-id before '==' token
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:68:47: error: '_Hash_node_base' is not a member of 'std::__detail'
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:68:62: error: template argument 2 is invalid
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:190:39: error: expected template-name before '<' token [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:190:39: error: expected '{' before '<' token
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1421:15: error: expected constructor, destructor, or type conversion before '(' token
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1442:18: error: 'size_type' has not been declared; did you mean 'true_type'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1444:24: error: 'allocator_type' does not name a type; did you mean 'allocator_traits'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1444:66: error: invalid use of incomplete type 'class std::_Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal, _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>'
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1456:18: error: 'size_type' has not been declared; did you mean 'true_type'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1458:24: error: 'allocator_type' does not name a type; did you mean 'allocator_traits'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1458:61: error: invalid use of incomplete type 'class std::_Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal, _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>'
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1484:15: error: missing template argument list after 'std::_Hashtable'; template placeholder not permitted in parameter [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1481:5: error: deduced class type '_Hashtable' in function return type
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1536:36: error: invalid use of incomplete type 'class std::_Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal, _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>'
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1588:55: error: invalid use of incomplete type 'class std::_Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal, _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>'
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1650:16: error: invalid use of incomplete type 'class std::_Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal, _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>'
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1667:20: error: missing template argument list after 'std::_Hashtable'; template placeholder not permitted in parameter [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1667:48: error: invalid use of incomplete type 'class std::_Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal, _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>'
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1701:20: error: missing template argument list after 'std::_Hashtable'; template placeholder not permitted in parameter [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1701:49: error: invalid use of incomplete type 'class std::_Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal, _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>'
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1720:16: error: missing template argument list after 'std::_Hashtable'; template placeholder not permitted in parameter [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1720:38: error: invalid use of incomplete type 'class std::_Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal, _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>'
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1741:16: error: missing template argument list after 'std::_Hashtable'; template placeholder not permitted in parameter [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1741:35: error: '__node_alloc_type' has not been declared [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1743:14: error: there are no arguments to '_S_nothrow_move' that depend on a template parameter, so a declaration of '_S_nothrow_move' must be available [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1743:31: error: invalid use of incomplete type 'class std::_Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal, _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>'
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1775:16: error: missing template argument list after 'std::_Hashtable'; template placeholder not permitted in parameter [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1775:46: error: 'allocator_type' does not name a type; did you mean 'allocator_traits'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1775:65: error: invalid use of incomplete type 'class std::_Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal, _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>'
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1795:16: error: missing template argument list after 'std::_Hashtable'; template placeholder not permitted in parameter [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1795:35: error: '__node_alloc_type' has not been declared [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1796:51: error: invalid use of incomplete type 'class std::_Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal, _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>'
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1839:19: error: invalid use of incomplete type 'class std::_Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal, _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>'
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1863:10: error: missing template argument list after 'std::_Hashtable'; template placeholder not permitted in parameter [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1865:63: error: invalid use of incomplete type 'class std::_Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal, _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>'
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1916:16: error: 'key_type' does not name a type [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1913:5: error: deduced class type 'iterator' in function return type
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1927:16: error: 'key_type' does not name a type [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1928:8: error: 'const_iterator' does not name a type; did you mean 'move_iterator'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1988:17: error: 'key_type' does not name a type [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:1989:8: error: 'size_type' does not name a type; did you mean 'true_type'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2061:23: error: 'key_type' does not name a type [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2062:31: error: type/value mismatch at argument 1 in template parameter list for 'template<class _T1, class _T2> struct std::pair' [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2062:31: error: type/value mismatch at argument 2 in template parameter list for 'template<class _T1, class _T2> struct std::pair' [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2085:23: error: 'key_type' does not name a type [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2086:13: error: 'const_iterator' was not declared in this scope; did you mean 'move_iterator'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2086:29: error: 'const_iterator' was not declared in this scope; did you mean 'move_iterator'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2086:43: error: template argument 1 is invalid [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2086:43: error: template argument 2 is invalid [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2201:25: error: template definition of non-template 'auto std::_Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal, _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>::_M_find_before_node' [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2201:25: error: 'size_type' was not declared in this scope; did you mean 'true_type'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2201:42: error: expected primary-expression before 'const' [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2202:25: error: '__hash_code' was not declared in this scope; did you mean '__hash_base'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2231:30: error: template definition of non-template 'auto std::_Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal, _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>::_M_find_before_node_tr' [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2231:30: error: 'size_type' was not declared in this scope; did you mean 'true_type'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2231:47: error: expected primary-expression before 'const' [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2232:30: error: '__hash_code' was not declared in this scope; did you mean '__hash_base'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2260:21: error: 'key_type' does not name a type [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2261:8: error: '__location_type' does not name a type [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2296:26: error: template definition of non-template 'auto std::_Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal, _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>::_M_get_previous_node' [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2296:26: error: 'size_type' was not declared in this scope; did you mean 'true_type'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2296:43: error: '__node_ptr' was not declared in this scope; did you mean '_mode_t'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2316:29: error: type/value mismatch at argument 1 in template parameter list for 'template<class _T1, class _T2> struct std::pair' [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2379:24: error: template definition of non-template 'auto std::_Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal, _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>::_M_emplace_multi' [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2379:24: error: 'const_iterator' was not declared in this scope; did you mean 'move_iterator'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2379:52: error: expected primary-expression before '&&' token [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2398:3: error: variable or field '_M_rehash_insert' declared void
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2400:20: error: 'size_type' was not declared in this scope; did you mean 'true_type'?
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2425:74: error: invalid use of incomplete type 'class std::_Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal, _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>'
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2439:26: error: template definition of non-template 'auto std::_Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal, _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>::_M_compute_hash_code' [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2439:26: error: '__node_ptr' was not declared in this scope; did you mean '_mode_t'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2439:45: error: expected primary-expression before 'const' [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2468:27: error: template definition of non-template 'auto std::_Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal, _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>::_M_insert_unique_node' [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2468:27: error: 'size_type' was not declared in this scope; did you mean 'true_type'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2468:44: error: '__hash_code' was not declared in this scope; did you mean '__hash_base'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2469:27: error: '__node_ptr' was not declared in this scope; did you mean '_mode_t'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2469:46: error: 'size_type' was not declared in this scope; did you mean 'true_type'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2499:26: error: template definition of non-template 'auto std::_Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal, _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>::_M_insert_multi_node' [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2499:26: error: '__node_ptr' was not declared in this scope; did you mean '_mode_t'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2500:26: error: '__hash_code' was not declared in this scope; did you mean '__hash_base'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2500:46: error: '__node_ptr' was not declared in this scope; did you mean '_mode_t'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2555:11: error: template definition of non-template 'auto std::_Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal, _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>::erase' [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2555:11: error: 'const_iterator' was not declared in this scope; did you mean 'move_iterator'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2575:14: error: template definition of non-template 'auto std::_Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal, _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>::_M_erase' [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2575:14: error: 'size_type' was not declared in this scope; did you mean 'true_type'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2575:31: error: '__node_base_ptr' was not declared in this scope [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2575:57: error: '__node_ptr' was not declared in this scope; did you mean '_mode_t'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2605:17: error: 'key_type' does not name a type [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2606:8: error: 'size_type' does not name a type; did you mean 'true_type'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2667:11: error: template definition of non-template 'auto std::_Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal, _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>::erase' [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2667:11: error: 'const_iterator' was not declared in this scope; did you mean 'move_iterator'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2667:35: error: 'const_iterator' was not declared in this scope; did you mean 'move_iterator'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2714:13: error: invalid use of incomplete type 'class std::_Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal, _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>'
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2727:5: error: variable or field 'rehash' declared void
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2729:12: error: 'size_type' was not declared in this scope; did you mean 'true_type'?
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2750:5: error: variable or field '_M_rehash' declared void
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2752:15: error: 'size_type' was not declared in this scope; did you mean 'true_type'?
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2752:59: error: expected primary-expression before ')' token
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2793:5: error: variable or field '_M_rehash' declared void
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2795:15: error: 'size_type' was not declared in this scope; did you mean 'true_type'?
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2795:60: error: expected primary-expression before ')' token
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2890:14: error: missing template argument list after 'std::_Hashtable'; template placeholder not permitted in parameter [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/hashtable.h:2890:41: error: invalid use of incomplete type 'class std::_Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal, _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>'
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:48:37: error: '_Hashtable_traits' in namespace 'std::__detail' does not name a template type
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:54:27: error: '__uset_traits' does not name a type
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:54:40: error: expected '>' before '<' token
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:56:51: error: '_Identity' is not a member of 'std::__detail'; did you mean 'std::_Identity'?
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:57:51: error: '_Mod_range_hashing' is not a member of 'std::__detail'
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:58:51: error: '_Default_ranged_hash' is not a member of 'std::__detail'
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:59:51: error: '_Prime_rehash_policy' is not a member of 'std::__detail'
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:59:76: error: template argument 4 is invalid
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:59:76: error: template argument 7 is invalid
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:59:76: error: template argument 8 is invalid
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:59:76: error: template argument 9 is invalid
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:63:38: error: '_Hashtable_traits' in namespace 'std::__detail' does not name a template type
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:69:27: error: '__umset_traits' does not name a type
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:69:41: error: expected '>' before '<' token
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:71:52: error: '_Identity' is not a member of 'std::__detail'; did you mean 'std::_Identity'?
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:73:52: error: '_Mod_range_hashing' is not a member of 'std::__detail'
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:74:52: error: '_Default_ranged_hash' is not a member of 'std::__detail'
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:75:52: error: '_Prime_rehash_policy' is not a member of 'std::__detail'
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:75:77: error: template argument 4 is invalid
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:75:77: error: template argument 7 is invalid
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:75:77: error: template argument 8 is invalid
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:75:77: error: template argument 9 is invalid
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:109:15: error: '__uset_hashtable' does not name a type [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:110:7: error: invalid use of template-name 'std::_Hashtable' without an argument list [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:116:24: error: 'template<class _Key, class _Value, class _Alloc, class _ExtractKey, class _Equal, class _Hash, class _RangeHash, class _Unused, class _RehashPolicy, class _Traits> class std::_Hashtable' used without template arguments [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:117:24: error: 'template<class _Key, class _Value, class _Alloc, class _ExtractKey, class _Equal, class _Hash, class _RangeHash, class _Unused, class _RehashPolicy, class _Traits> class std::_Hashtable' used without template arguments [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:118:24: error: 'template<class _Key, class _Value, class _Alloc, class _ExtractKey, class _Equal, class _Hash, class _RangeHash, class _Unused, class _RehashPolicy, class _Traits> class std::_Hashtable' used without template arguments [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:119:24: error: 'template<class _Key, class _Value, class _Alloc, class _ExtractKey, class _Equal, class _Hash, class _RangeHash, class _Unused, class _RehashPolicy, class _Traits> class std::_Hashtable' used without template arguments [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:120:24: error: 'template<class _Key, class _Value, class _Alloc, class _ExtractKey, class _Equal, class _Hash, class _RangeHash, class _Unused, class _RehashPolicy, class _Traits> class std::_Hashtable' used without template arguments [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:125:24: error: 'template<class _Key, class _Value, class _Alloc, class _ExtractKey, class _Equal, class _Hash, class _RangeHash, class _Unused, class _RehashPolicy, class _Traits> class std::_Hashtable' used without template arguments [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:126:24: error: 'template<class _Key, class _Value, class _Alloc, class _ExtractKey, class _Equal, class _Hash, class _RangeHash, class _Unused, class _RehashPolicy, class _Traits> class std::_Hashtable' used without template arguments [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:127:24: error: 'template<class _Key, class _Value, class _Alloc, class _ExtractKey, class _Equal, class _Hash, class _RangeHash, class _Unused, class _RehashPolicy, class _Traits> class std::_Hashtable' used without template arguments [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:128:24: error: 'template<class _Key, class _Value, class _Alloc, class _ExtractKey, class _Equal, class _Hash, class _RangeHash, class _Unused, class _RehashPolicy, class _Traits> class std::_Hashtable' used without template arguments [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:129:24: error: 'template<class _Key, class _Value, class _Alloc, class _ExtractKey, class _Equal, class _Hash, class _RangeHash, class _Unused, class _RehashPolicy, class _Traits> class std::_Hashtable' used without template arguments [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:130:24: error: 'template<class _Key, class _Value, class _Alloc, class _ExtractKey, class _Equal, class _Hash, class _RangeHash, class _Unused, class _RehashPolicy, class _Traits> class std::_Hashtable' used without template arguments [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:131:24: error: 'template<class _Key, class _Value, class _Alloc, class _ExtractKey, class _Equal, class _Hash, class _RangeHash, class _Unused, class _RehashPolicy, class _Traits> class std::_Hashtable' used without template arguments [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:132:24: error: 'template<class _Key, class _Value, class _Alloc, class _ExtractKey, class _Equal, class _Hash, class _RangeHash, class _Unused, class _RehashPolicy, class _Traits> class std::_Hashtable' used without template arguments [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:133:24: error: 'template<class _Key, class _Value, class _Alloc, class _ExtractKey, class _Equal, class _Hash, class _RangeHash, class _Unused, class _RehashPolicy, class _Traits> class std::_Hashtable' used without template arguments [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:134:24: error: 'template<class _Key, class _Value, class _Alloc, class _ExtractKey, class _Equal, class _Hash, class _RangeHash, class _Unused, class _RehashPolicy, class _Traits> class std::_Hashtable' used without template arguments [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:138:34: error: 'template<class _Key, class _Value, class _Alloc, class _ExtractKey, class _Equal, class _Hash, class _RangeHash, class _Unused, class _RehashPolicy, class _Traits> class std::_Hashtable' used without template arguments [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:139:43: error: 'template<class _Key, class _Value, class _Alloc, class _ExtractKey, class _Equal, class _Hash, class _RangeHash, class _Unused, class _RehashPolicy, class _Traits> class std::_Hashtable' used without template arguments [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:556:7: error: 'node_type' does not name a type; did you mean 'size_type'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:564:7: error: 'node_type' does not name a type; did you mean 'size_type'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:569:7: error: 'insert_return_type' does not name a type [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:575:30: error: 'node_type' has not been declared; did you mean 'size_type'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:575:7: error: 'std::unordered_set<_Value, _Hash, _Pred, _Alloc>::iterator std::unordered_set<_Value, _Hash, _Pred, _Alloc>::insert(const_iterator, int&&)' cannot be overloaded with 'std::unordered_set<_Value, _Hash, _Pred, _Alloc>::iterator std::unordered_set<_Value, _Hash, _Pred, _Alloc>::insert(const_iterator, value_type&&)' [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:599:7: error: 'std::unordered_set<_Value, _Hash, _Pred, _Alloc>::iterator std::unordered_set<_Value, _Hash, _Pred, _Alloc>::erase(iterator)' cannot be overloaded with 'std::unordered_set<_Value, _Hash, _Pred, _Alloc>::iterator std::unordered_set<_Value, _Hash, _Pred, _Alloc>::erase(const_iterator)' [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:1080:15: error: '__umset_hashtable' does not name a type [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:1081:7: error: invalid use of template-name 'std::_Hashtable' without an argument list [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:1087:24: error: 'template<class _Key, class _Value, class _Alloc, class _ExtractKey, class _Equal, class _Hash, class _RangeHash, class _Unused, class _RehashPolicy, class _Traits> class std::_Hashtable' used without template arguments [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:1088:24: error: 'template<class _Key, class _Value, class _Alloc, class _ExtractKey, class _Equal, class _Hash, class _RangeHash, class _Unused, class _RehashPolicy, class _Traits> class std::_Hashtable' used without template arguments [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:1089:24: error: 'template<class _Key, class _Value, class _Alloc, class _ExtractKey, class _Equal, class _Hash, class _RangeHash, class _Unused, class _RehashPolicy, class _Traits> class std::_Hashtable' used without template arguments [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:1090:24: error: 'template<class _Key, class _Value, class _Alloc, class _ExtractKey, class _Equal, class _Hash, class _RangeHash, class _Unused, class _RehashPolicy, class _Traits> class std::_Hashtable' used without template arguments [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:1091:24: error: 'template<class _Key, class _Value, class _Alloc, class _ExtractKey, class _Equal, class _Hash, class _RangeHash, class _Unused, class _RehashPolicy, class _Traits> class std::_Hashtable' used without template arguments [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:1096:24: error: 'template<class _Key, class _Value, class _Alloc, class _ExtractKey, class _Equal, class _Hash, class _RangeHash, class _Unused, class _RehashPolicy, class _Traits> class std::_Hashtable' used without template arguments [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:1097:24: error: 'template<class _Key, class _Value, class _Alloc, class _ExtractKey, class _Equal, class _Hash, class _RangeHash, class _Unused, class _RehashPolicy, class _Traits> class std::_Hashtable' used without template arguments [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:1098:24: error: 'template<class _Key, class _Value, class _Alloc, class _ExtractKey, class _Equal, class _Hash, class _RangeHash, class _Unused, class _RehashPolicy, class _Traits> class std::_Hashtable' used without template arguments [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:1099:24: error: 'template<class _Key, class _Value, class _Alloc, class _ExtractKey, class _Equal, class _Hash, class _RangeHash, class _Unused, class _RehashPolicy, class _Traits> class std::_Hashtable' used without template arguments [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:1100:24: error: 'template<class _Key, class _Value, class _Alloc, class _ExtractKey, class _Equal, class _Hash, class _RangeHash, class _Unused, class _RehashPolicy, class _Traits> class std::_Hashtable' used without template arguments [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:1101:24: error: 'template<class _Key, class _Value, class _Alloc, class _ExtractKey, class _Equal, class _Hash, class _RangeHash, class _Unused, class _RehashPolicy, class _Traits> class std::_Hashtable' used without template arguments [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:1102:24: error: 'template<class _Key, class _Value, class _Alloc, class _ExtractKey, class _Equal, class _Hash, class _RangeHash, class _Unused, class _RehashPolicy, class _Traits> class std::_Hashtable' used without template arguments [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:1103:24: error: 'template<class _Key, class _Value, class _Alloc, class _ExtractKey, class _Equal, class _Hash, class _RangeHash, class _Unused, class _RehashPolicy, class _Traits> class std::_Hashtable' used without template arguments [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:1104:24: error: 'template<class _Key, class _Value, class _Alloc, class _ExtractKey, class _Equal, class _Hash, class _RangeHash, class _Unused, class _RehashPolicy, class _Traits> class std::_Hashtable' used without template arguments [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:1105:24: error: 'template<class _Key, class _Value, class _Alloc, class _ExtractKey, class _Equal, class _Hash, class _RangeHash, class _Unused, class _RehashPolicy, class _Traits> class std::_Hashtable' used without template arguments [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:1109:34: error: 'template<class _Key, class _Value, class _Alloc, class _ExtractKey, class _Equal, class _Hash, class _RangeHash, class _Unused, class _RehashPolicy, class _Traits> class std::_Hashtable' used without template arguments [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:1514:7: error: 'node_type' does not name a type; did you mean 'size_type'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:1522:7: error: 'node_type' does not name a type; did you mean 'size_type'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:1528:14: error: 'node_type' has not been declared; did you mean 'size_type'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:1528:7: error: 'std::unordered_multiset<_Value, _Hash, _Pred, _Alloc>::iterator std::unordered_multiset<_Value, _Hash, _Pred, _Alloc>::insert(int&&)' cannot be overloaded with 'std::unordered_multiset<_Value, _Hash, _Pred, _Alloc>::iterator std::unordered_multiset<_Value, _Hash, _Pred, _Alloc>::insert(value_type&&)' [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:1533:37: error: 'node_type' has not been declared; did you mean 'size_type'? [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:1533:7: error: 'std::unordered_multiset<_Value, _Hash, _Pred, _Alloc>::iterator std::unordered_multiset<_Value, _Hash, _Pred, _Alloc>::insert(const_iterator, int&&)' cannot be overloaded with 'std::unordered_multiset<_Value, _Hash, _Pred, _Alloc>::iterator std::unordered_multiset<_Value, _Hash, _Pred, _Alloc>::insert(const_iterator, value_type&&)' [-Wtemplate-body]
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unordered_set.h:1558:7: error: 'std::unordered_multiset<_Value, _Hash, _Pred, _Alloc>::iterator std::unordered_multiset<_Value, _Hash, _Pred, _Alloc>::erase(iterator)' cannot be overloaded with 'std::unordered_multiset<_Value, _Hash, _Pred, _Alloc>::iterator std::unordered_multiset<_Value, _Hash, _Pred, _Alloc>::erase(const_iterator)' [-Wtemplate-body]
+RawrXD_Win32_IDE.cpp:326:13: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:326:22: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:326:32: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:326:41: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:326:51: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:326:60: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:326:70: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:326:80: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:327:13: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:327:25: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:327:36: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:327:43: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:327:54: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:327:63: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:327:72: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:327:83: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:328:13: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:328:23: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:328:31: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:328:42: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:328:51: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:328:58: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:328:69: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:328:77: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:329:13: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:329:27: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:329:35: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:329:47: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:329:60: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:329:72: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:329:86: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:330:13: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:330:26: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:330:37: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:330:47: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:330:58: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:330:69: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:330:80: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:331:13: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:331:24: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:331:37: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:331:46: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:331:56: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:331:65: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:331:73: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:331:85: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:332:13: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:332:23: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:332:36: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:332:46: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:332:58: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:332:67: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:332:80: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:333:13: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:333:22: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:333:36: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:333:49: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:333:59: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:333:72: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:333:85: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:334:13: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:334:25: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:334:37: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:334:50: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:334:63: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:334:81: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:335:13: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:335:30: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:335:51: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:335:66: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:335:79: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:335:90: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:336:13: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:336:26: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:336:38: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:336:49: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:336:61: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:336:72: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:336:84: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:336:92: error: invalid conversion from 'const wchar_t*' to 'int' [-fpermissive]
+RawrXD_Win32_IDE.cpp:349:30: error: no matching function for call to 'std::unordered_set<std::__cxx11::basic_string<wchar_t> >::find(const std::wstring&)'
+RawrXD_Win32_IDE.cpp:570:9: error: 'g_hTitanDll' was not declared in this scope
+RawrXD_Win32_IDE.cpp:573:5: error: 'g_hTitanDll' was not declared in this scope
+RawrXD_Win32_IDE.cpp:580:9: error: 'pTitan_Initialize' was not declared in this scope; did you mean 'InitOnceInitialize'?
+RawrXD_Win32_IDE.cpp:580:30: error: 'Titan_Initialize_t' was not declared in this scope
+RawrXD_Win32_IDE.cpp:581:9: error: 'pTitan_LoadModel' was not declared in this scope
+RawrXD_Win32_IDE.cpp:581:29: error: 'Titan_LoadModelPersistent_t' was not declared in this scope
+RawrXD_Win32_IDE.cpp:582:9: error: 'pTitan_RunInference' was not declared in this scope
+RawrXD_Win32_IDE.cpp:582:32: error: 'Titan_RunInference_t' was not declared in this scope
+RawrXD_Win32_IDE.cpp:583:9: error: 'pTitan_Shutdown' was not declared in this scope; did you mean 'InitiateShutdown'?
+RawrXD_Win32_IDE.cpp:583:28: error: 'Titan_Shutdown_t' was not declared in this scope
+RawrXD_Win32_IDE.cpp:595:9: error: 'g_hModelBridgeDll' was not declared in this scope
+RawrXD_Win32_IDE.cpp:597:5: error: 'g_hModelBridgeDll' was not declared in this scope
+RawrXD_Win32_IDE.cpp:604:9: error: 'pLoadModelNative' was not declared in this scope
+RawrXD_Win32_IDE.cpp:604:29: error: 'LoadModelNative_t' was not declared in this scope
+RawrXD_Win32_IDE.cpp:605:9: error: 'pGetTokenEmbedding' was not declared in this scope
+RawrXD_Win32_IDE.cpp:605:31: error: 'GetTokenEmbedding_t' was not declared in this scope
+RawrXD_Win32_IDE.cpp:606:9: error: 'pForwardPassASM' was not declared in this scope
+RawrXD_Win32_IDE.cpp:606:28: error: 'ForwardPassASM_t' was not declared in this scope
+RawrXD_Win32_IDE.cpp:607:9: error: 'pCleanupMathTables' was not declared in this scope
+RawrXD_Win32_IDE.cpp:607:31: error: 'CleanupMathTables_t' was not declared in this scope
+RawrXD_Win32_IDE.cpp:615:44: error: 'pLoadModelNative' was not declared in this scope
+RawrXD_Win32_IDE.cpp:619:9: error: 'g_hInferenceEngine' was not declared in this scope; did you mean 'LoadInferenceEngine'?
+RawrXD_Win32_IDE.cpp:622:5: error: 'g_hInferenceEngine' was not declared in this scope; did you mean 'LoadInferenceEngine'?
+RawrXD_Win32_IDE.cpp:632:9: error: 'pLoadModel' was not declared in this scope; did you mean 'LoadModule'?
+RawrXD_Win32_IDE.cpp:632:23: error: 'LoadModel_t' was not declared in this scope; did you mean 'LoadModule'?
+RawrXD_Win32_IDE.cpp:633:9: error: 'pUnloadModel' was not declared in this scope; did you mean '_unloaddll'?
+RawrXD_Win32_IDE.cpp:633:25: error: 'UnloadModel_t' was not declared in this scope
+RawrXD_Win32_IDE.cpp:634:9: error: 'pForwardPassInfer' was not declared in this scope
+RawrXD_Win32_IDE.cpp:634:30: error: 'ForwardPassInfer_t' was not declared in this scope
+RawrXD_Win32_IDE.cpp:635:9: error: 'pSampleNext' was not declared in this scope
+RawrXD_Win32_IDE.cpp:635:24: error: 'SampleNext_t' was not declared in this scope
+RawrXD_Win32_IDE.cpp:643:45: error: 'pLoadModel' was not declared in this scope; did you mean 'LoadModule'?
+RawrXD_Win32_IDE.cpp:647:10: error: 'g_hInferenceEngine' was not declared in this scope; did you mean 'LoadInferenceEngine'?
+RawrXD_Win32_IDE.cpp:647:33: error: 'pLoadModel' was not declared in this scope; did you mean 'LoadModule'?
+RawrXD_Win32_IDE.cpp:651:9: error: 'g_modelContext' was not declared in this scope
+RawrXD_Win32_IDE.cpp:651:27: error: 'pUnloadModel' was not declared in this scope; did you mean '_unloaddll'?
+RawrXD_Win32_IDE.cpp:656:5: error: 'g_modelContext' was not declared in this scope
+RawrXD_Win32_IDE.cpp:656:22: error: 'pLoadModel' was not declared in this scope; did you mean 'LoadModule'?
+RawrXD_Win32_IDE.cpp:658:9: error: 'g_modelLoaded' was not declared in this scope
+RawrXD_Win32_IDE.cpp:659:9: error: 'g_loadedModelPath' was not declared in this scope
+RawrXD_Win32_IDE.cpp:666:9: error: 'g_modelContext' was not declared in this scope
+RawrXD_Win32_IDE.cpp:666:27: error: 'pUnloadModel' was not declared in this scope; did you mean '_unloaddll'?
+RawrXD_Win32_IDE.cpp:670:5: error: 'g_modelLoaded' was not declared in this scope
+RawrXD_Win32_IDE.cpp:671:5: error: 'g_loadedModelPath' was not declared in this scope
+RawrXD_Win32_IDE.cpp:742:21: error: 'g_hwndMain' was not declared in this scope; did you mean 'g_hwnd'?
+RawrXD_Win32_IDE.cpp:752:21: error: 'g_hwndMain' was not declared in this scope; did you mean 'g_hwnd'?
+RawrXD_Win32_IDE.cpp:760:20: error: 'g_hwndEditor' was not declared in this scope
+RawrXD_Win32_IDE.cpp:766:20: error: 'g_hwndMain' was not declared in this scope; did you mean 'g_hwnd'?
+RawrXD_Win32_IDE.cpp:770:18: error: 'g_hwndStatusBar' was not declared in this scope
+RawrXD_Win32_IDE.cpp:775:36: error: 'g_hwndEditor' was not declared in this scope
+RawrXD_Win32_IDE.cpp:785:21: error: 'g_hwndMain' was not declared in this scope; did you mean 'g_hwnd'?
+RawrXD_Win32_IDE.cpp:791:21: error: 'g_hwndMain' was not declared in this scope; did you mean 'g_hwnd'?
+RawrXD_Win32_IDE.cpp:799:18: error: 'g_hwndStatusBar' was not declared in this scope
+RawrXD_Win32_IDE.cpp:837:17: error: 'g_hwndEditor' was not declared in this scope
+RawrXD_Win32_IDE.cpp:839:9: error: 'g_modelLoaded' was not declared in this scope
+RawrXD_Win32_IDE.cpp:839:26: error: 'pForwardPassInfer' was not declared in this scope
+RawrXD_Win32_IDE.cpp:839:47: error: 'pSampleNext' was not declared in this scope
+RawrXD_Win32_IDE.cpp:839:62: error: 'g_modelContext' was not declared in this scope
+RawrXD_Win32_IDE.cpp:841:26: error: 'g_hwndOutput' was not declared in this scope
+RawrXD_Win32_IDE.cpp:883:5: error: 'TriggerAICompletion' was not declared in this scope; did you mean 'HideAICompletion'?
+RawrXD_Win32_IDE.cpp:884:22: error: 'g_hwndOutput' was not declared in this scope
+RawrXD_Win32_IDE.cpp:888:5: error: 'ExplainSelectedCode' was not declared in this scope
+RawrXD_Win32_IDE.cpp:892:5: error: 'RefactorSelectedCode' was not declared in this scope
+RawrXD_Win32_IDE.cpp:896:10: error: 'g_hwndEditor' was not declared in this scope
+RawrXD_Win32_IDE.cpp:897:22: error: 'g_hwndOutput' was not declared in this scope
+RawrXD_Win32_IDE.cpp:908:46: error: 'g_hwndEditor' was not declared in this scope
+RawrXD_Win32_IDE.cpp:942:10: error: 'g_hwndEditor' was not declared in this scope
+RawrXD_Win32_IDE.cpp:946:17: error: 'g_hwndEditor' was not declared in this scope
+RawrXD_Win32_IDE.cpp:966:17: error: 'g_hwndEditor' was not declared in this scope
+RawrXD_Win32_IDE.cpp:979:17: error: 'g_hwndEditor' was not declared in this scope
+RawrXD_Win32_IDE.cpp:989:40: error: 'g_hwndMain' was not declared in this scope; did you mean 'g_hwnd'?
+RawrXD_Win32_IDE.cpp:992:22: error: 'g_hwndOutput' was not declared in this scope
+RawrXD_Win32_IDE.cpp:994:9: error: 'g_hTitanDll' was not declared in this scope
+RawrXD_Win32_IDE.cpp:994:24: error: 'pTitan_LoadModel' was not declared in this scope; did you mean 'AI_LoadModel'?
+RawrXD_Win32_IDE.cpp:1018:26: error: 'g_hwndOutput' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1022:22: error: 'g_hwndOutput' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1023:5: error: 'SaveCurrentFile' was not declared in this scope; did you mean 'g_currentFile'?
+RawrXD_Win32_IDE.cpp:1024:5: error: 'CompileCurrentFile' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1025:5: error: 'RunCurrentFile' was not declared in this scope; did you mean 'g_currentFile'?
+RawrXD_Win32_IDE.cpp:1030:26: error: 'g_hwndOutput' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1033:22: error: 'g_hwndOutput' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1034:5: error: 'SaveCurrentFile' was not declared in this scope; did you mean 'g_currentFile'?
+RawrXD_Win32_IDE.cpp:1035:5: error: 'CompileCurrentFile' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1120:9: error: 'g_hwndEditor' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1128:9: error: 'g_hwndOutput' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1134:9: error: 'g_hwndFileTree' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1140:9: error: 'g_hwndTerminal' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1147:9: error: 'g_hwndChatHistory' was not declared in this scope; did you mean 'LoadChatHistory'?
+RawrXD_Win32_IDE.cpp:1153:9: error: 'g_hwndChatInput' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1160:9: error: 'g_hwndIssuesPanel' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1165:9: error: 'g_hwndIssuesList' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1190:9: error: 'g_hwndIssuesCritical' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1195:9: error: 'g_hwndIssuesHigh' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1200:9: error: 'g_hwndIssuesMedium' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1205:9: error: 'g_hwndIssuesLow' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1210:9: error: 'g_hwndIssuesInfo' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1226:9: error: 'g_hwndChatNew' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1228:9: error: 'g_hwndChatHistoryBtn' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1230:9: error: 'g_hwndChatExport' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1232:9: error: 'g_hwndChatConfig' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1234:9: error: 'g_hwndChatMCP' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1236:9: error: 'g_hwndChatLogs' was not declared in this scope; did you mean 'ShowChatLogs'?
+RawrXD_Win32_IDE.cpp:1256:9: error: 'g_hwndStatusBar' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1289:22: error: 'g_hwndStatusBar' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1295:25: error: 'g_bChatVisible' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1296:27: error: 'g_bIssuesVisible' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1298:13: error: 'g_bOutputVisible' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1298:33: error: 'g_bTerminalVisible' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1306:20: error: 'g_hwndFileTree' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1309:20: error: 'g_hwndEditor' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1312:13: error: 'g_bOutputVisible' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1312:34: error: 'g_bTerminalVisible' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1313:24: error: 'g_hwndOutput' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1316:24: error: 'g_hwndOutput' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1320:13: error: 'g_bTerminalVisible' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1321:24: error: 'g_hwndTerminal' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1324:24: error: 'g_hwndTerminal' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1330:24: error: 'g_hwndIssuesPanel' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1333:24: error: 'g_hwndIssuesPanel' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1344:24: error: 'g_hwndChatHistory' was not declared in this scope; did you mean 'LoadChatHistory'?
+RawrXD_Win32_IDE.cpp:1348:24: error: 'g_hwndChatNew' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1349:24: error: 'g_hwndChatHistoryBtn' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1350:24: error: 'g_hwndChatExport' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1351:24: error: 'g_hwndChatConfig' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1352:24: error: 'g_hwndChatMCP' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1353:24: error: 'g_hwndChatLogs' was not declared in this scope; did you mean 'ShowChatLogs'?
+RawrXD_Win32_IDE.cpp:1365:24: error: 'g_hwndChatInput' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1387:24: error: 'g_hwndChatHistory' was not declared in this scope; did you mean 'LoadChatHistory'?
+RawrXD_Win32_IDE.cpp:1388:24: error: 'g_hwndChatInput' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1391:24: error: 'g_hwndChatNew' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1392:24: error: 'g_hwndChatHistoryBtn' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1393:24: error: 'g_hwndChatExport' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1394:24: error: 'g_hwndChatConfig' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1395:24: error: 'g_hwndChatMCP' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1396:24: error: 'g_hwndChatLogs' was not declared in this scope; did you mean 'ShowChatLogs'?
+RawrXD_Win32_IDE.cpp:1428:28: error: 'g_hwndEditor' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1482:13: error: 'g_bOutputVisible' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1483:35: error: 'g_bTerminalVisible' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1485:61: error: 'g_bTerminalVisible' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1495:42: error: 'g_hwndTerminal' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1505:13: error: 'g_bChatVisible' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1509:34: error: 'g_hwndChatHistory' was not declared in this scope; did you mean 'LoadChatHistory'?
+RawrXD_Win32_IDE.cpp:1524:13: error: 'g_bIssuesVisible' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1562:13: error: 'g_bAbortInference' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1565:28: error: 'g_hwndChatHistory' was not declared in this scope; did you mean 'LoadChatHistory'?
+RawrXD_Win32_IDE.cpp:1573:13: error: 'g_bShowCritical' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1577:13: error: 'g_bShowHigh' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1581:13: error: 'g_bShowMedium' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1585:13: error: 'g_bShowLow' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1589:13: error: 'g_bShowInfo' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1639:34: error: 'g_hwndOutput' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1643:56: error: 'g_loadedModelPath' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1644:34: error: 'g_hwndStatusBar' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1653:17: error: 'g_modelLoaded' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1655:34: error: 'g_hwndOutput' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1656:30: error: 'g_hwndStatusBar' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1677:33: error: 'g_hwndEditor' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1701:13: error: 'g_modelContext' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1702:13: error: 'g_hInferenceEngine' was not declared in this scope; did you mean 'LoadInferenceEngine'?
+RawrXD_Win32_IDE.cpp:1705:13: error: 'g_hModelBridgeDll' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1707:13: error: 'g_hTitanDll' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1723:10: error: 'g_hwndIssuesList' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1726:18: error: 'g_hwndIssuesList' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1736:31: error: 'g_hwndIssuesPanel' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1747:9: error: 'g_hwndIssuesList' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1750:22: error: 'g_hwndOutput' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1754:10: error: 'g_hwndIssuesList' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1756:18: error: 'g_hwndIssuesList' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1762:61: error: 'g_bShowCritical' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1763:57: error: 'g_bShowHigh' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1764:59: error: 'g_bShowMedium' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1765:56: error: 'g_bShowLow' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1766:57: error: 'g_bShowInfo' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1815:26: error: 'g_hwndOutput' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1819:22: error: 'g_hwndOutput' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1822:36: error: 'g_hwndEditor' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1912:40: error: 'g_hwndMain' was not declared in this scope; did you mean 'g_hwnd'?
+RawrXD_Win32_IDE.cpp:1948:22: error: 'g_hwndOutput' was not declared in this scope
+RawrXD_Win32_IDE.cpp:1971:5: error: 'g_hwndMain' was not declared in this scope; did you mean 'g_hwnd'?
+RawrXD_Win32_IDE.cpp:2010:36: error: 'g_hwndChatInput' was not declared in this scope
+RawrXD_Win32_IDE.cpp:2021:22: error: 'g_hwndChatHistory' was not declared in this scope; did you mean 'LoadChatHistory'?
+RawrXD_Win32_IDE.cpp:2058:26: error: 'g_hwndChatHistory' was not declared in this scope; did you mean 'LoadChatHistory'?
+RawrXD_Win32_IDE.cpp:2069:26: error: 'g_hwndChatHistory' was not declared in this scope; did you mean 'LoadChatHistory'?
+RawrXD_Win32_IDE.cpp:2098:38: error: 'g_hwndChatHistory' was not declared in this scope; did you mean 'LoadChatHistory'?
+RawrXD_Win32_IDE.cpp:2104:30: error: 'g_hwndChatHistory' was not declared in this scope; did you mean 'LoadChatHistory'?
+RawrXD_Win32_IDE.cpp:2107:26: error: 'g_hwndChatHistory' was not declared in this scope; did you mean 'LoadChatHistory'?
+RawrXD_Win32_IDE.cpp:2146:30: error: 'g_hwndChatHistory' was not declared in this scope; did you mean 'LoadChatHistory'?
+RawrXD_Win32_IDE.cpp:2159:26: error: 'g_hwndChatHistory' was not declared in this scope; did you mean 'LoadChatHistory'?
+RawrXD_Win32_IDE.cpp:2191:26: error: 'g_hwndChatHistory' was not declared in this scope; did you mean 'LoadChatHistory'?
+RawrXD_Win32_IDE.cpp:2194:26: error: 'g_hwndChatHistory' was not declared in this scope; did you mean 'LoadChatHistory'?
+RawrXD_Win32_IDE.cpp:2204:26: error: 'g_hwndChatHistory' was not declared in this scope; did you mean 'LoadChatHistory'?
+RawrXD_Win32_IDE.cpp:2213:9: error: 'g_hwndChatHistory' was not declared in this scope; did you mean 'LoadChatHistory'?
+RawrXD_Win32_IDE.cpp:2218:9: error: 'g_hwndChatInput' was not declared in this scope
+RawrXD_Win32_IDE.cpp:2228:21: error: 'g_hwndMain' was not declared in this scope; did you mean 'g_hwnd'?
+RawrXD_Win32_IDE.cpp:2251:29: error: 'g_hwndChatHistory' was not declared in this scope; did you mean 'LoadChatHistory'?
+RawrXD_Win32_IDE.cpp:2259:43: error: 'wLen' was not declared in this scope; did you mean 'wcslen'?
+RawrXD_Win32_IDE.cpp:2260:58: error: 'wBuf' was not declared in this scope
+RawrXD_Win32_IDE.cpp:2262:21: error: 'g_hwndChatHistory' was not declared in this scope; did you mean 'LoadChatHistory'?
+RawrXD_Win32_IDE.cpp:2267:17: error: type '<type error>' argument given to 'delete', expected pointer
+RawrXD_Win32_IDE.cpp:2279:21: error: 'g_hwndMain' was not declared in this scope; did you mean 'g_hwnd'?
+RawrXD_Win32_IDE.cpp:2288:40: error: 'g_hwndChatHistory' was not declared in this scope; did you mean 'LoadChatHistory'?
+RawrXD_Win32_IDE.cpp:2313:30: error: 'g_hwndMain' was not declared in this scope; did you mean 'g_hwnd'?
+RawrXD_Win32_IDE.cpp:2323:26: error: 'g_hwndChatHistory' was not declared in this scope; did you mean 'LoadChatHistory'?
+RawrXD_Win32_IDE.cpp:2339:23: error: 'g_hwndMain' was not declared in this scope; did you mean 'g_hwnd'?
+RawrXD_Win32_IDE.cpp:2342:22: error: 'g_hwndChatHistory' was not declared in this scope; did you mean 'LoadChatHistory'?

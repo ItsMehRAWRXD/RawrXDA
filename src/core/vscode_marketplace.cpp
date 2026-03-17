@@ -16,7 +16,7 @@
 #include "marketplace/enterprise_policy_engine.h"
 #include "marketplace/offline_cache_store.h"
 #include "license_enforcement.h"
-#include "nlohmann/json.hpp"
+#include <nlohmann/json.hpp>
 #include <fstream>
 #include <sstream>
 #include <filesystem>

@@ -1,0 +1,20 @@
+{
+  "name": "projectideai",
+  "version": "1.0.0",
+  "description": "Your unified workspace containing:\r - ✅ **BigDaddyG IDE** - Full-featured browser IDE\r - ✅ **Orchestra Server** - Your own AI backend (replaces Ollama)\r - ✅ **29 Models** - Discovered from your C:/D: drives\r - ✅ **73 Agents** - Found across all your repos\r - ✅ **Unlimited Generator** - Can build ANYTHING algorithmically",
+  "main": "INTEGRATE-EVERYTHING.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "body-parser": "^2.2.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {}
+}

@@ -1,0 +1,54 @@
+Microsoft (R) Macro Assembler (x64) Version 14.44.35223.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+ Assembling: D:\rawrxd\gpu_dma_production_final_target9.asm
+D:\rawrxd\gpu_dma_production_final_target9.asm(183) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(185) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(187) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(189) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(191) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(193) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(195) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(197) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(199) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(489) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(491) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(493) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(552) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(554) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(556) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(558) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(560) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(562) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(564) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(566) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(568) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(804) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(806) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(808) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(810) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(812) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(814) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(816) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(818) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(820) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(930) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(932) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(934) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(936) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(938) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(999) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(1001) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(1003) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(1005) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(1007) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(1009) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(1071) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(1073) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(1075) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(1132) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(1134) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(1136) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(1183) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(1185) : warning A4026:.ENDPROLOG found before EH directives
+D:\rawrxd\gpu_dma_production_final_target9.asm(1187) : warning A4026:.ENDPROLOG found before EH directives

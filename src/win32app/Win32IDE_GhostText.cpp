@@ -39,7 +39,7 @@ static const UINT_PTR GHOST_TEXT_TIMER_ID   = 8888;
 static const UINT      GHOST_TEXT_DELAY_MS  = 120;   // Debounce: 120ms after last keystroke
 static const int       GHOST_TEXT_MAX_CHARS = 512;    // Max ghost text length
 static const int       GHOST_TEXT_MAX_LINES = 8;      // Max multi-line completions
-static const uint64_t  GHOST_TEXT_CACHE_TTL_MS = 2000;
+static const uint64_t  GHOST_TEXT_CACHE_TTL_MS = 5000;  // 5s for 70B inference latency
 static const size_t    GHOST_TEXT_CACHE_MAX_ITEMS = 256;
 
 namespace {
@@ -403,6 +403,21 @@ std::string Win32IDE::requestGhostTextCompletion(const std::string& context,
         if (provider == GhostProviderKind::Lsp) {
             if (filePath.empty()) continue;
             const int lspLine = cursorLine > 0 ? cursorLine - 1 : 0;
+
+            // Fast path: direct LSP completion for current cursor.
+            std::string uri = filePathToUri(filePath);
+            auto lspItems = lspCompletion(uri, lspLine, cursorCol);
+            for (const auto& item : lspItems) {
+                if (item.insertText.empty()) continue;
+                std::string lspText = trimGhostText(item.insertText);
+                if (!lspText.empty()) {
+                    std::lock_guard<std::mutex> lock(m_ghostTextCacheMutex);
+                    m_ghostTextMetrics.lspWins++;
+                    return lspText;
+                }
+            }
+
+            // Fallback: hybrid merge if direct LSP did not yield usable insert text.
             auto items = requestHybridCompletion(filePath, lspLine, cursorCol);
             for (const auto& item : items) {
                 if (item.insertText.empty()) continue;
@@ -438,16 +453,22 @@ void Win32IDE::onGhostTextReady(int requestedCursorPos, const char* completionTe
         return;
     }
 
+    // ARCHITECTURE ALIGNMENT: 
+    // Directly update state and invalidate for RichEdit overlay rendering.
+    // Ensure we don't just store, but activate the 'visible' state for WM_PAINT.
     m_ghostTextContent = completionText;
     m_ghostTextVisible = true;
     m_ghostTextAccepted = false;
 
+    // Align with MASM Sovereign logic: trigger immediate repaint
+    if (m_hwndEditor) {
+        InvalidateRect(m_hwndEditor, nullptr, FALSE);
+        UpdateWindow(m_hwndEditor); // Force immediate paint to minimize flicker
+    }
+
     // Record event
     recordEvent(AgentEventType::GhostTextRequested, "",
                 m_ghostTextContent.substr(0, 128), "", 0, true);
-
-    // Force editor repaint to show ghost text
-    InvalidateRect(m_hwndEditor, nullptr, FALSE);
 }
 
 // ============================================================================

@@ -46,10 +46,20 @@ SubAgentManager::SubAgentManager(AgenticEngine* engine)
 
 SubAgentManager::~SubAgentManager() {
     cancelAll();
+
+    logInfo("SubAgentManager draining " + std::to_string(m_threads.size()) + " threads...");
+    auto drainStart = std::chrono::steady_clock::now();
+
     for (auto& t : m_threads) {
         if (t.joinable()) t.join();
     }
-    logInfo("SubAgentManager destroyed — spawned " + std::to_string(m_totalSpawned.load()) + " total");
+    m_threads.clear();
+
+    auto drainMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - drainStart).count();
+    logInfo("SubAgentManager destroyed — spawned " +
+            std::to_string(m_totalSpawned.load()) + " total, drain took " +
+            std::to_string(drainMs) + "ms");
 }
 
 // ============================================================================
@@ -216,7 +226,39 @@ void SubAgentManager::runSubAgentThread(const std::string& agentId) {
             throw std::runtime_error("No AgenticEngine available");
         }
 
-        std::string response = m_engine->chat(prompt);
+        std::string response;
+        const int maxRetries = 3;
+        for (int attempt = 0; attempt <= maxRetries; attempt++) {
+            // Check for cancellation before each attempt
+            {
+                std::lock_guard<std::mutex> lock(m_mutex);
+                auto it = m_agents.find(agentId);
+                if (it != m_agents.end() &&
+                    it->second->state == SubAgent::State::Cancelled) {
+                    logInfo("SubAgent cancelled before attempt " +
+                            std::to_string(attempt) + ": " + agentId);
+                    return;
+                }
+            }
+
+            if (attempt > 0) {
+                int backoffMs = 200 * (1 << (attempt - 1)); // 200, 400, 800ms
+                std::this_thread::sleep_for(std::chrono::milliseconds(backoffMs));
+                logInfo("SubAgent retry " + std::to_string(attempt) + "/" +
+                        std::to_string(maxRetries) + ": " + agentId);
+                metric("subagent.retries");
+            }
+
+            try {
+                response = m_engine->chat(prompt);
+                if (!response.empty()) break; // Success
+            } catch (const std::exception& retryEx) {
+                if (attempt == maxRetries) throw; // Re-throw on final attempt
+                logInfo("SubAgent attempt " + std::to_string(attempt) +
+                        " transient failure, retrying: " +
+                        std::string(retryEx.what()));
+            }
+        }
 
         {
             std::lock_guard<std::mutex> lock(m_mutex);

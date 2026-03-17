@@ -1,0 +1,62 @@
+[1/27] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\ssot_handlers_ext.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/core/ssot_handlers_ext.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ADVANCED_DEOBFUSCATOR_ASM=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=0 -DRAWRXD_LINK_CODEBASE_AUDIT_SYSTEM_ASM=0 -DRAWRXD_LINK_DUAL_ENGINE_QUANTUM_BEACON_ASM=0 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PATTERN_RECONSTRUCTOR_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=0 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_UNIFIED_OVERCLOCK_GOVERNOR_ASM=0 -DRAWRXD_LINK_VISION_PROJECTION_ASM=0 -DRAWR_HAS_MASM=1 -DRAWR_HAS_QUICKJS=1 -DRAWR_HAS_SOVEREIGN_ENGINES=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\win32app -ID:\rawrxd\src\modules -ID:\rawrxd\src\utils -ID:\rawrxd\src\config -ID:\rawrxd\src\asm -ID:\rawrxd\src\lsp -ID:\rawrxd\src\plugin_system -ID:\rawrxd\src\ide -ID:\rawrxd\src\context -ID:\rawrxd\src\multimodal_engine -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\include -ID:\rawrxd\3rdparty\quickjs_ng -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /EHsc /W0 /arch:AVX2 /O2 /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\core\ssot_handlers_ext.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\core\ssot_handlers_ext.cpp
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(3121): error C3861: 'trimCliDebugText': identifier not found
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(20948): error C2039: 'stepOverCount': is not a member of 'DebugCliRuntimeState'
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(888): note: see declaration of 'DebugCliRuntimeState'
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(20959): error C2065: 'DebugCliStackFrame': undeclared identifier
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(20958): error C2737: 'frame': const object must be initialized
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(20961): error C2039: 'stepOverCount': is not a member of 'DebugCliRuntimeState'
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(888): note: see declaration of 'DebugCliRuntimeState'
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(20962): error C3536: 'frame': cannot be used before it is initialized
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(20980): error C2039: 'stepIntoCount': is not a member of 'DebugCliRuntimeState'
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(888): note: see declaration of 'DebugCliRuntimeState'
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(20986): error C2065: 'DebugCliStackFrame': undeclared identifier
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(20986): error C2146: syntax error: missing ';' before identifier 'frame'
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(20986): error C2065: 'frame': undeclared identifier
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(20987): error C2065: 'frame': undeclared identifier
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(20988): error C2065: 'frame': undeclared identifier
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(20989): error C2065: 'frame': undeclared identifier
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(20990): error C2065: 'frame': undeclared identifier
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(20992): error C2065: 'frame': undeclared identifier
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(20993): error C2065: 'frame': undeclared identifier
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(20996): error C2039: 'stepIntoCount': is not a member of 'DebugCliRuntimeState'
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(888): note: see declaration of 'DebugCliRuntimeState'
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(20997): error C2065: 'frame': undeclared identifier
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(20997): error C2065: 'frame': undeclared identifier
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(20998): error C2065: 'frame': undeclared identifier
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(21015): error C2039: 'stepOutCount': is not a member of 'DebugCliRuntimeState'
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(888): note: see declaration of 'DebugCliRuntimeState'
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(21031): error C2065: 'DebugCliStackFrame': undeclared identifier
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(21030): error C2737: 'frame': const object must be initialized
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(21033): error C2039: 'stepOutCount': is not a member of 'DebugCliRuntimeState'
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(888): note: see declaration of 'DebugCliRuntimeState'
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(21034): error C3536: 'frame': cannot be used before it is initialized
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(21145): error C2065: 'DebugCliStackFrame': undeclared identifier
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(21144): error C2737: 'frame': const object must be initialized
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(21149): error C2039: 'stepIntoCount': is not a member of 'DebugCliRuntimeState'
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(888): note: see declaration of 'DebugCliRuntimeState'
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(21149): error C2039: 'stepOverCount': is not a member of 'DebugCliRuntimeState'
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(888): note: see declaration of 'DebugCliRuntimeState'
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(21149): error C2039: 'stepOutCount': is not a member of 'DebugCliRuntimeState'
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(888): note: see declaration of 'DebugCliRuntimeState'
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(21149): error C2737: 'localFlags': const object must be initialized
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(21154): error C3536: 'frame': cannot be used before it is initialized
+[2/27] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_EmojiSupport.cpp.obj
+[3/27] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Tier5Cosmetics.cpp.obj
+[4/27] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AgentStreamingBridge.cpp.obj
+[5/27] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_ShortcutEditor.cpp.obj
+[6/27] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_SecurityScans.cpp.obj
+[7/27] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_ProblemsPanel.cpp.obj
+[8/27] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_ColorPicker.cpp.obj
+[9/27] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_BuildRunner.cpp.obj
+[10/27] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_SemanticPanel.cpp.obj
+[11/27] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_TelemetryDashboard.cpp.obj
+[12/27] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_TestExplorerTree.cpp.obj
+[13/27] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_TelemetryPanel.cpp.obj
+[14/27] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Tier3Polish.cpp.obj
+[15/27] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_CrashReporter.cpp.obj
+[16/27] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_NetworkPanel.cpp.obj
+[17/27] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Tier3Cosmetics.cpp.obj
+[18/27] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_MarketplacePanel.cpp.obj
+ninja: build stopped: subcommand failed.

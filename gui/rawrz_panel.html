@@ -1,0 +1,683 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RawrZ Security Platform - Main Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0b1020 0%, #1a1f3a 100%);
+            color: #e6e9ef;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: rgba(17, 22, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #222a45;
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header h1 {
+            color: #4a9eff;
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .card {
+            background: rgba(18, 25, 47, 0.8);
+            border: 1px solid #20284a;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            border-color: #4a9eff;
+            box-shadow: 0 8px 25px rgba(74, 158, 255, 0.1);
+        }
+        
+        .card h3 {
+            color: #4a9eff;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+        
+        .row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        input, select, button {
+            background: rgba(15, 21, 48, 0.8);
+            color: #e6e9ef;
+            border: 1px solid #263056;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: #4a9eff;
+            box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.2);
+        }
+        
+        button {
+            background: linear-gradient(135deg, #4a9eff 0%, #357abd 100%);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(74, 158, 255, 0.3);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        pre {
+            background: #0a0f24;
+            border: 1px solid #1d2444;
+            padding: 12px;
+            border-radius: 8px;
+            overflow: auto;
+            max-height: 360px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+        
+        .status-success { background: #28a745; }
+        .status-warning { background: #ffc107; }
+        .status-error { background: #dc3545; }
+        .status-info { background: #17a2b8; }
+        
+        .panel-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .panel-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+        
+        .panel-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .panel-btn:active {
+            transform: translateY(0);
+        }
+        
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        
+        .error-message {
+            color: #dc3545;
+            background: rgba(220, 53, 69, 0.1);
+            border: 1px solid #dc3545;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        
+        .success-message {
+            color: #28a745;
+            background: rgba(40, 167, 69, 0.1);
+            border: 1px solid #28a745;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        
+        .engine-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .engine-card {
+            background: rgba(15, 21, 48, 0.6);
+            border: 1px solid #263056;
+            border-radius: 8px;
+            padding: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .engine-card:hover {
+            border-color: #4a9eff;
+            box-shadow: 0 4px 15px rgba(74, 158, 255, 0.1);
+        }
+        
+        .engine-card h4 {
+            color: #4a9eff;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+        
+        .engine-card p {
+            color: #a0a8c0;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            line-height: 1.4;
+        }
+        
+        .engine-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .engine-actions button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .engine-actions button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3);
+        }
+        
+        .result-display {
+            background: #0a0f24;
+            border: 1px solid #1d2444;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .result-item {
+            background: rgba(15, 21, 48, 0.6);
+            border: 1px solid #263056;
+            border-radius: 6px;
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+        }
+        
+        .result-header {
+            color: #4a9eff;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .result-content {
+            color: #e6e9ef;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .status-online { background: #28a745; color: white; }
+        .status-offline { background: #dc3545; color: white; }
+        .status-warning { background: #ffc107; color: #000; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>RawrZ Security Platform - Main Dashboard</h1>
+    </div>
+    
+    <div class="container">
+        <!-- Authentication & Health -->
+        <div class="card">
+            <h3><span class="status-indicator status-info"></span>Authentication & Health</h3>
+            <div class="row">
+                <input id="authToken" placeholder="Auth token (optional)" />
+                <button onclick="saveToken()">Save Token</button>
+                <button onclick="checkHealth()">Health Check</button>
+                <button onclick="loadEngineStatuses()">Engine Status</button>
+            </div>
+        </div>
+        
+        <!-- Panel Navigation -->
+        <div class="card">
+            <h3><span class="status-indicator status-success"></span>Panel Navigation</h3>
+            <div class="panel-grid">
+                <button class="panel-btn" onclick="window.open('comprehensive-unified-panel.html', '_blank')">
+                    🔐 Comprehensive Unified Panel
+                </button>
+                <button class="panel-btn" onclick="window.open('encryption-panel.html', '_blank')">
+                    ⚡ Advanced Encryption Panel
+                </button>
+                <button class="panel-btn" onclick="window.open('advanced-encryption-panel.html', '_blank')">
+                    💻 Real CLI Interface
+                </button>
+                <button class="panel-btn" onclick="window.open('health-dashboard.html', '_blank')">
+                    🏥 Health Dashboard
+                </button>
+                <button class="panel-btn" onclick="window.open('cve-analysis-panel.html', '_blank')">
+                    🔍 CVE Analysis Panel
+                </button>
+                <button class="panel-btn" onclick="window.open('bot-manager.html', '_blank')">
+                    🤖 Bot Manager
+                </button>
+                <button class="panel-btn" onclick="window.open('ev-cert-panel.html', '_blank')">
+                    📜 EV Certificate Panel
+                </button>
+                <button class="panel-btn" onclick="window.open('advanced-encryption-panel.html#hotpatcher', '_blank')">
+                    🔥 Hotpatcher System
+                </button>
+                <button class="panel-btn" onclick="window.open('index.html', '_blank')">
+                    🖥️ Command & Control Center
+                </button>
+            </div>
+        </div>
+        
+        <!-- Hash Operations -->
+        <div class="card">
+            <h3><span class="status-indicator status-warning"></span>Hash Operations</h3>
+            <div class="row">
+                <input id="hashInput" placeholder="Enter text to hash" />
+                <select id="hashAlgo">
+                    <option value="sha256">SHA-256</option>
+                    <option value="md5">MD5</option>
+                    <option value="sha1">SHA-1</option>
+                    <option value="sha512">SHA-512</option>
+                    <option value="sha384">SHA-384</option>
+                    <option value="sha224">SHA-224</option>
+                </select>
+                <button onclick="runHash()">Hash</button>
+            </div>
+        </div>
+        
+        <!-- Encryption Operations -->
+        <div class="card">
+            <h3><span class="status-indicator status-success"></span>Encryption Operations</h3>
+            <div class="row">
+                <select id="encAlgo">
+                    <option value="aes-256-gcm">AES-256-GCM</option>
+                    <option value="aes-256-cbc">AES-256-CBC</option>
+                    <option value="aes-192-gcm">AES-192-GCM</option>
+                    <option value="aes-128-gcm">AES-128-GCM</option>
+                    <option value="chacha20-poly1305">ChaCha20-Poly1305</option>
+                    <option value="aria-256-gcm">ARIA-256-GCM</option>
+                </select>
+                <input id="encInput" placeholder="Enter text to encrypt" />
+                <button onclick="runEncrypt()">Encrypt</button>
+            </div>
+        </div>
+        
+        <!-- Decryption Operations -->
+        <div class="card">
+            <h3><span class="status-indicator status-warning"></span>Decryption Operations</h3>
+            <div class="row">
+                <input id="decKey" placeholder="Decryption Key (hex)" />
+                <input id="decIv" placeholder="Decryption IV (hex)" />
+                <button onclick="runDecrypt()">Decrypt</button>
+            </div>
+        </div>
+        
+        <!-- Engine Management -->
+        <div class="card">
+            <h3><span class="status-indicator status-success"></span>Engine Management</h3>
+            <div class="engine-grid">
+                <div class="engine-card">
+                    <h4>CVE Analysis Engine</h4>
+                    <p>Real vulnerability detection and analysis for legitimate CVEs</p>
+                    <div class="engine-actions">
+                        <button onclick="executeEngineAction('cve-analysis-engine', 'analyzeCVE', {target: 'CVE-2023-1234', options: {}})">Analyze CVE</button>
+                        <button onclick="executeEngineAction('cve-analysis-engine', 'getStatus', {})">Get Status</button>
+                        <button onclick="executeEngineAction('cve-analysis-engine', 'loadDatabase', {})">Load Database</button>
+                    </div>
+                </div>
+                
+                <div class="engine-card">
+                    <h4>HTTP Bot Manager</h4>
+                    <p>Full RAT functionality and bot control system</p>
+                    <div class="engine-actions">
+                        <button onclick="executeEngineAction('http-bot-manager', 'manageHTTPBot', {action: 'list', botData: {}, options: {}})">List Bots</button>
+                        <button onclick="executeEngineAction('http-bot-manager', 'manageHTTPBot', {action: 'register', botData: {id: 'test-bot'}, options: {}})">Register Bot</button>
+                        <button onclick="executeEngineAction('http-bot-manager', 'getStats', {})">Get Stats</button>
+                    </div>
+                </div>
+                
+                <div class="engine-card">
+                    <h4>Payload Manager</h4>
+                    <p>Comprehensive payload management system</p>
+                    <div class="engine-actions">
+                        <button onclick="executeEngineAction('payload-manager', 'managePayload', {action: 'list', payloadData: {}, options: {}})">List Payloads</button>
+                        <button onclick="executeEngineAction('payload-manager', 'managePayload', {action: 'create', payloadData: {type: 'basic'}, options: {}})">Create Payload</button>
+                        <button onclick="executeEngineAction('payload-manager', 'getStats', {})">Get Stats</button>
+                    </div>
+                </div>
+                
+                <div class="engine-card">
+                    <h4>Plugin Architecture</h4>
+                    <p>Extensible plugin system for the platform</p>
+                    <div class="engine-actions">
+                        <button onclick="executeEngineAction('plugin-architecture', 'managePlugin', {action: 'list', pluginData: {}, options: {}})">List Plugins</button>
+                        <button onclick="executeEngineAction('plugin-architecture', 'getPluginStats', {})">Get Stats</button>
+                        <button onclick="executeEngineAction('plugin-architecture', 'getStatus', {})">Get Status</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Output -->
+        <div class="card">
+            <h3><span class="status-indicator status-info"></span>Output</h3>
+            <div id="out">Ready for operations...</div>
+        </div>
+    </div>
+    
+<script>
+        // Standardized API call function
+        async function apiCall(endpoint, method = 'GET', body = null) {
+            try {
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                
+                const token = localStorage.getItem('authToken');
+                if (token) {
+                    headers.Authorization = `Bearer ${token}`;
+                }
+                
+                const response = await fetch(endpoint, {
+                    method: method,
+                    headers: headers,
+                    body: body ? JSON.stringify(body) : null
+                });
+                
+                const data = await response.text();
+                try {
+                    return { status: response.status, data: JSON.parse(data) };
+                } catch {
+                    return { status: response.status, data: data };
+                }
+            } catch (error) {
+                return { status: 500, data: { error: error.message } };
+            }
+        }
+        
+        // Health check
+        async function checkHealth() {
+            try {
+                const result = await apiCall('/health');
+                render('out', result);
+            } catch (error) {
+                render('out', { status: 500, data: { error: error.message } });
+            }
+        }
+        
+        // Load engine statuses
+        async function loadEngineStatuses() {
+            try {
+                const result = await apiCall('/api/rawrz-engine/status');
+                render('out', result);
+            } catch (error) {
+                render('out', { status: 500, data: { error: error.message } });
+            }
+        }
+        
+        // Hash operation
+        async function runHash() {
+            const input = document.getElementById('hashInput').value;
+            const algorithm = document.getElementById('hashAlgo').value;
+            
+            if (!input) {
+                render('out', { status: 400, data: { error: 'Please enter text to hash' } });
+                return;
+            }
+            
+            try {
+                const result = await apiCall('/hash', 'POST', { input, algorithm });
+                render('out', result);
+            } catch (error) {
+                render('out', { status: 500, data: { error: error.message } });
+            }
+        }
+        
+        // Encryption operation
+        async function runEncrypt() {
+            const algorithm = document.getElementById('encAlgo').value;
+            const input = document.getElementById('encInput').value;
+            
+            if (!input) {
+                render('out', { status: 400, data: { error: 'Please enter text to encrypt' } });
+                return;
+            }
+            
+            try {
+                const result = await apiCall('/encrypt', 'POST', { algorithm, input });
+                render('out', result);
+            } catch (error) {
+                render('out', { status: 500, data: { error: error.message } });
+            }
+        }
+        
+        // Decryption operation
+        async function runDecrypt() {
+            const algorithm = document.getElementById('encAlgo').value;
+            const input = document.getElementById('encInput').value;
+            const key = document.getElementById('decKey').value;
+            const iv = document.getElementById('decIv').value;
+            
+            if (!key || !iv) {
+                render('out', { status: 400, data: { error: 'Key and IV are required for decryption' } });
+                return;
+            }
+            
+            try {
+                const result = await apiCall('/decrypt', 'POST', { algorithm, input, key, iv });
+                render('out', result);
+            } catch (error) {
+                render('out', { status: 500, data: { error: error.message } });
+            }
+        }
+        
+        // Save authentication token
+        function saveToken() {
+            const token = document.getElementById('authToken').value.trim();
+            if (token) {
+                localStorage.setItem('authToken', token);
+                render('out', { status: 200, data: { message: 'Token saved successfully' } });
+            } else {
+                render('out', { status: 400, data: { error: 'Please enter a valid token' } });
+            }
+        }
+        
+        // Execute engine action
+        async function executeEngineAction(engineId, action, params) {
+            try {
+                const result = await apiCall('/api/rawrz-engine/execute', 'POST', {
+                    engineId: engineId,
+                    action: action,
+                    params: params
+                });
+                
+                if (result.status === 200 && result.data.success) {
+                    displayEngineResult(engineId, action, result.data.data);
+                } else {
+                    displayError(`Engine action failed: ${result.data.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                displayError(`Error executing engine action: ${error.message}`);
+            }
+        }
+        
+        // Display engine result in a user-friendly format
+        function displayEngineResult(engineId, action, data) {
+            const output = document.getElementById('out');
+            let html = `<div class="result-display">`;
+            html += `<div class="result-header">${engineId} - ${action} Result</div>`;
+            
+            // Handle different types of results based on engine and action
+            if (engineId === 'http-bot-manager' && action === 'manageHTTPBot') {
+                if (Array.isArray(data)) {
+                    html += `<div class="result-content">`;
+                    html += `<h4>Bot List (${data.length} bots)</h4>`;
+                    data.forEach((bot, index) => {
+                        html += `<div class="result-item">`;
+                        html += `<strong>Bot ${index + 1}:</strong> ${bot.id || 'Unknown'}<br>`;
+                        html += `<span class="status-badge status-${bot.status || 'offline'}">${bot.status || 'offline'}</span><br>`;
+                        if (bot.system) {
+                            html += `OS: ${bot.system.os || 'Unknown'}<br>`;
+                            html += `Arch: ${bot.system.arch || 'Unknown'}<br>`;
+                            html += `User: ${bot.system.user || 'Unknown'}<br>`;
+                        }
+                        if (bot.capabilities) {
+                            html += `Capabilities: ${Object.keys(bot.capabilities).filter(k => bot.capabilities[k]).join(', ')}<br>`;
+                        }
+                        html += `</div>`;
+                    });
+                    html += `</div>`;
+                } else {
+                    html += `<div class="result-content">${JSON.stringify(data, null, 2)}</div>`;
+                }
+            } else if (engineId === 'cve-analysis-engine' && action === 'analyzeCVE') {
+                html += `<div class="result-content">`;
+                html += `<h4>CVE Analysis Result</h4>`;
+                html += `<div class="result-item">`;
+                html += `<strong>CVE ID:</strong> ${data.cveId || 'Unknown'}<br>`;
+                html += `<strong>Severity:</strong> <span class="status-badge status-${data.severity || 'warning'}">${data.severity || 'Unknown'}</span><br>`;
+                html += `<strong>CVSS Score:</strong> ${data.cvssScore || 'N/A'}<br>`;
+                html += `<strong>Description:</strong> ${data.description || 'No description available'}<br>`;
+                html += `</div>`;
+                html += `</div>`;
+            } else if (engineId === 'payload-manager' && action === 'managePayload') {
+                html += `<div class="result-content">`;
+                html += `<h4>Payload Management Result</h4>`;
+                if (Array.isArray(data)) {
+                    html += `<p>Found ${data.length} payloads</p>`;
+                    data.forEach((payload, index) => {
+                        html += `<div class="result-item">`;
+                        html += `<strong>Payload ${index + 1}:</strong> ${payload.name || 'Unnamed'}<br>`;
+                        html += `<strong>Type:</strong> ${payload.type || 'Unknown'}<br>`;
+                        html += `<strong>Size:</strong> ${payload.size || 'Unknown'}<br>`;
+                        html += `</div>`;
+                    });
+                } else {
+                    html += `<div class="result-item">${JSON.stringify(data, null, 2)}</div>`;
+                }
+                html += `</div>`;
+            } else if (engineId === 'plugin-architecture' && action === 'managePlugin') {
+                html += `<div class="result-content">`;
+                html += `<h4>Plugin Management Result</h4>`;
+                if (Array.isArray(data)) {
+                    html += `<p>Found ${data.length} plugins</p>`;
+                    data.forEach((plugin, index) => {
+                        html += `<div class="result-item">`;
+                        html += `<strong>Plugin ${index + 1}:</strong> ${plugin.name || 'Unnamed'}<br>`;
+                        html += `<strong>Version:</strong> ${plugin.version || 'Unknown'}<br>`;
+                        html += `<strong>Status:</strong> <span class="status-badge status-${plugin.status || 'offline'}">${plugin.status || 'offline'}</span><br>`;
+                        html += `</div>`;
+                    });
+                } else {
+                    html += `<div class="result-item">${JSON.stringify(data, null, 2)}</div>`;
+                }
+                html += `</div>`;
+            } else {
+                // Default display for other results
+                html += `<div class="result-content">`;
+                html += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                html += `</div>`;
+            }
+            
+            html += `</div>`;
+            output.innerHTML = html;
+        }
+        
+        // Display error message
+        function displayError(message) {
+            const output = document.getElementById('out');
+            output.innerHTML = `<div class="result-display">
+                <div class="result-header" style="color: #dc3545;">Error</div>
+                <div class="result-content" style="color: #dc3545;">${message}</div>
+            </div>`;
+        }
+        
+        // Render output (legacy function for backward compatibility)
+        function render(id, obj) {
+            const element = document.getElementById(id);
+            if (element) {
+                if (typeof obj === 'object') {
+                    element.innerHTML = `<div class="result-display">
+                        <div class="result-content">
+                            <pre>${JSON.stringify(obj, null, 2)}</pre>
+                        </div>
+                    </div>`;
+                } else {
+                    element.textContent = obj;
+                }
+            }
+        }
+        
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', function() {
+            checkHealth();
+        });
+    </script>
+</body>
+</html>

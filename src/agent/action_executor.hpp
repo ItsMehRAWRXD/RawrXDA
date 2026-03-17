@@ -45,6 +45,7 @@ enum class ActionType {
     InvokeCommand,      ///< Execute arbitrary command
     QueryUser,          ///< Pause and ask user for input
     RecursiveAgent,     ///< Invoke agent recursively
+    AgentRouterTask,    ///< Execute agentic routing/dispatch (ASM)
     Unknown             ///< Unknown action type
 };
 
@@ -254,6 +255,9 @@ private:
 
     /** @brief Prompt user for input */
     bool handleQueryUser(Action& action);
+
+    /** @brief Execute agentic routing/dispatch (ASM) */
+    bool handleAgentRouterTask(Action& action);
 
     // -----------------------------------------------------------------
     // Utility Methods

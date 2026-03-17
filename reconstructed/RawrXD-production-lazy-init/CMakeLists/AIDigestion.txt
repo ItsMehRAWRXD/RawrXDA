@@ -1,0 +1,52 @@
+cmake_minimum_required(VERSION 3.21)
+project(AIDigestionTest CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
+
+# Find Qt6
+find_package(Qt6 COMPONENTS Core Gui Widgets Concurrent REQUIRED)
+
+# Include directories
+include_directories(
+    "${CMAKE_SOURCE_DIR}/include"
+    "${CMAKE_SOURCE_DIR}/src/qtapp"
+    "${CMAKE_SOURCE_DIR}/3rdparty/ggml/include"
+)
+
+# Source files for AI digestion system
+set(AI_DIGESTION_SOURCES
+    src/qtapp/ai_digestion_engine.cpp
+    src/qtapp/ai_digestion_engine.hpp
+    src/qtapp/ai_training_pipeline.cpp
+    src/qtapp/ai_training_pipeline.hpp
+    src/qtapp/ai_digestion_panel.cpp
+    src/qtapp/ai_digestion_panel.hpp
+    src/qtapp/ai_workers.cpp
+    src/qtapp/ai_workers.h
+    src/qtapp/ai_digestion_widgets.cpp
+)
+
+# Create the test executable
+add_executable(AIDigestionTest 
+    ${AI_DIGESTION_SOURCES}
+    test_ai_digestion.cpp
+)
+
+# Link Qt libraries
+target_link_libraries(AIDigestionTest 
+    Qt6::Core 
+    Qt6::Gui 
+    Qt6::Widgets 
+    Qt6::Concurrent
+)
+
+# Compiler flags
+if(MSVC)
+    target_compile_options(AIDigestionTest PRIVATE /W4 /std:c++latest)
+else()
+    target_compile_options(AIDigestionTest PRIVATE -Wall -Wextra -std=c++20)
+endif()

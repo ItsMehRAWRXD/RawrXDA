@@ -14,7 +14,7 @@ param(
     [switch]$SkipAnalysis
 )
 
-$ProjectRoot = 'd:\lazy init ide'
+$ProjectRoot = 'D:\rawrxd'
 Set-Location $ProjectRoot
 
 function Banner {
@@ -31,7 +31,7 @@ function AnalyzeBuildState {
     
     $state = @{
         CompilersBuilt = (Get-ChildItem 'compilers' -Filter '*.exe' -ErrorAction SilentlyContinue | Measure-Object).Count -gt 50
-        IDEBuilt = (Get-ChildItem 'build' -Filter 'RawrXD.exe' -Recurse -ErrorAction SilentlyContinue | Measure-Object).Count -gt 0
+        IDEBuilt = (Get-ChildItem 'build' -Recurse -Filter '*.exe' -ErrorAction SilentlyContinue | Where-Object { $_.Name -in 'RawrXD-Win32IDE.exe','rawrxd.exe' } | Measure-Object).Count -gt 0
         DesktopReady = (Get-ChildItem 'dist' -Filter '*.ps1' -ErrorAction SilentlyContinue | Measure-Object).Count -gt 0
     }
     
@@ -123,7 +123,7 @@ switch ($Mode) {
     'test' {
         Write-Host "`n▶ TEST MODE - Validate existing build" -ForegroundColor Green
         if ($state.IDEBuilt) {
-            $ide = Get-ChildItem 'build' -Filter 'RawrXD.exe' -Recurse | Select-Object -First 1
+            $ide = Get-ChildItem 'build' -Recurse -Filter '*.exe' -ErrorAction SilentlyContinue | Where-Object { $_.Name -in 'RawrXD-Win32IDE.exe','rawrxd.exe' } | Select-Object -First 1
             Write-Host "  Found IDE: $($ide.FullName)" -ForegroundColor Green
             Write-Host "  To launch: & '$($ide.FullName)'" -ForegroundColor Cyan
         } else {

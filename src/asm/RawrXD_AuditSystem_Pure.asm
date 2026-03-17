@@ -63,7 +63,7 @@ g_IssueCount            DWORD 0                 ; issues found
 g_PatternMatches        DWORD 0                 ; patterns matched
 g_InitializedFlag       DWORD 0                 ; 1 = initialized
 
-align 32
+align 16
 g_GlobalChecksum        BYTE 32 DUP(0)          ; Accumulated SHA256-like checksum
 
 ; Security pattern signatures (pre-computed hashes)
@@ -82,10 +82,11 @@ AuditSystem_Initialize PROC
     ; Initialize audit system
     mov rax, AUDIT_SUCCESS
     mov g_InitializedFlag, 1
-    xor r8, r8
-    mov g_FileCount, r32d
-    mov g_IssueCount, r32d
-    mov g_PatternMatches, r32d
+    xor eax, eax
+    mov g_FileCount, eax
+    mov g_IssueCount, eax
+    mov g_PatternMatches, eax
+    mov rax, AUDIT_SUCCESS
     ret
 AuditSystem_Initialize ENDP
 
@@ -187,7 +188,7 @@ AuditSystem_DetectStubs PROC
 
 @STUBS_DONE:
     mov rax, r8             ; return stub count
-    add g_IssueCount, r32d  ; accumulate
+    add g_IssueCount, r8d    ; accumulate
     ret
 
 STUBS_INVALID:
@@ -231,10 +232,10 @@ AuditSystem_GenerateReport ENDP
 ; ============================================================================
 AuditSystem_Shutdown PROC
     mov g_InitializedFlag, 0
-    xor r8, r8
-    mov g_FileCount, r32d
-    mov g_IssueCount, r32d
-    mov g_PatternMatches, r32d
+    xor eax, eax
+    mov g_FileCount, eax
+    mov g_IssueCount, eax
+    mov g_PatternMatches, eax
     mov rax, AUDIT_SUCCESS
     ret
 AuditSystem_Shutdown ENDP

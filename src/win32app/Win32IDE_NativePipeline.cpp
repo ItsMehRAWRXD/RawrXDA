@@ -12,31 +12,32 @@
 // ============================================================================
 
 #include "Win32IDE.h"
+#include "IDELogger.h"
 #include "../core/context_deterioration_hotpatch.hpp"
 #include "../../include/feature_flags_runtime.h"
 #include <cstdio>
 #include <sstream>
 
-// Win32-native debug logging
+// Win32-native debug logging — unified LOG_* pipeline (per .cursorrules)
 #ifndef RAWRXD_LOG_INFO
 #define RAWRXD_LOG_INFO(msg) do { \
-    std::ostringstream _oss; _oss << "[INFO] " << msg << "\n"; \
-    OutputDebugStringA(_oss.str().c_str()); \
-    std::cout << _oss.str(); \
+    std::ostringstream _oss; _oss << msg; \
+    OutputDebugStringA(("[INFO] " + _oss.str() + "\n").c_str()); \
+    LOG_INFO(_oss.str()); \
 } while(0)
 #endif
 #ifndef RAWRXD_LOG_WARNING
 #define RAWRXD_LOG_WARNING(msg) do { \
-    std::ostringstream _oss; _oss << "[WARN] " << msg << "\n"; \
-    OutputDebugStringA(_oss.str().c_str()); \
-    std::cerr << _oss.str(); \
+    std::ostringstream _oss; _oss << msg; \
+    OutputDebugStringA(("[WARN] " + _oss.str() + "\n").c_str()); \
+    LOG_WARNING(_oss.str()); \
 } while(0)
 #endif
 #ifndef RAWRXD_LOG_ERROR
 #define RAWRXD_LOG_ERROR(msg) do { \
-    std::ostringstream _oss; _oss << "[ERROR] " << msg << "\n"; \
-    OutputDebugStringA(_oss.str().c_str()); \
-    std::cerr << _oss.str(); \
+    std::ostringstream _oss; _oss << msg; \
+    OutputDebugStringA(("[ERROR] " + _oss.str() + "\n").c_str()); \
+    LOG_ERROR(_oss.str()); \
 } while(0)
 #endif
 

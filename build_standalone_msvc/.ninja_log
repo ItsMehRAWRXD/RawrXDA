@@ -1,8 +1,0 @@
-# ninja log v6
-13	981	7935889559127393	CMakeFiles/rawrxd-standalone.dir/D_/rawrxd/src/gguf_proxy_server.cpp.obj	b3b5d3bfc6be6359
-7	2075	7935891969351305	CMakeFiles/rawrxd-standalone.dir/D_/rawrxd/src/standalone_main.cpp.obj	fc1c13e810149ba8
-7	2090	7935895933640357	CMakeFiles/rawrxd-standalone.dir/D_/rawrxd/src/standalone_main.cpp.obj	fc1c13e810149ba8
-11	2830	7935895933676017	CMakeFiles/rawrxd-standalone.dir/D_/rawrxd/src/agent/gguf_proxy_server.cpp.obj	7b59779322e2128a
-3	4707	7935895933599651	CMakeFiles/rawrxd-standalone.dir/D_/rawrxd/src/standalone_web_bridge.cpp.obj	27b70dca51e503ea
-14	5214	7935895933706693	CMakeFiles/rawrxd-standalone.dir/D_/rawrxd/src/agent/agent_hot_patcher.cpp.obj	c9fc8aa3c497487e
-5214	5427	7935895985715333	rawrxd-standalone.exe	c52a81a939dfacd7

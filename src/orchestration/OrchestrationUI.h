@@ -3,14 +3,20 @@
 #pragma once
 
 #include "TaskOrchestrator.h"
+#include <string>
+#include <utility>
+#include <vector>
 
 // Win32: parent is HWND for CreateWindowExW when embedding the orchestration UI.
-namespace RawrXD {
+namespace RawrXD
+{
 
-class OrchestrationUI {public:
+class OrchestrationUI
+{
+  public:
     explicit OrchestrationUI(TaskOrchestrator* orchestrator, void* parent = nullptr);
 
-\nprivate:\n    void onOrchestrateClicked();
+    \nprivate :\n void onOrchestrateClicked();
     void onTaskSplitCompleted(const std::vector<TaskDefinition>& tasks);
     void onModelSelectionCompleted(const std::map<std::string, std::string>& modelAssignments);
     void onTabCreated(const std::string& tabName, const std::string& model);
@@ -22,7 +28,7 @@ class OrchestrationUI {public:
     void onMemoryProfileChanged(int index);
     void onMemoryStrategyChanged(int index);
 
-private:
+  private:
     void setupUI();
     void* createInputSection();
     void* createProgressSection();
@@ -34,11 +40,12 @@ private:
     std::string formatMemorySize(int64_t bytes) const;
 
     TaskOrchestrator* m_orchestrator = nullptr;
-    voidEdit* m_taskInput = nullptr;
+    void* m_taskInput = nullptr;  // HWND edit control (native)
     void* m_orchestrateButton = nullptr;
     void* m_statusLabel = nullptr;
     void* m_overallProgress = nullptr;
-    void* m_taskList = nullptr;  // HWND list control (was QListWidget*)
+    void* m_taskList = nullptr;                                    // HWND list control (ListView) or null
+    std::vector<std::pair<std::string, std::string>> m_taskItems;  // native: id, display text
     void* m_resultsDisplay = nullptr;
     void* m_memoryProfileCombo = nullptr;
     void* m_memoryStrategyCombo = nullptr;
@@ -46,5 +53,4 @@ private:
     void* m_memoryUsageBar = nullptr;
 };
 
-} // namespace RawrXD
-
+}  // namespace RawrXD

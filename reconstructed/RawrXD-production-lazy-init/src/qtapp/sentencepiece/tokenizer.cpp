@@ -1,0 +1,445 @@
+#include "sentencepiece_tokenizer.hpp"
+#include <QFile>
+#include <QDataStream>
+#include <QDebug>
+#include <QElapsedTimer>
+#include <QRegularExpression>
+#include <algorithm>
+#include <cmath>
+#include <limits>
+
+// Production-ready SentencePiece with proper library
+#ifdef USE_SENTENCEPIECE
+#include <sentencepiece_processor.h>
+#include <sentencepiece_trainer.h>
+#endif
+
+// Simple lattice structure for Viterbi algorithm
+struct SentencePieceTokenizer::Lattice {
+    struct Node {
+        int pos;                              // Position in text
+        float score;                          // Cumulative score
+        int backPointer;                      // Previous node
+        int32_t tokenId;                      // Token at this position
+    };
+    
+    QVector<QVector<Node>> nodes;  // nodes[pos] = possible tokens starting at pos
+    QString text;
+    
+    Lattice(const QString& t) : text(t) {
+        nodes.resize(t.length() + 1);
+        // Initialize start node
+        Node start{0, 0.0f, -1, -1};
+        nodes[0].append(start);
+    }
+};
+
+SentencePieceTokenizer::SentencePieceTokenizer() {
+    m_trie = nullptr;
+}
+
+void SentencePieceTokenizer::initialize() {
+    if (m_trie) return;  // Already initialized
+    m_trie = new TrieNode();
+}
+
+SentencePieceTokenizer::~SentencePieceTokenizer() {
+    if (m_trie) {
+        delete m_trie;
+        m_trie = nullptr;
+    }
+}
+
+bool SentencePieceTokenizer::loadFromFile(const QString& modelPath) {
+#ifdef USE_SENTENCEPIECE
+    // Production-ready implementation using SentencePiece library
+    m_spProcessor = std::make_unique<sentencepiece::SentencePieceProcessor>();
+    
+    const auto status = m_spProcessor->Load(modelPath.toStdString());
+    if (!status.ok()) {
+        qWarning() << "Failed to load SentencePiece model:" << modelPath 
+                   << "Error:" << QString::fromStdString(status.ToString());
+        m_spProcessor.reset();
+        return false;
+    }
+    
+    // Load vocabulary into our internal structures for compatibility
+    const int vocabSize = m_spProcessor->GetPieceSize();
+    m_pieces.reserve(vocabSize);
+    m_tokenIdToString.clear();
+    m_stringToTokenId.clear();
+    
+    for (int i = 0; i < vocabSize; ++i) {
+        const std::string piece = m_spProcessor->IdToPiece(i);
+        const float score = m_spProcessor->GetScore(i);
+        const bool isControl = m_spProcessor->IsControl(i);
+        const bool isUnused = m_spProcessor->IsUnused(i);
+        const bool isByte = m_spProcessor->IsByte(i);
+        
+        TokenPiece tp;
+        tp.piece = QString::fromStdString(piece);
+        tp.score = score;
+        tp.type = isControl ? TokenType::Control :
+                  isUnused ? TokenType::Unused :
+                  isByte ? TokenType::Byte :
+                  TokenType::Normal;
+        
+        m_pieces.append(tp);
+        m_tokenIdToString[i] = tp.piece;
+        m_stringToTokenId[tp.piece] = i;
+    }
+    
+    qDebug() << "Loaded SentencePiece model with" << vocabSize << "tokens";
+    buildTrie();
+    return true;
+    
+#else
+    // Fallback: simplified protobuf parser (not production-ready)
+    QFile file(modelPath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning() << "Failed to open SentencePiece model:" << modelPath;
+        qWarning() << "Note: Compile with USE_SENTENCEPIECE for production-ready tokenization";
+        return false;
+    }
+    
+    // Simplified parser - reads basic model structure
+    QDataStream stream(&file);
+    stream.setByteOrder(QDataStream::LittleEndian);
+    
+    // Skip header, read pieces count
+    file.seek(16);
+    int32_t numPieces;
+    stream >> numPieces;
+    
+    m_pieces.reserve(numPieces);
+    
+    for (int32_t i = 0; i < numPieces; ++i) {
+        quint32 pieceLen;
+        stream >> pieceLen;
+        
+        QByteArray pieceBytes(pieceLen, Qt::Uninitialized);
+        stream.readRawData(pieceBytes.data(), pieceLen);
+        
+        float score;
+        stream >> score;
+        
+        SentencePiece piece;
+        piece.piece = QString::fromUtf8(pieceBytes);
+        piece.score = score;
+        piece.id = i;
+        piece.type = SentencePiece::NORMAL;
+        
+        // Detect special tokens
+        if (piece.piece == "<s>") m_bosId = i;
+        else if (piece.piece == "</s>") m_eosId = i;
+        else if (piece.piece == "<unk>") m_unkId = i;
+        else if (piece.piece == "<pad>") m_padId = i;
+        
+        m_pieces.append(piece);
+        m_pieceToId[piece.piece] = i;
+    }
+    
+    buildTrie();
+    
+    qInfo() << "SentencePiece loaded (fallback mode):" << m_pieces.size() << "pieces";
+    qWarning() << "WARNING: Using simplified tokenizer. Compile with USE_SENTENCEPIECE for production.";
+    return true;
+#endif
+}
+
+bool SentencePieceTokenizer::loadFromGGUFMetadata(const QHash<QString, QByteArray>& metadata) {
+    // Load from GGUF tokenizer metadata
+    if (metadata.contains("tokenizer.ggml.tokens")) {
+        const QElapsedTimer timer = [] { QElapsedTimer t; t.start(); return t; }();
+
+        const QByteArray tokensData = metadata.value("tokenizer.ggml.tokens");
+        if (tokensData.isEmpty()) {
+            return false;
+        }
+
+        // GGUFLoaderQt exports tokens as a single NUL-delimited blob.
+        // Do NOT treat it as length-prefixed; that was the source of the historical "freeze".
+        QList<QByteArray> tokenList = tokensData.split('\0');
+        if (!tokenList.isEmpty() && tokenList.last().isEmpty()) {
+            tokenList.removeLast();
+        }
+
+        if (tokenList.isEmpty()) {
+            return false;
+        }
+
+        m_pieces.clear();
+        m_pieceToId.clear();
+        m_pieces.resize(tokenList.size());
+
+        for (int i = 0; i < tokenList.size(); ++i) {
+            SentencePiece piece;
+            piece.piece = QString::fromUtf8(tokenList[i]);
+            piece.score = 0.0f;
+            piece.id = i;
+            piece.type = SentencePiece::NORMAL;
+
+            // Check for special tokens
+            if (piece.piece == "<s>" || piece.piece == "<|begin_of_text|>") m_bosId = i;
+            else if (piece.piece == "</s>" || piece.piece == "<|end_of_text|>") m_eosId = i;
+            else if (piece.piece == "<unk>") m_unkId = i;
+            else if (piece.piece == "<pad>") m_padId = i;
+
+            m_pieces[i] = piece;
+            // Note: duplicate piece strings can exist; last one wins.
+            m_pieceToId[piece.piece] = i;
+        }
+
+        // Load scores if available (float32 LE)
+        if (metadata.contains("tokenizer.ggml.scores")) {
+            const QByteArray scoresData = metadata.value("tokenizer.ggml.scores");
+            QDataStream scoreStream(scoresData);
+            scoreStream.setByteOrder(QDataStream::LittleEndian);
+
+            const int maxScores = qMin<int>(m_pieces.size(), scoresData.size() / static_cast<int>(sizeof(float)));
+            for (int i = 0; i < maxScores && scoreStream.status() == QDataStream::Ok; ++i) {
+                float score = 0.0f;
+                scoreStream >> score;
+                m_pieces[i].score = score;
+            }
+        }
+
+        // Load token types if available (uint32 LE)
+        if (metadata.contains("tokenizer.ggml.token_type")) {
+            const QByteArray typeData = metadata.value("tokenizer.ggml.token_type");
+            QDataStream typeStream(typeData);
+            typeStream.setByteOrder(QDataStream::LittleEndian);
+
+            const int maxTypes = qMin<int>(m_pieces.size(), typeData.size() / static_cast<int>(sizeof(uint32_t)));
+            for (int i = 0; i < maxTypes && typeStream.status() == QDataStream::Ok; ++i) {
+                uint32_t type = 0;
+                typeStream >> type;
+                if (type <= static_cast<uint32_t>(SentencePiece::BYTE)) {
+                    m_pieces[i].type = static_cast<SentencePiece::Type>(type);
+                }
+            }
+        }
+
+        buildTrie();
+        qInfo() << "SentencePiece loaded from GGUF:" << m_pieces.size() << "pieces in" << timer.elapsed() << "ms";
+        return true;
+    }
+    
+    return false;
+}
+
+void SentencePieceTokenizer::buildTrie() {
+    initialize();  // Ensure trie is allocated
+    for (const SentencePiece& piece : m_pieces) {
+        insertTrie(piece.piece, piece.id);
+    }
+}
+
+void SentencePieceTokenizer::insertTrie(const QString& piece, int32_t id) {
+    TrieNode* node = m_trie;
+    for (QChar ch : piece) {
+        if (!node->children.contains(ch)) {
+            node->children[ch] = new TrieNode();
+        }
+        node = node->children[ch];
+    }
+    node->tokenId = id;
+}
+
+QVector<int32_t> SentencePieceTokenizer::findMatchingPieces(const QString& text, int pos) {
+    QVector<int32_t> matches;
+    TrieNode* node = m_trie;
+    
+    for (int i = pos; i < text.length(); ++i) {
+        QChar ch = text[i];
+        if (!node->children.contains(ch)) break;
+        
+        node = node->children[ch];
+        if (node->tokenId >= 0) {
+            matches.append(node->tokenId);
+        }
+    }
+    
+    return matches;
+}
+
+QString SentencePieceTokenizer::normalize(const QString& text) {
+    // Basic NFKC normalization (simplified)
+    QString result = text;
+    
+    // Replace various whitespace with standard space
+    result.replace(QRegularExpression("[\\t\\n\\r]+"), " ");
+    
+    // Trim
+    result = result.trimmed();
+    
+    return result;
+}
+
+QString SentencePieceTokenizer::replaceSP(const QString& text) {
+    // Replace space with ▁ (U+2581)
+    QString result = text;
+    result.replace(' ', QChar(0x2581));
+    return result;
+}
+
+QString SentencePieceTokenizer::unreplaceSP(const QString& text) {
+    // Replace ▁ with space
+    QString result = text;
+    result.replace(QChar(0x2581), ' ');
+    return result;
+}
+
+SentencePieceTokenizer::Lattice* SentencePieceTokenizer::buildLattice(const QString& text) {
+    Lattice* lattice = new Lattice(text);
+    
+    for (int pos = 0; pos < text.length(); ++pos) {
+        if (lattice->nodes[pos].isEmpty()) continue;
+        
+        // Find all pieces that can start at this position
+        QVector<int32_t> matches = findMatchingPieces(text, pos);
+        
+        for (int32_t tokenId : matches) {
+            const SentencePiece& piece = m_pieces[tokenId];
+            int endPos = pos + piece.piece.length();
+            
+            if (endPos > text.length()) continue;
+            
+            // Add node to lattice
+            for (const Lattice::Node& prevNode : lattice->nodes[pos]) {
+                Lattice::Node newNode;
+                newNode.pos = endPos;
+                newNode.score = prevNode.score + piece.score;
+                newNode.backPointer = pos;
+                newNode.tokenId = tokenId;
+                
+                lattice->nodes[endPos].append(newNode);
+            }
+        }
+        
+        // Byte fallback for unknown characters
+        if (m_byteFallback && lattice->nodes[pos + 1].isEmpty() && pos + 1 <= text.length()) {
+            uint8_t byte = text[pos].toLatin1();
+            
+            Lattice::Node byteNode;
+            byteNode.pos = pos + 1;
+            byteNode.score = lattice->nodes[pos].first().score - 10.0f;  // Penalty
+            byteNode.backPointer = pos;
+            byteNode.tokenId = m_unkId;
+            
+            lattice->nodes[pos + 1].append(byteNode);
+        }
+    }
+    
+    return lattice;
+}
+
+std::vector<int32_t> SentencePieceTokenizer::viterbi(Lattice* lattice) {
+    std::vector<int32_t> result;
+    
+    int endPos = lattice->text.length();
+    if (lattice->nodes[endPos].isEmpty()) {
+        qWarning() << "No valid tokenization found";
+        delete lattice;
+        return result;
+    }
+    
+    // Find best path (highest score)
+    const Lattice::Node* bestEnd = &lattice->nodes[endPos].first();
+    for (const Lattice::Node& node : lattice->nodes[endPos]) {
+        if (node.score > bestEnd->score) {
+            bestEnd = &node;
+        }
+    }
+    
+    // Backtrack to collect tokens
+    std::vector<int32_t> reversed;
+    int pos = endPos;
+    
+    while (pos > 0) {
+        const Lattice::Node* current = nullptr;
+        
+        for (const Lattice::Node& node : lattice->nodes[pos]) {
+            if (&node == bestEnd || node.backPointer == bestEnd->backPointer) {
+                current = &node;
+                break;
+            }
+        }
+        
+        if (!current) break;
+        
+        if (current->tokenId >= 0) {
+            reversed.push_back(current->tokenId);
+        }
+        
+        pos = current->backPointer;
+        if (pos >= 0 && !lattice->nodes[pos].isEmpty()) {
+            bestEnd = &lattice->nodes[pos].first();
+        }
+    }
+    
+    // Reverse to get correct order
+    result.assign(reversed.rbegin(), reversed.rend());
+    
+    delete lattice;
+    return result;
+}
+
+std::vector<int32_t> SentencePieceTokenizer::encode(const QString& text, bool addBos, bool addEos) {
+    if (!isReady()) {
+        qWarning() << "SentencePiece not initialized";
+        return {};
+    }
+    
+    std::vector<int32_t> result;
+    
+    if (addBos) {
+        result.push_back(m_bosId);
+    }
+    
+    // Normalize and preprocess
+    QString normalized = normalize(text);
+    QString withSP = replaceSP(" " + normalized);  // Add leading space
+    
+    // Build lattice and find best tokenization
+    Lattice* lattice = buildLattice(withSP);
+    std::vector<int32_t> tokens = viterbi(lattice);
+    
+    result.insert(result.end(), tokens.begin(), tokens.end());
+    
+    if (addEos) {
+        result.push_back(m_eosId);
+    }
+    
+    return result;
+}
+
+QString SentencePieceTokenizer::decode(const std::vector<int32_t>& tokens, bool skipSpecial) {
+    if (!isReady()) return QString();
+    
+    QString result;
+    
+    for (int32_t tokenId : tokens) {
+        if (tokenId < 0 || tokenId >= m_pieces.size()) {
+            qWarning() << "Invalid token ID:" << tokenId;
+            continue;
+        }
+        
+        const SentencePiece& piece = m_pieces[tokenId];
+        
+        // Skip special tokens if requested
+        if (skipSpecial) {
+            if (tokenId == m_bosId || tokenId == m_eosId || 
+                tokenId == m_padId || tokenId == m_unkId) {
+                continue;
+            }
+        }
+        
+        result += piece.piece;
+    }
+    
+    // Replace ▁ with spaces
+    result = unreplaceSP(result);
+    
+    return result.trimmed();
+}

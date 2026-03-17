@@ -1,0 +1,40 @@
+// This file exists solely to force MOC processing of all Q_OBJECT headers
+// All #includes are in MainWindow_v5.cpp, but this file ensures MOC discovers them
+
+// Include from canonical headers to force MOC processing on full class definitions
+#include "../include/agentic_ide.h"
+#include "../agentic_executor.h"
+#include "../include/agentic_copilot_bridge.h"
+#include "../include/agentic_engine.h"
+#include "../include/agentic_text_edit.h"
+#include "../include/chat_interface.h"
+#include "../include/chat_workspace.h"
+#include "../include/checkpoint_manager.h"
+#include "../include/ci_cd_settings.h"
+#include "../include/file_browser.h"
+#include "../include/ghost_text_renderer.h"
+#include "../include/hardware_backend_selector.h"
+#include "../include/lsp_client.h"
+#include "../include/model_registry.h"
+#include "../include/model_trainer.h"
+#include "../include/multi_tab_editor.h"
+#include "../include/observability_dashboard.h"
+#include "../include/plan_orchestrator.h"
+#include "../include/planning_agent.h"
+#include "../include/profiler.h"
+#include "../include/scalar_server.h"
+#include "../include/security_manager.h"
+#include "../include/settings_dialog.h"
+#include "../include/telemetry.h"
+#include "../include/terminal_pool.h"
+#include "../include/zero_day_agentic_engine.hpp"
+#include "../qtapp/TelemetryWindow.h"
+#include "../include/tokenizer_selector.h"
+#include "../include/todo_dock.h"
+#include "../include/todo_manager.h"
+#include "../include/training_dialog.h"
+#include "../include/training_progress_dock.h"
+#include "../include/transformer_block_scalar.h"
+
+// Empty implementation - this file is only for MOC processing
+

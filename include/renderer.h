@@ -1,17 +1,36 @@
 #pragma once
 
-#include <windows.h>
+#include <vector>
 #include <string>
+#include <Windows.h>
 
-class IRenderer {
-public:
-    virtual ~IRenderer() = default;
-    virtual bool initialize(HWND hwnd) = 0;
-    virtual void resize(UINT w, UINT h) = 0;
-    virtual void render() = 0;
-    virtual void setClearColor(float r, float g, float b, float a) = 0;
-    virtual void updateEditorText(const std::wstring& text, const RECT& editorRect, size_t caretIndex, size_t caretLine, size_t caretColumn) = 0;
-};
+namespace RawrXD {
 
-// Optional Vulkan backend factory (implemented when ENABLE_VULKAN is ON)
-IRenderer* CreateVulkanRenderer();
+    // Forward declaration if needed, or define shared structs
+    struct RenderCommand {
+        std::string type;
+        // extended fields...
+    };
+
+    #ifndef RAWRXD_RENDERER_INTERFACE_DEFINED
+    #define RAWRXD_RENDERER_INTERFACE_DEFINED
+    class IRenderer {
+    public:
+        virtual ~IRenderer() = default;
+
+        virtual bool Initialize(HWND hWnd) = 0;
+        virtual void Render() = 0;
+        virtual void Resize(UINT width, UINT height) = 0;
+        virtual void SetTransparency(float alpha) = 0;
+        
+        // Advanced features stubbed initially
+        virtual void DrawText(const std::wstring& text, float x, float y, float size, uint32_t color) = 0;
+        virtual void DrawRect(float x, float y, float w, float h, uint32_t color) = 0;
+        
+        // Enterprise features
+        virtual void BeginFrame() = 0;
+        virtual void EndFrame() = 0;
+    };
+    #endif
+
+}

@@ -1,0 +1,14 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_CLASSES_ROOT\.asm]
+@="RawrXDAssemblyFile"
+
+[HKEY_CLASSES_ROOT\RawrXDAssemblyFile\shell\open\command]
+@="\"D:\rawrxd\build_prod\RawrXD_Genesis.exe\" \"%1\""
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\Applications\RawrXD_Genesis.exe\Capabilities]
+"ApplicationDescription"="RawrXD Genesis - Pure MASM64 IDE"
+"ApplicationName"="RawrXD"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\RegisteredApplications]
+"RawrXD"="Software\\Classes\\Applications\\RawrXD_Genesis.exe\\Capabilities"

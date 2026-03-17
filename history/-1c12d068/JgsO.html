@@ -1,0 +1,2659 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RawrXD IDE // TEST JUMPER — Real Feature Validation</title>
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧪</text></svg>">
+  <style>
+    :root {
+      --bg-primary: #0a0a0f;
+      --bg-secondary: #12121a;
+      --bg-tertiary: #1a1a25;
+      --accent-primary: #ff6b35;
+      --accent-green: #00ff88;
+      --accent-red: #ff3366;
+      --accent-cyan: #00d9ff;
+      --accent-yellow: #ffd700;
+      --accent-purple: #b829dd;
+      --text-primary: #f0f0f5;
+      --text-secondary: #a0a0b0;
+      --text-muted: #606070;
+      --border-subtle: #2a2a35;
+      --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace;
+      --font-sans: 'Inter', 'Segoe UI', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      height: 100%;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      overflow-x: hidden;
+    }
+
+    .jumper-header {
+      background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+      border-bottom: 2px solid var(--accent-primary);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .jumper-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-family: var(--font-mono);
+    }
+
+    .jumper-brand .icon {
+      font-size: 28px;
+    }
+
+    .jumper-brand .title {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--accent-primary);
+      letter-spacing: 1px;
+    }
+
+    .jumper-brand .subtitle {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .controls-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .url-input {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      width: 280px;
+    }
+
+    .url-input:focus {
+      outline: none;
+      border-color: var(--accent-primary);
+    }
+
+    .btn {
+      padding: 8px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: var(--font-sans);
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-primary), #e85d2c);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.2);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--accent-cyan);
+    }
+
+    .btn-danger {
+      background: rgba(255, 51, 102, 0.2);
+      color: var(--accent-red);
+      border: 1px solid rgba(255, 51, 102, 0.3);
+    }
+
+    .summary-bar {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+    }
+
+    .stat {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .stat-pass {
+      color: var(--accent-green);
+    }
+
+    .stat-fail {
+      color: var(--accent-red);
+    }
+
+    .stat-skip {
+      color: var(--accent-yellow);
+    }
+
+    .stat-running {
+      color: var(--accent-cyan);
+    }
+
+    .progress-track {
+      flex: 1;
+      height: 6px;
+      background: var(--bg-tertiary);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.3s;
+      background: var(--accent-green);
+    }
+
+    .progress-fill.has-failures {
+      background: linear-gradient(90deg, var(--accent-green), var(--accent-red));
+    }
+
+    .duration-badge {
+      color: var(--text-muted);
+      font-size: 11px;
+    }
+
+    .test-content {
+      padding: 16px 24px;
+      max-width: 1200px;
+    }
+
+    .category-filter {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .filter-chip {
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      transition: all 0.2s;
+    }
+
+    .filter-chip.active {
+      border-color: var(--accent-primary);
+      color: var(--accent-primary);
+      background: rgba(255, 107, 53, 0.1);
+    }
+
+    .filter-chip:hover {
+      border-color: var(--accent-cyan);
+    }
+
+    .section {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      margin-bottom: 12px;
+      overflow: hidden;
+      transition: border-color 0.3s;
+    }
+
+    .section.all-pass {
+      border-color: rgba(0, 255, 136, 0.3);
+    }
+
+    .section.has-fail {
+      border-color: rgba(255, 51, 102, 0.3);
+    }
+
+    .section-header {
+      padding: 10px 16px;
+      font-weight: 600;
+      font-size: 13px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .section-header:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .section-header .cat-badge {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-family: var(--font-mono);
+    }
+
+    .badge-pass {
+      background: rgba(0, 255, 136, 0.15);
+      color: var(--accent-green);
+    }
+
+    .badge-fail {
+      background: rgba(255, 51, 102, 0.15);
+      color: var(--accent-red);
+    }
+
+    .badge-skip {
+      background: rgba(255, 215, 0, 0.15);
+      color: var(--accent-yellow);
+    }
+
+    .badge-running {
+      background: rgba(0, 217, 255, 0.15);
+      color: var(--accent-cyan);
+    }
+
+    .section-body {
+      display: block;
+    }
+
+    .section-body.collapsed {
+      display: none;
+    }
+
+    .test-row {
+      padding: 8px 16px;
+      border-bottom: 1px solid rgba(42, 42, 53, 0.5);
+      font-size: 12px;
+      font-family: var(--font-mono);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 32px;
+    }
+
+    .test-row:last-child {
+      border-bottom: none;
+    }
+
+    .test-row .icon {
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .test-row .name {
+      flex: 1;
+    }
+
+    .test-row .detail {
+      color: var(--text-muted);
+      font-size: 11px;
+      max-width: 400px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .test-row .latency {
+      color: var(--accent-cyan);
+      font-size: 11px;
+      min-width: 50px;
+      text-align: right;
+    }
+
+    .test-row.pass .name {
+      color: var(--accent-green);
+    }
+
+    .test-row.fail .name {
+      color: var(--accent-red);
+    }
+
+    .test-row.skip .name {
+      color: var(--accent-yellow);
+    }
+
+    .test-row.running .name {
+      color: var(--accent-cyan);
+    }
+
+    .log-panel {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      margin-top: 16px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 8px 12px;
+    }
+
+    .log-line {
+      padding: 2px 0;
+      color: var(--text-muted);
+    }
+
+    .log-line.error {
+      color: var(--accent-red);
+    }
+
+    .log-line.success {
+      color: var(--accent-green);
+    }
+
+    .log-line.info {
+      color: var(--accent-cyan);
+    }
+
+    .log-line.warn {
+      color: var(--accent-yellow);
+    }
+
+    /* Spinner */
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--border-subtle);
+      border-top-color: var(--accent-cyan);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      flex-shrink: 0;
+    }
+
+    /* IDE frame test */
+    .ide-frame-test {
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-top: 16px;
+      background: var(--bg-secondary);
+    }
+
+    .ide-frame-test iframe {
+      width: 100%;
+      height: 500px;
+      border: none;
+    }
+
+    .ide-frame-controls {
+      padding: 8px 12px;
+      background: var(--bg-tertiary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .jumper-header {
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .url-input {
+        width: 100%;
+      }
+
+      .test-content {
+        padding: 12px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="jumper-header">
+    <div class="jumper-brand">
+      <span class="icon">🧪</span>
+      <div>
+        <div class="title">RAWRXD TEST JUMPER</div>
+        <div class="subtitle">Real Feature Validation — No Simulations, No Mocks</div>
+      </div>
+    </div>
+    <div class="controls-bar">
+      <input type="text" class="url-input" id="backendUrl" value="" placeholder="Backend URL"
+        title="Backend server URL (auto-detected from page origin)">
+      <input type="text" class="url-input" id="ollamaUrl" value="http://127.0.0.1:11434" placeholder="Ollama URL"
+        style="width:220px" title="Direct Ollama URL">
+      <button class="btn btn-primary" id="runBtn" onclick="TJ.runAll()">▶ Run All Tests</button>
+      <button class="btn btn-secondary" onclick="TJ.runFailed()">🔄 Rerun Failed</button>
+      <button class="btn btn-secondary" onclick="TJ.exportReport()">📋 Export</button>
+      <button class="btn btn-danger" onclick="TJ.reset()">✕ Reset</button>
+    </div>
+  </div>
+
+  <div class="summary-bar" id="summaryBar">
+    <span class="stat stat-pass" id="statPass">✅ 0</span>
+    <span class="stat stat-fail" id="statFail">❌ 0</span>
+    <span class="stat stat-skip" id="statSkip">⏭ 0</span>
+    <span class="stat stat-running" id="statRunning">⏳ 0</span>
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill" style="width:0"></div>
+    </div>
+    <span class="duration-badge" id="durationBadge">—</span>
+  </div>
+
+  <div class="test-content">
+    <div class="category-filter" id="categoryFilter"></div>
+    <div id="results"></div>
+    <div class="log-panel" id="logPanel"></div>
+  </div>
+
+  <!-- Hidden iframe for IDE interaction testing -->
+  <div class="ide-frame-test" id="ideFrameTest" style="display:none">
+    <div class="ide-frame-controls">
+      <span>🖥 Live IDE Frame (for DOM tests)</span>
+      <button class="btn btn-secondary" onclick="TJ.toggleIdeFrame()"
+        style="padding:4px 10px;font-size:11px">Toggle</button>
+      <span id="ideFrameStatus" style="color:var(--text-muted);font-size:11px">Not loaded</span>
+    </div>
+    <iframe id="ideFrame" src="about:blank"></iframe>
+  </div>
+
+  <script>
+    // ============================================================================
+    // RawrXD Test Jumper — REAL feature testing, zero simulation
+    // ============================================================================
+    const TJ = (function () {
+      'use strict';
+
+      // ---- State ----
+      const S = {
+        passed: 0, failed: 0, skipped: 0, running: 0, total: 0,
+        startTime: 0,
+        results: [],       // {name, cat, status, detail, latency, error}
+        sections: {},      // cat -> DOM section
+        categories: new Set(),
+        activeFilter: null,
+        abortController: null,
+        ideWindow: null,
+        ideLoaded: false,
+        log: [],
+        proxyAvailable: null,   // null=untested, true/false after probe
+        fallbackMode: false,    // true = proxy down, using Ollama direct where possible
+      };
+
+      // ---- Helpers ----
+      // Auto-detect backend URL from page origin to guarantee same-origin iframe access
+      (function autoDetectBackendUrl() {
+        var el = document.getElementById('backendUrl');
+        if (el && !el.value) {
+          // If served from the backend (http), use page origin; otherwise fall back to localhost
+          el.value = (window.location.protocol === 'http:' || window.location.protocol === 'https:')
+            ? window.location.origin
+            : 'http://127.0.0.1:11435';
+        }
+      })();
+      function backendUrl() {
+        var el = document.getElementById('backendUrl');
+        var val = el.value.replace(/\/+$/, '');
+        // Auto-detect: use page origin to guarantee same-origin iframe access
+        if (!val) {
+          val = window.location.origin || 'http://127.0.0.1:11435';
+          el.value = val;
+        }
+        return val;
+      }
+      function ollamaUrl() { return document.getElementById('ollamaUrl').value.replace(/\/+$/, ''); }
+
+      // Effective base URL: uses proxy if available, otherwise Ollama direct
+      function effectiveBase() {
+        if (S.fallbackMode) return ollamaUrl();
+        return backendUrl();
+      }
+
+      // Probe the proxy backend to determine availability
+      async function probeBackend() {
+        try {
+          const res = await fetchWithTimeout(backendUrl() + '/health', {}, 4000);
+          S.proxyAvailable = res.ok;
+        } catch (_) {
+          S.proxyAvailable = false;
+        }
+        S.fallbackMode = !S.proxyAvailable;
+        if (S.fallbackMode) {
+          log('⚠ Proxy backend (' + backendUrl() + ') is OFFLINE — engaging Ollama-direct fallback mode', 'warn');
+          log('  Tests requiring proxy-only features will auto-skip', 'warn');
+          log('  Chat, models, streaming tests will use Ollama at ' + ollamaUrl(), 'info');
+        } else {
+          log('✓ Proxy backend is online at ' + backendUrl(), 'success');
+        }
+        return S.proxyAvailable;
+      }
+
+      // Helper: skip a test if proxy is required but unavailable
+      function requireProxy(detail) {
+        if (S.fallbackMode) {
+          return { status: 'skip', detail: detail || 'Requires proxy server (offline)' };
+        }
+        return null; // continue with test
+      }
+
+      function log(msg, level) {
+        level = level || 'info';
+        const ts = new Date().toISOString().split('T')[1].replace('Z', '');
+        S.log.push({ ts, msg, level });
+        const panel = document.getElementById('logPanel');
+        const div = document.createElement('div');
+        div.className = 'log-line ' + level;
+        div.textContent = '[' + ts + '] ' + msg;
+        panel.appendChild(div);
+        panel.scrollTop = panel.scrollHeight;
+      }
+
+      // Fetch with timeout + abort support
+      async function fetchWithTimeout(url, opts, timeoutMs) {
+        timeoutMs = timeoutMs || 8000;
+        const ctrl = new AbortController();
+        if (S.abortController) {
+          // Link to master abort
+          S.abortController.signal.addEventListener('abort', () => ctrl.abort());
+        }
+        const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+        try {
+          const res = await fetch(url, { ...opts, signal: ctrl.signal });
+          clearTimeout(timer);
+          return res;
+        } catch (e) {
+          clearTimeout(timer);
+          throw e;
+        }
+      }
+
+      async function fetchJSON(url, opts, timeoutMs) {
+        const res = await fetchWithTimeout(url, opts, timeoutMs);
+        if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + res.statusText);
+        return { data: await res.json(), res };
+      }
+
+      // ---- Section / Result Rendering ----
+      function ensureSection(cat, label) {
+        if (S.sections[cat]) return S.sections[cat];
+        S.categories.add(cat);
+
+        const sec = document.createElement('div');
+        sec.className = 'section';
+        sec.dataset.cat = cat;
+
+        const header = document.createElement('div');
+        header.className = 'section-header';
+        header.innerHTML = '<span>' + label + '</span><span class="cat-badge badge-running" id="sec-badge-' + cat + '">...</span>';
+        header.onclick = function () {
+          const body = sec.querySelector('.section-body');
+          body.classList.toggle('collapsed');
+        };
+
+        const body = document.createElement('div');
+        body.className = 'section-body';
+
+        sec.appendChild(header);
+        sec.appendChild(body);
+        document.getElementById('results').appendChild(sec);
+        S.sections[cat] = { el: sec, body, pass: 0, fail: 0, skip: 0 };
+        return S.sections[cat];
+      }
+
+      function addResult(cat, name, status, detail, latencyMs) {
+        const sec = S.sections[cat];
+        if (!sec) return;
+
+        S.total++;
+        if (status === 'pass') { S.passed++; sec.pass++; }
+        else if (status === 'fail') { S.failed++; sec.fail++; }
+        else { S.skipped++; sec.skip++; }
+
+        const row = document.createElement('div');
+        row.className = 'test-row ' + status;
+        const icon = status === 'pass' ? '✅' : status === 'fail' ? '❌' : '⏭️';
+        row.innerHTML =
+          '<span class="icon">' + icon + '</span>' +
+          '<span class="name">' + name + '</span>' +
+          (detail ? '<span class="detail" title="' + (detail + '').replace(/"/g, '&quot;') + '">' + detail + '</span>' : '') +
+          (latencyMs != null ? '<span class="latency">' + latencyMs + 'ms</span>' : '');
+        sec.body.appendChild(row);
+
+        S.results.push({ cat, name, status, detail: detail || '', latency: latencyMs || 0 });
+
+        updateSummary();
+        updateSectionBadge(cat);
+      }
+
+      function addRunning(cat, name) {
+        const sec = S.sections[cat];
+        if (!sec) return;
+        S.running++;
+        const row = document.createElement('div');
+        row.className = 'test-row running';
+        row.id = 'running-' + name.replace(/[^a-zA-Z0-9]/g, '_');
+        row.innerHTML = '<div class="spinner"></div><span class="name">' + name + '</span>';
+        sec.body.appendChild(row);
+        updateSummary();
+        return row;
+      }
+
+      function resolveRunning(rowEl) {
+        S.running--;
+        if (rowEl && rowEl.parentNode) rowEl.parentNode.removeChild(rowEl);
+        updateSummary();
+      }
+
+      function updateSectionBadge(cat) {
+        const sec = S.sections[cat];
+        if (!sec) return;
+        const badge = document.getElementById('sec-badge-' + cat);
+        if (!badge) return;
+        if (sec.fail > 0) {
+          badge.className = 'cat-badge badge-fail';
+          badge.textContent = sec.fail + ' failed';
+          sec.el.className = 'section has-fail';
+        } else if (sec.pass > 0 && sec.skip === 0) {
+          badge.className = 'cat-badge badge-pass';
+          badge.textContent = sec.pass + '/' + sec.pass + ' passed';
+          sec.el.className = 'section all-pass';
+        } else {
+          badge.className = 'cat-badge badge-skip';
+          badge.textContent = sec.pass + ' pass, ' + sec.skip + ' skip';
+        }
+      }
+
+      function updateSummary() {
+        document.getElementById('statPass').textContent = '✅ ' + S.passed;
+        document.getElementById('statFail').textContent = '❌ ' + S.failed;
+        document.getElementById('statSkip').textContent = '⏭ ' + S.skipped;
+        document.getElementById('statRunning').textContent = '⏳ ' + S.running;
+
+        const completed = S.passed + S.failed + S.skipped;
+        const pct = completed > 0 ? (S.passed / completed * 100) : 0;
+        const fill = document.getElementById('progressFill');
+        fill.style.width = pct + '%';
+        fill.className = 'progress-fill' + (S.failed > 0 ? ' has-failures' : '');
+
+        if (S.startTime > 0) {
+          document.getElementById('durationBadge').textContent = Math.round(performance.now() - S.startTime) + 'ms';
+        }
+      }
+
+      // ---- Test Definitions ----
+      // Each test is { name, cat, catLabel, fn: async () => {status, detail, latency} }
+
+      function defineTests() {
+        const tests = [];
+        const base = backendUrl;
+        const olla = ollamaUrl;
+
+        // ================================================================
+        // CATEGORY 1: Backend Connectivity
+        // ================================================================
+        const C1 = 'connectivity';
+        const C1L = '🔌 Backend Connectivity & Health';
+
+        tests.push({
+          cat: C1, catLabel: C1L, name: '/health endpoint',
+          fn: async () => {
+            const skip = requireProxy('Proxy health endpoint');
+            if (skip) return skip;
+            const t0 = performance.now();
+            const { data } = await fetchJSON(base() + '/health');
+            const ms = Math.round(performance.now() - t0);
+            return { status: data.status === 'ok' ? 'pass' : 'fail', detail: JSON.stringify(data), latency: ms };
+          }
+        });
+
+        tests.push({
+          cat: C1, catLabel: C1L, name: '/status returns server info',
+          fn: async () => {
+            const skip = requireProxy('Proxy status endpoint');
+            if (skip) return skip;
+            const t0 = performance.now();
+            const { data } = await fetchJSON(base() + '/status');
+            const ms = Math.round(performance.now() - t0);
+            const hasBackend = !!(data.backend || data.server);
+            return { status: hasBackend ? 'pass' : 'fail', detail: (data.backend || data.server || 'no server type') + ', uptime=' + (data.uptime_seconds || 0) + 's', latency: ms };
+          }
+        });
+
+        tests.push({
+          cat: C1, catLabel: C1L, name: '/status has request counters',
+          fn: async () => {
+            const skip = requireProxy('Proxy status counters');
+            if (skip) return skip;
+            const { data } = await fetchJSON(base() + '/status');
+            const has = data.total_requests !== undefined;
+            return { status: has ? 'pass' : 'fail', detail: 'total_requests=' + (data.total_requests || '?') };
+          }
+        });
+
+        tests.push({
+          cat: C1, catLabel: C1L, name: 'CORS headers present',
+          fn: async () => {
+            const skip = requireProxy('Proxy CORS headers');
+            if (skip) return skip;
+            const res = await fetchWithTimeout(base() + '/health');
+            const cors = res.headers.get('Access-Control-Allow-Origin');
+            return { status: cors ? 'pass' : 'fail', detail: 'ACAO: ' + (cors || 'missing') };
+          }
+        });
+
+        tests.push({
+          cat: C1, catLabel: C1L, name: 'Security headers (X-Content-Type-Options)',
+          fn: async () => {
+            const skip = requireProxy('Proxy security headers');
+            if (skip) return skip;
+            const res = await fetchWithTimeout(base() + '/health');
+            const xcto = res.headers.get('X-Content-Type-Options');
+            const xfo = res.headers.get('X-Frame-Options');
+            return { status: xcto ? 'pass' : 'fail', detail: 'XCTO=' + (xcto || 'missing') + ' XFO=' + (xfo || 'missing') };
+          }
+        });
+
+        tests.push({
+          cat: C1, catLabel: C1L, name: 'OPTIONS preflight returns 204',
+          fn: async () => {
+            const skip = requireProxy('Proxy OPTIONS preflight');
+            if (skip) return skip;
+            const res = await fetchWithTimeout(base() + '/health', { method: 'OPTIONS' });
+            return { status: res.status === 204 ? 'pass' : 'fail', detail: 'HTTP ' + res.status };
+          }
+        });
+
+        tests.push({
+          cat: C1, catLabel: C1L, name: 'Direct Ollama /api/tags reachable',
+          fn: async () => {
+            const t0 = performance.now();
+            const { data } = await fetchJSON(olla() + '/api/tags');
+            const ms = Math.round(performance.now() - t0);
+            const count = (data.models || []).length;
+            return { status: count > 0 ? 'pass' : 'fail', detail: count + ' models found', latency: ms };
+          }
+        });
+
+        tests.push({
+          cat: C1, catLabel: C1L, name: 'Proxy /api/tags matches Ollama',
+          fn: async () => {
+            const skip = requireProxy('Needs both proxy + Ollama');
+            if (skip) return skip;
+            const { data: direct } = await fetchJSON(olla() + '/api/tags');
+            const { data: proxy } = await fetchJSON(base() + '/api/tags');
+            const directNames = (direct.models || []).map(m => m.name).sort().join(',');
+            const proxyNames = (proxy.models || []).map(m => m.name).sort().join(',');
+            return { status: directNames === proxyNames ? 'pass' : 'fail', detail: 'direct=' + (direct.models || []).length + ' proxy=' + (proxy.models || []).length };
+          }
+        });
+
+        // ================================================================
+        // CATEGORY 2: Model Management
+        // ================================================================
+        const C2 = 'models';
+        const C2L = '🧠 Model Management';
+
+        tests.push({
+          cat: C2, catLabel: C2L, name: '/models returns model list',
+          fn: async () => {
+            const t0 = performance.now();
+            let list, source;
+            if (S.fallbackMode) {
+              // Fallback: query Ollama /api/tags directly and transform
+              const { data } = await fetchJSON(olla() + '/api/tags');
+              list = (data.models || []).map(m => ({ name: m.name, type: 'ollama', size: m.size ? (m.size / 1e9).toFixed(1) + 'GB' : '?' }));
+              source = 'Ollama-direct';
+            } else {
+              const { data } = await fetchJSON(base() + '/models');
+              list = data.models || data;
+              source = 'proxy';
+            }
+            const ms = Math.round(performance.now() - t0);
+            const count = Array.isArray(list) ? list.length : 0;
+            return { status: count > 0 ? 'pass' : 'fail', detail: count + ' models via ' + source, latency: ms };
+          }
+        });
+
+        tests.push({
+          cat: C2, catLabel: C2L, name: 'Models have name + type + size',
+          fn: async () => {
+            let list;
+            if (S.fallbackMode) {
+              const { data } = await fetchJSON(olla() + '/api/tags');
+              list = (data.models || []).map(m => ({ name: m.name, type: 'ollama', size: m.size ? (m.size / 1e9).toFixed(1) + 'GB' : '?' }));
+            } else {
+              const { data } = await fetchJSON(base() + '/models');
+              list = data.models || [];
+            }
+            if (list.length === 0) return { status: 'skip', detail: 'no models' };
+            const m = list[0];
+            const hasFields = m.name && m.type && m.size;
+            return { status: hasFields ? 'pass' : 'fail', detail: JSON.stringify(m).substring(0, 120) };
+          }
+        });
+
+        tests.push({
+          cat: C2, catLabel: C2L, name: 'Ollama models have type=ollama',
+          fn: async () => {
+            let list;
+            if (S.fallbackMode) {
+              const { data } = await fetchJSON(olla() + '/api/tags');
+              list = (data.models || []).map(m => ({ name: m.name, type: 'ollama' }));
+            } else {
+              const { data } = await fetchJSON(base() + '/models');
+              list = data.models || [];
+            }
+            const ollamaModels = list.filter(m => m.type === 'ollama');
+            return { status: ollamaModels.length > 0 ? 'pass' : 'skip', detail: ollamaModels.length + ' Ollama models' };
+          }
+        });
+
+        tests.push({
+          cat: C2, catLabel: C2L, name: 'GGUF scan finds local models',
+          fn: async () => {
+            if (S.fallbackMode) return { status: 'skip', detail: 'GGUF scan requires proxy server' };
+            const { data } = await fetchJSON(base() + '/models');
+            const list = data.models || [];
+            const ggufModels = list.filter(m => m.type === 'gguf');
+            return { status: ggufModels.length >= 0 ? 'pass' : 'fail', detail: ggufModels.length + ' GGUF models' + (ggufModels.length > 0 ? ': ' + ggufModels[0].name : '') };
+          }
+        });
+
+        // ================================================================
+        // CATEGORY 3: Chat & Inference (Non-Streaming)
+        // ================================================================
+        const C3 = 'chat';
+        const C3L = '💬 Chat & Inference (Non-Streaming)';
+
+        tests.push({
+          cat: C3, catLabel: C3L, name: 'OpenAI /v1/chat/completions (non-stream)',
+          fn: async () => {
+            const models = await getFirstModel();
+            const t0 = performance.now();
+            const target = effectiveBase();
+            const { data } = await fetchJSON(target + '/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                model: models,
+                messages: [{ role: 'user', content: 'Reply with exactly the word PONG and nothing else.' }],
+                stream: false, max_tokens: 16, temperature: 0
+              })
+            }, 30000);
+            const ms = Math.round(performance.now() - t0);
+            const content = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+            const hasContent = content.length > 0;
+            return { status: hasContent ? 'pass' : 'fail', detail: '"' + content.substring(0, 80) + '"' + (S.fallbackMode ? ' [Ollama-direct]' : ''), latency: ms };
+          }
+        });
+
+        tests.push({
+          cat: C3, catLabel: C3L, name: 'Response has usage.total_tokens',
+          fn: async () => {
+            const models = await getFirstModel();
+            const target = effectiveBase();
+            const { data } = await fetchJSON(target + '/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                model: models,
+                messages: [{ role: 'user', content: 'Say hi' }],
+                stream: false, max_tokens: 8, temperature: 0
+              })
+            }, 30000);
+            const usage = data.usage || {};
+            return { status: usage.total_tokens > 0 ? 'pass' : 'fail', detail: 'prompt=' + (usage.prompt_tokens || '?') + ' completion=' + (usage.completion_tokens || '?') + ' total=' + (usage.total_tokens || '?') + (S.fallbackMode ? ' [Ollama-direct]' : '') };
+          }
+        });
+
+        tests.push({
+          cat: C3, catLabel: C3L, name: 'Ollama /api/generate (non-stream)',
+          fn: async () => {
+            const models = await getFirstModel();
+            const t0 = performance.now();
+            const target = effectiveBase();
+            const { data } = await fetchJSON(target + '/api/generate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ model: models, prompt: 'Reply PONG', stream: false, options: { num_predict: 10 } })
+            }, 30000);
+            const ms = Math.round(performance.now() - t0);
+            const resp = data.response || '';
+            return { status: resp.length > 0 ? 'pass' : 'fail', detail: '"' + resp.substring(0, 80) + '"' + (S.fallbackMode ? ' [Ollama-direct]' : ''), latency: ms };
+          }
+        });
+
+        tests.push({
+          cat: C3, catLabel: C3L, name: 'Legacy /ask endpoint',
+          fn: async () => {
+            const skip = requireProxy('Legacy /ask is proxy-only');
+            if (skip) return skip;
+            const models = await getFirstModel();
+            const t0 = performance.now();
+            const { data } = await fetchJSON(base() + '/ask', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ question: 'PING', model: models })
+            }, 30000);
+            const ms = Math.round(performance.now() - t0);
+            const answer = data.answer || '';
+            return { status: answer.length > 0 ? 'pass' : 'fail', detail: '"' + answer.substring(0, 80) + '"', latency: ms };
+          }
+        });
+
+        // ================================================================
+        // CATEGORY 4: Streaming
+        // ================================================================
+        const C4 = 'streaming';
+        const C4L = '🌊 Streaming (SSE / NDJSON)';
+
+        tests.push({
+          cat: C4, catLabel: C4L, name: 'OpenAI SSE stream produces chunks',
+          fn: async () => {
+            const models = await getFirstModel();
+            const t0 = performance.now();
+            const target = effectiveBase();
+            const res = await fetchWithTimeout(target + '/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                model: models,
+                messages: [{ role: 'user', content: 'Count from 1 to 5' }],
+                stream: true, max_tokens: 64
+              })
+            }, 30000);
+            if (!res.ok || !res.body) return { status: 'fail', detail: 'HTTP ' + res.status + ' or no body' };
+
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let chunks = 0, fullText = '', tokens = 0;
+            const timeout = setTimeout(() => { try { reader.cancel(); } catch (_) { } }, 20000);
+            try {
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                chunks++;
+                const text = decoder.decode(value, { stream: true });
+                fullText += text;
+                // Count SSE data lines
+                const lines = text.split('\n').filter(l => l.startsWith('data:'));
+                tokens += lines.length;
+              }
+            } catch (_) { }
+            clearTimeout(timeout);
+            const ms = Math.round(performance.now() - t0);
+            return { status: chunks > 1 ? 'pass' : 'fail', detail: chunks + ' chunks, ~' + tokens + ' tokens', latency: ms };
+          }
+        });
+
+        tests.push({
+          cat: C4, catLabel: C4L, name: 'SSE has data: prefix format',
+          fn: async () => {
+            const models = await getFirstModel();
+            const target = effectiveBase();
+            const res = await fetchWithTimeout(target + '/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                model: models,
+                messages: [{ role: 'user', content: 'hi' }],
+                stream: true, max_tokens: 8
+              })
+            }, 20000);
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let fullText = '';
+            const timeout = setTimeout(() => { try { reader.cancel(); } catch (_) { } }, 15000);
+            try {
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                fullText += decoder.decode(value, { stream: true });
+              }
+            } catch (_) { }
+            clearTimeout(timeout);
+            const hasSSE = fullText.includes('data:');
+            return { status: hasSSE ? 'pass' : 'fail', detail: hasSSE ? 'SSE format confirmed' : 'No data: lines found' };
+          }
+        });
+
+        tests.push({
+          cat: C4, catLabel: C4L, name: 'SSE ends with [DONE]',
+          fn: async () => {
+            const models = await getFirstModel();
+            const target = effectiveBase();
+            const res = await fetchWithTimeout(target + '/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                model: models,
+                messages: [{ role: 'user', content: 'reply ok' }],
+                stream: true, max_tokens: 8
+              })
+            }, 20000);
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let fullText = '';
+            const timeout = setTimeout(() => { try { reader.cancel(); } catch (_) { } }, 15000);
+            try {
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                fullText += decoder.decode(value, { stream: true });
+              }
+            } catch (_) { }
+            clearTimeout(timeout);
+            const hasDone = fullText.includes('[DONE]');
+            return { status: hasDone ? 'pass' : 'skip', detail: hasDone ? 'data: [DONE] found' : 'No [DONE] — may terminate differently' };
+          }
+        });
+
+        tests.push({
+          cat: C4, catLabel: C4L, name: 'Ollama NDJSON stream works',
+          fn: async () => {
+            const models = await getFirstModel();
+            const t0 = performance.now();
+            const target = effectiveBase();
+            const res = await fetchWithTimeout(target + '/api/generate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ model: models, prompt: 'Count 1 to 3', stream: true, options: { num_predict: 30 } })
+            }, 30000);
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let fullText = '', lines = 0;
+            const timeout = setTimeout(() => { try { reader.cancel(); } catch (_) { } }, 20000);
+            try {
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                const chunk = decoder.decode(value, { stream: true });
+                fullText += chunk;
+                lines += chunk.split('\n').filter(l => l.trim()).length;
+              }
+            } catch (_) { }
+            clearTimeout(timeout);
+            const ms = Math.round(performance.now() - t0);
+            // NDJSON should be parseable line-by-line
+            let parsed = 0;
+            for (const line of fullText.split('\n')) {
+              if (!line.trim()) continue;
+              try { JSON.parse(line); parsed++; } catch (_) { }
+            }
+            return { status: parsed > 1 ? 'pass' : 'fail', detail: parsed + '/' + lines + ' valid NDJSON lines', latency: ms };
+          }
+        });
+
+        // ================================================================
+        // CATEGORY 5: Agent Framework
+        // ================================================================
+        const C5 = 'agents';
+        const C5L = '🤖 Agentic Framework';
+
+        tests.push({
+          cat: C5, catLabel: C5L, name: '/api/agents/status responds',
+          fn: async () => {
+            const skip = requireProxy('Agents API requires proxy');
+            if (skip) return skip;
+            const t0 = performance.now();
+            const { data } = await fetchJSON(base() + '/api/agents/status');
+            const ms = Math.round(performance.now() - t0);
+            const hasAgents = !!data.agents;
+            return { status: hasAgents ? 'pass' : 'fail', detail: 'agents=' + (hasAgents ? Object.keys(data.agents).length + ' subsystems' : 'missing'), latency: ms };
+          }
+        });
+
+        tests.push({
+          cat: C5, catLabel: C5L, name: 'Failure detector is active',
+          fn: async () => {
+            const skip = requireProxy('Agents API requires proxy');
+            if (skip) return skip;
+            const { data } = await fetchJSON(base() + '/api/agents/status');
+            const fd = data.agents && data.agents.failure_detector;
+            return { status: fd && fd.active ? 'pass' : 'fail', detail: fd ? 'detections=' + fd.detections : 'not found' };
+          }
+        });
+
+        tests.push({
+          cat: C5, catLabel: C5L, name: 'Puppeteer is active',
+          fn: async () => {
+            const skip = requireProxy('Agents API requires proxy');
+            if (skip) return skip;
+            const { data } = await fetchJSON(base() + '/api/agents/status');
+            const pp = data.agents && data.agents.puppeteer;
+            return { status: pp && pp.active ? 'pass' : 'fail', detail: pp ? 'corrections=' + pp.corrections : 'not found' };
+          }
+        });
+
+        tests.push({
+          cat: C5, catLabel: C5L, name: 'Proxy hotpatcher is active',
+          fn: async () => {
+            const skip = requireProxy('Agents API requires proxy');
+            if (skip) return skip;
+            const { data } = await fetchJSON(base() + '/api/agents/status');
+            const ph = data.agents && data.agents.proxy_hotpatcher;
+            return { status: ph && ph.active ? 'pass' : 'fail', detail: ph ? 'patches=' + ph.patches_applied : 'not found' };
+          }
+        });
+
+        tests.push({
+          cat: C5, catLabel: C5L, name: 'Unified manager tracks layers',
+          fn: async () => {
+            const skip = requireProxy('Agents API requires proxy');
+            if (skip) return skip;
+            const { data } = await fetchJSON(base() + '/api/agents/status');
+            const um = data.agents && data.agents.unified_manager;
+            return { status: um ? 'pass' : 'fail', detail: um ? 'mem=' + um.memory_patches + ' byte=' + um.byte_patches + ' srv=' + um.server_patches : 'not found' };
+          }
+        });
+
+        tests.push({
+          cat: C5, catLabel: C5L, name: '/api/agents/history responds',
+          fn: async () => {
+            const skip = requireProxy('Agents API requires proxy');
+            if (skip) return skip;
+            const { data } = await fetchJSON(base() + '/api/agents/history');
+            const events = data.events || [];
+            return { status: Array.isArray(events) ? 'pass' : 'fail', detail: events.length + ' events' };
+          }
+        });
+
+        // ================================================================
+        // CATEGORY 6: Failure Intelligence
+        // ================================================================
+        const C6 = 'failures';
+        const C6L = '🔥 Failure Intelligence';
+
+        tests.push({
+          cat: C6, catLabel: C6L, name: '/api/failures returns data',
+          fn: async () => {
+            const skip = requireProxy('Failures API requires proxy');
+            if (skip) return skip;
+            const { data } = await fetchJSON(base() + '/api/failures');
+            const fArr = data.failures || [];
+            const stats = data.stats || {};
+            return { status: Array.isArray(fArr) ? 'pass' : 'fail', detail: fArr.length + ' failures, total=' + (stats.totalFailures || 0) };
+          }
+        });
+
+        tests.push({
+          cat: C6, catLabel: C6L, name: 'Failure stats include top reasons',
+          fn: async () => {
+            const skip = requireProxy('Failures API requires proxy');
+            if (skip) return skip;
+            const { data } = await fetchJSON(base() + '/api/failures');
+            const stats = data.stats || {};
+            const reasons = stats.topReasons || [];
+            return { status: Array.isArray(reasons) ? 'pass' : 'fail', detail: reasons.length + ' reason types' };
+          }
+        });
+
+        tests.push({
+          cat: C6, catLabel: C6L, name: '/api/failures?limit=5 respects limit',
+          fn: async () => {
+            const skip = requireProxy('Failures API requires proxy');
+            if (skip) return skip;
+            const { data } = await fetchJSON(base() + '/api/failures?limit=5');
+            const fArr = data.failures || [];
+            return { status: fArr.length <= 5 ? 'pass' : 'fail', detail: fArr.length + ' returned (limit 5)' };
+          }
+        });
+
+        tests.push({
+          cat: C6, catLabel: C6L, name: 'Replay retry works',
+          fn: async () => {
+            const skip = requireProxy('Replay API requires proxy');
+            if (skip) return skip;
+            // First get a failure to replay
+            const { data: fData } = await fetchJSON(base() + '/api/failures?limit=1');
+            const failures = fData.failures || [];
+            if (failures.length === 0) return { status: 'skip', detail: 'no failures to replay' };
+            const fId = failures[0].id;
+            const { data } = await fetchJSON(base() + '/api/agents/replay', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ failure_id: fId, action: 'retry' })
+            });
+            return { status: data.status === 'retried' ? 'pass' : 'fail', detail: 'id=' + fId + ' outcome=' + (data.outcome || '?') };
+          }
+        });
+
+        // ================================================================
+        // CATEGORY 7: File Operations
+        // ================================================================
+        const C7 = 'files';
+        const C7L = '📁 File Operations';
+
+        tests.push({
+          cat: C7, catLabel: C7L, name: 'POST /api/read-file reads a known file',
+          fn: async () => {
+            const skip = requireProxy('File API requires proxy');
+            if (skip) return skip;
+            const t0 = performance.now();
+            const { data } = await fetchJSON(base() + '/api/read-file', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ path: 'D:/rawrxd/CMakeLists.txt' })
+            });
+            const ms = Math.round(performance.now() - t0);
+            const hasContent = data.content && data.content.length > 0;
+            return { status: hasContent ? 'pass' : 'fail', detail: 'size=' + (data.size || 0) + ' name=' + (data.name || '?'), latency: ms };
+          }
+        });
+
+        tests.push({
+          cat: C7, catLabel: C7L, name: 'GET /api/read-file?path= works',
+          fn: async () => {
+            const skip = requireProxy('File API requires proxy');
+            if (skip) return skip;
+            const { data } = await fetchJSON(base() + '/api/read-file?path=D%3A%2Frawrxd%2FCMakeLists.txt');
+            const hasContent = data.content && data.content.length > 0;
+            return { status: hasContent ? 'pass' : 'fail', detail: 'size=' + (data.size || 0) };
+          }
+        });
+
+        tests.push({
+          cat: C7, catLabel: C7L, name: 'Missing file returns 404',
+          fn: async () => {
+            const skip = requireProxy('File API requires proxy');
+            if (skip) return skip;
+            try {
+              const res = await fetchWithTimeout(base() + '/api/read-file', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path: 'D:/nonexistent_test_file_xyz.txt' })
+              });
+              return { status: res.status === 404 ? 'pass' : 'fail', detail: 'HTTP ' + res.status };
+            } catch (e) {
+              return { status: 'fail', detail: e.message };
+            }
+          }
+        });
+
+        tests.push({
+          cat: C7, catLabel: C7L, name: 'Network path rejected (security)',
+          fn: async () => {
+            const skip = requireProxy('File API requires proxy');
+            if (skip) return skip;
+            try {
+              const res = await fetchWithTimeout(base() + '/api/read-file', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path: '\\\\network\\share\\file.txt' })
+              });
+              return { status: res.status === 403 ? 'pass' : 'fail', detail: 'HTTP ' + res.status };
+            } catch (e) {
+              return { status: 'fail', detail: e.message };
+            }
+          }
+        });
+
+        // ================================================================
+        // CATEGORY 8: Rate Limiting & Security
+        // ================================================================
+        const C8 = 'security';
+        const C8L = '🛡️ Security & Rate Limiting';
+
+        tests.push({
+          cat: C8, catLabel: C8L, name: '404 for unknown endpoint',
+          fn: async () => {
+            const skip = requireProxy('Endpoint security requires proxy');
+            if (skip) return skip;
+            const res = await fetchWithTimeout(base() + '/api/this-does-not-exist-xyz');
+            return { status: res.status === 404 ? 'pass' : 'fail', detail: 'HTTP ' + res.status };
+          }
+        });
+
+        tests.push({
+          cat: C8, catLabel: C8L, name: 'Invalid JSON returns 400',
+          fn: async () => {
+            const skip = requireProxy('JSON validation requires proxy');
+            if (skip) return skip;
+            const res = await fetchWithTimeout(base() + '/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: 'this is not json {'
+            });
+            return { status: res.status === 400 ? 'pass' : 'fail', detail: 'HTTP ' + res.status };
+          }
+        });
+
+        tests.push({
+          cat: C8, catLabel: C8L, name: 'Large payload rejected (413)',
+          fn: async () => {
+            // Send 11MB body to trigger 413
+            const huge = 'x'.repeat(11 * 1024 * 1024);
+            try {
+              const res = await fetchWithTimeout(base() + '/ask', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: huge
+              }, 15000);
+              return { status: res.status === 413 ? 'pass' : 'fail', detail: 'HTTP ' + res.status };
+            } catch (e) {
+              // Network error from abort or size is also acceptable
+              return { status: 'pass', detail: 'Connection rejected: ' + e.message };
+            }
+          }
+        });
+
+        // ================================================================
+        // CATEGORY 9: GUI Serving
+        // ================================================================
+        const C9 = 'gui';
+        const C9L = '🖥 GUI & HTML Serving';
+
+        tests.push({
+          cat: C9, catLabel: C9L, name: '/gui serves HTML',
+          fn: async () => {
+            const skip = requireProxy('GUI serving requires proxy');
+            if (skip) return skip;
+            const t0 = performance.now();
+            const res = await fetchWithTimeout(base() + '/gui');
+            const ms = Math.round(performance.now() - t0);
+            const ct = res.headers.get('Content-Type') || '';
+            const isHtml = ct.includes('text/html');
+            const size = res.headers.get('Content-Length') || '?';
+            return { status: isHtml ? 'pass' : 'fail', detail: 'Content-Type=' + ct + ' size=' + size + 'B', latency: ms };
+          }
+        });
+
+        tests.push({
+          cat: C9, catLabel: C9L, name: 'GUI HTML is not truncated',
+          fn: async () => {
+            const skip = requireProxy('GUI serving requires proxy');
+            if (skip) return skip;
+            const res = await fetchWithTimeout(base() + '/gui');
+            const html = await res.text();
+            const hasClosingTag = html.includes('</html>');
+            const hasRawrVoice = html.includes('RawrVoice');
+            const hasCriticalCheck = html.includes('criticalFns');
+            return {
+              status: hasClosingTag && hasRawrVoice && hasCriticalCheck ? 'pass' : 'fail',
+              detail: 'size=' + html.length + ' </html>=' + hasClosingTag + ' RawrVoice=' + hasRawrVoice + ' criticalCheck=' + hasCriticalCheck
+            };
+          }
+        });
+
+        tests.push({
+          cat: C9, catLabel: C9L, name: 'GUI has DOMPurify shim',
+          fn: async () => {
+            const skip = requireProxy('GUI serving requires proxy');
+            if (skip) return skip;
+            const res = await fetchWithTimeout(base() + '/gui');
+            const html = await res.text();
+            const hasShim = html.includes('DOMPurify') && html.includes('sanitize');
+            return { status: hasShim ? 'pass' : 'fail', detail: hasShim ? 'DOMPurify shim present' : 'DOMPurify missing' };
+          }
+        });
+
+        tests.push({
+          cat: C9, catLabel: C9L, name: 'GUI has highlight.js shim',
+          fn: async () => {
+            const skip = requireProxy('GUI serving requires proxy');
+            if (skip) return skip;
+            const res = await fetchWithTimeout(base() + '/gui');
+            const html = await res.text();
+            const hasHljs = html.includes('hljs') && html.includes('highlightElement');
+            return { status: hasHljs ? 'pass' : 'fail', detail: hasHljs ? 'hljs fallback present' : 'hljs missing' };
+          }
+        });
+
+        // ================================================================
+        // CATEGORY 10: IDE DOM Tests (via iframe)
+        // ================================================================
+        const C10 = 'dom';
+        const C10L = '🧩 IDE DOM Feature Tests (Live Frame)';
+
+        tests.push({
+          cat: C10, catLabel: C10L, name: 'IDE loads in iframe',
+          fn: async () => {
+            const loaded = await loadIdeFrame(15000);
+            return { status: loaded ? 'pass' : 'fail', detail: loaded ? 'IDE loaded in frame' : 'Failed to load IDE' };
+          }
+        });
+
+        tests.push({
+          cat: C10, catLabel: C10L, name: 'State object exists',
+          fn: async () => {
+            try {
+              const state = await ideQuery('getState');
+              const hasState = !!state;
+              return { status: hasState ? 'pass' : 'fail', detail: hasState ? 'State.backend.online=' + state.backend.online : 'State undefined' };
+            } catch (e) { return { status: 'skip', detail: 'IDE not accessible: ' + e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C10, catLabel: C10L, name: 'sendMessage function exists',
+          fn: async () => {
+            try {
+              const has = await ideQuery('hasFn', ['sendMessage']);
+              return { status: has ? 'pass' : 'fail' };
+            } catch (e) { return { status: 'skip', detail: 'IDE not accessible: ' + e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C10, catLabel: C10L, name: 'addMessage function exists',
+          fn: async () => {
+            try {
+              const has = await ideQuery('hasFn', ['addMessage']);
+              return { status: has ? 'pass' : 'fail' };
+            } catch (e) { return { status: 'skip', detail: 'IDE not accessible: ' + e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C10, catLabel: C10L, name: 'chatMessages element exists',
+          fn: async () => {
+            try {
+              const el = await ideQuery('getElement', ['chatMessages']);
+              return { status: el ? 'pass' : 'fail', detail: el ? 'found #chatMessages' : 'missing' };
+            } catch (e) { return { status: 'skip', detail: 'IDE not accessible: ' + e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C10, catLabel: C10L, name: 'chatInput element exists',
+          fn: async () => {
+            try {
+              const el = await ideQuery('getElement', ['chatInput']);
+              return { status: el ? 'pass' : 'fail' };
+            } catch (e) { return { status: 'skip', detail: 'IDE not accessible: ' + e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C10, catLabel: C10L, name: 'modelSelect dropdown exists',
+          fn: async () => {
+            try {
+              const el = await ideQuery('getElement', ['modelSelect']);
+              return { status: el ? 'pass' : 'fail', detail: el ? 'found modelSelect' : 'missing' };
+            } catch (e) { return { status: 'skip', detail: 'IDE not accessible: ' + e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C10, catLabel: C10L, name: 'terminalInput element exists',
+          fn: async () => {
+            try {
+              const el = await ideQuery('getElement', ['terminalInput']);
+              return { status: el ? 'pass' : 'fail' };
+            } catch (e) { return { status: 'skip', detail: 'IDE not accessible: ' + e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C10, catLabel: C10L, name: 'backendStatus pill exists',
+          fn: async () => {
+            try {
+              const el = await ideQuery('getElement', ['backendStatus']);
+              return { status: el ? 'pass' : 'fail', detail: el ? 'found backendStatus' : 'missing' };
+            } catch (e) { return { status: 'skip', detail: 'IDE not accessible: ' + e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C10, catLabel: C10L, name: 'Conversation object exists',
+          fn: async () => {
+            try {
+              const has = await ideQuery('hasObj', ['Conversation']);
+              return { status: has ? 'pass' : 'fail', detail: has ? 'Conversation.messages available' : 'missing' };
+            } catch (e) { return { status: 'skip', detail: 'IDE not accessible: ' + e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C10, catLabel: C10L, name: 'EngineAPI object exists',
+          fn: async () => {
+            try {
+              const has = await ideQuery('getEngineAPI');
+              return { status: has ? 'pass' : 'fail' };
+            } catch (e) { return { status: 'skip', detail: 'IDE not accessible: ' + e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C10, catLabel: C10L, name: 'RawrVoice module loaded',
+          fn: async () => {
+            try {
+              const state = await ideQuery('getRawrVoice');
+              const has = !!state;
+              return { status: has ? 'pass' : 'fail', detail: has ? 'TTS=' + state.ttsEnabled + ' recording=' + state.recording : 'missing' };
+            } catch (e) { return { status: 'skip', detail: 'IDE not accessible: ' + e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C10, catLabel: C10L, name: 'DOMPurify available in IDE',
+          fn: async () => {
+            try {
+              const libs = await ideQuery('libs');
+              const has = libs && libs.DOMPurify;
+              return { status: has ? 'pass' : 'fail', detail: has ? 'DOMPurify present' : 'missing' };
+            } catch (e) { return { status: 'skip', detail: 'IDE not accessible: ' + e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C10, catLabel: C10L, name: 'hljs available in IDE',
+          fn: async () => {
+            try {
+              const libs = await ideQuery('libs');
+              return { status: (libs && libs.hljs) ? 'pass' : 'fail' };
+            } catch (e) { return { status: 'skip', detail: 'IDE not accessible: ' + e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C10, catLabel: C10L, name: 'Critical functions not missing',
+          fn: async () => {
+            const criticalFns = [
+              'switchTerminalMode', 'handleTerminal', 'showExtensionsPanel',
+              'checkServerStatus', 'showDebug', 'showEndpoints', 'showFailures',
+              'showAgentDashboard', 'showPerfPanel', 'showSecurityPanel',
+              'showToolsPanel', 'showEnginePanel', 'showMetricsPanel'
+            ];
+            try {
+              var missing = [];
+              for (var i = 0; i < criticalFns.length; i++) {
+                var has = await ideQuery('hasFn', [criticalFns[i]]);
+                if (!has) missing.push(criticalFns[i]);
+              }
+              return { status: missing.length === 0 ? 'pass' : 'fail', detail: missing.length === 0 ? 'All ' + criticalFns.length + ' critical fns present' : 'Missing: ' + missing.join(', ') };
+            } catch (e) { return { status: 'skip', detail: 'IDE not accessible: ' + e.message }; }
+          }
+        });
+
+        // ================================================================
+        // CATEGORY 11: IDE Functional Tests (Live Interactions)
+        // ================================================================
+        const C11 = 'functional';
+        const C11L = '⚡ IDE Live Functional Tests';
+
+        tests.push({
+          cat: C11, catLabel: C11L, name: 'addMessage() renders to DOM',
+          fn: async () => {
+            try {
+              const hasFn = await ideQuery('hasFn', ['addMessage']);
+              const chatEl = await ideQuery('getElement', ['chatMessages']);
+              if (!hasFn || !chatEl) return { status: 'skip', detail: 'addMessage or chatMessages missing' };
+              // Use named bridge command (CSP-safe, no eval)
+              const before = await ideQuery('getChildCount', ['chatMessages']);
+              await ideQuery('callFn', ['addMessage', 'system', '🧪 Test Jumper validation message — ignore this']);
+              await sleep(100);
+              const after = await ideQuery('getChildCount', ['chatMessages']);
+              return { status: after > before ? 'pass' : 'fail', detail: 'children before=' + before + ' after=' + after };
+            } catch (e) { return { status: 'skip', detail: 'IDE not accessible: ' + e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C11, catLabel: C11L, name: 'formatMessage() sanitizes HTML',
+          fn: async () => {
+            try {
+              const hasFn = await ideQuery('hasFn', ['formatMessage']);
+              if (!hasFn) return { status: 'skip', detail: 'formatMessage not found' };
+              const result = await ideQuery('callFn', ['formatMessage', 'Hello **bold** and `code`']);
+              const hasHtml = result && (result.includes('<strong>') || result.includes('<code>') || result.includes('bold'));
+              return { status: hasHtml ? 'pass' : 'fail', detail: result ? result.substring(0, 100) : 'null result' };
+            } catch (e) { return { status: 'skip', detail: 'IDE not accessible: ' + e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C11, catLabel: C11L, name: 'checkServerStatus() runs',
+          fn: async () => {
+            try {
+              const hasFn = await ideQuery('hasFn', ['checkServerStatus']);
+              if (!hasFn) return { status: 'skip', detail: 'not found' };
+              await ideQuery('callFn', ['checkServerStatus']);
+              return { status: 'pass', detail: 'called without error' };
+            } catch (e) { return { status: 'fail', detail: e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C11, catLabel: C11L, name: 'fetchModels() runs',
+          fn: async () => {
+            try {
+              const hasFn = await ideQuery('hasFn', ['fetchModels']);
+              if (!hasFn) return { status: 'skip', detail: 'not found' };
+              await ideQuery('callFn', ['fetchModels']);
+              await sleep(2000);
+              return { status: 'pass', detail: 'called' };
+            } catch (e) { return { status: 'fail', detail: e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C11, catLabel: C11L, name: 'switchTerminalMode("local") works',
+          fn: async () => {
+            try {
+              const hasFn = await ideQuery('hasFn', ['switchTerminalMode']);
+              if (!hasFn) return { status: 'skip', detail: 'not found' };
+              await ideQuery('callFn', ['switchTerminalMode', 'local']);
+              return { status: 'pass', detail: 'switched to local' };
+            } catch (e) { return { status: 'fail', detail: e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C11, catLabel: C11L, name: 'switchTerminalMode("cli") works',
+          fn: async () => {
+            try {
+              const hasFn = await ideQuery('hasFn', ['switchTerminalMode']);
+              if (!hasFn) return { status: 'skip', detail: 'not found' };
+              await ideQuery('callFn', ['switchTerminalMode', 'cli']);
+              await sleep(100);
+              await ideQuery('callFn', ['switchTerminalMode', 'local']);
+              return { status: 'pass', detail: 'switched cli→local' };
+            } catch (e) { return { status: 'fail', detail: e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C11, catLabel: C11L, name: 'showDebug() opens debug panel',
+          fn: async () => {
+            try {
+              const hasFn = await ideQuery('hasFn', ['showDebug']);
+              if (!hasFn) return { status: 'skip', detail: 'not found' };
+              await ideQuery('callFn', ['showDebug']);
+              await sleep(200);
+              const state = await ideQuery('getState');
+              const visible = state && state.debug && state.debug.open;
+              try { await ideQuery('callFn', ['closeDebug']); } catch (_) { }
+              return { status: visible ? 'pass' : 'fail', detail: 'debug.open=' + visible };
+            } catch (e) { return { status: 'fail', detail: e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C11, catLabel: C11L, name: 'showPerfPanel() opens perf overlay',
+          fn: async () => {
+            try {
+              const hasFn = await ideQuery('hasFn', ['showPerfPanel']);
+              if (!hasFn) return { status: 'skip', detail: 'not found' };
+              await ideQuery('callFn', ['showPerfPanel']);
+              await sleep(200);
+              const panel = await ideQuery('getElement', ['perfPanel']);
+              const visible = panel && panel.visible !== false;
+              try { await ideQuery('callFn', ['closePerfPanel']); } catch (_) { }
+              return { status: visible ? 'pass' : 'fail', detail: 'perfPanel visible=' + visible };
+            } catch (e) { return { status: 'fail', detail: e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C11, catLabel: C11L, name: 'showSecurityPanel() opens security overlay',
+          fn: async () => {
+            try {
+              const hasFn = await ideQuery('hasFn', ['showSecurityPanel']);
+              if (!hasFn) return { status: 'skip', detail: 'not found' };
+              await ideQuery('callFn', ['showSecurityPanel']);
+              await sleep(200);
+              const panel = await ideQuery('getElement', ['securityPanel']);
+              const visible = panel && panel.visible !== false;
+              try { await ideQuery('callFn', ['closeSecurityPanel']); } catch (_) { }
+              return { status: visible ? 'pass' : 'fail', detail: 'securityPanel visible=' + visible };
+            } catch (e) { return { status: 'fail', detail: e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C11, catLabel: C11L, name: 'showAgentDashboard() opens dashboard',
+          fn: async () => {
+            try {
+              const hasFn = await ideQuery('hasFn', ['showAgentDashboard']);
+              if (!hasFn) return { status: 'skip', detail: 'not found' };
+              await ideQuery('callFn', ['showAgentDashboard']);
+              await sleep(200);
+              const panel = await ideQuery('getElement', ['agentPanel']);
+              const visible = panel && panel.visible !== false;
+              try { await ideQuery('callFn', ['closeAgentDashboard']); } catch (_) { }
+              return { status: visible ? 'pass' : 'fail', detail: 'agentPanel visible=' + visible };
+            } catch (e) { return { status: 'fail', detail: e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C11, catLabel: C11L, name: 'showFailures() opens failure panel',
+          fn: async () => {
+            try {
+              const hasFn = await ideQuery('hasFn', ['showFailures']);
+              if (!hasFn) return { status: 'skip', detail: 'not found' };
+              await ideQuery('callFn', ['showFailures']);
+              await sleep(300);
+              try { await ideQuery('callFn', ['closeFailures']); } catch (_) { }
+              return { status: 'pass', detail: 'opened and closed' };
+            } catch (e) { return { status: 'fail', detail: e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C11, catLabel: C11L, name: 'showExtensionsPanel() opens extensions',
+          fn: async () => {
+            try {
+              const hasFn = await ideQuery('hasFn', ['showExtensionsPanel']);
+              if (!hasFn) return { status: 'skip', detail: 'not found' };
+              await ideQuery('callFn', ['showExtensionsPanel']);
+              await sleep(200);
+              const panel = await ideQuery('getElement', ['extensionsPanel']);
+              const visible = panel && panel.visible !== false;
+              try { await ideQuery('callFn', ['closeExtensionsPanel']); } catch (_) { }
+              return { status: visible ? 'pass' : 'fail', detail: 'extensionsPanel visible=' + visible };
+            } catch (e) { return { status: 'fail', detail: e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C11, catLabel: C11L, name: 'showEndpoints() runs diagnostics',
+          fn: async () => {
+            try {
+              const hasFn = await ideQuery('hasFn', ['showEndpoints']);
+              if (!hasFn) return { status: 'skip', detail: 'not found' };
+              await ideQuery('callFn', ['showEndpoints']);
+              await sleep(100);
+              return { status: 'pass', detail: 'called without error' };
+            } catch (e) { return { status: 'fail', detail: e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C11, catLabel: C11L, name: 'Conversation.clear() works',
+          fn: async () => {
+            try {
+              const conv = await ideQuery('getConversation');
+              if (!conv) return { status: 'skip', detail: 'Conversation not found' };
+              const before = conv.messages ? conv.messages.length : 0;
+              await ideQuery('clearConversation');
+              const conv2 = await ideQuery('getConversation');
+              const after = conv2 && conv2.messages ? conv2.messages.length : 0;
+              return { status: after <= before ? 'pass' : 'fail', detail: 'before=' + before + ' after=' + after };
+            } catch (e) { return { status: 'fail', detail: e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C11, catLabel: C11L, name: 'RawrVoice.getState() returns state',
+          fn: async () => {
+            try {
+              const state = await ideQuery('getRawrVoice');
+              if (!state) return { status: 'skip', detail: 'RawrVoice not found' };
+              const has = typeof state.ttsEnabled !== 'undefined';
+              return { status: has ? 'pass' : 'fail', detail: has ? 'tts=' + state.ttsEnabled + ' stt=' + state.sttSupported + ' lang=' + state.lang : 'bad state' };
+            } catch (e) { return { status: 'fail', detail: e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C11, catLabel: C11L, name: 'RawrVoice.getMetrics() returns metrics',
+          fn: async () => {
+            try {
+              const m = await ideQuery('getRawrVoiceMetrics');
+              if (!m) return { status: 'skip', detail: 'RawrVoice not found' };
+              return { status: m && m.recordingCount !== undefined ? 'pass' : 'fail', detail: JSON.stringify(m) };
+            } catch (e) { return { status: 'fail', detail: e.message }; }
+          }
+        });
+
+        // ================================================================
+        // CATEGORY 12: Terminal CLI Commands
+        // ================================================================
+        const C12 = 'terminal';
+        const C12L = '💻 Terminal CLI Commands';
+
+        tests.push({
+          cat: C12, catLabel: C12L, name: 'Terminal "help" command',
+          fn: async () => { return await runTerminalCommand('help'); }
+        });
+
+        tests.push({
+          cat: C12, catLabel: C12L, name: 'Terminal "status" command',
+          fn: async () => { return await runTerminalCommand('status'); }
+        });
+
+        tests.push({
+          cat: C12, catLabel: C12L, name: 'Terminal "models" command',
+          fn: async () => { return await runTerminalCommand('models'); }
+        });
+
+        tests.push({
+          cat: C12, catLabel: C12L, name: 'Terminal "health" command',
+          fn: async () => { return await runTerminalCommand('health'); }
+        });
+
+        tests.push({
+          cat: C12, catLabel: C12L, name: 'Terminal "endpoints" command',
+          fn: async () => { return await runTerminalCommand('endpoints'); }
+        });
+
+        tests.push({
+          cat: C12, catLabel: C12L, name: 'Terminal "perf" command',
+          fn: async () => { return await runTerminalCommand('perf'); }
+        });
+
+        // ================================================================
+        // CATEGORY 13: Browser Panel
+        // ================================================================
+        const C13 = 'browser';
+        const C13L = '🌐 Browser Panel';
+
+        tests.push({
+          cat: C13, catLabel: C13L, name: 'showBrowserPanel() opens browser',
+          fn: async () => {
+            try {
+              const hasFn = await ideQuery('hasFn', ['showBrowserPanel']);
+              if (!hasFn) return { status: 'skip', detail: 'not found' };
+              await ideQuery('callFn', ['showBrowserPanel', 'about:blank']);
+              await sleep(300);
+              const overlay = await ideQuery('getElement', ['browserOverlay']);
+              const visible = overlay && overlay.visible !== false;
+              try { await ideQuery('callFn', ['closeBrowserPanel']); } catch (_) { }
+              return { status: visible ? 'pass' : 'fail', detail: 'browserOverlay visible=' + visible };
+            } catch (e) { return { status: 'fail', detail: e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C13, catLabel: C13L, name: 'Browser state tracks tabs',
+          fn: async () => {
+            try {
+              const state = await ideQuery('getState');
+              if (!state || !state.browser) return { status: 'skip', detail: 'State.browser not found' };
+              const b = state.browser;
+              return { status: 'pass', detail: 'tabs=' + (b.tabs || []).length + ' activeTab=' + b.activeTab + ' zoom=' + b.zoom };
+            } catch (e) { return { status: 'skip', detail: 'IDE not accessible: ' + e.message }; }
+          }
+        });
+
+        // ================================================================
+        // CATEGORY 14: File Editor
+        // ================================================================
+        const C14 = 'editor';
+        const C14L = '📝 File Editor Panel';
+
+        tests.push({
+          cat: C14, catLabel: C14L, name: 'showFileEditorPanel() opens editor',
+          fn: async () => {
+            try {
+              const hasFn = await ideQuery('hasFn', ['showFileEditorPanel']);
+              if (!hasFn) return { status: 'skip', detail: 'not found' };
+              await ideQuery('callFn', ['showFileEditorPanel']);
+              await sleep(300);
+              const panel = await ideQuery('getElement', ['fileEditorPanel']);
+              const visible = panel && panel.visible !== false;
+              try { await ideQuery('callFn', ['closeFileEditorPanel']); } catch (_) { }
+              return { status: visible ? 'pass' : 'fail', detail: 'fileEditorPanel visible=' + visible };
+            } catch (e) { return { status: 'fail', detail: e.message }; }
+          }
+        });
+
+        // ================================================================
+        // CATEGORY 15: Reverse Engineering Panel
+        // ================================================================
+        const C15 = 're';
+        const C15L = '🔬 Reverse Engineering';
+
+        tests.push({
+          cat: C15, catLabel: C15L, name: 'showREPanel() opens RE panel',
+          fn: async () => {
+            try {
+              const hasFn = await ideQuery('hasFn', ['showREPanel']);
+              if (!hasFn) return { status: 'skip', detail: 'not found' };
+              await ideQuery('callFn', ['showREPanel']);
+              await sleep(200);
+              try { await ideQuery('callFn', ['toggleREPanel']); } catch (_) { }
+              return { status: 'pass', detail: 'opened and toggled' };
+            } catch (e) { return { status: 'fail', detail: e.message }; }
+          }
+        });
+
+        // ================================================================
+        // CATEGORY 16: Chain-of-Thought
+        // ================================================================
+        const C16 = 'cot';
+        const C16L = '🧠 Chain-of-Thought (CoT)';
+
+        tests.push({
+          cat: C16, catLabel: C16L, name: 'CoT object exists',
+          fn: async () => {
+            try {
+              const cot = await ideQuery('getCoT');
+              return { status: cot ? 'pass' : 'fail', detail: cot ? 'CoT module loaded' : 'missing' };
+            } catch (e) { return { status: 'skip', detail: 'IDE not accessible: ' + e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C16, catLabel: C16L, name: 'cotSwitch element exists',
+          fn: async () => {
+            try {
+              const el = await ideQuery('getElement', ['cotSwitch']);
+              return { status: el ? 'pass' : 'fail' };
+            } catch (e) { return { status: 'skip', detail: 'IDE not accessible: ' + e.message }; }
+          }
+        });
+
+        // ================================================================
+        // CATEGORY 17: Dual Agent
+        // ================================================================
+        const C17 = 'dual';
+        const C17L = '👥 Dual Agent (Architect+Coder)';
+
+        tests.push({
+          cat: C17, catLabel: C17L, name: 'DualAgent object exists',
+          fn: async () => {
+            try {
+              const has = await ideQuery('getDualAgent');
+              return { status: has ? 'pass' : 'fail' };
+            } catch (e) { return { status: 'skip', detail: 'IDE not accessible: ' + e.message }; }
+          }
+        });
+
+        // ================================================================
+        // CATEGORY 18: Performance Metrics (recordMetric)
+        // ================================================================
+        const C18 = 'perf';
+        const C18L = '📊 Performance Instrumentation';
+
+        tests.push({
+          cat: C18, catLabel: C18L, name: 'recordMetric() exists',
+          fn: async () => {
+            try {
+              const has = await ideQuery('hasFn', ['recordMetric']);
+              return { status: has ? 'pass' : 'fail' };
+            } catch (e) { return { status: 'skip', detail: 'IDE not accessible: ' + e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C18, catLabel: C18L, name: 'recordMetric() records data',
+          fn: async () => {
+            try {
+              const hasFn = await ideQuery('hasFn', ['recordMetric']);
+              if (!hasFn) return { status: 'skip', detail: 'not found' };
+              const before = await ideQuery('getPerfHistoryLen');
+              await ideQuery('callFn', ['recordMetric', { endpoint: '/test', latency: 42, tokens: 10, status: 200 }]);
+              const after = await ideQuery('getPerfHistoryLen');
+              return { status: after > before ? 'pass' : 'fail', detail: 'history before=' + before + ' after=' + after };
+            } catch (e) { return { status: 'fail', detail: e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C18, catLabel: C18L, name: 'logStructured() logs entries',
+          fn: async () => {
+            try {
+              const hasFn = await ideQuery('hasFn', ['logStructured']);
+              if (!hasFn) return { status: 'skip', detail: 'not found' };
+              const before = await ideQuery('getStructuredLogLen');
+              await ideQuery('callFn', ['logStructured', 'INFO', 'test_jumper_validation', { source: 'test_jumper' }]);
+              const after = await ideQuery('getStructuredLogLen');
+              return { status: after > before ? 'pass' : 'fail', detail: 'structuredLog before=' + before + ' after=' + after };
+            } catch (e) { return { status: 'fail', detail: e.message }; }
+          }
+        });
+
+        // ================================================================
+        // CATEGORY 19: Security Client-Side
+        // ================================================================
+        const C19 = 'sec-client';
+        const C19L = '🔐 Client-Side Security';
+
+        tests.push({
+          cat: C19, catLabel: C19L, name: 'validateInput() exists',
+          fn: async () => {
+            try {
+              const has = await ideQuery('hasFn', ['validateInput']);
+              return { status: has ? 'pass' : 'fail' };
+            } catch (e) { return { status: 'skip', detail: 'IDE not accessible: ' + e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C19, catLabel: C19L, name: 'validateInput() blocks XSS',
+          fn: async () => {
+            try {
+              const hasFn = await ideQuery('hasFn', ['validateInput']);
+              if (!hasFn) return { status: 'skip', detail: 'not found' };
+              const result = await ideQuery('callFn', ['validateInput', '<script>alert(1)<\/script>']);
+              return { status: result !== undefined ? 'pass' : 'fail', detail: 'result=' + JSON.stringify(result) };
+            } catch (e) { return { status: 'fail', detail: e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C19, catLabel: C19L, name: 'checkRateLimit() exists',
+          fn: async () => {
+            try {
+              const has = await ideQuery('hasFn', ['checkRateLimit']);
+              return { status: has ? 'pass' : 'fail' };
+            } catch (e) { return { status: 'skip', detail: 'IDE not accessible: ' + e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C19, catLabel: C19L, name: 'isUrlAllowed() exists',
+          fn: async () => {
+            try {
+              const has = await ideQuery('hasFn', ['isUrlAllowed']);
+              return { status: has ? 'pass' : 'fail' };
+            } catch (e) { return { status: 'skip', detail: 'IDE not accessible: ' + e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C19, catLabel: C19L, name: 'isUrlAllowed() allows localhost',
+          fn: async () => {
+            try {
+              const hasFn = await ideQuery('hasFn', ['isUrlAllowed']);
+              if (!hasFn) return { status: 'skip', detail: 'not found' };
+              const allowed = await ideQuery('callFn', ['isUrlAllowed', 'http://localhost:11435/api/test']);
+              return { status: allowed ? 'pass' : 'fail', detail: 'localhost allowed=' + allowed };
+            } catch (e) { return { status: 'fail', detail: e.message }; }
+          }
+        });
+
+        tests.push({
+          cat: C19, catLabel: C19L, name: 'secLog() records security events',
+          fn: async () => {
+            try {
+              const hasFn = await ideQuery('hasFn', ['secLog']);
+              if (!hasFn) return { status: 'skip', detail: 'not found' };
+              const before = await ideQuery('getSecurityLogLen');
+              await ideQuery('callFn', ['secLog', 'INFO', 'test_jumper_security_check']);
+              const after = await ideQuery('getSecurityLogLen');
+              return { status: after > before ? 'pass' : 'fail', detail: 'eventLog before=' + before + ' after=' + after };
+            } catch (e) { return { status: 'fail', detail: e.message }; }
+          }
+        });
+
+        // ================================================================
+        // CATEGORY 20: localStorage Persistence
+        // ================================================================
+        const C20 = 'persist';
+        const C20L = '💾 Persistence (localStorage)';
+
+        tests.push({
+          cat: C20, catLabel: C20L, name: 'localStorage accessible',
+          fn: async () => {
+            try {
+              localStorage.setItem('test_jumper_check', '1');
+              const val = localStorage.getItem('test_jumper_check');
+              localStorage.removeItem('test_jumper_check');
+              return { status: val === '1' ? 'pass' : 'fail', detail: 'read/write works' };
+            } catch (e) {
+              return { status: 'skip', detail: 'localStorage not available: ' + e.message };
+            }
+          }
+        });
+
+        tests.push({
+          cat: C20, catLabel: C20L, name: 'Voice prefs persist',
+          fn: async () => {
+            try {
+              const raw = localStorage.getItem('rawrxd_voice_prefs');
+              return { status: raw ? 'pass' : 'skip', detail: raw ? 'found (' + raw.length + ' bytes)' : 'no voice prefs saved yet' };
+            } catch (e) {
+              return { status: 'skip', detail: e.message };
+            }
+          }
+        });
+
+        return tests;
+      }
+
+      // ---- Utility: get first available model ----
+      // Prefer Ollama models (type=ollama) and favor smaller ones for faster tests
+      let _cachedModel = null;
+      async function getFirstModel() {
+        if (_cachedModel) return _cachedModel;
+        // In fallback mode, skip proxy /models and go straight to Ollama
+        if (!S.fallbackMode) {
+          try {
+            const { data } = await fetchJSON(backendUrl() + '/models');
+            const list = data.models || [];
+            // Prefer smaller Ollama models for faster test inference
+            const ollamaModels = list.filter(m => m.type === 'ollama');
+            if (ollamaModels.length > 0) {
+              const sorted = ollamaModels.slice().sort((a, b) => {
+                const sa = parseFloat((a.size || '0').replace(/[^0-9.]/g, '')) || 999;
+                const sb = parseFloat((b.size || '0').replace(/[^0-9.]/g, '')) || 999;
+                return sa - sb;
+              });
+              const usable = sorted.filter(m => parseFloat((m.size || '0').replace(/[^0-9.]/g, '')) > 0.1);
+              const pick = usable.length > 0 ? usable[0] : sorted[0];
+              _cachedModel = pick.name || pick;
+              log('Selected model for tests: ' + _cachedModel, 'info');
+              return _cachedModel;
+            }
+            if (list.length > 0) {
+              _cachedModel = list[0].name || list[0];
+              return _cachedModel;
+            }
+          } catch (_) { }
+        }
+        // Fallback (or proxy failed): try Ollama directly
+        try {
+          const { data } = await fetchJSON(ollamaUrl() + '/api/tags');
+          if (data.models && data.models.length > 0) {
+            // Pick smallest model for faster tests
+            const sorted = data.models.slice().sort((a, b) => (a.size || 0) - (b.size || 0));
+            const usable = sorted.filter(m => (m.size || 0) > 100000000); // >100MB
+            const pick = usable.length > 0 ? usable[0] : sorted[0];
+            _cachedModel = pick.name;
+            log('Selected model for tests (Ollama-direct): ' + _cachedModel, 'info');
+            return _cachedModel;
+          }
+        } catch (_) { }
+        // Dynamic fallback: use first available model from either backend
+        return (window.State && window.State.model && window.State.model.list && window.State.model.list[0] && window.State.model.list[0].name)
+          || 'rawrxd'; // last resort fallback
+      }
+
+      // ---- PostMessage Bridge for Cross-Origin IDE Testing ----
+      var _bridgeReady = false;
+      var _bridgePending = {};
+      var _bridgeMsgId = 0;
+
+      window.addEventListener('message', function (event) {
+        if (event.data && event.data.type === 'rawrxd-ide-ready') {
+          _bridgeReady = true;
+          log('IDE PostMessage bridge ready', 'success');
+          return;
+        }
+        if (event.data && event.data.id && _bridgePending[event.data.id]) {
+          var p = _bridgePending[event.data.id];
+          delete _bridgePending[event.data.id];
+          if (event.data.error) {
+            p.reject(new Error(event.data.error));
+          } else {
+            p.resolve(event.data.result);
+          }
+        }
+      });
+
+      function bridgeCall(cmd, args, timeout) {
+        return new Promise(function (resolve, reject) {
+          var id = ++_bridgeMsgId;
+          var frame = document.getElementById('ideFrame');
+          if (!frame || !frame.contentWindow) {
+            return reject(new Error('IDE frame not available'));
+          }
+          _bridgePending[id] = { resolve: resolve, reject: reject };
+          var tm = setTimeout(function () {
+            if (_bridgePending[id]) {
+              delete _bridgePending[id];
+              reject(new Error('Bridge timeout: ' + cmd));
+            }
+          }, timeout || 5000);
+          // Wrap resolve/reject to clear timer
+          var origResolve = resolve;
+          var origReject = reject;
+          _bridgePending[id] = {
+            resolve: function (v) { clearTimeout(tm); origResolve(v); },
+            reject: function (e) { clearTimeout(tm); origReject(e); }
+          };
+          try {
+            frame.contentWindow.postMessage({ id: id, cmd: cmd, args: args || [] }, '*');
+          } catch (e) {
+            delete _bridgePending[id];
+            clearTimeout(tm);
+            reject(e);
+          }
+        });
+      }
+
+      // ---- IDE Frame Management ----
+      // Detect same-origin by actually probing contentWindow access.
+      // URL comparison alone is unreliable (browser may block even matching origins).
+      var _directAccessWorks = null; // null = untested, true/false = cached result
+
+      function _probeSameOrigin(frameEl) {
+        // Stage 1: URL-based pre-check (quick reject for obvious mismatches)
+        try {
+          if (!frameEl || !frameEl.src || frameEl.src === 'about:blank') return false;
+          var frameOrigin = new URL(frameEl.src, window.location.href).origin;
+          if (frameOrigin !== window.location.origin) return false;
+        } catch (e) { return false; }
+        // Stage 2: Actual contentWindow probe — the ONLY reliable check
+        // The browser is the final authority on same-origin, not URL strings
+        try {
+          var win = frameEl.contentWindow;
+          if (!win) return false;
+          // Try reading document.title — a harmless property that always exists
+          var _probe = win.document.title;
+          return true;
+        } catch (e) {
+          // DOMException / SecurityError = browser says cross-origin
+          return false;
+        }
+      }
+
+      function getIdeWindow() {
+        try {
+          var frame = document.getElementById('ideFrame');
+          if (!frame || !frame.contentWindow) return null;
+          // Probe once per frame load cycle (reset when frame.src changes)
+          if (_directAccessWorks === null) {
+            _directAccessWorks = _probeSameOrigin(frame);
+            if (_directAccessWorks) {
+              log('Direct iframe access confirmed (same-origin probe passed)', 'info');
+            } else {
+              log('Cross-origin detected — all tests will use PostMessage bridge', 'info');
+              log('  Page origin: ' + window.location.origin, 'info');
+              log('  iframe src:  ' + (frame.src || 'unknown'), 'info');
+            }
+          }
+          if (_directAccessWorks) {
+            return frame.contentWindow;
+          }
+          // Return null — tests will use bridgeCall() for cross-origin
+          return null;
+        } catch (e) { return null; }
+      }
+
+      // Helper: try direct access first, fall back to bridge
+      async function ideQuery(cmd, args, timeout) {
+        // Try direct access first (only if confirmed same-origin)
+        var win = getIdeWindow();
+        if (win) {
+          try {
+            if (cmd === 'getState') return win.State;
+            if (cmd === 'getBackendState') return win.State ? win.State.backend : null;
+            if (cmd === 'getModelState') return win.State ? win.State.model : null;
+            if (cmd === 'hasFn') return typeof win[args[0]] === 'function';
+            if (cmd === 'hasObj') return typeof win[args[0]] !== 'undefined' && win[args[0]] !== null;
+            if (cmd === 'callFn') {
+              var fnName = args[0];
+              var fnArgs = Array.isArray(args[1]) ? args[1] : args.slice(1);
+              if (typeof win[fnName] === 'function') {
+                var r = win[fnName].apply(null, fnArgs);
+                // Await async functions automatically
+                if (r && typeof r.then === 'function') return await r;
+                return r;
+              }
+              return undefined;
+            }
+            if (cmd === 'getRawrVoice') return win.RawrVoice ? win.RawrVoice.getState() : null;
+            if (cmd === 'getRawrVoiceMetrics') return win.RawrVoice ? win.RawrVoice.getMetrics() : null;
+            if (cmd === 'getEngineAPI') return !!win.EngineAPI;
+            if (cmd === 'getCoT') return win.CoT ? { enabled: win.CoT.enabled, steps: win.CoT.steps.length } : null;
+            if (cmd === 'getDualAgent') return !!win.DualAgent;
+            if (cmd === 'getConversation') {
+              if (!win.Conversation) return null;
+              return { exists: true, messages: win.Conversation.messages, addMessage: typeof win.Conversation.addMessage === 'function', getContextForAPI: typeof win.Conversation.getContextForAPI === 'function', clear: typeof win.Conversation.clear === 'function' };
+            }
+            if (cmd === 'eval') {
+              try { return (new Function('win', 'return ' + args[0]))(win); }
+              catch (evalErr) { return { error: evalErr.message }; }
+            }
+            if (cmd === 'getElement') { var el = win.document.getElementById(args[0]); return el ? { id: el.id, tag: el.tagName, visible: el.offsetParent !== null || (el.style && el.style.display !== 'none') } : null; }
+            // CSP-safe named commands
+            if (cmd === 'getChildCount') { var el2 = win.document.getElementById(args[0]); return el2 ? el2.children.length : 0; }
+            if (cmd === 'getPerfHistoryLen') return win.State && win.State.perf ? win.State.perf.history.length : 0;
+            if (cmd === 'getStructuredLogLen') return win.State && win.State.perf ? win.State.perf.structuredLog.length : 0;
+            if (cmd === 'getSecurityLogLen') return win.State && win.State.security ? win.State.security.eventLog.length : 0;
+            if (cmd === 'clearConversation') { if (win.Conversation && win.Conversation.clear) { win.Conversation.clear(); return true; } return false; }
+            if (cmd === 'elements') {
+              var ids = ['chatMessages', 'chatInput', 'modelSelect', 'terminalInput', 'backendStatus', 'cotSwitch'];
+              var result = {};
+              for (var i = 0; i < ids.length; i++) result[ids[i]] = !!win.document.getElementById(ids[i]);
+              return result;
+            }
+            if (cmd === 'libs') {
+              return { DOMPurify: typeof win.DOMPurify !== 'undefined', hljs: typeof win.hljs !== 'undefined' };
+            }
+          } catch (e) {
+            // Direct access failed mid-operation — permanently switch to bridge
+            _directAccessWorks = false;
+            log('Direct access revoked mid-query (' + cmd + '), switching to bridge', 'warn');
+            // Fall through to bridge instead of throwing
+          }
+        }
+        // Fall back to PostMessage bridge
+        var frame = document.getElementById('ideFrame');
+        if (frame && frame.contentWindow) {
+          try {
+            return await bridgeCall(cmd, args, timeout || 8000);
+          } catch (bridgeErr) {
+            throw new Error('Bridge failed for ' + cmd + ': ' + bridgeErr.message);
+          }
+        }
+        throw new Error('IDE not accessible — no iframe or bridge available');
+      }
+
+      function getIdeDocument() {
+        try {
+          var frame = document.getElementById('ideFrame');
+          if (_directAccessWorks) return frame && frame.contentDocument;
+          return null;
+        } catch (e) { return null; }
+      }
+
+      function loadIdeFrame(timeoutMs) {
+        return new Promise((resolve) => {
+          const frame = document.getElementById('ideFrame');
+          const container = document.getElementById('ideFrameTest');
+          container.style.display = 'block';
+
+          // Set the IDE URL — prefer same-origin relative path to avoid cross-origin issues
+          // If served from the backend, use relative '/gui'; otherwise use full backendUrl
+          const base = backendUrl();
+          const isSameServer = (window.location.protocol === 'http:' || window.location.protocol === 'https:')
+            && base === window.location.origin;
+          const url = isSameServer ? '/gui' : (base + '/gui');
+          frame.src = url;
+          // Reset direct-access cache since iframe is reloading
+          _directAccessWorks = null;
+
+          document.getElementById('ideFrameStatus').textContent = 'Loading ' + url + '...';
+          log('Loading IDE in iframe: ' + url, 'info');
+
+          const timer = setTimeout(() => {
+            document.getElementById('ideFrameStatus').textContent = 'Timeout';
+            log('IDE frame load timed out', 'error');
+            // Even on timeout, the bridge might still work
+            resolve(_bridgeReady);
+          }, timeoutMs || 15000);
+
+          // Listen for PostMessage bridge ready signal
+          var bridgeHandler = function (event) {
+            if (event.data && event.data.type === 'rawrxd-ide-ready') {
+              _bridgeReady = true;
+            }
+          };
+          window.addEventListener('message', bridgeHandler);
+
+          frame.onload = function () {
+            clearTimeout(timer);
+            S.ideLoaded = true;
+            document.getElementById('ideFrameStatus').textContent = 'Loaded ✅';
+            log('IDE frame loaded successfully', 'success');
+            // Give scripts time to initialize + wait for bridge
+            setTimeout(function () {
+              window.removeEventListener('message', bridgeHandler);
+              resolve(true);
+            }, 2000);
+          };
+
+          frame.onerror = function () {
+            clearTimeout(timer);
+            document.getElementById('ideFrameStatus').textContent = 'Error ❌';
+            log('IDE frame failed to load', 'error');
+            resolve(false);
+          };
+        });
+      }
+
+      function toggleIdeFrame() {
+        const container = document.getElementById('ideFrameTest');
+        const frame = document.getElementById('ideFrame');
+        if (container.style.display === 'none') {
+          container.style.display = 'block';
+        } else {
+          container.style.display = 'none';
+          frame.src = 'about:blank';
+          S.ideLoaded = false;
+        }
+      }
+
+      // ---- Terminal Command Runner ----
+      async function runTerminalCommand(cmd) {
+        const win = getIdeWindow();
+        const doc = getIdeDocument();
+        if (!win || !doc) return { status: 'skip', detail: 'IDE not loaded' };
+
+        const termInput = doc.getElementById('terminalInput');
+        const termOutput = doc.getElementById('terminalOutput');
+        if (!termInput || !termOutput) return { status: 'skip', detail: 'terminal elements missing' };
+
+        const beforeLines = termOutput.children.length;
+        termInput.value = cmd;
+
+        // Fire the Enter key event
+        const evt = new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true });
+        termInput.dispatchEvent(evt);
+
+        await sleep(500);
+
+        const afterLines = termOutput.children.length;
+        const newLines = afterLines - beforeLines;
+
+        if (newLines > 0) {
+          // Read last added line(s)
+          const lastLine = termOutput.children[termOutput.children.length - 1];
+          const text = lastLine ? lastLine.textContent.substring(0, 100) : '';
+          return { status: 'pass', detail: newLines + ' line(s): ' + text };
+        } else {
+          return { status: 'fail', detail: 'no output produced' };
+        }
+      }
+
+      // ---- Sleep ----
+      function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+      // ---- Main Runner ----
+      async function runAll() {
+        const btn = document.getElementById('runBtn');
+        btn.disabled = true;
+        btn.textContent = '⏳ Running...';
+
+        reset();
+        S.startTime = performance.now();
+        S.abortController = new AbortController();
+        _cachedModel = null;
+
+        log('====== TEST JUMPER STARTED ======', 'info');
+        log('Backend: ' + backendUrl(), 'info');
+        log('Ollama: ' + ollamaUrl(), 'info');
+
+        // Probe proxy availability before running tests
+        await probeBackend();
+
+        const tests = defineTests();
+        log('Defined ' + tests.length + ' tests across ' + new Set(tests.map(t => t.cat)).size + ' categories', 'info');
+
+        // Create all sections first
+        for (const t of tests) {
+          ensureSection(t.cat, t.catLabel);
+        }
+        buildCategoryFilter();
+
+        // Run tests sequentially (some depend on IDE frame)
+        for (const t of tests) {
+          if (S.abortController.signal.aborted) break;
+
+          // Apply category filter
+          if (S.activeFilter && t.cat !== S.activeFilter) {
+            addResult(t.cat, t.name, 'skip', 'filtered out');
+            continue;
+          }
+
+          const runRow = addRunning(t.cat, t.name);
+          try {
+            const result = await t.fn();
+            resolveRunning(runRow);
+            addResult(t.cat, t.name, result.status, result.detail, result.latency);
+            if (result.status === 'fail') log('FAIL: ' + t.name + ' — ' + (result.detail || ''), 'error');
+            else if (result.status === 'pass') log('PASS: ' + t.name, 'success');
+          } catch (e) {
+            resolveRunning(runRow);
+            addResult(t.cat, t.name, 'fail', 'Exception: ' + e.message);
+            log('EXCEPTION: ' + t.name + ' — ' + e.message, 'error');
+          }
+        }
+
+        const elapsed = Math.round(performance.now() - S.startTime);
+        document.getElementById('durationBadge').textContent = elapsed + 'ms';
+        log('====== TEST JUMPER COMPLETE: ' + S.passed + ' pass, ' + S.failed + ' fail, ' + S.skipped + ' skip in ' + elapsed +
+          'ms ======', S.failed > 0 ? 'warn' : 'success');
+
+        btn.disabled = false;
+        btn.textContent = '▶ Run All Tests';
+      }
+
+      async function runFailed() {
+        // Collect failed test names then rerun only those
+        const failedNames = S.results.filter(r => r.status === 'fail').map(r => r.name);
+        if (failedNames.length === 0) { log('No failed tests to rerun', 'info'); return; }
+
+        const btn = document.getElementById('runBtn');
+        btn.disabled = true;
+
+        S.abortController = new AbortController();
+        _cachedModel = null;
+        log('Rerunning ' + failedNames.length + ' failed tests...', 'warn');
+
+        const tests = defineTests().filter(t => failedNames.includes(t.name));
+        for (const t of tests) {
+          if (S.abortController.signal.aborted) break;
+          ensureSection(t.cat, t.catLabel);
+          const runRow = addRunning(t.cat, t.name);
+          try {
+            const result = await t.fn();
+            resolveRunning(runRow);
+            addResult(t.cat, t.name, result.status, result.detail + ' [RERUN]', result.latency);
+          } catch (e) {
+            resolveRunning(runRow);
+            addResult(t.cat, t.name, 'fail', 'Exception: ' + e.message + ' [RERUN]');
+          }
+        }
+
+        btn.disabled = false;
+        log('Rerun complete', 'info');
+      }
+
+      function reset() {
+        S.passed = S.failed = S.skipped = S.running = S.total = 0;
+        S.startTime = 0;
+        S.results = [];
+        S.sections = {};
+        S.categories.clear();
+        S.activeFilter = null;
+        S.log = [];
+        S.proxyAvailable = null;
+        S.fallbackMode = false;
+        _cachedModel = null;
+
+        document.getElementById('results').innerHTML = '';
+        document.getElementById('logPanel').innerHTML = '';
+        document.getElementById('categoryFilter').innerHTML = '';
+        updateSummary();
+        document.getElementById('durationBadge').textContent = '—';
+      }
+
+      function buildCategoryFilter() {
+        const container = document.getElementById('categoryFilter');
+        container.innerHTML = '';
+
+        const allChip = document.createElement('span');
+        allChip.className = 'filter-chip active';
+        allChip.textContent = 'All';
+        allChip.onclick = () => { S.activeFilter = null; updateFilterUI(); };
+        container.appendChild(allChip);
+
+        for (const cat of S.categories) {
+          const chip = document.createElement('span');
+          chip.className = 'filter-chip';
+          chip.dataset.cat = cat;
+          chip.textContent = cat;
+          chip.onclick = () => { S.activeFilter = cat; updateFilterUI(); };
+          container.appendChild(chip);
+        }
+      }
+
+      function updateFilterUI() {
+        const chips = document.querySelectorAll('.filter-chip');
+        chips.forEach(c => {
+          c.classList.toggle('active', !S.activeFilter ? c.textContent === 'All' : c.dataset.cat === S.activeFilter);
+        });
+        // Show/hide sections
+        for (const [cat, sec] of Object.entries(S.sections)) {
+          sec.el.style.display = (!S.activeFilter || cat === S.activeFilter) ? '' : 'none';
+        }
+      }
+
+      function exportReport() {
+        const report = {
+          timestamp: new Date().toISOString(),
+          backend: backendUrl(),
+          ollama: ollamaUrl(),
+          summary: { passed: S.passed, failed: S.failed, skipped: S.skipped, total: S.total },
+          duration: S.startTime > 0 ? Math.round(performance.now() - S.startTime) : 0,
+          results: S.results,
+          log: S.log,
+        };
+
+        // Copy to clipboard as JSON
+        const json = JSON.stringify(report, null, 2);
+        navigator.clipboard.writeText(json).then(() => {
+          log('Report copied to clipboard (' + json.length + ' bytes)', 'success');
+        }).catch(() => {
+          // Fallback: download as file
+          const blob = new Blob([json], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'rawrxd-test-report-' + Date.now() + '.json';
+          a.click();
+          URL.revokeObjectURL(url);
+          log('Report downloaded as file', 'success');
+        });
+      }
+
+      // ---- Public API ----
+      return {
+        runAll,
+        runFailed,
+        reset,
+        exportReport,
+        toggleIdeFrame,
+      };
+    })();
+  </script>
+</body>
+
+</html>

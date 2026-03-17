@@ -1,0 +1,14 @@
+{
+    "extensions": [
+        {
+            "Id": "community-code-snippets",
+            "Name": "Community Code Snippets",
+            "Description": "A collection of useful code snippets from the community.",
+            "Author": "Community",
+            "Version": "1.0.0",
+            "Category": "Snippets",
+            "Tags": ["snippets", "community"],
+            "MarketplaceId": "community"
+        }
+    ]
+}

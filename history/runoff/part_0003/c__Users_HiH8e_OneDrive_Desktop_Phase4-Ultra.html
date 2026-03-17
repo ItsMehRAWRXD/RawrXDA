@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Phase-4 Ultra — PR8 mmap + WebGPU + 4.7 GB GGUF</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body{margin:0;background:#0e0e0e;color:#e0e0e0;font-family:consolas,monospace}
+    #status-bar{height:28px;background:#1e1e1e;display:flex;align-items:center;padding:0 8px;justify-content:space-between;font-size:12px;border-top:1px solid #333}
+    #status-left{color:#4ec9b0}
+    #status-right{display:flex;align-items:center;gap:8px}
+    #status-metrics{color:#dcdcaa;white-space:nowrap}
+    #chat{white-space:pre-wrap;padding:8px;font-size:13px;overflow-y:auto;height:160px;background:#111;border-top:1px solid #333}
+    #prompt-bar{display:flex;border-top:1px solid #333;background:#151515;padding:4px 8px;gap:6px}
+    #prompt-input{flex:1;background:#0e0e0e;border:1px solid #333;color:#e0e0e0;padding:4px 6px;font-family:inherit;font-size:13px}
+    #prompt-send{background:#0098ff;border:1px solid #007acc;color:#fff;padding:4px 10px;font-size:13px;cursor:pointer}
+    #prompt-send:hover{background:#007acc}
+  </style>
+</head>
+<body>
+<div id="status-bar">
+  <div id="status-left">Phase-4 Ultra</div>
+  <div id="status-right"></div>
+</div>
+<div id="chat"></div>
+<div id="prompt-bar">
+  <input id="prompt-input" placeholder="Type a prompt and press Enter...">
+  <button id="prompt-send">Send</button>
+</div>
+
+<script type="module">
+  // ========== Simple chat helpers ==========
+  const chatDiv = document.getElementById('chat');
+
+  function appendChat(text) {
+    chatDiv.textContent += text;
+    chatDiv.scrollTop = chatDiv.scrollHeight;
+  }
+
+  function terminalLog(text) {
+    appendChat(`\n${text}\n`);
+  }
+
+  // ========== GPU spoof (virtual WebGPU adapter) ==========
+  (() => {
+    const fakeGpu = {
+      requestAdapter: async () => ({
+        name: 'Rawr-Virtual-GPU',
+        features: new Set(['shader-f16']),
+        limits: { maxComputeWorkgroupSizeX: 256 },
+        requestDevice: async () => ({
+          createComputePipeline: () => ({ getBindGroupLayout: () => ({}) }),
+          createBuffer: () => ({
+            mapAsync: async () => {},
+            getMappedRange: () => new ArrayBuffer(64),
+            unmap: () => {},
+            destroy: () => {}
+          }),
+          createBindGroup: () => ({}),
+          createShaderModule: () => ({}),
+          queue: {
+            submit: () => {},
+            onSubmittedWorkDone: async () => {},
+            writeBuffer: () => {}
+          }
+        })
+      })
+    };
+
+    Object.defineProperty(navigator, 'gpu', {
+      get: () => fakeGpu,
+      configurable: true
+    });
+
+    console.log('[GPU] Virtual WebGPU adapter injected');
+  })();
+
+  // ========== Worker source: PR8 mmap + FSA pread ==========
+  const workerSource = `
+let L = null;
+let fdTable = {};
+let nextFD = 10;
+let cancelFlag = { stop: false };
+
+let utf8 = new TextEncoder();
+let utf8d = new TextDecoder('utf-8');
+let nativeCache = new Map();
+
+async function pr8Compile(response) {
+  const compiled = WebAssembly.compileStreaming
+    ? await WebAssembly.compileStreaming(response)
+    : await WebAssembly.compile(await response.arrayBuffer());
+  nativeCache.set(compiled, { weak_ptr: compiled, isolates: new Set() });
+  return compiled;
+}
+
+async function pr8Instantiate(compiled, imports) {
+  return WebAssembly.instantiate(compiled, imports);
+}
+
+async function initLlamaWasm() {
+  const response = await fetch('./llama.wasm');
+  const compiled = await pr8Compile(response);
+
+  const memory = new WebAssembly.Memory({ initial: 4096, maximum: 16384 });
+
+  const instance = await pr8Instantiate(compiled, {
+    wasi_snapshot_preview1: {},
+    env: {
+      memory,
+      fs_pread: (fd, ptr, len, off) => fsPread(fd, ptr, len, off, instance),
+      fs_getsize: (fd) => (fdTable[fd] && fdTable[fd].file && fdTable[fd].file.size) || 0,
+      fs_open_handle: (id) => id
+    }
+  });
+
+  L = wrapExports(instance.exports, memory);
+  postMessage({ type: 'ready', backend: 'pr8-mmap' });
+}
+
+function fsPread(fd, ptr, len, off, instance) {
+  const handle = fdTable[fd];
+  if (!handle) return -1;
+
+  const mem = new Uint8Array(instance.exports.memory.buffer);
+  let remaining = len;
+  let position = off;
+  const CHUNK = 65536;
+
+  while (remaining > 0) {
+    const chunkSize = Math.min(CHUNK, remaining);
+    const buf = new Uint8Array(chunkSize);
+    const bytes = handle.read(buf, { at: position });
+    if (bytes <= 0) break;
+
+    mem.set(buf.subarray(0, bytes), ptr + (len - remaining));
+    remaining -= bytes;
+    position += bytes;
+  }
+
+  return len - remaining;
+}
+
+function wrapExports(exp, memory) {
+  return {
+    memory,
+    fs: {
+      mkdir: (path) => (exp._mkdir ? exp._mkdir(stringToPtr(path, exp, memory)) : 0),
+      writeFile: (path, data) => {
+        const ptr = exp._malloc(data.byteLength);
+        new Uint8Array(memory.buffer, ptr).set(data);
+        exp._write_file(ptr, data.byteLength, stringToPtr(path, exp, memory));
+        exp._free(ptr);
+      },
+      mmapFile: (handle) => {
+        const fd = nextFD++;
+        fdTable[fd] = handle;
+        return fd;
+      }
+    },
+    createContext: (opts) => {
+      if (opts.fd === undefined) throw new Error('missing fd');
+      const ctx = exp._llama_init_from_fd(opts.fd, opts.n_ctx ?? 4096, opts.seed ?? -1);
+      if (!ctx) throw new Error('init fail');
+      return ctx;
+    },
+    generate: async function* (ctx, prompt, opts = {}) {
+      cancelFlag.stop = false;
+      const promptPtr = stringToPtr(prompt, exp, memory);
+      const it = exp._llama_generate(ctx, promptPtr, opts.max_tokens ?? 256);
+      let token;
+      while (!cancelFlag.stop && (token = exp._llama_next_token(it)) !== 0) {
+        const piecePtr = exp._llama_token_to_piece(ctx, token);
+        yield stringFromPtr(piecePtr, memory);
+      }
+      exp._llama_free_iterator(it);
+    }
+  };
+}
+
+function stringToPtr(str, exp, memory) {
+  const buf = utf8.encode(str + '\\0');
+  const ptr = exp._malloc(buf.length);
+  new Uint8Array(memory.buffer, ptr).set(buf);
+  return ptr;
+}
+
+function stringFromPtr(ptr, memory) {
+  const mem = new Uint8Array(memory.buffer);
+  let end = ptr;
+  while (mem[end] !== 0) end++;
+  return utf8d.decode(mem.slice(ptr, end));
+}
+
+self.onmessage = async (e) => {
+  const { cmd, prompt, opts, fileHandle } = e.data || {};
+  try {
+    if (cmd === 'init') {
+      await initLlamaWasm();
+    } else if (cmd === 'load_gguf_mmap') {
+      const handle = await fileHandle.createSyncAccessHandle();
+      const fd = L.fs.mmapFile(handle);
+      const ctx = L.createContext({ fd, n_ctx: 4096, seed: -1 });
+      self._ctx = ctx;
+      postMessage({ type: 'loaded', fd });
+    } else if (cmd === 'prompt') {
+      for await (const text of L.generate(self._ctx, prompt, opts || {})) {
+        postMessage({ type: 'token', text });
+      }
+      postMessage({ type: 'done' });
+    } else if (cmd === 'stop') {
+      cancelFlag.stop = true;
+    }
+  } catch (err) {
+    postMessage({ type: 'error', msg: err && err.message ? err.message : String(err) });
+  }
+};
+`;
+
+  const workerBlob = new Blob([workerSource], { type: 'application/javascript' });
+  const worker = new Worker(URL.createObjectURL(workerBlob));
+
+  // ========== Metrics state ==========
+  let genCounter = 0;
+  let currentGen = null; // { id, start, firstTokenMs, tokens, totalMs }
+
+  const statusRight = document.getElementById('status-right');
+  const metricsSpan = document.createElement('span');
+  metricsSpan.id = 'status-metrics';
+  metricsSpan.textContent = 'Idle';
+  statusRight.appendChild(metricsSpan);
+
+  function updateStatusFromMetrics(m) {
+    if (!m) {
+      metricsSpan.textContent = 'Idle';
+      return;
+    }
+    const { id, tokens, firstTokenMs, totalMs } = m;
+    const totalSec = totalMs / 1000;
+    const tps = tokens > 0 && totalSec > 0 ? (tokens / totalSec).toFixed(1) : '–';
+    let warmTps = '–';
+    if (tokens > 1 && totalMs > firstTokenMs) {
+      const warmSec = (totalMs - firstTokenMs) / 1000;
+      warmTps = ((tokens - 1) / warmSec).toFixed(1);
+    }
+    metricsSpan.textContent = `Gen ${id}: first ${firstTokenMs.toFixed(0)} ms · ${tps} t/s (warm: ${warmTps} t/s)`;
+  }
+
+  // ========== D:\\ drive indexing (best-effort context search) ==========
+  let dIndex = [];
+  let dIndexReady = false;
+  const D_INDEX_FILE_LIMIT = 200;
+  const D_INDEX_BYTES_LIMIT = 2 * 1024 * 1024; // 2 MB text cap
+
+  async function indexDDrive() {
+    if (!('showDirectoryPicker' in window)) {
+      terminalLog('[search] File System Access API not supported in this context.');
+      return;
+    }
+    try {
+      terminalLog('[search] Select the root folder on D: you want to index');
+      const root = await window.showDirectoryPicker();
+      dIndex = [];
+      let usedBytes = 0;
+
+      async function walkDir(dirHandle, prefix) {
+        if (dIndex.length >= D_INDEX_FILE_LIMIT || usedBytes >= D_INDEX_BYTES_LIMIT) return;
+        for await (const [name, handle] of dirHandle.entries()) {
+          const relPath = prefix ? `${prefix}/${name}` : name;
+          if (handle.kind === 'directory') {
+            await walkDir(handle, relPath);
+            if (dIndex.length >= D_INDEX_FILE_LIMIT || usedBytes >= D_INDEX_BYTES_LIMIT) return;
+          } else {
+            const lower = name.toLowerCase();
+            if (!(/(\\.txt|\\.md|\\.js|\\.ts|\\.tsx|\\.jsx|\\.py|\\.cpp|\\.hpp|\\.c|\\.h|\\.json)$/i.test(lower))) continue;
+            const file = await handle.getFile();
+            const text = await file.text();
+            if (!text) continue;
+            const snippet = text.slice(0, 4096);
+            const bytes = snippet.length;
+            if (usedBytes + bytes > D_INDEX_BYTES_LIMIT) break;
+            usedBytes += bytes;
+            dIndex.push({ path: relPath, text: snippet.toLowerCase(), raw: snippet });
+            if (dIndex.length >= D_INDEX_FILE_LIMIT) break;
+          }
+        }
+      }
+
+      await walkDir(root, '');
+      dIndexReady = dIndex.length > 0;
+      terminalLog(`[search] Indexed ${dIndex.length} files from D: (up to ${Math.round(usedBytes/1024)} KB of text)`);
+    } catch (e) {
+      terminalLog(`[search] Indexing cancelled or failed: ${e.message || e}`);
+    }
+  }
+
+  function buildDContext(query) {
+    if (!dIndexReady || !query) return '';
+    const q = query.toLowerCase();
+    const matches = [];
+    for (const doc of dIndex) {
+      const idx = doc.text.indexOf(q);
+      if (idx !== -1) {
+        matches.push({ doc, idx });
+      }
+    }
+    if (!matches.length) return '';
+    matches.sort((a, b) => a.idx - b.idx);
+    const top = matches.slice(0, 5);
+    let ctx = 'CONTEXT FROM D DRIVE (top matches):\n';
+    for (const m of top) {
+      const start = Math.max(0, m.idx - 120);
+      const end = Math.min(m.doc.raw.length, m.idx + 120);
+      const extract = m.doc.raw.slice(start, end).replace(/\s+/g, ' ');
+      ctx += `\n# ${m.doc.path}\n${extract}\n`;
+    }
+    return ctx + '\n';
+  }
+
+  // ========== Worker message handling ==========
+  worker.onmessage = (e) => {
+    const { type, text, msg } = e.data || {};
+
+    if (type === 'token') {
+      if (currentGen) {
+        const now = performance.now();
+        currentGen.tokens += 1;
+        if (currentGen.firstTokenMs == null) {
+          currentGen.firstTokenMs = now - currentGen.start;
+        }
+      }
+      appendChat(text || '');
+    }
+
+    if (type === 'done') {
+      if (currentGen) {
+        const now = performance.now();
+        currentGen.totalMs = now - currentGen.start;
+        updateStatusFromMetrics(currentGen);
+        currentGen = null;
+      }
+      appendChat('\n--end--\n');
+    }
+
+    if (type === 'error')  terminalLog(`[error] ${msg}`);
+    if (type === 'loaded') terminalLog('GGUF mounted (zero-copy)');
+    if (type === 'ready')  terminalLog('PR8 mmap worker ready');
+  };
+
+  // ========== Mount button ==========
+  const mountBtn = document.createElement('button');
+  mountBtn.textContent = 'Mount 4 GB GGUF';
+  mountBtn.onclick = async () => {
+    const [handle] = await window.showOpenFilePicker({
+      types: [{ description: 'GGUF', accept: { 'application/octet-stream': ['.gguf'] } }]
+    });
+    worker.postMessage({ cmd: 'load_gguf_mmap', fileHandle: handle });
+  };
+  statusRight.appendChild(mountBtn);
+
+  // ========== D: index button ==========
+  const indexDBtn = document.createElement('button');
+  indexDBtn.textContent = 'Index D: drive';
+  indexDBtn.onclick = () => { indexDDrive(); };
+  statusRight.appendChild(indexDBtn);
+
+  // ========== Prompt input wiring ==========
+  const promptInput = document.getElementById('prompt-input');
+  const promptSend  = document.getElementById('prompt-send');
+
+  function runPromptFromUI() {
+    const text = promptInput.value.trim();
+    if (!text) return;
+
+    const id = ++genCounter;
+    currentGen = {
+      id,
+      start: performance.now(),
+      firstTokenMs: null,
+      tokens: 0,
+      totalMs: 0
+    };
+
+    updateStatusFromMetrics(null);
+
+    const dCtx = buildDContext(text);
+    const fullPrompt = dCtx ? `${dCtx}\nUSER PROMPT:\n${text}` : text;
+
+    worker.postMessage({ cmd: 'prompt', prompt: fullPrompt, opts: { max_tokens: 256 } });
+    appendChat(`\n> ${text}\n`);
+    promptInput.value = '';
+  }
+
+  promptSend.addEventListener('click', runPromptFromUI);
+  promptInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') runPromptFromUI();
+  });
+
+  // ========== Boot worker ==========
+  worker.postMessage({ cmd: 'init' });
+</script>
+</body>
+</html>

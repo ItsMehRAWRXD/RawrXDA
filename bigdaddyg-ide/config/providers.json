@@ -6,15 +6,21 @@
   },
   "copilot": {
     "enabled": false,
-    "token": ""
+    "token": "",
+    "url": "http://localhost:11434",
+    "model": "codellama"
   },
   "amazonq": {
     "enabled": false,
-    "region": "us-east-1"
+    "region": "us-east-1",
+    "url": "http://localhost:11434",
+    "model": "qwen2.5-coder"
   },
   "cursor": {
     "enabled": false,
-    "apiKey": ""
+    "apiKey": "",
+    "url": "http://localhost:11434",
+    "model": "deepseek-coder"
   },
   "experimental": {
     "autonomousAgent": false,

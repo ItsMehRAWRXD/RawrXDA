@@ -1,0 +1,31 @@
+// PATCH: Remove all HTTP/Ollama networking code from ai_chat_panel.cpp
+// This file contains the cleaned implementation focusing only on local GGUF routing
+
+// Lines to remove/replace in initialize():
+// - All m_cloudEnabled, m_localEnabled, m_cloudEndpoint, m_localEndpoint, m_apiKey, m_requestTimeout assignments
+// - fetchAvailableModels() call
+// - m_network creation
+
+// Lines to remove in setupUI():
+// - m_modelSelector creation and connection
+// - m_network creation
+
+// Methods to completely remove:
+// - fetchAvailableModels()
+// - onModelsListFetched()
+// - onModelSelected()
+// - sendMessageToBackend()
+// - buildCloudPayload()
+// - buildLocalPayload()
+// - extractAssistantText()
+// - onNetworkFinished()
+// - onNetworkError()
+// - setCloudConfiguration()
+// - setLocalConfiguration()
+// - setLocalModel()
+// - setSelectedModel()
+// - setRequestTimeout()
+
+// References to remove:
+// - All m_localModel references in onSendClicked
+// - Any m_network, m_cloudEnabled, m_localEnabled, etc. checks

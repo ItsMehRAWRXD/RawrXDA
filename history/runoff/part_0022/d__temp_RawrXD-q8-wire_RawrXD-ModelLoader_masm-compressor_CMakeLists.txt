@@ -1,0 +1,39 @@
+# MASM-Compressed GGUF Builder
+cmake_minimum_required(VERSION 3.20)
+project(MASM_GGUF_Compressor)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Enable MASM
+enable_language(ASM_MASM)
+
+# MASM compression kernels
+set(KERNEL_DIR "${CMAKE_SOURCE_DIR}/../kernels")
+
+add_library(masm_compression STATIC
+    ${KERNEL_DIR}/deflate_compress_masm.asm
+)
+
+# MASM options for x64
+set_source_files_properties(
+    ${KERNEL_DIR}/deflate_compress_masm.asm
+    PROPERTIES
+    COMPILE_FLAGS "/nologo /c /Cx"
+)
+
+# MASM GGUF compressor executable
+add_executable(masm_gguf_compress
+    ${CMAKE_SOURCE_DIR}/../src/masm_gguf_example.cpp
+)
+
+target_include_directories(masm_gguf_compress PRIVATE
+    ${CMAKE_SOURCE_DIR}/../src
+)
+
+target_link_libraries(masm_gguf_compress PRIVATE
+    masm_compression
+)
+
+message(STATUS "MASM GGUF Compressor configured")
+message(STATUS "  Kernels: deflate_brutal_masm.asm, deflate_godmode_masm.asm")

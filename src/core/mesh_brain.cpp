@@ -17,10 +17,92 @@
 #include <cstring>
 #include <cstdio>
 #include <algorithm>
+#include <array>
+#include <unordered_map>
+
+namespace {
+
+std::mutex g_meshFallbackMutex;
+std::unordered_map<uint64_t, uint64_t> g_meshFallbackCrdt;
+std::vector<std::array<uint64_t, 4>> g_meshFallbackTopology;
+
+std::array<uint64_t, 4> meshCopyNodeId(const uint64_t* nodeId) {
+    std::array<uint64_t, 4> copied = {0, 0, 0, 0};
+    if (nodeId) {
+        copied[0] = nodeId[0];
+        copied[1] = nodeId[1];
+        copied[2] = nodeId[2];
+        copied[3] = nodeId[3];
+    }
+    return copied;
+}
+
+bool meshNodeIdEqual(const std::array<uint64_t, 4>& a, const std::array<uint64_t, 4>& b) {
+    return a[0] == b[0] && a[1] == b[1] && a[2] == b[2] && a[3] == b[3];
+}
+
+} // namespace
 
 extern "C" {
-void asm_mesh_crdt_track(uint64_t key, uint64_t value);
-void asm_mesh_topology_track(const uint64_t* nodeId);
+
+int asm_mesh_crdt_lookup(uint64_t key, uint64_t* outValue) {
+    std::lock_guard<std::mutex> lock(g_meshFallbackMutex);
+    auto it = g_meshFallbackCrdt.find(key);
+    if (it == g_meshFallbackCrdt.end()) {
+        return 0;
+    }
+    if (outValue) {
+        *outValue = it->second;
+    }
+    return 1;
+}
+
+void asm_mesh_crdt_track(uint64_t key, uint64_t value) {
+    std::lock_guard<std::mutex> lock(g_meshFallbackMutex);
+    g_meshFallbackCrdt[key] = value;
+}
+
+void asm_mesh_topology_track(const uint64_t* nodeId) {
+    std::lock_guard<std::mutex> lock(g_meshFallbackMutex);
+    const auto id = meshCopyNodeId(nodeId);
+    const auto it = std::find_if(g_meshFallbackTopology.begin(), g_meshFallbackTopology.end(),
+        [&](const std::array<uint64_t, 4>& existing) { return meshNodeIdEqual(existing, id); });
+    if (it == g_meshFallbackTopology.end()) {
+        g_meshFallbackTopology.push_back(id);
+    }
+}
+
+void asm_mesh_topology_remove(const uint64_t* nodeId) {
+    std::lock_guard<std::mutex> lock(g_meshFallbackMutex);
+    const auto id = meshCopyNodeId(nodeId);
+    g_meshFallbackTopology.erase(
+        std::remove_if(g_meshFallbackTopology.begin(), g_meshFallbackTopology.end(),
+            [&](const std::array<uint64_t, 4>& existing) { return meshNodeIdEqual(existing, id); }),
+        g_meshFallbackTopology.end());
+}
+
+uint32_t asm_mesh_topology_count(void) {
+    std::lock_guard<std::mutex> lock(g_meshFallbackMutex);
+    return static_cast<uint32_t>(g_meshFallbackTopology.size());
+}
+
+void asm_mesh_topology_list(void* outBuf, uint32_t maxCount) {
+    if (!outBuf || maxCount == 0) {
+        return;
+    }
+
+    std::lock_guard<std::mutex> lock(g_meshFallbackMutex);
+    const uint32_t count = std::min<uint32_t>(maxCount, static_cast<uint32_t>(g_meshFallbackTopology.size()));
+    auto* out = static_cast<MeshNodeInfo*>(outBuf);
+
+    for (uint32_t i = 0; i < count; ++i) {
+        std::memset(&out[i], 0, sizeof(MeshNodeInfo));
+        std::memcpy(out[i].nodeId, g_meshFallbackTopology[i].data(), sizeof(uint64_t) * 4);
+        out[i].flags = 1;
+        out[i].fitness = 100;
+        out[i].lastSeen = __rdtsc();
+    }
+}
 }
 
 // ---------------------------------------------------------------------------

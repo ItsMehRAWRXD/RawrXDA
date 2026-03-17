@@ -1,0 +1,20 @@
+02:54:55.662 | === RAWRXD SELF-HEALING DEMO ===
+02:54:55.669 | Start: 03/14/2026 02:54:55
+02:54:55.679 | Build env injected (MSVC+SDK): msvc=C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717 sdk=C:\Program Files (x86)\Windows Kits\10
+02:54:55.679 | Build command: cmake --build build_prod --config Release --target test_autonomous_pipeline 2>&1
+02:54:55.680 | [PHASE 0] Baseline check before controlled break...
+02:54:55.843 | Baseline exit code: 0
+02:54:55.849 | Baseline errors: 0
+02:54:55.851 | [PHASE 1] Injecting intentional build failure...
+02:54:55.858 | Injected break into: tests\test_autonomous_pipeline.cpp
+02:54:55.860 | [PHASE 2] Verifying build fails without fix...
+cmake : mingw32-make[3]: *** 
+[CMakeFiles\test_autonomous_pipeline.dir\build.make:78: CMakeFiles/test_auton
+omous_pipeline.dir/tests/test_autonomous_pipeline.cpp.obj] Error 2
+At line:1 char:1
++ cmake --build build_prod --config Release --target test_autonomous_pi ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (mingw32-make[3]...pp.obj] Error 
+    2:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 

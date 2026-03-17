@@ -230,15 +230,15 @@ std::vector<QuantumTask> AdvancedAutonomousTaskManager::generate_todos_automatic
                     todo.priority = QuantumTaskPriority::HIGH_PRIORITY;
                     todo.complexity = TaskComplexity::COMPLEX;
                     break;
-                case AgenticDeepThinkingEngine::ThinkingStep::SolutionGeneration:
+                case AgenticDeepThinkingEngine::ThinkingStep::HypothesisGeneration:
                     todo.priority = QuantumTaskPriority::CRITICAL_QUANTUM;
                     todo.complexity = TaskComplexity::QUANTUM;
                     break;
-                case AgenticDeepThinkingEngine::ThinkingStep::Implementation:
+                case AgenticDeepThinkingEngine::ThinkingStep::CodeSynthesizing:
                     todo.priority = QuantumTaskPriority::HIGH_PRIORITY;
                     todo.complexity = TaskComplexity::COMPLEX;
                     break;
-                case AgenticDeepThinkingEngine::ThinkingStep::Testing:
+                case AgenticDeepThinkingEngine::ThinkingStep::Validation:
                     todo.priority = QuantumTaskPriority::NORMAL;
                     todo.complexity = TaskComplexity::MODERATE;
                     break;
@@ -469,10 +469,14 @@ std::string AdvancedAutonomousTaskManager::execute_powershell_command(
         auto execution_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
         
         // Update average execution time
-        powershell_stats_.avg_execution_time = std::chrono::milliseconds(
-            (powershell_stats_.avg_execution_time.count() * (powershell_stats_.successful_commands) + 
-             execution_time.count()) / (powershell_stats_.successful_commands + 1)
-        );
+        if (powershell_stats_.successful_commands > 0) {
+            powershell_stats_.avg_execution_time = std::chrono::milliseconds(
+                (powershell_stats_.avg_execution_time.count() * (powershell_stats_.successful_commands) + 
+                 execution_time.count()) / (powershell_stats_.successful_commands + 1)
+            );
+        } else {
+            powershell_stats_.avg_execution_time = execution_time;
+        }
         
         powershell_stats_.successful_commands++;
         powershell_stats_.current_timeout = timeout;

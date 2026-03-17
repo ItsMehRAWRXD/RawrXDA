@@ -1,0 +1,6 @@
+LIBRARY RawrXD_Titan
+EXPORTS
+    Titan_Initialize     @1
+    Titan_InferAsync     @2
+    Titan_Shutdown       @3
+    Titan_Abort          @4

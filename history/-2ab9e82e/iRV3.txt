@@ -1,0 +1,91 @@
+cmake_minimum_required(VERSION 3.25)
+project(NativeIDE LANGUAGES CXX ASM)
+
+# Set C++ standard and requirements
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Configure for static linking (portable executable)
+if(WIN32)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    add_compile_options(-static -static-libgcc -static-libstdc++)
+endif()
+
+# Security and performance flags
+if(MSVC)
+    add_compile_options(/W4 /WX /GS /sdl)
+    add_link_options(/NXCOMPAT /DYNAMICBASE)
+else()
+    add_compile_options(-Wall -Wextra -Werror -fstack-protector-strong -D_FORTIFY_SOURCE=2)
+    add_link_options(-Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now)
+endif()
+
+# Find required packages
+if(WIN32)
+    # Windows-specific libraries (bundled with Windows SDK)
+    set(PLATFORM_LIBS d2d1 dwrite comctl32 shlwapi ole32 uuid shell32 user32 gdi32 kernel32)
+else()
+    # Linux/Unix libraries
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
+    set(PLATFORM_LIBS ${GTK3_LIBRARIES})
+    include_directories(${GTK3_INCLUDE_DIRS})
+endif()
+
+# Include directories
+include_directories(include)
+include_directories(src)
+
+# Main IDE executable
+add_executable(NativeIDE WIN32
+    src/main.cpp
+    src/ide_application.cpp
+    src/main_window.cpp
+    src/startup_dialog.cpp
+    src/editor_core.cpp
+    src/text_buffer.cpp
+    src/syntax_highlighter.cpp
+    src/compiler_integration.cpp
+    src/plugin_manager.cpp
+    src/project_manager.cpp
+    src/file_manager.cpp
+    src/git_integration.cpp
+    resources/ide.rc
+)
+
+target_link_libraries(NativeIDE ${PLATFORM_LIBS})
+
+# Copy resources and toolchain for deployment
+install(TARGETS NativeIDE DESTINATION bin)
+install(DIRECTORY toolchain/ DESTINATION bin/toolchain)
+install(DIRECTORY templates/ DESTINATION bin/templates)
+install(DIRECTORY plugins/ DESTINATION bin/plugins)
+
+# Plugin examples
+add_library(syntax_plugin SHARED
+    plugins/syntax_plugin.cpp
+)
+
+add_library(git_plugin SHARED
+    plugins/git_plugin.cpp
+)
+
+add_library(debugger_plugin SHARED
+    plugins/debugger_plugin.cpp
+)
+
+# Tests
+enable_testing()
+add_subdirectory(tests)
+
+# Documentation
+find_program(DOXYGEN_EXECUTABLE doxygen)
+if(DOXYGEN_EXECUTABLE)
+    configure_file(Doxyfile.in Doxyfile @ONLY)
+    add_custom_target(docs
+        ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        COMMENT "Generating API documentation"
+    )
+endif()

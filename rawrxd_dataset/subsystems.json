@@ -1,0 +1,63 @@
+{
+  "MASM": {
+    "Details": [
+      "MASM x64 assembly kernels active"
+    ],
+    "Status": "Active"
+  },
+  "Streaming": {
+    "Details": [
+      "Token streaming pipeline detected"
+    ],
+    "Status": "Present"
+  },
+  "IO": {
+    "Details": [
+      "Win32 file I/O detected"
+    ],
+    "Status": "Win32IO"
+  },
+  "UI": {
+    "Details": [
+      "Win32 UI framework detected"
+    ],
+    "Status": "Win32"
+  },
+  "Neural": {
+    "Details": [
+      "MASM neural inference core detected"
+    ],
+    "Status": "Active"
+  },
+  "Vulkan": {
+    "Details": [
+      "Vulkan Compute detected"
+    ],
+    "Status": "Present"
+  },
+  "Rendering": {
+    "Details": [
+      "Direct2D Factory detected",
+      "GDI primitives detected"
+    ],
+    "Status": "Direct2D"
+  },
+  "LLM": {
+    "Details": [
+      "Local LLM inference detected"
+    ],
+    "Status": "Integrated"
+  },
+  "Crypto": {
+    "Details": [
+      "Cryptographic routines detected"
+    ],
+    "Status": "Integrated"
+  },
+  "LSP": {
+    "Details": [
+      "LSP-style features detected"
+    ],
+    "Status": "Client"
+  }
+}

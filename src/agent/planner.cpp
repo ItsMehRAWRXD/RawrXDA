@@ -592,22 +592,22 @@ json Planner::planBulkFix(const std::string& wish) {
 
     // Step 1: Scan for targets (if no explicit files given)
     if (explicitFiles.empty()) {
-        tasks.push_back({
+        tasks.push_back(nlohmann::json::object({
             {"type", "scan_targets"},
             {"strategy", strategy},
             {"scan_pattern", "src/**/*.cpp"},
             {"description", "Scanning codebase for " + strategy + " targets"}
-        });
+        }));
     }
 
     // Step 2: Dispatch autonomous subagents for bulk fix
-    json bulkFixParams = {
+    json bulkFixParams = nlohmann::json::object({
         {"strategy", strategy},
         {"max_parallel", 4},
         {"max_retries", 3},
         {"auto_verify", true},
         {"self_heal", true}
-    };
+    });
 
     if (!explicitFiles.empty()) {
         json fileArray = json::array();
@@ -615,33 +615,33 @@ json Planner::planBulkFix(const std::string& wish) {
         bulkFixParams["targets"] = fileArray;
     }
 
-    tasks.push_back({
+    tasks.push_back(nlohmann::json::object({
         {"type", "bulk_fix"},
         {"strategy", strategy},
         {"params", bulkFixParams},
         {"description", "Spawning autonomous subagents for " + strategy}
-    });
+    }));
 
     // Step 3: Verification pass
-    tasks.push_back({
+    tasks.push_back(nlohmann::json::object({
         {"type", "verify_bulk_fix"},
         {"strategy", strategy},
         {"description", "Verifying all fixes were applied correctly"}
-    });
+    }));
 
     // Step 4: Build to confirm no regressions
-    tasks.push_back({
+    tasks.push_back(nlohmann::json::object({
         {"type", "build"},
         {"target", "RawrXD-Shell"},
         {"description", "Rebuild to verify no regressions from bulk fixes"}
-    });
+    }));
 
     // Step 5: Self-test
-    tasks.push_back({
+    tasks.push_back(nlohmann::json::object({
         {"type", "self_test"},
         {"cases", 50},
         {"description", "Running self-tests after bulk fix"}
-    });
+    }));
 
     return tasks;
 }

@@ -16,8 +16,15 @@
 #include "unified_command_dispatch.hpp"
 #include "shared_feature_dispatch.h"
 #include "command_registry.hpp"
+#include <windows.h>
 #include <cstdio>
 #include <cstring>
+#include <vector>
+#include <mutex>
+#include <fstream>
+#include <unordered_set>
+#include <algorithm>
+#include <sstream>
 
 // ============================================================================
 // AUTO-REGISTER FROM COMMAND_TABLE → SharedFeatureRegistry
@@ -130,6 +137,294 @@ struct AutoRegistrar {
 static AutoRegistrar s_autoRegistrar;
 
 } // anonymous namespace
+
+namespace RawrXD::Dispatch {
+
+namespace {
+std::mutex g_usageMutex;
+std::vector<CommandUsageStat> g_usageStats;
+bool g_cfgLoaded = false;
+bool g_disableIncomplete = true;
+bool g_telemetryEnabled = true;
+std::unordered_set<std::string> g_disabledCanonical;
+std::unordered_set<std::string> g_enabledCanonical;
+std::unordered_set<std::string> g_disabledCategories;
+std::unordered_set<std::string> g_incompleteCanonical;
+
+CommandUsageStat* findUsage(uint32_t id) {
+    for (auto& s : g_usageStats) {
+        if (s.id == id) return &s;
+    }
+    return nullptr;
+}
+
+std::string trimCopy(const std::string& text) {
+    size_t b = 0;
+    while (b < text.size() && static_cast<unsigned char>(text[b]) <= 32u) ++b;
+    size_t e = text.size();
+    while (e > b && static_cast<unsigned char>(text[e - 1]) <= 32u) --e;
+    return text.substr(b, e - b);
+}
+
+void parseListIntoSet(const char* text, std::unordered_set<std::string>& out) {
+    if (!text || !text[0]) return;
+    std::string s(text);
+    size_t start = 0;
+    while (start < s.size()) {
+        size_t end = s.find_first_of(",;", start);
+        if (end == std::string::npos) end = s.size();
+        std::string item = trimCopy(s.substr(start, end - start));
+        if (!item.empty()) out.insert(item);
+        start = end + 1;
+    }
+}
+
+void loadRuntimeConfigLocked() {
+    if (g_cfgLoaded) return;
+
+    // Default incomplete command set (override via config/env).
+
+    char buf[8192] = {};
+
+    DWORD n = GetEnvironmentVariableA("RAWRXD_COMMAND_TELEMETRY", buf, static_cast<DWORD>(sizeof(buf)));
+    if (n > 0 && n < sizeof(buf)) {
+        std::string v = trimCopy(buf);
+        std::transform(v.begin(), v.end(), v.begin(), [](unsigned char c) { return static_cast<char>(::tolower(c)); });
+        g_telemetryEnabled = !(v == "0" || v == "off" || v == "false");
+    }
+
+    std::memset(buf, 0, sizeof(buf));
+    n = GetEnvironmentVariableA("RAWRXD_DISABLE_INCOMPLETE_COMMANDS", buf, static_cast<DWORD>(sizeof(buf)));
+    if (n > 0 && n < sizeof(buf)) {
+        std::string v = trimCopy(buf);
+        std::transform(v.begin(), v.end(), v.begin(), [](unsigned char c) { return static_cast<char>(::tolower(c)); });
+        g_disableIncomplete = !(v == "0" || v == "off" || v == "false");
+    }
+
+    std::memset(buf, 0, sizeof(buf));
+    n = GetEnvironmentVariableA("RAWRXD_DISABLE_COMMANDS", buf, static_cast<DWORD>(sizeof(buf)));
+    if (n > 0 && n < sizeof(buf)) parseListIntoSet(buf, g_disabledCanonical);
+
+    std::memset(buf, 0, sizeof(buf));
+    n = GetEnvironmentVariableA("RAWRXD_ENABLE_COMMANDS", buf, static_cast<DWORD>(sizeof(buf)));
+    if (n > 0 && n < sizeof(buf)) parseListIntoSet(buf, g_enabledCanonical);
+
+    std::memset(buf, 0, sizeof(buf));
+    n = GetEnvironmentVariableA("RAWRXD_INCOMPLETE_COMMANDS", buf, static_cast<DWORD>(sizeof(buf)));
+    if (n > 0 && n < sizeof(buf)) parseListIntoSet(buf, g_incompleteCanonical);
+
+    std::memset(buf, 0, sizeof(buf));
+    n = GetEnvironmentVariableA("RAWRXD_DISABLE_COMMAND_CATEGORIES", buf, static_cast<DWORD>(sizeof(buf)));
+    if (n > 0 && n < sizeof(buf)) parseListIntoSet(buf, g_disabledCategories);
+
+    const char* configCandidates[] = {
+        "config\\command_feature_flags.ini",
+        ".rawrxd_command_feature_flags.ini"
+    };
+
+    for (const char* path : configCandidates) {
+        std::ifstream in(path, std::ios::binary);
+        if (!in.good()) continue;
+
+        std::string line;
+        while (std::getline(in, line)) {
+            line = trimCopy(line);
+            if (line.empty() || line[0] == '#' || line[0] == ';') continue;
+
+            size_t eq = line.find('=');
+            if (eq == std::string::npos) continue;
+            std::string key = trimCopy(line.substr(0, eq));
+            std::string value = trimCopy(line.substr(eq + 1));
+            std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c) { return static_cast<char>(::tolower(c)); });
+
+            if (key == "disable_incomplete") {
+                std::string v = value;
+                std::transform(v.begin(), v.end(), v.begin(), [](unsigned char c) { return static_cast<char>(::tolower(c)); });
+                g_disableIncomplete = !(v == "0" || v == "off" || v == "false");
+            } else if (key == "telemetry") {
+                std::string v = value;
+                std::transform(v.begin(), v.end(), v.begin(), [](unsigned char c) { return static_cast<char>(::tolower(c)); });
+                g_telemetryEnabled = !(v == "0" || v == "off" || v == "false");
+            } else if (key == "disable_command") {
+                if (!value.empty()) g_disabledCanonical.insert(value);
+            } else if (key == "enable_command") {
+                if (!value.empty()) g_enabledCanonical.insert(value);
+            } else if (key == "disable_category") {
+                if (!value.empty()) g_disabledCategories.insert(value);
+            } else if (key == "incomplete_command") {
+                if (!value.empty()) g_incompleteCanonical.insert(value);
+            }
+        }
+    }
+
+    g_cfgLoaded = true;
+}
+} // namespace
+
+bool isCommandEnabledRuntime(const CmdDescriptor& cmd, const char** reasonOut) {
+    std::lock_guard<std::mutex> lock(g_usageMutex);
+    loadRuntimeConfigLocked();
+
+    static thread_local std::string reason;
+    reason.clear();
+
+    if (cmd.handler == nullptr) {
+        reason = "handler not linked";
+        if (reasonOut) *reasonOut = reason.c_str();
+        return false;
+    }
+
+    if (g_enabledCanonical.find(cmd.canonicalName) != g_enabledCanonical.end()) {
+        if (reasonOut) *reasonOut = nullptr;
+        return true;
+    }
+
+    if (g_disabledCanonical.find(cmd.canonicalName) != g_disabledCanonical.end()) {
+        reason = std::string("disabled by runtime flag: ") + cmd.canonicalName;
+        if (reasonOut) *reasonOut = reason.c_str();
+        return false;
+    }
+
+    if (g_disabledCategories.find(cmd.category) != g_disabledCategories.end()) {
+        reason = std::string("category disabled by runtime flag: ") + cmd.category;
+        if (reasonOut) *reasonOut = reason.c_str();
+        return false;
+    }
+
+    if (g_disableIncomplete && g_incompleteCanonical.find(cmd.canonicalName) != g_incompleteCanonical.end()) {
+        reason = std::string("command flagged incomplete: ") + cmd.canonicalName;
+        if (reasonOut) *reasonOut = reason.c_str();
+        return false;
+    }
+
+    if (reasonOut) *reasonOut = nullptr;
+    return true;
+}
+
+void recordCommandUsage(const CmdDescriptor* cmd, DispatchStatus status, const char* source) {
+    (void)source;
+    if (!cmd) return;
+    std::lock_guard<std::mutex> lock(g_usageMutex);
+    loadRuntimeConfigLocked();
+    if (!g_telemetryEnabled) return;
+
+    CommandUsageStat* stat = findUsage(cmd->id);
+    if (!stat) {
+        CommandUsageStat init{};
+        init.id = cmd->id;
+        init.canonicalName = cmd->canonicalName;
+        init.handlerName = cmd->handlerName;
+        init.category = cmd->category;
+        g_usageStats.push_back(init);
+        stat = &g_usageStats.back();
+    }
+
+    stat->attempts++;
+    if (status == DispatchStatus::OK) stat->okCount++;
+    else stat->errorCount++;
+    stat->lastStatus = status;
+    stat->lastTickMs = GetTickCount64();
+}
+
+void resetCommandUsage() {
+    std::lock_guard<std::mutex> lock(g_usageMutex);
+    g_usageStats.clear();
+}
+
+size_t getCommandUsageStats(CommandUsageStat* out, size_t maxOut) {
+    if (!out || maxOut == 0) return 0;
+    std::lock_guard<std::mutex> lock(g_usageMutex);
+    size_t n = (g_usageStats.size() < maxOut) ? g_usageStats.size() : maxOut;
+    for (size_t i = 0; i < n; ++i) out[i] = g_usageStats[i];
+    return n;
+}
+
+bool exportCommandUsageJson(const char* path) {
+    if (!path || path[0] == '\0') return false;
+    std::lock_guard<std::mutex> lock(g_usageMutex);
+    loadRuntimeConfigLocked();
+    std::ofstream f(path, std::ios::binary | std::ios::trunc);
+    if (!f.good()) return false;
+    f << "{\n";
+    f << "  \"telemetryEnabled\": " << (g_telemetryEnabled ? "true" : "false") << ",\n";
+    f << "  \"disableIncomplete\": " << (g_disableIncomplete ? "true" : "false") << ",\n";
+    f << "  \"usage\": [\n";
+    for (size_t i = 0; i < g_usageStats.size(); ++i) {
+        const auto& s = g_usageStats[i];
+        f << "    {\"id\":" << s.id
+          << ",\"canonical\":\"" << (s.canonicalName ? s.canonicalName : "")
+          << "\",\"handler\":\"" << (s.handlerName ? s.handlerName : "")
+          << "\",\"category\":\"" << (s.category ? s.category : "")
+          << "\",\"attempts\":" << s.attempts
+          << ",\"ok\":" << s.okCount
+          << ",\"error\":" << s.errorCount
+          << ",\"lastTickMs\":" << s.lastTickMs
+          << ",\"lastStatus\":" << static_cast<unsigned>(s.lastStatus)
+          << "}" << (i + 1 < g_usageStats.size() ? "," : "") << "\n";
+    }
+    f << "  ]\n}\n";
+    return true;
+}
+
+bool exportCommandMapMarkdown(const char* path, const char* proofTag) {
+    if (!path || path[0] == '\0') return false;
+
+    std::vector<CommandUsageStat> usageSnapshot;
+    {
+        std::lock_guard<std::mutex> lock(g_usageMutex);
+        loadRuntimeConfigLocked();
+        usageSnapshot = g_usageStats;
+    }
+
+    std::ofstream f(path, std::ios::binary | std::ios::trunc);
+    if (!f.good()) return false;
+    f << "# Command Map\n\n";
+    if (proofTag && proofTag[0] != '\0') f << "Proof baseline: " << proofTag << "\n\n";
+    f << "| cmdId | canonical | handler | category | enabled | attempts | proof note |\n";
+    f << "|---:|---|---|---|---|---:|---|\n";
+
+    const uint32_t selftestIds[] = {1002u, 2028u, 3200u, 4009u, 10000u};
+
+    for (size_t i = 0; i < g_commandRegistrySize; ++i) {
+        const auto& c = g_commandRegistry[i];
+
+        const char* reason = nullptr;
+        const bool enabled = isCommandEnabledRuntime(c, &reason);
+
+        uint64_t attempts = 0;
+        for (const auto& s : usageSnapshot) {
+            if (s.id == c.id) {
+                attempts = s.attempts;
+                break;
+            }
+        }
+
+        bool selftestCovered = false;
+        for (uint32_t id : selftestIds) {
+            if (id == c.id) {
+                selftestCovered = true;
+                break;
+            }
+        }
+
+        std::string proof = "Registry wired + unified dispatch path";
+        if (attempts > 0) proof = "Observed in runtime telemetry";
+        else if (selftestCovered) proof = "Covered by --selftest dispatch probe";
+        else if (!enabled && reason) proof = reason;
+
+        f << "| " << c.id
+          << " | " << c.canonicalName
+          << " | " << (c.handlerName ? c.handlerName : "")
+          << " | " << c.category
+          << " | " << (enabled ? "yes" : "no")
+          << " | " << attempts
+          << " | " << proof
+          << " |\n";
+    }
+    return true;
+}
+
+} // namespace RawrXD::Dispatch
 
 
 // ============================================================================

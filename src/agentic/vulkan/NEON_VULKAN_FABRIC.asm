@@ -362,7 +362,7 @@ ALIGN 64
 ; rdx = Device selection criteria
 ; Returns: EAX = VK_SUCCESS (0) or error code
 ; -----------------------------------------------------------------------------
-VulkanInitialize PROC FRAME
+VulkanInitialize PROC
     push rbx
     push r12
     push r13
@@ -521,7 +521,7 @@ VulkanInitialize ENDP
 ; r9d = Total device count
 ; Returns: Device at index in r8
 ; -----------------------------------------------------------------------------
-VulkanGetPhysicalDeviceByIndex PROC FRAME
+VulkanGetPhysicalDeviceByIndex PROC
     push rbx
     
     ; Call vkEnumeratePhysicalDevices with actual device array
@@ -545,7 +545,7 @@ VulkanGetPhysicalDeviceByIndex ENDP
 ; r9  = Criteria ptr
 ; Returns: XMM0 = Score (0-1000)
 ; -----------------------------------------------------------------------------
-VulkanScoreDevice PROC FRAME
+VulkanScoreDevice PROC
     push rbx
     push r12
     
@@ -598,7 +598,7 @@ VulkanScoreDevice ENDP
 ; rcx = Physical device
 ; Returns: EAX = VK_SUCCESS or error
 ; -----------------------------------------------------------------------------
-VulkanCreateComputeDevice PROC FRAME
+VulkanCreateComputeDevice PROC
     push rbx
     push r12
     push r13
@@ -713,7 +713,7 @@ VulkanCreateComputeDevice ENDP
 ; r8d = Property flags desired (VK_MEMORY_PROPERTY_*)
 ; Returns: EAX = Memory type index (0-31), or -1 if not found
 ; -----------------------------------------------------------------------------
-VulkanFindMemoryType PROC FRAME
+VulkanFindMemoryType PROC
     push rbx
     
     mov rbx, rcx                    ; Physical device
@@ -776,7 +776,7 @@ VulkanFindMemoryType ENDP
 ; r8  = SPIR-V size in bytes
 ; Returns: EAX = VK_SUCCESS or error
 ; -----------------------------------------------------------------------------
-VulkanFSMCreatePipeline PROC FRAME
+VulkanFSMCreatePipeline PROC
     push rbx
     push r12
     push r13
@@ -944,7 +944,7 @@ VulkanFSMCreatePipeline ENDP
 ; rdx = Pipeline state ptr
 ; Returns: EAX = VK_SUCCESS or error
 ; -----------------------------------------------------------------------------
-BitmaskBroadcastVulkan PROC FRAME
+BitmaskBroadcastVulkan PROC
     push rbx
     push r12
     push r13
@@ -999,7 +999,7 @@ BitmaskBroadcastVulkan ENDP
 ; rcx = Pipeline state ptr
 ; Returns: EAX = VK_SUCCESS or error
 ; -----------------------------------------------------------------------------
-VulkanRecordBitmaskUpdate PROC FRAME
+VulkanRecordBitmaskUpdate PROC
     push rbx
     push r12
     
@@ -1083,7 +1083,7 @@ VulkanRecordBitmaskUpdate ENDP
 ; rcx = Pipeline state ptr
 ; Returns: EAX = VK_SUCCESS or error
 ; -----------------------------------------------------------------------------
-VulkanSubmitAsync PROC FRAME
+VulkanSubmitAsync PROC
     push rbx
     
     mov rbx, rcx
@@ -1138,7 +1138,7 @@ VulkanSubmitAsync ENDP
 ; r9  = Size
 ; Returns: RAX = Host pointer, or NULL on error
 ; -----------------------------------------------------------------------------
-VulkanMapBuffer PROC FRAME
+VulkanMapBuffer PROC
     push rbx
     
     mov rbx, rcx                    ; Device
@@ -1183,8 +1183,12 @@ VulkanMapBuffer ENDP
 ; rdx = Device memory handle
 ; Returns: EAX = VK_SUCCESS or error
 ; -----------------------------------------------------------------------------
-VulkanUnmapBuffer PROC FRAME
+VulkanUnmapBuffer PROC
     push rbx
+    
+    sub rsp, 32
+    
+    
     
     mov rbx, rcx                    ; Device
     
@@ -1193,6 +1197,7 @@ VulkanUnmapBuffer PROC FRAME
     mov rdx, rdx                    ; memory
     call vkUnmapMemory
     
+    add rsp, 32
     pop rbx
     ret
 VulkanUnmapBuffer ENDP
@@ -1208,17 +1213,17 @@ VulkanUnmapBuffer ENDP
 ; r8  = Pipeline state ptr (output)
 ; Returns: EAX = VK_SUCCESS or error
 ; -----------------------------------------------------------------------------
-VulkanCreatePoolsAndSyncs PROC FRAME
+VulkanCreatePoolsAndSyncs PROC
     push rbx
     push r12
     push r13
     push r14
+    sub rsp, 256
+    .ENDPROLOG
     
     mov rbx, rcx                    ; Device
     mov r12d, edx                   ; Queue family
     mov r13, r8                     ; Pipeline state
-    
-    sub rsp, 256
     
     ; Create command pool
     lea rcx, [rsp+64]               ; VkCommandPoolCreateInfo
@@ -1355,15 +1360,20 @@ VulkanCreatePoolsAndSyncs ENDP
 ; Returns: EAX = VK_SUCCESS or error
 ; Note: Each buffer param is [buffer_handle | device_address] packed in 128-bit
 ; -----------------------------------------------------------------------------
-VulkanBindFSMDescriptors PROC FRAME
+VulkanBindFSMDescriptors PROC
     push rbx
+    
     push r12
+    
     push r13
+    
+    
+    sub rsp, 512
+    
+    
     
     mov rbx, rcx                    ; Device
     mov r12, rdx                    ; Descriptor set
-    
-    sub rsp, 512
     
     ; Build descriptor writes for all 4 bindings
     ; Binding 0: FSM table buffer
@@ -1475,12 +1485,14 @@ VulkanBindFSMDescriptors ENDP
 ; Returns: EAX = VK_SUCCESS
 ; Note: Uses interlocked operations for thread safety across processes
 ; -----------------------------------------------------------------------------
-VulkanRegisterFabricCoordination PROC FRAME
+VulkanRegisterFabricCoordination PROC
     push rbx
     push r12
     push r13
     push r14
     push r15
+    sub rsp, 32
+    .ENDPROLOG
     
     mov rbx, rcx                    ; Control block
     mov r12, rdx                    ; Instance
@@ -1505,6 +1517,7 @@ VulkanRegisterFabricCoordination PROC FRAME
     ; Verify broadcast updated all shards (via atomic fence)
     mov eax, VK_SUCCESS
     
+    add rsp, 32
     pop r15
     pop r14
     pop r13

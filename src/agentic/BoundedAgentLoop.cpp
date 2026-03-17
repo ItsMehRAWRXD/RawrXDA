@@ -274,13 +274,13 @@ std::string BoundedAgentLoop::RunLoop(const std::string& userPrompt) {
                 !toolResult.filePath.empty()) {
 
                 m_state.store(AgentLoopState::Verifying);
-                json diagArgs = {{"file", toolResult.filePath}};
+                json diagArgs = nlohmann::json::object({{"file", toolResult.filePath}});
                 auto diagResult = AgentToolHandlers::GetDiagnostics(diagArgs);
 
                 if (diagResult.isSuccess() && !diagResult.output.empty() &&
                     diagResult.output != "No diagnostics") {
                     // Inject diagnostics as additional context
-                    json diagMsg;
+                    json diagMsg = nlohmann::json::object();
                     diagMsg["role"] = "system";
                     diagMsg["content"] = "Post-edit diagnostics for " + toolResult.filePath +
                                          ":\n" + diagResult.output;
@@ -353,18 +353,18 @@ ToolCallResult BoundedAgentLoop::DispatchTool(const std::string& name, const jso
 // ============================================================================
 
 json BoundedAgentLoop::BuildSystemMessage() {
-    return {
+    return json::object({
         {"role", "system"},
-        {"content", AgentToolHandlers::GetSystemPrompt(
-            m_config.workingDirectory, m_config.openFiles)}
-    };
+        {"content", json(AgentToolHandlers::GetSystemPrompt(
+            m_config.workingDirectory, m_config.openFiles))}
+    });
 }
 
 json BoundedAgentLoop::BuildUserMessage(const std::string& prompt) {
-    return {
+    return json::object({
         {"role", "user"},
-        {"content", prompt}
-    };
+        {"content", json(prompt)}
+    });
 }
 
 json BoundedAgentLoop::BuildToolResultMessage(const std::string& callId,
@@ -402,10 +402,10 @@ json BoundedAgentLoop::BuildAssistantToolCallMessage(const LLMChatResponse& resp
     json toolCall;
     toolCall["id"] = response.toolCallId.empty() ? "call_0" : response.toolCallId;
     toolCall["type"] = "function";
-    toolCall["function"] = {
+    toolCall["function"] = nlohmann::json::object({
         {"name", response.toolName},
         {"arguments", response.toolArgs.dump()}
-    };
+    });
     json toolCalls = json::array();
     toolCalls.push_back(toolCall);
     msg["tool_calls"] = toolCalls;
@@ -438,10 +438,10 @@ LLMChatResponse BoundedAgentLoop::OllamaChat(const LLMChatRequest& request,
     body["model"] = modelName;
     body["messages"] = request.messages;
     body["stream"] = false;
-    body["options"] = {
+    body["options"] = nlohmann::json::object({
         {"temperature", request.temperature},
         {"num_predict", request.maxTokens}
-    };
+    });
 
     // Include tools if available
     if (!request.tools.empty()) {

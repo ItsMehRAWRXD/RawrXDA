@@ -1,0 +1,47 @@
+
+    // ─── GPU resources (upload Q4_0 matrix + FP32 vector) ─────────────
+    Microsoft::WRL::ComPtr<ID3D12Resource> gpuMatrix, gpuVector, gpuOutput;
+
+    if (gpuReady) {
+        using namespace RawrXD;
+        // Upload Q4_0 quantized matrix (not FP32)
+        TensorInfo mi; mi.name = "matrix"; mi.shape = {cfg.cols, cfg.rows, 1, 1};
+        mi.type = GGMLType::Q4_0; mi.size_bytes = q4matrix.size();
+        bool matOk = bridge.UploadGGUFTensor(mi, q4matrix, gpuMatrix);
+        printf("[GPU Upload] Matrix Q4_0 (%llu bytes): %s\n", (unsigned long long)mi.size_bytes,
+               matOk ? "OK" : "FAILED");
+
+        TensorInfo vi; vi.name = "vector"; vi.shape = {cfg.cols, 1, 1, 1};
+        vi.type = GGMLType::F32; vi.size_bytes = cfg.cols * sizeof(float);
+        std::vector<uint8_t> vb(reinterpret_cast<const uint8_t*>(vec.data()),
+                                reinterpret_cast<const uint8_t*>(vec.data()) + vi.size_bytes);
+        bool vecOk = bridge.UploadGGUFTensor(vi, vb, gpuVector);
+        printf("[GPU Upload] Vector (%llu bytes): %s\n", (unsigned long long)vi.size_bytes,
+               vecOk ? "OK" : "FAILED");
+
+        TensorInfo oi; oi.name = "output"; oi.shape = {cfg.rows, 1, 1, 1};
+        oi.type = GGMLType::F32; oi.size_bytes = cfg.rows * sizeof(float);
+        std::vector<uint8_t> ob(oi.size_bytes, 0);
+        bool outOk = bridge.UploadGGUFTensor(oi, ob, gpuOutput);
+        printf("[GPU Upload] Output (%llu bytes): %s\n", (unsigned long long)oi.size_bytes,
+               outOk ? "OK" : "FAILED");
+
+        if (!matOk || !vecOk || !outOk) {
+            printf("[GPU Upload] Upload failed, disabling GPU path\n");
+            gpuReady = false;
+        } else {
+            // Test dispatch once
+            bool dispatchOk = bridge.DispatchMatVecQ4(gpuMatrix.Get(), gpuVector.Get(),
+                                                       gpuOutput.Get(), cfg.rows, cfg.cols);
+            if (dispatchOk) dispatchOk = bridge.DispatchSoftmax(gpuOutput.Get(), cfg.rows);
+            
+            printf("[GPU Dispatch] Test MatVec+Softmax dispatch: %s\n", dispatchOk ? "OK" : "FAILED");
+            if (!dispatchOk) {
+                // Dump D3D12 debug messages
+                Microsoft::WRL::ComPtr<ID3D12InfoQueue> iq;
+                if (device && SUCCEEDED(device->QueryInterface(IID_PPV_ARGS(&iq)))) {
+                    UINT64 numMsgs = iq->GetNumStoredMessages();
+                    printf("[D3D12] %llu debug messages:\n", (unsigned long long)numMsgs);
+                    for (UINT64 i = 0; i < numMsgs && i < 10; ++i) {
+                        SIZE_T msgLen = 0;
+                        iq->GetMessage(i, nullptr, &msgLen);

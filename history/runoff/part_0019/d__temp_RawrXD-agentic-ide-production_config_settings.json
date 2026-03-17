@@ -1,0 +1,54 @@
+{
+  "model": {
+    "default": "Phi-3-mini",
+    "temperature": 0.7,
+    "maxTokens": 4096,
+    "localOnly": false
+  },
+  "privacy": {
+    "mode": "balanced",
+    "noTelemetry": false,
+    "blockMCP": false
+  },
+  "mcp": {
+    "servers": [
+      {
+        "name": "github",
+        "url": "http://localhost:3000",
+        "enabled": true
+      },
+      {
+        "name": "filesystem",
+        "url": "http://localhost:3001",
+        "enabled": true
+      }
+    ]
+  },
+  "composer": {
+    "maxFiles": 10,
+    "autoImport": true,
+    "previewChanges": true
+  },
+  "indexing": {
+    "enabled": true,
+    "exclude": [
+      "build/*",
+      "*.obj",
+      "*.exe",
+      "node_modules/*"
+    ],
+    "vectorDBPath": "~/.rawrxd/index.db"
+  },
+  "editor": {
+    "fontSize": 12,
+    "fontFamily": "Consolas",
+    "tabSize": 4,
+    "wordWrap": false,
+    "lineNumbers": true
+  },
+  "agent": {
+    "defaultMode": "balanced",
+    "autoStart": false,
+    "maxHistory": 100
+  }
+}

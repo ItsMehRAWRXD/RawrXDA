@@ -1,0 +1,26 @@
+{
+  "architecture": "x64",
+  "subsystem": "WINDOWS_CUI",
+  "imageBase": "0x140000000",
+  "sectionAlignment": 4096,
+  "fileAlignment": 512,
+  "stackReserve": 1048576,
+  "stackCommit": 4096,
+  "heapReserve": 1048576,
+  "heapCommit": 4096,
+  "entryPointSymbol": "main",
+  "enableASLR": true,
+  "enableDEP": true,
+  "enableSEH": true,
+  "enableHighEntropyVA": true,
+  "libraries": [
+    "kernel32.dll",
+    "user32.dll",
+    "msvcrt.dll"
+  ],
+  "symbols": [
+    "ExitProcess",
+    "printf",
+    "malloc"
+  ]
+}

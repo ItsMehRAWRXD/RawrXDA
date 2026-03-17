@@ -2,11 +2,11 @@
 #include <iostream>
 #include <algorithm>
 
-GGUFLoader::~GGUFLoader() {
+EngineGGUFLoader::~EngineGGUFLoader() {
     unload();
 }
 
-bool GGUFLoader::load(const char* path) {
+bool EngineGGUFLoader::load(const char* path) {
     hFile = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ, 
                        NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE) return false;
@@ -24,19 +24,19 @@ bool GGUFLoader::load(const char* path) {
     return parse();
 }
 
-void GGUFLoader::unload() {
+void EngineGGUFLoader::unload() {
     if (pMap) { UnmapViewOfFile(pMap); pMap = nullptr; }
     if (hMap) { CloseHandle(hMap); hMap = NULL; }
     if (hFile != INVALID_HANDLE_VALUE) { CloseHandle(hFile); hFile = INVALID_HANDLE_VALUE; }
 }
 
-TensorInfo* GGUFLoader::getTensor(const char* name) {
+TensorInfo* EngineGGUFLoader::getTensor(const char* name) {
     auto it = tensorMap.find(name);
     if (it != tensorMap.end()) return &tensors[it->second];
     return nullptr;
 }
 
-void GGUFLoader::dequantize_q4_0(float* dst, const block_q4_0* src, int n) {
+void EngineGGUFLoader::dequantize_q4_0(float* dst, const block_q4_0* src, int n) {
     int nb = n / 32;
     
     #pragma omp parallel for
@@ -53,7 +53,7 @@ void GGUFLoader::dequantize_q4_0(float* dst, const block_q4_0* src, int n) {
     }
 }
 
-void GGUFLoader::dequantize_q8_0(float* dst, const block_q8_0* src, int n) {
+void EngineGGUFLoader::dequantize_q8_0(float* dst, const block_q8_0* src, int n) {
     int nb = n / 32;
     
     #pragma omp parallel for
@@ -65,7 +65,7 @@ void GGUFLoader::dequantize_q8_0(float* dst, const block_q8_0* src, int n) {
     }
 }
 
-bool GGUFLoader::parse() {
+bool EngineGGUFLoader::parse() {
     uint8_t* ptr = (uint8_t*)pMap;
     
     // Header
@@ -142,14 +142,14 @@ bool GGUFLoader::parse() {
     return true;
 }
 
-std::string GGUFLoader::readString(uint8_t*& ptr) {
+std::string EngineGGUFLoader::readString(uint8_t*& ptr) {
     uint64_t len = *(uint64_t*)ptr; ptr += 8;
     std::string s((char*)ptr, len);
     ptr += len;
     return s;
 }
 
-size_t GGUFLoader::ggml_nbytes(ggml_type type, size_t n) {
+size_t EngineGGUFLoader::ggml_nbytes(ggml_type type, size_t n) {
     switch (type) {
         case GGML_TYPE_F32:  return n * 4;
         case GGML_TYPE_F16:  return n * 2;

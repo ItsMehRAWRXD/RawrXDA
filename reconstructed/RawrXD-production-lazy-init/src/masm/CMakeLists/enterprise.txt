@@ -1,0 +1,166 @@
+# ===============================================================================
+# CMakeLists.txt - Enterprise MASM Modules Integration
+# Integrates all pure MASM implementations into RawrXD orchestration layer
+# ===============================================================================
+
+cmake_minimum_required(VERSION 3.20)
+
+# Enable MASM support
+enable_language(ASM_MASM)
+
+# Set ASM compiler flags for x86-64
+set(CMAKE_ASM_MASM_FLAGS "${CMAKE_ASM_MASM_FLAGS} /W3 /WX")
+
+# ===============================================================================
+# LIBRARY TARGETS
+# ===============================================================================
+
+# Common Infrastructure Library (Memory, Strings, Logging, JSON)
+add_library(masm_enterprise_common STATIC
+    enterprise_common.asm
+)
+
+# OAuth2 Manager Library
+add_library(masm_oauth2_manager STATIC
+    oauth2_manager.asm
+)
+target_link_libraries(masm_oauth2_manager 
+    masm_enterprise_common
+    ws2_32
+    wininet
+)
+
+# REST API Server Library (Full implementation with HTTP/1.1)
+add_library(masm_rest_api_full STATIC
+    rest_api_server_full.asm
+)
+target_link_libraries(masm_rest_api_full
+    masm_enterprise_common
+    ws2_32
+    kernel32
+)
+
+# Advanced Planning Engine Library
+add_library(masm_advanced_planning STATIC
+    advanced_planning_engine.asm
+)
+target_link_libraries(masm_advanced_planning
+    masm_enterprise_common
+)
+
+# Error Analysis System Library
+add_library(masm_error_analysis STATIC
+    error_analysis_system.asm
+)
+target_link_libraries(masm_error_analysis
+    masm_enterprise_common
+)
+
+# Distributed Tracer Library (OpenTelemetry-compatible)
+add_library(masm_distributed_tracer STATIC
+    distributed_tracer.asm
+)
+target_link_libraries(masm_distributed_tracer
+    masm_enterprise_common
+    ws2_32
+    wininet
+)
+
+# ML Error Detector Library
+add_library(masm_ml_error_detector STATIC
+    ml_error_detector.asm
+)
+target_link_libraries(masm_ml_error_detector
+    masm_enterprise_common
+)
+
+# ===============================================================================
+# MASTER ORCHESTRATION LIBRARY
+# ===============================================================================
+
+add_library(masm_enterprise_orchestration STATIC
+    enterprise_common.asm
+    oauth2_manager.asm
+    rest_api_server_full.asm
+    advanced_planning_engine.asm
+    error_analysis_system.asm
+    distributed_tracer.asm
+    ml_error_detector.asm
+)
+
+target_link_libraries(masm_enterprise_orchestration
+    ws2_32
+    wininet
+    kernel32
+    user32
+)
+
+# ===============================================================================
+# C++ BRIDGE LIBRARIES (Optional - for C++ interop)
+# ===============================================================================
+
+# Header-only C++ bridge library
+add_library(masm_enterprise_bridge INTERFACE)
+target_include_directories(masm_enterprise_bridge INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+# ===============================================================================
+# BUILD SUMMARY
+# ===============================================================================
+
+message(STATUS "=================================================")
+message(STATUS "Enterprise MASM Modules Build Configuration")
+message(STATUS "=================================================")
+message(STATUS "")
+message(STATUS "Core Libraries:")
+message(STATUS "  - masm_enterprise_common      : Common infrastructure")
+message(STATUS "  - masm_oauth2_manager         : OAuth2/PKCE support")
+message(STATUS "  - masm_rest_api_full          : HTTP/1.1 REST server")
+message(STATUS "  - masm_advanced_planning      : Task scheduling & optimization")
+message(STATUS "  - masm_error_analysis         : Error RCA & pattern detection")
+message(STATUS "  - masm_distributed_tracer     : OpenTelemetry traces")
+message(STATUS "  - masm_ml_error_detector      : Anomaly detection & classification")
+message(STATUS "")
+message(STATUS "Master Library:")
+message(STATUS "  - masm_enterprise_orchestration : All-in-one integrated library")
+message(STATUS "")
+message(STATUS "Interop:")
+message(STATUS "  - masm_enterprise_bridge       : C++ bridge headers")
+message(STATUS "")
+message(STATUS "Total Lines of MASM Code: ~4500+ lines")
+message(STATUS "Zero External Dependencies (Windows API only)")
+message(STATUS "Production-Ready Enterprise Features")
+message(STATUS "")
+message(STATUS "=================================================")
+
+# ===============================================================================
+# INSTALLATION
+# ===============================================================================
+
+# Install headers
+install(FILES
+    enterprise_common.asm
+    oauth2_manager.asm
+    rest_api_server_full.asm
+    advanced_planning_engine.asm
+    error_analysis_system.asm
+    distributed_tracer.asm
+    ml_error_detector.asm
+    DESTINATION include/masm
+)
+
+# Install libraries
+install(TARGETS
+    masm_enterprise_common
+    masm_oauth2_manager
+    masm_rest_api_full
+    masm_advanced_planning
+    masm_error_analysis
+    masm_distributed_tracer
+    masm_ml_error_detector
+    masm_enterprise_orchestration
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+)

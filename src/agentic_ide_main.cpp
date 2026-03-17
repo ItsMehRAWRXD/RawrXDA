@@ -1,5 +1,8 @@
 // RawrXD Agentic IDE
 // Advanced AI-powered IDE with terminal integration and agentic capabilities
+// Guard: only compiled when RAWRXD_AGENTIC_MAIN is defined in the CMake target.
+// Default build target uses win32app/Win32IDE_Main.cpp (main_win32.cpp) instead.
+#ifdef RAWRXD_AGENTIC_MAIN
 
 
 #include <windows.h>
@@ -56,3 +59,4 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     }
 }
 
+#endif // RAWRXD_AGENTIC_MAIN

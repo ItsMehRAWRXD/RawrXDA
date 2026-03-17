@@ -105,8 +105,7 @@ bool IDEConfig::loadFromFile(const std::string& configPath)
 
     std::ifstream file(configPath);
     if (!file.is_open()) {
-        s_logger.error( "[IDEConfig] Config file not found: " << configPath
-                  << " — using defaults." << std::endl;
+        s_logger.error("[IDEConfig] Config file not found: " + configPath + " — using defaults.");
         return false;
     }
 
@@ -135,11 +134,11 @@ bool IDEConfig::loadFromFile(const std::string& configPath)
         };
 
         flatten("", json);
-        s_logger.info("[IDEConfig] Loaded ");
+        s_logger.info("[IDEConfig] Loaded config");
         return true;
 
     } catch (const std::exception& e) {
-        s_logger.error( "[IDEConfig] Error parsing config: " << e.what() << std::endl;
+        s_logger.error("[IDEConfig] Error parsing config: " + std::string(e.what()));
         return false;
     }
 }
@@ -203,7 +202,7 @@ bool IDEConfig::saveToFile(const std::string& configPath) const
         return true;
 
     } catch (const std::exception& e) {
-        s_logger.error( "[IDEConfig] Error saving config: " << e.what() << std::endl;
+        s_logger.error("[IDEConfig] Error saving config: " + std::string(e.what()));
         return false;
     }
 }

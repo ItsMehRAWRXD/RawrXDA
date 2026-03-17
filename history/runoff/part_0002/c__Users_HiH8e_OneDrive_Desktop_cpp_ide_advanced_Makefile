@@ -1,0 +1,55 @@
+# Makefile for Advanced C++ IDE
+
+CXX = g++
+CXXFLAGS = -std=c++17 -O2 -Wall -Wextra
+LDFLAGS = -mwindows
+LIBS = -lcomctl32 -lcomdlg32 -lshell32 -lshlwapi -lole32 -luuid
+
+TARGET = advanced_ide.exe
+SOURCE = main.cpp
+
+# Default target
+all: $(TARGET)
+
+# Build the IDE
+$(TARGET): $(SOURCE)
+	@echo Building Advanced C++ IDE...
+	$(CXX) $(CXXFLAGS) -o $(TARGET) $(SOURCE) $(LDFLAGS) $(LIBS)
+	@echo Build complete! Executable: $(TARGET)
+
+# Clean build files
+clean:
+	del /Q $(TARGET) 2>nul || true
+	@echo Clean complete.
+
+# Run the IDE
+run: $(TARGET)
+	@echo Starting Advanced C++ IDE...
+	./$(TARGET)
+
+# Install (copy to system path - optional)
+install: $(TARGET)
+	copy $(TARGET) "%PROGRAMFILES%\AdvancedCppIDE\" 2>nul || echo "Run as administrator to install system-wide"
+
+# Debug build
+debug:
+	$(CXX) $(CXXFLAGS) -g -DDEBUG -o $(TARGET) $(SOURCE) $(LDFLAGS) $(LIBS)
+	@echo Debug build complete!
+
+# Release build with optimizations
+release:
+	$(CXX) $(CXXFLAGS) -O3 -DNDEBUG -s -o $(TARGET) $(SOURCE) $(LDFLAGS) $(LIBS)
+	@echo Release build complete!
+
+# Show help
+help:
+	@echo Available targets:
+	@echo   all      - Build the IDE (default)
+	@echo   clean    - Remove build files
+	@echo   run      - Build and run the IDE
+	@echo   debug    - Build debug version
+	@echo   release  - Build optimized release version
+	@echo   install  - Install system-wide (requires admin)
+	@echo   help     - Show this help
+
+.PHONY: all clean run install debug release help

@@ -1,0 +1,24 @@
+{
+  "name": "RefactoringPlugin",
+  "version": "1.0.0",
+  "description": "Detects code smells and offers automated refactorings",
+  "author": "RawrXD Team",
+  "license": "MIT",
+  "dependencies": [],
+  "capabilities": [
+    "refactoring",
+    "smell-detection"
+  ],
+  "settings": {
+    "severityThreshold": 2,
+    "autoFix": true,
+    "scanInterval": 300,
+    "excludePatterns": [
+      "node_modules",
+      ".git",
+      "build",
+      "dist",
+      "vendor"
+    ]
+  }
+}

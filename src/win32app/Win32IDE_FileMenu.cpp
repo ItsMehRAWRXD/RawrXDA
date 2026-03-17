@@ -90,6 +90,13 @@ bool Win32IDE_OpenFileFromMenu(HWND hwnd, UINT commandId) {
                         std::istreambuf_iterator<char>());
     file.close();
     
+    // Notify Agent of context change if bridge exists
+    if (m_ide && m_ide->getAgenticBridge()) {
+        std::filesystem::path p(filepath);
+        m_ide->getAgenticBridge()->SetWorkspaceRoot(p.parent_path().string());
+        m_ide->getAgenticBridge()->SetLanguageContext(p.extension().string(), filepath);
+    }
+
     // Find editor control (assuming RichEdit control)
     HWND hEditor = FindWindowExA(hwnd, NULL, "RICHEDIT50W", NULL);
     if (!hEditor) {

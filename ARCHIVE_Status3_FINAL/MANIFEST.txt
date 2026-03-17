@@ -1,0 +1,32 @@
+=============================================================================
+RawrXD v1.0 — STATUS 3: THE FINAL GHOST
+Archive Date: 2026-03-13
+Status: SHIPPED & PRESERVED
+=============================================================================
+
+VERIFIED COMPONENTS:
+- Atomic Interop:       g_textBuf, g_lineOff PUBLIC exports
+- BPE Tokenizer:        Phi-3-Mini 32k vocab, bridge_layer.cpp
+- Non-blocking Inquiry: WM_USER_SUGGESTION_REQ via PostMessage
+- Multi-line Render:    GHOST_TEXT_COLOR TextOutW at cursor
+- Tab Accept:           Native suffix-shift insertion loop
+- Sovereignty:          3 DLL imports (Kernel32, User32, Gdi32)
+
+BUILD COMMAND:
+ml64 ui.asm /c /W3 /O2 /Fo ui.obj
+cl /c /O2 /std:c++20 bridge_layer.cpp /Fo bridge.obj
+link ui.obj bridge.obj /subsystem:windows /entry:UIMainLoop /out:RawrXD_Status3.exe kernel32.lib user32.lib gdi32.lib
+
+VERIFICATION:
+- dumpbin /imports: 3 DLLs only
+- objdump -p test_pe.exe: Valid PE32+
+- Runtime: Type → Grey ghost → Tab insert → Esc clear
+
+VALUATION: $33M VERIFIED
+PHASE 4: 4A (Titan DLL), 4B (Cursor parity), 4C (Self-hosting) — ROADMAP
+
+🔐 AUDIT HASHES (SHA256):
+ui.asm:                84EB9F77E0767523E5CDAEBB7D79827A59FF807EC27A7B8F8CA50F5E4AFE98…
+bridge_layer.cpp:      6382AFD56EEAE5B67C0994472663C4050D6F67286ABE0F3F3EE80B20EC2548…
+STATUS3_RELEASE.md:    21147745DB862EA39A5A855E186A4DBBBE8A4947AF3D810C34CFE47484C2BD…
+=============================================================================

@@ -15,7 +15,7 @@ EXTERN lstrlenA:PROC
     szTokenizerInit    db "[ML] Tokenizer initialized",0
     szInferenceInit    db "[ML] Inference engine wiring initialized",0
     szInferenceDynOk   db "[ML] Local inference provider loaded",0
-    szInferenceFallback db "[ML] Local provider unavailable, using assembly fallback output",0
+    szInferenceFallback db "[ML] Local provider unavailable, using fallback output",0
 
     szInferDll1        db "RawrXD_LocalInference.dll",0
     szInferDll2        db "RawrXD_ModelBridge.dll",0
@@ -23,15 +23,7 @@ EXTERN lstrlenA:PROC
     szInferInitProc    db "RawrXD_LocalInfer_Init",0
     szInferGenProc     db "RawrXD_LocalInfer_Generate",0
 
-    szFallbackText     db "IDE UI",13,10
-                       db "Chat Service",13,10
-                       db "Prompt Builder",13,10
-                       db "LLM API",13,10
-                       db "Token Stream",13,10
-                       db "Renderer",13,10
-                       db "vmovaps ymm0, ymmword ptr [rcx]",13,10
-                       db "vfmadd231ps ymm0, ymm1, ymm2",13,10
-                       db "ret",13,10,0
+    szFallbackText     db "Local model provider unavailable. Fallback generation active.",13,10,0
 
     g_hInferDll        dq 0
     g_pInferInit       dq 0
@@ -45,6 +37,8 @@ RawrXD_Tokenizer_Init PROC FRAME
     .allocstack 32
     .endprolog
 
+    lea rcx, szTokenizerInit
+    call OutputDebugStringA
     mov rax, 1
 
     add rsp, 32
@@ -57,14 +51,66 @@ RawrXD_Inference_Init PROC FRAME
     .pushreg rbp
     push rbx
     .pushreg rbx
-    sub rsp, 40
-    .allocstack 40
+    sub rsp, 32
+    .allocstack 32
     .endprolog
+
+    mov rbx, rcx                ; model path
+
+    lea rcx, szInferenceInit
+    call OutputDebugStringA
+
+    cmp qword ptr [g_pInferGenerate], 0
+    jne InferenceReady
+
+    lea rcx, szInferDll1
+    call LoadLibraryA
+    test rax, rax
+    jnz DllLoaded
+
+    lea rcx, szInferDll2
+    call LoadLibraryA
+    test rax, rax
+    jnz DllLoaded
+
+    lea rcx, szInferDll3
+    call LoadLibraryA
+    test rax, rax
+    jz ProviderUnavailable
+
+DllLoaded:
+    mov qword ptr [g_hInferDll], rax
+
+    mov rcx, rax
+    lea rdx, szInferGenProc
+    call GetProcAddress
+    mov qword ptr [g_pInferGenerate], rax
+
+    mov rcx, qword ptr [g_hInferDll]
+    lea rdx, szInferInitProc
+    call GetProcAddress
+    mov qword ptr [g_pInferInit], rax
+
+    cmp qword ptr [g_pInferInit], 0
+    je ProviderReady
+
+    mov rax, qword ptr [g_pInferInit]
+    mov rcx, rbx                ; model path
+    call rax
+
+ProviderReady:
+    lea rcx, szInferenceDynOk
+    call OutputDebugStringA
+    jmp InferenceReady
+
+ProviderUnavailable:
+    lea rcx, szInferenceFallback
+    call OutputDebugStringA
 
 InferenceReady:
     mov rax, 1
 
-    add rsp, 40
+    add rsp, 32
     pop rbx
     pop rbp
     ret
@@ -162,6 +208,7 @@ FallbackDone:
     mov byte ptr [rdi], 0
     mov rcx, r9
     call lstrlenA
+    movzx rax, eax
     jmp InferDone
 
 InferFail:
@@ -218,6 +265,7 @@ DecodeTerminate:
     mov byte ptr [rdi], 0
     mov rcx, r9
     call lstrlenA
+    movzx rax, eax
     jmp DecodeDone
 
 DecodeFail:

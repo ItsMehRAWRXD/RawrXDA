@@ -1,0 +1,1 @@
+{"version":1,"resource":"file:///d%3A/temp/HYBRID-QUANTIZATION-IMPLEMENTATION-ROADMAP.md","entries":[{"id":"KnhR.md","source":"Chat Edit: ' Current GGUF spec assumes uniform quantization\r\n   - Need to add metadata flags per tensor\r\n   - Backward compatibility concerns'","timestamp":1764834688866}]}

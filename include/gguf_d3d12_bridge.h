@@ -91,12 +91,40 @@ public:
                              ID3D12Resource* residualBuffer,
                              uint32_t dim);
 
+    // Flash Attention v14.7.0-ATTN: Hybrid Dispatch
+    // If seqLen <= threshold, uses AVX-512 fallback to avoid overhead.
+    bool DispatchHybridFlashAttention(
+        ID3D12Resource* qBuffer,
+        ID3D12Resource* kBuffer,
+        ID3D12Resource* vBuffer,
+        ID3D12Resource* oBuffer,
+        uint32_t seqLen,
+        uint32_t headDim,
+        uint32_t numHeads,
+        float scale,
+        uint32_t avx512Threshold = 512);
+
     // FP32 MatVec: matrixBuffer (rows×cols floats as ByteAddress) × vectorBuffer → outputBuffer
     bool DispatchMatVecFP32(ID3D12Resource* matrixBuffer,
                             ID3D12Resource* vectorBuffer,
                             ID3D12Resource* outputBuffer,
                             uint32_t rows,
                             uint32_t cols);
+
+    // Hybrid Flash Attention (v14.7.0-ATTN)
+    // Toggles between GPU (HLSL) and CPU (AVX-512) depending on sequence length / head availability.
+    bool DispatchHybridFlashAttention(ID3D12Resource* qBuffer,
+                                     ID3D12Resource* kBuffer,
+                                     ID3D12Resource* vBuffer,
+                                     ID3D12Resource* outBuffer,
+                                     uint32_t seqLen, uint32_t headDim, uint32_t numHeads);
+
+    // Standard Flash Attention (Full GPU)
+    bool DispatchFlashAttention(ID3D12Resource* qBuffer,
+                                 ID3D12Resource* kBuffer,
+                                 ID3D12Resource* vBuffer,
+                                 ID3D12Resource* outBuffer,
+                                 uint32_t seqLen, uint32_t headDim, uint32_t numHeads);
 
     // Element-wise multiply: outputBuffer[i] = aBuffer[i] * bBuffer[i]
     bool DispatchElementwiseMul(ID3D12Resource* aBuffer,
@@ -210,6 +238,7 @@ private:
         // Phase E additions
         Microsoft::WRL::ComPtr<ID3DBlob> kvCacheWrite;
         Microsoft::WRL::ComPtr<ID3DBlob> attentionHead;
+        Microsoft::WRL::ComPtr<ID3DBlob> flashAttention;
     };
 
     struct RootAndPSO {
@@ -228,6 +257,7 @@ private:
         // Phase E
         Microsoft::WRL::ComPtr<ID3D12PipelineState> psoKVCacheWrite;
         Microsoft::WRL::ComPtr<ID3D12PipelineState> psoAttentionHead;
+        Microsoft::WRL::ComPtr<ID3D12PipelineState> psoFlashAttention;
     };
 
     struct ResourceState {
@@ -274,3 +304,4 @@ private:
 };
 
 } // namespace RawrXD
+

@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "generatedAt": "2025-12-21T00:00:00Z",
+  "source": "RawrXD Agentic IDE",
+  "features": {
+    "gemini3_flash_preview": {
+      "enabled": true,
+      "rollout": "all-clients",
+      "defaultModel": "gemini-3-flash-preview",
+      "expires": "2026-03-31T23:59:59Z",
+      "beacon": {
+        "id": "gemini3-flash-preview-global",
+        "priority": 100,
+        "channel": "preview",
+        "owner": "platform-ai",
+        "createdBy": "automation",
+        "tags": ["ai", "llm", "google", "preview"],
+        "notes": "Enable Gemini 3 Flash (Preview) for all clients."
+      },
+      "overrides": {
+        "env": {
+          "ENABLE_GEMINI_3_FLASH_PREVIEW": "true",
+          "DEFAULT_MODEL": "gemini-3-flash-preview"
+        }
+      },
+      "safety": {
+        "failClosed": false,
+        "fallbackModel": "llama-3.1-8b-instruct",
+        "maxRequestRatePerClient": 60
+      }
+    }
+  }
+}

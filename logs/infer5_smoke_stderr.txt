@@ -1,0 +1,3 @@
+[main_win32] CMDLINE: '--test-inference-fast --test-model F:\OllamaModels\BigDaddyG-Q2_K-PRUNED-16GB.gguf --test-prompt Hello world --test-max-tokens 5 --test-timeout-ms 120000'
+[main_win32] FLAGS: headless=0 help=0 fastInf=1 inf=1
+[main_win32] ✅ Entering inference fast test mode

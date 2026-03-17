@@ -1,0 +1,44 @@
+01:19:22.769 | === RAWRXD SELF-HEALING DEMO ===
+01:19:22.771 | Start: 03/14/2026 01:19:22
+01:19:22.774 | Build env injected (MSVC+SDK): msvc=C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717 sdk=C:\Program Files (x86)\Windows Kits\10
+01:19:22.775 | Build command: cmake --build build_prod --config Release --target test_autonomous_pipeline 2>&1
+01:19:22.775 | [PHASE 0] Baseline check before controlled break...
+01:19:22.954 | Baseline exit code: 0
+01:19:22.958 | Baseline errors: 0
+01:19:22.959 | [PHASE 1] Injecting intentional build failure...
+01:19:22.960 | Injected break into: tests\test_autonomous_pipeline.cpp
+01:19:22.961 | [PHASE 2] Verifying build fails without fix...
+01:19:23.872 | Pre-fix exit code: 2
+01:19:23.873 | Pre-fix errors: 8
+01:19:23.873 | [PHASE 3] Triggering executeAutoFix()...
+01:19:23.881 | Healing executable: D:\rawrxd\.\build_prod\bin\RawrXD-AutoFixCLI.exe
+01:19:26.422 | Healing exit code: 0
+01:19:26.423 | Healing launch attempts: 0
+01:19:26.425 | Healing duration: 2.54s
+01:19:26.425 | Healing output lines: 9
+01:19:26.426 | HEAL> [RawrXD] executeAutoFix start
+01:19:26.427 | HEAL> [RawrXD] Build command: cmake --build build_prod --config Release --target test_autonomous_pipeline 2>&1
+01:19:26.427 | HEAL> [RawrXD] Workspace: D:\rawrxd
+01:19:26.427 | HEAL> [RawrXD] Result: SUCCESS
+01:19:26.428 | HEAL> [RawrXD] Attempts used: 1
+01:19:26.428 | HEAL> [RawrXD] Diagnostics generated: 1
+01:19:26.428 | HEAL> [RawrXD] Diagnostics handled: 1
+01:19:26.429 | HEAL> [RawrXD] Fixes staged: 1
+01:19:26.429 | HEAL> [RawrXD] Duration(ms): 2531
+01:19:26.430 | [PHASE 4] Verifying post-healing build...
+01:19:26.625 | Post-fix exit code: 0
+01:19:26.626 | Post-fix errors: 0
+01:19:26.626 | [PHASE 5] Analyzing telemetry...
+01:19:26.629 | Attempts consumed: 1
+01:19:26.630 | Diagnostics generated: 1
+01:19:26.631 | Diagnostics handled: 1
+01:19:26.632 | Fixes staged: 1
+01:19:26.632 | Final status: success
+01:19:26.633 | [PHASE 6] Generating valuation artifacts...
+01:19:26.733 | Artifact: demo_summary.json
+01:19:26.733 | [PHASE 7] Cleaning demo injection...
+01:19:26.735 | Restored original file: tests\test_autonomous_pipeline.cpp
+01:19:26.735 | === DEMO COMPLETE ===
+01:19:26.737 | Duration: 00:03.968
+01:19:26.737 | Status: SUCCESS — Self-healing validated
+01:19:26.738 | Artifacts: self_healing_demo_20260314_011922.log, demo_summary.json, healing_telemetry.json

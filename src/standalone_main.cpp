@@ -1,3 +1,6 @@
+// Guard: compile only when RAWRXD_STANDALONE_WEB_MAIN is defined (web-bridge server target).
+#ifdef RAWRXD_STANDALONE_WEB_MAIN
+
 #include "standalone_web_bridge.hpp"
 #include <iostream>
 #include <string>
@@ -90,3 +93,5 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }
+
+#endif // RAWRXD_STANDALONE_WEB_MAIN

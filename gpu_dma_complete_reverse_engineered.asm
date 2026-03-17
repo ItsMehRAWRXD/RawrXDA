@@ -6,8 +6,8 @@
 ;==============================================================================
 
 OPTION CASEMAP:NONE
-OPTION WIN64:3
-OPTION ALIGN:64
+; OPTION WIN64:3
+; OPTION ALIGN:64
 
 ;==============================================================================
 ; EXTERNAL FUNCTIONS
@@ -66,7 +66,7 @@ DEVICE_ADDRESS_THRESHOLD        EQU 0FFFF000000000000h
 MEMORY_PATCH STRUCT
     HostAddress         DQ ?        ; +0x00 Source address (CPU accessible)
     DeviceAddress       DQ ?        ; +0x08 Destination address (GPU memory)
-    Size                DQ ?        ; +0x10 Size in bytes
+    PatchSize           DQ ?        ; +0x10 Size in bytes
     Flags               DD ?        ; +0x18 Operation flags
     Reserved            DD ?        ; +0x1C Padding
 MEMORY_PATCH ENDS
@@ -133,7 +133,6 @@ NF4_LOOKUP_TABLE LABEL REAL4
     REAL4 1.0
 
 ; Nibble mask for extracting 4-bit values
-ALIGN 64
 NIBBLE_MASK DB 0Fh, 0Fh, 0Fh, 0Fh, 0Fh, 0Fh, 0Fh, 0Fh
             DB 0Fh, 0Fh, 0Fh, 0Fh, 0Fh, 0Fh, 0Fh, 0Fh
 

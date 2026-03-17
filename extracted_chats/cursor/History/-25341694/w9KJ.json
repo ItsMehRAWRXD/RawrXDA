@@ -1,5 +1,0 @@
-{
-  "bigdaddyg.temperature": 1.7,
-  "bigdaddyg.model": "BigDaddyG:latest",
-  "bigdaddyg.ollamaEndpoint": "http://localhost:11434"
-}

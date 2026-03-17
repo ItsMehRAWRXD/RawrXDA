@@ -13,12 +13,23 @@
 #include "agent_modes.h"
 #include "tool_registry.h"
 
-#include "engine/sovereign_engines.h"
 #include "modules/react_generator.h"
 
-// Forward declarations: MemoryPlugins::init in memory_plugins.cpp; register_rawr_inference in tool_registry_init.cpp or inference_engine.cpp or rawr_engine.cpp (per-target).
+// Forward declarations: MemoryPlugins::init in memory_plugins.cpp.
 namespace MemoryPlugins { void init(size_t); }
+#ifndef RAWR_HAS_RAWR_INFERENCE
+#define RAWR_HAS_RAWR_INFERENCE 1
+#endif
+#ifndef RAWR_HAS_SOVEREIGN_ENGINES
+#define RAWR_HAS_SOVEREIGN_ENGINES 1
+#endif
+
+#if RAWR_HAS_RAWR_INFERENCE
 void register_rawr_inference();
+#endif
+#if RAWR_HAS_SOVEREIGN_ENGINES
+#include "engine/sovereign_engines.h"
+#endif
 
 static std::atomic<bool> running = true;
 
@@ -51,8 +62,12 @@ std::string get_active_engine_name() {
 }
 
 void init_runtime() {
+#if RAWR_HAS_RAWR_INFERENCE
     register_rawr_inference();
+#endif
+#if RAWR_HAS_SOVEREIGN_ENGINES
     register_sovereign_engines();
+#endif
     
     // Default to first available or nullptr specific logic
     if (!engines.empty()) {

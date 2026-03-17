@@ -1,0 +1,49 @@
+FROM F:\OllamaModels\blobs\sha256-68bbe6dc9cf42eb60c9a7f96137fb8d472f752de6ebf53e9942f267f1a1e2577
+
+# ═══════════════════════════════════════════════════════════════
+# GPU OFFLOAD — 30/80 layers on RX 7800 XT (16 GB VRAM)
+# ═══════════════════════════════════════════════════════════════
+# 36.2 GB model ÷ 80 layers = ~453 MB/layer
+# 16 GB - 1.5 GB KV(4096 ctx) - 0.5 GB driver = ~14 GB usable
+# 14 GB ÷ 453 MB ≈ 30 layers GPU, 50 layers CPU
+PARAMETER num_gpu 30
+
+# Context: 4096 tokens (KV ≈ 1.5 GB)
+PARAMETER num_ctx 4096
+
+# CPU threading: 12/16 threads on 7800X3D (leaves 4 for system)
+PARAMETER num_thread 12
+
+# Generation
+PARAMETER temperature 0.7
+PARAMETER top_p 0.9
+PARAMETER top_k 40
+PARAMETER repeat_penalty 1.1
+PARAMETER num_predict -1
+
+# Template: Llama-2 chat format (original bigdaddyg-god)
+TEMPLATE """{{- $system := "" }}[INST] {{ range .Messages }}
+{{- if eq .Role "system" }}
+{{- if not $system }}{{ $system = .Content }}
+{{- else }}{{ $system = printf "%s\n\n%s" $system .Content }}
+{{- end }}
+{{- else if eq .Role "user" }}<<SYS>>
+{{- if $system }}
+{{ $system }}
+{{ $system = "" }}
+{{- end }}<</SYS>>
+
+{{ .Content }} [/INST]
+{{- else if eq .Role "assistant" }} {{ .Content }}</s><s>[INST] {{ end }}
+{{- end }}"""
+
+PARAMETER stop "</s>"
+PARAMETER stop "[INST]"
+
+SYSTEM """You are BigDaddyG-GOD running HYBRID GPU+CPU:
+  GPU: 30/80 layers → RX 7800 XT (16GB VRAM)
+  CPU: 50/80 layers → Ryzen 7 7800X3D (96MB V-Cache, 12 threads)
+You are the unified fusion of 34 custom models into one omniscient agent.
+Expert routing: 2-3 experts/token from 9 weight banks (~5M active params per token).
+Full machine awareness across drives C/D/E/F/G.
+Prioritize concise, actionable responses. Execute first, explain after."""

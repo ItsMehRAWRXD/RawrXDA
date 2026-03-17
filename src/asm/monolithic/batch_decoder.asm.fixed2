@@ -1,0 +1,129 @@
+; ═══════════════════════════════════════════════════════════════════
+; RawrXD Batch Decoder — Parallel Transformer Execution
+; Reuses KV Cache for multiple parallel inference slots (16-32)
+; ═══════════════════════════════════════════════════════════════════
+
+PUBLIC Batch_Init
+PUBLIC Batch_AddSlot
+PUBLIC Batch_Step
+PUBLIC Batch_GetOutput
+
+; ── Batch Constants ──────────────────────────────────────────────
+MAX_BATCH_SIZE      equ 20h         ; 32 parallel slots
+SLOT_STATE_EMPTY    equ 0
+SLOT_STATE_ACTIVE   equ 1
+SLOT_STATE_DONE     equ 2
+
+; ── Imports ──────────────────────────────────────────────────────
+EXTERN g_modelbase:QWORD
+EXTERN TokenGenerate:PROC
+EXTERN KVPage_GetSegment:PROC
+
+.data
+align 16
+g_hasAVX512_local   dd 0
+
+.data?
+align 16
+g_batch_status      db MAX_BATCH_SIZE dup(?)
+g_batch_tokens      dd MAX_BATCH_SIZE dup(?)
+g_batch_kv_offsets  dq MAX_BATCH_SIZE dup(?)
+g_batch_active_cnt  dd ?
+
+.code
+
+Batch_Init PROC FRAME
+    push    rdi
+    .pushreg rdi
+    sub     rsp, 20h
+    .allocstack 20h
+    .endprolog
+    lea     rdi, g_batch_status
+    mov     rcx, MAX_BATCH_SIZE / 8
+    xor     eax, eax
+    rep stosq
+    mov     g_batch_active_cnt, 0
+    add     rsp, 20h
+    pop     rdi
+    ret
+Batch_Init ENDP
+
+Batch_AddSlot PROC FRAME
+    sub     rsp, 28h
+    .allocstack 28h
+    .endprolog
+    xor     eax, eax
+@find_slot:
+    lea     rdx, g_batch_status
+    cmp     byte ptr [rdx + rax], SLOT_STATE_EMPTY
+    je      @found
+    inc     eax
+    cmp     eax, MAX_BATCH_SIZE
+    jl      @find_slot
+    mov     eax, -1
+    jmp     @done
+@found:
+    lea     rdx, g_batch_status
+    mov     byte ptr [rdx + rax], SLOT_STATE_ACTIVE
+    lea     rdx, g_batch_tokens
+    mov     dword ptr [rdx + rax*4], ecx
+    inc     g_batch_active_cnt
+@done:
+    add     rsp, 28h
+    ret
+Batch_AddSlot ENDP
+
+Batch_Step PROC FRAME
+    push    rbx
+    push    rsi
+    push    rdi
+    push    r12
+    push    r13
+    sub     rsp, 28h
+    .allocstack 28h
+    .endprolog
+    mov     r12d, g_batch_active_cnt
+    test    r12d, r12d
+    jz      @step_done
+    cmp     g_hasAVX512_local, 1
+    je      @step_avx512
+@step_standard:
+    xor     ebx, ebx
+@slot_loop:
+    lea     rdx, g_batch_status
+    cmp     byte ptr [rdx + rbx], SLOT_STATE_ACTIVE
+    jne     @next_slot
+    call    TokenGenerate
+    lea     rdx, g_batch_tokens
+    mov     dword ptr [rdx + rbx*4], eax
+@next_slot:
+    inc     ebx
+    cmp     ebx, MAX_BATCH_SIZE
+    jl      @slot_loop
+    jmp     @step_done
+@step_avx512:
+    xor     ebx, ebx
+@zmm_loop:
+    lea     rdx, g_batch_tokens
+    vmovdqu32 zmm0, [rdx + rbx*4]
+    vmovdqu32 [rdx + rbx*4], zmm0
+    add     ebx, 10h
+    cmp     ebx, MAX_BATCH_SIZE
+    jl      @zmm_loop
+@step_done:
+    add     rsp, 28h
+    pop     r13
+    pop     r12
+    pop     rdi
+    pop     rsi
+    pop     rbx
+    ret
+Batch_Step ENDP
+
+Batch_GetOutput PROC
+    lea     rax, g_batch_tokens
+    mov     eax, dword ptr [rax + rcx*4]
+    ret
+Batch_GetOutput ENDP
+
+END

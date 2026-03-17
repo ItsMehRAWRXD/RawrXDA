@@ -1,0 +1,1012 @@
+;================================================================================
+; Code_Pattern_Reconstructor.asm
+; Pure MASM x64 - Pattern-based code reconstruction
+; Reverse engineers binaries by identifying code patterns and reconstructing logic
+;================================================================================
+; SCAFFOLD_136: inference_core.asm
+; SCAFFOLD_137: feature_dispatch_bridge.asm
+
+option casemap:none
+
+EXTERN VirtualAlloc:PROC
+EXTERN VirtualFree:PROC
+EXTERN GetStdHandle:PROC
+EXTERN WriteFile:PROC
+
+;================================================================================
+; STRUCTURES
+;================================================================================
+
+CODE_PATTERN struct
+    signature       db 16 dup(?)    ; Pattern signature bytes
+    sig_length      dd ?
+    pattern_type    dd ?            ; 0=func_entry, 1=func_exit, 2=call, 3=loop
+    semantic_type   dd ?            ; Semantic meaning
+    confidence      dd ?
+CODE_PATTERN ends
+
+FUNCTION_INFO struct
+    entry_offset    dq ?
+    exit_offset     dq ?
+    size_bytes      dd ?
+    call_count      dd ?
+    loop_count      dd ?
+    complexity      dd ?
+    reconstructed   dd ?
+FUNCTION_INFO ends
+
+RECONSTRUCT_CONTEXT struct
+    binary_base     dq ?
+    binary_size     dq ?
+    output_buffer   dq ?
+    output_size     dq ?
+    functions_found dd ?
+    patterns_matched dd ?
+RECONSTRUCT_CONTEXT ends
+
+;================================================================================
+; DATA
+;================================================================================
+.data
+align 16
+
+; Function Entry Patterns (x64)
+pattern_func_entry_std      db 48h, 89h, 5Ch, 24h, 08h        ; mov [rsp+8], rbx
+pattern_func_entry_frame    db 55h, 48h, 89h, 0E5h            ; push rbp; mov rbp, rsp
+pattern_func_entry_stack    db 48h, 83h, 0ECh                 ; sub rsp, imm8
+pattern_func_entry_prologue db 40h, 53h, 48h, 83h, 0ECh, 20h  ; push rbx; sub rsp, 20h
+
+; Function Exit Patterns
+pattern_func_exit_ret       db 0C3h                           ; ret
+pattern_func_exit_frame     db 5Dh, 0C3h                      ; pop rbp; ret
+pattern_func_exit_stack     db 48h, 83h, 0C4h                 ; add rsp, imm8
+pattern_func_exit_epilogue  db 48h, 8Bh, 5Ch, 24h, 30h, 48h, 83h, 0C4h, 20h, 5Bh, 0C3h
+
+; Call Patterns
+pattern_call_direct         db 0E8h                           ; call rel32
+pattern_call_indirect_rax   db 0FFh, 0D0h                     ; call rax
+pattern_call_indirect_mem   db 0FFh, 15h                      ; call [rip+rel32]
+
+; Loop Patterns
+pattern_loop_simple         db 75h                            ; jnz rel8 (loop back)
+pattern_loop_dec_jnz        db 48h, 0FFh, 0C8h, 75h           ; dec rax; jnz
+pattern_loop_cmp_jne        db 48h, 3Bh                       ; cmp rax, ...
+
+; String Patterns
+pattern_string_load         db 48h, 8Dh, 0Dh                  ; lea rcx, [rip+rel32]
+pattern_string_move         db 48h, 0B8h                      ; mov rax, imm64
+
+; Context
+g_context                   RECONSTRUCT_CONTEXT <>
+g_functions                 FUNCTION_INFO 1024 dup(<>)
+g_patterns                  CODE_PATTERN 64 dup(<>)
+g_pattern_count             dd 0
+
+; Reconstruction buffer
+reconstructed_asm           db 65536 dup(0)
+reconstructed_size          dd 0
+
+; Strings
+sz_banner       db "╔═══════════════════════════════════╗", 13, 10
+                db "║  Code Pattern Reconstructor v1.0  ║", 13, 10
+                db "║  Pure MASM x64                    ║", 13, 10
+                db "╚═══════════════════════════════════╝", 13, 10, 0
+sz_analyzing    db "[*] Analyzing binary patterns...", 13, 10, 0
+sz_functions    db "[+] Found %d functions", 13, 10, 0
+sz_patterns     db "[+] Matched %d patterns", 13, 10, 0
+sz_reconstructing db "[*] Reconstructing code...", 13, 10, 0
+sz_complete     db "[+] Reconstruction complete", 13, 10, 0
+sz_func_label   db "func_%04d:", 13, 10, 0
+sz_func_entry   db "    ; Function entry at offset 0x%llX", 13, 10, 0
+sz_func_exit    db "    ret                    ; Function exit", 13, 10, 0
+sz_call_inst    db "    call sub_%llX         ; Direct call", 13, 10, 0
+sz_loop_start   db "loop_start:", 13, 10, 0
+sz_loop_end     db "    jnz loop_start        ; Loop back", 13, 10, 0
+
+STD_OUTPUT_HANDLE equ -11
+
+;================================================================================
+; CODE
+;================================================================================
+.code
+
+PUBLIC Reconstructor_Initialize
+PUBLIC Reconstructor_ScanPatterns
+PUBLIC Reconstructor_IdentifyFunctions
+PUBLIC Reconstructor_BuildASM
+PUBLIC Reconstructor_GetResult
+
+; Internal helpers
+AppendString            PROTO
+AppendChar              PROTO
+AppendCRLF              PROTO
+AppendHexU64            PROTO
+AppendHexU32Fixed4      PROTO
+AppendDecU32            PROTO
+AnalyzeFunctionRange    PROTO
+
+;--------------------------------------------------------------------------------
+; Initialize reconstructor
+; RCX = binary base
+; RDX = binary size
+;--------------------------------------------------------------------------------
+Reconstructor_Initialize PROC
+    push rbx
+    sub rsp, 20h
+    
+    test rcx, rcx
+    jz init_fail
+    test rdx, rdx
+    jz init_fail
+    
+    mov g_context.binary_base, rcx
+    mov g_context.binary_size, rdx
+    xor eax, eax
+    mov g_context.functions_found, eax
+    mov g_context.patterns_matched, eax
+    
+    ; Allocate output buffer
+    mov rcx, 0
+    mov rdx, 65536              ; 64KB output buffer
+    mov r8d, 00003000h          ; MEM_COMMIT | MEM_RESERVE
+    mov r9d, 04h                ; PAGE_READWRITE
+    call VirtualAlloc
+    
+    test rax, rax
+    jz init_fail
+    
+    mov g_context.output_buffer, rax
+    mov g_context.output_size, 65536
+    
+    ; Print banner
+    lea rcx, sz_banner
+    call PrintString
+    
+    mov eax, 1
+    add rsp, 20h
+    pop rbx
+    ret
+    
+init_fail:
+    xor eax, eax
+    add rsp, 20h
+    pop rbx
+    ret
+Reconstructor_Initialize ENDP
+
+;--------------------------------------------------------------------------------
+; Scan for code patterns
+; Returns: RAX = patterns found
+;--------------------------------------------------------------------------------
+Reconstructor_ScanPatterns PROC
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+    sub rsp, 20h
+    
+    lea rcx, sz_analyzing
+    call PrintString
+    
+    mov r12, g_context.binary_base
+    mov r13, g_context.binary_size
+    xor r14, r14                ; offset iterator
+    xor r15d, r15d              ; pattern counter
+    
+scan_loop:
+    cmp r14, r13
+    jae scan_done
+    
+    ; Check function entry patterns
+    lea rcx, [r12 + r14]
+    mov rdx, r13
+    sub rdx, r14
+    call MatchFunctionEntry
+    test eax, eax
+    jz check_func_exit
+    
+    inc r15d
+    add r14, rax
+    jmp scan_loop
+    
+check_func_exit:
+    lea rcx, [r12 + r14]
+    mov rdx, r13
+    sub rdx, r14
+    call MatchFunctionExit
+    test eax, eax
+    jz check_calls
+    
+    inc r15d
+    add r14, rax
+    jmp scan_loop
+    
+check_calls:
+    lea rcx, [r12 + r14]
+    mov rdx, r13
+    sub rdx, r14
+    call MatchCallPattern
+    test eax, eax
+    jz check_loops
+    
+    inc r15d
+    add r14, rax
+    jmp scan_loop
+    
+check_loops:
+    lea rcx, [r12 + r14]
+    mov rdx, r13
+    sub rdx, r14
+    call MatchLoopPattern
+    test eax, eax
+    jz next_byte
+    
+    inc r15d
+    add r14, rax
+    jmp scan_loop
+    
+next_byte:
+    inc r14
+    jmp scan_loop
+    
+scan_done:
+    mov g_context.patterns_matched, r15d
+    mov eax, r15d
+    add rsp, 20h
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+Reconstructor_ScanPatterns ENDP
+
+;--------------------------------------------------------------------------------
+; Match function entry pattern
+; RCX = position
+; RDX = remaining bytes
+; Returns: RAX = pattern length if matched, 0 otherwise
+;--------------------------------------------------------------------------------
+MatchFunctionEntry PROC
+    cmp rdx, 2
+    jb no_match
+    
+    ; Check for push rbp; mov rbp, rsp (55 48 89 E5)
+    cmp byte ptr [rcx], 55h
+    jne check_stack_frame
+    cmp byte ptr [rcx+1], 48h
+    jne check_stack_frame
+    cmp byte ptr [rcx+2], 89h
+    jne check_stack_frame
+    cmp byte ptr [rcx+3], 0E5h
+    jne check_stack_frame
+    mov eax, 4
+    ret
+    
+check_stack_frame:
+    cmp rdx, 5
+    jb check_sub_rsp
+    
+    ; Check for mov [rsp+8], rbx (48 89 5C 24 08)
+    cmp byte ptr [rcx], 48h
+    jne check_sub_rsp
+    cmp byte ptr [rcx+1], 89h
+    jne check_sub_rsp
+    cmp byte ptr [rcx+2], 5Ch
+    jne check_sub_rsp
+    cmp byte ptr [rcx+3], 24h
+    jne check_sub_rsp
+    cmp byte ptr [rcx+4], 08h
+    jne check_sub_rsp
+    mov eax, 5
+    ret
+    
+check_sub_rsp:
+    cmp rdx, 3
+    jb no_match
+    
+    ; Check for sub rsp, imm8 (48 83 EC ??)
+    cmp byte ptr [rcx], 48h
+    jne no_match
+    cmp byte ptr [rcx+1], 83h
+    jne no_match
+    cmp byte ptr [rcx+2], 0ECh
+    jne no_match
+    mov eax, 4
+    ret
+    
+no_match:
+    xor eax, eax
+    ret
+MatchFunctionEntry ENDP
+
+;--------------------------------------------------------------------------------
+; Match function exit pattern
+; RCX = position
+; RDX = remaining bytes
+; Returns: RAX = pattern length if matched, 0 otherwise
+;--------------------------------------------------------------------------------
+MatchFunctionExit PROC
+    cmp rdx, 1
+    jb no_exit_match
+    
+    ; Check for simple ret (C3)
+    cmp byte ptr [rcx], 0C3h
+    jne check_pop_ret
+    mov eax, 1
+    ret
+    
+check_pop_ret:
+    cmp rdx, 2
+    jb no_exit_match
+    
+    ; Check for pop rbp; ret (5D C3)
+    cmp byte ptr [rcx], 5Dh
+    jne check_add_rsp_ret
+    cmp byte ptr [rcx+1], 0C3h
+    jne check_add_rsp_ret
+    mov eax, 2
+    ret
+    
+check_add_rsp_ret:
+    cmp rdx, 4
+    jb no_exit_match
+    
+    ; Check for add rsp, ??; ret (48 83 C4 ?? C3)
+    cmp byte ptr [rcx], 48h
+    jne no_exit_match
+    cmp byte ptr [rcx+1], 83h
+    jne no_exit_match
+    cmp byte ptr [rcx+2], 0C4h
+    jne no_exit_match
+    ; Skip immediate byte check
+    cmp byte ptr [rcx+4], 0C3h
+    jne no_exit_match
+    mov eax, 5
+    ret
+    
+no_exit_match:
+    xor eax, eax
+    ret
+MatchFunctionExit ENDP
+
+;--------------------------------------------------------------------------------
+; Match call pattern
+; RCX = position
+; RDX = remaining bytes
+; Returns: RAX = pattern length if matched, 0 otherwise
+;--------------------------------------------------------------------------------
+MatchCallPattern PROC
+    cmp rdx, 1
+    jb no_call_match
+    
+    ; Check for call rel32 (E8)
+    cmp byte ptr [rcx], 0E8h
+    jne check_call_rax
+    mov eax, 5
+    ret
+    
+check_call_rax:
+    cmp rdx, 2
+    jb check_call_mem
+    
+    ; Check for call rax (FF D0)
+    cmp byte ptr [rcx], 0FFh
+    jne check_call_mem
+    cmp byte ptr [rcx+1], 0D0h
+    jne check_call_mem
+    mov eax, 2
+    ret
+    
+check_call_mem:
+    cmp rdx, 6
+    jb no_call_match
+    
+    ; Check for call [rip+rel32] (FF 15)
+    cmp byte ptr [rcx], 0FFh
+    jne no_call_match
+    cmp byte ptr [rcx+1], 15h
+    jne no_call_match
+    mov eax, 6
+    ret
+    
+no_call_match:
+    xor eax, eax
+    ret
+MatchCallPattern ENDP
+
+;--------------------------------------------------------------------------------
+; Match loop pattern
+; RCX = position
+; RDX = remaining bytes
+; Returns: RAX = pattern length if matched, 0 otherwise
+;--------------------------------------------------------------------------------
+MatchLoopPattern PROC
+    cmp rdx, 2
+    jb no_loop_match
+    
+    ; Check for jnz rel8 with negative offset (loop back)
+    cmp byte ptr [rcx], 75h
+    jne check_dec_loop
+    movsx rax, byte ptr [rcx+1]
+    test rax, rax
+    jge check_dec_loop          ; Only count backward jumps as loops
+    mov eax, 2
+    ret
+    
+check_dec_loop:
+    cmp rdx, 4
+    jb no_loop_match
+    
+    ; Check for dec reg; jnz (48 FF C8 75)
+    cmp byte ptr [rcx], 48h
+    jne no_loop_match
+    cmp byte ptr [rcx+1], 0FFh
+    jne no_loop_match
+    cmp byte ptr [rcx+2], 0C8h
+    jne no_loop_match
+    cmp byte ptr [rcx+3], 75h
+    jne no_loop_match
+    mov eax, 4
+    ret
+    
+no_loop_match:
+    xor eax, eax
+    ret
+MatchLoopPattern ENDP
+
+;--------------------------------------------------------------------------------
+; Identify functions from patterns
+; Returns: RAX = functions found
+;--------------------------------------------------------------------------------
+Reconstructor_IdentifyFunctions PROC
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+    sub rsp, 20h
+    
+    mov r12, g_context.binary_base
+    mov r13, g_context.binary_size
+    xor r14d, r14d              ; function counter
+    xor rbx, rbx                ; offset
+    mov r15d, 0FFFFFFFFh        ; last function index (-1)
+    
+identify_loop:
+    cmp rbx, r13
+    jae identify_done
+    
+    ; Check for function entry
+    lea rcx, [r12 + rbx]
+    mov rdx, r13
+    sub rdx, rbx
+    call MatchFunctionEntry
+    test eax, eax
+    jz next_offset
+    
+    ; Found function entry, record it
+    cmp r14d, 1024
+    jae identify_done
+
+    ; Finalize previous function range (end at current offset-1)
+    cmp r15d, 0FFFFFFFFh
+    je no_prev_finalize
+    mov rdi, r15
+    imul rdi, sizeof FUNCTION_INFO
+    lea rdi, [g_functions + rdi]
+    mov rax, rbx
+    dec rax
+    mov qword ptr [rdi + FUNCTION_INFO.exit_offset], rax
+    mov rax, qword ptr [rdi + FUNCTION_INFO.entry_offset]
+    mov rcx, qword ptr [rdi + FUNCTION_INFO.exit_offset]
+    sub rcx, rax
+    inc ecx
+    mov dword ptr [rdi + FUNCTION_INFO.size_bytes], ecx
+
+no_prev_finalize:
+    
+    mov rdi, r14
+    imul rdi, sizeof FUNCTION_INFO
+    lea rdi, [g_functions + rdi]
+    mov qword ptr [rdi + FUNCTION_INFO.entry_offset], rbx
+    mov qword ptr [rdi + FUNCTION_INFO.exit_offset], 0
+    mov dword ptr [rdi + FUNCTION_INFO.size_bytes], 0
+    mov dword ptr [rdi + FUNCTION_INFO.call_count], 0
+    mov dword ptr [rdi + FUNCTION_INFO.loop_count], 0
+    mov dword ptr [rdi + FUNCTION_INFO.complexity], 0
+    mov dword ptr [rdi + FUNCTION_INFO.reconstructed], 0
+    mov r15d, r14d
+    inc r14d
+    
+next_offset:
+    inc rbx
+    jmp identify_loop
+    
+identify_done:
+    ; Finalize last function to end of buffer
+    cmp r14d, 0
+    je identify_post
+    mov eax, r14d
+    dec eax
+    mov rdi, rax
+    imul rdi, sizeof FUNCTION_INFO
+    lea rdi, [g_functions + rdi]
+    mov rax, r13
+    dec rax
+    mov qword ptr [rdi + FUNCTION_INFO.exit_offset], rax
+    mov rax, qword ptr [rdi + FUNCTION_INFO.entry_offset]
+    mov rcx, qword ptr [rdi + FUNCTION_INFO.exit_offset]
+    sub rcx, rax
+    inc ecx
+    mov dword ptr [rdi + FUNCTION_INFO.size_bytes], ecx
+
+identify_post:
+    ; Analyze each function range for calls/loops and refine exit offset
+    xor ebx, ebx
+analyze_loop:
+    cmp ebx, r14d
+    jae analyze_done
+    mov rdi, rbx
+    imul rdi, sizeof FUNCTION_INFO
+    lea rcx, [g_functions + rdi]
+    call AnalyzeFunctionRange
+    inc ebx
+    jmp analyze_loop
+
+analyze_done:
+    mov g_context.functions_found, r14d
+    mov eax, r14d
+    add rsp, 20h
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+Reconstructor_IdentifyFunctions ENDP
+
+;--------------------------------------------------------------------------------
+; Build reconstructed ASM output
+; Returns: RAX = 1 on success
+;--------------------------------------------------------------------------------
+Reconstructor_BuildASM PROC
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+    sub rsp, 20h
+    
+    lea rcx, sz_reconstructing
+    call PrintString
+    
+    mov r12, g_context.output_buffer
+    mov r13d, g_context.functions_found
+    mov r15, r12                ; cursor
+    xor ebx, ebx
+
+    ; Header
+    lea rdx, sz_banner
+    mov rcx, r15
+    call AppendString
+    mov r15, rax
+    lea rdx, sz_reconstructing
+    mov rcx, r15
+    call AppendString
+    mov r15, rax
+
+    lea rdx, sz_complete
+    ; (sz_complete is also emitted at end, but useful as file header marker)
+    mov rcx, r15
+    call AppendString
+    mov r15, rax
+
+    ; Minimal MASM header
+    lea rdx, sz_codegen_header
+    mov rcx, r15
+    call AppendString
+    mov r15, rax
+    lea rdx, sz_dot_code
+    mov rcx, r15
+    call AppendString
+    mov r15, rax
+    
+build_loop:
+    cmp ebx, r13d
+    jae build_done
+
+    ; Load FUNCTION_INFO
+    mov r14, rbx
+    imul r14, sizeof FUNCTION_INFO
+    lea r14, [g_functions + r14]
+
+    ; func_XXXX:
+    lea rdx, sz_func_prefix
+    mov rcx, r15
+    call AppendString
+    mov r15, rax
+    mov edx, ebx
+    mov rcx, r15
+    call AppendHexU32Fixed4
+    mov r15, rax
+    mov dl, ':'
+    mov rcx, r15
+    call AppendChar
+    mov r15, rax
+    mov rcx, r15
+    call AppendCRLF
+    mov r15, rax
+
+    ; entry_offset line
+    lea rdx, sz_entry_prefix
+    mov rcx, r15
+    call AppendString
+    mov r15, rax
+    mov rdx, qword ptr [r14 + FUNCTION_INFO.entry_offset]
+    mov rcx, r15
+    call AppendHexU64
+    mov r15, rax
+    mov rcx, r15
+    call AppendCRLF
+    mov r15, rax
+
+    ; size_bytes line
+    lea rdx, sz_size_prefix
+    mov rcx, r15
+    call AppendString
+    mov r15, rax
+    mov edx, dword ptr [r14 + FUNCTION_INFO.size_bytes]
+    mov rcx, r15
+    call AppendDecU32
+    mov r15, rax
+    mov rcx, r15
+    call AppendCRLF
+    mov r15, rax
+
+    ; calls/loops line
+    lea rdx, sz_calls_prefix
+    mov rcx, r15
+    call AppendString
+    mov r15, rax
+    mov edx, dword ptr [r14 + FUNCTION_INFO.call_count]
+    mov rcx, r15
+    call AppendDecU32
+    mov r15, rax
+    lea rdx, sz_loops_prefix
+    mov rcx, r15
+    call AppendString
+    mov r15, rax
+    mov edx, dword ptr [r14 + FUNCTION_INFO.loop_count]
+    mov rcx, r15
+    call AppendDecU32
+    mov r15, rax
+    mov rcx, r15
+    call AppendCRLF
+    mov r15, rax
+
+    ; Emit a conservative skeleton body
+    lea rdx, sz_body_prefix
+    mov rcx, r15
+    call AppendString
+    mov r15, rax
+    lea rdx, sz_ret_line
+    mov rcx, r15
+    call AppendString
+    mov r15, rax
+    mov rcx, r15
+    call AppendCRLF
+    mov r15, rax
+
+    ; Blank line
+    mov rcx, r15
+    call AppendCRLF
+    mov r15, rax
+    
+    inc ebx
+    jmp build_loop
+    
+build_done:
+    lea rcx, sz_complete
+    call PrintString
+
+    ; Finalize reconstructed size
+    mov rax, r15
+    sub rax, g_context.output_buffer
+    mov reconstructed_size, eax
+    mov g_context.output_size, eax
+
+    mov eax, 1
+    add rsp, 20h
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+Reconstructor_BuildASM ENDP
+
+;--------------------------------------------------------------------------------
+; Get reconstruction result
+; RCX = output buffer pointer (out)
+; RDX = output size pointer (out)
+;--------------------------------------------------------------------------------
+Reconstructor_GetResult PROC
+    mov rax, g_context.output_buffer
+    mov [rcx], rax
+    mov eax, reconstructed_size
+    mov [rdx], rax
+    mov eax, 1
+    ret
+Reconstructor_GetResult ENDP
+
+;--------------------------------------------------------------------------------
+; AnalyzeFunctionRange
+; RCX = FUNCTION_INFO*
+; Populates call_count, loop_count, complexity and refines exit_offset to last RET.
+;--------------------------------------------------------------------------------
+AnalyzeFunctionRange PROC
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+    sub rsp, 20h
+
+    mov r12, rcx                                ; FUNCTION_INFO*
+    mov r13, g_context.binary_base
+    mov r14, qword ptr [r12 + FUNCTION_INFO.entry_offset]
+    mov eax, dword ptr [r12 + FUNCTION_INFO.size_bytes]
+    test eax, eax
+    jz afr_done
+    mov r15d, eax                               ; size
+
+    lea rbx, [r13 + r14]                        ; start ptr
+    xor r10d, r10d                              ; calls
+    xor r11d, r11d                              ; loops
+    xor r9, r9                                  ; last ret offset (relative)
+
+    xor r8d, r8d                                ; i
+afr_scan:
+    cmp r8d, r15d
+    jae afr_finish
+
+    ; Remaining
+    mov edx, r15d
+    sub edx, r8d
+    lea rcx, [rbx + r8]
+    movzx rdx, edx
+
+    ; Call patterns
+    call MatchCallPattern
+    test eax, eax
+    jz afr_loop_check
+    inc r10d
+    add r8d, eax
+    jmp afr_scan
+
+afr_loop_check:
+    mov edx, r15d
+    sub edx, r8d
+    lea rcx, [rbx + r8]
+    movzx rdx, edx
+    call MatchLoopPattern
+    test eax, eax
+    jz afr_ret_check
+    inc r11d
+    add r8d, eax
+    jmp afr_scan
+
+afr_ret_check:
+    mov edx, r15d
+    sub edx, r8d
+    lea rcx, [rbx + r8]
+    movzx rdx, edx
+    call MatchFunctionExit
+    test eax, eax
+    jz afr_next
+    ; record last ret offset (absolute offset = entry_offset + i)
+    mov r9d, r8d
+    add r9, r14
+    add r8d, eax
+    jmp afr_scan
+
+afr_next:
+    inc r8d
+    jmp afr_scan
+
+afr_finish:
+    mov dword ptr [r12 + FUNCTION_INFO.call_count], r10d
+    mov dword ptr [r12 + FUNCTION_INFO.loop_count], r11d
+    ; complexity = calls + loops + (size/64)
+    mov eax, r15d
+    shr eax, 6
+    add eax, r10d
+    add eax, r11d
+    mov dword ptr [r12 + FUNCTION_INFO.complexity], eax
+    mov dword ptr [r12 + FUNCTION_INFO.reconstructed], 1
+
+    ; If we saw a ret, refine exit_offset and size_bytes
+    test r9, r9
+    jz afr_done
+    mov qword ptr [r12 + FUNCTION_INFO.exit_offset], r9
+    mov rax, qword ptr [r12 + FUNCTION_INFO.entry_offset]
+    mov rcx, qword ptr [r12 + FUNCTION_INFO.exit_offset]
+    sub rcx, rax
+    inc ecx
+    mov dword ptr [r12 + FUNCTION_INFO.size_bytes], ecx
+
+afr_done:
+    add rsp, 20h
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+AnalyzeFunctionRange ENDP
+
+;--------------------------------------------------------------------------------
+; Output builder helpers (return updated cursor in RAX)
+;--------------------------------------------------------------------------------
+AppendChar PROC
+    mov byte ptr [rcx], dl
+    lea rax, [rcx + 1]
+    ret
+AppendChar ENDP
+
+AppendCRLF PROC
+    mov byte ptr [rcx], 13
+    mov byte ptr [rcx + 1], 10
+    lea rax, [rcx + 2]
+    ret
+AppendCRLF ENDP
+
+AppendString PROC
+    push rbx
+    mov rbx, rcx
+as_loop:
+    mov al, byte ptr [rdx]
+    mov byte ptr [rbx], al
+    inc rdx
+    inc rbx
+    test al, al
+    jnz as_loop
+    dec rbx                       ; don't include terminator in cursor
+    mov rax, rbx
+    pop rbx
+    ret
+AppendString ENDP
+
+; Append 0x + 16 hex digits (uppercase)
+AppendHexU64 PROC
+    push rbx
+    push rsi
+    mov rbx, rcx
+    mov rsi, rdx
+    mov byte ptr [rbx], '0'
+    mov byte ptr [rbx+1], 'x'
+    lea rbx, [rbx+2]
+    mov ecx, 16
+ah64_loop:
+    mov rax, rsi
+    shr rax, 60
+    and eax, 0Fh
+    cmp al, 9
+    jbe ah64_digit
+    add al, 7
+ah64_digit:
+    add al, '0'
+    mov byte ptr [rbx], al
+    inc rbx
+    shl rsi, 4
+    dec ecx
+    jnz ah64_loop
+    mov rax, rbx
+    pop rsi
+    pop rbx
+    ret
+AppendHexU64 ENDP
+
+; Append 4 hex digits (uppercase), from EDX
+AppendHexU32Fixed4 PROC
+    push rbx
+    mov rbx, rcx
+    mov eax, edx
+    shl eax, 16                 ; keep low 16 bits in high position
+    mov ecx, 4
+ah4_loop:
+    mov edx, eax
+    shr edx, 28
+    and dl, 0Fh
+    cmp dl, 9
+    jbe ah4_digit
+    add dl, 7
+ah4_digit:
+    add dl, '0'
+    mov byte ptr [rbx], dl
+    inc rbx
+    shl eax, 4
+    dec ecx
+    jnz ah4_loop
+    mov rax, rbx
+    pop rbx
+    ret
+AppendHexU32Fixed4 ENDP
+
+; Append decimal from EDX
+AppendDecU32 PROC
+    sub rsp, 40h
+    lea r8, [rsp + 20h]        ; temp buffer
+    xor r9d, r9d               ; len
+    mov eax, edx
+    cmp eax, 0
+    jne ad_loop
+    mov byte ptr [rcx], '0'
+    lea rax, [rcx + 1]
+    add rsp, 40h
+    ret
+
+ad_loop:
+    xor edx, edx
+    mov r10d, 10
+    div r10d
+    add dl, '0'
+    mov byte ptr [r8 + r9], dl
+    inc r9d
+    test eax, eax
+    jnz ad_loop
+
+    ; reverse to output
+    mov r11, rcx
+ad_rev:
+    dec r9d
+    mov dl, byte ptr [r8 + r9]
+    mov byte ptr [r11], dl
+    inc r11
+    test r9d, r9d
+    jnz ad_rev
+    mov rax, r11
+    add rsp, 40h
+    ret
+AppendDecU32 ENDP
+
+
+;--------------------------------------------------------------------------------
+; Print string helper
+;--------------------------------------------------------------------------------
+PrintString PROC
+    push rbx
+    push r12
+    push r13
+    sub rsp, 40h
+    
+    mov r12, rcx
+    xor r13, r13
+strlen_loop:
+    cmp byte ptr [r12 + r13], 0
+    je strlen_done
+    inc r13
+    jmp strlen_loop
+    
+strlen_done:
+    mov ecx, STD_OUTPUT_HANDLE
+    call GetStdHandle
+    mov rbx, rax
+    
+    mov rcx, rbx
+    mov rdx, r12
+    mov r8, r13
+    lea r9, [rsp+30h]
+    mov qword ptr [rsp+20h], 0
+    call WriteFile
+    
+    add rsp, 40h
+    pop r13
+    pop r12
+    pop rbx
+    ret
+PrintString ENDP
+
+END

@@ -16,7 +16,7 @@
 #include "gguf_loader.h"
 #include "inference_engine.h"
 #include "license_enforcement.h"
-#include "nlohmann/json.hpp"
+#include <nlohmann/json.hpp>
 #include <fstream>
 #include <sstream>
 #include <algorithm>

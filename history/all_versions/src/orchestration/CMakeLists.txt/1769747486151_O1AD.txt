@@ -1,0 +1,69 @@
+cmake_minimum_required(VERSION 3.20)
+project(RawrXDOrchestration)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+if(Qt6_FOUND)
+    set(CMAKE_AUTOMOC ON)
+    set(CMAKE_AUTORCC ON)
+    find_package(Qt6 COMPONENTS Core Network Sql Multimedia REQUIRED)
+else()
+    set(CMAKE_AUTOMOC OFF)
+    set(CMAKE_AUTORCC OFF)
+endif()
+
+set(RAWRXD_ORCHESTRATION_SOURCES
+    agent_coordinator.hpp
+    agent_coordinator.cpp
+    voice_processor.hpp
+    voice_processor.cpp
+    qt6_audio_helper.hpp
+    TaskOrchestrator.cpp
+    OrchestrationUI.cpp
+    ../backend/agentic_tools.cpp
+    ../backend/agentic_tools.h
+    ../backend/ollama_client.cpp
+    ../backend/ollama_client.h
+    ../tools/file_ops.cpp
+    ../tools/git_client.cpp
+)
+
+if(Qt6_FOUND)
+    list(APPEND RAWRXD_ORCHESTRATION_SOURCES
+        llm_router.hpp
+        llm_router.cpp
+    )
+endif()
+
+add_library(RawrXDOrchestration STATIC
+    ${RAWRXD_ORCHESTRATION_SOURCES}
+)
+
+if(Qt6_FOUND)
+    target_link_libraries(RawrXDOrchestration
+        PUBLIC
+            Qt6::Core
+            Qt6::Network
+            Qt6::Sql
+            Qt6::Multimedia
+    )
+endif()
+
+target_include_directories(RawrXDOrchestration
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/..
+)
+
+# Enable warnings
+if(MSVC)
+    target_compile_options(RawrXDOrchestration PRIVATE /W4)
+else()
+    target_compile_options(RawrXDOrchestration PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+# Optimization
+target_compile_options(RawrXDOrchestration PRIVATE
+    $<$<AND:$<CXX_COMPILER_ID:MSVC>,$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>,$<CONFIG:MinSizeRel>>>:/O2>
+    $<$<AND:$<NOT:$<CXX_COMPILER_ID:MSVC>>,$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>,$<CONFIG:MinSizeRel>>>:-O3>
+)

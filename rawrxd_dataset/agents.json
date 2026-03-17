@@ -1,0 +1,887 @@
+{
+  "Tools": [
+    {
+      "Type": "Tools",
+      "Name": "ToolCallDisplay"
+    },
+    {
+      "Type": "Tools",
+      "Name": "CapabilityVersion"
+    },
+    {
+      "Type": "Tools",
+      "Name": "CapabilityDescriptor"
+    },
+    {
+      "Type": "Tools",
+      "Name": "CapabilityManifest"
+    },
+    {
+      "Type": "Tools",
+      "Name": "ICapability"
+    },
+    {
+      "Type": "Tools",
+      "Name": "CapabilityRegistration"
+    },
+    {
+      "Type": "Tools",
+      "Name": "CapabilityRouter"
+    },
+    {
+      "Type": "Tools",
+      "Name": "EditorCapability"
+    },
+    {
+      "Type": "Tools",
+      "Name": "ModelCapability"
+    },
+    {
+      "Type": "Tools",
+      "Name": "PipeClient"
+    },
+    {
+      "Type": "Tools",
+      "Name": "CapabilityManifest"
+    },
+    {
+      "Type": "Tools",
+      "Name": "EngineCapability"
+    },
+    {
+      "Type": "Tools",
+      "Name": "SubsystemCapability"
+    },
+    {
+      "Type": "Tools",
+      "Name": "ToolCallResult"
+    },
+    {
+      "Type": "Tools",
+      "Name": "CapabilityVersion"
+    },
+    {
+      "Type": "Tools",
+      "Name": "CapabilityDescriptor"
+    },
+    {
+      "Type": "Tools",
+      "Name": "CapabilityManifest"
+    },
+    {
+      "Type": "Tools",
+      "Name": "ICapability"
+    },
+    {
+      "Type": "Tools",
+      "Name": "CapabilityRegistration"
+    },
+    {
+      "Type": "Tools",
+      "Name": "CapabilityRouter"
+    },
+    {
+      "Type": "Tools",
+      "Name": "ModelCapability"
+    },
+    {
+      "Type": "Tools",
+      "Name": "PipeClient"
+    },
+    {
+      "Type": "Tools",
+      "Name": "CapabilityManifest"
+    },
+    {
+      "Type": "Tools",
+      "Name": "CapabilityManifest"
+    },
+    {
+      "Type": "Tools",
+      "Name": "EngineCapability"
+    },
+    {
+      "Type": "Tools",
+      "Name": "ToolCallResult"
+    },
+    {
+      "Type": "Tools",
+      "Name": "BackendCapability"
+    }
+  ],
+  "Models": [
+    {
+      "Type": "Models",
+      "Name": "CPUInferenceEngine"
+    },
+    {
+      "Type": "Models",
+      "Name": "CPUInferenceEngine"
+    },
+    {
+      "Type": "Models",
+      "Name": "ModelCaller"
+    },
+    {
+      "Type": "Models",
+      "Name": "BPETokenizer"
+    },
+    {
+      "Type": "Models",
+      "Name": "BPETokenizer"
+    },
+    {
+      "Type": "Models",
+      "Name": "BPETokenizer"
+    },
+    {
+      "Type": "Models",
+      "Name": "CPUInferenceEngine"
+    },
+    {
+      "Type": "Models",
+      "Name": "CPUInferenceEngine"
+    },
+    {
+      "Type": "Models",
+      "Name": "BPETokenizer"
+    },
+    {
+      "Type": "Models",
+      "Name": "CPUInferenceEngine"
+    },
+    {
+      "Type": "Models",
+      "Name": "CPUInferenceEngine"
+    },
+    {
+      "Type": "Models",
+      "Name": "CPUInferenceEngine"
+    },
+    {
+      "Type": "Models",
+      "Name": "GGUFLoader"
+    },
+    {
+      "Type": "Models",
+      "Name": "GGUFLoader"
+    },
+    {
+      "Type": "Models",
+      "Name": "IGGUFLoader"
+    },
+    {
+      "Type": "Models",
+      "Name": "GGUFLoader"
+    },
+    {
+      "Type": "Models",
+      "Name": "GGUFLoaderQt"
+    },
+    {
+      "Type": "Models",
+      "Name": "CPUInferenceEngine"
+    },
+    {
+      "Type": "Models",
+      "Name": "GGUFLoader"
+    },
+    {
+      "Type": "Models",
+      "Name": "Tokenizer"
+    },
+    {
+      "Type": "Models",
+      "Name": "CPUInferenceEngine"
+    },
+    {
+      "Type": "Models",
+      "Name": "GGUFLoader"
+    },
+    {
+      "Type": "Models",
+      "Name": "StreamingGGUFLoader"
+    },
+    {
+      "Type": "Models",
+      "Name": "GGUFLoader"
+    },
+    {
+      "Type": "Models",
+      "Name": "RawrXDTokenizer"
+    },
+    {
+      "Type": "Models",
+      "Name": "SentencePieceTokenizer"
+    },
+    {
+      "Type": "Models",
+      "Name": "Fts5Tokenizer"
+    },
+    {
+      "Type": "Models",
+      "Name": "TokenizerType"
+    },
+    {
+      "Type": "Models",
+      "Name": "AdvancedTokenizer"
+    },
+    {
+      "Type": "Models",
+      "Name": "BPETokenizer"
+    },
+    {
+      "Type": "Models",
+      "Name": "SentencePieceTokenizer"
+    },
+    {
+      "Type": "Models",
+      "Name": "TokenizerFactory"
+    },
+    {
+      "Type": "Models",
+      "Name": "EnhancedStreamingGGUFLoader"
+    },
+    {
+      "Type": "Models",
+      "Name": "StreamingGGUFLoaderQt"
+    },
+    {
+      "Type": "Models",
+      "Name": "StreamingGGUFLoader"
+    },
+    {
+      "Type": "Models",
+      "Name": "StreamingGGUFLoader"
+    },
+    {
+      "Type": "Models",
+      "Name": "CPUInferenceEngine"
+    },
+    {
+      "Type": "Models",
+      "Name": "TokenizerLanguageSelector"
+    },
+    {
+      "Type": "Models",
+      "Name": "TokenizerType"
+    },
+    {
+      "Type": "Models",
+      "Name": "TokenizerSelector"
+    },
+    {
+      "Type": "Models",
+      "Name": "TokenizerSelector"
+    },
+    {
+      "Type": "Models",
+      "Name": "TokenizerType"
+    },
+    {
+      "Type": "Models",
+      "Name": "TokenizerConfig"
+    },
+    {
+      "Type": "Models",
+      "Name": "TokenizerMetrics"
+    },
+    {
+      "Type": "Models",
+      "Name": "Tokenizer"
+    },
+    {
+      "Type": "Models",
+      "Name": "StreamingGGUFLoader"
+    },
+    {
+      "Type": "Models",
+      "Name": "NativeGGUFLoader"
+    },
+    {
+      "Type": "Models",
+      "Name": "CPUInferenceEngine"
+    },
+    {
+      "Type": "Models",
+      "Name": "ModelCaller"
+    },
+    {
+      "Type": "Models",
+      "Name": "CPUInferenceEngine"
+    },
+    {
+      "Type": "Models",
+      "Name": "BPETokenizer"
+    },
+    {
+      "Type": "Models",
+      "Name": "BPETokenizer"
+    },
+    {
+      "Type": "Models",
+      "Name": "BPETokenizer"
+    },
+    {
+      "Type": "Models",
+      "Name": "CPUInferenceEngine"
+    },
+    {
+      "Type": "Models",
+      "Name": "CPUInferenceEngine"
+    },
+    {
+      "Type": "Models",
+      "Name": "Fts5Tokenizer"
+    },
+    {
+      "Type": "Models",
+      "Name": "IcuTokenizer"
+    },
+    {
+      "Type": "Models",
+      "Name": "IcuTokenizer"
+    },
+    {
+      "Type": "Models",
+      "Name": "Fts5Tokenizer"
+    },
+    {
+      "Type": "Models",
+      "Name": "Fts5TokenizerConfig"
+    },
+    {
+      "Type": "Models",
+      "Name": "Fts5TokenizerConfig"
+    },
+    {
+      "Type": "Models",
+      "Name": "Fts5TokenizerModule"
+    },
+    {
+      "Type": "Models",
+      "Name": "Fts5TokenizerModule"
+    },
+    {
+      "Type": "Models",
+      "Name": "Fts5VtoVTokenizer"
+    },
+    {
+      "Type": "Models",
+      "Name": "Fts5VtoVTokenizer"
+    },
+    {
+      "Type": "Models",
+      "Name": "AsciiTokenizer"
+    },
+    {
+      "Type": "Models",
+      "Name": "AsciiTokenizer"
+    },
+    {
+      "Type": "Models",
+      "Name": "Unicode61Tokenizer"
+    },
+    {
+      "Type": "Models",
+      "Name": "Unicode61Tokenizer"
+    },
+    {
+      "Type": "Models",
+      "Name": "PorterTokenizer"
+    },
+    {
+      "Type": "Models",
+      "Name": "PorterTokenizer"
+    },
+    {
+      "Type": "Models",
+      "Name": "TrigramTokenizer"
+    },
+    {
+      "Type": "Models",
+      "Name": "TrigramTokenizer"
+    },
+    {
+      "Type": "Models",
+      "Name": "BuiltinTokenizer"
+    },
+    {
+      "Type": "Models",
+      "Name": "CPUInferenceEngine"
+    },
+    {
+      "Type": "Models",
+      "Name": "CPUInferenceEngine"
+    },
+    {
+      "Type": "Models",
+      "Name": "BPETokenizer"
+    },
+    {
+      "Type": "Models",
+      "Name": "ModelCaller"
+    },
+    {
+      "Type": "Models",
+      "Name": "CPUInferenceEngine"
+    },
+    {
+      "Type": "Models",
+      "Name": "CPUInferenceEngine"
+    },
+    {
+      "Type": "Models",
+      "Name": "GGUFLoader"
+    },
+    {
+      "Type": "Models",
+      "Name": "GGUFLoader"
+    },
+    {
+      "Type": "Models",
+      "Name": "IGGUFLoader"
+    },
+    {
+      "Type": "Models",
+      "Name": "GGUFLoader"
+    },
+    {
+      "Type": "Models",
+      "Name": "GGUFLoaderQt"
+    },
+    {
+      "Type": "Models",
+      "Name": "CPUInferenceEngine"
+    },
+    {
+      "Type": "Models",
+      "Name": "Tokenizer"
+    },
+    {
+      "Type": "Models",
+      "Name": "CPUInferenceEngine"
+    },
+    {
+      "Type": "Models",
+      "Name": "GGUFLoader"
+    },
+    {
+      "Type": "Models",
+      "Name": "StreamingGGUFLoader"
+    },
+    {
+      "Type": "Models",
+      "Name": "GGUFLoader"
+    },
+    {
+      "Type": "Models",
+      "Name": "RawrXDTokenizer"
+    },
+    {
+      "Type": "Models",
+      "Name": "SentencePieceTokenizer"
+    },
+    {
+      "Type": "Models",
+      "Name": "EnhancedStreamingGGUFLoader"
+    },
+    {
+      "Type": "Models",
+      "Name": "StreamingGGUFLoaderQt"
+    },
+    {
+      "Type": "Models",
+      "Name": "StreamingGGUFLoader"
+    },
+    {
+      "Type": "Models",
+      "Name": "StreamingGGUFLoader"
+    },
+    {
+      "Type": "Models",
+      "Name": "CPUInferenceEngine"
+    },
+    {
+      "Type": "Models",
+      "Name": "TokenizerLanguageSelector"
+    },
+    {
+      "Type": "Models",
+      "Name": "TokenizerType"
+    },
+    {
+      "Type": "Models",
+      "Name": "Tokenizer"
+    },
+    {
+      "Type": "Models",
+      "Name": "ModelConnection"
+    },
+    {
+      "Type": "Models",
+      "Name": "ModelConnection"
+    },
+    {
+      "Type": "Models",
+      "Name": "CPUInferenceEngine"
+    }
+  ],
+  "Workers": [],
+  "Hooks": [
+    {
+      "Type": "Hooks",
+      "Name": "Detour"
+    },
+    {
+      "Type": "Hooks",
+      "Name": "Detour"
+    },
+    {
+      "Type": "Hooks",
+      "Name": "OSInterceptor"
+    },
+    {
+      "Type": "Hooks",
+      "Name": "OSExplorerInterceptor"
+    },
+    {
+      "Type": "Hooks",
+      "Name": "DetourEntry"
+    },
+    {
+      "Type": "Hooks",
+      "Name": "Detour"
+    },
+    {
+      "Type": "Hooks",
+      "Name": "Detour"
+    },
+    {
+      "Type": "Hooks",
+      "Name": "OSInterceptor"
+    },
+    {
+      "Type": "Hooks",
+      "Name": "OSExplorerInterceptor"
+    },
+    {
+      "Type": "Hooks",
+      "Name": "DetourEntry"
+    }
+  ],
+  "Orchestrators": [
+    {
+      "Type": "Orchestrators",
+      "Name": "AgentSelfHealingOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "AgenticHotpatchOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "PlanOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "OrchestratorConfig"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "AgentOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "AutoRepairOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "AutonomousFeatureEngine"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "OrchestratorMode"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "AutonomousIntelligenceOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "AutonomousRecoveryOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "BulkFixOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "BulkFixOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "PlanOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "DigestionOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "DistributedPipelineOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "SwarmOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "SwarmOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "IDEOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "PlanOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "TrainingPipelineOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "OmegaOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "TaskOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "OrchestratorBridge"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "OrchestratorState"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "ModelOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "PlanOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "PlanOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "AutonomousOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "StreamingOrchestratorParams"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "ReasoningPipelineOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "OrchestratorStats"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "ReasoningPipelineOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "SecureHotpatchOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "BulkFixOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "AgentOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "OrchestratorMode"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "SwarmOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "PlanOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "SwarmOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "TaskOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "PlanOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "AgentSelfHealingOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "BulkFixOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "AgenticHotpatchOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "PlanOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "OrchestratorConfig"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "AgentOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "AutoRepairOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "AutonomousFeatureEngine"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "OrchestratorMode"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "AutonomousIntelligenceOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "AutonomousRecoveryOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "BulkFixOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "BulkFixOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "PlanOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "DigestionOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "DistributedPipelineOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "SwarmOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "SwarmOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "IDEOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "PlanOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "AgentOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "TrainingPipelineOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "OmegaOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "OrchestratorBridge"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "PlanOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "PlanOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "PlanOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "StreamingOrchestratorParams"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "SecureHotpatchOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "BulkFixOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "AgentOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "OrchestratorMode"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "SwarmOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "PlanOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "SwarmOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "TaskOrchestrator"
+    },
+    {
+      "Type": "Orchestrators",
+      "Name": "PlanOrchestrator"
+    }
+  ]
+}

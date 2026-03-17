@@ -38,14 +38,40 @@
 #include <thread>
 #include <condition_variable>
 
-// SCAFFOLD_150: Semantic tokens (if used)
+// ============================================================================
+// SEMANTIC TOKENS — Full delta-capable implementation
+//   Requests textDocument/semanticTokens/full from the LSP server,
+//   parses the encoded integer array per LSP 3.16 spec, and maps
+//   token types to editor highlight ranges.
+// ============================================================================
 
-
-// SCAFFOLD_149: Hover and document link
-
-
-// SCAFFOLD_148: Completion and signature help
-
+// Standard LSP semantic token types (index order per spec)
+static const char* s_semanticTokenTypes[] = {
+    "namespace",    // 0
+    "type",         // 1
+    "class",        // 2
+    "enum",         // 3
+    "interface",    // 4
+    "struct",       // 5
+    "typeParameter",// 6
+    "parameter",    // 7
+    "variable",     // 8
+    "property",     // 9
+    "enumMember",   // 10
+    "event",        // 11
+    "function",     // 12
+    "method",       // 13
+    "macro",        // 14
+    "keyword",      // 15
+    "modifier",     // 16
+    "comment",      // 17
+    "string",       // 18
+    "number",       // 19
+    "regexp",       // 20
+    "operator",     // 21
+    "decorator",    // 22
+};
+static constexpr int s_numSemanticTokenTypes = sizeof(s_semanticTokenTypes) / sizeof(s_semanticTokenTypes[0]);
 
 // nlohmann/json already included via Win32IDE.h
 
@@ -407,7 +433,12 @@ nlohmann::json Win32IDE::readLSPResponse(LSPLanguage lang, int requestId, int ti
             return resp;
         }
         if (m_lspResponseCV.wait_until(lock, deadline) == std::cv_status::timeout) {
-            return nlohmann::json{{"error", {{"code", -1}, {"message", "Timeout waiting for response"}}}};
+            nlohmann::json err_obj;
+            err_obj["code"] = -1;
+            err_obj["message"] = "Timeout waiting for response";
+            nlohmann::json root;
+            root["error"] = err_obj;
+            return root;
         }
     }
 }
@@ -772,10 +803,10 @@ Win32IDE::LSPWorkspaceEdit Win32IDE::lspRenameSymbol(const std::string& uri,
     const auto& result = resp["result"];
     if (result.contains("changes") && result["changes"].is_object()) {
         for (auto it = result["changes"].begin(); it != result["changes"].end(); ++it) {
-            std::string fileUri = it.first;
+            std::string fileUri = it.key();
             std::vector<LSPWorkspaceEdit::TextEdit> edits;
-            if ((*it).is_array()) {
-                const nlohmann::json& editArr = *it;
+            if (it.value().is_array()) {
+                const nlohmann::json& editArr = it.value();
                 for (size_t ei = 0; ei < editArr.size(); ++ei) {
                     const nlohmann::json& ej = editArr[ei];
                     LSPWorkspaceEdit::TextEdit te;
@@ -889,6 +920,120 @@ Win32IDE::LSPHoverInfo Win32IDE::lspHover(const std::string& uri, int line, int 
 
     info.valid = !info.contents.empty();
     return info;
+}
+
+std::vector<Win32IDE::LSPCompletionItem> Win32IDE::lspCompletion(const std::string& uri,
+                                                                   int line, int character) {
+    std::vector<LSPCompletionItem> items;
+    LSPLanguage lang = detectLanguageForFile(uriToFilePath(uri));
+    if (lang >= LSPLanguage::Count || m_lspStatuses[(size_t)lang].state != LSPServerState::Running) {
+        return items;
+    }
+
+    nlohmann::json params;
+    params["textDocument"]["uri"] = uri;
+    params["position"]["line"] = line;
+    params["position"]["character"] = character;
+    params["context"]["triggerKind"] = 1;
+
+    int id = sendLSPRequest(lang, "textDocument/completion", params);
+    if (id < 0) return items;
+
+    nlohmann::json resp = readLSPResponse(lang, id, 5000);
+    m_lspStats.totalCompletionRequests++;
+    if (!resp.contains("result") || resp["result"].is_null()) return items;
+
+    auto parseItem = [](const nlohmann::json& cj) -> LSPCompletionItem {
+        LSPCompletionItem out;
+        out.label = cj.value("label", "");
+        out.detail = cj.value("detail", "");
+        out.kind = cj.value("kind", 0);
+        out.isSnippet = (cj.value("insertTextFormat", 1) == 2);
+
+        if (cj.contains("insertText") && cj["insertText"].is_string()) {
+            out.insertText = cj["insertText"].get<std::string>();
+        } else if (cj.contains("textEdit") && cj["textEdit"].is_object()) {
+            const auto& te = cj["textEdit"];
+            if (te.contains("newText") && te["newText"].is_string()) {
+                out.insertText = te["newText"].get<std::string>();
+            }
+        }
+
+        if (out.insertText.empty()) {
+            out.insertText = out.label;
+        }
+        return out;
+    };
+
+    const auto& result = resp["result"];
+    if (result.is_array()) {
+        for (size_t i = 0; i < result.size(); ++i) {
+            items.push_back(parseItem(result[i]));
+        }
+    } else if (result.is_object()) {
+        if (result.contains("items") && result["items"].is_array()) {
+            const auto& arr = result["items"];
+            for (size_t i = 0; i < arr.size(); ++i) {
+                items.push_back(parseItem(arr[i]));
+            }
+        }
+    }
+    return items;
+}
+
+Win32IDE::LSPSignatureHelpInfo Win32IDE::lspSignatureHelp(const std::string& uri,
+                                                            int line, int character, int triggerKind) {
+    LSPSignatureHelpInfo out;
+    LSPLanguage lang = detectLanguageForFile(uriToFilePath(uri));
+    if (lang >= LSPLanguage::Count || m_lspStatuses[(size_t)lang].state != LSPServerState::Running) {
+        return out;
+    }
+
+    nlohmann::json params;
+    params["textDocument"]["uri"] = uri;
+    params["position"]["line"] = line;
+    params["position"]["character"] = character;
+    params["context"]["triggerKind"] = triggerKind;
+    params["context"]["isRetrigger"] = false;
+
+    int id = sendLSPRequest(lang, "textDocument/signatureHelp", params);
+    if (id < 0) return out;
+
+    nlohmann::json resp = readLSPResponse(lang, id, 5000);
+    m_lspStats.totalSignatureRequests++;
+    if (!resp.contains("result") || resp["result"].is_null()) return out;
+
+    const auto& result = resp["result"];
+    if (!result.contains("signatures") || !result["signatures"].is_array()) return out;
+    const auto& signatures = result["signatures"];
+    if (signatures.empty()) return out;
+
+    out.activeSignature = result.value("activeSignature", 0);
+    out.activeParameter = result.value("activeParameter", 0);
+    if (out.activeSignature < 0) out.activeSignature = 0;
+    if (out.activeParameter < 0) out.activeParameter = 0;
+
+    for (size_t i = 0; i < signatures.size(); ++i) {
+        const auto& sj = signatures[i];
+        std::string label = sj.value("label", "");
+        if (!label.empty()) {
+            out.signatures.push_back(label);
+        }
+    }
+
+    if (out.activeSignature >= (int)signatures.size()) out.activeSignature = 0;
+    const auto& active = signatures[(size_t)out.activeSignature];
+    out.activeSignatureLabel = active.value("label", "");
+    if (active.contains("documentation")) {
+        if (active["documentation"].is_string()) {
+            out.activeDocumentation = active["documentation"].get<std::string>();
+        } else if (active["documentation"].is_object()) {
+            out.activeDocumentation = active["documentation"].value("value", "");
+        }
+    }
+
+    out.valid = !out.activeSignatureLabel.empty() || !out.signatures.empty();
+    return out;
 }
 
 // ---- 5. Diagnostics (notification-based — see lspReaderThread) -------------
@@ -1228,6 +1373,8 @@ std::string Win32IDE::getLSPStatsString() const {
     ss << "  Reference Requests:    " << m_lspStats.totalReferenceRequests << "\n";
     ss << "  Rename Requests:       " << m_lspStats.totalRenameRequests << "\n";
     ss << "  Hover Requests:        " << m_lspStats.totalHoverRequests << "\n";
+    ss << "  Completion Requests:   " << m_lspStats.totalCompletionRequests << "\n";
+    ss << "  Signature Requests:    " << m_lspStats.totalSignatureRequests << "\n";
     ss << "  Diagnostics Received:  " << m_lspStats.totalDiagnosticsReceived << "\n";
     ss << "  Server Restarts:       " << m_lspStats.totalServerRestarts << "\n";
     return ss.str();
@@ -1573,6 +1720,8 @@ void Win32IDE::handleLSPStatusEndpoint(SOCKET client) {
     stats["referenceRequests"]   = m_lspStats.totalReferenceRequests;
     stats["renameRequests"]      = m_lspStats.totalRenameRequests;
     stats["hoverRequests"]       = m_lspStats.totalHoverRequests;
+    stats["completionRequests"]  = m_lspStats.totalCompletionRequests;
+    stats["signatureRequests"]   = m_lspStats.totalSignatureRequests;
     stats["diagnosticsReceived"] = m_lspStats.totalDiagnosticsReceived;
     stats["serverRestarts"]      = m_lspStats.totalServerRestarts;
     j["stats"] = stats;
@@ -1581,6 +1730,78 @@ void Win32IDE::handleLSPStatusEndpoint(SOCKET client) {
     std::string resp = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n"
                        "Content-Length: " + std::to_string(body.size()) + "\r\n\r\n" + body;
     send(client, resp.c_str(), (int)resp.size(), 0);
+}
+
+// ============================================================================
+// SEMANTIC TOKENS — textDocument/semanticTokens/full
+//   LSP 3.16 encoded integer array: [deltaLine, deltaStartChar, length, tokenType, tokenModifiers] × N
+//   Returns structured SemanticToken vector for the editor to apply highlighting.
+// ============================================================================
+
+std::vector<Win32IDE::SemanticToken> Win32IDE::lspSemanticTokensFull(const std::string& uri) {
+    std::vector<SemanticToken> tokens;
+
+    LSPLanguage lang = detectLanguageForFile(uriToFilePath(uri));
+    if (lang >= LSPLanguage::Count || m_lspStatuses[(size_t)lang].state != LSPServerState::Running) {
+        return tokens;
+    }
+
+    // Check server capability for semantic tokens
+    nlohmann::json params;
+    params["textDocument"]["uri"] = uri;
+
+    int id = sendLSPRequest(lang, "textDocument/semanticTokens/full", params);
+    if (id < 0) return tokens;
+
+    nlohmann::json resp = readLSPResponse(lang, id, 10000); // semantic tokens can be slow
+    if (!resp.contains("result") || resp["result"].is_null()) return tokens;
+
+    const auto& result = resp["result"];
+    if (!result.contains("data") || !result["data"].is_array()) return tokens;
+
+    const auto& data = result["data"];
+    if (data.size() % 5 != 0) {
+        fprintf(stderr, "[LSP] Semantic tokens data array size not multiple of 5: %zu\n", data.size());
+        return tokens;
+    }
+
+    // Decode the delta-encoded token stream
+    int currentLine = 0;
+    int currentChar = 0;
+
+    for (size_t i = 0; i + 4 < data.size(); i += 5) {
+        int deltaLine      = data[i].get<int>();
+        int deltaStartChar = data[i + 1].get<int>();
+        int length         = data[i + 2].get<int>();
+        int tokenType      = data[i + 3].get<int>();
+        int tokenModifiers = data[i + 4].get<int>();
+
+        if (deltaLine > 0) {
+            currentLine += deltaLine;
+            currentChar = deltaStartChar;
+        } else {
+            currentChar += deltaStartChar;
+        }
+
+        SemanticToken tok;
+        tok.line       = currentLine;
+        tok.startChar  = currentChar;
+        tok.length     = length;
+        tok.tokenType  = tokenType;
+        tok.modifiers  = tokenModifiers;
+
+        // Map type index to name string
+        if (tokenType >= 0 && tokenType < s_numSemanticTokenTypes) {
+            tok.typeName = s_semanticTokenTypes[tokenType];
+        } else {
+            tok.typeName = "unknown";
+        }
+
+        tokens.push_back(tok);
+    }
+
+    fprintf(stderr, "[LSP] Semantic tokens: %zu tokens for %s\n", tokens.size(), uri.c_str());
+    return tokens;
 }
 
 void Win32IDE::handleLSPDiagnosticsEndpoint(SOCKET client) {

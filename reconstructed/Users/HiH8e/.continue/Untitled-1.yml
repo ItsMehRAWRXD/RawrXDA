@@ -1,0 +1,23 @@
+# Cleaned config.yaml: local configuration for models/providers.
+# Edit api_key/base_url as needed. Leave api_key empty to use local/no-auth setup.
+
+name: Local Config
+version: 1.0.0
+schema: v1
+default_model: Autodetect
+
+models:
+  - name: Autodetect
+    provider: ollama
+    model: AUTODETECT
+  - name: CustomModel
+    provider: ollama
+    model: CUSTOM_MODEL
+
+providers:
+  ollama:
+    api_key:                # set to your Ollama API key if required; empty = local/no-auth
+    base_url: http://localhost:11434
+    timeout_seconds: 30
+    retries: 3
+    log_level: info

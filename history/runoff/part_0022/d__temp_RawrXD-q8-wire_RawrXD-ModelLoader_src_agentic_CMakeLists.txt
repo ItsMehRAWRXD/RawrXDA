@@ -1,0 +1,222 @@
+# CMakeLists.txt for RawrXD Agentic Framework
+# Orchestrates Phase-2/3 components: CommandRegistry + PredictiveKernel + MMF + Hotpatch + Bridge
+
+cmake_minimum_required(VERSION 3.25)
+project(RawrXD-Agentic LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# ============================================================================
+# Phase-2: C++ Kernel Components
+# ============================================================================
+
+add_library(RawrXD-PredictiveKernel STATIC
+    kernel/RawrXD_PredictiveCommandKernel.hpp
+    kernel/RawrXD_PredictiveCommandKernel.cpp
+)
+
+target_include_directories(RawrXD-PredictiveKernel PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/kernel
+)
+
+target_compile_features(RawrXD-PredictiveKernel PUBLIC cxx_std_20)
+
+if(MSVC)
+    target_compile_options(RawrXD-PredictiveKernel PRIVATE /W4 /permissive- /EHsc)
+else()
+    target_compile_options(RawrXD-PredictiveKernel PRIVATE -Wall -Wextra -pedantic)
+endif()
+
+# ============================================================================
+# Phase-3: MMF Producer Component
+# ============================================================================
+
+add_library(RawrXD-MmfProducer STATIC
+    mmf/RawrXD_MmfProducer.hpp
+    mmf/RawrXD_MmfProducer.cpp
+)
+
+target_include_directories(RawrXD-MmfProducer PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/mmf
+)
+
+target_compile_features(RawrXD-MmfProducer PUBLIC cxx_std_20)
+
+if(MSVC)
+    target_compile_options(RawrXD-MmfProducer PRIVATE /W4 /permissive- /EHsc)
+else()
+    target_compile_options(RawrXD-MmfProducer PRIVATE -Wall -Wextra -pedantic)
+endif()
+
+# ============================================================================
+# Phase-3: Hotpatch Engine Component
+# ============================================================================
+
+add_library(RawrXD-HotpatchEngine STATIC
+    hotpatch/RawrXD_HotpatchEngine.hpp
+    hotpatch/RawrXD_HotpatchEngine.cpp
+)
+
+target_include_directories(RawrXD-HotpatchEngine PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/hotpatch
+)
+
+target_compile_features(RawrXD-HotpatchEngine PUBLIC cxx_std_20)
+
+if(MSVC)
+    target_compile_options(RawrXD-HotpatchEngine PRIVATE /W4 /permissive- /EHsc)
+else()
+    target_compile_options(RawrXD-HotpatchEngine PRIVATE -Wall -Wextra -pedantic)
+endif()
+
+# ============================================================================
+# SelfManifestor: PE Scanning + Capability Discovery
+# ============================================================================
+
+add_library(RawrXD-SelfManifestor STATIC
+    manifest/RawrXD_SelfManifestor.hpp
+    manifest/RawrXD_SelfManifestor.cpp
+)
+
+target_include_directories(RawrXD-SelfManifestor PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/manifest
+)
+
+target_compile_features(RawrXD-SelfManifestor PUBLIC cxx_std_20)
+
+if(MSVC)
+    target_compile_options(RawrXD-SelfManifestor PRIVATE /W4 /permissive- /EHsc)
+else()
+    target_compile_options(RawrXD-SelfManifestor PRIVATE -Wall -Wextra -pedantic)
+endif()
+
+# ============================================================================
+# Win32IDEBridge: Full Integration Layer
+# ============================================================================
+
+add_library(RawrXD-Win32IDEBridge STATIC
+    bridge/RawrXD_Win32IDEBridge.hpp
+    bridge/RawrXD_Win32IDEBridge.cpp
+)
+
+target_include_directories(RawrXD-Win32IDEBridge PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/bridge
+    ${CMAKE_CURRENT_SOURCE_DIR}/kernel
+    ${CMAKE_CURRENT_SOURCE_DIR}/mmf
+    ${CMAKE_CURRENT_SOURCE_DIR}/hotpatch
+    ${CMAKE_CURRENT_SOURCE_DIR}/manifest
+)
+
+target_link_libraries(RawrXD-Win32IDEBridge PUBLIC
+    RawrXD-PredictiveKernel
+    RawrXD-MmfProducer
+    RawrXD-HotpatchEngine
+    RawrXD-SelfManifestor
+)
+
+target_compile_features(RawrXD-Win32IDEBridge PUBLIC cxx_std_20)
+
+if(MSVC)
+    target_compile_options(RawrXD-Win32IDEBridge PRIVATE /W4 /permissive- /EHsc)
+else()
+    target_compile_options(RawrXD-Win32IDEBridge PRIVATE -Wall -Wextra -pedantic)
+endif()
+
+# ============================================================================
+# Consolidated Agentic Library (Main Target)
+# ============================================================================
+
+add_library(RawrXD-AgenticFramework SHARED
+    AgenticCopilotIntegration.cpp
+    AgenticNavigator.cpp
+)
+
+target_include_directories(RawrXD-AgenticFramework PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/kernel
+    ${CMAKE_CURRENT_SOURCE_DIR}/mmf
+    ${CMAKE_CURRENT_SOURCE_DIR}/hotpatch
+    ${CMAKE_CURRENT_SOURCE_DIR}/manifest
+    ${CMAKE_CURRENT_SOURCE_DIR}/bridge
+)
+
+target_link_libraries(RawrXD-AgenticFramework PUBLIC
+    RawrXD-Win32IDEBridge
+)
+
+target_compile_features(RawrXD-AgenticFramework PUBLIC cxx_std_20)
+
+if(MSVC)
+    target_compile_options(RawrXD-AgenticFramework PRIVATE /W4 /permissive- /EHsc)
+    target_compile_definitions(RawrXD-AgenticFramework PRIVATE _CRT_SECURE_NO_WARNINGS)
+else()
+    target_compile_options(RawrXD-AgenticFramework PRIVATE -Wall -Wextra -pedantic)
+endif()
+
+# ============================================================================
+# Optional: MASM64 Phase-2/3 Components (if available)
+# ============================================================================
+
+# Check if ASM_MASM is available
+if(CMAKE_ASM_MASM_COMPILER)
+    enable_language(ASM_MASM)
+    
+    # Phase-2 MASM Agent Kernel (zero-copy consumer loop)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/kernel/RawrXD_AgentKernel_Phase2.asm")
+        add_library(RawrXD-KernelPhase2-MASM OBJECT
+            kernel/RawrXD_AgentKernel_Phase2.asm
+        )
+        
+        set_source_files_properties(
+            kernel/RawrXD_AgentKernel_Phase2.asm
+            PROPERTIES
+            LANGUAGE ASM_MASM
+        )
+        
+        target_include_directories(RawrXD-KernelPhase2-MASM PUBLIC
+            ${CMAKE_CURRENT_SOURCE_DIR}/kernel
+        )
+    endif()
+    
+    # Phase-3 MMF Producer (ring buffer with thermal pacing)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/mmf/RawrXD_MmfProducer_Phase3.asm")
+        add_library(RawrXD-MmfProducerPhase3-MASM OBJECT
+            mmf/RawrXD_MmfProducer_Phase3.asm
+        )
+        
+        set_source_files_properties(
+            mmf/RawrXD_MmfProducer_Phase3.asm
+            PROPERTIES
+            LANGUAGE ASM_MASM
+        )
+    endif()
+    
+    # Phase-3 Hotpatch Engine (x64 detours with atomic commits)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/hotpatch/RawrXD_HotpatchEngine_Phase3.asm")
+        add_library(RawrXD-HotpatchPhase3-MASM OBJECT
+            hotpatch/RawrXD_HotpatchEngine_Phase3.asm
+        )
+        
+        set_source_files_properties(
+            hotpatch/RawrXD_HotpatchEngine_Phase3.asm
+            PROPERTIES
+            LANGUAGE ASM_MASM
+        )
+    endif()
+    
+    message(STATUS "MASM64 support enabled for Agentic Framework")
+else()
+    message(WARNING "ASM_MASM compiler not found - MASM components will be skipped")
+endif()
+
+# Export targets for parent project
+export(TARGETS 
+    RawrXD-PredictiveKernel
+    RawrXD-MmfProducer
+    RawrXD-HotpatchEngine
+    RawrXD-SelfManifestor
+    RawrXD-Win32IDEBridge
+    RawrXD-AgenticFramework
+    FILE RawrXD-AgenticConfig.cmake
+)

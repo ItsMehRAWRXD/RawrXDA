@@ -1,0 +1,12 @@
+
+./nlohmann/json.hpp:442:1: error: expected declaration before '}' token
+./nlohmann/json.hpp:444:66: error: specialization of 'T nlohmann::json::get() const [with T = std::__cxx11::basic_string<char>]' after instantiation
+telemetry.h:40:108: error: 'nlohmann::json::object' cannot be used as a function
+telemetry.cpp:41:55: error: 'nlohmann::json::array' cannot be used as a function
+settings.cpp:191:36: error: 'const struct AppState' has no member named 'is_gpu_enabled'
+settings.cpp:192:37: error: 'const struct AppState' has no member named 'thread_count'
+settings.cpp:193:38: error: 'const struct AppState' has no member named 'vram_limit_mb'
+overclock_governor.cpp:5:10: fatal error: baseline_profile.h: No such file or directory
+overclock_vendor.cpp:148:25: error: 'my_clamp' was not declared in this scope
+modules/vsix_loader.cpp:8:10: fatal error: zip.h: No such file or directory
+

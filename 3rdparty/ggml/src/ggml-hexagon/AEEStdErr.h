@@ -1,0 +1,20 @@
+#pragma once
+
+// Hexagon SDK Error Codes (Stubs)
+
+#define AEE_SUCCESS 0
+#define AEE_EFAILED 1
+#define AEE_ENOMEMORY 2
+#define AEE_ECLASSNOTSUPPORT 3
+#define AEE_EUNSUPPORTED 4
+#define AEE_EINVALIDARG 5
+#define AEE_EALREADY 6
+#define AEE_ENOSUCH 7
+#define AEE_EITEMBUSY 8
+#define AEE_EBUFFERTOOSMALL 9
+#define AEE_EADDRNOTAVAIL 10
+#define AEE_ENETDOWN 11
+#define AEE_ENOTCONNECTED 12
+#define AEE_ETIMEDOUT 13
+#define AEE_ECONNREFUSED 14
+#define AEE_ELOWLEVEL 15

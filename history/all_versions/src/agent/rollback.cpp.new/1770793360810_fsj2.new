@@ -1,0 +1,89 @@
+#include "rollback.hpp"
+#include "json_types.hpp"
+#include "process_utils.hpp"
+#include <cstdio>
+#include <string>
+#include "meta_learn.hpp"
+
+// ---------- 1. detect regression ----------
+bool Rollback::detectRegression() {
+    bool ok = false;
+    JsonArray db = MetaLearn::loadDB(&ok);
+    if (!ok) {
+        fprintf(stderr, "[WARN] Rollback: unable to read perf_db.json\n");
+        return false;
+    }
+    if (db.size() < 2)
+        return false;
+
+    JsonObject last = db.last();
+    JsonObject prev = db.at(db.size() - 2);
+
+    double lastTPS = last.value("tps").toDouble();
+    double prevTPS = prev.value("tps").toDouble();
+    double lastPPL = last.value("ppl").toDouble();
+    double prevPPL = prev.value("ppl").toDouble();
+
+    bool tpsReg = lastTPS < prevTPS * 0.95;
+    bool pplReg = lastPPL > prevPPL * 1.02;
+
+    fprintf(stderr, "[INFO] Rollback::detectRegression tpsReg=%d pplReg=%d lastTPS=%.2f prevTPS=%.2f lastPPL=%.2f prevPPL=%.2f\n",
+            tpsReg, pplReg, lastTPS, prevTPS, lastPPL, prevPPL);
+
+    return tpsReg || pplReg;
+}
+
+// ---------- 2. git revert ----------
+bool Rollback::revertLastCommit() {
+    ProcResult pr = proc::run("git", {"revert", "--no-edit", "HEAD"}, 60000);
+    if (pr.timedOut) {
+        fprintf(stderr, "[WARN] Rollback: git revert timed out\n");
+        return false;
+    }
+    if (pr.exitCode != 0) {
+        fprintf(stderr, "[WARN] Rollback: git revert failed: %s\n", pr.stderrStr.c_str());
+        return false;
+    }
+    fprintf(stderr, "[INFO] Rollback: git revert SUCCESS\n");
+    return true;
+}
+
+// ---------- 3. open GitHub issue ----------
+bool Rollback::openIssue(const std::string& title, const std::string& body) {
+    std::string token = getEnvVar("GITHUB_TOKEN");
+    if (token.empty()) {
+        fprintf(stderr, "[WARN] Rollback: GITHUB_TOKEN not set, skipping issue\n");
+        return true; // allow in dev
+    }
+
+    JsonObject issue;
+    issue["title"] = title;
+    issue["body"] = body;
+
+    JsonArray labels;
+    labels.append("regression");
+    labels.append("auto");
+    issue["labels"] = labels;
+
+    JsonDoc doc(issue);
+    std::string payload = doc.toJsonString();
+
+    http::Response resp = http::post(
+        "https://api.github.com/repos/ItsMehRAWRXD/RawrXD-ModelLoader/issues",
+        payload,
+        {
+            {"Authorization", "Bearer " + token},
+            {"Content-Type", "application/json"},
+            {"Accept", "application/vnd.github+json"}
+        }
+    );
+
+    if (!resp.ok()) {
+        fprintf(stderr, "[WARN] Rollback: GitHub issue failed (HTTP %d): %s\n",
+                resp.statusCode, resp.error.c_str());
+        return false;
+    }
+
+    fprintf(stderr, "[INFO] Rollback: GitHub issue opened\n");
+    return true;
+}

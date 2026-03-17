@@ -26,6 +26,8 @@
 ; Rule: NO SOURCE FILE IS TO BE SIMPLIFIED
 ; =============================================================================
 
+INCLUDE rawr_globals.inc
+
 .CODE
 ALIGN 16
 
@@ -86,6 +88,25 @@ requantize_q4km_q2k_block_avx512 PROC PUBLIC FRAME
     sub     rsp, 512        ; Local scratch space (aligned to 64 for AVX-512)
     .allocstack 512
     .endprolog
+
+    ; ── Runtime AVX-512 gate ──────────────────────────────────────────
+    ; This kernel is pure AVX-512 DQ+BW.  If AVX-512 is not available
+    ; (Zen 2/3, or OS XSTATE not enabled), bail immediately with no
+    ; side effects.  C++ caller must check return or provide fallback.
+    cmp     g_HasAVX512F, 1
+    je      @@requant_avx512_ok
+    ; Return gracefully — no blocks processed
+    add     rsp, 512
+    pop     rdi
+    pop     rsi
+    pop     r15
+    pop     r14
+    pop     r13
+    pop     r12
+    pop     rbx
+    pop     rbp
+    ret
+@@requant_avx512_ok:
 
     ; Validate block_count
     test    r9, r9
@@ -251,7 +272,7 @@ ALIGN 16
     lea     rsi, [rsp+64]      ; F32 scratch buffer
 
     ; First pass: find global min/max across all 256 elements for super-scale
-    vmovups zmm0, [rsi]
+    vmovups zmm0, ZMMWORD PTR [rsi]
     vmovaps zmm1, zmm0         ; zmm0 = running min, zmm1 = running max
 
     mov     ecx, 1
@@ -260,7 +281,7 @@ ALIGN 16
     jge     @@global_minmax_done
     mov     eax, ecx
     shl     eax, 6              ; * 64 bytes
-    vmovups zmm2, [rsi+rax]
+    vmovups zmm2, ZMMWORD PTR [rsi+rax]
     vminps  zmm0, zmm0, zmm2
     vmaxps  zmm1, zmm1, zmm2
     inc     ecx
@@ -315,8 +336,8 @@ ALIGN 16
 
     ; Zero out qs area (64 bytes)
     vpxord  zmm10, zmm10, zmm10
-    vmovdqu64 [rbx], zmm10
-    vmovdqu64 [rbx+64], zmm10     ; Extra safety (only 64 bytes needed at [rbx..rbx+63])
+    vmovdqu64 ZMMWORD PTR [rbx], zmm10
+    vmovdqu64 ZMMWORD PTR [rbx+64], zmm10     ; Extra safety (only 64 bytes needed at [rbx..rbx+63])
 
     ; Broadcast super-block scale for division
     vbroadcastss zmm6, xmm4    ; super d
@@ -332,7 +353,7 @@ ALIGN 16
     ; Load 16 F32 elements for this sub-block (2 zmm halves or 1 ymm load)
     mov     eax, r10d
     shl     eax, 6              ; * 64 bytes per sub-block of 16 floats
-    vmovups zmm8, [rsi+rax]     ; 16 F32 elements (upper 8 may be part of next sub-block)
+    vmovups zmm8, ZMMWORD PTR [rsi+rax]     ; 16 F32 elements (upper 8 may be part of next sub-block)
 
     ; We only need 16 elements = 64 bytes, but zmm is 64 bytes = 16 floats. Perfect.
 

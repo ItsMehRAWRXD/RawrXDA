@@ -1,23 +1,52 @@
+#include "AppState.h"
 #include "agentic_engine.h"
 #include "cpu_inference_engine.h"
 #include "native_agent.hpp"
-#include "advanced_agent_features.hpp"
 #include "reverse_engineering/RawrDumpBin.hpp"
 #include "reverse_engineering/RawrCodex.hpp"
 #include "reverse_engineering/RawrCompiler.hpp"
 #include <iostream>
+#include <algorithm>
+#include <cmath>
+#include <variant>
+#include <optional>
+#include <algorithm>
 #include <sstream>
+#include <cmath>
+#include <algorithm>
+#include <algorithm>
+#include <cmath>
 #include <algorithm>
 #include <fstream>
+#include <cmath>
+#include <algorithm>
 #include <regex>
+#include <cmath>
+#include <algorithm>
 #include <filesystem>
+#include <cmath>
+#include <algorithm>
 #include <stack>
+#include <cmath>
+#include <algorithm>
 #include <unordered_map>
+#include <cmath>
+#include <algorithm>
 #include <unordered_set>
+#include <cmath>
+#include <algorithm>
 #include <numeric>
+#include <cmath>
+#include <algorithm>
 #include <mutex>
+#include <cmath>
+#include <algorithm>
 #include <chrono>
+#include <cmath>
+#include <algorithm>
 #include <iomanip>
+#include <cmath>
+#include <algorithm>
 
 // Feedback tracking structures
 struct FeedbackEntry {
@@ -29,6 +58,8 @@ struct FeedbackEntry {
 
 // MASM Telemetry bridge — lock-free atomic counters
 #include "rawrxd_telemetry_exports.h"
+#include <cmath>
+#include <algorithm>
 
 // SCAFFOLD_092: AgenticEngine chat/analyze/generate
 
@@ -162,9 +193,9 @@ std::string AgenticEngine::calculateMetrics(const std::string& code) {
     // Compute Halstead-inspired complexity estimate
     double maintainabilityIndex = 0.0;
     if (codeLines > 0 && totalTokens > 0) {
-        double halsteadVolume = static_cast<double>(totalTokens) * std::log2(static_cast<double>(totalTokens));
+        double halsteadVolume = static_cast<double>(totalTokens) * log10(static_cast<double>(totalTokens));
         maintainabilityIndex = std::max(0.0,
-            171.0 - 5.2 * std::log(halsteadVolume) - 0.23 * cyclomaticComplexity - 16.2 * std::log(static_cast<double>(codeLines)));
+            171.0 - 5.2 * log(halsteadVolume) - 0.23 * cyclomaticComplexity - 16.2 * log(static_cast<double>(codeLines)));
     }
 
     // Estimate algorithmic complexity based on nesting depth and patterns

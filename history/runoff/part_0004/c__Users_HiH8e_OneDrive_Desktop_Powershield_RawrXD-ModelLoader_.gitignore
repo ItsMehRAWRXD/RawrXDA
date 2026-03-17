@@ -1,0 +1,83 @@
+# Build directories
+build/
+build-msvc/
+build-mingw/
+bin/
+obj/
+out/
+
+# Self-signed cert secrets (NEVER commit!)
+*.pfx
+*_cert_base64.txt
+RawrXD_self.*
+
+# Qt generated
+moc_*.cpp
+ui_*.h
+qrc_*.cpp
+*.qm
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.sdf
+*.opensdf
+*.vcxproj.filters
+*.vcxproj.user
+
+# Compiled binaries
+*.exe
+*.dll
+*.so
+*.dylib
+*.obj
+*.o
+*.lib
+*.a
+*.exp
+*.ilk
+*.pdb
+
+# Node.js (for services)
+node_modules/
+package-lock.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
+# Temporary files
+*.log
+*.tmp
+*.temp
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+test_metrics.*
+test_session.json
+
+# GGUF models (large files)
+*.gguf
+*.bin
+
+# IDE settings (keep these out)
+.vscode/settings.json
+.idea/
+
+# CMake cache
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+
+# Backup files
+*.backup
+*.bak
+*.old

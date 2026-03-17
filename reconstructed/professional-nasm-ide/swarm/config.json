@@ -1,0 +1,98 @@
+{
+  "models": [
+    {
+      "id": "code_completion",
+      "path": "models/code_completion_400mb.gguf",
+      "specialization": "code",
+      "priority": 1
+    },
+    {
+      "id": "text_generation",
+      "path": "models/text_generation_300mb.gguf",
+      "specialization": "text",
+      "priority": 2
+    },
+    {
+      "id": "syntax_analysis",
+      "path": "models/syntax_analysis_250mb.gguf",
+      "specialization": "syntax",
+      "priority": 1
+    },
+    {
+      "id": "error_detection",
+      "path": "models/error_detection_200mb.gguf",
+      "specialization": "error",
+      "priority": 1
+    },
+    {
+      "id": "documentation",
+      "path": "models/documentation_350mb.gguf",
+      "specialization": "docs",
+      "priority": 3
+    },
+    {
+      "id": "collaboration",
+      "path": "models/collaboration_280mb.gguf",
+      "specialization": "collab",
+      "priority": 2
+    },
+    {
+      "id": "marketplace_ai",
+      "path": "models/marketplace_ai_320mb.gguf",
+      "specialization": "market",
+      "priority": 3
+    },
+    {
+      "id": "optimization",
+      "path": "models/optimization_290mb.gguf",
+      "specialization": "optimize",
+      "priority": 2
+    },
+    {
+      "id": "debugging",
+      "path": "models/debugging_310mb.gguf",
+      "specialization": "debug",
+      "priority": 1
+    },
+    {
+      "id": "integration",
+      "path": "models/integration_270mb.gguf",
+      "specialization": "integrate",
+      "priority": 2
+    }
+  ],
+  "websocket_port": 8765,
+  "http_port": 8080,
+  "max_concurrent_tasks": 25,
+  "model_load_timeout": 30,
+  "task_timeout": 120,
+  "team_collaboration": {
+    "max_users_per_session": 25,
+    "session_timeout": 3600,
+    "auto_save_interval": 10
+  },
+  "ai_features": {
+    "code_completion": true,
+    "syntax_highlighting": true,
+    "error_detection": true,
+    "optimization_suggestions": true,
+    "documentation_generation": true
+  },
+  "marketplace": {
+    "auto_update": true,
+    "extension_cache_size": "1GB",
+    "featured_extensions": [
+      "nasm-intellisense-pro",
+      "assembly-debugger",
+      "x86-64-reference",
+      "performance-analyzer",
+      "theme-dark-assembly"
+    ]
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "logs/swarm.log",
+    "max_size": "100MB",
+    "backup_count": 5
+  }
+}

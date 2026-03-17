@@ -1,0 +1,166 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		// ─── PowerBuild: Full Project ───
+		{
+			"label": "PowerBuild: Release",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"${workspaceFolder}/RawrXD-Build.ps1",
+				"-Config",
+				"Release"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"problemMatcher": [
+				"$msCompile"
+			],
+			"presentation": {
+				"reveal": "always",
+				"panel": "shared",
+				"clear": true
+			}
+		},
+		{
+			"label": "PowerBuild: Debug",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"${workspaceFolder}/RawrXD-Build.ps1",
+				"-Config",
+				"Debug"
+			],
+			"group": "build",
+			"problemMatcher": [
+				"$msCompile"
+			],
+			"presentation": {
+				"reveal": "always",
+				"panel": "shared",
+				"clear": true
+			}
+		},
+		{
+			"label": "PowerBuild: Clean + Release",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"${workspaceFolder}/RawrXD-Build.ps1",
+				"-Config",
+				"Release",
+				"-Clean"
+			],
+			"group": "build",
+			"problemMatcher": [
+				"$msCompile"
+			]
+		},
+		{
+			"label": "PowerBuild: Clean + Debug",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"${workspaceFolder}/RawrXD-Build.ps1",
+				"-Config",
+				"Debug",
+				"-Clean"
+			],
+			"group": "build",
+			"problemMatcher": [
+				"$msCompile"
+			]
+		},
+		// ─── MASM: Single File ───
+		{
+			"label": "MASM: Assemble Current File",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"$ml64 = & \"${env:ProgramFiles(x86)}\\Microsoft Visual Studio\\Installer\\vswhere.exe\" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -find 'VC\\Tools\\MSVC\\*\\bin\\Hostx64\\x64\\ml64.exe' | Select-Object -Last 1; if (-not $ml64) { Write-Error 'ml64.exe not found'; exit 1 }; & $ml64 /c /nologo /Fo \"${workspaceFolder}\\obj\\${fileBasenameNoExtension}.obj\" \"${file}\""
+			],
+			"problemMatcher": {
+				"owner": "masm",
+				"fileLocation": [
+					"relative",
+					"${workspaceFolder}"
+				],
+				"pattern": {
+					"regexp": "^(.+)\\((\\d+)\\)\\s*:\\s*(error|warning)\\s+(A\\d+):\\s*(.*)$",
+					"file": 1,
+					"line": 2,
+					"severity": 3,
+					"code": 4,
+					"message": 5
+				}
+			},
+			"presentation": {
+				"reveal": "always",
+				"panel": "shared"
+			}
+		},
+		// ─── TerraForm: Assemble + Link ───
+		{
+			"label": "TerraForm: Build v11",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"$ml64 = & \"${env:ProgramFiles(x86)}\\Microsoft Visual Studio\\Installer\\vswhere.exe\" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -find 'VC\\Tools\\MSVC\\*\\bin\\Hostx64\\x64\\ml64.exe' | Select-Object -Last 1; $link = & \"${env:ProgramFiles(x86)}\\Microsoft Visual Studio\\Installer\\vswhere.exe\" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -find 'VC\\Tools\\MSVC\\*\\bin\\Hostx64\\x64\\link.exe' | Select-Object -Last 1; $vcLib = Split-Path $link; $vcLib = Join-Path (Split-Path (Split-Path $vcLib)) 'lib\\x64'; Write-Host '[ASM] terraform_v11.asm'; & $ml64 /c /nologo /Fo obj\\terraform_v11.obj terraform_v11.asm; if ($LASTEXITCODE -ne 0) { exit 1 }; Write-Host '[LINK] terraform_v11.exe'; & $link /NOLOGO /ENTRY:_start /SUBSYSTEM:CONSOLE /LIBPATH:$vcLib /LIBPATH:\"C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.26100.0\\um\\x64\" /LIBPATH:\"C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.26100.0\\ucrt\\x64\" /OUT:bin\\terraform_v11.exe obj\\terraform_v11.obj kernel32.lib; if ($LASTEXITCODE -ne 0) { exit 1 }; Write-Host '[OK] bin\\terraform_v11.exe' -ForegroundColor Green"
+			],
+			"group": "build",
+			"problemMatcher": {
+				"owner": "masm",
+				"fileLocation": [
+					"relative",
+					"${workspaceFolder}"
+				],
+				"pattern": {
+					"regexp": "^(.+)\\((\\d+)\\)\\s*:\\s*(error|warning)\\s+(A\\d+|LNK\\d+):\\s*(.*)$",
+					"file": 1,
+					"line": 2,
+					"severity": 3,
+					"code": 4,
+					"message": 5
+				}
+			}
+		},
+		// ─── Run ───
+		{
+			"label": "Run: RawrXD-Win32IDE",
+			"type": "shell",
+			"command": "${workspaceFolder}/bin/RawrXD-Win32IDE.exe",
+			"dependsOn": "PowerBuild: Release",
+			"problemMatcher": []
+		},
+		{
+			"label": "Run: TerraForm v11",
+			"type": "shell",
+			"command": "${workspaceFolder}/bin/terraform_v11.exe",
+			"args": [
+				"${file}"
+			],
+			"dependsOn": "TerraForm: Build v11",
+			"problemMatcher": []
+		}
+	]
+}

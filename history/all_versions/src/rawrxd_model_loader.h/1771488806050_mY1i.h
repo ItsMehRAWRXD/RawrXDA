@@ -1,0 +1,97 @@
+#pragma once
+#include <string>
+#include <vector>
+#include <unordered_map>
+#include <vulkan/vulkan.h>
+#include <windows.h>
+
+struct Tensor {
+    std::string name;
+    std::vector<uint64_t> dims;
+    uint32_t type;
+    uint64_t offset;
+    void* data; // Mapped pointer (Raw)
+    
+    // Vulkan
+    VkBuffer gpuBuffer = VK_NULL_HANDLE;
+    VkDeviceMemory gpuMemory = VK_NULL_HANDLE;
+    bool onGPU = false;
+    
+    // CPU Float cache for reference implementation
+    std::vector<float> cpuFloatData;
+};
+
+struct GGUFHeader {
+    uint32_t magic;
+    uint32_t version;
+    uint64_t tensor_count;
+    uint64_t kv_count;
+};
+
+// GGUF quantization block structures
+#pragma pack(push, 1)
+struct Q4_0_Block {
+    uint16_t d; // float16 scale
+    uint8_t qs[16]; // 32 x 4-bit nibbles
+};
+
+struct Q5_0_Block {
+    uint16_t d;       // float16 scale
+    uint8_t qh[4];    // 32 x 1-bit high bits
+    uint8_t qs[16];   // 32 x 4-bit low nibbles
+};
+
+struct Q8_0_Block {
+    uint16_t d;        // float16 scale
+    int8_t qs[32];     // 32 x 8-bit quants
+};
+
+struct Q4_K_Block {
+    uint16_t d;        // float16 super-block scale
+    uint16_t dmin;     // float16 super-block min
+    uint8_t scales[12]; // sub-block scales (packed 6-bit)
+    uint8_t qs[128];   // 256 x 4-bit weights
+};
+#pragma pack(pop)
+
+class RawrXDModelLoader {
+public:
+    bool Load(const wchar_t* path, VkDevice device, VkPhysicalDevice physDevice);
+    float* GetTensor(const std::string& name);
+    
+private:
+    VkDevice device;
+    VkPhysicalDeviceMemoryProperties memProps;
+    HANDLE hFile, hMapping;
+    void* mappedView;
+    uint64_t fileSize;
+    
+    // Metadata
+    int n_embd = 4096;
+    int n_layers = 32;
+    int n_heads = 32;
+    int n_heads_kv = 32;
+    int n_ctx = 4096;
+    int vocab_size = 32000;
+
+public:
+    int getDim() const { return n_embd; }
+    int getLayers() const { return n_layers; }
+    int getHeads() const { return n_heads; }
+    int getKVHeads() const { return n_heads_kv; }
+    int getCtx() const { return n_ctx; }
+    int getVocabSize() const { return vocab_size; }
+    
+    std::unordered_map<std::string, Tensor> tensors;
+    
+    // Helpers
+    uint8_t* ParseMetadata(uint8_t* ptr, uint64_t count);
+    uint8_t* ParseTensorInfo(uint8_t* ptr, Tensor& t);
+    void LoadTensorAsync(Tensor& t);
+    void DequantAndUploadQ4_0(Tensor& t, void* blocks, size_t N);
+    void UploadF32(Tensor& t, void* data, size_t N);
+    void CreateGPUBuffer(Tensor& t, void* data, size_t size);
+    void UploadViaStaging(void* data, size_t size, VkBuffer dstBuffer);
+    uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+    int64_t CalculateVRAMUsage();
+};

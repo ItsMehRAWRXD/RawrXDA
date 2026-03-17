@@ -1,0 +1,77 @@
+{
+  "name": "bigdaddyg-copilot",
+  "displayName": "BigDaddyG Copilot",
+  "publisher": "bigdaddyg",
+  "version": "1.0.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ItsMehRAWRXD/RawrXD.git"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "bigdaddyg-copilot.openChat",
+        "title": "BigDaddyG Copilot: Open AI Chat"
+      },
+      {
+        "command": "bigdaddyg-copilot.beaconChat",
+        "title": "BigDaddyG Copilot: Beacon Chat (Local Ollama)"
+      },
+      {
+        "command": "bigdaddyg-copilot.toggleBypass",
+        "title": "BigDaddyG Copilot: Toggle Cursor Bypass"
+      },
+      {
+        "command": "bigdaddyg-copilot.startBypass",
+        "title": "BigDaddyG Copilot: Start Cursor Bypass"
+      },
+      {
+        "command": "bigdaddyg-copilot.stopBypass",
+        "title": "BigDaddyG Copilot: Stop Cursor Bypass"
+      },
+      {
+        "command": "bigdaddyg-copilot.enableInterceptor",
+        "title": "BigDaddyG Copilot: Enable Request Interceptor"
+      },
+      {
+        "command": "bigdaddyg-copilot.disableInterceptor",
+        "title": "BigDaddyG Copilot: Disable Request Interceptor"
+      },
+      {
+        "command": "bigdaddyg-copilot.insertCode",
+        "title": "BigDaddyG Copilot: Insert Code at Cursor"
+      },
+      {
+        "command": "bigdaddyg-copilot.applyDiff",
+        "title": "BigDaddyG Copilot: Apply Code Changes"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "bigdaddyg-copilot.openChat",
+        "key": "ctrl+shift+l",
+        "when": "editorTextFocus"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "tsc -p ./",
+    "compile": "tsc -p ./",
+    "package": "@vscode/vsce package --allow-missing-repository"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^18.19.0",
+    "typescript": "^5.9.3"
+  }
+}

@@ -238,6 +238,79 @@ void RunGEMMParityTest(uint32_t M, uint32_t K, uint32_t N)
     }
 }
 
+
+extern "C" void attention_baseline(float* q, float* k, float* v, int batch_size, int seq_len, int head_size, int num_heads, float* output);
+
+void RunFlashAttentionParityTest(int seq_len) {
+    const int head_dim = 64;
+    const int n_heads = 32;
+    int size = seq_len * head_dim * n_heads;
+
+    std::vector<float> Q_cpu(size);
+    std::vector<float> K_cpu(size);
+    std::vector<float> V_cpu(size);
+    std::vector<float> Out_cpu(size);
+    std::vector<float> Out_gpu(size);
+
+    std::mt19937 rng(42);
+    std::uniform_real_distribution<float> dist(-1.f, 1.f);
+    for (int i = 0; i < size; ++i) {
+        Q_cpu[i] = dist(rng);
+        K_cpu[i] = dist(rng);
+        V_cpu[i] = dist(rng);
+    }
+
+    auto start_cpu = std::chrono::high_resolution_clock::now();
+    attention_baseline(Q_cpu.data(), K_cpu.data(), V_cpu.data(), 1, seq_len, head_dim, n_heads, Out_cpu.data());
+    auto end_cpu = std::chrono::high_resolution_clock::now();
+    std::cout << "CPU Flash Attention done.\n";
+
+    Microsoft::WRL::ComPtr<ID3D12Device> device;
+    if (FAILED(D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&device)))) return;
+
+    D3D12_COMMAND_QUEUE_DESC queueDesc = {};
+    queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+    Microsoft::WRL::ComPtr<ID3D12CommandQueue> cmdQueue;
+    if (FAILED(device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&cmdQueue)))) return;
+
+    GGUFD3D12Bridge bridge;
+    bridge.Initialize(device.Get(), cmdQueue.Get());
+
+    Microsoft::WRL::ComPtr<ID3D12Resource> bufQ, bufK, bufV, bufOut;
+    bridge.CreateBuffer("q_buf", size * sizeof(float), &bufQ, Q_cpu.data());
+    bridge.CreateBuffer("k_buf", size * sizeof(float), &bufK, K_cpu.data());
+    bridge.CreateBuffer("v_buf", size * sizeof(float), &bufV, V_cpu.data());
+    bridge.CreateBuffer("o_buf", size * sizeof(float), &bufOut, nullptr);
+
+    auto start_gpu = std::chrono::high_resolution_clock::now();
+    if (!bridge.DispatchFlashAttention(bufQ.Get(), bufK.Get(), bufV.Get(), bufOut.Get(), seq_len, head_dim, n_heads)) {
+        std::cout << "GPU Flash Attention Dispatch failed!\n";
+        return;
+    }
+    auto end_gpu = std::chrono::high_resolution_clock::now();
+    std::cout << "GPU Flash Attention done.\n";
+
+    if (!bridge.ReadbackBuffer(bufOut.Get(), Out_gpu.data(), Out_gpu.size() * sizeof(float))) {
+        std::cout << "Readback failed!\n";
+        return;
+    }
+
+    float max_err = 0.0f;
+    for (uint32_t i = 0; i < Out_cpu.size(); ++i) {
+        float err = std::abs(Out_cpu[i] - Out_gpu[i]);
+        if (err > max_err) max_err = err;
+    }
+
+    std::cout << "CPU Flash Attention Time: " << std::chrono::duration_cast<std::chrono::microseconds>(end_cpu - start_cpu).count() << " us\n";
+    std::cout << "GPU Flash Attention Time: " << std::chrono::duration_cast<std::chrono::microseconds>(end_gpu - start_gpu).count() << " us\n";
+    std::cout << "Max Error Margin: " << max_err << "\n";
+
+    if (max_err < 0.01f) {
+        std::cout << "[PASS] Flash Attention output matches closely.\n";
+    } else {
+        std::cout << "[FAIL] Error exceeds margin!\n";
+    }
+}
 int main(int argc, char** argv)
 {
     std::cout << "Starting benchmark..." << std::endl << std::flush;
@@ -253,12 +326,16 @@ int main(int argc, char** argv)
         RunRoPEParityTest(512);
         RunGEMMParityTest(128, 128, 128);
         RunGEMMParityTest(256, 128, 512);
+        RunFlashAttentionParityTest(128);
     } else {
         RunRoPEParityTest(seq_len);
         RunGEMMParityTest(128, 128, 128);
         RunGEMMParityTest(256, 128, 512);
+        RunFlashAttentionParityTest(128);
     }
 
     return 0;
 }
+
+
 

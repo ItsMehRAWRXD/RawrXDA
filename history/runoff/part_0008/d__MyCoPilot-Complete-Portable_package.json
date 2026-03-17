@@ -1,0 +1,20 @@
+{
+  "dependencies": {
+    "express": "^5.1.0",
+    "node-fetch": "^3.3.2",
+    "ws": "^8.18.3"
+  },
+  "name": "mycopilot-complete-portable",
+  "version": "1.0.0",
+  "description": "",
+  "main": "amazon-q-bridge.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "ollama:check": "node ./ollama/check.js",
+    "ollama:test": "node ./ollama/check.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}

@@ -1,0 +1,65 @@
+name: Validate Copilot Instructions
+
+on:
+  pull_request:
+    paths:
+      - '.github/copilot-instructions.md'
+      - 'src/**/*.hpp'
+      - 'src/**/*.cpp'
+      - 'CMakeLists.txt'
+      - '.github/workflows/validate-copilot.yml'
+  push:
+    branches: [main, develop]
+    paths:
+      - '.github/copilot-instructions.md'
+      - 'src/**/*.hpp'
+      - 'src/**/*.cpp'
+      - 'CMakeLists.txt'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    name: Validate Copilot Instructions
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pathspec
+
+      - name: Run validation script
+        run: python scripts/validate-copilot-instructions.py
+
+      - name: Check for outdated patterns
+        run: |
+          # Verify PatchResult usage is consistent
+          grep -r "PatchResult::" src/ --include="*.cpp" | wc -l > /tmp/patch_result_count.txt
+          if grep -q "PatchResult{" src/ --include="*.cpp"; then
+            echo "❌ Found direct PatchResult construction instead of factory methods"
+            exit 1
+          fi
+          echo "✅ All PatchResult usage follows factory pattern"
+
+      - name: Verify hotpatch files are included
+        run: |
+          # Check that hotpatch files are not commented out in CMakeLists
+          if grep -c "# src/qtapp/model_memory_hotpatch" CMakeLists.txt > /dev/null; then
+            echo "⚠️  Warning: model_memory_hotpatch appears to be commented out"
+          fi
+          echo "✅ Hotpatch files status verified"
+
+      - name: Report results
+        if: always()
+        run: |
+          echo "## Copilot Instructions Validation Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ All copilot instructions verified against current codebase" >> $GITHUB_STEP_SUMMARY

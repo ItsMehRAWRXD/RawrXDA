@@ -1,0 +1,90 @@
+#include "native_ide.h"
+#include <winver.h>
+
+// Application icon (you would replace this with actual icon resources)
+IDI_APPLICATION ICON "ide.ico"
+
+// Version information
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION 1,0,0,0
+PRODUCTVERSION 1,0,0,0
+FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
+FILEFLAGS 0x0L
+FILEOS VOS__WINDOWS32
+FILETYPE VFT_APP
+FILESUBTYPE VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName", "Native IDE Project"
+            VALUE "FileDescription", "Native Portable IDE"
+            VALUE "FileVersion", "1.0.0.0"
+            VALUE "InternalName", "NativeIDE"
+            VALUE "LegalCopyright", "Copyright (C) 2025"
+            VALUE "OriginalFilename", "NativeIDE.exe"
+            VALUE "ProductName", "Native IDE"
+            VALUE "ProductVersion", "1.0.0.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
+
+// Startup Dialog
+IDD_STARTUP DIALOGEX 0, 0, 400, 300
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Native IDE - Get Started"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "Welcome to Native IDE",IDC_STATIC,20,20,360,16,SS_CENTER
+    LTEXT           "Choose how to get started:",IDC_STATIC,20,50,360,12
+    
+    PUSHBUTTON      "&Open Project or Solution...",IDC_OPEN_PROJECT,50,80,300,30,BS_LEFT
+    LTEXT           "Open an existing project (.vcxproj, .sln, Makefile)",IDC_STATIC,70,115,260,12
+    
+    PUSHBUTTON      "&Clone Repository...",IDC_CLONE_REPO,50,140,300,30,BS_LEFT
+    LTEXT           "Clone a Git repository to local folder",IDC_STATIC,70,175,260,12
+    
+    PUSHBUTTON      "Open &Folder...",IDC_OPEN_FOLDER,50,200,300,30,BS_LEFT
+    LTEXT           "Open a local folder as workspace",IDC_STATIC,70,235,260,12
+    
+    DEFPUSHBUTTON   "OK",IDOK,240,270,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,300,270,50,14
+END
+
+// Accelerator table for keyboard shortcuts
+IDR_ACCELERATORS ACCELERATORS
+BEGIN
+    "N",            IDM_FILE_NEW,           VIRTKEY, CONTROL
+    "O",            IDM_FILE_OPEN,          VIRTKEY, CONTROL
+    "S",            IDM_FILE_SAVE,          VIRTKEY, CONTROL
+    "Z",            IDM_EDIT_UNDO,          VIRTKEY, CONTROL
+    "Y",            IDM_EDIT_REDO,          VIRTKEY, CONTROL
+    "X",            IDM_EDIT_CUT,           VIRTKEY, CONTROL
+    "C",            IDM_EDIT_COPY,          VIRTKEY, CONTROL
+    "V",            IDM_EDIT_PASTE,         VIRTKEY, CONTROL
+    "F",            IDM_EDIT_FIND,          VIRTKEY, CONTROL
+    "H",            IDM_EDIT_REPLACE,       VIRTKEY, CONTROL
+    VK_F5,          IDM_BUILD_BUILD,        VIRTKEY
+    VK_F7,          IDM_BUILD_COMPILE,      VIRTKEY
+    VK_F5,          IDM_BUILD_RUN,          VIRTKEY, CONTROL
+    VK_F9,          IDM_BUILD_DEBUG,        VIRTKEY
+END
+
+// String table for application strings
+STRINGTABLE
+BEGIN
+    IDS_APP_TITLE           "Native IDE"
+    IDS_READY               "Ready"
+    IDS_COMPILING           "Compiling..."
+    IDS_BUILDING            "Building..."
+    IDS_COMPILE_SUCCESS     "Compilation successful"
+    IDS_COMPILE_ERROR       "Compilation failed"
+    IDS_FILE_NOT_FOUND      "File not found"
+    IDS_SAVE_CHANGES        "Save changes to %s?"
+    IDS_UNTITLED            "Untitled"
+END

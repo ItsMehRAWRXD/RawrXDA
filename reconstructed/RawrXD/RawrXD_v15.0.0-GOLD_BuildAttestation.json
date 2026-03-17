@@ -1,0 +1,123 @@
+{
+  "Modules": [
+    {
+      "Exists": false,
+      "Status": "MISSING",
+      "Path": "src\\asm\\RawrCodex.asm",
+      "Overall": "FAIL",
+      "Critical": true,
+      "FileName": "RawrCodex.asm"
+    },
+    {
+      "Exists": false,
+      "Status": "MISSING",
+      "Path": "src\\asm\\FlashAttention_AVX512.asm",
+      "Overall": "FAIL",
+      "Critical": true,
+      "FileName": "FlashAttention_AVX512.asm"
+    },
+    {
+      "Exists": false,
+      "Status": "MISSING",
+      "Path": "src\\asm\\RawrXD_Debug_Engine.asm",
+      "Overall": "FAIL",
+      "Critical": true,
+      "FileName": "RawrXD_Debug_Engine.asm"
+    },
+    {
+      "Exists": false,
+      "Status": "MISSING",
+      "Path": "src\\asm\\RawrXD_KQuant_Dequant.asm",
+      "Overall": "FAIL",
+      "Critical": true,
+      "FileName": "RawrXD_KQuant_Dequant.asm"
+    },
+    {
+      "Exists": false,
+      "Status": "MISSING",
+      "Path": "src\\asm\\RawrXD_Swarm_Network.asm",
+      "Overall": "FAIL",
+      "Critical": false,
+      "FileName": "RawrXD_Swarm_Network.asm"
+    },
+    {
+      "Exists": false,
+      "Status": "MISSING",
+      "Path": "src\\asm\\RawrXD_QuadBuffer_Streamer.asm",
+      "Overall": "FAIL",
+      "Critical": true,
+      "FileName": "RawrXD_QuadBuffer_Streamer.asm"
+    },
+    {
+      "Exists": false,
+      "Status": "MISSING",
+      "Path": "src\\asm\\RawrXD_EnterpriseLicense.asm",
+      "Overall": "FAIL",
+      "Critical": true,
+      "FileName": "RawrXD_EnterpriseLicense.asm"
+    },
+    {
+      "Exists": false,
+      "Status": "MISSING",
+      "Path": "src\\asm\\RawrXD_License_Shield.asm",
+      "Overall": "FAIL",
+      "Critical": true,
+      "FileName": "RawrXD_License_Shield.asm"
+    },
+    {
+      "Exists": false,
+      "Status": "MISSING",
+      "Path": "src\\asm\\memory_patch.asm",
+      "Overall": "FAIL",
+      "Critical": true,
+      "FileName": "memory_patch.asm"
+    },
+    {
+      "Exists": false,
+      "Status": "MISSING",
+      "Path": "src\\asm\\byte_search.asm",
+      "Overall": "FAIL",
+      "Critical": true,
+      "FileName": "byte_search.asm"
+    },
+    {
+      "Exists": false,
+      "Status": "MISSING",
+      "Path": "src\\asm\\request_patch.asm",
+      "Overall": "FAIL",
+      "Critical": true,
+      "FileName": "request_patch.asm"
+    },
+    {
+      "Exists": false,
+      "Status": "MISSING",
+      "Path": "src\\asm\\custom_zlib.asm",
+      "Overall": "FAIL",
+      "Critical": false,
+      "FileName": "custom_zlib.asm"
+    },
+    {
+      "Exists": false,
+      "Status": "MISSING",
+      "Path": "src\\asm\\inference_kernels.asm",
+      "Overall": "FAIL",
+      "Critical": true,
+      "FileName": "inference_kernels.asm"
+    }
+  ],
+  "Metadata": {
+    "Validator": "RawrXD-BuildCert-v1",
+    "Platform": "MASM64/x64",
+    "RepoRoot": "D:\\rawrxd\\reconstructed\\RawrXD",
+    "ML64Path": "C:\\VS2022Enterprise\\VC\\Tools\\MSVC\\14.50.35717\\bin\\Hostx64\\x64\\ml64.exe",
+    "Timestamp": "2026-02-20T16:43:11.8886055-05:00",
+    "Version": "15.0.0-GOLD"
+  },
+  "Summary": {
+    "TotalFiles": 13,
+    "TotalLines": 0,
+    "Failed": 13,
+    "Passed": 0,
+    "Warnings": 0
+  }
+}

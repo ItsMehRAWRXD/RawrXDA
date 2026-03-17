@@ -1,0 +1,93 @@
+cmake_minimum_required(VERSION 3.25)
+project(NativeIDE LANGUAGES CXX)
+
+# Systems Engineering Standards
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Security hardening flags
+if(MSVC)
+    add_compile_options(
+        /W4 /WX          # Warnings as errors
+        /GS              # Buffer security check
+        /DYNAMICBASE     # ASLR support
+        /NXCOMPAT        # DEP support
+        /guard:cf        # Control Flow Guard
+    )
+    add_link_options(
+        /SUBSYSTEM:WINDOWS
+        /ENTRY:mainCRTStartup
+    )
+else()
+    add_compile_options(
+        -Wall -Wextra -Werror
+        -fstack-protector-strong
+        -D_FORTIFY_SOURCE=2
+    )
+    add_link_options(
+        -Wl,-z,relro
+        -Wl,-z,now
+        -Wl,-z,noexecstack
+    )
+endif()
+
+# Source files
+set(SOURCES
+    src/main.cpp
+    src/ide_application.cpp
+    src/main_window.cpp
+    src/editor_core.cpp
+    src/file_manager.cpp
+    src/compiler_integration.cpp
+    src/plugin_manager.cpp
+)
+
+# Headers
+set(HEADERS
+    include/ide_application.h
+    include/main_window.h
+    include/editor_core.h
+    include/compiler_integration.h
+    include/plugin_manager.h
+)
+
+# Create executable
+add_executable(NativeIDE ${SOURCES} ${HEADERS})
+
+# Include directories
+target_include_directories(NativeIDE PRIVATE include)
+
+# Windows-specific libraries
+if(WIN32)
+    target_link_libraries(NativeIDE
+        user32
+        gdi32
+        kernel32
+        comctl32
+        shell32
+        comdlg32
+    )
+endif()
+
+# Static runtime linking for portability
+if(MSVC)
+    set_property(TARGET NativeIDE PROPERTY
+        MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
+# Optimization flags
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    if(MSVC)
+        target_compile_options(NativeIDE PRIVATE /O2 /Ob2)
+    else()
+        target_compile_options(NativeIDE PRIVATE -O3 -DNDEBUG)
+    endif()
+endif()
+
+# Install configuration
+install(TARGETS NativeIDE
+    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+)

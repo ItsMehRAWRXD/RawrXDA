@@ -1,0 +1,19 @@
+FROM bigdaddyg-16gb:latest
+
+# Force 100% GPU — reduce context window to fit KV cache in 16GB VRAM
+# 20.9B MXFP4 = ~13GB weights. 16GB - 13GB = 3GB for KV cache
+# At 2048 ctx: KV cache ~1.5GB → fits with headroom
+# At 4096 ctx: KV cache ~3GB → tight but fits
+# num_gpu 999 = load ALL layers on GPU (ollama caps at actual count)
+PARAMETER num_gpu 999
+PARAMETER num_ctx 2048
+PARAMETER num_predict 2048
+PARAMETER temperature 0.3
+PARAMETER top_k 40
+PARAMETER top_p 0.85
+PARAMETER repeat_last_n 128
+PARAMETER repeat_penalty 1.2
+PARAMETER stop [INST]
+PARAMETER stop [/INST]
+PARAMETER stop <<SYS>>
+PARAMETER stop <</SYS>>

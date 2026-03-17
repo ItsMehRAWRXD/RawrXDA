@@ -1,21 +1,6 @@
 // ============================================================================
 // support_tier.h — Enterprise Support Tier System (Feature 0x10)
 // ============================================================================
-// Provides priority support routing, SLA enforcement, and ticket lifecycle
-// management for Enterprise-licensed users.
-//
-// Architecture:
-//   SupportTierManager::Instance()
-//    ├─ Tier classification (Community/Pro/Enterprise)
-//    ├─ SLA guarantees per tier
-//    ├─ Ticket routing & priority queuing
-//    └─ Auto-escalation on SLA breach
-//
-// PATTERN:   No exceptions. No std::function. Raw function pointers only.
-// THREADING: Singleton with std::mutex. Thread-safe.
-// RULE:      NO SOURCE FILE IS TO BE SIMPLIFIED
-// ============================================================================
-
 #pragma once
 
 #include <cstdint>
@@ -26,32 +11,23 @@
 
 namespace RawrXD::Enterprise {
 
-// ============================================================================
-// Support Tier Levels
-// ============================================================================
 enum class SupportLevel : uint32_t {
-    Community   = 0,    // Forum-only, best-effort
-    Pro         = 1,    // Email support, 48h SLA
-    Enterprise  = 2,    // Priority, 4h SLA, phone, dedicated engineer
-    OEM         = 3,    // Custom SLA, white-glove
+    Community   = 0,
+    Pro         = 1,
+    Enterprise  = 2,
+    OEM         = 3,
 };
 
-// ============================================================================
-// SLA Configuration per tier
-// ============================================================================
 struct SLAConfig {
     SupportLevel     level;
-    uint32_t         responseTimeMinutes;   // Max response time SLA
-    uint32_t         resolutionTimeHours;   // Max resolution time SLA
+    uint32_t         responseTimeMinutes;
+    uint32_t         resolutionTimeHours;
     bool             phoneSupport;
     bool             dedicatedEngineer;
     bool             weekendCoverage;
     const char*      description;
 };
 
-// ============================================================================
-// Support Ticket
-// ============================================================================
 enum class TicketPriority : uint32_t {
     Low      = 0,
     Normal   = 1,
@@ -75,15 +51,12 @@ struct SupportTicket {
     SupportLevel    tier;
     const char*     subject;
     const char*     description;
-    uint64_t        createdAtMs;        // Unix epoch milliseconds
+    uint64_t        createdAtMs;
     uint64_t        updatedAtMs;
-    uint64_t        slaDeadlineMs;      // When SLA breach occurs
+    uint64_t        slaDeadlineMs;
     bool            slaBreached;
 };
 
-// ============================================================================
-// Support Tier Result — structured return (no exceptions)
-// ============================================================================
 struct SupportResult {
     bool        success;
     const char* detail;
@@ -97,35 +70,25 @@ struct SupportResult {
     }
 };
 
-// ============================================================================
-// Callbacks — raw function pointers (NO std::function)
-// ============================================================================
 using TicketCreatedFn    = void(*)(const SupportTicket& ticket);
 using TicketEscalatedFn  = void(*)(const SupportTicket& ticket);
 using SLABreachFn        = void(*)(const SupportTicket& ticket);
 
-// ============================================================================
-// Support Tier Manager — Singleton
-// ============================================================================
 class SupportTierManager {
 public:
     static SupportTierManager& Instance();
 
-    // Non-copyable
     SupportTierManager(const SupportTierManager&) = delete;
     SupportTierManager& operator=(const SupportTierManager&) = delete;
 
-    // ---- Lifecycle ----
     SupportResult Initialize(SupportLevel level);
     void Shutdown();
     bool IsInitialized() const { return m_initialized; }
 
-    // ---- Tier Queries ----
     SupportLevel GetCurrentLevel() const;
     const SLAConfig& GetSLAConfig() const;
     const char* GetLevelName(SupportLevel level) const;
 
-    // ---- Ticket Management ----
     SupportResult CreateTicket(TicketPriority priority,
                                const char* subject,
                                const char* description);
@@ -133,16 +96,13 @@ public:
     SupportResult ResolveTicket(uint64_t ticketId);
     SupportResult CloseTicket(uint64_t ticketId);
 
-    // ---- SLA Monitoring ----
     void CheckSLABreaches();
     uint32_t GetOpenTicketCount() const;
     uint32_t GetBreachedTicketCount() const;
 
-    // ---- Status / Reporting ----
     std::string GenerateStatusReport() const;
     std::string GenerateTicketList() const;
 
-    // ---- Callbacks ----
     void OnTicketCreated(TicketCreatedFn fn)       { m_onCreated = fn; }
     void OnTicketEscalated(TicketEscalatedFn fn)   { m_onEscalated = fn; }
     void OnSLABreach(SLABreachFn fn)               { m_onBreach = fn; }
@@ -161,11 +121,9 @@ private:
     std::vector<SupportTicket>  m_tickets;
     uint64_t                    m_nextId = 1;
 
-    // Callbacks — raw pointers, no std::function
     TicketCreatedFn             m_onCreated = nullptr;
     TicketEscalatedFn           m_onEscalated = nullptr;
     SLABreachFn                 m_onBreach = nullptr;
 };
 
 } // namespace RawrXD::Enterprise
-

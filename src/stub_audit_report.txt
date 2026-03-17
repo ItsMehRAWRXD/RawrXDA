@@ -1,0 +1,73 @@
+﻿# RawrXD Stub Purge Audit Report
+Generated: 2026-03-16 20:48:25
+Build dir: D:\rawrxd\build_prod
+
+## Summary
+  Unresolved symbols : 0
+  Stub files scanned : 54
+  LIVE (keep/impl)   : 0
+  DEAD (safe delete) : 33
+  ORPHAN (no symbols): 21
+
+## DEAD STUBS — safe to git rm
+  D:\rawrxd\src\agent\quantum_agent_orchestrator_stubs.cpp
+  D:\rawrxd\src\core\analyzer_distiller_stubs.cpp
+  D:\rawrxd\src\core\enterprise_license_stubs.cpp
+  D:\rawrxd\src\core\licensing_stubs.cpp
+  D:\rawrxd\src\core\memory_patch_byte_search_stubs.cpp
+  D:\rawrxd\src\core\mesh_brain_asm_stubs.cpp
+  D:\rawrxd\src\core\missing_handler_stubs.cpp
+  D:\rawrxd\src\core\monaco_core_stubs.cpp
+  D:\rawrxd\src\core\sqlite3_stubs.cpp
+  D:\rawrxd\src\core\streaming_orchestrator_stubs.cpp
+  D:\rawrxd\src\core\stubs.cpp
+  D:\rawrxd\src\core\subsystem_mode_stubs.cpp
+  D:\rawrxd\src\core\swarm_network_stubs.cpp
+  D:\rawrxd\src\core\test_masm_stubs.cpp
+  D:\rawrxd\src\core\universal_stub.cpp
+  D:\rawrxd\src\core\WebView2Container_stubs.cpp
+  D:\rawrxd\src\core\win32_ide_link_stubs.cpp
+  D:\rawrxd\src\engine\core_generator_stubs.cpp
+  D:\rawrxd\src\engine\inference_kernels_stubs.cpp
+  D:\rawrxd\src\inference\vulkan_compute_min_stub.cpp
+  D:\rawrxd\src\qtapp\compliance_logger_stub.hpp
+  D:\rawrxd\src\qtapp\gguf_loader_stub.hpp
+  D:\rawrxd\src\stubs\production_link_stubs.cpp
+  D:\rawrxd\src\telemetry\ai_metrics_stub.cpp
+  D:\rawrxd\src\win32app\digestion_engine_stub.cpp
+  D:\rawrxd\src\win32app\link_stubs_ssot_handlers.cpp
+  D:\rawrxd\src\win32app\link_stubs_win32ide_methods.cpp
+  D:\rawrxd\src\win32app\multi_file_search_stub.cpp
+  D:\rawrxd\src\win32app\reverse_engineered_stubs.cpp
+  D:\rawrxd\src\win32app\Win32IDE_CircularArchStub.cpp
+  D:\rawrxd\src\minimal_hub_stub.hpp
+  D:\rawrxd\src\rawrxd_cli_stub.cpp
+  D:\rawrxd\src\vulkan_compute_stub.cpp
+
+  git rm command:
+    git rm -- "src\agent\quantum_agent_orchestrator_stubs.cpp" "src\core\analyzer_distiller_stubs.cpp" "src\core\enterprise_license_stubs.cpp" "src\core\licensing_stubs.cpp" "src\core\memory_patch_byte_search_stubs.cpp" "src\core\mesh_brain_asm_stubs.cpp" "src\core\missing_handler_stubs.cpp" "src\core\monaco_core_stubs.cpp" "src\core\sqlite3_stubs.cpp" "src\core\streaming_orchestrator_stubs.cpp" "src\core\stubs.cpp" "src\core\subsystem_mode_stubs.cpp" "src\core\swarm_network_stubs.cpp" "src\core\test_masm_stubs.cpp" "src\core\universal_stub.cpp" "src\core\WebView2Container_stubs.cpp" "src\core\win32_ide_link_stubs.cpp" "src\engine\core_generator_stubs.cpp" "src\engine\inference_kernels_stubs.cpp" "src\inference\vulkan_compute_min_stub.cpp" "src\qtapp\compliance_logger_stub.hpp" "src\qtapp\gguf_loader_stub.hpp" "src\stubs\production_link_stubs.cpp" "src\telemetry\ai_metrics_stub.cpp" "src\win32app\digestion_engine_stub.cpp" "src\win32app\link_stubs_ssot_handlers.cpp" "src\win32app\link_stubs_win32ide_methods.cpp" "src\win32app\multi_file_search_stub.cpp" "src\win32app\reverse_engineered_stubs.cpp" "src\win32app\Win32IDE_CircularArchStub.cpp" "src\minimal_hub_stub.hpp" "src\rawrxd_cli_stub.cpp" "src\vulkan_compute_stub.cpp"
+
+## ORPHAN STUBS — no parseable symbols (inspect manually)
+  D:\rawrxd\src\agent\agentic_deep_thinking_engine_stub.cpp
+  D:\rawrxd\src\codec\brutal_gzip_stub.cpp
+  D:\rawrxd\src\codec\deflate_brutal_stub.cpp
+  D:\rawrxd\src\core\ai_agent_masm_stubs.cpp
+  D:\rawrxd\src\core\debug_engine_stubs.cpp
+  D:\rawrxd\src\core\enterprise_devunlock_stub_masm.cpp
+  D:\rawrxd\src\core\flash_attention_stubs.cpp
+  D:\rawrxd\src\core\js_extension_host_stub.cpp
+  D:\rawrxd\src\core\tier1_headless_stubs.cpp
+  D:\rawrxd\src\modules\react_generator_stubs.cpp
+  D:\rawrxd\src\modules\ReverseEngineering_stub.cpp
+  D:\rawrxd\src\qtapp\codec_stub.cpp
+  D:\rawrxd\src\qtapp\compliance_logger_stub.cpp
+  D:\rawrxd\src\qtapp\deflate_brutal_stub.cpp
+  D:\rawrxd\src\qtapp\gguf_loader_stub.cpp
+  D:\rawrxd\src\security\uac_bypass_impl_stub.cpp
+  D:\rawrxd\src\tools\license_validator_telemetry_stub.cpp
+  D:\rawrxd\src\win32app\benchmark_menu_stub.cpp
+  D:\rawrxd\src\win32app\benchmark_runner_stub.cpp
+  D:\rawrxd\src\cpu_inference_engine_autofix_stub.cpp
+  D:\rawrxd\src\verify_hub_stubs.cpp
+
+

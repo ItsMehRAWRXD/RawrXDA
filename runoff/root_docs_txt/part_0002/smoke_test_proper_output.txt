@@ -1,0 +1,816 @@
+**********************************************************************
+** Visual Studio 2022 Developer Command Prompt v17.14.27
+** Copyright (c) 2025 Microsoft Corporation
+**********************************************************************
+[vcvarsall.bat] Environment initialized for: 'x64'
+[+] cl.exe: C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\bin\HostX64\x64\cl.exe
+
+=== RawrXD Proper Smoke Test ===
+Files: 298 | Flags: 19
+  FAIL: AgentOllamaClient.cpp
+  FAIL: accelerator_router.cpp
+  FAIL: adaptive_pipeline_parallel.cpp
+  FAIL: agentic_task_graph.cpp
+  FAIL: alert_system.cpp
+  FAIL: amd_gpu_accelerator.cpp
+  FAIL: analyzer_distiller_stubs.cpp
+  FAIL: arm64_gpu_accelerator.cpp
+  FAIL: autonomous_debugger.cpp
+  FAIL: autonomous_workflow_engine.cpp
+  FAIL: auto_discovery.cpp
+  FAIL: auto_feature_registry.cpp
+  FAIL: auto_repair_orchestrator.cpp
+  FAIL: auto_update_system.cpp
+  FAIL: backup_manager.cpp
+  FAIL: byte_level_hotpatcher.cpp
+  FAIL: camellia256_bridge.cpp
+  FAIL: cerebras_wse_accelerator.cpp
+  FAIL: command_id_validator.cpp
+  FAIL: convergence_controller.cpp
+  FAIL: convergence_stress_harness.cpp
+  FAIL: cot_fallback_system.cpp
+  FAIL: crash_containment.cpp
+  FAIL: cross_run_tensor_cache.cpp
+  FAIL: debug_engine_stubs.cpp
+  FAIL: deterministic_replay.cpp
+  FAIL: deterministic_scheduler.cpp
+  FAIL: deterministic_swarm.cpp
+  FAIL: directml_compute.cpp
+  FAIL: distributed_pipeline_orchestrator.cpp
+  FAIL: dml_streaming_integration.cpp
+  FAIL: EditorEngineFactory.cpp
+  FAIL: embedding_engine.cpp
+  FAIL: enterprise_license_stubs.cpp
+  FAIL: enterprise_stress_tests.cpp
+  FAIL: enterprise_telemetry_compliance.cpp
+  FAIL: execution_governor.cpp
+  FAIL: execution_scheduler.cpp
+  FAIL: extension_polyfill_engine.cpp
+  FAIL: feature_handlers.cpp
+  FAIL: feature_registry.cpp
+  [50/298] pass=9 fail=41
+  FAIL: final_gauntlet.cpp
+  FAIL: gguf_dml_bridge.cpp
+  FAIL: gpu_backend_bridge.cpp
+  FAIL: gpu_kernel_autotuner.cpp
+  FAIL: hardware_synthesizer.cpp
+  FAIL: hotpatch_control_plane.cpp
+  FAIL: hotpatch_recovery_journal.cpp
+  FAIL: inference_state_machine.cpp
+  FAIL: input_guard_slicer.cpp
+  FAIL: instructions_provider.cpp
+  FAIL: intel_gpu_accelerator.cpp
+  FAIL: iterative_tensor_traversal.cpp
+  FAIL: js_extension_host.cpp
+  FAIL: layer_contribution_scorer.cpp
+  FAIL: layer_offload_manager.cpp
+  FAIL: live_binary_patcher.cpp
+  FAIL: local_ai_core.cpp
+  FAIL: local_parity_bridge.cpp
+  FAIL: lock_hierarchy.cpp
+  FAIL: masm_stress_harness.cpp
+  FAIL: memory_ownership.cpp
+  FAIL: memory_pressure_handler.cpp
+  FAIL: menu_auditor.cpp
+  FAIL: mesh_brain.cpp
+  FAIL: missing_handler_stubs.cpp
+  FAIL: model_bruteforce_engine.cpp
+  FAIL: model_memory_hotpatch.cpp
+  FAIL: model_training_pipeline.cpp
+  FAIL: MonacoCoreEngine.cpp
+  FAIL: multiwindow_scheduler.cpp
+  FAIL: native_debugger_engine.cpp
+  FAIL: native_inference_pipeline.cpp
+  FAIL: native_speed_layer.cpp
+  FAIL: neural_bridge.cpp
+  FAIL: omega_orchestrator.cpp
+  FAIL: patch_rollback_ledger.cpp
+  FAIL: pdb_gsi_hash.cpp
+  FAIL: pdb_lsp_bridge.cpp
+  FAIL: pdb_native.cpp
+  FAIL: pdb_reference_provider.cpp
+  FAIL: perf_telemetry.cpp
+  FAIL: plugin_signature.cpp
+  [100/298] pass=17 fail=83
+  FAIL: production_release.cpp
+  FAIL: proxy_hotpatcher.cpp
+  FAIL: pt_driver_contract.cpp
+  FAIL: quantum_safe_transport.cpp
+  FAIL: quant_hysteresis.cpp
+  FAIL: quickjs_sandbox.cpp
+  FAIL: rawrxd_state_mmf.cpp
+  FAIL: rawrxd_subsystem_api.cpp
+  FAIL: reasoning_pipeline_orchestrator.cpp
+  FAIL: reasoning_profile.cpp
+  FAIL: reasoning_schema_versioning.cpp
+  FAIL: RichEditEditorEngine.cpp
+  FAIL: safe_refactor_engine.cpp
+  FAIL: sandbox_integration.cpp
+  FAIL: self_host_engine.cpp
+  FAIL: semantic_code_intelligence.cpp
+  FAIL: semantic_delta_tracker.cpp
+  FAIL: sentinel_watchdog.cpp
+  FAIL: shadow_page_detour.cpp
+  FAIL: shortcut_manager.cpp
+  FAIL: speciator_engine.cpp
+  FAIL: ssot_handlers.cpp
+  FAIL: ssot_handlers_ext.cpp
+  FAIL: static_analysis_engine.cpp
+  FAIL: streaming_engine_registry.cpp
+  FAIL: streaming_orchestrator_stubs.cpp
+  FAIL: stubs.cpp
+  FAIL: subsystem_health_monitor.cpp
+  FAIL: swarm_coordinator.cpp
+  FAIL: swarm_decision_bridge.cpp
+  FAIL: swarm_network_stubs.cpp
+  FAIL: swarm_reconciliation.cpp
+  FAIL: swarm_worker.cpp
+  FAIL: thread_contention_profiler.cpp
+  FAIL: thread_pool.cpp
+  FAIL: transaction_journal.cpp
+  FAIL: transcendence_coordinator.cpp
+  FAIL: traversal_strategy.cpp
+  FAIL: unified_hotpatch_manager.cpp
+  FAIL: universal_model_hotpatcher.cpp
+  FAIL: update_signature.cpp
+  [150/298] pass=26 fail=124
+  FAIL: vision_encoder.cpp
+  FAIL: vision_gpu_staging.cpp
+  FAIL: voice_automation.cpp
+  FAIL: voice_chat.cpp
+  FAIL: watchdog_service.cpp
+  FAIL: webrtc_signaling.cpp
+  FAIL: WebView2EditorEngine.cpp
+  FAIL: workspace_reasoning_profiles.cpp
+  FAIL: AutonomousAgent.cpp
+  FAIL: CircularBeaconSystem.cpp
+  FAIL: ConsentPrompt.cpp
+  FAIL: digestion_engine_stub.cpp
+  FAIL: digestion_test_harness.cpp
+  FAIL: FileRegistry_Auto.cpp
+  FAIL: FileRegistry_Generated.cpp
+  FAIL: HeadlessIDE.cpp
+  FAIL: IDEAutoHealerLauncher.cpp
+  FAIL: IDEDiagnosticAutoHealer.cpp
+  FAIL: IDEDiagnosticAutoHealer_Impl.cpp
+  FAIL: IDELogger.cpp
+  FAIL: IocpFileWatcher.cpp
+  FAIL: MainWindowSimple.cpp
+  FAIL: main_win32.cpp
+  FAIL: OSExplorerInterceptor.cpp
+  FAIL: RawrXD_FileManager_Win32.cpp
+  FAIL: reverse_engineered_stubs.cpp
+  FAIL: simple_test.cpp
+  FAIL: SourceFileRegistry.cpp
+  FAIL: test_runner.cpp
+  FAIL: TodoManager.cpp
+  FAIL: TransparentRenderer.cpp
+  FAIL: VulkanRenderer.cpp
+  FAIL: Win32IDE.cpp
+  FAIL: Win32IDE_AgentCommands.cpp
+  FAIL: Win32IDE_AgentHistory.cpp
+  FAIL: Win32IDE_AgenticBridge.cpp
+  FAIL: Win32IDE_AgentPanel.cpp
+  FAIL: Win32IDE_AIBackend.cpp
+  FAIL: Win32IDE_AIReverseEngineering.cpp
+  FAIL: Win32IDE_AirgappedEnterprise.cpp
+  FAIL: Win32IDE_Annotations.cpp
+  FAIL: Win32IDE_AsmSemantic.cpp
+  FAIL: Win32IDE_AuditDashboard.cpp
+  FAIL: Win32IDE_Autonomy.cpp
+  FAIL: Win32IDE_BackendSwitcher.cpp
+  [200/298] pass=31 fail=169
+  FAIL: Win32IDE_BeaconWiring.cpp
+  FAIL: Win32IDE_Breadcrumbs.cpp
+  FAIL: Win32IDE_Build.cpp
+  FAIL: Win32IDE_CircularArchStub.cpp
+  FAIL: Win32IDE_CircularBeaconIntegration.cpp
+  FAIL: Win32IDE_ColorPicker.cpp
+  FAIL: Win32IDE_Commands.cpp
+  FAIL: Win32IDE_CopilotGapPanel.cpp
+  FAIL: Win32IDE_Core.cpp
+  FAIL: Win32IDE_CrashReporter.cpp
+  FAIL: Win32IDE_CruciblePanel.cpp
+  FAIL: Win32IDE_CursorParity.cpp
+  FAIL: Win32IDE_Debugger.cpp
+  FAIL: Win32IDE_DecompilerView.cpp
+  FAIL: Win32IDE_DiskRecovery.cpp
+  FAIL: Win32IDE_DualAgentPanel.cpp
+  FAIL: Win32IDE_EditorEngine.cpp
+  FAIL: Win32IDE_EmojiSupport.cpp
+  FAIL: Win32IDE_ExecutionGovernor.cpp
+  FAIL: Win32IDE_FailureDetector.cpp
+  FAIL: Win32IDE_FailureIntelligence.cpp
+  FAIL: Win32IDE_FeatureManifest.cpp
+  FAIL: Win32IDE_FileMenu.cpp
+  FAIL: Win32IDE_FileOps.cpp
+  FAIL: Win32IDE_FlagshipFeatures.cpp
+  FAIL: Win32IDE_FlightRecorder.cpp
+  FAIL: Win32IDE_GameEnginePanel.cpp
+  FAIL: Win32IDE_Gauntlet.cpp
+  FAIL: Win32IDE_GhostText.cpp
+  FAIL: Win32IDE_GUILayoutHotpatch.cpp
+  FAIL: Win32IDE_HotpatchCtrlPanel.cpp
+  FAIL: Win32IDE_HotpatchPanel.cpp
+  FAIL: Win32IDE_HotpatchWiring.cpp
+  FAIL: Win32IDE_InitSequence.cpp
+  FAIL: Win32IDE_Instructions.cpp
+  FAIL: Win32IDE_LinkFixes.cpp
+  FAIL: Win32IDE_LLMRouter.cpp
+  FAIL: Win32IDE_LocalServer.cpp
+  FAIL: Win32IDE_Logger.cpp
+  FAIL: Win32IDE_LSPClient.cpp
+  FAIL: Win32IDE_LSPServer.cpp
+  FAIL: Win32IDE_LSP_AI_Bridge.cpp
+  FAIL: Win32IDE_MarketplacePanel.cpp
+  FAIL: Win32IDE_MCP.cpp
+  FAIL: Win32IDE_MCPHooks.cpp
+  FAIL: Win32IDE_MonacoThemes.cpp
+  FAIL: Win32IDE_MultiResponse.cpp
+  FAIL: Win32IDE_NativeDebugPanel.cpp
+  FAIL: Win32IDE_NativePipeline.cpp
+  FAIL: Win32IDE_NetworkPanel.cpp
+  [250/298] pass=31 fail=219
+  FAIL: Win32IDE_OutlinePanel.cpp
+  FAIL: Win32IDE_PDBSymbols.cpp
+  FAIL: Win32IDE_PipelinePanel.cpp
+  FAIL: Win32IDE_PlanExecutor.cpp
+  FAIL: Win32IDE_Plugins.cpp
+  FAIL: Win32IDE_PowerShell.cpp
+  FAIL: Win32IDE_PowerShellBeaconButtons.cpp
+  FAIL: Win32IDE_PowerShellPanel.cpp
+  FAIL: Win32IDE_ProvableAgent.cpp
+  FAIL: Win32IDE_QuickWins.cpp
+  FAIL: Win32IDE_RenamePreview.cpp
+  FAIL: Win32IDE_ReverseEngineering.cpp
+  FAIL: Win32IDE_SemanticPanel.cpp
+  FAIL: Win32IDE_Session.cpp
+  FAIL: Win32IDE_Settings.cpp
+  FAIL: Win32IDE_ShortcutEditor.cpp
+  FAIL: Win32IDE_Sidebar.cpp
+  FAIL: Win32IDE_SidebarBridge.cpp
+  FAIL: Win32IDE_Sidebar_PathOps.cpp
+  FAIL: Win32IDE_SourceFilePicker.cpp
+  FAIL: Win32IDE_StaticAnalysisPanel.cpp
+  FAIL: Win32IDE_StreamingUX.cpp
+  FAIL: Win32IDE_SubAgent.cpp
+  FAIL: Win32IDE_SwarmPanel.cpp
+  FAIL: Win32IDE_SyntaxHighlight.cpp
+  FAIL: Win32IDE_TaskRunner.cpp
+  FAIL: Win32IDE_Telemetry.cpp
+  FAIL: Win32IDE_TelemetryDashboard.cpp
+  FAIL: Win32IDE_TelemetryPanel.cpp
+  FAIL: Win32IDE_TestExplorerTree.cpp
+  FAIL: Win32IDE_Themes.cpp
+  FAIL: Win32IDE_Tier1Cosmetics.cpp
+  FAIL: Win32IDE_Tier2Cosmetics.cpp
+  FAIL: Win32IDE_Tier3Cosmetics.cpp
+  FAIL: Win32IDE_Tier3Polish.cpp
+  FAIL: Win32IDE_Tier5Cosmetics.cpp
+  FAIL: Win32IDE_TranscendencePanel.cpp
+  FAIL: Win32IDE_VoiceAutomation.cpp
+  FAIL: Win32IDE_VoiceChat.cpp
+  FAIL: Win32IDE_VSCodeExtAPI.cpp
+  FAIL: Win32IDE_VSCodeUI.cpp
+  FAIL: Win32IDE_WebView2.cpp
+  FAIL: Win32IDE_Window.cpp
+  FAIL: Win32TerminalManager.cpp
+  FAIL: sqlite3.c
+
+=== RESULTS ===
+Total:  298
+Passed: 34
+Failed: 264
+Rate:   11.4%
+
+Failed files:
+  AgentOllamaClient.cpp
+    D:\rawrxd\src\agentic\AgentOllamaClient.h(24): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  accelerator_router.cpp
+    D:\rawrxd\src\core\accelerator_router.h(38): fatal error C1083: Cannot open include file: 'Windows.h': No such file or directory
+  adaptive_pipeline_parallel.cpp
+    D:\rawrxd\src\core\adaptive_pipeline_parallel.h(45): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  agentic_task_graph.cpp
+    D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  alert_system.cpp
+    D:\rawrxd\src\core\alert_system.cpp(13): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  amd_gpu_accelerator.cpp
+    D:\rawrxd\src\core\amd_gpu_accelerator.h(27): fatal error C1083: Cannot open include file: 'Windows.h': No such file or directory
+  analyzer_distiller_stubs.cpp
+    D:\rawrxd\src\core\analyzer_distiller_stubs.cpp(24): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  arm64_gpu_accelerator.cpp
+    D:\rawrxd\src\core\arm64_gpu_accelerator.h(38): fatal error C1083: Cannot open include file: 'Windows.h': No such file or directory
+  autonomous_debugger.cpp
+    D:\rawrxd\src\core\autonomous_debugger.hpp(27): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  autonomous_workflow_engine.cpp
+    D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  auto_discovery.cpp
+    D:\rawrxd\src\core\auto_discovery.cpp(57): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  auto_feature_registry.cpp
+    D:\rawrxd\src\core\model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  auto_repair_orchestrator.cpp
+    D:\rawrxd\src\core\auto_repair_orchestrator.hpp(36): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  auto_update_system.cpp
+    D:\rawrxd\src\core\../../include/auto_update_system.h(21): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  backup_manager.cpp
+    D:\rawrxd\src\core\backup_manager.hpp(22): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  byte_level_hotpatcher.cpp
+    D:\rawrxd\src\core\model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  camellia256_bridge.cpp
+    D:\rawrxd\src\core\shadow_page_detour.hpp(34): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  cerebras_wse_accelerator.cpp
+    D:\rawrxd\src\core\cerebras_wse_accelerator.h(39): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  command_id_validator.cpp
+    D:\rawrxd\src\core\command_id_validator.cpp(23): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  convergence_controller.cpp
+    D:\rawrxd\src\core\model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  convergence_stress_harness.cpp
+    D:\rawrxd\src\core\convergence_stress_harness.cpp(19): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  cot_fallback_system.cpp
+    D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  crash_containment.cpp
+    d:\rawrxd\include\crash_containment.h(17): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  cross_run_tensor_cache.cpp
+    D:\rawrxd\src\core\model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  debug_engine_stubs.cpp
+    D:\rawrxd\src\core\debug_engine_stubs.cpp(19): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  deterministic_replay.cpp
+    D:\rawrxd\src\core\deterministic_replay.cpp(21): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  deterministic_scheduler.cpp
+    D:\rawrxd\src\core\model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  deterministic_swarm.cpp
+    D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  directml_compute.cpp
+    D:\rawrxd\src\core\directml_compute.h(52): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  distributed_pipeline_orchestrator.cpp
+    D:\rawrxd\src\core\model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  dml_streaming_integration.cpp
+    D:\rawrxd\src\core\directml_compute.h(52): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  EditorEngineFactory.cpp
+    d:\rawrxd\include\editor_engine.h(34): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  embedding_engine.cpp
+    d:\rawrxd\src\gguf_loader.h(16): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  enterprise_license_stubs.cpp
+    D:\rawrxd\src\core\enterprise_license_stubs.cpp(25): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  enterprise_stress_tests.cpp
+    D:\rawrxd\src\core\../../include/enterprise_stress_tests.h(25): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  enterprise_telemetry_compliance.cpp
+    D:\rawrxd\src\core\model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  execution_governor.cpp
+    D:\rawrxd\src\core\execution_governor.h(26): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  execution_scheduler.cpp
+    D:\rawrxd\src\core\execution_scheduler.cpp(24): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  extension_polyfill_engine.cpp
+    D:\rawrxd\src\core\js_extension_host.hpp(59): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  feature_handlers.cpp
+    D:\rawrxd\src\core\model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  feature_registry.cpp
+    D:\rawrxd\src\core\feature_registry.cpp(35): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  final_gauntlet.cpp
+    d:\rawrxd\include\final_gauntlet.h(20): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  gguf_dml_bridge.cpp
+    D:\rawrxd\src\core\directml_compute.h(52): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  gpu_backend_bridge.cpp
+    D:\rawrxd\src\core\gpu_backend_bridge.cpp(16): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  gpu_kernel_autotuner.cpp
+    D:\rawrxd\src\core\gpu_kernel_autotuner.h(25): fatal error C1083: Cannot open include file: 'Windows.h': No such file or directory
+  hardware_synthesizer.cpp
+    D:\rawrxd\src\core\hardware_synthesizer.cpp(12): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  hotpatch_control_plane.cpp
+    D:\rawrxd\src\core\model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  hotpatch_recovery_journal.cpp
+    D:\rawrxd\src\core\model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  inference_state_machine.cpp
+    D:\rawrxd\src\core\model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  input_guard_slicer.cpp
+    D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  instructions_provider.cpp
+    D:\rawrxd\src\core\instructions_provider.cpp(19): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  intel_gpu_accelerator.cpp
+    D:\rawrxd\src\core\intel_gpu_accelerator.h(30): fatal error C1083: Cannot open include file: 'Windows.h': No such file or directory
+  iterative_tensor_traversal.cpp
+    D:\rawrxd\src\core\model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  js_extension_host.cpp
+    D:\rawrxd\src\core\js_extension_host.hpp(59): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  layer_contribution_scorer.cpp
+    D:\rawrxd\src\core\model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  layer_offload_manager.cpp
+    D:\rawrxd\src\core\layer_offload_manager.cpp(19): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  live_binary_patcher.cpp
+    D:\rawrxd\src\core\model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  local_ai_core.cpp
+    D:\rawrxd\src\core\model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  local_parity_bridge.cpp
+    D:\rawrxd\src\core\local_parity_bridge.cpp(10): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  lock_hierarchy.cpp
+    D:\rawrxd\src\core\model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  masm_stress_harness.cpp
+    d:\rawrxd\include\masm_bridge_cathedral.h(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  memory_ownership.cpp
+    D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  memory_pressure_handler.cpp
+    D:\rawrxd\src\core\memory_pressure_handler.cpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  menu_auditor.cpp
+    D:\rawrxd\src\core\menu_auditor.cpp(35): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  mesh_brain.cpp
+    D:\rawrxd\src\core\mesh_brain.cpp(13): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  missing_handler_stubs.cpp
+    D:\rawrxd\src\core\missing_handler_stubs.cpp(19): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  model_bruteforce_engine.cpp
+    D:\rawrxd\src\core\model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  model_memory_hotpatch.cpp
+    D:\rawrxd\src\core\model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  model_training_pipeline.cpp
+    D:\rawrxd\src\core\model_training_pipeline.hpp(29): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  MonacoCoreEngine.cpp
+    d:\rawrxd\include\editor_engine.h(34): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  multiwindow_scheduler.cpp
+    d:\rawrxd\include\multiwindow_kernel.h(20): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  native_debugger_engine.cpp
+    D:\rawrxd\src\core\native_debugger_engine.cpp(30): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  native_inference_pipeline.cpp
+    D:\rawrxd\src\core\model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  native_speed_layer.cpp
+    D:\rawrxd\src\core\model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  neural_bridge.cpp
+    D:\rawrxd\src\core\model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  omega_orchestrator.cpp
+    D:\rawrxd\src\core\model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  patch_rollback_ledger.cpp
+    d:\rawrxd\include\patch_rollback_ledger.h(21): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  pdb_gsi_hash.cpp
+    D:\rawrxd\src\core\../../include/pdb_native.h(43): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  pdb_lsp_bridge.cpp
+    D:\rawrxd\src\core\../../include/pdb_native.h(43): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  pdb_native.cpp
+    D:\rawrxd\src\core\../../include/pdb_native.h(43): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  pdb_reference_provider.cpp
+    D:\rawrxd\src\core\../../include/pdb_reference_provider.h(55): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  perf_telemetry.cpp
+    D:\rawrxd\src\core\perf_telemetry.cpp(18): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  plugin_signature.cpp
+    D:\rawrxd\src\core\../../include/plugin_signature.h(25): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  production_release.cpp
+    D:\rawrxd\src\core\production_release.h(36): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  proxy_hotpatcher.cpp
+    D:\rawrxd\src\core\model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  pt_driver_contract.cpp
+    D:\rawrxd\src\core\model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  quantum_safe_transport.cpp
+    D:\rawrxd\src\core\quantum_safe_transport.h(50): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  quant_hysteresis.cpp
+    D:\rawrxd\src\core\quant_hysteresis.cpp(13): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  quickjs_sandbox.cpp
+    D:\rawrxd\src\core\../../include/quickjs_sandbox.h(27): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  rawrxd_state_mmf.cpp
+    D:\rawrxd\src\core\rawrxd_state_mmf.hpp(44): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  rawrxd_subsystem_api.cpp
+    D:\rawrxd\src\core\rawrxd_subsystem_api.cpp(18): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  reasoning_pipeline_orchestrator.cpp
+    D:\rawrxd\src\core\reasoning_pipeline_orchestrator.cpp(25): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  reasoning_profile.cpp
+    D:\rawrxd\src\core\reasoning_profile.cpp(23): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  reasoning_schema_versioning.cpp
+    D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  RichEditEditorEngine.cpp
+    d:\rawrxd\include\editor_engine.h(34): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  safe_refactor_engine.cpp
+    D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  sandbox_integration.cpp
+    D:\rawrxd\src\core\sandbox_integration.h(25): fatal error C1083: Cannot open include file: 'Windows.h': No such file or directory
+  self_host_engine.cpp
+    D:\rawrxd\src\core\self_host_engine.cpp(12): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  semantic_code_intelligence.cpp
+    D:\rawrxd\src\core\model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  semantic_delta_tracker.cpp
+    D:\rawrxd\src\core\model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  sentinel_watchdog.cpp
+    D:\rawrxd\src\core\sentinel_watchdog.cpp(16): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  shadow_page_detour.cpp
+    D:\rawrxd\src\core\shadow_page_detour.cpp(15): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  shortcut_manager.cpp
+    D:\rawrxd\src\core\shortcut_manager.hpp(20): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  speciator_engine.cpp
+    D:\rawrxd\src\core\speciator_engine.cpp(13): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  ssot_handlers.cpp
+    D:\rawrxd\src\core\model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  ssot_handlers_ext.cpp
+    D:\rawrxd\src\core\../agentic/AgentOllamaClient.h(24): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  static_analysis_engine.cpp
+    D:\rawrxd\src\core\model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  streaming_engine_registry.cpp
+    D:\rawrxd\src\core\streaming_engine_registry.cpp(9): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  streaming_orchestrator_stubs.cpp
+    D:\rawrxd\src\core\streaming_orchestrator_stubs.cpp(27): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  stubs.cpp
+    d:\rawrxd\include\BATCH2_CONTEXT.h(3): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  subsystem_health_monitor.cpp
+    D:\rawrxd\src\core\model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  swarm_coordinator.cpp
+    D:\rawrxd\src\core\swarm_coordinator.h(36): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  swarm_decision_bridge.cpp
+    D:\rawrxd\src\core\swarm_decision_bridge.h(42): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  swarm_network_stubs.cpp
+    D:\rawrxd\src\core\swarm_network_stubs.cpp(28): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  swarm_reconciliation.cpp
+    D:\rawrxd\src\core\../../include/swarm_reconciliation.h(29): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  swarm_worker.cpp
+    D:\rawrxd\src\core\swarm_worker.h(23): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  thread_contention_profiler.cpp
+    D:\rawrxd\src\core\model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  thread_pool.cpp
+    D:\rawrxd\src\core\thread_pool.cpp(18): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  transaction_journal.cpp
+    D:\rawrxd\src\core\transaction_journal.cpp(19): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  transcendence_coordinator.cpp
+    D:\rawrxd\src\core\model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  traversal_strategy.cpp
+    D:\rawrxd\src\core\model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  unified_hotpatch_manager.cpp
+    D:\rawrxd\src\core\model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  universal_model_hotpatcher.cpp
+    D:\rawrxd\src\core\universal_model_hotpatcher.h(31): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  update_signature.cpp
+    D:\rawrxd\src\core\../../include/update_signature.h(35): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  vision_encoder.cpp
+    d:\rawrxd\src\gguf_loader.h(16): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  vision_gpu_staging.cpp
+    D:\rawrxd\src\core\vision_gpu_staging.hpp(41): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  voice_automation.cpp
+    D:\rawrxd\src\core\voice_automation.hpp(29): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  voice_chat.cpp
+    D:\rawrxd\src\core\voice_chat.hpp(24): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  watchdog_service.cpp
+    D:\rawrxd\src\core\watchdog_service.cpp(24): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  webrtc_signaling.cpp
+    D:\rawrxd\src\core\webrtc_signaling.h(37): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  WebView2EditorEngine.cpp
+    d:\rawrxd\include\editor_engine.h(34): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  workspace_reasoning_profiles.cpp
+    D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(14): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  AutonomousAgent.cpp
+    D:\rawrxd\Full Source\src\win32app\AutonomousAgent.h(3): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  CircularBeaconSystem.cpp
+    D:\rawrxd\src\win32app\../../include/circular_beacon_system.h(47): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  ConsentPrompt.cpp
+    D:\rawrxd\src\win32app\ConsentPrompt.h(3): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  digestion_engine_stub.cpp
+    D:\rawrxd\src\win32app\digestion_engine_stub.cpp(5): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  digestion_test_harness.cpp
+    D:\rawrxd\src\win32app\digestion_test_harness.cpp(5): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  FileRegistry_Auto.cpp
+    D:\rawrxd\src\win32app\FileRegistry_Auto.h(3): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  FileRegistry_Generated.cpp
+    D:\rawrxd\src\win32app\FileRegistry_Auto.h(3): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  HeadlessIDE.cpp
+    D:\rawrxd\src\win32app\HeadlessIDE.h(26): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  IDEAutoHealerLauncher.cpp
+    D:\rawrxd\src\win32app\IDEAutoHealerLauncher.cpp(2): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  IDEDiagnosticAutoHealer.cpp
+    D:\rawrxd\src\win32app\IDEDiagnosticAutoHealer.h(4): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  IDEDiagnosticAutoHealer_Impl.cpp
+    D:\rawrxd\src\win32app\IDEDiagnosticAutoHealer.h(4): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  IDELogger.cpp
+    D:\rawrxd\src\win32app\IDELogger.cpp(3): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  IocpFileWatcher.cpp
+    D:\rawrxd\src\win32app\IocpFileWatcher.h(3): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  MainWindowSimple.cpp
+    D:\rawrxd\src\win32app\MainWindowSimple.h(3): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  main_win32.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  OSExplorerInterceptor.cpp
+    D:\rawrxd\src\win32app\OSExplorerInterceptor.h(3): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  RawrXD_FileManager_Win32.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  reverse_engineered_stubs.cpp
+    D:\rawrxd\src\win32app\../../include/reverse_engineered_bridge.h(15): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  simple_test.cpp
+    D:\rawrxd\src\win32app\simple_test.cpp(2): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  SourceFileRegistry.cpp
+    D:\rawrxd\src\win32app\SourceFileRegistry.h(5): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  test_runner.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  TodoManager.cpp
+    D:\rawrxd\src\win32app\TodoManager.h(6): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  TransparentRenderer.cpp
+    D:\rawrxd\src\win32app\TransparentRenderer.h(3): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  VulkanRenderer.cpp
+    d:\rawrxd\include\renderer.h(3): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  Win32IDE.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_AgentCommands.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_AgentHistory.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_AgenticBridge.cpp
+    D:\rawrxd\src\win32app\Win32IDE_AgenticBridge.h(3): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  Win32IDE_AgentPanel.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_AIBackend.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_AIReverseEngineering.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_AirgappedEnterprise.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_Annotations.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_AsmSemantic.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_AuditDashboard.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_Autonomy.cpp
+    D:\rawrxd\src\win32app\Win32IDE_AgenticBridge.h(3): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  Win32IDE_BackendSwitcher.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_BeaconWiring.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_Breadcrumbs.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_Build.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_CircularArchStub.cpp
+    D:\rawrxd\src\win32app\BATCH2_CONTEXT.h(3): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  Win32IDE_CircularBeaconIntegration.cpp
+    D:\rawrxd\src\win32app\BATCH2_CONTEXT.h(3): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  Win32IDE_ColorPicker.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_Commands.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_CopilotGapPanel.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_Core.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_CrashReporter.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_CruciblePanel.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_CursorParity.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_Debugger.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_DecompilerView.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_DiskRecovery.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_DualAgentPanel.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_EditorEngine.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_EmojiSupport.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_ExecutionGovernor.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_FailureDetector.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_FailureIntelligence.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_FeatureManifest.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_FileMenu.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_FileOps.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_FlagshipFeatures.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_FlightRecorder.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_GameEnginePanel.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_Gauntlet.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_GhostText.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_GUILayoutHotpatch.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_HotpatchCtrlPanel.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_HotpatchPanel.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_HotpatchWiring.cpp
+    D:\rawrxd\src\win32app\HeadlessIDE.h(26): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_InitSequence.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_Instructions.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_LinkFixes.cpp
+    D:\rawrxd\src\win32app\BATCH2_CONTEXT.h(3): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  Win32IDE_LLMRouter.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_LocalServer.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_Logger.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_LSPClient.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_LSPServer.cpp
+    d:\rawrxd\src\win32app/Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_LSP_AI_Bridge.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_MarketplacePanel.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_MCP.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_MCPHooks.cpp
+    D:\rawrxd\src\win32app\Win32IDE_MCPHooks.h(5): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_MonacoThemes.cpp
+    D:\rawrxd\src\win32app\Win32IDE_WebView2.h(45): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  Win32IDE_MultiResponse.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_NativeDebugPanel.cpp
+    D:\rawrxd\src\win32app\Win32IDE_NativeDebugPanel.cpp(18): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  Win32IDE_NativePipeline.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_NetworkPanel.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_OutlinePanel.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_PDBSymbols.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_PipelinePanel.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_PlanExecutor.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_Plugins.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_PowerShell.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_PowerShellBeaconButtons.cpp
+    D:\rawrxd\src\win32app\BATCH2_CONTEXT.h(3): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  Win32IDE_PowerShellPanel.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_ProvableAgent.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_QuickWins.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_RenamePreview.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_ReverseEngineering.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_SemanticPanel.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_Session.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_Settings.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_ShortcutEditor.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_Sidebar.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_SidebarBridge.cpp
+    D:\rawrxd\src\win32app\BATCH2_CONTEXT.h(3): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  Win32IDE_Sidebar_PathOps.cpp
+    D:\rawrxd\src\win32app\Win32IDE_Sidebar_PathOps.cpp(6): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  Win32IDE_SourceFilePicker.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_StaticAnalysisPanel.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_StreamingUX.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_SubAgent.cpp
+    D:\rawrxd\src\win32app\Win32IDE_SubAgent.h(20): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  Win32IDE_SwarmPanel.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_SyntaxHighlight.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_TaskRunner.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_Telemetry.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_TelemetryDashboard.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_TelemetryPanel.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_TestExplorerTree.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_Themes.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_Tier1Cosmetics.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_Tier2Cosmetics.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_Tier3Cosmetics.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_Tier3Polish.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_Tier5Cosmetics.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_TranscendencePanel.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_VoiceAutomation.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_VoiceChat.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_VSCodeExtAPI.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_VSCodeUI.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32IDE_WebView2.cpp
+    D:\rawrxd\src\win32app\Win32IDE_WebView2.h(45): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  Win32IDE_Window.cpp
+    D:\rawrxd\src\win32app\Win32IDE.h(9): fatal error C1083: Cannot open include file: 'winsock2.h': No such file or directory
+  Win32TerminalManager.cpp
+    D:\rawrxd\src\win32app\Win32TerminalManager.h(3): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+  sqlite3.c
+    D:\rawrxd\src\core\sqlite3.c(29999): fatal error C1083: Cannot open include file: 'windows.h': No such file or directory
+
+Report: d:\rawrxd\smoke_test_proper_results.json

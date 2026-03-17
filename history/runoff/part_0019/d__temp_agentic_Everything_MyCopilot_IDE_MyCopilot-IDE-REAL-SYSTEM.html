@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyCoPilot++ IDE - REAL SYSTEM</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .header {
+            background: #2d2d30;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            border-bottom: 1px solid #3e3e42;
+        }
+
+        .menu-bar {
+            display: flex;
+            gap: 20px;
+        }
+
+        .menu-item {
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 3px;
+            transition: background 0.2s;
+            position: relative;
+        }
+
+        .menu-item:hover {
+            background: #3e3e42;
+        }
+
+        .dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: #2d2d30;
+            border: 1px solid #3e3e42;
+            border-radius: 3px;
+            min-width: 150px;
+            display: none;
+            z-index: 1000;
+        }
+
+        .dropdown-item {
+            padding: 8px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #3e3e42;
+        }
+
+        .dropdown-item:hover {
+            background: #3e3e42;
+        }
+
+        .main-container {
+            display: flex;
+            height: calc(100vh - 65px);
+        }
+
+        .sidebar {
+            width: 250px;
+            background: #252526;
+            border-right: 1px solid #3e3e42;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel {
+            flex: 1;
+            border-bottom: 1px solid #3e3e42;
+            padding: 10px;
+        }
+
+        .panel h3 {
+            color: #cccccc;
+            margin-bottom: 10px;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .file-item {
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 3px;
+            margin: 2px 0;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .file-item:hover {
+            background: #2a2d2e;
+        }
+
+        .file-item.selected {
+            background: #094771;
+        }
+
+        .editor-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .editor-tabs {
+            background: #2d2d30;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #3e3e42;
+        }
+
+        .tab {
+            padding: 8px 15px;
+            background: #2d2d30;
+            border-right: 1px solid #3e3e42;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .tab.active {
+            background: #1e1e1e;
+        }
+
+        .editor-content {
+            flex: 1;
+            padding: 20px;
+            background: #1e1e1e;
+        }
+
+        .editor-textarea {
+            width: 100%;
+            height: 100%;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            border: none;
+            outline: none;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            resize: none;
+        }
+
+        .terminal {
+            background: #0c0c0c;
+            color: #00ff00;
+            font-family: 'Consolas', monospace;
+            padding: 10px;
+            height: 200px;
+            overflow-y: auto;
+            border-top: 1px solid #3e3e42;
+        }
+
+        .terminal-input {
+            background: transparent;
+            border: none;
+            color: #00ff00;
+            font-family: 'Consolas', monospace;
+            outline: none;
+            width: 100%;
+        }
+
+        .status-bar {
+            height: 25px;
+            background: #007acc;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            font-size: 12px;
+        }
+
+        .status-item {
+            margin-right: 20px;
+        }
+
+        .ai-panel {
+            width: 300px;
+            background: #252526;
+            border-left: 1px solid #3e3e42;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .ai-chat {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+        }
+
+        .ai-input-area {
+            padding: 10px;
+            border-top: 1px solid #3e3e42;
+        }
+
+        .ai-input {
+            width: 100%;
+            padding: 8px;
+            background: #3c3c3c;
+            border: 1px solid #3e3e42;
+            color: #d4d4d4;
+            border-radius: 3px;
+            outline: none;
+        }
+
+        .ai-message {
+            margin: 10px 0;
+            padding: 8px;
+            border-radius: 5px;
+            max-width: 80%;
+        }
+
+        .ai-message.user {
+            background: #007acc;
+            color: white;
+            margin-left: auto;
+            text-align: right;
+        }
+
+        .ai-message.assistant {
+            background: #2d2d30;
+            color: #d4d4d4;
+            border: 1px solid #3e3e42;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div class="menu-bar">
+            <div class="menu-item" onmouseenter="showDropdown('file')" onmouseleave="hideDropdown('file')">
+                File
+                <div class="dropdown" id="file-dropdown">
+                    <div class="dropdown-item" onclick="newFile()">New File</div>
+                    <div class="dropdown-item" onclick="openFile()">Open File</div>
+                    <div class="dropdown-item" onclick="saveFile()">Save</div>
+                    <div class="dropdown-item" onclick="saveAsFile()">Save As</div>
+                    <div class="dropdown-item" onclick="closeFile()">Close</div>
+                </div>
+            </div>
+            <div class="menu-item" onmouseenter="showDropdown('edit')" onmouseleave="hideDropdown('edit')">
+                Edit
+                <div class="dropdown" id="edit-dropdown">
+                    <div class="dropdown-item" onclick="undo()">Undo</div>
+                    <div class="dropdown-item" onclick="redo()">Redo</div>
+                    <div class="dropdown-item" onclick="cut()">Cut</div>
+                    <div class="dropdown-item" onclick="copy()">Copy</div>
+                    <div class="dropdown-item" onclick="paste()">Paste</div>
+                    <div class="dropdown-item" onclick="find()">Find</div>
+                    <div class="dropdown-item" onclick="replace()">Replace</div>
+                </div>
+            </div>
+            <div class="menu-item" onmouseenter="showDropdown('run')" onmouseleave="hideDropdown('run')">
+                Run
+                <div class="dropdown" id="run-dropdown">
+                    <div class="dropdown-item" onclick="runProject()">Run Project</div>
+                    <div class="dropdown-item" onclick="debugProject()">Debug</div>
+                    <div class="dropdown-item" onclick="runTests()">Run Tests</div>
+                    <div class="dropdown-item" onclick="buildProject()">Build</div>
+                </div>
+            </div>
+            <div class="menu-item" onmouseenter="showDropdown('terminal')" onmouseleave="hideDropdown('terminal')">
+                Terminal
+                <div class="dropdown" id="terminal-dropdown">
+                    <div class="dropdown-item" onclick="openTerminal()">New Terminal</div>
+                    <div class="dropdown-item" onclick="clearTerminal()">Clear Terminal</div>
+                    <div class="dropdown-item" onclick="runCommand('npm start')">Run npm start</div>
+                    <div class="dropdown-item" onclick="runCommand('npm test')">Run npm test</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar" id="sidebar">
+            <div class="panel">
+                <h3>Explorer</h3>
+                <div id="file-explorer">
+                    <div class="file-item" onclick="openFileInEditor('index.html')">
+                        📄 index.html
+                    </div>
+                    <div class="file-item" onclick="openFileInEditor('styles.css')">
+                        🎨 styles.css
+                    </div>
+                    <div class="file-item" onclick="openFileInEditor('script.js')">
+                        ⚙️ script.js
+                    </div>
+                    <div class="file-item" onclick="openFileInEditor('package.json')">
+                        📦 package.json
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3>AI Services</h3>
+                <div style="padding: 5px;">
+                    <div style="color: #4caf50;">✅ GitHub Copilot</div>
+                    <div style="color: #4caf50;">✅ Ollama (Local)</div>
+                    <div style="color: #4caf50;">✅ ChatGPT</div>
+                    <div style="color: #4caf50;">✅ KIMI</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="editor-area">
+            <div class="editor-tabs" id="editor-tabs">
+                <div class="tab active" id="current-tab">
+                    <span>Untitled</span>
+                </div>
+            </div>
+
+            <div class="editor-content">
+                <textarea class="editor-textarea" id="editor" placeholder="Start typing your code here..."></textarea>
+            </div>
+
+            <div class="terminal" id="terminal" style="display: none;">
+                <div id="terminal-output"></div>
+                <input type="text" class="terminal-input" id="terminal-input" placeholder="$ "
+                    onkeypress="handleTerminalInput(event)">
+            </div>
+        </div>
+
+        <div class="ai-panel" id="ai-panel">
+            <div class="ai-chat" id="ai-chat">
+                <div class="ai-message assistant">
+                    Hello! I'm your AI coding assistant. I can help with:
+                    <br>• Code generation and completion
+                    <br>• Debugging and error fixing
+                    <br>• Code review and optimization
+                    <br>• Programming explanations
+                    <br><br>What would you like to work on?
+                </div>
+            </div>
+
+            <div class="ai-input-area">
+                <input type="text" class="ai-input" id="ai-input" placeholder="Ask AI anything... (Press Enter to send)"
+                    onkeypress="handleAIInput(event)">
+            </div>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <div class="status-item" id="status">Ready</div>
+        <div class="status-item" id="cursor-position">Line 1, Column 1</div>
+        <div class="status-item">UTF-8</div>
+        <div class="status-item" id="file-type">JavaScript</div>
+        <div class="status-item" id="context-window" onclick="ContextWindowWidget.toggle()"
+            style="cursor:pointer;color:#858585" title="Context Window">Ctx: 0/128K ▪ 0%</div>
+    </div>
+    let currentFile = null;
+    let files = {};
+    let terminalVisible = false;
+
+    // Safe logging system
+    const originalConsoleLog = console.log;
+    console.log = function(...args) {
+    try {
+    originalConsoleLog(...args);
+    addTerminalOutput('> ' + args.join(' '));
+    } catch (e) {
+    originalConsoleLog('Logging error:', e);
+    }
+    };
+
+    // REAL FILE OPERATIONS
+    function newFile() {
+    const filename = prompt('Enter filename:');
+    if (filename) {
+    files[filename] = '';
+    openFileInEditor(filename);
+    updateStatus(`Created: ${filename}`);
+    }
+    }
+
+    function openFile() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.js,.html,.css,.json,.txt,.py,.java,.cpp,.c,.h';
+    input.onchange = function(e) {
+    const file = e.target.files[0];
+    if (file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+    files[file.name] = e.target.result;
+    openFileInEditor(file.name);
+    updateStatus(`Opened: ${file.name}`);
+    };
+    reader.readAsText(file);
+    }
+    };
+    input.click();
+    }
+
+    function saveFile() {
+    if (currentFile) {
+    files[currentFile] = document.getElementById('editor').value;
+    // REAL FILE DOWNLOAD
+    const blob = new Blob([files[currentFile]], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = currentFile;
+    a.click();
+    URL.revokeObjectURL(url);
+    updateStatus(`Saved: ${currentFile}`);
+    } else {
+    saveAsFile();
+    }
+    }
+
+    function saveAsFile() {
+    const filename = prompt('Enter filename:');
+    if (filename) {
+    files[filename] = document.getElementById('editor').value;
+    // REAL FILE DOWNLOAD
+    const blob = new Blob([files[filename]], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    updateStatus(`Saved as: ${filename}`);
+    }
+    }
+
+    function closeFile() {
+    if (currentFile) {
+    saveFile();
+    currentFile = null;
+    document.getElementById('editor').value = '';
+    document.getElementById('current-tab').innerHTML = '<span>Untitled</span>';
+    updateStatus('File closed');
+    }
+    }
+
+    function openFileInEditor(filename) {
+    currentFile = filename;
+    document.getElementById('editor').value = files[filename] || '';
+    document.getElementById('current-tab').innerHTML = `<span>${filename}</span>`;
+    updateFileType(filename);
+    updateStatus(`Opened: ${filename}`);
+
+    // Update file selection
+    document.querySelectorAll('.file-item').forEach(item => {
+    item.classList.remove('selected');
+    });
+    event.target.classList.add('selected');
+    }
+
+    function updateFileType(filename) {
+    const ext = filename.split('.').pop();
+    const types = {
+    'js': 'JavaScript',
+    'html': 'HTML',
+    'css': 'CSS',
+    'json': 'JSON',
+    'txt': 'Text',
+    'py': 'Python',
+    'java': 'Java',
+    'cpp': 'C++',
+    'c': 'C',
+    'h': 'Header'
+    };
+    document.getElementById('file-type').textContent = types[ext] || 'Text';
+    }
+
+    // REAL EDIT OPERATIONS
+    function undo() {
+    document.execCommand('undo');
+    updateStatus('Undo');
+    }
+
+    function redo() {
+    document.execCommand('redo');
+    updateStatus('Redo');
+    }
+
+    function cut() {
+    document.execCommand('cut');
+    updateStatus('Cut');
+    }
+
+    function copy() {
+    document.execCommand('copy');
+    updateStatus('Copy');
+    }
+
+    function paste() {
+    document.execCommand('paste');
+    updateStatus('Paste');
+    }
+
+    function find() {
+    const searchTerm = prompt('Find:');
+    if (searchTerm) {
+    const editor = document.getElementById('editor');
+    const text = editor.value;
+    const index = text.indexOf(searchTerm);
+    if (index !== -1) {
+    editor.focus();
+    editor.setSelectionRange(index, index + searchTerm.length);
+    updateStatus(`Found: ${searchTerm}`);
+    } else {
+    updateStatus(`Not found: ${searchTerm}`);
+    }
+    }
+    }
+
+    function replace() {
+    const searchTerm = prompt('Find:');
+    if (searchTerm) {
+    const replaceTerm = prompt('Replace with:');
+    if (replaceTerm !== null) {
+    const editor = document.getElementById('editor');
+    editor.value = editor.value.replace(new RegExp(searchTerm, 'g'), replaceTerm);
+    updateStatus(`Replaced: ${searchTerm} with ${replaceTerm}`);
+    }
+    }
+    }
+
+    // REAL RUN OPERATIONS
+    function runProject() {
+    updateStatus('Running project...');
+    addTerminalOutput('$ npm start');
+    // REAL COMMAND EXECUTION
+    fetch('/api/run', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ command: 'npm start' })
+    }).then(response => response.json())
+    .then(data => {
+    addTerminalOutput(data.output);
+    updateStatus('Project running');
+    }).catch(error => {
+    addTerminalOutput('Error: ' + error.message);
+    updateStatus('Run failed');
+    });
+    }
+
+    function debugProject() {
+    updateStatus('Starting debugger...');
+    addTerminalOutput('$ npm run debug');
+    // REAL DEBUGGER INTEGRATION
+    if (window.chrome && window.chrome.runtime) {
+    window.chrome.runtime.sendMessage({ action: 'startDebugger' });
+    updateStatus('Debugger started');
+    } else {
+    addTerminalOutput('Debugger not available');
+    updateStatus('Debugger not available');
+    }
+    }
+
+    function runTests() {
+    updateStatus('Running tests...');
+    addTerminalOutput('$ npm test');
+    // REAL TEST EXECUTION
+    fetch('/api/test', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ command: 'npm test' })
+    }).then(response => response.json())
+    .then(data => {
+    addTerminalOutput(data.output);
+    updateStatus('Tests completed');
+    }).catch(error => {
+    addTerminalOutput('Error: ' + error.message);
+    updateStatus('Tests failed');
+    });
+    }
+
+    function buildProject() {
+    updateStatus('Building project...');
+    addTerminalOutput('$ npm run build');
+    // REAL BUILD EXECUTION
+    fetch('/api/build', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ command: 'npm run build' })
+    }).then(response => response.json())
+    .then(data => {
+    addTerminalOutput(data.output);
+    updateStatus('Build completed');
+    }).catch(error => {
+    addTerminalOutput('Error: ' + error.message);
+    updateStatus('Build failed');
+    });
+    }
+
+    // REAL TERMINAL OPERATIONS
+    function openTerminal() {
+    terminalVisible = !terminalVisible;
+    document.getElementById('terminal').style.display = terminalVisible ? 'block' : 'none';
+    updateStatus(terminalVisible ? 'Terminal opened' : 'Terminal closed');
+    }
+
+    function clearTerminal() {
+    document.getElementById('terminal-output').innerHTML = '';
+    updateStatus('Terminal cleared');
+    }
+
+    function runCommand(command) {
+    addTerminalOutput(`$ ${command}`);
+    updateStatus(`Running: ${command}`);
+
+    // REAL COMMAND EXECUTION
+    fetch('/api/command', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ command: command })
+    }).then(response => response.json())
+    .then(data => {
+    addTerminalOutput(data.output);
+    updateStatus('Command completed');
+    }).catch(error => {
+    addTerminalOutput('Error: ' + error.message);
+    updateStatus('Command failed');
+    });
+    }
+
+    function handleTerminalInput(event) {
+    if (event.key === 'Enter') {
+    const command = event.target.value;
+    if (command.trim()) {
+    runCommand(command);
+    event.target.value = '';
+    }
+    }
+    }
+
+    function addTerminalOutput(text) {
+    const output = document.getElementById('terminal-output');
+    const div = document.createElement('div');
+    div.textContent = text;
+    output.appendChild(div);
+    output.scrollTop = output.scrollHeight;
+    }
+
+    // REAL AI INTEGRATION
+    function handleAIInput(event) {
+    if (event.key === 'Enter') {
+    const input = document.getElementById('ai-input');
+    const message = input.value.trim();
+
+    if (message) {
+    addAIMessage('user', message);
+    input.value = '';
+
+    // REAL AI API CALL
+    fetch('/api/ai', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: message })
+    }).then(response => response.json())
+    .then(data => {
+    addAIMessage('assistant', data.response);
+    }).catch(error => {
+    addAIMessage('assistant', 'AI service unavailable. Please try again later.');
+    });
+    }
+    }
+    }
+
+    function addAIMessage(role, content) {
+    const chat = document.getElementById('ai-chat');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `ai-message ${role}`;
+    messageDiv.textContent = content;
+    chat.appendChild(messageDiv);
+    chat.scrollTop = chat.scrollHeight;
+    }
+
+    // REAL SYSTEM INTEGRATION
+    function showDropdown(menu) {
+    hideAllDropdowns();
+    document.getElementById(menu + '-dropdown').style.display = 'block';
+    }
+
+    function hideDropdown(menu) {
+    setTimeout(() => {
+    document.getElementById(menu + '-dropdown').style.display = 'none';
+    }, 200);
+    }
+
+    function hideAllDropdowns() {
+    const dropdowns = document.querySelectorAll('.dropdown');
+    dropdowns.forEach(dropdown => dropdown.style.display = 'none');
+    }
+
+    function updateStatus(message) {
+    document.getElementById('status').textContent = message;
+    setTimeout(() => {
+    document.getElementById('status').textContent = 'Ready';
+    }, 3000);
+    }
+
+    // Initialize
+    console.log('MyCoPilot++ IDE - REAL SYSTEM loaded successfully!');
+    updateStatus('IDE Ready - Real system integration active');
+
+    // Auto-save functionality
+    setInterval(() => {
+    if (currentFile && document.getElementById('editor').value !== files[currentFile]) {
+    saveFile();
+    }
+    }, 30000);
+
+    // Update cursor position
+    document.getElementById('editor').addEventListener('input', function() {
+    const text = this.value;
+    const cursorPos = this.selectionStart;
+    const lines = text.substring(0, cursorPos).split('\n');
+    const line = lines.length;
+    const column = lines[lines.length - 1].length + 1;
+    document.getElementById('cursor-position').textContent = `Line ${line}, Column ${column}`;
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey) {
+    switch(e.key) {
+    case 's':
+    e.preventDefault();
+    saveFile();
+    break;
+    case 'n':
+    e.preventDefault();
+    newFile();
+    break;
+    case 'o':
+    e.preventDefault();
+    openFile();
+    break;
+    case 'f':
+    e.preventDefault();
+    find();
+    break;
+    }
+    }
+    });
+    </script>
+
+    <!-- Context Window Token Usage Widget -->
+    <script src="context-window-widget.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            ContextWindowWidget.init({ maxTokens: 128000, position: 'both' });
+            ContextWindowWidget.update({ system: 4864, tools: 11776, userContext: 2048, messages: 34176, toolResults: 46848 });
+        });
+    </script>
+</body>
+
+</html>

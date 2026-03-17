@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AI Login Portal</title>
+  <style>
+    body { font-family: Arial, sans-serif; display:flex; align-items:center; justify-content:center; min-height:100vh; background:#0b1220; color:#fff; }
+    .card { background:#0f1724; padding:24px; border-radius:10px; width:420px; box-shadow:0 10px 30px rgba(0,0,0,0.5); }
+    label, input { display:block; width:100%; margin-bottom:12px; }
+    input { padding:10px; border-radius:6px; border:1px solid #233; background:#07101a; color:#fff; }
+    button { padding:10px 16px; border-radius:6px; background:#2dd4bf; border:none; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>AI Credentials Manager</h2>
+    <p>Enter API credentials for your AI services (optional).</p>
+    <label for="serverUrl">Server URL</label>
+    <input id="serverUrl" value="http://localhost:3003">
+    <label for="apiKey">API Key</label>
+    <input id="apiKey" placeholder="Paste API key here">
+    <button onclick="save()">Save</button>
+    <p id="msg"></p>
+  </div>
+  <script>
+    function save(){
+      const url = document.getElementById('serverUrl').value;
+      const key = document.getElementById('apiKey').value;
+      localStorage.setItem('multiai.serverUrl', url);
+      localStorage.setItem('multiai.apiKey', key);
+      document.getElementById('msg').innerText = 'Saved locally.';
+    }
+  </script>
+</body>
+</html>

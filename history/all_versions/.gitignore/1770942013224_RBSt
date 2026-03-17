@@ -1,0 +1,116 @@
+# Build artifacts
+build/
+build_fresh/
+build_manual/
+build2/
+build_clean/
+build_fresh/
+build_ghost/
+build_mingw/
+build_msvc/
+build_nasm/
+build_new/
+build_output/
+build_pure_cpp/
+build_test/
+build_universal/
+build_verify/
+build_win32_gui_test/
+build_gui_3/
+build-arm64/
+bin/
+lib/
+obj/
+*.o
+*.a
+*.so
+*.dll
+*.exe
+*.dylib
+*.obj
+*.pdb
+*.lst
+*.lib
+*.exp
+*.ilk
+NUL.obj
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+*.log
+
+# Dependencies
+node_modules/
+package-lock.json
+
+# Generated IDE
+out/rawrxd-ide/node_modules/
+out/rawrxd-ide/dist/
+out/rawrxd-ide/.vite/
+
+# Models (large, user-provided)
+models/*.gguf
+models/*.bin
+*.gguf
+*.bin
+*.sqlite
+*.zip
+
+# Temp
+tmp/
+temp/
+*.tmp
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Dist - keep only source, ignore everything else
+dist/
+!dist/RawrXD_Enterprise_v3.0/
+!dist/RawrXD_Enterprise_v3.0/extras/
+!dist/RawrXD_Enterprise_v3.0/extras/codex_reverse_engine/
+!dist/RawrXD_Enterprise_v3.0/extras/codex_reverse_engine/**/*.c
+!dist/RawrXD_Enterprise_v3.0/extras/codex_reverse_engine/**/*.asm
+!dist/RawrXD_Enterprise_v3.0/extras/codex_reverse_engine/**/*.inc
+!dist/RawrXD_Enterprise_v3.0/extras/codex_reverse_engine/**/*.bat
+!dist/RawrXD_Enterprise_v3.0/extras/codex_reverse_engine/**/*.ps1
+!dist/RawrXD_Enterprise_v3.0/extras/codex_reverse_engine/include/
+!dist/RawrXD_Enterprise_v3.0/extras/powershield/
+!dist/RawrXD_Enterprise_v3.0/extras/powershield/**/*.ps1
+!dist/RawrXD_Enterprise_v3.0/extras/powershield/**/*.bat
+!dist/RawrXD_Enterprise_v3.0/extras/powershield/**/*.hpp
+!dist/RawrXD_Enterprise_v3.0/extras/powershield/**/*.cpp
+!dist/RawrXD_Enterprise_v3.0/extras/powershield/**/*.h
+!dist/RawrXD_Enterprise_v3.0/extras/powershield/agentic-framework/
+!dist/RawrXD_Enterprise_v3.0/extras/powershield/AgenticTest/
+!dist/RawrXD_Enterprise_v3.0/extras/powershield/test-projects/
+!dist/RawrXD_Enterprise_v3.0/extras/assistance_suite/
+!dist/RawrXD_Enterprise_v3.0/extras/assistance_suite/**/*.ps1
+!dist/RawrXD_Enterprise_v3.0/extras/assistance_suite/**/*.bat
+!dist/*.ps1
+!dist/*.bat
+!dist/RawrXD_Enterprise_v3.0/*.bat
+
+# Local only
+*.local
+secrets.txt
+
+# Nested repos (not submodules)
+itsmehrawrxd-master/

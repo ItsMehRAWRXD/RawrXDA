@@ -566,6 +566,8 @@ void FileRegistry::registerAllFiles() {
     registerFile("./Ship/RawrXD_Agent.hpp");
     registerFile("./Ship/RawrXD_AgentCoordinator.cpp");
     registerFile("./Ship/RawrXD_AgentCoordinator_Minimal.cpp");
+    registerFile("./Ship/RawrXD_AutonomousAgenticPipeline.cpp");
+    registerFile("./Ship/RawrXD_AutonomousAgenticPipeline.h");
     registerFile("./Ship/RawrXD_AgentPool.cpp");
     registerFile("./Ship/RawrXD_Agent_Complete.hpp");
     registerFile("./Ship/RawrXD_Agent_Final.cpp");

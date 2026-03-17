@@ -1,0 +1,32 @@
+# Integration Framework Include Setup
+# Add this to your main CMakeLists.txt or Qt app target configuration
+
+# Ensure integration headers are in include path
+target_include_directories(RawrXD-AgenticIDE PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/qtapp/integration
+)
+
+# Optional: Copy integration documentation to build/docs
+add_custom_target(integration_docs ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_CURRENT_SOURCE_DIR}/qtapp/integration
+        ${CMAKE_BINARY_DIR}/docs/integration
+    COMMENT "Copying integration framework documentation"
+)
+
+# Optional: Add integration headers to the source group for IDE visibility
+source_group("Integration" FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/qtapp/integration/ProdIntegration.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/qtapp/integration/InitializationTracker.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/qtapp/integration/Logger.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/qtapp/integration/Diagnostics.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/qtapp/integration/ResourceGuards.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/qtapp/integration/examples.h
+)
+
+# Feature: Optional integration library (if you want to add compiled stubs later)
+# add_library(integration-lib INTERFACE)
+# target_include_directories(integration-lib INTERFACE
+#     ${CMAKE_CURRENT_SOURCE_DIR}/qtapp/integration
+# )
+# target_link_libraries(RawrXD-AgenticIDE PRIVATE integration-lib)

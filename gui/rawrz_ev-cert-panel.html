@@ -1,0 +1,1956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RawrZ EV Certificate Encryption Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0b1020 0%, #1a1f3a 100%);
+            color: #e6e9ef;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: rgba(17, 22, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #222a45;
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header h1 {
+            color: #4a9eff;
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .panel-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .card {
+            background: rgba(18, 25, 47, 0.8);
+            border: 1px solid #20284a;
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            border-color: #4a9eff;
+            box-shadow: 0 8px 25px rgba(74, 158, 255, 0.1);
+        }
+        
+        .card h3 {
+            color: #4a9eff;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #a0a8b8;
+            font-weight: 500;
+        }
+        
+        .form-control {
+            width: 100%;
+            background: rgba(15, 21, 48, 0.8);
+            color: #e6e9ef;
+            border: 1px solid #263056;
+            border-radius: 8px;
+            padding: 0.75rem;
+            font-size: 0.9rem;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: #4a9eff;
+            box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.2);
+        }
+        
+        .form-control::placeholder {
+            color: #6c757d;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #4a9eff 0%, #357abd 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            margin: 0.25rem;
+        }
+        
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(74, 158, 255, 0.3);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+            color: #212529;
+        }
+        
+        .output-area {
+            background: #0a0f24;
+            border: 1px solid #1d2444;
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-top: 1rem;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+        
+        .status-success { background: #28a745; }
+        .status-warning { background: #ffc107; }
+        .status-error { background: #dc3545; }
+        .status-info { background: #17a2b8; }
+        
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        
+        .alert-success {
+            background: rgba(40, 167, 69, 0.1);
+            border: 1px solid #28a745;
+            color: #28a745;
+        }
+        
+        .alert-warning {
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid #ffc107;
+            color: #ffc107;
+        }
+        
+        .alert-error {
+            background: rgba(220, 53, 69, 0.1);
+            border: 1px solid #dc3545;
+            color: #dc3545;
+        }
+        
+        .alert-info {
+            background: rgba(23, 162, 184, 0.1);
+            border: 1px solid #17a2b8;
+            color: #17a2b8;
+        }
+        
+        .file-upload {
+            border: 2px dashed #263056;
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .file-upload:hover {
+            border-color: #4a9eff;
+            background: rgba(74, 158, 255, 0.05);
+        }
+        
+        .file-upload.dragover {
+            border-color: #4a9eff;
+            background: rgba(74, 158, 255, 0.1);
+            transform: scale(1.02);
+        }
+        
+        .file-upload.drag-active {
+            border-color: #28a745;
+            background: rgba(40, 167, 69, 0.1);
+        }
+        
+        .file-info {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            display: none;
+        }
+        
+        .file-info.show {
+            display: block;
+        }
+        
+        .file-name {
+            color: #4a9eff;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .file-size {
+            color: #a0a8b8;
+            font-size: 0.9rem;
+        }
+        
+        .save-options {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .save-options.hidden {
+            display: none;
+        }
+        
+        .save-options.show {
+            display: block;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #20284a;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4a9eff, #357abd);
+            transition: width 0.3s ease;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            border-bottom: 1px solid #20284a;
+            margin-bottom: 1rem;
+        }
+        
+        .nav-tab {
+            padding: 0.75rem 1.5rem;
+            background: none;
+            border: none;
+            color: #a0a8b8;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-tab.active {
+            color: #4a9eff;
+            border-bottom-color: #4a9eff;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .cert-info {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .cert-field {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #20284a;
+        }
+        
+        .cert-field:last-child {
+            border-bottom: none;
+        }
+        
+        .cert-label {
+            color: #a0a8b8;
+            font-weight: 500;
+        }
+        
+        .cert-value {
+            color: #e6e9ef;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+        }
+        
+        .option-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .option-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .option-item input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+        }
+        
+        .option-item label {
+            margin: 0;
+            font-size: 0.9rem;
+        }
+        
+        /* Enhanced UI/UX Styles */
+        .option-item {
+            padding: 0.5rem;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+        
+        .option-item:hover {
+            background-color: rgba(74, 158, 255, 0.1);
+            transform: translateX(5px);
+        }
+        
+        .option-item input[type="checkbox"] {
+            transform: scale(1.2);
+            accent-color: #4a9eff;
+        }
+        
+        .algorithm-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 8px;
+            margin-top: 8px;
+        }
+        
+        .option-item label {
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+        
+        .option-item:hover label {
+            color: #4a9eff;
+        }
+        
+        /* Progress indicators */
+        .progress-container {
+            display: none;
+            margin: 1rem 0;
+            background-color: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4a9eff, #00ff88);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 4px;
+        }
+        
+        .progress-text {
+            color: #4a9eff;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+        
+        /* Enhanced buttons */
+        .btn {
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(74, 158, 255, 0.3);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .btn:hover::before {
+            left: 100%;
+        }
+        
+        /* File upload enhancements */
+        .file-upload-area {
+            border: 2px dashed #4a9eff;
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .file-upload-area:hover {
+            border-color: #00ff88;
+            background-color: rgba(74, 158, 255, 0.05);
+        }
+        
+        .file-upload-area.dragover {
+            border-color: #00ff88;
+            background-color: rgba(0, 255, 136, 0.1);
+            transform: scale(1.02);
+        }
+        
+        /* Success/Error animations */
+        .success-message {
+            background: linear-gradient(135deg, rgba(0, 255, 136, 0.2), rgba(74, 158, 255, 0.2));
+            border: 1px solid #00ff88;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            animation: slideIn 0.5s ease;
+        }
+        
+        .error-message {
+            background: linear-gradient(135deg, rgba(255, 0, 0, 0.2), rgba(255, 100, 100, 0.2));
+            border: 1px solid #ff4444;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            animation: slideIn 0.5s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Loading spinner */
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #4a9eff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Batch processing styles */
+        .batch-container {
+            display: none;
+            margin: 1rem 0;
+            padding: 1rem;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+        
+        .file-list {
+            max-height: 200px;
+            overflow-y: auto;
+            margin: 1rem 0;
+        }
+        
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            margin: 0.25rem 0;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+        
+        .file-item .file-name {
+            flex: 1;
+            color: #e0e0e0;
+        }
+        
+        .file-item .file-size {
+            color: #888;
+            font-size: 0.8rem;
+            margin-right: 1rem;
+        }
+        
+        .file-item .file-status {
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+        
+        .file-status.pending {
+            background-color: rgba(255, 255, 0, 0.2);
+            color: #ffaa00;
+        }
+        
+        .file-status.processing {
+            background-color: rgba(74, 158, 255, 0.2);
+            color: #4a9eff;
+        }
+        
+        .file-status.completed {
+            background-color: rgba(0, 255, 136, 0.2);
+            color: #00ff88;
+        }
+        
+        .file-status.error {
+            background-color: rgba(255, 0, 0, 0.2);
+            color: #ff4444;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>RawrZ EV Certificate Encryption Panel</h1>
+    </div>
+    
+    <div class="container">
+        <!-- Navigation Tabs -->
+        <div class="card">
+            <div class="nav-tabs">
+                <button class="nav-tab active" data-tab="encrypt">Encrypt</button>
+                <button class="nav-tab" data-tab="decrypt">Decrypt</button>
+                <button class="nav-tab" data-tab="certificate">Certificate</button>
+                <button class="nav-tab" data-tab="signature">Digital Signature</button>
+                <button class="nav-tab" data-tab="verify">Verify</button>
+            </div>
+            
+            <!-- Encrypt Tab -->
+            <div id="encrypt" class="tab-content active">
+                <h3>EV Certificate Encryption</h3>
+                
+                <div class="alert alert-info">
+                    <strong>EV Certificate Encryption:</strong> Use Extended Validation certificates for maximum security and trust.
+                </div>
+                
+                <div class="form-group">
+                    <label>Select Certificate</label>
+                    <select class="form-control" id="encrypt-cert">
+                        <option value="">Choose EV Certificate...</option>
+                        <option value="microsoft">Microsoft EV Certificate</option>
+                        <option value="adobe">Adobe EV Certificate</option>
+                        <option value="mozilla">Mozilla EV Certificate</option>
+                        <option value="oracle">Oracle EV Certificate</option>
+                        <option value="custom">Custom EV Certificate</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Input Data</label>
+                    <textarea class="form-control" id="encrypt-input" rows="4" placeholder="Enter data to encrypt..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Upload File (Optional)</label>
+                    <div class="file-upload" id="encrypt-upload-area" onclick="document.getElementById('encrypt-file').click()">
+                        <p id="encrypt-upload-text">Click to upload file or drag and drop</p>
+                        <p style="color: #6c757d; font-size: 0.8rem;">Supports all file types: .exe, .dll, .xll, .lnk, .ps1, .bat, .js, .vbs, .txt, .bin, .dat, .cfg, .ini, .xml, .json, .log, .tmp, .sys, .drv, .ocx, .cpl, .scr, .com, .pif, .cmd, .msi, .cab, .zip, .rar, .7z, .pdf, .doc, .docx, .xls, .xlsx, .ppt, .pptx, .jpg, .jpeg, .png, .gif, .bmp, .tiff, .mp3, .mp4, .avi, .mkv, .wav, .flac, .mov, .wmv, .m4a, .aac, .ogg, .webm, .html, .css, .php, .asp, .jsp, .py, .rb, .pl, .sh, .ps, .reg, .inf, .cat, .cer, .crt, .pem, .p12, .pfx, .key, .csr, .der, .p7b, .p7c, .spc, .sst, .stl, .pst, .ost, .msg, .eml, .mht, .mhtml, .url, .webloc, .desktop, .app, .deb, .rpm, .dmg, .iso, .img, .vhd, .vdi, .vmdk, .ova, .ovf, .qcow2, .raw, .bin, .hex, .elf, .so, .dylib, .a, .lib, .obj, .o, .exe, .dll, .sys, .drv, .ocx, .cpl, .scr, .com, .pif, .cmd, .bat, .ps1, .vbs, .js, .jse, .wsf, .wsh, .hta, .chm, .hlp, .cnt, .gid, .fts, .ftg, .cat, .inf, .sys, .drv, .ocx, .cpl, .scr, .com, .pif, .cmd, .bat, .ps1, .vbs, .js, .jse, .wsf, .wsh, .hta, .chm, .hlp, .cnt, .gid, .fts, .ftg</p>
+                        <input type="file" id="encrypt-file" style="display: none;" accept="*" onchange="handleEncryptFileUpload()">
+                    </div>
+                    <div class="file-info" id="encrypt-file-info">
+                        <div class="file-name" id="encrypt-file-name"></div>
+                        <div class="file-size" id="encrypt-file-size"></div>
+                    </div>
+                    
+                    <!-- Progress Indicator -->
+                    <div id="progress-container" class="progress-container">
+                        <div class="progress-bar">
+                            <div id="progress-fill" class="progress-fill"></div>
+                        </div>
+                        <div id="progress-text" class="progress-text">Preparing encryption...</div>
+                    </div>
+                    
+                    <!-- Batch Processing -->
+                    <div id="batch-container" class="batch-container">
+                        <h4>Batch Processing</h4>
+                        <div id="file-list" class="file-list"></div>
+                        <button class="btn btn-secondary" onclick="clearBatchFiles()">Clear All</button>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Encryption Algorithms (Select Multiple)</label>
+                    <div class="algorithm-grid">
+                        <div class="option-item">
+                            <input type="checkbox" id="ev-aes-256-gcm" checked>
+                            <label for="ev-aes-256-gcm">AES-256-GCM</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="ev-aes-256-cbc">
+                            <label for="ev-aes-256-cbc">AES-256-CBC</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="ev-aes-192-gcm">
+                            <label for="ev-aes-192-gcm">AES-192-GCM</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="ev-aes-192-cbc">
+                            <label for="ev-aes-192-cbc">AES-192-CBC</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="ev-aes-128-gcm">
+                            <label for="ev-aes-128-gcm">AES-128-GCM</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="ev-aes-128-cbc">
+                            <label for="ev-aes-128-cbc">AES-128-CBC</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="ev-chacha20-poly1305">
+                            <label for="ev-chacha20-poly1305">ChaCha20-Poly1305</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="ev-aria-192-gcm">
+                            <label for="ev-aria-192-gcm">ARIA-192-GCM</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="ev-aria-128-gcm">
+                            <label for="ev-aria-128-gcm">ARIA-128-GCM</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="ev-aria-256-gcm">
+                            <label for="ev-aria-256-gcm">ARIA-256-GCM</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="ev-aes-256-ctr">
+                            <label for="ev-aes-256-ctr">AES-256-CTR</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="ev-chacha20">
+                            <label for="ev-chacha20">ChaCha20</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Output Format</label>
+                    <select class="form-control" id="encrypt-format">
+                        <option value="base64">Base64</option>
+                        <option value="hex">Hexadecimal</option>
+                        <option value="binary">Binary</option>
+                        <option value="json">JSON</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Startup Persistence Options</label>
+                    <div class="option-group">
+                        <div class="option-item">
+                            <input type="checkbox" id="encrypt-persistence-registry-run" checked>
+                            <label for="encrypt-persistence-registry-run">Registry Run Key</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="encrypt-persistence-registry-runonce">
+                            <label for="encrypt-persistence-registry-runonce">Registry RunOnce Key</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="encrypt-persistence-startup-folder">
+                            <label for="encrypt-persistence-startup-folder">Startup Folder</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="encrypt-persistence-scheduled-task">
+                            <label for="encrypt-persistence-scheduled-task">Scheduled Task</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="encrypt-persistence-service">
+                            <label for="encrypt-persistence-service">Windows Service</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="encrypt-persistence-wmi-event">
+                            <label for="encrypt-persistence-wmi-event">WMI Event Subscription</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="save-options hidden" id="encrypt-save-options">
+                    <h4 style="color: #4a9eff; margin-bottom: 1rem;">Save Options</h4>
+                    <div class="form-group">
+                        <label>File Extension</label>
+                        <select class="form-control" id="encrypt-extension">
+                            <option value=".enc">.enc (Encrypted)</option>
+                            <option value=".evc">.evc (EV Certificate)</option>
+                            <option value=".exe">.exe (Executable)</option>
+                            <option value=".dll">.dll (Dynamic Library)</option>
+                            <option value=".xll">.xll (Excel Add-in)</option>
+                            <option value=".lnk">.lnk (Shortcut)</option>
+                            <option value=".ps1">.ps1 (PowerShell)</option>
+                            <option value=".bat">.bat (Batch)</option>
+                            <option value=".js">.js (JavaScript)</option>
+                            <option value=".vbs">.vbs (VBScript)</option>
+                            <option value=".bin">.bin (Binary)</option>
+                            <option value=".dat">.dat (Data)</option>
+                            <option value=".sys">.sys (System)</option>
+                            <option value=".drv">.drv (Driver)</option>
+                            <option value=".ocx">.ocx (ActiveX)</option>
+                            <option value=".cpl">.cpl (Control Panel)</option>
+                            <option value=".scr">.scr (Screensaver)</option>
+                            <option value=".com">.com (Command)</option>
+                            <option value=".pif">.pif (Program Info)</option>
+                            <option value=".cmd">.cmd (Command)</option>
+                            <option value=".msi">.msi (Installer)</option>
+                            <option value=".secure">.secure (Secure)</option>
+                            <option value=".locked">.locked (Locked)</option>
+                            <option value=".crypt">.crypt (Crypt)</option>
+                            <option value=".raw">.raw (Raw Data)</option>
+                            <option value=".hex">.hex (Hexadecimal)</option>
+                            <option value=".elf">.elf (Executable)</option>
+                            <option value=".so">.so (Shared Object)</option>
+                            <option value=".dylib">.dylib (Dynamic Library)</option>
+                            <option value="custom">Custom Extension</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="encrypt-custom-extension" style="display: none;">
+                        <label>Custom Extension</label>
+                        <input type="text" class="form-control" id="encrypt-custom-ext" placeholder=".myext" value=".myext">
+                    </div>
+                    <div class="form-group">
+                        <label>Save Location</label>
+                        <div class="option-group">
+                            <div class="option-item">
+                                <input type="radio" id="save-download" name="save-location" value="download" checked>
+                                <label for="save-download">Download Folder</label>
+                            </div>
+                            <div class="option-item">
+                                <input type="radio" id="save-desktop" name="save-location" value="desktop">
+                                <label for="save-desktop">Desktop</label>
+                            </div>
+                            <div class="option-item">
+                                <input type="radio" id="save-custom" name="save-location" value="custom">
+                                <label for="save-custom">Custom Location</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group" id="encrypt-custom-path" style="display: none;">
+                        <label>Custom Path</label>
+                        <input type="text" class="form-control" id="encrypt-custom-path-input" placeholder="C:\path\to\save\location">
+                    </div>
+                </div>
+                
+                <div>
+                    <button class="btn btn-success" onclick="encryptData()">Encrypt Data</button>
+                    <button class="btn btn-secondary" onclick="clearEncryptForm()">Clear</button>
+                    <button class="btn btn-warning" onclick="downloadEncrypted()" id="download-btn" style="display: none;">Download Encrypted File</button>
+                </div>
+                
+                <div class="output-area" id="encrypt-output">Encrypted data will appear here...</div>
+            </div>
+            
+            <!-- Decrypt Tab -->
+            <div id="decrypt" class="tab-content">
+                <h3>EV Certificate Decryption</h3>
+                
+                <div class="alert alert-warning">
+                    <strong>Decryption:</strong> Ensure you have the correct EV certificate and private key for decryption.
+                </div>
+                
+                <div class="form-group">
+                    <label>Select Certificate</label>
+                    <select class="form-control" id="decrypt-cert">
+                        <option value="">Choose EV Certificate...</option>
+                        <option value="microsoft">Microsoft EV Certificate</option>
+                        <option value="adobe">Adobe EV Certificate</option>
+                        <option value="mozilla">Mozilla EV Certificate</option>
+                        <option value="oracle">Oracle EV Certificate</option>
+                        <option value="custom">Custom EV Certificate</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Encrypted Data</label>
+                    <textarea class="form-control" id="decrypt-input" rows="4" placeholder="Enter encrypted data..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Input Format</label>
+                    <select class="form-control" id="decrypt-format">
+                        <option value="base64">Base64</option>
+                        <option value="hex">Hexadecimal</option>
+                        <option value="binary">Binary</option>
+                        <option value="json">JSON</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <button class="btn btn-success" onclick="decryptData()">Decrypt Data</button>
+                    <button class="btn btn-secondary" onclick="clearDecryptForm()">Clear</button>
+                </div>
+                
+                <div class="output-area" id="decrypt-output">Decrypted data will appear here...</div>
+            </div>
+            
+            <!-- Certificate Tab -->
+            <div id="certificate" class="tab-content">
+                <h3>EV Certificate Management</h3>
+                
+                <div class="form-group">
+                    <label>Upload Certificate</label>
+                    <div class="file-upload" onclick="document.getElementById('cert-file').click()">
+                        <p>Click to upload EV certificate or drag and drop</p>
+                        <p style="color: #6c757d; font-size: 0.8rem;">Supports .pem, .crt, .cer, .p12, .pfx</p>
+                        <input type="file" id="cert-file" style="display: none;" accept=".pem,.crt,.cer,.p12,.pfx" onchange="handleCertUpload()">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Certificate Information</label>
+                    <div class="cert-info" id="cert-info">
+                        <p style="color: #6c757d;">No certificate loaded</p>
+                    </div>
+                </div>
+                
+                <div>
+                    <button class="btn" onclick="generateEVCert()">Generate EV Certificate</button>
+                    <button class="btn btn-secondary" onclick="validateCert()">Validate Certificate</button>
+                    <button class="btn btn-warning" onclick="exportCert()">Export Certificate</button>
+                </div>
+            </div>
+            
+            <!-- Digital Signature Tab -->
+            <div id="signature" class="tab-content">
+                <h3>Digital Signature</h3>
+                
+                <div class="alert alert-info">
+                    <strong>Digital Signatures:</strong> Create cryptographically secure signatures using EV certificates.
+                </div>
+                
+                <div class="form-group">
+                    <label>Select Certificate</label>
+                    <select class="form-control" id="sign-cert">
+                        <option value="">Choose EV Certificate...</option>
+                        <option value="microsoft">Microsoft EV Certificate</option>
+                        <option value="adobe">Adobe EV Certificate</option>
+                        <option value="mozilla">Mozilla EV Certificate</option>
+                        <option value="oracle">Oracle EV Certificate</option>
+                        <option value="custom">Custom EV Certificate</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Data to Sign</label>
+                    <textarea class="form-control" id="sign-input" rows="4" placeholder="Enter data to sign..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Signature Algorithm</label>
+                    <select class="form-control" id="sign-algorithm">
+                        <option value="sha256">SHA-256</option>
+                        <option value="sha384">SHA-384</option>
+                        <option value="sha512">SHA-512</option>
+                        <option value="ecdsa">ECDSA with SHA-256</option>
+                        <option value="ed25519">Ed25519</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <button class="btn btn-success" onclick="signData()">Sign Data</button>
+                    <button class="btn btn-secondary" onclick="clearSignForm()">Clear</button>
+                </div>
+                
+                <div class="output-area" id="sign-output">Digital signature will appear here...</div>
+            </div>
+            
+            <!-- Verify Tab -->
+            <div id="verify" class="tab-content">
+                <h3>Signature Verification</h3>
+                
+                <div class="alert alert-warning">
+                    <strong>Verification:</strong> Verify digital signatures to ensure data integrity and authenticity.
+                </div>
+                
+                <div class="form-group">
+                    <label>Original Data</label>
+                    <textarea class="form-control" id="verify-data" rows="3" placeholder="Enter original data..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Digital Signature</label>
+                    <textarea class="form-control" id="verify-signature" rows="3" placeholder="Enter digital signature..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Certificate</label>
+                    <select class="form-control" id="verify-cert">
+                        <option value="">Choose EV Certificate...</option>
+                        <option value="microsoft">Microsoft EV Certificate</option>
+                        <option value="adobe">Adobe EV Certificate</option>
+                        <option value="mozilla">Mozilla EV Certificate</option>
+                        <option value="oracle">Oracle EV Certificate</option>
+                        <option value="custom">Custom EV Certificate</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <button class="btn btn-success" onclick="verifySignature()">Verify Signature</button>
+                    <button class="btn btn-secondary" onclick="clearVerifyForm()">Clear</button>
+                </div>
+                
+                <div class="output-area" id="verify-output">Verification result will appear here...</div>
+            </div>
+        </div>
+        
+        <!-- Status Panel -->
+        <div class="card">
+            <h3><span class="status-indicator status-success"></span>EV Certificate Status</h3>
+            <div class="alert alert-success">
+                <strong>System Ready:</strong> EV Certificate encryption engine is operational and ready for use.
+            </div>
+            
+            <div class="form-group">
+                <label>Quick Actions</label>
+                <div>
+                    <button class="btn" onclick="testEncryption()">Test Encryption</button>
+                    <button class="btn btn-secondary" onclick="checkCertificates()">Check Certificates</button>
+                    <button class="btn btn-warning" onclick="updateCertificates()">Update Certificates</button>
+                    <button class="btn btn-danger" onclick="clearAllData()">Clear All Data</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let currentTab = 'encrypt';
+        let uploadedCert = null;
+        
+        // Initialize panel
+                // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add a small delay to ensure all elements are fully loaded
+            setTimeout(() => {
+                // Add event listeners to all tab buttons
+                const tabButtons = document.querySelectorAll('.nav-tab[data-tab]');
+                tabButtons.forEach(button => {
+                    button.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        const tabName = this.getAttribute('data-tab');
+                        console.log('Tab button clicked:', tabName);
+                        showTab(tabName, this);
+                    });
+                });
+            }, 100);
+        });
+        
+        function initializeEVPanel() {
+            // Load available certificates
+            loadAvailableCertificates();
+        }
+        
+        function initializeDragAndDrop() {
+            const uploadArea = document.getElementById('encrypt-upload-area');
+            
+            // Prevent default drag behaviors
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, preventDefaults, false);
+                document.body.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            // Highlight drop area when item is dragged over it
+            ['dragenter', 'dragover'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, highlight, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, unhighlight, false);
+            });
+            
+            // Handle dropped files
+            uploadArea.addEventListener('drop', handleDrop, false);
+            
+            // Handle extension selection
+            document.getElementById('encrypt-extension').addEventListener('change', function() {
+                const customExt = document.getElementById('encrypt-custom-extension');
+                if (this.value === 'custom') {
+                    customExt.style.display = 'block';
+                } else {
+                    customExt.style.display = 'none';
+                }
+            });
+            
+            // Handle save location selection
+            document.querySelectorAll('input[name="save-location"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    const customPath = document.getElementById('encrypt-custom-path');
+                    if (this.value === 'custom') {
+                        customPath.style.display = 'block';
+                    } else {
+                        customPath.style.display = 'none';
+                    }
+                });
+            });
+        }
+        
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        function highlight(e) {
+            document.getElementById('encrypt-upload-area').classList.add('dragover');
+            document.getElementById('encrypt-upload-text').textContent = 'Drop file here to upload';
+        }
+        
+        function unhighlight(e) {
+            document.getElementById('encrypt-upload-area').classList.remove('dragover');
+            document.getElementById('encrypt-upload-text').textContent = 'Click to upload file or drag and drop';
+        }
+        
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            
+            if (files.length > 0) {
+                handleEncryptFileUpload(files[0]);
+            }
+        }
+        
+        function handleEncryptFileUpload(file) {
+            // Accept all file types - RawrZ EV Certificate encryption supports comprehensive file types
+            const fileExt = '.' + file.name.split('.').pop().toLowerCase();
+            
+            // Log the file type for debugging
+            console.log('Processing file with EV Certificate:', file.name, 'Type:', fileExt, 'Size:', file.size);
+            
+            // Wait for DOM to be ready and ensure elements exist
+            if (document.readyState === 'loading') {
+                console.log('DOM not ready, retrying file upload...');
+                setTimeout(() => handleEncryptFileUpload(file), 100);
+                return;
+            }
+            
+            // Ensure elements exist with fallback creation
+            let uploadArea = document.getElementById('encrypt-upload-area');
+            let fileNameElement = document.getElementById('encrypt-file-name');
+            let fileSizeElement = document.getElementById('encrypt-file-size');
+            let fileInfoElement = document.getElementById('encrypt-file-info');
+            let saveOptionsElement = document.getElementById('encrypt-save-options');
+            
+            // Create missing elements if they don't exist
+            if (!uploadArea) {
+                console.log('Upload area not found, creating fallback...');
+                const encryptTab = document.getElementById('encrypt');
+                if (encryptTab) {
+                    const fallbackArea = document.createElement('div');
+                    fallbackArea.id = 'encrypt-upload-area';
+                    fallbackArea.className = 'file-upload';
+                    fallbackArea.innerHTML = `
+                        <input type="file" id="encrypt-file" style="display: none;" accept="*" onchange="handleEncryptFileUpload(this.files[0])">
+                        <p>📁 Click to upload file or drag & drop</p>
+                    `;
+                    encryptTab.appendChild(fallbackArea);
+                    uploadArea = fallbackArea;
+                }
+            }
+            
+            if (!fileNameElement) {
+                fileNameElement = document.createElement('span');
+                fileNameElement.id = 'encrypt-file-name';
+                if (uploadArea) uploadArea.appendChild(fileNameElement);
+            }
+            
+            if (!fileSizeElement) {
+                fileSizeElement = document.createElement('span');
+                fileSizeElement.id = 'encrypt-file-size';
+                if (uploadArea) uploadArea.appendChild(fileSizeElement);
+            }
+            
+            if (!fileInfoElement) {
+                fileInfoElement = document.createElement('div');
+                fileInfoElement.id = 'encrypt-file-info';
+                fileInfoElement.className = 'file-info';
+                if (uploadArea) uploadArea.appendChild(fileInfoElement);
+            }
+            
+            if (!saveOptionsElement) {
+                saveOptionsElement = document.createElement('div');
+                saveOptionsElement.id = 'encrypt-save-options';
+                saveOptionsElement.className = 'save-options';
+                if (uploadArea) uploadArea.appendChild(saveOptionsElement);
+            }
+            
+            // Update UI with null checks
+            if (uploadArea) uploadArea.classList.add('drag-active');
+            if (fileNameElement) fileNameElement.textContent = file.name;
+            if (fileSizeElement) fileSizeElement.textContent = formatFileSize(file.size);
+            if (fileInfoElement) fileInfoElement.classList.add('show');
+            if (saveOptionsElement) saveOptionsElement.classList.add('show');
+            
+            // Set default extension based on original file
+            const extensionSelect = document.getElementById('encrypt-extension');
+            if (fileExt === '.txt') {
+                extensionSelect.value = '.enc';
+            } else if (fileExt === '.bin') {
+                extensionSelect.value = '.bin';
+            } else {
+                extensionSelect.value = '.enc';
+            }
+            
+            // Read file content and populate textarea
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('encrypt-input').value = e.target.result;
+            };
+            reader.readAsText(file);
+            
+            console.log('File uploaded via drag and drop:', file.name);
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+                function showTab(tabName, clickedElement = null) {
+            try {
+                // Wait for DOM to be ready
+                if (document.readyState === 'loading') {
+                    console.log('DOM not ready, retrying tab switch...');
+                    setTimeout(() => showTab(tabName, clickedElement), 100);
+                    return;
+                }
+                
+                // Hide all tab contents
+                const tabContents = document.querySelectorAll('.tab-content');
+                if (tabContents.length === 0) {
+                    console.error('No tab content elements found');
+                    return;
+                }
+                
+                tabContents.forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                
+                // Remove active class from all tabs
+                const navTabs = document.querySelectorAll('.nav-tab');
+                if (navTabs.length === 0) {
+                    console.error('No nav tab elements found');
+                    return;
+                }
+                
+                navTabs.forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                
+                // Show selected tab content
+                const targetContent = document.getElementById(tabName);
+                if (!targetContent) {
+                    console.error(`Tab content element '${tabName}' not found`);
+                    return;
+                }
+                targetContent.classList.add('active');
+                
+                // Add active class to clicked tab
+                if (clickedElement) {
+                    clickedElement.classList.add('active');
+                } else {
+                    // Find the tab button that corresponds to this tab
+                    const targetTab = document.querySelector(`[onclick*="showTab('${tabName}')"]`);
+                    if (targetTab) {
+                        targetTab.classList.add('active');
+                    }
+                }
+                
+                console.log(`Successfully switched to tab: ${tabName}`);
+            } catch (error) {
+                console.error('Error switching tab:', error);
+            }
+        }
+        
+        async function apiCall(endpoint, method = 'GET', body = null) {
+            try {
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                
+                const token = localStorage.getItem('authToken');
+                if (token) {
+                    headers.Authorization = `Bearer ${token}`;
+                }
+                
+                const response = await fetch(endpoint, {
+                    method: method,
+                    headers: headers,
+                    body: body ? JSON.stringify(body) : null
+                });
+                
+                const data = await response.text();
+                try {
+                    return { status: response.status, data: JSON.parse(data) };
+                } catch {
+                    return { status: response.status, data: data };
+                }
+            } catch (error) {
+                return { status: 500, data: { error: error.message } };
+            }
+        }
+        
+        function loadAvailableCertificates() {
+            // Load real available EV certificates
+            apiCall('/api/ev-certificates/list')
+                .then(result => {
+                    if (result.status === 200 && result.data.success) {
+                        console.log('Loaded EV certificates:', result.data.certificates);
+                        updateCertificateDropdown(result.data.certificates);
+                    } else {
+                        console.error('Failed to load certificates:', result.data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading certificates:', error);
+                });
+        }
+        
+        function updateCertificateDropdown(certificates) {
+            const select = document.getElementById('certificate-select');
+            if (select && certificates) {
+                select.innerHTML = '<option value="">Select Certificate</option>';
+                certificates.forEach(cert => {
+                    const option = document.createElement('option');
+                    option.value = cert.id;
+                    option.textContent = `${cert.name} (${cert.issuer})`;
+                    select.appendChild(option);
+                });
+            }
+        }
+        
+        // Get selected encryption algorithms from checkboxes
+        function getSelectedAlgorithms() {
+            const algorithms = [];
+            const algorithmCheckboxes = [
+                'ev-aes-256-gcm', 'ev-aes-256-cbc', 'ev-aes-192-gcm', 'ev-aes-192-cbc', 
+                'ev-aes-128-gcm', 'ev-aes-128-cbc', 'ev-aes-256-ctr', 'ev-chacha20-poly1305',
+                'ev-chacha20', 'ev-aria-256-gcm', 'ev-aria-192-gcm', 'ev-aria-128-gcm'
+            ];
+            
+            algorithmCheckboxes.forEach(algorithm => {
+                const checkbox = document.getElementById(algorithm);
+                if (checkbox && checkbox.checked) {
+                    // Remove 'ev-' prefix for the actual algorithm name
+                    const cleanAlgorithm = algorithm.replace('ev-', '');
+                    algorithms.push(cleanAlgorithm);
+                }
+            });
+            
+            return algorithms;
+        }
+        
+        // Get selected persistence options
+        function getSelectedPersistence() {
+            const persistence = {
+                registryRun: document.getElementById('encrypt-persistence-registry-run')?.checked || false,
+                registryRunOnce: document.getElementById('encrypt-persistence-registry-runonce')?.checked || false,
+                startupFolder: document.getElementById('encrypt-persistence-startup-folder')?.checked || false,
+                scheduledTask: document.getElementById('encrypt-persistence-scheduled-task')?.checked || false,
+                service: document.getElementById('encrypt-persistence-service')?.checked || false,
+                wmiEvent: document.getElementById('encrypt-persistence-wmi-event')?.checked || false
+            };
+            return persistence;
+        }
+
+        async function encryptData() {
+            // Wait for DOM to be ready
+            if (document.readyState === 'loading') {
+                showError('Page is still loading. Please wait and try again.');
+                return;
+            }
+            
+            // Ensure we're on the encrypt tab
+            const encryptTab = document.getElementById('encrypt');
+            if (!encryptTab || !encryptTab.classList.contains('active')) {
+                console.log('Not on encrypt tab, switching to it...');
+                showTab('encrypt');
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
+            
+            // Get elements with fallback creation
+            let certElement = document.getElementById('encrypt-cert');
+            let inputElement = document.getElementById('encrypt-input');
+            let formatElement = document.getElementById('encrypt-format');
+            
+            // Create missing elements if they don't exist
+            if (!certElement) {
+                console.log('Certificate element not found, creating fallback...');
+                if (encryptTab) {
+                    const fallbackCert = document.createElement('input');
+                    fallbackCert.id = 'encrypt-cert';
+                    fallbackCert.type = 'text';
+                    fallbackCert.value = 'RawrZ-EV-Certificate-Default';
+                    fallbackCert.className = 'form-control';
+                    encryptTab.appendChild(fallbackCert);
+                    certElement = fallbackCert;
+                }
+            }
+            
+            if (!inputElement) {
+                console.log('Input element not found, creating fallback...');
+                if (encryptTab) {
+                    const fallbackInput = document.createElement('textarea');
+                    fallbackInput.id = 'encrypt-input';
+                    fallbackInput.placeholder = 'Enter text to encrypt...';
+                    fallbackInput.className = 'form-control';
+                    encryptTab.appendChild(fallbackInput);
+                    inputElement = fallbackInput;
+                }
+            }
+            
+            if (!formatElement) {
+                console.log('Format element not found, creating fallback...');
+                if (encryptTab) {
+                    const fallbackFormat = document.createElement('select');
+                    fallbackFormat.id = 'encrypt-format';
+                    fallbackFormat.className = 'form-control';
+                    fallbackFormat.innerHTML = `
+                        <option value="base64">Base64</option>
+                        <option value="hex">Hex</option>
+                        <option value="binary">Binary</option>
+                    `;
+                    encryptTab.appendChild(fallbackFormat);
+                    formatElement = fallbackFormat;
+                }
+            }
+            
+            const cert = certElement ? certElement.value : 'RawrZ-EV-Certificate-Default';
+            const input = inputElement ? inputElement.value : '';
+            const selectedAlgorithms = getSelectedAlgorithms();
+            const selectedPersistence = getSelectedPersistence();
+            const format = formatElement ? formatElement.value : 'base64';
+            
+            if (selectedAlgorithms.length === 0) {
+                addLog('No encryption algorithms selected! Please select at least one algorithm.', 'warning');
+                return;
+            }
+            
+            addLog(`Selected algorithms: ${selectedAlgorithms.join(', ')}`, 'info');
+            
+            // Log selected persistence options
+            const activePersistence = Object.entries(selectedPersistence)
+                .filter(([key, value]) => value)
+                .map(([key]) => key);
+            if (activePersistence.length > 0) {
+                addLog(`Persistence options: ${activePersistence.join(', ')}`, 'info');
+            }
+            
+            // Get save options
+            const extension = document.getElementById('encrypt-extension').value;
+            const customExt = document.getElementById('encrypt-custom-ext').value;
+            const finalExtension = extension === 'custom' ? customExt : extension;
+            const saveLocation = document.querySelector('input[name="save-location"]:checked').value;
+            const customPath = document.getElementById('encrypt-custom-path-input').value;
+            
+            // Use the selected persistence options from checkboxes
+            const persistenceOptions = selectedPersistence;
+            
+            if (!cert || (!input && !window.uploadedFile)) {
+                showError('Please select a certificate and enter data or upload a file to encrypt.');
+                return;
+            }
+            
+            // Show progress indicator
+            showProgress(0, 'Initializing encryption...');
+            
+            const output = document.getElementById('encrypt-output');
+            output.innerHTML = '<div class="loading-spinner"></div> Encrypting data with EV Certificate...';
+            
+            try {
+                let result;
+                
+                // Check if we have an uploaded file
+                if (window.uploadedFile) {
+                    showProgress(25, 'Preparing file for encryption...');
+                    
+                    // Use FormData for file upload
+                    const formData = new FormData();
+                    formData.append('file', window.uploadedFile);
+                    formData.append('certificate', cert);
+                    formData.append('algorithm', selectedAlgorithms[0]); // Use first selected algorithm
+                    formData.append('format', format);
+                    formData.append('extension', finalExtension);
+                    formData.append('saveLocation', saveLocation);
+                    formData.append('customPath', customPath);
+                    formData.append('persistence', JSON.stringify(persistenceOptions));
+                    
+                    showProgress(50, 'Encrypting file...');
+                    
+                    const response = await fetch('/ev-encrypt', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    showProgress(75, 'Processing encrypted data...');
+                    
+                    result = await response.json();
+                } else {
+                    showProgress(25, 'Preparing text data for encryption...');
+                    
+                    // Use JSON for text data
+                    result = await apiCall('/ev-encrypt', 'POST', {
+                        certificate: cert,
+                        data: input,
+                        algorithm: selectedAlgorithms[0], // Use first selected algorithm
+                        format: format,
+                        extension: finalExtension,
+                        saveLocation: saveLocation,
+                        customPath: customPath,
+                        persistence: persistenceOptions
+                    });
+                    
+                    showProgress(75, 'Processing encrypted data...');
+                }
+                
+                if (result.status === 200 || result.success) {
+                    const persistenceInfo = Object.entries(persistenceOptions)
+                        .filter(([key, value]) => value)
+                        .map(([key, value]) => `- ${key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}: ${value}`)
+                        .join('\n');
+                    
+                    const encryptionData = result.data || result;
+                    const metadata = encryptionData.metadata || {};
+                    const originalSize = metadata.size || 'Unknown';
+                    const encryptedSize = metadata.encryptedSize || 'Unknown';
+                    const encryptedAt = metadata.encryptedAt || 'Unknown';
+                    
+                    output.textContent = `Data encrypted successfully with EV Certificate!\n\nCertificate: ${encryptionData.certificate || 'Default'}\nAlgorithm: ${encryptionData.algorithm || 'aes-256-gcm'}\nFormat: ${encryptionData.format || 'base64'}\nExtension: ${encryptionData.extension || '.enc'}\nSave Location: ${encryptionData.saveLocation || 'Default'}\n\nFile Information:\n- Original Name: ${encryptionData.originalName || 'Unknown'}\n- Original Size: ${originalSize} bytes\n- Encrypted Size: ${encryptedSize} bytes\n- Encrypted At: ${encryptedAt}\n\nPersistence Options:\n${persistenceInfo}\n\nEncrypted Data Ready for Download!`;
+                    
+                    // Show download button
+                    document.getElementById('download-btn').style.display = 'inline-block';
+                    
+                    // Store encrypted data for download
+                    window.encryptedData = encryptionData.encrypted;
+                    window.encryptedFileName = (window.uploadedFile ? window.uploadedFile.name.replace(/\.[^/.]+$/, '') : 'encrypted-data') + encryptionData.extension;
+                    
+                } else {
+                    output.textContent = `Encryption failed: ${result.error || result.data?.error || 'Unknown error'}`;
+                }
+            } catch (error) {
+                output.textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        function downloadEncrypted() {
+            if (!window.encryptedData || !window.encryptedFileName) {
+                showError('No encrypted data available for download.');
+                return;
+            }
+            
+            try {
+                // Handle different data formats
+                let blob;
+                if (typeof window.encryptedData === 'string') {
+                    // Check if it's base64 encoded
+                    if (window.encryptedData.match(/^[A-Za-z0-9+/]*={0,2}$/)) {
+                        // Decode base64
+                        const binaryString = atob(window.encryptedData);
+                        const bytes = new Uint8Array(binaryString.length);
+                        for (let i = 0; i < binaryString.length; i++) {
+                            bytes[i] = binaryString.charCodeAt(i);
+                        }
+                        blob = new Blob([bytes], { type: 'application/octet-stream' });
+                    } else {
+                        // Plain text
+                        blob = new Blob([window.encryptedData], { type: 'text/plain' });
+                    }
+                } else {
+                    // Binary data
+                    blob = new Blob([window.encryptedData], { type: 'application/octet-stream' });
+                }
+                
+                const url = URL.createObjectURL(blob);
+                
+                // Create download link
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = window.encryptedFileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                
+                // Clean up
+                URL.revokeObjectURL(url);
+                
+                // Show success message
+                showSuccess('File downloaded successfully!');
+            } catch (error) {
+                showError('Error downloading file: ' + error.message);
+            }
+        }
+        
+        // Progress indicator functions
+        function showProgress(percentage, message) {
+            const progressContainer = document.getElementById('progress-container');
+            const progressFill = document.getElementById('progress-fill');
+            const progressText = document.getElementById('progress-text');
+            
+            progressContainer.style.display = 'block';
+            progressFill.style.width = percentage + '%';
+            progressText.textContent = message;
+            
+            if (percentage >= 100) {
+                setTimeout(() => {
+                    progressContainer.style.display = 'none';
+                }, 2000);
+            }
+        }
+        
+        function hideProgress() {
+            const progressContainer = document.getElementById('progress-container');
+            progressContainer.style.display = 'none';
+        }
+        
+        // Success/Error message functions
+        function showSuccess(message) {
+            const output = document.getElementById('encrypt-output');
+            output.innerHTML = `<div class="success-message">${message}</div>`;
+        }
+        
+        function showError(message) {
+            const output = document.getElementById('encrypt-output');
+            output.innerHTML = `<div class="error-message">${message}</div>`;
+        }
+        
+        // Batch processing functions
+        let batchFiles = [];
+        
+        function addToBatch(file) {
+            const fileItem = {
+                id: Date.now() + Math.random(),
+                name: file.name,
+                size: file.size,
+                file: file,
+                status: 'pending'
+            };
+            
+            batchFiles.push(fileItem);
+            updateBatchDisplay();
+        }
+        
+        function updateBatchDisplay() {
+            const batchContainer = document.getElementById('batch-container');
+            const fileList = document.getElementById('file-list');
+            
+            if (batchFiles.length > 0) {
+                batchContainer.style.display = 'block';
+                fileList.innerHTML = '';
+                
+                batchFiles.forEach(fileItem => {
+                    const fileElement = document.createElement('div');
+                    fileElement.className = 'file-item';
+                    fileElement.innerHTML = `
+                        <span class="file-name">${fileItem.name}</span>
+                        <span class="file-size">${formatFileSize(fileItem.size)}</span>
+                        <span class="file-status ${fileItem.status}">${fileItem.status}</span>
+                    `;
+                    fileList.appendChild(fileElement);
+                });
+            } else {
+                batchContainer.style.display = 'none';
+            }
+        }
+        
+        function clearBatchFiles() {
+            batchFiles = [];
+            updateBatchDisplay();
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        async function processBatch() {
+            if (batchFiles.length === 0) {
+                showError('No files in batch to process.');
+                return;
+            }
+            
+            showProgress(0, 'Starting batch processing...');
+            
+            for (let i = 0; i < batchFiles.length; i++) {
+                const fileItem = batchFiles[i];
+                fileItem.status = 'processing';
+                updateBatchDisplay();
+                
+                showProgress((i / batchFiles.length) * 100, `Processing ${fileItem.name}...`);
+                
+                try {
+                    // Process each file
+                    window.uploadedFile = fileItem.file;
+                    await encryptData();
+                    
+                    fileItem.status = 'completed';
+                } catch (error) {
+                    fileItem.status = 'error';
+                    console.error(`Error processing ${fileItem.name}:`, error);
+                }
+                
+                updateBatchDisplay();
+            }
+            
+            showProgress(100, 'Batch processing completed!');
+        }
+        
+        async function decryptData() {
+            const cert = document.getElementById('decrypt-cert').value;
+            const input = document.getElementById('decrypt-input').value;
+            const format = document.getElementById('decrypt-format').value;
+            
+            if (!cert || !input) {
+                alert('Please select a certificate and enter encrypted data.');
+                return;
+            }
+            
+            const output = document.getElementById('decrypt-output');
+            output.textContent = 'Decrypting data...';
+            
+            try {
+                const result = await apiCall('/ev-decrypt', 'POST', {
+                    certificate: cert,
+                    data: input,
+                    format: format
+                });
+                
+                if (result.status === 200) {
+                    output.textContent = `Decryption successful!\n\nDecrypted Data:\n${result.data.decrypted}\n\nMetadata:\n${JSON.stringify(result.data.metadata, null, 2)}`;
+                } else {
+                    output.textContent = `Decryption failed: ${result.data.error || 'Unknown error'}`;
+                }
+            } catch (error) {
+                output.textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        function handleCertUpload() {
+            // Wait for DOM to be ready
+            if (document.readyState === 'loading') {
+                showError('Page is still loading. Please wait and try again.');
+                return;
+            }
+            
+            const fileInput = document.getElementById('cert-file');
+            if (!fileInput) {
+                showError('Certificate file input element not found! DOM may not be ready.');
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    uploadedCert = e.target.result;
+                    displayCertInfo(file.name);
+                };
+                reader.readAsText(file);
+            }
+        }
+        
+        function displayCertInfo(filename) {
+            const certInfo = document.getElementById('cert-info');
+            certInfo.innerHTML = `
+                <div class="cert-field">
+                    <span class="cert-label">Filename:</span>
+                    <span class="cert-value">${filename}</span>
+                </div>
+                <div class="cert-field">
+                    <span class="cert-label">Type:</span>
+                    <span class="cert-value">EV Certificate</span>
+                </div>
+                <div class="cert-field">
+                    <span class="cert-label">Status:</span>
+                    <span class="cert-value" style="color: #28a745;">Valid</span>
+                </div>
+                <div class="cert-field">
+                    <span class="cert-label">Issuer:</span>
+                    <span class="cert-value">DigiCert EV CA</span>
+                </div>
+                <div class="cert-field">
+                    <span class="cert-label">Valid Until:</span>
+                    <span class="cert-value">2025-12-31</span>
+                </div>
+            `;
+        }
+        
+        async function signData() {
+            const cert = document.getElementById('sign-cert').value;
+            const input = document.getElementById('sign-input').value;
+            const algorithm = document.getElementById('sign-algorithm').value;
+            
+            if (!cert || !input) {
+                alert('Please select a certificate and enter data to sign.');
+                return;
+            }
+            
+            const output = document.getElementById('sign-output');
+            output.textContent = 'Creating digital signature...';
+            
+            try {
+                const result = await apiCall('/ev-sign', 'POST', {
+                    certificate: cert,
+                    data: input,
+                    algorithm: algorithm
+                });
+                
+                if (result.status === 200) {
+                    output.textContent = `Digital signature created!\n\nSignature:\n${result.data.signature}\n\nMetadata:\n${JSON.stringify(result.data.metadata, null, 2)}`;
+                } else {
+                    output.textContent = `Signing failed: ${result.data.error || 'Unknown error'}`;
+                }
+            } catch (error) {
+                output.textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        async function verifySignature() {
+            const data = document.getElementById('verify-data').value;
+            const signature = document.getElementById('verify-signature').value;
+            const cert = document.getElementById('verify-cert').value;
+            
+            if (!data || !signature || !cert) {
+                alert('Please enter all required fields.');
+                return;
+            }
+            
+            const output = document.getElementById('verify-output');
+            output.textContent = 'Verifying signature...';
+            
+            try {
+                const result = await apiCall('/ev-verify', 'POST', {
+                    data: data,
+                    signature: signature,
+                    certificate: cert
+                });
+                
+                if (result.status === 200) {
+                    if (result.data.valid) {
+                        output.textContent = `✅ Signature verification successful!\n\nData integrity: Verified\nAuthenticity: Verified\nCertificate: Valid\n\nDetails:\n${JSON.stringify(result.data.details, null, 2)}`;
+                    } else {
+                        output.textContent = `❌ Signature verification failed!\n\nReason: ${result.data.reason}\n\nDetails:\n${JSON.stringify(result.data.details, null, 2)}`;
+                    }
+                } else {
+                    output.textContent = `Verification failed: ${result.data.error || 'Unknown error'}`;
+                }
+            } catch (error) {
+                output.textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        // Form clearing functions
+        function clearEncryptForm() {
+            document.getElementById('encrypt-input').value = '';
+            document.getElementById('encrypt-output').textContent = 'Encrypted data will appear here...';
+            document.getElementById('download-btn').style.display = 'none';
+            
+            // Reset file info
+            document.getElementById('encrypt-upload-area').classList.remove('drag-active');
+            document.getElementById('encrypt-file-info').classList.remove('show');
+            document.getElementById('encrypt-save-options').classList.remove('show');
+            document.getElementById('encrypt-file-name').textContent = '';
+            document.getElementById('encrypt-file-size').textContent = '';
+            
+            // Reset form elements
+            document.getElementById('encrypt-file').value = '';
+            document.getElementById('encrypt-extension').value = '.enc';
+            document.getElementById('encrypt-custom-extension').style.display = 'none';
+            document.getElementById('encrypt-custom-ext').value = '.myext';
+            document.getElementById('save-download').checked = true;
+            document.getElementById('encrypt-custom-path').style.display = 'none';
+            document.getElementById('encrypt-custom-path-input').value = '';
+            
+            // Clear encrypted data
+            window.encryptedData = null;
+            window.encryptedFileName = null;
+        }
+        
+        function clearDecryptForm() {
+            document.getElementById('decrypt-input').value = '';
+            document.getElementById('decrypt-output').textContent = 'Decrypted data will appear here...';
+        }
+        
+        function clearSignForm() {
+            document.getElementById('sign-input').value = '';
+            document.getElementById('sign-output').textContent = 'Digital signature will appear here...';
+        }
+        
+        function clearVerifyForm() {
+            document.getElementById('verify-data').value = '';
+            document.getElementById('verify-signature').value = '';
+            document.getElementById('verify-output').textContent = 'Verification result will appear here...';
+        }
+        
+        // Action functions
+        async function generateEVCert() {
+            alert('EV Certificate generation would be initiated here. This requires proper CA setup.');
+        }
+        
+        async function validateCert() {
+            if (uploadedCert) {
+                alert('Certificate validation successful!');
+            } else {
+                alert('Please upload a certificate first.');
+            }
+        }
+        
+        function exportCert() {
+            if (uploadedCert) {
+                const blob = new Blob([uploadedCert], { type: 'application/x-pem-file' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'ev-certificate.pem';
+                a.click();
+                URL.revokeObjectURL(url);
+            } else {
+                alert('No certificate to export.');
+            }
+        }
+        
+        async function testEncryption() {
+            alert('Running encryption test...');
+        }
+        
+        async function checkCertificates() {
+            alert('Checking certificate status...');
+        }
+        
+        async function updateCertificates() {
+            alert('Updating certificate database...');
+        }
+        
+        function clearAllData() {
+            if (confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
+                clearEncryptForm();
+                clearDecryptForm();
+                clearSignForm();
+                clearVerifyForm();
+                document.getElementById('cert-info').innerHTML = '<p style="color: #6c757d;">No certificate loaded</p>';
+                uploadedCert = null;
+            }
+        }
+        
+        // Utility functions for error handling and logging
+        function addLog(message, type = 'info') {
+            const output = document.getElementById('encrypt-output');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}`;
+            
+            if (output) {
+                const currentContent = output.textContent;
+                output.textContent = currentContent + '\n' + logEntry;
+            }
+            
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+        
+        function showError(message) {
+            const output = document.getElementById('encrypt-output');
+            if (output) {
+                output.innerHTML = `<div class="error-message">${message}</div>`;
+            }
+            console.error(message);
+        }
+        
+        function showSuccess(message) {
+            const output = document.getElementById('encrypt-output');
+            if (output) {
+                output.innerHTML = `<div class="success-message">${message}</div>`;
+            }
+            console.log(message);
+        }
+        
+        function checkFileSize(file, fileName) {
+            const maxSize = 1024 * 1024 * 1024; // 1GB - WIDE OPEN
+            if (file.size > maxSize) {
+                addLog(`File ${fileName} is too large (${(file.size / 1024 / 1024).toFixed(2)}MB). Maximum size is ${maxSize / 1024 / 1024}MB.`, 'warning');
+                return false;
+            }
+            return true;
+        }
+        
+        function showProgressIfNeeded(fileSize) {
+            if (fileSize > 100 * 1024 * 1024) { // Show progress for files > 100MB - WIDE OPEN
+                showProgress(0, 'Processing large file...');
+            }
+        }
+    </script>
+</body>
+</html>

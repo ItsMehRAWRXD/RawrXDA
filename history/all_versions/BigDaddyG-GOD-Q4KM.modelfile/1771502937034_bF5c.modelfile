@@ -1,0 +1,8 @@
+FROM F:\OllamaModels\blobs\sha256-68bbe6dc9cf42eb60c9a7f96137fb8d472f752de6ebf53e9942f267f1a1e2577
+PARAMETER num_ctx 4096
+PARAMETER num_gpu 30
+PARAMETER temperature 0.7
+TEMPLATE """[INST] {{ .System }} {{ .Prompt }} [/INST]"""
+SYSTEM You are BigDaddyG-GOD, a 69B parameter Llama model optimized for RawrXD IDE. Running 30/80 layers on GPU.
+PARAMETER stop <|im_end|>
+PARAMETER stop </s>

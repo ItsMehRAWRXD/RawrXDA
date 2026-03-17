@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RawrXD — Agentic Tasks</title>
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --border-hover: #484f58;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --text-dim: #6e7681;
+      --accent: #58a6ff;
+      --accent-dim: #1f6feb;
+      --accent-green: #3fb950;
+      --accent-red: #f85149;
+      --accent-yellow: #d29922;
+      --accent-purple: #bc8cff;
+      --font-mono: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+      --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      --radius: 8px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none
+    }
+
+    a:hover {
+      text-decoration: underline
+    }
+
+    /* ─── Titlebar ─── */
+    .titlebar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      user-select: none
+    }
+
+    .titlebar .logo {
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--accent);
+      font-family: var(--font-mono)
+    }
+
+    .titlebar .sep {
+      color: var(--border);
+      font-size: 18px
+    }
+
+    .titlebar .title {
+      font-size: 14px;
+      color: var(--text-muted)
+    }
+
+    .titlebar .status {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block
+    }
+
+    .status-dot.online {
+      background: var(--accent-green);
+      box-shadow: 0 0 6px var(--accent-green)
+    }
+
+    .status-dot.offline {
+      background: var(--accent-red)
+    }
+
+    .status-dot.connecting {
+      background: var(--accent-yellow);
+      animation: pulse 1s infinite
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: .4
+      }
+    }
+
+    /* ─── Layout ─── */
+    .main {
+      flex: 1;
+      display: flex;
+      gap: 0
+    }
+
+    .sidebar {
+      width: 280px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto
+    }
+
+    .content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden
+    }
+
+    /* ─── Sidebar ─── */
+    .sidebar-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between
+    }
+
+    .sidebar-header h2 {
+      font-size: 13px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px
+    }
+
+    .new-task-btn {
+      background: var(--accent-dim);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      padding: 6px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background .15s
+    }
+
+    .new-task-btn:hover {
+      background: var(--accent)
+    }
+
+    .agent-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px
+    }
+
+    .agent-item {
+      padding: 10px 14px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: background .12s;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 2px
+    }
+
+    .agent-item:hover {
+      background: #1c2128
+    }
+
+    .agent-item.active {
+      background: var(--accent-dim);
+      border: 1px solid var(--accent)
+    }
+
+    .agent-item .agent-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text)
+    }
+
+    .agent-item .agent-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis
+    }
+
+    .agent-item .agent-status {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-top: 2px
+    }
+
+    .agent-item .agent-status.queued {
+      color: var(--accent-yellow)
+    }
+
+    .agent-item .agent-status.running {
+      color: var(--accent-green)
+    }
+
+    .agent-item .agent-status.completed {
+      color: var(--accent-green)
+    }
+
+    .agent-item .agent-status.failed {
+      color: var(--accent-red)
+    }
+
+    .agent-item .agent-status.idle {
+      color: var(--text-dim)
+    }
+
+    /* ─── Content header ─── */
+    .content-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px
+    }
+
+    .content-header h1 {
+      font-size: 16px;
+      font-weight: 600
+    }
+
+    .content-header .tag {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2px 10px;
+      font-size: 11px;
+      color: var(--text-muted)
+    }
+
+    /* ─── Task detail ─── */
+    .task-detail {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px
+    }
+
+    .task-detail.empty {
+      align-items: center;
+      justify-content: center;
+      color: var(--text-dim);
+      font-size: 14px;
+      gap: 8px
+    }
+
+    .task-detail.empty .icon {
+      font-size: 48px;
+      opacity: 0.3
+    }
+
+    .detail-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px
+    }
+
+    .detail-section h3 {
+      font-size: 13px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .5px
+    }
+
+    /* Log stream */
+    .log-stream {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.7;
+      max-height: 400px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      color: var(--text-muted)
+    }
+
+    .log-stream .log-info {
+      color: var(--accent)
+    }
+
+    .log-stream .log-warn {
+      color: var(--accent-yellow)
+    }
+
+    .log-stream .log-error {
+      color: var(--accent-red)
+    }
+
+    .log-stream .log-success {
+      color: var(--accent-green)
+    }
+
+    /* Metrics bar */
+    .metrics-bar {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap
+    }
+
+    .metric-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 14px;
+      min-width: 120px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px
+    }
+
+    .metric-card .metric-label {
+      font-size: 10px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: .5px
+    }
+
+    .metric-card .metric-value {
+      font-size: 18px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      color: var(--accent)
+    }
+
+    .metric-card .metric-value.green {
+      color: var(--accent-green)
+    }
+
+    .metric-card .metric-value.red {
+      color: var(--accent-red)
+    }
+
+    .metric-card .metric-value.yellow {
+      color: var(--accent-yellow)
+    }
+
+    /* Action buttons */
+    .action-bar {
+      display: flex;
+      gap: 8px;
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+      background: var(--surface)
+    }
+
+    .action-btn {
+      padding: 8px 16px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all .12s;
+      font-family: var(--font-sans)
+    }
+
+    .action-btn:hover:not(:disabled) {
+      background: #1c2128;
+      border-color: var(--border-hover)
+    }
+
+    .action-btn:disabled {
+      opacity: .4;
+      cursor: not-allowed
+    }
+
+    .action-btn.primary {
+      background: var(--accent-dim);
+      border-color: var(--accent-dim);
+      color: #fff
+    }
+
+    .action-btn.primary:hover:not(:disabled) {
+      background: var(--accent)
+    }
+
+    .action-btn.danger {
+      border-color: var(--accent-red);
+      color: var(--accent-red)
+    }
+
+    .action-btn.danger:hover:not(:disabled) {
+      background: rgba(248, 81, 73, .1)
+    }
+
+    /* Toast */
+    .toast-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 9999
+    }
+
+    .toast {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 16px;
+      font-size: 13px;
+      animation: slideIn .2s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, .4)
+    }
+
+    .toast.success {
+      border-color: var(--accent-green)
+    }
+
+    .toast.error {
+      border-color: var(--accent-red)
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(40px);
+        opacity: 0
+      }
+
+      to {
+        transform: translateX(0);
+        opacity: 1
+      }
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .6);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      display: none
+    }
+
+    .modal-overlay.visible {
+      display: flex
+    }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      width: 480px;
+      max-width: 90vw;
+      max-height: 80vh;
+      overflow-y: auto
+    }
+
+    .modal h2 {
+      font-size: 16px;
+      margin-bottom: 16px
+    }
+
+    .modal label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      margin-top: 12px
+    }
+
+    .modal input,
+    .modal textarea,
+    .modal select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 12px;
+      color: var(--text);
+      font-size: 13px;
+      font-family: var(--font-sans)
+    }
+
+    .modal textarea {
+      height: 80px;
+      resize: vertical;
+      font-family: var(--font-mono)
+    }
+
+    .modal .modal-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 20px
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ═══════════ Titlebar ═══════════ -->
+  <div class="titlebar">
+    <span class="logo">RawrXD</span>
+    <span class="sep">|</span>
+    <span class="title">Agentic Tasks</span>
+    <div class="status">
+      <span class="status-dot offline" id="statusDot"></span>
+      <span id="statusLabel">Connecting...</span>
+      <span style="color:var(--text-dim);font-family:var(--font-mono)" id="backendInfo">—</span>
+    </div>
+  </div>
+
+  <!-- ═══════════ Main layout ═══════════ -->
+  <div class="main">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <h2>Tasks</h2>
+        <button class="new-task-btn" onclick="showNewTaskModal()">+ New Task</button>
+      </div>
+      <div class="agent-list" id="agentList">
+        <!-- populated dynamically -->
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+      <div class="content-header" id="contentHeader" style="display:none">
+        <h1 id="taskTitle">—</h1>
+        <span class="tag" id="taskType">—</span>
+        <span class="tag" id="taskStatus">—</span>
+      </div>
+
+      <!-- Metrics bar (always visible when task selected) -->
+      <div class="metrics-bar" id="metricsBar" style="padding:16px 24px;display:none">
+        <div class="metric-card"><span class="metric-label">Requests</span><span class="metric-value"
+            id="mRequests">0</span></div>
+        <div class="metric-card"><span class="metric-label">Uptime</span><span class="metric-value"
+            id="mUptime">—</span></div>
+        <div class="metric-card"><span class="metric-label">Memory</span><span class="metric-value"
+            id="mMemory">—</span></div>
+        <div class="metric-card"><span class="metric-label">DLL</span><span class="metric-value" id="mDll">—</span>
+        </div>
+        <div class="metric-card"><span class="metric-label">Tokens/s</span><span class="metric-value green"
+            id="mTps">—</span></div>
+        <div class="metric-card"><span class="metric-label">Status</span><span class="metric-value"
+            id="mStatus">—</span></div>
+      </div>
+
+      <!-- Task detail / empty state -->
+      <div class="task-detail empty" id="taskDetail">
+        <div class="icon">&#x1F916;</div>
+        <div>Select or create a task to begin.</div>
+        <div style="font-size:12px">Tasks run against your live RawrXD backends.</div>
+      </div>
+
+      <!-- Action bar -->
+      <div class="action-bar" id="actionBar" style="display:none">
+        <button class="action-btn primary" id="btnRun" onclick="runSelectedTask()" disabled>&#x25B6; Run</button>
+        <button class="action-btn" id="btnStop" onclick="stopSelectedTask()" disabled>&#x23F9; Stop</button>
+        <button class="action-btn" onclick="clearLogs()">Clear Logs</button>
+        <button class="action-btn danger" onclick="deleteSelectedTask()">Delete</button>
+        <span style="flex:1"></span>
+        <button class="action-btn" onclick="window.location.href='/launcher'">&#x2190; Launcher</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ New Task Modal ═══════════ -->
+  <div class="modal-overlay" id="newTaskModal">
+    <div class="modal">
+      <h2>New Agentic Task</h2>
+      <label>Task Name</label>
+      <input type="text" id="ntName" placeholder="e.g. Build auth module">
+      <label>Type</label>
+      <select id="ntType">
+        <option value="build-feature">Build Feature</option>
+        <option value="fix-bugs">Fix Bugs</option>
+        <option value="security-audit">Security Audit</option>
+        <option value="explore-codebase">Explore Codebase</option>
+        <option value="refactor">Refactor</option>
+        <option value="generate-tests">Generate Tests</option>
+        <option value="custom-prompt">Custom Prompt</option>
+      </select>
+      <label>Prompt / Description</label>
+      <textarea id="ntPrompt" placeholder="Describe the task in detail..."></textarea>
+      <label>Target Path (optional)</label>
+      <input type="text" id="ntPath" placeholder="e.g. d:\rawrxd\src\core">
+      <div class="modal-actions">
+        <button class="action-btn" onclick="closeNewTaskModal()">Cancel</button>
+        <button class="action-btn primary" onclick="createNewTask()">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ Toast container ═══════════ -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script>
+    // ══════════════════════════════════════════════════════════════
+    // RawrXD Agentic Tasks — real backend wiring
+    // All calls go to server.js on localhost:8080
+    // Cascade: DLL → Ollama → model-server (port 3000)
+    // ══════════════════════════════════════════════════════════════
+
+    const BACKEND_BASE = (function () {
+      // Auto-detect: if loaded from server, use same origin; else probe 8080
+      if (window.location.protocol !== 'file:' && window.location.port) {
+        return window.location.origin;
+      }
+      return 'http://localhost:8080';
+    })();
+
+    const OLLAMA_DIRECT = 'http://localhost:11434';
+
+    // ─── State ───
+    const AgentState = {
+      backend: { online: false, type: null, url: BACKEND_BASE },
+      tasks: [],
+      selectedId: null,
+      metricsTimer: null,
+      runningAbort: null,  // AbortController for cancelling running tasks
+    };
+
+    // ─── Built-in agent templates ───
+    const BUILTIN_AGENTS = [
+      { id: 'select-repository', name: 'Select Repository', type: 'explore-codebase', desc: 'Scan and list available model repositories', prompt: 'List all model files (.gguf, .bin, .safetensors) available in the configured search directories. Report their sizes, formats, and readiness status.' },
+      { id: 'build-feature', name: 'Build Feature', type: 'build-feature', desc: 'Generate code for a new feature', prompt: 'Implement the requested feature following the project architecture. Use PatchResult return types, no exceptions, mutex locking.' },
+      { id: 'fix-bugs', name: 'Fix Bugs', type: 'fix-bugs', desc: 'Analyze and fix reported bugs', prompt: 'Analyze the described bug. Identify root cause, propose a fix, and generate corrected code.' },
+      { id: 'explore-codex', name: 'Explore Codebase', type: 'explore-codebase', desc: 'Deep-dive into project structure', prompt: 'Analyze the project structure, list key files, describe the architecture layers (memory, byte-level, server hotpatching), and identify integration points.' },
+      { id: 'security-audit', name: 'Security Audit', type: 'security-audit', desc: 'Run security analysis on codebase', prompt: 'Perform a security audit: check for buffer overflows, unsafe pointer casts, missing bounds checks, unprotected memory writes, and injection vulnerabilities.' },
+      { id: 'improve-docs', name: 'Improve Documentation', type: 'custom-prompt', desc: 'Generate or improve documentation', prompt: 'Generate comprehensive documentation for the specified module, including API reference, usage examples, and architecture notes.' },
+      { id: 'solve-todo', name: 'Solve TODOs', type: 'fix-bugs', desc: 'Find and resolve TODO/FIXME comments', prompt: 'Search the codebase for TODO, FIXME, HACK, and XXX comments. For each, propose a concrete implementation or fix.' },
+    ];
+
+    // ─── Init ───
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Load tasks from localStorage or use builtins
+      loadTasksFromStorage();
+      if (AgentState.tasks.length === 0) {
+        AgentState.tasks = BUILTIN_AGENTS.map(a => ({
+          ...a,
+          status: 'idle',
+          logs: [],
+          result: null,
+          startedAt: null,
+          completedAt: null,
+        }));
+        saveTasksToStorage();
+      }
+      renderAgentList();
+      await connectBackend();
+      startMetricsPolling();
+    });
+
+    // ══════════════════════════════════════════════════════════════
+    // BACKEND CONNECTION — real probes, no stubs
+    // ══════════════════════════════════════════════════════════════
+
+    async function connectBackend() {
+      const dot = document.getElementById('statusDot');
+      const label = document.getElementById('statusLabel');
+      const info = document.getElementById('backendInfo');
+      dot.className = 'status-dot connecting';
+      label.textContent = 'Connecting...';
+
+      // Try 1: RawrXD server on main port
+      try {
+        const res = await fetch(BACKEND_BASE + '/status', { signal: AbortSignal.timeout(3000) });
+        if (res.ok) {
+          const data = await res.json();
+          AgentState.backend.online = true;
+          AgentState.backend.type = data.backend || data.server || 'rawrxd';
+          AgentState.backend.url = BACKEND_BASE;
+          dot.className = 'status-dot online';
+          label.textContent = 'Connected';
+          info.textContent = AgentState.backend.type + ' :' + (new URL(BACKEND_BASE).port || '80');
+          toast('Connected to ' + AgentState.backend.type, 'success');
+          return;
+        }
+      } catch (_) { }
+
+      // Try 2: Ollama direct
+      try {
+        const res = await fetch(OLLAMA_DIRECT + '/', { signal: AbortSignal.timeout(3000) });
+        if (res.ok) {
+          const body = await res.text();
+          if (body.toLowerCase().includes('ollama')) {
+            AgentState.backend.online = true;
+            AgentState.backend.type = 'ollama-direct';
+            AgentState.backend.url = OLLAMA_DIRECT;
+            dot.className = 'status-dot online';
+            label.textContent = 'Ollama Direct';
+            info.textContent = 'ollama :11434';
+            toast('Connected to Ollama directly', 'success');
+            return;
+          }
+        }
+      } catch (_) { }
+
+      // Offline
+      AgentState.backend.online = false;
+      dot.className = 'status-dot offline';
+      label.textContent = 'Offline';
+      info.textContent = 'no backend';
+      toast('No backend found. Start server.js or Ollama.', 'error');
+
+      // Auto-retry in 15s
+      setTimeout(connectBackend, 15000);
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // REAL METRICS POLLING — /api/metrics
+    // ══════════════════════════════════════════════════════════════
+
+    function startMetricsPolling() {
+      if (AgentState.metricsTimer) clearInterval(AgentState.metricsTimer);
+      AgentState.metricsTimer = setInterval(fetchMetrics, 5000);
+      fetchMetrics();
+    }
+
+    async function fetchMetrics() {
+      if (!AgentState.backend.online) return;
+      try {
+        const res = await fetch(AgentState.backend.url + '/api/metrics', { signal: AbortSignal.timeout(3000) });
+        if (!res.ok) return;
+        const m = await res.json();
+        document.getElementById('mRequests').textContent = m.requests || 0;
+        document.getElementById('mUptime').textContent = formatDuration(m.uptimeMs || 0);
+        document.getElementById('mMemory').textContent = (m.memUsedMB || 0) + ' MB';
+        document.getElementById('mDll').textContent = m.dllLoaded ? 'Loaded' : 'N/A';
+        document.getElementById('mDll').className = 'metric-value ' + (m.dllLoaded ? 'green' : 'yellow');
+        // Real Tokens/s from server metrics (tracked per generate call)
+        const tps = m.tokensPerSec || 0;
+        document.getElementById('mTps').textContent = tps > 0 ? tps.toFixed(1) : (m.generates > 0 ? '0' : '—');
+        document.getElementById('mTps').className = 'metric-value ' + (tps > 10 ? 'green' : tps > 0 ? 'yellow' : '');
+        document.getElementById('mStatus').textContent = m.kernelReady ? 'Kernel Ready' : (m.ollamaReachable ? 'Ollama' : 'Fallback');
+        document.getElementById('mStatus').className = 'metric-value ' + (m.kernelReady ? 'green' : m.ollamaReachable ? 'green' : 'yellow');
+      } catch (_) { }
+    }
+
+    function formatDuration(ms) {
+      if (ms < 60000) return Math.round(ms / 1000) + 's';
+      if (ms < 3600000) return Math.round(ms / 60000) + 'm';
+      return Math.round(ms / 3600000) + 'h ' + Math.round((ms % 3600000) / 60000) + 'm';
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // TASK MANAGEMENT
+    // ══════════════════════════════════════════════════════════════
+
+    function loadTasksFromStorage() {
+      try {
+        const raw = localStorage.getItem('rawrxd_agent_tasks');
+        if (raw) AgentState.tasks = JSON.parse(raw);
+      } catch (_) { }
+    }
+
+    function saveTasksToStorage() {
+      try {
+        localStorage.setItem('rawrxd_agent_tasks', JSON.stringify(AgentState.tasks));
+      } catch (_) { }
+    }
+
+    function renderAgentList() {
+      const list = document.getElementById('agentList');
+      list.innerHTML = '';
+      for (const task of AgentState.tasks) {
+        const el = document.createElement('div');
+        el.className = 'agent-item' + (AgentState.selectedId === task.id ? ' active' : '');
+        el.innerHTML = `
+      <span class="agent-name">${esc(task.name)}</span>
+      <span class="agent-desc">${esc(task.desc || task.prompt || '')}</span>
+      <span class="agent-status ${task.status}">${task.status.toUpperCase()}</span>
+    `;
+        el.onclick = () => selectTask(task.id);
+        list.appendChild(el);
+      }
+    }
+
+    function selectTask(id) {
+      AgentState.selectedId = id;
+      renderAgentList();
+      renderTaskDetail();
+    }
+
+    function renderTaskDetail() {
+      const task = AgentState.tasks.find(t => t.id === AgentState.selectedId);
+      const detail = document.getElementById('taskDetail');
+      const header = document.getElementById('contentHeader');
+      const actionBar = document.getElementById('actionBar');
+      const metricsBar = document.getElementById('metricsBar');
+
+      if (!task) {
+        detail.className = 'task-detail empty';
+        detail.innerHTML = '<div class="icon">&#x1F916;</div><div>Select or create a task to begin.</div><div style="font-size:12px">Tasks run against your live RawrXD backends.</div>';
+        header.style.display = 'none';
+        actionBar.style.display = 'none';
+        metricsBar.style.display = 'none';
+        return;
+      }
+
+      header.style.display = 'flex';
+      actionBar.style.display = 'flex';
+      metricsBar.style.display = 'flex';
+      document.getElementById('taskTitle').textContent = task.name;
+      document.getElementById('taskType').textContent = task.type;
+      document.getElementById('taskStatus').textContent = task.status.toUpperCase();
+
+      // Enable/disable buttons based on status
+      document.getElementById('btnRun').disabled = task.status === 'running';
+      document.getElementById('btnStop').disabled = task.status !== 'running';
+
+      detail.className = 'task-detail';
+      detail.innerHTML = '';
+
+      // Prompt section
+      const promptSec = document.createElement('div');
+      promptSec.className = 'detail-section';
+      promptSec.innerHTML = '<h3>Prompt</h3><div style="font-size:13px;color:var(--text-muted);white-space:pre-wrap">' + esc(task.prompt) + '</div>';
+      detail.appendChild(promptSec);
+
+      // Result section (if completed)
+      if (task.result) {
+        const resultSec = document.createElement('div');
+        resultSec.className = 'detail-section';
+        resultSec.innerHTML = '<h3>Result</h3><div style="font-size:13px;white-space:pre-wrap">' + formatResult(task.result) + '</div>';
+        detail.appendChild(resultSec);
+      }
+
+      // Timing
+      if (task.startedAt) {
+        const timingSec = document.createElement('div');
+        timingSec.className = 'detail-section';
+        let html = '<h3>Timing</h3>';
+        html += '<div style="font-size:12px;color:var(--text-muted)">Started: ' + new Date(task.startedAt).toLocaleString() + '</div>';
+        if (task.completedAt) {
+          const dur = task.completedAt - task.startedAt;
+          html += '<div style="font-size:12px;color:var(--text-muted)">Completed: ' + new Date(task.completedAt).toLocaleString() + ' (' + formatDuration(dur) + ')</div>';
+        }
+        timingSec.innerHTML = html;
+        detail.appendChild(timingSec);
+      }
+
+      // Log stream
+      const logSec = document.createElement('div');
+      logSec.className = 'detail-section';
+      logSec.innerHTML = '<h3>Logs</h3>';
+      const logBox = document.createElement('div');
+      logBox.className = 'log-stream';
+      logBox.id = 'logStream';
+      if (task.logs && task.logs.length > 0) {
+        logBox.innerHTML = task.logs.map(l => `<span class="log-${l.level}">[${l.time}] ${esc(l.msg)}</span>`).join('\n');
+      } else {
+        logBox.textContent = '(no logs yet)';
+      }
+      logSec.appendChild(logBox);
+      detail.appendChild(logSec);
+    }
+
+    function formatResult(result) {
+      if (typeof result === 'string') return esc(result);
+      if (result && result.choices && result.choices[0]) {
+        return esc(result.choices[0].message?.content || JSON.stringify(result));
+      }
+      if (result && result.response) return esc(result.response);
+      if (result && result.answer) return esc(result.answer);
+      if (result && result.models) {
+        return result.models.map(m => `${m.name || m.id}  (${m.type || 'unknown'}, ${m.sizeMB || '?'} MB, ${m.status || '?'})`).join('\n');
+      }
+      return esc(JSON.stringify(result, null, 2));
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // TASK EXECUTION — real API calls
+    // ══════════════════════════════════════════════════════════════
+
+    async function runSelectedTask() {
+      const task = AgentState.tasks.find(t => t.id === AgentState.selectedId);
+      if (!task) return;
+      if (!AgentState.backend.online) {
+        toast('No backend connected. Connect first.', 'error');
+        return;
+      }
+
+      task.status = 'running';
+      task.startedAt = Date.now();
+      task.completedAt = null;
+      task.result = null;
+      task.logs = [];
+      saveTasksToStorage();
+      renderAgentList();
+      renderTaskDetail();
+
+      addLog(task, 'info', 'Task started: ' + task.name);
+      addLog(task, 'info', 'Backend: ' + AgentState.backend.url + ' (' + AgentState.backend.type + ')');
+
+      try {
+        const controller = new AbortController();
+        AgentState.runningAbort = controller;
+
+        if (task.type === 'explore-codebase' && task.id === 'select-repository') {
+          // Special: use /api/models to list repos
+          await runModelDiscovery(task, controller.signal);
+        } else if (task.type === 'security-audit') {
+          // Security audit: multi-step prompt
+          await runSecurityAudit(task, controller.signal);
+        } else {
+          // Generic: send prompt to /v1/chat/completions
+          await runGenericAgent(task, controller.signal);
+        }
+      } catch (err) {
+        if (err.name === 'AbortError') {
+          addLog(task, 'warn', 'Task cancelled by user');
+          task.status = 'idle';
+        } else {
+          addLog(task, 'error', 'Task failed: ' + err.message);
+          task.status = 'failed';
+        }
+      } finally {
+        AgentState.runningAbort = null;
+        task.completedAt = Date.now();
+        saveTasksToStorage();
+        renderAgentList();
+        renderTaskDetail();
+      }
+    }
+
+    // ─── Model discovery (real /api/models) ───
+    async function runModelDiscovery(task, signal) {
+      addLog(task, 'info', 'Scanning model repositories via /api/models...');
+      const res = await fetch(AgentState.backend.url + '/api/models', { signal });
+      if (!res.ok) throw new Error('/api/models returned ' + res.status);
+      const data = await res.json();
+      const models = data.models || [];
+      addLog(task, 'success', 'Found ' + models.length + ' model(s)');
+      for (const m of models) {
+        addLog(task, 'info', '  ' + (m.name || m.id) + '  [' + (m.type || '?') + ']  ' + (m.sizeMB || '?') + ' MB  status=' + (m.status || '?'));
+      }
+      if (data.ollamaStatus === 'unreachable') {
+        addLog(task, 'warn', 'Ollama is not running — only local files discovered');
+      }
+      task.result = data;
+      task.status = 'completed';
+      toast('Model discovery complete: ' + models.length + ' found', 'success');
+    }
+
+    // ─── Security audit (multi-step) ───
+    async function runSecurityAudit(task, signal) {
+      const steps = [
+        'Analyze all source files for buffer overflow vulnerabilities',
+        'Check for unsafe pointer casts and missing bounds checks in hotpatch code',
+        'Verify VirtualProtect/mprotect usage around memory writes',
+        'Scan for injection vulnerabilities in server request handlers',
+        'Review mutex usage and detect potential deadlocks',
+      ];
+
+      let fullReport = '';
+
+      for (let i = 0; i < steps.length; i++) {
+        addLog(task, 'info', 'Step ' + (i + 1) + '/' + steps.length + ': ' + steps[i]);
+        const prompt = task.prompt + '\n\nFocus specifically on: ' + steps[i] + '\n\nProvide findings in a structured format with severity levels (CRITICAL, HIGH, MEDIUM, LOW).';
+
+        const res = await fetch(AgentState.backend.url + '/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'rawrxd',
+            messages: [
+              { role: 'system', content: 'You are a security auditor for C++20/MASM64 codebase. Be thorough and specific.' },
+              { role: 'user', content: prompt }
+            ],
+            stream: false,
+            temperature: 0.3,
+            max_tokens: 1024,
+          }),
+          signal,
+        });
+
+        if (!res.ok) {
+          addLog(task, 'warn', 'Step ' + (i + 1) + ' returned HTTP ' + res.status + ', trying fallback...');
+          // Fallback to /ask
+          const askRes = await fetch(AgentState.backend.url + '/ask', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question: prompt, model: 'rawrxd' }),
+            signal,
+          });
+          if (askRes.ok) {
+            const askData = await askRes.json();
+            const answer = askData.answer || askData.response || '';
+            addLog(task, 'success', 'Step ' + (i + 1) + ' complete (' + answer.length + ' chars)');
+            fullReport += '\n\n## Step ' + (i + 1) + ': ' + steps[i] + '\n' + answer;
+          } else {
+            addLog(task, 'error', 'Step ' + (i + 1) + ' failed on both endpoints');
+          }
+          continue;
+        }
+
+        const data = await res.json();
+        const answer = data.choices?.[0]?.message?.content || data.response || data.answer || '';
+        addLog(task, 'success', 'Step ' + (i + 1) + ' complete (' + answer.length + ' chars)');
+        fullReport += '\n\n## Step ' + (i + 1) + ': ' + steps[i] + '\n' + answer;
+      }
+
+      task.result = fullReport || '(No findings generated — check backend logs)';
+      task.status = 'completed';
+      toast('Security audit complete', 'success');
+    }
+
+    // ─── Generic agent (real /v1/chat/completions → /ask fallback) ───
+    async function runGenericAgent(task, signal) {
+      addLog(task, 'info', 'Sending prompt to /v1/chat/completions...');
+      addLog(task, 'info', 'Prompt: ' + task.prompt.substring(0, 120) + (task.prompt.length > 120 ? '...' : ''));
+
+      const systemMsg = getSystemPromptForType(task.type);
+      const targetInfo = task.targetPath ? '\n\nTarget path: ' + task.targetPath : '';
+
+      let answer = '';
+      let usedEndpoint = '/v1/chat/completions';
+
+      // Try OpenAI-compatible first
+      try {
+        const res = await fetch(AgentState.backend.url + '/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'rawrxd',
+            messages: [
+              { role: 'system', content: systemMsg },
+              { role: 'user', content: task.prompt + targetInfo }
+            ],
+            stream: false,
+            temperature: task.type === 'generate-tests' ? 0.2 : 0.7,
+            max_tokens: 2048,
+          }),
+          signal,
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          answer = data.choices?.[0]?.message?.content || '';
+          if (data.usage) {
+            addLog(task, 'info', 'Tokens: prompt=' + (data.usage.prompt_tokens || 0) + ' completion=' + (data.usage.completion_tokens || 0));
+          }
+        } else {
+          throw new Error('HTTP ' + res.status);
+        }
+      } catch (err) {
+        addLog(task, 'warn', '/v1/chat/completions failed: ' + err.message + ', trying /ask...');
+        usedEndpoint = '/ask';
+
+        // Fallback: /ask
+        const askRes = await fetch(AgentState.backend.url + '/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            question: systemMsg + '\n\n' + task.prompt + targetInfo,
+            model: 'rawrxd',
+          }),
+          signal,
+        });
+
+        if (!askRes.ok) {
+          // Last resort: Ollama direct /api/generate
+          addLog(task, 'warn', '/ask failed, trying Ollama direct...');
+          usedEndpoint = 'ollama:/api/generate';
+          const ollamaRes = await fetch(OLLAMA_DIRECT + '/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: 'llama2',
+              prompt: systemMsg + '\n\n' + task.prompt + targetInfo,
+              stream: false,
+              options: { num_predict: 2048 }
+            }),
+            signal,
+          });
+          if (!ollamaRes.ok) throw new Error('All endpoints failed');
+          const od = await ollamaRes.json();
+          answer = od.response || '';
+        } else {
+          const askData = await askRes.json();
+          answer = askData.answer || askData.response || '';
+        }
+      }
+
+      addLog(task, 'success', 'Completed via ' + usedEndpoint + ' (' + answer.length + ' chars)');
+      task.result = answer || '(Empty response from backend)';
+      task.status = 'completed';
+      toast(task.name + ' completed', 'success');
+    }
+
+    function getSystemPromptForType(type) {
+      switch (type) {
+        case 'build-feature':
+          return 'You are an expert C++20 developer working on the RawrXD-Shell project. Generate production-ready code following the project conventions: PatchResult return types, no exceptions, std::mutex for locking, uintptr_t for pointer math, factory-style constructors.';
+        case 'fix-bugs':
+          return 'You are a debugging expert for C++20/MASM64 projects. Analyze the reported issue, identify root cause, and provide a corrected implementation. Check for common issues: const correctness, unresolved externals from missing ASM linkage, access violations from unprotected writes.';
+        case 'security-audit':
+          return 'You are a security auditor specializing in native C++ codebases with ASM components. Focus on: buffer overflows, unsafe pointer casts, missing bounds checks, race conditions, injection vulnerabilities in HTTP handlers, and unprotected memory writes.';
+        case 'explore-codebase':
+          return 'You are a codebase analyst. Describe the architecture, key files, module dependencies, and integration points. Be thorough but concise.';
+        case 'refactor':
+          return 'You are a refactoring specialist for C++20 codebases. Propose clean, maintainable restructuring while preserving the three-layer hotpatching architecture (memory, byte-level, server).';
+        case 'generate-tests':
+          return 'You are a test engineering expert. Generate comprehensive unit tests and integration tests for the specified module. Cover edge cases, error paths, and boundary conditions.';
+        default:
+          return 'You are an expert software engineer working on the RawrXD-Shell project. Follow project conventions and provide detailed, production-ready responses.';
+      }
+    }
+
+    function stopSelectedTask() {
+      if (AgentState.runningAbort) {
+        AgentState.runningAbort.abort();
+        toast('Task stop requested', 'success');
+      }
+    }
+
+    function deleteSelectedTask() {
+      if (!AgentState.selectedId) return;
+      AgentState.tasks = AgentState.tasks.filter(t => t.id !== AgentState.selectedId);
+      AgentState.selectedId = null;
+      saveTasksToStorage();
+      renderAgentList();
+      renderTaskDetail();
+      toast('Task deleted', 'success');
+    }
+
+    function clearLogs() {
+      const task = AgentState.tasks.find(t => t.id === AgentState.selectedId);
+      if (task) {
+        task.logs = [];
+        saveTasksToStorage();
+        renderTaskDetail();
+      }
+    }
+
+    function addLog(task, level, msg) {
+      const time = new Date().toLocaleTimeString();
+      task.logs.push({ level, msg, time });
+      // Live update if this task is selected
+      if (AgentState.selectedId === task.id) {
+        const logBox = document.getElementById('logStream');
+        if (logBox) {
+          const line = document.createElement('span');
+          line.className = 'log-' + level;
+          line.textContent = '[' + time + '] ' + msg;
+          logBox.appendChild(document.createTextNode('\n'));
+          logBox.appendChild(line);
+          logBox.scrollTop = logBox.scrollHeight;
+        }
+      }
+      saveTasksToStorage();
+    }
+
+    // ── New Task Modal ──
+    function showNewTaskModal() {
+      document.getElementById('newTaskModal').classList.add('visible');
+      document.getElementById('ntName').value = '';
+      document.getElementById('ntPrompt').value = '';
+      document.getElementById('ntPath').value = '';
+      document.getElementById('ntName').focus();
+    }
+
+    function closeNewTaskModal() {
+      document.getElementById('newTaskModal').classList.remove('visible');
+    }
+
+    function createNewTask() {
+      const name = document.getElementById('ntName').value.trim();
+      const type = document.getElementById('ntType').value;
+      const prompt = document.getElementById('ntPrompt').value.trim();
+      const targetPath = document.getElementById('ntPath').value.trim();
+
+      if (!name || !prompt) {
+        toast('Name and prompt are required', 'error');
+        return;
+      }
+
+      const id = 'task-' + Date.now();
+      AgentState.tasks.push({
+        id, name, type, prompt, desc: prompt.substring(0, 80),
+        status: 'idle', logs: [], result: null,
+        startedAt: null, completedAt: null,
+        targetPath: targetPath || null,
+      });
+      saveTasksToStorage();
+      renderAgentList();
+      closeNewTaskModal();
+      selectTask(id);
+      toast('Task created: ' + name, 'success');
+    }
+
+    // ── Utilities ──
+    function esc(s) {
+      if (!s) return '';
+      const d = document.createElement('div');
+      d.textContent = String(s);
+      return d.innerHTML;
+    }
+
+    function toast(msg, type) {
+      const container = document.getElementById('toastContainer');
+      const t = document.createElement('div');
+      t.className = 'toast ' + (type || '');
+      t.textContent = msg;
+      container.appendChild(t);
+      setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 4000);
+    }
+  </script>
+</body>
+
+</html>

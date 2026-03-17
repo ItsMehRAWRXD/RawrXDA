@@ -45,10 +45,12 @@ AgenticObservability::AgenticObservability()
     : m_systemStartTime(std::chrono::system_clock::now())
 {
     fprintf(stderr, "[AgenticObservability] Initialized - Ready for comprehensive observability\n");
+    startHeartbeatLoop();
 }
 
 AgenticObservability::~AgenticObservability()
 {
+    stopHeartbeatLoop();
     fprintf(stderr, "[AgenticObservability] Destroyed - Logged %d entries and %d metrics\n",
             m_totalLogsWritten, m_totalMetricsRecorded);
 }
@@ -704,6 +706,112 @@ std::string AgenticObservability::exportLogsAsJson() const
     }
 
     return logs.dump(2);
+}
+
+std::string AgenticObservability::exportMetricsAsPrometheus() const
+{
+    std::ostringstream prom;
+    std::unordered_map<std::string, float> latestMetrics;
+    
+    // Grab the latest value for each metric
+    for (const auto& metric : m_metrics) {
+        latestMetrics[metric.metricName] = metric.value;
+    }
+
+    // Add generic info
+    prom << "# HELP agentic_observability_total_logs Total number of written logs\n"
+         << "# TYPE agentic_observability_total_logs counter\n"
+         << "agentic_observability_total_logs " << m_totalLogsWritten << "\n";
+         
+    prom << "# HELP agentic_observability_total_metrics Total number of metrics recorded\n"
+         << "# TYPE agentic_observability_total_metrics counter\n"
+         << "agentic_observability_total_metrics " << m_totalMetricsRecorded << "\n";
+    
+    for (const auto& pair : latestMetrics) {
+        // Sanitize metric name for prometheus (replacing non-alphanumeric with underscores mostly)
+        std::string safeName = pair.first;
+        for(auto& c : safeName) {
+            if(!std::isalnum(c)) c = '_';
+        }
+        prom << "# HELP " << safeName << " Auto-generated metric for " << pair.first << "\n"
+             << "# TYPE " << safeName << " gauge\n"
+             << safeName << " " << pair.second << "\n";
+    }
+
+    return prom.str();
+}
+
+void AgenticObservability::startHeartbeatLoop()
+{
+    if (m_heartbeatRunning) return;
+    m_heartbeatRunning = true;
+    m_heartbeatThread = std::make_unique<std::thread>(&AgenticObservability::heartbeatWorker, this);
+}
+
+void AgenticObservability::stopHeartbeatLoop()
+{
+    if (m_heartbeatRunning) {
+        m_heartbeatRunning = false;
+        if (m_heartbeatThread && m_heartbeatThread->joinable()) {
+            m_heartbeatThread->join();
+        }
+    }
+}
+
+// -----------------------------------------------------------------------
+// Core Agent Metrics Hooks 
+// -----------------------------------------------------------------------
+
+void AgenticObservability::updateTokensPerSecond(float tps)
+{
+    setGauge("inference_tokens_per_sec", tps, {});
+}
+
+void AgenticObservability::updateAgentLoopIterationTime(float ms)
+{
+    recordHistogram("agent_loop_iteration_time_ms", ms, {});
+    setGauge("agent_loop_iteration_latest_ms", ms, {});
+}
+
+void AgenticObservability::updateMemoryUsage(size_t bytes)
+{
+    setGauge("memory_usage_bytes", static_cast<float>(bytes), {});
+}
+
+#include <fstream>
+#ifdef _WIN32
+#include <windows.h>
+#include <psapi.h>
+#pragma comment(lib, "psapi.lib")
+#else
+#include <sys/resource.h>
+#endif
+
+void AgenticObservability::heartbeatWorker()
+{
+    while (m_heartbeatRunning) {
+        // Collect automated memory metrics
+        size_t memoryUsage = 0;
+#ifdef _WIN32
+        PROCESS_MEMORY_COUNTERS pmc;
+        if (GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc))) {
+            memoryUsage = pmc.WorkingSetSize;
+        }
+#endif
+        if (memoryUsage > 0) {
+            recordMetric("memory_usage_bytes", static_cast<float>(memoryUsage), {}, "bytes");
+        }
+
+        // Write metrics to metrics.prom file
+        std::ofstream promFile("metrics.prom", std::ios::trunc);
+        if (promFile.is_open()) {
+            promFile << exportMetricsAsPrometheus();
+            promFile.flush();
+            promFile.close();
+        }
+
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
 }
 
 // ===== PRIVATE HELPERS =====

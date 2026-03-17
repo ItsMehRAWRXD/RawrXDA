@@ -1,0 +1,100 @@
+# ================================================================
+# Dockerfile.production — RawrXD AI Toolkit Production Container
+# Multi-stage build: MSVC compilation → minimal runtime image
+# ================================================================
+# NOTE: This Dockerfile targets Windows containers with MSVC.
+# For Linux containers, replace with GCC/Clang equivalents.
+# ================================================================
+
+# Stage 1: Build
+FROM mcr.microsoft.com/dotnet/framework/sdk:4.8-windowsservercore-ltsc2022 AS builder
+
+# Install Visual Studio Build Tools
+SHELL ["cmd", "/S", "/C"]
+RUN curl -SL --output vs_buildtools.exe https://aka.ms/vs/17/release/vs_buildtools.exe \
+    && start /w vs_buildtools.exe --quiet --wait --norestart --nocache \
+       --add Microsoft.VisualStudio.Workload.VCTools \
+       --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 \
+       --add Microsoft.VisualStudio.Component.Windows11SDK.22621 \
+    && del /q vs_buildtools.exe
+
+# Install Vulkan SDK
+RUN curl -SL --output VulkanSDK.exe https://sdk.lunarg.com/sdk/download/1.3.268.0/windows/VulkanSDK-1.3.268.0-Installer.exe \
+    && start /w VulkanSDK.exe /S \
+    && del /q VulkanSDK.exe
+
+# Set up build environment
+WORKDIR /build
+COPY src/ ./src/
+
+# Assemble MASM files
+RUN call "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat" \
+    && ml64 /c /nologo src/exception/SEH_wrapper.asm /Fo:obj/SEH_wrapper.obj \
+    && ml64 /c /nologo src/inference/tokenizer_masm.asm /Fo:obj/tokenizer_masm.obj \
+    && ml64 /c /nologo src/compression/hierarchical_quant.asm /Fo:obj/hierarchical_quant.obj
+
+# Compile C++ sources
+RUN call "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat" \
+    && cl /O2 /std:c++20 /EHsc /arch:AVX512 /DRAWRXD_VULKAN_IMPL \
+       /I"C:\VulkanSDK\1.3.268.0\Include" \
+       src/main_production.cpp \
+       obj/SEH_wrapper.obj obj/tokenizer_masm.obj obj/hierarchical_quant.obj \
+       /link ws2_32.lib "C:\VulkanSDK\1.3.268.0\Lib\vulkan-1.lib" \
+       /Fe:rawrxd_production.exe
+
+# Compile test suite
+RUN call "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat" \
+    && cl /O2 /std:c++20 /EHsc src/tests/regression_suite.cpp /Fe:regression_suite.exe \
+    && cl /O2 /std:c++20 /EHsc src/tests/fuzz_gguf_loader.cpp /Fe:fuzz_gguf.exe
+
+# Run tests
+RUN regression_suite.exe || exit /b 1
+RUN fuzz_gguf.exe -n 50000 || exit /b 1
+
+# Stage 2: Runtime
+FROM mcr.microsoft.com/windows/servercore:ltsc2022
+
+LABEL maintainer="RawrXD Team"
+LABEL version="1.0.0"
+LABEL description="RawrXD AI Toolkit Production Server"
+
+WORKDIR /app
+
+# Copy only the built executable and required DLLs
+COPY --from=builder /build/rawrxd_production.exe .
+COPY --from=builder /build/src/config/ ./config/
+
+# Install Vulkan runtime (ICD only, no SDK)
+RUN curl -SL --output vulkan-1.dll https://sdk.lunarg.com/sdk/download/1.3.268.0/windows/vulkan-1.dll \
+    && move vulkan-1.dll C:\Windows\System32\
+
+# Production environment defaults
+ENV RAWRXD_ENV=production
+ENV RAWRXD_MODEL_PATH=/models/current.gguf
+ENV RAWRXD_CONTEXT_LENGTH=4096
+ENV RAWRXD_BATCH_SIZE=512
+ENV RAWRXD_GPU_LAYERS=80
+ENV RAWRXD_API_PORT=8080
+ENV RAWRXD_METRICS_PORT=9090
+ENV RAWRXD_MAX_CONNECTIONS=256
+ENV RAWRXD_VULKAN_COMPUTE=true
+ENV RAWRXD_FLASH_ATTENTION=true
+ENV RAWRXD_KV_CACHE_COMPRESSION=true
+ENV RAWRXD_SPECULATIVE_DECODING=true
+ENV RAWRXD_QUANTIZATION_LEVEL=Q4_K
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+    CMD curl -sf http://localhost:8080/health || exit 1
+
+# Expose ports
+EXPOSE 8080 9090
+
+# Model volume mount point
+VOLUME ["/models"]
+
+# Resource constraints hint
+# Set via docker run --cpus=8 --memory=64g --gpus all
+# Or via Kubernetes resource limits
+
+ENTRYPOINT ["rawrxd_production.exe"]

@@ -1,0 +1,45 @@
+; =============================================================================
+; RawrXD MultiWindow Task Scheduler Kernel — Module Definition
+; =============================================================================
+; Build: link /DLL /DEF:MultiWindowKernel.def /OUT:RawrXD_MultiWindow_Kernel.dll
+;        RawrXD_MultiWindow_Kernel.obj kernel32.lib
+; =============================================================================
+
+LIBRARY RawrXD_MultiWindow_Kernel
+
+EXPORTS
+    ; Core lifecycle
+    KernelInit              @1
+    KernelShutdown          @2
+
+    ; Task management
+    SubmitTask              @3
+    CancelTask              @4
+
+    ; Window management
+    RegisterWindow          @5
+    UnregisterWindow        @6
+
+    ; Inter-process communication
+    SendIPCMessage          @7
+
+    ; Statistics
+    GetKernelStats          @8
+
+    ; Swarm / Chain-of-Thought
+    SwarmBroadcast          @9
+    ChainOfThought          @10
+
+    ; Timing
+    GetMicroseconds         @11
+
+    ; Memory barriers (exposed for C++ callers if needed)
+    MemoryFence             @12
+    LoadFence               @13
+    StoreFence              @14
+
+    ; Dependency resolution
+    IsTaskComplete          @15
+
+    ; Deterministic replay
+    WriteReplayEntry        @16

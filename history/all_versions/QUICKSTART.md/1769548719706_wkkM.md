@@ -1,0 +1,329 @@
+# RawrXD IDE Integration - Quick Start Guide
+
+**Status**: ✅ READY  
+**Location**: C:\RawrXD  
+**Libraries**: 4 (54.08 KB)  
+**API Functions**: 39
+
+---
+
+## 🚀 5-Minute Setup
+
+### Step 1: Copy Header (Already Done ✓)
+```
+C:\RawrXD\Headers\instruction_encoder.h
+```
+
+### Step 2: Configure Visual Studio
+
+**Option A: Command Line**
+```batch
+cl.exe /I"C:\RawrXD\Headers" /link /LIBPATH:"C:\RawrXD\Libraries" instruction_encoder.lib myprogram.cpp
+```
+
+**Option B: Visual Studio Project**
+1. `Project Properties` → `VC++ Directories`
+2. **Include Directories**: Add `C:\RawrXD\Headers`
+3. **Library Directories**: Add `C:\RawrXD\Libraries`
+4. **Linker** → **Input** → **Additional Dependencies**: Add `instruction_encoder.lib`
+
+### Step 3: Write Code
+
+```cpp
+#include "instruction_encoder.h"
+
+int main() {
+    uint8_t buffer[256];
+    ENCODER_CTX ctx;
+    
+    // Initialize
+    Encoder_Init(&ctx, buffer, sizeof(buffer));
+    
+    // Encode MOV RAX, 0x123456789ABCDEF
+    Encode_MOV_R64_IMM64(&ctx, REG_RAX, 0x123456789ABCDEF);
+    
+    // Get result
+    uint8_t* encoded = Encoder_GetBuffer(&ctx);
+    uint64_t size = Encoder_GetSize(&ctx);
+    
+    // Use encoded bytes...
+    
+    return 0;
+}
+```
+
+---
+
+## 📚 Complete API at a Glance
+
+### 15 High-Level Instruction Encoders
+
+```cpp
+// Registers: REG_RAX, REG_RCX, REG_RDX, REG_RBX, REG_RSP, REG_RBP, REG_RSI, REG_RDI
+//            REG_R8 through REG_R15
+
+// MOV Family
+Encode_MOV_R64_R64(ctx, dest, src);           // MOV reg64, reg64
+Encode_MOV_R64_IMM64(ctx, dest, imm64);       // MOV reg64, imm64
+Encode_MOV_M64_R64(ctx, base, disp32, src);   // MOV [base+disp32], reg64
+Encode_MOV_R64_M64(ctx, dest, base, disp32);  // MOV reg64, [base+disp32]
+
+// Stack (auto-handles REX.B for R8-R15)
+Encode_PUSH_R64(ctx, reg);                    // PUSH reg64
+Encode_POP_R64(ctx, reg);                     // POP reg64
+
+// Calls (rel32 - relative offset from next instruction)
+Encode_CALL_REL32(ctx, offset);               // CALL rel32
+Encode_RET(ctx);                              // RET
+
+// Arithmetic
+Encode_LEA_R64_M(ctx, dest, base, disp32);    // LEA reg64, [base+disp32]
+Encode_ADD_R64_R64(ctx, dest, src);           // ADD reg64, reg64
+Encode_SUB_R64_IMM8(ctx, dest, imm8);         // SUB reg64, imm8
+Encode_CMP_R64_R64(ctx, reg1, reg2);          // CMP reg64, reg64
+
+// Jumps (rel32 offset)
+Encode_JMP_REL32(ctx, offset);                // JMP rel32
+Encode_Jcc_REL32(ctx, COND_E, offset);        // Jcc rel32 (16 conditions)
+  // COND_O, COND_NO, COND_B, COND_NB, COND_E, COND_NE, COND_BE, COND_A,
+  // COND_S, COND_NS, COND_P, COND_NP, COND_L, COND_GE, COND_LE, COND_G
+
+// System
+Encode_SYSCALL(ctx);                          // SYSCALL (0F 05)
+
+// Exchange
+Encode_XCHG_R64_R64(ctx, reg1, reg2);         // XCHG reg64, reg64
+
+// Padding
+Encode_NOP(ctx, length);                      // NOP (1-byte or multi-byte)
+```
+
+### Low-Level Building Blocks (For Custom Encodings)
+
+```cpp
+// Context Management
+Encoder_Init(ctx, buffer, capacity);
+Encoder_Reset(ctx);
+Encoder_GetBuffer(ctx);          // Get encoded bytes
+Encoder_GetSize(ctx);            // Get total size
+Encoder_GetLastSize(ctx);        // Get last instruction size
+Encoder_GetError(ctx);           // Get error code (0 = success)
+
+// Building Instructions Piece by Piece
+Encoder_SetOpcode(ctx, bOpcode);
+Encoder_SetOpcode2(ctx, bOpcode1, bOpcode2);  // For 2-byte opcodes
+Encoder_SetREX(ctx, W, R, X, B);
+Encoder_SetModRM_RegReg(ctx, reg1, reg2);
+Encoder_SetSIB(ctx, scale, index, base);
+Encoder_SetDisplacement8(ctx, disp);
+Encoder_SetDisplacement32(ctx, disp);
+Encoder_SetImmediate64(ctx, value);
+Encoder_EncodeInstruction(ctx);  // Finalize
+```
+
+---
+
+## 🎯 Common Tasks
+
+### Generate a Small Shellcode
+
+```cpp
+uint8_t buffer[256];
+ENCODER_CTX ctx;
+Encoder_Init(&ctx, buffer, sizeof(buffer));
+
+// PUSH RBP
+Encode_PUSH_R64(&ctx, REG_RBP);
+size_t offset1 = Encoder_GetSize(&ctx);
+
+// MOV RBP, RSP
+Encode_MOV_R64_R64(&ctx, REG_RBP, REG_RSP);
+size_t offset2 = Encoder_GetSize(&ctx);
+
+// SUB RSP, 32
+Encode_SUB_R64_IMM8(&ctx, REG_RSP, 32);
+
+// Get all bytes
+uint8_t* shellcode = Encoder_GetBuffer(&ctx);
+size_t total = Encoder_GetSize(&ctx);
+```
+
+### Calculate Jump Offset
+
+```cpp
+// If instruction at offset 0x1000 wants to jump to 0x2000
+// The rel32 value is: target - (current_offset + instruction_length)
+
+uint32_t current = 0x1000;
+uint32_t target = 0x2000;
+uint32_t instruction_length = 5;  // JMP is 5 bytes (E9 + 4-byte rel32)
+
+int32_t rel32 = target - (current + instruction_length);
+Encode_JMP_REL32(&ctx, rel32);
+```
+
+### Handle Extended Registers (R8-R15)
+
+```cpp
+// For registers R8-R15, REX.B is automatically handled
+Encode_MOV_R64_IMM64(&ctx, REG_R10, 0xDEADBEEF);  // Automatically adds REX.B
+Encode_PUSH_R64(&ctx, REG_R15);                    // REX.B added automatically
+```
+
+---
+
+## 📁 File Locations
+
+```
+C:\RawrXD\
+├── Libraries/
+│   ├── instruction_encoder.lib    ← Use this in your projects
+│   ├── x64_encoder_pure.lib       (alternative)
+│   └── reverse_asm.lib            (disassembler)
+│
+├── Headers/
+│   ├── instruction_encoder.h      ← Include this in C/C++ code
+│   └── pe_generator.h
+│
+├── Docs/
+│   ├── INSTRUCTION_ENCODER_DOCS.md      (Complete API reference)
+│   ├── INTEGRATION_MANIFEST.md          (Detailed linking guide)
+│   └── ... (5 more documentation files)
+│
+└── INTEGRATION_EXAMPLE.cpp        ← Copy & modify this
+```
+
+---
+
+## ✅ Verification Checklist
+
+- [ ] C:\RawrXD\Libraries\instruction_encoder.lib exists
+- [ ] C:\RawrXD\Headers\instruction_encoder.h exists
+- [ ] Ran `Wire-RawrXD.bat` (build + wiring)
+- [ ] Added C:\RawrXD\Headers to IDE include path
+- [ ] Added C:\RawrXD\Libraries to IDE library path
+- [ ] Added instruction_encoder.lib to linker settings
+- [ ] Test compilation with INTEGRATION_EXAMPLE.cpp succeeds
+- [ ] Code can use: `Encode_MOV_R64_IMM64(&ctx, REG_RAX, 0x123);`
+
+---
+
+## 🔗 Linking Examples
+
+### Automated Wiring (Recommended)
+
+```batch
+C:\RawrXD\Wire-RawrXD.bat
+```
+
+### Visual Studio Project File (.vcxproj)
+
+```xml
+<ItemGroup>
+    <ClCompile Include="myprogram.cpp" />
+</ItemGroup>
+
+<ItemDefinitionGroup>
+    <ClCompile>
+        <AdditionalIncludeDirectories>C:\RawrXD\Headers;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+        <AdditionalLibraryDirectories>C:\RawrXD\Libraries;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+        <AdditionalDependencies>instruction_encoder.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+</ItemDefinitionGroup>
+```
+
+### CMakeLists.txt
+
+```cmake
+include_directories(C:\RawrXD\Headers)
+link_directories(C:\RawrXD\Libraries)
+
+add_executable(myapp myprogram.cpp)
+target_link_libraries(myapp instruction_encoder.lib)
+```
+
+### PowerShell Build Script
+
+```powershell
+$IncludePath = "C:\RawrXD\Headers"
+$LibPath = "C:\RawrXD\Libraries"
+$Libs = "instruction_encoder.lib"
+
+& cl.exe /I"$IncludePath" /link /LIBPATH:"$LibPath" $Libs myprogram.cpp
+```
+
+---
+
+## 📊 Library Contents
+
+| Library | Functions | Use Case |
+|---------|-----------|----------|
+| **instruction_encoder.lib** | 39 | Primary - full API, all instruction types |
+| x64_encoder_pure.lib | 15+ | Struct-based, immutable encoding |
+| x64_encoder.lib | 20+ | Alternative context-based encoder |
+| reverse_asm.lib | 25+ | Disassembler - for reverse engineering |
+
+**Recommendation**: Use `instruction_encoder.lib` - it's the most complete.
+
+---
+
+## 🐛 Error Handling
+
+```cpp
+ENCODER_CTX ctx;
+uint8_t buffer[4];  // Too small
+
+Encoder_Init(&ctx, buffer, 4);
+Encode_MOV_R64_IMM64(&ctx, REG_RAX, 0x1234567890ABCDEF);
+
+uint8_t err = Encoder_GetError(&ctx);
+
+if (err == ENC_ERROR_BUFFER_OVERFLOW) {
+    // Buffer too small - need more space
+}
+if (err == ENC_ERROR_INVALID_REG) {
+    // Invalid register number
+}
+if (err == ENC_ERROR_NONE) {
+    // Success
+}
+```
+
+**Error Codes**:
+- `ENC_ERROR_NONE` (0) - Success
+- `ENC_ERROR_BUFFER_OVERFLOW` (1) - Buffer capacity exceeded
+- `ENC_ERROR_INVALID_OPERAND` (2) - Invalid operand
+- `ENC_ERROR_INVALID_REG` (3) - Register out of range
+- `ENC_ERROR_ENCODING_FAILED` (4) - Internal encoding error
+
+---
+
+## 📖 More Information
+
+| Document | For |
+|----------|-----|
+| INSTRUCTION_ENCODER_DOCS.md | Complete API reference with examples |
+| INTEGRATION_MANIFEST.md | Detailed architecture and linking setup |
+| INTEGRATION_EXAMPLE.cpp | 7 working C++ code examples |
+| PE_GENERATOR_QUICK_REF.md | If using PE generation features |
+
+---
+
+## 🎓 Learning Path
+
+1. **Start**: This file (Quick Start)
+2. **Build**: INTEGRATION_EXAMPLE.cpp (copy and compile)
+3. **Reference**: INSTRUCTION_ENCODER_DOCS.md (all functions)
+4. **Integrate**: INTEGRATION_MANIFEST.md (IDE setup)
+5. **Advanced**: Read the header files directly
+
+---
+
+**Version**: 2.0  
+**Status**: ✅ Production Ready  
+**Platform**: Windows x86-64  
+**Compiler**: Visual Studio 2022+, GCC (with PE linking), Clang
+
+Happy encoding! 🚀

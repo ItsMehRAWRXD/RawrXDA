@@ -1,0 +1,59 @@
+# Build artifacts
+build/
+build_fresh/
+build_manual/
+bin/
+lib/
+*.o
+*.a
+*.so
+*.dll
+*.exe
+*.dylib
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+*.log
+
+# Dependencies
+node_modules/
+package-lock.json
+
+# Generated IDE
+out/rawrxd-ide/node_modules/
+out/rawrxd-ide/dist/
+out/rawrxd-ide/.vite/
+
+# Models (large, user-provided)
+models/*.gguf
+models/*.bin
+
+# Temp
+tmp/
+temp/
+*.tmp
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+
+# Local only
+*.local
+secrets.txt

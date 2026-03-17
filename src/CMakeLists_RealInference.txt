@@ -1,0 +1,173 @@
+cmake_minimum_required(VERSION 3.20)
+project(RawrXD_RealInference CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Find packages
+find_package(CURL REQUIRED)
+find_package(nlohmann_json 3.2.0 REQUIRED)
+
+# MASM/ml64 setup
+set(ML64_EXE "C:/masm64/bin64/ml64.exe" CACHE PATH "Path to ml64.exe")
+set(MASM_INCLUDE_DIR "C:/masm64/include64" CACHE PATH "Path to masm64 includes")
+
+# Enable MASM as a language (custom)
+enable_language(ASM)
+set(CMAKE_ASM_COMPILER ${ML64_EXE})
+set(CMAKE_ASM_FLAGS "/c /nologo /I\"${MASM_INCLUDE_DIR}\"")
+set(CMAKE_ASM_COMPILE_OBJECT "<CMAKE_ASM_COMPILER> <DEFINES> <INCLUDES> <FLAGS> /Fo<OBJECT> <SOURCE>")
+
+#=============================================================================
+# SOVEREIGN CORE — Pure x64 MASM library
+#=============================================================================
+
+add_library(sovereign_core STATIC)
+
+# Assemble sovereign core
+target_sources(sovereign_core PRIVATE
+    "${CMAKE_SOURCE_DIR}/RawrXD_Sovereign_Core.asm"
+)
+
+# Set properties
+set_target_properties(sovereign_core PROPERTIES
+    LINKER_LANGUAGE CXX
+    PREFIX ""
+    SUFFIX ".obj"
+)
+
+# Properly link the .obj file
+add_library(sovereign_core_obj OBJECT IMPORTED)
+set_target_properties(sovereign_core_obj PROPERTIES
+    IMPORTED_OBJECTS "${CMAKE_BINARY_DIR}/RawrXD_Sovereign_Core.obj"
+)
+
+#=============================================================================
+# ML INFERENCE ENGINE — C++ library for HTTP + inference
+#=============================================================================
+
+add_library(ml_inference STATIC
+    "src/inference/MLInferenceEngine.cpp"
+    "src/inference/MLInferenceEngine.hpp"
+)
+
+target_include_directories(ml_inference PUBLIC
+    "${CMAKE_SOURCE_DIR}/src/inference"
+)
+
+target_link_libraries(ml_inference PUBLIC
+    CURL::libcurl
+    nlohmann_json::nlohmann_json
+    ws2_32.lib
+)
+
+#=============================================================================
+# GUI TOKEN STREAMING — Win32 UI components
+#=============================================================================
+
+add_library(token_display STATIC
+    "src/gui/TokenStreamDisplay.cpp"
+    "src/gui/TokenStreamDisplay.hpp"
+)
+
+target_include_directories(token_display PUBLIC
+    "${CMAKE_SOURCE_DIR}/src/gui"
+)
+
+target_link_libraries(token_display PUBLIC
+    user32.lib
+    gdi32.lib
+)
+
+#=============================================================================
+# SOVEREIGN C++ WRAPPER — Interface to MASM core
+#=============================================================================
+
+add_library(sovereign_wrapper STATIC
+    "src/sovereign/SovereignCoreWrapper.cpp"
+    "src/sovereign/SovereignCoreWrapper.hpp"
+)
+
+target_include_directories(sovereign_wrapper PUBLIC
+    "${CMAKE_SOURCE_DIR}/src/sovereign"
+)
+
+target_link_libraries(sovereign_wrapper PUBLIC
+    kernel32.lib
+)
+
+#=============================================================================
+# CLI EXECUTABLE — RawrXD_CLI with JSON telemetry
+#=============================================================================
+
+add_executable(RawrXD_CLI_Real
+    "src/cli/RawrXDCLI_Main.cpp"
+)
+
+target_include_directories(RawrXD_CLI_Real PRIVATE
+    "${CMAKE_SOURCE_DIR}/src"
+)
+
+target_link_libraries(RawrXD_CLI_Real PRIVATE
+    ml_inference
+    sovereign_wrapper
+    nlohmann_json::nlohmann_json
+    kernel32.lib
+    ws2_32.lib
+)
+
+# Link sovereign core .obj
+target_link_options(RawrXD_CLI_Real PRIVATE
+    "${CMAKE_BINARY_DIR}/RawrXD_Sovereign_Core.obj"
+)
+
+set_target_properties(RawrXD_CLI_Real PROPERTIES
+    VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+)
+
+#=============================================================================
+# GUI EXECUTABLE — RawrXD_GUI with live token streaming
+#=============================================================================
+
+add_executable(RawrXD_GUI_Real WIN32
+    "src/gui/RawrXDGUI_Main.cpp"
+)
+
+target_include_directories(RawrXD_GUI_Real PRIVATE
+    "${CMAKE_SOURCE_DIR}/src"
+)
+
+target_link_libraries(RawrXD_GUI_Real PRIVATE
+    ml_inference
+    sovereign_wrapper
+    token_display
+    nlohmann_json::nlohmann_json
+    kernel32.lib
+    user32.lib
+    gdi32.lib
+    ws2_32.lib
+)
+
+# Link sovereign core .obj
+target_link_options(RawrXD_GUI_Real PRIVATE
+    "${CMAKE_BINARY_DIR}/RawrXD_Sovereign_Core.obj"
+)
+
+set_target_properties(RawrXD_GUI_Real PROPERTIES
+    VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+)
+
+#=============================================================================
+# BUILD OUTPUTS
+#=============================================================================
+
+message(STATUS "=== RawrXD Real Inference Build ===")
+message(STATUS "ML64.exe: ${ML64_EXE}")
+message(STATUS "MASM Include: ${MASM_INCLUDE_DIR}")
+message(STATUS "")
+message(STATUS "Targets:")
+message(STATUS "  • RawrXD_CLI_Real (console with JSON telemetry)")
+message(STATUS "  • RawrXD_GUI_Real (Win32 with live token streaming)")
+message(STATUS "")
+message(STATUS "Build with:")
+message(STATUS "  cmake --build . --config Release")

@@ -1,0 +1,1707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RawrZ Payload Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0b1020 0%, #1a1f3a 100%);
+            color: #e6e9ef;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: rgba(17, 22, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #222a45;
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header h1 {
+            color: #4a9eff;
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .panel-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .card {
+            background: rgba(18, 25, 47, 0.8);
+            border: 1px solid #20284a;
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            border-color: #4a9eff;
+            box-shadow: 0 8px 25px rgba(74, 158, 255, 0.1);
+        }
+        
+        .card h3 {
+            color: #4a9eff;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #a0a8b8;
+            font-weight: 500;
+        }
+        
+        .form-control {
+            width: 100%;
+            background: rgba(15, 21, 48, 0.8);
+            color: #e6e9ef;
+            border: 1px solid #263056;
+            border-radius: 8px;
+            padding: 0.75rem;
+            font-size: 0.9rem;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: #4a9eff;
+            box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.2);
+        }
+        
+        .form-control::placeholder {
+            color: #6c757d;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #4a9eff 0%, #357abd 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            margin: 0.25rem;
+        }
+        
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(74, 158, 255, 0.3);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+            color: #212529;
+        }
+        
+        .output-area {
+            background: #0a0f24;
+            border: 1px solid #1d2444;
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-top: 1rem;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+        
+        .status-success { background: #28a745; }
+        .status-warning { background: #ffc107; }
+        .status-error { background: #dc3545; }
+        .status-info { background: #17a2b8; }
+        
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        
+        .alert-success {
+            background: rgba(40, 167, 69, 0.1);
+            border: 1px solid #28a745;
+            color: #28a745;
+        }
+        
+        .alert-warning {
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid #ffc107;
+            color: #ffc107;
+        }
+        
+        .alert-error {
+            background: rgba(220, 53, 69, 0.1);
+            border: 1px solid #dc3545;
+            color: #dc3545;
+        }
+        
+        .alert-info {
+            background: rgba(23, 162, 184, 0.1);
+            border: 1px solid #17a2b8;
+            color: #17a2b8;
+        }
+        
+        .file-upload {
+            border: 2px dashed #263056;
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .file-upload:hover {
+            border-color: #4a9eff;
+            background: rgba(74, 158, 255, 0.05);
+        }
+        
+        .file-upload.dragover {
+            border-color: #4a9eff;
+            background: rgba(74, 158, 255, 0.1);
+            transform: scale(1.02);
+        }
+        
+        .file-upload.drag-active {
+            border-color: #28a745;
+            background: rgba(40, 167, 69, 0.1);
+        }
+        
+        .file-info {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            display: none;
+        }
+        
+        .file-info.show {
+            display: block;
+        }
+        
+        .file-name {
+            color: #4a9eff;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .file-size {
+            color: #a0a8b8;
+            font-size: 0.9rem;
+        }
+        
+        .save-options {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .save-options.hidden {
+            display: none;
+        }
+        
+        .save-options.show {
+            display: block;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #20284a;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4a9eff, #357abd);
+            transition: width 0.3s ease;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            border-bottom: 1px solid #20284a;
+            margin-bottom: 1rem;
+        }
+        
+        .nav-tab {
+            padding: 0.75rem 1.5rem;
+            background: none;
+            border: none;
+            color: #a0a8b8;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-tab.active {
+            color: #4a9eff;
+            border-bottom-color: #4a9eff;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .payload-preview {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .option-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .option-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .option-item input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+        }
+        
+        .option-item label {
+            margin: 0;
+            font-size: 0.9rem;
+        }
+        
+        .payload-info {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .payload-field {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #20284a;
+        }
+        
+        .payload-field:last-child {
+            border-bottom: none;
+        }
+        
+        .payload-label {
+            color: #a0a8b8;
+            font-weight: 500;
+        }
+        
+        .payload-value {
+            color: #e6e9ef;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>RawrZ Payload Panel</h1>
+    </div>
+    
+    <div class="container">
+        <!-- Navigation Tabs -->
+        <div class="card">
+            <div class="nav-tabs">
+                <button class="nav-tab active" data-tab="create">Create Payload</button>
+                <button class="nav-tab" data-tab="encrypt">Encrypt Payload</button>
+                <button class="nav-tab" data-tab="obfuscate">Obfuscate</button>
+                <button class="nav-tab" data-tab="pack">Pack/Compress</button>
+                <button class="nav-tab" data-tab="analyze">Analyze</button>
+            </div>
+            
+            <!-- Create Payload Tab -->
+            <div id="create" class="tab-content active">
+                <h3>Create Payload</h3>
+                
+                <div class="alert alert-info">
+                    <strong>Payload Creation:</strong> Create custom payloads with various delivery methods and evasion techniques.
+                </div>
+                
+                <div class="form-group">
+                    <label>Payload Type</label>
+                    <select class="form-control" id="payload-type">
+                        <option value="executable">Executable (.exe)</option>
+                        <option value="dll">Dynamic Library (.dll)</option>
+                        <option value="powershell">PowerShell Script</option>
+                        <option value="batch">Batch Script (.bat)</option>
+                        <option value="javascript">JavaScript</option>
+                        <option value="vbs">VBScript</option>
+                        <option value="macro">Office Macro</option>
+                        <option value="shellcode">Shellcode</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Target Platform</label>
+                    <select class="form-control" id="payload-platform">
+                        <option value="windows-x64">Windows x64</option>
+                        <option value="windows-x86">Windows x86</option>
+                        <option value="linux-x64">Linux x64</option>
+                        <option value="linux-arm">Linux ARM</option>
+                        <option value="macos-x64">macOS x64</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Payload Function</label>
+                    <select class="form-control" id="payload-function">
+                        <option value="reverse-shell">Reverse Shell</option>
+                        <option value="bind-shell">Bind Shell</option>
+                        <option value="meterpreter">Meterpreter</option>
+                        <option value="keylogger">Keylogger</option>
+                        <option value="screenshot">Screenshot</option>
+                        <option value="file-stealer">File Stealer</option>
+                        <option value="persistence">Persistence</option>
+                        <option value="custom">Custom Function</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Connection Details</label>
+                    <input type="text" class="form-control" id="payload-host" placeholder="Target host (IP or domain)">
+                    <input type="number" class="form-control" id="payload-port" placeholder="Port number" style="margin-top: 0.5rem;">
+                </div>
+                
+                <div class="form-group">
+                    <label>Beacon URLs & Payload Sources</label>
+                    <input type="text" class="form-control" id="beacon-url" placeholder="Primary beacon URL (e.g., https://example.com/beacon)">
+                    <input type="text" class="form-control" id="payload-url" placeholder="Payload download URL (e.g., https://example.com/payload.bin)" style="margin-top: 0.5rem;">
+                    <input type="text" class="form-control" id="c2-urls" placeholder="Additional C2 URLs (comma-separated)" style="margin-top: 0.5rem;">
+                </div>
+                
+                <div class="form-group">
+                    <label>Evasion & Beaconism Options</label>
+                    <div style="margin-bottom: 1rem;">
+                        <button type="button" class="btn btn-secondary" onclick="selectAllFeatures()" style="margin-right: 0.5rem;">Select All Features</button>
+                        <button type="button" class="btn btn-secondary" onclick="deselectAllFeatures()">Deselect All</button>
+                    </div>
+                    
+                    <div class="option-group">
+                        <div class="option-item">
+                            <input type="checkbox" id="evasion-anti-vm" checked>
+                            <label for="evasion-anti-vm">Anti-VM</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="evasion-anti-debug" checked>
+                            <label for="evasion-anti-debug">Anti-Debug</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="evasion-anti-sandbox" checked>
+                            <label for="evasion-anti-sandbox">Anti-Sandbox</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="evasion-anti-analysis">
+                            <label for="evasion-anti-analysis">Anti-Analysis</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="evasion-stealth" checked>
+                            <label for="evasion-stealth">Stealth Mode</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="evasion-persistence">
+                            <label for="evasion-persistence">Persistence</label>
+                        </div>
+                    </div>
+                    
+                    <h4 style="color: #4a9eff; margin: 1rem 0 0.5rem 0; font-size: 1rem;">Beaconism Features</h4>
+                    <div class="option-group">
+                        <div class="option-item">
+                            <input type="checkbox" id="beaconism-xll-sideloading">
+                            <label for="beaconism-xll-sideloading">XLL Sideloading</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="beaconism-lnk-shortcuts">
+                            <label for="beaconism-lnk-shortcuts">LNK Shortcuts</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="beaconism-mutex-engine">
+                            <label for="beaconism-mutex-engine">Mutex Engine</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="beaconism-dll-injection">
+                            <label for="beaconism-dll-injection">DLL Injection</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="beaconism-encrypted-beacons">
+                            <label for="beaconism-encrypted-beacons">Encrypted Beacons</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="beaconism-traffic-obfuscation">
+                            <label for="beaconism-traffic-obfuscation">Traffic Obfuscation</label>
+                        </div>
+                    </div>
+                    
+                    <h4 style="color: #4a9eff; margin: 1rem 0 0.5rem 0; font-size: 1rem;">Advanced Beaconism</h4>
+                    <div class="option-group">
+                        <div class="option-item">
+                            <input type="checkbox" id="beaconism-ssl-tls">
+                            <label for="beaconism-ssl-tls">SSL/TLS Encryption</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="beaconism-proxy-support">
+                            <label for="beaconism-proxy-support">Proxy Support</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="beaconism-jitter">
+                            <label for="beaconism-jitter">Jitter Timing</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="beaconism-domain-fronting">
+                            <label for="beaconism-domain-fronting">Domain Fronting</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="beaconism-c2-channels">
+                            <label for="beaconism-c2-channels">Multiple C2 Channels</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="beaconism-sleep-masking">
+                            <label for="beaconism-sleep-masking">Sleep Masking</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <button class="btn btn-success" onclick="createPayload()">Create Payload</button>
+                    <button class="btn btn-secondary" onclick="clearCreateForm()">Clear</button>
+                </div>
+                
+                <div class="output-area" id="create-output">Generated payload will appear here...</div>
+            </div>
+            
+            <!-- Encrypt Payload Tab -->
+            <div id="encrypt" class="tab-content">
+                <h3>Encrypt Payload</h3>
+                
+                <div class="alert alert-warning">
+                    <strong>Payload Encryption:</strong> Encrypt existing payloads with various encryption algorithms.
+                </div>
+                
+                <div class="form-group">
+                    <label>Upload Payload</label>
+                    <div class="file-upload" id="encrypt-upload-area" onclick="document.getElementById('encrypt-file').click()">
+                        <p id="encrypt-upload-text">Click to upload payload or drag and drop</p>
+                        <p style="color: #6c757d; font-size: 0.8rem;">Supports all file types: .exe, .dll, .xll, .lnk, .ps1, .bat, .js, .vbs, .txt, .bin, .dat, .cfg, .ini, .xml, .json, .log, .tmp, .sys, .drv, .ocx, .cpl, .scr, .com, .pif, .cmd, .msi, .cab, .zip, .rar, .7z, .pdf, .doc, .docx, .xls, .xlsx, .ppt, .pptx, .jpg, .jpeg, .png, .gif, .bmp, .tiff, .mp3, .mp4, .avi, .mkv, .wav, .flac, .mov, .wmv, .m4a, .aac, .ogg, .webm, .html, .css, .php, .asp, .jsp, .py, .rb, .pl, .sh, .ps, .reg, .inf, .cat, .cer, .crt, .pem, .p12, .pfx, .key, .csr, .der, .p7b, .p7c, .spc, .sst, .stl, .pst, .ost, .msg, .eml, .mht, .mhtml, .url, .webloc, .desktop, .app, .deb, .rpm, .dmg, .iso, .img, .vhd, .vdi, .vmdk, .ova, .ovf, .qcow2, .raw, .bin, .hex, .elf, .so, .dylib, .a, .lib, .obj, .o, .exe, .dll, .sys, .drv, .ocx, .cpl, .scr, .com, .pif, .cmd, .bat, .ps1, .vbs, .js, .jse, .wsf, .wsh, .hta, .chm, .hlp, .cnt, .gid, .fts, .ftg, .cat, .inf, .sys, .drv, .ocx, .cpl, .scr, .com, .pif, .cmd, .bat, .ps1, .vbs, .js, .jse, .wsf, .wsh, .hta, .chm, .hlp, .cnt, .gid, .fts, .ftg</p>
+                        <input type="file" id="encrypt-file" style="display: none;" accept="*" onchange="handleEncryptUpload()">
+                    </div>
+                    <div class="file-info" id="encrypt-file-info">
+                        <div class="file-name" id="encrypt-file-name"></div>
+                        <div class="file-size" id="encrypt-file-size"></div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Encryption Algorithm</label>
+                    <select class="form-control" id="encrypt-algorithm">
+                        <option value="aes-256-gcm">AES-256-GCM (Recommended)</option>
+                        <option value="aes-256-cbc">AES-256-CBC</option>
+                        <option value="aes-192-gcm">AES-192-GCM</option>
+                        <option value="aes-128-gcm">AES-128-GCM</option>
+                        <option value="chacha20-poly1305">ChaCha20-Poly1305</option>
+                        <option value="aria-256-ctr">ARIA-256-CTR</option>
+                        <option value="xor">XOR</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Encryption Key</label>
+                    <input type="password" class="form-control" id="encrypt-key" placeholder="Enter encryption key or leave blank for fileless auto-generation">
+                    <small style="color: #6c757d; font-size: 0.8rem;">Leave blank for fileless encryption with auto-generated secure keys</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>Fileless Encryption Options</label>
+                    <div class="option-group">
+                        <div class="option-item">
+                            <input type="checkbox" id="encrypt-fileless" checked>
+                            <label for="encrypt-fileless">Enable Fileless Encryption</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="encrypt-auto-key" checked>
+                            <label for="encrypt-auto-key">Auto-Generate Secure Keys</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="encrypt-system-entropy">
+                            <label for="encrypt-system-entropy">Use System Entropy</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="encrypt-memory-only">
+                            <label for="encrypt-memory-only">Memory-Only Key Storage</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Encryption Options</label>
+                    <div class="option-group">
+                        <div class="option-item">
+                            <input type="checkbox" id="encrypt-compress" checked>
+                            <label for="encrypt-compress">Compress Before Encryption</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="encrypt-obfuscate" checked>
+                            <label for="encrypt-obfuscate">Obfuscate Key</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="encrypt-integrity" checked>
+                            <label for="encrypt-integrity">Add Integrity Check</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="encrypt-metadata">
+                            <label for="encrypt-metadata">Include Metadata</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Startup Persistence Options</label>
+                    <div class="option-group">
+                        <div class="option-item">
+                            <input type="checkbox" id="payload-persistence-registry-run" checked>
+                            <label for="payload-persistence-registry-run">Registry Run Key</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="payload-persistence-registry-runonce">
+                            <label for="payload-persistence-registry-runonce">Registry RunOnce Key</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="payload-persistence-startup-folder">
+                            <label for="payload-persistence-startup-folder">Startup Folder</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="payload-persistence-scheduled-task">
+                            <label for="payload-persistence-scheduled-task">Scheduled Task</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="payload-persistence-service">
+                            <label for="payload-persistence-service">Windows Service</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="payload-persistence-wmi-event">
+                            <label for="payload-persistence-wmi-event">WMI Event Subscription</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="payload-persistence-dll-hijack">
+                            <label for="payload-persistence-dll-hijack">DLL Hijacking</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="payload-persistence-com-hijack">
+                            <label for="payload-persistence-com-hijack">COM Hijacking</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="save-options hidden" id="encrypt-save-options">
+                    <h4 style="color: #4a9eff; margin-bottom: 1rem;">Save Options</h4>
+                    <div class="form-group">
+                        <label>File Extension</label>
+                        <select class="form-control" id="encrypt-extension">
+                            <option value=".enc">.enc (Encrypted)</option>
+                            <option value=".exe">.exe (Executable)</option>
+                            <option value=".dll">.dll (Dynamic Library)</option>
+                            <option value=".xll">.xll (Excel Add-in)</option>
+                            <option value=".lnk">.lnk (Shortcut)</option>
+                            <option value=".ps1">.ps1 (PowerShell)</option>
+                            <option value=".bat">.bat (Batch)</option>
+                            <option value=".js">.js (JavaScript)</option>
+                            <option value=".vbs">.vbs (VBScript)</option>
+                            <option value=".bin">.bin (Binary)</option>
+                            <option value=".dat">.dat (Data)</option>
+                            <option value=".sys">.sys (System)</option>
+                            <option value=".drv">.drv (Driver)</option>
+                            <option value=".ocx">.ocx (ActiveX)</option>
+                            <option value=".cpl">.cpl (Control Panel)</option>
+                            <option value=".scr">.scr (Screensaver)</option>
+                            <option value=".com">.com (Command)</option>
+                            <option value=".pif">.pif (Program Info)</option>
+                            <option value=".cmd">.cmd (Command)</option>
+                            <option value=".msi">.msi (Installer)</option>
+                            <option value=".crypt">.crypt (Crypt)</option>
+                            <option value=".secure">.secure (Secure)</option>
+                            <option value=".locked">.locked (Locked)</option>
+                            <option value=".raw">.raw (Raw Data)</option>
+                            <option value=".hex">.hex (Hexadecimal)</option>
+                            <option value=".elf">.elf (Executable)</option>
+                            <option value=".so">.so (Shared Object)</option>
+                            <option value=".dylib">.dylib (Dynamic Library)</option>
+                            <option value="custom">Custom Extension</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="encrypt-custom-extension" style="display: none;">
+                        <label>Custom Extension</label>
+                        <input type="text" class="form-control" id="encrypt-custom-ext" placeholder=".myext" value=".myext">
+                    </div>
+                    <div class="form-group">
+                        <label>Save Location</label>
+                        <div class="option-group">
+                            <div class="option-item">
+                                <input type="radio" id="save-download" name="save-location" value="download" checked>
+                                <label for="save-download">Download Folder</label>
+                            </div>
+                            <div class="option-item">
+                                <input type="radio" id="save-desktop" name="save-location" value="desktop">
+                                <label for="save-desktop">Desktop</label>
+                            </div>
+                            <div class="option-item">
+                                <input type="radio" id="save-custom" name="save-location" value="custom">
+                                <label for="save-custom">Custom Location</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group" id="encrypt-custom-path" style="display: none;">
+                        <label>Custom Path</label>
+                        <input type="text" class="form-control" id="encrypt-custom-path-input" placeholder="C:\path\to\save\location">
+                    </div>
+                </div>
+                
+                <div>
+                    <button class="btn btn-success" onclick="encryptPayload()">Encrypt Payload</button>
+                    <button class="btn btn-secondary" onclick="clearEncryptForm()">Clear</button>
+                    <button class="btn btn-warning" onclick="downloadEncrypted()" id="download-btn" style="display: none;">Download Encrypted File</button>
+                </div>
+                
+                <div class="output-area" id="encrypt-output">Encrypted payload will appear here...</div>
+            </div>
+            
+            <!-- Obfuscate Tab -->
+            <div id="obfuscate" class="tab-content">
+                <h3>Obfuscate Payload</h3>
+                
+                <div class="alert alert-info">
+                    <strong>Payload Obfuscation:</strong> Obfuscate payloads to evade detection and analysis.
+                </div>
+                
+                <div class="form-group">
+                    <label>Upload Payload</label>
+                    <div class="file-upload" onclick="document.getElementById('obfuscate-file').click()">
+                        <p>Click to upload payload or drag and drop</p>
+                        <p style="color: #6c757d; font-size: 0.8rem;">Supports .exe, .dll, .ps1, .bat, .js, .vbs</p>
+                        <input type="file" id="obfuscate-file" style="display: none;" accept=".exe,.dll,.ps1,.bat,.js,.vbs" onchange="handleObfuscateUpload()">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Obfuscation Level</label>
+                    <select class="form-control" id="obfuscate-level">
+                        <option value="low">Low (Basic)</option>
+                        <option value="medium" selected>Medium (Recommended)</option>
+                        <option value="high">High (Advanced)</option>
+                        <option value="extreme">Extreme (Maximum)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Obfuscation Techniques</label>
+                    <div class="option-group">
+                        <div class="option-item">
+                            <input type="checkbox" id="obfuscate-string" checked>
+                            <label for="obfuscate-string">String Obfuscation</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="obfuscate-control" checked>
+                            <label for="obfuscate-control">Control Flow</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="obfuscate-variable" checked>
+                            <label for="obfuscate-variable">Variable Renaming</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="obfuscate-junk" checked>
+                            <label for="obfuscate-junk">Junk Code</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="obfuscate-encrypt">
+                            <label for="obfuscate-encrypt">Code Encryption</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="obfuscate-polymorphic">
+                            <label for="obfuscate-polymorphic">Polymorphic</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <button class="btn btn-success" onclick="obfuscatePayload()">Obfuscate Payload</button>
+                    <button class="btn btn-secondary" onclick="clearObfuscateForm()">Clear</button>
+                </div>
+                
+                <div class="output-area" id="obfuscate-output">Obfuscated payload will appear here...</div>
+            </div>
+            
+            <!-- Pack/Compress Tab -->
+            <div id="pack" class="tab-content">
+                <h3>Pack/Compress Payload</h3>
+                
+                <div class="alert alert-warning">
+                    <strong>Payload Packing:</strong> Pack and compress payloads to reduce size and evade detection.
+                </div>
+                
+                <div class="form-group">
+                    <label>Upload Payload</label>
+                    <div class="file-upload" onclick="document.getElementById('pack-file').click()">
+                        <p>Click to upload payload or drag and drop</p>
+                        <p style="color: #6c757d; font-size: 0.8rem;">Supports .exe, .dll, .ps1, .bat, .js, .vbs</p>
+                        <input type="file" id="pack-file" style="display: none;" accept=".exe,.dll,.ps1,.bat,.js,.vbs" onchange="handlePackUpload()">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Packing Method</label>
+                    <select class="form-control" id="pack-method">
+                        <option value="upx">UPX (Ultimate Packer)</option>
+                        <option value="mpress">MPRESS</option>
+                        <option value="fsg">FSG</option>
+                        <option value="pecompact">PECompact</option>
+                        <option value="aspack">ASPack</option>
+                        <option value="gzip">GZIP Compression</option>
+                        <option value="lzma">LZMA Compression</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Compression Level</label>
+                    <select class="form-control" id="pack-level">
+                        <option value="1">Level 1 (Fastest)</option>
+                        <option value="3">Level 3 (Balanced)</option>
+                        <option value="6" selected>Level 6 (Default)</option>
+                        <option value="9">Level 9 (Maximum)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Packing Options</label>
+                    <div class="option-group">
+                        <div class="option-item">
+                            <input type="checkbox" id="pack-overlay" checked>
+                            <label for="pack-overlay">Pack Overlay</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="pack-resources" checked>
+                            <label for="pack-resources">Pack Resources</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="pack-debug">
+                            <label for="pack-debug">Strip Debug Info</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="pack-relocs">
+                            <label for="pack-relocs">Strip Relocations</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <button class="btn btn-success" onclick="packPayload()">Pack Payload</button>
+                    <button class="btn btn-secondary" onclick="clearPackForm()">Clear</button>
+                </div>
+                
+                <div class="output-area" id="pack-output">Packed payload will appear here...</div>
+            </div>
+            
+            <!-- Analyze Tab -->
+            <div id="analyze" class="tab-content">
+                <h3>Analyze Payload</h3>
+                
+                <div class="alert alert-info">
+                    <strong>Payload Analysis:</strong> Analyze payloads for security, size, and detection risk.
+                </div>
+                
+                <div class="form-group">
+                    <label>Upload Payload</label>
+                    <div class="file-upload" onclick="document.getElementById('analyze-file').click()">
+                        <p>Click to upload payload or drag and drop</p>
+                        <p style="color: #6c757d; font-size: 0.8rem;">Supports .exe, .dll, .ps1, .bat, .js, .vbs</p>
+                        <input type="file" id="analyze-file" style="display: none;" accept=".exe,.dll,.ps1,.bat,.js,.vbs" onchange="handleAnalyzeUpload()">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Analysis Type</label>
+                    <div class="option-group">
+                        <div class="option-item">
+                            <input type="checkbox" id="analyze-basic" checked>
+                            <label for="analyze-basic">Basic Analysis</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="analyze-strings" checked>
+                            <label for="analyze-strings">String Analysis</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="analyze-imports" checked>
+                            <label for="analyze-imports">Import Analysis</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="analyze-sections">
+                            <label for="analyze-sections">Section Analysis</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="analyze-entropy">
+                            <label for="analyze-entropy">Entropy Analysis</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="analyze-detection">
+                            <label for="analyze-detection">Detection Risk</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <button class="btn btn-success" onclick="analyzePayload()">Analyze Payload</button>
+                    <button class="btn btn-secondary" onclick="clearAnalyzeForm()">Clear</button>
+                </div>
+                
+                <div class="output-area" id="analyze-output">Analysis results will appear here...</div>
+            </div>
+        </div>
+        
+        <!-- Status Panel -->
+        <div class="card">
+            <h3><span class="status-indicator status-success"></span>Payload Engine Status</h3>
+            <div class="alert alert-success">
+                <strong>System Ready:</strong> Payload engine is operational and ready for use.
+            </div>
+            
+            <div class="form-group">
+                <label>Quick Actions</label>
+                <div>
+                    <button class="btn" onclick="testPayloadGeneration()">Test Generation</button>
+                    <button class="btn btn-secondary" onclick="viewPayloadTemplates()">View Templates</button>
+                    <button class="btn btn-warning" onclick="updatePayloadTemplates()">Update Templates</button>
+                    <button class="btn btn-danger" onclick="clearAllPayloads()">Clear All</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let currentTab = 'create';
+        let uploadedFiles = {};
+        
+        // Initialize panel
+                // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add a small delay to ensure all elements are fully loaded
+            setTimeout(() => {
+                // Add event listeners to all tab buttons
+                const tabButtons = document.querySelectorAll('.nav-tab[data-tab]');
+                tabButtons.forEach(button => {
+                    button.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        const tabName = this.getAttribute('data-tab');
+                        console.log('Tab button clicked:', tabName);
+                        showTab(tabName, this);
+                    });
+                });
+            }, 100);
+        });
+        
+        function initializePayloadPanel() {
+            // Load available templates
+            loadAvailableTemplates();
+        }
+        
+        function initializeDragAndDrop() {
+            const uploadArea = document.getElementById('encrypt-upload-area');
+            const uploadText = document.getElementById('encrypt-upload-text');
+            
+            // Prevent default drag behaviors
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, preventDefaults, false);
+                document.body.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            // Highlight drop area when item is dragged over it
+            ['dragenter', 'dragover'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, highlight, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, unhighlight, false);
+            });
+            
+            // Handle dropped files
+            uploadArea.addEventListener('drop', handleDrop, false);
+            
+            // Handle extension selection
+            document.getElementById('encrypt-extension').addEventListener('change', function() {
+                const customExt = document.getElementById('encrypt-custom-extension');
+                if (this.value === 'custom') {
+                    customExt.style.display = 'block';
+                } else {
+                    customExt.style.display = 'none';
+                }
+            });
+            
+            // Handle save location selection
+            document.querySelectorAll('input[name="save-location"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    const customPath = document.getElementById('encrypt-custom-path');
+                    if (this.value === 'custom') {
+                        customPath.style.display = 'block';
+                    } else {
+                        customPath.style.display = 'none';
+                    }
+                });
+            });
+        }
+        
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        function highlight(e) {
+            document.getElementById('encrypt-upload-area').classList.add('dragover');
+            document.getElementById('encrypt-upload-text').textContent = 'Drop file here to upload';
+        }
+        
+        function unhighlight(e) {
+            document.getElementById('encrypt-upload-area').classList.remove('dragover');
+            document.getElementById('encrypt-upload-text').textContent = 'Click to upload payload or drag and drop';
+        }
+        
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            
+            if (files.length > 0) {
+                handleFileUpload(files[0]);
+            }
+        }
+        
+        function handleFileUpload(file) {
+            // Accept all file types - RawrZ supports comprehensive file encryption
+            const fileExt = '.' + file.name.split('.').pop().toLowerCase();
+            
+            // Log the file type for debugging
+            console.log('Processing file:', file.name, 'Type:', fileExt, 'Size:', file.size);
+            
+            // Store file
+            uploadedFiles.encrypt = file;
+            
+            // Update UI
+            document.getElementById('encrypt-upload-area').classList.add('drag-active');
+            document.getElementById('encrypt-file-name').textContent = file.name;
+            document.getElementById('encrypt-file-size').textContent = formatFileSize(file.size);
+            document.getElementById('encrypt-file-info').classList.add('show');
+            document.getElementById('encrypt-save-options').classList.add('show');
+            
+            // Set default extension based on original file
+            const extensionSelect = document.getElementById('encrypt-extension');
+            if (fileExt === '.exe') {
+                extensionSelect.value = '.exe';
+            } else if (fileExt === '.dll') {
+                extensionSelect.value = '.dll';
+            } else {
+                extensionSelect.value = '.enc';
+            }
+            
+            console.log('File uploaded via drag and drop:', file.name);
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+                function showTab(tabName, clickedElement = null) {
+            try {
+                // Wait for DOM to be ready
+                if (document.readyState === 'loading') {
+                    console.log('DOM not ready, retrying tab switch...');
+                    setTimeout(() => showTab(tabName, clickedElement), 100);
+                    return;
+                }
+                
+                // Hide all tab contents
+                const tabContents = document.querySelectorAll('.tab-content');
+                if (tabContents.length === 0) {
+                    console.error('No tab content elements found');
+                    return;
+                }
+                
+                tabContents.forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                
+                // Remove active class from all tabs
+                const navTabs = document.querySelectorAll('.nav-tab');
+                if (navTabs.length === 0) {
+                    console.error('No nav tab elements found');
+                    return;
+                }
+                
+                navTabs.forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                
+                // Show selected tab content
+                const targetContent = document.getElementById(tabName);
+                if (!targetContent) {
+                    console.error(`Tab content element '${tabName}' not found`);
+                    return;
+                }
+                targetContent.classList.add('active');
+                
+                // Add active class to clicked tab
+                if (clickedElement) {
+                    clickedElement.classList.add('active');
+                } else {
+                    // Find the tab button that corresponds to this tab
+                    const targetTab = document.querySelector(`[onclick*="showTab('${tabName}')"]`);
+                    if (targetTab) {
+                        targetTab.classList.add('active');
+                    }
+                }
+                
+                console.log(`Successfully switched to tab: ${tabName}`);
+            } catch (error) {
+                console.error('Error switching tab:', error);
+            }
+        }
+        
+        async function apiCall(endpoint, method = 'GET', body = null) {
+            try {
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                
+                const token = localStorage.getItem('authToken');
+                if (token) {
+                    headers.Authorization = `Bearer ${token}`;
+                }
+                
+                const response = await fetch(endpoint, {
+                    method: method,
+                    headers: headers,
+                    body: body ? JSON.stringify(body) : null
+                });
+                
+                const data = await response.text();
+                try {
+                    return { status: response.status, data: JSON.parse(data) };
+                } catch {
+                    return { status: response.status, data: data };
+                }
+            } catch (error) {
+                return { status: 500, data: { error: error.message } };
+            }
+        }
+        
+        function loadAvailableTemplates() {
+            // Load real available payload templates
+            fetch('/api/rawrz-engine/execute', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    engineId: 'payload-manager',
+                    action: 'getStatus'
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        console.log('Loaded payload manager status:', data.data);
+                        // Use default templates since the engine doesn't return template list
+                        const defaultTemplates = ['basic-payload', 'advanced-payload', 'beacon-payload', 'shellcode-payload'];
+                        updateTemplateDropdown(defaultTemplates);
+                    } else {
+                        console.error('Failed to load payload manager status:', data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading templates:', error);
+                });
+        }
+        
+        function updateTemplateDropdown(templates) {
+            const select = document.getElementById('template-select');
+            if (select && templates) {
+                select.innerHTML = '<option value="">Select Template</option>';
+                templates.forEach(template => {
+                    const option = document.createElement('option');
+                    option.value = template.id;
+                    option.textContent = `${template.name} (${template.type})`;
+                    select.appendChild(option);
+                });
+            }
+        }
+        
+        async function createPayload() {
+            const type = document.getElementById('payload-type').value;
+            const platform = document.getElementById('payload-platform').value;
+            const function_ = document.getElementById('payload-function').value;
+            const host = document.getElementById('payload-host').value;
+            const port = document.getElementById('payload-port').value;
+            const beaconUrl = document.getElementById('beacon-url').value;
+            const payloadUrl = document.getElementById('payload-url').value;
+            const c2Urls = document.getElementById('c2-urls').value;
+            
+            // Basic evasion options
+            const antiVM = document.getElementById('evasion-anti-vm').checked;
+            const antiDebug = document.getElementById('evasion-anti-debug').checked;
+            const antiSandbox = document.getElementById('evasion-anti-sandbox').checked;
+            const antiAnalysis = document.getElementById('evasion-anti-analysis').checked;
+            const stealth = document.getElementById('evasion-stealth').checked;
+            const persistence = document.getElementById('evasion-persistence').checked;
+            
+            // Beaconism features
+            const beaconismFeatures = {
+                xllSideloading: document.getElementById('beaconism-xll-sideloading').checked,
+                lnkShortcuts: document.getElementById('beaconism-lnk-shortcuts').checked,
+                mutexEngine: document.getElementById('beaconism-mutex-engine').checked,
+                dllInjection: document.getElementById('beaconism-dll-injection').checked,
+                encryptedBeacons: document.getElementById('beaconism-encrypted-beacons').checked,
+                trafficObfuscation: document.getElementById('beaconism-traffic-obfuscation').checked,
+                sslTls: document.getElementById('beaconism-ssl-tls').checked,
+                proxySupport: document.getElementById('beaconism-proxy-support').checked,
+                jitter: document.getElementById('beaconism-jitter').checked,
+                domainFronting: document.getElementById('beaconism-domain-fronting').checked,
+                c2Channels: document.getElementById('beaconism-c2-channels').checked,
+                sleepMasking: document.getElementById('beaconism-sleep-masking').checked
+            };
+            
+            if (!host || !port) {
+                alert('Please enter host and port information.');
+                return;
+            }
+            
+            const output = document.getElementById('create-output');
+            output.textContent = 'Creating enhanced payload with beaconism features...';
+            
+            try {
+                const result = await apiCall('/payload-create', 'POST', {
+                    type: type,
+                    platform: platform,
+                    function: function_,
+                    host: host,
+                    port: parseInt(port),
+                    beaconUrl: beaconUrl,
+                    payloadUrl: payloadUrl,
+                    c2Urls: c2Urls ? c2Urls.split(',').map(url => url.trim()) : [],
+                    evasion: {
+                        antiVM: antiVM,
+                        antiDebug: antiDebug,
+                        antiSandbox: antiSandbox,
+                        antiAnalysis: antiAnalysis,
+                        stealth: stealth,
+                        persistence: persistence
+                    },
+                    beaconism: beaconismFeatures
+                });
+                
+                if (result.status === 200) {
+                    const beaconismInfo = Object.entries(beaconismFeatures)
+                        .filter(([key, value]) => value)
+                        .map(([key, value]) => `- ${key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}: ${value}`)
+                        .join('\n');
+                    
+                    const payloadData = result.data;
+                    output.textContent = `Enhanced payload created successfully!\n\nType: ${payloadData.type}\nPlatform: ${payloadData.platform}\nFunction: ${payloadData.function}\nTarget: ${payloadData.target}\nBeacon URL: ${payloadData.beaconUrl || 'Not specified'}\nPayload URL: ${payloadData.payloadUrl || 'Not specified'}\nC2 URLs: ${payloadData.c2Urls ? payloadData.c2Urls.join(', ') : 'None'}\nSize: ${payloadData.size} bytes\nChecksum: ${payloadData.checksum}\nGenerated: ${payloadData.generatedAt}\n\nEvasion Options:\n- Anti-VM: ${antiVM}\n- Anti-Debug: ${antiDebug}\n- Anti-Sandbox: ${antiSandbox}\n- Anti-Analysis: ${antiAnalysis}\n- Stealth: ${stealth}\n- Persistence: ${persistence}\n\nBeaconism Features:\n${beaconismInfo}\n\nGenerated Payload Code:\n${payloadData.payload}`;
+                } else {
+                    output.textContent = `Payload creation failed: ${result.data.error || 'Unknown error'}`;
+                }
+            } catch (error) {
+                output.textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        function handleEncryptUpload() {
+            const file = document.getElementById('encrypt-file').files[0];
+            if (file) {
+                handleFileUpload(file);
+            }
+        }
+        
+        function handleObfuscateUpload() {
+            const file = document.getElementById('obfuscate-file').files[0];
+            if (file) {
+                uploadedFiles.obfuscate = file;
+                console.log('Obfuscate file uploaded:', file.name);
+            }
+        }
+        
+        function handlePackUpload() {
+            const file = document.getElementById('pack-file').files[0];
+            if (file) {
+                uploadedFiles.pack = file;
+                console.log('Pack file uploaded:', file.name);
+            }
+        }
+        
+        function handleAnalyzeUpload() {
+            const file = document.getElementById('analyze-file').files[0];
+            if (file) {
+                uploadedFiles.analyze = file;
+                console.log('Analyze file uploaded:', file.name);
+            }
+        }
+        
+        // Feature selection functions
+        function selectAllFeatures() {
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = true;
+            });
+        }
+        
+        function deselectAllFeatures() {
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+        }
+        
+        async function encryptPayload() {
+            // Wait for DOM to be ready
+            if (document.readyState === 'loading') {
+                alert('Page is still loading. Please wait and try again.');
+                return;
+            }
+            
+            // Ensure we're on the encrypt tab
+            const encryptTab = document.getElementById('encrypt');
+            if (!encryptTab || !encryptTab.classList.contains('active')) {
+                console.log('Not on encrypt tab, switching to it...');
+                showTab('encrypt');
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
+            
+            if (!uploadedFiles.encrypt) {
+                alert('Please upload a payload file first.');
+                return;
+            }
+            
+            // Get elements with fallback creation
+            let algorithmElement = document.getElementById('encrypt-algorithm');
+            let keyElement = document.getElementById('encrypt-key');
+            let compressElement = document.getElementById('encrypt-compress');
+            let obfuscateElement = document.getElementById('encrypt-obfuscate');
+            let integrityElement = document.getElementById('encrypt-integrity');
+            let metadataElement = document.getElementById('encrypt-metadata');
+            
+            // Create missing elements if they don't exist
+            if (!algorithmElement) {
+                console.log('Algorithm element not found, creating fallback...');
+                if (encryptTab) {
+                    const fallbackAlgorithm = document.createElement('select');
+                    fallbackAlgorithm.id = 'encrypt-algorithm';
+                    fallbackAlgorithm.className = 'form-control';
+                    fallbackAlgorithm.innerHTML = `
+                        <option value="aes-256-gcm">AES-256-GCM</option>
+                        <option value="aes-256-cbc">AES-256-CBC</option>
+                        <option value="chacha20-poly1305">ChaCha20-Poly1305</option>
+                    `;
+                    encryptTab.appendChild(fallbackAlgorithm);
+                    algorithmElement = fallbackAlgorithm;
+                }
+            }
+            
+            if (!keyElement) {
+                console.log('Key element not found, creating fallback...');
+                if (encryptTab) {
+                    const fallbackKey = document.createElement('input');
+                    fallbackKey.id = 'encrypt-key';
+                    fallbackKey.type = 'text';
+                    fallbackKey.placeholder = 'Enter encryption key (or leave blank for auto)';
+                    fallbackKey.className = 'form-control';
+                    encryptTab.appendChild(fallbackKey);
+                    keyElement = fallbackKey;
+                }
+            }
+            
+            const algorithm = algorithmElement ? algorithmElement.value : 'aes-256-gcm';
+            const key = keyElement ? keyElement.value : '';
+            const compress = compressElement ? compressElement.checked : false;
+            const obfuscate = obfuscateElement ? obfuscateElement.checked : false;
+            const integrity = integrityElement ? integrityElement.checked : false;
+            const metadata = metadataElement ? metadataElement.checked : false;
+            
+            // Fileless encryption options
+            const fileless = document.getElementById('encrypt-fileless').checked;
+            const autoKey = document.getElementById('encrypt-auto-key').checked;
+            const systemEntropy = document.getElementById('encrypt-system-entropy').checked;
+            const memoryOnly = document.getElementById('encrypt-memory-only').checked;
+            
+            // Get save options
+            const extension = document.getElementById('encrypt-extension').value;
+            const customExt = document.getElementById('encrypt-custom-ext').value;
+            const finalExtension = extension === 'custom' ? customExt : extension;
+            const saveLocation = document.querySelector('input[name="save-location"]:checked').value;
+            const customPath = document.getElementById('encrypt-custom-path-input').value;
+            
+            // Get persistence options
+            const persistenceOptions = {
+                registryRun: document.getElementById('payload-persistence-registry-run').checked,
+                registryRunOnce: document.getElementById('payload-persistence-registry-runonce').checked,
+                startupFolder: document.getElementById('payload-persistence-startup-folder').checked,
+                scheduledTask: document.getElementById('payload-persistence-scheduled-task').checked,
+                service: document.getElementById('payload-persistence-service').checked,
+                wmiEvent: document.getElementById('payload-persistence-wmi-event').checked,
+                dllHijack: document.getElementById('payload-persistence-dll-hijack').checked,
+                comHijack: document.getElementById('payload-persistence-com-hijack').checked
+            };
+            
+            const output = document.getElementById('encrypt-output');
+            output.textContent = 'Encrypting payload...';
+            
+            try {
+                // Create FormData for file upload
+                const formData = new FormData();
+                formData.append('file', uploadedFiles.encrypt);
+                formData.append('algorithm', algorithm);
+                formData.append('key', key);
+                formData.append('compress', compress);
+                formData.append('obfuscate', obfuscate);
+                formData.append('integrity', integrity);
+                formData.append('metadata', metadata);
+                formData.append('extension', finalExtension);
+                formData.append('saveLocation', saveLocation);
+                formData.append('customPath', customPath);
+                formData.append('persistence', JSON.stringify(persistenceOptions));
+                
+                // Fileless encryption options
+                formData.append('fileless', fileless);
+                formData.append('autoKey', autoKey);
+                formData.append('systemEntropy', systemEntropy);
+                formData.append('memoryOnly', memoryOnly);
+                
+                const response = await fetch('/payload-encrypt', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    const persistenceInfo = Object.entries(persistenceOptions)
+                        .filter(([key, value]) => value)
+                        .map(([key, value]) => `- ${key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}: ${value}`)
+                        .join('\n');
+                    
+                    const filelessInfo = fileless ? `\nFileless Encryption:\n- Fileless Mode: ${fileless}\n- Auto-Generate Keys: ${autoKey}\n- System Entropy: ${systemEntropy}\n- Memory-Only Storage: ${memoryOnly}` : '';
+                    
+                    const encryptionData = result.data;
+                    const metadata = encryptionData.metadata || {};
+                    const options = metadata.options || {};
+                    
+                    output.textContent = `Payload encrypted successfully!\n\nAlgorithm: ${encryptionData.algorithm || 'aes-256-gcm'}\nKey: ${encryptionData.key || 'standard'}\nExtension: ${encryptionData.extension || '.enc'}\nSave Location: ${encryptionData.saveLocation || 'Default'}\n\nFile Information:\n- Original Name: ${encryptionData.originalName || 'Unknown'}\n- Original Size: ${metadata.originalSize || 'Unknown'} bytes\n- Compressed Size: ${metadata.compressedSize || 'Unknown'} bytes\n- Encrypted Size: ${metadata.encryptedSize || 'Unknown'} bytes\n- Integrity Hash: ${encryptionData.integrityHash || 'Not calculated'}\n- Encrypted At: ${metadata.encryptedAt || 'Unknown'}\n\nOptions:\n- Compression: ${options.compress || 'false'}\n- Key Obfuscation: ${options.obfuscate || 'false'}\n- Integrity Check: ${options.integrity || 'false'}\n- Metadata: ${options.metadata || 'false'}${filelessInfo}\n\nPersistence Options:\n${persistenceInfo}\n\nEncrypted Payload Ready for Download!`;
+                    
+                    // Show download button
+                    document.getElementById('download-btn').style.display = 'inline-block';
+                    
+                    // Store encrypted data for download
+                    window.encryptedData = result.data.encrypted;
+                    window.encryptedFileName = uploadedFiles.encrypt.name.replace(/\.[^/.]+$/, '') + finalExtension;
+                    
+                } else {
+                    output.textContent = `Payload encryption failed: ${result.error || 'Unknown error'}`;
+                }
+            } catch (error) {
+                output.textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        function downloadEncrypted() {
+            if (!window.encryptedData || !window.encryptedFileName) {
+                alert('No encrypted data available for download.');
+                return;
+            }
+            
+            try {
+                // Decode base64 encrypted data
+                const binaryString = atob(window.encryptedData);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                
+                // Create blob from encrypted data
+                const blob = new Blob([bytes], { type: 'application/octet-stream' });
+                const url = URL.createObjectURL(blob);
+                
+                // Create download link
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = window.encryptedFileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                
+                // Clean up
+                URL.revokeObjectURL(url);
+                
+                // Show success message
+                const output = document.getElementById('encrypt-output');
+                output.textContent += '\n\nFile downloaded successfully!';
+            } catch (error) {
+                alert('Error downloading file: ' + error.message);
+            }
+        }
+        
+        async function obfuscatePayload() {
+            if (!uploadedFiles.obfuscate) {
+                alert('Please upload a payload file first.');
+                return;
+            }
+            
+            const level = document.getElementById('obfuscate-level').value;
+            const string = document.getElementById('obfuscate-string').checked;
+            const control = document.getElementById('obfuscate-control').checked;
+            const variable = document.getElementById('obfuscate-variable').checked;
+            const junk = document.getElementById('obfuscate-junk').checked;
+            const encrypt = document.getElementById('obfuscate-encrypt').checked;
+            const polymorphic = document.getElementById('obfuscate-polymorphic').checked;
+            
+            const output = document.getElementById('obfuscate-output');
+            output.textContent = 'Obfuscating payload...';
+            
+            try {
+                const result = await apiCall('/payload-obfuscate', 'POST', {
+                    level: level,
+                    techniques: {
+                        string: string,
+                        control: control,
+                        variable: variable,
+                        junk: junk,
+                        encrypt: encrypt,
+                        polymorphic: polymorphic
+                    }
+                });
+                
+                if (result.status === 200) {
+                    output.textContent = `Payload obfuscated successfully!\n\nLevel: ${level}\n\nTechniques:\n- String Obfuscation: ${string}\n- Control Flow: ${control}\n- Variable Renaming: ${variable}\n- Junk Code: ${junk}\n- Code Encryption: ${encrypt}\n- Polymorphic: ${polymorphic}\n\nObfuscated Payload:\n${result.data.obfuscated}`;
+                } else {
+                    output.textContent = `Payload obfuscation failed: ${result.data.error || 'Unknown error'}`;
+                }
+            } catch (error) {
+                output.textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        async function packPayload() {
+            if (!uploadedFiles.pack) {
+                alert('Please upload a payload file first.');
+                return;
+            }
+            
+            const method = document.getElementById('pack-method').value;
+            const level = document.getElementById('pack-level').value;
+            const overlay = document.getElementById('pack-overlay').checked;
+            const resources = document.getElementById('pack-resources').checked;
+            const debug = document.getElementById('pack-debug').checked;
+            const relocs = document.getElementById('pack-relocs').checked;
+            
+            const output = document.getElementById('pack-output');
+            output.textContent = 'Packing payload...';
+            
+            try {
+                const result = await apiCall('/payload-pack', 'POST', {
+                    method: method,
+                    level: parseInt(level),
+                    options: {
+                        overlay: overlay,
+                        resources: resources,
+                        debug: debug,
+                        relocs: relocs
+                    }
+                });
+                
+                if (result.status === 200) {
+                    output.textContent = `Payload packed successfully!\n\nMethod: ${method}\nLevel: ${level}\n\nOptions:\n- Pack Overlay: ${overlay}\n- Pack Resources: ${resources}\n- Strip Debug Info: ${debug}\n- Strip Relocations: ${relocs}\n\nPacked Payload:\n${result.data.packed}`;
+                } else {
+                    output.textContent = `Payload packing failed: ${result.data.error || 'Unknown error'}`;
+                }
+            } catch (error) {
+                output.textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        async function analyzePayload() {
+            if (!uploadedFiles.analyze) {
+                alert('Please upload a payload file first.');
+                return;
+            }
+            
+            const basic = document.getElementById('analyze-basic').checked;
+            const strings = document.getElementById('analyze-strings').checked;
+            const imports = document.getElementById('analyze-imports').checked;
+            const sections = document.getElementById('analyze-sections').checked;
+            const entropy = document.getElementById('analyze-entropy').checked;
+            const detection = document.getElementById('analyze-detection').checked;
+            
+            const output = document.getElementById('analyze-output');
+            output.textContent = 'Analyzing payload...';
+            
+            try {
+                const result = await apiCall('/payload-analyze', 'POST', {
+                    analysis: {
+                        basic: basic,
+                        strings: strings,
+                        imports: imports,
+                        sections: sections,
+                        entropy: entropy,
+                        detection: detection
+                    }
+                });
+                
+                if (result.status === 200) {
+                    output.textContent = `Payload analysis completed!\n\nAnalysis Types:\n- Basic: ${basic}\n- Strings: ${strings}\n- Imports: ${imports}\n- Sections: ${sections}\n- Entropy: ${entropy}\n- Detection Risk: ${detection}\n\nAnalysis Results:\n${JSON.stringify(result.data.analysis, null, 2)}`;
+                } else {
+                    output.textContent = `Payload analysis failed: ${result.data.error || 'Unknown error'}`;
+                }
+            } catch (error) {
+                output.textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        // Form clearing functions
+        function clearCreateForm() {
+            document.getElementById('payload-host').value = '';
+            document.getElementById('payload-port').value = '';
+            document.getElementById('create-output').textContent = 'Generated payload will appear here...';
+        }
+        
+        function clearEncryptForm() {
+            document.getElementById('encrypt-key').value = '';
+            document.getElementById('encrypt-output').textContent = 'Encrypted payload will appear here...';
+            document.getElementById('download-btn').style.display = 'none';
+            uploadedFiles.encrypt = null;
+            
+            // Reset file info
+            document.getElementById('encrypt-upload-area').classList.remove('drag-active');
+            document.getElementById('encrypt-file-info').classList.remove('show');
+            document.getElementById('encrypt-save-options').classList.remove('show');
+            document.getElementById('encrypt-file-name').textContent = '';
+            document.getElementById('encrypt-file-size').textContent = '';
+            
+            // Reset form elements
+            document.getElementById('encrypt-file').value = '';
+            document.getElementById('encrypt-extension').value = '.enc';
+            document.getElementById('encrypt-custom-extension').style.display = 'none';
+            document.getElementById('encrypt-custom-ext').value = '.myext';
+            document.getElementById('save-download').checked = true;
+            document.getElementById('encrypt-custom-path').style.display = 'none';
+            document.getElementById('encrypt-custom-path-input').value = '';
+            
+            // Clear encrypted data
+            window.encryptedData = null;
+            window.encryptedFileName = null;
+        }
+        
+        function clearObfuscateForm() {
+            document.getElementById('obfuscate-output').textContent = 'Obfuscated payload will appear here...';
+            uploadedFiles.obfuscate = null;
+        }
+        
+        function clearPackForm() {
+            document.getElementById('pack-output').textContent = 'Packed payload will appear here...';
+            uploadedFiles.pack = null;
+        }
+        
+        function clearAnalyzeForm() {
+            document.getElementById('analyze-output').textContent = 'Analysis results will appear here...';
+            uploadedFiles.analyze = null;
+        }
+        
+        // Action functions
+        async function testPayloadGeneration() {
+            alert('Testing payload generation...');
+        }
+        
+        function viewPayloadTemplates() {
+            alert('Payload template viewer would open here');
+        }
+        
+        function updatePayloadTemplates() {
+            alert('Updating payload templates...');
+        }
+        
+        function clearAllPayloads() {
+            if (confirm('Are you sure you want to clear all payload data? This action cannot be undone.')) {
+                clearCreateForm();
+                clearEncryptForm();
+                clearObfuscateForm();
+                clearPackForm();
+                clearAnalyzeForm();
+                uploadedFiles = {};
+            }
+        }
+    </script>
+</body>
+</html>

@@ -23,6 +23,8 @@
 #include <mutex>
 #include <atomic>
 #include <vector>
+#include <string>
+#include <thread>
 
 // ---------------------------------------------------------------------------
 // SelfHealAction — Describes what the orchestrator did to heal itself
@@ -117,6 +119,24 @@ public:
     CorrectionOutcome healAgentOutput(const char* output, size_t outputLen,
                                        const char* prompt, size_t promptLen,
                                        char* correctedOutput, size_t correctedCapacity);
+
+    // ---- Advanced Agent Enhancements ----
+    struct AllocateVolatileBSS {
+        void* ast_memory_pool;
+        size_t bss_size;
+        AllocateVolatileBSS() : ast_memory_pool(nullptr), bss_size(2048) {}
+    };
+
+    void DeterministicFallback(const std::string& path);
+    AllocateVolatileBSS AllocateVolatileBSS_AST();
+    int RecursiveReprompt(int maxRetries);
+    void ExecuteParallelSubagents();
+    void BinaryHexPatchPipeline(uint8_t* offset, const std::vector<uint8_t>& hook);
+    bool EnforceLexicalHandshake();
+    void HushTerminalOutput(bool active);
+
+    bool HotSwapGGUF(const std::string& modelPath);
+    void ActivateSwarmLink(int gpu_count, std::vector<int> tensor_split);
 
     // ---- History ----
     const std::vector<SelfHealReport>& getHistory() const;

@@ -1,0 +1,131 @@
+```jsonc
+{
+    "github.copilot.nextEditSuggestions.enabled": true,
+    "amazonQ.suppressPrompts": {
+        "amazonQChatDisclaimer": true,
+        "amazonQChatPairProgramming": true
+    },
+    "chat.tools.terminal.autoApprove": {
+        "powershell -NoProfile -ExecutionPolicy Bypass -File D:\\create-ide-shortcuts.ps1": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "Test-Path -LiteralPath 'D:\\AmazonQ-IDE.exe'": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "$files = @('D:\\MyCoPilot-Complete-Portable\\index.html','D:\\MyCoPilot-Complete-Portable\\backend-server.js','D:\\MyCoPilot-Complete-Portable\\js\\main.js','D:\\MyCoPilot-Complete-Portable\\js\\ai\\webAuthIntegration.js','D:\\MyCoPilot-Complete-Portable\\js\\ai\\agenticBridge.js','D:\\MyCoPilot-Complete-Portable\\js\\ai\\multi-ai-integration.js','D:\\test_chatgpt_integration.html','D:\\test_claude_integration.html','D:\\test_gemini_integration.html','D:\\test_perplexity_integration.html'); foreach ($f in $files) { Write-Output ("$f -> " + (Test-Path -LiteralPath $f)) }": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "$files = @('D:\\MyCoPilot-Complete-Portable\\index.html','D:\\MyCoPilot-Complete-Portable\\backend-server.js','D:\\MyCoPilot-Complete-Portable\\js\\main.js','D:\\MyCoPilot-Complete-Portable\\js\\ai\\webAuthIntegration.js','D:\\MyCoPilot-Complete-Portable\\js\\ai\\agenticBridge.js','D:\\MyCoPilot-Complete-Portable\\js\\ai\\multi-ai-integration.js','D:\\test_chatgpt_integration.html','D:\\test_claude_integration.html','D:\\test_gemini_integration.html','D:\\test_perplexity_integration.html'); foreach ($f in $files) { Write-Output ("$f -> " + (Test-Path -LiteralPath $f)) }": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "node -v": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "Test-Path -LiteralPath 'D:\\amazonq-ide\\server.js'; Test-Path -LiteralPath 'D:\\server.js'": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Test-Path -LiteralPath 'D:\\MyCoPilot-Complete-Portable\\node_modules'; if ($?) { Get-ChildItem -LiteralPath 'D:\\MyCoPilot-Complete-Portable\\node_modules' -Name | Select-String -Pattern 'express|cors|ws|node-fetch' }\"": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "powershell": true,
+        "if": true,
+        "cors": true,
+        "ws": true,
+        "node-fetch)$'": true,
+        "D:\\MyCoPilot-Complete-Portable\\portable-toolchains\\gcc-portable\\bin\\gcc.exe -std=c++20 -O3 systems-ide-core-clean.cpp ide-main-clean.cpp -o systems-ide-clean.exe -static": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    },
+    "chat.agent.maxRequests": 1000000,
+    "workbench.settings.applyToAllProfiles": [
+        "chat.agent.maxRequests",
+        "github.copilot.enable",
+        "windowsaistudio.openAIInferencePort",
+        "chat.mcp.autostart",
+        "github.copilot.chat.codeGeneration.useInstructionFiles"
+    ],
+    "gitlens.ai.model": "vscode",
+    "gitlens.ai.vscode.model": "copilot:gpt-4.1",
+    "workbench.secondarySideBar.defaultVisibility": "visible",
+    "workbench.colorTheme": "Visual Studio 2017 Dark - C++",
+    "github.copilot.chat.codesearch.enabled": true,
+    "multiAI.preferredAI": "kimi",
+    "chat.editing.confirmEditRequestRetry": false,
+    "chat.editing.confirmEditRequestRemoval": false,
+    "multiAI.serverUrl": "https://www.kimi.com/",
+    "chat.mcp.serverSampling": {
+        "Global in Code: chromedevtools/chrome-devtools-mcp": {
+            "allowedModels": [
+                "copilot/auto",
+                "copilot/claude-opus-4",
+                "copilot/claude-opus-41",
+                "copilot/claude-3.5-sonnet",
+                "copilot/claude-3.7-sonnet",
+                "copilot/claude-3.7-sonnet-thought",
+                "copilot/claude-sonnet-4",
+                "copilot/claude-sonnet-4.5",
+                "ollama/codellama:7b",
+                "copilot/gemini-2.0-flash-001",
+                "copilot/gemini-2.5-pro",
+                "copilot/gpt-4.1",
+                "copilot/gpt-4o",
+                "copilot/gpt-5",
+                "copilot/gpt-5-mini",
+                "copilot/gpt-5-codex",
+                "copilot/grok-code-fast-1",
+                "copilot/o3",
+                "copilot/o3-mini",
+                "copilot/o4-mini",
+                "aitk-github/GitHub/AI21-Jamba-1.5-Large",
+                "aitk-foundry/Azure AI Foundry/AI21-Jamba-1.5-Large",
+                "aitk-github/GitHub/AI21-Jamba-1.5-Mini",
+                "aitk-foundry/Azure AI Foundry/AI21-Jamba-1.5-Mini",
+                "aitk-github/GitHub/Codestral-2501",
+                "aitk-foundry/Azure AI Foundry/Codestral-2501",
+                "aitk-foundry/Azure AI Foundry/codex-mini",
+                "aitk-github/GitHub/cohere-command-a",
+                "aitk-foundry/Azure AI Foundry/cohere-command-a",
+                "aitk-github/GitHub/Cohere-command-r",
+                "aitk-foundry/Azure AI Foundry/Cohere-command-r",
+                "aitk-github/GitHub/Cohere-command-r-08-2024",
+                "aitk-foundry/Azure AI Foundry/Cohere-command-r-08-2024",
+                "aitk-github/GitHub/Cohere-command-r-plus",
+                "aitk-foundry/Azure AI Foundry/Cohere-command-r-plus",
+                "aitk-github/GitHub/Cohere-command-r-plus-08-2024",
+                "aitk-foundry/Azure AI Foundry/Cohere-command-r-plus-08-2024",
+                "aitk-github/GitHub/DeepSeek-R1",
+                "aitk-foundry/Azure AI Foundry/DeepSeek-R1",
+                "aitk-github/GitHub/DeepSeek-R1-0528",
+                "aitk-foundry/Azure AI Foundry/DeepSeek-R1-0528",
+                "aitk-foundry-local/Foundry Local/deepseek-r1-distill-qwen-14b-generic-cpu:3",
+                "aitk-foundry-local/Foundry Local/deepseek-r1-distill-qwen-14b-generic-gpu:3",
+                "aitk-foundry-local/Foundry Local/deepseek-r1-distill-qwen-7b-generic-cpu:3",
+                "aitk-foundry-local/Foundry Local/deepseek-r1-distill-qwen-7b-generic-gpu:3",
+                "aitk-github/GitHub/DeepSeek-V3",
+                "aitk-foundry/Azure AI Foundry/DeepSeek-V3",
+                "aitk-github/GitHub/DeepSeek-V3-0324",
+                "aitk-foundry/Azure AI Foundry/DeepSeek-V3-0324",
+                "aitk-github/GitHub/DeepSeek-V3.1",
+                "aitk-foundry/Azure AI Foundry/DeepSeek-V3.1",
+                "aitk-foundry/Azure AI Foundry/gpt-35-turbo",
+                "aitk-foundry/Azure AI Foundry/gpt-35-turbo-16k",
+                "aitk-foundry/Azure AI Foundry/gpt-35-turbo-instruct",
+                "aitk-foundry/Azure AI Foundry/gpt-4",
+                "aitk-foundry/Azure AI Foundry/gpt-4-32k",
+                "aitk-foundry/Azure AI Foundry/gpt-4.5-preview",
+                "aitk-foundry/Azure AI Foundry/gpt-5-codex",
+                "aitk-foundry/Azure AI Foundry/gpt-oss-120b",
+                "aitk-foundry/Azure AI Foundry/Gretel-Navigator-Tabular",
+                "aitk-github/GitHub/gpt-4.1",
+                "aitk-foundry/Azure AI Foundry/gpt-4.1",
+                "aitk-github/GitHub/gpt-4.1-mini",
+                "aitk-foundry/Azure AI Foundry/gpt-4.1-mini",
+```

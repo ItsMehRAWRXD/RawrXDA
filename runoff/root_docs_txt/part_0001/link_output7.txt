@@ -1,0 +1,13 @@
+   Creating library .\bin\RawrXD-Win32IDE.lib and object .\bin\RawrXD-Win32IDE.exp
+msvcrt.lib(utility.obj) : error LNK2001: unresolved external symbol __vcrt_initialize
+msvcrt.lib(utility.obj) : error LNK2001: unresolved external symbol __vcrt_uninitialize
+msvcrt.lib(utility.obj) : error LNK2001: unresolved external symbol __vcrt_uninitialize_critical
+msvcrt.lib(utility.obj) : error LNK2001: unresolved external symbol __vcrt_thread_attach
+msvcrt.lib(utility.obj) : error LNK2001: unresolved external symbol __vcrt_thread_detach
+msvcrt.lib(utility.obj) : error LNK2001: unresolved external symbol _is_c_termination_complete
+msvcrt.lib(utility.obj) : error LNK2001: unresolved external symbol __acrt_initialize
+msvcrt.lib(utility.obj) : error LNK2001: unresolved external symbol __acrt_uninitialize
+msvcrt.lib(utility.obj) : error LNK2001: unresolved external symbol __acrt_uninitialize_critical
+msvcrt.lib(utility.obj) : error LNK2001: unresolved external symbol __acrt_thread_attach
+msvcrt.lib(utility.obj) : error LNK2001: unresolved external symbol __acrt_thread_detach
+.\bin\RawrXD-Win32IDE.exe : fatal error LNK1120: 11 unresolved externals

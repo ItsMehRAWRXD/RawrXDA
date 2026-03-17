@@ -1,0 +1,14 @@
+{
+  "name": "rawrz-payload-builder",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local-only Electron UI with light theme and safe placeholders.",
+  "main": "main.js",
+  "scripts": {
+    "dev": "electron .",
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^31.3.0"
+  }
+}

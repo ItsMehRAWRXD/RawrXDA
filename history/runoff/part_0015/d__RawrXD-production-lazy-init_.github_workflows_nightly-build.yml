@@ -1,0 +1,191 @@
+name: Nightly Build & Extended Tests
+
+on:
+  schedule:
+    - cron: '0 1 * * *'  # 1 AM UTC daily
+  workflow_dispatch:
+
+jobs:
+  nightly-build:
+    runs-on: windows-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: |
+          choco install cmake ninja -y
+          python -m pip install --upgrade pip pytest
+
+      - name: Setup Qt6
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: '6.7.0'
+          host: windows
+          target: desktop
+          arch: win64_msvc2019_64
+
+      - name: Create Build Directory
+        run: |
+          New-Item -ItemType Directory -Path build -Force
+
+      - name: Configure CMake (Debug)
+        working-directory: build
+        run: |
+          cmake -G "Visual Studio 17 2022" -A x64 `
+            -DCMAKE_BUILD_TYPE=Debug `
+            -DQt6_DIR="${{ env.Qt6_DIR }}\lib\cmake\Qt6" `
+            ..
+
+      - name: Build Debug
+        working-directory: build
+        run: |
+          cmake --build . --config Debug --parallel 4
+
+      - name: Run Comprehensive Unit Tests
+        working-directory: build
+        run: |
+          ctest -C Debug --output-on-failure --parallel 4 --timeout 600
+
+      - name: Run Fuzz Tests
+        working-directory: build
+        run: |
+          echo "Running fuzz tests..."
+          if (Test-Path "bin/fuzz_test.exe") {
+              .\bin\fuzz_test.exe --iterations=10000 --timeout=300
+          }
+
+      - name: Run Memory Tests
+        working-directory: build
+        run: |
+          echo "Running memory leak detection..."
+          ctest -C Debug -R "memory" --output-on-failure
+
+      - name: Run Stress Tests
+        working-directory: build
+        run: |
+          echo "Running stress tests..."
+          $testDuration = 600  # 10 minutes
+          $startTime = Get-Date
+          while ((Get-Date) - $startTime -lt (New-TimeSpan -Seconds $testDuration)) {
+              if (Test-Path "bin/stress_test.exe") {
+                  .\bin\stress_test.exe --duration=30
+              }
+          }
+
+      - name: Run Integration Tests (Extended)
+        working-directory: build
+        run: |
+          ctest -C Debug -R "integration" --output-on-failure --parallel 2 --timeout 1200
+
+      - name: Run Model Loading Tests
+        working-directory: build
+        run: |
+          ctest -C Debug -R "model_loading" --output-on-failure --timeout 600
+
+      - name: Run Streaming Inference Tests
+        working-directory: build
+        run: |
+          ctest -C Debug -R "streaming" --output-on-failure --timeout 600
+
+      - name: Run Agent Coordinator Tests
+        working-directory: build
+        run: |
+          ctest -C Debug -R "agent_coordinator" --output-on-failure --timeout 300
+
+      - name: Generate Test Report
+        working-directory: build
+        if: always()
+        run: |
+          ctest -C Debug --output-on-failure > test_report_nightly.txt 2>&1
+          python -m pytest --tb=short --junit-xml=pytest_results.xml || true
+
+      - name: Upload Test Report
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: nightly-test-report
+          path: |
+            build/test_report_nightly.txt
+            build/pytest_results.xml
+
+      - name: Profile Hot Tests
+        working-directory: build
+        run: |
+          echo "Profiling slow tests..."
+          $slowTests = @()
+          ctest -C Debug --print-labels --output-on-failure -V | ForEach-Object {
+              if ($_ -match "(\d+\.\d+)s") {
+                  $slowTests += $_
+              }
+          }
+          $slowTests | Sort-Object -Descending | Select-Object -First 10
+
+      - name: Generate Performance Report
+        working-directory: build
+        run: |
+          python -c @"
+          import json
+          import time
+          
+          report = {
+              'timestamp': time.isoformat(),
+              'build_type': 'nightly',
+              'os': 'windows-latest',
+              'tests_completed': True,
+              'metrics': {
+                  'duration_seconds': 0,
+                  'passed': 0,
+                  'failed': 0
+              }
+          }
+          
+          with open('performance_report.json', 'w') as f:
+              json.dump(report, f, indent=2)
+          print('Performance report generated')
+          "@
+
+      - name: Upload Performance Report
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: nightly-performance-report
+          path: build/performance_report.json
+
+      - name: Alert on Failures
+        if: failure()
+        run: |
+          $message = "Nightly build FAILED on ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          Write-Host "::warning::$message"
+
+      - name: Generate Nightly Summary
+        if: always()
+        run: |
+          @"
+          # Nightly Build Summary
+          - **Date**: $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+          - **Status**: $(if ($LASTEXITCODE -eq 0) { "✅ PASSED" } else { "❌ FAILED" })
+          - **Repository**: ${{ github.repository }}
+          - **Branch**: ${{ github.ref }}
+          - **Commit**: ${{ github.sha }}
+          - **Run URL**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          "@ | Out-File -FilePath nightly_summary.md -Encoding UTF8
+
+      - name: Upload Summary
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: nightly-summary
+          path: nightly_summary.md

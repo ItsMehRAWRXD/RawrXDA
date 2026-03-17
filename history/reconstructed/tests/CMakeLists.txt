@@ -1,0 +1,204 @@
+# ============================================================
+# RawrXD Test Suite - CTest Registration
+# ============================================================
+# This file registers tests defined in the parent CMakeLists.txt with CTest
+# and adds additional tests not already defined there.
+#
+# Tests ALREADY defined in parent CMakeLists.txt (do NOT redefine):
+# - test_gguf_loader
+# - test_gguf_loader_simple  
+# - test_agent_coordinator
+# - test_agent_coordinator_integration
+# - quant_correctness_tests
+# - quant_engine_test
+# - quant_scalar_smoke
+# - test_kv_cache
+# - test_chat_streaming
+# - test_terminal
+# - test_ide_main
+# - test_qmainwindow
+# - test_header
+
+cmake_minimum_required(VERSION 3.20)
+
+# Enable testing
+enable_testing()
+
+message(STATUS "========================================")
+message(STATUS "Registering Tests with CTest")
+message(STATUS "========================================")
+
+# Register existing tests from parent CMakeLists.txt with CTest
+# These targets already exist, we just register them for ctest discovery
+if(TARGET test_gguf_loader)
+    add_test(NAME test_gguf_loader COMMAND test_gguf_loader)
+    message(STATUS "  ✓ Registered test_gguf_loader")
+endif()
+
+if(TARGET test_gguf_loader_simple)
+    add_test(NAME test_gguf_loader_simple COMMAND test_gguf_loader_simple)
+    message(STATUS "  ✓ Registered test_gguf_loader_simple")
+endif()
+
+if(TARGET test_agent_coordinator)
+    add_test(NAME test_agent_coordinator COMMAND test_agent_coordinator)
+    message(STATUS "  ✓ Registered test_agent_coordinator")
+endif()
+
+if(TARGET test_agent_coordinator_integration)
+    add_test(NAME test_agent_coordinator_integration COMMAND test_agent_coordinator_integration)
+    message(STATUS "  ✓ Registered test_agent_coordinator_integration")
+endif()
+
+if(TARGET quant_correctness_tests)
+    add_test(NAME quant_correctness_tests COMMAND quant_correctness_tests)
+    message(STATUS "  ✓ Registered quant_correctness_tests")
+endif()
+
+if(TARGET quant_engine_test)
+    add_test(NAME quant_engine_test COMMAND quant_engine_test)
+    message(STATUS "  ✓ Registered quant_engine_test")
+endif()
+
+if(TARGET quant_scalar_smoke)
+    add_test(NAME quant_scalar_smoke COMMAND quant_scalar_smoke)
+    message(STATUS "  ✓ Registered quant_scalar_smoke")
+endif()
+
+if(TARGET test_kv_cache)
+    add_test(NAME test_kv_cache COMMAND test_kv_cache)
+    message(STATUS "  ✓ Registered test_kv_cache")
+endif()
+
+# ============================================================
+# NEW TESTS - Only add tests not in parent CMakeLists.txt
+# ============================================================
+
+# AI Completions Test (if not already defined)
+if(NOT TARGET test_ai_completions AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_ai_completions.cpp")
+    add_executable(test_ai_completions test_ai_completions.cpp)
+    target_link_libraries(test_ai_completions PRIVATE Qt6::Core Qt6::Test Qt6::Network)
+    target_include_directories(test_ai_completions PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_ai_completions PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" AUTOMOC ON)
+    add_test(NAME test_ai_completions COMMAND test_ai_completions)
+    message(STATUS "  ✓ Added test_ai_completions")
+endif()
+
+# LLM Connectivity Test
+if(NOT TARGET test_llm_connectivity AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_llm_connectivity.cpp")
+    add_executable(test_llm_connectivity test_llm_connectivity.cpp)
+    target_link_libraries(test_llm_connectivity PRIVATE Qt6::Core Qt6::Test Qt6::Network)
+    target_include_directories(test_llm_connectivity PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_llm_connectivity PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" AUTOMOC ON)
+    add_test(NAME test_llm_connectivity COMMAND test_llm_connectivity)
+    message(STATUS "  ✓ Added test_llm_connectivity")
+endif()
+
+# Tool Registry Test
+if(NOT TARGET test_tool_registry AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_tool_registry.cpp")
+    add_executable(test_tool_registry test_tool_registry.cpp)
+    target_link_libraries(test_tool_registry PRIVATE Qt6::Core Qt6::Test)
+    target_include_directories(test_tool_registry PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_tool_registry PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" AUTOMOC ON)
+    add_test(NAME test_tool_registry COMMAND test_tool_registry)
+    message(STATUS "  ✓ Added test_tool_registry")
+endif()
+
+# Voice Processor Test
+if(NOT TARGET test_voice_processor AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_voice_processor.cpp")
+    add_executable(test_voice_processor test_voice_processor.cpp)
+    target_link_libraries(test_voice_processor PRIVATE Qt6::Core Qt6::Test)
+    target_include_directories(test_voice_processor PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_voice_processor PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" AUTOMOC ON)
+    add_test(NAME test_voice_processor COMMAND test_voice_processor)
+    message(STATUS "  ✓ Added test_voice_processor")
+endif()
+
+# Zero Retention Manager Test
+if(NOT TARGET test_zero_retention_manager AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_zero_retention_manager.cpp")
+    add_executable(test_zero_retention_manager test_zero_retention_manager.cpp)
+    target_link_libraries(test_zero_retention_manager PRIVATE Qt6::Core Qt6::Test)
+    target_include_directories(test_zero_retention_manager PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_zero_retention_manager PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" AUTOMOC ON)
+    add_test(NAME test_zero_retention_manager COMMAND test_zero_retention_manager)
+    message(STATUS "  ✓ Added test_zero_retention_manager")
+endif()
+
+# Semantic Diff Analyzer Test
+if(NOT TARGET test_semantic_diff_analyzer AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_semantic_diff_analyzer.cpp")
+    add_executable(test_semantic_diff_analyzer test_semantic_diff_analyzer.cpp)
+    target_link_libraries(test_semantic_diff_analyzer PRIVATE Qt6::Core Qt6::Test Qt6::Concurrent)
+    target_include_directories(test_semantic_diff_analyzer PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_semantic_diff_analyzer PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" AUTOMOC ON)
+    add_test(NAME test_semantic_diff_analyzer COMMAND test_semantic_diff_analyzer)
+    message(STATUS "  ✓ Added test_semantic_diff_analyzer")
+endif()
+
+# AI Merge Resolver Test
+if(NOT TARGET test_ai_merge_resolver AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_ai_merge_resolver.cpp")
+    add_executable(test_ai_merge_resolver test_ai_merge_resolver.cpp)
+    target_link_libraries(test_ai_merge_resolver PRIVATE Qt6::Core Qt6::Test Qt6::Network Qt6::Concurrent)
+    target_include_directories(test_ai_merge_resolver PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_ai_merge_resolver PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" AUTOMOC ON)
+    add_test(NAME test_ai_merge_resolver COMMAND test_ai_merge_resolver)
+    message(STATUS "  ✓ Added test_ai_merge_resolver")
+endif()
+
+# Sandboxed Terminal Test
+if(NOT TARGET test_sandboxed_terminal AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_sandboxed_terminal.cpp")
+    add_executable(test_sandboxed_terminal test_sandboxed_terminal.cpp)
+    target_link_libraries(test_sandboxed_terminal PRIVATE Qt6::Core Qt6::Test)
+    target_include_directories(test_sandboxed_terminal PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_sandboxed_terminal PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" AUTOMOC ON)
+    add_test(NAME test_sandboxed_terminal COMMAND test_sandboxed_terminal)
+    message(STATUS "  ✓ Added test_sandboxed_terminal")
+endif()
+
+# Agentic File Operations Test
+if(NOT TARGET test_agentic_file_operations AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_agentic_file_operations.cpp")
+    add_executable(test_agentic_file_operations test_agentic_file_operations.cpp)
+    target_link_libraries(test_agentic_file_operations PRIVATE Qt6::Core Qt6::Test)
+    target_include_directories(test_agentic_file_operations PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_agentic_file_operations PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" AUTOMOC ON)
+    add_test(NAME test_agentic_file_operations COMMAND test_agentic_file_operations)
+    message(STATUS "  ✓ Added test_agentic_file_operations")
+endif()
+
+# Model Registry Test
+if(NOT TARGET model_registry_test AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/model_registry_test.cpp")
+    add_executable(model_registry_test model_registry_test.cpp)
+    target_link_libraries(model_registry_test PRIVATE Qt6::Core Qt6::Test)
+    target_include_directories(model_registry_test PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(model_registry_test PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" AUTOMOC ON)
+    add_test(NAME model_registry_test COMMAND model_registry_test)
+    message(STATUS "  ✓ Added model_registry_test")
+endif()
+
+# Qt AI Integration Test
+if(NOT TARGET test_qt_ai_integration AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_qt_ai_integration.cpp")
+    add_executable(test_qt_ai_integration test_qt_ai_integration.cpp)
+    target_link_libraries(test_qt_ai_integration PRIVATE Qt6::Core Qt6::Test Qt6::Widgets Qt6::Network)
+    target_include_directories(test_qt_ai_integration PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_qt_ai_integration PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" AUTOMOC ON)
+    add_test(NAME test_qt_ai_integration COMMAND test_qt_ai_integration)
+    message(STATUS "  ✓ Added test_qt_ai_integration")
+endif()
+
+# GGUF Integration Test
+if(NOT TARGET test_gguf_integration AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_gguf_integration.cpp")
+    add_executable(test_gguf_integration test_gguf_integration.cpp)
+    target_link_libraries(test_gguf_integration PRIVATE Qt6::Core Qt6::Test)
+    target_include_directories(test_gguf_integration PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_gguf_integration PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" AUTOMOC ON)
+    add_test(NAME test_gguf_integration COMMAND test_gguf_integration)
+    message(STATUS "  ✓ Added test_gguf_integration")
+endif()
+
+# ============================================================
+# Test Summary
+# ============================================================
+message(STATUS "========================================")
+message(STATUS "Test Suite Registration Complete")
+message(STATUS "Run tests: ctest --output-on-failure -C Release")
+message(STATUS "Run specific: ctest -R <name> -V -C Release")
+message(STATUS "========================================")

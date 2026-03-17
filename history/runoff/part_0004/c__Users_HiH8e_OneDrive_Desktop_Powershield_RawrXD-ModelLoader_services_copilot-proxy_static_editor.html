@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Streaming Editor Demo</title>
+  <style>
+    body {
+      font-family: Segoe UI, Arial;
+      background: #0f1115;
+      color: #e6edf3;
+      margin: 0
+    }
+
+    header {
+      padding: 10px 16px;
+      background: #161b22;
+      border-bottom: 1px solid #30363d
+    }
+
+    main {
+      display: flex;
+      gap: 16px;
+      padding: 16px
+    }
+
+    .pane {
+      flex: 1;
+      min-height: 400px;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      overflow: auto
+    }
+
+    .pane h3 {
+      margin: 0;
+      padding: 8px 12px;
+      border-bottom: 1px solid #30363d;
+      background: #161b22
+    }
+
+    textarea {
+      width: 100%;
+      height: 320px;
+      background: #0d1117;
+      color: #e6edf3;
+      border: none;
+      outline: none;
+      padding: 12px;
+      font-family: Consolas, monospace
+    }
+
+    .editor {
+      position: relative
+    }
+
+    .ghost {
+      position: absolute;
+      left: 0;
+      top: 0;
+      color: #6e7681;
+      pointer-events: none;
+      white-space: pre-wrap;
+      padding: 12px;
+      font-family: Consolas, monospace
+    }
+
+    .code {
+      position: relative;
+      z-index: 1
+    }
+
+    .controls {
+      padding: 12px
+    }
+
+    input,
+    button {
+      margin-right: 8px
+    }
+
+    .suggestion-actions {
+      position: absolute;
+      top: 40px;
+      right: 12px;
+      z-index: 10;
+      display: none;
+      gap: 6px;
+    }
+
+    .suggestion-actions.active {
+      display: flex;
+    }
+
+    .suggestion-actions button {
+      background: #21262d;
+      border: 1px solid #30363d;
+      color: #e6edf3;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .suggestion-actions button:hover {
+      background: #30363d;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <strong>Streaming Editor Demo</strong>
+  </header>
+  <main>
+    <div class="pane">
+      <h3>Editor</h3>
+      <div class="controls">
+        <input id="upstream" placeholder="Upstream URL" style="width:420px"
+          value="http://localhost:11434/api/generate" />
+        <input id="model" placeholder="Model (Ollama)" style="width:220px" value="llama3.1:8b-instruct" />
+        <button id="completeBtn">Complete</button>
+      </div>
+      <div class="editor">
+        <div class="suggestion-actions" id="suggestionActions">
+          <button id="acceptBtn" title="Tab to accept">✓ Accept</button>
+          <button id="rejectBtn" title="Esc to dismiss">✗ Dismiss</button>
+        </div>
+        <div id="ghost" class="ghost"></div>
+        <textarea id="code" class="code">function greet(name){
+  // write friendly greeting
+}</textarea>
+      </div>
+    </div>
+    <div class="pane">
+      <h3>Stream</h3>
+      <pre id="out" style="padding:12px"></pre>
+    </div>
+  </main>
+  <script>
+    const codeEl = document.getElementById('code');
+    const ghostEl = document.getElementById('ghost');
+    const outEl = document.getElementById('out');
+    const suggestionActionsEl = document.getElementById('suggestionActions');
+    const acceptBtn = document.getElementById('acceptBtn');
+    const rejectBtn = document.getElementById('rejectBtn');
+
+    let currentSuggestion = '';
+
+    function showSuggestionActions() {
+      suggestionActionsEl.classList.add('active');
+    }
+
+    function hideSuggestionActions() {
+      suggestionActionsEl.classList.remove('active');
+    }
+
+    function acceptSuggestion() {
+      if (currentSuggestion) {
+        codeEl.value += currentSuggestion;
+        currentSuggestion = '';
+        ghostEl.textContent = '';
+        hideSuggestionActions();
+      }
+    }
+
+    function rejectSuggestion() {
+      currentSuggestion = '';
+      ghostEl.textContent = '';
+      hideSuggestionActions();
+    }
+
+    // Keyboard shortcuts
+    codeEl.addEventListener('keydown', (e) => {
+      if (currentSuggestion) {
+        if (e.key === 'Tab') {
+          e.preventDefault();
+          acceptSuggestion();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          rejectSuggestion();
+        }
+      }
+    });
+
+    acceptBtn.addEventListener('click', acceptSuggestion);
+    rejectBtn.addEventListener('click', rejectSuggestion);
+
+    function startCompletion() {
+      ghostEl.textContent = '';
+      outEl.textContent = '';
+      currentSuggestion = '';
+      hideSuggestionActions();
+      const upstream = document.getElementById('upstream').value.trim();
+      const model = document.getElementById('model').value.trim();
+      const prompt = codeEl.value + "\n// completion:";
+
+      fetch('/stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ upstream, provider: 'ollama', model, prompt, max_tokens: 256 })
+      }).then(async (res) => {
+        if (!res.ok) { outEl.textContent = 'Error: ' + (await res.text()); return; }
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const parts = buffer.split(/\n\n/);
+          buffer = parts.pop();
+          for (const part of parts) {
+            if (!part.startsWith('data:')) continue;
+            const payload = part.replace(/^data:\s*/, '');
+            outEl.textContent += payload + "\n\n";
+            try {
+              const j = JSON.parse(payload);
+              // Ollama: j.response incremental; j.done true at end
+              if (j.response) {
+                currentSuggestion += j.response;
+                ghostEl.textContent = currentSuggestion;
+                showSuggestionActions();
+              }
+            } catch {
+              // non-JSON lines ignored
+            }
+          }
+        }
+      }).catch(err => {
+        outEl.textContent = 'Network error: ' + err.message;
+      });
+    }
+
+    document.getElementById('completeBtn').addEventListener('click', startCompletion);
+  </script>
+</body>
+
+</html>

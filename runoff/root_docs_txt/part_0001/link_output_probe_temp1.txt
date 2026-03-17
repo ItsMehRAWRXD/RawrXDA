@@ -1,0 +1,3 @@
+ucrt.lib(api-ms-win-crt-string-l1-1-0.dll) : error LNK2005: strncmp already defined in libucrt.lib(strncmp.obj)
+   Creating library .\bin\RawrXD-Win32IDE.lib and object .\bin\RawrXD-Win32IDE.exp
+.\bin\RawrXD-Win32IDE.exe : fatal error LNK1169: one or more multiply defined symbols found

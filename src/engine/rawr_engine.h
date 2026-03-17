@@ -8,7 +8,7 @@
 #include <functional>
 
 class RawrEngine {
-    GGUFLoader model;
+    EngineGGUFLoader model;
     BPETokenizer tokenizer;
     Sampler sampler;
     

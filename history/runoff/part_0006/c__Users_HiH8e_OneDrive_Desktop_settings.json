@@ -1,0 +1,12 @@
+{
+  "Theme": "Dark",
+  "FontSize": 12,
+  "AutoSave": true,
+  "LineNumbers": true,
+  "WordWrap": false,
+  "InstalledExtensions": [
+    "GitHub.copilot",
+    "ms-python.python",
+    "ms-vscode.csharp"
+  ]
+}

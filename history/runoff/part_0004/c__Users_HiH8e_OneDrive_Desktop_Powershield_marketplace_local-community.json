@@ -1,0 +1,34 @@
+{
+  "Extensions": [
+    {
+      "Id": "community-gitops-visualizer",
+      "MarketplaceId": "community-gitops-visualizer",
+      "Name": "GitOps Visualizer",
+      "Description": "Branch and pipeline maps with live dependency annotations.",
+      "Author": "RawrXD Community",
+      "Language": 999,
+      "Capabilities": 580,
+      "Version": "1.1.3",
+      "Category": "Git",
+      "Downloads": 9765,
+      "Rating": 4.4,
+      "Tags": ["git", "visual"],
+      "Source": "Community Marketplace"
+    },
+    {
+      "Id": "community-ai-mentor",
+      "MarketplaceId": "community-ai-mentor",
+      "Name": "AI Code Mentor",
+      "Description": "Context-aware hints, examples, and refactors surfaced as inline annotations.",
+      "Author": "RawrXD Community",
+      "Language": 999,
+      "Capabilities": 544,
+      "Version": "0.9.7",
+      "Category": "AI",
+      "Downloads": 13420,
+      "Rating": 4.8,
+      "Tags": ["ai", "mentor"],
+      "Source": "Community Marketplace"
+    }
+  ]
+}

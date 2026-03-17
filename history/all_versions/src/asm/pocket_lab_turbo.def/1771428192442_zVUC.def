@@ -1,0 +1,31 @@
+; =============================================================================
+; pocket_lab_turbo.def — Module definition for pocket_lab_turbo.dll
+; =============================================================================
+; DLL exports for TurboSparse + PowerInfer MASM kernel
+; Used by KernelDispatcher (LoadLibrary + GetProcAddress)
+;
+; Ordinal ranges:
+;   @1-@9    C++ bridge exports (engine-friendly)
+;   @10-@19  Raw ASM exports (advanced use)
+; =============================================================================
+
+LIBRARY pocket_lab_turbo
+
+EXPORTS
+    ; === C++ Bridge Exports (primary API) ===
+    PocketLabInit_Export            @1
+    PocketLabGetStats_Export        @2
+    PocketLabRunCycle_Export        @3
+    PocketLabShutdown_Export        @4
+
+    ; === Raw ASM Exports (direct kernel access) ===
+    PocketLabInit                   @10
+    PocketLabRunCycle               @11
+    PocketLabGetStats               @12
+    PocketLabGetThermal             @13
+    PocketLabShutdown               @14
+    DetectTier                      @15
+    AllocateResources               @16
+    BuildSparseBitmap               @17
+    BuildHotTable                   @18
+    PowerInferLoop                  @19

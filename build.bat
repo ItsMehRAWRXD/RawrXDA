@@ -1,28 +1,57 @@
 @echo off
-setlocal enabledelayedexpansion
+REM Build script for RawrXD TextEditorGUI
+REM Requires ml64.exe and Windows SDK
 
-set ML64="C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\ml64.exe"
-set LINK="C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\link.exe"
-set SOURCE=D:\RawrXD\src\RawrXD_NativeModelBridge_Complete.asm
-set OBJ=D:\RawrXD\bin\RawrXD_NativeModelBridge.obj
-set DLL=D:\RawrXD\bin\RawrXD_NativeModelBridge.dll
-set LIB=D:\RawrXD\bin\RawrXD_NativeModelBridge.lib
+echo ============================================
+echo Building RawrXD Text Editor GUI
+echo ============================================
 
-echo Assembling...
-%ML64% /c /W3 /Fo%OBJ% %SOURCE%
-
-if !errorlevel! neq 0 (
-    echo Assembly failed
-    exit /b !errorlevel!
+REM Check if ml64.exe is available
+where ml64.exe >nul 2>&1
+if errorlevel 1 (
+    echo ERROR: ml64.exe not found in PATH
+    echo Make sure MASM64 is installed
+    goto error
 )
 
-echo Linking...
-%LINK% /DLL /SUBSYSTEM:WINDOWS /MACHINE:x64 /OUT:%DLL% /IMPLIB:%LIB% %OBJ% kernel32.lib ntdll.lib user32.lib msvcrt.lib
+echo.
+echo [1/3] Assembling main editor module...
+ml64 /c /Fo:RawrXD_TextEditorGUI.obj RawrXD_TextEditorGUI.asm /W3
+if errorlevel 1 goto error
 
-if !errorlevel! neq 0 (
-    echo Linking failed
-    exit /b !errorlevel!
-)
+echo [2/3] Assembling WinMain integration example...
+ml64 /c /Fo:WinMain_Integration_Example.obj WinMain_Integration_Example.asm /W3
+if errorlevel 1 goto error
 
-echo Build successful!
-echo DLL: %DLL%
+echo [3/3] Assembling AI completion integration module...
+ml64 /c /Fo:AICompletionIntegration.obj AICompletionIntegration.asm /W3
+if errorlevel 1 goto error
+
+echo.
+echo [4/4] Linking executable...
+link /SUBSYSTEM:WINDOWS /ENTRY:WinMainCRTStartup ^
+    /MACHINE:X64 ^
+    RawrXD_TextEditorGUI.obj WinMain_Integration_Example.obj AICompletionIntegration.obj ^
+    kernel32.lib user32.lib gdi32.lib ^
+    /OUT:RawrXD_TextEditorGUI.exe
+if errorlevel 1 goto error
+
+echo.
+echo ============================================
+echo Build completed successfully!
+echo ============================================
+echo.
+echo Executable: RawrXD_TextEditorGUI.exe
+echo.
+echo Run with: RawrXD_TextEditorGUI.exe
+echo.
+goto end
+
+:error
+echo.
+echo ============================================
+echo ERROR: Build failed!
+echo ============================================
+exit /b 1
+
+:end

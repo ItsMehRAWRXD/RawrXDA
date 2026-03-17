@@ -51,6 +51,36 @@ const char* ToolActionStatusFormatter::iconForKind(ToolActionKind kind) {
     }
 }
 
+const char* ToolActionStatusFormatter::nameForKind(ToolActionKind kind) {
+    switch (kind) {
+        case ToolActionKind::ReadFile:         return "Read File";
+        case ToolActionKind::EditFile:         return "Edit File";
+        case ToolActionKind::CreateFile:       return "Create File";
+        case ToolActionKind::DeleteFile:       return "Delete File";
+        case ToolActionKind::RunTerminal:      return "Run Terminal";
+        case ToolActionKind::SearchGrep:       return "Search (Grep)";
+        case ToolActionKind::SearchSemantic:   return "Semantic Search";
+        case ToolActionKind::SearchFiles:      return "Search Files";
+        case ToolActionKind::ListDirectory:    return "List Directory";
+        case ToolActionKind::ManagedTodoList:  return "Manage Todo";
+        case ToolActionKind::ReviewedChanges:  return "Review Changes";
+        case ToolActionKind::ListCodeUsages:   return "List Usages";
+        case ToolActionKind::GetErrors:        return "Get Errors";
+        case ToolActionKind::FetchWebpage:     return "Fetch Webpage";
+        case ToolActionKind::RunSubagent:      return "Run Subagent";
+        case ToolActionKind::NotebookRun:      return "Run Notebook";
+        case ToolActionKind::NotebookEdit:     return "Edit Notebook";
+        case ToolActionKind::GitOperation:     return "Git Operation";
+        case ToolActionKind::BuildProject:     return "Build Project";
+        case ToolActionKind::FinishedStep:     return "Finished Step";
+        case ToolActionKind::MultiReplace:     return "Multi Replace";
+        case ToolActionKind::OpenBrowser:      return "Open Browser";
+        case ToolActionKind::AgentThinking:    return "Thinking";
+        case ToolActionKind::Custom:
+        default:                               return "Action";
+    }
+}
+
 const char* ToolActionStatusFormatter::stateIcon(ToolActionState state) {
     switch (state) {
         case ToolActionState::Pending:    return "\xE2\xAC\x9C"; // ⬜

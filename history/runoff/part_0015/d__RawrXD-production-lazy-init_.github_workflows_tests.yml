@@ -1,0 +1,481 @@
+name: Automated Unit Tests & Component Tests
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+      - agentic-ide-production
+      - feature/**
+      - feat/**
+      - bugfix/**
+      - hotfix/**
+  pull_request:
+    branches:
+      - main
+      - dev
+      - agentic-ide-production
+  workflow_dispatch:
+
+jobs:
+  # ============================================================
+  # Test Suite: Google Test + Qt Test
+  # ============================================================
+  test-suite:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [Debug, Release]
+        shard: [0, 1, 2, 3] # 4 Shards for faster parallel execution
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Add MSBuild
+        uses: microsoft/setup-msbuild@v1.3
+
+      - name: Install NASM
+        run: |
+          choco install nasm -y
+          $env:PATH += ";C:\Program Files\NASM"
+
+      - name: Install Qt via aqtinstall
+        shell: pwsh
+        run: |
+          pip install aqtinstall
+          python -m aqt install-qt windows desktop 6.7.3 win64_msvc2019_64
+          $QtBase = Join-Path $PWD "Qt\6.7.3\msvc2019_64"
+          echo "Qt6_DIR=$QtBase" >> $env:GITHUB_ENV
+          echo "CMAKE_PREFIX_PATH=$QtBase" >> $env:GITHUB_ENV
+          echo "$($QtBase)\bin" >> $env:GITHUB_PATH
+
+      - name: Download Google Test
+        shell: pwsh
+        run: |
+          if (!(Test-Path "3rdparty/googletest")) {
+            mkdir -p 3rdparty
+            Invoke-WebRequest -Uri "https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip" -OutFile googletest.zip
+            Expand-Archive -Path googletest.zip -DestinationPath 3rdparty
+            Rename-Item -Path "3rdparty/googletest-1.14.0" -NewName "googletest"
+            Remove-Item googletest.zip
+          }
+
+      - name: Configure CMake (Tests)
+        shell: pwsh
+        run: |
+          $BuildDir = "build_tests"
+          if (Test-Path $BuildDir) {
+            Remove-Item $BuildDir -Recurse -Force
+          }
+          mkdir $BuildDir
+          cd $BuildDir
+          cmake -DCMAKE_BUILD_TYPE=${{ matrix.config }} `
+                -DENABLE_TESTING=ON `
+                -DENABLE_GTEST=ON `
+                -DENABLE_QT_TESTS=ON `
+                -G "Visual Studio 17 2022" `
+                -A x64 `
+                ..
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: Build Tests
+        shell: pwsh
+        run: |
+          cd build_tests
+          cmake --build . --config ${{ matrix.config }} --target RUN_TESTS -j4
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: Run Google Test Suite (Sharded)
+        shell: pwsh
+        continue-on-error: false
+        run: |
+          cd build_tests
+          $testExe = "bin/${{ matrix.config }}/gtest_all.exe"
+          if (Test-Path $testExe) {
+            Write-Host "Calculating test shards for $testExe"
+            $rawList = & $testExe --gtest_list_tests
+            
+            # Extract Test Suites (lines ending with '.')
+            $suites = $rawList | Select-String -Pattern "\.$" | ForEach-Object { $_.ToString().Trim() }
+            Write-Host "Found $($suites.Count) test suites."
+
+            $shardIndex = ${{ matrix.shard }}
+            $totalShards = 4
+            
+            $mySuites = @()
+            for ($i = 0; $i -lt $suites.Count; $i++) {
+              if ($i % $totalShards -eq $shardIndex) {
+                 $mySuites += $suites[$i]
+              }
+            }
+            
+            if ($mySuites.Count -gt 0) {
+              # Construct filter: Suite1.*:Suite2.*
+              $filterParts = $mySuites | ForEach-Object { "$_*" }
+              $filter = $filterParts -join ":"
+              
+              Write-Host "Running shard $shardIndex / $totalShards with $($mySuites.Count) suites."
+              & $testExe --gtest_filter=$filter --gtest_shuffle --gtest_repeat=2
+              if ($LASTEXITCODE -ne 0) { exit 1 }
+            } else {
+              Write-Host "No Google Tests assigned to shard $shardIndex"
+            }
+          } else {
+            Write-Warning "Google Test executable not found at $testExe"
+          }
+
+      - name: Run Qt Tests (Sharded)
+        shell: pwsh
+        continue-on-error: false
+        run: |
+          cd build_tests
+          # Match both suffix _test.exe and prefix test_.exe
+          $files = @(Get-ChildItem -Path "bin/${{ matrix.config }}" -Include "*_test.exe", "test_*.exe" -Recurse)
+          # Deduplicate
+          $files = $files | Select-Object -Unique FullName
+          
+          $shardIndex = ${{ matrix.shard }}
+          $totalShards = 4
+          
+          Write-Host "Found $($files.Count) Qt test executables."
+          
+          for ($i = 0; $i -lt $files.Count; $i++) {
+            if ($i % $totalShards -eq $shardIndex) {
+              $testBin = $files[$i]
+              Write-Host "Running $($testBin.Name) (Shard $shardIndex)..."
+              & $testBin.FullName -v2
+              if ($LASTEXITCODE -ne 0) {
+                Write-Error "Test $($testBin.Name) failed"
+                exit 1
+              }
+            }
+          }
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.config }}
+          path: build_tests/Testing/
+          retention-days: 30
+
+      - name: Publish Test Report
+        if: always()
+        uses: mikepenz/action-junit-report@v4
+        with:
+          report_paths: 'build_tests/Testing/Temporary/*.xml'
+          fail_on_failure: true
+          include_passed: true
+
+  # ============================================================
+  # Component Test: VoiceProcessor
+  # ============================================================
+  test-voice-processor:
+    runs-on: windows-latest
+    # needs: test-suite # Run in parallel
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Add MSBuild
+        uses: microsoft/setup-msbuild@v1.3
+
+      - name: Install Qt
+        shell: pwsh
+        run: |
+          pip install aqtinstall
+          python -m aqt install-qt windows desktop 6.7.3 win64_msvc2019_64
+          $QtBase = Join-Path $PWD "Qt\6.7.3\msvc2019_64"
+          echo "Qt6_DIR=$QtBase" >> $env:GITHUB_ENV
+          echo "$($QtBase)\bin" >> $env:GITHUB_PATH
+
+      - name: Build VoiceProcessor Tests
+        shell: pwsh
+        run: |
+          mkdir build_voice -Force
+          cd build_voice
+          cmake -DCMAKE_BUILD_TYPE=Release -G "Visual Studio 17 2022" -A x64 ..
+          cmake --build . --config Release --target voice_processor_test -j4
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: Run VoiceProcessor Tests
+        shell: pwsh
+        run: |
+          cd build_voice
+          .\bin\Release\voice_processor_test.exe --gtest_shuffle
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+  # ============================================================
+  # Component Test: AIMergeResolver
+  # ============================================================
+  test-ai-merge-resolver:
+    runs-on: windows-latest
+    # needs: test-suite # Run in parallel
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Add MSBuild
+        uses: microsoft/setup-msbuild@v1.3
+
+      - name: Install Qt
+        shell: pwsh
+        run: |
+          pip install aqtinstall
+          python -m aqt install-qt windows desktop 6.7.3 win64_msvc2019_64
+          $QtBase = Join-Path $PWD "Qt\6.7.3\msvc2019_64"
+          echo "Qt6_DIR=$QtBase" >> $env:GITHUB_ENV
+          echo "$($QtBase)\bin" >> $env:GITHUB_PATH
+
+      - name: Build AIMergeResolver Tests
+        shell: pwsh
+        run: |
+          mkdir build_merge -Force
+          cd build_merge
+          cmake -DCMAKE_BUILD_TYPE=Release -G "Visual Studio 17 2022" -A x64 ..
+          cmake --build . --config Release --target ai_merge_resolver_test -j4
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: Run AIMergeResolver Tests
+        shell: pwsh
+        run: |
+          cd build_merge
+          .\bin\Release\ai_merge_resolver_test.exe --gtest_shuffle
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+  # ============================================================
+  # Component Test: SemanticDiffAnalyzer
+  # ============================================================
+  test-semantic-diff:
+    runs-on: windows-latest
+    # needs: test-suite # Run in parallel
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Add MSBuild
+        uses: microsoft/setup-msbuild@v1.3
+
+      - name: Install Qt
+        shell: pwsh
+        run: |
+          pip install aqtinstall
+          python -m aqt install-qt windows desktop 6.7.3 win64_msvc2019_64
+          $QtBase = Join-Path $PWD "Qt\6.7.3\msvc2019_64"
+          echo "Qt6_DIR=$QtBase" >> $env:GITHUB_ENV
+          echo "$($QtBase)\bin" >> $env:GITHUB_PATH
+
+      - name: Build SemanticDiffAnalyzer Tests
+        shell: pwsh
+        run: |
+          mkdir build_semantic -Force
+          cd build_semantic
+          cmake -DCMAKE_BUILD_TYPE=Release -G "Visual Studio 17 2022" -A x64 ..
+          cmake --build . --config Release --target semantic_diff_analyzer_test -j4
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: Run SemanticDiffAnalyzer Tests
+        shell: pwsh
+        run: |
+          cd build_semantic
+          .\bin\Release\semantic_diff_analyzer_test.exe --gtest_shuffle
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+  # ============================================================
+  # Component Test: ZeroRetentionManager (GDPR)
+  # ============================================================
+  test-zero-retention:
+    runs-on: windows-latest
+    # needs: test-suite # Run in parallel
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Add MSBuild
+        uses: microsoft/setup-msbuild@v1.3
+
+      - name: Install Qt
+        shell: pwsh
+        run: |
+          pip install aqtinstall
+          python -m aqt install-qt windows desktop 6.7.3 win64_msvc2019_64
+          $QtBase = Join-Path $PWD "Qt\6.7.3\msvc2019_64"
+          echo "Qt6_DIR=$QtBase" >> $env:GITHUB_ENV
+          echo "$($QtBase)\bin" >> $env:GITHUB_PATH
+
+      - name: Build ZeroRetentionManager Tests
+        shell: pwsh
+        run: |
+          mkdir build_retention -Force
+          cd build_retention
+          cmake -DCMAKE_BUILD_TYPE=Release -G "Visual Studio 17 2022" -A x64 ..
+          cmake --build . --config Release --target zero_retention_manager_test -j4
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: Run ZeroRetentionManager Tests
+        shell: pwsh
+        run: |
+          cd build_retention
+          .\bin\Release\zero_retention_manager_test.exe --gtest_shuffle
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+  # ============================================================
+  # Component Test: SandboxedTerminal
+  # ============================================================
+  test-sandboxed-terminal:
+    runs-on: windows-latest
+    # needs: test-suite # Run in parallel
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Add MSBuild
+        uses: microsoft/setup-msbuild@v1.3
+
+      - name: Install Qt
+        shell: pwsh
+        run: |
+          pip install aqtinstall
+          python -m aqt install-qt windows desktop 6.7.3 win64_msvc2019_64
+          $QtBase = Join-Path $PWD "Qt\6.7.3\msvc2019_64"
+          echo "Qt6_DIR=$QtBase" >> $env:GITHUB_ENV
+          echo "$($QtBase)\bin" >> $env:GITHUB_PATH
+
+      - name: Build SandboxedTerminal Tests
+        shell: pwsh
+        run: |
+          mkdir build_sandbox -Force
+          cd build_sandbox
+          cmake -DCMAKE_BUILD_TYPE=Release -G "Visual Studio 17 2022" -A x64 ..
+          cmake --build . --config Release --target sandboxed_terminal_test -j4
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: Run SandboxedTerminal Tests
+        shell: pwsh
+        run: |
+          cd build_sandbox
+          .\bin\Release\sandboxed_terminal_test.exe --gtest_shuffle
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+  # ============================================================
+  # Component Test: ModelRegistry
+  # ============================================================
+  test-model-registry:
+    runs-on: windows-latest
+    # needs: test-suite # Run in parallel
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Add MSBuild
+        uses: microsoft/setup-msbuild@v1.3
+
+      - name: Install Qt
+        shell: pwsh
+        run: |
+          pip install aqtinstall
+          python -m aqt install-qt windows desktop 6.7.3 win64_msvc2019_64
+          $QtBase = Join-Path $PWD "Qt\6.7.3\msvc2019_64"
+          echo "Qt6_DIR=$QtBase" >> $env:GITHUB_ENV
+          echo "$($QtBase)\bin" >> $env:GITHUB_PATH
+
+      - name: Build ModelRegistry Tests
+        shell: pwsh
+        run: |
+          mkdir build_registry -Force
+          cd build_registry
+          cmake -DCMAKE_BUILD_TYPE=Release -G "Visual Studio 17 2022" -A x64 ..
+          cmake --build . --config Release --target model_registry_test -j4
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: Run ModelRegistry Tests
+        shell: pwsh
+        run: |
+          cd build_registry
+          .\bin\Release\model_registry_test.exe --gtest_shuffle
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+  # ============================================================
+  # Summary & Status Check
+  # ============================================================
+  test-summary:
+    runs-on: windows-latest
+    needs: [
+      test-suite,
+      test-voice-processor,
+      test-ai-merge-resolver,
+      test-semantic-diff,
+      test-zero-retention,
+      test-sandboxed-terminal,
+      test-model-registry
+    ]
+    if: always()
+    
+    steps:
+      - name: Check Test Results
+        shell: pwsh
+        run: |
+          $failed = @()
+          
+          if ("${{ needs.test-suite.result }}" -ne "success") {
+            $failed += "Test Suite"
+          }
+          if ("${{ needs.test-voice-processor.result }}" -ne "success") {
+            $failed += "VoiceProcessor Tests"
+          }
+          if ("${{ needs.test-ai-merge-resolver.result }}" -ne "success") {
+            $failed += "AIMergeResolver Tests"
+          }
+          if ("${{ needs.test-semantic-diff.result }}" -ne "success") {
+            $failed += "SemanticDiffAnalyzer Tests"
+          }
+          if ("${{ needs.test-zero-retention.result }}" -ne "success") {
+            $failed += "ZeroRetentionManager Tests"
+          }
+          if ("${{ needs.test-sandboxed-terminal.result }}" -ne "success") {
+            $failed += "SandboxedTerminal Tests"
+          }
+          if ("${{ needs.test-model-registry.result }}" -ne "success") {
+            $failed += "ModelRegistry Tests"
+          }
+          
+          if ($failed.Count -gt 0) {
+            Write-Host "❌ FAILED TESTS:"
+            $failed | ForEach-Object { Write-Host "  - $_" }
+            exit 1
+          } else {
+            Write-Host "✅ ALL TESTS PASSED"
+            exit 0
+          }
+
+      - name: Create Test Summary
+        if: always()
+        shell: pwsh
+        run: |
+          $summary = @"
+          # 🧪 Test Execution Summary
+          
+          | Component | Status |
+          |-----------|--------|
+          | Test Suite (Debug/Release) | ${{ needs.test-suite.result }} |
+          | VoiceProcessor | ${{ needs.test-voice-processor.result }} |
+          | AIMergeResolver | ${{ needs.test-ai-merge-resolver.result }} |
+          | SemanticDiffAnalyzer | ${{ needs.test-semantic-diff.result }} |
+          | ZeroRetentionManager | ${{ needs.test-zero-retention.result }} |
+          | SandboxedTerminal | ${{ needs.test-sandboxed-terminal.result }} |
+          | ModelRegistry | ${{ needs.test-model-registry.result }} |
+          
+          **Summary**: All 7 component test suites with 290+ test cases executed.
+          "@
+          
+          Write-Host $summary

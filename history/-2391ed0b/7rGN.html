@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carmilla Encryption System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: #e8e8e8;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px 0;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4);
+            background-size: 400% 400%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradient 3s ease infinite;
+            margin-bottom: 10px;
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            color: #b8c5d6;
+            margin-bottom: 20px;
+        }
+
+        .tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #2a2d3a;
+        }
+
+        .tab {
+            padding: 15px 30px;
+            background: none;
+            border: none;
+            color: #b8c5d6;
+            font-size: 1rem;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            color: #4ecdc4;
+            border-bottom-color: #4ecdc4;
+        }
+
+        .tab:hover {
+            color: #4ecdc4;
+            background: rgba(78, 205, 196, 0.1);
+        }
+
+        .tab-content {
+            display: none;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #4ecdc4;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #2a2d3a;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #e8e8e8;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #4ecdc4;
+            box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.2);
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(78, 205, 196, 0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #e8e8e8;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            border-left: 4px solid #4ecdc4;
+        }
+
+        .result.error {
+            border-left-color: #ff6b6b;
+            background: rgba(255, 107, 107, 0.1);
+        }
+
+        .result pre {
+            white-space: pre-wrap;
+            word-break: break-all;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: #e8e8e8;
+        }
+
+        .targets-container {
+            border: 2px dashed #2a2d3a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .target-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .target-item select,
+        .target-item input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #2a2d3a;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #e8e8e8;
+        }
+
+        .remove-target {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+
+        .add-target {
+            background: #4ecdc4;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 15px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .patch-config {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .patch-list {
+            border: 2px dashed #2a2d3a;
+            border-radius: 8px;
+            padding: 15px;
+            min-height: 100px;
+        }
+
+        .patch-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .patch-item input {
+            flex: 1;
+            margin-right: 10px;
+        }
+
+        .remove-patch {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .add-patch {
+            background: #4ecdc4;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 12px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 20px;
+            background: rgba(78, 205, 196, 0.9);
+            color: white;
+            font-weight: 600;
+            display: none;
+            z-index: 1000;
+        }
+
+        .status.error {
+            background: rgba(255, 107, 107, 0.9);
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #4ecdc4;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card h3 {
+            color: #4ecdc4;
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .tabs {
+                flex-wrap: wrap;
+            }
+
+            .tab {
+                padding: 10px 15px;
+                font-size: 0.9rem;
+            }
+
+            .patch-config {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 Carmilla Encryption System</h1>
+            <p>Advanced OpenSSL encryption with in-memory patching capabilities</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('basic')">Basic Encryption</button>
+            <button class="tab" onclick="showTab('selective')">Selective Encryption</button>
+            <button class="tab" onclick="showTab('packaging')">Packaging</button>
+            <button class="tab" onclick="showTab('patching')">Car(); Patching</button>
+            <button class="tab" onclick="showTab('health')">System Health</button>
+        </div>
+
+        <div id="basic" class="tab-content active">
+            <div class="grid">
+                <div class="card">
+                    <h3>Encrypt Data</h3>
+                    <div class="form-group">
+                        <label for="encrypt-data">Data to Encrypt:</label>
+                        <textarea id="encrypt-data" placeholder="Enter data to encrypt..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="encrypt-passphrase">Passphrase:</label>
+                        <input type="password" id="encrypt-passphrase" placeholder="Enter encryption passphrase">
+                    </div>
+                    <button class="btn btn-primary" onclick="encryptData()">Encrypt</button>
+                    <div id="encrypt-result" class="result" style="display: none;"></div>
+                </div>
+
+                <div class="card">
+                    <h3>Decrypt Data</h3>
+                    <div class="form-group">
+                        <label for="decrypt-data">Encrypted Data:</label>
+                        <textarea id="decrypt-data" placeholder="Paste encrypted data here..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="decrypt-passphrase">Passphrase:</label>
+                        <input type="password" id="decrypt-passphrase" placeholder="Enter decryption passphrase">
+                    </div>
+                    <button class="btn btn-primary" onclick="decryptData()">Decrypt</button>
+                    <div id="decrypt-result" class="result" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="selective" class="tab-content">
+            <div class="card">
+                <h3>Selective Encryption</h3>
+                <div class="form-group">
+                    <label>Passphrase:</label>
+                    <input type="password" id="selective-passphrase" placeholder="Enter passphrase for all targets">
+                </div>
+
+                <div class="targets-container">
+                    <h4>Encryption Targets</h4>
+                    <div id="targets-list"></div>
+                    <button class="add-target" onclick="addTarget()">+ Add Target</button>
+                </div>
+
+                <button class="btn btn-primary" onclick="processSelective()">Process Selective Encryption</button>
+                <div id="selective-result" class="result" style="display: none;"></div>
+            </div>
+        </div>
+
+        <div id="packaging" class="tab-content">
+            <div class="grid">
+                <div class="card">
+                    <h3>Encrypt & Package</h3>
+                    <div class="form-group">
+                        <label for="pack-data">Data to Package:</label>
+                        <textarea id="pack-data" placeholder="Enter data to encrypt and package..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="pack-passphrase">Passphrase:</label>
+                        <input type="password" id="pack-passphrase" placeholder="Enter passphrase">
+                    </div>
+                    <div class="form-group">
+                        <label for="pack-hint">Passphrase Hint:</label>
+                        <input type="text" id="pack-hint" placeholder="Optional hint">
+                    </div>
+                    <button class="btn btn-primary" onclick="encryptAndPack()">Encrypt & Pack</button>
+                    <div id="pack-result" class="result" style="display: none;"></div>
+                </div>
+
+                <div class="card">
+                    <h3>Unpack & Decrypt</h3>
+                    <div class="form-group">
+                        <label for="unpack-data">Packaged Data:</label>
+                        <textarea id="unpack-data" placeholder="Paste packaged data here..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="unpack-passphrase">Passphrase:</label>
+                        <input type="password" id="unpack-passphrase" placeholder="Enter passphrase">
+                    </div>
+                    <button class="btn btn-primary" onclick="unpackAndDecrypt()">Unpack & Decrypt</button>
+                    <div id="unpack-result" class="result" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="patching" class="tab-content">
+            <div class="card">
+                <h3>Car(); In-Memory Patching System</h3>
+
+                <div class="form-group">
+                    <label for="patch-file">File Path:</label>
+                    <input type="text" id="patch-file" placeholder="Path to file with Car(); markers">
+                </div>
+
+                <div class="patch-config">
+                    <div>
+                        <h4>Patches</h4>
+                        <div class="patch-list" id="patches-list"></div>
+                        <button class="add-patch" onclick="addPatch()">+ Add Patch</button>
+                    </div>
+
+                    <div>
+                        <h4>Configuration</h4>
+                        <div class="form-group">
+                            <label><input type="checkbox" id="randomize-order"> Randomize Patch Order</label>
+                        </div>
+                        <div class="form-group">
+                            <label><input type="checkbox" id="add-fake-patches"> Add Fake Patches</label>
+                        </div>
+                        <div class="form-group">
+                            <label><input type="checkbox" id="preserve-original"> Preserve Original</label>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" onclick="applyPatches()">Apply Patches</button>
+                <div id="patch-result" class="result" style="display: none;"></div>
+            </div>
+        </div>
+
+        <div id="health" class="tab-content">
+            <div class="card">
+                <h3>System Health Check</h3>
+                <button class="btn btn-primary" onclick="checkHealth()">Check System Health</button>
+                <div id="health-result" class="result" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="status" class="status"></div>
+
+    <script>
+        let targets = [];
+        let patches = [];
+
+        function showTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            document.querySelector(`[onclick="showTab('${tabName}')"]`).classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+        }
+
+        function showStatus(message, isError = false) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.classList.toggle('error', isError);
+            status.style.display = 'block';
+            setTimeout(() => status.style.display = 'none', 3000);
+        }
+
+        async function apiCall(endpoint, data) {
+            try {
+                const response = await fetch(`/api/${endpoint}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.message || 'API call failed');
+                }
+
+                return result;
+            } catch (error) {
+                throw new Error(error.message);
+            }
+        }
+
+        async function encryptData() {
+            const data = document.getElementById('encrypt-data').value;
+            const passphrase = document.getElementById('encrypt-passphrase').value;
+
+            if (!data || !passphrase) {
+                showStatus('Please fill in all fields', true);
+                return;
+            }
+
+            try {
+                showStatus('Encrypting...');
+                const result = await apiCall('encrypt', { data, passphrase });
+                document.getElementById('encrypt-result').innerHTML = `<pre>${result.encrypted}</pre>`;
+                document.getElementById('encrypt-result').style.display = 'block';
+                showStatus('Encryption successful!');
+            } catch (error) {
+                document.getElementById('encrypt-result').innerHTML = `<pre>Error: ${error.message}</pre>`;
+                document.getElementById('encrypt-result').classList.add('error');
+                document.getElementById('encrypt-result').style.display = 'block';
+                showStatus('Encryption failed', true);
+            }
+        }
+
+        async function decryptData() {
+            const encrypted = document.getElementById('decrypt-data').value;
+            const passphrase = document.getElementById('decrypt-passphrase').value;
+
+            if (!encrypted || !passphrase) {
+                showStatus('Please fill in all fields', true);
+                return;
+            }
+
+            try {
+                showStatus('Decrypting...');
+                const result = await apiCall('decrypt', { encrypted, passphrase });
+                document.getElementById('decrypt-result').innerHTML = `<pre>${result.decrypted}</pre>`;
+                document.getElementById('decrypt-result').style.display = 'block';
+                showStatus('Decryption successful!');
+            } catch (error) {
+                document.getElementById('decrypt-result').innerHTML = `<pre>Error: ${error.message}</pre>`;
+                document.getElementById('decrypt-result').classList.add('error');
+                document.getElementById('decrypt-result').style.display = 'block';
+                showStatus('Decryption failed', true);
+            }
+        }
+
+        function addTarget() {
+            const target = {
+                id: Date.now(),
+                type: 'obj',
+                key: '',
+                data: '',
+                intent: 'encrypt'
+            };
+            targets.push(target);
+            renderTargets();
+        }
+
+        function removeTarget(id) {
+            targets = targets.filter(t => t.id !== id);
+            renderTargets();
+        }
+
+        function updateTarget(id, field, value) {
+            const target = targets.find(t => t.id === id);
+            if (target) {
+                target[field] = value;
+            }
+        }
+
+        function renderTargets() {
+            const container = document.getElementById('targets-list');
+            container.innerHTML = targets.map(target => `
+                <div class="target-item">
+                    <select onchange="updateTarget(${target.id}, 'type', this.value)">
+                        <option value="obj" ${target.type === 'obj' ? 'selected' : ''}>Object</option>
+                        <option value="file" ${target.type === 'file' ? 'selected' : ''}>File</option>
+                        <option value="buffer" ${target.type === 'buffer' ? 'selected' : ''}>Buffer</option>
+                    </select>
+                    <input type="text" placeholder="Key/Path" value="${target.key}" onchange="updateTarget(${target.id}, 'key', this.value)">
+                    <input type="text" placeholder="Data" value="${target.data}" onchange="updateTarget(${target.id}, 'data', this.value)">
+                    <select onchange="updateTarget(${target.id}, 'intent', this.value)">
+                        <option value="encrypt" ${target.intent === 'encrypt' ? 'selected' : ''}>Encrypt</option>
+                        <option value="do-not-encrypt" ${target.intent === 'do-not-encrypt' ? 'selected' : ''}>Do Not Encrypt</option>
+                        <option value="cannot-encrypt" ${target.intent === 'cannot-encrypt' ? 'selected' : ''}>Cannot Encrypt</option>
+                    </select>
+                    <button class="remove-target" onclick="removeTarget(${target.id})">Remove</button>
+                </div>
+            `).join('');
+        }
+
+        async function processSelective() {
+            const passphrase = document.getElementById('selective-passphrase').value;
+
+            if (!passphrase || targets.length === 0) {
+                showStatus('Please provide passphrase and add at least one target', true);
+                return;
+            }
+
+            try {
+                showStatus('Processing selective encryption...');
+                const result = await apiCall('encrypt-selective', { targets, passphrase });
+                document.getElementById('selective-result').innerHTML = `
+                    <h4>Results Summary:</h4>
+                    <p>Total: ${result.summary.total}, Encrypted: ${result.summary.encrypted}, Failed: ${result.summary.failed}, Skipped: ${result.summary.skipped}</p>
+                    <pre>${JSON.stringify(result.results, null, 2)}</pre>
+                `;
+                document.getElementById('selective-result').style.display = 'block';
+                showStatus('Selective encryption completed!');
+            } catch (error) {
+                document.getElementById('selective-result').innerHTML = `<pre>Error: ${error.message}</pre>`;
+                document.getElementById('selective-result').classList.add('error');
+                document.getElementById('selective-result').style.display = 'block';
+                showStatus('Selective encryption failed', true);
+            }
+        }
+
+        async function encryptAndPack() {
+            const data = document.getElementById('pack-data').value;
+            const passphrase = document.getElementById('pack-passphrase').value;
+            const passphrase_hint = document.getElementById('pack-hint').value;
+
+            if (!data || !passphrase) {
+                showStatus('Please fill in data and passphrase', true);
+                return;
+            }
+
+            try {
+                showStatus('Encrypting and packaging...');
+                const result = await apiCall('encrypt-and-pack', {
+                    data,
+                    passphrase,
+                    options: { passphrase_hint }
+                });
+                document.getElementById('pack-result').innerHTML = `<pre>${result.packaged}</pre>`;
+                document.getElementById('pack-result').style.display = 'block';
+                showStatus('Packaging successful!');
+            } catch (error) {
+                document.getElementById('pack-result').innerHTML = `<pre>Error: ${error.message}</pre>`;
+                document.getElementById('pack-result').classList.add('error');
+                document.getElementById('pack-result').style.display = 'block';
+                showStatus('Packaging failed', true);
+            }
+        }
+
+        async function unpackAndDecrypt() {
+            const packaged = document.getElementById('unpack-data').value;
+            const passphrase = document.getElementById('unpack-passphrase').value;
+
+            if (!packaged || !passphrase) {
+                showStatus('Please fill in packaged data and passphrase', true);
+                return;
+            }
+
+            try {
+                showStatus('Unpacking and decrypting...');
+                const result = await apiCall('unpack-and-decrypt', { packaged, passphrase });
+                document.getElementById('unpack-result').innerHTML = `<pre>${result.decrypted}</pre>`;
+                document.getElementById('unpack-result').style.display = 'block';
+                showStatus('Unpacking successful!');
+            } catch (error) {
+                document.getElementById('unpack-result').innerHTML = `<pre>Error: ${error.message}</pre>`;
+                document.getElementById('unpack-result').classList.add('error');
+                document.getElementById('unpack-result').style.display = 'block';
+                showStatus('Unpacking failed', true);
+            }
+        }
+
+        function addPatch() {
+            patches.push('');
+            renderPatches();
+        }
+
+        function removePatch(index) {
+            patches.splice(index, 1);
+            renderPatches();
+        }
+
+        function updatePatch(index, value) {
+            patches[index] = value;
+        }
+
+        function renderPatches() {
+            const container = document.getElementById('patches-list');
+            container.innerHTML = patches.map((patch, index) => `
+                <div class="patch-item">
+                    <input type="text" placeholder="Patch code..." value="${patch}" onchange="updatePatch(${index}, this.value)">
+                    <button class="remove-patch" onclick="removePatch(${index})">Remove</button>
+                </div>
+            `).join('');
+        }
+
+        async function applyPatches() {
+            const filePath = document.getElementById('patch-file').value;
+            const randomizeOrder = document.getElementById('randomize-order').checked;
+            const addFakePatches = document.getElementById('add-fake-patches').checked;
+            const preserveOriginal = document.getElementById('preserve-original').checked;
+
+            if (!filePath || patches.length === 0) {
+                showStatus('Please provide file path and add at least one patch', true);
+                return;
+            }
+
+            try {
+                showStatus('Applying patches...');
+                const result = await apiCall('patch/apply', {
+                    filePath,
+                    config: {
+                        patches: patches.filter(p => p.trim()),
+                        randomizeOrder,
+                        addFakePatches,
+                        preserveOriginal
+                    }
+                });
+                document.getElementById('patch-result').innerHTML = `
+                    <h4>Patch Results:</h4>
+                    <p>Patches Applied: ${result.patchesApplied}</p>
+                    <pre>${result.patchedFile}</pre>
+                `;
+                document.getElementById('patch-result').style.display = 'block';
+                showStatus('Patches applied successfully!');
+            } catch (error) {
+                document.getElementById('patch-result').innerHTML = `<pre>Error: ${error.message}</pre>`;
+                document.getElementById('patch-result').classList.add('error');
+                document.getElementById('patch-result').style.display = 'block';
+                showStatus('Patch application failed', true);
+            }
+        }
+
+        async function checkHealth() {
+            try {
+                showStatus('Checking system health...');
+                const response = await fetch('/api/health');
+                const result = await response.json();
+                document.getElementById('health-result').innerHTML = `
+                    <h4>System Status: ${result.status}</h4>
+                    <p>Service: ${result.service}</p>
+                    <p>Version: ${result.version}</p>
+                    <p>Features: ${result.features.join(', ')}</p>
+                    <pre>${JSON.stringify(result, null, 2)}</pre>
+                `;
+                document.getElementById('health-result').style.display = 'block';
+                showStatus('Health check completed!');
+            } catch (error) {
+                document.getElementById('health-result').innerHTML = `<pre>Error: ${error.message}</pre>`;
+                document.getElementById('health-result').classList.add('error');
+                document.getElementById('health-result').style.display = 'block';
+                showStatus('Health check failed', true);
+            }
+        }
+
+        // Initialize
+        addTarget();
+        addPatch();
+    </script>
+</body>
+</html>

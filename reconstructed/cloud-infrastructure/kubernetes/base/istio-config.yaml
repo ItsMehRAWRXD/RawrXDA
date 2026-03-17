@@ -1,0 +1,226 @@
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: api-gateway
+  namespace: production
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "api.example.com"
+        - "*.api.example.com"
+    - port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      tls:
+        mode: SIMPLE
+        credentialName: api-tls-cert
+      hosts:
+        - "api.example.com"
+        - "*.api.example.com"
+    - port:
+        number: 50051
+        name: grpc
+        protocol: GRPC
+      hosts:
+        - "grpc.api.example.com"
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: api-vs
+  namespace: production
+spec:
+  hosts:
+    - api.example.com
+    - api-v1.example.com
+    - api-v2.example.com
+  gateways:
+    - api-gateway
+  http:
+    - match:
+        - uri:
+            prefix: "/api/v1"
+      route:
+        - destination:
+            host: api-service
+            port:
+              number: 8080
+            subset: v1
+          weight: 100
+      timeout: 30s
+      retries:
+        attempts: 3
+        perTryTimeout: 10s
+      corsPolicy:
+        allowOrigins:
+          - exact: "https://app.example.com"
+          - exact: "https://admin.example.com"
+        allowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - OPTIONS
+        allowHeaders:
+          - "*"
+        maxAge: "24h"
+    - match:
+        - uri:
+            prefix: "/api/v2"
+      route:
+        - destination:
+            host: api-service
+            port:
+              number: 8080
+            subset: v2
+          weight: 90
+        - destination:
+            host: api-service
+            port:
+              number: 8080
+            subset: v1
+          weight: 10
+      timeout: 30s
+      retries:
+        attempts: 3
+        perTryTimeout: 10s
+    - match:
+        - uri:
+            prefix: "/health"
+      route:
+        - destination:
+            host: api-service
+            port:
+              number: 8080
+      timeout: 5s
+    - route:
+        - destination:
+            host: api-service
+            port:
+              number: 8080
+          weight: 100
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: api-grpc-vs
+  namespace: production
+spec:
+  hosts:
+    - grpc.api.example.com
+  gateways:
+    - api-gateway
+  http:
+    - match:
+        - uri:
+            prefix: "/"
+      route:
+        - destination:
+            host: api-service
+            port:
+              number: 50051
+          weight: 100
+      timeout: 60s
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: api-dr
+  namespace: production
+spec:
+  host: api-service
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 1000
+      http:
+        http1MaxPendingRequests: 100
+        http2MaxRequests: 1000
+        maxRequestsPerConnection: 2
+    loadBalancer:
+      simple: ROUND_ROBIN
+      consistentHash:
+        httpCookie:
+          name: session-cookie
+          ttl: 3600s
+    outlierDetection:
+      consecutive5xxErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+      minRequestVolume: 50
+      splitExternalLocalOriginErrors: true
+  subsets:
+    - name: v1
+      labels:
+        version: v1
+    - name: v2
+      labels:
+        version: v2
+---
+apiVersion: networking.istio.io/v1beta1
+kind: RequestAuthentication
+metadata:
+  name: api-jwt-auth
+  namespace: production
+spec:
+  selector:
+    matchLabels:
+      app: api-server
+  jwtRules:
+    - issuer: "https://auth.example.com"
+      jwksUri: "https://auth.example.com/.well-known/jwks.json"
+      audiences: "api.example.com"
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: api-authz
+  namespace: production
+spec:
+  selector:
+    matchLabels:
+      app: api-server
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/production/sa/api-server"]
+      to:
+        - operation:
+            methods: ["GET"]
+            paths: ["/health", "/metrics"]
+    - from:
+        - source:
+            requestPrincipals: ["https://auth.example.com/user"]
+      to:
+        - operation:
+            methods: ["*"]
+            paths: ["/api/*"]
+---
+apiVersion: networking.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: api-mTLS
+  namespace: production
+spec:
+  mtls:
+    mode: STRICT
+---
+apiVersion: networking.istio.io/v1beta1
+kind: ProxyConfig
+metadata:
+  name: api-proxy-config
+  namespace: production
+spec:
+  concurrency: 4
+  environmentVariables:
+    TRACE_PAYLOAD: "true"

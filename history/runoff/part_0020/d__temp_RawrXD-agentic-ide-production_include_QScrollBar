@@ -1,0 +1,12 @@
+#pragma once
+#include "QWidget"
+#include "../src/qt_stubs.h"
+class QScrollBar : public QWidget {
+public:
+    QScrollBar(QWidget* parent = nullptr) : QWidget(parent) {}
+    int value() const { return m_value; }
+    void setValue(int v) { m_value = v; }
+    void valueChanged(int) {}
+private:
+    int m_value = 0;
+};

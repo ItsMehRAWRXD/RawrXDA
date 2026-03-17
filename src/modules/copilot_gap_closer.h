@@ -107,6 +107,13 @@ extern "C" {
     int64_t Crdt_GetDocLength(void* doc);
     int64_t Crdt_GetLamport(void* doc);
 
+    // ── Task Ingestion & Dispatcher ──
+    // Stubbed in copilot_gap_closer.cpp because implementaiton is in monolithic/tasks.asm 
+    // which uses different naming conventions.
+    // int32_t Task_SubmitRequest(const char* taskDescription, const void** attachments, int32_t attachmentCount);
+    // int32_t Task_GetStatus(int32_t taskId);
+    // int32_t Task_Cancel(int32_t taskId);
+
     extern void*    g_CrdtLocalDoc;
     extern int32_t  g_CrdtPeerCount;
     extern GapCloserPerfCounter g_CrdtPerf;
@@ -353,8 +360,33 @@ public:
     std::string GetStatusString() const;
 };
 
+extern "C" {
+    int32_t Task_SubmitRequest(const char* task, const void** files, int32_t count);
+    int32_t Task_GetStatus(int32_t taskId);
+    int32_t Task_Cancel(int32_t taskId);
+}
+
 // ============================================================================
-// CopilotGapCloser — Unified coordinator for all 4 subsystems
+// TaskDispatcher — C++ wrapper for general AI task ingestion
+// ============================================================================
+class TaskDispatcher {
+public:
+    TaskDispatcher()  = default;
+    ~TaskDispatcher() = default;
+
+    /// Submit a generalized task (e.g. "audit project", "refactor code", "explain this")
+    /// Returns a unique Task ID (> 0) on success, or 0 on failure.
+    int32_t Submit(const std::string& task, const std::vector<std::string>& files = {});
+
+    /// Get task status code (Ready, Processing, Failed, Completed).
+    int32_t GetStatus(int32_t taskId);
+
+    /// Cancel a pending or running task.
+    bool Cancel(int32_t taskId);
+};
+
+// ============================================================================
+// CopilotGapCloser — Unified coordinator for all 5 subsystems
 // ============================================================================
 class CopilotGapCloser {
 public:
@@ -365,7 +397,7 @@ public:
     CopilotGapCloser& operator=(const CopilotGapCloser&) = delete;
 
     /// Initialize all subsystems.
-    /// Returns number of subsystems successfully initialized (0..4).
+    /// Returns number of subsystems successfully initialized (0..5).
     int Initialize();
 
     /// Access individual subsystems.
@@ -373,8 +405,9 @@ public:
     MultiFileComposer& GetComposer() { return m_composer; }
     CrdtEngine&        GetCrdt()     { return m_crdt; }
     GitContextProvider& GetGitCtx()  { return m_gitCtx; }
+    TaskDispatcher&    GetDispatcher() { return m_dispatcher; }
 
-    /// Get performance counters for all 3 measured subsystems.
+    /// Get performance counters for measured subsystems.
     void GetPerfCounters(GapCloserPerfCounter& vecDb,
                          GapCloserPerfCounter& composer,
                          GapCloserPerfCounter& crdt) const;
@@ -393,6 +426,7 @@ private:
     MultiFileComposer  m_composer;
     CrdtEngine         m_crdt;
     GitContextProvider m_gitCtx;
+    TaskDispatcher     m_dispatcher;
     int                m_initCount = 0;
 };
 

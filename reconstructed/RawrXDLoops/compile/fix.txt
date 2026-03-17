@@ -1,0 +1,13 @@
+# Compilation errors to fix:
+# Line 620: movss [rax], xmm0 - invalid operands
+# Lines 1916, 1967: undefined symbol g_KickPitch, g_SnarePitch
+
+# The undefined symbols issue:
+# These constants are in .data section but MASM can't find them during 1st pass
+# This happens when the .data section hasn't been fully parsed yet
+# Solution: Use intermediate storage or declare symbols as extern
+
+# For line 620: Use movd instead of movss for storing to memory
+# Or use a temporary xmm register strategy
+
+# For pitch constants: Declare them explicitly as public or check if they're after alignment directives

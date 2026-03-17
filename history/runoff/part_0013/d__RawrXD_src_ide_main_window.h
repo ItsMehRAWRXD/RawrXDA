@@ -1,0 +1,192 @@
+// ide_main_window.h - Main IDE Window (Pure C++ / Qt-Free)
+#ifndef IDE_MAIN_WINDOW_H
+#define IDE_MAIN_WINDOW_H
+
+#include <string>
+#include <memory>
+#include <vector>
+
+// Core Systems
+class AutonomousModelManager;
+class IntelligentCodebaseEngine;
+class AutonomousFeatureEngine;
+class HybridCloudManager;
+class ErrorRecoverySystem;
+class PerformanceMonitor;
+class ModelRouterAdapter;
+
+// Forward declares for data structures used in slots
+class AutonomousSuggestion;
+class SecurityIssue;
+class PerformanceOptimization;
+class GeneratedTest;
+class ErrorRecord;
+class SystemHealth;
+class MetricData;
+class PerformanceSnapshot;
+
+// Qt Forward Declares (for legacy/transition support)
+class QPlainTextEdit;
+class QTabWidget;
+class QTreeWidget;
+class QListWidget;
+class QFileDialog;
+class QMessageBox;
+
+// Widget Forward Declares
+class ModelRouterWidget;
+class CloudSettingsDialog;
+class MetricsDashboard;
+class ModelRouterConsole;
+class AutonomousSuggestionWidget;
+class SecurityAlertWidget;
+class OptimizationPanelWidget;
+
+class IDEMainWindow {
+public:
+    explicit IDEMainWindow();
+    ~IDEMainWindow();
+
+    void setupUI();
+
+public slots: // Using standard C++ but matching Qt slot signature style
+    void onNewFile();
+    void onOpenFile();
+    void onAnalyzeCodebase();
+    void onGenerateTests();
+    void onSecurityScan();
+    void onOptimizeCode();
+    void onSwitchModel();
+    void onCloudSettings();
+
+    // Model Router actions
+    void onOpenModelRouter();
+    void onShowModelDashboard();
+    void onOpenModelConsole();
+    void onSwitchCloudProvider();
+    void onConfigureApiKeys();
+    void onMonitorModelCost();
+
+    // Help menu actions
+    void onAbout();
+    void onDocumentation();
+
+    // Code editor events
+    void onCodeChanged();
+    void onCursorPositionChanged();
+
+    // Autonomous system slots
+    void onSuggestionGenerated(const AutonomousSuggestion& suggestion);
+    void onSecurityIssueDetected(const SecurityIssue& issue);
+    void onOptimizationFound(const PerformanceOptimization& optimization);
+    void onTestGenerated(const GeneratedTest& test);
+
+    // Error recovery slots
+    void onErrorRecorded(const ErrorRecord& error);
+    void onErrorRecovered(const std::string& errorId, bool success);
+    void onSystemHealthUpdated(const SystemHealth& health);
+
+    // Performance monitoring slots
+    void onMetricRecorded(const MetricData& metric);
+    void onThresholdViolation(const MetricData& metric, const std::string& severity);
+    void onSnapshotCaptured(const PerformanceSnapshot& snapshot);
+
+    // Model management slots
+    void onModelDownloadProgress(const std::string& modelId, int percentage, int64_t speed, int64_t eta);
+    void onModelDownloadCompleted(const std::string& modelId, bool success);
+    void onModelLoaded(const std::string& modelId);
+
+    // Cloud execution slots
+    void onHealthCheckCompleted();
+
+    // Model Router widget signals
+    void onModelRouterGenerationRequested(const std::string& prompt, const std::string& model);
+    void onModelRouterStatusUpdated(const std::string& status);
+    void onModelRouterErrorOccurred(const std::string& error);
+    void onModelRouterDashboardRequested();
+    void onModelRouterConsoleRequested();
+    void onModelRouterApiKeyEditRequested();
+
+    // Real-time code analysis
+    void analyzeCurrentCode();
+
+private:
+    void setupMenus();
+    void setupToolbars();
+    void setupDockWidgets();
+    void setupStatusBar();
+    void setupConnections();
+    void loadSettings();
+    void saveSettings();
+
+    std::string getCurrentLanguage() const;
+    std::string getCurrentFilePath() const;
+    void updateStatusBar();
+    void showMessage(const std::string& message, int timeout = 3000);
+
+    // Core systems
+    std::unique_ptr<AutonomousModelManager> modelManager;
+    std::unique_ptr<IntelligentCodebaseEngine> codebaseEngine;
+    std::unique_ptr<HybridCloudManager> cloudManager;
+    std::unique_ptr<AutonomousFeatureEngine> featureEngine;
+    std::unique_ptr<ErrorRecoverySystem> errorRecovery;
+    std::unique_ptr<PerformanceMonitor> performanceMonitor;
+    std::unique_ptr<ModelRouterAdapter> modelRouterAdapter;
+
+    // Model Router systems
+    ModelRouterWidget* modelRouterWidget;
+    void* modelRouterDock;
+    CloudSettingsDialog* cloudSettingsDialog;
+    MetricsDashboard* metricsDashboard;
+    void* metricsDashboardDock;
+    ModelRouterConsole* modelRouterConsole;
+    void* modelRouterConsoleDock;
+
+    // UI components
+    QPlainTextEdit* codeEditor;
+    QTabWidget* editorTabs;
+    
+    // Dock widgets
+    void* suggestionsDock;
+    void* securityDock;
+    void* optimizationDock;
+    void* fileExplorerDock;
+    void* outputDock;
+    void* metricsDock;
+
+    // Custom widgets
+    AutonomousSuggestionWidget* suggestionsWidget;
+    SecurityAlertWidget* securityWidget;
+    OptimizationPanelWidget* optimizationWidget;
+    QTreeWidget* fileExplorerWidget;
+    void* outputWidget;
+    QListWidget* metricsWidget;
+
+    // Status bar widgets
+    void* statusLabel;
+    void* languageLabel;
+    void* modelLabel;
+    void* healthLabel;
+    void* progressBar;
+
+    // Menus
+    void* fileMenu;
+    void* editMenu;
+    void* viewMenu;
+    void* toolsMenu;
+    void* helpMenu;
+
+    // Toolbars
+    void* mainToolbar;
+    void* aiToolbar;
+
+    // State
+    std::string currentFilePath;
+    std::string currentLanguage;
+    std::string activeModelId;
+    bool isAnalyzing;
+};
+
+#endif // IDE_MAIN_WINDOW_H
+
+

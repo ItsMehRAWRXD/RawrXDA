@@ -33,6 +33,10 @@
 
 namespace rawrxd::auth {
 
+// Forward declarations for static helpers defined at end of file
+static std::vector<uint8_t> dpapiCrypt(const std::vector<uint8_t>& in, bool encrypt);
+static std::string getMachineGuid();
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // KeyMetadata Implementation
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -316,8 +320,9 @@ void KeyStorage::loadFromDisk()
     if(std::filesystem::exists(path)) {
         try {
             std::ifstream f(path);
-            json doc;
-            f >> doc;
+            std::string content((std::istreambuf_iterator<char>(f)),
+                                 std::istreambuf_iterator<char>());
+            json doc = json::parse(content);
             
             if(doc.contains("keys")) {
                  for(auto& el : doc["keys"]) {

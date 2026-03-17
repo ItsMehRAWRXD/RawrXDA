@@ -1,0 +1,1637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RawrZ Stub Generator Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0b1020 0%, #1a1f3a 100%);
+            color: #e6e9ef;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: rgba(17, 22, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #222a45;
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header h1 {
+            color: #4a9eff;
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .panel-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .card {
+            background: rgba(18, 25, 47, 0.8);
+            border: 1px solid #20284a;
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            border-color: #4a9eff;
+            box-shadow: 0 8px 25px rgba(74, 158, 255, 0.1);
+        }
+        
+        .card h3 {
+            color: #4a9eff;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #a0a8b8;
+            font-weight: 500;
+        }
+        
+        .form-control {
+            width: 100%;
+            background: rgba(15, 21, 48, 0.8);
+            color: #e6e9ef;
+            border: 1px solid #263056;
+            border-radius: 8px;
+            padding: 0.75rem;
+            font-size: 0.9rem;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: #4a9eff;
+            box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.2);
+        }
+        
+        .form-control::placeholder {
+            color: #6c757d;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #4a9eff 0%, #357abd 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            margin: 0.25rem;
+        }
+        
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(74, 158, 255, 0.3);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+            color: #212529;
+        }
+        
+        .output-area {
+            background: #0a0f24;
+            border: 1px solid #1d2444;
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-top: 1rem;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+        
+        .status-success { background: #28a745; }
+        .status-warning { background: #ffc107; }
+        .status-error { background: #dc3545; }
+        .status-info { background: #17a2b8; }
+        
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        
+        .alert-success {
+            background: rgba(40, 167, 69, 0.1);
+            border: 1px solid #28a745;
+            color: #28a745;
+        }
+        
+        .alert-warning {
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid #ffc107;
+            color: #ffc107;
+        }
+        
+        .alert-error {
+            background: rgba(220, 53, 69, 0.1);
+            border: 1px solid #dc3545;
+            color: #dc3545;
+        }
+        
+        .alert-info {
+            background: rgba(23, 162, 184, 0.1);
+            border: 1px solid #17a2b8;
+            color: #17a2b8;
+        }
+        
+        .file-upload {
+            border: 2px dashed #263056;
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .file-upload:hover {
+            border-color: #4a9eff;
+            background: rgba(74, 158, 255, 0.05);
+        }
+        
+        .file-upload.dragover {
+            border-color: #4a9eff;
+            background: rgba(74, 158, 255, 0.1);
+            transform: scale(1.02);
+        }
+        
+        .file-upload.drag-active {
+            border-color: #28a745;
+            background: rgba(40, 167, 69, 0.1);
+        }
+        
+        .file-info {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            display: none;
+        }
+        
+        .file-info.show {
+            display: block;
+        }
+        
+        .file-name {
+            color: #4a9eff;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .file-size {
+            color: #a0a8b8;
+            font-size: 0.9rem;
+        }
+        
+        .save-options {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .save-options.hidden {
+            display: none;
+        }
+        
+        .save-options.show {
+            display: block;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #20284a;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4a9eff, #357abd);
+            transition: width 0.3s ease;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            border-bottom: 1px solid #20284a;
+            margin-bottom: 1rem;
+        }
+        
+        .nav-tab {
+            padding: 0.75rem 1.5rem;
+            background: none;
+            border: none;
+            color: #a0a8b8;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-tab.active {
+            color: #4a9eff;
+            border-bottom-color: #4a9eff;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .stub-preview {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .option-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .option-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .option-item input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+        }
+        
+        .option-item label {
+            margin: 0;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>RawrZ Stub Generator Panel</h1>
+    </div>
+    
+    <div class="container">
+        <!-- Navigation Tabs -->
+        <div class="card">
+            <div class="nav-tabs">
+                <button class="nav-tab active" data-tab="basic">Basic Stub</button>
+                <button class="nav-tab" data-tab="advanced">Advanced Stub</button>
+                <button class="nav-tab" data-tab="polymorphic">Polymorphic</button>
+                <button class="nav-tab" data-tab="encrypted">Encrypted Stub</button>
+                <button class="nav-tab" data-tab="custom">Custom Template</button>
+            </div>
+            
+            <!-- Basic Stub Tab -->
+            <div id="basic" class="tab-content active">
+                <h3>Basic Stub Generator</h3>
+                
+                <div class="alert alert-info">
+                    <strong>Basic Stub:</strong> Generate simple executable stubs with basic functionality.
+                </div>
+                
+                <div class="form-group">
+                    <label>Stub Type</label>
+                    <select class="form-control" id="basic-type">
+                        <option value="executable">Executable (.exe)</option>
+                        <option value="dll">Dynamic Library (.dll)</option>
+                        <option value="service">Windows Service</option>
+                        <option value="console">Console Application</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Target Platform</label>
+                    <select class="form-control" id="basic-platform">
+                        <option value="windows-x64">Windows x64</option>
+                        <option value="windows-x86">Windows x86</option>
+                        <option value="linux-x64">Linux x64</option>
+                        <option value="linux-arm">Linux ARM</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Payload URL</label>
+                    <input type="text" class="form-control" id="basic-payload" placeholder="https://example.com/payload.bin">
+                </div>
+                
+                <div class="form-group">
+                    <label>Stub Options</label>
+                    <div class="option-group">
+                        <div class="option-item">
+                            <input type="checkbox" id="basic-persistence" checked>
+                            <label for="basic-persistence">Persistence</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="basic-stealth" checked>
+                            <label for="basic-stealth">Stealth Mode</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="basic-anti-debug">
+                            <label for="basic-anti-debug">Anti-Debug</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="basic-anti-vm">
+                            <label for="basic-anti-vm">Anti-VM</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <button class="btn btn-success" onclick="generateBasicStub()">Generate Stub</button>
+                    <button class="btn btn-secondary" onclick="clearBasicForm()">Clear</button>
+                </div>
+                
+                <div class="output-area" id="basic-output">Generated stub will appear here...</div>
+            </div>
+            
+            <!-- Advanced Stub Tab -->
+            <div id="advanced" class="tab-content">
+                <h3>Advanced Stub Generator</h3>
+                
+                <div class="alert alert-warning">
+                    <strong>Advanced Stub:</strong> Generate sophisticated stubs with advanced evasion techniques.
+                </div>
+                
+                <div class="form-group">
+                    <label>Stub Type</label>
+                    <select class="form-control" id="advanced-type">
+                        <option value="executable">Executable (.exe)</option>
+                        <option value="dll">Dynamic Library (.dll)</option>
+                        <option value="service">Windows Service</option>
+                        <option value="driver">Kernel Driver</option>
+                        <option value="com">COM Object</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Target Platform</label>
+                    <select class="form-control" id="advanced-platform">
+                        <option value="windows-x64">Windows x64</option>
+                        <option value="windows-x86">Windows x86</option>
+                        <option value="linux-x64">Linux x64</option>
+                        <option value="linux-arm">Linux ARM</option>
+                        <option value="macos-x64">macOS x64</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Payload Configuration</label>
+                    <div class="option-group">
+                        <div class="option-item">
+                            <input type="radio" id="payload-url" name="payload-type" value="url" checked>
+                            <label for="payload-url">URL</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="radio" id="payload-embedded" name="payload-type" value="embedded">
+                            <label for="payload-embedded">Embedded</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="radio" id="payload-encrypted" name="payload-type" value="encrypted">
+                            <label for="payload-encrypted">Encrypted</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Payload Source</label>
+                    <input type="text" class="form-control" id="advanced-payload" placeholder="https://example.com/payload.bin or upload file">
+                </div>
+                
+                <div class="form-group">
+                    <label>Upload Payload File (Optional)</label>
+                    <div class="file-upload" id="advanced-upload-area" onclick="document.getElementById('advanced-file').click()">
+                        <p id="advanced-upload-text">Click to upload payload file or drag and drop</p>
+                        <p style="color: #6c757d; font-size: 0.8rem;">Supports all file types: .exe, .dll, .xll, .lnk, .ps1, .bat, .js, .vbs, .txt, .bin, .dat, .cfg, .ini, .xml, .json, .log, .tmp, .sys, .drv, .ocx, .cpl, .scr, .com, .pif, .cmd, .msi, .cab, .zip, .rar, .7z, .pdf, .doc, .docx, .xls, .xlsx, .ppt, .pptx, .jpg, .jpeg, .png, .gif, .bmp, .tiff, .mp3, .mp4, .avi, .mkv, .wav, .flac, .mov, .wmv, .m4a, .aac, .ogg, .webm, .html, .css, .php, .asp, .jsp, .py, .rb, .pl, .sh, .ps, .reg, .inf, .cat, .cer, .crt, .pem, .p12, .pfx, .key, .csr, .der, .p7b, .p7c, .spc, .sst, .stl, .pst, .ost, .msg, .eml, .mht, .mhtml, .url, .webloc, .desktop, .app, .deb, .rpm, .dmg, .iso, .img, .vhd, .vdi, .vmdk, .ova, .ovf, .qcow2, .raw, .bin, .hex, .elf, .so, .dylib, .a, .lib, .obj, .o, .exe, .dll, .sys, .drv, .ocx, .cpl, .scr, .com, .pif, .cmd, .bat, .ps1, .vbs, .js, .jse, .wsf, .wsh, .hta, .chm, .hlp, .cnt, .gid, .fts, .ftg, .cat, .inf, .sys, .drv, .ocx, .cpl, .scr, .com, .pif, .cmd, .bat, .ps1, .vbs, .js, .jse, .wsf, .wsh, .hta, .chm, .hlp, .cnt, .gid, .fts, .ftg</p>
+                        <input type="file" id="advanced-file" style="display: none;" accept="*" onchange="handleAdvancedFileUpload()">
+                    </div>
+                    <div class="file-info" id="advanced-file-info">
+                        <div class="file-name" id="advanced-file-name"></div>
+                        <div class="file-size" id="advanced-file-size"></div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Advanced Options</label>
+                    <div class="option-group">
+                        <div class="option-item">
+                            <input type="checkbox" id="advanced-polymorphic" checked>
+                            <label for="advanced-polymorphic">Polymorphic Code</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="advanced-encryption" checked>
+                            <label for="advanced-encryption">Payload Encryption</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="advanced-obfuscation" checked>
+                            <label for="advanced-obfuscation">Code Obfuscation</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="advanced-packing">
+                            <label for="advanced-packing">Executable Packing</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="advanced-anti-analysis" checked>
+                            <label for="advanced-anti-analysis">Anti-Analysis</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="advanced-sandbox-evasion" checked>
+                            <label for="advanced-sandbox-evasion">Sandbox Evasion</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Startup Persistence Options</label>
+                    <div class="option-group">
+                        <div class="option-item">
+                            <input type="checkbox" id="advanced-persistence-registry-run" checked>
+                            <label for="advanced-persistence-registry-run">Registry Run Key</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="advanced-persistence-registry-runonce">
+                            <label for="advanced-persistence-registry-runonce">Registry RunOnce Key</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="advanced-persistence-startup-folder">
+                            <label for="advanced-persistence-startup-folder">Startup Folder</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="advanced-persistence-scheduled-task">
+                            <label for="advanced-persistence-scheduled-task">Scheduled Task</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="advanced-persistence-service">
+                            <label for="advanced-persistence-service">Windows Service</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="advanced-persistence-wmi-event">
+                            <label for="advanced-persistence-wmi-event">WMI Event Subscription</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="advanced-persistence-dll-hijack">
+                            <label for="advanced-persistence-dll-hijack">DLL Hijacking</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="advanced-persistence-com-hijack">
+                            <label for="advanced-persistence-com-hijack">COM Hijacking</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="save-options hidden" id="advanced-save-options">
+                    <h4 style="color: #4a9eff; margin-bottom: 1rem;">Save Options</h4>
+                    <div class="form-group">
+                        <label>File Extension</label>
+                        <select class="form-control" id="advanced-extension">
+                            <option value=".exe">.exe (Executable)</option>
+                            <option value=".dll">.dll (Dynamic Library)</option>
+                            <option value=".xll">.xll (Excel Add-in)</option>
+                            <option value=".lnk">.lnk (Shortcut)</option>
+                            <option value=".ps1">.ps1 (PowerShell)</option>
+                            <option value=".bat">.bat (Batch)</option>
+                            <option value=".js">.js (JavaScript)</option>
+                            <option value=".vbs">.vbs (VBScript)</option>
+                            <option value=".bin">.bin (Binary)</option>
+                            <option value=".dat">.dat (Data)</option>
+                            <option value=".sys">.sys (System)</option>
+                            <option value=".drv">.drv (Driver)</option>
+                            <option value=".ocx">.ocx (ActiveX)</option>
+                            <option value=".cpl">.cpl (Control Panel)</option>
+                            <option value=".scr">.scr (Screensaver)</option>
+                            <option value=".com">.com (Command)</option>
+                            <option value=".pif">.pif (Program Info)</option>
+                            <option value=".cmd">.cmd (Command)</option>
+                            <option value=".msi">.msi (Installer)</option>
+                            <option value=".stub">.stub (Stub)</option>
+                            <option value=".payload">.payload (Payload)</option>
+                            <option value=".secure">.secure (Secure)</option>
+                            <option value=".locked">.locked (Locked)</option>
+                            <option value=".crypt">.crypt (Crypt)</option>
+                            <option value=".raw">.raw (Raw Data)</option>
+                            <option value=".hex">.hex (Hexadecimal)</option>
+                            <option value=".elf">.elf (Executable)</option>
+                            <option value=".so">.so (Shared Object)</option>
+                            <option value=".dylib">.dylib (Dynamic Library)</option>
+                            <option value="custom">Custom Extension</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="advanced-custom-extension" style="display: none;">
+                        <label>Custom Extension</label>
+                        <input type="text" class="form-control" id="advanced-custom-ext" placeholder=".myext" value=".myext">
+                    </div>
+                    <div class="form-group">
+                        <label>Save Location</label>
+                        <div class="option-group">
+                            <div class="option-item">
+                                <input type="radio" id="advanced-save-download" name="advanced-save-location" value="download" checked>
+                                <label for="advanced-save-download">Download Folder</label>
+                            </div>
+                            <div class="option-item">
+                                <input type="radio" id="advanced-save-desktop" name="advanced-save-location" value="desktop">
+                                <label for="advanced-save-desktop">Desktop</label>
+                            </div>
+                            <div class="option-item">
+                                <input type="radio" id="advanced-save-custom" name="advanced-save-location" value="custom">
+                                <label for="advanced-save-custom">Custom Location</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group" id="advanced-custom-path" style="display: none;">
+                        <label>Custom Path</label>
+                        <input type="text" class="form-control" id="advanced-custom-path-input" placeholder="C:\path\to\save\location">
+                    </div>
+                </div>
+                
+                <div>
+                    <button class="btn btn-success" onclick="generateAdvancedStub()">Generate Advanced Stub</button>
+                    <button class="btn btn-secondary" onclick="clearAdvancedForm()">Clear</button>
+                    <button class="btn btn-warning" onclick="downloadAdvancedStub()" id="advanced-download-btn" style="display: none;">Download Stub</button>
+                </div>
+                
+                <div class="output-area" id="advanced-output">Generated advanced stub will appear here...</div>
+            </div>
+            
+            <!-- Polymorphic Stub Tab -->
+            <div id="polymorphic" class="tab-content">
+                <h3>Polymorphic Stub Generator</h3>
+                
+                <div class="alert alert-warning">
+                    <strong>Polymorphic Stub:</strong> Generate stubs that change their code structure on each generation.
+                </div>
+                
+                <div class="form-group">
+                    <label>Polymorphism Level</label>
+                    <select class="form-control" id="poly-level">
+                        <option value="low">Low (Basic)</option>
+                        <option value="medium" selected>Medium (Recommended)</option>
+                        <option value="high">High (Advanced)</option>
+                        <option value="extreme">Extreme (Maximum)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Mutation Techniques</label>
+                    <div class="option-group">
+                        <div class="option-item">
+                            <input type="checkbox" id="poly-instruction" checked>
+                            <label for="poly-instruction">Instruction Substitution</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="poly-register" checked>
+                            <label for="poly-register">Register Reallocation</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="poly-junk" checked>
+                            <label for="poly-junk">Junk Code Insertion</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="poly-control" checked>
+                            <label for="poly-control">Control Flow Obfuscation</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="poly-data" checked>
+                            <label for="poly-data">Data Encryption</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="poly-api">
+                            <label for="poly-api">API Obfuscation</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Payload URL</label>
+                    <input type="text" class="form-control" id="poly-payload" placeholder="https://example.com/payload.bin">
+                </div>
+                
+                <div class="form-group">
+                    <label>Generation Count</label>
+                    <input type="number" class="form-control" id="poly-count" value="1" min="1" max="100">
+                </div>
+                
+                <div class="form-group">
+                    <label>Startup Persistence Options</label>
+                    <div class="option-group">
+                        <div class="option-item">
+                            <input type="checkbox" id="poly-persistence-registry-run" checked>
+                            <label for="poly-persistence-registry-run">Registry Run Key</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="poly-persistence-registry-runonce">
+                            <label for="poly-persistence-registry-runonce">Registry RunOnce Key</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="poly-persistence-startup-folder">
+                            <label for="poly-persistence-startup-folder">Startup Folder</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="poly-persistence-scheduled-task">
+                            <label for="poly-persistence-scheduled-task">Scheduled Task</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="poly-persistence-service">
+                            <label for="poly-persistence-service">Windows Service</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="poly-persistence-wmi-event">
+                            <label for="poly-persistence-wmi-event">WMI Event Subscription</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <button class="btn btn-success" onclick="generatePolymorphicStub()">Generate Polymorphic Stub</button>
+                    <button class="btn btn-secondary" onclick="clearPolyForm()">Clear</button>
+                </div>
+                
+                <div class="output-area" id="poly-output">Generated polymorphic stub will appear here...</div>
+            </div>
+            
+            <!-- Encrypted Stub Tab -->
+            <div id="encrypted" class="tab-content">
+                <h3>Encrypted Stub Generator</h3>
+                
+                <div class="alert alert-info">
+                    <strong>Encrypted Stub:</strong> Generate stubs with built-in encryption and decryption capabilities.
+                </div>
+                
+                <div class="form-group">
+                    <label>Encryption Algorithm</label>
+                    <select class="form-control" id="enc-algorithm">
+                        <option value="aes-256-gcm">AES-256-GCM (Recommended)</option>
+                        <option value="aes-256-cbc">AES-256-CBC</option>
+                        <option value="aes-192-gcm">AES-192-GCM</option>
+                        <option value="chacha20-poly1305">ChaCha20-Poly1305</option>
+                        <option value="aria-256-ctr">ARIA-256-CTR</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Key Derivation</label>
+                    <select class="form-control" id="enc-key-derivation">
+                        <option value="pbkdf2">PBKDF2</option>
+                        <option value="scrypt">Scrypt</option>
+                        <option value="argon2">Argon2</option>
+                        <option value="bcrypt">bcrypt</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Encryption Key</label>
+                    <input type="password" class="form-control" id="enc-key" placeholder="Enter encryption key or leave blank for auto-generation">
+                </div>
+                
+                <div class="form-group">
+                    <label>Payload URL</label>
+                    <input type="text" class="form-control" id="enc-payload" placeholder="https://example.com/encrypted-payload.bin">
+                </div>
+                
+                <div class="form-group">
+                    <label>Encryption Options</label>
+                    <div class="option-group">
+                        <div class="option-item">
+                            <input type="checkbox" id="enc-compression" checked>
+                            <label for="enc-compression">Payload Compression</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="enc-integrity" checked>
+                            <label for="enc-integrity">Integrity Check</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="enc-obfuscation" checked>
+                            <label for="enc-obfuscation">Key Obfuscation</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="enc-anti-debug">
+                            <label for="enc-anti-debug">Anti-Debug Protection</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Startup Persistence Options</label>
+                    <div class="option-group">
+                        <div class="option-item">
+                            <input type="checkbox" id="enc-persistence-registry-run" checked>
+                            <label for="enc-persistence-registry-run">Registry Run Key</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="enc-persistence-registry-runonce">
+                            <label for="enc-persistence-registry-runonce">Registry RunOnce Key</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="enc-persistence-startup-folder">
+                            <label for="enc-persistence-startup-folder">Startup Folder</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="enc-persistence-scheduled-task">
+                            <label for="enc-persistence-scheduled-task">Scheduled Task</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="enc-persistence-service">
+                            <label for="enc-persistence-service">Windows Service</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="enc-persistence-wmi-event">
+                            <label for="enc-persistence-wmi-event">WMI Event Subscription</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <button class="btn btn-success" onclick="generateEncryptedStub()">Generate Encrypted Stub</button>
+                    <button class="btn btn-secondary" onclick="clearEncForm()">Clear</button>
+                </div>
+                
+                <div class="output-area" id="enc-output">Generated encrypted stub will appear here...</div>
+            </div>
+            
+            <!-- Custom Template Tab -->
+            <div id="custom" class="tab-content">
+                <h3>Custom Template Generator</h3>
+                
+                <div class="alert alert-info">
+                    <strong>Custom Template:</strong> Create stubs using custom templates and configurations.
+                </div>
+                
+                <div class="form-group">
+                    <label>Template Type</label>
+                    <select class="form-control" id="custom-template">
+                        <option value="blank">Blank Template</option>
+                        <option value="minimal">Minimal Template</option>
+                        <option value="full-featured">Full-Featured Template</option>
+                        <option value="stealth">Stealth Template</option>
+                        <option value="persistent">Persistent Template</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Custom Code</label>
+                    <textarea class="form-control" id="custom-code" rows="8" placeholder="// Enter custom C/C++ code here..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Build Configuration</label>
+                    <div class="option-group">
+                        <div class="option-item">
+                            <input type="checkbox" id="custom-optimize" checked>
+                            <label for="custom-optimize">Optimize for Size</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="custom-strip">
+                            <label for="custom-strip">Strip Debug Info</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="custom-upx">
+                            <label for="custom-upx">UPX Packing</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="custom-aslr">
+                            <label for="custom-aslr">ASLR Support</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <button class="btn btn-success" onclick="generateCustomStub()">Generate Custom Stub</button>
+                    <button class="btn btn-secondary" onclick="clearCustomForm()">Clear</button>
+                    <button class="btn btn-warning" onclick="loadTemplate()">Load Template</button>
+                </div>
+                
+                <div class="output-area" id="custom-output">Generated custom stub will appear here...</div>
+            </div>
+        </div>
+        
+        <!-- Status Panel -->
+        <div class="card">
+            <h3><span class="status-indicator status-success"></span>Stub Generator Status</h3>
+            <div class="alert alert-success">
+                <strong>System Ready:</strong> Stub generator engine is operational and ready for use.
+            </div>
+            
+            <div class="form-group">
+                <label>Quick Actions</label>
+                <div>
+                    <button class="btn" onclick="testStubGeneration()">Test Generation</button>
+                    <button class="btn btn-secondary" onclick="viewTemplates()">View Templates</button>
+                    <button class="btn btn-warning" onclick="updateTemplates()">Update Templates</button>
+                    <button class="btn btn-danger" onclick="clearAllStubs()">Clear All</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let currentTab = 'basic';
+        
+        // Initialize panel
+                // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add a small delay to ensure all elements are fully loaded
+            setTimeout(() => {
+                // Add event listeners to all tab buttons
+                const tabButtons = document.querySelectorAll('.nav-tab[data-tab]');
+                tabButtons.forEach(button => {
+                    button.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        const tabName = this.getAttribute('data-tab');
+                        console.log('Tab button clicked:', tabName);
+                        showTab(tabName, this);
+                    });
+                });
+            }, 100);
+        });
+        
+        function initializeStubPanel() {
+            // Load available templates
+            loadAvailableTemplates();
+        }
+        
+        function initializeDragAndDrop() {
+            const uploadArea = document.getElementById('advanced-upload-area');
+            
+            // Prevent default drag behaviors
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, preventDefaults, false);
+                document.body.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            // Highlight drop area when item is dragged over it
+            ['dragenter', 'dragover'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, highlight, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, unhighlight, false);
+            });
+            
+            // Handle dropped files
+            uploadArea.addEventListener('drop', handleDrop, false);
+            
+            // Handle extension selection
+            document.getElementById('advanced-extension').addEventListener('change', function() {
+                const customExt = document.getElementById('advanced-custom-extension');
+                if (this.value === 'custom') {
+                    customExt.style.display = 'block';
+                } else {
+                    customExt.style.display = 'none';
+                }
+            });
+            
+            // Handle save location selection
+            document.querySelectorAll('input[name="advanced-save-location"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    const customPath = document.getElementById('advanced-custom-path');
+                    if (this.value === 'custom') {
+                        customPath.style.display = 'block';
+                    } else {
+                        customPath.style.display = 'none';
+                    }
+                });
+            });
+        }
+        
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        function highlight(e) {
+            document.getElementById('advanced-upload-area').classList.add('dragover');
+            document.getElementById('advanced-upload-text').textContent = 'Drop file here to upload';
+        }
+        
+        function unhighlight(e) {
+            document.getElementById('advanced-upload-area').classList.remove('dragover');
+            document.getElementById('advanced-upload-text').textContent = 'Click to upload payload file or drag and drop';
+        }
+        
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            
+            if (files.length > 0) {
+                handleAdvancedFileUpload(files[0]);
+            }
+        }
+        
+        function handleAdvancedFileUpload(file) {
+            // Accept all file types - RawrZ stub generator supports comprehensive file types
+            const fileExt = '.' + file.name.split('.').pop().toLowerCase();
+            
+            // Log the file type for debugging
+            console.log('Processing file for stub generation:', file.name, 'Type:', fileExt, 'Size:', file.size);
+            
+            // Update UI
+            document.getElementById('advanced-upload-area').classList.add('drag-active');
+            document.getElementById('advanced-file-name').textContent = file.name;
+            document.getElementById('advanced-file-size').textContent = formatFileSize(file.size);
+            document.getElementById('advanced-file-info').classList.add('show');
+            document.getElementById('advanced-save-options').classList.add('show');
+            
+            // Set default extension based on original file
+            const extensionSelect = document.getElementById('advanced-extension');
+            if (fileExt === '.exe') {
+                extensionSelect.value = '.exe';
+            } else if (fileExt === '.dll') {
+                extensionSelect.value = '.dll';
+            } else {
+                extensionSelect.value = '.bin';
+            }
+            
+            // Store file for later use
+            window.advancedUploadedFile = file;
+            
+            console.log('File uploaded via drag and drop:', file.name);
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+                function showTab(tabName, clickedElement = null) {
+            try {
+                // Wait for DOM to be ready
+                if (document.readyState === 'loading') {
+                    console.log('DOM not ready, retrying tab switch...');
+                    setTimeout(() => showTab(tabName, clickedElement), 100);
+                    return;
+                }
+                
+                // Hide all tab contents
+                const tabContents = document.querySelectorAll('.tab-content');
+                if (tabContents.length === 0) {
+                    console.error('No tab content elements found');
+                    return;
+                }
+                
+                tabContents.forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                
+                // Remove active class from all tabs
+                const navTabs = document.querySelectorAll('.nav-tab');
+                if (navTabs.length === 0) {
+                    console.error('No nav tab elements found');
+                    return;
+                }
+                
+                navTabs.forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                
+                // Show selected tab content
+                const targetContent = document.getElementById(tabName);
+                if (!targetContent) {
+                    console.error(`Tab content element '${tabName}' not found`);
+                    return;
+                }
+                targetContent.classList.add('active');
+                
+                // Add active class to clicked tab
+                if (clickedElement) {
+                    clickedElement.classList.add('active');
+                } else {
+                    // Find the tab button that corresponds to this tab
+                    const targetTab = document.querySelector(`[onclick*="showTab('${tabName}')"]`);
+                    if (targetTab) {
+                        targetTab.classList.add('active');
+                    }
+                }
+                
+                console.log(`Successfully switched to tab: ${tabName}`);
+            } catch (error) {
+                console.error('Error switching tab:', error);
+            }
+        }
+        
+        async function apiCall(endpoint, method = 'GET', body = null) {
+            try {
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                
+                const token = localStorage.getItem('authToken');
+                if (token) {
+                    headers.Authorization = `Bearer ${token}`;
+                }
+                
+                const response = await fetch(endpoint, {
+                    method: method,
+                    headers: headers,
+                    body: body ? JSON.stringify(body) : null
+                });
+                
+                const data = await response.text();
+                try {
+                    return { status: response.status, data: JSON.parse(data) };
+                } catch {
+                    return { status: response.status, data: data };
+                }
+            } catch (error) {
+                return { status: 500, data: { error: error.message } };
+            }
+        }
+        
+        function loadAvailableTemplates() {
+            // Load real available stub templates
+            fetch('/api/rawrz-engine/execute', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    engineId: 'stub-generator',
+                    action: 'getStatus'
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        console.log('Loaded stub generator status:', data.data);
+                        // Use default templates since the engine doesn't return template list
+                        const defaultTemplates = ['cpp', 'csharp', 'python', 'powershell'];
+                        updateStubTemplateDropdown(defaultTemplates);
+                    } else {
+                        console.error('Failed to load stub generator status:', data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading stub templates:', error);
+                });
+        }
+        
+        function updateStubTemplateDropdown(templates) {
+            const select = document.getElementById('stub-template-select');
+            if (select && templates) {
+                select.innerHTML = '<option value="">Select Template</option>';
+                templates.forEach(template => {
+                    const option = document.createElement('option');
+                    option.value = template.id;
+                    option.textContent = `${template.name} (${template.type})`;
+                    select.appendChild(option);
+                });
+            }
+        }
+        
+        async function generateBasicStub() {
+            const type = document.getElementById('basic-type').value;
+            const platform = document.getElementById('basic-platform').value;
+            const payload = document.getElementById('basic-payload').value;
+            const persistence = document.getElementById('basic-persistence').checked;
+            const stealth = document.getElementById('basic-stealth').checked;
+            const antiDebug = document.getElementById('basic-anti-debug').checked;
+            const antiVM = document.getElementById('basic-anti-vm').checked;
+            
+            if (!payload) {
+                alert('Please enter a payload URL.');
+                return;
+            }
+            
+            const output = document.getElementById('basic-output');
+            output.textContent = 'Generating basic stub...';
+            
+            try {
+                const result = await apiCall('/stub-generate-basic', 'POST', {
+                    type: type,
+                    platform: platform,
+                    payload: payload,
+                    options: {
+                        persistence: persistence,
+                        stealth: stealth,
+                        antiDebug: antiDebug,
+                        antiVM: antiVM
+                    }
+                });
+                
+                if (result.status === 200) {
+                    output.textContent = `Basic stub generated successfully!\n\nStub Type: ${type}\nPlatform: ${platform}\nPayload: ${payload}\n\nOptions:\n- Persistence: ${persistence}\n- Stealth: ${stealth}\n- Anti-Debug: ${antiDebug}\n- Anti-VM: ${antiVM}\n\nGenerated Stub:\n${result.data.stub}`;
+                } else {
+                    output.textContent = `Stub generation failed: ${result.data.error || 'Unknown error'}`;
+                }
+            } catch (error) {
+                output.textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        async function generateAdvancedStub() {
+            // Wait for DOM to be ready
+            if (document.readyState === 'loading') {
+                alert('Page is still loading. Please wait and try again.');
+                return;
+            }
+            
+            // Ensure we're on the advanced tab
+            const advancedTab = document.getElementById('advanced');
+            if (!advancedTab || !advancedTab.classList.contains('active')) {
+                console.log('Not on advanced tab, switching to it...');
+                showTab('advanced');
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
+            
+            // Get elements with fallback creation
+            let typeElement = document.getElementById('advanced-type');
+            let platformElement = document.getElementById('advanced-platform');
+            let payloadTypeElement = document.querySelector('input[name="payload-type"]:checked');
+            let payloadElement = document.getElementById('advanced-payload');
+            let polymorphicElement = document.getElementById('advanced-polymorphic');
+            let encryptionElement = document.getElementById('advanced-encryption');
+            let obfuscationElement = document.getElementById('advanced-obfuscation');
+            let packingElement = document.getElementById('advanced-packing');
+            let antiAnalysisElement = document.getElementById('advanced-anti-analysis');
+            let sandboxEvasionElement = document.getElementById('advanced-sandbox-evasion');
+            
+            // Create missing elements if they don't exist
+            if (!typeElement) {
+                console.log('Type element not found, creating fallback...');
+                if (advancedTab) {
+                    const fallbackType = document.createElement('select');
+                    fallbackType.id = 'advanced-type';
+                    fallbackType.className = 'form-control';
+                    fallbackType.innerHTML = `
+                        <option value="executable">Executable (.exe)</option>
+                        <option value="dll">Dynamic Library (.dll)</option>
+                        <option value="service">Windows Service</option>
+                    `;
+                    advancedTab.appendChild(fallbackType);
+                    typeElement = fallbackType;
+                }
+            }
+            
+            if (!platformElement) {
+                console.log('Platform element not found, creating fallback...');
+                if (advancedTab) {
+                    const fallbackPlatform = document.createElement('select');
+                    fallbackPlatform.id = 'advanced-platform';
+                    fallbackPlatform.className = 'form-control';
+                    fallbackPlatform.innerHTML = `
+                        <option value="windows">Windows</option>
+                        <option value="linux">Linux</option>
+                        <option value="cross-platform">Cross-Platform</option>
+                    `;
+                    advancedTab.appendChild(fallbackPlatform);
+                    platformElement = fallbackPlatform;
+                }
+            }
+            
+            if (!payloadElement) {
+                console.log('Payload element not found, creating fallback...');
+                if (advancedTab) {
+                    const fallbackPayload = document.createElement('textarea');
+                    fallbackPayload.id = 'advanced-payload';
+                    fallbackPayload.placeholder = 'Enter payload source code or URL...';
+                    fallbackPayload.className = 'form-control';
+                    advancedTab.appendChild(fallbackPayload);
+                    payloadElement = fallbackPayload;
+                }
+            }
+            
+            const type = typeElement ? typeElement.value : 'executable';
+            const platform = platformElement ? platformElement.value : 'windows';
+            const payloadType = payloadTypeElement ? payloadTypeElement.value : 'source';
+            const payload = payloadElement ? payloadElement.value : '';
+            const polymorphic = polymorphicElement ? polymorphicElement.checked : false;
+            const encryption = encryptionElement ? encryptionElement.checked : false;
+            const obfuscation = obfuscationElement ? obfuscationElement.checked : false;
+            const packing = packingElement ? packingElement.checked : false;
+            const antiAnalysis = antiAnalysisElement ? antiAnalysisElement.checked : false;
+            const sandboxEvasion = sandboxEvasionElement ? sandboxEvasionElement.checked : false;
+            
+            // Get save options
+            const extension = document.getElementById('advanced-extension').value;
+            const customExt = document.getElementById('advanced-custom-ext').value;
+            const finalExtension = extension === 'custom' ? customExt : extension;
+            const saveLocation = document.querySelector('input[name="advanced-save-location"]:checked').value;
+            const customPath = document.getElementById('advanced-custom-path-input').value;
+            
+            // Get persistence options
+            const persistenceOptions = {
+                registryRun: document.getElementById('advanced-persistence-registry-run').checked,
+                registryRunOnce: document.getElementById('advanced-persistence-registry-runonce').checked,
+                startupFolder: document.getElementById('advanced-persistence-startup-folder').checked,
+                scheduledTask: document.getElementById('advanced-persistence-scheduled-task').checked,
+                service: document.getElementById('advanced-persistence-service').checked,
+                wmiEvent: document.getElementById('advanced-persistence-wmi-event').checked,
+                dllHijack: document.getElementById('advanced-persistence-dll-hijack').checked,
+                comHijack: document.getElementById('advanced-persistence-com-hijack').checked
+            };
+            
+            if (!payload && !window.advancedUploadedFile) {
+                alert('Please enter a payload source or upload a file.');
+                return;
+            }
+            
+            const output = document.getElementById('advanced-output');
+            output.textContent = 'Generating advanced stub...';
+            
+            try {
+                // Create FormData for file upload if file is present
+                let requestBody;
+                if (window.advancedUploadedFile) {
+                    const formData = new FormData();
+                    formData.append('file', window.advancedUploadedFile);
+                    formData.append('type', type);
+                    formData.append('platform', platform);
+                    formData.append('payloadType', payloadType);
+                    formData.append('payload', payload);
+                    formData.append('polymorphic', polymorphic);
+                    formData.append('encryption', encryption);
+                    formData.append('obfuscation', obfuscation);
+                    formData.append('packing', packing);
+                    formData.append('antiAnalysis', antiAnalysis);
+                    formData.append('sandboxEvasion', sandboxEvasion);
+                    formData.append('extension', finalExtension);
+                    formData.append('saveLocation', saveLocation);
+                    formData.append('customPath', customPath);
+                    formData.append('persistence', JSON.stringify(persistenceOptions));
+                    
+                    const response = await fetch('/stub-generate-advanced', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    requestBody = await response.json();
+                } else {
+                    requestBody = await apiCall('/stub-generate-advanced', 'POST', {
+                        type: type,
+                        platform: platform,
+                        payloadType: payloadType,
+                        payload: payload,
+                        options: {
+                            polymorphic: polymorphic,
+                            encryption: encryption,
+                            obfuscation: obfuscation,
+                            packing: packing,
+                            antiAnalysis: antiAnalysis,
+                            sandboxEvasion: sandboxEvasion
+                        },
+                        extension: finalExtension,
+                        saveLocation: saveLocation,
+                        customPath: customPath,
+                        persistence: persistenceOptions
+                    });
+                }
+                
+                if (requestBody.status === 200) {
+                    const persistenceInfo = Object.entries(persistenceOptions)
+                        .filter(([key, value]) => value)
+                        .map(([key, value]) => `- ${key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}: ${value}`)
+                        .join('\n');
+                    
+                    output.textContent = `Advanced stub generated successfully!\n\nStub Type: ${type}\nPlatform: ${platform}\nPayload Type: ${payloadType}\nPayload: ${payload || 'Uploaded File'}\nExtension: ${finalExtension}\nSave Location: ${saveLocation}\n\nAdvanced Options:\n- Polymorphic: ${polymorphic}\n- Encryption: ${encryption}\n- Obfuscation: ${obfuscation}\n- Packing: ${packing}\n- Anti-Analysis: ${antiAnalysis}\n- Sandbox Evasion: ${sandboxEvasion}\n\nPersistence Options:\n${persistenceInfo}\n\nGenerated Stub Ready for Download!`;
+                    
+                    // Show download button
+                    document.getElementById('advanced-download-btn').style.display = 'inline-block';
+                    
+                    // Store stub data for download
+                    window.advancedStubData = requestBody.data.stub;
+                    window.advancedStubFileName = 'advanced_stub' + finalExtension;
+                    
+                } else {
+                    output.textContent = `Advanced stub generation failed: ${requestBody.data.error || 'Unknown error'}`;
+                }
+            } catch (error) {
+                output.textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        function downloadAdvancedStub() {
+            if (!window.advancedStubData || !window.advancedStubFileName) {
+                alert('No stub data available for download.');
+                return;
+            }
+            
+            // Create blob from stub data
+            const blob = new Blob([window.advancedStubData], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            
+            // Create download link
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = window.advancedStubFileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            // Clean up
+            URL.revokeObjectURL(url);
+            
+            // Show success message
+            const output = document.getElementById('advanced-output');
+            output.textContent += '\n\nStub downloaded successfully!';
+        }
+        
+        async function generatePolymorphicStub() {
+            const level = document.getElementById('poly-level').value;
+            const instruction = document.getElementById('poly-instruction').checked;
+            const register = document.getElementById('poly-register').checked;
+            const junk = document.getElementById('poly-junk').checked;
+            const control = document.getElementById('poly-control').checked;
+            const data = document.getElementById('poly-data').checked;
+            const api = document.getElementById('poly-api').checked;
+            const payload = document.getElementById('poly-payload').value;
+            const count = document.getElementById('poly-count').value;
+            
+            // Get persistence options
+            const persistenceOptions = {
+                registryRun: document.getElementById('poly-persistence-registry-run').checked,
+                registryRunOnce: document.getElementById('poly-persistence-registry-runonce').checked,
+                startupFolder: document.getElementById('poly-persistence-startup-folder').checked,
+                scheduledTask: document.getElementById('poly-persistence-scheduled-task').checked,
+                service: document.getElementById('poly-persistence-service').checked,
+                wmiEvent: document.getElementById('poly-persistence-wmi-event').checked
+            };
+            
+            if (!payload) {
+                alert('Please enter a payload URL.');
+                return;
+            }
+            
+            const output = document.getElementById('poly-output');
+            output.textContent = 'Generating polymorphic stub...';
+            
+            try {
+                const result = await apiCall('/stub-generate-polymorphic', 'POST', {
+                    level: level,
+                    payload: payload,
+                    count: parseInt(count),
+                    techniques: {
+                        instruction: instruction,
+                        register: register,
+                        junk: junk,
+                        control: control,
+                        data: data,
+                        api: api
+                    },
+                    persistence: persistenceOptions
+                });
+                
+                if (result.status === 200) {
+                    const persistenceInfo = Object.entries(persistenceOptions)
+                        .filter(([key, value]) => value)
+                        .map(([key, value]) => `- ${key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}: ${value}`)
+                        .join('\n');
+                    
+                    output.textContent = `Polymorphic stub generated successfully!\n\nPolymorphism Level: ${level}\nPayload: ${payload}\nGeneration Count: ${count}\n\nMutation Techniques:\n- Instruction Substitution: ${instruction}\n- Register Reallocation: ${register}\n- Junk Code Insertion: ${junk}\n- Control Flow Obfuscation: ${control}\n- Data Encryption: ${data}\n- API Obfuscation: ${api}\n\nPersistence Options:\n${persistenceInfo}\n\nGenerated Stub:\n${result.data.stub}`;
+                } else {
+                    output.textContent = `Polymorphic stub generation failed: ${result.data.error || 'Unknown error'}`;
+                }
+            } catch (error) {
+                output.textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        async function generateEncryptedStub() {
+            const algorithm = document.getElementById('enc-algorithm').value;
+            const keyDerivation = document.getElementById('enc-key-derivation').value;
+            const key = document.getElementById('enc-key').value;
+            const payload = document.getElementById('enc-payload').value;
+            const compression = document.getElementById('enc-compression').checked;
+            const integrity = document.getElementById('enc-integrity').checked;
+            const obfuscation = document.getElementById('enc-obfuscation').checked;
+            const antiDebug = document.getElementById('enc-anti-debug').checked;
+            
+            // Get persistence options
+            const persistenceOptions = {
+                registryRun: document.getElementById('enc-persistence-registry-run').checked,
+                registryRunOnce: document.getElementById('enc-persistence-registry-runonce').checked,
+                startupFolder: document.getElementById('enc-persistence-startup-folder').checked,
+                scheduledTask: document.getElementById('enc-persistence-scheduled-task').checked,
+                service: document.getElementById('enc-persistence-service').checked,
+                wmiEvent: document.getElementById('enc-persistence-wmi-event').checked
+            };
+            
+            if (!payload) {
+                alert('Please enter a payload URL.');
+                return;
+            }
+            
+            const output = document.getElementById('enc-output');
+            output.textContent = 'Generating encrypted stub...';
+            
+            try {
+                const result = await apiCall('/stub-generate-encrypted', 'POST', {
+                    algorithm: algorithm,
+                    keyDerivation: keyDerivation,
+                    key: key,
+                    payload: payload,
+                    options: {
+                        compression: compression,
+                        integrity: integrity,
+                        obfuscation: obfuscation,
+                        antiDebug: antiDebug
+                    },
+                    persistence: persistenceOptions
+                });
+                
+                if (result.status === 200) {
+                    const persistenceInfo = Object.entries(persistenceOptions)
+                        .filter(([key, value]) => value)
+                        .map(([key, value]) => `- ${key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}: ${value}`)
+                        .join('\n');
+                    
+                    output.textContent = `Encrypted stub generated successfully!\n\nEncryption Algorithm: ${algorithm}\nKey Derivation: ${keyDerivation}\nPayload: ${payload}\n\nEncryption Options:\n- Compression: ${compression}\n- Integrity Check: ${integrity}\n- Key Obfuscation: ${obfuscation}\n- Anti-Debug Protection: ${antiDebug}\n\nPersistence Options:\n${persistenceInfo}\n\nGenerated Stub:\n${result.data.stub}`;
+                } else {
+                    output.textContent = `Encrypted stub generation failed: ${result.data.error || 'Unknown error'}`;
+                }
+            } catch (error) {
+                output.textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        async function generateCustomStub() {
+            const template = document.getElementById('custom-template').value;
+            const code = document.getElementById('custom-code').value;
+            const optimize = document.getElementById('custom-optimize').checked;
+            const strip = document.getElementById('custom-strip').checked;
+            const upx = document.getElementById('custom-upx').checked;
+            const aslr = document.getElementById('custom-aslr').checked;
+            
+            const output = document.getElementById('custom-output');
+            output.textContent = 'Generating custom stub...';
+            
+            try {
+                const result = await apiCall('/stub-generate-custom', 'POST', {
+                    template: template,
+                    code: code,
+                    buildConfig: {
+                        optimize: optimize,
+                        strip: strip,
+                        upx: upx,
+                        aslr: aslr
+                    }
+                });
+                
+                if (result.status === 200) {
+                    output.textContent = `Custom stub generated successfully!\n\nTemplate: ${template}\nCustom Code: ${code ? 'Yes' : 'No'}\n\nBuild Configuration:\n- Optimize for Size: ${optimize}\n- Strip Debug Info: ${strip}\n- UPX Packing: ${upx}\n- ASLR Support: ${aslr}\n\nGenerated Stub:\n${result.data.stub}`;
+                } else {
+                    output.textContent = `Custom stub generation failed: ${result.data.error || 'Unknown error'}`;
+                }
+            } catch (error) {
+                output.textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        // Form clearing functions
+        function clearBasicForm() {
+            document.getElementById('basic-payload').value = '';
+            document.getElementById('basic-output').textContent = 'Generated stub will appear here...';
+        }
+        
+        function clearAdvancedForm() {
+            document.getElementById('advanced-payload').value = '';
+            document.getElementById('advanced-output').textContent = 'Generated advanced stub will appear here...';
+            document.getElementById('advanced-download-btn').style.display = 'none';
+            
+            // Reset file info
+            document.getElementById('advanced-upload-area').classList.remove('drag-active');
+            document.getElementById('advanced-file-info').classList.remove('show');
+            document.getElementById('advanced-save-options').classList.remove('show');
+            document.getElementById('advanced-file-name').textContent = '';
+            document.getElementById('advanced-file-size').textContent = '';
+            
+            // Reset form elements
+            document.getElementById('advanced-file').value = '';
+            document.getElementById('advanced-extension').value = '.exe';
+            document.getElementById('advanced-custom-extension').style.display = 'none';
+            document.getElementById('advanced-custom-ext').value = '.myext';
+            document.getElementById('advanced-save-download').checked = true;
+            document.getElementById('advanced-custom-path').style.display = 'none';
+            document.getElementById('advanced-custom-path-input').value = '';
+            
+            // Clear uploaded file and stub data
+            window.advancedUploadedFile = null;
+            window.advancedStubData = null;
+            window.advancedStubFileName = null;
+        }
+        
+        function clearPolyForm() {
+            document.getElementById('poly-payload').value = '';
+            document.getElementById('poly-count').value = '1';
+            document.getElementById('poly-output').textContent = 'Generated polymorphic stub will appear here...';
+        }
+        
+        function clearEncForm() {
+            document.getElementById('enc-key').value = '';
+            document.getElementById('enc-payload').value = '';
+            document.getElementById('enc-output').textContent = 'Generated encrypted stub will appear here...';
+        }
+        
+        function clearCustomForm() {
+            document.getElementById('custom-code').value = '';
+            document.getElementById('custom-output').textContent = 'Generated custom stub will appear here...';
+        }
+        
+        // Action functions
+        async function testStubGeneration() {
+            alert('Testing stub generation...');
+        }
+        
+        function viewTemplates() {
+            alert('Template viewer would open here');
+        }
+        
+        function updateTemplates() {
+            alert('Updating stub templates...');
+        }
+        
+        function loadTemplate() {
+            const template = document.getElementById('custom-template').value;
+            const codeArea = document.getElementById('custom-code');
+            
+            const templates = {
+                'blank': '// Blank template - add your code here\n\nint main() {\n    // Your code here\n    return 0;\n}',
+                'minimal': '// Minimal template\n#include <windows.h>\n\nint main() {\n    // Minimal stub code\n    return 0;\n}',
+                'full-featured': '// Full-featured template\n#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    // Full-featured stub with all capabilities\n    return 0;\n}',
+                'stealth': '// Stealth template\n#include <windows.h>\n\nint main() {\n    // Stealth mode implementation\n    return 0;\n}',
+                'persistent': '// Persistent template\n#include <windows.h>\n\nint main() {\n    // Persistence implementation\n    return 0;\n}'
+            };
+            
+            codeArea.value = templates[template] || '';
+        }
+        
+        function clearAllStubs() {
+            if (confirm('Are you sure you want to clear all stub data? This action cannot be undone.')) {
+                clearBasicForm();
+                clearAdvancedForm();
+                clearPolyForm();
+                clearEncForm();
+                clearCustomForm();
+            }
+        }
+    </script>
+</body>
+</html>

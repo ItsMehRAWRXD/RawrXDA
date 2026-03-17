@@ -1,0 +1,1843 @@
+**********************
+PowerShell transcript start
+Start time: 20260315214444
+Username: FCUKED\HiH8e
+RunAs User: FCUKED\HiH8e
+Configuration Name: 
+Machine: FCUKED (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\Program Files\PowerShell\7\pwsh.dll -noexit -command try { . "d:\VS Code\591199df40\resources\app\out\vs\workbench\contrib\terminal\common\scripts\shellIntegration.ps1" } catch {}
+Process ID: 24700
+PSVersion: 7.5.4
+PSEdition: Core
+GitCommitId: 7.5.4
+OS: Microsoft Windows 10.0.26200
+Platform: Win32NT
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+**********************
+Transcript started, output file is D:\rawrxd\logs\v278_run_transcript.txt
+
+==============================================================================
+  RawrXD v278 — Orchestration-Collapsed Speculative Benchmark
+==============================================================================
+
+  DLL:          D:\rawrxd\bin\RawrXD_Singularity_120B_v270.dll
+  Draft:        gemma3:1b
+  Verifier:     qwen2.5:7b
+  Burst:        16 x1 = 16 draft/verify
+  Target:       64 tokens x 3 runs
+  v277 ref:     1.13 wall t/s, 141.42 infer t/s
+    DLL verified: 54.5 KB
+
+==============================================================================
+  PHASE 0: PRE-LOAD — Concurrent VRAM
+==============================================================================
+  [21:44:46] Loading gemma3:1b (keep_alive=-1)...
+    gemma3:1b loaded: load=205.5ms
+  [21:44:48] Loading qwen2.5:7b (keep_alive=-1)...
+    qwen2.5:7b loaded: load=77.2ms
+    Both models in VRAM: 5.74 GB used
+
+==============================================================================
+  PHASE 1: BASELINE — qwen2.5:7b (verifier-only)
+==============================================================================
+  [21:44:52] Warmup...
+  [21:44:55]   Warmup: tg=91.18 t/s, load=79.1ms
+  [21:44:55] Baseline run 1/3 (64 tokens)...
+PS>TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+PS D:\> Write-Host "checking..."
+checking...
+PS D:\> Get-Content "D:\rawrxd\logs\v278_run_transcript.txt" -Tail 120
+**********************
+PowerShell transcript start
+Start time: 20260315214444
+Username: FCUKED\HiH8e
+RunAs User: FCUKED\HiH8e
+Configuration Name:
+Machine: FCUKED (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\Program Files\PowerShell\7\pwsh.dll -noexit -command try { . "d:\VS Code\591199df40\resources\app\out\vs\workbench\contrib\terminal\common\scripts\shellIntegration.ps1" } catch {}
+Process ID: 24700
+PSVersion: 7.5.4
+PSEdition: Core
+GitCommitId: 7.5.4
+OS: Microsoft Windows 10.0.26200
+Platform: Win32NT
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+**********************
+Transcript started, output file is D:\rawrxd\logs\v278_run_transcript.txt
+
+==============================================================================
+  RawrXD v278 — Orchestration-Collapsed Speculative Benchmark
+==============================================================================
+
+  DLL:          D:\rawrxd\bin\RawrXD_Singularity_120B_v270.dll
+  Draft:        gemma3:1b
+  Verifier:     qwen2.5:7b
+  Burst:        16 x1 = 16 draft/verify
+  Target:       64 tokens x 3 runs
+  v277 ref:     1.13 wall t/s, 141.42 infer t/s
+    DLL verified: 54.5 KB
+
+==============================================================================
+  PHASE 0: PRE-LOAD — Concurrent VRAM
+==============================================================================
+  [21:44:46] Loading gemma3:1b (keep_alive=-1)...
+    gemma3:1b loaded: load=205.5ms
+  [21:44:48] Loading qwen2.5:7b (keep_alive=-1)...
+    qwen2.5:7b loaded: load=77.2ms
+    Both models in VRAM: 5.74 GB used
+
+==============================================================================
+  PHASE 1: BASELINE — qwen2.5:7b (verifier-only)
+==============================================================================
+  [21:44:52] Warmup...
+  [21:44:55]   Warmup: tg=91.18 t/s, load=79.1ms
+  [21:44:55] Baseline run 1/3 (64 tokens)...
+PS>TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+PS D:\> Write-Host "checking..."
+checking...
+PS D:\> $env:OLLAMA_MODELS = "F:\OllamaModels"
+PS D:\> $body = @{ model = "qwen2.5:7b"; prompt = "Hello world"; stream = $false; keep_alive = -1; options = @{ num_predict = 64; temperature = 0.1; seed = 42 } } | ConvertTo-Json -Depth 5
+PS D:\> $r = Invoke-RestMethod -Uri "http://localhost:11434/api/generate" -Method Post -Body $body -ContentType "application/json" -TimeoutSec 30
+PS D:\> Write-Host "tg_count=$($r.eval_count), tg_tps=$([math]::Round($r.eval_count / ($r.eval_duration / 1e9), 2))"
+tg_count=10, tg_tps=98.36
+PS D:\> $ErrorActionPreference = "Continue"
+PS D:\> $env:OLLAMA_MODELS = "F:\OllamaModels"
+PS D:\> function Invoke-OllamaGenerate2 {
+    param([string]$Model, [string]$Prompt, [int]$NumPredict = 128, [double]$Temperature = 0.1, [int]$Seed = 42)
+    $body = @{ model = $Model; prompt = $Prompt; stream = $false; keep_alive = -1; options = @{ num_predict = $NumPredict; temperature = $Temperature; seed = $Seed } } | ConvertTo-Json -Depth 5
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    try {
+        $resp = Invoke-RestMethod -Uri "http://localhost:11434/api/generate" -Method Post -Body $body -ContentType "application/json" -TimeoutSec 300
+        $sw.Stop()
+        $tg_count = [int]($resp.eval_count)
+        $tg_dur_ns = [long]($resp.eval_duration)
+        $tg_tps = if ($tg_dur_ns -gt 0) { [math]::Round($tg_count / ($tg_dur_ns / 1e9), 2) } else { 0 }
+        return @{ success = $true; tg_tps = $tg_tps; tg_count = $tg_count; wall_ms = $sw.ElapsedMilliseconds }
+    } catch { $sw.Stop(); return @{ success = $false; error = $_.Exception.Message; wall_ms = $sw.ElapsedMilliseconds } }
+}
+PS D:\> Write-Host "Testing baseline run..."
+Testing baseline run...
+PS D:\> $r = Invoke-OllamaGenerate2 -Model "qwen2.5:7b" -Prompt "Explain speculative execution" -NumPredict 64
+PS D:\> Write-Host "Result: success=$($r.success) tg_tps=$($r.tg_tps) tg_count=$($r.tg_count) wall=$($r.wall_ms)ms"
+Result: success=True tg_tps=89.38 tg_count=64 wall=2876ms
+PS D:\> $tg_values = @(); $tg_values += $r.tg_tps
+PS D:\> Write-Host "Values: $($tg_values -join ', ')"
+Values: 89.38
+PS D:\> $avg_tg = [math]::Round(($tg_values | Measure-Object -Average).Average, 2)
+PS D:\> Write-Host "Avg: $avg_tg"
+Avg: 89.38
+PS D:\> try { & "D:\rawrxd\src\Beyond200\RawrXD_SmokeTest_v278_Collapsed.ps1" -Burst 16 -MultiBurst 1 -Runs 1 -TargetTokens 16 -Verbose 2>&1 | ForEach-Object { $_.ToString() } } catch { Write-Host "CAUGHT: $_" }
+
+==============================================================================
+  RawrXD v278 — Orchestration-Collapsed Speculative Benchmark
+==============================================================================
+
+  DLL:          D:\rawrxd\bin\RawrXD_Singularity_120B_v270.dll
+  Draft:        gemma3:1b
+  Verifier:     qwen2.5:7b
+  Burst:        16 x1 = 16 draft/verify
+  Target:       16 tokens x 1 runs
+  v277 ref:     1.13 wall t/s, 141.42 infer t/s
+    DLL verified: 54.5 KB
+
+==============================================================================
+  PHASE 0: PRE-LOAD — Concurrent VRAM
+==============================================================================
+  [21:45:39] Loading gemma3:1b (keep_alive=-1)...
+    gemma3:1b loaded: load=205.7ms
+  [21:45:41] Loading qwen2.5:7b (keep_alive=-1)...
+    qwen2.5:7b loaded: load=79.5ms
+    Both models in VRAM: 5.74 GB used
+
+==============================================================================
+  PHASE 1: BASELINE — qwen2.5:7b (verifier-only)
+==============================================================================
+  [21:45:45] Warmup...
+  [21:45:48]   Warmup: tg=89.63 t/s, load=88.5ms
+  [21:45:48] Baseline run 1/1 (16 tokens)...
+    Run 1: tg=94.25 t/s, pp=5766.03 t/s, wall=2304ms
+    BASELINE: tg=94.25 ±0 t/s, pp=5766.03 t/s, wall=2304 ms
+
+  ┌─────────────────────────────────────────┐
+  │ BASELINE: 94.25 ±0 t/s (verifier-only) │
+  └─────────────────────────────────────────┘
+
+==============================================================================
+  PHASE 2: SPECULATIVE — gemma3:1b -> qwen2.5:7b (burst=16 x1)
+==============================================================================
+  [SPEC] Run 1: burst=16 x1 = 16 draft/verify, target=16
+PS D:\> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+PS D:\> Write-Host "checking last..."
+checking last...
+PS D:\> & "D:\rawrxd\src\Beyond200\RawrXD_SmokeTest_v278_Collapsed.ps1" -Burst 16 -MultiBurst 1 -Runs 1 -TargetTokens 16 -Verbose *> "D:\rawrxd\logs\v278_debug.txt" 2>&1; Write-Host "EXIT CODE: $LASTEXITCODE"
+>> ParameterBinding(Out-File): name="InputObject"; value="
+=============================================================================="
+
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  RawrXD v278 — Orchestration-Collapsed Speculative Benchmark"
+  RawrXD v278 — Orchestration-Collapsed Speculative Benchmark
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value=""
+
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  DLL:          D:\rawrxd\bin\RawrXD_Singularity_120B_v270.dll"
+  DLL:          D:\rawrxd\bin\RawrXD_Singularity_120B_v270.dll
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Draft:        gemma3:1b"
+  Draft:        gemma3:1b
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Verifier:     qwen2.5:7b"
+  Verifier:     qwen2.5:7b
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Burst:        16 x1 = 16 draft/verify"
+  Burst:        16 x1 = 16 draft/verify
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Target:       16 tokens x 1 runs"
+  Target:       16 tokens x 1 runs
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  v277 ref:     1.13 wall t/s, 141.42 infer t/s"
+  v277 ref:     1.13 wall t/s, 141.42 infer t/s
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    DLL verified: 54.5 KB"
+    DLL verified: 54.5 KB
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="
+=============================================================================="
+
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  PHASE 0: PRE-LOAD — Concurrent VRAM"
+  PHASE 0: PRE-LOAD — Concurrent VRAM
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [21:52:09] Loading gemma3:1b (keep_alive=-1)..."
+  [21:52:09] Loading gemma3:1b (keep_alive=-1)...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    gemma3:1b loaded: load=227.2ms"
+    gemma3:1b loaded: load=227.2ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [21:52:11] Loading qwen2.5:7b (keep_alive=-1)..."
+  [21:52:11] Loading qwen2.5:7b (keep_alive=-1)...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    qwen2.5:7b loaded: load=80.5ms"
+    qwen2.5:7b loaded: load=80.5ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    Both models in VRAM: 5.74 GB used"
+    Both models in VRAM: 5.74 GB used
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="
+=============================================================================="
+
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  PHASE 1: BASELINE — qwen2.5:7b (verifier-only)"
+  PHASE 1: BASELINE — qwen2.5:7b (verifier-only)
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [21:52:15] Warmup..."
+  [21:52:15] Warmup...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [21:52:18]   Warmup: tg=89.6 t/s, load=81.6ms"
+  [21:52:18]   Warmup: tg=89.6 t/s, load=81.6ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [21:52:18] Baseline run 1/1 (16 tokens)..."
+  [21:52:18] Baseline run 1/1 (16 tokens)...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    Run 1: tg=92.33 t/s, pp=5727.57 t/s, wall=2299ms"
+    Run 1: tg=92.33 t/s, pp=5727.57 t/s, wall=2299ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    BASELINE: tg=92.33 ±0 t/s, pp=5727.57 t/s, wall=2299 ms"
+    BASELINE: tg=92.33 ±0 t/s, pp=5727.57 t/s, wall=2299 ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="
+  ┌─────────────────────────────────────────┐"
+
+  ┌─────────────────────────────────────────┐
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │ BASELINE: 92.33 ±0 t/s (verifier-only) │"
+  │ BASELINE: 92.33 ±0 t/s (verifier-only) │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  └─────────────────────────────────────────┘"
+  └─────────────────────────────────────────┘
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="
+=============================================================================="
+
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  PHASE 2: SPECULATIVE — gemma3:1b -> qwen2.5:7b (burst=16 x1)"
+  PHASE 2: SPECULATIVE — gemma3:1b -> qwen2.5:7b (burst=16 x1)
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC] Run 1: burst=16 x1 = 16 draft/verify, target=16"
+  [SPEC] Run 1: burst=16 x1 = 16 draft/verify, target=16
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 1: draft=16, committed=17, accept=1, infer=185.58 t/s, session=3.8 t/s, d_wall=2336ms, v_wall=2132ms, total=4474ms"
+  [SPEC]   Cycle 1: draft=16, committed=17, accept=1, infer=185.58 t/s, session=3.8 t/s, d_wall=2336ms, v_wall=2132ms, total=4474ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    Run 1: infer=185.58 t/s, session=3.8 t/s, committed=17, accept=100%, cycles=1, http=2, overhead=98%"
+    Run 1: infer=185.58 t/s, session=3.8 t/s, committed=17, accept=100%, cycles=1, http=2, overhead=98%
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="
+=============================================================================="
+
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  PHASE 3: ANALYSIS — v278 Orchestration Collapse"
+  PHASE 3: ANALYSIS — v278 Orchestration Collapse
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value=""
+
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  ┌──────────────────────────────────────────────────────────┐"
+  ┌──────────────────────────────────────────────────────────┐
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │           v278 ORCHESTRATION-COLLAPSED RESULTS           │"
+  │           v278 ORCHESTRATION-COLLAPSED RESULTS           │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  ├──────────────────────────────────────────────────────────┤"
+  ├──────────────────────────────────────────────────────────┤
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  Pair:                            gemma3:1b -> qwen2.5:7b  │"
+  │  Pair:                            gemma3:1b -> qwen2.5:7b  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  Burst:                                       16 x1 = 16  │"
+  │  Burst:                                       16 x1 = 16  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  Runs x Cycles:                                    1 x 1  │"
+  │  Runs x Cycles:                                    1 x 1  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  Total HTTP Calls:                                     2  │"
+  │  Total HTTP Calls:                                     2  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  Tokens/HTTP Call:                                   8.5  │"
+  │  Tokens/HTTP Call:                                   8.5  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  HTTP Overhead:                                      98%  │"
+  │  HTTP Overhead:                                      98%  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  ├──────────────────────────────────────────────────────────┤"
+  ├──────────────────────────────────────────────────────────┤
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  Baseline TPS:                                 92.33 t/s  │"
+  │  Baseline TPS:                                 92.33 t/s  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  Median Infer TPS:                    185.58 t/s (+101%)  │"
+  │  Median Infer TPS:                    185.58 t/s (+101%)  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  Median Session TPS:              3.8 t/s (+236.3% vs v277)  │"
+  │  Median Session TPS:              3.8 t/s (+236.3% vs v277)  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  Best Session TPS:                               3.8 t/s  │"
+  │  Best Session TPS:                               3.8 t/s  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  v277 Session TPS:                  1.13 t/s (reference)  │"
+  │  v277 Session TPS:                  1.13 t/s (reference)  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  Accept Rate:                                       100%  │"
+  │  Accept Rate:                                       100%  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  Fallback Rate:                                       0%  │"
+  │  Fallback Rate:                                       0%  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  ├──────────────────────────────────────────────────────────┤"
+  ├──────────────────────────────────────────────────────────┤
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  VERDICT:                                        HEALTHY  │"
+  │  VERDICT:                                        HEALTHY  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  └──────────────────────────────────────────────────────────┘"
+  └──────────────────────────────────────────────────────────┘
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value=""
+
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Health Gate:"
+  Health Gate:
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    sample_count >= 3: WARN"
+    sample_count >= 3: WARN
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    median_accept >= 0.55: PASS (1)"
+    median_accept >= 0.55: PASS (1)
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    fallback_rate <= 0.15: PASS (0)"
+    fallback_rate <= 0.15: PASS (0)
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    infer_gain >= 20%: PASS (+101%)"
+    infer_gain >= 20%: PASS (+101%)
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    session_tps vs v277: PASS (+236.3%)"
+    session_tps vs v277: PASS (+236.3%)
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value=""
+
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Planner Score Delta: 90"
+  Planner Score Delta: 90
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value=""
+
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Per-Run Breakdown:"
+  Per-Run Breakdown:
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    RUN         INFER    SESSION    ACCEPT%   CYCLES    HTTP#   TOK/HTTP    OVHD%"
+    RUN         INFER    SESSION    ACCEPT%   CYCLES    HTTP#   TOK/HTTP    OVHD%
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    ------------------------------------------------------------------------------"
+    ------------------------------------------------------------------------------
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    Run 1      185.58        3.8       100%        1        2        8.5      98%"
+    Run 1      185.58        3.8       100%        1        2        8.5      98%
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value=""
+
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Session log: D:\rawrxd\logs\speculative_v278_log.jsonl"
+  Session log: D:\rawrxd\logs\speculative_v278_log.jsonl
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Cycle log:   D:\rawrxd\logs\speculative_v278_cycle_log.jsonl"
+  Cycle log:   D:\rawrxd\logs\speculative_v278_cycle_log.jsonl
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="
+=============================================================================="
+
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  v278 Benchmark Complete — 15.8s elapsed"
+  v278 Benchmark Complete — 15.8s elapsed
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+EXIT CODE:
+PS D:\> Write-Host "waiting..."
+waiting...
+PS D:\> Get-Content "D:\rawrxd\logs\v278_debug.txt"
+
+==============================================================================
+  RawrXD v278 — Orchestration-Collapsed Speculative Benchmark
+==============================================================================
+
+  DLL:          D:\rawrxd\bin\RawrXD_Singularity_120B_v270.dll
+  Draft:        gemma3:1b
+  Verifier:     qwen2.5:7b
+  Burst:        16 x1 = 16 draft/verify
+  Target:       16 tokens x 1 runs
+  v277 ref:     1.13 wall t/s, 141.42 infer t/s
+    DLL verified: 54.5 KB
+
+==============================================================================
+  PHASE 0: PRE-LOAD — Concurrent VRAM
+==============================================================================
+  [21:52:09] Loading gemma3:1b (keep_alive=-1)...
+    gemma3:1b loaded: load=227.2ms
+  [21:52:11] Loading qwen2.5:7b (keep_alive=-1)...
+    qwen2.5:7b loaded: load=80.5ms
+    Both models in VRAM: 5.74 GB used
+
+==============================================================================
+  PHASE 1: BASELINE — qwen2.5:7b (verifier-only)
+==============================================================================
+  [21:52:15] Warmup...
+  [21:52:18]   Warmup: tg=89.6 t/s, load=81.6ms
+  [21:52:18] Baseline run 1/1 (16 tokens)...
+    Run 1: tg=92.33 t/s, pp=5727.57 t/s, wall=2299ms
+    BASELINE: tg=92.33 ±0 t/s, pp=5727.57 t/s, wall=2299 ms
+
+  ┌─────────────────────────────────────────┐
+  │ BASELINE: 92.33 ±0 t/s (verifier-only) │
+  └─────────────────────────────────────────┘
+
+==============================================================================
+  PHASE 2: SPECULATIVE — gemma3:1b -> qwen2.5:7b (burst=16 x1)
+==============================================================================
+  [SPEC] Run 1: burst=16 x1 = 16 draft/verify, target=16
+  [SPEC]   Cycle 1: draft=16, committed=17, accept=1, infer=185.58 t/s, session=3.8 t/s, d_wall=2336ms, v_wall=2132ms, total=4474ms
+    Run 1: infer=185.58 t/s, session=3.8 t/s, committed=17, accept=100%, cycles=1, http=2, overhead=98%
+
+==============================================================================
+  PHASE 3: ANALYSIS — v278 Orchestration Collapse
+==============================================================================
+
+  ┌──────────────────────────────────────────────────────────┐
+  │           v278 ORCHESTRATION-COLLAPSED RESULTS           │
+  ├──────────────────────────────────────────────────────────┤
+  │  Pair:                            gemma3:1b -> qwen2.5:7b  │
+  │  Burst:                                       16 x1 = 16  │
+  │  Runs x Cycles:                                    1 x 1  │
+  │  Total HTTP Calls:                                     2  │
+  │  Tokens/HTTP Call:                                   8.5  │
+  │  HTTP Overhead:                                      98%  │
+  ├──────────────────────────────────────────────────────────┤
+  │  Baseline TPS:                                 92.33 t/s  │
+  │  Median Infer TPS:                    185.58 t/s (+101%)  │
+  │  Median Session TPS:              3.8 t/s (+236.3% vs v277)  │
+  │  Best Session TPS:                               3.8 t/s  │
+  │  v277 Session TPS:                  1.13 t/s (reference)  │
+  │  Accept Rate:                                       100%  │
+  │  Fallback Rate:                                       0%  │
+  ├──────────────────────────────────────────────────────────┤
+  │  VERDICT:                                        HEALTHY  │
+  └──────────────────────────────────────────────────────────┘
+
+  Health Gate:
+    sample_count >= 3: WARN
+    median_accept >= 0.55: PASS (1)
+    fallback_rate <= 0.15: PASS (0)
+    infer_gain >= 20%: PASS (+101%)
+    session_tps vs v277: PASS (+236.3%)
+
+  Planner Score Delta: 90
+
+  Per-Run Breakdown:
+    RUN         INFER    SESSION    ACCEPT%   CYCLES    HTTP#   TOK/HTTP    OVHD%
+    ------------------------------------------------------------------------------
+    Run 1      185.58        3.8       100%        1        2        8.5      98%
+
+  Session log: D:\rawrxd\logs\speculative_v278_log.jsonl
+  Cycle log:   D:\rawrxd\logs\speculative_v278_cycle_log.jsonl
+
+==============================================================================
+  v278 Benchmark Complete — 15.8s elapsed
+==============================================================================
+PS D:\> Remove-Item "D:\rawrxd\logs\speculative_v278_log.jsonl" -ErrorAction SilentlyContinue; Remove-Item "D:\rawrxd\logs\speculative_v278_cycle_log.jsonl" -ErrorAction SilentlyContinue; & "D:\rawrxd\src\Beyond200\RawrXD_SmokeTest_v278_Collapsed.ps1" -Burst 16 -MultiBurst 1 -Runs 3 -TargetTokens 64 -Verbose *> "D:\rawrxd\logs\v278_full_run.txt" 2>&1; Write-Host "DONE"
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="
+=============================================================================="
+
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  RawrXD v278 — Orchestration-Collapsed Speculative Benchmark"
+  RawrXD v278 — Orchestration-Collapsed Speculative Benchmark
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value=""
+
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  DLL:          D:\rawrxd\bin\RawrXD_Singularity_120B_v270.dll"
+  DLL:          D:\rawrxd\bin\RawrXD_Singularity_120B_v270.dll
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Draft:        gemma3:1b"
+  Draft:        gemma3:1b
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Verifier:     qwen2.5:7b"
+  Verifier:     qwen2.5:7b
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Burst:        16 x1 = 16 draft/verify"
+  Burst:        16 x1 = 16 draft/verify
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Target:       64 tokens x 3 runs"
+  Target:       64 tokens x 3 runs
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  v277 ref:     1.13 wall t/s, 141.42 infer t/s"
+  v277 ref:     1.13 wall t/s, 141.42 infer t/s
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    DLL verified: 54.5 KB"
+    DLL verified: 54.5 KB
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="
+=============================================================================="
+
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  PHASE 0: PRE-LOAD — Concurrent VRAM"
+  PHASE 0: PRE-LOAD — Concurrent VRAM
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [21:53:32] Loading gemma3:1b (keep_alive=-1)..."
+  [21:53:32] Loading gemma3:1b (keep_alive=-1)...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    gemma3:1b loaded: load=204.2ms"
+    gemma3:1b loaded: load=204.2ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [21:53:34] Loading qwen2.5:7b (keep_alive=-1)..."
+  [21:53:34] Loading qwen2.5:7b (keep_alive=-1)...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    qwen2.5:7b loaded: load=80.2ms"
+    qwen2.5:7b loaded: load=80.2ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    Both models in VRAM: 5.74 GB used"
+    Both models in VRAM: 5.74 GB used
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="
+=============================================================================="
+
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  PHASE 1: BASELINE — qwen2.5:7b (verifier-only)"
+  PHASE 1: BASELINE — qwen2.5:7b (verifier-only)
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [21:53:38] Warmup..."
+  [21:53:38] Warmup...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [21:53:40]   Warmup: tg=92.17 t/s, load=80.6ms"
+  [21:53:40]   Warmup: tg=92.17 t/s, load=80.6ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [21:53:40] Baseline run 1/3 (64 tokens)..."
+  [21:53:40] Baseline run 1/3 (64 tokens)...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    Run 1: tg=89.56 t/s, pp=5726.03 t/s, wall=2904ms"
+    Run 1: tg=89.56 t/s, pp=5726.03 t/s, wall=2904ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [21:53:43] Baseline run 2/3 (64 tokens)..."
+  [21:53:43] Baseline run 2/3 (64 tokens)...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    Run 2: tg=89.42 t/s, pp=5782.76 t/s, wall=2897ms"
+    Run 2: tg=89.42 t/s, pp=5782.76 t/s, wall=2897ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [21:53:46] Baseline run 3/3 (64 tokens)..."
+  [21:53:46] Baseline run 3/3 (64 tokens)...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    Run 3: tg=89.73 t/s, pp=6002.72 t/s, wall=2919ms"
+    Run 3: tg=89.73 t/s, pp=6002.72 t/s, wall=2919ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    BASELINE: tg=89.57 ±0.16 t/s, pp=5837.17 t/s, wall=2906.7 ms"
+    BASELINE: tg=89.57 ±0.16 t/s, pp=5837.17 t/s, wall=2906.7 ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="
+  ┌─────────────────────────────────────────┐"
+
+  ┌─────────────────────────────────────────┐
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │ BASELINE: 89.57 ±0.16 t/s (verifier-only) │"
+  │ BASELINE: 89.57 ±0.16 t/s (verifier-only) │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  └─────────────────────────────────────────┘"
+  └─────────────────────────────────────────┘
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="
+=============================================================================="
+
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  PHASE 2: SPECULATIVE — gemma3:1b -> qwen2.5:7b (burst=16 x1)"
+  PHASE 2: SPECULATIVE — gemma3:1b -> qwen2.5:7b (burst=16 x1)
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC] Run 1: burst=16 x1 = 16 draft/verify, target=64"
+  [SPEC] Run 1: burst=16 x1 = 16 draft/verify, target=64
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 1: draft=16, committed=17, accept=1, infer=187.22 t/s, session=3.7 t/s, d_wall=2418ms, v_wall=2180ms, total=4600ms"
+  [SPEC]   Cycle 1: draft=16, committed=17, accept=1, infer=187.22 t/s, session=3.7 t/s, d_wall=2418ms, v_wall=2180ms, total=4600ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 2: draft=16, committed=17, accept=1, infer=184.4 t/s, session=3.7 t/s, d_wall=2423ms, v_wall=2174ms, total=4597ms"
+  [SPEC]   Cycle 2: draft=16, committed=17, accept=1, infer=184.4 t/s, session=3.7 t/s, d_wall=2423ms, v_wall=2174ms, total=4597ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 3: draft=16, committed=17, accept=1, infer=185.54 t/s, session=3.66 t/s, d_wall=2458ms, v_wall=2184ms, total=4643ms"
+  [SPEC]   Cycle 3: draft=16, committed=17, accept=1, infer=185.54 t/s, session=3.66 t/s, d_wall=2458ms, v_wall=2184ms, total=4643ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 4: draft=16, committed=17, accept=1, infer=175.65 t/s, session=3.74 t/s, d_wall=2377ms, v_wall=2172ms, total=4550ms"
+  [SPEC]   Cycle 4: draft=16, committed=17, accept=1, infer=175.65 t/s, session=3.74 t/s, d_wall=2377ms, v_wall=2172ms, total=4550ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    Run 1: infer=183.09 t/s, session=3.7 t/s, committed=68, accept=100%, cycles=4, http=8, overhead=98%"
+    Run 1: infer=183.09 t/s, session=3.7 t/s, committed=68, accept=100%, cycles=4, http=8, overhead=98%
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC] Run 2: burst=16 x1 = 16 draft/verify, target=64"
+  [SPEC] Run 2: burst=16 x1 = 16 draft/verify, target=64
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 1: draft=16, committed=17, accept=1, infer=204.42 t/s, session=3.73 t/s, d_wall=2385ms, v_wall=2174ms, total=4560ms"
+  [SPEC]   Cycle 1: draft=16, committed=17, accept=1, infer=204.42 t/s, session=3.73 t/s, d_wall=2385ms, v_wall=2174ms, total=4560ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 2: draft=16, committed=17, accept=1, infer=183.69 t/s, session=3.69 t/s, d_wall=2427ms, v_wall=2175ms, total=4603ms"
+  [SPEC]   Cycle 2: draft=16, committed=17, accept=1, infer=183.69 t/s, session=3.69 t/s, d_wall=2427ms, v_wall=2175ms, total=4603ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 3: draft=16, committed=17, accept=1, infer=182.85 t/s, session=3.7 t/s, d_wall=2393ms, v_wall=2195ms, total=4589ms"
+  [SPEC]   Cycle 3: draft=16, committed=17, accept=1, infer=182.85 t/s, session=3.7 t/s, d_wall=2393ms, v_wall=2195ms, total=4589ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 4: draft=16, committed=17, accept=1, infer=178.82 t/s, session=3.71 t/s, d_wall=2423ms, v_wall=2163ms, total=4587ms"
+  [SPEC]   Cycle 4: draft=16, committed=17, accept=1, infer=178.82 t/s, session=3.71 t/s, d_wall=2423ms, v_wall=2163ms, total=4587ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    Run 2: infer=186.94 t/s, session=3.71 t/s, committed=68, accept=100%, cycles=4, http=8, overhead=98%"
+    Run 2: infer=186.94 t/s, session=3.71 t/s, committed=68, accept=100%, cycles=4, http=8, overhead=98%
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC] Run 3: burst=16 x1 = 16 draft/verify, target=64"
+  [SPEC] Run 3: burst=16 x1 = 16 draft/verify, target=64
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 1: draft=16, committed=17, accept=1, infer=207 t/s, session=3.8 t/s, d_wall=2321ms, v_wall=2155ms, total=4477ms"
+  [SPEC]   Cycle 1: draft=16, committed=17, accept=1, infer=207 t/s, session=3.8 t/s, d_wall=2321ms, v_wall=2155ms, total=4477ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 2: draft=16, committed=17, accept=1, infer=181.69 t/s, session=3.7 t/s, d_wall=2404ms, v_wall=2184ms, total=4589ms"
+  [SPEC]   Cycle 2: draft=16, committed=17, accept=1, infer=181.69 t/s, session=3.7 t/s, d_wall=2404ms, v_wall=2184ms, total=4589ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 3: draft=16, committed=17, accept=1, infer=176.81 t/s, session=3.71 t/s, d_wall=2389ms, v_wall=2189ms, total=4578ms"
+  [SPEC]   Cycle 3: draft=16, committed=17, accept=1, infer=176.81 t/s, session=3.71 t/s, d_wall=2389ms, v_wall=2189ms, total=4578ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 4: draft=16, committed=17, accept=1, infer=177.12 t/s, session=3.75 t/s, d_wall=2379ms, v_wall=2158ms, total=4538ms"
+  [SPEC]   Cycle 4: draft=16, committed=17, accept=1, infer=177.12 t/s, session=3.75 t/s, d_wall=2379ms, v_wall=2158ms, total=4538ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    Run 3: infer=184.87 t/s, session=3.74 t/s, committed=68, accept=100%, cycles=4, http=8, overhead=98%"
+    Run 3: infer=184.87 t/s, session=3.74 t/s, committed=68, accept=100%, cycles=4, http=8, overhead=98%
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="
+=============================================================================="
+
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  PHASE 3: ANALYSIS — v278 Orchestration Collapse"
+  PHASE 3: ANALYSIS — v278 Orchestration Collapse
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value=""
+
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  ┌──────────────────────────────────────────────────────────┐"
+  ┌──────────────────────────────────────────────────────────┐
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │           v278 ORCHESTRATION-COLLAPSED RESULTS           │"
+  │           v278 ORCHESTRATION-COLLAPSED RESULTS           │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  ├──────────────────────────────────────────────────────────┤"
+  ├──────────────────────────────────────────────────────────┤
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  Pair:                            gemma3:1b -> qwen2.5:7b  │"
+  │  Pair:                            gemma3:1b -> qwen2.5:7b  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  Burst:                                       16 x1 = 16  │"
+  │  Burst:                                       16 x1 = 16  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  Runs x Cycles:                                   3 x 12  │"
+  │  Runs x Cycles:                                   3 x 12  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  Total HTTP Calls:                                    24  │"
+  │  Total HTTP Calls:                                    24  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  Tokens/HTTP Call:                                   8.5  │"
+  │  Tokens/HTTP Call:                                   8.5  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  HTTP Overhead:                                      98%  │"
+  │  HTTP Overhead:                                      98%  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  ├──────────────────────────────────────────────────────────┤"
+  ├──────────────────────────────────────────────────────────┤
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  Baseline TPS:                                 89.57 t/s  │"
+  │  Baseline TPS:                                 89.57 t/s  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  Median Infer TPS:                  184.87 t/s (+106.4%)  │"
+  │  Median Infer TPS:                  184.87 t/s (+106.4%)  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  Median Session TPS:              3.71 t/s (+228.3% vs v277)  │"
+  │  Median Session TPS:              3.71 t/s (+228.3% vs v277)  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  Best Session TPS:                              3.74 t/s  │"
+  │  Best Session TPS:                              3.74 t/s  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  v277 Session TPS:                  1.13 t/s (reference)  │"
+  │  v277 Session TPS:                  1.13 t/s (reference)  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  Accept Rate:                                       100%  │"
+  │  Accept Rate:                                       100%  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  Fallback Rate:                                       0%  │"
+  │  Fallback Rate:                                       0%  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  ├──────────────────────────────────────────────────────────┤"
+  ├──────────────────────────────────────────────────────────┤
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  VERDICT:                                        HEALTHY  │"
+  │  VERDICT:                                        HEALTHY  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  └──────────────────────────────────────────────────────────┘"
+  └──────────────────────────────────────────────────────────┘
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value=""
+
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Health Gate:"
+  Health Gate:
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    sample_count >= 3: PASS"
+    sample_count >= 3: PASS
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    median_accept >= 0.55: PASS (1)"
+    median_accept >= 0.55: PASS (1)
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    fallback_rate <= 0.15: PASS (0)"
+    fallback_rate <= 0.15: PASS (0)
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    infer_gain >= 20%: PASS (+106.4%)"
+    infer_gain >= 20%: PASS (+106.4%)
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    session_tps vs v277: PASS (+228.3%)"
+    session_tps vs v277: PASS (+228.3%)
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value=""
+
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Planner Score Delta: 100"
+  Planner Score Delta: 100
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value=""
+
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Per-Run Breakdown:"
+  Per-Run Breakdown:
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    RUN         INFER    SESSION    ACCEPT%   CYCLES    HTTP#   TOK/HTTP    OVHD%"
+    RUN         INFER    SESSION    ACCEPT%   CYCLES    HTTP#   TOK/HTTP    OVHD%
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    ------------------------------------------------------------------------------"
+    ------------------------------------------------------------------------------
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    Run 1      183.09        3.7       100%        4        8        8.5      98%"
+    Run 1      183.09        3.7       100%        4        8        8.5      98%
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    Run 2      186.94       3.71       100%        4        8        8.5      98%"
+    Run 2      186.94       3.71       100%        4        8        8.5      98%
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    Run 3      184.87       3.74       100%        4        8        8.5      98%"
+    Run 3      184.87       3.74       100%        4        8        8.5      98%
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value=""
+
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Session log: D:\rawrxd\logs\speculative_v278_log.jsonl"
+  Session log: D:\rawrxd\logs\speculative_v278_log.jsonl
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Cycle log:   D:\rawrxd\logs\speculative_v278_cycle_log.jsonl"
+  Cycle log:   D:\rawrxd\logs\speculative_v278_cycle_log.jsonl
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="
+=============================================================================="
+
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  v278 Benchmark Complete — 72.6s elapsed"
+  v278 Benchmark Complete — 72.6s elapsed
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+DONE
+PS D:\> Write-Host "waiting for completion..."
+waiting for completion...
+PS D:\> Write-Host "ping"
+ping
+PS D:\> Write-Host "check"
+check
+PS D:\> Write-Host "alive"
+alive
+PS D:\> Test-Path "D:\rawrxd\logs\v278_full_run.txt"
+True
+PS D:\> Get-Content "D:\rawrxd\logs\v278_full_run.txt"
+
+==============================================================================
+  RawrXD v278 — Orchestration-Collapsed Speculative Benchmark
+==============================================================================
+
+  DLL:          D:\rawrxd\bin\RawrXD_Singularity_120B_v270.dll
+  Draft:        gemma3:1b
+  Verifier:     qwen2.5:7b
+  Burst:        16 x1 = 16 draft/verify
+  Target:       64 tokens x 3 runs
+  v277 ref:     1.13 wall t/s, 141.42 infer t/s
+    DLL verified: 54.5 KB
+
+==============================================================================
+  PHASE 0: PRE-LOAD — Concurrent VRAM
+==============================================================================
+  [21:53:32] Loading gemma3:1b (keep_alive=-1)...
+    gemma3:1b loaded: load=204.2ms
+  [21:53:34] Loading qwen2.5:7b (keep_alive=-1)...
+    qwen2.5:7b loaded: load=80.2ms
+    Both models in VRAM: 5.74 GB used
+
+==============================================================================
+  PHASE 1: BASELINE — qwen2.5:7b (verifier-only)
+==============================================================================
+  [21:53:38] Warmup...
+  [21:53:40]   Warmup: tg=92.17 t/s, load=80.6ms
+  [21:53:40] Baseline run 1/3 (64 tokens)...
+    Run 1: tg=89.56 t/s, pp=5726.03 t/s, wall=2904ms
+  [21:53:43] Baseline run 2/3 (64 tokens)...
+    Run 2: tg=89.42 t/s, pp=5782.76 t/s, wall=2897ms
+  [21:53:46] Baseline run 3/3 (64 tokens)...
+    Run 3: tg=89.73 t/s, pp=6002.72 t/s, wall=2919ms
+    BASELINE: tg=89.57 ±0.16 t/s, pp=5837.17 t/s, wall=2906.7 ms
+
+  ┌─────────────────────────────────────────┐
+  │ BASELINE: 89.57 ±0.16 t/s (verifier-only) │
+  └─────────────────────────────────────────┘
+
+==============================================================================
+  PHASE 2: SPECULATIVE — gemma3:1b -> qwen2.5:7b (burst=16 x1)
+==============================================================================
+  [SPEC] Run 1: burst=16 x1 = 16 draft/verify, target=64
+  [SPEC]   Cycle 1: draft=16, committed=17, accept=1, infer=187.22 t/s, session=3.7 t/s, d_wall=2418ms, v_wall=2180ms, total=4600ms
+  [SPEC]   Cycle 2: draft=16, committed=17, accept=1, infer=184.4 t/s, session=3.7 t/s, d_wall=2423ms, v_wall=2174ms, total=4597ms
+  [SPEC]   Cycle 3: draft=16, committed=17, accept=1, infer=185.54 t/s, session=3.66 t/s, d_wall=2458ms, v_wall=2184ms, total=4643ms
+  [SPEC]   Cycle 4: draft=16, committed=17, accept=1, infer=175.65 t/s, session=3.74 t/s, d_wall=2377ms, v_wall=2172ms, total=4550ms
+    Run 1: infer=183.09 t/s, session=3.7 t/s, committed=68, accept=100%, cycles=4, http=8, overhead=98%
+  [SPEC] Run 2: burst=16 x1 = 16 draft/verify, target=64
+  [SPEC]   Cycle 1: draft=16, committed=17, accept=1, infer=204.42 t/s, session=3.73 t/s, d_wall=2385ms, v_wall=2174ms, total=4560ms
+  [SPEC]   Cycle 2: draft=16, committed=17, accept=1, infer=183.69 t/s, session=3.69 t/s, d_wall=2427ms, v_wall=2175ms, total=4603ms
+  [SPEC]   Cycle 3: draft=16, committed=17, accept=1, infer=182.85 t/s, session=3.7 t/s, d_wall=2393ms, v_wall=2195ms, total=4589ms
+  [SPEC]   Cycle 4: draft=16, committed=17, accept=1, infer=178.82 t/s, session=3.71 t/s, d_wall=2423ms, v_wall=2163ms, total=4587ms
+    Run 2: infer=186.94 t/s, session=3.71 t/s, committed=68, accept=100%, cycles=4, http=8, overhead=98%
+  [SPEC] Run 3: burst=16 x1 = 16 draft/verify, target=64
+  [SPEC]   Cycle 1: draft=16, committed=17, accept=1, infer=207 t/s, session=3.8 t/s, d_wall=2321ms, v_wall=2155ms, total=4477ms
+  [SPEC]   Cycle 2: draft=16, committed=17, accept=1, infer=181.69 t/s, session=3.7 t/s, d_wall=2404ms, v_wall=2184ms, total=4589ms
+  [SPEC]   Cycle 3: draft=16, committed=17, accept=1, infer=176.81 t/s, session=3.71 t/s, d_wall=2389ms, v_wall=2189ms, total=4578ms
+  [SPEC]   Cycle 4: draft=16, committed=17, accept=1, infer=177.12 t/s, session=3.75 t/s, d_wall=2379ms, v_wall=2158ms, total=4538ms
+    Run 3: infer=184.87 t/s, session=3.74 t/s, committed=68, accept=100%, cycles=4, http=8, overhead=98%
+
+==============================================================================
+  PHASE 3: ANALYSIS — v278 Orchestration Collapse
+==============================================================================
+
+  ┌──────────────────────────────────────────────────────────┐
+  │           v278 ORCHESTRATION-COLLAPSED RESULTS           │
+  ├──────────────────────────────────────────────────────────┤
+  │  Pair:                            gemma3:1b -> qwen2.5:7b  │
+  │  Burst:                                       16 x1 = 16  │
+  │  Runs x Cycles:                                   3 x 12  │
+  │  Total HTTP Calls:                                    24  │
+  │  Tokens/HTTP Call:                                   8.5  │
+  │  HTTP Overhead:                                      98%  │
+  ├──────────────────────────────────────────────────────────┤
+  │  Baseline TPS:                                 89.57 t/s  │
+  │  Median Infer TPS:                  184.87 t/s (+106.4%)  │
+  │  Median Session TPS:              3.71 t/s (+228.3% vs v277)  │
+  │  Best Session TPS:                              3.74 t/s  │
+  │  v277 Session TPS:                  1.13 t/s (reference)  │
+  │  Accept Rate:                                       100%  │
+  │  Fallback Rate:                                       0%  │
+  ├──────────────────────────────────────────────────────────┤
+  │  VERDICT:                                        HEALTHY  │
+  └──────────────────────────────────────────────────────────┘
+
+  Health Gate:
+    sample_count >= 3: PASS
+    median_accept >= 0.55: PASS (1)
+    fallback_rate <= 0.15: PASS (0)
+    infer_gain >= 20%: PASS (+106.4%)
+    session_tps vs v277: PASS (+228.3%)
+
+  Planner Score Delta: 100
+
+  Per-Run Breakdown:
+    RUN         INFER    SESSION    ACCEPT%   CYCLES    HTTP#   TOK/HTTP    OVHD%
+    ------------------------------------------------------------------------------
+    Run 1      183.09        3.7       100%        4        8        8.5      98%
+    Run 2      186.94       3.71       100%        4        8        8.5      98%
+    Run 3      184.87       3.74       100%        4        8        8.5      98%
+
+  Session log: D:\rawrxd\logs\speculative_v278_log.jsonl
+  Cycle log:   D:\rawrxd\logs\speculative_v278_cycle_log.jsonl
+
+==============================================================================
+  v278 Benchmark Complete — 72.6s elapsed
+==============================================================================
+PS D:\> & "D:\rawrxd\src\Beyond200\RawrXD_SmokeTest_v259.ps1" *> "D:\rawrxd\logs\v278_smoke_standard.txt" 2>&1; Write-Host "SMOKE DONE"
+>> ParameterBinding(Out-File): name="InputObject"; value=""
+
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  RawrXD Sovereign Smoke Test Harness v259"
+  RawrXD Sovereign Smoke Test Harness v259
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value=""
+
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  DLL:       D:\rawrxd\bin\RawrXD_Singularity_120B_v270.dll"
+  DLL:       D:\rawrxd\bin\RawrXD_Singularity_120B_v270.dll
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Backend:   rocm"
+  Backend:   rocm
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Models:    gemma3:1b, phi3:mini, qwen2.5-coder:latest, qwen2.5:7b, gemma3:12b"
+  Models:    gemma3:1b, phi3:mini, qwen2.5-coder:latest, qwen2.5:7b, gemma3:12b
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Warmup:    1  |  Runs: 3"
+  Warmup:    1  |  Runs: 3
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Log:       D:\rawrxd\logs\smoke_v270.jsonl"
+  Log:       D:\rawrxd\logs\smoke_v270.jsonl
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Quick:     False  |  Compare: False"
+  Quick:     False  |  Compare: False
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  DLL verified: 54.5 KB"
+  DLL verified: 54.5 KB
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value=""
+
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Backend: ROCM"
+  Backend: ROCM
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value=""
+
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [1/5] gemma3:1b @ ROCM"
+  [1/5] gemma3:1b @ ROCM
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> TerminatingError(Invoke-RestMethod): "
+{
+  "error": "model \u0027dummy\u0027 not found"
+}"
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [21:55:09] Warmup 1/1 (long prompt)..."
+  [21:55:09] Warmup 1/1 (long prompt)...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [21:55:12]   Warmup: pp=5067.46 t/s, tg=238.2 t/s, load=293.5ms"
+  [21:55:12]   Warmup: pp=5067.46 t/s, tg=238.2 t/s, load=293.5ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [21:55:12] Run 1/3 (long prompt, 128 tokens)..."
+  [21:55:12] Run 1/3 (long prompt, 128 tokens)...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Run 1 : pp=16181.58 t/s, tg=246.22 t/s, wall=2823ms"
+  Run 1 : pp=16181.58 t/s, tg=246.22 t/s, wall=2823ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [21:55:14] Run 2/3 (long prompt, 128 tokens)..."
+  [21:55:14] Run 2/3 (long prompt, 128 tokens)...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Run 2 : pp=14663.33 t/s, tg=258.92 t/s, wall=2822ms"
+  Run 2 : pp=14663.33 t/s, tg=258.92 t/s, wall=2822ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [21:55:17] Run 3/3 (long prompt, 128 tokens)..."
+  [21:55:17] Run 3/3 (long prompt, 128 tokens)...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Run 3 : pp=16239.39 t/s, tg=267.55 t/s, wall=2844ms"
+  Run 3 : pp=16239.39 t/s, tg=267.55 t/s, wall=2844ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="@{model=gemma3:1b; created_at=3/16/2026 1:55:22 AM; response=; done=True; done_reason=unload}"
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value=""
+
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [2/5] phi3:mini @ ROCM"
+  [2/5] phi3:mini @ ROCM
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> TerminatingError(Invoke-RestMethod): "
+{
+  "error": "model \u0027dummy\u0027 not found"
+}"
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [21:55:27] Warmup 1/1 (long prompt)..."
+  [21:55:27] Warmup 1/1 (long prompt)...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [21:55:32]   Warmup: pp=2109.29 t/s, tg=175.02 t/s, load=2790.3ms"
+  [21:55:32]   Warmup: pp=2109.29 t/s, tg=175.02 t/s, load=2790.3ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [21:55:32] Run 1/3 (long prompt, 128 tokens)..."
+  [21:55:32] Run 1/3 (long prompt, 128 tokens)...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Run 1 : pp=14253.82 t/s, tg=172.57 t/s, wall=2816ms"
+  Run 1 : pp=14253.82 t/s, tg=172.57 t/s, wall=2816ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [21:55:35] Run 2/3 (long prompt, 128 tokens)..."
+  [21:55:35] Run 2/3 (long prompt, 128 tokens)...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Run 2 : pp=13360.59 t/s, tg=176.38 t/s, wall=2797ms"
+  Run 2 : pp=13360.59 t/s, tg=176.38 t/s, wall=2797ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [21:55:38] Run 3/3 (long prompt, 128 tokens)..."
+  [21:55:38] Run 3/3 (long prompt, 128 tokens)...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Run 3 : pp=13463.32 t/s, tg=176.07 t/s, wall=2807ms"
+  Run 3 : pp=13463.32 t/s, tg=176.07 t/s, wall=2807ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="@{model=phi3:mini; created_at=3/16/2026 1:55:42 AM; response=; done=True; done_reason=unload}"
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value=""
+
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [3/5] qwen2.5-coder:latest @ ROCM"
+  [3/5] qwen2.5-coder:latest @ ROCM
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> TerminatingError(Invoke-RestMethod): "
+{
+  "error": "model \u0027dummy\u0027 not found"
+}"
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [21:55:47] Warmup 1/1 (long prompt)..."
+  [21:55:47] Warmup 1/1 (long prompt)...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [21:55:53]   Warmup: pp=1644.07 t/s, tg=87.6 t/s, load=2761.6ms"
+  [21:55:53]   Warmup: pp=1644.07 t/s, tg=87.6 t/s, load=2761.6ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [21:55:53] Run 1/3 (long prompt, 128 tokens)..."
+  [21:55:53] Run 1/3 (long prompt, 128 tokens)...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Run 1 : pp=6378.28 t/s, tg=88.37 t/s, wall=3676ms"
+  Run 1 : pp=6378.28 t/s, tg=88.37 t/s, wall=3676ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [21:55:56] Run 2/3 (long prompt, 128 tokens)..."
+  [21:55:56] Run 2/3 (long prompt, 128 tokens)...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Run 2 : pp=8045.73 t/s, tg=89.44 t/s, wall=3650ms"
+  Run 2 : pp=8045.73 t/s, tg=89.44 t/s, wall=3650ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [21:56:00] Run 3/3 (long prompt, 128 tokens)..."
+  [21:56:00] Run 3/3 (long prompt, 128 tokens)...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Run 3 : pp=7370.34 t/s, tg=88.83 t/s, wall=3672ms"
+  Run 3 : pp=7370.34 t/s, tg=88.83 t/s, wall=3672ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="@{model=qwen2.5-coder:latest; created_at=3/16/2026 1:56:06 AM; response=; done=True; done_reason=unload}"
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value=""
+
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [4/5] qwen2.5:7b @ ROCM"
+  [4/5] qwen2.5:7b @ ROCM
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> TerminatingError(Invoke-RestMethod): "
+{
+  "error": "model \u0027dummy\u0027 not found"
+}"
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [21:56:10] Warmup 1/1 (long prompt)..."
+  [21:56:10] Warmup 1/1 (long prompt)...
+PS D:\> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+PS D:\> Get-Date
+
+Sunday, March 15, 2026 9:56:11 PM
+
+PS D:\> Get-Content "D:\rawrxd\logs\v278_smoke_standard.txt" -Tail 40
+==============================================================================
+  [2/5] phi3:mini @ ROCM
+==============================================================================
+  [21:55:27] Warmup 1/1 (long prompt)...
+  [21:55:32]   Warmup: pp=2109.29 t/s, tg=175.02 t/s, load=2790.3ms
+  [21:55:32] Run 1/3 (long prompt, 128 tokens)...
+  Run 1 : pp=14253.82 t/s, tg=172.57 t/s, wall=2816ms
+  [21:55:35] Run 2/3 (long prompt, 128 tokens)...
+  Run 2 : pp=13360.59 t/s, tg=176.38 t/s, wall=2797ms
+  [21:55:38] Run 3/3 (long prompt, 128 tokens)...
+  Run 3 : pp=13463.32 t/s, tg=176.07 t/s, wall=2807ms
+model       : phi3:mini
+created_at  : 3/16/2026 1:55:42 AM
+response    :
+done        : True
+done_reason : unload
+
+
+==============================================================================
+  [3/5] qwen2.5-coder:latest @ ROCM
+==============================================================================
+  [21:55:47] Warmup 1/1 (long prompt)...
+  [21:55:53]   Warmup: pp=1644.07 t/s, tg=87.6 t/s, load=2761.6ms
+  [21:55:53] Run 1/3 (long prompt, 128 tokens)...
+  Run 1 : pp=6378.28 t/s, tg=88.37 t/s, wall=3676ms
+  [21:55:56] Run 2/3 (long prompt, 128 tokens)...
+  Run 2 : pp=8045.73 t/s, tg=89.44 t/s, wall=3650ms
+  [21:56:00] Run 3/3 (long prompt, 128 tokens)...
+  Run 3 : pp=7370.34 t/s, tg=88.83 t/s, wall=3672ms
+model       : qwen2.5-coder:latest
+created_at  : 3/16/2026 1:56:06 AM
+response    :
+done        : True
+done_reason : unload
+
+
+==============================================================================
+  [4/5] qwen2.5:7b @ ROCM
+==============================================================================
+  [21:56:10] Warmup 1/1 (long prompt)...
+PS D:\> Start-Sleep -Seconds 45; Get-Content "D:\rawrxd\logs\v278_smoke_standard.txt" -Tail 60
+PS D:\> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+PS D:\> Get-Content "D:\rawrxd\logs\v278_smoke_standard.txt" -Tail 80
+
+==============================================================================
+  RawrXD Sovereign Smoke Test Harness v259
+==============================================================================
+
+  DLL:       D:\rawrxd\bin\RawrXD_Singularity_120B_v270.dll
+  Backend:   rocm
+  Models:    gemma3:1b, phi3:mini, qwen2.5-coder:latest, qwen2.5:7b, gemma3:12b
+  Warmup:    1  |  Runs: 3
+  Log:       D:\rawrxd\logs\smoke_v270.jsonl
+  Quick:     False  |  Compare: False
+  DLL verified: 54.5 KB
+
+==============================================================================
+  Backend: ROCM
+==============================================================================
+
+==============================================================================
+  [1/5] gemma3:1b @ ROCM
+==============================================================================
+  [21:55:09] Warmup 1/1 (long prompt)...
+  [21:55:12]   Warmup: pp=5067.46 t/s, tg=238.2 t/s, load=293.5ms
+  [21:55:12] Run 1/3 (long prompt, 128 tokens)...
+  Run 1 : pp=16181.58 t/s, tg=246.22 t/s, wall=2823ms
+  [21:55:14] Run 2/3 (long prompt, 128 tokens)...
+  Run 2 : pp=14663.33 t/s, tg=258.92 t/s, wall=2822ms
+  [21:55:17] Run 3/3 (long prompt, 128 tokens)...
+  Run 3 : pp=16239.39 t/s, tg=267.55 t/s, wall=2844ms
+
+model       : gemma3:1b
+created_at  : 3/16/2026 1:55:22 AM
+response    :
+done        : True
+done_reason : unload
+
+
+==============================================================================
+  [2/5] phi3:mini @ ROCM
+==============================================================================
+  [21:55:27] Warmup 1/1 (long prompt)...
+  [21:55:32]   Warmup: pp=2109.29 t/s, tg=175.02 t/s, load=2790.3ms
+  [21:55:32] Run 1/3 (long prompt, 128 tokens)...
+  Run 1 : pp=14253.82 t/s, tg=172.57 t/s, wall=2816ms
+  [21:55:35] Run 2/3 (long prompt, 128 tokens)...
+  Run 2 : pp=13360.59 t/s, tg=176.38 t/s, wall=2797ms
+  [21:55:38] Run 3/3 (long prompt, 128 tokens)...
+  Run 3 : pp=13463.32 t/s, tg=176.07 t/s, wall=2807ms
+model       : phi3:mini
+created_at  : 3/16/2026 1:55:42 AM
+response    :
+done        : True
+done_reason : unload
+
+
+==============================================================================
+  [3/5] qwen2.5-coder:latest @ ROCM
+==============================================================================
+  [21:55:47] Warmup 1/1 (long prompt)...
+  [21:55:53]   Warmup: pp=1644.07 t/s, tg=87.6 t/s, load=2761.6ms
+  [21:55:53] Run 1/3 (long prompt, 128 tokens)...
+  Run 1 : pp=6378.28 t/s, tg=88.37 t/s, wall=3676ms
+  [21:55:56] Run 2/3 (long prompt, 128 tokens)...
+  Run 2 : pp=8045.73 t/s, tg=89.44 t/s, wall=3650ms
+  [21:56:00] Run 3/3 (long prompt, 128 tokens)...
+  Run 3 : pp=7370.34 t/s, tg=88.83 t/s, wall=3672ms
+model       : qwen2.5-coder:latest
+created_at  : 3/16/2026 1:56:06 AM
+response    :
+done        : True
+done_reason : unload
+
+
+==============================================================================
+  [4/5] qwen2.5:7b @ ROCM
+==============================================================================
+  [21:56:10] Warmup 1/1 (long prompt)...
+PS D:\> Start-Sleep -Seconds 90; Get-Content "D:\rawrxd\logs\v278_smoke_standard.txt" -Tail 50
+PS D:\> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+PS D:\> Get-Content "D:\rawrxd\logs\v278_smoke_standard.txt" -Tail 60
+
+==============================================================================
+  [1/5] gemma3:1b @ ROCM
+==============================================================================
+  [21:55:09] Warmup 1/1 (long prompt)...
+  [21:55:12]   Warmup: pp=5067.46 t/s, tg=238.2 t/s, load=293.5ms
+  [21:55:12] Run 1/3 (long prompt, 128 tokens)...
+  Run 1 : pp=16181.58 t/s, tg=246.22 t/s, wall=2823ms
+  [21:55:14] Run 2/3 (long prompt, 128 tokens)...
+  Run 2 : pp=14663.33 t/s, tg=258.92 t/s, wall=2822ms
+  [21:55:17] Run 3/3 (long prompt, 128 tokens)...
+  Run 3 : pp=16239.39 t/s, tg=267.55 t/s, wall=2844ms
+
+model       : gemma3:1b
+created_at  : 3/16/2026 1:55:22 AM
+response    :
+done        : True
+done_reason : unload
+
+
+==============================================================================
+  [2/5] phi3:mini @ ROCM
+==============================================================================
+  [21:55:27] Warmup 1/1 (long prompt)...
+  [21:55:32]   Warmup: pp=2109.29 t/s, tg=175.02 t/s, load=2790.3ms
+  [21:55:32] Run 1/3 (long prompt, 128 tokens)...
+  Run 1 : pp=14253.82 t/s, tg=172.57 t/s, wall=2816ms
+  [21:55:35] Run 2/3 (long prompt, 128 tokens)...
+  Run 2 : pp=13360.59 t/s, tg=176.38 t/s, wall=2797ms
+  [21:55:38] Run 3/3 (long prompt, 128 tokens)...
+  Run 3 : pp=13463.32 t/s, tg=176.07 t/s, wall=2807ms
+model       : phi3:mini
+created_at  : 3/16/2026 1:55:42 AM
+response    :
+done        : True
+done_reason : unload
+
+
+==============================================================================
+  [3/5] qwen2.5-coder:latest @ ROCM
+==============================================================================
+  [21:55:47] Warmup 1/1 (long prompt)...
+  [21:55:53]   Warmup: pp=1644.07 t/s, tg=87.6 t/s, load=2761.6ms
+  [21:55:53] Run 1/3 (long prompt, 128 tokens)...
+  Run 1 : pp=6378.28 t/s, tg=88.37 t/s, wall=3676ms
+  [21:55:56] Run 2/3 (long prompt, 128 tokens)...
+  Run 2 : pp=8045.73 t/s, tg=89.44 t/s, wall=3650ms
+  [21:56:00] Run 3/3 (long prompt, 128 tokens)...
+  Run 3 : pp=7370.34 t/s, tg=88.83 t/s, wall=3672ms
+model       : qwen2.5-coder:latest
+created_at  : 3/16/2026 1:56:06 AM
+response    :
+done        : True
+done_reason : unload
+
+
+==============================================================================
+  [4/5] qwen2.5:7b @ ROCM
+==============================================================================
+  [21:56:10] Warmup 1/1 (long prompt)...
+PS D:\> $f = Get-Item "D:\rawrxd\logs\v278_smoke_standard.txt"; Write-Host "Size: $($f.Length)  Modified: $($f.LastWriteTime)"
+Size: 3145  Modified: 03/15/2026 21:56:10
+PS D:\> try { $ps = Invoke-RestMethod -Uri "http://localhost:11434/api/ps" -TimeoutSec 5; $ps.models | ForEach-Object { "$($_.name)  vram=$([math]::Round($_.size_vram/1GB, 2))GB  expires=$($_.expires_at)" } } catch { Write-Host "Ollama not responding: $_" }
+qwen2.5:7b  vram=4.59GB  expires=2318-06-25T20:42:01.427823107-05:00
+PS D:\> # Quick regression test - just verify our two spec models haven't regressed
+PS D:\> $env:OLLAMA_MODELS = "F:\OllamaModels"
+PS D:\> # First unload all keep_alive models
+PS D:\> $unload1 = @{ model = "gemma3:1b"; keep_alive = 0 } | ConvertTo-Json
+PS D:\> $unload2 = @{ model = "qwen2.5:7b"; keep_alive = 0 } | ConvertTo-Json
+PS D:\> try { Invoke-RestMethod "http://localhost:11434/api/generate" -Method Post -Body $unload1 -ContentType "application/json" -TimeoutSec 5 | Out-Null } catch {}
+PS D:\> try { Invoke-RestMethod "http://localhost:11434/api/generate" -Method Post -Body $unload2 -ContentType "application/json" -TimeoutSec 5 | Out-Null } catch {}
+PS D:\> Write-Host "Models unloaded"
+Models unloaded
+PS D:\> # Test gemma3:1b
+PS D:\> $b1 = @{ model="gemma3:1b"; prompt="Explain quantum computing"; stream=$false; options=@{num_predict=64;temperature=0.1;seed=42} } | ConvertTo-Json -Depth 5
+PS D:\> $r1 = Invoke-RestMethod "http://localhost:11434/api/generate" -Method Post -Body $b1 -ContentType "application/json" -TimeoutSec 60
+PS D:\> $tps1 = [math]::Round($r1.eval_count / ($r1.eval_duration / 1e9), 2)
+PS D:\> Write-Host "gemma3:1b  tg=$tps1 t/s  (ref: 237-270)"
+gemma3:1b  tg=246.53 t/s  (ref: 237-270)
+PS D:\> # Test qwen2.5:7b  
+PS D:\> $b2 = @{ model="qwen2.5:7b"; prompt="Explain quantum computing"; stream=$false; options=@{num_predict=64;temperature=0.1;seed=42} } | ConvertTo-Json -Depth 5
+PS D:\> $r2 = Invoke-RestMethod "http://localhost:11434/api/generate" -Method Post -Body $b2 -ContentType "application/json" -TimeoutSec 60
+PS D:\> $tps2 = [math]::Round($r2.eval_count / ($r2.eval_duration / 1e9), 2)
+PS D:\> Write-Host "qwen2.5:7b tg=$tps2 t/s  (ref: 88-92)"
+qwen2.5:7b tg=89.04 t/s  (ref: 88-92)
+PS D:\> $reg1 = if ($tps1 -ge 220) { "PASS" } else { "REGRESSED" }
+PS D:\> $reg2 = if ($tps2 -ge 80)  { "PASS" } else { "REGRESSED" }
+PS D:\> Write-Host "`nRegression: gemma3:1b=$reg1, qwen2.5:7b=$reg2"
+
+Regression: gemma3:1b=PASS, qwen2.5:7b=PASS
+PS D:\> Write-Host "waiting for qwen..."
+waiting for qwen...
+PS D:\> Remove-Item "D:\rawrxd\logs\speculative_v279_log.jsonl" -ErrorAction SilentlyContinue; Remove-Item "D:\rawrxd\logs\speculative_v279_cycle_log.jsonl" -ErrorAction SilentlyContinue; Write-Host "v279 logs cleared"
+v279 logs cleared
+PS D:\> $env:OLLAMA_MODELS = "F:\OllamaModels"; $env:OLLAMA_VULKAN = "false"; & "D:\rawrxd\src\Beyond200\RawrXD_SmokeTest_v279_PhiFamily.ps1" -InitBurst 8 -EscalatedBurst 16 -Runs 3 -TargetTokens 64 -Verbose *> "D:\rawrxd\logs\v279_full_run.txt" 2>&1; Write-Host "V279 DONE"
+>> ParameterBinding(Out-File): name="InputObject"; value="
+=============================================================================="
+
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  RawrXD v279 — Second-Family Speculative Validation (Phi)"
+  RawrXD v279 — Second-Family Speculative Validation (Phi)
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value=""
+
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  DLL:          D:\rawrxd\bin\RawrXD_Singularity_120B_v270.dll"
+  DLL:          D:\rawrxd\bin\RawrXD_Singularity_120B_v270.dll
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Draft:        phi:latest"
+  Draft:        phi:latest
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Verifier:     phi3:mini"
+  Verifier:     phi3:mini
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Init Burst:   8 (escalate to 16 if qualified)"
+  Init Burst:   8 (escalate to 16 if qualified)
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Target:       64 tokens x 3 runs"
+  Target:       64 tokens x 3 runs
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  v278 ref:     3.71 session t/s, 184.87 infer t/s (gemma pair)"
+  v278 ref:     3.71 session t/s, 184.87 infer t/s (gemma pair)
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    DLL verified: 54.5 KB"
+    DLL verified: 54.5 KB
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="
+=============================================================================="
+
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  PHASE 0: PRE-LOAD — Phi Family Concurrent VRAM"
+  PHASE 0: PRE-LOAD — Phi Family Concurrent VRAM
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [22:07:15] Evicting previous models..."
+  [22:07:15] Evicting previous models...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [22:07:19] Loading phi:latest (keep_alive=-1)..."
+  [22:07:19] Loading phi:latest (keep_alive=-1)...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    phi:latest loaded: load=1834.2ms, tg=0 t/s"
+    phi:latest loaded: load=1834.2ms, tg=0 t/s
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [22:07:23] Loading phi3:mini (keep_alive=-1)..."
+  [22:07:23] Loading phi3:mini (keep_alive=-1)...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    phi3:mini loaded: load=2792.9ms, tg=0 t/s"
+    phi3:mini loaded: load=2792.9ms, tg=0 t/s
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [22:07:30] Models in VRAM:"
+  [22:07:30] Models in VRAM:
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="      phi3:mini: 3.72GB"
+      phi3:mini: 3.72GB
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="      phi:latest: 2.2GB"
+      phi:latest: 2.2GB
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    Total VRAM: 5.92 GB"
+    Total VRAM: 5.92 GB
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="
+=============================================================================="
+
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  PHASE 1: BASELINE — phi3:mini (verifier-only decode)"
+  PHASE 1: BASELINE — phi3:mini (verifier-only decode)
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [22:07:30] Warmup..."
+  [22:07:30] Warmup...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [22:07:32]   Warmup: tg=173.38 t/s, load=20.3ms"
+  [22:07:32]   Warmup: tg=173.38 t/s, load=20.3ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [22:07:32] Baseline run 1/3 (64 tokens)..."
+  [22:07:32] Baseline run 1/3 (64 tokens)...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    Run 1: tg=178.55 t/s, pp=9693.78 t/s, wall=2418ms"
+    Run 1: tg=178.55 t/s, pp=9693.78 t/s, wall=2418ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [22:07:35] Baseline run 2/3 (64 tokens)..."
+  [22:07:35] Baseline run 2/3 (64 tokens)...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    Run 2: tg=179.16 t/s, pp=6075.6 t/s, wall=2433ms"
+    Run 2: tg=179.16 t/s, pp=6075.6 t/s, wall=2433ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [22:07:37] Baseline run 3/3 (64 tokens)..."
+  [22:07:37] Baseline run 3/3 (64 tokens)...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    Run 3: tg=178.29 t/s, pp=9622.49 t/s, wall=2429ms"
+    Run 3: tg=178.29 t/s, pp=9622.49 t/s, wall=2429ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    BASELINE: tg=178.67 ±0.45 t/s, pp=8463.96 t/s, wall=2426.7 ms"
+    BASELINE: tg=178.67 ±0.45 t/s, pp=8463.96 t/s, wall=2426.7 ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="
+  ┌─────────────────────────────────────────┐"
+
+  ┌─────────────────────────────────────────┐
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │ BASELINE: 178.67 ±0.45 t/s (phi3:mini) │"
+  │ BASELINE: 178.67 ±0.45 t/s (phi3:mini) │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  └─────────────────────────────────────────┘"
+  └─────────────────────────────────────────┘
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="
+=============================================================================="
+
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  PHASE 2: SPECULATIVE — phi:latest -> phi3:mini (burst=8)"
+  PHASE 2: SPECULATIVE — phi:latest -> phi3:mini (burst=8)
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC] Run 1: burst=8, target=64"
+  [SPEC] Run 1: burst=8, target=64
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 1: draft=8, committed=9, accept=1, infer=197.73 t/s, session=2.14 t/s, d_wall=2129ms, v_wall=2073ms, total=4203ms"
+  [SPEC]   Cycle 1: draft=8, committed=9, accept=1, infer=197.73 t/s, session=2.14 t/s, d_wall=2129ms, v_wall=2073ms, total=4203ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 2: draft=8, committed=9, accept=1, infer=146.52 t/s, session=2.13 t/s, d_wall=2133ms, v_wall=2088ms, total=4223ms"
+  [SPEC]   Cycle 2: draft=8, committed=9, accept=1, infer=146.52 t/s, session=2.13 t/s, d_wall=2133ms, v_wall=2088ms, total=4223ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 3: draft=8, committed=9, accept=1, infer=181.88 t/s, session=2.15 t/s, d_wall=2123ms, v_wall=2065ms, total=4189ms"
+  [SPEC]   Cycle 3: draft=8, committed=9, accept=1, infer=181.88 t/s, session=2.15 t/s, d_wall=2123ms, v_wall=2065ms, total=4189ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 4: draft=8, committed=9, accept=1, infer=202.66 t/s, session=2.14 t/s, d_wall=2125ms, v_wall=2074ms, total=4199ms"
+  [SPEC]   Cycle 4: draft=8, committed=9, accept=1, infer=202.66 t/s, session=2.14 t/s, d_wall=2125ms, v_wall=2074ms, total=4199ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 5: draft=8, committed=9, accept=1, infer=154.87 t/s, session=2.15 t/s, d_wall=2113ms, v_wall=2077ms, total=4191ms"
+  [SPEC]   Cycle 5: draft=8, committed=9, accept=1, infer=154.87 t/s, session=2.15 t/s, d_wall=2113ms, v_wall=2077ms, total=4191ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 6: draft=8, committed=9, accept=1, infer=161.75 t/s, session=2.13 t/s, d_wall=2126ms, v_wall=2093ms, total=4220ms"
+  [SPEC]   Cycle 6: draft=8, committed=9, accept=1, infer=161.75 t/s, session=2.13 t/s, d_wall=2126ms, v_wall=2093ms, total=4220ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 7: draft=8, committed=9, accept=1, infer=166.65 t/s, session=2.15 t/s, d_wall=2101ms, v_wall=2081ms, total=4182ms"
+  [SPEC]   Cycle 7: draft=8, committed=9, accept=1, infer=166.65 t/s, session=2.15 t/s, d_wall=2101ms, v_wall=2081ms, total=4182ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 8: draft=8, committed=9, accept=1, infer=187.97 t/s, session=2.14 t/s, d_wall=2124ms, v_wall=2077ms, total=4203ms"
+  [SPEC]   Cycle 8: draft=8, committed=9, accept=1, infer=187.97 t/s, session=2.14 t/s, d_wall=2124ms, v_wall=2077ms, total=4203ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    Run 1: infer=172.88 t/s, session=2.14 t/s, committed=72, accept=100%, cycles=8, http=16"
+    Run 1: infer=172.88 t/s, session=2.14 t/s, committed=72, accept=100%, cycles=8, http=16
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC] Run 2: burst=8, target=64"
+  [SPEC] Run 2: burst=8, target=64
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 1: draft=8, committed=9, accept=1, infer=208.6 t/s, session=2.16 t/s, d_wall=2114ms, v_wall=2049ms, total=4164ms"
+  [SPEC]   Cycle 1: draft=8, committed=9, accept=1, infer=208.6 t/s, session=2.16 t/s, d_wall=2114ms, v_wall=2049ms, total=4164ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 2: draft=8, committed=9, accept=1, infer=165.74 t/s, session=2.13 t/s, d_wall=2123ms, v_wall=2092ms, total=4216ms"
+  [SPEC]   Cycle 2: draft=8, committed=9, accept=1, infer=165.74 t/s, session=2.13 t/s, d_wall=2123ms, v_wall=2092ms, total=4216ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 3: draft=8, committed=9, accept=1, infer=192.98 t/s, session=2.16 t/s, d_wall=2112ms, v_wall=2054ms, total=4167ms"
+  [SPEC]   Cycle 3: draft=8, committed=9, accept=1, infer=192.98 t/s, session=2.16 t/s, d_wall=2112ms, v_wall=2054ms, total=4167ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 4: draft=8, committed=9, accept=1, infer=196.94 t/s, session=2.16 t/s, d_wall=2115ms, v_wall=2053ms, total=4169ms"
+  [SPEC]   Cycle 4: draft=8, committed=9, accept=1, infer=196.94 t/s, session=2.16 t/s, d_wall=2115ms, v_wall=2053ms, total=4169ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 5: draft=8, committed=9, accept=1, infer=160.34 t/s, session=2.15 t/s, d_wall=2107ms, v_wall=2085ms, total=4193ms"
+  [SPEC]   Cycle 5: draft=8, committed=9, accept=1, infer=160.34 t/s, session=2.15 t/s, d_wall=2107ms, v_wall=2085ms, total=4193ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 6: draft=8, committed=9, accept=1, infer=159.97 t/s, session=2.16 t/s, d_wall=2103ms, v_wall=2069ms, total=4173ms"
+  [SPEC]   Cycle 6: draft=8, committed=9, accept=1, infer=159.97 t/s, session=2.16 t/s, d_wall=2103ms, v_wall=2069ms, total=4173ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 7: draft=8, committed=9, accept=1, infer=156.05 t/s, session=2.15 t/s, d_wall=2112ms, v_wall=2080ms, total=4194ms"
+  [SPEC]   Cycle 7: draft=8, committed=9, accept=1, infer=156.05 t/s, session=2.15 t/s, d_wall=2112ms, v_wall=2080ms, total=4194ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 8: draft=8, committed=9, accept=1, infer=192.35 t/s, session=2.16 t/s, d_wall=2110ms, v_wall=2061ms, total=4172ms"
+  [SPEC]   Cycle 8: draft=8, committed=9, accept=1, infer=192.35 t/s, session=2.16 t/s, d_wall=2110ms, v_wall=2061ms, total=4172ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    Run 2: infer=177.06 t/s, session=2.15 t/s, committed=72, accept=100%, cycles=8, http=16"
+    Run 2: infer=177.06 t/s, session=2.15 t/s, committed=72, accept=100%, cycles=8, http=16
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC] Run 3: burst=8, target=64"
+  [SPEC] Run 3: burst=8, target=64
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 1: draft=8, committed=9, accept=1, infer=209.77 t/s, session=2.16 t/s, d_wall=2105ms, v_wall=2060ms, total=4166ms"
+  [SPEC]   Cycle 1: draft=8, committed=9, accept=1, infer=209.77 t/s, session=2.16 t/s, d_wall=2105ms, v_wall=2060ms, total=4166ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 2: draft=8, committed=9, accept=1, infer=160.77 t/s, session=2.16 t/s, d_wall=2111ms, v_wall=2059ms, total=4171ms"
+  [SPEC]   Cycle 2: draft=8, committed=9, accept=1, infer=160.77 t/s, session=2.16 t/s, d_wall=2111ms, v_wall=2059ms, total=4171ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 3: draft=8, committed=9, accept=1, infer=197.23 t/s, session=2.15 t/s, d_wall=2136ms, v_wall=2059ms, total=4195ms"
+  [SPEC]   Cycle 3: draft=8, committed=9, accept=1, infer=197.23 t/s, session=2.15 t/s, d_wall=2136ms, v_wall=2059ms, total=4195ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 4: draft=8, committed=9, accept=1, infer=191.74 t/s, session=2.14 t/s, d_wall=2131ms, v_wall=2076ms, total=4207ms"
+  [SPEC]   Cycle 4: draft=8, committed=9, accept=1, infer=191.74 t/s, session=2.14 t/s, d_wall=2131ms, v_wall=2076ms, total=4207ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 5: draft=8, committed=9, accept=1, infer=161.06 t/s, session=2.15 t/s, d_wall=2107ms, v_wall=2079ms, total=4187ms"
+  [SPEC]   Cycle 5: draft=8, committed=9, accept=1, infer=161.06 t/s, session=2.15 t/s, d_wall=2107ms, v_wall=2079ms, total=4187ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 6: draft=8, committed=9, accept=1, infer=160.08 t/s, session=2.15 t/s, d_wall=2123ms, v_wall=2057ms, total=4181ms"
+  [SPEC]   Cycle 6: draft=8, committed=9, accept=1, infer=160.08 t/s, session=2.15 t/s, d_wall=2123ms, v_wall=2057ms, total=4181ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 7: draft=8, committed=9, accept=1, infer=166.2 t/s, session=2.14 t/s, d_wall=2117ms, v_wall=2082ms, total=4200ms"
+  [SPEC]   Cycle 7: draft=8, committed=9, accept=1, infer=166.2 t/s, session=2.14 t/s, d_wall=2117ms, v_wall=2082ms, total=4200ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [SPEC]   Cycle 8: draft=8, committed=9, accept=1, infer=204.54 t/s, session=2.14 t/s, d_wall=2127ms, v_wall=2067ms, total=4196ms"
+  [SPEC]   Cycle 8: draft=8, committed=9, accept=1, infer=204.54 t/s, session=2.14 t/s, d_wall=2127ms, v_wall=2067ms, total=4196ms
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    Run 3: infer=179.24 t/s, session=2.15 t/s, committed=72, accept=100%, cycles=8, http=16"
+    Run 3: infer=179.24 t/s, session=2.15 t/s, committed=72, accept=100%, cycles=8, http=16
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="
+=============================================================================="
+
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  PHASE 2 ANALYSIS — Burst 8"
+  PHASE 2 ANALYSIS — Burst 8
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value=""
+
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  ┌──────────────────────────────────────────────────────────┐"
+  ┌──────────────────────────────────────────────────────────┐
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │    v279 BURST-8 RESULTS    │"
+  │    v279 BURST-8 RESULTS    │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  ├──────────────────────────────────────────────────────────┤"
+  ├──────────────────────────────────────────────────────────┤
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  Pair:                            phi:latest -> phi3:mini  │"
+  │  Pair:                            phi:latest -> phi3:mini  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  Burst:                                                8  │"
+  │  Burst:                                                8  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  Runs x Cycles:                                   3 x 24  │"
+  │  Runs x Cycles:                                   3 x 24  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  Tokens/HTTP Call:                                   4.5  │"
+  │  Tokens/HTTP Call:                                   4.5  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  HTTP Overhead:                                    98.8%  │"
+  │  HTTP Overhead:                                    98.8%  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  ├──────────────────────────────────────────────────────────┤"
+  ├──────────────────────────────────────────────────────────┤
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  Baseline TPS:                                178.67 t/s  │"
+  │  Baseline TPS:                                178.67 t/s  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  Median Infer TPS:                   177.06 t/s (+-0.9%)  │"
+  │  Median Infer TPS:                   177.06 t/s (+-0.9%)  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  Median Session TPS:                            2.15 t/s  │"
+  │  Median Session TPS:                            2.15 t/s  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  Best Session TPS:                              2.15 t/s  │"
+  │  Best Session TPS:                              2.15 t/s  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  v278 Ref Session TPS:             3.71 t/s (gemma pair)  │"
+  │  v278 Ref Session TPS:             3.71 t/s (gemma pair)  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  Accept Rate:                                       100%  │"
+  │  Accept Rate:                                       100%  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  Fallback Rate:                                       0%  │"
+  │  Fallback Rate:                                       0%  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  ├──────────────────────────────────────────────────────────┤"
+  ├──────────────────────────────────────────────────────────┤
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  VERDICT:                                     QUARANTINE  │"
+  │  VERDICT:                                     QUARANTINE  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  PROMOTE:                                             NO  │"
+  │  PROMOTE:                                             NO  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  │  ESCALATE to 16:                                 NOT YET  │"
+  │  ESCALATE to 16:                                 NOT YET  │
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  └──────────────────────────────────────────────────────────┘"
+  └──────────────────────────────────────────────────────────┘
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value=""
+
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Health Gate:"
+  Health Gate:
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    sample_count >= 3: PASS (3)"
+    sample_count >= 3: PASS (3)
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    median_accept >= 0.55: PASS (1)"
+    median_accept >= 0.55: PASS (1)
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    fallback_rate <= 0.15: PASS (0)"
+    fallback_rate <= 0.15: PASS (0)
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    infer_gain >= 20%: FAIL (+-0.9%)"
+    infer_gain >= 20%: FAIL (+-0.9%)
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value=""
+
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Planner Score Delta: 10"
+  Planner Score Delta: 10
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value=""
+
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Per-Run Breakdown:"
+  Per-Run Breakdown:
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    RUN         INFER    SESSION    ACCEPT%   CYCLES    HTTP#   TOK/HTTP    OVHD%"
+    RUN         INFER    SESSION    ACCEPT%   CYCLES    HTTP#   TOK/HTTP    OVHD%
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    ------------------------------------------------------------------------------"
+    ------------------------------------------------------------------------------
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    Run 1      172.88       2.14       100%        8       16        4.5    98.8%"
+    Run 1      172.88       2.14       100%        8       16        4.5    98.8%
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    Run 2      177.06       2.15       100%        8       16        4.5    98.8%"
+    Run 2      177.06       2.15       100%        8       16        4.5    98.8%
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    Run 3      179.24       2.15       100%        8       16        4.5    98.8%"
+    Run 3      179.24       2.15       100%        8       16        4.5    98.8%
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [22:09:20] Escalation NOT qualified: accept=1, gain=+-0.9%"
+  [22:09:20] Escalation NOT qualified: accept=1, gain=+-0.9%
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [22:09:20]   Need: accept >= 0.9 AND gain >= 35%"
+  [22:09:20]   Need: accept >= 0.9 AND gain >= 35%
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="
+=============================================================================="
+
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  CROSS-FAMILY COMPARISON"
+  CROSS-FAMILY COMPARISON
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="                                            Pair #1 (v278)       Pair #2 (v279)"
+                                            Pair #1 (v278)       Pair #2 (v279)
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="                                               gemma->qwen            phi->phi3"
+                                               gemma->qwen            phi->phi3
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  -----------------------------------------------------------------------------"
+  -----------------------------------------------------------------------------
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Baseline TPS                                   89.57 t/s           178.67 t/s"
+  Baseline TPS                                   89.57 t/s           178.67 t/s
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Burst                                                 16                    8"
+  Burst                                                 16                    8
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Median Infer TPS                              184.87 t/s           177.06 t/s"
+  Median Infer TPS                              184.87 t/s           177.06 t/s
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Median Session TPS                              3.71 t/s             2.15 t/s"
+  Median Session TPS                              3.71 t/s             2.15 t/s
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Accept Rate                                         100%                 100%"
+  Accept Rate                                         100%                 100%
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Verdict                                 HEALTHY (sealed)           QUARANTINE"
+  Verdict                                 HEALTHY (sealed)           QUARANTINE
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value=""
+
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  CROSS-FAMILY VERDICT: PAIR-SPECIFIC ONLY"
+  CROSS-FAMILY VERDICT: PAIR-SPECIFIC ONLY
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value=""
+
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Session log: D:\rawrxd\logs\speculative_v279_log.jsonl"
+  Session log: D:\rawrxd\logs\speculative_v279_log.jsonl
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Cycle log:   D:\rawrxd\logs\speculative_v279_cycle_log.jsonl"
+  Cycle log:   D:\rawrxd\logs\speculative_v279_cycle_log.jsonl
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="
+=============================================================================="
+
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  v279 Second-Family Validation Complete — 125s elapsed"
+  v279 Second-Family Validation Complete — 125s elapsed
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+V279 DONE
+PS D:\> Write-Host "waiting..."
+waiting...
+PS D:\> Write-Host "ping"
+ping
+PS D:\> if (Test-Path "D:\rawrxd\logs\v279_full_run.txt") { $c = Get-Content "D:\rawrxd\logs\v279_full_run.txt"; Write-Host "Lines: $($c.Count)"; $c | Select-Object -Last 15 } else { Write-Host "Not yet" }
+Lines: 141
+  Baseline TPS                                   89.57 t/s           178.67 t/s
+  Burst                                                 16                    8
+  Median Infer TPS                              184.87 t/s           177.06 t/s
+  Median Session TPS                              3.71 t/s             2.15 t/s
+  Accept Rate                                         100%                 100%
+  Verdict                                 HEALTHY (sealed)           QUARANTINE
+
+  CROSS-FAMILY VERDICT: PAIR-SPECIFIC ONLY
+
+  Session log: D:\rawrxd\logs\speculative_v279_log.jsonl
+  Cycle log:   D:\rawrxd\logs\speculative_v279_cycle_log.jsonl
+
+==============================================================================
+  v279 Second-Family Validation Complete — 125s elapsed
+==============================================================================
+PS D:\> $f = Get-Item "D:\rawrxd\logs\v279_full_run.txt" -ErrorAction SilentlyContinue; if ($f) { Write-Host "Size=$($f.Length) Last=$($f.LastWriteTime)" } else { Write-Host "File not found" }
+Size=10087 Last=03/15/2026 22:09:20
+PS D:\> Get-Date
+
+Sunday, March 15, 2026 10:09:20 PM
+
+PS D:\> Get-Content "D:\rawrxd\logs\v279_full_run.txt" | Select-Object -Last 5
+  Cycle log:   D:\rawrxd\logs\speculative_v279_cycle_log.jsonl
+
+==============================================================================
+  v279 Second-Family Validation Complete — 125s elapsed
+==============================================================================
+PS D:\> echo "hello"
+hello
+PS D:\> Start-Sleep -Seconds 180; $lines = (Get-Content "D:\rawrxd\logs\v279_full_run.txt").Count; Write-Host "Lines: $lines"
+Lines: 141
+PS D:\> Remove-Item "D:\rawrxd\logs\speculative_v279b_log.jsonl" -ErrorAction SilentlyContinue
+PS D:\> Remove-Item "D:\rawrxd\logs\speculative_v279b_cycle_log.jsonl" -ErrorAction SilentlyContinue
+PS D:\> $env:OLLAMA_MODELS = "F:\OllamaModels"; $env:OLLAMA_VULKAN = "false"
+PS D:\> # Run v279b: gemma3:1b -> phi3:mini, burst=8, auto-escalate to 16
+PS D:\> & "D:\rawrxd\src\Beyond200\RawrXD_SmokeTest_v279_PhiFamily.ps1" `
+    -DraftModel "gemma3:1b" -VerifyModel "phi3:mini" `
+    -InitBurst 8 -EscalatedBurst 16 `
+    -Runs 3 -TargetTokens 64 -Verbose `
+    -LogFile "D:\rawrxd\logs\speculative_v279b_log.jsonl" `
+    -CycleLogFile "D:\rawrxd\logs\speculative_v279b_cycle_log.jsonl" `
+    *> "D:\rawrxd\logs\v279b_full_run.txt" 2>&1
+>> ParameterBinding(Out-File): name="InputObject"; value="
+=============================================================================="
+
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  RawrXD v279 — Second-Family Speculative Validation (Phi)"
+  RawrXD v279 — Second-Family Speculative Validation (Phi)
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value=""
+
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  DLL:          D:\rawrxd\bin\RawrXD_Singularity_120B_v270.dll"
+  DLL:          D:\rawrxd\bin\RawrXD_Singularity_120B_v270.dll
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Draft:        gemma3:1b"
+  Draft:        gemma3:1b
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Verifier:     phi3:mini"
+  Verifier:     phi3:mini
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Init Burst:   8 (escalate to 16 if qualified)"
+  Init Burst:   8 (escalate to 16 if qualified)
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Target:       64 tokens x 3 runs"
+  Target:       64 tokens x 3 runs
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  v278 ref:     3.71 session t/s, 184.87 infer t/s (gemma pair)"
+  v278 ref:     3.71 session t/s, 184.87 infer t/s (gemma pair)
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    DLL verified: 54.5 KB"
+    DLL verified: 54.5 KB
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="
+=============================================================================="
+
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  PHASE 0: PRE-LOAD — Phi Family Concurrent VRAM"
+  PHASE 0: PRE-LOAD — Phi Family Concurrent VRAM
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [22:13:00] Evicting previous models..."
+  [22:13:00] Evicting previous models...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [22:13:04] Loading gemma3:1b (keep_alive=-1)..."
+  [22:13:04] Loading gemma3:1b (keep_alive=-1)...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    gemma3:1b loaded: load=1387.8ms, tg=0 t/s"
+    gemma3:1b loaded: load=1387.8ms, tg=0 t/s
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [22:13:07] Loading phi3:mini (keep_alive=-1)..."
+  [22:13:07] Loading phi3:mini (keep_alive=-1)...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    phi3:mini loaded: load=21.6ms, tg=0 t/s"
+    phi3:mini loaded: load=21.6ms, tg=0 t/s
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [22:13:11] Models in VRAM:"
+  [22:13:11] Models in VRAM:
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="      phi3:mini: 3.72GB"
+      phi3:mini: 3.72GB
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="      gemma3:1b: 1.15GB"
+      gemma3:1b: 1.15GB
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="      phi:latest: 2.2GB"
+      phi:latest: 2.2GB
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    Total VRAM: 7.07 GB"
+    Total VRAM: 7.07 GB
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="
+=============================================================================="
+
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  PHASE 1: BASELINE — phi3:mini (verifier-only decode)"
+  PHASE 1: BASELINE — phi3:mini (verifier-only decode)
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [22:13:11] Warmup..."
+  [22:13:11] Warmup...
+PS D:\> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+PS D:\> Write-Host "V279B DONE"
+V279B DONE
+PS D:\> (Get-Content "D:\rawrxd\logs\v279b_full_run.txt").Count
+31
+PS D:\> # Unload ALL models
+PS D:\> $env:OLLAMA_MODELS = "F:\OllamaModels"
+PS D:\> foreach ($m in @("gemma3:1b", "qwen2.5:7b", "phi:latest", "phi3:mini")) {
+    $ub = @{ model = $m; keep_alive = 0 } | ConvertTo-Json
+    try { Invoke-RestMethod "http://localhost:11434/api/generate" -Method Post -Body $ub -ContentType "application/json" -TimeoutSec 10 | Out-Null; Write-Host "  Unloaded $m" } catch { Write-Host "  Skip $m" }
+}
+  Unloaded gemma3:1b
+  Unloaded qwen2.5:7b
+  Unloaded phi:latest
+  Unloaded phi3:mini
+PS D:\> Start-Sleep 3
+PS D:\> # Verify clean VRAM
+PS D:\> $ps = Invoke-RestMethod "http://localhost:11434/api/ps" -TimeoutSec 5
+PS D:\> Write-Host "Models in VRAM: $($ps.models.Count)"
+Models in VRAM: 0
+PS D:\> $ps = Invoke-RestMethod "http://localhost:11434/api/ps" -TimeoutSec 5; Write-Host "Models in VRAM: $($ps.models.Count)"
+Models in VRAM: 0
+PS D:\> Remove-Item "D:\rawrxd\logs\v279b_full_run.txt" -ErrorAction SilentlyContinue
+PS D:\> Remove-Item "D:\rawrxd\logs\speculative_v279b_log.jsonl" -ErrorAction SilentlyContinue
+PS D:\> Remove-Item "D:\rawrxd\logs\speculative_v279b_cycle_log.jsonl" -ErrorAction SilentlyContinue
+PS D:\> $env:OLLAMA_MODELS = "F:\OllamaModels"; $env:OLLAMA_VULKAN = "false"
+PS D:\> & "D:\rawrxd\src\Beyond200\RawrXD_SmokeTest_v279_PhiFamily.ps1" `
+    -DraftModel "gemma3:1b" -VerifyModel "phi3:mini" `
+    -InitBurst 8 -EscalatedBurst 16 `
+    -Runs 3 -TargetTokens 64 -Verbose `
+    -LogFile "D:\rawrxd\logs\speculative_v279b_log.jsonl" `
+    -CycleLogFile "D:\rawrxd\logs\speculative_v279b_cycle_log.jsonl" `
+    *> "D:\rawrxd\logs\v279b_full_run.txt" 2>&1
+>> ParameterBinding(Out-File): name="InputObject"; value="
+=============================================================================="
+
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  RawrXD v279 — Second-Family Speculative Validation (Phi)"
+  RawrXD v279 — Second-Family Speculative Validation (Phi)
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value=""
+
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  DLL:          D:\rawrxd\bin\RawrXD_Singularity_120B_v270.dll"
+  DLL:          D:\rawrxd\bin\RawrXD_Singularity_120B_v270.dll
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Draft:        gemma3:1b"
+  Draft:        gemma3:1b
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Verifier:     phi3:mini"
+  Verifier:     phi3:mini
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Init Burst:   8 (escalate to 16 if qualified)"
+  Init Burst:   8 (escalate to 16 if qualified)
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Target:       64 tokens x 3 runs"
+  Target:       64 tokens x 3 runs
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  v278 ref:     3.71 session t/s, 184.87 infer t/s (gemma pair)"
+  v278 ref:     3.71 session t/s, 184.87 infer t/s (gemma pair)
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    DLL verified: 54.5 KB"
+    DLL verified: 54.5 KB
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="
+=============================================================================="
+
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  PHASE 0: PRE-LOAD — Phi Family Concurrent VRAM"
+  PHASE 0: PRE-LOAD — Phi Family Concurrent VRAM
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [22:13:59] Evicting previous models..."
+  [22:13:59] Evicting previous models...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [22:14:03] Loading gemma3:1b (keep_alive=-1)..."
+  [22:14:03] Loading gemma3:1b (keep_alive=-1)...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    gemma3:1b loaded: load=1418ms, tg=0 t/s"
+    gemma3:1b loaded: load=1418ms, tg=0 t/s
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [22:14:06] Loading phi3:mini (keep_alive=-1)..."
+  [22:14:06] Loading phi3:mini (keep_alive=-1)...
+PS D:\> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+PS D:\> Write-Host "V279B DONE"
+V279B DONE
+PS D:\> Get-Content "D:\rawrxd\logs\v279b_full_run.txt"
+
+==============================================================================
+  RawrXD v279 — Second-Family Speculative Validation (Phi)
+==============================================================================
+
+  DLL:          D:\rawrxd\bin\RawrXD_Singularity_120B_v270.dll
+  Draft:        gemma3:1b
+  Verifier:     phi3:mini
+  Init Burst:   8 (escalate to 16 if qualified)
+  Target:       64 tokens x 3 runs
+  v278 ref:     3.71 session t/s, 184.87 infer t/s (gemma pair)
+    DLL verified: 54.5 KB
+
+==============================================================================
+  PHASE 0: PRE-LOAD — Phi Family Concurrent VRAM
+==============================================================================
+  [22:13:59] Evicting previous models...
+  [22:14:03] Loading gemma3:1b (keep_alive=-1)...
+    gemma3:1b loaded: load=1418ms, tg=0 t/s
+  [22:14:06] Loading phi3:mini (keep_alive=-1)...
+PS D:\> # Direct test: can we generate from phi3:mini?
+PS D:\> $env:OLLAMA_MODELS = "F:\OllamaModels"
+PS D:\> $body = @{ model = "phi3:mini"; prompt = "hello"; stream = $false; keep_alive = -1; options = @{ num_predict = 5; temperature = 0.1; seed = 42 } } | ConvertTo-Json -Depth 5
+PS D:\> $sw = [System.Diagnostics.Stopwatch]::StartNew()
+PS D:\> $r = Invoke-RestMethod -Uri "http://localhost:11434/api/generate" -Method Post -Body $body -ContentType "application/json" -TimeoutSec 60
+PS D:\> $sw.Stop()
+PS D:\> Write-Host "wall=$($sw.ElapsedMilliseconds)ms eval_count=$($r.eval_count) load_dur=$([math]::Round($r.load_duration/1e6,1))ms response='$($r.response)'"
+wall=4465ms eval_count=5 load_dur=2383.2ms response='Hello! How can I'
+PS D:\> # Load gemma3:1b first
+PS D:\> $body1 = @{ model = "gemma3:1b"; prompt = "hi"; stream = $false; keep_alive = -1; options = @{ num_predict = 1 } } | ConvertTo-Json -Depth 5
+PS D:\> Invoke-RestMethod "http://localhost:11434/api/generate" -Method Post -Body $body1 -ContentType "application/json" -TimeoutSec 30 | Out-Null
+PS D:\> Write-Host "gemma3:1b loaded"
+gemma3:1b loaded
+PS D:\> # Now load phi3:mini
+PS D:\> $body2 = @{ model = "phi3:mini"; prompt = "hi"; stream = $false; keep_alive = -1; options = @{ num_predict = 1 } } | ConvertTo-Json -Depth 5
+PS D:\> $r = Invoke-RestMethod "http://localhost:11434/api/generate" -Method Post -Body $body2 -ContentType "application/json" -TimeoutSec 60
+PS D:\> Write-Host "phi3:mini loaded: eval=$($r.eval_count)"
+phi3:mini loaded: eval=1
+PS D:\> # Check VRAM
+PS D:\> $ps = Invoke-RestMethod "http://localhost:11434/api/ps" -TimeoutSec 5
+PS D:\> $ps.models | ForEach-Object { Write-Host "  $($_.name): $([math]::Round($_.size_vram/1GB, 2))GB" }
+  phi3:mini: 3.72GB
+  gemma3:1b: 1.15GB
+PS D:\> Remove-Item "D:\rawrxd\logs\v279b_full_run.txt" -ErrorAction SilentlyContinue
+PS D:\> Remove-Item "D:\rawrxd\logs\speculative_v279b_log.jsonl" -ErrorAction SilentlyContinue
+PS D:\> Remove-Item "D:\rawrxd\logs\speculative_v279b_cycle_log.jsonl" -ErrorAction SilentlyContinue
+PS D:\> & "D:\rawrxd\src\Beyond200\RawrXD_SmokeTest_v279_PhiFamily.ps1" `
+    -DraftModel "gemma3:1b" -VerifyModel "phi3:mini" `
+    -InitBurst 8 -EscalatedBurst 16 `
+    -Runs 3 -TargetTokens 64 -Verbose `
+    -LogFile "D:\rawrxd\logs\speculative_v279b_log.jsonl" `
+    -CycleLogFile "D:\rawrxd\logs\speculative_v279b_cycle_log.jsonl" `
+    *> "D:\rawrxd\logs\v279b_full_run.txt" 2>&1
+>> ParameterBinding(Out-File): name="InputObject"; value="
+=============================================================================="
+
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  RawrXD v279 — Second-Family Speculative Validation (Phi)"
+  RawrXD v279 — Second-Family Speculative Validation (Phi)
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value=""
+
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  DLL:          D:\rawrxd\bin\RawrXD_Singularity_120B_v270.dll"
+  DLL:          D:\rawrxd\bin\RawrXD_Singularity_120B_v270.dll
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Draft:        gemma3:1b"
+  Draft:        gemma3:1b
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Verifier:     phi3:mini"
+  Verifier:     phi3:mini
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Init Burst:   8 (escalate to 16 if qualified)"
+  Init Burst:   8 (escalate to 16 if qualified)
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  Target:       64 tokens x 3 runs"
+  Target:       64 tokens x 3 runs
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  v278 ref:     3.71 session t/s, 184.87 infer t/s (gemma pair)"
+  v278 ref:     3.71 session t/s, 184.87 infer t/s (gemma pair)
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    DLL verified: 54.5 KB"
+    DLL verified: 54.5 KB
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="
+=============================================================================="
+
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  PHASE 0: PRE-LOAD — Phi Family Concurrent VRAM"
+  PHASE 0: PRE-LOAD — Phi Family Concurrent VRAM
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [22:14:52] Evicting previous models..."
+  [22:14:52] Evicting previous models...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [22:14:56] Loading gemma3:1b (keep_alive=-1)..."
+  [22:14:56] Loading gemma3:1b (keep_alive=-1)...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    gemma3:1b loaded: load=1370.9ms, tg=0 t/s"
+    gemma3:1b loaded: load=1370.9ms, tg=0 t/s
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [22:15:00] Loading phi3:mini (keep_alive=-1)..."
+  [22:15:00] Loading phi3:mini (keep_alive=-1)...
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    phi3:mini loaded: load=19ms, tg=0 t/s"
+    phi3:mini loaded: load=19ms, tg=0 t/s
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [22:15:04] Models in VRAM:"
+  [22:15:04] Models in VRAM:
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="      phi3:mini: 3.72GB"
+      phi3:mini: 3.72GB
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="      gemma3:1b: 1.15GB"
+      gemma3:1b: 1.15GB
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="    Total VRAM: 4.88 GB"
+    Total VRAM: 4.88 GB
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="
+=============================================================================="
+
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  PHASE 1: BASELINE — phi3:mini (verifier-only decode)"
+  PHASE 1: BASELINE — phi3:mini (verifier-only decode)
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="=============================================================================="
+==============================================================================
+PS D:\> ParameterBinding(Out-File): name="InputObject"; value="  [22:15:04] Warmup..."
+  [22:15:04] Warmup...
+PS D:\> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+PS D:\> Write-Host "V279B DONE"
+V279B DONE
+PS D:\> (Get-Content "D:\rawrxd\logs\v279b_full_run.txt").Count
+30
+PS D:\> $ErrorActionPreference = "Continue"
+PS D:\> $GENERATE_EP = "http://localhost:11434/api/generate"
+PS D:\> $prompt = "Explain the concept of speculative execution in modern CPU architectures, including branch prediction, out-of-order execution, and how mispredictions are handled. Discuss the performance implications and the Spectre vulnerability class."
+PS D:\> $body = @{
+    model = "phi3:mini"; prompt = $prompt; stream = $false; keep_alive = -1
+    options = @{ num_predict = 32; temperature = 0.1; seed = 42 }
+} | ConvertTo-Json -Depth 5
+PS D:\> Write-Host "Calling phi3:mini warmup..."
+Calling phi3:mini warmup...
+PS D:\> $sw = [System.Diagnostics.Stopwatch]::StartNew()
+PS D:\> $resp = Invoke-RestMethod -Uri $GENERATE_EP -Method Post -Body $body -ContentType "application/json" -TimeoutSec 300
+PS D:\> $sw.Stop()
+PS D:\> Write-Host "Done: wall=$($sw.ElapsedMilliseconds)ms eval=$($resp.eval_count) tg_tps=$([math]::Round($resp.eval_count / ($resp.eval_duration / 1e9), 2))"
+Done: wall=2264ms eval=32 tg_tps=185.18
+PS D:\> # Run without file redirect - just capture output directly
+PS D:\> $env:OLLAMA_MODELS = "F:\OllamaModels"; $env:OLLAMA_VULKAN = "false"
+PS D:\> # First ensure only our 2 models are loaded
+PS D:\> $ps = Invoke-RestMethod "http://localhost:11434/api/ps" -TimeoutSec 5
+PS D:\> Write-Host "Current VRAM: $($ps.models.Count) models"
+Current VRAM: 2 models
+PS D:\> $ps.models | ForEach-Object { Write-Host "  $($_.name) $([math]::Round($_.size_vram/1GB,2))GB" }
+  phi3:mini 3.72GB
+  gemma3:1b 1.15GB
+PS D:\> Write-Host "`nStarting v279b harness directly..."
+
+Starting v279b harness directly...
+PS D:\> Remove-Item "D:\rawrxd\logs\speculative_v279b_log.jsonl" -ErrorAction SilentlyContinue; Remove-Item "D:\rawrxd\logs\speculative_v279b_cycle_log.jsonl" -ErrorAction SilentlyContinue
+PS D:\> & "D:\rawrxd\src\Beyond200\RawrXD_SmokeTest_v279_PhiFamily.ps1" -DraftModel "gemma3:1b" -VerifyModel "phi3:mini" -InitBurst 8 -EscalatedBurst 16 -Runs 3 -TargetTokens 64 -Verbose -LogFile "D:\rawrxd\logs\speculative_v279b_log.jsonl" -CycleLogFile "D:\rawrxd\logs\speculative_v279b_cycle_log.jsonl"
+
+==============================================================================
+  RawrXD v279 — Second-Family Speculative Validation (Phi)
+==============================================================================
+
+  DLL:          D:\rawrxd\bin\RawrXD_Singularity_120B_v270.dll
+  Draft:        gemma3:1b
+  Verifier:     phi3:mini
+  Init Burst:   8 (escalate to 16 if qualified)
+  Target:       64 tokens x 3 runs
+  v278 ref:     3.71 session t/s, 184.87 infer t/s (gemma pair)
+    DLL verified: 54.5 KB
+
+==============================================================================
+  PHASE 0: PRE-LOAD — Phi Family Concurrent VRAM
+==============================================================================
+  [22:16:31] Evicting previous models...
+  [22:16:35] Loading gemma3:1b (keep_alive=-1)...
+    gemma3:1b loaded: load=1388.9ms, tg=0 t/s
+  [22:16:39] Loading phi3:mini (keep_alive=-1)...
+    phi3:mini loaded: load=20.5ms, tg=0 t/s
+  [22:16:43] Models in VRAM:
+      phi3:mini: 3.72GB
+      gemma3:1b: 1.15GB
+    Total VRAM: 4.88 GB
+
+==============================================================================
+  PHASE 1: BASELINE — phi3:mini (verifier-only decode)
+==============================================================================
+  [22:16:43] Warmup...
+  [22:16:45]   Warmup: tg=179.52 t/s, load=18.4ms
+  [22:16:45] Baseline run 1/3 (64 tokens)...
+    Run 1: tg=178.82 t/s, pp=9100.51 t/s, wall=2442ms
+  [22:16:47] Baseline run 2/3 (64 tokens)...
+    Run 2: tg=181.87 t/s, pp=9122.3 t/s, wall=2424ms
+  [22:16:50] Baseline run 3/3 (64 tokens)...
+PS D:\> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+PS D:\> # Kill the stuck script with Ctrl+C
+PS D:\> # First unload everything cleanly
+PS D:\> $env:OLLAMA_MODELS = "F:\OllamaModels"
+PS D:\> foreach ($m in @("gemma3:1b", "qwen2.5:7b", "phi:latest", "phi3:mini")) {
+    $ub = @{ model = $m; keep_alive = 0 } | ConvertTo-Json
+    try { Invoke-RestMethod "http://localhost:11434/api/generate" -Method Post -Body $ub -ContentType "application/json" -TimeoutSec 10 | Out-Null } catch {}
+}
+PS D:\> Start-Sleep 3
+PS D:\> $ps = Invoke-RestMethod "http://localhost:11434/api/ps" -TimeoutSec 5
+PS D:\> Write-Host "VRAM clean: $($ps.models.Count) models"
+VRAM clean: 0 models
+PS D:\> Write-Host "check"
+check
+PS D:\> $ps = Invoke-RestMethod "http://localhost:11434/api/ps" -TimeoutSec 5; Write-Host "Models: $($ps.models.Count)"
+Models: 0
+**********************
+PowerShell transcript end
+End time: 20260315221907
+**********************

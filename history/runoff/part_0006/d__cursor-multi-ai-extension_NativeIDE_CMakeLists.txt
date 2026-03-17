@@ -1,0 +1,72 @@
+cmake_minimum_required(VERSION 3.25)
+project(NativeIDE LANGUAGES CXX)
+
+# Systems Engineering Standards
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Security hardening flags
+if(MSVC)
+    add_compile_options(
+        /W4              # High warning level
+        /wd4305 /wd4309  # Disable truncation warnings
+        /GS              # Buffer security check
+        /guard:cf        # Control Flow Guard
+    )
+    add_link_options(
+        /SUBSYSTEM:WINDOWS
+        /DYNAMICBASE     # ASLR support
+    )
+else()
+    add_compile_options(
+        -Wall -Wextra -Werror
+        -fstack-protector-strong
+        -D_FORTIFY_SOURCE=2
+    )
+    add_link_options(
+        -Wl,-z,relro
+        -Wl,-z,now
+        -Wl,-z,noexecstack
+    )
+endif()
+
+# Single source file - complete implementation
+add_executable(NativeIDE src/main.cpp)
+
+# Include directories
+target_include_directories(NativeIDE PRIVATE include)
+
+# Windows-specific libraries
+if(WIN32)
+    target_link_libraries(NativeIDE
+        user32
+        gdi32
+        kernel32
+        comctl32
+        shell32
+        comdlg32
+    )
+endif()
+
+# Static runtime linking for portability
+if(MSVC)
+    set_property(TARGET NativeIDE PROPERTY
+        MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
+# Optimization flags
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    if(MSVC)
+        target_compile_options(NativeIDE PRIVATE /O2 /Ob2)
+    else()
+        target_compile_options(NativeIDE PRIVATE -O3 -DNDEBUG)
+    endif()
+endif()
+
+# Install configuration
+install(TARGETS NativeIDE
+    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+)

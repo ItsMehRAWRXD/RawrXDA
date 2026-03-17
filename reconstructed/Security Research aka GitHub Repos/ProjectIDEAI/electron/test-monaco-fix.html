@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monaco Bootstrap Test</title>
+    <style>
+        body { font-family: monospace; background: #1e1e1e; color: #fff; padding: 20px; }
+        .test { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .pass { background: #0f5132; border: 1px solid #198754; }
+        .fail { background: #842029; border: 1px solid #dc3545; }
+        .pending { background: #664d03; border: 1px solid #ffc107; }
+    </style>
+</head>
+<body>
+    <h1>Monaco Bootstrap Test</h1>
+    <div id="results"></div>
+    
+    <script>
+        const results = document.getElementById('results');
+        
+        function addResult(test, status, message) {
+            const div = document.createElement('div');
+            div.className = `test ${status}`;
+            div.innerHTML = `<strong>${test}:</strong> ${message}`;
+            results.appendChild(div);
+        }
+        
+        // Test 1: CSS file accessibility
+        addResult('CSS Test', 'pending', 'Checking CSS file...');
+        fetch('./node_modules/monaco-editor/min/vs/editor/editor.main.css')
+            .then(response => {
+                if (response.ok) {
+                    addResult('CSS Test', 'pass', `✅ CSS accessible (${response.status})`);
+                } else {
+                    addResult('CSS Test', 'fail', `❌ CSS failed (${response.status})`);
+                }
+            })
+            .catch(error => {
+                addResult('CSS Test', 'fail', `❌ CSS error: ${error.message}`);
+            });
+        
+        // Test 2: AMD loader
+        addResult('AMD Loader', 'pending', 'Loading AMD...');
+        const script = document.createElement('script');
+        script.src = './node_modules/monaco-editor/min/vs/loader.js';
+        script.onload = () => {
+            if (typeof require === 'function' && require.config) {
+                addResult('AMD Loader', 'pass', '✅ AMD loader available');
+                
+                // Test 3: Monaco loading
+                addResult('Monaco Load', 'pending', 'Loading Monaco...');
+                require.config({ paths: { 'vs': './node_modules/monaco-editor/min/vs' } });
+                require(['vs/editor/editor.main'], () => {
+                    if (typeof monaco !== 'undefined') {
+                        addResult('Monaco Load', 'pass', '✅ Monaco loaded successfully');
+                        
+                        // Test 4: Editor creation
+                        addResult('Editor Test', 'pending', 'Creating editor...');
+                        try {
+                            const container = document.createElement('div');
+                            container.style.width = '100px';
+                            container.style.height = '100px';
+                            document.body.appendChild(container);
+                            
+                            const editor = monaco.editor.create(container, {
+                                value: 'console.log("test");',
+                                language: 'javascript'
+                            });
+                            
+                            addResult('Editor Test', 'pass', '✅ Editor created successfully');
+                            editor.dispose();
+                            container.remove();
+                        } catch (error) {
+                            addResult('Editor Test', 'fail', `❌ Editor failed: ${error.message}`);
+                        }
+                    } else {
+                        addResult('Monaco Load', 'fail', '❌ Monaco global not available');
+                    }
+                }, (error) => {
+                    addResult('Monaco Load', 'fail', `❌ Monaco load failed: ${error}`);
+                });
+            } else {
+                addResult('AMD Loader', 'fail', '❌ AMD loader not functional');
+            }
+        };
+        script.onerror = () => {
+            addResult('AMD Loader', 'fail', '❌ AMD loader script failed');
+        };
+        document.head.appendChild(script);
+    </script>
+</body>
+</html>

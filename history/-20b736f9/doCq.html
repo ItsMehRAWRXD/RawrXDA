@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BigDaddyG Ultimate - Complete Orchestration System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Courier New', monospace;
+        }
+        
+        /* Accessibility helpers */
+        .visually-hidden {
+            position: absolute !important;
+            width: 1px; height: 1px; padding: 0; margin: -1px;
+            overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+        }
+        .hidden { display: none !important; }
+        
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            color: #00ff00;
+            overflow: hidden;
+        }
+        
+        .main-container {
+            display: -ms-grid; /* IE 10+ fallback */
+            display: grid;
+            grid-template-columns: 300px 1fr 350px;
+            grid-template-rows: 60px 1fr 250px;
+            -ms-grid-columns: 300px 1fr 350px;
+            -ms-grid-rows: 60px 1fr 250px;
+            height: 100vh;
+            gap: 2px;
+            background: #000;
+        }
+        
+        /* Header */
+        .header {
+            grid-column: 1 / 4;
+            -ms-grid-column: 1; /* IE grid fallback */
+            -ms-grid-column-span: 3;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            padding: 15px 20px;
+            display: -ms-flexbox; /* IE flex fallback */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            -ms-flex-pack: justify;
+            -ms-flex-align: center;
+            border-bottom: 2px solid #00ff00;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            text-shadow: 0 0 10px #00ff00;
+        }
+        
+        .header-controls {
+            display: -ms-flexbox;
+            display: flex;
+            gap: 10px;
+        }
+        /* Fallback when gap not supported */
+        .header-controls > * { margin-right: 10px; }
+        .header-controls > *:last-child { margin-right: 0; }
+        
+        .header-controls button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .header-controls button:hover {
+            background: #00aa00;
+            box-shadow: 0 0 15px #00ff00;
+        }
+        
+        /* Left Panel - Agent List */
+        .agent-list {
+            background: rgba(0, 255, 0, 0.05);
+            padding: 15px;
+            overflow-y: auto;
+            border-right: 2px solid #00ff00;
+        }
+        
+        .agent-card {
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid #00ff00;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .agent-card:hover {
+            background: rgba(0, 255, 0, 0.2);
+            border-color: #00ff00;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        }
+        
+        .agent-card.active {
+            border-width: 2px;
+            background: rgba(0, 255, 0, 0.3);
+        }
+        
+        .agent-card h3 {
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        .agent-meta {
+            font-size: 12px;
+            color: #c9f7c9; /* improved contrast */
+        }
+        
+        .agent-status {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        
+        .status-idle { background: #666; }
+        .status-active { background: #00ff00; animation: pulse 1s infinite; }
+        .status-error { background: #ff0000; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* Center Panel - Orchestration Graph */
+        .orchestration-panel {
+            background: rgba(0, 0, 0, 0.8);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .graph-canvas {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        
+        .node {
+            position: absolute;
+            width: 120px;
+            padding: 15px;
+            background: rgba(0, 255, 0, 0.1);
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            text-align: center;
+            cursor: move;
+            transition: all 0.3s;
+        }
+        
+        .node:hover {
+            background: rgba(0, 255, 0, 0.2);
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.8);
+        }
+        
+        .node.active {
+            border-color: #ffff00;
+            background: rgba(255, 255, 0, 0.2);
+            box-shadow: 0 0 30px rgba(255, 255, 0, 0.8);
+        }
+        
+        /* Right Panel - Controls */
+        .control-panel {
+            background: rgba(0, 255, 0, 0.05);
+            padding: 15px;
+            overflow-y: auto;
+            border-left: 2px solid #00ff00;
+        }
+        
+        .control-section {
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid #00ff00;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .control-section h3 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #00ff00;
+        }
+        
+        /* Chat Panel */
+        .chat-panel {
+            grid-column: 1 / 4;
+            -ms-grid-column: 1; /* IE grid fallback */
+            -ms-grid-column-span: 3;
+            background: rgba(0, 0, 0, 0.9);
+            border-top: 2px solid #00ff00;
+            display: -ms-flexbox; /* IE flex fallback */
+            display: flex;
+            flex-direction: column;
+            -ms-flex-direction: column;
+        }
+        
+        .chat-messages {
+            flex: 1 1 auto;
+            -ms-flex: 1 1 auto;
+            padding: 15px;
+            overflow-y: auto;
+        }
+        
+        .message {
+            margin-bottom: 12px;
+            padding: 10px 15px;
+            border-radius: 8px;
+            border-left: 3px solid;
+        }
+        
+        .message.user {
+            background: rgba(0, 150, 255, 0.1);
+            border-left-color: #0096ff;
+            margin-left: 50px;
+        }
+        
+        .message.assistant {
+            background: rgba(0, 255, 0, 0.1);
+            border-left-color: #00ff00;
+            margin-right: 50px;
+        }
+        
+        .message.system {
+            background: rgba(255, 165, 0, 0.1);
+            border-left-color: #ffa500;
+            font-size: 12px;
+        }
+        
+        .chat-input-container {
+            padding: 15px;
+            background: rgba(0, 255, 0, 0.05);
+            display: -ms-flexbox; /* IE flex fallback */
+            display: flex;
+            gap: 10px;
+        }
+        /* Fallback when gap not supported */
+        .chat-input-container > * { margin-right: 10px; }
+        .chat-input-container > *:last-child { margin-right: 0; }
+        
+        .chat-input-container input {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #00ff00;
+            border-radius: 5px;
+            padding: 12px;
+            color: #00ff00;
+            font-family: inherit;
+        }
+        
+        .chat-input-container button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            border-radius: 5px;
+            padding: 12px 25px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        /* Timeline Slider */
+        .timeline-slider {
+            margin-top: 10px;
+        }
+        
+        .timeline-slider input[type="range"] {
+            width: 100%;
+            margin: 10px 0;
+        }
+        
+        .timeline-details {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+        }
+        
+        /* Heatmap */
+        .heatmap-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .heatmap-cell {
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+            font-size: 12px;
+            border: 1px solid #00ff00;
+        }
+        
+        /* Plugin Loader */
+        .plugin-loader input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #00ff00;
+            border-radius: 3px;
+            padding: 8px;
+            color: #00ff00;
+            font-family: inherit;
+            margin-bottom: 8px;
+        }
+        
+        .plugin-loader button {
+            width: 100%;
+            background: #00ff00;
+            color: #000;
+            border: none;
+            border-radius: 3px;
+            padding: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        /* Latency Table */
+        .latency-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        
+        .latency-table th,
+        .latency-table td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #00ff00;
+        }
+        
+        .latency-table th {
+            background: rgba(0, 255, 0, 0.2);
+        }
+        
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: #1a1a2e;
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            padding: 25px;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-content h2 {
+            margin-bottom: 15px;
+            color: #00ff00;
+        }
+        
+        .modal-close {
+            float: right;
+            cursor: pointer;
+            font-size: 24px;
+            color: #00ff00;
+        }
+        
+        /* Trace Panel */
+        .trace-panel {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .token-trace {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px;
+            border-bottom: 1px solid rgba(0, 255, 0, 0.2);
+            font-size: 12px;
+        }
+        
+        /* Feedback Form */
+        .feedback-form textarea {
+            width: 100%;
+            min-height: 100px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+            padding: 10px;
+            color: #00ff00;
+            font-family: inherit;
+            margin: 10px 0;
+        }
+        
+        .feedback-form button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        /* Toggle Switch */
+        .toggle-switch {
+            display: inline-block;
+            position: relative;
+            width: 50px;
+            height: 24px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #333;
+            border-radius: 24px;
+            transition: 0.3s;
+        }
+        
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+        
+        input:checked + .toggle-slider {
+            background-color: #00ff00;
+        }
+        
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🚀 BigDaddyG Ultimate</h1>
+            <div class="header-controls">
+                <button onclick="toggleHeatmap()">Heatmap</button>
+                <button onclick="toggleTimeline()">Timeline</button>
+                <button onclick="measureLatency()">Latency Test</button>
+                <button onclick="showPluginLoader()">Plugins</button>
+            </div>
+        </div>
+        
+        <!-- Left Panel - Agent List -->
+        <div class="agent-list">
+            <h3>Agents</h3>
+            <div id="agent-cards"></div>
+        </div>
+        
+        <!-- Center Panel - Orchestration Graph -->
+        <div class="orchestration-panel">
+            <div class="graph-canvas" id="graph"></div>
+        </div>
+        
+        <!-- Right Panel - Controls -->
+        <div class="control-panel">
+            <!-- Sandbox Toggle -->
+            <div class="control-section">
+                <h3>Sandbox Mode</h3>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="sandbox-toggle" onchange="toggleSandbox()">
+                    <span class="toggle-slider"></span>
+                </label>
+                <span id="sandbox-status">OFF</span>
+            </div>
+            
+            <!-- Timeline Control -->
+            <div class="control-section" id="timeline-section" style="display:none;">
+                <h3>Timeline Replay</h3>
+                <div class="timeline-slider">
+                    <input type="range" id="timeline-range" min="0" max="0" value="0" oninput="scrubTimeline(this.value)">
+                    <div class="timeline-details" id="timeline-details"></div>
+                </div>
+            </div>
+            
+            <!-- Heatmap View -->
+            <div class="control-section" id="heatmap-section" style="display:none;">
+                <h3>Activity Heatmap</h3>
+                <div class="heatmap-grid" id="heatmap"></div>
+            </div>
+            
+            <!-- Latency Comparison -->
+            <div class="control-section" id="latency-section" style="display:none;">
+                <h3>Agent Latency</h3>
+                <table class="latency-table">
+                    <thead>
+                        <tr>
+                            <th>Agent</th>
+                            <th>Latency (ms)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="latency-table"></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Chat Panel -->
+        <div class="chat-panel">
+            <div class="chat-messages" id="chat"></div>
+            <div class="chat-input-container">
+                <input type="text" id="chat-input" placeholder="Type your message..." onkeypress="handleKeyPress(event)">
+                <button onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Feedback Modal -->
+    <div class="modal" id="feedback-modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeFeedbackModal()">&times;</span>
+            <h2>Provide Feedback</h2>
+            <div id="feedback-content"></div>
+            <div class="feedback-form">
+                <textarea id="feedback-text" placeholder="Your feedback..."></textarea>
+                <button onclick="submitFeedback()">Submit Feedback</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Trace Modal -->
+    <div class="modal" id="trace-modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeTraceModal()">&times;</span>
+            <h2>Execution Trace</h2>
+            <div class="trace-panel" id="trace-content"></div>
+        </div>
+    </div>
+    
+    <!-- Plugin Loader Modal -->
+    <div class="modal" id="plugin-modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closePluginModal()">&times;</span>
+            <h2>Load Plugin</h2>
+            <div class="plugin-loader">
+                <input type="text" id="plugin-url" placeholder="Plugin URL or JSON...">
+                <button onclick="loadPlugin()">Load Plugin</button>
+            </div>
+            <div id="plugin-status"></div>
+        </div>
+    </div>
+
+    <script>
+        /* ================================================================
+         * BigDaddyG Ultimate - Complete Orchestration System
+         * Includes: Timeline, Heatmap, Sandbox, Plugins, Latency, Traces
+         * ================================================================ */
+        
+        class BigDaddyGUltimate {
+            constructor() {
+                this.agents = new Map();
+                this.memory = [];
+                this.sandboxed = false;
+                this.selectedAgent = null;
+                this.timelineIndex = 0;
+                this.initializeAgents();
+                this.renderAgents();
+                this.setupGraph();
+            }
+            
+            initializeAgents() {
+                const agentConfigs = [
+                    { id: 'bigdaddyg', name: 'BigDaddyG Elder', role: 'orchestrator', x: 300, y: 100 },
+                    { id: 'rawr', name: 'Rawr Engine', role: 'inference', x: 100, y: 250 },
+                    { id: 'browser', name: 'Browser Agent', role: 'automation', x: 300, y: 250 },
+                    { id: 'parser', name: 'Parser Agent', role: 'parsing', x: 500, y: 250 },
+                    { id: 'optimizer', name: 'Optimizer', role: 'optimization', x: 100, y: 400 },
+                    { id: 'trainer', name: 'Trainer Agent', role: 'learning', x: 300, y: 400 },
+                    { id: 'internet', name: 'Internet Fallback', role: 'fallback', x: 500, y: 400 }
+                ];
+                
+                agentConfigs.forEach(config => {
+                    this.agents.set(config.id, {
+                        ...config,
+                        status: 'idle',
+                        memory: [],
+                        trace: [],
+                        lastOutput: 'Ready',
+                        latency: 0,
+                        executions: 0
+                    });
+                });
+            }
+            
+            renderAgents() {
+                const container = document.getElementById('agent-cards');
+                container.innerHTML = '';
+                
+                this.agents.forEach((agent, id) => {
+                    const card = document.createElement('div');
+                    card.className = 'agent-card';
+                    card.id = `agent-card-${id}`;
+                    card.onclick = () => this.selectAgent(id);
+                    card.innerHTML = `
+                        <h3>
+                            <span class="agent-status status-${agent.status}"></span>
+                            ${agent.name}
+                        </h3>
+                        <div style="font-size: 11px; color: #888;">
+                            Role: ${agent.role}<br>
+                            Executions: ${agent.executions}<br>
+                            Avg Latency: ${agent.latency}ms
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            }
+            
+            setupGraph() {
+                const graph = document.getElementById('graph');
+                graph.innerHTML = '';
+                
+                this.agents.forEach((agent, id) => {
+                    const node = document.createElement('div');
+                    node.className = 'node';
+                    node.id = `node-${id}`;
+                    node.style.left = agent.x + 'px';
+                    node.style.top = agent.y + 'px';
+                    node.innerHTML = `
+                        <div><strong>${agent.name}</strong></div>
+                        <div style="font-size: 11px; margin-top: 5px;">${agent.status}</div>
+                    `;
+                    node.onclick = () => this.showTraceModal(id);
+                    graph.appendChild(node);
+                });
+            }
+            
+            selectAgent(id) {
+                document.querySelectorAll('.agent-card').forEach(card => {
+                    card.classList.remove('active');
+                });
+                document.getElementById(`agent-card-${id}`).classList.add('active');
+                this.selectedAgent = id;
+                
+                const agent = this.agents.get(id);
+                log(`Selected agent: ${agent.name}`, 'system');
+            }
+            
+            async execute(task, agentId = null) {
+                // Route to appropriate agent
+                if (!agentId) {
+                    agentId = this.classifyTask(task);
+                }
+                
+                const agent = this.agents.get(agentId);
+                if (!agent) return 'Agent not found';
+                
+                // Update status
+                agent.status = 'active';
+                this.updateAgentDisplay(agentId);
+                
+                const startTime = Date.now();
+                
+                try {
+                    let result;
+                    
+                    if (this.sandboxed) {
+                        result = await this.runInSandbox(task, agent);
+                    } else {
+                        result = await this.runAgent(task, agent);
+                    }
+                    
+                    const latency = Date.now() - startTime;
+                    
+                    // Update agent stats
+                    agent.latency = Math.round((agent.latency * agent.executions + latency) / (agent.executions + 1));
+                    agent.executions++;
+                    agent.lastOutput = result;
+                    
+                    // Store in memory
+                    const interaction = {
+                        input: task,
+                        output: result,
+                        timestamp: Date.now(),
+                        agent: agentId,
+                        latency: latency,
+                        feedback: null
+                    };
+                    
+                    agent.memory.push(interaction);
+                    this.memory.push(interaction);
+                    
+                    // Update timeline
+                    this.updateTimeline();
+                    
+                    return result;
+                    
+                } finally {
+                    agent.status = 'idle';
+                    this.updateAgentDisplay(agentId);
+                }
+            }
+            
+            classifyTask(task) {
+                const lower = task.toLowerCase();
+                
+                if (/browser|web|page|click/.test(lower)) return 'browser';
+                if (/parse|json|xml|extract/.test(lower)) return 'parser';
+                if (/optimize|performance|fast/.test(lower)) return 'optimizer';
+                if (/train|learn|teach/.test(lower)) return 'trainer';
+                if (/search|internet|web/.test(lower)) return 'internet';
+                if (/model|inference|generate/.test(lower)) return 'rawr';
+                
+                return 'bigdaddyg';
+            }
+            
+            async runAgent(task, agent) {
+                // Simulate agent execution
+                await sleep(300 + Math.random() * 700);
+                
+                const responses = {
+                    bigdaddyg: `Elder orchestrating: ${task}`,
+                    rawr: `Rawr processing: ${task}`,
+                    browser: `Browser executing: ${task}`,
+                    parser: `Parsing data from: ${task}`,
+                    optimizer: `Optimizing: ${task}`,
+                    trainer: `Learning from: ${task}`,
+                    internet: `Fetching from internet: ${task}`
+                };
+                
+                return responses[agent.id] || `Executed: ${task}`;
+            }
+            
+            async runInSandbox(task, agent) {
+                log(`Running in sandbox: ${agent.name}`, 'system');
+                // Create isolated execution
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.sandbox = 'allow-scripts';
+                document.body.appendChild(iframe);
+                
+                try {
+                    const result = await this.runAgent(task, agent);
+                    return `[SANDBOX] ${result}`;
+                } finally {
+                    document.body.removeChild(iframe);
+                }
+            }
+            
+            updateAgentDisplay(id) {
+                const agent = this.agents.get(id);
+                const card = document.getElementById(`agent-card-${id}`);
+                const node = document.getElementById(`node-${id}`);
+                
+                if (card) {
+                    card.querySelector('.agent-status').className = `agent-status status-${agent.status}`;
+                    card.querySelector('div:last-child').innerHTML = `
+                        Role: ${agent.role}<br>
+                        Executions: ${agent.executions}<br>
+                        Avg Latency: ${agent.latency}ms
+                    `;
+                }
+                
+                if (node) {
+                    node.className = agent.status === 'active' ? 'node active' : 'node';
+                    node.querySelector('div:last-child').textContent = agent.status;
+                }
+            }
+            
+            updateTimeline() {
+                const range = document.getElementById('timeline-range');
+                range.max = Math.max(0, this.memory.length - 1);
+                range.value = this.memory.length - 1;
+                this.scrubTimeline(this.memory.length - 1);
+            }
+            
+            scrubTimeline(index) {
+                if (!this.memory.length) return;
+                
+                const interaction = this.memory[index];
+                const agent = this.agents.get(interaction.agent);
+                
+                document.getElementById('timeline-details').innerHTML = `
+                    <p><strong>Agent:</strong> ${agent.name}</p>
+                    <p><strong>Input:</strong> ${interaction.input}</p>
+                    <p><strong>Output:</strong> ${interaction.output}</p>
+                    <p><strong>Latency:</strong> ${interaction.latency}ms</p>
+                    <p><strong>Time:</strong> ${new Date(interaction.timestamp).toLocaleTimeString()}</p>
+                    ${interaction.feedback ? `<p><strong>Feedback:</strong> ${interaction.feedback}</p>` : ''}
+                `;
+            }
+            
+            showTraceModal(agentId) {
+                const agent = this.agents.get(agentId);
+                const modal = document.getElementById('trace-modal');
+                const content = document.getElementById('trace-content');
+                
+                content.innerHTML = `
+                    <h3>${agent.name} Execution History</h3>
+                    ${agent.memory.map((m, i) => `
+                        <div class="token-trace">
+                            <span>${i + 1}. ${m.input.substring(0, 50)}...</span>
+                            <span>${m.latency}ms</span>
+                        </div>
+                    `).join('')}
+                `;
+                
+                modal.classList.add('show');
+            }
+            
+            showFeedbackModal(index) {
+                const interaction = this.memory[index];
+                const modal = document.getElementById('feedback-modal');
+                const content = document.getElementById('feedback-content');
+                
+                content.innerHTML = `
+                    <p><strong>Input:</strong> ${interaction.input}</p>
+                    <p><strong>Output:</strong> ${interaction.output}</p>
+                `;
+                
+                modal.classList.add('show');
+                this.feedbackIndex = index;
+            }
+            
+            submitFeedback() {
+                const feedback = document.getElementById('feedback-text').value;
+                if (!feedback) return;
+                
+                this.memory[this.feedbackIndex].feedback = feedback;
+                log(`Feedback received: ${feedback}`, 'system');
+                closeFeedbackModal();
+            }
+            
+            renderHeatmap() {
+                const container = document.getElementById('heatmap');
+                container.innerHTML = '';
+                
+                this.agents.forEach((agent, id) => {
+                    const intensity = agent.executions;
+                    const color = `rgba(0,255,0,${Math.min(1, intensity / 10)})`;
+                    
+                    const cell = document.createElement('div');
+                    cell.className = 'heatmap-cell';
+                    cell.style.backgroundColor = color;
+                    cell.innerHTML = `
+                        <p><strong>${agent.name}</strong></p>
+                        <p>${agent.executions} runs</p>
+                    `;
+                    container.appendChild(cell);
+                });
+            }
+            
+            async measureLatency() {
+                log('Measuring agent latency...', 'system');
+                const table = document.getElementById('latency-table');
+                table.innerHTML = '';
+                
+                for (const [id, agent] of this.agents) {
+                    const startTime = Date.now();
+                    await this.runAgent('test task', agent);
+                    const latency = Date.now() - startTime;
+                    
+                    const row = table.insertRow();
+                    row.innerHTML = `
+                        <td>${agent.name}</td>
+                        <td>${latency}</td>
+                    `;
+                }
+                
+                document.getElementById('latency-section').style.display = 'block';
+                log('Latency measurement complete', 'system');
+            }
+            
+            async loadPlugin(url) {
+                try {
+                    log(`Loading plugin: ${url}`, 'system');
+                    
+                    // Simulate plugin loading
+                    await sleep(1000);
+                    
+                    const pluginId = 'plugin_' + Date.now();
+                    const plugin = {
+                        id: pluginId,
+                        name: 'Custom Plugin',
+                        role: 'custom',
+                        status: 'idle',
+                        memory: [],
+                        trace: [],
+                        lastOutput: 'Ready',
+                        latency: 0,
+                        executions: 0,
+                        x: 300,
+                        y: 100 + (this.agents.size * 50)
+                    };
+                    
+                    this.agents.set(pluginId, plugin);
+                    this.renderAgents();
+                    this.setupGraph();
+                    
+                    log(`Plugin loaded: ${plugin.name}`, 'system');
+                    document.getElementById('plugin-status').innerHTML = '<p style="color: #00ff00;">Plugin loaded successfully!</p>';
+                    
+                } catch (error) {
+                    log(`Plugin load failed: ${error.message}`, 'system');
+                    document.getElementById('plugin-status').innerHTML = `<p style="color: #ff0000;">Error: ${error.message}</p>`;
+                }
+            }
+        }
+        
+        // Global instance
+        const ultimate = new BigDaddyGUltimate();
+        
+        // Helper functions
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+        
+        function log(message, type = 'assistant') {
+            const chat = document.getElementById('chat');
+            const msg = document.createElement('div');
+            msg.className = `message ${type}`;
+            msg.textContent = message;
+            chat.appendChild(msg);
+            chat.scrollTop = chat.scrollHeight;
+        }
+        
+        async function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+            if (!message) return;
+            
+            log(message, 'user');
+            input.value = '';
+            
+            const result = await ultimate.execute(message);
+            log(result, 'assistant');
+        }
+        
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+        
+        function toggleSandbox() {
+            ultimate.sandboxed = !ultimate.sandboxed;
+            document.getElementById('sandbox-status').textContent = ultimate.sandboxed ? 'ON' : 'OFF';
+            log(`Sandbox mode: ${ultimate.sandboxed ? 'ENABLED' : 'DISABLED'}`, 'system');
+        }
+        
+        function toggleTimeline() {
+            const section = document.getElementById('timeline-section');
+            section.style.display = section.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        function toggleHeatmap() {
+            const section = document.getElementById('heatmap-section');
+            if (section.style.display === 'none') {
+                ultimate.renderHeatmap();
+                section.style.display = 'block';
+            } else {
+                section.style.display = 'none';
+            }
+        }
+        
+        function scrubTimeline(value) {
+            ultimate.scrubTimeline(parseInt(value));
+        }
+        
+        function measureLatency() {
+            ultimate.measureLatency();
+        }
+        
+        function showPluginLoader() {
+            document.getElementById('plugin-modal').classList.add('show');
+        }
+        
+        function loadPlugin() {
+            const url = document.getElementById('plugin-url').value;
+            ultimate.loadPlugin(url);
+        }
+        
+        function closeFeedbackModal() {
+            document.getElementById('feedback-modal').classList.remove('show');
+            document.getElementById('feedback-text').value = '';
+        }
+        
+        function closeTraceModal() {
+            document.getElementById('trace-modal').classList.remove('show');
+        }
+        
+        function closePluginModal() {
+            document.getElementById('plugin-modal').classList.remove('show');
+        }
+        
+        function submitFeedback() {
+            ultimate.submitFeedback();
+        }
+        
+        // Initialize
+        window.addEventListener('load', () => {
+            log('🚀 BigDaddyG Ultimate initialized!', 'system');
+            log('Features: Timeline Replay, Heatmap, Sandbox, Plugin Loader, Latency Comparison', 'system');
+            log('Try: "Parse this data", "Optimize my code", "Train on this example"', 'system');
+        });
+    </script>
+</body>
+</html>

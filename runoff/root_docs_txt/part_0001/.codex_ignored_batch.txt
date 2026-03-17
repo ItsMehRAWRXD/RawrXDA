@@ -1,0 +1,8 @@
+"itsmehrawrxd-master/Build-PureASM-Compilers.ps1\r"
+"itsmehrawrxd-master/Build-Universal-Compilers-Fixed.ps1\r"
+"itsmehrawrxd-master/Build-Universal-Compilers.ps1\r"
+"itsmehrawrxd-master/Eon-ASM/compilers/eon_ide_monolithic.asm\r"
+"itsmehrawrxd-master/generate-monolithic-ide.js\r"
+"itsmehrawrxd-master/machine_code_genesis.asm\r"
+"itsmehrawrxd-master/monolithic-ide-specification.json\r"
+"itsmehrawrxd-master/monolithic_ide.asm\r"

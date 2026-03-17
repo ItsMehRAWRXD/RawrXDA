@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyCopilot++ IDE - FINAL COMPLETE AGENTIC EDITION v5.0</title>
+    
+    <!-- Monaco Editor with correct SRI hash -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js" 
+            integrity="sha512-ZG31AN9z/CQD1YDDAK4RUAvogwbJHv6bHrumrnMLzdCrVu4HeAqrUX7Jsal/cbUwXGfaMUNmQU04tQ8XXl5Znw==" 
+            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    
+    <!-- Quill Editor with fallback -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js" onerror="console.warn('Quill CDN failed, using fallback')"></script>
+    
+    <!-- CodeMirror -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/css/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/clike/clike.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/glsl/glsl.min.js"></script>
+    
+    <!-- Embedded AI System -->
+    <script src="embedded-ai-system.js"></script>
+    <script src="model-loader.js"></script>
+    <script src="agentic-ai-copilot.js"></script>
+    <script src="custom-model-system.js"></script>
+    <script src="plugin-system.js"></script>
+    <script src="model-connection-fix.js"></script>
+    <script src="complete-ai-copilot-system.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1e1e1e;
+            color: #ffffff;
+            overflow: auto;
+            height: 100vh;
+        }
+
+        .menu-bar {
+            background: rgba(45, 45, 48, 0.95);
+            border-bottom: 1px solid #3e3e42;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            height: 32px;
+            backdrop-filter: blur(10px);
+            position: relative;
+            z-index: 1000;
+        }
+
+        .main-container {
+            display: flex;
+            height: calc(100vh - 32px);
+        }
+
+        .sidebar {
+            width: 300px;
+            background: rgba(37, 37, 38, 0.95);
+            border-right: 1px solid #3e3e42;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-header {
+            background: rgba(45, 45, 48, 0.95);
+            padding: 8px 16px;
+            border-bottom: 1px solid #3e3e42;
+            font-weight: bold;
+            font-size: 12px;
+            text-transform: uppercase;
+            backdrop-filter: blur(10px);
+        }
+
+        .file-explorer {
+            flex: 1;
+            padding: 8px;
+        }
+
+        .file-item {
+            padding: 4px 8px;
+            cursor: pointer;
+            color: #ffffff;
+            font-size: 13px;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            transition: background 0.2s;
+        }
+
+        .file-item:hover {
+            background: rgba(62, 62, 66, 0.8);
+        }
+
+        .file-item.selected {
+            background: rgba(0, 122, 204, 0.8);
+            color: white;
+        }
+
+        .editor-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .editor-tabs {
+            display: flex;
+            background: rgba(45, 45, 48, 0.95);
+            border-bottom: 1px solid #3e3e42;
+        }
+
+        .tab {
+            padding: 8px 16px;
+            cursor: pointer;
+            color: #d4d4d4;
+            font-size: 12px;
+            border-right: 1px solid #3e3e42;
+            transition: background 0.2s;
+        }
+
+        .tab:hover {
+            background: rgba(62, 62, 66, 0.8);
+        }
+
+        .tab.active {
+            background: rgba(0, 122, 204, 0.8);
+            color: white;
+        }
+
+        .editor-area {
+            flex: 1;
+            position: relative;
+        }
+
+        .editor {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: none;
+        }
+
+        .editor.active {
+            display: block;
+        }
+
+        .terminal {
+            height: 200px;
+            background: rgba(37, 37, 38, 0.95);
+            border-top: 1px solid #3e3e42;
+            padding: 8px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .ai-panel {
+            width: 350px;
+            background: rgba(37, 37, 38, 0.95);
+            border-left: 1px solid #3e3e42;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .ai-header {
+            background: rgba(45, 45, 48, 0.95);
+            padding: 8px 16px;
+            border-bottom: 1px solid #3e3e42;
+            font-weight: bold;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .ai-content {
+            flex: 1;
+            padding: 8px;
+            overflow-y: auto;
+        }
+
+        .ai-input {
+            width: 100%;
+            padding: 8px;
+            background: rgba(62, 62, 66, 0.8);
+            border: 1px solid #3e3e42;
+            color: #ffffff;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .ai-response {
+            margin-top: 16px;
+            padding: 12px;
+            background: rgba(62, 62, 66, 0.5);
+            border-radius: 4px;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .loading {
+            color: #ffa500;
+            font-style: italic;
+        }
+
+        .error {
+            color: #ff6b6b;
+        }
+
+        .success {
+            color: #51cf66;
+        }
+
+        .ai-query {
+            color: #569cd6;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .ai-response-text {
+            color: #ffffff;
+            white-space: pre-wrap;
+            margin-bottom: 8px;
+        }
+
+        .ai-timestamp {
+            color: #6a9955;
+            font-size: 11px;
+            font-style: italic;
+        }
+
+        .retry {
+            color: #4ec9b0;
+            cursor: pointer;
+            text-decoration: underline;
+            margin-top: 8px;
+        }
+
+        .retry:hover {
+            color: #6ec9b0;
+        }
+
+        .model-info {
+            background: rgba(45, 45, 48, 0.95);
+            border: 1px solid #3e3e42;
+            border-radius: 4px;
+            padding: 8px;
+            margin: 4px 0;
+            font-size: 11px;
+            color: #6a9955;
+        }
+
+        .warning {
+            color: #ffa500;
+        }
+
+        .status-bar {
+            height: 22px;
+            background: rgba(45, 45, 48, 0.95);
+            border-top: 1px solid #3e3e42;
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+            font-size: 11px;
+            color: #d4d4d4;
+        }
+
+        .status-bar > div {
+            margin-right: 16px;
+        }
+
+        .opengl-panel {
+            background: rgba(45, 45, 48, 0.95);
+            border: 1px solid #3e3e42;
+            border-radius: 4px;
+            padding: 8px;
+            margin: 8px 0;
+        }
+
+        .opengl-button {
+            background: rgba(0, 122, 204, 0.8);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
+            margin: 2px;
+        }
+
+        .opengl-button:hover {
+            background: rgba(0, 122, 204, 1);
+        }
+
+        .plugin-panel {
+            background: rgba(45, 45, 48, 0.95);
+            border: 1px solid #3e3e42;
+            border-radius: 4px;
+            padding: 8px;
+            margin: 8px 0;
+        }
+
+        .plugin-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(62, 62, 66, 0.5);
+        }
+
+        .plugin-toggle {
+            background: rgba(51, 204, 51, 0.8);
+            color: white;
+            border: none;
+            padding: 2px 8px;
+            border-radius: 2px;
+            cursor: pointer;
+            font-size: 10px;
+        }
+
+        .plugin-toggle.disabled {
+            background: rgba(204, 51, 51, 0.8);
+        }
+
+        .opengl-subtitle {
+            font-size: 11px;
+            margin-bottom: 8px;
+        }
+
+        .opengl-status {
+            font-size: 10px;
+            margin-top: 4px;
+            color: #6a9955;
+        }
+
+        .ai-separator {
+            color: #6a9955;
+            margin: 0 5px;
+        }
+
+        .ide-title {
+            padding: 0 16px;
+            font-weight: bold;
+        }
+
+        .terminal-input {
+            outline: none;
+        }
+
+        .monaco-fallback {
+            width: 100%;
+            height: 100%;
+            background: #1e1e1e;
+            color: #ffffff;
+            border: none;
+            padding: 10px;
+            font-family: monospace;
+            resize: none;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .quill-fallback-container {
+            width: 100%;
+            height: 100%;
+            background: #1e1e1e;
+            color: #ffffff;
+            border: 1px solid #3e3e42;
+        }
+
+        .quill-fallback-info {
+            color: #ff6b6b;
+            margin: 10px;
+        }
+
+        .quill-fallback-textarea {
+            width: calc(100% - 20px);
+            height: calc(100% - 60px);
+            background: #1e1e1e;
+            color: #ffffff;
+            border: none;
+            padding: 10px;
+            font-family: monospace;
+            resize: none;
+            margin: 10px;
+        }
+
+        .plugin-name {
+            font-weight: bold;
+            font-size: 11px;
+        }
+
+        .plugin-description {
+            font-size: 10px;
+            color: #6a9955;
+        }
+
+        .ai-suggestions {
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+<div class="menu-bar">
+    <div class="ide-title">MyCopilot++ IDE - FINAL COMPLETE AGENTIC EDITION v5.0</div>
+</div>
+
+<div class="main-container">
+    <div class="sidebar">
+        <div class="sidebar-header">Explorer</div>
+        <div class="file-explorer" id="file-explorer">
+            <div class="loading">Loading files...</div>
+        </div>
+        
+        <div class="sidebar-header">OpenGL System</div>
+        <div class="opengl-panel">
+            <div class="opengl-subtitle">Agentic OpenGL Renderer</div>
+            <button type="button" class="opengl-button" onclick="compileOpenGL()">Compile OpenGL</button>
+            <button type="button" class="opengl-button" onclick="runOpenGL()">Run OpenGL</button>
+            <button type="button" class="opengl-button" onclick="modifyShaders()">Modify Shaders</button>
+            <div id="opengl-status" class="opengl-status">Ready</div>
+        </div>
+        
+        <div class="sidebar-header">Plugins</div>
+        <div class="plugin-panel" id="plugin-panel">
+            <div class="loading">Loading plugins...</div>
+        </div>
+    </div>
+
+    <div class="editor-container">
+        <div class="editor-tabs">
+            <div class="tab active" data-editor="monaco">Monaco</div>
+            <div class="tab" data-editor="quill">Quill</div>
+            <div class="tab" data-editor="codemirror">CodeMirror</div>
+        </div>
+
+        <div class="editor-area">
+            <div id="monaco-editor" class="editor active"></div>
+            <div id="quill-editor" class="editor"></div>
+            <div id="codemirror-editor" class="editor"></div>
+        </div>
+        
+        <div class="terminal" id="terminal">
+            <div class="success">MyCopilot++ IDE Terminal v5.0 - FINAL COMPLETE AGENTIC EDITION</div>
+            <div>Type commands below or use the menu:</div>
+            <div>$ <span id="terminal-input" contenteditable="true" class="terminal-input"></span></div>
+        </div>
+    </div>
+
+    <div class="ai-panel">
+        <div class="ai-header">🤖 Hybrid AI Copilot (Ollama + Custom)</div>
+        <div class="ai-content">
+            <div class="model-info" id="model-info">
+                <div>Loading agentic AI system...</div>
+            </div>
+            <div class="ai-response">
+                <div class="success">Ready</div>
+                <div>Hello! I'm your HYBRID AI coding assistant with both Ollama models and your custom trained models. I can intelligently route queries to the best model - use Ollama for general tasks and your custom models for specialized agentic coding! How can I assist you today?</div>
+            </div>
+            <input type="text" class="ai-input" placeholder="Ask agentic AI anything..." id="ai-input">
+        </div>
+    </div>
+</div>
+
+<div class="status-bar">
+    <div id="status-line">Ready - MyCopilot++ IDE v5.0 - FINAL COMPLETE AGENTIC EDITION</div>
+    <div id="status-info">
+        <span id="current-file">No file selected</span> | 
+        <span id="editor-mode">Monaco</span> | 
+        <span id="encoding">UTF-8</span> | 
+        <span id="language">HTML</span> | 
+        <span id="git-status">Git: main</span> | 
+        <span id="debug-status">Debug: Off</span> | 
+        <span id="theme-status">Theme: vs-dark</span> | 
+        <span id="plugins-status">Plugins: 0</span>
+    </div>
+</div>
+
+<script>
+    // FINAL COMPLETE AGENTIC IDE - Enhanced with all features
+    console.log('[AGENTIC-IDE] Initializing final complete agentic IDE v5.0...');
+
+    // Global variables
+    let files = {};
+    let currentFile = null;
+    let currentEditor = 'monaco';
+    let monacoEditor = null;
+    let quillEditor = null;
+    let codemirrorEditor = null;
+    let agenticAI = null;
+    let pluginSystem = null;
+
+    // Enhanced file system with OpenGL support
+    function loadFiles() {
+        files = {
+            "index.html": `<!DOCTYPE html>
+<html>
+<head>
+    <title>My App</title>
+</head>
+<body>
+    <h1>Hello World!</h1>
+    <script src="script.js"></script>
+</body>
+</html>`,
+            "hello.py": `#!/usr/bin/env python3
+
+def main():
+    print("Hello from Python!")
+
+if __name__ == "__main__":
+    main()`,
+            "hello.js": `console.log('Hello from JavaScript!');
+
+function greet(name) {
+    return \`Hello, \${name}!\`;
+}`,
+            "styles.css": `body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #f0f0f0;
+}
+
+h1 {
+    color: #333;
+    text-align: center;
+}`,
+            "README.md": `# My App
+
+This is my awesome application!`,
+            "opengl-shader.vert": `#version 330 core
+layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec3 aColor;
+
+out vec3 vertexColor;
+
+void main()
+{
+    gl_Position = vec4(aPos, 1.0);
+    vertexColor = aColor;
+}`,
+            "opengl-shader.frag": `#version 330 core
+in vec3 vertexColor;
+out vec4 FragColor;
+
+void main()
+{
+    FragColor = vec4(vertexColor, 1.0);
+}`,
+            "main.cpp": `#include &lt;iostream&gt;
+#include &lt;GL/glew.h&gt;
+#include &lt;GLFW/glfw3.h&gt;
+
+int main() {
+    std::cout << "OpenGL Agentic Renderer" << std::endl;
+    return 0;
+}`
+        };
+        
+        console.log(`[AGENTIC-IDE] Loaded ${Object.keys(files).length} files`);
+        updateFileExplorer();
+        return true;
+    }
+
+    function updateFileExplorer() {
+        const explorer = document.getElementById('file-explorer');
+        explorer.innerHTML = '';
+        
+        Object.keys(files).forEach(filename => {
+            const fileItem = document.createElement('div');
+            fileItem.className = 'file-item';
+            fileItem.textContent = filename;
+            fileItem.onclick = () => openFile(filename);
+            explorer.appendChild(fileItem);
+        });
+    }
+
+    function openFile(filename) {
+        currentFile = filename;
+        document.getElementById('current-file').textContent = filename;
+        
+        // Update file selection
+        document.querySelectorAll('.file-item').forEach(item => {
+            item.classList.remove('selected');
+            if (item.textContent === filename) {
+                item.classList.add('selected');
+            }
+        });
+        
+        // Load content into current editor
+        const content = files[filename] || '';
+        setCurrentEditorContent(content);
+        
+        // Update language based on file extension
+        updateLanguage(filename);
+        
+        console.log(`[AGENTIC-IDE] Opened file: ${filename}`);
+    }
+
+    function updateLanguage(filename) {
+        const extension = filename.split('.').pop();
+        const languageMap = {
+            'js': 'JavaScript',
+            'py': 'Python',
+            'html': 'HTML',
+            'css': 'CSS',
+            'cpp': 'C++',
+            'vert': 'GLSL',
+            'frag': 'GLSL',
+            'md': 'Markdown'
+        };
+        
+        const language = languageMap[extension] || 'Text';
+        document.getElementById('language').textContent = language;
+    }
+
+    function setCurrentEditorContent(content) {
+        switch(currentEditor) {
+            case 'monaco':
+                if (monacoEditor) {
+                    monacoEditor.setValue(content);
+                }
+                break;
+            case 'quill':
+                if (quillEditor && quillEditor.root) {
+                    quillEditor.root.innerHTML = content;
+                } else {
+                    const fallbackEditor = document.querySelector('#quill-editor textarea');
+                    if (fallbackEditor) {
+                        fallbackEditor.value = content;
+                    }
+                }
+                break;
+            case 'codemirror':
+                if (codemirrorEditor) {
+                    codemirrorEditor.setValue(content);
+                }
+                break;
+        }
+    }
+
+    function getCurrentEditorContent() {
+        switch(currentEditor) {
+            case 'monaco':
+                return monacoEditor ? monacoEditor.getValue() : '';
+            case 'quill':
+                if (quillEditor && quillEditor.root) {
+                    return quillEditor.root.innerHTML;
+                } else {
+                    const fallbackEditor = document.querySelector('#quill-editor textarea');
+                    return fallbackEditor ? fallbackEditor.value : '';
+                }
+            case 'codemirror':
+                return codemirrorEditor ? codemirrorEditor.getValue() : '';
+            default:
+                return '';
+        }
+    }
+
+    function saveFile() {
+        if (currentFile) {
+            files[currentFile] = getCurrentEditorContent();
+            console.log(`[AGENTIC-IDE] Saved file: ${currentFile}`);
+            showSuccess(`Saved ${currentFile}`);
+        }
+    }
+
+    function showError(message) {
+        const terminal = document.getElementById('terminal');
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error';
+        errorDiv.textContent = `[ERROR] ${message}`;
+        terminal.appendChild(errorDiv);
+        terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    function showSuccess(message) {
+        const terminal = document.getElementById('terminal');
+        const successDiv = document.createElement('div');
+        successDiv.className = 'success';
+        successDiv.textContent = `[SUCCESS] ${message}`;
+        terminal.appendChild(successDiv);
+        terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    function showInfo(message) {
+        const terminal = document.getElementById('terminal');
+        const infoDiv = document.createElement('div');
+        infoDiv.textContent = `[INFO] ${message}`;
+        terminal.appendChild(infoDiv);
+        terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    // Editor switching
+    function switchEditor(editorName) {
+        currentEditor = editorName;
+        
+        // Update tabs
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.classList.remove('active');
+            if (tab.dataset.editor === editorName) {
+                tab.classList.add('active');
+            }
+        });
+
+        // Update editors
+        document.querySelectorAll('.editor').forEach(editor => {
+            editor.classList.remove('active');
+        });
+        document.getElementById(`${editorName}-editor`).classList.add('active');
+
+        // Update status
+        document.getElementById('editor-mode').textContent = editorName.charAt(0).toUpperCase() + editorName.slice(1);
+
+        // Load current file content
+        if (currentFile) {
+            setCurrentEditorContent(files[currentFile] || '');
+        }
+
+        console.log(`[AGENTIC-IDE] Switched to ${editorName} editor`);
+    }
+
+    // Initialize editors with enhanced error handling
+    function initializeEditors() {
+        console.log('[AGENTIC-IDE] Initializing editors...');
+
+        // Initialize Monaco Editor with improved error handling
+        setTimeout(() => {
+            try {
+                if (typeof require !== 'undefined') {
+                    require.config({
+                        paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' }
+                    });
+
+                    require(['vs/editor/editor.main'], function () {
+                        monacoEditor = monaco.editor.create(document.getElementById('monaco-editor'), {
+                            value: '',
+                            language: 'html',
+                            theme: 'vs-dark',
+                            automaticLayout: true,
+                            fontSize: 14,
+                            lineNumbers: 'on',
+                            wordWrap: 'on',
+                            minimap: { enabled: true },
+                            scrollBeyondLastLine: false,
+                            renderWhitespace: 'selection'
+                        });
+
+                        monacoEditor.onDidChangeModelContent(() => {
+                            if (currentFile) {
+                                files[currentFile] = monacoEditor.getValue();
+                            }
+                        });
+
+                        console.log('[AGENTIC-IDE] Monaco Editor initialized successfully');
+                    }, function (error) {
+                        console.warn('[AGENTIC-IDE] Monaco module load failed, using fallback:', error);
+                        createMonacoFallback();
+                    });
+                } else {
+                    throw new Error('RequireJS not available');
+                }
+            } catch (error) {
+                console.error('[AGENTIC-IDE] Monaco initialization failed:', error);
+                createMonacoFallback();
+            }
+        }, 1000);
+
+        // Initialize Quill Editor with fallback
+        try {
+            if (typeof Quill !== 'undefined') {
+                quillEditor = new Quill('#quill-editor', {
+                    theme: 'snow',
+                    modules: {
+                        toolbar: [
+                            ['bold', 'italic', 'underline'],
+                            ['blockquote', 'code-block'],
+                            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                            ['link', 'image'],
+                            ['clean']
+                        ]
+                    }
+                });
+
+                quillEditor.on('text-change', () => {
+                    if (currentFile) {
+                        files[currentFile] = quillEditor.root.innerHTML;
+                    }
+                });
+
+                console.log('[AGENTIC-IDE] Quill Editor initialized');
+            } else {
+                createQuillFallback();
+            }
+        } catch (error) {
+            console.error('[AGENTIC-IDE] Quill Editor failed:', error);
+            createQuillFallback();
+        }
+
+        // Initialize CodeMirror Editor
+        try {
+            codemirrorEditor = CodeMirror(document.getElementById('codemirror-editor'), {
+                value: '',
+                mode: 'htmlmixed',
+                theme: 'default',
+                lineNumbers: true,
+                indentUnit: 4,
+                tabSize: 4,
+                lineWrapping: true
+            });
+
+            codemirrorEditor.on('change', () => {
+                if (currentFile) {
+                    files[currentFile] = codemirrorEditor.getValue();
+                }
+            });
+
+            console.log('[AGENTIC-IDE] CodeMirror Editor initialized');
+        } catch (error) {
+            console.error('[AGENTIC-IDE] CodeMirror Editor failed:', error);
+        }
+    }
+
+    function createMonacoFallback() {
+        const monacoContainer = document.getElementById('monaco-editor');
+        monacoContainer.innerHTML = `
+            <textarea id="monaco-fallback" class="monaco-fallback" placeholder="Code Editor - Ready to use!"></textarea>
+        `;
+        
+        const fallbackEditor = document.getElementById('monaco-fallback');
+        fallbackEditor.addEventListener('input', () => {
+            if (currentFile) {
+                files[currentFile] = fallbackEditor.value;
+            }
+        });
+        
+        monacoEditor = {
+            getValue: () => fallbackEditor.value,
+            setValue: (value) => { fallbackEditor.value = value; }
+        };
+        
+        console.log('[AGENTIC-IDE] Monaco fallback editor created');
+    }
+
+    function createQuillFallback() {
+        const quillContainer = document.getElementById('quill-editor');
+        quillContainer.innerHTML = `
+            <div class="quill-fallback-container">
+                <div class="quill-fallback-info">[INFO] Rich text editor (Quill not available)</div>
+                <textarea class="quill-fallback-textarea" placeholder="Rich text content..."></textarea>
+            </div>
+        `;
+        console.log('[AGENTIC-IDE] Quill fallback editor created');
+    }
+
+    // OpenGL System Integration
+    function compileOpenGL() {
+        showInfo('Compiling OpenGL project...');
+        document.getElementById('opengl-status').textContent = 'Compiling...';
+        
+        // Simulate compilation
+        setTimeout(() => {
+            showSuccess('OpenGL project compiled successfully!');
+            document.getElementById('opengl-status').textContent = 'Compiled';
+        }, 2000);
+    }
+
+    function runOpenGL() {
+        showInfo('Running OpenGL renderer...');
+        document.getElementById('opengl-status').textContent = 'Running...';
+        
+        // Simulate running
+        setTimeout(() => {
+            showSuccess('OpenGL renderer started!');
+            document.getElementById('opengl-status').textContent = 'Running';
+        }, 1000);
+    }
+
+    function modifyShaders() {
+        showInfo('Opening shader files for modification...');
+        
+        // Open shader files
+        if (files['opengl-shader.vert']) {
+            openFile('opengl-shader.vert');
+        }
+        
+        setTimeout(() => {
+            showSuccess('Shaders ready for agentic modification!');
+        }, 500);
+    }
+
+    // Plugin System Integration
+    function updatePluginPanel() {
+        const pluginPanel = document.getElementById('plugin-panel');
+        pluginPanel.innerHTML = '';
+        
+        if (pluginSystem && pluginSystem.getAllPlugins) {
+            const plugins = pluginSystem.getAllPlugins();
+            plugins.forEach(plugin => {
+                const pluginItem = document.createElement('div');
+                pluginItem.className = 'plugin-item';
+                pluginItem.innerHTML = `
+                    <div>
+                        <div class="plugin-name">${plugin.name}</div>
+                        <div class="plugin-description">${plugin.description}</div>
+                    </div>
+                    <button class="plugin-toggle ${plugin.enabled ? '' : 'disabled'}" 
+                            onclick="togglePlugin('${plugin.name}')">
+                        ${plugin.enabled ? 'ON' : 'OFF'}
+                    </button>
+                `;
+                pluginPanel.appendChild(pluginItem);
+            });
+            
+            document.getElementById('plugins-status').textContent = `Plugins: ${plugins.length}`;
+        } else {
+            pluginPanel.innerHTML = '<div class="loading">Loading plugins...</div>';
+        }
+    }
+
+    function togglePlugin(pluginName) {
+        if (pluginSystem) {
+            const plugin = pluginSystem.getPlugin(pluginName);
+            if (plugin) {
+                if (plugin.enabled) {
+                    pluginSystem.disablePlugin(pluginName);
+                } else {
+                    pluginSystem.enablePlugin(pluginName);
+                }
+                updatePluginPanel();
+            }
+        }
+    }
+
+    // Enhanced AI Integration
+    async function handleAIQuery(query) {
+        const responseDiv = document.querySelector('.ai-response');
+        responseDiv.innerHTML = `
+            <div class="loading">🤖 Agentic AI processing your request...</div>
+        `;
+
+        try {
+            // Use the agentic AI system
+            if (window.agenticAI && window.agenticAI.isInitialized) {
+                const result = await window.agenticAI.generateResponse(query, {
+                    currentFile: currentFile,
+                    editorContent: getCurrentEditorContent(),
+                    editorType: currentEditor,
+                    files: files
+                });
+                
+                if (result.success) {
+                    responseDiv.innerHTML = `
+                        <div class="success">🤖 Agentic AI (${result.model})</div>
+                        <div class="ai-query">You: "${query}"</div>
+                        <div class="ai-response-text">${result.response}</div>
+                        ${result.suggestions && result.suggestions.length > 0 ? 
+                            `<div style="margin-top: 8px;"><strong>Suggestions:</strong><br>${result.suggestions.join('<br>')}</div>` : ''}
+                        <div class="ai-timestamp">${new Date(result.timestamp).toLocaleTimeString()}</div>
+                    `;
+                } else {
+                    responseDiv.innerHTML = `
+                        <div class="error">AI Error</div>
+                        <div>${result.error || 'Unknown error occurred'}</div>
+                        <div class="fallback">${result.fallback || ''}</div>
+                    `;
+                }
+            } else {
+                // Fallback if agentic AI not ready
+                responseDiv.innerHTML = `
+                    <div class="warning">Agentic AI System Loading...</div>
+                    <div>Please wait while the agentic AI system initializes.</div>
+                    <div class="retry" onclick="handleAIQuery('${query}')">🔄 Retry</div>
+                `;
+            }
+        } catch (error) {
+            console.error('[AI] Query failed:', error);
+            responseDiv.innerHTML = `
+                <div class="error">AI System Error</div>
+                <div>Failed to process your request. Please try again.</div>
+                <div class="error-details">${error.message}</div>
+            `;
+        }
+    }
+
+    function handleTerminalCommand(command) {
+        const terminal = document.getElementById('terminal');
+        const commandDiv = document.createElement('div');
+        commandDiv.textContent = `$ ${command}`;
+        terminal.appendChild(commandDiv);
+
+        // Handle enhanced commands
+        if (command === 'help') {
+            showInfo('Available commands: help, list, save, clear, compile, run, plugins, ai');
+        } else if (command === 'list') {
+            showInfo(`Files: ${Object.keys(files).join(', ')}`);
+        } else if (command === 'save') {
+            saveFile();
+        } else if (command === 'clear') {
+            terminal.innerHTML = '<div class="success">MyCopilot++ IDE Terminal v5.0 - FINAL COMPLETE AGENTIC EDITION</div><div>Type commands below or use the menu:</div>';
+            const inputDiv = document.createElement('div');
+            inputDiv.innerHTML = '$ <span id="terminal-input-clear" contenteditable="true" style="outline: none;"></span>';
+            terminal.appendChild(inputDiv);
+            document.getElementById('terminal-input-clear').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    const command = e.target.textContent.trim();
+                    if (command) {
+                        handleTerminalCommand(command);
+                        e.target.textContent = '';
+                    }
+                }
+            });
+        } else if (command === 'compile') {
+            compileOpenGL();
+        } else if (command === 'run') {
+            runOpenGL();
+        } else if (command === 'plugins') {
+            updatePluginPanel();
+            showInfo('Plugin panel updated');
+        } else if (command.startsWith('ai ')) {
+            const query = command.substring(3);
+            handleAIQuery(query);
+        } else {
+            showInfo(`Command not found: ${command}. Type 'help' for available commands.`);
+        }
+
+        terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    function updateModelInfo() {
+        const modelInfoDiv = document.getElementById('model-info');
+        
+        if (window.customModelSystem && window.customModelSystem.isInitialized) {
+            const info = window.customModelSystem.getModelInfo();
+            modelInfoDiv.innerHTML = `
+                <div><strong>Mode:</strong> ${info.modelType}</div>
+                <div><strong>Status:</strong> ${info.isInitialized ? 'Ready' : 'Loading...'}</div>
+                <div><strong>Ollama Models:</strong> ${info.ollamaModels.length}</div>
+                <div><strong>Custom Models:</strong> ${info.customModels.length}</div>
+                <div><strong>Total Models:</strong> ${info.totalModels}</div>
+            `;
+        } else if (window.agenticAI && window.agenticAI.isInitialized) {
+            const info = window.agenticAI.getModelInfo();
+            modelInfoDiv.innerHTML = `
+                <div><strong>Model:</strong> ${info.currentModel}</div>
+                <div><strong>Status:</strong> ${info.isInitialized ? 'Ready' : 'Loading...'}</div>
+                <div><strong>Capabilities:</strong> ${info.capabilities.slice(0, 3).join(', ')}...</div>
+                <div><strong>Performance:</strong> ${info.performanceMetrics.suggestionsGiven} suggestions</div>
+            `;
+        } else {
+            modelInfoDiv.innerHTML = `
+                <div>Initializing hybrid AI system...</div>
+                <div>Loading Ollama + Custom models...</div>
+            `;
+        }
+    }
+
+    // Event listeners
+    document.addEventListener('DOMContentLoaded', async function() {
+        console.log('[AGENTIC-IDE] DOM loaded, initializing...');
+        
+        // Load files first
+        loadFiles();
+
+        // Initialize editors
+        initializeEditors();
+
+        // Initialize hybrid AI system
+        if (window.customModelSystem) {
+            agenticAI = window.customModelSystem;
+        } else if (window.agenticAI) {
+            agenticAI = window.agenticAI;
+        }
+
+        // Initialize plugin system
+        if (window.pluginSystem) {
+            pluginSystem = window.pluginSystem;
+            // Connect plugin API to IDE
+            if (pluginSystem.pluginAPI) {
+                pluginSystem.pluginAPI.setIDE({
+                    readFile: (path) => files[path] || '',
+                    writeFile: (path, content) => { files[path] = content; },
+                    getCurrentFile: () => currentFile,
+                    getCurrentEditor: () => currentEditor,
+                    getEditorContent: getCurrentEditorContent,
+                    setEditorContent: setCurrentEditorContent,
+                    getAllFiles: () => files,
+                    showNotification: showInfo,
+                    showModal: (title, content) => showInfo(`${title}: ${content}`)
+                });
+                pluginSystem.pluginAPI.setHooks(pluginSystem);
+            }
+        }
+
+        // Setup tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                switchEditor(tab.dataset.editor);
+            });
+        });
+
+        // Setup keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                saveFile();
+            }
+        });
+
+        // Setup AI input
+        document.getElementById('ai-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const query = e.target.value;
+                if (query.trim()) {
+                    handleAIQuery(query);
+                    e.target.value = '';
+                }
+            }
+        });
+
+        // Setup terminal input
+        document.getElementById('terminal-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const command = e.target.textContent.trim();
+                if (command) {
+                    handleTerminalCommand(command);
+                    e.target.textContent = '';
+                }
+            }
+        });
+
+        // Initialize displays
+        updateModelInfo();
+        updatePluginPanel();
+        
+        showSuccess('FINAL COMPLETE AGENTIC IDE initialized successfully!');
+        console.log('[AGENTIC-IDE] Initialization complete');
+    });
+
+    // Update displays periodically
+    setInterval(updateModelInfo, 5000);
+    setInterval(updatePluginPanel, 10000);
+
+    console.log('[AGENTIC-IDE] Script loaded');
+</script>
+
+</body>
+</html>

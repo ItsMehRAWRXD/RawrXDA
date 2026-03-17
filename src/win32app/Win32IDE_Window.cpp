@@ -1,6 +1,8 @@
-#include "Win32IDE.h"
+﻿#include "Win32IDE.h"
 #include <windowsx.h>
 #include <commctrl.h>
+#include <shellscalingapi.h>   // GetDpiForWindow
+#include <cassert>
 
 // Window Management Implementation for Win32IDE
 // Completes the GUI IDE loop by providing the missing Window Procedure and creation logic.
@@ -46,6 +48,26 @@ void Win32IDE::showWindow() {
     if (m_hwndMain) {
         ShowWindow(m_hwndMain, SW_SHOW);
         UpdateWindow(m_hwndMain);
+
+        // Post-show client-rect verification
+        RECT rc = {};
+        GetClientRect(m_hwndMain, &rc);
+        int cw = rc.right - rc.left;
+        int ch = rc.bottom - rc.top;
+        if (cw < 400 || ch < 300) {
+            // Window reported a degenerate client area — force a safe minimum size
+            char warn[128];
+            snprintf(warn, sizeof(warn),
+                     "[showWindow] Degenerate client rect %dx%d — forcing 1280x800\n", cw, ch);
+            OutputDebugStringA(warn);
+            SetWindowPos(m_hwndMain, HWND_TOP, 0, 0, 1280, 800,
+                         SWP_NOMOVE | SWP_NOZORDER | SWP_SHOWWINDOW);
+        } else {
+            char info[128];
+            snprintf(info, sizeof(info),
+                     "[showWindow] Client rect OK: %dx%d\n", cw, ch);
+            OutputDebugStringA(info);
+        }
     }
 }
 
@@ -102,15 +124,62 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
         case WM_CLOSE:
             DestroyWindow(hwnd);
             return 0;
-            
+
         // Autonomy and Agent Events
-        case WM_USER + 100: // Agent Output Update
-            // Refresh UI if needed
+        case WM_USER + 100:
             return 0;
+
+        // Watchdog show-window request (posted from VisibilityWatchdogThread
+        // to avoid cross-thread blocking during shutdown).
+        // wParam = SW_* command (SW_SHOW, SW_RESTORE, etc.)
+        case WM_APP + 1:
+            ShowWindow(hwnd, static_cast<int>(wParam));
+            SetForegroundWindow(hwnd);
+            return 0;
+
+        case WM_ACTIVATE: {
+            WORD state = LOWORD(wParam);
+            const char* stateStr = (state == WA_INACTIVE) ? "INACTIVE"
+                                 : (state == WA_ACTIVE)   ? "ACTIVE"
+                                                          : "CLICKACTIVE";
+            char dbg[128];
+            snprintf(dbg, sizeof(dbg), "[WM_ACTIVATE] state=%s\n", stateStr);
+            OutputDebugStringA(dbg);
+            return DefWindowProc(hwnd, uMsg, wParam, lParam);
+        }
+
+        case WM_MOVE: {
+            int x = (int)(short)LOWORD(lParam);
+            int y = (int)(short)HIWORD(lParam);
+            RECT wa = {};
+            SystemParametersInfo(SPI_GETWORKAREA, 0, &wa, 0);
+            if (x < wa.left - 1200 || y < wa.top - 100 || x > wa.right || y > wa.bottom) {
+                char warn[128];
+                snprintf(warn, sizeof(warn),
+                         "[WM_MOVE] Off-screen (%d, %d) -- recentering\n", x, y);
+                OutputDebugStringA(warn);
+                int sw = GetSystemMetrics(SM_CXSCREEN);
+                int sh = GetSystemMetrics(SM_CYSCREEN);
+                SetWindowPos(hwnd, nullptr, (sw - 1280) / 2, (sh - 800) / 2, 0, 0,
+                             SWP_NOSIZE | SWP_NOZORDER);
+            }
+            return DefWindowProc(hwnd, uMsg, wParam, lParam);
+        }
+
+        case WM_PAINT: {
+            PAINTSTRUCT ps;
+            HDC hdc = BeginPaint(hwnd, &ps);
+            if (hdc) {
+                RECT rcClient;
+                GetClientRect(hwnd, &rcClient);
+                FillRect(hdc, &rcClient, (HBRUSH)GetStockObject(BLACK_BRUSH));
+                EndPaint(hwnd, &ps);
+            }
+            return 0;
+        }
     }
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
-
 void Win32IDE::onCreate(HWND hwnd) {
     LOG_INFO("Main Window Created: Initializing UI Components");
     
@@ -157,6 +226,12 @@ void Win32IDE::onCreate(HWND hwnd) {
 }
 
 void Win32IDE::onDestroy() {
+    m_shuttingDown.store(true, std::memory_order_release);
+
+    // Parity-audit: stop watchdog before anything else so it can't race on
+    // the HWND members we're about to tear down.
+    stopVisibilityWatchdog();
+
     // Cleanup Resources
     if (m_agenticBridge) {
         m_agenticBridge->StopAgentLoop();
@@ -165,19 +240,39 @@ void Win32IDE::onDestroy() {
         DestroyAcceleratorTable(m_hAccel);
         m_hAccel = nullptr;
     }
-    shutdownInference();
     shutdownLogging();
 }
 
 void Win32IDE::onSize(int width, int height) {
-    if (width == 0 || height == 0) return;
+    // ── Parity-audit: dimension guards ──────────────────────────────────────
+    // Clamp to safe minimums so layout arithmetic never produces negatives.
+    // The assert fires in Debug builds; the clamp protects Release builds.
+    if (width  < 1) width  = 1;
+    if (height < 1) height = 1;
+    width  = (width  < 400) ? 400  : width;
+    height = (height < 300) ? 300  : height;
+    assert(width  >= 400);
+    assert(height >= 300);
+
+    // DPI-aware scaling
+    UINT dpi = GetDpiForWindow(m_hwndMain ? m_hwndMain : GetDesktopWindow());
+    if (dpi == 0) dpi = 96;  // fallback: 100% scaling
+    float dpiScale = (float)dpi / 96.0f;
+
+    // Debug trace (visible in DebugView / VS Output)
+    {
+        char dbg[128];
+        snprintf(dbg, sizeof(dbg),
+                 "[WM_SIZE] %dx%d  DPI=%u (%.2fx)\n", width, height, dpi, dpiScale);
+        OutputDebugStringA(dbg);
+    }
 
     // Layout constants
-    int statusBarHeight = 25;
-    int terminalHeight = 200; // Fixed for now, should be m_terminalHeight
-    int activityBarWidth = 48; // VSCode style
-    int sidebarWidth = 250; // Should be m_sidebarWidth
-    int secondarySidebarWidth = 320; // Should be m_secondarySidebarWidth
+    int statusBarHeight      = (int)(25  * dpiScale);
+    int terminalHeight       = (int)(200 * dpiScale);
+    int activityBarWidth     = (int)(48  * dpiScale);
+    int sidebarWidth         = (int)(250 * dpiScale);
+    int secondarySidebarWidth= (int)(320 * dpiScale);
     
     // Adjust logic based on visibility
     bool showSidebar = (m_hwndSidebar != nullptr && IsWindowVisible(m_hwndSidebar));
@@ -187,45 +282,11 @@ void Win32IDE::onSize(int width, int height) {
     int currentX = 0;
     
     // 1. Activity Bar (Far Left)
-    // If we had m_hwndActivityBar, we'd size it. Assuming it exists if Sidebar exists?
-    // Win32IDE_Sidebar.cpp creates m_hwndActivityBar.
-    // If we can't access m_hwndActivityBar (private), we might need to rely on direct HWND search or use known ID.
-    // For now, allow sidebar to handle its own layout if it does, but we must position the main containers.
-    
-    // Actually, Win32IDE_Sidebar.cpp likely doesn't resize itself?
-    // SidebarProc handles PAINT, but what about SIZE?
-    
-    // Let's position the main containers we know about.
-    
     int workspaceX = 0;
     int workspaceWidth = width;
-    
-    // Sidebar Area
+
     if (showSidebar) {
-        // Assume Sidebar includes Activity Bar visually?
-        // Win32IDE.cpp createSidebar puts it at x=48.
-        // So we need to put Activity Bar at x=0, w=48.
-        // And Sidebar at x=48, w=m_sidebarWidth.
-        
-        // Find Activity Bar by ID if member not accessible? 
-        // Or assume ID 1100 (from VSCodeUI).
-        // HWND hActivity = GetDlgItem(m_hwndMain, 1100); or m_hwndActivityBar if accessible.
-        
-        // Since we are in Win32IDE class, we have access to private members declared in header!
-        // We need to check if m_hwndActivityBar is in header.
-        // Assuming it is.
-        
-        /* 
-           Since I am not 100% sure of member visibility in the split definition, 
-           I will use Safe positioning knowing that I am in the class scope.
-        */
-        
-        // Activity Bar
-        // MoveWindow(m_hwndActivityBar, 0, 0, activityBarWidth, height - statusBarHeight, TRUE);
-        
-        // Primary Sidebar
         MoveWindow(m_hwndSidebar, activityBarWidth, 0, sidebarWidth, height - statusBarHeight, TRUE);
-        
         workspaceX += (activityBarWidth + sidebarWidth);
         workspaceWidth -= (activityBarWidth + sidebarWidth);
     }
@@ -241,9 +302,6 @@ void Win32IDE::onSize(int width, int height) {
     if (showTerminal) {
         editorHeight -= terminalHeight;
         MoveWindow(m_hwndPowerShellPanel, workspaceX, editorHeight, workspaceWidth, terminalHeight, TRUE);
-        
-        // Also Command Input?
-        // m_hwndCommandInput
     }
     
     // Editor Area
@@ -258,24 +316,10 @@ void Win32IDE::onSize(int width, int height) {
     }
 }
 
-void Win32IDE::onCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify) {
-    switch (id) {
-        case 1204: // IDC_COPILOT_SEND_BTN
-            HandleCopilotSend();
-            break;
-        case 1205: // IDC_COPILOT_CLEAR_BTN
-            HandleCopilotClear();
-            break;
-        default:
-            routeCommand(id);
-            break;
-    }
-}
-
 void Win32IDE::initializeAgenticBridge() {
     m_agenticBridge = std::make_unique<AgenticBridge>(this);
-    // Explicitly assume local path for tools
-    m_agenticBridge->Initialize(".", "titan-micro");
+    // Initialize engine so chat and agentic work with any loaded model (local definitions vary; no required default)
+    m_agenticBridge->Initialize(".", "");
     
     // Connect output to Copilot Chat
     m_agenticBridge->SetOutputCallback([this](const std::string& type, const std::string& msg) {

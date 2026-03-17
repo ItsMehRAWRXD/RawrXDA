@@ -1,0 +1,36 @@
+{
+  "cursor-ai-copilot": {
+    "apiEndpoint": "https://api.openai.com/v1",
+    "apiKey": "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",
+    "model": "gpt-5.2-pro",
+    "temperature": 0.7,
+    "maxTokens": 4096,
+    "enableTelemetry": true,
+    "completionTriggerCharacters": ". ",
+    "requestTimeout": 60000,
+    "enableHoverAnalysis": true,
+    "enableCompletions": true,
+    "showWelcomeMessage": true,
+    "modelPriority": [
+      "gpt-5.2-pro",
+      "gpt-5.1-codex-max",
+      "gpt-4o-mini",
+      "gpt-4o-audio-preview"
+    ],
+    "agenticConfig": {
+      "plannerModel": "gpt-5.2-pro",
+      "reflectorModel": "gpt-5.2-pro",
+      "coderModel": "gpt-5.2-pro",
+      "maxAgentIterations": 10,
+      "agentTimeout": 120000,
+      "enableFallback": true
+    }
+  },
+  "win32": {
+    "credentialStorage": "windows-credential-manager",
+    "registryRoot": "HKEY_CURRENT_USER\\Software\\RawrXD\\CursorAICopilot",
+    "pipelineMode": "hybrid",
+    "enableLogging": true,
+    "logPath": "%APPDATA%\\RawrXD\\Cursor-AI-Copilot\\logs"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "files": [
+    {
+      "path": "D:\\lazy init ide\\src\\RawrXD_Autonomous_Reverse_Engineer.asm",
+      "type": ".asm",
+      "size": 1234
+    },
+    {
+      "path": "D:\\lazy init ide\\src\\RawrXD_Widget_RE.asm",
+      "type": ".asm",
+      "size": 5678
+    },
+    {
+      "path": "D:\\lazy init ide\\src\\test_generated.asm",
+      "type": ".asm",
+      "size": 89
+    }
+  ],
+  "includes": [],
+  "dependencies": []
+}

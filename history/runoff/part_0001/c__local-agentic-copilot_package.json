@@ -1,0 +1,126 @@
+{
+  "name": "local-agentic-copilot",
+  "displayName": "Local Agentic Copilot",
+  "description": "GitHub Copilot-like experience using local Ollama models with agentic reasoning capabilities",
+  "version": "1.0.0",
+  "publisher": "rawrxd",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "agentic-copilot.openChat",
+        "title": "Agentic Copilot: Open Chat",
+        "category": "Agentic Copilot"
+      },
+      {
+        "command": "agentic-copilot.toggleAgenticMode",
+        "title": "Agentic Copilot: Toggle Agentic Mode",
+        "category": "Agentic Copilot"
+      },
+      {
+        "command": "agentic-copilot.generateCode",
+        "title": "Agentic Copilot: Generate Code",
+        "category": "Agentic Copilot"
+      },
+      {
+        "command": "agentic-copilot.explainCode",
+        "title": "Agentic Copilot: Explain Code",
+        "category": "Agentic Copilot"
+      },
+      {
+        "command": "agentic-copilot.fixCode",
+        "title": "Agentic Copilot: Fix Code",
+        "category": "Agentic Copilot"
+      },
+      {
+        "command": "agentic-copilot.showStatus",
+        "title": "Agentic Copilot: Show Agentic Status",
+        "category": "Agentic Copilot"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "agentic-copilot.openChat",
+        "key": "ctrl+shift+o",
+        "mac": "cmd+shift+o"
+      },
+      {
+        "command": "agentic-copilot.toggleAgenticMode",
+        "key": "ctrl+shift+a",
+        "mac": "cmd+shift+a"
+      },
+      {
+        "command": "agentic-copilot.generateCode",
+        "key": "ctrl+shift+j",
+        "mac": "cmd+shift+j"
+      },
+      {
+        "command": "agentic-copilot.explainCode",
+        "key": "ctrl+shift+e",
+        "mac": "cmd+shift+e"
+      },
+      {
+        "command": "agentic-copilot.fixCode",
+        "key": "ctrl+shift+f",
+        "mac": "cmd+shift+f"
+      }
+    ],
+    "configuration": {
+      "title": "Agentic Copilot",
+      "properties": {
+        "agenticCopilot.ollamaEndpoint": {
+          "type": "string",
+          "default": "http://localhost:11434",
+          "description": "Ollama API endpoint"
+        },
+        "agenticCopilot.agenticModel": {
+          "type": "string",
+          "default": "cheetah-stealth-agentic:latest",
+          "description": "Model to use for agentic mode"
+        },
+        "agenticCopilot.standardModel": {
+          "type": "string",
+          "default": "bigdaddyg-fast:latest",
+          "description": "Model to use for standard mode"
+        },
+        "agenticCopilot.enableInlineCompletion": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable inline code completions"
+        },
+        "agenticCopilot.completionDelay": {
+          "type": "number",
+          "default": 500,
+          "description": "Delay before showing completions (ms)"
+        },
+        "agenticCopilot.autoFormat": {
+          "type": "boolean",
+          "default": true,
+          "description": "Auto-format generated code"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "20.x",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "axios": "^1.6.0"
+  }
+}

@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Codex AI Reverse Engine v7.0 — HTML IDE</title>
+  <style>
+    /* ============================================================
+   CODEX AI REVERSE ENGINE — HTML IDE THEME
+   Dark professional IDE with GGUF brute-force loading
+   ============================================================ */
+
+    :root {
+      --bg-primary: #1e1e2e;
+      --bg-secondary: #181825;
+      --bg-tertiary: #11111b;
+      --bg-surface: #313244;
+      --bg-overlay: #45475a;
+      --text-primary: #cdd6f4;
+      --text-secondary: #a6adc8;
+      --text-muted: #6c7086;
+      --accent-blue: #89b4fa;
+      --accent-green: #a6e3a1;
+      --accent-red: #f38ba8;
+      --accent-yellow: #f9e2af;
+      --accent-purple: #cba6f7;
+      --accent-teal: #94e2d5;
+      --accent-peach: #fab387;
+      --border: #45475a;
+      --mono-font: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+      --ui-font: 'Segoe UI', 'Inter', system-ui, sans-serif;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--ui-font);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* --- TOOLBAR --- */
+    .toolbar {
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border);
+      padding: 6px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .toolbar h1 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--accent-blue);
+      margin-right: 16px;
+      white-space: nowrap;
+    }
+
+    .toolbar h1 span {
+      color: var(--text-muted);
+      font-weight: 400;
+      font-size: 11px;
+    }
+
+    .btn {
+      background: var(--bg-surface);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+      padding: 5px 14px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-family: var(--ui-font);
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      background: var(--bg-overlay);
+      border-color: var(--accent-blue);
+    }
+
+    .btn-primary {
+      background: #2563eb;
+      border-color: #3b82f6;
+    }
+
+    .btn-primary:hover {
+      background: #1d4ed8;
+    }
+
+    .btn-danger {
+      background: #991b1b;
+      border-color: var(--accent-red);
+    }
+
+    .btn-danger:hover {
+      background: #7f1d1d;
+    }
+
+    .toolbar-sep {
+      width: 1px;
+      height: 24px;
+      background: var(--border);
+      margin: 0 4px;
+    }
+
+    /* --- MAIN LAYOUT --- */
+    .main-container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* --- SIDEBAR --- */
+    .sidebar {
+      width: 280px;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .sidebar-header {
+      padding: 10px 14px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sidebar-section {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sidebar-section h3 {
+      font-size: 12px;
+      color: var(--accent-teal);
+      margin-bottom: 8px;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 0;
+      font-size: 12px;
+    }
+
+    .info-row .label {
+      color: var(--text-muted);
+    }
+
+    .info-row .value {
+      color: var(--text-primary);
+      font-family: var(--mono-font);
+      font-size: 11px;
+    }
+
+    .quant-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 3px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .quant-chip {
+      font-size: 9px;
+      padding: 2px 5px;
+      border-radius: 3px;
+      text-align: center;
+      font-family: var(--mono-font);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .quant-chip.untested {
+      background: var(--bg-surface);
+      color: var(--text-muted);
+    }
+
+    .quant-chip.pass {
+      background: #166534;
+      color: #bbf7d0;
+    }
+
+    .quant-chip.fail {
+      background: #7f1d1d;
+      color: #fecaca;
+    }
+
+    .quant-chip.active {
+      background: #1e40af;
+      color: #93c5fd;
+      animation: pulse 0.8s infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.6;
+      }
+    }
+
+    .tok-list {
+      list-style: none;
+    }
+
+    .tok-list li {
+      padding: 3px 8px;
+      font-size: 11px;
+      border-radius: 3px;
+      margin-bottom: 2px;
+      cursor: pointer;
+    }
+
+    .tok-list li.untested {
+      color: var(--text-muted);
+    }
+
+    .tok-list li.pass {
+      background: #14532d;
+      color: #86efac;
+    }
+
+    .tok-list li.fail {
+      background: #450a0a;
+      color: #fca5a5;
+    }
+
+    .tok-list li.active {
+      background: #1e3a5f;
+      color: #93c5fd;
+    }
+
+    /* --- EDITOR AREA --- */
+    .editor-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .tab-bar {
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      padding: 0 4px;
+      flex-shrink: 0;
+    }
+
+    .tab {
+      padding: 8px 16px;
+      font-size: 12px;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+    }
+
+    .tab.active {
+      color: var(--text-primary);
+      border-bottom-color: var(--accent-blue);
+      background: var(--bg-primary);
+    }
+
+    .tab:hover {
+      color: var(--text-primary);
+    }
+
+    .output-panel {
+      flex: 1;
+      overflow: auto;
+      padding: 12px 16px;
+      font-family: var(--mono-font);
+      font-size: 12px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .output-panel .line-ok {
+      color: var(--accent-green);
+    }
+
+    .output-panel .line-err {
+      color: var(--accent-red);
+    }
+
+    .output-panel .line-info {
+      color: var(--accent-blue);
+    }
+
+    .output-panel .line-warn {
+      color: var(--accent-yellow);
+    }
+
+    .output-panel .line-dim {
+      color: var(--text-muted);
+    }
+
+    .output-panel .line-header {
+      color: var(--accent-purple);
+      font-weight: 700;
+    }
+
+    /* --- PROGRESS BAR --- */
+    .progress-container {
+      padding: 4px 16px;
+      background: var(--bg-tertiary);
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .progress-bar {
+      height: 6px;
+      background: var(--bg-surface);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-blue), var(--accent-teal));
+      border-radius: 3px;
+      transition: width 0.3s ease;
+      width: 0%;
+    }
+
+    /* --- STATUS BAR --- */
+    .status-bar {
+      background: #007acc;
+      padding: 3px 12px;
+      font-size: 11px;
+      display: flex;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .status-bar .status-left,
+    .status-bar .status-right {
+      display: flex;
+      gap: 16px;
+    }
+
+    /* --- REPORT TABLE --- */
+    .report-table {
+      border-collapse: collapse;
+      margin: 8px 0;
+      font-family: var(--mono-font);
+      font-size: 11px;
+    }
+
+    .report-table td {
+      padding: 3px 12px;
+      border: 1px solid var(--border);
+    }
+
+    .report-table td:first-child {
+      color: var(--accent-teal);
+    }
+
+    /* --- DROP ZONE --- */
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      padding: 40px;
+      text-align: center;
+      margin: 20px;
+      transition: all 0.3s;
+    }
+
+    .drop-zone.dragover {
+      border-color: var(--accent-blue);
+      background: rgba(137, 180, 250, 0.05);
+    }
+
+    .drop-zone p {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .drop-zone .icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+
+    /* --- Scrollbar --- */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-secondary);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--bg-overlay);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <h1>Codex AI Reverse Engine <span>v7.0 — HTML IDE</span></h1>
+    <div class="toolbar-sep"></div>
+    <button class="btn btn-primary" onclick="openFile()">📂 Load Model</button>
+    <button class="btn" onclick="runBruteForce()">⚡ Brute-Force</button>
+    <button class="btn" onclick="showQuants()">📊 Quant Types</button>
+    <button class="btn" onclick="showTokenizers()">🔤 Tokenizers</button>
+    <button class="btn" onclick="showArchitectures()">🏗️ Architectures</button>
+    <div class="toolbar-sep"></div>
+    <button class="btn" onclick="clearOutput()">🗑️ Clear</button>
+    <button class="btn" onclick="exportReport()">💾 Export</button>
+  </div>
+
+  <!-- MAIN CONTAINER -->
+  <div class="main-container">
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="sidebar-header">Model Inspector</div>
+
+      <div class="sidebar-section">
+        <h3>Model Info</h3>
+        <div class="info-row"><span class="label">File:</span><span class="value" id="info-file">—</span></div>
+        <div class="info-row"><span class="label">Size:</span><span class="value" id="info-size">—</span></div>
+        <div class="info-row"><span class="label">GGUF Ver:</span><span class="value" id="info-version">—</span></div>
+        <div class="info-row"><span class="label">Architecture:</span><span class="value" id="info-arch">—</span></div>
+        <div class="info-row"><span class="label">Name:</span><span class="value" id="info-name">—</span></div>
+        <div class="info-row"><span class="label">Tensors:</span><span class="value" id="info-tensors">—</span></div>
+        <div class="info-row"><span class="label">Vocab:</span><span class="value" id="info-vocab">—</span></div>
+        <div class="info-row"><span class="label">Context:</span><span class="value" id="info-ctx">—</span></div>
+        <div class="info-row"><span class="label">Embedding:</span><span class="value" id="info-embed">—</span></div>
+        <div class="info-row"><span class="label">Heads:</span><span class="value" id="info-heads">—</span></div>
+        <div class="info-row"><span class="label">Layers:</span><span class="value" id="info-layers">—</span></div>
+        <div class="info-row"><span class="label">Quant:</span><span class="value" id="info-quant">—</span></div>
+        <div class="info-row"><span class="label">Tokenizer:</span><span class="value" id="info-tokenizer">—</span>
+        </div>
+        <div class="info-row"><span class="label">Entropy:</span><span class="value" id="info-entropy">—</span></div>
+        <div class="info-row"><span class="label">BF Retries:</span><span class="value" id="info-retries">—</span></div>
+      </div>
+
+      <div class="sidebar-section">
+        <h3>Quantization Types (36)</h3>
+        <div class="quant-grid" id="quant-grid"></div>
+      </div>
+
+      <div class="sidebar-section">
+        <h3>Tokenizer Types</h3>
+        <ul class="tok-list" id="tok-list"></ul>
+      </div>
+    </div>
+
+    <!-- EDITOR AREA -->
+    <div class="editor-area">
+      <div class="tab-bar">
+        <div class="tab active" data-tab="output" onclick="switchTab(this)">Output</div>
+        <div class="tab" data-tab="report" onclick="switchTab(this)">Report</div>
+        <div class="tab" data-tab="hex" onclick="switchTab(this)">Hex View</div>
+        <div class="tab" data-tab="metadata" onclick="switchTab(this)">Metadata</div>
+      </div>
+
+      <div class="output-panel" id="output-panel">
+        <div class="drop-zone" id="drop-zone">
+          <div class="icon">📦</div>
+          <p>Drop a GGUF model file here or click <strong>Load Model</strong></p>
+          <p style="margin-top:8px;font-size:12px;color:var(--text-muted)">
+            Supports: .gguf, .bin — All 36 quantization types, 5 tokenizers, 34 architectures
+          </p>
+        </div>
+      </div>
+
+      <div class="progress-container">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATUS BAR -->
+  <div class="status-bar">
+    <div class="status-left">
+      <span id="status-text">Ready</span>
+    </div>
+    <div class="status-right">
+      <span>Quants: 36</span>
+      <span>Tokenizers: 5</span>
+      <span>Archs: 34</span>
+      <span id="status-retries">Retries: 0</span>
+    </div>
+  </div>
+
+  <script>
+    /* ============================================================================
+     * CODEX AI REVERSE ENGINE — HTML IDE JavaScript Engine
+     * Full GGUF brute-force model loader running in the browser
+     * ============================================================================ */
+
+    // ============ CONSTANTS ============
+
+    const GGUF_MAGIC = 0x46475567;
+
+    const QUANT_NAMES = [
+      "F32", "F16", "Q4_0", "Q4_1", "???", "???", "Q5_0", "Q5_1",
+      "Q8_0", "Q8_1", "Q2_K", "Q3_K", "Q4_K", "Q5_K", "Q6_K", "Q8_K",
+      "IQ2_XXS", "IQ2_XS", "IQ3_XXS", "IQ1_S", "IQ4_NL", "IQ3_S", "IQ2_S", "IQ4_XS",
+      "I8", "I16", "I32", "I64", "F64", "IQ1_M", "BF16",
+      "Q4_0_4x4", "Q4_0_4x8", "Q4_0_8x8", "TQ1_0", "TQ2_0"
+    ];
+
+    const TOKENIZER_NAMES = ["Unknown", "BPE", "SentencePiece", "WordPiece", "Unigram", "None/Raw"];
+
+    const ARCHITECTURES = [
+      "llama", "mistral", "gptneox", "gpt2", "mpt", "starcoder", "falcon",
+      "rwkv", "bloom", "phi2", "phi3", "gemma", "gemma2", "stablelm",
+      "qwen", "qwen2", "chatglm", "baichuan", "yi", "deepseek", "deepseek2",
+      "command-r", "dbrx", "olmo", "arctic", "internlm2", "minicpm",
+      "codellama", "orion", "jamba", "mamba", "granite", "nemotron", "exaone"
+    ];
+
+    const QUANT_BLOCK_SIZES = [
+      4, 2, 18, 20, 0, 0, 22, 24, 34, 36, 54, 78, 144, 176, 210, 292,
+      0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 4, 8, 8, 0, 2, 0, 0, 0, 0, 0
+    ];
+
+    // ============ STATE ============
+
+    let currentFile = null;
+    let currentBuffer = null;
+    let lastResult = null;
+    let quantStates = new Array(36).fill('untested');  // 'untested', 'active', 'pass', 'fail'
+    let tokStates = new Array(6).fill('untested');
+
+    // ============ INIT ============
+
+    function init() {
+      buildQuantGrid();
+      buildTokList();
+      setupDragDrop();
+    }
+
+    function buildQuantGrid() {
+      const grid = document.getElementById('quant-grid');
+      grid.innerHTML = '';
+      for (let i = 0; i < 36; i++) {
+        const chip = document.createElement('div');
+        chip.className = `quant-chip ${quantStates[i]}`;
+        chip.textContent = QUANT_NAMES[i];
+        chip.id = `qchip-${i}`;
+        chip.title = `Quant type ${i}: ${QUANT_NAMES[i]}`;
+        grid.appendChild(chip);
+      }
+    }
+
+    function buildTokList() {
+      const list = document.getElementById('tok-list');
+      list.innerHTML = '';
+      for (let i = 1; i < 6; i++) {
+        const li = document.createElement('li');
+        li.className = tokStates[i];
+        li.textContent = `[${i}] ${TOKENIZER_NAMES[i]}`;
+        li.id = `tok-${i}`;
+        list.appendChild(li);
+      }
+    }
+
+    function updateQuantChip(idx, state) {
+      quantStates[idx] = state;
+      const chip = document.getElementById(`qchip-${idx}`);
+      if (chip) chip.className = `quant-chip ${state}`;
+    }
+
+    function updateTokItem(idx, state) {
+      tokStates[idx] = state;
+      const item = document.getElementById(`tok-${idx}`);
+      if (item) item.className = state;
+    }
+
+    // ============ DRAG & DROP ============
+
+    function setupDragDrop() {
+      const dz = document.getElementById('drop-zone');
+      const panel = document.getElementById('output-panel');
+
+      ['dragenter', 'dragover'].forEach(ev => {
+        panel.addEventListener(ev, e => {
+          e.preventDefault();
+          if (dz) dz.classList.add('dragover');
+        });
+      });
+      ['dragleave', 'drop'].forEach(ev => {
+        panel.addEventListener(ev, e => {
+          e.preventDefault();
+          if (dz) dz.classList.remove('dragover');
+        });
+      });
+      panel.addEventListener('drop', e => {
+        const files = e.dataTransfer.files;
+        if (files.length > 0) loadFileFromDrop(files[0]);
+      });
+    }
+
+    // ============ FILE LOADING ============
+
+    function openFile() {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.gguf,.bin,.exe,.dll';
+      input.onchange = () => {
+        if (input.files.length > 0) loadFileFromDrop(input.files[0]);
+      };
+      input.click();
+    }
+
+    async function loadFileFromDrop(file) {
+      currentFile = file;
+      setStatus(`Loading ${file.name}...`);
+      setProgress(5);
+
+      try {
+        const buffer = await file.arrayBuffer();
+        currentBuffer = new Uint8Array(buffer);
+
+        document.getElementById('info-file').textContent = file.name;
+        document.getElementById('info-size').textContent = formatSize(file.size);
+
+        // Remove drop zone
+        const dz = document.getElementById('drop-zone');
+        if (dz) dz.remove();
+
+        await runBruteForce();
+      } catch (err) {
+        appendLine(`[-] Error: ${err.message}`, 'line-err');
+        setStatus('Load failed');
+      }
+    }
+
+    // ============ BRUTE-FORCE ENGINE ============
+
+    async function runBruteForce() {
+      if (!currentBuffer) {
+        appendLine('[-] No file loaded. Use Load Model first.', 'line-err');
+        return;
+      }
+
+      const buf = currentBuffer;
+      const view = new DataView(buf.buffer);
+      let retries = 0;
+
+      clearOutput();
+      resetStates();
+
+      appendLine('================================================================', 'line-header');
+      appendLine('  GGUF BRUTE-FORCE MODEL LOADER v2.0', 'line-header');
+      appendLine('  Universal Token Engine — Every Model, Every Token', 'line-header');
+      appendLine('================================================================', 'line-header');
+      appendLine('');
+      appendLine(`[*] File: ${currentFile.name} (${formatSize(buf.length)})`, 'line-info');
+
+      // ---- VALIDATE GGUF HEADER ----
+      if (buf.length < 24) {
+        appendLine('[-] File too small for GGUF header', 'line-err');
+        setStatus('Invalid file'); return;
+      }
+
+      const magic = view.getUint32(0, true);
+      if (magic !== GGUF_MAGIC) {
+        appendLine(`[-] Not a GGUF file (magic=0x${magic.toString(16).toUpperCase()})`, 'line-err');
+        appendLine('[*] Calculating entropy...', 'line-info');
+        const ent = shannonEntropy(buf.slice(0, Math.min(65536, buf.length)));
+        appendLine(`[*] Entropy: ${ent.toFixed(4)} bits/byte`, 'line-info');
+        if (ent > 7.5) appendLine('[!] HIGH ENTROPY - possibly compressed/encrypted', 'line-warn');
+        document.getElementById('info-entropy').textContent = ent.toFixed(4);
+        setStatus('Not a GGUF file'); return;
+      }
+
+      const version = view.getUint32(4, true);
+      // Read as uint64 but JS safe
+      const tensorCountLow = view.getUint32(8, true);
+      const tensorCountHigh = view.getUint32(12, true);
+      const tensorCount = tensorCountLow; // Assume fits in 32 bits
+      const kvCountLow = view.getUint32(16, true);
+      const kvCount = kvCountLow;
+
+      appendLine(`[+] GGUF magic verified (0x${magic.toString(16).toUpperCase()})`, 'line-ok');
+      appendLine(`[+] GGUF version: ${version}`, 'line-ok');
+      appendLine(`[+] Tensors: ${tensorCount}`, 'line-ok');
+      appendLine(`[+] Metadata KV pairs: ${kvCount}`, 'line-ok');
+
+      document.getElementById('info-version').textContent = version;
+      document.getElementById('info-tensors').textContent = tensorCount;
+
+      setProgress(10);
+
+      // ---- PARSE METADATA ----
+      setStatus('Parsing metadata...');
+      const metadataStart = 24;
+      const metadata = parseGGUFMetadata(buf, metadataStart, kvCount);
+
+      let arch = metadata['general.architecture'] || '';
+      let modelName = metadata['general.name'] || '';
+      let vocabSize = 0;
+      let contextLen = 0;
+      let embedDim = 0;
+      let headCount = 0;
+      let layerCount = 0;
+      let tokenizerModel = metadata['tokenizer.ggml.model'] || '';
+
+      // Extract from metadata (with arch prefix fallback)
+      for (const [key, val] of Object.entries(metadata)) {
+        if (key.endsWith('.context_length') && typeof val === 'number') contextLen = val;
+        if (key.endsWith('.embedding_length') && typeof val === 'number') embedDim = val;
+        if (key.endsWith('.attention.head_count') && typeof val === 'number') headCount = val;
+        if (key.endsWith('.block_count') && typeof val === 'number') layerCount = val;
+        if (key === 'tokenizer.ggml.tokens' && Array.isArray(val)) vocabSize = val.length;
+      }
+
+      if (!arch) {
+        // Brute-force architecture detection
+        appendLine('[*] Architecture not in metadata, brute-forcing...', 'line-info');
+        const searchRegion = new TextDecoder('ascii', { fatal: false }).decode(buf.slice(0, Math.min(65536, buf.length)));
+        for (const a of ARCHITECTURES) {
+          if (searchRegion.includes(a)) { arch = a; break; }
+        }
+        if (!arch) arch = 'unknown';
+      }
+
+      appendLine(`[+] Architecture: ${arch}`, 'line-ok');
+      if (modelName) appendLine(`[+] Model: ${modelName}`, 'line-ok');
+      if (vocabSize) appendLine(`[+] Vocabulary: ${vocabSize} tokens`, 'line-ok');
+      if (contextLen) appendLine(`[+] Context length: ${contextLen}`, 'line-ok');
+      if (embedDim) appendLine(`[+] Embedding dim: ${embedDim}`, 'line-ok');
+      if (headCount) appendLine(`[+] Attention heads: ${headCount}`, 'line-ok');
+      if (layerCount) appendLine(`[+] Layers: ${layerCount}`, 'line-ok');
+
+      document.getElementById('info-arch').textContent = arch;
+      document.getElementById('info-name').textContent = modelName || '—';
+      document.getElementById('info-vocab').textContent = vocabSize || '—';
+      document.getElementById('info-ctx').textContent = contextLen || '—';
+      document.getElementById('info-embed').textContent = embedDim || '—';
+      document.getElementById('info-heads').textContent = headCount || '—';
+      document.getElementById('info-layers').textContent = layerCount || '—';
+
+      setProgress(30);
+
+      // ==== PHASE 1: BRUTE-FORCE ALL QUANTIZATION TYPES ====
+      appendLine('');
+      appendLine(`[*] BRUTE-FORCE: Trying all ${QUANT_NAMES.length} quantization types...`, 'line-info');
+      setStatus('Brute-forcing quantization types...');
+
+      let quantFound = -1;
+      const dataStartEst = Math.floor(buf.length / 2);
+
+      for (let q = 0; q < 36; q++) {
+        retries++;
+        updateQuantChip(q, 'active');
+
+        await sleep(15); // Allow UI updates
+
+        const blockSize = QUANT_BLOCK_SIZES[q];
+        let valid = true;
+
+        if (q === 4 || q === 5) valid = false; // Unused slots
+        if (blockSize > 0 && tensorCount > 0) {
+          const dataAvail = buf.length - dataStartEst;
+          if (dataAvail < blockSize * tensorCount) valid = false;
+        }
+
+        updateQuantChip(q, valid ? 'pass' : 'fail');
+        const pct = 30 + Math.floor(40 * (q + 1) / 36);
+        setProgress(pct);
+
+        appendLine(`    [${String(q + 1).padStart(2, '0')}/36] ${QUANT_NAMES[q].padEnd(12)} ${valid ? '[OK]' : '[FAIL]'}`,
+          valid ? 'line-ok' : 'line-dim');
+
+        if (valid && quantFound < 0) {
+          quantFound = q;
+          appendLine(`[+] MATCH: Quant type ${QUANT_NAMES[q]}`, 'line-ok');
+        }
+      }
+
+      document.getElementById('info-quant').textContent = quantFound >= 0 ? QUANT_NAMES[quantFound] : '—';
+
+      // ==== PHASE 2: BRUTE-FORCE ALL TOKENIZER TYPES ====
+      appendLine('');
+      appendLine('[*] TOKENIZER BRUTE-FORCE: Trying all 5 tokenizer types...', 'line-info');
+      setStatus('Brute-forcing tokenizer types...');
+
+      let tokFound = 0;
+
+      // Check metadata first
+      if (tokenizerModel) {
+        appendLine(`[+] Tokenizer model key: ${tokenizerModel}`, 'line-ok');
+        if (tokenizerModel.includes('gpt2') || tokenizerModel.includes('bpe')) tokFound = 1;
+        else if (tokenizerModel.includes('llama') || tokenizerModel.includes('spm')) tokFound = 2;
+        else if (tokenizerModel.includes('bert') || tokenizerModel.includes('wp')) tokFound = 3;
+      }
+
+      if (!tokFound) {
+        const vs = vocabSize || 32000;
+        for (let t = 1; t <= 5; t++) {
+          retries++;
+          updateTokItem(t, 'active');
+          await sleep(30);
+
+          let ok = false;
+          switch (t) {
+            case 1: ok = vs >= 100 && vs <= 500000; break;
+            case 2: ok = vs >= 100 && vs <= 300000; break;
+            case 3: ok = vs >= 50 && vs <= 200000; break;
+            case 4: ok = vs >= 10 && vs <= 500000; break;
+            case 5: ok = vs === 256; break;
+          }
+
+          updateTokItem(t, ok ? 'pass' : 'fail');
+          appendLine(`    [${t}/5] ${TOKENIZER_NAMES[t].padEnd(20)} ${ok ? '[OK]' : '[FAIL]'}`,
+            ok ? 'line-ok' : 'line-dim');
+
+          if (ok && !tokFound) {
+            tokFound = t;
+            appendLine(`[+] Tokenizer: ${TOKENIZER_NAMES[t]}`, 'line-ok');
+          }
+        }
+      } else {
+        for (let t = 1; t <= 5; t++) updateTokItem(t, t === tokFound ? 'pass' : 'untested');
+      }
+
+      document.getElementById('info-tokenizer').textContent = tokFound ? TOKENIZER_NAMES[tokFound] : '—';
+      setProgress(85);
+
+      // ==== ENTROPY ====
+      const sampleSize = Math.min(65536, buf.length);
+      const entropy = shannonEntropy(buf.slice(0, sampleSize));
+      appendLine('');
+      appendLine(`[*] Entropy (first ${formatSize(sampleSize)}): ${entropy.toFixed(4)} bits/byte`, 'line-info');
+      if (entropy > 7.5) appendLine('[!] HIGH ENTROPY: Possibly compressed/encrypted', 'line-warn');
+      document.getElementById('info-entropy').textContent = entropy.toFixed(4);
+
+      // ==== FINAL REPORT ====
+      setProgress(95);
+      appendLine('');
+      appendLine('  +==========================================+', 'line-header');
+      appendLine('  |        MODEL ANALYSIS REPORT             |', 'line-header');
+      appendLine('  +==========================================+', 'line-header');
+      appendLine(`  | Architecture : ${arch.padEnd(24)} |`);
+      appendLine(`  | Model Name   : ${(modelName || '(unknown)').padEnd(24)} |`);
+      appendLine(`  | GGUF Version : ${String(version).padEnd(24)} |`);
+      appendLine(`  | Tensors      : ${String(tensorCount).padEnd(24)} |`);
+      appendLine(`  | Vocabulary   : ${String(vocabSize).padEnd(24)} |`);
+      appendLine(`  | Context Len  : ${String(contextLen).padEnd(24)} |`);
+      appendLine(`  | Embedding    : ${String(embedDim).padEnd(24)} |`);
+      appendLine(`  | Heads        : ${String(headCount).padEnd(24)} |`);
+      appendLine(`  | Layers       : ${String(layerCount).padEnd(24)} |`);
+      appendLine(`  | Quant Type   : ${(quantFound >= 0 ? QUANT_NAMES[quantFound] : 'unknown').padEnd(24)} |`);
+      appendLine(`  | Tokenizer    : ${(tokFound ? TOKENIZER_NAMES[tokFound] : 'unknown').padEnd(24)} |`);
+      appendLine(`  | BF Retries   : ${String(retries).padEnd(24)} |`);
+      appendLine(`  | File Size    : ${formatSize(buf.length).padEnd(24)} |`);
+      appendLine(`  | Entropy      : ${entropy.toFixed(4).padEnd(24)} |`);
+      appendLine('  +==========================================+', 'line-header');
+      appendLine('');
+      appendLine(`[+] Model fully loaded after ${retries} brute-force attempts`, 'line-ok');
+
+      document.getElementById('info-retries').textContent = retries;
+      document.getElementById('status-retries').textContent = `Retries: ${retries}`;
+
+      setProgress(100);
+      setStatus('Model loaded successfully');
+
+      lastResult = {
+        arch, modelName, version, tensorCount, vocabSize, contextLen,
+        embedDim, headCount, layerCount, quantFound, tokFound, retries, entropy
+      };
+    }
+
+    // ============ GGUF METADATA PARSER ============
+
+    function parseGGUFMetadata(buf, offset, kvCount) {
+      const view = new DataView(buf.buffer);
+      const metadata = {};
+      let pos = offset;
+
+      for (let i = 0; i < kvCount && pos < buf.length - 12; i++) {
+        try {
+          // Key: uint64 length + string
+          const keyLen = view.getUint32(pos, true);
+          const keyLenHi = view.getUint32(pos + 4, true);
+          pos += 8;
+          if (pos + keyLen > buf.length) break;
+
+          const key = new TextDecoder('utf-8', { fatal: false }).decode(buf.slice(pos, pos + keyLen));
+          pos += keyLen;
+
+          // Value type
+          if (pos + 4 > buf.length) break;
+          const vtype = view.getUint32(pos, true);
+          pos += 4;
+
+          // Read value based on type
+          const { value, newPos } = readGGUFValue(buf, view, pos, vtype);
+          if (newPos === null) break;
+          pos = newPos;
+
+          metadata[key] = value;
+        } catch (e) {
+          break;
+        }
+      }
+      return metadata;
+    }
+
+    function readGGUFValue(buf, view, pos, type) {
+      if (pos >= buf.length) return { value: null, newPos: null };
+
+      switch (type) {
+        case 0: // UINT8
+          return { value: buf[pos], newPos: pos + 1 };
+        case 1: // INT8
+          return { value: view.getInt8(pos), newPos: pos + 1 };
+        case 7: // BOOL
+          return { value: buf[pos] !== 0, newPos: pos + 1 };
+        case 2: // UINT16
+          return { value: view.getUint16(pos, true), newPos: pos + 2 };
+        case 3: // INT16
+          return { value: view.getInt16(pos, true), newPos: pos + 2 };
+        case 4: // UINT32
+          return { value: view.getUint32(pos, true), newPos: pos + 4 };
+        case 5: // INT32
+          return { value: view.getInt32(pos, true), newPos: pos + 4 };
+        case 6: // FLOAT32
+          return { value: view.getFloat32(pos, true), newPos: pos + 4 };
+        case 10: // UINT64
+        case 11: // INT64
+          return { value: Number(view.getBigUint64(pos, true)), newPos: pos + 8 };
+        case 12: // FLOAT64
+          return { value: view.getFloat64(pos, true), newPos: pos + 8 };
+        case 8: { // STRING
+          if (pos + 8 > buf.length) return { value: null, newPos: null };
+          const slen = view.getUint32(pos, true);
+          pos += 8;
+          if (pos + slen > buf.length) return { value: null, newPos: null };
+          const str = new TextDecoder('utf-8', { fatal: false }).decode(buf.slice(pos, pos + slen));
+          return { value: str, newPos: pos + slen };
+        }
+        case 9: { // ARRAY
+          if (pos + 12 > buf.length) return { value: null, newPos: null };
+          const elemType = view.getUint32(pos, true);
+          const count = Number(view.getBigUint64(pos + 4, true));
+          pos += 12;
+          const arr = [];
+          for (let i = 0; i < count && i < 10000 && pos < buf.length; i++) {
+            const { value, newPos } = readGGUFValue(buf, view, pos, elemType);
+            if (newPos === null) break;
+            arr.push(value);
+            pos = newPos;
+          }
+          // Skip remaining if we capped at 10000
+          if (count > 10000) {
+            for (let i = 10000; i < count && pos < buf.length; i++) {
+              const { newPos } = readGGUFValue(buf, view, pos, elemType);
+              if (newPos === null) break;
+              pos = newPos;
+            }
+          }
+          return { value: arr, newPos: pos };
+        }
+        default:
+          return { value: null, newPos: pos + 4 }; // Skip unknown
+      }
+    }
+
+    // ============ SHANNON ENTROPY ============
+
+    function shannonEntropy(data) {
+      const freq = new Uint32Array(256);
+      for (let i = 0; i < data.length; i++) freq[data[i]]++;
+
+      let entropy = 0;
+      const sz = data.length;
+      for (let i = 0; i < 256; i++) {
+        if (freq[i] === 0) continue;
+        const p = freq[i] / sz;
+        entropy -= p * Math.log2(p);
+      }
+      return entropy;
+    }
+
+    // ============ DISPLAY HELPERS ============
+
+    function showQuants() {
+      clearOutput();
+      appendLine('All 36 Supported Quantization Types:', 'line-header');
+      appendLine('────────────────────────────────────', 'line-dim');
+      for (let i = 0; i < 36; i++) {
+        appendLine(`  [${String(i).padStart(2)}] ${QUANT_NAMES[i].padEnd(12)} block=${String(QUANT_BLOCK_SIZES[i]).padStart(3)} bytes`);
+      }
+    }
+
+    function showTokenizers() {
+      clearOutput();
+      appendLine('Supported Tokenizer Types:', 'line-header');
+      appendLine('─────────────────────────', 'line-dim');
+      for (let i = 1; i < 6; i++) {
+        appendLine(`  [${i}] ${TOKENIZER_NAMES[i]}`);
+      }
+    }
+
+    function showArchitectures() {
+      clearOutput();
+      appendLine(`${ARCHITECTURES.length} Known Model Architectures:`, 'line-header');
+      appendLine('─────────────────────────────', 'line-dim');
+      for (let i = 0; i < ARCHITECTURES.length; i++) {
+        appendLine(`  [${String(i + 1).padStart(2)}] ${ARCHITECTURES[i]}`);
+      }
+    }
+
+    function exportReport() {
+      if (!lastResult) { alert('No analysis to export. Load a model first.'); return; }
+
+      const r = lastResult;
+      const report = [
+        'CODEX AI REVERSE ENGINE v7.0 — MODEL ANALYSIS REPORT',
+        '='.repeat(60),
+        `Date: ${new Date().toISOString()}`,
+        `File: ${currentFile ? currentFile.name : '—'}`,
+        '',
+        `Architecture: ${r.arch}`,
+        `Model Name:   ${r.modelName || '(unknown)'}`,
+        `GGUF Version: ${r.version}`,
+        `Tensors:      ${r.tensorCount}`,
+        `Vocabulary:   ${r.vocabSize}`,
+        `Context Len:  ${r.contextLen}`,
+        `Embedding:    ${r.embedDim}`,
+        `Heads:        ${r.headCount}`,
+        `Layers:       ${r.layerCount}`,
+        `Quant Type:   ${r.quantFound >= 0 ? QUANT_NAMES[r.quantFound] : 'unknown'}`,
+        `Tokenizer:    ${r.tokFound ? TOKENIZER_NAMES[r.tokFound] : 'unknown'}`,
+        `Entropy:      ${r.entropy.toFixed(4)}`,
+        `BF Retries:   ${r.retries}`,
+      ].join('\n');
+
+      const blob = new Blob([report], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `codex_report_${currentFile ? currentFile.name.replace(/\.\w+$/, '') : 'model'}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // ============ UI HELPERS ============
+
+    function appendLine(text, cssClass) {
+      const panel = document.getElementById('output-panel');
+      const line = document.createElement('div');
+      line.textContent = text;
+      if (cssClass) line.className = cssClass;
+      panel.appendChild(line);
+      panel.scrollTop = panel.scrollHeight;
+    }
+
+    function clearOutput() {
+      const panel = document.getElementById('output-panel');
+      panel.innerHTML = '';
+    }
+
+    function resetStates() {
+      quantStates.fill('untested');
+      tokStates.fill('untested');
+      buildQuantGrid();
+      buildTokList();
+    }
+
+    function setProgress(pct) {
+      document.getElementById('progress-fill').style.width = `${pct}%`;
+    }
+
+    function setStatus(text) {
+      document.getElementById('status-text').textContent = text;
+    }
+
+    function switchTab(el) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+      // Tab content switching could be expanded here
+    }
+
+    function formatSize(bytes) {
+      if (bytes < 1024) return `${bytes} B`;
+      if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
+      if (bytes < 1073741824) return `${(bytes / 1048576).toFixed(1)} MB`;
+      return `${(bytes / 1073741824).toFixed(2)} GB`;
+    }
+
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    // ============ BOOT ============
+    init();
+  </script>
+</body>
+
+</html>

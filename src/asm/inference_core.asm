@@ -57,23 +57,10 @@ PREFETCH_DIST_L2        EQU 1024        ; 16 cache lines
 ; =============================================================================
 ;                           DATA
 ; =============================================================================
-_DATA64 SEGMENT ALIGN(64) 'DATA'
-
-; CPUID feature flags (set by InferenceCore_Init)
-g_HasAVX2               DD 0
-g_HasFMA3               DD 0
-g_HasAVX512F            DD 0
-
-; Performance counters
-g_GemmCalls             DQ 0
-g_GemvCalls             DQ 0
-g_GemmFlops             DQ 0            ; Accumulated FLOPs
-
-; Dispatch function pointer (set by Init to best available path)
-g_GemmDispatch          DQ 0            ; -> sgemm_avx2 or sgemm_avx512
-g_GemvDispatch          DQ 0            ; -> sgemv_avx2 or sgemv_avx512
-
-_DATA64 ENDS
+; g_HasAVX2, g_HasFMA3, g_HasAVX512F, g_GemmCalls, g_GemvCalls,
+; g_GemmFlops, g_GemmDispatch, g_GemvDispatch
+; are now defined in rawr_globals.asm — accessed via EXTERNDEF (rawr_globals.inc)
+INCLUDE rawr_globals.inc
 
 ; =============================================================================
 ;                           EXPORTS
@@ -1950,10 +1937,11 @@ InferenceCore_SGEMV_AVX512 PROC FRAME
 InferenceCore_SGEMV_AVX512 ENDP
 
 ; =============================================================================
-; Trampoline aliases for native_speed_layer.cpp extern "C" declarations.
-; These keep the ASM public API stable (InferenceCore_*) while providing the
-; legacy short names used by the NativeSpeedLayer dispatch table.
+; Trampoline aliases for native_speed_layer.cpp extern "C" declarations
+; These thin wrappers forward to the full InferenceCore_* implementations.
+; Same calling convention (Microsoft x64: RCX, RDX, R8, R9 + stack).
 ; =============================================================================
+
 sgemm_avx2 PROC
     jmp InferenceCore_SGEMM_AVX2
 sgemm_avx2 ENDP

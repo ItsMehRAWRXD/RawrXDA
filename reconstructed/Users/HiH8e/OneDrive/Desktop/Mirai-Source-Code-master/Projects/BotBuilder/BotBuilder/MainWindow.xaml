@@ -1,0 +1,382 @@
+<Window x:Class="BotBuilder.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="BotBuilder - Bot Configuration GUI"
+        Height="650"
+        Width="900"
+        WindowStartupLocation="CenterScreen"
+        Background="#F5F5F5">
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <!-- Header -->
+    <StackPanel Grid.Row="0"
+        Background="#003366"
+        Margin="20">
+      <TextBlock Text="BotBuilder GUI"
+          FontSize="24"
+          FontWeight="Bold"
+          Foreground="White"/>
+      <TextBlock Text="Professional Bot Configuration Interface"
+          FontSize="12"
+          Foreground="#CCCCCC"
+          Margin="0,5,0,0"/>
+    </StackPanel>
+
+    <!-- Tab Control -->
+    <TabControl Grid.Row="1"
+        Margin="10">
+      <!-- Configuration Tab -->
+      <TabItem Header="Configuration"
+          Name="ConfigTab">
+        <StackPanel Margin="20,20,20,10">
+          <TextBlock Text="Bot Configuration"
+              FontSize="16"
+              FontWeight="Bold"
+              Margin="0,0,0,20"/>
+
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="200"/>
+              <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            
+            <!-- Bot Name -->
+            <TextBlock Grid.Row="0"
+                Grid.Column="0"
+                Text="Bot Name:"
+                VerticalAlignment="Center"
+                Margin="0,0,10,15"/>
+            <TextBox Grid.Row="0"
+                Grid.Column="1"
+                Text="{Binding BotName, UpdateSourceTrigger=PropertyChanged}"
+                Margin="0,0,0,15"
+                Height="32"/>
+
+            <!-- C2 Server -->
+            <TextBlock Grid.Row="1"
+                Grid.Column="0"
+                Text="C2 Server:"
+                VerticalAlignment="Center"
+                Margin="0,0,10,15"/>
+            <TextBox Grid.Row="1"
+                Grid.Column="1"
+                Text="{Binding C2Server, UpdateSourceTrigger=PropertyChanged}"
+                Margin="0,0,0,15"
+                Height="32"/>
+
+            <!-- C2 Port -->
+            <TextBlock Grid.Row="2"
+                Grid.Column="0"
+                Text="C2 Port:"
+                VerticalAlignment="Center"
+                Margin="0,0,10,15"/>
+            <TextBox Grid.Row="2"
+                Grid.Column="1"
+                Text="{Binding C2Port, UpdateSourceTrigger=PropertyChanged}"
+                Margin="0,0,0,15"
+                Height="32"/>
+
+            <!-- Architecture Selection -->
+            <TextBlock Grid.Row="3"
+                Grid.Column="0"
+                Text="Architecture:"
+                VerticalAlignment="Center"
+                Margin="0,0,10,15"/>
+            <ComboBox Grid.Row="3"
+                Grid.Column="1"
+                SelectedValuePath="Content"
+                SelectedItem="{Binding Architecture, UpdateSourceTrigger=PropertyChanged}"
+                Margin="0,0,0,15"
+                Height="32">
+              <ComboBoxItem>x86</ComboBoxItem>
+              <ComboBoxItem>x64</ComboBoxItem>
+            </ComboBox>
+          </Grid>
+
+          <TextBlock Text="Output Format"
+              FontSize="14"
+              FontWeight="Bold"
+              Margin="0,20,0,10"/>
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="200"/>
+              <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0"
+                Text="Format:"
+                VerticalAlignment="Center"
+                Margin="0,0,10,0"/>
+            <ComboBox Grid.Column="1"
+                SelectedValuePath="Content"
+                SelectedItem="{Binding OutputFormat, UpdateSourceTrigger=PropertyChanged}"
+                Height="32">
+              <ComboBoxItem>EXE</ComboBoxItem>
+              <ComboBoxItem>DLL</ComboBoxItem>
+              <ComboBoxItem>PS1</ComboBoxItem>
+              <ComboBoxItem>VBS</ComboBoxItem>
+              <ComboBoxItem>Batch</ComboBoxItem>
+            </ComboBox>
+          </Grid>
+
+          <TextBlock Text="Obfuscation Level"
+              FontSize="14"
+              FontWeight="Bold"
+              Margin="0,20,0,10"/>
+          <Slider Minimum="0"
+              Maximum="100"
+              Value="{Binding ObfuscationLevel, UpdateSourceTrigger=PropertyChanged}"
+              Height="30"
+              Margin="0,0,0,10"/>
+          <TextBlock Text="{Binding ObfuscationLevel}"
+              Foreground="#666666"/>
+        </StackPanel>
+      </TabItem>
+
+      <!-- Advanced Tab -->
+      <TabItem Header="Advanced"
+          Name="AdvancedTab">
+        <StackPanel Margin="20,20,20,10">
+          <TextBlock Text="Advanced Security Options"
+              FontSize="16"
+              FontWeight="Bold"
+              Margin="0,0,0,20"/>
+
+          <TextBlock Text="Evasion Methods"
+              FontSize="14"
+              FontWeight="Bold"
+              Margin="0,0,0,15"/>
+          <CheckBox Content="Anti-VM Detection"
+              IsChecked="{Binding AntiVMDetection, UpdateSourceTrigger=PropertyChanged}"
+              Margin="0,0,0,10"
+              Height="24"/>
+          <CheckBox Content="Anti-Debugging Protection"
+              IsChecked="{Binding AntiDebugging, UpdateSourceTrigger=PropertyChanged}"
+              Margin="0,0,0,15"
+              Height="24"/>
+
+          <TextBlock Text="Persistence Methods"
+              FontSize="14"
+              FontWeight="Bold"
+              Margin="0,15,0,15"/>
+          <CheckBox Content="Registry Persistence"
+              IsChecked="{Binding RegistryPersistence, UpdateSourceTrigger=PropertyChanged}"
+              Margin="0,0,0,10"
+              Height="24"/>
+          <CheckBox Content="COM Object Persistence"
+              IsChecked="{Binding COMPersistence, UpdateSourceTrigger=PropertyChanged}"
+              Margin="0,0,0,10"
+              Height="24"/>
+          <CheckBox Content="WMI Event Subscription"
+              IsChecked="{Binding WMIPersistence, UpdateSourceTrigger=PropertyChanged}"
+              Margin="0,0,0,10"
+              Height="24"/>
+          <CheckBox Content="Scheduled Task Persistence"
+              IsChecked="{Binding ScheduledTaskPersistence, UpdateSourceTrigger=PropertyChanged}"
+              Margin="0,0,0,15"
+              Height="24"/>
+
+          <TextBlock Text="Network Configuration"
+              FontSize="14"
+              FontWeight="Bold"
+              Margin="0,15,0,15"/>
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="200"/>
+              <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0"
+                Text="Protocol:"
+                VerticalAlignment="Center"
+                Margin="0,0,10,0"/>
+            <ComboBox Grid.Column="1"
+                SelectedValuePath="Content"
+                SelectedItem="{Binding NetworkProtocol, UpdateSourceTrigger=PropertyChanged}"
+                Height="32">
+              <ComboBoxItem>TCP</ComboBoxItem>
+              <ComboBoxItem>HTTP</ComboBoxItem>
+              <ComboBoxItem>HTTPS</ComboBoxItem>
+              <ComboBoxItem>DNS</ComboBoxItem>
+            </ComboBox>
+          </Grid>
+        </StackPanel>
+      </TabItem>
+
+      <!-- Build Tab -->
+      <TabItem Header="Build"
+          Name="BuildTab">
+        <StackPanel Margin="20,20,20,10">
+          <TextBlock Text="Build Configuration"
+              FontSize="16"
+              FontWeight="Bold"
+              Margin="0,0,0,20"/>
+
+          <TextBlock Text="Compression"
+              FontSize="14"
+              FontWeight="Bold"
+              Margin="0,0,0,10"/>
+          <Grid Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="200"/>
+              <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0"
+                Text="Method:"
+                VerticalAlignment="Center"
+                Margin="0,0,10,0"/>
+            <ComboBox Grid.Column="1"
+                SelectedValuePath="Content"
+                SelectedItem="{Binding CompressionMethod, UpdateSourceTrigger=PropertyChanged}"
+                Height="32">
+              <ComboBoxItem>None</ComboBoxItem>
+              <ComboBoxItem>Zlib</ComboBoxItem>
+              <ComboBoxItem>LZMA</ComboBoxItem>
+              <ComboBoxItem>UPX</ComboBoxItem>
+            </ComboBox>
+          </Grid>
+
+          <TextBlock Text="Encryption"
+              FontSize="14"
+              FontWeight="Bold"
+              Margin="0,0,0,10"/>
+          <Grid Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="200"/>
+              <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0"
+                Text="Algorithm:"
+                VerticalAlignment="Center"
+                Margin="0,0,10,0"/>
+            <ComboBox Grid.Column="1"
+                SelectedValuePath="Content"
+                SelectedItem="{Binding EncryptionMethod, UpdateSourceTrigger=PropertyChanged}"
+                Height="32">
+              <ComboBoxItem>AES-256</ComboBoxItem>
+              <ComboBoxItem>AES-128</ComboBoxItem>
+              <ComboBoxItem>XOR</ComboBoxItem>
+            </ComboBox>
+          </Grid>
+
+          <TextBlock Text="Build Status"
+              FontSize="14"
+              FontWeight="Bold"
+              Margin="0,20,0,10"/>
+          <TextBlock Text="{Binding BuildStatus}"
+              Foreground="#0078D4"
+              FontSize="12"
+              Margin="0,0,0,15"/>
+
+          <ProgressBar Value="{Binding BuildProgress}"
+              Height="20"
+              Margin="0,0,0,15"/>
+          <TextBlock Text="{Binding BuildProgress}"
+              Foreground="#666666"
+              Margin="0,0,0,20"/>
+
+          <Button Content="START BUILD"
+              Click="OnBuildClick"
+              Height="40"
+              FontSize="14"
+              FontWeight="Bold"/>
+        </StackPanel>
+      </TabItem>
+
+      <!-- Preview Tab -->
+      <TabItem Header="Preview"
+          Name="PreviewTab">
+        <StackPanel Margin="20,20,20,10">
+          <TextBlock Text="Payload Information"
+              FontSize="16"
+              FontWeight="Bold"
+              Margin="0,0,0,20"/>
+
+          <Grid Margin="0,0,0,30">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="300"/>
+              <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            
+            <TextBlock Grid.Row="0"
+                Grid.Column="0"
+                Text="Estimated Payload Size:"
+                FontWeight="Bold"
+                Margin="0,0,20,15"/>
+            <TextBlock Grid.Row="0"
+                Grid.Column="1"
+                Text="{Binding EstimatedPayloadSize, StringFormat=N0}"
+                FontSize="12"
+                Margin="0,0,0,15"/>
+
+            <TextBlock Grid.Row="1"
+                Grid.Column="0"
+                Text="Payload Hash (SHA256):"
+                FontWeight="Bold"
+                Margin="0,0,20,15"/>
+            <TextBlock Grid.Row="1"
+                Grid.Column="1"
+                Text="{Binding PayloadHash}"
+                FontFamily="Courier New"
+                FontSize="10"
+                TextWrapping="Wrap"
+                Margin="0,0,0,15"/>
+
+            <TextBlock Grid.Row="2"
+                Grid.Column="0"
+                Text="Evasion Score:"
+                FontWeight="Bold"
+                Margin="0,0,20,0"/>
+            <ProgressBar Grid.Row="2"
+                Grid.Column="1"
+                Value="{Binding EvadeScore}"
+                Height="25"/>
+          </Grid>
+
+          <TextBlock Text="{Binding EvadeScore}"
+              Foreground="#666666"
+              Margin="0,0,0,30"/>
+
+          <Button Content="EXPORT PAYLOAD"
+              Height="40"
+              FontSize="14"
+              FontWeight="Bold"
+              Click="OnExportClick"/>
+        </StackPanel>
+      </TabItem>
+    </TabControl>
+
+    <!-- Footer -->
+    <StackPanel Grid.Row="2"
+        Background="#E8E8E8"
+        Margin="20"
+        Orientation="Horizontal"
+        HorizontalAlignment="Right">
+      <Button Content="RESET"
+          Click="OnResetClick"
+          Margin="0,0,10,0"
+          Width="100" Height="35"/>
+      <Button Content="SAVE CONFIG"
+          Click="OnSaveClick"
+          Margin="0,0,10,0"
+          Width="120" Height="35"/>
+      <Button Content="EXIT"
+          Click="OnExitClick"
+          Width="80" Height="35"/>
+    </StackPanel>
+  </Grid>
+</Window>

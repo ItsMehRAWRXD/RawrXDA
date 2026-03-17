@@ -1,0 +1,154 @@
+#pragma once
+// <QString> removed (Qt-free build)
+// <QByteArray> removed (Qt-free build)
+// <QHash> removed (Qt-free build)
+// Qt include removed (Qt-free build)
+#include <vector>
+#include <cstdint>
+
+// Forward declarations for ggml
+struct ggml_context;
+struct ggml_tensor;
+struct ggml_cgraph;
+
+// Forward declaration to avoid circular dependency
+class InferenceEngine;
+
+/**
+ * @brief Lightweight transformer inference using ggml backend
+ * 
+ * Implements basic GPT-style autoregressive generation with:
+ * - Token embedding lookup
+ * - Multi-head self-attention
+ * - Feed-forward MLP layers
+ * - Layer normalization
+ * - RoPE positional encoding
+ */
+class TransformerInference {
+public:
+    TransformerInference();
+    ~TransformerInference();
+    
+    /**
+     * @brief Load model weights from QByteArray hash (legacy overload)
+     * @param tensorCache Map of tensor names to quantized data
+     * @param nLayers Number of transformer layers
+     * @param nEmbd Embedding dimension
+     * @param nHead Number of attention heads
+     * @param nVocab Vocabulary size
+     * @return true if loaded successfully
+     */
+    bool loadWeights(const QHash<QString, QByteArray>& tensorCache,
+                     int nLayers, int nEmbd, int nHead, int nVocab);
+    
+    /**
+     * @brief Load model weights with explicit quantization type information
+     * @param tensorCacheWithTypes Map of tensor names to (data, type_id) pairs
+     *        Each pair contains the quantized data and its GGML type ID
+     * @param nLayers Number of transformer layers
+     * @param nEmbd Embedding dimension
+     * @param nHead Number of attention heads
+     * @param nVocab Vocabulary size
+     * @return true if loaded successfully
+     * 
+     * This overload is preferred for models with mixed quantization types,
+     * as it preserves the actual quantization type of each tensor instead of
+     * assuming all tensors are F32.
+     */
+    bool loadWeightsWithTypes(const QHash<QString, QPair<QByteArray, int>>& tensorCacheWithTypes,
+                              int nLayers, int nEmbd, int nHead, int nVocab);
+    
+    /**
+     * @brief Generate tokens autoregressively
+     * @param prompt Input token IDs
+     * @param maxTokens Maximum tokens to generate
+     * @param temperature Sampling temperature (0.0 = greedy)
+     * @return Generated token IDs
+     */
+    std::vector<int32_t> generate(const std::vector<int32_t>& prompt,
+                                   int maxTokens, float temperature = 0.7f);
+    
+    /**
+     * @brief Run a single forward pass
+     * @param tokens Input token sequence
+     * @return Logits for next token prediction [vocab_size]
+     */
+    std::vector<float> forward(const std::vector<int32_t>& tokens);
+    
+    /**
+     * @brief Check if model is loaded and ready
+     */
+    bool isReady() const { return m_ready; }
+    
+    /**
+     * @brief Mark transformer as ready when using GGUF direct inference
+     * This is called when the model uses GGUF loader directly instead of
+     * loading weights into the transformer's own tensors.
+     */
+    void markReadyForGGUFInference() { 
+        m_ready = true; 
+        m_ggufDirectMode = true;
+    }
+    
+private:
+    // Model hyperparameters
+    int m_nLayers{0};
+    int m_nEmbd{0};
+    int m_nHead{0};
+    int m_nVocab{0};
+    int m_ctxSize{2048};  // Context window
+    
+    // GGUF direct mode flag (for models loaded via GGUF loader without transformer weight loading)
+    bool m_ggufDirectMode{false};
+    
+    // ggml computation context
+    ggml_context* m_ctx{nullptr};
+    ggml_context* m_kvCtx{nullptr};  // KV cache context
+    
+    // Model weights as ggml tensors
+    ggml_tensor* m_tokenEmbed{nullptr};
+    ggml_tensor* m_outputWeight{nullptr};
+    
+    struct LayerWeights {
+        ggml_tensor* attn_q{nullptr};
+        ggml_tensor* attn_k{nullptr};
+        ggml_tensor* attn_v{nullptr};
+        ggml_tensor* attn_proj{nullptr};
+        ggml_tensor* ln1_weight{nullptr};
+        ggml_tensor* ln1_bias{nullptr};
+        ggml_tensor* mlp_fc1{nullptr};
+        ggml_tensor* mlp_fc2{nullptr};
+        ggml_tensor* ln2_weight{nullptr};
+        ggml_tensor* ln2_bias{nullptr};
+        
+        // FIX 4: Add Bias Terms
+        ggml_tensor* attn_q_bias{nullptr};
+        ggml_tensor* attn_k_bias{nullptr};
+        ggml_tensor* attn_v_bias{nullptr};
+        ggml_tensor* attn_output_bias{nullptr};
+        ggml_tensor* mlp_fc1_bias{nullptr};
+        ggml_tensor* mlp_fc2_bias{nullptr};
+    };
+    std::vector<LayerWeights> m_layers;
+    
+    // KV cache for efficient generation
+    std::vector<ggml_tensor*> m_kCache;
+    std::vector<ggml_tensor*> m_vCache;
+    
+    bool m_ready{false};
+    
+    // Helper methods
+    ggml_tensor* createTensorFromCache(const QString& name, 
+                                       const QHash<QString, QByteArray>& cache,
+                                       const int64_t* shape, int nDims);
+    
+    // New overload that accepts type ID
+    ggml_tensor* createTensorFromCache(const QByteArray& data,
+                                       int typeId,
+                                       const std::vector<qint64>& dimensions);
+    
+    ggml_tensor* buildGraph(ggml_context* ctx, const std::vector<int32_t>& tokens);
+    int sampleToken(const std::vector<float>& logits, float temperature);
+    void initKVCache();
+    void freeContext();
+};

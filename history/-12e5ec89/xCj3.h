@@ -1,0 +1,43 @@
+#pragma once
+
+#include <QWidget>
+#include <QString>
+
+class QTextEdit;
+class QLineEdit;
+class QComboBox;
+class QCheckBox;
+class QLabel;
+
+class ChatInterface : public QWidget {
+    Q_OBJECT
+public:
+    explicit ChatInterface(QWidget* parent = nullptr);
+    
+    void addMessage(const QString& sender, const QString& message);
+    QString selectedModel() const;
+    bool isMaxMode() const;
+    
+public slots:
+    void displayResponse(const QString& response);
+    void focusInput();
+    void sendMessage();
+    void refreshModels();
+    void onModelChanged(int index);
+    void onMaxModeToggled(bool enabled);
+    
+signals:
+    void messageSent(const QString& message);
+    void modelSelected(const QString& modelPath);
+    void maxModeChanged(bool enabled);
+    
+private:
+    void loadAvailableModels();
+    
+    QTextEdit* message_history_;
+    QLineEdit* message_input_;
+    QComboBox* modelSelector_;
+    QCheckBox* maxModeToggle_;
+    QLabel* statusLabel_;
+    bool maxMode_;
+};

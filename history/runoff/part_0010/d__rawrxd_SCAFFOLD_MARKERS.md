@@ -1,0 +1,418 @@
+# RawrXD — 367 Scaffold Markers
+
+**Purpose:** Numbered markers (SCAFFOLD_001 … SCAFFOLD_367) for implementation tracking, audits, and refactor points. Reference from code via `include/scaffold_markers_367.h` or from docs.
+
+**Last updated:** 2026-02-15
+
+**Clarification (scope, targets, format, script path):** See **docs/SCAFFOLD_MARKERS_CLARIFICATION.md**.
+
+---
+
+## Format
+
+Each line: `| SCAFFOLD_NNN | Category | Description | File/Area | Status |`
+
+**Status:** `open` | `in_progress` | `done` | `deferred`
+
+---
+
+## Marker Registry (1–100)
+
+| ID | Category | Description | File/Area | Status |
+| ---- | ---------- | ----------- | ---------- | ------ |
+| SCAFFOLD_001 | Win32 IDE | Main window creation and message loop | Win32IDE.cpp | open |
+| SCAFFOLD_002 | Win32 IDE | Activity bar and primary sidebar layout | Win32IDE_VSCodeUI | open |
+| SCAFFOLD_003 | Win32 IDE | Secondary sidebar (Copilot chat) creation | Win32IDE_VSCodeUI | open |
+| SCAFFOLD_004 | Win32 IDE | Panel container (Terminal, Output, Problems) | Win32IDE_VSCodeUI | open |
+| SCAFFOLD_005 | Win32 IDE | Editor control and RichEdit integration | Win32IDE | open |
+| SCAFFOLD_006 | Win32 IDE | Tab bar and document switching | Win32IDE | open |
+| SCAFFOLD_007 | Win32 IDE | Status bar and parts layout | Win32IDE | open |
+| SCAFFOLD_008 | Win32 IDE | Command palette creation and filtering | Win32IDE | open |
+| SCAFFOLD_009 | Win32 IDE | File explorer tree and refresh | Win32IDE | open |
+| SCAFFOLD_010 | Win32 IDE | Font and DPI scaling application | Win32IDE | open |
+| SCAFFOLD_011 | Win32 IDE | Menu bar and accelerator table | Win32IDE | open |
+| SCAFFOLD_012 | Win32 IDE | Find/Replace dialog and options | Win32IDE | open |
+| SCAFFOLD_013 | Win32 IDE | Go to line dialog | Win32IDE | open |
+| SCAFFOLD_014 | Win32 IDE | Model selector combobox population | Win32IDE | open |
+| SCAFFOLD_015 | Win32 IDE | Copilot Send/Clear button handlers | Win32IDE_Core | open |
+| SCAFFOLD_016 | Win32 IDE | Agentic mode switcher (Ask/Plan/Agent) | Win32IDE, Win32IDE_AgentCommands | open |
+| SCAFFOLD_017 | Win32 IDE | AI mode toggles (Max, Deep Think, etc.) | Win32IDE_AgentCommands | open |
+| SCAFFOLD_018 | Win32 IDE | Plan approval dialog and list view | Win32IDE_PlanExecutor | open |
+| SCAFFOLD_019 | Win32 IDE | Plan step execution and rollback | Win32IDE_PlanExecutor | open |
+| SCAFFOLD_020 | Win32 IDE | Agentic bridge initialization | Win32IDE_AgenticBridge | open |
+| SCAFFOLD_021 | Win32 IDE | Autonomy manager and goal loop | Win32IDE_Autonomy | open |
+| SCAFFOLD_022 | Win32 IDE | Terminal pane creation and split | Win32IDE | open |
+| SCAFFOLD_023 | Win32 IDE | Output panel and severity tabs | Win32IDE | open |
+| SCAFFOLD_024 | Win32 IDE | Problems list and go-to-problem | Win32IDE_VSCodeUI | open |
+| SCAFFOLD_025 | Win32 IDE | Git diff panel and hunk display | Win32IDE_Tier2Cosmetics | open |
+| SCAFFOLD_026 | Win32 IDE | Theme picker and color application | Win32IDE_Themes | open |
+| SCAFFOLD_027 | Win32 IDE | Syntax highlighting by language | Win32IDE_SyntaxHighlight | open |
+| SCAFFOLD_028 | Win32 IDE | Breadcrumbs and navigation | Win32IDE_Breadcrumbs | open |
+| SCAFFOLD_029 | Win32 IDE | Voice chat and transcript UI | Win32IDE_VoiceChat | open |
+| SCAFFOLD_030 | Win32 IDE | Voice automation provider combo | Win32IDE_VoiceAutomation | open |
+| SCAFFOLD_031 | Win32 IDE | Telemetry dashboard list view | Win32IDE_TelemetryDashboard | open |
+| SCAFFOLD_032 | Win32 IDE | Test explorer tree population | Win32IDE_TestExplorerTree | open |
+| SCAFFOLD_033 | Win32 IDE | Transcendence panel and endpoints | Win32IDE | open |
+| SCAFFOLD_034 | Win32 IDE | File operations and model load from explorer | Win32IDE_FileOps | open |
+| SCAFFOLD_035 | Win32 IDE | Failure detector and agentic prompt | Win32IDE_FailureDetector | open |
+| SCAFFOLD_036 | Win32 IDE | Failure intelligence and remediation | Win32IDE_FailureIntelligence | open |
+| SCAFFOLD_037 | Win32 IDE | Cursor parity (fuzzy search, references) | Win32IDE_CursorParity | open |
+| SCAFFOLD_038 | Win32 IDE | Agent history and replay | Win32IDE_AgentHistory | open |
+| SCAFFOLD_039 | Win32 IDE | Agent commands menu dispatch | Win32IDE_AgentCommands | open |
+| SCAFFOLD_040 | Win32 IDE | SubAgent chain/swarm/todo handlers | Win32IDE_AgentCommands | open |
+| SCAFFOLD_041 | Win32 IDE | WebView2 and model selector | Win32IDE_WebView2 | open |
+| SCAFFOLD_042 | Win32 IDE | GUILayout hotpatch application | Win32IDE_GUILayoutHotpatch | open |
+| SCAFFOLD_043 | Win32 IDE | Game engine panel | Win32IDE_GameEnginePanel | open |
+| SCAFFOLD_044 | Win32 IDE | Copilot gap closer panel | Win32IDE_CopilotGapPanel | open |
+| SCAFFOLD_045 | Win32 IDE | LSP client process and pipes | Win32IDE_LSPClient / LSPClient.hpp | open |
+| SCAFFOLD_046 | Win32 IDE | MCP server and tool dispatch | MCPServer.hpp | open |
+| SCAFFOLD_047 | Win32 IDE | Extension loader and VSIX API | ExtensionLoader, vscode_extension_api | open |
+| SCAFFOLD_048 | Win32 IDE | Plugin loader and Phase 43 | win32_plugin_loader | open |
+| SCAFFOLD_049 | Win32 IDE | Checkpoint manager show and list | Win32IDE | open |
+| SCAFFOLD_050 | Win32 IDE | License dialogs (info, activation) | Win32IDE | open |
+| SCAFFOLD_051 | Agent | AgenticBridge ExecuteAgentCommand | Win32IDE_AgenticBridge | open |
+| SCAFFOLD_052 | Agent | AgenticBridge StartAgentLoop / StopAgentLoop | Win32IDE_AgenticBridge | open |
+| SCAFFOLD_053 | Agent | AgenticBridge LoadModel and model override | Win32IDE_AgenticBridge | open |
+| SCAFFOLD_054 | Agent | AgenticBridge DispatchModelToolCalls | Win32IDE_AgenticBridge | open |
+| SCAFFOLD_055 | Agent | AutonomyManager planNextAction | Win32IDE_Autonomy | open |
+| SCAFFOLD_056 | Agent | AutonomyManager executeAction | Win32IDE_Autonomy | open |
+| SCAFFOLD_057 | Agent | SubAgentManager chain execution | Win32IDE_SubAgent | open |
+| SCAFFOLD_058 | Agent | SubAgentManager swarm execution | Win32IDE_SubAgent | open |
+| SCAFFOLD_059 | Agent | SubAgentManager todo list sync | Win32IDE_SubAgent | open |
+| SCAFFOLD_060 | Agent | BoundedAgentLoop and cycle limit | BoundedAgentLoop | open |
+| SCAFFOLD_061 | Agent | AgentOrchestrator task dispatch | AgentOrchestrator | open |
+| SCAFFOLD_062 | Agent | OrchestratorBridge and native bridge | OrchestratorBridge | open |
+| SCAFFOLD_063 | Agent | agentic_composer_ux integration | agentic_composer_ux | open |
+| SCAFFOLD_064 | Agent | OllamaProvider and model list | OllamaProvider | open |
+| SCAFFOLD_065 | Agent | AgentOllamaClient and HTTP | AgentOllamaClient | open |
+| SCAFFOLD_066 | Agent | agentic_executor executeUserRequest | agentic_executor | open |
+| SCAFFOLD_067 | Agent | agentic_failure_detector and retry | agentic_failure_detector | open |
+| SCAFFOLD_068 | Agent | agentic_puppeteer orchestration | agentic_puppeteer | open |
+| SCAFFOLD_069 | Agent | agentic_hotpatch_orchestrator | agentic_hotpatch_orchestrator | open |
+| SCAFFOLD_070 | Agent | DeterministicReplayEngine record/replay | DeterministicReplayEngine | open |
+| SCAFFOLD_071 | Agent | AgenticTaskGraph DAG execution | agentic_task_graph | open |
+| SCAFFOLD_072 | Agent | autonomous_workflow_engine | autonomous_workflow_engine | open |
+| SCAFFOLD_073 | Agent | swarm_decision_bridge and LAN | swarm_decision_bridge | open |
+| SCAFFOLD_074 | Agent | agentic_decision_tree CLI | agentic_decision_tree | open |
+| SCAFFOLD_075 | Agent | Tool registry and tool implementations | ToolExecutionEngine, ToolImplementations | open |
+| SCAFFOLD_076 | Agent | Agent memory store/recall/export | Win32IDE | open |
+| SCAFFOLD_077 | Agent | Plan step parsing (STEP/DESC/TYPE) | Win32IDE_PlanExecutor | open |
+| SCAFFOLD_078 | Agent | Plan dialog Approve/Reject/Edit | Win32IDE_PlanExecutor | open |
+| SCAFFOLD_079 | Agent | Plan execution progress and pause | Win32IDE_PlanExecutor | open |
+| SCAFFOLD_080 | Agent | Plan rollback and file backup | Win32IDE_PlanExecutor | open |
+| SCAFFOLD_081 | Agent | generateAgentPlan and WM_PLAN_READY | Win32IDE_PlanExecutor | open |
+| SCAFFOLD_082 | Agent | generateResponseAsync and streaming | Win32IDE | open |
+| SCAFFOLD_083 | Agent | ToolActionStatus and bubbles in chat | tool_action_status | open |
+| SCAFFOLD_084 | Agent | Native inference pipeline and instructions | native_inference_pipeline | open |
+| SCAFFOLD_085 | Agent | instructions_provider | instructions_provider | open |
+| SCAFFOLD_086 | Agent | MCP integration and tools | mcp_integration | open |
+| SCAFFOLD_087 | Agent | Model router and tier hopping | ModelRouter | open |
+| SCAFFOLD_088 | Agent | RawrXD_PlanOrchestrator | RawrXD_PlanOrchestrator | open |
+| SCAFFOLD_089 | Agent | RawrXD_AgenticEngine and AgenticController | Ship | open |
+| SCAFFOLD_090 | Agent | RawrXD_Agent and tool dispatch | RawrXD_Agent | open |
+| SCAFFOLD_091 | Agent | RawrXD_CopilotBridge | RawrXD_CopilotBridge | open |
+| SCAFFOLD_092 | Agent | AgenticEngine chat/analyze/generate | agentic_engine | open |
+| SCAFFOLD_093 | Agent | interactive_shell /agent commands | interactive_shell | open |
+| SCAFFOLD_094 | Agent | cli_shell agentic engine wiring | cli_shell | open |
+| SCAFFOLD_095 | Agent | backend agentic_tools | agentic_tools | open |
+| SCAFFOLD_096 | Agent | tool_server capabilities and agentic | tool_server | open |
+| SCAFFOLD_097 | Agent | diagnostic_consumer agentic auto-fix | diagnostic_consumer | open |
+| SCAFFOLD_098 | Agent | prompt_template_engine AGENTIC type | prompt_template_engine | open |
+| SCAFFOLD_099 | Agent | agentic_task_graph executor_agenticLoop | agentic_task_graph | open |
+| SCAFFOLD_100 | Agent | SubsystemAgentBridge and failure callback | subsystem_agent_bridge | open |
+
+---
+
+## Marker Registry (101–200)
+
+| ID | Category | Description | File/Area | Status |
+| ---- | ---------- | ----------- | ---------- | ------ |
+| SCAFFOLD_101 | Inference | GGUF loader and tensor read | gguf_loader | open |
+| SCAFFOLD_102 | Inference | Streaming GGUF loader | streaming_gguf_loader | open |
+| SCAFFOLD_103 | Inference | Model source resolver | model_source_resolver | open |
+| SCAFFOLD_104 | Inference | Inference engine forward pass | RawrXD_InferenceEngine | open |
+| SCAFFOLD_105 | Inference | Vulkan compute backend init | vulkan_compute | open |
+| SCAFFOLD_106 | Inference | CPU inference fallback | inference_engine | open |
+| SCAFFOLD_107 | Inference | BPE tokenizer (tiktoken) | bpe_tokenizer | open |
+| SCAFFOLD_108 | Inference | SentencePiece tokenizer | sentencepiece_tokenizer | open |
+| SCAFFOLD_109 | Inference | Vocabulary loader GGUF/JSON | vocabulary_loader | open |
+| SCAFFOLD_110 | Inference | KV cache and attention | inference | open |
+| SCAFFOLD_111 | Inference | Multi-GPU manager stub | multi_gpu_manager | open |
+| SCAFFOLD_112 | Inference | CUDA inference engine stub | cuda_inference_engine | open |
+| SCAFFOLD_113 | Inference | Native model bridge (Ship ASM) | RawrXD_ModelLoader | open |
+| SCAFFOLD_114 | Inference | GGUFRunner and streaming | GGUFRunner | open |
+| SCAFFOLD_115 | Inference | generateResponse sync path | Win32IDE | open |
+| SCAFFOLD_116 | Inference | Ollama model override and selection | Win32IDE | open |
+| SCAFFOLD_117 | Inference | callLocalAgentAPI WinHTTP | chat_panel_integration | open |
+| SCAFFOLD_118 | Inference | FIM prompt builder | FIMPromptBuilder | open |
+| SCAFFOLD_119 | Inference | Ultra-fast inference header | ultra_fast_inference | open |
+| SCAFFOLD_120 | Inference | Inference state machine | inference_state_machine | open |
+| SCAFFOLD_121 | Inference | Vision embedding cache | vision_embedding_cache | open |
+| SCAFFOLD_122 | Inference | Vision KV isolation | vision_kv_isolation | open |
+| SCAFFOLD_123 | Inference | Speculative decoder | speculative_decoder | open |
+| SCAFFOLD_124 | Inference | KV cache optimizer | kv_cache_optimizer | open |
+| SCAFFOLD_125 | Inference | engine_manager and compiler registration | engine_manager | open |
+| SCAFFOLD_126 | Inference | modules/codex_ultimate | codex_ultimate | open |
+| SCAFFOLD_127 | Inference | modules/crucible_engine | crucible_engine | open |
+| SCAFFOLD_128 | Inference | RawrXD_InferenceEngine_Win32 | Ship | open |
+| SCAFFOLD_129 | Inference | RawrXD_AICompletion | Ship | open |
+| SCAFFOLD_130 | Inference | Headless inference and model load | HeadlessIDE | open |
+| SCAFFOLD_131 | Inference | RawrXD_ModelRouter | Ship | open |
+| SCAFFOLD_132 | Inference | Model loader bridge and IPC | RawrXD_ModelLoader | open |
+| SCAFFOLD_133 | Inference | Brutal compression and deflate | compression, bench_deflate | open |
+| SCAFFOLD_134 | Inference | NEON/Vulkan fabric ASM | asm | done |
+| SCAFFOLD_135 | Inference | MASM custom zlib | custom_zlib.asm | done |
+| SCAFFOLD_136 | Inference | inference_core.asm | inference_core.asm | done |
+| SCAFFOLD_137 | Inference | feature_dispatch_bridge.asm | feature_dispatch_bridge.asm | done |
+| SCAFFOLD_138 | Inference | Pyre compute and wiring | pyre_compute | open |
+| SCAFFOLD_139 | Inference | Quantization and model trainer | agent_tool_quantize, ModelLoader | open |
+| SCAFFOLD_140 | Inference | test_quantization and loader tests | RawrXD-ModelLoader | open |
+| SCAFFOLD_141 | LSP | LSP client process spawn and JSON-RPC | LSPClient.hpp | open |
+| SCAFFOLD_142 | LSP | Diagnostic consumer and aggregation | diagnostic_consumer | open |
+| SCAFFOLD_143 | LSP | LSP server RawrXD (if present) | LSPServer | open |
+| SCAFFOLD_144 | LSP | Diagnostic severity and quick-fix | diagnostic_consumer | open |
+| SCAFFOLD_145 | LSP | LSP hotpatch bridge | lsp_hotpatch_bridge | open |
+| SCAFFOLD_146 | LSP | Editor sync (open/change/close) to LSP | Win32IDE, LSPClient | open |
+| SCAFFOLD_147 | LSP | Go to definition / references | Win32IDE_CursorParity | open |
+| SCAFFOLD_148 | LSP | Completion and signature help | LSPClient | open |
+| SCAFFOLD_149 | LSP | Hover and document link | LSPClient | open |
+| SCAFFOLD_150 | LSP | Semantic tokens (if used) | LSPClient | open |
+| SCAFFOLD_151 | Editor | Line numbers and caret | Win32IDE | open |
+| SCAFFOLD_152 | Editor | Minimap (if present) | Win32IDE | open |
+| SCAFFOLD_153 | Editor | Code folding (if present) | Win32IDE | open |
+| SCAFFOLD_154 | Editor | Split code viewer | Win32IDE | open |
+| SCAFFOLD_155 | Editor | Indentation and tab/space | Win32IDE | open |
+| SCAFFOLD_156 | Editor | EOL and encoding detection | Win32IDE | open |
+| SCAFFOLD_157 | Editor | Language mode from file extension | Win32IDE | open |
+| SCAFFOLD_158 | Editor | Undo/redo stack | Win32IDE | open |
+| SCAFFOLD_159 | Editor | Selection and clipboard | Win32IDE | open |
+| SCAFFOLD_160 | Editor | Inline AI suggestion overlay (future) | Win32IDE | open |
+| SCAFFOLD_161 | Editor | Monaco/WebView editor migration (future) | Win32IDE | open |
+| SCAFFOLD_162 | Editor | Snippet list and insertion | Win32IDE | open |
+| SCAFFOLD_163 | Editor | Clipboard history panel | Win32IDE | open |
+| SCAFFOLD_164 | Editor | Reference tree and symbol list | Win32IDE_Tier2Cosmetics | open |
+| SCAFFOLD_165 | Editor | Git diff inline or side-by-side | Win32IDE_Tier2Cosmetics | open |
+| SCAFFOLD_166 | Editor | Tier 2 cosmetics and fonts | Win32IDE_Tier2Cosmetics | open |
+| SCAFFOLD_167 | Editor | Tier 3 (DirectWrite if present) | Win32IDE | open |
+| SCAFFOLD_168 | Editor | IocpFileWatcher and reload | IocpFileWatcher | open |
+| SCAFFOLD_169 | Editor | Save/Save As and modified flag | Win32IDE | open |
+| SCAFFOLD_170 | Editor | New file and default content | Win32IDE | open |
+| SCAFFOLD_171 | CLI | RawrXD CLI main and command parse | rawrxd_cli, RawrXD_CLI | open |
+| SCAFFOLD_172 | CLI | /run-tool and /autonomy | RawrEngine, Headless | open |
+| SCAFFOLD_173 | CLI | Command registry and dispatch | Win32IDE_Commands | open |
+| SCAFFOLD_174 | CLI | routeCommandUnified and unknown ID | Win32IDE_Core | open |
+| SCAFFOLD_175 | CLI | Terminal manager CreateProcess and pipes | Win32TerminalManager, RawrXD_TerminalMgr | open |
+| SCAFFOLD_176 | CLI | Terminal kill and split | Win32IDE | open |
+| SCAFFOLD_177 | CLI | PowerShell output and execute | Win32IDE | open |
+| SCAFFOLD_178 | CLI | Command palette filtering and run | Win32IDE | open |
+| SCAFFOLD_179 | CLI | Git command execution (status, diff) | Win32IDE, git_context | open |
+| SCAFFOLD_180 | CLI | Tool server HTTP and capabilities | tool_server | open |
+| SCAFFOLD_181 | CLI | digestion_cli and apply agentic fixes | digestion_cli | open |
+| SCAFFOLD_182 | CLI | rawrz and hotpatch proxy | RawrZ, ollama_hotpatch_proxy | open |
+| SCAFFOLD_183 | CLI | Test harness and replay | replay_harness | open |
+| SCAFFOLD_184 | CLI | benchmark_suite and IDE variant | benchmark_suite | open |
+| SCAFFOLD_185 | CLI | Feature handlers and CLI parity | feature_handlers, CLI_PARITY | open |
+| SCAFFOLD_186 | CLI | Audit detect stubs and report | Win32IDE | done |
+| SCAFFOLD_187 | CLI | License validator and manifest | license_validator_manifest | open |
+| SCAFFOLD_188 | CLI | Tool execution JSON and AgenticToolExecutor | NativeHttpServerStubs | open |
+| SCAFFOLD_189 | CLI | REPL and headless options | HeadlessIDE, RawrEngine | open |
+| SCAFFOLD_190 | CLI | Extension host and JS (if present) | js_extension_host_stub | open |
+| SCAFFOLD_191 | CLI | MCP client (if present) | mcp_integration | open |
+| SCAFFOLD_192 | CLI | Build scripts and CMake targets | build.bat, CMakeLists | open |
+| SCAFFOLD_193 | CLI | Test runner and integration tests | test_suite, Run-Integration-Tests | open |
+| SCAFFOLD_194 | CLI | CI/CD and regression workflow | .github/workflows, ci | open |
+| SCAFFOLD_195 | CLI | Verify-Build and Prepare-CleanBuild | Verify-Build, Prepare-CleanBuild | open |
+| SCAFFOLD_196 | CLI | Toolchain (nasm, masm) and ASM run | toolchain, RawrXD_Win32_IDE | done |
+| SCAFFOLD_197 | CLI | Fortress E-drive audit and migration | FORTRESS_E_DRIVE_AUDIT | open |
+| SCAFFOLD_198 | CLI | Ship build phases and batch files | Ship/build_*.bat | open |
+| SCAFFOLD_199 | CLI | RawrXD_Executor and temp compile | RawrXD_Executor | open |
+| SCAFFOLD_200 | CLI | RawrXD_Settings and default shell | RawrXD_Settings | open |
+
+---
+
+## Marker Registry (201–300)
+
+| ID | Category | Description | File/Area | Status |
+| ---- | ---------- | ----------- | ---------- | ------ |
+| SCAFFOLD_201 | Security | License check and feature manifest | checkFeatureLicense, FeatureManifest | open |
+| SCAFFOLD_202 | Security | License activation dialog and key path | Win32IDE | open |
+| SCAFFOLD_203 | Security | HSM integration stub | hsm_integration | open |
+| SCAFFOLD_204 | Security | FIPS compliance stub | fips_compliance | open |
+| SCAFFOLD_205 | Security | License anti-tampering | license_anti_tampering | open |
+| SCAFFOLD_206 | Security | Audit log immutable checksum | audit_log_immutable | done |
+| SCAFFOLD_207 | Security | Sovereign key management RSA | sovereign_keymgmt | open |
+| SCAFFOLD_208 | Security | Plugin signature verification | plugin_signature | open |
+| SCAFFOLD_209 | Security | Sandbox integration | sandbox_integration | open |
+| SCAFFOLD_210 | Security | Agent safety contract | agent_safety_contract | open |
+| SCAFFOLD_211 | Security | Enterprise license panel | enterprise_license_panel | open |
+| SCAFFOLD_212 | Security | SetupWizard importKey/exportKey | SetupWizard | open |
+| SCAFFOLD_213 | Security | Entropy key path AppData/RawrXD | SetupWizard | open |
+| SCAFFOLD_214 | Security | QuantumAuthUI and auth flow | QuantumAuthUI | open |
+| SCAFFOLD_215 | Security | API key management and storage | docs, config | open |
+| SCAFFOLD_216 | Security | Secure credential store (future) | open | open |
+| SCAFFOLD_217 | Security | TLS and certificate pinning (if any) | tls, network | open |
+| SCAFFOLD_218 | Security | Process isolation for tool execution | ToolExecutionEngine | open |
+| SCAFFOLD_219 | Security | Memory patch and byte search stubs | memory_patch_byte_search_stubs | open |
+| SCAFFOLD_220 | Security | Proxy hotpatcher and agentic | proxy_hotpatcher | open |
+| SCAFFOLD_221 | Build | CMakeLists.txt Win32 IDE target | CMakeLists.txt | open |
+| SCAFFOLD_222 | Build | CMakeLists RawrXD-Gold and sources | CMakeLists.txt | open |
+| SCAFFOLD_223 | Build | CMakeLists RawrEngine / Headless | CMakeLists.txt | open |
+| SCAFFOLD_224 | Build | CMakeLists RawrXD-ModelLoader | RawrXD-ModelLoader/CMakeLists | open |
+| SCAFFOLD_225 | Build | enforce_no_scaffold target | tools/enforce_no_scaffold.ps1 | open |
+| SCAFFOLD_226 | Build | ASM build and ml64/nasm | toolchain/masm | done |
+| SCAFFOLD_227 | Build | Ninja and MSVC toolchain | build_ide | open |
+| SCAFFOLD_228 | Build | MinGW branch (if present) | CMakeLists | open |
+| SCAFFOLD_229 | Build | Stub exclusions (benchmark, test) | CMakeLists | open |
+| SCAFFOLD_230 | Build | Include dirs and dependencies | CMakeLists | open |
+| SCAFFOLD_231 | Build | RawrXD-ModelLoader tests | RawrXD-ModelLoader/tests | open |
+| SCAFFOLD_232 | Build | Ship CMakeLists and tools | Ship/CMakeLists, tools | open |
+| SCAFFOLD_233 | Build | 3rdparty ggml and hexagon | 3rdparty/ggml | open |
+| SCAFFOLD_234 | Build | WebView2 and nupkg | webview2 | open |
+| SCAFFOLD_235 | Build | DLL and runtime dependencies | CMake, install | open |
+| SCAFFOLD_236 | Build | Production vs debug config | CMakeLists | open |
+| SCAFFOLD_237 | Build | Benchmark runner stub IDE variant | benchmark_runner_stub | open |
+| SCAFFOLD_238 | Build | Inference engine stub IDE variant | inference_engine_stub.hpp | open |
+| SCAFFOLD_239 | Build | multi_file_search_stub IDE variant | multi_file_search_stub | open |
+| SCAFFOLD_240 | Build | digestion_engine_stub production | digestion_engine_stub | open |
+| SCAFFOLD_241 | Extensions | ExtensionLoader load and unload | ExtensionLoader | open |
+| SCAFFOLD_242 | Extensions | VS Code extension API compatibility | vscode_extension_api | open |
+| SCAFFOLD_243 | Extensions | Marketplace panel and VSIX install | MarketplacePanel | open |
+| SCAFFOLD_244 | Extensions | Extension panel Win32 HWND | ExtensionPanel | open |
+| SCAFFOLD_245 | Extensions | Phase 43 plugin loader | win32_plugin_loader | open |
+| SCAFFOLD_246 | Extensions | LoadMemoryPlugin legacy | Win32IDE | open |
+| SCAFFOLD_247 | Extensions | Feature registry panel | FeatureRegistryPanel | open |
+| SCAFFOLD_248 | Extensions | Snippet and template insertion | Win32IDE | open |
+| SCAFFOLD_249 | Extensions | Download VSIX from marketplace | Download-VSCodeMarketplaceVsix | open |
+| SCAFFOLD_250 | Extensions | Test VSIX loader | Test-VSIXLoader | open |
+| SCAFFOLD_251 | Extensions | Extension host process (if any) | open | open |
+| SCAFFOLD_252 | Extensions | Language plugin and refactoring | language_plugin, refactoring_plugin | open |
+| SCAFFOLD_253 | Extensions | React IDE generator and agentic template | react_ide_generator | open |
+| SCAFFOLD_254 | Extensions | monaco_gen and agentic template | monaco_gen | open |
+| SCAFFOLD_255 | Extensions | engine_manager and compiler registration | engine_manager | open |
+| SCAFFOLD_256 | Extensions | Codex ultimate module | codex_ultimate | open |
+| SCAFFOLD_257 | Extensions | Game engine manager | game_engine_manager | open |
+| SCAFFOLD_258 | Extensions | Crucible engine | crucible_engine | open |
+| SCAFFOLD_259 | Extensions | Copilot gap closer module | copilot_gap_closer | open |
+| SCAFFOLD_260 | Extensions | Module browser (if present) | Win32IDE | open |
+| SCAFFOLD_261 | Telemetry | METRICS and SCOPED_METRIC | IDELogger, metrics | open |
+| SCAFFOLD_262 | Telemetry | Telemetry dashboard and list | Win32IDE_TelemetryDashboard | open |
+| SCAFFOLD_263 | Telemetry | Telemetry export and report | telemetry_export | open |
+| SCAFFOLD_264 | Telemetry | Win32IDE_Telemetry and events | Win32IDE_Telemetry | open |
+| SCAFFOLD_265 | Telemetry | Agent event recording | Win32IDE_PlanExecutor, AgentHistory | open |
+| SCAFFOLD_266 | Telemetry | Perf telemetry | perf_telemetry | open |
+| SCAFFOLD_267 | Telemetry | Subsystem health monitor | subsystem_health_monitor | open |
+| SCAFFOLD_268 | Telemetry | Deterministic replay for audit | deterministic_replay | open |
+| SCAFFOLD_269 | Telemetry | Log level and output routing | IDELogger, appendToOutput | open |
+| SCAFFOLD_270 | Telemetry | Status bar and Copilot status | Win32IDE_VSCodeUI | open |
+| SCAFFOLD_271 | Telemetry | Error count and warning count | Win32IDE | open |
+| SCAFFOLD_272 | Telemetry | Bottleneck and metrics docs | BOTTLENECK_* | open |
+| SCAFFOLD_273 | Telemetry | Phase 6 AI metrics | docs | open |
+| SCAFFOLD_274 | Telemetry | Filter combo (ui/perf/error/agent) | Win32IDE_TelemetryDashboard | open |
+| SCAFFOLD_275 | Telemetry | TelemetryCollector Qt-free | docs/QT_TO_WIN32_IDE_AUDIT | open |
+| SCAFFOLD_276 | Integration | Native HTTP server stubs | NativeHttpServerStubs | open |
+| SCAFFOLD_277 | Integration | Tool execute JSON and executor | ToolExecuteEngine, AgenticToolExecutor | open |
+| SCAFFOLD_278 | Integration | Integration.cpp and wWinMain tail | Integration | open |
+| SCAFFOLD_279 | Integration | ide_linker_bridge createKey | ide_linker_bridge | open |
+| SCAFFOLD_280 | Integration | Chat panel integration env checks | chat_panel_integration | open |
+| SCAFFOLD_281 | Integration | CallLocalAgentAPI and WinHTTP | chat_panel_integration | open |
+| SCAFFOLD_282 | Integration | processTokenStream callback | chat_panel_integration | open |
+| SCAFFOLD_283 | Integration | Resource generator | resource_generator | open |
+| SCAFFOLD_284 | Integration | Core generator Unity scaffolding | core_generator | open |
+| SCAFFOLD_285 | Integration | React server generator | react_server_generator | open |
+| SCAFFOLD_286 | Integration | auto_feature_registry 286 handlers | auto_feature_registry | open |
+| SCAFFOLD_287 | Integration | SSOT handlers | ssot_handlers | open |
+| SCAFFOLD_288 | Integration | Universal model hotpatcher | universal_model_hotpatcher | open |
+| SCAFFOLD_289 | Integration | Model invoker | model_invoker | open |
+| SCAFFOLD_290 | Integration | Swarm conflict resolver | swarm_conflict_resolver | open |
+| SCAFFOLD_291 | Integration | Webrtc signaling | webrtc_signaling | open |
+| SCAFFOLD_292 | Integration | Self host engine | self_host_engine | open |
+| SCAFFOLD_293 | Integration | Reasoning CoT bridge | reasoning_cot_bridge | open |
+| SCAFFOLD_294 | Integration | Deterministic replay engine | DeterministicReplayEngine | open |
+| SCAFFOLD_295 | Integration | BoundedAgentLoop integration | BoundedAgentLoop | open |
+| SCAFFOLD_296 | Integration | MCP tool list and invoke | mcp_integration | open |
+| SCAFFOLD_297 | Integration | Git context for agent prompts | git_context | open |
+| SCAFFOLD_298 | Integration | Digest and reverse engineering | digestion, digestion_cli | open |
+| SCAFFOLD_299 | Integration | Auto repair orchestrator | auto_repair_orchestrator | open |
+| SCAFFOLD_300 | Integration | Alert system | alert_system | open |
+
+---
+
+## Marker Registry (301–367)
+
+| ID | Category | Description | File/Area | Status |
+| ---- | ---------- | ----------- | ---------- | ------ |
+| SCAFFOLD_301 | Docs | UNFINISHED_FEATURES and 50-scaffold table | UNFINISHED_FEATURES.md | open |
+| SCAFFOLD_302 | Docs | ALL STUBS section and audit rule | UNFINISHED_FEATURES.md | open |
+| SCAFFOLD_303 | Docs | RAWRXD_IDE_DIRECTORY_COMPLETION_AUDIT | docs | open |
+| SCAFFOLD_304 | Docs | QT_TO_WIN32_IDE_AUDIT | docs | open |
+| SCAFFOLD_305 | Docs | WIN32_IDE_WIRING_MANIFEST | docs | open |
+| SCAFFOLD_306 | Docs | PRODUCTION_READINESS_AUDIT | docs | open |
+| SCAFFOLD_307 | Docs | FULL_PARITY_AUDIT and CURSOR_GITHUB | docs | open |
+| SCAFFOLD_308 | Docs | CLI_PARITY and /run-tool | docs | open |
+| SCAFFOLD_309 | Docs | LOCAL_AGENTIC_AUTONOMOUS_NO_KEY | docs | open |
+| SCAFFOLD_310 | Docs | FORTRESS_E_DRIVE_AUDIT | FORTRESS_E_DRIVE_AUDIT.md | open |
+| SCAFFOLD_311 | Docs | toolchain README and compiler script | toolchain/README.md | open |
+| SCAFFOLD_312 | Docs | AGENTIC_MODE_SWITCHER_IMPLEMENTATION | docs | open |
+| SCAFFOLD_313 | Docs | PHASE* build and API reference | docs/PHASE* | open |
+| SCAFFOLD_314 | Docs | QUICK_START and IDE_LAUNCH | README, docs | open |
+| SCAFFOLD_315 | Docs | MMF and BRUTAL compression | docs, RawrXD-ModelLoader/docs | open |
+| SCAFFOLD_316 | Docs | VOICE_ASSISTANT and COPILOT guides | docs | open |
+| SCAFFOLD_317 | Docs | DOCUMENTATION_INDEX and DELIVERY_INDEX | docs | open |
+| SCAFFOLD_318 | Docs | CHANGELOG and versioning | docs/CHANGELOG | open |
+| SCAFFOLD_319 | Docs | API.md and USER_GUIDE | docs | open |
+| SCAFFOLD_320 | Docs | ARCHITECTURE and REVERSE_ENGINEERING | docs | open |
+| SCAFFOLD_321 | Audit | void* parent HWND documentation | 11+ files | open |
+| SCAFFOLD_322 | Audit | Command default logging (unhandled ID) | Win32IDE_Core | open |
+| SCAFFOLD_323 | Audit | Hotpatch/Semantic/Pipeline/Crucible log | Win32IDE_Core | open |
+| SCAFFOLD_324 | Audit | Loading... tree UX comments | Win32IDE | open |
+| SCAFFOLD_325 | Audit | Stub vs production wording sweep | enforce_no_scaffold | done |
+| SCAFFOLD_326 | Audit | TODO/FIXME scan and replace | tool_server, UNFINISHED | open |
+| SCAFFOLD_327 | Audit | Enterprise license unified creator | enterprise_license_unified_creator | open |
+| SCAFFOLD_328 | Audit | Enterprise license v2 impl minimal | enterprise_licensev2_impl | open |
+| SCAFFOLD_329 | Audit | CheckpointManager listCheckpoints API | Win32IDE | open |
+| SCAFFOLD_330 | Audit | Feature manifest and STUB description | FeatureManifest | open |
+| SCAFFOLD_331 | Audit | SwarmPanel message and wiring | SwarmPanel | open |
+| SCAFFOLD_332 | Audit | Smart rewrite test skeleton | smart_rewrite | open |
+| SCAFFOLD_333 | Audit | LSP hotpatch bridge revert error | lsp_hotpatch_bridge | open |
+| SCAFFOLD_334 | Audit | digestion reverse_engineering void impl | digestion | open |
+| SCAFFOLD_335 | Audit | Agentic deep thinking per-agent model | agentic_deep_thinking | open |
+| SCAFFOLD_336 | Audit | Vision GPU staging platform error | vision_gpu_staging | open |
+| SCAFFOLD_337 | Audit | final_gauntlet XXXX→0000 | open | open |
+| SCAFFOLD_338 | Audit | Win32IDE_LSPServer Created state | Win32IDE_LSPServer | open |
+| SCAFFOLD_339 | Audit | Benchmark menu stub real dialog | benchmark_menu_stub | open |
+| SCAFFOLD_340 | Audit | Multi file search stub real search | multi_file_search_stub | open |
+| SCAFFOLD_341 | Audit | NativeHttpServerStubs ToolExecuteJson | NativeHttpServerStubs | open |
+| SCAFFOLD_342 | Audit | Extension panel void* parent doc | ExtensionPanel | open |
+| SCAFFOLD_343 | Audit | SetupWizard void* parent doc | SetupWizard | open |
+| SCAFFOLD_344 | Audit | QuantumAuthUI void* parent doc | QuantumAuthUI | open |
+| SCAFFOLD_345 | Audit | Thermal dashboard void* parent doc | thermal_dashboard_plugin | open |
+| SCAFFOLD_346 | Audit | OrchestrationUI void* parent doc | OrchestrationUI | open |
+| SCAFFOLD_347 | Audit | Mainwindow void* parent doc | mainwindow | open |
+| SCAFFOLD_348 | Audit | Zero day agentic engine void* | zero_day_agentic_engine | open |
+| SCAFFOLD_349 | Audit | Plugin loader void* parent doc | plugin_loader | open |
+| SCAFFOLD_350 | Audit | EXACT_ACTION_ITEMS TODO #3 void* list | EXACT_ACTION_ITEMS | open |
+| SCAFFOLD_351 | Audit | DOCUMENTATION_INDEX open items | DOCUMENTATION_INDEX | open |
+| SCAFFOLD_352 | Audit | SOURCE_CODE_AUDIT Phase 2 | SOURCE_CODE_AUDIT | done |
+| SCAFFOLD_353 | Audit | Completed audits batch 2–7 refs | UNFINISHED_FEATURES | open |
+| SCAFFOLD_354 | Audit | Batch 5 scaffold summary | UNFINISHED_FEATURES | open |
+| SCAFFOLD_355 | Audit | Comment standardization TODO/Stub | UNFINISHED_FEATURES | open |
+| SCAFFOLD_356 | Audit | 0 blockers remaining note | UNFINISHED_FEATURES | open |
+| SCAFFOLD_357 | Misc | IocpFileWatcher and file change | IocpFileWatcher | open |
+| SCAFFOLD_358 | Misc | TransparentRenderer (if used) | TransparentRenderer | open |
+| SCAFFOLD_359 | Misc | IDELogger and RAWRXD_LOG_* | IDELogger | open |
+| SCAFFOLD_360 | Misc | DPI scale helper | Win32IDE | open |
+| SCAFFOLD_361 | Misc | setFont helper for controls | Win32IDE | open |
+| SCAFFOLD_362 | Misc | utf8ToWide / wideToUtf8 | Win32IDE | open |
+| SCAFFOLD_363 | Misc | appendToOutput and severity | Win32IDE | open |
+| SCAFFOLD_364 | Misc | DetachedThreadGuard and shutdown | Win32IDE | open |
+| SCAFFOLD_365 | Misc | killTerminal and timeout | Win32IDE | open |
+| SCAFFOLD_366 | Misc | testFindPatternRVAParity | Win32IDE | open |
+| SCAFFOLD_367 | Misc | SCAFFOLD_MARKERS.md and scaffold_markers_367.h | SCAFFOLD_MARKERS.md, include/scaffold_markers_367.h | open |
+
+---
+
+## Usage
+
+- **In code:** `#include "scaffold_markers_367.h"` and use `SCAFFOLD_NNN` (e.g. `SCAFFOLD_016`) for logging or conditional compilation. `RAWRXD_SCAFFOLD_COUNT` is 367.
+- **In docs:** Reference `SCAFFOLD_NNN` in UNFINISHED_FEATURES, audits, or task lists.
+- **Status updates:** Change the Status column to `in_progress` or `done` as work completes.

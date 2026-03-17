@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Script Diagnostic</title></head>
+<body>
+<h2>Script Execution Diagnostic</h2>
+<div id="log" style="font-family:monospace;white-space:pre;background:#111;color:#0f0;padding:10px;"></div>
+
+<script>
+// This script loads ide_chatbot.html via fetch and checks its script blocks
+var log = document.getElementById('log');
+function addLog(msg) {
+  log.textContent += msg + '\n';
+}
+
+addLog('Starting diagnostic...');
+addLog('Protocol: ' + window.location.protocol);
+addLog('User Agent: ' + navigator.userAgent);
+
+fetch('/gui')
+  .then(function(res) {
+    addLog('Response status: ' + res.status);
+    addLog('Content-Type: ' + res.headers.get('content-type'));
+    addLog('Content-Length: ' + res.headers.get('content-length'));
+    return res.text();
+  })
+  .then(function(html) {
+    addLog('Received: ' + html.length + ' chars');
+    
+    // Check if the full file was received
+    addLog('Last 50 chars: ' + JSON.stringify(html.slice(-50)));
+    addLog('Ends with </html>: ' + html.trim().endsWith('</html>'));
+    
+    // Count script tags
+    var opens = (html.match(/<script[\s>]/gi) || []).length;
+    var closes = (html.match(/<\/script>/gi) || []).length;
+    addLog('Script opens: ' + opens + ', closes: ' + closes);
+    
+    // Find the main script block
+    var mainStart = html.indexOf('<script>', html.indexOf('</script>', html.indexOf('</script>', html.indexOf('</script>') + 1) + 1) + 1);
+    addLog('Main <script> at char offset: ' + mainStart);
+    
+    // Check if we can parse the main script
+    var blocks = html.match(/<script[^>]*>([\s\S]*?)<\/script>/gi);
+    addLog('Regex-extracted blocks: ' + (blocks ? blocks.length : 0));
+    
+    if (blocks) {
+      blocks.forEach(function(block, i) {
+        var content = block.replace(/<\/?script[^>]*>/gi, '');
+        addLog('Block ' + (i+1) + ': ' + content.length + ' chars');
+        
+        // Try to parse the largest block
+        if (content.length > 100000) {
+          addLog('Testing syntax of block ' + (i+1) + '...');
+          try {
+            new Function(content);
+            addLog('  SYNTAX OK');
+          } catch(e) {
+            addLog('  SYNTAX ERROR: ' + e.message);
+          }
+        }
+      });
+    }
+    
+    // Check if functions are available from the CURRENT page
+    addLog('\n--- Current page function check ---');
+    addLog('typeof switchTerminalMode: ' + typeof switchTerminalMode);
+    addLog('typeof showExtensionsPanel: ' + typeof showExtensionsPanel);
+  })
+  .catch(function(err) {
+    addLog('FETCH ERROR: ' + err.message);
+  });
+</script>
+</body>
+</html>

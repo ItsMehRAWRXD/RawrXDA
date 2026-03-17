@@ -1,0 +1,28 @@
+# RawrXD-AI Training Pipeline Requirements
+# ==========================================
+# Install: pip install -r requirements.txt
+#
+# For AMD GPU (ROCm) - install PyTorch FIRST:
+#   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm6.0
+#
+# Then install the rest:
+#   pip install -r requirements.txt
+
+# Core ML
+transformers>=4.40.0
+datasets>=2.19.0
+accelerate>=0.30.0
+peft>=0.10.0
+trl>=0.8.0
+bitsandbytes>=0.43.0
+
+# Tokenization
+sentencepiece>=0.2.0
+protobuf>=4.25.0
+
+# Utilities
+safetensors>=0.4.3
+huggingface-hub>=0.23.0
+numpy>=1.26.0
+scipy>=1.13.0
+tqdm>=4.66.0

@@ -1,0 +1,37 @@
+{
+  "name": "cursor-agent-exec",
+  "description": "Provides agent execution capabilities for Cursor, enabling agents to run commands, interact with files, and use tools with user permissions and approvals",
+  "publisher": "anysphere",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.43.0"
+  },
+  "main": "./dist/main",
+  "activationEvents": [
+    "onCommand:cursor-agent-exec.execute",
+    "onCommand:cursor-agent-exec.runAgent"
+  ],
+  "enabledApiProposals": [
+    "control",
+    "cursor",
+    "cursorTracing"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "cursor-agent-exec.execute",
+        "title": "Execute Command"
+      },
+      {
+        "command": "cursor-agent-exec.runAgent",
+        "title": "Run Agent"
+      }
+    ]
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.0",
+    "@types/vscode": "^1.109.0",
+    "webpack": "^5.105.2",
+    "webpack-cli": "^6.0.1"
+  }
+}

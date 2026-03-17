@@ -1,0 +1,45 @@
+# Test executable for console chat
+# Add to main CMakeLists.txt as subdirectory
+
+if(Qt6_FOUND)
+    set(CHAT_TEST_SOURCES
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_chat_console.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/chat_session.cpp
+    )
+    
+    # Include directories for dependencies
+    include_directories(
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_SOURCE_DIR}/src/qtapp
+    )
+    
+    # Create the test executable
+    add_executable(test_chat_console ${CHAT_TEST_SOURCES})
+    
+    # Link with Qt6
+    target_link_libraries(test_chat_console
+        Qt6::Core
+        Qt6::Gui
+    )
+    
+    # Link with inference engine libraries
+    if(TARGET RawrXD-AgenticIDE)
+        # If IDE is built, link with its dependencies
+        target_link_libraries(test_chat_console
+            Qt6::Concurrent
+            ggml_interface
+        )
+    endif()
+    
+    # Set output directory
+    set_target_properties(test_chat_console PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/Release"
+    )
+    
+    # Deploy Qt dependencies (Windows)
+    deploy_runtime_dependencies(test_chat_console)
+    
+    message(STATUS "✓ test_chat_console executable configured")
+else()
+    message(WARNING "Qt6 not found - test_chat_console will not be built")
+endif()

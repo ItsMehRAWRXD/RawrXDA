@@ -1,0 +1,170 @@
+{
+  "models": [
+    {
+      "title": "Ollama (local)",
+      "provider": "ollama",
+      "model": "llama3.1:8b",
+      "baseUrl": "http://localhost:11434"
+    },
+    {
+      "title": "Llama 3.1 (8B)",
+      "provider": "ollama",
+      "model": "llama3.1:latest",
+      "baseUrl": "http://localhost:11434"
+    },
+    {
+      "title": "Llama 3.2 (3B)",
+      "provider": "ollama",
+      "model": "llama3.2:latest",
+      "baseUrl": "http://localhost:11434"
+    },
+    {
+      "title": "Qwen 2.5 (7.6B)",
+      "provider": "ollama",
+      "model": "qwen2.5:latest",
+      "baseUrl": "http://localhost:11434"
+    },
+    {
+      "title": "Qwen 2.5 Coder (7.6B)",
+      "provider": "ollama",
+      "model": "qwen2.5-coder:latest",
+      "baseUrl": "http://localhost:11434"
+    },
+    {
+      "title": "Qwen 2.5 Coder (7B)",
+      "provider": "ollama",
+      "model": "qwen2.5-coder:7b",
+      "baseUrl": "http://localhost:11434"
+    },
+    {
+      "title": "Qwen 2.5 Coder (1.5B)",
+      "provider": "ollama",
+      "model": "qwen2.5-coder:1.5b",
+      "baseUrl": "http://localhost:11434"
+    },
+    {
+      "title": "Qwen 2.5 (3.1B)",
+      "provider": "ollama",
+      "model": "qwen2.5:3b",
+      "baseUrl": "http://localhost:11434"
+    },
+    {
+      "title": "Mistral (7.2B)",
+      "provider": "ollama",
+      "model": "mistral:latest",
+      "baseUrl": "http://localhost:11434"
+    },
+    {
+      "title": "Phi-3 (3.8B)",
+      "provider": "ollama",
+      "model": "phi3:latest",
+      "baseUrl": "http://localhost:11434"
+    },
+    {
+      "title": "Phi-3 Mini (3.8B)",
+      "provider": "ollama",
+      "model": "phi3:mini",
+      "baseUrl": "http://localhost:11434"
+    },
+    {
+      "title": "Phi-3 Medium (14B)",
+      "provider": "ollama",
+      "model": "phi3:medium",
+      "baseUrl": "http://localhost:11434"
+    },
+    {
+      "title": "Gemma (9B)",
+      "provider": "ollama",
+      "model": "gemma:latest",
+      "baseUrl": "http://localhost:11434"
+    },
+    {
+      "title": "Gemma 2 (9.2B)",
+      "provider": "ollama",
+      "model": "gemma2:latest",
+      "baseUrl": "http://localhost:11434"
+    },
+    {
+      "title": "DeepSeek Coder (6.7B)",
+      "provider": "ollama",
+      "model": "deepseek-coder:6.7b",
+      "baseUrl": "http://localhost:11434"
+    },
+    {
+      "title": "DeepSeek R1 (8.2B)",
+      "provider": "ollama",
+      "model": "deepseek-r1:latest",
+      "baseUrl": "http://localhost:11434"
+    },
+    {
+      "title": "DeepSeek v3.1 (6.71B)",
+      "provider": "ollama",
+      "model": "deepseek-v3.1:671b-cloud",
+      "baseUrl": "http://localhost:11434"
+    },
+    {
+      "title": "Code Llama (7B)",
+      "provider": "ollama",
+      "model": "codellama:7b",
+      "baseUrl": "http://localhost:11434"
+    },
+    {
+      "title": "LLaVA (7B)",
+      "provider": "ollama",
+      "model": "llava:latest",
+      "baseUrl": "http://localhost:11434"
+    },
+    {
+      "title": "Llama 2 (70B)",
+      "provider": "ollama",
+      "model": "llama2:70b",
+      "baseUrl": "http://localhost:11434"
+    },
+    {
+      "title": "GPT-OSS (20.9B)",
+      "provider": "ollama",
+      "model": "gpt-oss:latest",
+      "baseUrl": "http://localhost:11434"
+    },
+    {
+      "title": "GPT-OSS (120B)",
+      "provider": "ollama",
+      "model": "gpt-oss:120b-cloud",
+      "baseUrl": "http://localhost:11434"
+    },
+    {
+      "title": "GPT-OSS (20B)",
+      "provider": "ollama",
+      "model": "gpt-oss:20b-cloud",
+      "baseUrl": "http://localhost:11434"
+    },
+    {
+      "title": "Qwen3 Coder (480B)",
+      "provider": "ollama",
+      "model": "qwen3-coder:480b-cloud",
+      "baseUrl": "http://localhost:11434"
+    },
+    {
+      "title": "Amazon Q Expert",
+      "provider": "ollama",
+      "model": "amazonq-expert:latest",
+      "baseUrl": "http://localhost:11434"
+    },
+    {
+      "title": "Your Custom Model (7.6B)",
+      "provider": "ollama",
+      "model": "your-custom-model:latest",
+      "baseUrl": "http://localhost:11434"
+    },
+    {
+      "title": "BigDaddyG (local)",
+      "provider": "openai",
+      // TODO: Replace "sk-local-bigdaddyg" with your valid API key for production use.
+      "apiKey": "sk-local-bigdaddyg",
+      "apiBase": "http://localhost:11441/v1",
+      "model": "bigdaddyg-assembly"
+    }
+  ],
+  // If set to true, anonymous usage data will be sent to help improve the product; set to false to disable telemetry.
+  "allowAnonymousTelemetry": true
+}

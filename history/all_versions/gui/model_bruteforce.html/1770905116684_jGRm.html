@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RawrXD — Model Brute-Force Scanner</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card: #161b22;
+      --border: #30363d;
+      --text: #c9d1d9;
+      --green: #3fb950;
+      --red: #f85149;
+      --yellow: #d29922;
+      --blue: #58a6ff;
+      --accent: #bc8cff;
+      --orange: #f0883e;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Cascadia Code', 'JetBrains Mono', monospace;
+      padding: 20px;
+    }
+
+    h1 {
+      color: var(--accent);
+      text-align: center;
+      margin-bottom: 8px;
+      font-size: 1.6em;
+    }
+
+    h1 span {
+      color: var(--yellow);
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #8b949e;
+      margin-bottom: 20px;
+      font-size: 0.85em;
+    }
+
+    /* Controls */
+    .controls {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.85em;
+      font-weight: bold;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #000;
+    }
+
+    .btn-primary:hover {
+      opacity: 0.85;
+    }
+
+    .btn-danger {
+      background: var(--red);
+      color: #fff;
+    }
+
+    .btn-danger:hover {
+      opacity: 0.85;
+    }
+
+    .btn-secondary {
+      background: var(--card);
+      color: var(--text);
+    }
+
+    .btn-secondary:hover {
+      background: #21262d;
+    }
+
+    .btn-hotpatch {
+      background: var(--orange);
+      color: #000;
+    }
+
+    .btn-hotpatch:hover {
+      opacity: 0.85;
+    }
+
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* Stats */
+    .stats {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 28px;
+      text-align: center;
+      min-width: 120px;
+    }
+
+    .stat .num {
+      font-size: 2.2em;
+      font-weight: bold;
+    }
+
+    .stat .label {
+      font-size: 0.75em;
+      opacity: 0.6;
+      margin-top: 4px;
+    }
+
+    .stat.total .num {
+      color: var(--blue);
+    }
+
+    .stat.ok .num {
+      color: var(--green);
+    }
+
+    .stat.fail .num {
+      color: var(--red);
+    }
+
+    .stat.hp .num {
+      color: var(--orange);
+    }
+
+    /* Progress */
+    .progress-bar {
+      display: none;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .progress-bar.active {
+      display: block;
+    }
+
+    .progress-track {
+      height: 8px;
+      background: var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 4px;
+      transition: width 0.3s;
+      width: 0%;
+    }
+
+    .progress-text {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      font-size: 0.8em;
+    }
+
+    /* Table */
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--card);
+    }
+
+    th {
+      background: #21262d;
+      color: var(--accent);
+      padding: 10px 8px;
+      text-align: left;
+      font-size: 0.8em;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    th:hover {
+      background: #2d333b;
+    }
+
+    td {
+      padding: 8px;
+      border-top: 1px solid var(--border);
+      font-size: 0.8em;
+      white-space: nowrap;
+    }
+
+    tr:hover {
+      background: #1c2128;
+    }
+
+    .compat {
+      text-align: center;
+      font-size: 1.1em;
+    }
+
+    .yes {
+      color: var(--green);
+    }
+
+    .no {
+      color: var(--red);
+    }
+
+    .size {
+      color: var(--yellow);
+    }
+
+    .arch {
+      color: var(--blue);
+    }
+
+    .quant {
+      color: var(--accent);
+    }
+
+    .path-cell {
+      max-width: 300px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .probe-out {
+      max-width: 160px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      opacity: 0.7;
+    }
+
+    /* Hotpatch buttons */
+    .hp-btn {
+      background: var(--orange);
+      color: #000;
+      border: none;
+      padding: 4px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.75em;
+      font-weight: bold;
+      font-family: inherit;
+    }
+
+    .hp-btn:hover {
+      opacity: 0.8;
+    }
+
+    .hp-btn.patched {
+      background: var(--green);
+    }
+
+    .hp-btn.failed {
+      background: var(--red);
+      color: #fff;
+    }
+
+    /* Filters */
+    .filters {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .filter-input {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 0.8em;
+    }
+
+    .filter-input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    select.filter-input {
+      cursor: pointer;
+    }
+
+    /* Log */
+    .log-panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 20px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-size: 0.75em;
+    }
+
+    .log-panel .log-entry {
+      padding: 2px 0;
+      opacity: 0.8;
+    }
+
+    .log-panel .log-entry.error {
+      color: var(--red);
+    }
+
+    .log-panel .log-entry.success {
+      color: var(--green);
+    }
+
+    .log-panel .log-entry.info {
+      color: var(--blue);
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>⚡ RawrXD <span>Model Brute-Force Scanner</span></h1>
+  <p class="subtitle">Three-Layer Hotpatch Integration · CLI / GUI / HTML Compatibility Matrix</p>
+
+  <!-- Controls -->
+  <div class="controls">
+    <button class="btn btn-primary" onclick="startScan()" id="btnScan">🔍 Brute-Force Scan All</button>
+    <button class="btn btn-danger" onclick="cancelScan()" id="btnCancel" disabled>⏹ Cancel</button>
+    <button class="btn btn-secondary" onclick="refreshResults()" id="btnRefresh">🔄 Refresh</button>
+    <button class="btn btn-secondary" onclick="exportJSON()">📋 Export JSON</button>
+    <button class="btn btn-secondary" onclick="exportHTML()">📄 Export HTML</button>
+    <button class="btn btn-hotpatch" onclick="toggleHotpatch()" id="btnHotpatch">⚡ Enable Auto-Route</button>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters">
+    <input class="filter-input" type="text" id="filterName" placeholder="Filter by name..." oninput="applyFilters()">
+    <select class="filter-input" id="filterArch" onchange="applyFilters()">
+      <option value="">All Architectures</option>
+    </select>
+    <select class="filter-input" id="filterQuant" onchange="applyFilters()">
+      <option value="">All Quantizations</option>
+    </select>
+    <select class="filter-input" id="filterCompat" onchange="applyFilters()">
+      <option value="">All Compatibility</option>
+      <option value="compatible">Compatible Only</option>
+      <option value="failed">Failed Only</option>
+    </select>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat total">
+      <div class="num" id="statTotal">0</div>
+      <div class="label">Models Found</div>
+    </div>
+    <div class="stat ok">
+      <div class="num" id="statCompat">0</div>
+      <div class="label">Compatible</div>
+    </div>
+    <div class="stat fail">
+      <div class="num" id="statFailed">0</div>
+      <div class="label">Failed</div>
+    </div>
+    <div class="stat hp">
+      <div class="num" id="statHotpatched">0</div>
+      <div class="label">Hotpatched</div>
+    </div>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-bar" id="progressBar">
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+    <div class="progress-text">
+      <span id="progressMsg">Initializing...</span>
+      <span id="progressPct">0%</span>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap">
+    <table id="modelTable">
+      <thead>
+        <tr>
+          <th onclick="sortTable(0)">#</th>
+          <th onclick="sortTable(1)">Model</th>
+          <th onclick="sortTable(2)">Arch</th>
+          <th onclick="sortTable(3)">Quant</th>
+          <th onclick="sortTable(4)">Size</th>
+          <th onclick="sortTable(5)">Ctx</th>
+          <th onclick="sortTable(6)">Layers</th>
+          <th onclick="sortTable(7)">RAM Est.</th>
+          <th onclick="sortTable(8)">CLI</th>
+          <th onclick="sortTable(9)">GUI</th>
+          <th onclick="sortTable(10)">HTML</th>
+          <th onclick="sortTable(11)">Tok/s</th>
+          <th>Hotpatch</th>
+          <th>Source</th>
+        </tr>
+      </thead>
+      <tbody id="modelBody"></tbody>
+    </table>
+  </div>
+
+  <!-- Log Panel -->
+  <div class="log-panel" id="logPanel">
+    <div class="log-entry info">Model Brute-Force Scanner initialized. Click "Brute-Force Scan All" to begin.</div>
+  </div>
+
+  <script>
+    const API_BASE = window.location.origin;
+    let allModels = [];
+    let hotpatchEnabled = false;
+    let hotpatchedModels = new Set();
+    let pollInterval = null;
+    let sortCol = -1;
+    let sortAsc = true;
+
+    function log(msg, type = 'info') {
+      const panel = document.getElementById('logPanel');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry ' + type;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      panel.prepend(entry);
+      // Keep max 100 entries
+      while (panel.children.length > 100) panel.removeChild(panel.lastChild);
+    }
+
+    async function startScan() {
+      document.getElementById('btnScan').disabled = true;
+      document.getElementById('btnCancel').disabled = false;
+      document.getElementById('progressBar').classList.add('active');
+      log('Starting brute-force scan...', 'info');
+
+      try {
+        const res = await fetch(`${API_BASE}/api/models/bruteforce/scan`, { method: 'POST' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        // Start progress polling
+        pollInterval = setInterval(pollProgress, 2000);
+      } catch (e) {
+        log('Scan failed: ' + e.message, 'error');
+        document.getElementById('btnScan').disabled = false;
+        document.getElementById('btnCancel').disabled = true;
+      }
+    }
+
+    async function pollProgress() {
+      try {
+        const res = await fetch(`${API_BASE}/api/models/bruteforce/progress`);
+        const data = await res.json();
+
+        document.getElementById('progressFill').style.width = data.percent_complete + '%';
+        document.getElementById('progressPct').textContent = Math.round(data.percent_complete) + '%';
+        document.getElementById('progressMsg').textContent = data.status_message || 'Scanning...';
+
+        if (data.is_complete) {
+          clearInterval(pollInterval);
+          pollInterval = null;
+          document.getElementById('btnScan').disabled = false;
+          document.getElementById('btnCancel').disabled = true;
+          document.getElementById('progressBar').classList.remove('active');
+          log(`Scan complete: ${data.models_found} models found, ${data.models_compatible} compatible`, 'success');
+          await refreshResults();
+        }
+      } catch (e) {
+        // silent retry
+      }
+    }
+
+    async function cancelScan() {
+      try {
+        await fetch(`${API_BASE}/api/models/bruteforce/cancel`, { method: 'POST' });
+        log('Cancel requested', 'info');
+        if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+        document.getElementById('btnScan').disabled = false;
+        document.getElementById('btnCancel').disabled = true;
+        document.getElementById('progressBar').classList.remove('active');
+      } catch (e) { log('Cancel failed: ' + e.message, 'error'); }
+    }
+
+    async function refreshResults() {
+      try {
+        const res = await fetch(`${API_BASE}/api/models/bruteforce/results`);
+        const data = await res.json();
+        allModels = data.models || [];
+        updateStats(data);
+        populateFilters();
+        renderTable(allModels);
+        log(`Loaded ${allModels.length} model results`, 'info');
+      } catch (e) {
+        log('Failed to load results: ' + e.message, 'error');
+      }
+    }
+
+    function updateStats(data) {
+      document.getElementById('statTotal').textContent = data.total || allModels.length;
+      document.getElementById('statCompat').textContent = data.compatible || 0;
+      document.getElementById('statFailed').textContent = data.failed || 0;
+      document.getElementById('statHotpatched').textContent = hotpatchedModels.size;
+    }
+
+    function populateFilters() {
+      const archs = new Set(), quants = new Set();
+      allModels.forEach(m => {
+        if (m.architecture) archs.add(m.architecture);
+        if (m.quantization) quants.add(m.quantization);
+      });
+
+      const archSel = document.getElementById('filterArch');
+      const curArch = archSel.value;
+      archSel.innerHTML = '<option value="">All Architectures</option>';
+      [...archs].sort().forEach(a => {
+        archSel.innerHTML += `<option value="${a}" ${a === curArch ? 'selected' : ''}>${a}</option>`;
+      });
+
+      const quantSel = document.getElementById('filterQuant');
+      const curQuant = quantSel.value;
+      quantSel.innerHTML = '<option value="">All Quantizations</option>';
+      [...quants].sort().forEach(q => {
+        quantSel.innerHTML += `<option value="${q}" ${q === curQuant ? 'selected' : ''}>${q}</option>`;
+      });
+    }
+
+    function applyFilters() {
+      const name = document.getElementById('filterName').value.toLowerCase();
+      const arch = document.getElementById('filterArch').value;
+      const quant = document.getElementById('filterQuant').value;
+      const compat = document.getElementById('filterCompat').value;
+
+      const filtered = allModels.filter(m => {
+        if (name && !(m.filename || '').toLowerCase().includes(name)) return false;
+        if (arch && m.architecture !== arch) return false;
+        if (quant && m.quantization !== quant) return false;
+        if (compat === 'compatible' && !(m.cli_compatible || m.gui_compatible || m.html_compatible)) return false;
+        if (compat === 'failed' && (m.cli_compatible || m.gui_compatible || m.html_compatible)) return false;
+        return true;
+      });
+      renderTable(filtered);
+    }
+
+    function renderTable(models) {
+      const body = document.getElementById('modelBody');
+      body.innerHTML = '';
+
+      models.forEach((m, i) => {
+        const sizeGB = (m.size_bytes / (1024 * 1024 * 1024)).toFixed(1);
+        const ctxK = Math.round((m.context_length || 0) / 1024);
+        const isPatched = hotpatchedModels.has(m.path);
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${i + 1}</td>
+            <td class="path-cell" title="${m.path}">${m.filename}</td>
+            <td class="arch">${m.architecture || '?'}</td>
+            <td class="quant">${m.quantization || '?'}</td>
+            <td class="size">${sizeGB}GB</td>
+            <td>${ctxK}K</td>
+            <td>${m.layer_count || '?'}</td>
+            <td>${(m.estimated_ram_gb || 0).toFixed(1)}GB</td>
+            <td class="compat">${m.cli_compatible ? '<span class="yes">✓</span>' : '<span class="no">✗</span>'}</td>
+            <td class="compat">${m.gui_compatible ? '<span class="yes">✓</span>' : '<span class="no">✗</span>'}</td>
+            <td class="compat">${m.html_compatible ? '<span class="yes">✓</span>' : '<span class="no">✗</span>'}</td>
+            <td>${(m.tokens_per_sec || 0).toFixed(1)}</td>
+            <td><button class="hp-btn ${isPatched ? 'patched' : ''}" onclick="hotpatchModel('${escapeAttr(m.path)}', this)">${isPatched ? '✓ Patched' : '⚡ Patch'}</button></td>
+            <td>${m.source || 'local'}</td>
+        `;
+        body.appendChild(row);
+      });
+    }
+
+    function escapeAttr(s) { return (s || '').replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
+
+    async function hotpatchModel(path, btn) {
+      btn.textContent = '⏳...';
+      btn.disabled = true;
+      try {
+        const res = await fetch(`${API_BASE}/api/models/bruteforce/hotpatch`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model_path: path })
+        });
+        const data = await res.json();
+        if (data.success) {
+          btn.textContent = '✓ Patched';
+          btn.className = 'hp-btn patched';
+          hotpatchedModels.add(path);
+          log(`Hotpatched: ${path}`, 'success');
+        } else {
+          btn.textContent = '✗ Failed';
+          btn.className = 'hp-btn failed';
+          log(`Hotpatch failed: ${data.error || 'unknown'}`, 'error');
+        }
+      } catch (e) {
+        btn.textContent = '✗ Error';
+        btn.className = 'hp-btn failed';
+        log('Hotpatch error: ' + e.message, 'error');
+      }
+      btn.disabled = false;
+      document.getElementById('statHotpatched').textContent = hotpatchedModels.size;
+    }
+
+    async function toggleHotpatch() {
+      const btn = document.getElementById('btnHotpatch');
+      if (!hotpatchEnabled) {
+        try {
+          const res = await fetch(`${API_BASE}/api/models/bruteforce/hotpatch/enable`, { method: 'POST' });
+          const data = await res.json();
+          if (data.success) {
+            hotpatchEnabled = true;
+            btn.textContent = '⚡ Disable Auto-Route';
+            btn.className = 'btn btn-danger';
+            log('Auto-route hotpatch ENABLED — best model auto-selected on inference', 'success');
+          } else {
+            log('Failed to enable auto-route: ' + (data.error || ''), 'error');
+          }
+        } catch (e) { log('Error: ' + e.message, 'error'); }
+      } else {
+        try {
+          const res = await fetch(`${API_BASE}/api/models/bruteforce/hotpatch/disable`, { method: 'POST' });
+          hotpatchEnabled = false;
+          btn.textContent = '⚡ Enable Auto-Route';
+          btn.className = 'btn btn-hotpatch';
+          log('Auto-route hotpatch DISABLED', 'info');
+        } catch (e) { log('Error: ' + e.message, 'error'); }
+      }
+    }
+
+    async function exportJSON() {
+      try {
+        const res = await fetch(`${API_BASE}/api/models/bruteforce/export/json`, { method: 'POST' });
+        const data = await res.json();
+        log(`JSON exported: ${data.path || 'model_bruteforce_results.json'}`, 'success');
+      } catch (e) { log('Export failed: ' + e.message, 'error'); }
+    }
+
+    async function exportHTML() {
+      try {
+        const res = await fetch(`${API_BASE}/api/models/bruteforce/export/html`, { method: 'POST' });
+        const data = await res.json();
+        log(`HTML exported: ${data.path || 'model_bruteforce_results.html'}`, 'success');
+      } catch (e) { log('Export failed: ' + e.message, 'error'); }
+    }
+
+    function sortTable(col) {
+      if (sortCol === col) sortAsc = !sortAsc;
+      else { sortCol = col; sortAsc = true; }
+
+      const keys = ['index', 'filename', 'architecture', 'quantization', 'size_bytes',
+        'context_length', 'layer_count', 'estimated_ram_gb',
+        'cli_compatible', 'gui_compatible', 'html_compatible', 'tokens_per_sec'];
+      const key = keys[col] || 'filename';
+
+      allModels.sort((a, b) => {
+        let va = a[key], vb = b[key];
+        if (typeof va === 'string') { va = va.toLowerCase(); vb = (vb || '').toLowerCase(); }
+        if (va < vb) return sortAsc ? -1 : 1;
+        if (va > vb) return sortAsc ? 1 : -1;
+        return 0;
+      });
+      applyFilters();
+    }
+
+    // Initial load
+    refreshResults();
+  </script>
+</body>
+
+</html>

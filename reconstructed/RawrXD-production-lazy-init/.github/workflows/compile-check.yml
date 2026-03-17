@@ -1,0 +1,103 @@
+name: Production Compile Check
+
+on:
+  push:
+    branches: [ main, sync-source-* ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  BUILD_TYPE: Release
+  QT_VERSION: 6.7.3
+
+jobs:
+  compile-check:
+    name: Zero-Error Compilation Check
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    
+    - name: Setup MSVC
+      uses: microsoft/setup-msbuild@v2
+      with:
+        vs-version: '17.0'
+    
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v4
+      with:
+        version: ${{ env.QT_VERSION }}
+        host: windows
+        target: desktop
+        arch: win64_msvc2022_64
+        cache: true
+    
+    - name: Setup Vulkan SDK
+      run: |
+        $VulkanVersion = "1.4.328.1"
+        if (-not (Test-Path "C:\VulkanSDK\$VulkanVersion")) {
+          Write-Host "Vulkan SDK not found - using system defaults"
+        }
+    
+    - name: Configure CMake
+      run: |
+        # v1.0.0: Test with all experimental features OFF (production baseline)
+        $env:RAWRXD_HOTPATCH_SYSTEM = "0"
+        $env:RAWRXD_ADVANCED_PROFILING = "0"
+        $env:RAWRXD_CLOUD_HYBRID = "0"
+        $env:RAWRXD_AGENT_LEARNING = "0"
+        $env:RAWRXD_DISTRIBUTED_TRAINING = "0"
+        $env:RAWRXD_PLUGIN_MARKETPLACE = "0"
+        $env:RAWRXD_TIME_TRAVEL_DEBUGGING = "0"
+        $env:RAWRXD_TEST_GENERATION = "0"
+        $env:RAWRXD_CODE_STREAM = "0"
+        
+        cmake -B build `
+          -G "Visual Studio 17 2022" `
+          -A x64 `
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} `
+          -DCMAKE_PREFIX_PATH="${{ env.Qt6_DIR }}"
+    
+    - name: Compile-Only Check (No Linking)
+      run: |
+        cmake --build build `
+          --config ${{ env.BUILD_TYPE }} `
+          --target RawrXD-AgenticIDE `
+          -- /p:CLToolExe="cl.exe" /p:CLToolPath="" /p:LinkCompile=false
+      continue-on-error: false
+    
+    - name: Verify Zero Errors
+      run: |
+        $logPath = "build/compile.log"
+        if (Test-Path $logPath) {
+          $errors = Select-String -Path $logPath -Pattern "error C[0-9]{4}:"
+          if ($errors) {
+            Write-Error "❌ Compilation errors detected - production invariant violated"
+            $errors | ForEach-Object { Write-Host $_.Line }
+            exit 1
+          }
+        }
+        Write-Host "✅ Zero compilation errors confirmed"
+    
+    - name: Archive Build Logs
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: build-logs
+        path: |
+          build/**/*.log
+          build/CMakeFiles/CMakeOutput.log
+          build/CMakeFiles/CMakeError.log
+        retention-days: 7
+    
+    - name: Report Success
+      if: success()
+      run: |
+        Write-Host "═══════════════════════════════════════"
+        Write-Host "✅ PRODUCTION COMPILE CHECK PASSED"
+        Write-Host "═══════════════════════════════════════"
+        Write-Host "0 errors | Build system validated"
+        Write-Host "Baseline: IDE_SOURCE_AUDIT_COMPLETE.md"

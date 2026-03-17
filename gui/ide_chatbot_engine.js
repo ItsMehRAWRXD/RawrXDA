@@ -31,7 +31,7 @@ var State = {
     fileProtocol: _isFileProtocol,               // true when opened via file:///
     hasCliEndpoint: false,    // Beacon: true if backend has /api/cli (Win32IDE or tool_server)
   },
-  model: { current: null, list: [] },
+  model: { current: null, list: [], local: [] },
   gen: {
     context: 8192, maxTokens: 512, temperature: 0.7, stream: true,
     top_p: 0.9, top_k: 40,
@@ -3286,6 +3286,7 @@ function populateModelSelect(models) {
 
   var labels = {
     gguf: '\uD83D\uDCE6 Local GGUF',
+    'gguf-local': '\uD83D\uDCE6 Local Folder',
     ollama: '\uD83E\uDD99 Ollama',
     blob: '\uD83D\uDCBE Blobs',
     cloud: '\u2601\uFE0F Cloud',
@@ -3307,7 +3308,120 @@ function populateModelSelect(models) {
 
 function populateModelsFallback() {
   var sel = document.getElementById('modelSelect');
-  sel.innerHTML = '<option value="">Backend offline</option>';
+  sel.innerHTML = '<option value=\"\">Backend offline — use Browse Local</option>';
+}
+
+// Local model discovery (file:// or offline mode)
+function isLocalModelFile(name) {
+  var lower = (name || '').toLowerCase();
+  return lower.endsWith('.gguf') || lower.endsWith('.bin');
+}
+
+function normalizeLocalModelName(name) {
+  return (name || '')
+    .replace(/\\.gguf.*$/i, '')
+    .replace(/\\.bin$/i, '')
+    .trim();
+}
+
+function inferLocalFolderLabel(fileList) {
+  if (!fileList || fileList.length === 0) return 'Local Folder';
+  var first = fileList[0];
+  if (first.webkitRelativePath) {
+    var parts = first.webkitRelativePath.split(/[\\\\/]/);
+    parts.pop(); // remove filename
+    return parts.join('/') || 'Local Folder';
+  }
+  return first.name || 'Local Folder';
+}
+
+function applyLocalModels(models, label) {
+  label = label || 'Local Folder';
+  State.model.local = models;
+  var merged = (models || []).concat(State.model.list || []);
+  var seen = {};
+  var dedup = [];
+  merged.forEach(function (m) {
+    if (!m || !m.name) return;
+    if (seen[m.name]) return;
+    seen[m.name] = true;
+    dedup.push(m);
+  });
+  State.model.list = dedup;
+  populateModelSelect(dedup);
+  addMessage('system', '\u2705 Loaded ' + models.length + ' local models from ' + label + '.');
+  logDebug('Local models: ' + models.length + ' (' + label + ')', 'info');
+}
+
+async function browseLocalModels() {
+  // Prefer native directory picker when available (Chrome 86+)
+  if (window.showDirectoryPicker) {
+    try {
+      var dir = await window.showDirectoryPicker({ mode: 'read' });
+      var models = await scanDirectoryForModels(dir);
+      applyLocalModels(models, dir && dir.name ? dir.name : 'Local Folder');
+      return;
+    } catch (e) {
+      if (e && e.name === 'AbortError') return; // user cancelled
+      logDebug('Directory picker failed (' + (e && e.message ? e.message : e) + '), falling back to file chooser.', 'warn');
+    }
+  }
+
+  // Fallback: <input type="file" webkitdirectory>
+  var input = document.getElementById('localModelDirInput');
+  if (input) {
+    input.value = '';
+    input.click();
+  } else {
+    addMessage('system', 'Directory picker not available in this browser.');
+  }
+}
+
+async function scanDirectoryForModels(dirHandle) {
+  var models = [];
+  if (!dirHandle || !dirHandle.values) return models;
+  try {
+    for await (const entry of dirHandle.values()) {
+      if (entry.kind === 'file') {
+        try {
+          var f = await entry.getFile();
+          if (isLocalModelFile(f.name)) {
+            models.push({
+              name: normalizeLocalModelName(f.name),
+              type: 'gguf-local',
+              size: formatBytes(f.size || 0),
+              path: (dirHandle.name ? dirHandle.name + '/' : '') + entry.name,
+              _local: true,
+            });
+          }
+        } catch (eFile) {
+          logDebug('Skip file read: ' + eFile.message, 'warn');
+        }
+      }
+    }
+  } catch (e) {
+    logDebug('scanDirectoryForModels failed: ' + (e && e.message ? e.message : e), 'warn');
+  }
+  return models;
+}
+
+function handleLocalModelFiles(fileList) {
+  var files = Array.from(fileList || []).filter(function (f) { return isLocalModelFile(f.name); });
+  if (files.length === 0) {
+    addMessage('system', 'No GGUF/BIN models found in the selected folder.');
+    return;
+  }
+  var label = inferLocalFolderLabel(files);
+  var models = files.map(function (f) {
+    return {
+      name: normalizeLocalModelName(f.name),
+      type: 'gguf-local',
+      size: formatBytes(f.size || 0),
+      path: f.webkitRelativePath || f.name,
+      _local: true,
+    };
+  });
+  applyLocalModels(models, label);
 }
 
 async function refreshModels() {

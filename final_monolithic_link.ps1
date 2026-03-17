@@ -17,13 +17,46 @@ Write-Host "============================================================" -Fore 
 
 if(!(Test-Path $OutDir)) { New-Item -ItemType Directory -Path $OutDir -Force | Out-Null }
 
-# Use proven linker discovery
-$LinkerPaths = @(
-    "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\link.exe",
-    "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\link.exe",
-    "C:\Program Files\Microsoft Visual Studio\2022\Professional\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\link.exe"
-)
-$Linker = $LinkerPaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+# Use proven linker discovery — auto-detect via vswhere
+$Linker = $null
+$_msvcRoot = $null
+$vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+if (Test-Path $vswhere) {
+    $vsPath = & $vswhere -latest -products * `
+        -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+        -property installationPath 2>$null
+    if ($vsPath -and (Test-Path "$vsPath\VC\Tools\MSVC")) {
+        $ver = Get-ChildItem -Directory "$vsPath\VC\Tools\MSVC" |
+               Sort-Object Name -Descending | Select-Object -First 1
+        if ($ver) {
+            $_msvcRoot = $ver.FullName
+            $candidate = Join-Path $ver.FullName "bin\Hostx64\x64\link.exe"
+            if (Test-Path $candidate) { $Linker = $candidate }
+        }
+    }
+}
+if (!$Linker) {
+    foreach ($base in @("C:\VS2022Enterprise\VC\Tools\MSVC",
+                        "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC",
+                        "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC",
+                        "C:\Program Files\Microsoft Visual Studio\2022\Professional\VC\Tools\MSVC")) {
+        if (Test-Path $base) {
+            $ver = Get-ChildItem -Directory $base | Sort-Object Name -Descending | Select-Object -First 1
+            if ($ver) {
+                $_msvcRoot = $ver.FullName
+                $candidate = Join-Path $ver.FullName "bin\Hostx64\x64\link.exe"
+                if (Test-Path $candidate) { $Linker = $candidate; break }
+            }
+        }
+    }
+}
+if (!$Linker) { throw "MSVC Linker not found." }
+
+# Auto-detect Windows SDK
+$_sdkBase = "C:\Program Files (x86)\Windows Kits\10"
+$_sdkVer  = (Get-ChildItem -Directory "$_sdkBase\Include" |
+             Where-Object { Test-Path "$($_.FullName)\um\windows.h" } |
+             Sort-Object Name -Descending | Select-Object -First 1).Name
 
 Write-Host "[INFO] Using MSVC Linker: $Linker" -Fore Green
 
@@ -98,9 +131,9 @@ $linkArgs = @(
     # Ignore non-critical warnings only
     "/IGNORE:4099",  # PDB not found
     "/IGNORE:4098",  # Conflicting default libraries
-    "/LIBPATH:`"C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\um\x64`"",
-    "/LIBPATH:`"C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\ucrt\x64`"",
-    "/LIBPATH:`"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\lib\x64`"",
+    "/LIBPATH:`"$_sdkBase\Lib\$_sdkVer\um\x64`"",
+    "/LIBPATH:`"$_sdkBase\Lib\$_sdkVer\ucrt\x64`"",
+    "/LIBPATH:`"$_msvcRoot\lib\x64`"",
     "@`"$responseFile`""
 )
 

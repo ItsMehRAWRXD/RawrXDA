@@ -1,0 +1,290 @@
+
+    // Window dimensions
+    int m_editorHeight;
+    int m_terminalHeight;
+    int m_minimapX;
+    RECT m_editorRect;
+    bool m_gpuTextEnabled;
+    bool m_editorHooksInstalled;
+
+    // Splitter bar for terminal/output resize
+    HWND m_hwndSplitter;
+    bool m_splitterDragging;
+    int m_splitterY;
+    std::unique_ptr<RawrXD::IRenderer> m_renderer;
+    bool m_rendererReady;
+
+    // Search and Replace state
+    std::string m_lastSearchText;
+    std::string m_lastReplaceText;
+    bool m_searchCaseSensitive;
+    bool m_searchWholeWord;
+    bool m_searchUseRegex;
+    int m_lastFoundPos;
+    HWND m_hwndFindDialog;
+    HWND m_hwndReplaceDialog;
+
+    // Primary Sidebar state
+    HWND m_hwndActivityBar;
+    HWND m_hwndSidebar;
+    HWND m_hwndSidebarContent;
+    bool m_sidebarVisible;
+    int m_sidebarWidth;
+    SidebarView m_currentSidebarView;
+
+    // Explorer View
+    HWND m_hwndExplorerTree;
+    HWND m_hwndExplorerToolbar;
+    HIMAGELIST m_hImageListExplorer;
+    std::string m_explorerRootPath;
+
+    // Search View
+    HWND m_hwndSearchInput;
+    HWND m_hwndSearchResults;
+    HWND m_hwndSearchOptions;
+    HWND m_hwndIncludePattern;
+    HWND m_hwndExcludePattern;
+    std::vector<std::string> m_searchResults;
+    bool m_searchInProgress;
+
+    // Source Control View (extends existing Git)
+    HWND m_hwndSCMFileList;
+    HWND m_hwndSCMToolbar;
+    HWND m_hwndSCMMessageBox;
+
+    // Run and Debug View
+    HWND m_hwndDebugConfigs;
+    HWND m_hwndDebugToolbar;
+    HWND m_hwndDebugVariables;
+    HWND m_hwndDebugCallStack;
+    HWND m_hwndDebugConsole;
+    bool m_debuggingActive;
+
+    // Full Debugger UI HWNDs
+    HWND m_hwndDebuggerContainer = nullptr;
+    HWND m_hwndDebuggerToolbar = nullptr;
+    HWND m_hwndDebuggerStatus = nullptr;
+    HWND m_hwndDebuggerTabs = nullptr;
+    HWND m_hwndDebuggerBreakpoints = nullptr;
+    HWND m_hwndDebuggerWatch = nullptr;
+    HWND m_hwndDebuggerVariables = nullptr;
+    HWND m_hwndDebuggerStackTrace = nullptr;
+    HWND m_hwndDebuggerMemory = nullptr;
+
+    // Debugger State
+    bool m_debuggerEnabled = false;
+    bool m_debuggerAttached = false;
+    bool m_debuggerPaused = false;
+    size_t m_debuggerMaxMemory = 0;
+    std::string m_debuggerCurrentFile;
+    int m_debuggerCurrentLine = -1;
+
+    // Debugger Collections
+    std::vector<Breakpoint> m_breakpoints;
+    std::vector<StackFrame> m_callStack;
+    std::vector<Variable> m_localVariables;
+    std::vector<WatchItem> m_watchList;
+
+    // Extensions View
+    HWND m_hwndExtensionsList;
+    HWND m_hwndExtensionSearch;
+    HWND m_hwndExtensionDetails;
+    struct Extension {
+        std::string id;
+        std::string name;
+        std::string version;
+        std::string description;
+        std::string author;
+        bool installed;
+        bool enabled;
+    };
+    std::vector<Extension> m_extensions;
+
+    // Outline View (code structure)
+    HWND m_hwndOutlineTree;
+    struct OutlineItem {
+        std::string name;
+        std::string type;  // function, class, variable, etc.
+        int line;
+        int column;
+        std::vector<OutlineItem> children;
+    };
+    std::vector<OutlineItem> m_outlineItems;
+    void createOutlineView(HWND hwndParent);
+    void updateOutlineView();
+    void parseCodeForOutline();
+    void goToOutlineItem(int index);
+
+    // Timeline View (file history)
+    HWND m_hwndTimelineList;
+    struct TimelineEntry {
+        std::string message;
+        std::string author;
+        std::string date;
+        std::string commitHash;
+        bool isGitCommit;
+    };
+    std::vector<TimelineEntry> m_timelineEntries;
+    void createTimelineView(HWND hwndParent);
+    void updateTimelineView();
+    void loadGitHistory();
+    void goToTimelineEntry(int index);
+
+    // =========================================================================
+    // VS Code-like UI Components
+    // =========================================================================
+
+    // Activity Bar (Far Left) - vertical icon bar for switching sidebar views
+    static const int ACTIVITY_BAR_WIDTH = 48;
+    HWND m_activityBarButtons[7];  // Explorer, Search, SCM, Debug, Extensions, Settings, Accounts
+    int m_activeActivityBarButton;
+    HBRUSH m_actBarBackgroundBrush;
+    HBRUSH m_actBarHoverBrush;
+    HBRUSH m_actBarActiveBrush;
+    static LRESULT CALLBACK ActivityBarButtonProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+
+    // Secondary Sidebar (Right) - AI Chat / Copilot area
+    HWND m_hwndSecondarySidebar;
+    HWND m_hwndSecondarySidebarHeader;
+    HWND m_hwndCopilotChatInput;
+    HWND m_hwndCopilotChatOutput;
+    HWND m_hwndCopilotSendBtn;
+    HWND m_hwndCopilotClearBtn;
+    HWND m_hwndModelSelector;
+    HWND m_hwndMaxTokensSlider;
+    HWND m_hwndMaxTokensLabel;
+
+    // AI Mode Toggles
+    HWND m_hwndChkMaxMode;
+    HWND m_hwndChkDeepThink;
+    HWND m_hwndChkDeepResearch;
+    HWND m_hwndChkNoRefusal;
+
+    // New Context Slider
+    HWND m_hwndContextSlider;
+    HWND m_hwndContextLabel;
+    size_t m_currentContextSize;
+    void onContextSizeChanged(int newValue);
+
+    bool m_secondarySidebarVisible;
+    int m_secondarySidebarWidth;
+    int m_currentMaxTokens;
+    std::vector<std::string> m_availableModels;
+    std::vector<std::pair<std::string, std::string>> m_chatHistory; // role, message
+    static LRESULT CALLBACK SecondarySidebarProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+
+    // Panel (Bottom) - Terminal, Output, Problems, Debug Console
+    enum class PanelTab {
+        Terminal = 0,
+        Output = 1,
+        Problems = 2,
+        DebugConsole = 3
+    };
+    HWND m_hwndPanelContainer;
+    HWND m_hwndPanelTabs;
+    HWND m_hwndPanelToolbar;
+    HWND m_hwndPanelNewTerminalBtn;
+    HWND m_hwndPanelSplitTerminalBtn;
+    HWND m_hwndPanelKillTerminalBtn;
+    HWND m_hwndPanelMaximizeBtn;
+    HWND m_hwndPanelCloseBtn;
+    HWND m_hwndProblemsListView;
+    PanelTab m_activePanelTab;
+    bool m_panelVisible;
+    bool m_panelMaximized;
+    int m_panelHeight;
+
+    // Problems tracking
+    struct ProblemItem {
+        std::string file;
+        int line;
+        int column;
+        std::string message;
+        int severity;  // 0=Error, 1=Warning, 2=Info
+    };
+    std::vector<ProblemItem> m_problems;
+    int m_errorCount;
+    int m_warningCount;
+
+    // Enhanced Status Bar items
+    struct StatusBarInfo {
+        std::string remoteName;       // e.g., "WSL: Ubuntu" or empty
+        std::string branchName;       // e.g., "main"
+        int syncAhead;                // commits ahead
+        int syncBehind;               // commits behind
+        int errors;
+        int warnings;
+        int line;
+        int column;
+        int spacesOrTabWidth;
+        bool useSpaces;
+        std::string encoding;         // e.g., "UTF-8"
+        std::string eolSequence;      // e.g., "LF" or "CRLF"
+        std::string languageMode;     // e.g., "C++", "Python"
+        bool copilotActive;
+        int copilotSuggestions;       // number of available suggestions
+    };
+    StatusBarInfo m_statusBarInfo;
+    HWND m_statusBarParts[12];  // Individual status bar items for custom drawing
+
+    // VS Code UI Creation/Update functions
+    void createActivityBarUI(HWND hwndParent);
+    void createSecondarySidebar(HWND hwndParent);
+    void createPanel(HWND hwndParent);
+    void createEnhancedStatusBar(HWND hwndParent);
+
+    void updateActivityBarState();
+    void updateSecondarySidebarContent();
+    void updatePanelContent();
+    void updateEnhancedStatusBar();
+    void updateProblemsPanel();
+
+    void toggleSecondarySidebar();
+    void togglePanel();
+    void maximizePanel();
+    void restorePanel();
+
+    void switchPanelTab(PanelTab tab);
+    void addProblem(const std::string& file, int line, int col, const std::string& msg, int severity);
+    void clearProblems();
+    void goToProblem(int index);
+    void sendCopilotMessage(const std::string& message);
+    void clearCopilotChat();
+    void appendCopilotResponse(const std::string& response);
+    void updateCursorPosition();
+    void updateLanguageMode();
+    void detectLanguageFromFile(const std::string& filePath);
+
+    // File Explorer
+    void createFileExplorer();
+    void populateFileTree();
+    void refreshFileExplorer();
+    void expandTreeNode(HTREEITEM hItem);
+    void onFileExplorerDoubleClick();
+    void onFileExplorerRightClick();
+    void showFileContextMenu(const std::string& filePath, bool isDirectory);
+    void loadModelFromExplorer(const std::string& filePath);
+    bool isModelFile(const std::string& filePath);
+    HTREEITEM addTreeItem(HTREEITEM hParent, const std::string& text, const std::string& fullPath, bool isDirectory);
+    void scanDirectory(const std::string& dirPath, HTREEITEM hParent);
+    std::string getSelectedFilePath();
+
+    // Model Chat Interface
+    std::string sendMessageToModel(const std::string& message);
+    void toggleChatMode();
+    void appendChatMessage(const std::string& user, const std::string& message);
+    bool trySendToOllama(const std::string& prompt, std::string& outResponse);
+
+    // Ollama config
+    std::string m_ollamaBaseUrl;      // e.g., http://localhost:11434
+    std::string m_ollamaModelOverride; // if set, use this tag instead of deriving from filename
+
+    // File Explorer members (additional)
+    HIMAGELIST m_hImageList;
+    std::vector<FileExplorerItem> m_rootItems;
+    std::string m_currentExplorerPath;
+    HWND m_hwndFileExplorer;  // Primary file explorer window
+
+    // Model Chat state
+    bool m_chatMode;
+

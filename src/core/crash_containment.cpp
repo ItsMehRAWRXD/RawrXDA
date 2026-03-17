@@ -94,6 +94,32 @@ static void buildDumpPath(char* out, size_t outLen, const char* dir, const char*
              st.wHour, st.wMinute, st.wSecond, ext);
 }
 
+// Ensure dump directory exists so .dmp and .log files can be written and stored for full news
+static void ensureDumpDirectoryExists(const char* dir) {
+    if (!dir || !dir[0]) return;
+    CreateDirectoryA(dir, nullptr);
+}
+
+// Append one line to crash_manifest.txt so dmp paths and errors are stored for full news
+static void appendCrashManifest(const char* dir, const CrashReport* report) {
+    if (!dir || !dir[0] || !report) return;
+    char manifestPath[268];
+    snprintf(manifestPath, sizeof(manifestPath), "%s\\crash_manifest.txt", dir);
+    HANDLE h = CreateFileA(manifestPath, FILE_APPEND_DATA, FILE_SHARE_READ, nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (h == INVALID_HANDLE_VALUE) return;
+    char line[768];
+    int len = snprintf(line, sizeof(line), "%llu\t0x%08X\t%s\t%s\n",
+                       (unsigned long long)report->timestampMs,
+                       (unsigned)report->exceptionCode,
+                       report->dumpPath,
+                       report->logPath);
+    if (len > 0 && (size_t)len < sizeof(line)) {
+        DWORD written = 0;
+        WriteFile(h, line, (DWORD)(size_t)len, &written, nullptr);
+    }
+    CloseHandle(h);
+}
+
 // ============================================================================
 // MiniDump Writer (dynamic DbgHelp.dll)
 // ============================================================================
@@ -287,6 +313,9 @@ static LONG WINAPI CathedralCrashFilter(EXCEPTION_POINTERS* ep) {
         emergencyPatchRollback(report);
     }
 
+    // Ensure dump directory exists so .dmp and .log are stored
+    ensureDumpDirectoryExists(g_config.dumpDirectory);
+
     // 2. Write MiniDump
     if (g_config.enableMiniDump) {
         buildDumpPath(report.dumpPath, sizeof(report.dumpPath),
@@ -306,6 +335,9 @@ static LONG WINAPI CathedralCrashFilter(EXCEPTION_POINTERS* ep) {
     buildDumpPath(report.logPath, sizeof(report.logPath),
                   g_config.dumpDirectory, "log");
     writeCrashLog(report.logPath, report);
+
+    // 3b. Store dump and error paths in manifest for full news
+    appendCrashManifest(g_config.dumpDirectory, &report);
 
     // 4. Custom callback
     if (g_config.onCrashCallback) {
@@ -349,6 +381,7 @@ static LONG WINAPI CathedralCrashFilter(EXCEPTION_POINTERS* ep) {
 
 void Install(const CrashConfig& config) {
     g_config = config;
+    ensureDumpDirectoryExists(g_config.dumpDirectory);
     g_previousFilter = SetUnhandledExceptionFilter(CathedralCrashFilter);
     g_installed.store(true, std::memory_order_release);
     OutputDebugStringA("[RawrXD] Crash containment boundary installed\n");

@@ -1,0 +1,92 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build-debug",
+      "type": "shell",
+      "command": "cmake",
+      "args": [
+        "--build",
+        "${workspaceFolder}/build",
+        "--config",
+        "Debug",
+        "--parallel",
+        "4"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": [
+        "$msCompile"
+      ],
+      "isBackground": false
+    },
+    {
+      "label": "build-release",
+      "type": "shell",
+      "command": "cmake",
+      "args": [
+        "--build",
+        "${workspaceFolder}/build",
+        "--config",
+        "Release",
+        "--parallel",
+        "4"
+      ],
+      "group": "build",
+      "problemMatcher": [
+        "$msCompile"
+      ],
+      "isBackground": false
+    },
+    {
+      "label": "clean-build",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-Command",
+        "if (Test-Path '${workspaceFolder}/build') { Remove-Item -Recurse -Force '${workspaceFolder}/build' }; mkdir '${workspaceFolder}/build'; cd '${workspaceFolder}/build'; cmake -G 'Visual Studio 17 2022' -A x64 '..' -DCMAKE_BUILD_TYPE=Debug"
+      ],
+      "group": "build",
+      "problemMatcher": [
+        "$msCompile"
+      ],
+      "isBackground": false
+    },
+    {
+      "label": "cmake-configure",
+      "type": "shell",
+      "command": "cmake",
+      "args": [
+        "-G",
+        "Visual Studio 17 2022",
+        "-A",
+        "x64",
+        "-DCMAKE_BUILD_TYPE=Debug",
+        "-S",
+        "${workspaceFolder}",
+        "-B",
+        "${workspaceFolder}/build"
+      ],
+      "group": "build",
+      "problemMatcher": [
+        "$msCompile"
+      ],
+      "isBackground": false
+    },
+    {
+      "label": "run-executable",
+      "type": "shell",
+      "command": "${workspaceFolder}/build/Debug/NoRefusalEngine.exe",
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "isBackground": false,
+      "runOptions": {
+        "runOn": "folderOpen"
+      }
+    }
+  ]
+}

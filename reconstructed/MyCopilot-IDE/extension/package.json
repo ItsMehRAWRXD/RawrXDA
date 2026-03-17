@@ -1,0 +1,159 @@
+{
+  "name": "mycopilot-ide",
+  "displayName": "MyCopilot-IDE",
+  "publisher": "mycopilot",
+  "version": "1.0.0",
+  "description": "Complete AI-powered IDE with 36+ language compilers, universal toolchain, and advanced AI integration",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "main": "./extension.js",
+  "icon": "icon.png",
+  "categories": [
+    "Other",
+    "Programming Languages",
+    "Debuggers",
+    "Formatters",
+    "Linters"
+  ],
+  "keywords": [
+    "ai",
+    "copilot",
+    "compiler",
+    "ide",
+    "assistant",
+    "powershell",
+    "universal"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onLanguage:*"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "mycopilot.start",
+        "title": "MyCopilot: Start AI Assistant"
+      },
+      {
+        "command": "mycopilot.compile",
+        "title": "MyCopilot: Compile with AI (36 Languages)"
+      },
+      {
+        "command": "mycopilot.openIDE",
+        "title": "MyCopilot: Open Full IDE"
+      },
+      {
+        "command": "mycopilot.showCompilers",
+        "title": "MyCopilot: Show All 36 Compilers"
+      },
+      {
+        "command": "mycopilot.runAgent",
+        "title": "MyCopilot: Ask AI Agent"
+      },
+      {
+        "command": "mycopilot.generateCode",
+        "title": "MyCopilot: Generate Code with AI"
+      },
+      {
+        "command": "mycopilot.explainCode",
+        "title": "MyCopilot: Explain Code with AI"
+      },
+      {
+        "command": "mycopilot.optimizeCode",
+        "title": "MyCopilot: Optimize Code with AI"
+      },
+      {
+        "command": "mycopilot.debugCode",
+        "title": "MyCopilot: Debug Code with AI"
+      },
+      {
+        "command": "mycopilot.openTerminal",
+        "title": "MyCopilot: Open Integrated Terminal"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "mycopilot.compile",
+          "group": "mycopilot",
+          "when": "editorHasSelection || editorTextFocus"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "mycopilot.compile",
+          "group": "mycopilot",
+          "when": "resourceExtname =~ /\\.(js|ts|py|rs|go|java|c|cpp|cs|ps1)$/"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "mycopilot.start",
+        "key": "ctrl+shift+m",
+        "mac": "cmd+shift+m"
+      },
+      {
+        "command": "mycopilot.compile",
+        "key": "ctrl+shift+c",
+        "mac": "cmd+shift+c"
+      },
+      {
+        "command": "mycopilot.runAgent",
+        "key": "ctrl+shift+a",
+        "mac": "cmd+shift+a"
+      },
+      {
+        "command": "mycopilot.generateCode",
+        "key": "ctrl+shift+g",
+        "mac": "cmd+shift+g"
+      },
+      {
+        "command": "mycopilot.explainCode",
+        "key": "ctrl+shift+e",
+        "mac": "cmd+shift+e"
+      }
+    ],
+    "configuration": {
+      "title": "MyCopilot-IDE",
+      "properties": {
+        "mycopilot.enableAI": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable AI assistant features"
+        },
+        "mycopilot.autoCompile": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically compile files on save"
+        },
+        "mycopilot.defaultCompiler": {
+          "type": "string",
+          "default": "auto",
+          "description": "Default compiler to use (auto-detect by file extension)"
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1",
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.12"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0"
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package",
+    "test": "node ./out/test/runTest.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mycopilot/mycopilot-ide"
+  },
+  "license": "MIT"
+}

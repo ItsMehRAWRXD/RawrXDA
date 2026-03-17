@@ -1,0 +1,70 @@
+# MASM + C++ Win32 IDE CMakeLists.txt
+# Pure native implementation without Qt dependencies
+
+cmake_minimum_required(VERSION 3.20)
+project(RawrXDWin32MASM LANGUAGES CXX ASM_MASM)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Force x64 architecture
+if(MSVC)
+    set(CMAKE_GENERATOR_PLATFORM x64)
+    set(CMAKE_SIZEOF_VOID_P 8)
+endif()
+
+# MASM source files
+set(MASM_SOURCES
+    src/asm/boot.asm
+)
+
+# C++ source files
+set(CPP_SOURCES
+    src/masm_main.cpp
+    src/core/engine.cpp
+    src/ui/window.cpp
+    src/agentic/model_invoker.cpp
+    src/agentic/action_executor.cpp
+    src/agentic/ide_agent_bridge.cpp
+    src/tools/tool_registry.cpp
+    src/llm/llm_client.cpp
+    src/config/config_manager.cpp
+)
+
+# Create the main executable
+add_executable(${PROJECT_NAME}
+    ${MASM_SOURCES}
+    ${CPP_SOURCES}
+)
+
+# Link with required Windows libraries
+target_link_libraries(${PROJECT_NAME} PRIVATE
+    user32
+    gdi32
+    kernel32
+    winhttp
+    shell32
+    comctl32
+)
+
+# Include directories
+target_include_directories(${PROJECT_NAME} PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+# Compiler options
+if(MSVC)
+    target_compile_options(${PROJECT_NAME} PRIVATE /EHsc /O2)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE _CRT_SECURE_NO_WARNINGS)
+endif()
+
+# Output properties
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+    WIN32_EXECUTABLE TRUE
+)
+
+message(STATUS "MASM + C++ Win32 IDE configured: ${PROJECT_NAME}")
+message(STATUS "MASM sources: ${MASM_SOURCES}")
+message(STATUS "C++ sources: ${CPP_SOURCES}")

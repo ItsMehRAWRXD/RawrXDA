@@ -23,6 +23,7 @@
 #include <mutex>
 #include <atomic>
 #include <functional>
+#include <filesystem>
 #include "IDELogger.h"
 #include "Win32TerminalManager.h"
 #include "TransparentRenderer.h"
@@ -30,6 +31,7 @@
 #include "../streaming_gguf_loader.h"
 #include "../model_source_resolver.h"
 #include "Win32IDE_AgenticBridge.h"
+#include "../full_agentic_ide/FullAgenticIDE.h"
 #include "Win32IDE_Autonomy.h"
 #include "Win32IDE_SubAgent.h"
 #include "Win32IDE_WebView2.h"
@@ -49,705 +51,22 @@
 #include "../core/problems_aggregator.hpp"
 #include "../ui/tool_action_status.h"
 #include <nlohmann/json.hpp>
+using json = nlohmann::json;
 #include <condition_variable>
 #include <climits>
 
-// Forward declarations
-class MultiResponseEngine;
-class SubAgentManager;
-class ModelRegistry;
-class InterpretabilityPanel;
-class BenchmarkMenu;
-class CheckpointManager;
-class CICDSettings;
-class MultiFileSearchWidget;
-namespace RawrXD { namespace LSPServer { class RawrXDLSPServer; } }
-namespace RawrXD { class GhostTextRenderer; }
-
-// Tier 3: File Watcher + DirectWrite (need full types for unique_ptr destructor)
+#include "Win32IDE_Fwd.h"
+// Tier 3: File Watcher — full type needed for unique_ptr destructor
 #include "IocpFileWatcher.h"
-
-// Forward declarations for DirectWrite types (avoid including <dwrite.h> in header)
-struct IDWriteFactory;
-struct IDWriteTextFormat;
-struct IDWriteTextLayout;
 
 #include "../agentic/OllamaProvider.h"
 #include "../../include/agentic/agentic_composer_ux.h"
 #include "../agent/agentic_failure_detector.hpp"
 #include "agentic_mode_switcher.hpp"
 
-// Agent and AI IDs
-#define IDM_AGENT_BOUNDED_LOOP 4120
-#define IDM_AGENT_START_LOOP 4100
-#define IDM_AGENT_EXECUTE_CMD 4101
-#define IDM_AGENT_CONFIGURE_MODEL 4102
-#define IDM_AGENT_VIEW_TOOLS 4103
-#define IDM_AGENT_VIEW_STATUS 4104
-#define IDM_AGENT_STOP 4105
-#define IDM_AGENT_MEMORY 4106
-#define IDM_AGENT_MEMORY_VIEW 4107
-#define IDM_AGENT_MEMORY_CLEAR 4108
-#define IDM_AGENT_MEMORY_EXPORT 4109
+#include "Win32IDE_Commands.h"
+#include "Win32IDE_Types.h"
 
-// SubAgent / Chain / Swarm / Todo command IDs (4110–4119)
-#define IDM_SUBAGENT_CHAIN 4110
-#define IDM_SUBAGENT_SWARM 4111
-#define IDM_SUBAGENT_TODO_LIST 4112
-#define IDM_SUBAGENT_TODO_CLEAR 4113
-#define IDM_SUBAGENT_STATUS 4114
-
-// Terminal extended IDs (4006–4010)
-#define IDM_TERMINAL_KILL 4006
-#define IDM_TERMINAL_SPLIT_H 4007
-#define IDM_TERMINAL_SPLIT_V 4008
-#define IDM_TERMINAL_SPLIT_CODE 4009
-#define IDM_TERMINAL_CLEAR 4010
-
-// Autonomy IDs
-#define IDM_AUTONOMY_TOGGLE 4150
-#define IDM_AUTONOMY_START 4151
-#define IDM_AUTONOMY_STOP 4152
-#define IDM_AUTONOMY_SET_GOAL 4153
-#define IDM_AUTONOMY_STATUS 4154
-#define IDM_AUTONOMY_MEMORY 4155
-
-// AI Mode IDs
-#define IDM_AI_MODE_MAX 4200
-#define IDM_AI_MODE_DEEP_THINK 4201
-#define IDM_AI_MODE_DEEP_RESEARCH 4202
-#define IDM_AI_MODE_NO_REFUSAL 4203
-
-// Engine / 800B Dual-Engine & Titan (4220–4239)
-#define IDM_ENGINE_UNLOCK_800B 4220
-#define IDM_ENGINE_LOAD_800B   4221
-#define IDM_TITAN_TOGGLE       4230
-
-// AI Mode Toggle IDs (Controls)
-#define IDC_AI_MAX_MODE 5001
-#define IDC_AI_DEEP_THINK 5002
-#define IDC_AI_DEEP_RESEARCH 5003
-#define IDC_AI_NO_REFUSAL 5004
-
-// Plan Approval Dialog Controls
-#define IDC_PLAN_LIST          7001
-#define IDC_PLAN_DETAIL        7002
-#define IDC_PLAN_GOAL_LABEL    7003
-#define IDC_PLAN_SUMMARY_LABEL 7004
-#define IDC_PLAN_BTN_APPROVE   7010
-#define IDC_PLAN_BTN_EDIT      7011
-#define IDC_PLAN_BTN_REJECT    7012
-#define IDC_PLAN_BTN_PAUSE     7013
-#define IDC_PLAN_BTN_CANCEL    7014
-#define IDC_PLAN_PROGRESS      7020
-#define IDC_PLAN_PROGRESS_LABEL 7021
-
-// Retry Approval Controls (inside Plan Dialog)
-#define IDC_PLAN_BTN_RETRY_YES 7030
-#define IDC_PLAN_BTN_RETRY_NO  7031
-#define IDC_PLAN_RETRY_LABEL   7032
-
-// Unified Problems Panel (P0: LSP, SAST, SCA, Secrets, Build)
-#define IDC_PROBLEMS_PANEL      7050
-#define IDC_PROBLEMS_LISTVIEW   7051
-#define IDC_PROBLEMS_FILTER     7052
-#define IDC_PROBLEMS_CLEAR      7053
-#define IDC_PROBLEMS_SHOW_ERRORS 7054
-#define IDC_PROBLEMS_SHOW_WARNINGS 7055
-#define IDM_VIEW_PROBLEMS       7056
-#define IDM_VIEW_AGENT_PANEL    7057
-#define IDM_VIEW_FILE_EXPLORER  2030
-#define IDM_VIEW_EXTENSIONS     2031
-
-// Security scan menu IDs (Top-50 P0)
-#define IDM_SECURITY_SCAN_SECRETS       9550
-#define IDM_SECURITY_SCAN_SAST          9551
-#define IDM_SECURITY_SCAN_DEPENDENCIES  9552
-#define IDM_SECURITY_DASHBOARD          9553
-#define IDM_SECURITY_EXPORT_SBOM        9554
-
-// Build menu IDs (Win32 IDE)
-// Note: kept out of existing routed ranges; routeCommand explicitly routes 10400–10499 to handleBuildCommand().
-#define IDM_BUILD_SOLUTION              10400
-#define IDM_BUILD_CLEAN                 10401
-#define IDM_BUILD_REBUILD               10402
-
-// Context Window IDs
-#define IDM_AI_CONTEXT_4K 4210
-#define IDM_AI_CONTEXT_32K 4211
-#define IDM_AI_CONTEXT_64K 4212
-#define IDM_AI_CONTEXT_128K 4213
-#define IDM_AI_CONTEXT_256K 4214
-#define IDM_AI_CONTEXT_512K 4215
-#define IDM_AI_CONTEXT_1M 4216
-#define IDM_AI_AGENT_CYCLES_SET 4217
-#define IDM_AI_AGENT_MULTI_ENABLE 4218
-#define IDM_AI_AGENT_MULTI_DISABLE 4219
-#define IDM_AI_AGENT_MULTI_STATUS 4220
-#define IDM_AI_TITAN_TOGGLE       4221
-#define IDM_AI_800B_STATUS        4222
-
-// AI Extensions (5300+ range)
-#define IDM_AI_MODEL_REGISTRY     5300
-#define IDM_AI_CHECKPOINT_MGR     5301
-#define IDM_AI_INTERPRET_PANEL    5302
-#define IDM_AI_CICD_SETTINGS      5303
-#define IDM_AI_MULTI_FILE_SEARCH  5304
-#define IDM_AI_BENCHMARK_MENU     5305
-
-// View Monaco / Thermal
-#define IDM_VIEW_MONACO_SETTINGS  5310
-#define IDM_VIEW_THERMAL_DASHBOARD 5311
-
-// Agent testing
-#define IDM_AGENT_SMOKE_TEST      5320
-#define IDM_AGENT_SET_CYCLE_AGENT_COUNTER 5321
-
-// Reverse Engineering IDs
-#define IDM_REVENG_ANALYZE 4300
-#define IDM_REVENG_DISASM 4301
-#define IDM_REVENG_DUMPBIN 4302
-#define IDM_REVENG_COMPILE 4303
-#define IDM_REVENG_COMPARE 4304
-#define IDM_REVENG_DETECT_VULNS 4305
-#define IDM_REVENG_EXPORT_IDA 4306
-#define IDM_REVENG_EXPORT_GHIDRA 4307
-#define IDM_REVENG_CFG 4308
-#define IDM_REVENG_FUNCTIONS 4309
-#define IDM_REVENG_DEMANGLE 4310
-#define IDM_REVENG_SSA 4311
-#define IDM_REVENG_RECURSIVE_DISASM 4312
-#define IDM_REVENG_TYPE_RECOVERY 4313
-#define IDM_REVENG_DATA_FLOW 4314
-#define IDM_REVENG_LICENSE_INFO 4315
-
-// Decompiler View IDs (Phase 18B)
-#define IDM_REVENG_DECOMPILER_VIEW 4316
-#define IDM_REVENG_DECOMP_RENAME   4317
-#define IDM_REVENG_DECOMP_SYNC     4318
-#define IDM_REVENG_DECOMP_CLOSE    4319
-#define IDM_REVENG_SET_BINARY_FROM_ACTIVE 4320
-#define IDM_REVENG_SET_BINARY_FROM_DEBUG_TARGET  4321
-#define IDM_REVENG_SET_BINARY_FROM_BUILD_OUTPUT  4322
-#define IDM_REVENG_DISASM_AT_RIP                 4323
-
-// Define LOG_FUNCTION macro if not already defined
-#ifndef LOG_FUNCTION
-#define LOG_FUNCTION() LOG_DEBUG(std::string("ENTER ") + __FUNCTION__)
-#endif
-
-// Theme and customization structures — now in include/IDETheme.h
-// IDETheme is already included via editor_engine.h → IDETheme.h
-
-// ============================================================================
-// THEME COMMAND IDS (3100 range — routed via handleViewCommand)
-// ============================================================================
-#define IDM_THEME_BASE              3100
-#define IDM_THEME_DARK_PLUS         3101
-#define IDM_THEME_LIGHT_PLUS        3102
-#define IDM_THEME_MONOKAI           3103
-#define IDM_THEME_DRACULA           3104
-#define IDM_THEME_NORD              3105
-#define IDM_THEME_SOLARIZED_DARK    3106
-#define IDM_THEME_SOLARIZED_LIGHT   3107
-#define IDM_THEME_CYBERPUNK_NEON    3108
-#define IDM_THEME_GRUVBOX_DARK      3109
-#define IDM_THEME_CATPPUCCIN_MOCHA  3110
-#define IDM_THEME_TOKYO_NIGHT       3111
-#define IDM_THEME_RAWRXD_CRIMSON    3112
-#define IDM_THEME_HIGH_CONTRAST     3113
-#define IDM_THEME_ONE_DARK_PRO      3114
-#define IDM_THEME_SYNTHWAVE84       3115
-#define IDM_THEME_ABYSS             3116
-#define IDM_THEME_END               3117
-
-// Tier 3: Language Mode Quick Switch (9100 range)
-#define IDM_LANGMODE_FIRST          9100
-#define IDM_LANGMODE_LAST           9199
-
-// Tier 3: Encoding Selector (9200/9300 range)
-#define IDM_ENCODING_REOPEN_FIRST   9200
-#define IDM_ENCODING_REOPEN_LAST    9249
-#define IDM_ENCODING_SAVE_FIRST     9300
-#define IDM_ENCODING_SAVE_LAST      9349
-
-// Tier 3: File changed externally — custom window message
-#define WM_FILE_CHANGED_EXTERNAL    (WM_APP + 200)
-
-// Transparency commands (3200 range — routed via handleViewCommand)
-#define IDM_TRANSPARENCY_100        3200
-#define IDM_TRANSPARENCY_90         3201
-#define IDM_TRANSPARENCY_80         3202
-#define IDM_TRANSPARENCY_70         3203
-#define IDM_TRANSPARENCY_60         3204
-#define IDM_TRANSPARENCY_50         3205
-#define IDM_TRANSPARENCY_40         3206
-#define IDM_TRANSPARENCY_CUSTOM     3210
-#define IDM_TRANSPARENCY_TOGGLE     3211
-
-// AI Backend Switcher commands (5037+ range — routed via handleToolsCommand)
-#define IDM_BACKEND_SWITCH_LOCAL    5037
-#define IDM_BACKEND_SWITCH_OLLAMA   5038
-#define IDM_BACKEND_SWITCH_OPENAI   5039
-#define IDM_BACKEND_SWITCH_CLAUDE   5040
-#define IDM_BACKEND_SWITCH_GEMINI   5041
-#define IDM_BACKEND_SHOW_STATUS     5042
-#define IDM_BACKEND_SHOW_SWITCHER   5043
-#define IDM_BACKEND_CONFIGURE       5044
-#define IDM_BACKEND_HEALTH_CHECK    5045
-#define IDM_BACKEND_SET_API_KEY     5046
-#define IDM_BACKEND_SAVE_CONFIGS    5047
-
-// LLM Router commands (5048+ range — routed via handleToolsCommand)
-#define IDM_ROUTER_ENABLE           5048
-#define IDM_ROUTER_DISABLE          5049
-#define IDM_ROUTER_SHOW_STATUS      5050
-#define IDM_ROUTER_SHOW_DECISION    5051
-#define IDM_ROUTER_SET_POLICY       5052
-#define IDM_ROUTER_SHOW_CAPABILITIES 5053
-#define IDM_ROUTER_SHOW_FALLBACKS   5054
-#define IDM_ROUTER_SAVE_CONFIG      5055
-#define IDM_ROUTER_ROUTE_PROMPT     5056
-#define IDM_ROUTER_RESET_STATS      5057
-
-// LSP Client commands (5058+ range — routed via handleToolsCommand)
-#define IDM_LSP_START_ALL           5058
-#define IDM_LSP_STOP_ALL            5059
-#define IDM_LSP_SHOW_STATUS         5060
-#define IDM_LSP_GOTO_DEFINITION     5061
-#define IDM_LSP_FIND_REFERENCES     5062
-#define IDM_LSP_RENAME_SYMBOL       5063
-#define IDM_LSP_HOVER_INFO          5064
-#define IDM_LSP_SHOW_DIAGNOSTICS    5065
-#define IDM_LSP_RESTART_SERVER      5066
-#define IDM_LSP_CLEAR_DIAGNOSTICS   5067
-#define IDM_LSP_SHOW_SYMBOL_INFO    5068
-#define IDM_LSP_CONFIGURE           5069
-#define IDM_LSP_SAVE_CONFIG         5070
-
-// UX Enhancements & Research Track commands (5071+ range — routed via handleToolsCommand)
-#define IDM_ROUTER_WHY_BACKEND      5071
-#define IDM_ROUTER_PIN_TASK         5072
-#define IDM_ROUTER_UNPIN_TASK       5073
-#define IDM_ROUTER_SHOW_PINS        5074
-#define IDM_ROUTER_SHOW_HEATMAP     5075
-#define IDM_ROUTER_ENSEMBLE_ENABLE  5076
-#define IDM_ROUTER_ENSEMBLE_DISABLE 5077
-#define IDM_ROUTER_ENSEMBLE_STATUS  5078
-#define IDM_ROUTER_SIMULATE         5079
-#define IDM_ROUTER_SIMULATE_LAST    5080
-#define IDM_ROUTER_SHOW_COST_STATS  5081
-
-// Plugin System commands (5200+ range — routed via handleToolsCommand)
-#define IDM_PLUGIN_SHOW_PANEL       5200
-#define IDM_PLUGIN_LOAD             5201
-#define IDM_PLUGIN_UNLOAD           5202
-#define IDM_PLUGIN_UNLOAD_ALL       5203
-#define IDM_PLUGIN_REFRESH          5204
-#define IDM_PLUGIN_SCAN_DIR         5205
-#define IDM_PLUGIN_SHOW_STATUS      5206
-#define IDM_PLUGIN_TOGGLE_HOTLOAD   5207
-#define IDM_PLUGIN_CONFIGURE        5208
-
-struct CodeSnippet {
-    std::string name;
-    std::string description;
-    std::string code;
-    std::string trigger;
-    std::vector<std::string> placeholders;
-};
-
-struct ModuleInfo {
-    std::string name;
-    std::string version;
-    std::string description;
-    std::string path;
-    bool loaded;
-};
-
-struct TerminalPane {
-    int id;
-    HWND hwnd;
-    std::unique_ptr<Win32TerminalManager> manager;
-    std::string name;
-    Win32TerminalManager::ShellType shellType;
-    bool isActive;
-    RECT bounds;
-};
-
-struct GitStatus {
-    std::string branch;
-    int ahead;
-    int behind;
-    int modified;
-    int added;
-    int deleted;
-    int untracked;
-    bool hasChanges;
-    std::string lastCommit;
-    std::string lastCommitMessage;
-};
-
-struct GitFile {
-    std::string path;
-    char status;  // M=modified, A=added, D=deleted, ?=untracked
-    bool staged;
-};
-
-struct FileExplorerItem {
-    std::string name;
-    std::string fullPath;
-    bool isDirectory;
-    bool isModelFile;
-    size_t fileSize;
-    HTREEITEM hTreeItem;
-    std::vector<FileExplorerItem> children;
-};
-
-struct Breakpoint {
-    std::string file;
-    int line;
-    bool enabled;
-    std::string condition;
-    int hitCount;
-};
-
-struct StackFrame {
-    std::string function;
-    std::string file;
-    int line;
-    std::map<std::string, std::string> locals;
-};
-
-struct Variable {
-    std::string name;
-    std::string value;
-    std::string type;
-    bool expanded;
-    std::vector<Variable> children;
-};
-
-struct WatchItem {
-    std::string expression;
-    std::string value;
-    std::string type;
-    bool enabled;
-};
-
-// ============================================================================
-// Ghost Text / Inline Completions — WM_APP message
-// ============================================================================
-#define WM_GHOST_TEXT_READY (WM_APP + 400)
-
-// AgentFailureType from agentic_failure_detector.hpp (included above)
-
-// ── Phase 4B: Failure Classification with confidence + evidence ──
-struct FailureClassification {
-    AgentFailureType reason    = AgentFailureType::None;
-    float            confidence = 0.0f;   // 0.0–1.0
-    std::string      evidence;             // Bounded short string
-
-    static FailureClassification ok() { return { AgentFailureType::None, 1.0f, "" }; }
-    static FailureClassification make(AgentFailureType r, float c, const std::string& e) {
-        FailureClassification fc;
-        fc.reason     = r;
-        fc.confidence = c;
-        fc.evidence   = e.size() > 256 ? e.substr(0, 256) : e;
-        return fc;
-    }
-};
-
-struct FailureStats {
-    int totalRequests       = 0;
-    int totalFailures       = 0;
-    int totalRetries        = 0;
-    int successAfterRetry   = 0;
-    int refusalCount        = 0;
-    int hallucinationCount  = 0;
-    int formatViolationCount = 0;
-    int infiniteLoopCount   = 0;
-    int qualityDegradationCount = 0;
-    int emptyResponseCount  = 0;
-    int timeoutCount        = 0;
-    int toolErrorCount      = 0;
-    int invalidOutputCount  = 0;
-    int lowConfidenceCount  = 0;
-    int safetyViolationCount = 0;
-    int userAbortCount      = 0;
-    int retriesDeclined     = 0;
-};
-
-// ============================================================================
-// Failure Intelligence — Phase 6: Granular Classification + Retry Strategies
-// ============================================================================
-
-// Granular failure reason — finer than AgentFailureType
-enum class FailureReason {
-    Unknown             = 0,
-    // Refusal sub-types
-    PolicyRefusal       = 1,    // Model's safety policy blocked the output
-    TaskRefusal         = 2,    // Model explicitly declined the task
-    CapabilityRefusal   = 3,    // Model says it cannot do the task
-    // Hallucination sub-types
-    FabricatedAPI       = 10,   // Made-up function/library names
-    FabricatedFact      = 11,   // Incorrect factual claims
-    SelfContradiction   = 12,   // Output contradicts itself
-    // Format sub-types
-    WrongFormat         = 20,   // JSON expected but got prose, etc.
-    MissingStructure    = 21,   // Required fields/sections missing
-    ExcessiveVerbosity  = 22,   // Too much explanation when code-only requested
-    // Loop sub-types
-    TokenRepetition     = 30,   // Same tokens repeated (stuck decoding)
-    BlockRepetition     = 31,   // Same paragraphs/blocks repeated
-    // Quality sub-types
-    LowDensity          = 40,   // Very low information density
-    FillerDominant      = 41,   // Output dominated by filler/stop words
-    TooShort            = 42,   // Response suspiciously short for the task
-    // System-level
-    EmptyOutput         = 50,   // Agent returned nothing
-    Timeout             = 51,   // Inference timed out
-    ToolError           = 52,   // Tool invocation failed
-    ContextOverflow     = 53    // Prompt exceeded context window
-};
-
-// Retry strategy types — what to do when a failure occurs
-enum class RetryStrategyType {
-    None                = 0,    // No retry — accept the failure
-    Rephrase            = 1,    // Rephrase the prompt to avoid the trigger
-    AddContext           = 2,    // Inject grounding context / examples
-    ForceFormat         = 3,    // Add explicit format instructions
-    ReduceScope         = 4,    // Shorten/simplify the prompt
-    AdjustTemperature   = 5,    // Lower temperature for more deterministic output
-    SplitTask           = 6,    // Break the task into smaller sub-tasks
-    RetryVerbatim       = 7,    // Retry the exact same prompt (transient failures)
-    ToolRetry           = 8     // Retry only the failed tool call
-};
-
-// A single retry strategy definition
-struct RetryStrategy {
-    RetryStrategyType type      = RetryStrategyType::None;
-    int maxAttempts             = 1;        // Max times this strategy can be attempted
-    float temperatureOverride   = -1.0f;    // -1 = no override
-    std::string promptPrefix;               // Prepended to the prompt on retry
-    std::string promptSuffix;               // Appended to the prompt on retry
-    std::string description;                // Human-readable description for UI
-
-    std::string typeString() const;
-};
-
-// A record of a specific failure + its classification, stored in history
-struct FailureIntelligenceRecord {
-    uint64_t timestampMs        = 0;
-    std::string promptHash;                 // SHA-like hash of the prompt (for matching)
-    std::string promptSnippet;              // First 256 chars of prompt
-    AgentFailureType failureType = AgentFailureType::EmptyResponse;
-    FailureReason reason        = FailureReason::Unknown;
-    RetryStrategyType strategyUsed = RetryStrategyType::None;
-    int attemptNumber           = 0;
-    bool retrySucceeded         = false;
-    std::string failureDetail;              // Human-readable detail
-    std::string sessionId;
-
-    std::string toMetadataJSON() const;
-};
-
-// Per-reason aggregated stats
-struct FailureReasonStats {
-    int occurrences             = 0;
-    int retriesAttempted        = 0;
-    int retriesSucceeded        = 0;
-    float avgRetryAttempts      = 0.0f;
-    RetryStrategyType bestStrategy = RetryStrategyType::None;
-};
-
-// ============================================================================
-// Plan Executor Enums & Structures
-// ============================================================================
-#define WM_PLAN_READY     (WM_APP + 500)
-#define WM_PLAN_STEP_DONE (WM_APP + 501)
-#define WM_PLAN_COMPLETE  (WM_APP + 502)
-
-enum class PlanStepType {
-    CodeEdit,
-    FileCreate,
-    FileDelete,
-    ShellCommand,
-    Analysis,
-    Verification,
-    General
-};
-
-enum class PlanStepStatus {
-    Pending,
-    Running,
-    Completed,
-    Failed,
-    Skipped
-};
-
-enum class PlanStatus {
-    None,
-    Generating,
-    AwaitingApproval,
-    Approved,
-    Rejected,
-    Executing,
-    Completed,
-    Failed
-};
-
-struct PlanStep {
-    int id                 = 0;
-    std::string title;
-    std::string description;
-    PlanStepType type      = PlanStepType::General;
-    std::string targetFile;
-    int estimatedMinutes   = 0;
-    float confidence       = 0.5f;
-    std::string risk;
-    PlanStepStatus status  = PlanStepStatus::Pending;
-    std::string output;
-};
-
-struct AgentPlan {
-    std::string goal;
-    std::vector<PlanStep> steps;
-    PlanStatus status      = PlanStatus::None;
-    int currentStepIndex   = -1;
-    float overallConfidence = 0.0f;
-};
-
-// ============================================================================
-// IDE Settings Structure
-// ============================================================================
-struct IDESettings {
-    // General
-    bool autoSaveEnabled        = false;
-    bool lineNumbersVisible     = true;
-    bool wordWrapEnabled        = false;
-    int fontSize                = 14;
-    std::string fontName        = "Consolas";
-    std::string workingDirectory;
-    int autoSaveIntervalSec     = 60;
-
-    // AI / Model
-    float aiTemperature         = 0.7f;
-    float aiTopP                = 0.9f;
-    int aiTopK                  = 40;
-    int aiMaxTokens             = 512;
-    int aiContextWindow         = 4096;
-    std::string aiModelPath;
-    std::string aiOllamaUrl     = "http://localhost:11434";
-    bool ghostTextEnabled       = true;
-    bool failureDetectorEnabled = true;
-    int failureMaxRetries       = 3;
-
-    // Editor
-    int tabSize                 = 4;
-    bool useSpaces              = true;
-    std::string encoding        = "UTF-8";
-    std::string eolStyle        = "LF";
-    bool syntaxColoringEnabled  = true;
-    bool minimapEnabled         = true;
-    bool breadcrumbsEnabled     = true;
-    bool smoothScrollEnabled    = true;
-
-    // Theme
-    int themeId                 = 3101; // IDM_THEME_DARK_PLUS
-    BYTE windowAlpha            = 255;
-
-    // Display Scaling (100 = 100%, 125 = 125%, etc. 0 = auto/system DPI)
-    int uiScalePercent          = 0; // 0 = auto (follow system DPI)
-
-    // Server
-    bool localServerEnabled     = false;
-    int localServerPort         = 11435;
-
-    // Local Parity (no API key) — same Cursor/GitHub parity via local GGUF
-    bool localParityEnabled     = false;
-    std::string localParityModelPath;
-    std::string updateManifestUrl;   // Public URL for update check (no auth)
-
-    // Agent terminal isolation (Top-001: prevent agent commands/CTRL+C from interrupting user work)
-    // When true, agent-originated commands use a dedicated terminal; user terminal stays untouched.
-    bool agentTerminalIsolated  = true;
-};
-
-// ============================================================================
-// Local Server Statistics
-// ============================================================================
-struct LocalServerStats {
-    int totalRequests = 0;
-    int totalTokens   = 0;
-};
-
-// ============================================================================
-// Agent History — Persisted Event Schema (JSONL append-only log)
-// ============================================================================
-#define WM_AGENT_HISTORY_REPLAY_DONE (WM_APP + 600)
-
-enum class AgentEventType {
-    AgentStarted,           // Agent received a prompt
-    AgentCompleted,         // Agent returned a result
-    AgentFailed,            // Agent encountered an error
-    SubAgentSpawned,        // SubAgentManager spawned a child
-    SubAgentResult,         // SubAgent returned a result
-    ChainStepStarted,       // Chain pipeline step began
-    ChainStepCompleted,     // Chain pipeline step finished
-    SwarmStarted,           // HexMag swarm fan-out began
-    SwarmTaskCompleted,     // One swarm task finished
-    SwarmMerged,            // Swarm merge completed
-    ToolInvoked,            // Agent invoked a tool (file edit, shell, etc.)
-    TodoUpdated,            // Todo list item status changed
-    PlanGenerated,          // Plan executor generated a plan
-    PlanStepExecuted,       // Plan executor completed a step
-    FailureDetected,        // Failure detector flagged an issue
-    FailureCorrected,       // Failure detector correction succeeded
-    FailureFailed,          // Failure detector correction failed after retry
-    FailureRetryDeclined,   // User declined a retry proposal
-    GhostTextRequested,     // Ghost text completion was requested
-    GhostTextAccepted,      // Ghost text completion was accepted
-    SettingsChanged,        // Settings were modified
-    SessionEvent            // Generic session-level event (startup, shutdown)
-};
-
-struct AgentEvent {
-    AgentEventType type;
-    uint64_t timestampMs;       // Epoch milliseconds
-    std::string sessionId;      // Unique per IDE launch
-    std::string parentId;       // Agent/subagent parent ID (empty for root)
-    std::string agentId;        // Agent or subagent ID
-    std::string prompt;         // Input prompt (may be truncated)
-    std::string result;         // Output result (may be truncated)
-    std::string metadata;       // JSON string with type-specific extra data
-    int durationMs;             // Elapsed time for the event (0 if instantaneous)
-    bool success;               // Whether the operation succeeded
-
-    std::string typeString() const;
-    std::string toJSONL() const;
-    static AgentEvent fromJSONL(const std::string& line);
-};
-
-// Agent History statistics for the current session
-struct AgentHistoryStats {
-    int totalEvents         = 0;
-    int agentStarted        = 0;
-    int agentCompleted      = 0;
-    int agentFailed         = 0;
-    int subAgentSpawned     = 0;
-    int chainSteps          = 0;
-    int swarmTasks          = 0;
-    int toolInvocations     = 0;
-    int failuresDetected    = 0;
-    int failuresCorrected   = 0;
-    int ghostTextAccepted   = 0;
-    int totalDurationMs     = 0;
-};
-
-// Forward declaration for friend class
-namespace vscode { class VSCodeExtensionAPI; }
-
-class FeatureRegistryPanel;
 
 class Win32IDE
 {
@@ -785,6 +104,10 @@ public:
     bool createWindow();
     void showWindow();
     int runMessageLoop();
+    // ── Parity-audit: Visibility Watchdog ──────────────────────────────────
+    void startVisibilityWatchdog();
+    void stopVisibilityWatchdog();
+    static DWORD WINAPI VisibilityWatchdogThread(LPVOID param);
     void openModel();
     bool loadModelForInference(const std::string& filepath);
 
@@ -798,10 +121,12 @@ public:
     HWND getLineNumbers() const { return m_hwndLineNumbers; }
     HWND getTabBar() const { return m_hwndTabBar; }
 
-    // Agentic Framework
-    std::unique_ptr<AgenticBridge> m_agenticBridge;
+    // Agentic Framework — Full Agentic IDE owns the bridge (single entry point: src/full_agentic_ide/)
+    std::unique_ptr<full_agentic_ide::FullAgenticIDE> m_fullAgenticIDE;
+    AgenticBridge* m_agenticBridge = nullptr;  // Non-owning; set from m_fullAgenticIDE->getBridge()
     bool m_multiAgentEnabled = false;  // Multi-agent orchestration toggle
     void initializeAgenticBridge();
+    bool ensureAgenticBridgeHasModel(const std::string& path);
     void initializeAutonomy();
     void onAgentStartLoop();
     void onAgentExecuteCommand();
@@ -818,6 +143,14 @@ public:
     void onAutonomySetGoal();
     void onAutonomyViewStatus();
     void onAutonomyViewMemory();
+
+    // Autonomous Agentic Pipeline (Task 1) + external AgentCoordinator (Task 2)
+    std::unique_ptr<RawrXD::AutonomousAgenticPipelineCoordinator> m_autonomousPipeline;
+    void* m_agentCoordinatorForPipeline = nullptr;  // AgentCoordinatorHandle when linked
+    void ensureAutonomousPipelineInitialized();
+    void onPipelineRun();
+    void onPipelineAutonomyStart();
+    void onPipelineAutonomyStop();
 
     // AI Extended Features Handlers
     void onAIModeMax();
@@ -946,6 +279,7 @@ private:
     LRESULT handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
     void onCreate(HWND hwnd);
     void deferredHeavyInit();
+    static DWORD WINAPI deferredHeavyInitThreadProc(LPVOID param);
     void onDestroy();
     void onSize(int width, int height);
     void onCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify);
@@ -1237,7 +571,64 @@ private:
     void sendToAllTerminals(const std::string& command);
     TerminalPane* getActiveTerminalPane();
     void layoutTerminalPanes(int width, int top, int height);
-    
+
+    // Terminal Split Panes (Win32IDE_TerminalSplit.cpp)
+    void splitTerminalImpl(bool horizontal);
+    void focusNextTerminalPane();
+
+public:
+    // Peek Definition/References Overlay (Win32IDE_PeekView.cpp)
+    struct PeekLocation {
+        std::string filePath;
+        int line = 0;
+        int col = 0;
+        int endCol = 0;
+        std::string preview;
+        std::vector<std::string> contextLines;
+        int contextStartLine = 0;
+    };
+    void showPeekDefinition();
+    void showPeekReferences();
+    void closePeekView();
+    void navigatePeekLocation(int index);
+    void showPeekOverlay(const std::string& symbol, const std::vector<PeekLocation>& locations, bool isDefinition);
+    std::vector<PeekLocation> scanForDefinitions(const std::string& symbol);
+    std::vector<PeekLocation> scanForReferences(const std::string& symbol);
+
+    // Auto-Save System (Win32IDE_AutoSave.cpp)
+    enum class AutoSaveMode { Off = 0, AfterDelay = 1, OnFocusChange = 2, OnWindowChange = 3 };
+    void initAutoSave();
+    void shutdownAutoSave();
+    void toggleAutoSave();
+    void setAutoSaveMode(AutoSaveMode mode);
+    void startAutoSaveTimer();
+    void stopAutoSaveTimer();
+    void handleAutoSaveTimer(UINT_PTR timerId);
+    void autoSaveDirtyFiles();
+    void onEditorFocusLost();
+    void onWindowDeactivated();
+    void checkExternalFileChanges();
+    void reloadCurrentFile();
+
+    // Multi-Cursor Editing (Win32IDE_MultiCursor.cpp)
+    void initMultiCursor();
+    bool isMultiCursorActive() const;
+    void clearSecondaryCursors();
+    void addCursorAtPosition(int charPos);
+    void addCursorAbove();
+    void addCursorBelow();
+    void selectNextOccurrence();
+    void selectAllOccurrences();
+    void multiCursorInsertText(const std::string& text);
+    void multiCursorBackspace();
+    void multiCursorDelete();
+    void paintMultiCursorIndicators(HDC hdc);
+    bool handleMultiCursorKeyDown(WPARAM vk, bool ctrl, bool shift, bool alt);
+    bool handleMultiCursorChar(WPARAM ch);
+    bool handleMultiCursorClick(int charPos, bool altHeld);
+    void updateMultiCursorStatusBar();
+    int  getMultiCursorCount() const;
+
     // Git Integration (7 features - Status, commit, push, pull)
     void updateGitStatus();
     void showGitStatus();
@@ -1390,7 +781,6 @@ private:
 
     // Grant Tier 1 cosmetic callbacks access to private members
     friend LRESULT CALLBACK MinimapWndProc(HWND, UINT, WPARAM, LPARAM);
-    friend INT_PTR CALLBACK SettingsGUIProc(HWND, UINT, WPARAM, LPARAM);
 
     // Theme session persistence
     void saveSessionTheme(nlohmann::json& session);
@@ -1402,6 +792,21 @@ private:
     void insertSnippet(const std::string& trigger);
     void showSnippetManager();
     void createSnippet();
+
+    // Snippet Tab-Stop Engine (Win32IDE_SnippetEngine.cpp)
+    void insertSnippetWithTabStops(const std::string& snippetBody);
+    bool snippetNextField();
+    bool snippetPrevField();
+    void selectCurrentSnippetField();
+    void endSnippetSession();
+    bool isSnippetSessionActive() const;
+    bool handleSnippetTab(bool shiftHeld);
+    void loadSnippetsFromJson(const std::string& filePath, const std::string& language);
+    void loadBuiltInSnippets();
+    void loadUserSnippetFiles();
+    int  findSnippetByTrigger(const std::string& trigger, const std::string& language);
+    std::vector<std::pair<std::string, std::string>> getSnippetCompletions(const std::string& prefix, const std::string& language);
+    bool tryExpandSnippetAtCursor();
 
     // Integrated help
     void showGetHelp(const std::string& cmdlet = "");
@@ -1594,6 +999,8 @@ private:
     void updateMinimap();
     void scrollToMinimapPosition(int y);
     void toggleMinimap();
+    void paintMinimap(HDC hdc, RECT& rc);
+    void minimapHitTest(int mouseY, int& outLine);
 
     // Performance profiling
     void startProfiling();
@@ -1730,6 +1137,13 @@ private:
     void searchInFiles(const std::string& query);
     void replaceInFiles(const std::string& searchText, const std::string& replaceText);
     void clearSearchResults();
+    void createSearchPanel();
+    void performSearch();
+    void searchDirectory(const std::string& dir, const char* query, int depth,
+                         bool caseSensitive, bool useRegex, bool wholeWord,
+                         const std::string& includeFilter,
+                         const std::string& excludeFilter);
+    void performSearchReplace(bool replaceAll);
     
     // Source Control View
     void createSourceControlView(HWND hwndParent);
@@ -1753,6 +1167,10 @@ private:
     void stepOut();
     void continueExecution();
     void showDebugConsole();
+    void debugConsoleEvaluate(const std::string& expression);
+    void debugConsoleAppend(const std::string& text, COLORREF color);
+    std::string debugConsoleHistoryPrev();
+    std::string debugConsoleHistoryNext();
     void updateDebugVariables();
     
     // Extensions View
@@ -1765,6 +1183,10 @@ private:
     void updateExtension(const std::string& extensionId);
     void showExtensionDetails(const std::string& extensionId);
     void loadInstalledExtensions();
+    void handleExtensionCommand(int commandId);
+    
+    // Tooling & Diagnostics
+    void ExecuteToolingSmokeTest();  // CRITICAL FIX: Bounds-checked tool validation
 private:
     void installFromVSIXFile();
     void showMultiFileSearchDialog();
@@ -1876,6 +1298,31 @@ private:
     std::atomic<bool> m_modelOperationCancelled;
     std::atomic<float> m_modelProgressPercent;
     std::string m_modelProgressStatus;
+    // =========================================================================
+    // LOCK ORDERING - acquire mutexes only in this canonical order to prevent
+    // deadlock.  Never hold a lower-ranked lock while acquiring a higher one.
+    //
+    //  Rank  Member                     Guards
+    //  ----  -------------------------  ------------------------------------
+    //   1    m_backendMutex             AI backend selection / hot-swap
+    //   2    m_inferenceMutex           Inference engine state + thread
+    //   3    m_lspMutex                 LSP server lifecycle per language
+    //   4    m_lspResponseMutex         JSON-RPC pending response map
+    //   5    m_lspDiagnosticsMutex      Per-file diagnostic vectors
+    //   6    m_asmMutex                 ASM symbol tables (mutable analysis)
+    //   7    m_hybridMutex              Hybrid completion provider cache
+    //   8    m_outputMutex              Output panel append queue
+    //   9    m_modelProgressMutex       Model load progress % + status string
+    //  10    m_routerMutex              Command-routing dispatch table
+    //  11    m_failureIntelligenceMutex Failure-mode heuristics state
+    //  12    m_ghostTextCacheMutex      Ghost-text / inline-completion cache
+    //  13    m_eventBufferMutex         Agent-event ring buffer
+    //  14    m_agentMemoryMutex         Key-value agent memory store
+    //  15    m_streamingOutputMutex     Streaming token append buffer
+    //
+    // Watchdog thread touches NO mutexes - it communicates exclusively via
+    // PostMessage / InterlockedCompareExchange / m_shuttingDown.load().
+    // =========================================================================
     std::mutex m_modelProgressMutex;
     static const UINT_PTR MODEL_PROGRESS_TIMER_ID = 9902;
     static const UINT WM_MODEL_PROGRESS_UPDATE = WM_APP + 300;
@@ -1948,6 +1395,9 @@ private:
 
     HINSTANCE m_hInstance;
     HWND m_hwndMain;
+    // ── Parity-audit: Visibility Watchdog members ──────────────────────────
+    HANDLE              m_watchdogThread   = nullptr;
+    volatile LONG       m_watchdogRunning  = 0;   // 1 = active, 0 = stop requested
     HWND m_hwndEditor;
     HWND m_hwndLineNumbers;     // Line number gutter
     HWND m_hwndTabBar;           // Editor tab bar
@@ -2001,12 +1451,21 @@ private:
     HWND m_hwndGitPanel;
     HWND m_hwndGitStatusText;
     HWND m_hwndGitFileList;
+    HWND m_hwndGitStatus    = nullptr;  // Source control status EDIT
+    HWND m_hwndGitBranch    = nullptr;  // Branch label STATIC
+    HWND m_hwndGitDiff      = nullptr;  // Diff view EDIT
+    HWND m_hwndGitCommitMsg = nullptr;  // Commit message EDIT
     std::vector<GitFile> m_currentGitFiles;
     bool m_gitPanelVisible;
     WNDPROC m_gitPanelProc;
     std::string m_gitRepoPath;
     bool m_gitAutoRefresh;
     HWND m_hwndCommitDialog; // commit dialog handle
+
+    // Git panel methods (Win32IDE_GitPanel.cpp)
+    void createGitPanel();
+    void refreshGitStatus();
+    void handleGitPanelCommand(WORD cmdId);
     
     // File operations
     std::vector<std::string> m_recentFiles;
@@ -2014,6 +1473,31 @@ private:
     std::string m_currentDirectory;
     std::string m_defaultFileExtension;
     bool m_autoSaveEnabled;
+    AutoSaveMode m_autoSaveMode = AutoSaveMode::Off;
+    UINT_PTR m_autoSaveTimerId = 0;
+    UINT_PTR m_fileWatchTimerId = 0;
+    int m_autoSaveIntervalMs = 1000;
+    std::filesystem::file_time_type m_lastKnownFileWriteTime;
+
+    // Debug console REPL members
+    HWND m_hwndDebugConsole       = nullptr;
+    HWND m_hwndDebugConsoleOutput = nullptr;
+    HWND m_hwndDebugConsoleInput  = nullptr;
+    HWND m_hwndOutputPanel        = nullptr;
+    WNDPROC m_debugConsoleOrigInputProc = nullptr;
+    std::vector<std::string> m_debugConsoleHistory;
+    int m_debugConsoleHistoryIndex = -1;
+
+    // Debug engine handle (nullptr when no debugger attached)
+    void* m_debugEngine = nullptr;
+
+    // Peek overlay members
+    HWND m_hwndPeekOverlay     = nullptr;
+    HWND m_hwndPeekFileList    = nullptr;
+    HWND m_hwndPeekContent     = nullptr;
+    HWND m_hwndPeekCloseBtn    = nullptr;
+    std::vector<std::pair<std::string, int>> m_peekLocations;
+    int m_peekCurrentIndex     = -1;
     
     // Menu command system
     std::map<int, std::string> m_commandDescriptions;
@@ -2073,6 +1557,11 @@ private:
     int m_minimapWidth;
     std::vector<std::string> m_minimapLines;
     std::vector<int> m_minimapLineStarts;
+    int m_minimapScrollY = 0;
+    int m_minimapTotalLines = 0;
+    bool m_minimapDragging = false;
+    HFONT m_minimapFont = nullptr;
+    RECT m_minimapViewRect = {};
 
     // (Syntax coloring state declared inline with methods above — lines 641-645)
 
@@ -2139,6 +1628,10 @@ private:
     HWND m_hwndSearchOptions;
     HWND m_hwndIncludePattern;
     HWND m_hwndExcludePattern;
+    HWND m_hwndSearchReplace  = nullptr;
+    HWND m_hwndSearchInclude  = nullptr;
+    HWND m_hwndSearchExclude  = nullptr;
+    HWND m_hwndSearchStatus   = nullptr;
     std::vector<std::string> m_searchResults;
     bool m_searchInProgress;
 
@@ -2152,7 +1645,7 @@ private:
     HWND m_hwndDebugToolbar;
     HWND m_hwndDebugVariables;
     HWND m_hwndDebugCallStack;
-    HWND m_hwndDebugConsole;
+    // m_hwndDebugConsole declared above (line ~2136) with initializer
     bool m_debuggingActive;
 
     // Disk Recovery View
@@ -2495,6 +1988,9 @@ private:
     void HandleCopilotClear();
     void HandleCopilotStreamUpdate(const char* token, size_t length = 0);
     void populateModelSelector();
+    std::vector<std::string> getConfiguredModelDirectories() const;
+    std::vector<std::string> collectFilesystemModelNames(const std::vector<std::string>& modelDirs,
+                                                         size_t maxCount = 2048) const;
     void onModelSelectionChanged();
     void onMaxTokensChanged(int newValue);
     // Debugger Execution Control
@@ -3246,12 +2742,38 @@ private:
         bool        valid = false;
     };
 
+    struct LSPCompletionItem {
+        std::string label;
+        std::string detail;
+        std::string insertText;
+        int         kind       = 0;
+        bool        isSnippet  = false;
+    };
+
+    struct LSPSignatureHelpInfo {
+        std::vector<std::string> signatures;
+        std::string activeSignatureLabel;
+        std::string activeDocumentation;
+        int activeSignature = 0;
+        int activeParameter = 0;
+        bool valid = false;
+    };
+
     struct LSPSymbolInfo {
         std::string name;
         int         kind     = 0;       // LSP SymbolKind (1=File ... 26=TypeParameter)
         std::string detail;             // e.g., "void foo(int x)"
         LSPLocation location;
         std::string containerName;      // Enclosing symbol name
+    };
+
+    struct SemanticToken {
+        int line = 0;
+        int startChar = 0;
+        int length = 0;
+        int tokenType = 0;
+        int modifiers = 0;
+        std::string typeName;
     };
 
     struct LSPWorkspaceEdit {
@@ -3269,6 +2791,8 @@ private:
         uint64_t totalReferenceRequests     = 0;
         uint64_t totalRenameRequests        = 0;
         uint64_t totalHoverRequests         = 0;
+        uint64_t totalCompletionRequests    = 0;
+        uint64_t totalSignatureRequests     = 0;
         uint64_t totalDiagnosticsReceived   = 0;
         uint64_t totalServerRestarts        = 0;
     };
@@ -3312,6 +2836,9 @@ private:
     LSPWorkspaceEdit lspRenameSymbol(const std::string& uri, int line, int character,
                                       const std::string& newName);
     LSPHoverInfo lspHover(const std::string& uri, int line, int character);
+    std::vector<LSPCompletionItem> lspCompletion(const std::string& uri, int line, int character);
+    LSPSignatureHelpInfo lspSignatureHelp(const std::string& uri, int line, int character, int triggerKind = 1);
+    std::vector<SemanticToken> lspSemanticTokensFull(const std::string& uri);
     // Diagnostics arrive as notifications — handled in lspReaderThread
 
     // Apply edits from LSP
@@ -4966,6 +4493,7 @@ public:
     void initProblemsPanel();
     void refreshProblemsView();
     void onProblemsItemActivate(int index);
+    const std::vector<RawrXD::ProblemEntry>& problemsViewCache() const { return m_problemsViewCache; }
 private:
     void handleProblemsCommand(int commandId);
     void runBuildInBackground(const std::string& workingDir, const std::string& buildCommand);
@@ -5264,9 +4792,9 @@ private:
     static constexpr int IDM_RESOURCE_LOAD_PLUGIN     = 11574;
 
     // ── Cursor/JB-Parity Menu Builder ──
-    void createCursorParityMenu(HMENU parentMenu);
-    bool handleCursorParityCommand(int commandId);
-    void initAllCursorParityModules();
+    void createFeaturesMenu(HMENU parentMenu);
+    bool handleFeaturesCommand(int commandId);
+    void initAllFeatureModules();
 
     // ════════════════════════════════════════════════════════════════════
     // TIER 2: HIGH VISIBILITY (Daily Friction) — Features 11–19
@@ -5358,6 +4886,53 @@ private:
     std::vector<DiffHunk> m_gitDiffHunks;
     int m_gitDiffCurrentHunk = -1;
 
+    // ── Inline Diff Viewer (Side-by-Side + Inline mode) ──
+    struct DiffViewHunk {
+        enum HunkType { Added, Removed, Modified };
+        HunkType type = Added;
+        int leftStart = 0, leftCount = 0;
+        int rightStart = 0, rightCount = 0;
+        std::string leftText, rightText;
+    };
+
+    struct DiffViewState {
+        bool visible = false;
+        std::string leftTitle, rightTitle;
+        std::vector<std::string> leftLines, rightLines;
+        std::vector<DiffViewHunk> hunks;
+        int scrollPos = 0;
+        int currentHunk = -1;
+        bool inlineMode = false;
+        HFONT hFont = nullptr;
+    };
+
+    void initDiffView();
+    void shutdownDiffView();
+    void openDiffView(const std::string& leftContent, const std::string& rightContent,
+                      const std::string& leftTitle, const std::string& rightTitle);
+    void closeDiffView();
+    void computeDiffHunks();
+    void diffNavigateHunk(int direction);
+    void toggleDiffInlineMode();
+    void renderDiffPanel(HWND hwnd, HDC hdc, bool isRight);
+    void openGitDiffForCurrentFile();
+    static LRESULT CALLBACK DiffPanelProc(HWND, UINT, WPARAM, LPARAM);
+
+    DiffViewState m_diffState;
+    HWND m_hwndDiffPanel   = nullptr;
+    HWND m_hwndDiffLeft    = nullptr;
+    HWND m_hwndDiffRight   = nullptr;
+    HWND m_hwndDiffToolbar = nullptr;
+
+    static constexpr int IDC_DIFF_PANEL     = 10800;
+    static constexpr int IDC_DIFF_TOOLBAR   = 10801;
+    static constexpr int IDC_DIFF_LEFT      = 10802;
+    static constexpr int IDC_DIFF_RIGHT     = 10803;
+    static constexpr int IDC_DIFF_PREV_BTN  = 10804;
+    static constexpr int IDC_DIFF_NEXT_BTN  = 10805;
+    static constexpr int IDC_DIFF_INLINE_BTN= 10806;
+    static constexpr int IDC_DIFF_CLOSE_BTN = 10807;
+
     // ── TerminalProfile / TerminalTabInfo (Terminal Tabs) ──
     struct TerminalProfile {
         std::string name;
@@ -5391,18 +4966,44 @@ private:
     std::vector<TerminalTabInfo> m_terminalTabs;
 
     // 13. Hover Documentation Tooltips
+    struct HoverTooltipState {
+        HWND hwndPopup  = nullptr;
+        bool visible    = false;
+        bool pending    = false;
+        std::string content;
+        HFONT hFont     = nullptr;
+        HFONT hBoldFont = nullptr;
+        int line        = 0;
+        int column      = 0;
+        POINT screenPos = {};
+    };
+
     void initHoverTooltip();
+    void initHoverTooltips();
     void shutdownHoverTooltip();
+    void shutdownHoverTooltips();
     void showHoverTooltip(int screenX, int screenY, const std::string& content);
     void dismissHoverTooltip();
     void onEditorMouseHover(int charPos);
+    void onEditorMouseHover(int x, int y);
+    void onHoverTimer();
+    void onHoverReady(const std::string& content, int line, int col);
+    void renderHoverContent(HDC hdc, RECT rc, const std::string& content);
     static LRESULT CALLBACK HoverTooltipProc(HWND, UINT, WPARAM, LPARAM);
 
+    HoverTooltipState m_hoverState;
     HWND m_hwndHoverPopup   = nullptr;
     bool m_hoverVisible     = false;
     std::string m_hoverContent;
     HFONT m_hoverFont       = nullptr;
     HFONT m_hoverBoldFont   = nullptr;
+    bool m_hoverPending     = false;
+    int m_hoverLine         = 0;
+    int m_hoverColumn       = 0;
+    POINT m_hoverScreenPos  = {};
+    static constexpr UINT_PTR HOVER_TIMER_ID = 42001;
+    static constexpr int HOVER_TIMER_DELAY = 500;
+    static constexpr UINT WM_HOVER_READY = WM_USER + 200;
 
     // 14. Parameter Hints (Signature Help)
     void initSignatureHelp();
@@ -5491,6 +5092,8 @@ private:
         std::string symbol;
         int referenceCount  = 0;
         std::string text;
+        COLORREF color      = RGB(150, 150, 150);
+        std::string command;
     };
 
     // 18. CodeLens (Reference Counts)
@@ -5499,7 +5102,10 @@ private:
     void refreshCodeLens();
     int  countSymbolReferences(const std::string& symbol);
     void renderCodeLens(HDC hdc);
+    void renderCodeLens(HDC hdc, int lineY, int lineNumber);
     void toggleCodeLens();
+    void onCodeLensClick(int line);
+    void computeCodeLensForFunction(const std::string& funcName, int line);
 
     bool m_codeLensEnabled = true;
     std::vector<CodeLensEntry> m_codeLensEntries;
@@ -5513,6 +5119,7 @@ private:
         int column   = 0;
         std::string text;
         InlayHintKind kind = InlayHintKind::Type;
+        COLORREF color = RGB(104, 151, 187);
     };
 
     // 19. Inlay Type Hints
@@ -5521,7 +5128,9 @@ private:
     void refreshInlayHints();
     std::string inferTypeFromExpression(const std::string& expr);
     void renderInlayHints(HDC hdc);
+    void renderInlayHints(HDC hdc, int lineY, int lineNumber);
     void toggleInlayHints();
+    void parseInlayHintsFromLSP(const std::string& jsonResponse);
 
     bool m_inlayHintsEnabled = true;
     std::vector<InlayHintEntry> m_inlayHintEntries;
@@ -5611,7 +5220,7 @@ private:
     void stopWatchingFile();
     void onExternalFileChange(const std::string& changedFile);
     void showFileChangedToast();
-    void reloadCurrentFile();
+    // reloadCurrentFile() declared above (line ~1295)
 
     std::unique_ptr<IocpFileWatcher> m_fileWatcher;
     std::string                      m_watchedFilePath;
@@ -5738,8 +5347,10 @@ private:
 
     struct CodeAction {
         std::string title;
-        std::string kind;   // "quickfix", "refactor", "suppress"
+        std::string kind;          // "quickfix", "refactor", "refactor.extract", "source.organizeImports", "suppress"
         int diagnosticIndex = -1;
+        bool isFromLSP = false;    // true if action came from LSP server
+        std::string lspEditJson;   // JSON string of workspace edit (only for LSP actions)
     };
     std::vector<CodeAction> requestCodeActions(int line);
     void applyCodeAction(const CodeAction& action);
@@ -5856,6 +5467,11 @@ private:
     void showFuzzyPaletteWindow();
     void showFuzzyFileFinder();
     void showFuzzySymbolSearch();
+    int  fuzzyMatchScore(const std::string& pattern, const std::string& candidate,
+                         std::vector<int>* matchPositions = nullptr);
+    void fuzzyFilterCommandPalette(const std::string& query);
+    void paintFuzzyHighlights(HDC hdc, RECT itemRect, const std::string& text,
+                              const std::vector<int>& matchPositions);
 
     struct FuzzyCommandEntry {
         int         commandId = 0;
@@ -5866,9 +5482,28 @@ private:
     std::vector<FuzzyCommandEntry> m_fuzzyCommandLabels;
 
     // 5. Settings GUI
+    struct SettingsCategory {
+        std::string name;
+        std::vector<std::string> keys;
+    };
+
     void initSettingsGUI();
+    void showSettingsGUI();
     void showSettingsGUIDialog();
+    void buildSettingsSchema();
+    void createSettingsControls(HWND hwndParent);
+    void onSettingsCategorySelect(int categoryIndex);
+    void onSettingChanged(const std::string& key, const std::string& value);
+    void filterSettings(const std::string& query);
+    void populateSettingsTree();
     friend LRESULT CALLBACK SettingsSummaryWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
+
+    std::vector<SettingsCategory> m_settingsSchema;
+    std::string m_settingsSearchQuery;
+    HWND m_hwndSettingsGUI    = nullptr;
+    HWND m_hwndSettingsSearch = nullptr;
+    HWND m_hwndSettingsTabs   = nullptr;
+    HWND m_hwndSettingsPanel  = nullptr;
 
     // 6. Welcome / Onboarding Page
     void initWelcomePage();
@@ -6082,6 +5717,10 @@ private:
     // 44. Call Stack Symbols
     void initCallStackSymbols();
     bool handleCallStackCommand(int commandId);
+    void cmdCallStackCapture();
+    void cmdCallStackShowDialog();
+    void cmdCallStackCopy();
+    void cmdCallStackResolve();
 
     // 45. Marketplace
     void initMarketplace();
@@ -6092,6 +5731,9 @@ private:
     void cmdMarketplaceUninstall();
     void cmdMarketplaceList();
     void cmdMarketplaceStatus();
+
+    // Collaboration (View > Collaboration) — CRDT/WebSocket live session panel
+    void showCollabPanel();
 
     // 46. Telemetry Dashboard
     void initTelemetryDashboard();
@@ -6157,6 +5799,8 @@ public:
     static constexpr int IDM_DBGWATCH_CLEAR        = 11539;
 
     static constexpr int IDM_CALLSTACK_CAPTURE     = 11540;
+    static constexpr int IDM_CALLSTACK_SHOW        = 11541;
+    static constexpr int IDM_CALLSTACK_COPY        = 11542;
     static constexpr int IDM_CALLSTACK_RESOLVE     = 11549;
 
     static constexpr int IDM_MARKETPLACE_SHOW      = 11550;

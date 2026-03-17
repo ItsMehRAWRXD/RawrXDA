@@ -116,10 +116,46 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
+# Build amphibious autonomous components as first-class IDE artifacts
+$amphibiousScript = Join-Path $PSScriptRoot "Build-Amphibious-ml64.ps1"
+if (-not (Test-Path $amphibiousScript)) {
+    Write-Host "ERROR: Build-Amphibious-ml64.ps1 not found. Amphibious IDE integration is required." -ForegroundColor Red
+    Write-Host ""
+    pause
+    exit 1
+}
+
+Write-Host ""
+Write-Host "[3/3] Building amphibious AutoHeal CLI + GUI components..." -ForegroundColor Yellow
+& powershell -ExecutionPolicy Bypass -File $amphibiousScript
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "ERROR: Amphibious component build failed." -ForegroundColor Red
+    Write-Host ""
+    pause
+    exit 1
+}
+
+$amphibiousOut = Join-Path $PSScriptRoot "build\amphibious-ml64"
+$autoHealCli = Join-Path $amphibiousOut "RawrXD_AutoHeal_CLI.exe"
+$autoHealGui = Join-Path $amphibiousOut "RawrXD_Amphibious_GUI.exe"
+
+if ((Test-Path $autoHealCli) -and (Test-Path $autoHealGui)) {
+    Copy-Item $autoHealCli (Join-Path $PSScriptRoot "RawrXD_AutoHeal_CLI.exe") -Force
+    Copy-Item $autoHealGui (Join-Path $PSScriptRoot "RawrXD_Amphibious_GUI.exe") -Force
+} else {
+    Write-Host "ERROR: Amphibious outputs not found after build." -ForegroundColor Red
+    Write-Host ""
+    pause
+    exit 1
+}
+
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Green
 Write-Host "Build Complete!" -ForegroundColor Green
 Write-Host "Output: RawrXD_IDE_unified.exe" -ForegroundColor Green
+Write-Host "Output: RawrXD_AutoHeal_CLI.exe" -ForegroundColor Green
+Write-Host "Output: RawrXD_Amphibious_GUI.exe" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "Usage:" -ForegroundColor Cyan
@@ -134,4 +170,6 @@ Write-Host "            .\RawrXD_IDE_unified.exe -avscan" -ForegroundColor White
 Write-Host "            .\RawrXD_IDE_unified.exe -entropy" -ForegroundColor White
 Write-Host "            .\RawrXD_IDE_unified.exe -stubgen" -ForegroundColor White
 Write-Host "            .\RawrXD_IDE_unified.exe -trace" -ForegroundColor White
+Write-Host "  AutoHeal CLI: .\RawrXD_AutoHeal_CLI.exe" -ForegroundColor White
+Write-Host "  Amphibious GUI: .\RawrXD_Amphibious_GUI.exe" -ForegroundColor White
 Write-Host ""

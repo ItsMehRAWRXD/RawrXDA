@@ -1,0 +1,81 @@
+Microsoft (R) Macro Assembler (x64) Version 14.44.35223.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+ Assembling: D:\rawrxd\gpu_dma_production_v12.asm
+D:\rawrxd\gpu_dma_production_v12.asm(263) : error A2070:invalid instruction operands
+D:\rawrxd\gpu_dma_production_v12.asm(267) : error A2070:invalid instruction operands
+D:\rawrxd\gpu_dma_production_v12.asm(303) : error A2070:invalid instruction operands
+D:\rawrxd\gpu_dma_production_v12.asm(304) : error A2070:invalid instruction operands
+D:\rawrxd\gpu_dma_production_v12.asm(309) : error A2070:invalid instruction operands
+D:\rawrxd\gpu_dma_production_v12.asm(310) : error A2070:invalid instruction operands
+D:\rawrxd\gpu_dma_production_v12.asm(408) : error A2023:instruction operand must have size
+D:\rawrxd\gpu_dma_production_v12.asm(409) : error A2023:instruction operand must have size
+D:\rawrxd\gpu_dma_production_v12.asm(410) : error A2023:instruction operand must have size
+D:\rawrxd\gpu_dma_production_v12.asm(411) : error A2023:instruction operand must have size
+D:\rawrxd\gpu_dma_production_v12.asm(488) : error A2070:invalid instruction operands
+D:\rawrxd\gpu_dma_production_v12.asm(489) : error A2070:invalid instruction operands
+D:\rawrxd\gpu_dma_production_v12.asm(494) : error A2070:invalid instruction operands
+D:\rawrxd\gpu_dma_production_v12.asm(495) : error A2070:invalid instruction operands
+D:\rawrxd\gpu_dma_production_v12.asm(561) : error A2084:constant value too large
+D:\rawrxd\gpu_dma_production_v12.asm(566) : error A2084:constant value too large
+D:\rawrxd\gpu_dma_production_v12.asm(665) : error A2023:instruction operand must have size
+D:\rawrxd\gpu_dma_production_v12.asm(666) : error A2023:instruction operand must have size
+D:\rawrxd\gpu_dma_production_v12.asm(667) : error A2023:instruction operand must have size
+D:\rawrxd\gpu_dma_production_v12.asm(668) : error A2023:instruction operand must have size
+D:\rawrxd\gpu_dma_production_v12.asm(1199) : error A2084:constant value too large
+D:\rawrxd\gpu_dma_production_v12.asm(211) : error A2006:undefined symbol : MEMORY_PATCH
+D:\rawrxd\gpu_dma_production_v12.asm(363) : error A2006:undefined symbol : MEMORY_PATCH
+D:\rawrxd\gpu_dma_production_v12.asm(436) : error A2006:undefined symbol : MEMORY_PATCH
+D:\rawrxd\gpu_dma_production_v12.asm(546) : error A2006:undefined symbol : pSource
+D:\rawrxd\gpu_dma_production_v12.asm(547) : error A2006:undefined symbol : pDest
+D:\rawrxd\gpu_dma_production_v12.asm(549) : error A2006:undefined symbol : copyType
+D:\rawrxd\gpu_dma_production_v12.asm(552) : error A2006:undefined symbol : pSource
+D:\rawrxd\gpu_dma_production_v12.asm(554) : error A2006:undefined symbol : pDest
+D:\rawrxd\gpu_dma_production_v12.asm(560) : error A2006:undefined symbol : pSource
+D:\rawrxd\gpu_dma_production_v12.asm(563) : error A2006:undefined symbol : srcIsDevice
+D:\rawrxd\gpu_dma_production_v12.asm(565) : error A2006:undefined symbol : pDest
+D:\rawrxd\gpu_dma_production_v12.asm(568) : error A2006:undefined symbol : dstIsDevice
+D:\rawrxd\gpu_dma_production_v12.asm(571) : error A2006:undefined symbol : srcIsDevice
+D:\rawrxd\gpu_dma_production_v12.asm(573) : error A2006:undefined symbol : dstIsDevice
+D:\rawrxd\gpu_dma_production_v12.asm(578) : error A2006:undefined symbol : dstIsDevice
+D:\rawrxd\gpu_dma_production_v12.asm(583) : error A2006:undefined symbol : copyType
+D:\rawrxd\gpu_dma_production_v12.asm(587) : error A2006:undefined symbol : copyType
+D:\rawrxd\gpu_dma_production_v12.asm(591) : error A2006:undefined symbol : copyType
+D:\rawrxd\gpu_dma_production_v12.asm(595) : error A2006:undefined symbol : copyType
+D:\rawrxd\gpu_dma_production_v12.asm(598) : error A2006:undefined symbol : pSource
+D:\rawrxd\gpu_dma_production_v12.asm(599) : error A2006:undefined symbol : pDest
+D:\rawrxd\gpu_dma_production_v12.asm(795) : error A2006:undefined symbol : pSource
+D:\rawrxd\gpu_dma_production_v12.asm(796) : error A2006:undefined symbol : pDest
+D:\rawrxd\gpu_dma_production_v12.asm(801) : error A2006:undefined symbol : pSource
+D:\rawrxd\gpu_dma_production_v12.asm(803) : error A2006:undefined symbol : pDest
+D:\rawrxd\gpu_dma_production_v12.asm(809) : error A2006:undefined symbol : pOrchestrator
+D:\rawrxd\gpu_dma_production_v12.asm(810) : error A2006:undefined symbol : pOrchestrator
+D:\rawrxd\gpu_dma_production_v12.asm(813) : error A2006:undefined symbol : pOrchestrator
+D:\rawrxd\gpu_dma_production_v12.asm(820) : error A2006:undefined symbol : pSource
+D:\rawrxd\gpu_dma_production_v12.asm(821) : error A2006:undefined symbol : pDest
+D:\rawrxd\gpu_dma_production_v12.asm(834) : error A2006:undefined symbol : pSource
+D:\rawrxd\gpu_dma_production_v12.asm(835) : error A2006:undefined symbol : pDest
+D:\rawrxd\gpu_dma_production_v12.asm(844) : error A2006:undefined symbol : pSource
+D:\rawrxd\gpu_dma_production_v12.asm(845) : error A2006:undefined symbol : pDest
+D:\rawrxd\gpu_dma_production_v12.asm(910) : error A2006:undefined symbol : pSource
+D:\rawrxd\gpu_dma_production_v12.asm(911) : error A2006:undefined symbol : pDest
+D:\rawrxd\gpu_dma_production_v12.asm(913) : error A2006:undefined symbol : pOrchestrator
+D:\rawrxd\gpu_dma_production_v12.asm(915) : error A2006:undefined symbol : pOrchestrator
+D:\rawrxd\gpu_dma_production_v12.asm(980) : error A2006:undefined symbol : pSource
+D:\rawrxd\gpu_dma_production_v12.asm(981) : error A2006:undefined symbol : pDest
+D:\rawrxd\gpu_dma_production_v12.asm(983) : error A2006:undefined symbol : pOrchestrator
+D:\rawrxd\gpu_dma_production_v12.asm(985) : error A2006:undefined symbol : pOrchestrator
+D:\rawrxd\gpu_dma_production_v12.asm(989) : error A2006:undefined symbol : hDevice
+D:\rawrxd\gpu_dma_production_v12.asm(990) : error A2006:undefined symbol : hQueue
+D:\rawrxd\gpu_dma_production_v12.asm(992) : error A2006:undefined symbol : hDevice
+D:\rawrxd\gpu_dma_production_v12.asm(1045) : error A2006:undefined symbol : pCtx
+D:\rawrxd\gpu_dma_production_v12.asm(1046) : error A2006:undefined symbol : pCtx
+D:\rawrxd\gpu_dma_production_v12.asm(1062) : error A2006:undefined symbol : hFreq
+D:\rawrxd\gpu_dma_production_v12.asm(1067) : error A2006:undefined symbol : pCtx
+D:\rawrxd\gpu_dma_production_v12.asm(1105) : error A2006:undefined symbol : pOrchestrator
+D:\rawrxd\gpu_dma_production_v12.asm(1106) : error A2006:undefined symbol : pOrchestrator
+D:\rawrxd\gpu_dma_production_v12.asm(1112) : error A2206:missing operator in expression
+D:\rawrxd\gpu_dma_production_v12.asm(1133) : error A2006:undefined symbol : pOrchestrator
+D:\rawrxd\gpu_dma_production_v12.asm(1155) : error A2006:undefined symbol : pOrchestrator
+D:\rawrxd\gpu_dma_production_v12.asm(1156) : error A2006:undefined symbol : pOrchestrator
+D:\rawrxd\gpu_dma_production_v12.asm(1171) : error A2006:undefined symbol : pOrchestrator

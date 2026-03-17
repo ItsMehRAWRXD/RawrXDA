@@ -1,0 +1,1931 @@
+==== MASM/ASM Codebase Digest Report ====
+Total PROCs: 1849
+Total STRUCTs: 381
+Total DATA: 1129
+Total CONSTs: 1981
+Total EXTERNs: 369
+Total CALLs: 1896
+
+--- FIXMEs / STUBs ---
+.\CodexPro.asm: ; Must be after DOS stub
+.\CodexPro.asm: ; Function placeholder
+.\CodexPro.asm: ; Placeholder
+.\CodexPro.asm: ; Placeholder
+.\dumpbin_final.asm: ; Rich header search between DOS stub
+.\dumpbin_final.asm: ; Placeholder
+.\dumpbin_final.asm: ; Placeholder
+.\dumpbin_final.asm: ; Placeholder
+.\dumpbin_final.asm: ; Placeholder
+.\dumpbin_final.asm: ; Placeholder
+.\dumpbin_final.asm: ; Placeholder
+.\dumpbin_final.asm: ; Placeholder
+.\dumpbin_final.asm: ; Placeholder
+.\dumpbin_final.asm: ; Stub
+.\dumpbin_final.asm: ; Stub
+.\dumpbin_final.asm: ; Stub
+.\dumpbin_final_backup.asm: ; Placeholder
+.\dumpbin_final_backup.asm: ; Placeholder
+.\dumpbin_final_backup.asm: ; Placeholder
+.\dumpbin_final_backup.asm: ; Placeholder
+.\dumpbin_final_backup.asm: ; Placeholder
+.\dumpbin_final_backup.asm: ; Rich header search between DOS stub
+.\dumpbin_final_backup.asm: ; Placeholder
+.\dumpbin_final_backup.asm: ; Placeholder
+.\dumpbin_final_backup.asm: ; Placeholder
+.\dumpbin_final_backup.asm: ; Placeholder
+.\dumpbin_final_backup.asm: ; Placeholder
+.\dumpbin_final_backup.asm: ; Placeholder
+.\dumpbin_final_backup.asm: ; Placeholder
+.\dumpbin_final_backup.asm: ; Placeholder
+.\dumpbin_final_backup.asm: ; Placeholder
+.\omega_professional.asm: ; Old stub
+.\os_interceptor_cli.asm: ; Placeholder
+.\RawrXD_AVX512_PatternEngine.asm: ; Blazing-fast FIXME
+.\RawrXD_AVX512_PatternEngine.asm: ; Enough bytes for "FIXME
+.\RawrXD_AVX512_PatternEngine.asm: ; Check for "FIXME
+.\RawrXD_AVX512_PatternEngine.asm: ; Found FIXME
+.\RawrXD_AVX512_PatternEngine.asm: ; Set confidence: BUG=1.0, FIXME
+.\RawrXD_AVX512_Production.asm: ; Check for 'F' (FIXME
+.\RawrXD_AVX512_Production.asm: ; Check for 'F' (FIXME
+.\RawrXD_AVX512_Real.asm: ; Found FIXME
+.\RawrXD_AVX512_SIMD.asm: ; First character lookup (lowercase): b=BUG, f=FIXME
+.\RawrXD_CLI.asm: ; Simple read-eval-print loop placeholder
+.\RawrXD_CLI_Main.asm: ; Simple read-eval-print loop placeholder
+.\RawrXD_InferenceCore.asm: ; The core that was missing - real tensor operations, not stub
+.\RawrXD_InferenceCore.asm: ; External definition placeholder
+.\RawrXD_Inference_Engine.asm: ; The core that was missing - real tensor operations, not stub
+.\RawrXD_Inference_Engine.asm: ; External definition placeholder
+.\RawrXD_OmegaDeobfuscator.asm: ; Old stub
+.\RawrXD_PatternBridge.asm: ; Layout: "bug:....", "fixme
+.\RawrXD_PatternBridge.asm: ; fixme
+.\RawrXD_PatternBridge.asm: ; Priority table (severity-based: BUG=10, FIXME
+.\RawrXD_PatternBridge.asm: ; Index 0-8 (UNKNOWN, BUG, FIXME
+.\RawrXD_Standalone_Inference.asm: ; Placeholder
+.\RawrXD_Titan_CORE.asm: ; Complete Production Implementation - All Math Explicit, Zero Stub
+.\RawrXD_Titan_Kernel.asm: ; placeholder
+.\RawrXD_Titan_MINIMAL.asm: ; QUANTIZATION: Q2_K Block Dequantization (Stub
+.\RawrXD_Titan_UNIFIED.asm: ; Stub
+.\RawrXD_Titan_UNIFIED.asm: ; Stub
+.\terraform.asm: ; jz placeholder
+.\Titan_InferenceCore.asm: ; Temporary placeholder
+.\Titan_InferenceCore.asm: ; This is a placeholder
+.\Titan_InferenceCore.asm: ; This is a high-level placeholder
+.\Titan_InferenceCore.asm: ; (Simplified placeholder
+.\Titan_Streaming_Orchestrator_NoHTTP.asm: ; Placeholder
+.\Titan_Streaming_Orchestrator_NoHTTP.asm: ; Placeholder
+.\vulkan_masm.asm: ; MASM x64 Stub
+.\vulkan_masm.asm: ; This file provides MASM x64 stub
+.\vulkan_masm.asm: ; Each routine is a placeholder
+.\vulkan_masm.asm: ; [STUB
+.\week5_final_integration.asm: ; UTILITY FUNCTIONS (stub
+.\agentic\GPU_DMA_COMPLETE_IMPLEMENTATIONS.asm: ; For now, use memcpy (placeholder
+.\agentic\GPU_DMA_COMPLETE_IMPLEMENTATIONS.asm: ; For now, use memcpy (placeholder
+.\agentic\Phase3_Agent_Kernel_Complete.asm: ; Call inference (placeholder
+.\agentic\Phase3_Agent_Kernel_Complete.asm: ; Sample token (placeholder
+.\agentic\RawrXD_Compiler_Engine_Complete.asm: ; RawrXD IDE - COMPLETE COMPILER ENGINE WITH ZERO STUB
+.\agentic\RawrXD_Compiler_Engine_Complete.asm: ; FINAL DELIVERY - ZERO STUB
+.\agentic\RawrXD_Compiler_Engine_Stubs_BACKUP.asm: ; RawrXD IDE - COMPLETE COMPILER ENGINE WITH ZERO STUB
+.\agentic\RawrXD_Compiler_Engine_Stubs_BACKUP.asm: ; FINAL DELIVERY - ZERO STUB
+.\agentic\RawrXD_Complete_Explicit.asm: ; FULL IMPLEMENTATION - Zero Stub
+.\agentic\RawrXD_Complete_Production_Fix.asm: ; All explicit missing logic from audit - ZERO stub
+.\agentic\RawrXD_Critical_Blockers_P0.asm: ; Size: ~4,200 lines | Target: Production-ready | Zero stub
+.\agentic\RawrXD_Critical_Blockers_P0.asm: ; SECTION 1: REAL INFERENCE ENGINE (Replaces processChat() echo stub
+.\agentic\rawrxd_final_complete_implementation.asm: ; ALL 47 Audit Findings ELIMINATED - ZERO STUB
+.\agentic\RawrXD_High_Priority_P1.asm: ; Placeholder
+.\agentic\RawrXD_High_Priority_P1.asm: ; Placeholder
+.\agentic\RawrXD_High_Priority_P1.asm: ; Placeholder
+.\agentic\RawrXD_Low_Priority_P3.asm: ; Placeholder
+.\agentic\RawrXD_Low_Priority_P3.asm: ; Placeholder
+.\agentic\RawrXD_Low_Priority_P3.asm: ; Placeholder
+.\agentic\RawrXD_Low_Priority_P3.asm: ; Placeholder
+.\agentic\RawrXD_Production_ReverseEngineered.asm: ;   2. Real GPU Vulkan (not stub
+.\agentic\RawrXD_Production_ReverseEngineered.asm: ; (Stub
+.\agentic\RawrXD_Production_ReverseEngineered.asm: ; Allocate model buffer (placeholder
+.\agentic\RawrXD_Production_ReverseEngineered.asm: ; Placeholder
+.\agentic\RawrXD_Production_ReverseEngineered.asm: ; Placeholder
+.\agentic\RawrXD_Production_ReverseEngineered.asm: ; Placeholder
+.\agentic\RawrXD_Production_ReverseEngineered.asm: ; GPU COMPUTE SUBSYSTEM (REAL VULKAN, NOT STUB
+.\agentic\RawrXD_Production_ReverseEngineered.asm: ; Placeholder
+.\agentic\RawrXD_Production_ReverseEngineered.asm: ; Placeholder
+.\agentic\RawrXD_Production_ReverseEngineered.asm: ; Placeholder
+.\agentic\RawrXD_Production_ReverseEngineered.asm: ; Placeholder
+.\agentic\RawrXD_Titan_Master_GodSource_REVERSE_ENGINEERED.asm: ; Placeholder
+.\agentic\RawrXD_Titan_Master_GodSource_REVERSE_ENGINEERED.asm: ; Placeholder
+.\agentic\RawrXD_Titan_Master_GodSource_REVERSE_ENGINEERED.asm: ; Placeholder
+.\agentic\titan_masm_real.asm: ; Replaces ALL stub
+.\agentic\Titan_Streaming_Orchestrator.asm: ; STUB
+.\agentic\Titan_Streaming_Orchestrator_Complete.asm: ; Simulate inference work (memcpy input to output as placeholder
+.\agentic\monaco\MONACO_EDITOR_ENTERPRISE.ASM: ; UTILITY FUNCTIONS (stub
+.\agentic\monaco\NEON_MONACO_HACK.ASM: ; Calculate health (code quality) - stub
+.\agentic\vulkan\NEON_VULKAN_FABRIC.asm: ; This is a minimal stub
+.\agentic\vulkan\NEON_VULKAN_FABRIC_STUB.asm: ; NEON_VULKAN_FABRIC.asm - Stub
+.\agentic\vulkan\NEON_VULKAN_FABRIC_STUB.asm: ; This is a minimal placeholder
+.\agentic\vulkan\NEON_VULKAN_FABRIC_STUB.asm: ; Exported functions - stub
+.\agentic\week4\WEEK4_DELIVERABLE.asm: ; RegisterTest - Add single test to suite (simplified stub
+.\agentic\week4\WEEK4_DELIVERABLE.asm: ; Generate JUnit-style XML (stub
+.\agentic\week4\WEEK4_DELIVERABLE.asm: ; Generate JSON report (stub
+.\agentic\week5\WEEK5_COMPLETE_PRODUCTION.asm: ; ALL Missing Logic Fully Implemented - Zero Stub
+.\ai\digestion_scanner.asm: ; Scans memory for multiple stub
+.\ai\digestion_scanner.asm: ; int avx512_scan_stub
+.\asm\gguf_dump.asm: ; For string/array, use 1 as placeholder
+.\asm\RawrXD_Inference_AVX512.asm: ; External symbols (placeholder
+.\asm\solo_standalone_compiler.asm: ; STUB
+.\asm\solo_standalone_compiler.asm: ; These are placeholder
+.\digestion\RawrXD_DigestionEngine.asm: ; Minimal MASM64 stub
+.\digestion\RawrXD_DigestionEngine.asm: ; Minimal MASM64 stub
+.\direct_io\adaptive_burst_router.asm: ; RAWRXD v1.2.0 — ADAPTIVE BURST ROUTER (Stub
+.\direct_io\ghost_handshake.asm: ; 2. Stub
+.\direct_io\nvme_oracle_service.asm: ; wear placeholder
+.\direct_io\nvme_thermal_sidecar_entry.asm: ; Minimal entry stub
+.\extension_host\RawrXD_MarketplaceInstaller.asm: ; - Convert TypeScript/JavaScript to MASM64 stub
+.\extension_host\RawrXD_MarketplaceInstaller.asm: ; Generate activate function stub
+.\extension_host\RawrXD_MarketplaceInstaller.asm: ; Generate deactivate function stub
+.\extension_host\RawrXD_WebView2.asm: ; COM IIDs (placeholder
+.\gpu_masm\gpu_backend.asm: ; Backend-Specific Functions (Stub
+.\gpu_masm\gpu_detection.asm: ; Placeholder
+.\gpu_masm\gpu_kernels.asm: ; Kernel launch stub
+.\gpu_masm\gpu_memory.asm: ; GPU memory manager stub
+.\gpu_masm\gpu_memory.asm: ; Using host-allocated memory as a placeholder
+.\gpu_masm\vulkan\vk_instance.asm: ; Set limits (placeholder
+.\gpu_masm\vulkan\vk_instance.asm: ; Set common limits (placeholder
+.\gpu_masm\vulkan\vk_instance.asm: ; Set sparse properties (placeholder
+.\masm\masm_solo_compiler.asm: ; Modes: encrypt, decrypt, pack, unpack, compile (default), stub
+.\masm\masm_solo_compiler.asm: ; Generate a new polymorphic stub
+.\masm\masm_solo_compiler.asm: ; Modes: encrypt, decrypt, pack, unpack, compile (default), stub
+.\masm\masm_solo_compiler.asm: ; Polymorphic Stub
+.\masm\masm_solo_compiler.asm: ; Generates a unique loader stub
+.\masm\masm_solo_compiler.asm: ; Stub
+.\masm\masm_solo_compiler.asm: ; Generates a new polymorphic stub
+.\masm\masm_solo_compiler.asm: ; 2. No use of system RNG or GNR; every stub
+.\masm\masm_solo_compiler.asm: ; Runtime unpacking: decrypts payload in memory, wipes stub
+.\masm\masm_solo_compiler.asm: ; Randomizes register usage in the stub
+.\masm\masm_solo_compiler.asm: ; Saves the generated stub
+.\masm\masm_solo_compiler.asm: ; Loads a saved stub
+.\masm\masm_solo_compiler.asm: ; Anti-Debugging Stub
+.\masm\masm_solo_compiler.asm: ; Polymorphic stub
+.\masm\masm_solo_compiler_fixed.asm: ; WriteFile(handle, out_stub, out_stub
+.\masm\RawrXD_DirectionlessLoader.asm: ; Omnidirectional memory management with hotpatch stub
+.\masm\RawrXD_DirectionlessLoader.asm: ; Write JMP stub
+.\masm\RawrXD_NativeHttpServer.asm: ; For now, return success with placeholder
+.\masm\interconnect\RawrXD_Agentic_Router.asm: ; Stub
+.\masm\interconnect\RawrXD_DynamicTensorEngine.asm: ; Initialize each hotpatch slot with INT3 (debuggable) then JMP placeholder
+.\masm\interconnect\RawrXD_DynamicTensorEngine.asm: ; AVX-512 implementation placeholder
+.\masm\interconnect\RawrXD_HTTP_Router.asm: ; Stub
+.\masm\interconnect\RawrXD_Inference_Engine.asm: ; The core that was missing - real tensor operations, not stub
+.\masm\interconnect\RawrXD_Inference_Engine.asm: ; External definition placeholder
+.\masm\interconnect\RawrXD_JSON_Parser.asm: ; Stub
+.\masm\interconnect\RawrXD_Model_StateMachine.asm: ; Stub
+.\masm\interconnect\RawrXD_RingBuffer_Consumer.asm: ; Stub
+.\masm\interconnect\RawrXD_Streaming_Formatter.asm: ; Stub
+.\masm\interconnect\RawrXD_Swarm_Orchestrator.asm: ; Stub
+.\orchestrator\Phase5_Master_Complete.asm: ; FINAL PRODUCTION IMPLEMENTATION - Zero Stub
+.\orchestrator\RawrXD_Titan_Extensions.asm: ; Helper Functions (Stub
+.\orchestrator\RawrXD_Titan_Extensions.asm: ; Placeholder
+.\orchestrator\RawrXD_Titan_Extensions.asm: ; Stub
+.\orchestrator\RawrXD_Titan_Extensions.asm: ; Stub
+.\thermal\masm\pocket_lab.asm: ; ---------------------------------------------------------- GHOST-LOAD-STUB
+.\win32app\mcp_hooks.asm: ; Provides trampoline stub
+
+--- Stub/Empty PROCs ---
+
+--- PROCs missing ENDP ---
+.\agentic\RawrXD_Absolutely_Complete.asm: g_ProcessorTopology
+.\agentic\RawrXD_Compiler_Engine_Complete.asm: g_pi
+.\agentic\RawrXD_Compiler_Engine_Stubs_BACKUP.asm: g_pi
+.\extension_host\RawrXD_DAP.asm: processInfo
+
+--- PROCs missing RET ---
+.\CodexUltimate_simple.asm: main
+.\dumpbin_complete.asm: main
+.\dumpbin_final.asm: main
+.\dumpbin_final_backup.asm: main
+.\dumpbin_proper.asm: main
+.\dumpbin_replacement.asm: main
+.\dumpbin_replacement_final.asm: main
+.\dumpbin_working.asm: main
+.\memory_reader.asm: main
+.\os_explorer_interceptor.asm: MyCreateFileWHook
+.\os_explorer_interceptor.asm: MyReadFileHook
+.\os_explorer_interceptor.asm: MyWriteFileHook
+.\os_explorer_interceptor.asm: MyDeleteFileHook
+.\os_explorer_interceptor.asm: MyMoveFileHook
+.\os_explorer_interceptor.asm: MyRegOpenKeyExWHook
+.\os_explorer_interceptor.asm: MyRegQueryValueExWHook
+.\os_explorer_interceptor.asm: MyRegSetValueExWHook
+.\os_explorer_interceptor.asm: MyRegCreateKeyExWHook
+.\os_explorer_interceptor.asm: MyRegDeleteKeyHook
+.\os_explorer_interceptor.asm: MyWSAConnectHook
+.\os_explorer_interceptor.asm: MySendHook
+.\os_explorer_interceptor.asm: MyRecvHook
+.\os_explorer_interceptor.asm: MyGetAddrInfoHook
+.\os_interceptor_cli_final.asm: main
+.\os_interceptor_cli_fixed.asm: main
+.\os_interceptor_cli_robust.asm: main
+.\os_interceptor_cli_simple.asm: main
+.\os_interceptor_cli_universal.asm: main
+.\os_interceptor_cli_universal_v2.asm: main
+.\os_interceptor_cli_working.asm: main
+.\RawrXD_CLI.asm: mainCRTStartup
+.\RawrXD_CLI_Main.asm: mainCRTStartup
+.\rawrxd_lsp_bridge.asm: rxd_asm_destroy_cancel_token
+.\RawrXD_MetaReverse.asm: PEBMain
+.\RawrXD_NativeHost.asm: main
+.\rawrxd_neural_core.asm: RawrXD_RegisterDragDrop
+.\RawrXD_PatternBridge.asm: DetectAVX512
+.\RawrXD_PatternBridge.asm: ScanScalar
+.\RawrXD_PatternBridge.asm: ScanAVX512
+.\RawrXD_PatternBridge.asm: ClassifyPattern
+.\RawrXD_PatternBridge.asm: InitializePatternEngine
+.\RawrXD_PatternBridge.asm: ShutdownPatternEngine
+.\RawrXD_PatternBridge.asm: GetPatternStats
+.\RawrXD_PatternBridge.asm: DllMain
+.\RawrXD_System_Primitives.asm: Thread_AffinitySet
+.\RawrXD_Titan_MetaReverse.asm: PEBMain
+.\RawrXD_Titan_UNIFIED.asm: RMSNorm_AVX512
+.\simple_dumpbin.asm: main
+.\terraform.asm: expect
+.\terraform.asm: block
+.\universal_analyzer.asm: main
+.\week5_final_integration.asm: CrashReportUploadThread
+.\agentic\gpu_dma_complete_production.asm: Titan_IsDeviceAddress
+.\agentic\memory_cleanup.asm: Titan_Shutdown_L3_Cache
+.\agentic\memory_cleanup.asm: Titan_Close_Model_File
+.\agentic\memory_cleanup.asm: Titan_Cleanup_GGML_Context
+.\agentic\memory_cleanup.asm: Titan_Master_Shutdown
+.\agentic\memory_cleanup.asm: Titan_Emergency_Cleanup
+.\agentic\memory_cleanup.asm: Titan_Validate_Memory_State
+.\agentic\RawrXD_Production_ReverseEngineered.asm: SetError
+.\agentic\RawrXD_Production_ReverseEngineered.asm: GetLastError
+.\agentic\RawrXD_Production_ReverseEngineered.asm: TrackAlloc
+.\agentic\RawrXD_Production_ReverseEngineered.asm: TrackFree
+.\agentic\RawrXD_Production_ReverseEngineered.asm: CheckMemoryLeaks
+.\agentic\RawrXD_Production_ReverseEngineered.asm: AI_Initialize
+.\agentic\RawrXD_Production_ReverseEngineered.asm: AI_RunInference
+.\agentic\RawrXD_Production_ReverseEngineered.asm: AI_Softmax
+.\agentic\RawrXD_Production_ReverseEngineered.asm: AI_TopKSampling
+.\agentic\RawrXD_Production_ReverseEngineered.asm: GPU_Initialize
+.\agentic\RawrXD_Production_ReverseEngineered.asm: GPU_QuantizedMatMul
+.\agentic\RawrXD_Production_ReverseEngineered.asm: GPU_Shutdown
+.\agentic\RawrXD_Production_ReverseEngineered.asm: DirectStorage_Initialize
+.\agentic\RawrXD_Production_ReverseEngineered.asm: DirectStorage_EnqueueRequest
+.\agentic\RawrXD_Production_ReverseEngineered.asm: DirectStorage_Shutdown
+.\agentic\RawrXD_Production_ReverseEngineered.asm: InitCRC32Table
+.\agentic\RawrXD_Production_ReverseEngineered.asm: InitQuantTables
+.\agentic\RawrXD_Production_ReverseEngineered.asm: INFINITY_InitializeStream
+.\agentic\RawrXD_Production_ReverseEngineered.asm: INFINITY_Shutdown
+.\agentic\RawrXD_Production_ReverseEngineered.asm: AcquireSRWLock
+.\agentic\RawrXD_Production_ReverseEngineered.asm: ReleaseSRWLock
+.\agentic\RawrXD_Production_ReverseEngineered.asm: main
+.\agentic\RawrXD_Titan_Master_GodSource_REVERSE_ENGINEERED.asm: main
+.\agentic\week5\WEEK5_COMPLETE_PRODUCTION.asm: WinMainCRTStartup
+.\direct_io\nvme_oracle_service.asm: DebugLog
+.\direct_io\nvme_oracle_service.asm: ServiceCtrl
+.\direct_io\sidecar_minimal.asm: SidecarMinimalEntry
+.\direct_io\test_mmf.asm: TestEntry
+.\masm\masm_solo_compiler.asm: main
+.\masm\RawrXD_CLI.asm: main
+.\masm\RawrXD_CLI.asm: Sprintf
+.\masm\RawrXD_HttpChatServer.asm: StopChatServer
+.\masm\RawrXD_InferenceCore.asm: Final_LayerNorm
+.\masm\interconnect\RawrXD_System_Primitives.asm: Aligned_Free
+.\masm\interconnect\RawrXD_System_Primitives.asm: Thread_AffinitySet
+.\thermal\agent_bridge\SovereignAgentBridge.asm: AgentBridgeEntry
+.\thermal\agent_clients\agent_client_evict.asm: main
+.\thermal\agent_clients\agent_client_watch.asm: main
+.\thermal\agent_clients\agent_metrics_dump.asm: main
+.\thermal\masm\pocket_lab.asm: mainCRTStartup
+.\thermal\masm\pocket_lab_turbo.asm: main
+.\thermal\masm\SovereignThermalDemo.asm: DemoMain
+.\thermal\masm\SovereignThermalHUD.asm: WinMain
+.\thermal\masm\SovereignThermalStressOrchestrator.asm: SovereignStressMain
+.\thermal\masm\sovereign_stress_governor.asm: main
+
+--- Undefined CALL targets ---
+AELF
+AI_RunAttentionLayer
+AI_RunFFNLayer
+AI_RunLayerNorm
+AMACH
+APE
+API_IsTelemetryEnabled
+AVX512Blur
+AddVectoredExceptionHandler
+AimbotSmoothMove
+AllocateCPUMemory
+AllocateCUDAMemory
+AllocateROCmMemory
+AllocateTensorMemory
+AllocateVulkanMemory
+AnalyzeControlFlow
+AnalyzeFileHeader
+AnalyzeOptionalHeader
+AnalyzeReloc
+AppendMenuA
+ApplyCompileTimeObfuscation
+ApplyGlitchEffect
+ApplyTemperatureReal
+ArrayList_Add
+ArrayList_Clear
+ArrayList_Create
+Assemble
+AssertFailed
+Auditor_Shutdown
+BYTE
+BeginPaint
+C
+CPU_CheckAVX512
+CacheTokensWithConfidence
+CalcEntropy
+CalculateAdler32
+Camellia
+Camellia256_DecryptBlock_M64
+Camellia256_EncryptBlock_M64
+Camellia_Decrypt_Block
+ChamsRenderFlat
+ChamsRenderHologram
+ChamsRenderTextured
+ChamsRenderWireframe
+CheckRemoteDebuggerPresent
+ClearFramebuffer
+CoInitializeEx
+CoT_Initialize
+CoT_Shutdown
+CoUninitialize
+CommandLineToArgvW
+Compiler_InitializeBlockedFeatures
+CompletionProvider_Adapter_Create
+Config_EncryptSensitiveFields
+Config_SerializeToJSON
+CrashHandler_CreateMinidump
+CrashHandler_ShutdownGracefully
+CreateCoreWebView2EnvironmentWithOptions
+CreateDXGIFactory1
+CreateDirectory
+CreateFileMappingW
+CreateMenu
+CreateMutexA
+CreatePopupMenu
+CreateProcess
+CreateSemaphore
+D
+D2D1CreateFactory
+D3D11CreateDevice
+DAPInit
+DAP_ConvertStackFrames
+DAP_CreateBreakpoint
+DAP_CreateDebuggeeProcess
+DAP_CreateLocalsScope
+DAP_CreateRegistersScope
+DAP_FindModuleForAddress
+DAP_GetLocalVariables
+DAP_GetRegisterVariables
+DAP_GetThreadContext
+DAP_GetThreadHandle
+DAP_HandleCreateProcess
+DAP_HandleCreateThread
+DAP_HandleException
+DAP_HandleExitProcess
+DAP_HandleExitThread
+DAP_HandleLoadDll
+DAP_HandleOutputString
+DAP_HandleRip
+DAP_HandleUnloadDll
+DAP_InitCapabilities
+DAP_ProcessDebugEvent
+DAP_QwordToHex
+DAP_ResolveSourceLocation
+DAP_SendBreakpointEvent
+DAP_SendEvent
+DAP_SendInitializedEvent
+DAP_SendThreadEvent
+DAP_SerializeEvent
+DAP_SetupDebugEventLoop
+DAP_VerifyBreakpoint
+DAP_WalkStackFrames
+DB
+DWriteCreateFactory
+DbgRec
+DeepAnalysis
+DefWindowProcA
+DefinitionProvider_Adapter_Create
+DeleteObject
+DependencyGraph_AddNode
+DependencyGraph_Create
+DestroyWindow
+DetectAMDGPU
+DetectGPUs
+DetectIntelGPU
+DetectLang
+DetectNVIDIAGPU
+DetectPacker
+Diagnose_BlockedFeatures
+DiagnosticsInit
+DispatchMessageA
+DisposableCollection_Create
+DisposableCollection_Dispose
+Disposable_Create
+DraftModel_Forward
+DsmRec
+DumpDOSHeader
+DumpMetadata
+DumpOptionalHeader
+DumpPE
+DumpPEFileHeader
+DumpSectionHeaders
+ENDP
+ESPCullEntities
+ESPGrowEntityArray
+ESPRenderBox
+ESPRenderHealthBar
+ESPRenderSnapLine
+ESPSortEntities
+Embedding_LookupReal
+EndPaint
+EventEmitter_Create
+EventFire_ExtensionActivated
+EventFire_ExtensionDeactivated
+EventListener_DisposeInternal
+ExecuteCPUKernel
+ExecuteCUDAKernel
+ExecuteROCmKernel
+ExecuteTest
+ExecuteVulkanKernel
+ExpRec
+ExtensionContext_Create
+ExtensionHostBridge_Create
+ExtensionHostBridge_ProcessMessages
+ExtensionHostBridge_RegisterWebview
+ExtensionHostBridge_SendMessage
+ExtensionHostBridge_SendNotification
+ExtensionHostBridge_SendRequest
+ExtensionHostBridge_SignalReady
+ExtensionHost_BuildAPI
+ExtensionHost_HandleActivateRequest
+ExtensionHost_HandleDeactivateRequest
+ExtensionHost_LoadExtensions
+ExtensionHost_MessageLoop
+ExtensionHost_Shutdown
+ExtensionManifest_FromJson
+ExtensionModule_Load
+ExtensionStorage_GetPath
+Extension_CheckAutoActivate
+Extension_CleanupLanguageClients
+Extension_CleanupWebviews
+Extension_Create
+Extension_GetCurrent
+Extension_Register
+Extension_ValidateCapabilities
+FastRegexTokenize
+FindPieceAtOffset
+Float32ToFloat16
+Fmt
+FreeCPUMemory
+FreeCUDAMemory
+FreeROCmMemory
+FreeVulkanMemory
+FullAnalysis
+FullReconstruct
+GGML
+GGUF_FindTensorInfo
+GGUF_ParseHeader
+GeneratePE
+GetClientRect
+GetCommandLineA
+GetCommandLineW
+GetConsoleScreenBufferInfo
+GetEnvironmentVariable
+GetExitCodeProcess
+GetHex
+GetInt
+GetMessageA
+GetModuleFileNameA
+GetModuleFileNameW
+GetOpenFileNameA
+GetOverlappedResult
+GetStdHandleor
+GetSysColor
+GetSystemMetrics
+GetSystemTimePreciseAsFileTime
+GetTempPath
+GetTextMetricsA
+GitInit
+GlobalAlloc
+GlobalFree
+HashMapLookup
+HashMap_Create
+HashMap_ForEach
+HashMap_Get
+HashMap_Put
+HashMap_Remove
+HeapCreate
+HeapDestroy
+HoverProvider_Adapter_Create
+HttpAddRequestHeadersW
+HttpAddUrl
+HttpCreateHttpHandle
+HttpInitialize
+HttpOpenRequestW
+HttpQueryInfoW
+HttpReceiveHttpRequest
+HttpReceiveRequestEntityBody
+HttpRemoveUrl
+HttpSendHttpResponse
+HttpSendRequestW
+HttpTerminate
+INFINITY_TriggerPrefetch
+ImpRec
+Imports
+Inference
+InferenceEngine_LoadModel
+InitBuffers
+InitCommonControlsEx
+InitPE
+InitializeCPUBackend
+InitializeCUDABackend
+InitializeROCmBackend
+InitializeVulkanBackend
+Initialize_BlockedFeatures
+InsertNewPiece
+IntelliSenseInit
+InternetCloseHandle
+InternetConnectW
+InternetOpenUrlA
+InternetOpenW
+InternetQueryDataAvailable
+InternetReadFile
+InternetSetOptionW
+InvalidateLineCacheFrom
+InvalidateRect
+IsDebuggerPresent
+IsWow64Process
+JsonObject_Create
+Json_EscapeString
+Json_GetArray
+Json_GetArrayField
+Json_GetInt
+Json_GetObjectField
+Json_GetObjectKeys
+Json_GetString
+Json_GetStringField
+Json_HasField
+Json_ParseFile
+Json_ParseObject
+Json_ParseString
+LIE
+LSPParseCapabilities
+LSPSendInitialized
+LSP_Init_Handshake
+Lexer_Blocked_AVX512_Advanced
+Lexer_Blocked_NeuralNetwork
+Lexer_Blocked_QuantumInspired
+Lexer_Hidden_CodeAnalysis
+Lexer_Hidden_DiagnosticAnalysis
+Lexer_Hidden_OptimizationPass
+Lexer_Hidden_PredictiveAnalysis
+Lexer_Hidden_SelfModifyingCode
+Linear_ProjectionReal
+LoadCursorA
+LoadIconA
+LoadLibraryW
+LogPhaseError
+LspClient_ForwardMessage
+MM
+Main
+MainWindow_PopulateModelInfo
+MainWindow_UpdateTitleBar
+Marketplace_CheckVersionCompatibility
+Marketplace_DetermineExtensionType
+Marketplace_DownloadExtension
+Marketplace_ExtractFiles
+Marketplace_ExtractManifestFields
+Marketplace_ExtractSingleFile
+Marketplace_GenerateActivateFunction
+Marketplace_GenerateApiExports
+Marketplace_GenerateAsmHeader
+Marketplace_GenerateAsmIncludes
+Marketplace_GenerateDeactivateFunction
+Marketplace_GenerateExtensionInfo
+Marketplace_GenerateInstallDir
+Marketplace_GenerateNativeEntryPoint
+Marketplace_InitializeContext
+Marketplace_InstallDependency
+Marketplace_InstallExtension
+Marketplace_IsExtensionInstalled
+Marketplace_ParseManifest
+Marketplace_ParseVsixHeader
+Marketplace_RegisterExtension
+Marketplace_ResolveDependencies
+MessageBoxA
+MiniDumpWriteDump
+ModelManager_LoadModel
+MoveWindow
+MultiByteToWideChar
+Network_Initialize
+Network_Shutdown
+NeuralPredictTokens
+OPTION
+Observable_Create_ActiveTextEditor
+Observable_Create_VisibleTextEditors
+Observable_Create_WorkspaceFolders
+OptimizedQuantizeTensor
+OutputChannel_Append
+OutputChannel_AppendLine
+OutputChannel_Create
+OutputChannel_CreateAPI
+P
+PEDeep
+PROC
+PUBLIC
+ParsePE
+PatBlt
+PathCombineW
+PathFileExistsW
+PathRemoveFileSpecW
+Path_Join
+Path_Join_PackageJson
+PeekMessageA
+Phase_AgentKernel_Init
+Phase_AgentKernel_Shutdown
+Phase_Hardware_Init
+Phase_Hardware_Shutdown
+Phase_Inference_Init
+Phase_Inference_Shutdown
+Phase_ModelLoading_Init
+Phase_ModelLoading_Shutdown
+Phase_Orchestration_Init
+Phase_Orchestration_Shutdown
+Phase_SwarmIO_Init
+Phase_SwarmIO_Shutdown
+Phase_UI_Init
+Phase_UI_Shutdown
+Phase_Week1_Init
+Phase_Week1_Shutdown
+Phase_Week5_Init
+Phase_Week5_Shutdown
+Phase_Weeks2_3_Init
+Phase_Weeks2_3_Shutdown
+PostQuitMessage
+PredictiveEngineInit
+PredictiveWarmCache
+PrintChars
+PrintDirectories
+ProcessID
+Provider_FromDocumentSelector
+Provider_Register
+QWORD
+QuantizeAuto
+QuantumPieceAlloc
+R
+R10
+RH
+RI
+RMSNorm_ForwardReal
+RawrXD_Blind_Sensors
+RawrXD_Calculate_Jitter
+RawrXD_Camellia_256_Decrypt_Block
+RawrXD_Execute_Task
+RawrXD_Find_Gadgets
+RawrXD_Receive_Task
+RawrXD_Send_Heartbeat
+RawrXD_Socket_Init
+Read
+ReadConsoleInputA
+RebalanceTree
+ReconExports
+ReconImports
+ReconstructSource
+RegCloseKey
+RegOpenKeyExA
+RegQueryValueExA
+RegSetValueExA
+RegisterClass
+RegisterClassExA
+Registry_CreateKey
+Registry_KeyExists
+Registry_SetDwordValue
+Registry_SetQwordValue
+Registry_SetStringValue
+RelRec
+RenderGlowQuadBlurred
+RenderParticles
+RenderScanlines
+ResRec
+ResolveModeHandler
+ReturnType
+RtlSecureZeroMemory
+RunInferenceStep
+SHA256_Hash
+SSE4Blur
+SYS_NtAllocateVirtualMemory
+Safetensors_Init
+SearchPathW
+SemVer_Parse
+SemVer_ParseRange
+SemVer_Satisfies
+SemanticEnhanceTokens
+SendMessageA
+SetBkMode
+SetConsoleCursorPosition
+SetConsoleMode
+SetErrorMode
+SetLayeredWindowAttributes
+SetMenu
+SetTimer
+SetUnhandledExceptionFilter
+SetWindowTextA
+ShowDOS
+ShowExports
+ShowFileHdr
+ShowImports
+ShowOptHdr
+ShowSections
+ShowWindow
+SpawnSemanticAnalysis
+SpinLock_Acquire
+SpinLock_Release
+SplitPiece
+State_LoadEmergencyCheckpoint
+State_SaveEmergencyCheckpoint
+StrRec
+String_Join_Dot
+Swarm_ExecuteAsync
+Swarm_RunCoordinator
+Swarm_Shutdown
+TLSRec
+Telemetry_BuildJSONPayload
+Telemetry_LogCrash
+Telemetry_LogError
+Telemetry_SanitizeData
+TemporalLogCreate
+TerminateProcess
+ThreadPool_WaitComplete
+Titan_AlignedAlloc
+Titan_AllocateKVCacheDeferred
+Titan_BuildTensorTable
+Titan_CleanupAllModels
+Titan_DequeueTask
+Titan_ExecuteAttentionTask
+Titan_ExecuteMatMulTask
+Titan_ExecuteNormTask
+Titan_ExtractArchitecture
+Titan_FindFreeModelSlot
+Titan_ParseTensorInfos
+Titan_Vulkan_EmergencyReset
+Titan_Vulkan_Shutdown
+TlsAlloc
+TlsFree
+ToolExecuteJson
+TranslateMessage
+UpdateWindow
+ValidateBUG
+ValidateFIXME
+ValidateHACK
+ValidateIDEA
+ValidateNOTE
+ValidatePE
+ValidateREVIEW
+ValidateXXX
+Validate_BlockedFeatures
+VirtualQuery
+VulkanCompute_ExecuteMatMul
+VulkanCompute_Shutdown
+WebviewPanel_CreateAPI
+WideCharToMultiByte
+Win32
+WinHttpCloseHandle
+WinHttpConnect
+WinHttpOpen
+WinHttpOpenRequest
+WriteConsole
+__imp_CloseHandle
+__imp_CreateFileA
+__imp_CreateFileMappingA
+__imp_GetFileSizeEx
+__imp_GetStdHandle
+__imp_MapViewOfFile
+__imp_UnmapViewOfFile
+__imp_WriteFile
+_set_invalid_parameter_handler
+_set_purecall_handler
+activate
+add
+add_child_node
+advance_token
+analyze_imports
+analyze_pe_headers
+analyze_sections
+appropriate
+assemble_code
+assemble_to_machine_code
+ast_create_node
+atexit
+back
+bt
+callback
+classify_identifieruffer
+cleanup
+cleanup_compiler
+cmp
+codegen_directive
+codegen_generate
+codegen_node
+collect_declarations
+compile_file
+compile_source
+copy_string
+create_ast_node
+cuCtxCreate
+cuCtxDestroy
+cuDeviceGetCount
+cuInit
+cuMemAlloc
+cuMemFree
+cuMemcpyDtoH
+cuMemcpyHtoD
+current_token
+deactivate
+deleter
+duration
+emit_x86_64_instructions
+error
+exp
+expect_token
+exported
+external
+extract_strings
+factory
+failed
+failure
+for
+fread
+from
+function
+fwrite
+g_vkCmdBindDescriptorSets
+g_vkCmdBindPipeline
+g_vkCmdDispatch
+g_vkCmdPipelineBarrier
+g_vkCreateCommandPool
+g_vkCreateDevice
+g_vkCreateInstance
+g_vkDestroyInstance
+g_vkEnumeratePhysicalDevices
+g_vkGetDeviceQueue
+g_vkGetPhysicalDeviceProperties
+g_vkQueueBindSparse
+g_vkQueueSubmit
+generate_arm64
+generate_code
+generate_elf_executable
+generate_ir
+generate_ir_node
+generate_pe_executable
+generate_shared_library
+generate_x86_32
+generate_x86_64
+get_first_child
+get_next_sibling
+handler
+hook
+inference
+init_symbol_table
+initialization
+initialize_compiler
+initializer
+instruction
+into
+invoke
+is_alnum
+is_alpha
+is_digit
+is_hex_digit
+is_operator
+itoa
+jmp
+kernel
+lexer_read_char
+lexer_read_identifier
+lexer_read_number
+lexer_read_operator
+lexer_read_string
+lexer_skip_to_newline
+lexer_skip_whitespace
+lexer_tokenize
+link_executable
+listener
+local
+log
+logger
+logic
+lookup_keyword
+lookup_symbol
+lstrcmpi
+lstrcpyn
+mov
+optimize_ir
+option
+original
+pIsWow64Process
+pNtCreateThreadEx
+parse_args
+parse_arguments
+parse_block
+parse_cli_mode
+parse_command_line
+parse_const_decl
+parse_declaration
+parse_enum_decl
+parse_expression
+parse_extern_decl
+parse_for_statement
+parse_format
+parse_function_decl
+parse_if_statement
+parse_import_decl
+parse_next_token
+parse_parameters
+parse_program
+parse_return_statement
+parse_statement
+parse_struct_decl
+parse_target
+parse_type
+parse_variable_decl
+parse_while_statement
+parser_next_token
+parser_parse
+parser_parse_directive
+parser_parse_instruction
+parser_parse_label
+parser_parse_toplevel
+parser_parse_toplevelIVE
+parser_peek_token
+parser_peek_token_nnt
+pattern
+pe_writer_generate
+polymorphic
+pop
+pop_scope
+print_compile_error
+print_error
+print_error_message
+print_stage_message
+print_string
+printf_wrapper
+push
+push_scope
+pushes
+qword
+r12
+r14
+r8
+rawrxd_signal_patch_end
+rawrxd_signal_patch_start
+rawrxd_stream_enqueue_chunk
+rax
+rcx
+rdi
+read_file
+read_source_file
+real
+rel32
+relative
+resolve_and_typecheck
+rsi
+scan_operator
+scoring
+semantic_analysis
+semantic_analyze
+semantic_build_symbols
+semantic_resolve_refs
+semantic_type_check
+set_node_name
+set_node_params
+set_node_type
+single
+site
+skip_to_quote
+skip_to_whitespace
+skip_whitespace
+stack
+string_compare
+strncpy_s
+structure
+task
+test
+the
+this
+through
+thunks
+to
+tokenize
+tricks
+update_output_pos
+vkCmdPushConstants
+vkGetPhysicalDeviceMemoryProperties
+was
+write_file
+write_output_file
+wsprintf
+zlib_inflate
+
+--- Unused PROCs ---
+AIPair
+AI_CHECK_HRESULT
+AI_CHECK_VULKAN
+AI_GetError
+AI_Inference_Execute
+AI_MatMul_QKV
+AI_MultiHead_Attention
+AI_RunInference
+AROverlay
+ASN1_PatchField
+ASN1_PatchSubject
+ASN1_PatchValidity
+AdaptiveLockAcquireHidden
+AgentBridgeEntry
+AgentRouter_ExecuteTask
+AimbotUpdate
+Aligned_Allocate
+AllocateKVSlot
+AllocateTensor
+AnalyzeLoadConfig
+AnalyzeMemoryLayout
+AnalyzeRelocations
+AnalyzeResources
+AnalyzeRichHeader
+ApplyEdit
+ApplyRoPE
+Arena_Alloc
+Arena_Destroy
+Arena_Free
+Arena_Reset
+AsmCompiler_Assemble
+AtomicCompareExchange64
+AtomicDecrement64
+AtomicLoad64
+AtomicStore64
+Attention
+Attention_Compute
+Attention_Softmax
+Autotune_Create
+Autotune_ReportScore
+Autotune_Suggest
+BCIPrep
+BENCHMARK_QUADBUFFER
+BFT_CompareVotes
+BFT_VerifyQuorum
+BackupManager_CreateSnapshot
+BackupManager_DeleteSnapshot
+BackupManager_ListSnapshots
+BackupManager_RestoreSnapshot
+Beacon_AntiForensics
+Beacon_Exfiltrate
+Beacon_InitC2
+Beacon_MainLoop
+Beacon_Persist
+BhopScroll
+BinaryDiff
+BitmaskBroadcastVulkan
+BitmaskBroadcast_ASM
+Bounce_AttachModel
+Bounce_Destroy
+Bounce_GetStats
+Bounce_GetTPS
+Bounce_GetTensor
+Bounce_Init
+Bounce_NotifyTokenGen
+Bounce_SetBounceRate
+Bounce_SetHeatDecay
+Bounce_SetPoolRatio
+Bounce_SetPrefetchDepth
+Bounce_SetTargetTPS
+Bridge_Destroy
+Bridge_GetStats
+Bridge_GetStatus
+Bridge_GetStrength
+Bridge_GetTPS
+Bridge_Init
+Bridge_NotifyToken
+Bridge_Tick
+BufferDelete
+BufferInsert
+Build_Thread
+BurstExecute
+CLIMainLoop
+CLIThreadProc
+CMD_Clear
+CMD_Exit
+CMD_Export
+CMD_Filter
+CMD_Help
+CMD_Start
+CMD_Stats
+CMD_Status
+CMD_Stop
+CPUID_Execute
+CRC32_Finalize
+CRC32_Init
+CRC32_Update
+Cache_Cleanup
+Cache_Evict
+Cache_MoveToFront
+Cache_Store
+CalculateCRC32
+Camellia_Decrypt
+ChamsRender
+Check_IsDebuggerPresent
+Check_RemoteDebuggerPresent
+ClassifyPattern
+CleanupCLI
+ClearLog
+CodebaseContext_FindSymbol
+CodebaseContext_GetDefinitions
+CodebaseContext_IndexFile
+CodebaseContext_Init
+CompareFiles
+CompareWideAscii
+CompilerEngine_CompileSync
+CompilerEngine_Destroy
+CompilerEngine_ValidateOptions
+ComputeFileHash
+ComputeQKV
+Config_CreateDefault
+Config_Decrypt
+Config_Encrypt
+Config_Load
+Config_Save
+ConflictDetectorThread
+ConflictDetector_Initialize
+ConflictDetector_LockResource
+ConflictDetector_RegisterResource
+ConflictDetector_UnlockResource
+ConflictThreadProc
+CppCompiler_Compile
+CrashHandler_ExceptionFilter
+CrashHandler_Install
+CrashReportUploadThread
+CursorMoveLeft
+CursorMoveRight
+DAPContinue
+DAPLaunch
+DAPSetBreakpoint
+DAPStackTrace
+DAPStepOver
+DNASequence
+DeadlockDetectionThread
+Debugger_Attach
+Debugger_GetRegisters
+Debugger_Init
+Debugger_RemoveBreakpoint
+Debugger_SetBreakpoint
+Debugger_StepOver
+Debugger_WaitForEvent
+DecompileView
+DecompressNF4_AVX512Hidden
+DequantizeTensor
+DequantizeTensor_Q4_K
+Dequantize_Q4_0_Block
+DetectEncryption
+DetectModelFormat
+Diagnostic_Add
+DiagnosticsRenderSquiggles
+DigestionFastScan
+DigestionHashChunk
+DirLoad_Destroy
+DirLoad_FeedSlot
+DirLoad_GetDirection
+DirLoad_GetLoadPct
+DirLoad_GetStats
+DirLoad_HotPatch
+DirLoad_Init
+DirLoad_LockLoad
+DirLoad_MemPatch
+DirLoad_SetLoadPct
+DirLoad_Tick
+DirLoad_UnlockLoad
+DirectStorage_EnqueueRequest
+DirectStorage_FlushQueue
+Directory_Create
+DisassembleInstruction
+DisassemblerInit
+DisplayMessage
+DisplayMessageWithPid
+DllMain
+DoCertificate
+DoMemory
+DoYARA
+ESPInit
+ESPRenderGlow
+ESPScanSymbols
+EnterpriseEditorCreate
+EnumExports
+EnumImports
+Error_GetMessage
+Error_SetContext
+ExceptionFilterCallback
+ExceptionHandler
+ExportCapturedData
+ExportMetrics
+ExtractExports
+ExtractResourceToDisk
+ExtractUrlPath
+EyeTrackScroll
+FFN
+FeedForward
+FileHandle_Create
+FileHandle_Destroy
+FileHandle_ValidateAndClose
+File_ReadAllText
+File_WriteAllText
+FlushCacheLineHidden
+FormatLogEntry
+FormatToolResponse
+ForwardPass
+FreeDMABuffer
+GGML_ContextCleanup
+GPU_Detect
+GPU_GetAMDProperties
+GPU_GetDevice
+GPU_GetDeviceCount
+GPU_GetDeviceProperties
+GPU_GetGenericProperties
+GPU_GetIntelProperties
+GPU_GetNVIDIAProperties
+GPU_QuantizedMatMul
+GPU_ReadMemorySize
+GPU_ReadPCIConfig
+GPU_ReadPCIConfigDword
+GPU_ScanPCIBus
+GPU_SubmitDMATransfer
+GPU_WaitForDMA
+GRPC_Call
+GenerateCMake
+GenerateFullReport
+GenerateGhostKeyPair
+GenerateHeaderFile
+GenerateTokens
+GenericHook
+GetCurrentNumaNodeHidden
+GetEngineInfo
+GetFileName
+GetHookTypeName
+GetModelInfo
+GetNanosecondTimestampHidden
+GetOptimalDrive
+GetPatternStats
+GetTensorByName
+GhostDispatchToken
+GhostPagingGetStats
+GhostPagingPreloadCritical
+GhostPagingResetReuse
+GhostPagingSwapBuffer
+GhostPrefetchStart
+GhostPrefetchTokenMap
+GhostQueryTokenMap
+GhostUpdate
+Ghost_C2_Handshake
+GitBlame
+GitDiff
+GitGetStatus
+GlyphAtlas_GetMetrics
+GlyphAtlas_RenderText
+GossipMainLoop
+Gossip_Init
+Gossip_Send
+Gossip_ThreadProc
+Governor_HotSwap
+HandleChatRequest
+Handler
+HapticType
+HealingWorkerThread
+HeartbeatBatchUpdateHidden
+HeartbeatMonitorThread
+HeartbeatRecvThread
+HeartbeatSendThread
+HeartbeatThreadProc
+Heartbeat_AddNode
+Heartbeat_Initialize
+Heartbeat_Shutdown
+HeatMapToggle
+Heuristic_Scan
+HexEditToggle
+HoloRenderFrame
+HotPatch_Destroy
+HotPatch_GetMultiplier
+HotPatch_GetParam
+HotPatch_GetStats
+HotPatch_GetTPS
+HotPatch_Init
+HotPatch_SetParam
+HotpatchTensorOperation
+HttpRouter_ListenThread
+HttpServer_GetStatus
+HttpServer_Initialize
+HttpServer_IsRunning
+HttpServer_LoadModel
+HttpServer_Shutdown
+INFINITY_GetMetrics
+INFINITY_GetSlotRamPtr
+INFINITY_GetSlotState
+INFINITY_GetSlotVramPtr
+INFINITY_IOThreadProc
+INFINITY_ProcessIOCP
+INFINITY_ResetMetrics
+INFINITY_RotateBuffers
+IPC_AttachGPU
+IPC_DetachGPU
+IPC_ShareVulkanContext
+IPC_WaitForMessage
+InferStream
+InferenceCore_GenerateToken
+InferenceCore_Initialize
+InferenceCore_LoadModel
+InferenceCore_RunInference
+InferenceCore_Tokenize_AVX2
+InferenceEngine_ProcessChat
+Inference_FreeSequence
+Inference_GetKVContextSize
+Inference_MatMul_AVX512
+Inference_SubmitBatch
+InitCommandTable
+InitInferenceEngine
+InitOSInterceptor
+InitializeHiddenSubsystem
+InitializePatternEngine
+InitializeTensorEngine
+InjectDll_CreateRemoteThread
+InjectDll_NtCreateThreadEx
+InjectDll_QueueUserAPC
+InjectInterceptor
+InstallHardwareBreakpoint
+InstallHook
+InstallOSHooks
+IntelliSenseApplyCompletion
+IntelliSenseRenderPopup
+InterleavedLoadHidden
+IsDeviceAddress
+IsX64Process
+JitLBA_BurstTensor
+JitLBA_HashTensorName
+JitLBA_Init
+JitLBA_SetDriveMMIO
+JsonParser_Parse
+Json_ParseFast
+KVCache_Append
+KVCache_Create
+KVCache_Get
+KVCache_GetStats
+KVCache_Init
+KVCache_Insert
+KVCache_Lookup
+KernelEntry_SEH
+L3CachePool_Cleanup
+LFQueuePopHidden
+LFQueuePushHidden
+LSPClient_CodeAction
+LSPClient_Completion
+LSPClient_FindReferences
+LSPClient_GotoDefinition
+LSPClient_Hover
+LSPClient_Initialize
+LSPClient_Rename
+LSPCompletion
+LSPTextDocumentDidChange
+LSPTextDocumentDidOpen
+LSP_Handshake_CheckTimeout
+LSP_Handshake_Create
+LSP_Handshake_Destroy
+LSP_Handshake_DetectServer
+LSP_MessageThread
+Lexer_Destroy
+Lexer_GetPerformance
+Lexer_InitKeywords
+Lexer_Initialize
+Lexer_ReadNumber
+Lexer_ReadOperator
+Lexer_ReadString
+Lexer_Scan_Parallel
+LoadBalancer_Create
+LoadBalancer_Push
+LoadBalancer_Steal
+LoadModelNative
+LockFreeQueue_Dequeue
+LockFreeQueue_Destroy
+LockFreeQueue_Enqueue
+LockFreeQueue_Init
+Log_FlushThread
+Log_Write
+MCP_ExtractMethod
+MCP_HexDumpBuffer
+MCP_OnSocketData_Trampoline
+MCP_ParseContentLength
+MCP_ReadMessage_Trampoline
+MCP_WebSocketFrame_Trampoline
+MCP_WriteMessage_Trampoline
+MainWindow_OnFileOpen
+MatMul_AVX
+MatMul_F16_AVX512
+MatMul_Q2_K_F32
+MatMul_Q3_K_F32
+MatMul_Q4_0_F32
+MatMul_Q4_1_F32
+MatMul_Q4_K_F32
+MatMul_Q5_0_F32
+MatMul_Q5_1_F32
+MatMul_Q5_K_F32
+MatMul_Q6_K_F32
+MatMul_Q8_0_F32
+MemCpy_Optimized
+MemoryEditAttach
+Memory_PrefetchRead
+Minimap3D
+Mode_Handler_Compile
+Mode_Handler_Encrypt
+Mode_Handler_Stubgen
+ModelRouter_Init
+ModelRouter_SelectModel
+ModelRouter_UpdateScore
+ModelState_Transition
+ModelTrainer_Train
+MyCreateFileWHook
+MyDeleteFileHook
+MyGetAddrInfoHook
+MyMoveFileHook
+MyReadFileHook
+MyRecvHook
+MyRegCreateKeyExWHook
+MyRegDeleteKeyHook
+MyRegOpenKeyExWHook
+MyRegQueryValueExWHook
+MyRegSetValueExWHook
+MySendHook
+MyWSAConnectHook
+MyWriteFileHook
+NF4_Decompress_Full
+NF4_Decompress_Grouped
+NF4_Decompress_Sparse
+NVMe_AllocAlignedBuffer
+NVMe_FreeAlignedBuffer
+NVMe_GetCachedTemp
+NVMe_GetCoolestDrive
+NVMe_GetLastError
+NVMe_PollAllDrives
+NVMe_StressBurst
+NativeInferenceThread
+NeonFabricInitialize_ASM
+NeonFabricShutdown_ASM
+NeuralTokenize
+ONNX_Load
+Optimizer_AdamWStep
+OrchestratorInitialize
+OverclockGovernor_SetFrequency
+PEBMain
+ParseArray
+ParseFilter
+ParseNumber
+ParseObject
+PatternDB_Init
+PatternDB_Scan
+Phase1Initialize
+Phase2Initialize
+Phase3Initialize
+Phase3Shutdown
+Phase_InitializeAll
+PipeIPC_Connect
+PipeIPC_CreateServer
+PipeIPC_Send
+PipeIPC_ServerThread
+PocketLabGetStats
+PocketLabGetThermal
+PocketLabRunCycle
+Polymorph_CFFlatten
+Polymorph_InsertJunk
+Polymorph_LoadStub
+Polymorph_RandomizeRegisters
+Polymorph_SelfHeal
+Polymorph_ShuffleSections
+Polymorph_Virtualize
+PredictiveShow
+PrefetchHidden
+ProcessCLICommand
+ProcessCommand
+ProcessDirectory
+ProcessReceivedHeartbeat
+ProcessTensorBatch
+Profiler_GetReport
+Profiler_Init
+Profiler_RecordAllocation
+Profiler_RecordFunctionEnter
+Profiler_RecordFunctionExit
+Profiler_Start
+Profiler_Stop
+Prometheus_AcceptThread
+Prometheus_BuildMetrics
+Prometheus_HandleClient
+ProxyToOllama
+PublicProc
+PyTorch_Load
+PythonCompiler_Compile
+QPCToMs
+QuadBuffer_CopyToGPU
+QuadBuffer_IOCPWorker
+QuadBuffer_InitializeStream
+Quant_Q2K_Deblock
+QuantizeTensor_Q4_K
+QuantumAuth_VerifyFingerprint
+QuantumAuth_VerifyModelSignature
+QuantumBufferCreate
+QuantumEntangle
+QuantumInsert
+QueryNVMeTemp
+QueueInferenceJob
+RMSNorm_AVX512
+RS_Decode
+RS_Encode
+RS_Init
+RUN_VALIDATION_SUITE
+RWLock_AcquireRead
+RWLock_AcquireWrite
+RWLock_ReleaseRead
+RWLock_ReleaseWrite
+RaftMainLoop
+Raft_AppendEntries
+Raft_RequestVote
+RawrXD_CancelOperation
+RawrXD_ChatServer_Shutdown
+RawrXD_Check_DebugPort
+RawrXD_Detokenize
+RawrXD_ExceptionFilter
+RawrXD_Generate_Junk
+RawrXD_GetMetrics
+RawrXD_GetPerformance
+RawrXD_GetQuantStats
+RawrXD_GetStats
+RawrXD_HierarchicalQuant
+RawrXD_Inference
+RawrXD_InitUI
+RawrXD_InitializeAll
+RawrXD_Initialize_AllPhases
+RawrXD_Integrate_To_Stream
+RawrXD_Main_Entry
+RawrXD_RegisterDragDrop
+RawrXD_ShowUploaderDialog
+RawrXD_ShutdownAll
+RawrXD_ShutdownUI
+RawrXD_Socket_Connect
+RawrXD_SubmitChatRequest
+RawrXD_Timing_Check
+RawrXD_Tokenize
+RawrXD_Tokenize_SSE42
+RawrXD_UnloadModel
+RawrXD_VectorizedExceptionHandler
+RawrXD_WndProc
+ReadTsc
+RealWndProc
+RecordTelemetryEvent
+RegisterResource
+RegisterTool
+RemovePadding
+RingBufferConsumer_Shutdown
+RingBufferThreadProc
+RoPE
+RoPE_Rotate_AVX512
+Robust_AtomicCompareExchange
+Robust_AtomicInc64
+Robust_Crc64Init
+Robust_Crc64Update
+Robust_Free
+Robust_Initialize
+Robust_Log
+Robust_OpenStream
+Robust_SkipString
+RouteModelLoad
+Router_GetRoute
+Router_GetStats
+Router_Init
+RunDigestionEngine
+RunLocalModel
+RustCompiler_Compile
+SIMD_Classify
+SafeFloatOp
+SafeMemCopy
+Safetensors_Load
+Safetensors_ParseHeader
+ScanEmbeddedFormats
+SchedulerCoordinatorThread
+SchedulerThreadProc
+Scheduler_Initialize
+Scheduler_Shutdown
+Scheduler_SubmitTask
+Scheduler_WaitForTask
+ScrubThread
+SeedXorEntropy
+SemanticZoom
+SendChatMessage
+SensoryCode
+ServiceCtrl
+ServiceEntry
+ServiceHandler
+ServiceMain
+SetTensorCount
+SettingsManager_Get
+SettingsManager_Init
+SettingsManager_Load
+SettingsManager_Set
+ShowHelp
+ShowStats
+ShowStatus
+ShutdownPatternEngine
+ShutdownSystems
+SidecarEntry
+SidecarMinimalEntry
+Sloloris_AttachModel
+Sloloris_Destroy
+Sloloris_ForceOrbit
+Sloloris_GetTensor
+Sloloris_Init
+Sloloris_SetStrategy
+SmartPtr_AddRef
+SmartPtr_Create
+SmartPtr_Destroy
+Softmax_InPlace
+SovereignStressMain
+SpeculativeDecoder_GenerateDrafts
+SpeculativeDecoder_Init
+SpeculativeDecoder_Verify
+SpeedhackSetScale
+StagingBuffer_Deallocate
+StartInterceptor
+StartPerformanceCounter
+StopChatServer
+StopInterceptor
+StopPerformanceCounter
+StopPipeServer
+StrCmp_ASCII
+Str_Compare
+Str_Copy
+Str_Length
+StreamErrorMessage
+StreamSuccessMessage
+StreamThreadProc
+StreamToPowerShell
+StreamingGGUF_Init
+StreamingGGUF_LoadTensor
+StressAdapt
+SubmitIOBatchHidden
+SubmitTask
+Swarm_AllReduce_SUM
+Swarm_SubmitJob
+Swarm_WorkerThread
+TITAN_CheckGhostCache
+TITAN_Initialize
+TITAN_SyncLiveTheta
+TITAN_UpdatePredictor
+TSCToNanosecondsHidden
+TelemetryFlushThread
+Telemetry_FlushThread
+Telemetry_Init
+Telemetry_LogEvent
+Telemetry_Record
+Telemetry_Shutdown
+TemporalBranch
+TemporalMerge
+TensorData_ReleaseRef
+Tensor_QuantizedMatMul
+TerraFormer_EmitBinary
+TestEntry
+ThermalGovernor_ReadTemperature
+ThreadPool_WorkerProc
+Thread_AffinitySet
+Thread_GetCurrentProcessor
+Thread_SetAffinityValidated
+Thread_SetIdealProcessor
+Thread_SetQoS
+TimeTravelDebug
+Timing_GetElapsedMicros
+Timing_GetTSC
+Titan_AllocateRingBufferSpace
+Titan_AllocateSlot_Production
+Titan_BeginStreamingInference
+Titan_BeginStreamingInference_Native
+Titan_Bootstrap_Sieve_Real
+Titan_CheckHeartbeats
+Titan_CleanupRingBuffer
+Titan_ConsumeToken
+Titan_CreateContext
+Titan_DecompressNF4
+Titan_DetectConflict_Production
+Titan_DetectConflict_Simplified
+Titan_DirectStorage_Init_Real
+Titan_DirectStorage_Shutdown
+Titan_DirectStorage_Submit
+Titan_Dispatch_Nitro_Shader_Real
+Titan_Emergency_Cleanup
+Titan_Evict_LRU_Slot_Real
+Titan_GetDMAStats
+Titan_GetGPUStats
+Titan_GetHeartbeatStats
+Titan_GhostCacheLookup
+Titan_HeartbeatCallback
+Titan_InferenceThread
+Titan_InitOrchestrator_Production
+Titan_InitOrchestrator_Simplified
+Titan_InitializeDMA
+Titan_InitializeGPU
+Titan_IsDeviceAddress
+Titan_IsHeartbeatAlive
+Titan_LRU_Register_Slot
+Titan_LRU_Touch_Slot
+Titan_LoadModelPersistent
+Titan_LoadModel_GGUF
+Titan_LogError
+Titan_Master_Shutdown
+Titan_PerformDMA
+Titan_PredictNextLayer
+Titan_Queue_Submit
+Titan_RMSNorm_AVX512
+Titan_ReleaseRingBufferSpace
+Titan_ReleaseSlot_Production
+Titan_ResetGPUStats
+Titan_ShutdownDMA
+Titan_Shutdown_Real
+Titan_Softmax_AVX512
+Titan_StopInference
+Titan_SubmitJob
+Titan_TestMain
+Titan_UpdateHeartbeat
+Titan_UpdateHeartbeat_Production
+Titan_UpdateHeartbeat_Simplified
+Titan_Validate_Memory_State
+Titan_Vulkan_BindSparseMemory
+Titan_Vulkan_Init_Real
+Titan_WaitInferenceComplete
+Titan_WorkerThread
+Titan_WorkerThreadProc
+TokenStream_Create
+TokenStream_Read
+TokenStream_Write
+Token_Generate
+TokenizeLineIncremental
+TokenizeText
+TrackAlloc
+TrackFree
+TriggerbotCheck
+TrimString
+UIPanel_Create
+UIPanel_Destroy
+UIPanel_SetContent
+UIPanel_Show
+Unbraid_AddPressure
+Unbraid_Destroy
+Unbraid_Execute
+Unbraid_ForceRebraid
+Unbraid_ForceUnbraid
+Unbraid_GetPressurePct
+Unbraid_GetStats
+Unbraid_Init
+Unbraid_RegisterStage
+Unbraid_ReleasePressure
+Unbraid_SetBudget
+Unbraid_Tick
+Undo
+UnloadInterceptor
+UnloadModelNative
+UpdateCheckerThread
+ValidatePointer
+Validate_PE_Header
+VectoredExceptionHandler
+ViewCreate
+ViewModelUpdate
+ViewRender
+ViewRenderLine
+VoiceCommand
+Vram_Free
+Vram_SetCallbacks
+Vram_SubmitUpload
+VulkanBindFSMDescriptors
+VulkanCreateFSMBuffer_ASM
+VulkanCreatePoolsAndSyncs
+VulkanFSMCreatePipeline
+VulkanFSMUpdate_ASM
+VulkanFindMemoryType
+VulkanInitialize
+VulkanMapBuffer
+VulkanRegisterFabricCoordination
+VulkanUnmapBuffer
+Vulkan_CreateComputePipeline
+Vulkan_DestroyBuffers
+Vulkan_DispatchCompute
+Vulkan_InitializeReal
+Vulkan_ResetDescriptorPool
+WaitForGraphAddEdgeHidden
+WaitForGraphRemoveEdgeHidden
+Week1GetStatistics
+Week1GetVersion
+Week1Initialize
+Week1RegisterNode
+Week1RegisterResource
+Week1Shutdown
+Week1StartBackgroundThreads
+Week1_ConflictDetectionThread
+Week1_HeartbeatThread
+Week1_SubmitTask
+Week1_WorkerThread
+WideToAscii
+WinMainCRTStartup
+WindowProc
+WndProc
+WndProc_Command
+WndProc_Editor
+WndProc_Main
+WorkerThreadProc
+Worker_Thread_Proc
+WorkspaceEdit_Apply
+Workspace_Create
+Workspace_ScanFiles
+Workspace_WatchThread
+YTFN_ExceptionHandler
+_DllMainCRTStartup
+__memcpy
+__strcpy_w
+__utf16_to_utf8
+__utf8_to_utf16
+__wcslen
+applyPWMThrottle
+atoi
+avx512_scan_stubs
+block
+clearEmergencyStop
+cuda_alloc
+cuda_detect_device
+cuda_execute_kernel
+cuda_free
+cuda_get_device_count
+cuda_init
+cuda_memcpy_device_to_host
+cuda_memcpy_host_to_device
+cuda_memory_alloc
+cuda_shutdown
+deflate_brutal_masm
+dispatchLoop
+dispatchOnce
+emit_call_rel
+emit_jcc_rel
+emit_mov_rax_imm
+emit_rexw_op
+emit_word
+fillRandomBuffer
+g_ProcessorTopology
+g_pi
+generateAndInstallKey
+generateRandom32
+generateRandom64
+generateSeed64
+getThrottleLevel
+gpu_free
+gpu_malloc
+gpu_memcpy_device_to_host
+gpu_memcpy_host_to_device
+gpu_synchronize
+hasRdrand
+hasRdseed
+launch_element_mul_kernel
+launch_matmul_kernel
+launch_vector_add_kernel
+lstrcpynA
+ltoa
+main
+mainCRTStartup
+processInfo
+rocm_detect_device
+rocm_execute_kernel
+rocm_init
+rocm_memory_alloc
+rxd_asm_calculate_diff
+rxd_asm_cancel_token
+rxd_asm_copy_to_dma
+rxd_asm_create_cancel_token
+rxd_asm_emit_metric
+rxd_asm_is_cancelled
+rxd_asm_normalize_completion
+rxd_asm_scan_identifiers
+setThrottleLevel
+strcat
+strchr
+stricmp
+strtok
+testEntropyQuality
+triggerEmergencyStop
+validateSessionKey
+vkGetDeviceProcAddr
+vkGetInstanceProcAddr
+vkSetPhysicalDeviceLimits
+vkSetPhysicalDeviceSparseProperties
+vk_init
+vk_shutdown
+vulkan_detect_device
+vulkan_execute_command
+vulkan_init
+vulkan_memory_alloc
+wcstombs

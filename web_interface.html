@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RawrXD Web Interface - Browser TCP Bypass Demo</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+    }
+
+    .header {
+      background: #2c3e50;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .content {
+      padding: 30px;
+    }
+
+    .status {
+      display: inline-block;
+      padding: 5px 15px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    .status.ready {
+      background: #27ae60;
+      color: white;
+    }
+
+    .status.not-ready {
+      background: #e74c3c;
+      color: white;
+    }
+
+    .input-group {
+      margin: 20px 0;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #2c3e50;
+    }
+
+    textarea,
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #ddd;
+      border-radius: 5px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    button {
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background: #2980b9;
+    }
+
+    button:disabled {
+      background: #bdc3c7;
+      cursor: not-allowed;
+    }
+
+    .response {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 5px;
+      background: #f8f9fa;
+      border-left: 4px solid #3498db;
+    }
+
+    .error {
+      border-left-color: #e74c3c;
+      background: #fdf2f2;
+    }
+
+    .stats {
+      background: #ecf0f1;
+      padding: 15px;
+      border-radius: 5px;
+      margin: 20px 0;
+    }
+
+    .stats h3 {
+      margin-top: 0;
+      color: #2c3e50;
+    }
+
+    pre {
+      background: #2c3e50;
+      color: #ecf0f1;
+      padding: 15px;
+      border-radius: 5px;
+      overflow-x: auto;
+      font-size: 12px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🔥 RawrXD Web Interface</h1>
+      <p>Browser TCP Bypass - Direct Model Communication</p>
+      <div id="status" class="status not-ready">Checking server...</div>
+    </div>
+
+    <div class="content">
+      <div class="stats">
+        <h3>Server Statistics</h3>
+        <pre id="stats">Loading...</pre>
+      </div>
+
+      <div class="input-group">
+        <label for="prompt">Model Prompt:</label>
+        <textarea id="prompt"
+          placeholder="Enter your prompt here...">Hello! Can you help me understand how this browser bypass works?</textarea>
+      </div>
+
+      <div class="input-group">
+        <label for="temperature">Temperature (0.0 - 1.0):</label>
+        <input type="text" id="temperature" value="0.7" placeholder="0.7">
+      </div>
+
+      <button id="sendBtn" onclick="sendToModel()" disabled>Send to Model</button>
+
+      <div id="response" class="response" style="display: none;">
+        <h3>Model Response:</h3>
+        <div id="responseContent"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let rawrxdAPI = null;
+    let isServerReady = false;
+
+    // Wait for the API to be available
+    window.addEventListener('load', function () {
+      if (typeof QWebChannel !== 'undefined') {
+        new QWebChannel(qt.webChannelTransport, function (channel) {
+          rawrxdAPI = channel.objects.rawrxdAPI;
+          console.log('[WebInterface] API connected:', rawrxdAPI);
+
+          // Check server status
+          checkServerStatus();
+
+          // Set up periodic status updates
+          setInterval(checkServerStatus, 5000);
+        });
+      } else {
+        showError('QWebChannel not available - running in regular browser?');
+      }
+    });
+
+    function checkServerStatus() {
+      if (!rawrxdAPI) return;
+
+      try {
+        const status = rawrxdAPI.getServerStatus();
+        console.log('[WebInterface] Server status:', status);
+
+        isServerReady = status.ready || false;
+        updateStatusDisplay(status);
+
+        // Enable/disable send button
+        document.getElementById('sendBtn').disabled = !isServerReady;
+
+        // Update stats
+        updateStats();
+
+      } catch (error) {
+        console.error('[WebInterface] Status check failed:', error);
+        showError('Failed to check server status: ' + error);
+      }
+    }
+
+    function updateStatusDisplay(status) {
+      const statusEl = document.getElementById('status');
+      if (status.listening) {
+        statusEl.className = 'status ready';
+        statusEl.textContent = `Server Ready (Port ${status.port})`;
+      } else {
+        statusEl.className = 'status not-ready';
+        statusEl.textContent = 'Server Not Ready';
+      }
+    }
+
+    function updateStats() {
+      if (!rawrxdAPI) return;
+
+      try {
+        const stats = rawrxdAPI.getStatistics();
+        document.getElementById('stats').textContent = stats;
+      } catch (error) {
+        document.getElementById('stats').textContent = 'Failed to load statistics';
+      }
+    }
+
+    function sendToModel() {
+      if (!rawrxdAPI || !isServerReady) {
+        showError('Server not ready');
+        return;
+      }
+
+      const prompt = document.getElementById('prompt').value.trim();
+      if (!prompt) {
+        showError('Please enter a prompt');
+        return;
+      }
+
+      const temperature = parseFloat(document.getElementById('temperature').value) || 0.7;
+
+      // Prepare options
+      const options = {
+        temperature: Math.max(0, Math.min(1, temperature)),
+        max_tokens: 1000,
+        stream: false
+      };
+
+      console.log('[WebInterface] Sending prompt:', prompt, 'with options:', options);
+
+      try {
+        const response = rawrxdAPI.sendToModel(prompt, options);
+        console.log('[WebInterface] Raw response:', response);
+
+        if (response.success) {
+          showResponse(response.response || 'No response content');
+        } else {
+          showError(response.error || 'Unknown error');
+        }
+
+      } catch (error) {
+        console.error('[WebInterface] Send failed:', error);
+        showError('Failed to send to model: ' + error);
+      }
+    }
+
+    function showResponse(content) {
+      const responseEl = document.getElementById('response');
+      const contentEl = document.getElementById('responseContent');
+
+      responseEl.className = 'response';
+      contentEl.innerHTML = content.replace(/\n/g, '<br>');
+      responseEl.style.display = 'block';
+
+      // Scroll to response
+      responseEl.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function showError(message) {
+      const responseEl = document.getElementById('response');
+      const contentEl = document.getElementById('responseContent');
+
+      responseEl.className = 'response error';
+      contentEl.innerHTML = '<strong>Error:</strong> ' + message;
+      responseEl.style.display = 'block';
+    }
+
+    // Handle keyboard shortcuts
+    document.addEventListener('keydown', function (e) {
+      if (e.ctrlKey && e.key === 'Enter') {
+        e.preventDefault();
+        sendToModel();
+      }
+    });
+
+    console.log('[WebInterface] Page loaded, waiting for API connection...');
+  </script>
+</body>
+
+</html>

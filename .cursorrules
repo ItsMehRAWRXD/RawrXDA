@@ -71,6 +71,7 @@ qDebug() << "Error occurred";
 
 ### **No Qt — Win32 + StdReplacements only**
 - **NEVER** add `#include <QString>`, `<QtCore>`, or any Qt header. RawrXD is Qt-free.
+- **Removing Qt does NOT mean removing features.** Keep all features; implement them with Win32 + `Ship/StdReplacements.hpp` (e.g. menus, Git, View, panels, dialogs). Build it.
 - Use `Ship/StdReplacements.hpp`: `WideString`, `WideStringList`, `Variant`, `StdMap`, `StdFile`, `StdDir`, `JsonDoc`, etc.
 - Use `std::string` for core logic; `WideString` (or `std::wstring`) for UI/Win32 when needed.
 - Use Win32 APIs for process (CreateProcess), HTTP (winhttp), SQLite (native/sqlite3), UI (HWND, GDI/Direct2D).

@@ -1,0 +1,363 @@
+{
+  "_meta": {
+    "version": "1.0.0",
+    "project": "RawrXD IDE",
+    "generated": "2026-02-11",
+    "description": "API contract for all backend endpoints. Used by test harness to validate response shape and detect silent drift.",
+    "backends": {
+      "serve.py": { "port": 11435, "coverage": "full" },
+      "Win32IDE": { "port": 11435, "coverage": "full+native" },
+      "ollama-direct": { "port": 11434, "coverage": "inference-only" }
+    }
+  },
+
+  "endpoints": [
+    {
+      "id": "health",
+      "path": "/health",
+      "method": "GET",
+      "description": "Health check — confirms server is alive",
+      "backends": ["serve.py", "Win32IDE"],
+      "tier": 2,
+      "response": {
+        "status": 200,
+        "shape": {
+          "status": { "type": "string", "required": true, "expect": "ok" },
+          "server": { "type": "string", "required": false }
+        }
+      }
+    },
+    {
+      "id": "status",
+      "path": "/status",
+      "method": "GET",
+      "description": "Full server status with model count, uptime, stats",
+      "backends": ["serve.py", "Win32IDE"],
+      "tier": 2,
+      "response": {
+        "status": 200,
+        "shape": {
+          "ready": { "type": "boolean", "required": true },
+          "backend": { "type": "string", "required": true },
+          "server": { "type": "string", "required": false },
+          "available_models": { "type": "number", "required": false },
+          "total_requests": { "type": "number", "required": false },
+          "total_tokens": { "type": "number", "required": false },
+          "uptime_seconds": { "type": "number", "required": false }
+        }
+      }
+    },
+    {
+      "id": "api-status",
+      "path": "/api/status",
+      "method": "GET",
+      "description": "Legacy status endpoint (tool_server format)",
+      "backends": ["Win32IDE"],
+      "tier": 2,
+      "response": {
+        "status": 200,
+        "shape": {
+          "running": { "type": "boolean", "required": true },
+          "pid": { "type": "number", "required": true },
+          "uptime_seconds": { "type": "number", "required": false }
+        }
+      }
+    },
+    {
+      "id": "models",
+      "path": "/models",
+      "method": "GET",
+      "description": "List all available models (GGUF + Ollama + Blobs)",
+      "backends": ["serve.py", "Win32IDE"],
+      "tier": 1,
+      "response": {
+        "status": 200,
+        "shape": {
+          "models": { "type": "array", "required": true, "itemShape": {
+            "name": { "type": "string", "required": true },
+            "size": { "type": "number", "required": false },
+            "type": { "type": "string", "required": false }
+          }}
+        }
+      }
+    },
+    {
+      "id": "api-tags",
+      "path": "/api/tags",
+      "method": "GET",
+      "description": "Ollama-compatible model tags (proxy to Ollama)",
+      "backends": ["serve.py", "Win32IDE", "ollama-direct"],
+      "tier": 1,
+      "response": {
+        "status": 200,
+        "shape": {
+          "models": { "type": "array", "required": true, "itemShape": {
+            "name": { "type": "string", "required": true },
+            "model": { "type": "string", "required": false },
+            "size": { "type": "number", "required": false }
+          }}
+        }
+      }
+    },
+    {
+      "id": "v1-chat-completions",
+      "path": "/v1/chat/completions",
+      "method": "POST",
+      "description": "OpenAI-compatible chat completions (streaming + non-streaming)",
+      "backends": ["serve.py", "Win32IDE"],
+      "tier": 1,
+      "request": {
+        "contentType": "application/json",
+        "body": {
+          "model": { "type": "string", "required": true },
+          "messages": { "type": "array", "required": true, "itemShape": {
+            "role": { "type": "string", "required": true, "enum": ["system", "user", "assistant"] },
+            "content": { "type": "string", "required": true }
+          }},
+          "stream": { "type": "boolean", "required": false, "default": false },
+          "temperature": { "type": "number", "required": false },
+          "top_p": { "type": "number", "required": false },
+          "max_tokens": { "type": "number", "required": false }
+        }
+      },
+      "response": {
+        "status": 200,
+        "nonStreaming": {
+          "shape": {
+            "choices": { "type": "array", "required": true, "itemShape": {
+              "message": { "type": "object", "required": true, "shape": {
+                "role": { "type": "string", "required": true },
+                "content": { "type": "string", "required": true }
+              }},
+              "finish_reason": { "type": "string", "required": false }
+            }}
+          }
+        },
+        "streaming": {
+          "format": "SSE",
+          "linePrefix": "data: ",
+          "terminator": "[DONE]",
+          "chunkShape": {
+            "choices": { "type": "array", "required": true, "itemShape": {
+              "delta": { "type": "object", "required": true, "shape": {
+                "content": { "type": "string", "required": false }
+              }}
+            }}
+          }
+        }
+      }
+    },
+    {
+      "id": "api-generate",
+      "path": "/api/generate",
+      "method": "POST",
+      "description": "Ollama-compatible NDJSON streaming generation",
+      "backends": ["serve.py", "Win32IDE", "ollama-direct"],
+      "tier": 1,
+      "request": {
+        "contentType": "application/json",
+        "body": {
+          "model": { "type": "string", "required": true },
+          "prompt": { "type": "string", "required": true },
+          "stream": { "type": "boolean", "required": false, "default": true },
+          "options": { "type": "object", "required": false }
+        }
+      },
+      "response": {
+        "status": 200,
+        "format": "NDJSON",
+        "chunkShape": {
+          "response": { "type": "string", "required": true },
+          "done": { "type": "boolean", "required": true }
+        }
+      }
+    },
+    {
+      "id": "ask",
+      "path": "/ask",
+      "method": "POST",
+      "description": "Legacy non-streaming ask endpoint",
+      "backends": ["serve.py", "Win32IDE"],
+      "tier": 2,
+      "request": {
+        "contentType": "application/json",
+        "body": {
+          "question": { "type": "string", "required": true },
+          "model": { "type": "string", "required": false }
+        }
+      },
+      "response": {
+        "status": 200,
+        "shape": {
+          "answer": { "type": "string", "required": true }
+        }
+      }
+    },
+    {
+      "id": "api-failures",
+      "path": "/api/failures",
+      "method": "GET",
+      "description": "Failure intelligence log with stats",
+      "backends": ["serve.py", "Win32IDE"],
+      "tier": 2,
+      "queryParams": {
+        "limit": { "type": "number", "required": false, "default": 200 }
+      },
+      "response": {
+        "status": 200,
+        "shape": {
+          "failures": { "type": "array", "required": true, "itemShape": {
+            "id": { "type": "number", "required": true },
+            "timestampMs": { "type": "number", "required": true },
+            "type": { "type": "string", "required": true },
+            "evidence": { "type": "string", "required": false },
+            "strategy": { "type": "string", "required": false },
+            "outcome": { "type": "string", "required": false }
+          }},
+          "stats": { "type": "object", "required": true, "shape": {
+            "totalFailures": { "type": "number", "required": true },
+            "totalRetries": { "type": "number", "required": false },
+            "topReasons": { "type": "array", "required": false }
+          }}
+        }
+      }
+    },
+    {
+      "id": "api-agents-status",
+      "path": "/api/agents/status",
+      "method": "GET",
+      "description": "Agent subsystem status (detector, puppeteer, proxy, unified)",
+      "backends": ["serve.py", "Win32IDE"],
+      "tier": 2,
+      "response": {
+        "status": 200,
+        "shape": {
+          "agents": { "type": "object", "required": true },
+          "server_uptime": { "type": "number", "required": false },
+          "total_events": { "type": "number", "required": false }
+        }
+      }
+    },
+    {
+      "id": "api-agents-history",
+      "path": "/api/agents/history",
+      "method": "GET",
+      "description": "Agent event history log",
+      "backends": ["serve.py", "Win32IDE"],
+      "tier": 3,
+      "queryParams": {
+        "limit": { "type": "number", "required": false, "default": 100 }
+      },
+      "response": {
+        "status": 200,
+        "shape": {
+          "events": { "type": "array", "required": true, "itemShape": {
+            "timestampMs": { "type": "number", "required": true },
+            "type": { "type": "string", "required": true },
+            "detail": { "type": "string", "required": false },
+            "source": { "type": "string", "required": false }
+          }}
+        }
+      }
+    },
+    {
+      "id": "api-agents-replay",
+      "path": "/api/agents/replay",
+      "method": "POST",
+      "description": "Replay a failed agent event (retry/correct/decline)",
+      "backends": ["serve.py", "Win32IDE"],
+      "tier": 3,
+      "request": {
+        "contentType": "application/json",
+        "body": {
+          "failure_id": { "type": "number", "required": true },
+          "action": { "type": "string", "required": false, "default": "retry", "enum": ["retry", "correct", "decline"] }
+        }
+      },
+      "response": {
+        "status": 200,
+        "shape": {
+          "success": { "type": "boolean", "required": true },
+          "action": { "type": "string", "required": true },
+          "failure_id": { "type": "number", "required": true }
+        }
+      }
+    },
+    {
+      "id": "api-read-file",
+      "path": "/api/read-file",
+      "method": "POST",
+      "description": "Read a local file by path (IDE file-path auto-attach)",
+      "backends": ["serve.py", "Win32IDE"],
+      "tier": 2,
+      "request": {
+        "contentType": "application/json",
+        "body": {
+          "path": { "type": "string", "required": true }
+        }
+      },
+      "response": {
+        "status": 200,
+        "shape": {
+          "content": { "type": "string", "required": true },
+          "path": { "type": "string", "required": true },
+          "size": { "type": "number", "required": false }
+        }
+      }
+    },
+    {
+      "id": "api-cli",
+      "path": "/api/cli",
+      "method": "POST",
+      "description": "CLI command execution (Win32IDE / tool_server only)",
+      "backends": ["Win32IDE"],
+      "tier": 2,
+      "request": {
+        "contentType": "application/json",
+        "body": {
+          "command": { "type": "string", "required": true }
+        }
+      },
+      "response": {
+        "status": 200,
+        "shape": {
+          "output": { "type": "string", "required": true }
+        }
+      }
+    }
+  ],
+
+  "degradation_matrix": {
+    "description": "Expected behavior when backend features are absent",
+    "rules": [
+      {
+        "condition": "No backend reachable",
+        "behavior": "offline",
+        "features_available": ["localStorage restore", "local CLI", "voice STT/TTS", "CoT client-side", "offline responses", "engine explorer (cached)"],
+        "features_hidden": ["file editor save", "git integration", "swarm dashboard refresh", "extension host"],
+        "features_degraded": ["model selection (fallback list)", "chat (offline responses only)", "debug panel (no live data)"]
+      },
+      {
+        "condition": "Ollama direct only (:11434)",
+        "behavior": "directMode",
+        "features_available": ["chat (streaming)", "model selection", "/api/generate", "/api/tags"],
+        "features_hidden": ["agent dashboard (no /api/agents/*)", "failure panel", "CLI endpoint", "file read"],
+        "features_degraded": ["status pill shows 'OLLAMA DIRECT'", "no /v1/chat/completions (SSE)", "no failure intelligence"]
+      },
+      {
+        "condition": "serve.py only (:11435)",
+        "behavior": "full-proxy",
+        "features_available": ["chat", "models", "failures", "agents", "file read", "health", "status"],
+        "features_hidden": ["CLI endpoint (unless tool_server)", "hotpatch API (C++ only)", "MASM bridge"],
+        "features_degraded": []
+      },
+      {
+        "condition": "Win32IDE (:11435)",
+        "behavior": "full-native",
+        "features_available": ["ALL"],
+        "features_hidden": [],
+        "features_degraded": []
+      }
+    ]
+  }
+}

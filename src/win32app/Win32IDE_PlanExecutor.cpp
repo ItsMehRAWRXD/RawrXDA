@@ -491,7 +491,7 @@ void Win32IDE::executePlan() {
             }
 
             // Execute the step
-            std::string result = executeSingleStep(m_agenticBridge.get(), m_currentPlan.steps[i]);
+            std::string result = executeSingleStep(m_agenticBridge, m_currentPlan.steps[i]);
 
             // Phase 4B: Choke Point 1 — hookPlanStepOutput after each step
             FailureClassification stepFailure = hookPlanStepOutput(i, result);
@@ -501,7 +501,7 @@ void Win32IDE::executePlan() {
                 if (showRetryApprovalInPlanDialog(i, stepFailure)) {
                     std::string retryPrompt = buildRetryPrompt(stepFailure,
                         m_currentPlan.steps[i].title);
-                    std::string retryResult = executeSingleStep(m_agenticBridge.get(),
+                    std::string retryResult = executeSingleStep(m_agenticBridge,
                         m_currentPlan.steps[i]);
                     FailureClassification retryCheck = hookPlanStepOutput(i, retryResult);
                     if (retryCheck.reason == AgentFailureType::None) {
@@ -601,14 +601,14 @@ void Win32IDE::onPlanStepDone(int stepIndex, int result) {
                         "Step " + std::to_string(i + 1) + "/" + std::to_string(totalSteps) +
                         ": " + m_currentPlan.steps[i].title);
 
-                    std::string result = executeSingleStep(m_agenticBridge.get(), m_currentPlan.steps[i]);
+                    std::string result = executeSingleStep(m_agenticBridge, m_currentPlan.steps[i]);
 
                     // Phase 4B: Choke Point 2 — hookPlanStepOutput in resume loop
                     FailureClassification resumeFailure = hookPlanStepOutput(i, result);
                     if (resumeFailure.reason != AgentFailureType::None) {
                         if (showRetryApprovalInPlanDialog(i, resumeFailure)) {
                             std::string retryResult = executeSingleStep(
-                                m_agenticBridge.get(), m_currentPlan.steps[i]);
+                                m_agenticBridge, m_currentPlan.steps[i]);
                             FailureClassification retryCheck = hookPlanStepOutput(i, retryResult);
                             if (retryCheck.reason == AgentFailureType::None) {
                                 result = retryResult;

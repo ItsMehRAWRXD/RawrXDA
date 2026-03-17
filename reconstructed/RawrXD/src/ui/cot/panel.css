@@ -1,0 +1,217 @@
+/*
+ * cot_panel.css — RawrXD Chain-of-Thought Panel Styles
+ * =====================================================
+ *
+ * Dark theme styling for the CoT step-by-step renderer.
+ * Matches the IDE's VS Code-inspired color palette.
+ *
+ * Used by: src/ui/ide_cot_bridge.js
+ * Loaded in: chat panel WebView or IDE toolbar panel
+ */
+
+/* ==========================================================================
+   Pipeline Container
+   ========================================================================== */
+.cot-pipeline {
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  background: #1e1e1e;
+  color: #d4d4d4;
+  padding: 12px;
+  border-radius: 6px;
+  margin: 8px 0;
+  border: 1px solid #333;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* ==========================================================================
+   Individual Step
+   ========================================================================== */
+.cot-step {
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  background: #252526;
+  border-left: 3px solid #007acc;
+  border-radius: 0 4px 4px 0;
+  animation: cotSlideIn 0.3s ease forwards;
+  opacity: 0;
+}
+
+.cot-step:last-of-type {
+  margin-bottom: 0;
+}
+
+/* ==========================================================================
+   Step Header (role, model, timing)
+   ========================================================================== */
+.cot-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85em;
+  color: #858585;
+  margin-bottom: 4px;
+}
+
+.cot-icon {
+  font-size: 1.1em;
+}
+
+.cot-role {
+  font-weight: bold;
+  color: #4fc1ff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.cot-model {
+  color: #6a9955;
+  font-size: 0.8em;
+  font-style: italic;
+}
+
+.cot-time {
+  margin-left: auto;
+  font-size: 0.8em;
+  color: #d7ba7d;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==========================================================================
+   Step Content
+   ========================================================================== */
+.cot-content {
+  color: #ce9178;
+  font-size: 0.9em;
+  line-height: 1.5;
+  word-break: break-word;
+  padding-left: 4px;
+}
+
+.cot-content em {
+  color: #808080;
+  font-style: italic;
+}
+
+/* ==========================================================================
+   Final Answer Bar
+   ========================================================================== */
+.cot-final {
+  text-align: center;
+  color: #4ec9b0;
+  font-weight: bold;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #333;
+  font-size: 0.95em;
+}
+
+/* ==========================================================================
+   Status Badges
+   ========================================================================== */
+.cot-skip {
+  color: #6a9955;
+  font-style: italic;
+  padding: 8px 12px;
+  background: #1e1e1e;
+  border-radius: 6px;
+  border-left: 3px solid #6a9955;
+  font-family: 'Cascadia Code', monospace;
+  font-size: 0.9em;
+}
+
+.cot-badge-skip {
+  display: inline-block;
+  background: #3c3c3c;
+  color: #d7ba7d;
+  font-size: 0.7em;
+  padding: 1px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  vertical-align: middle;
+}
+
+.cot-loading {
+  color: #569cd6;
+  font-style: italic;
+  padding: 12px;
+  text-align: center;
+  font-family: 'Cascadia Code', monospace;
+  animation: cotPulse 1.5s ease-in-out infinite;
+}
+
+.cot-error {
+  color: #f44747;
+  padding: 8px 12px;
+  background: #1e1e1e;
+  border-radius: 6px;
+  border-left: 3px solid #f44747;
+  font-family: 'Cascadia Code', monospace;
+  font-size: 0.9em;
+}
+
+.cot-aborted {
+  color: #d7ba7d;
+  padding: 8px 12px;
+  background: #1e1e1e;
+  border-radius: 6px;
+  border-left: 3px solid #d7ba7d;
+  font-family: 'Cascadia Code', monospace;
+  font-size: 0.9em;
+  font-style: italic;
+}
+
+.cot-empty {
+  color: #808080;
+  font-style: italic;
+  text-align: center;
+  padding: 12px;
+}
+
+/* ==========================================================================
+   Animations
+   ========================================================================== */
+@keyframes cotSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes cotPulse {
+
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+
+  50% {
+    opacity: 1.0;
+  }
+}
+
+/* ==========================================================================
+   Scrollbar (WebKit — matches IDE dark theme)
+   ========================================================================== */
+.cot-pipeline::-webkit-scrollbar {
+  width: 8px;
+}
+
+.cot-pipeline::-webkit-scrollbar-track {
+  background: #1e1e1e;
+}
+
+.cot-pipeline::-webkit-scrollbar-thumb {
+  background: #424242;
+  border-radius: 4px;
+}
+
+.cot-pipeline::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}

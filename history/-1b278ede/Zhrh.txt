@@ -1,0 +1,55 @@
+# RawrXD Core Library
+# Shared functionality between GUI and CLI executables
+
+set(CORE_SOURCES
+    orchestra_manager.cpp
+    safe_mode_config.cpp
+    ../lazy_directory_loader.cpp
+    ../auto_model_loader.cpp
+)
+
+set(CORE_HEADERS
+    orchestra_manager.hpp
+    safe_mode_config.hpp
+    ../lazy_directory_loader.h
+    ../auto_model_loader.h
+)
+
+# Create the shared core library (static)
+add_library(RawrXD-Core STATIC ${CORE_SOURCES} ${CORE_HEADERS})
+
+# Find required packages
+find_package(Qt6 REQUIRED COMPONENTS Core Concurrent)
+
+# Link Qt Core
+target_link_libraries(RawrXD-Core PUBLIC
+    Qt6::Core
+    Qt6::Concurrent
+)
+
+# Include directories
+target_include_directories(RawrXD-Core PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+# Enable Qt MOC
+set_target_properties(RawrXD-Core PROPERTIES
+    AUTOMOC ON
+)
+
+# Additional platform-specific libraries
+if(WIN32)
+    target_link_libraries(RawrXD-Core PRIVATE
+        ws2_32
+        advapi32
+    )
+endif()
+
+# zlib integration (if available)
+find_package(ZLIB)
+if(ZLIB_FOUND)
+    target_link_libraries(RawrXD-Core PRIVATE ZLIB::ZLIB)
+    target_compile_definitions(RawrXD-Core PRIVATE HAVE_ZLIB=1)
+else()
+    message(STATUS "zlib not found, using stub implementations")
+endif()

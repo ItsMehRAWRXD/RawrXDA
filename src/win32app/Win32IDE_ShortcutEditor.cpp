@@ -20,6 +20,8 @@
 #include <string>
 #include <fstream>
 #include <unordered_map>
+#include <ShlObj.h>
+#include <filesystem>
 
 // ============================================================================
 // Shortcut data model
@@ -42,6 +44,116 @@ static HWND s_hwndKeyCapture     = nullptr;
 static bool s_isCapturing        = false;
 static int  s_captureTargetIndex = -1;
 static const wchar_t* SHORTCUT_EDITOR_CLASS = L"RawrXD_ShortcutEditor";
+
+// ============================================================================
+// Persistent path: %APPDATA%\RawrXD\keybindings.json
+// ============================================================================
+
+static std::string getKeybindingsPath() {
+    char appData[MAX_PATH] = {};
+    if (SUCCEEDED(SHGetFolderPathA(nullptr, CSIDL_APPDATA, nullptr, 0, appData))) {
+        std::string dir = std::string(appData) + "\\RawrXD";
+        std::filesystem::create_directories(dir);
+        return dir + "\\keybindings.json";
+    }
+    // Fallback to CWD
+    return "keybindings.json";
+}
+
+// ============================================================================
+// Load saved keybindings from disk (merges custom over defaults)
+// ============================================================================
+
+static bool loadKeybindingsFromDisk() {
+    std::string path = getKeybindingsPath();
+    std::ifstream fin(path);
+    if (!fin.is_open()) return false;
+
+    // Read entire file
+    std::string content((std::istreambuf_iterator<char>(fin)),
+                         std::istreambuf_iterator<char>());
+    fin.close();
+
+    if (content.size() < 3) return false;
+
+    // Simple JSON array parser: extract objects with "command", "key", "custom"
+    // Format: [{"command":"x","key":"y","description":"z","category":"c","custom":true},...]
+    size_t pos = 0;
+    int applied = 0;
+
+    while ((pos = content.find("{", pos)) != std::string::npos) {
+        size_t end = content.find("}", pos);
+        if (end == std::string::npos) break;
+
+        std::string obj = content.substr(pos, end - pos + 1);
+        pos = end + 1;
+
+        // Extract "command":"value"
+        auto extractField = [&obj](const std::string& field) -> std::string {
+            std::string needle = "\"" + field + "\":\"";
+            size_t start = obj.find(needle);
+            if (start == std::string::npos) return "";
+            start += needle.size();
+            size_t stop = obj.find("\"", start);
+            if (stop == std::string::npos) return "";
+            return obj.substr(start, stop - start);
+        };
+
+        std::string cmd = extractField("command");
+        std::string key = extractField("key");
+        std::string desc = extractField("description");
+        std::string cat = extractField("category");
+        bool custom = (obj.find("\"custom\":true") != std::string::npos ||
+                       obj.find("\"custom\": true") != std::string::npos);
+
+        if (cmd.empty() || key.empty()) continue;
+
+        // Find matching command in defaults and override
+        bool found = false;
+        for (auto& kb : s_keyBindings) {
+            if (kb.command == cmd) {
+                kb.keyCombination = key;
+                kb.isCustom = custom;
+                if (!desc.empty()) kb.description = desc;
+                if (!cat.empty()) kb.category = cat;
+                found = true;
+                applied++;
+                break;
+            }
+        }
+
+        // If command not in defaults, add it as custom
+        if (!found && custom) {
+            KeyBinding kb;
+            kb.command = cmd;
+            kb.description = desc.empty() ? cmd : desc;
+            kb.keyCombination = key;
+            kb.category = cat.empty() ? "Custom" : cat;
+            kb.isDefault = false;
+            kb.isCustom = true;
+            s_keyBindings.push_back(kb);
+            applied++;
+        }
+    }
+
+    OutputDebugStringA(("[ShortcutEditor] Loaded " + std::to_string(applied) +
+                        " keybinding(s) from " + path + "\n").c_str());
+    return applied > 0;
+}
+
+// ============================================================================
+// Conflict detection: check if a key combo is already bound to another command
+// ============================================================================
+
+static std::string findConflictingCommand(const std::string& keyCombination, int excludeIndex) {
+    for (int i = 0; i < (int)s_keyBindings.size(); ++i) {
+        if (i == excludeIndex) continue;
+        if (s_keyBindings[i].keyCombination == keyCombination) {
+            return s_keyBindings[i].command + " (" + s_keyBindings[i].description + ")";
+        }
+    }
+    return "";
+}
 
 // ============================================================================
 // Seed default keybindings
@@ -330,10 +442,41 @@ static LRESULT CALLBACK shortcutEditorWndProc(HWND hwnd, UINT msg, WPARAM wParam
 
             std::string keyName = buildKeyName(wParam, ctrl, shift, alt);
 
+            // Conflict detection — warn if key already bound
+            std::string conflict = findConflictingCommand(keyName, s_captureTargetIndex);
+            if (!conflict.empty()) {
+                std::wstring msg = L"Key \"";
+                wchar_t keyW[128] = {};
+                MultiByteToWideChar(CP_UTF8, 0, keyName.c_str(), -1, keyW, 127);
+                msg += keyW;
+                msg += L"\" is already assigned to:\n";
+                wchar_t conflictW[256] = {};
+                MultiByteToWideChar(CP_UTF8, 0, conflict.c_str(), -1, conflictW, 255);
+                msg += conflictW;
+                msg += L"\n\nOverride the existing binding?";
+                int result = MessageBoxW(hwnd, msg.c_str(), L"Keybinding Conflict",
+                                         MB_YESNO | MB_ICONWARNING);
+                if (result != IDYES) {
+                    s_isCapturing = false;
+                    SetWindowTextW(s_hwndKeyCapture, L"Cancelled — conflict");
+                    return 0;
+                }
+                // Remove the conflicting binding's key
+                for (int i = 0; i < (int)s_keyBindings.size(); ++i) {
+                    if (i != s_captureTargetIndex && s_keyBindings[i].keyCombination == keyName) {
+                        s_keyBindings[i].keyCombination = "(unassigned)";
+                        s_keyBindings[i].isCustom = true;
+                        break;
+                    }
+                }
+            }
+
             // Update capture display
-            wchar_t keyW[128] = {};
-            MultiByteToWideChar(CP_UTF8, 0, keyName.c_str(), -1, keyW, 127);
-            SetWindowTextW(s_hwndKeyCapture, keyW);
+            {
+                wchar_t keyW[128] = {};
+                MultiByteToWideChar(CP_UTF8, 0, keyName.c_str(), -1, keyW, 127);
+                SetWindowTextW(s_hwndKeyCapture, keyW);
+            }
             ShowWindow(s_hwndKeyCapture, SW_SHOW);
 
             // Apply to selected item
@@ -370,8 +513,9 @@ static LRESULT CALLBACK shortcutEditorWndProc(HWND hwnd, UINT msg, WPARAM wParam
             }
             refreshShortcutList();
         } else if (wmId == IDC_SE_SAVE) {
-            // Save keybindings to JSON file
-            std::ofstream fout("keybindings.json");
+            // Save keybindings to persistent JSON file
+            std::string path = getKeybindingsPath();
+            std::ofstream fout(path);
             if (fout.is_open()) {
                 fout << "[\n";
                 for (size_t i = 0; i < s_keyBindings.size(); ++i) {
@@ -465,6 +609,12 @@ void Win32IDE::initShortcutEditorPanel() {
 void Win32IDE::initShortcutEditor() {
     if (m_shortcutEditorInitialized) return;
     seedDefaultBindings();
+
+    // Load user-customized keybindings from %APPDATA%\RawrXD\keybindings.json
+    if (loadKeybindingsFromDisk()) {
+        OutputDebugStringA("[ShortcutEditor] Custom keybindings loaded from disk.\n");
+    }
+
     OutputDebugStringA("[ShortcutEditor] Tier 5 — Keyboard shortcut editor initialized.\n");
     m_shortcutEditorInitialized = true;
     appendToOutput("[ShortcutEditor] Visual keyboard shortcut editor ready.\n");
@@ -563,9 +713,10 @@ void Win32IDE::cmdShortcutEditorReset() {
 // ============================================================================
 
 void Win32IDE::cmdShortcutEditorSave() {
-    std::ofstream fout("keybindings.json");
+    std::string path = getKeybindingsPath();
+    std::ofstream fout(path);
     if (!fout.is_open()) {
-        appendToOutput("[ShortcutEditor] ERROR: Failed to save keybindings.\n");
+        appendToOutput("[ShortcutEditor] ERROR: Failed to save keybindings to " + path + "\n");
         return;
     }
 
@@ -585,7 +736,7 @@ void Win32IDE::cmdShortcutEditorSave() {
     fout << "]\n";
     fout.close();
 
-    appendToOutput("[ShortcutEditor] Keybindings saved to keybindings.json\n");
+    appendToOutput("[ShortcutEditor] Keybindings saved to " + path + "\n");
 }
 
 // ============================================================================

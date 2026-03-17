@@ -20,7 +20,7 @@
 #include <optional>
 
 // Uses nlohmann/json internally
-#include "nlohmann/json.hpp"
+#include <nlohmann/json.hpp>
 
 namespace RawrXD {
 namespace RPC {

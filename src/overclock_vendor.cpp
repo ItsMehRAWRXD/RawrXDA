@@ -1,12 +1,21 @@
 #include "overclock_vendor.h"
+#include <algorithm>
 #include "gui.h"
+#include <algorithm>
 #include <cstdio>
+#include <algorithm>
 #include <array>
+#include <algorithm>
 #include <filesystem>
+#include <algorithm>
 #include <iostream>
+#include <algorithm>
 #include <mutex>
+#include <algorithm>
 #include <cstdlib>
+#include <algorithm>
 #include <memory>
+#include <algorithm>
 
 namespace overclock_vendor {
 

@@ -68,17 +68,11 @@ if (Test-Path $Source -PathType Leaf) {
 
 # Single file: delegate to unified compiler
 if ($sources.Count -eq 1) {
-    $entryParam = if ($Entry) { "-Entry $Entry" } else { "" }
-    $args = @(
-        '-Source', $sources[0],
-        '-Tool', 'masm',
-        '-Architecture', $Architecture,
-        '-SubSystem', $SubSystem,
-        '-OutDir', $OutDir,
-        '-OutputType', $OutputType
-    )
-    if ($Entry) { $args += '-Entry'; $args += $Entry }
-    & $UnifiedScript @args
+    if ($Entry) {
+        & $UnifiedScript -Source $sources[0] -Tool 'masm' -Architecture $Architecture -SubSystem $SubSystem -OutDir $OutDir -OutputType $OutputType -Entry $Entry
+    } else {
+        & $UnifiedScript -Source $sources[0] -Tool 'masm' -Architecture $Architecture -SubSystem $SubSystem -OutDir $OutDir -OutputType $OutputType
+    }
     exit $LASTEXITCODE
 }
 
@@ -112,15 +106,26 @@ function Find-MSVCTools {
 
 function Find-Kits {
     param([string]$Arch)
-    $root = 'C:\Program Files (x86)\Windows Kits\10\Lib'
-    if (-not (Test-Path $root)) { $root = 'D:\Program Files (x86)\Windows Kits\10\Lib' }
-    if (-not (Test-Path $root)) { throw "Windows Kits not found" }
-    $ver = Get-ChildItem $root -Directory | Sort-Object Name -Descending | Select-Object -First 1
     $a = if ($Arch -eq 'x64') { 'x64' } else { 'x86' }
-    return @{
-        ucrt = (Join-Path $ver.FullName "ucrt\$a")
-        um   = (Join-Path $ver.FullName "um\$a")
+    $roots = @(
+        'C:\Program Files (x86)\Windows Kits\10\Lib',
+        'D:\Program Files (x86)\Windows Kits\10\Lib'
+    )
+    foreach ($root in $roots) {
+        if (-not (Test-Path $root)) { continue }
+        $versions = Get-ChildItem $root -Directory | Sort-Object Name -Descending
+        foreach ($ver in $versions) {
+            $ucrt = Join-Path $ver.FullName "ucrt\$a"
+            $um = Join-Path $ver.FullName "um\$a"
+            if ((Test-Path $ucrt) -and (Test-Path $um)) {
+                return @{
+                    ucrt = $ucrt
+                    um   = $um
+                }
+            }
+        }
     }
+    throw "Windows Kits with ucrt+um for $Arch not found"
 }
 
 New-Item -ItemType Directory -Path $OutDir -Force | Out-Null
@@ -131,7 +136,10 @@ foreach ($src in $sources) {
     $base = [IO.Path]::GetFileNameWithoutExtension($src)
     $obj = Join-Path $OutDir ($base + '.obj')
     Write-Host "Assembling $base ..."
-    & $tools.ml /c /nologo /Fo $obj $src
+    $mlArgs = @('/c', '/nologo')
+    if ($Architecture -eq 'x86') { $mlArgs += '/coff' }
+    $mlArgs += @("/Fo$obj", $src)
+    & $tools.ml @mlArgs
     if ($LASTEXITCODE -ne 0) { throw "ml failed: $src" }
     $objs += $obj
 }
@@ -146,15 +154,19 @@ $outName = if ($OutputType -eq 'dll') {
 
 $entry = if ($Entry) { $Entry } else { if ($OutputType -eq 'dll') { 'DllMain' } else { 'WinMain' } }
 $sub = $SubSystem
-$libPaths = "/LIBPATH:`"$($tools.lib)`" /LIBPATH:`"$($kits.ucrt)`" /LIBPATH:`"$($kits.um)`""
-$libs = "kernel32.lib user32.lib gdi32.lib comdlg32.lib comctl32.lib"
-$objStr = ($objs | ForEach-Object { "`"$_`"" }) -join ' '
-
+$machine = if ($Architecture -eq 'x64') { '/MACHINE:X64' } else { '/MACHINE:X86' }
+$linkArgs = @('/nologo', $machine, "/subsystem:$sub")
 if ($OutputType -eq 'dll') {
-    & $tools.link /nologo /DLL /NOENTRY /subsystem:$sub $objStr $libPaths $libs "/OUT:$outName"
+    $linkArgs += '/DLL'
+    if ($Entry) { $linkArgs += "/entry:$entry" } else { $linkArgs += '/NOENTRY' }
 } else {
-    & $tools.link /nologo /LARGEADDRESSAWARE:NO /subsystem:$sub /entry:$entry $objStr $libPaths $libs "/OUT:$outName"
+    $linkArgs += "/entry:$entry"
 }
+$linkArgs += $objs
+$linkArgs += @("/LIBPATH:$($tools.lib)", "/LIBPATH:$($kits.ucrt)", "/LIBPATH:$($kits.um)")
+$linkArgs += @('kernel32.lib', 'user32.lib', 'gdi32.lib', 'comdlg32.lib', 'comctl32.lib')
+$linkArgs += "/OUT:$outName"
+& $tools.link @linkArgs
 if ($LASTEXITCODE -ne 0) { throw "link failed" }
 
 Write-Host "[OK] Built: $outName" -ForegroundColor Green

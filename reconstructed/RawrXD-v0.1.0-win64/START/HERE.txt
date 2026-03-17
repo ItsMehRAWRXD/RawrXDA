@@ -1,0 +1,108 @@
+RawrXD v0.1.0 MVP
+==================
+
+Local AI code completion with streaming ghost text.
+
+QUICK START
+-----------
+
+1. Download a GGUF model:
+   Place it in: models/
+   Example: Mistral-7B-Instruct-v0.1.Q4_K_M.gguf
+
+2. Open TWO terminal windows:
+
+   Terminal 1 (Engine):
+   cd engine
+   run_engine.bat ..\models\Mistral-7B-Instruct-v0.1.Q4_K_M.gguf
+
+   Terminal 2 (IDE):
+   cd ide
+   run_ide.bat
+
+3. Open browser:
+   http://localhost:5173
+
+4. Start typing code
+   Ghost text appears in real-time
+
+FEATURES
+--------
+✓ Private (runs locally, no data leaves machine)
+✓ Fast (streaming completions in 2-4 seconds)
+✓ Open (you control the model and prompts)
+✓ Responsive (cancellation works instantly)
+
+DOCUMENTATION
+--------------
+See docs/ folder for:
+- README.md (full user guide)
+- QUICK_REFERENCE.md (commands)
+- STREAMING_COMPLETIONS.md (technical details)
+- RELEASE_v0.1.0_MVP.md (release notes)
+
+FOLDER STRUCTURE
+----------------
+engine/           - RawrEngine HTTP server + CLI tools
+ide/              - Monaco Editor web IDE (React + Vite)
+models/           - GGUF model storage (add your models here)
+docs/             - Documentation
+
+REQUIREMENTS
+------------
+- Windows 10/11 (64-bit)
+- 8GB RAM minimum
+- 4GB+ for Mistral 7B Q4 model
+- Node.js 18+ for IDE
+- Internet for initial model download
+
+TROUBLESHOOTING
+---------------
+
+Q: Engine crashes on startup
+A: Check model path is correct
+   Models must be in GGUF format
+   Example: run_engine.bat ..\models\model.gguf
+
+Q: IDE won't start
+A: Install Node.js from https://nodejs.org/
+   Then try: npm install && npm run dev
+
+Q: Ghost text doesn't appear
+A: Ensure engine is running on http://localhost:8080
+   Check browser console for errors (F12 in browser)
+   Model must be fully loaded (check engine window)
+
+Q: Port already in use
+A: Engine uses 8080, IDE uses 5173
+   Close other applications using these ports
+   Or edit run_engine.bat to use different --port
+
+WHAT'S INCLUDED
+---------------
+RawrEngine.exe
+  - Local inference server
+  - HTTP API (/complete, /complete/stream)
+  - Loads GGUF models
+  - Uses CPU only
+
+rawrxd-monaco-gen.exe
+  - IDE generator (advanced usage)
+  - Re-generates React components
+  - Not needed for normal operation
+
+PRIVACY
+-------
+Zero telemetry. Zero external services.
+Your code and model never leave your machine.
+This is local-only AI code completion.
+
+BUILD INFO
+----------
+v0.1.0-mvp
+Built: February 5, 2026
+Tag: v0.1.0-mvp
+Status: Production ready
+Feature Lock: 7 days
+
+For more info: see docs/RELEASE_v0.1.0_MVP.md

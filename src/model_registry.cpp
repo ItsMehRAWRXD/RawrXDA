@@ -82,8 +82,23 @@ ModelVersion ModelRegistry::getActiveModel() const {
     return {};
 }
 
+void ModelRegistry::setSelectedCallback(ModelSelectedCallback cb, void* ctx) {
+    m_selectedCb = cb;
+    m_selectedCtx = ctx;
+}
+
+void ModelRegistry::setUpdatedCallback(ModelUpdatedCallback cb, void* ctx) {
+    m_updatedCb = cb;
+    m_updatedCtx = ctx;
+}
+
+void ModelRegistry::setDeletedCallback(ModelDeletedCallback cb, void* ctx) {
+    m_deletedCb = cb;
+    m_deletedCtx = ctx;
+}
+
 void ModelRegistry::setShowCallback(ShowCallback cb, void* ctx) {
-    m_showCb = std::move(cb);
+    m_showCb = cb;
     m_showCtx = ctx;
 }
 

@@ -1,0 +1,23 @@
+name: Self-Release
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+jobs:
+  self_release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build agent
+        run: cmake -B build -G "Visual Studio 17 2022" -A x64 && cmake --build build --config Release --target RawrXD-Agent
+      - name: Let IDE improve itself
+        run: |
+          set RAWRXD_WISH="Improve inference speed by 10 % without quality loss"
+          build\bin\Release\RawrXD-Agent.exe
+        env:
+          CERT_PATH: ${{ secrets.CERT_PATH }}
+          CERT_PASS: ${{ secrets.CERT_PASS }}
+          AZURE_STORAGE_ACCOUNT: rawrxd
+          AZURE_STORAGE_KEY: ${{ secrets.AZURE_STORAGE_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TWITTER_BEARER: ${{ secrets.TWITTER_BEARER }}

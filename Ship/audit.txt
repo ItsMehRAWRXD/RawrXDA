@@ -1,0 +1,44 @@
+=============================================================================
+RAWRXD WIN32 IDE - COMPONENT AUDIT REPORT
+=============================================================================
+
+CRITICAL DLLS THAT IDE REQUIRES:
+- RawrXD_Titan_Kernel.dll: MISSING
+- RawrXD_NativeModelBridge.dll: MISSING
+- RawrXD_InferenceEngine_Win32.dll: EXISTS
+- RawrXD_InferenceEngine.dll: EXISTS
+
+ACTUAL DLLS AVAILABLE IN SHIP FOLDER:
+  - RawrXD_AdvancedCodingAgent.dll
+  - RawrXD_AgentCoordinator.dll
+  - RawrXD_AgenticController.dll
+  - RawrXD_AgenticEngine.dll
+  - RawrXD_AgentPool.dll
+  - RawrXD_AICompletion.dll
+  - RawrXD_Configuration.dll
+  - RawrXD_CopilotBridge.dll
+  - RawrXD_Core.dll
+  - RawrXD_ErrorHandler.dll
+  - RawrXD_Executor.dll
+  - RawrXD_FileBrowser.dll
+  - RawrXD_FileManager_Win32.dll
+  - RawrXD_FileOperations.dll
+  - RawrXD_Foundation_Integration.dll
+  - RawrXD_InferenceEngine_Win32.dll
+  - RawrXD_InferenceEngine.dll
+  - RawrXD_LSPClient.dll
+  - RawrXD_MainWindow_Win32.dll
+  - RawrXD_MemoryManager.dll
+  - RawrXD_ModelLoader.dll
+  - RawrXD_ModelRouter.dll
+  - RawrXD_PlanOrchestrator.dll
+  - RawrXD_ResourceManager_Win32.dll
+  - RawrXD_Search.dll
+  - RawrXD_Settings.dll
+  - RawrXD_SettingsManager_Win32.dll
+  - RawrXD_SyntaxHL.dll
+  - RawrXD_SystemMonitor.dll
+  - RawrXD_TaskScheduler.dll
+  - RawrXD_TerminalManager_Win32.dll
+  - RawrXD_TerminalMgr.dll
+  - RawrXD_TextEditor_Win32.dll

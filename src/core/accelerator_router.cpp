@@ -13,6 +13,7 @@
 #include "intel_gpu_accelerator.h"
 #include "arm64_gpu_accelerator.h"
 #include "cerebras_wse_accelerator.h"
+#include "flash_attention.h"
 #include "../../include/enterprise_license.h"
 
 #include <iostream>
@@ -1457,6 +1458,45 @@ void AcceleratorRouter::probeCerebras() {
     // We just check if it's been initialized elsewhere
     m_backends[static_cast<int>(RouterBackendType::Cerebras_WSE)].available = false;
     std::cout << "[Router]   Cerebras WSE not connected (requires manual connect)\n";
+}
+
+// ============================================================================
+// AcceleratorRouter::dispatchFlashAttention (v14.7.0-ATTN)
+// ============================================================================
+RouterResult AcceleratorRouter::dispatchFlashAttention(void* q, void* k, void* v, void* o,
+                                                     uint32_t seqM, uint32_t seqN,
+                                                     uint32_t headDim, uint32_t numHeads,
+                                                     float scale) {
+    // Priority: AVX-512 ASM Path (lowest latency for local small batches)
+    RawrXD::FlashAttentionEngine engine;
+    if (m_backends[static_cast<int>(RouterBackendType::CPU_Fallback)].enabled && engine.IsReady()) {
+        RawrXD::FlashAttentionConfig cfg{};
+        cfg.Q = static_cast<float*>(q);
+        cfg.K = static_cast<float*>(k);
+        cfg.V = static_cast<float*>(v);
+        cfg.O = static_cast<float*>(o);
+        cfg.seqLenM = static_cast<int32_t>(seqM);
+        cfg.seqLenN = static_cast<int32_t>(seqN);
+        cfg.headDim = static_cast<int32_t>(headDim);
+        cfg.numHeads = static_cast<int32_t>(numHeads);
+        cfg.numKVHeads = static_cast<int32_t>(numHeads); // Default MHA
+        cfg.batchSize = 1;
+        cfg.scale = scale;
+        cfg.causal = 1;
+
+        auto start = std::chrono::high_resolution_clock::now();
+        int32_t result = engine.Forward(cfg);
+        auto end = std::chrono::high_resolution_clock::now();
+
+        if (result == 0) {
+            RouterResult r = RouterResult::ok("AVX-512 Flash Attention Success", RouterBackendType::CPU_Fallback);
+            r.elapsedMs = std::chrono::duration<double, std::milli>(end - start).count();
+            return r;
+        }
+    }
+
+    // Fallback cascade to other backends if AVX-512 fails or is unavailable
+    return RouterResult::error("Flash Attention dispatch failed (AVX-512 unavailable or error)", -1);
 }
 
 // ============================================================================

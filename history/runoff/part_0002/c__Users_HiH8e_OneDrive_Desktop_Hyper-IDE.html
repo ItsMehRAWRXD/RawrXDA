@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Hyper-IDE Phase 1 (Monaco + Rawr Introspection)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+
+  <!-- Monaco Loader (CDN) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.46.0/min/vs/loader.min.js"></script>
+
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: #1e1e1e;
+      color: #cccccc;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+    }
+    #grid {
+      display: flex;
+      height: 100%;
+    }
+    #tree {
+      width: 230px;
+      background: #252526;
+      border-right: 1px solid #3e3e42;
+      overflow-y: auto;
+      padding: 8px;
+      font-size: 13px;
+    }
+    #tree h4 {
+      margin: 0 0 6px 0;
+      color: #4ec9b0;
+      font-size: 12px;
+    }
+    #tree .file-item {
+      cursor: pointer;
+      padding: 2px 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #tree .file-item:hover {
+      background: #3a3a3a;
+    }
+
+    #main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    #editor {
+      flex: 1;
+      min-height: 0;
+    }
+    #chat {
+      height: 180px;
+      background: #18181a;
+      border-top: 1px solid #3e3e42;
+      display: flex;
+      flex-direction: column;
+      font-size: 13px;
+    }
+    #chat-output {
+      flex: 1;
+      padding: 8px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+    #chat-input-row {
+      display: flex;
+      padding: 6px 8px;
+      border-top: 1px solid #3e3e42;
+    }
+    #chat-input {
+      flex: 1;
+      padding: 6px;
+      border-radius: 3px;
+      border: 1px solid #3e3e42;
+      background: #1e1e1e;
+      color: #ccc;
+    }
+    #chat-send {
+      margin-left: 6px;
+      padding: 6px 10px;
+      border-radius: 3px;
+      border: none;
+      background: #0098ff;
+      color: #fff;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    #status {
+      height: 22px;
+      background: #2d2d30;
+      border-top: 1px solid #3e3e42;
+      padding: 2px 8px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    #overlay {
+      position: fixed;
+      right: 0;
+      top: 0;
+      width: 340px;
+      height: 100%;
+      background: #111119;
+      color: #9f9;
+      padding: 8px;
+      border-left: 1px solid #3e3e42;
+      overflow-y: auto;
+      font: 11px/1.3 monospace;
+      white-space: pre-wrap;
+      box-sizing: border-box;
+    }
+    #overlay h4 {
+      margin: 0 0 4px 0;
+      color: #ffffff;
+      font-size: 11px;
+      border-bottom: 1px solid #333;
+      padding-bottom: 3px;
+    }
+    #overlay i {
+      color: #666;
+    }
+    button {
+      background: #0098ff;
+      color: #fff;
+      border: 0;
+      padding: 4px 8px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+  </style>
+</head>
+<body>
+  <div id="grid">
+    <div id="tree">
+      <h4>Workspace (OPFS)</h4>
+      <button id="new-file-btn">+ New file</button>
+      <div id="files" style="margin-top:6px;"></div>
+    </div>
+    <div id="main">
+      <div id="editor"></div>
+      <div id="chat">
+        <div id="chat-output">
+          [AI] Hyper-IDE ready. Type a message or a command (e.g. !ping, !time).
+        </div>
+        <div id="chat-input-row">
+          <input id="chat-input" placeholder="Ask or command (no mocks: everything you see here runs in-page)">
+          <button id="chat-send">Send</button>
+        </div>
+      </div>
+      <div id="status">
+        <span id="status-left">Booting…</span>
+        <span id="status-right">OPFS workspace | Rawr Introspection live</span>
+      </div>
+    </div>
+  </div>
+  <div id="overlay">
+    <h4>Rawr Introspection</h4>
+    <i>Console, network, DOM, FS traces will appear here.</i>
+  </div>
+
+  <script type="module">
+    // =============================================================
+    // 0. Small helpers
+    // =============================================================
+    const $ = (id) => document.getElementById(id);
+    const overlay = $("overlay");
+    const statusLeft = $("status-left");
+
+    const rawrLog = (msg, color = "#9f9") => {
+      const line = document.createElement("div");
+      line.style.color = color;
+      line.textContent = msg;
+      overlay.appendChild(line);
+      overlay.scrollTop = overlay.scrollHeight;
+    };
+
+    // =============================================================
+    // 1. Rawr Introspection: console, fetch, DOM
+    // =============================================================
+    ["log", "warn", "error"].forEach(kind => {
+      const orig = console[kind].bind(console);
+      console[kind] = (...args) => {
+        const msg = args.map(x =>
+          typeof x === "object" ? JSON.stringify(x) : String(x)
+        ).join(" ");
+        const c = kind === "error" ? "#f55" : kind === "warn" ? "#fd6" : "#9f9";
+        rawrLog(`[console:${kind}] ${msg}`, c);
+        orig(...args);
+      };
+    });
+
+    const origFetch = window.fetch.bind(window);
+    window.fetch = async (...args) => {
+      const url = args[0]?.url || args[0];
+      const t0 = performance.now();
+      rawrLog(`[→ NET] ${url}`, "#0cf");
+      try {
+        const res = await origFetch(...args);
+        const dt = Math.round(performance.now() - t0);
+        rawrLog(`[← NET] ${url} | ${res.status} | ${dt}ms`, "#0cf");
+        return res;
+      } catch (e) {
+        rawrLog(`[← NET] FAILED ${url} | ${e.message}`, "#f55");
+        throw e;
+      }
+    };
+
+    new MutationObserver(list => {
+      for (const r of list) {
+        if (r.type === "childList" && r.addedNodes.length) {
+          rawrLog(`[DOM] +${r.addedNodes.length} in <${r.target.tagName}>`, "#ff8c00");
+        } else if (r.type === "attributes" && r.attributeName !== "style") {
+          rawrLog(`[DOM] attr ${r.attributeName} on <${r.target.tagName}>`, "#ff8c00");
+        }
+      }
+    }).observe(document.body, { childList: true, subtree: true, attributes: true });
+
+    window.addEventListener("resize", () => rawrLog("[reflow] window resized", "#fd6"));
+
+    // =============================================================
+    // 2. OPFS-based workspace (real, persistent sandbox FS)
+    // =============================================================
+    const OPFS = {
+      root: null,
+      async init() {
+        if (!("storage" in navigator) || !navigator.storage.getDirectory) {
+          rawrLog("[OPFS] Not supported in this browser", "#f55");
+          statusLeft.textContent = "No OPFS support (try Chrome/Edge 102+)";
+          return false;
+        }
+        this.root = await navigator.storage.getDirectory();
+        rawrLog("[OPFS] Mounted origin-private workspace", "#ff0");
+        return true;
+      },
+      async writeText(path, text) {
+        const parts = path.split("/").filter(Boolean);
+        const fileName = parts.pop();
+        let dir = this.root;
+        for (const p of parts) {
+          dir = await dir.getDirectoryHandle(p, { create: true });
+        }
+        const fh = await dir.getFileHandle(fileName, { create: true });
+        if (fh.createSyncAccessHandle) {
+          const h = await fh.createSyncAccessHandle();
+          const enc = new TextEncoder();
+          const data = enc.encode(text);
+          await h.truncate(0);
+          await h.write(data);
+          await h.flush?.();
+          h.close();
+        } else {
+          const w = await fh.createWritable();
+          await w.write(text);
+          await w.close();
+        }
+        rawrLog(`[OPFS] write ${path} (${text.length} bytes)`, "#ff0");
+      },
+      async readText(path) {
+        const parts = path.split("/").filter(Boolean);
+        const fileName = parts.pop();
+        let dir = this.root;
+        for (const p of parts) {
+          dir = await dir.getDirectoryHandle(p);
+        }
+        const fh = await dir.getFileHandle(fileName);
+        const file = await fh.getFile();
+        const text = await file.text();
+        rawrLog(`[OPFS] read ${path} (${text.length} bytes)`, "#ff0");
+        return text;
+      },
+      async listAll(dir = this.root, base = "") {
+        const out = [];
+        for await (const [name, handle] of dir.entries()) {
+          const full = base ? `${base}/${name}` : name;
+          if (handle.kind === "directory") {
+            out.push({ path: full, kind: "dir" });
+            out.push(...await this.listAll(handle, full));
+          } else {
+            out.push({ path: full, kind: "file" });
+          }
+        }
+        return out;
+      }
+    };
+
+    // =============================================================
+    // 3. Monaco editor
+    // =============================================================
+    let monacoEditor = null;
+    let currentFile = null;
+
+    function createEditor() {
+      require.config({ paths: { vs: "https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.46.0/min/vs" } });
+      require(["vs/editor/editor.main"], () => {
+        monacoEditor = monaco.editor.create($("editor"), {
+          value: `// Hyper-IDE Phase 1\n// Monaco + OPFS workspace + Rawr introspection.\n// Files you create here persist per-origin.\n\nfunction hello() {\n  console.log('Hello from Hyper-IDE');\n}\n`,
+          language: "javascript",
+          theme: "vs-dark",
+          automaticLayout: true,
+          minimap: { enabled: false }
+        });
+        rawrLog("[Monaco] Editor initialized", "#6f9");
+        statusLeft.textContent = "Hyper-IDE ready | No file selected";
+      });
+    }
+
+    async function loadFileIntoEditor(path) {
+      try {
+        const text = await OPFS.readText(path);
+        if (!monacoEditor) return;
+        const model = monaco.editor.createModel(text, undefined);
+        monacoEditor.setModel(model);
+        currentFile = path;
+        statusLeft.textContent = `Editing: ${path}`;
+      } catch (e) {
+        console.error("Failed to open", path, e);
+      }
+    }
+
+    async function saveCurrentFile() {
+      if (!monacoEditor || !currentFile) return;
+      const text = monacoEditor.getValue();
+      await OPFS.writeText(currentFile, text);
+      statusLeft.textContent = `Saved: ${currentFile}`;
+    }
+
+    // Ctrl+S
+    window.addEventListener("keydown", (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        saveCurrentFile();
+      }
+    });
+
+    // =============================================================
+    // 4. File tree
+    // =============================================================
+    const filesDiv = $("files");
+    const newFileBtn = $("new-file-btn");
+
+    async function renderTree() {
+      if (!OPFS.root) return;
+      const entries = await OPFS.listAll();
+      filesDiv.innerHTML = "";
+      if (!entries.length) {
+        const d = document.createElement("div");
+        d.textContent = "(empty workspace)";
+        d.style.color = "#858585";
+        filesDiv.appendChild(d);
+        return;
+      }
+      for (const e of entries) {
+        if (e.kind !== "file") continue;
+        const d = document.createElement("div");
+        d.className = "file-item";
+        d.textContent = e.path;
+        d.onclick = () => loadFileIntoEditor(e.path);
+        filesDiv.appendChild(d);
+      }
+    }
+
+    newFileBtn.addEventListener("click", async () => {
+      const name = prompt("New file name (relative to workspace root):", "main.js");
+      if (!name) return;
+      await OPFS.writeText(name, "// New file\n");
+      await renderTree();
+      await loadFileIntoEditor(name);
+    });
+
+    // =============================================================
+    // 5. Simple, real chat commands (no fake code-flow)
+    // =============================================================
+    const chatOut = $("chat-output");
+    const chatInput = $("chat-input");
+    const chatSend = $("chat-send");
+
+    function appendChat(line, color = "#cccccc") {
+      const d = document.createElement("div");
+      d.style.color = color;
+      d.textContent = line;
+      chatOut.appendChild(d);
+      chatOut.scrollTop = chatOut.scrollHeight;
+    }
+
+    async function handleChat() {
+      const text = chatInput.value.trim();
+      if (!text) return;
+      chatInput.value = "";
+      appendChat(`> ${text}`, "#dcdcaa");
+
+      // Real behavior, even if simple – no fake unreachable paths.
+      if (text === "!ping") {
+        appendChat("[sys] pong", "#4ec9b0");
+        return;
+      }
+      if (text === "!time") {
+        appendChat(`[sys] ${new Date().toString()}`, "#4ec9b0");
+        return;
+      }
+      if (text.startsWith("!http ")) {
+        const url = text.slice(6).trim();
+        try {
+          const res = await fetch(url, { method: "HEAD" });
+          appendChat(`[net] ${url} -> ${res.status}`, "#4ec9b0");
+        } catch (e) {
+          appendChat(`[net] FAILED ${url} -> ${e.message}`, "#f55");
+        }
+        return;
+      }
+
+      // Fallback: echo + note
+      appendChat("[ai] No backend wired yet. This is a real, local command shell – next step is to hook it to your Orchestra/BigDaddyG endpoint.", "#0098ff");
+    }
+
+    chatSend.addEventListener("click", handleChat);
+    chatInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") handleChat();
+    });
+
+    // =============================================================
+    // 6. Boot sequence
+    // =============================================================
+    (async () => {
+      const ok = await OPFS.init();
+      if (ok) {
+        // Seed a default file on first run if workspace is empty
+        const entries = await OPFS.listAll();
+        if (!entries.length) {
+          await OPFS.writeText("hello.js", "// First run file\nconsole.log('Hello from OPFS workspace');\n");
+        }
+        await renderTree();
+      }
+      createEditor();
+      rawrLog("[ready] Hyper-IDE Phase 1 booted", "#6f9");
+      if (ok) statusLeft.textContent = "Hyper-IDE ready | OPFS workspace mounted";
+    })();
+  </script>
+</body>
+</html>

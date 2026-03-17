@@ -1,0 +1,72 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: base-infrastructure
+
+namespace: production
+
+resources:
+  - namespace.yaml
+  - service-mesh-namespace.yaml
+  - api-deployment.yaml
+  - api-service.yaml
+  - ingress.yaml
+  - configmap.yaml
+  - secret.yaml
+  - rbac.yaml
+  - hpa.yaml
+  - vpa.yaml
+  - networkpolicy.yaml
+  - pdb.yaml
+
+commonLabels:
+  app.kubernetes.io/part-of: cloud-infrastructure
+  managed-by: terraform
+
+commonAnnotations:
+  deployment-tool: kustomize
+  version: "1.0.0"
+
+generatorOptions:
+  disableNameSuffixHash: false
+  annotations:
+    com.example/generated: "true"
+
+configMapGenerator:
+  - name: api-config
+    literals:
+      - LOG_LEVEL=INFO
+      - ENVIRONMENT=production
+      - API_VERSION=v1
+  - name: observability-config
+    literals:
+      - PROMETHEUS_ENABLED=true
+      - JAEGER_ENABLED=true
+      - METRICS_PORT=9090
+
+secretGenerator:
+  - name: api-secrets
+    behavior: create
+    envs:
+      - secrets.env
+
+images:
+  - name: api-server
+    newTag: latest
+
+vars:
+  - name: API_REPLICAS
+    objref:
+      kind: Deployment
+      name: api-server
+      apiVersion: apps/v1
+    fieldref:
+      fieldpath: spec.replicas
+  - name: SERVICE_PORT
+    objref:
+      kind: Service
+      name: api-service
+      apiVersion: v1
+    fieldref:
+      fieldpath: spec.ports[0].port

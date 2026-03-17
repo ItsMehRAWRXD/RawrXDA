@@ -1,0 +1,2144 @@
+# RawrXD Source File Audit
+Generated: 2026-02-20 14:12:46
+Refreshed: 2026-02-21
+
+## Refresh Notes (2026-02-21)
+- The `Missing Files (Build Will Break)` list has been verified against the current workspace.
+- `Telemetry_Kernel.asm` is present as `src/asm/RawrXD_Telemetry_Kernel.asm` (and in `Full Source/src/asm/`).
+- The `QUICKJS_DIR` files are still not found anywhere under `d:\rawrxd`.
+- A duplicated `.archived_orphans/.archived_orphans/` prefix appears in many entries from the original report; actual files (when they exist) are under `.archived_orphans/`.
+
+## Summary
+| Status | Count |
+|--------|-------|
+| ACTIVE | 585 |
+| ACTIVE_HEADER | 1687 |
+| LIKELY_NEEDED | 99 |
+| MISSING | 8 |
+| NEEDED | 1945 |
+| ORPHAN | 695 |
+| ORPHAN_HEADER | 237 |
+
+## Files Still Needed To Finish The Build
+
+- **.archived_orphans/.archived_orphans/BeaconClient.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/GPU_DMA_COMPLETE_IMPLEMENTATIONS.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/MONACO_EDITOR_ENTERPRISE.ASM** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/MONACO_EDITOR_ZERO_DEPENDENCY.ASM** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/NEON_VULKAN_FABRIC.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/Phase4_Master_Complete.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/Phase5_Master_Complete.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/Phase5_Test_Harness.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD-VulkanKernel.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD_AVX512_SIMD.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD_Absolutely_Complete.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD_AgentToolExecutor.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD_BounceTPS.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD_CLI.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD_Complete_Explicit.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD_Complete_Hidden_Logic.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD_Complete_Production_Fix.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD_Complete_Production_System.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD_Critical_Blockers_P0.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD_DAP.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD_DiskKernel.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD_ExtensionHost.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD_GPU_Memory.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD_GUI_IDE.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD_GlyphAtlas.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD_High_Priority_P1.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD_HotPatchTPS.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD_HttpClient_Real.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD_HttpClient_Test.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD_LSP_Handshake_Ext.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD_MarketplaceInstaller.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD_Medium_Priority_P2.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD_NativeHost.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD_NativeHttpServer.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD_OllamaTuner.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD_QuadBuffer_Validate.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD_Standalone_Inference.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD_Titan_Extensions.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD_Titan_Kernel.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD_Titan_MINIMAL.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD_Titan_STANDALONE.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD_Titan_UNIFIED.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD_UnbraidPipeline.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/RawrXD_Unified_Manifest.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/SovereignThermalDemo.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/SovereignThermalDemoHUD.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/SovereignThermalHUD.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/Titan_FullLogic_Simplified_vs_Production.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/WEEK1_COMPLETE.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/WEEK1_DELIVERABLE.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/WEEK4_DELIVERABLE.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/WEEK5_COMPLETE_PRODUCTION.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/Week2_3_Master_Complete.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/Win32IDE_Sidebar.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/agent_client_evict.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/agent_client_watch.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/agent_metrics_dump.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/binary_analyzer.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/binary_analyzer_complete.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/binary_analyzer_final.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/binary_analyzer_final_working.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/binary_analyzer_proper.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/binary_analyzer_working.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/cuda_impl.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/cursor_widget.cpp** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/custom_zlib.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/dumpbin_compact.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/dumpbin_complete.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/dumpbin_final.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/dumpbin_final_backup.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/dumpbin_proper.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/dumpbin_replacement.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/dumpbin_replacement_final.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/dumpbin_simple.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/dumpbin_working.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/ghost_paging.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/ghost_paging_v2.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/gpu_detection.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/gpu_dma_complete_final.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/gpu_dma_complete_production.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/gpu_dma_complete_production_FIXED.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/jit_lba_mapper.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/memory_reader.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/model_monitor.cpp** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/nvme_oracle_service.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/nvme_query.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/nvme_thermal_sidecar.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/nvme_thermal_sidecar_clean.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/nvme_thermal_sidecar_corrected.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/nvme_thermal_stressor.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/os_explorer_interceptor.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/os_interceptor_cli.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/os_interceptor_cli_final.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/os_interceptor_cli_fixed.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/os_interceptor_cli_robust.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/os_interceptor_cli_simple.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/os_interceptor_cli_universal.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/os_interceptor_cli_universal_v2.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/os_interceptor_cli_working.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/pocket_lab.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/pocket_lab_turbo.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/rawrxd_compiler_masm64.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/rawrxd_compiler_test.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/rawrxd_complete_master_implementation.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/rawrxd_final_complete_implementation.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/robust_tools.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/rocm_impl.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/simple_dumpbin.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/sovereign_stress_governor.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/terraform.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/titan_masm_real.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/universal_analyzer.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/vk_instance.asm** — Defines symbols called by other active files
+- **.archived_orphans/.archived_orphans/vulkan_impl.asm** — Defines symbols called by other active files
+- **.archived_orphans/ActivityBar.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ActivityBarButton.cpp** — Defines symbols called by other active files
+- **.archived_orphans/AgentCoordinator.cpp** — Defines symbols called by other active files
+- **.archived_orphans/AgenticCopilotIntegration.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/AutoModelDownloader.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/BreadcrumbContextManager.cpp** — Defines symbols called by other active files
+- **.archived_orphans/CMakeCCompilerId.c** — Defines symbols called by other active files
+- **.archived_orphans/CMakeCXXCompilerId.cpp** — Defines symbols called by other active files
+- **.archived_orphans/CRITICAL_ISSUES_COMPLETE_IMPLEMENTATION.cpp** — Defines symbols called by other active files
+- **.archived_orphans/CodebaseContextAnalyzer.cpp** — Defines symbols called by other active files
+- **.archived_orphans/CodexAIReverseEngine.asm** — Defines symbols called by other active files
+- **.archived_orphans/CodexPro.asm** — Defines symbols called by other active files
+- **.archived_orphans/CodexProfessional.asm** — Defines symbols called by other active files
+- **.archived_orphans/CodexReverse.asm** — Defines symbols called by other active files
+- **.archived_orphans/CodexUltimate.asm** — Defines symbols called by other active files
+- **.archived_orphans/CodexUltra.asm** — Defines symbols called by other active files
+- **.archived_orphans/CompletionEngine.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ComponentFactory.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/Compute_Kernel_DMA_Complete.asm** — Defines symbols called by other active files
+- **.archived_orphans/ContextVisualizer.cpp** — Defines symbols called by other active files
+- **.archived_orphans/DeepSectorScan.cpp** — Defines symbols called by other active files
+- **.archived_orphans/DependencyGraph.cpp** — Defines symbols called by other active files
+- **.archived_orphans/Detour.cpp** — Defines symbols called by other active files
+- **.archived_orphans/DrawingEngine.cpp** — Defines symbols called by other active files
+- **.archived_orphans/Engine.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/EnhancedPredictiveThrottling.cpp** — Defines symbols called by other active files
+- **.archived_orphans/EventBus_Wiring.cpp** — Defines symbols called by other active files
+- **.archived_orphans/FileRegistry_Auto.cpp** — Defines symbols called by other active files
+- **.archived_orphans/FileRegistry_Generated.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/GGUFRunner.cpp** — Defines symbols called by other active files
+- **.archived_orphans/GlobalContext_Expanded.cpp** — Defines symbols called by other active files
+- **.archived_orphans/GovernorMain.cpp** — Defines symbols called by other active files
+- **.archived_orphans/IncidentResponseCoordinator.cpp** — Defines symbols called by other active files
+- **.archived_orphans/InferenceSettingsManager.cpp** — Defines symbols called by other active files
+- **.archived_orphans/LanguageServerIntegration.cpp** — Defines symbols called by other active files
+- **.archived_orphans/MONACO_EDITOR_CORE.ASM** — Defines symbols called by other active files
+- **.archived_orphans/MainWindowMinimal.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/MainWindowSimple.cpp** — Defines symbols called by other active files
+- **.archived_orphans/MainWindowSimple_Utils.cpp** — Defines symbols called by other active files
+- **.archived_orphans/MainWindow_AI_Integration.cpp** — Defines symbols called by other active files
+- **.archived_orphans/MainWindow_v5.cpp** — Defines symbols called by other active files
+- **.archived_orphans/MetricAnomalyDetector.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ModelConversionDialog.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ModelLoader.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/ModelLoader_x64.asm** — Name matches critical keyword pattern
+- **.archived_orphans/MonacoIntegration.cpp** — Defines symbols called by other active files
+- **.archived_orphans/MultiModalModelRouter.cpp** — Defines symbols called by other active files
+- **.archived_orphans/NEON_MONACO_CORE.ASM** — Defines symbols called by other active files
+- **.archived_orphans/NeonFabric.cpp** — Defines symbols called by other active files
+- **.archived_orphans/Omega-Install-Reverser-Protected.asm** — Defines symbols called by other active files
+- **.archived_orphans/OmegaPolyglotMax.asm** — Defines symbols called by other active files
+- **.archived_orphans/OmegaPolyglotPro.asm** — Defines symbols called by other active files
+- **.archived_orphans/OmegaPolyglot_v4.asm** — Defines symbols called by other active files
+- **.archived_orphans/OmegaPolyglot_v4_fixed.asm** — Defines symbols called by other active files
+- **.archived_orphans/OmegaPolyglot_v5.asm** — Defines symbols called by other active files
+- **.archived_orphans/OmegaProProfessional.asm** — Defines symbols called by other active files
+- **.archived_orphans/OmegaProProfessional_fixed.asm** — Defines symbols called by other active files
+- **.archived_orphans/OmegaPro_v3_fixed.asm** — Defines symbols called by other active files
+- **.archived_orphans/OverlayWidget.cpp** — Defines symbols called by other active files
+- **.archived_orphans/Phase1_Foundation.cpp** — Defines symbols called by other active files
+- **.archived_orphans/Phase2_Foundation.cpp** — Defines symbols called by other active files
+- **.archived_orphans/Phase5_Foundation.cpp** — Defines symbols called by other active files
+- **.archived_orphans/PostmortemGenerator.cpp** — Defines symbols called by other active files
+- **.archived_orphans/QuadBuffer_DMA_Wrapper.cpp** — Defines symbols called by other active files
+- **.archived_orphans/RAWRXD_BURSTCORE_X7.asm** — Name matches critical keyword pattern
+- **.archived_orphans/RawrXD-ModelLoader/kernels/deflate_godmode_masm.asm** — Defines symbols called by other active files
+- **.archived_orphans/RawrXD-ModelLoader/kernels/deflate_masm.asm** — Defines symbols called by other active files
+- **.archived_orphans/RawrXDDynamicPromptEngine.cpp** — Defines symbols called by other active files
+- **.archived_orphans/RawrXDMainWindow.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/RawrXD_AVX512_PatternEngine.asm** — Name matches critical keyword pattern
+- **.archived_orphans/RawrXD_AgenticShellBridge.asm** — Defines symbols called by other active files
+- **.archived_orphans/RawrXD_Application.cpp** — Defines symbols called by other active files
+- **.archived_orphans/RawrXD_CLI_Main.asm** — Defines symbols called by other active files
+- **.archived_orphans/RawrXD_Compiler_Engine_Complete.asm** — Defines symbols called by other active files
+- **.archived_orphans/RawrXD_Compiler_Engine_Stubs_BACKUP.asm** — Defines symbols called by other active files
+- **.archived_orphans/RawrXD_DigestionEngine.asm** — Name matches critical keyword pattern
+- **.archived_orphans/RawrXD_DirectionlessLoader.asm** — Defines symbols called by other active files
+- **.archived_orphans/RawrXD_DynamicTensorEngine.asm** — Name matches critical keyword pattern
+- **.archived_orphans/RawrXD_EditorWindow.cpp** — Defines symbols called by other active files
+- **.archived_orphans/RawrXD_Final_Integration.asm** — Defines symbols called by other active files
+- **.archived_orphans/RawrXD_GPU_DMA_Expanded_Final.asm** — Defines symbols called by other active files
+- **.archived_orphans/RawrXD_GlyphEngine.cpp** — Defines symbols called by other active files
+- **.archived_orphans/RawrXD_IDE_unified.asm** — Defines symbols called by other active files
+- **.archived_orphans/RawrXD_IPC_Bridge.asm** — Defines symbols called by other active files
+- **.archived_orphans/RawrXD_InferenceCore.asm** — Defines symbols called by other active files
+- **.archived_orphans/RawrXD_InferenceCore_SGEMM_AVX2.asm** — Name matches critical keyword pattern
+- **.archived_orphans/RawrXD_Inference_Engine.asm** — Defines symbols called by other active files
+- **.archived_orphans/RawrXD_KeyGen.cpp** — Defines symbols called by other active files
+- **.archived_orphans/RawrXD_LSP_Core.asm** — Name matches critical keyword pattern
+- **.archived_orphans/RawrXD_Lexer_MASM.cpp** — Defines symbols called by other active files
+- **.archived_orphans/RawrXD_MainIntegration.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/RawrXD_MainWindow.cpp** — Defines symbols called by other active files
+- **.archived_orphans/RawrXD_ModelLoader_x64.asm** — Name matches critical keyword pattern
+- **.archived_orphans/RawrXD_NanoDiskBridge.asm** — Defines symbols called by other active files
+- **.archived_orphans/RawrXD_NativeModelBridge_Complete.asm** — Defines symbols called by other active files
+- **.archived_orphans/RawrXD_NetworkSniper.asm** — Defines symbols called by other active files
+- **.archived_orphans/RawrXD_P2PRelay.asm** — Defines symbols called by other active files
+- **.archived_orphans/RawrXD_PatternBridge.asm** — Defines symbols called by other active files
+- **.archived_orphans/RawrXD_PatternBridgeClient.cpp** — Defines symbols called by other active files
+- **.archived_orphans/RawrXD_PipeTest.cpp** — Defines symbols called by other active files
+- **.archived_orphans/RawrXD_Production_ReverseEngineered.asm** — Defines symbols called by other active files
+- **.archived_orphans/RawrXD_QuadBuffer_DMA_Orchestrator.asm** — Defines symbols called by other active files
+- **.archived_orphans/RawrXD_ShellIntegration.asm** — Defines symbols called by other active files
+- **.archived_orphans/RawrXD_SidebarCore.asm** — Name matches critical keyword pattern
+- **.archived_orphans/RawrXD_SlolorisStreamLoader.asm** — Defines symbols called by other active files
+- **.archived_orphans/RawrXD_Streaming_Orchestrator.asm** — Name matches critical keyword pattern
+- **.archived_orphans/RawrXD_Swarm_Orchestrator.asm** — Name matches critical keyword pattern
+- **.archived_orphans/RawrXD_TPSBridge.asm** — Defines symbols called by other active files
+- **.archived_orphans/RawrXD_Titan_CORE.asm** — Defines symbols called by other active files
+- **.archived_orphans/RawrXD_Titan_Master_GodSource_REVERSE_ENGINEERED.asm** — Defines symbols called by other active files
+- **.archived_orphans/RunbookExecutor.cpp** — Defines symbols called by other active files
+- **.archived_orphans/SLOTracker.cpp** — Defines symbols called by other active files
+- **.archived_orphans/SetupWizard.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ShadowPage.cpp** — Defines symbols called by other active files
+- **.archived_orphans/Ship/RawrXD_CLI_Titan.asm** — Defines symbols called by other active files
+- **.archived_orphans/Ship/RawrXD_GUI_Titan.asm** — Defines symbols called by other active files
+- **.archived_orphans/Ship/RawrXD_MASM_CLI.asm** — Defines symbols called by other active files
+- **.archived_orphans/Ship/RawrXD_Titan_Kernel.asm** — Defines symbols called by other active files
+- **.archived_orphans/Ship/RawrZ_Camellia_MASM_x64.asm** — Defines symbols called by other active files
+- **.archived_orphans/Ship/masm_cli_x64.asm** — Defines symbols called by other active files
+- **.archived_orphans/Ship/rawrxd_agentic.asm** — Defines symbols called by other active files
+- **.archived_orphans/SmartRewriteEngine.cpp** — Defines symbols called by other active files
+- **.archived_orphans/SovereignAgentBridge.asm** — Defines symbols called by other active files
+- **.archived_orphans/SovereignNVMeOracle.cpp** — Defines symbols called by other active files
+- **.archived_orphans/SovereignThermalStressOrchestrator.asm** — Defines symbols called by other active files
+- **.archived_orphans/StreamingGGUFLoader.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/SwarmOrchestrator.cpp** — Defines symbols called by other active files
+- **.archived_orphans/TaskOrchestrator.cpp** — Defines symbols called by other active files
+- **.archived_orphans/TerminalManager.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ThermalDashboardWidget.cpp** — Defines symbols called by other active files
+- **.archived_orphans/Titan_Bridge.cpp** — Defines symbols called by other active files
+- **.archived_orphans/Titan_InferenceCore.asm** — Defines symbols called by other active files
+- **.archived_orphans/Titan_Streaming_Orchestrator.asm** — Defines symbols called by other active files
+- **.archived_orphans/Titan_Streaming_Orchestrator_Complete.asm** — Defines symbols called by other active files
+- **.archived_orphans/Titan_Streaming_Orchestrator_Fixed.asm** — Defines symbols called by other active files
+- **.archived_orphans/Titan_Streaming_Orchestrator_NoHTTP.asm** — Name matches critical keyword pattern
+- **.archived_orphans/VulkanManager.cpp** — Defines symbols called by other active files
+- **.archived_orphans/Win32IDEBridge.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/Win32IDE_BeaconWiring.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/Win32IDE_FileMenu.cpp** — Defines symbols called by other active files
+- **.archived_orphans/Win32IDE_HotpatchWiring.cpp** — Defines symbols called by other active files
+- **.archived_orphans/Win32IDE_InitSequence.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/Win32IDE_IntegrationSnippet.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/Win32IDE_PowerShellBeaconButtons.cpp** — Defines symbols called by other active files
+- **.archived_orphans/Win32IDE_Sidebar_Qt_Backup_20260219_084045.cpp** — Defines symbols called by other active files
+- **.archived_orphans/Win32IDE_VSCodeUI_Qt_Backup_20260219_084045.cpp** — Defines symbols called by other active files
+- **.archived_orphans/Win32IDE_Window.cpp** — Defines symbols called by other active files
+- **.archived_orphans/WinMain_CircularArch.cpp** — Defines symbols called by other active files
+- **.archived_orphans/acl_tensor.cpp** — Defines symbols called by other active files
+- **.archived_orphans/aclnn_ops.cpp** — Defines symbols called by other active files
+- **.archived_orphans/act-ops.c** — Defines symbols called by other active files
+- **.archived_orphans/action_executor.cpp** — Defines symbols called by other active files
+- **.archived_orphans/advanced_checkpoint_manager.cpp** — Defines symbols called by other active files
+- **.archived_orphans/agent_coordinator.cpp** — Defines symbols called by other active files
+- **.archived_orphans/agent_hot_patcher.cpp** — Defines symbols called by other active files
+- **.archived_orphans/agent_main.cpp** — Defines symbols called by other active files
+- **.archived_orphans/agent_mode_handler.cpp** — Defines symbols called by other active files
+- **.archived_orphans/agentic_copilot_bridge.cpp** — Defines symbols called by other active files
+- **.archived_orphans/agentic_core.cpp** — Defines symbols called by other active files
+- **.archived_orphans/agentic_file_operations.cpp** — Defines symbols called by other active files
+- **.archived_orphans/agentic_ide_main.cpp** — Defines symbols called by other active files
+- **.archived_orphans/agentic_ide_main_simple.cpp** — Defines symbols called by other active files
+- **.archived_orphans/agentic_ide_test.cpp** — Defines symbols called by other active files
+- **.archived_orphans/agentic_self_corrector.cpp** — Defines symbols called by other active files
+- **.archived_orphans/agentic_tools.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ai_assistant_engine.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ai_code_assistant.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ai_code_assistant_panel.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ai_code_assistant_panel_real.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ai_code_assistant_real.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ai_completion_provider.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ai_completion_provider_real.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ai_completion_real.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ai_completion_unified.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ai_digestion_engine.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ai_digestion_engine_extractors.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/ai_ide_integration.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ai_implementation.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ai_inference_real.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ai_integration_hub.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/ai_merge_resolver.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ai_merge_resolver_impl.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ai_metrics.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ai_metrics_stub.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ai_model_caller.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ai_model_caller_real.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ai_model_caller_unified.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ai_model_loader.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ai_session.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ai_training_pipeline.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ai_workers.cpp** — Defines symbols called by other active files
+- **.archived_orphans/amx.cpp** — Defines symbols called by other active files
+- **.archived_orphans/api_server.cpp** — Defines symbols called by other active files
+- **.archived_orphans/api_server_simple.cpp** — Defines symbols called by other active files
+- **.archived_orphans/arch_stub.cpp** — Defines symbols called by other active files
+- **.archived_orphans/arch_verify.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ask_mode_handler.cpp** — Defines symbols called by other active files
+- **.archived_orphans/asm/RawrXD_Inference.asm** — Defines symbols called by other active files
+- **.archived_orphans/asm/RawrXD_Tokenizer.asm** — Defines symbols called by other active files
+- **.archived_orphans/auto_bootstrap.cpp** — Defines symbols called by other active files
+- **.archived_orphans/auto_model_downloader.cpp** — Defines symbols called by other active files
+- **.archived_orphans/autonomous_feature_engine.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/autonomous_intelligence_orchestrator.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/backend/rawrxd_backend.asm** — Defines symbols called by other active files
+- **.archived_orphans/baseline_profile.cpp** — Defines symbols called by other active files
+- **.archived_orphans/beacon_bootstrap.cpp** — Defines symbols called by other active files
+- **.archived_orphans/bench_main.cpp** — Defines symbols called by other active files
+- **.archived_orphans/binary-ops.c** — Defines symbols called by other active files
+- **.archived_orphans/binary-ops.cpp** — Defines symbols called by other active files
+- **.archived_orphans/binbcast.cpp** — Defines symbols called by other active files
+- **.archived_orphans/bootstrap_reverser.asm** — Name matches critical keyword pattern
+- **.archived_orphans/build_prod/autofinisher_test/rewritten/RawrXD_Widget_RE.asm** — Defines symbols called by other active files
+- **.archived_orphans/build_system_widget.cpp** — Defines symbols called by other active files
+- **.archived_orphans/build_task_provider.cpp** — Defines symbols called by other active files
+- **.archived_orphans/burstc_main.cpp** — Defines symbols called by other active files
+- **.archived_orphans/cameleon/NativeHost.asm** — Defines symbols called by other active files
+- **.archived_orphans/camellia256_test.cpp** — Defines symbols called by other active files
+- **.archived_orphans/chat_interface_real.cpp** — Defines symbols called by other active files
+- **.archived_orphans/chatpanel.cpp** — Defines symbols called by other active files
+- **.archived_orphans/checkpoint_manager.cpp** — Defines symbols called by other active files
+- **.archived_orphans/checkpoint_manager_impl.cpp** — Defines symbols called by other active files
+- **.archived_orphans/chromatic_main.cpp** — Defines symbols called by other active files
+- **.archived_orphans/chromatic_window.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ci_cd_settings.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ci_cd_settings_broken.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ci_pipeline_manager.cpp** — Defines symbols called by other active files
+- **.archived_orphans/cli_shell.cpp** — Defines symbols called by other active files
+- **.archived_orphans/code_analyzer.cpp** — Defines symbols called by other active files
+- **.archived_orphans/codec.cpp** — Defines symbols called by other active files
+- **.archived_orphans/codex_integration.cpp** — Defines symbols called by other active files
+- **.archived_orphans/command_palette.cpp** — Defines symbols called by other active files
+- **.archived_orphans/common.cpp** — Defines symbols called by other active files
+- **.archived_orphans/compiler_asm_real.cpp** — Defines symbols called by other active files
+- **.archived_orphans/compiler_cpp_real.cpp** — Defines symbols called by other active files
+- **.archived_orphans/compilers/_patched/bash_compiler_from_scratch.asm** — Defines symbols called by other active files
+- **.archived_orphans/compilers/_patched/powershell_compiler_from_scratch.asm** — Defines symbols called by other active files
+- **.archived_orphans/compilers/_patched/universal_cross_platform_compiler.asm** — Defines symbols called by other active files
+- **.archived_orphans/compliance_logger.cpp** — Defines symbols called by other active files
+- **.archived_orphans/concat.cpp** — Defines symbols called by other active files
+- **.archived_orphans/conv.cpp** — Defines symbols called by other active files
+- **.archived_orphans/convert.cpp** — Defines symbols called by other active files
+- **.archived_orphans/count-equal.cpp** — Defines symbols called by other active files
+- **.archived_orphans/cpu-feats.cpp** — Defines symbols called by other active files
+- **.archived_orphans/cpy.cpp** — Defines symbols called by other active files
+- **.archived_orphans/d3d12_compute.cpp** — Defines symbols called by other active files
+- **.archived_orphans/dap_debugger_full.cpp** — Defines symbols called by other active files
+- **.archived_orphans/debug_engine_stubs.cpp** — Defines symbols called by other active files
+- **.archived_orphans/deobf/RawrXD_MetaReverse.asm** — Defines symbols called by other active files
+- **.archived_orphans/deobf/RawrXD_OmegaDeobfuscator.asm** — Defines symbols called by other active files
+- **.archived_orphans/dequant_simd.asm** — Defines symbols called by other active files
+- **.archived_orphans/diagnostic_launcher.cpp** — Defines symbols called by other active files
+- **.archived_orphans/diagnostics_impl.cpp** — Defines symbols called by other active files
+- **.archived_orphans/diff_dock.cpp** — Defines symbols called by other active files
+- **.archived_orphans/digest_cli.cpp** — Defines symbols called by other active files
+- **.archived_orphans/digestion_cli.cpp** — Defines symbols called by other active files
+- **.archived_orphans/digestion_config_manager.cpp** — Defines symbols called by other active files
+- **.archived_orphans/digestion_config_tests.cpp** — Defines symbols called by other active files
+- **.archived_orphans/digestion_db.cpp** — Defines symbols called by other active files
+- **.archived_orphans/digestion_engine.cpp** — Defines symbols called by other active files
+- **.archived_orphans/digestion_engine_stub.cpp** — Defines symbols called by other active files
+- **.archived_orphans/digestion_engine_unified.cpp** — Defines symbols called by other active files
+- **.archived_orphans/digestion_enterprise.cpp** — Defines symbols called by other active files
+- **.archived_orphans/digestion_orchestrator.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/digestion_reverse_engineering.cpp** — Defines symbols called by other active files
+- **.archived_orphans/digestion_reverse_engineering_complete.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/digestion_reverse_engineering_enterprise.cpp** — Defines symbols called by other active files
+- **.archived_orphans/digestion_reverse_engineering_fixed.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/digestion_reverse_engineering_production.cpp** — Defines symbols called by other active files
+- **.archived_orphans/digestion_test_harness.cpp** — Defines symbols called by other active files
+- **.archived_orphans/direct_io_ring_win.cpp** — Defines symbols called by other active files
+- **.archived_orphans/directstorage_real.cpp** — Defines symbols called by other active files
+- **.archived_orphans/directstorage_unified.cpp** — Defines symbols called by other active files
+- **.archived_orphans/dist/RawrXD_Enterprise_v3.0/extras/codex_reverse_engine/CodexUltimate.asm** — Defines symbols called by other active files
+- **.archived_orphans/distributed_trainer.cpp** — Defines symbols called by other active files
+- **.archived_orphans/dmmv.cpp** — Defines symbols called by other active files
+- **.archived_orphans/editor_agent_integration.cpp** — Defines symbols called by other active files
+- **.archived_orphans/editor_buffer.cpp** — Defines symbols called by other active files
+- **.archived_orphans/element_wise.cpp** — Defines symbols called by other active files
+- **.archived_orphans/engine_800b.cpp** — Defines symbols called by other active files
+- **.archived_orphans/enhanced_cli.cpp** — Defines symbols called by other active files
+- **.archived_orphans/enhanced_model_loader.cpp** — Defines symbols called by other active files
+- **.archived_orphans/enterprise_policy_engine.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/example_voice_plugin.cpp** — Defines symbols called by other active files
+- **.archived_orphans/extension-host/RawrXD_Agentic.asm** — Defines symbols called by other active files
+- **.archived_orphans/extension-host/RawrXD_Copilot.asm** — Defines symbols called by other active files
+- **.archived_orphans/extension-host/RawrXD_ExtensionHost.asm** — Defines symbols called by other active files
+- **.archived_orphans/extension-host/RawrXD_ExtensionHost_Hijacker.asm** — Defines symbols called by other active files
+- **.archived_orphans/extension-host/RawrXD_LSP.asm** — Defines symbols called by other active files
+- **.archived_orphans/extension_manager.cpp** — Defines symbols called by other active files
+- **.archived_orphans/extension_marketplace_manager.cpp** — Defines symbols called by other active files
+- **.archived_orphans/external_api_client.cpp** — Defines symbols called by other active files
+- **.archived_orphans/extracted_chats/cursor/History/-103a804f/gXhg.asm** — Defines symbols called by other active files
+- **.archived_orphans/extracted_chats/cursor/History/-12522156/2GjN.asm** — Defines symbols called by other active files
+- **.archived_orphans/extracted_chats/cursor/History/-144d1c89/u4eM.asm** — Defines symbols called by other active files
+- **.archived_orphans/extracted_chats/cursor/History/-1bd1bafa/6XiQ.asm** — Defines symbols called by other active files
+- **.archived_orphans/extracted_chats/cursor/History/-1bd1bafa/BGzb.asm** — Defines symbols called by other active files
+- **.archived_orphans/extracted_chats/cursor/History/-1bd1bafa/BsN1.asm** — Defines symbols called by other active files
+- **.archived_orphans/extracted_chats/cursor/History/-1bd1bafa/Fvt4.asm** — Defines symbols called by other active files
+- **.archived_orphans/extracted_chats/cursor/History/-1bd1bafa/GMzL.asm** — Defines symbols called by other active files
+- **.archived_orphans/extracted_chats/cursor/History/-1bd1bafa/Xidd.asm** — Defines symbols called by other active files
+- **.archived_orphans/extracted_chats/cursor/History/-1bd1bafa/Y6WM.asm** — Defines symbols called by other active files
+- **.archived_orphans/extracted_chats/cursor/History/-1bd1bafa/fVuY.asm** — Defines symbols called by other active files
+- **.archived_orphans/extracted_chats/cursor/History/-1bd1bafa/rgbY.asm** — Defines symbols called by other active files
+- **.archived_orphans/extracted_chats/cursor/History/-1bd1bafa/sGza.asm** — Defines symbols called by other active files
+- **.archived_orphans/extracted_chats/cursor/History/-1df922a3/49iE.asm** — Defines symbols called by other active files
+- **.archived_orphans/extracted_chats/cursor/History/-23f6bd4b/vGh8.asm** — Defines symbols called by other active files
+- **.archived_orphans/extracted_chats/cursor/History/-31e42663/gGaM.asm** — Defines symbols called by other active files
+- **.archived_orphans/extracted_chats/cursor/History/-39948a11/4wqr.asm** — Defines symbols called by other active files
+- **.archived_orphans/extracted_chats/cursor/History/-39948a11/IYLM.asm** — Defines symbols called by other active files
+- **.archived_orphans/extracted_chats/cursor/History/-39948a11/K2RN.asm** — Defines symbols called by other active files
+- **.archived_orphans/extracted_chats/cursor/History/-39948a11/T2VY.asm** — Defines symbols called by other active files
+- **.archived_orphans/extracted_chats/cursor/History/-39948a11/XSqc.asm** — Defines symbols called by other active files
+- **.archived_orphans/extracted_chats/cursor/History/-39948a11/YhuD.asm** — Defines symbols called by other active files
+- **.archived_orphans/extracted_chats/cursor/History/-39948a11/fWDM.asm** — Defines symbols called by other active files
+- **.archived_orphans/extracted_chats/cursor/History/-39948a11/guqZ.asm** — Defines symbols called by other active files
+- **.archived_orphans/extracted_chats/cursor/History/-39948a11/hvJW.asm** — Defines symbols called by other active files
+- **.archived_orphans/extracted_chats/cursor/History/-39948a11/hvu8.asm** — Defines symbols called by other active files
+- **.archived_orphans/extracted_chats/cursor/History/-39948a11/jmKw.asm** — Defines symbols called by other active files
+- **.archived_orphans/extracted_chats/cursor/History/-39948a11/t0qA.asm** — Defines symbols called by other active files
+- **.archived_orphans/file_operations.cpp** — Defines symbols called by other active files
+- **.archived_orphans/file_ops.cpp** — Defines symbols called by other active files
+- **.archived_orphans/find_widget.cpp** — Defines symbols called by other active files
+- **.archived_orphans/fuzz_gguf_loader.cpp** — Defines symbols called by other active files
+- **.archived_orphans/genesis/RawrXD_Genesis.asm** — Defines symbols called by other active files
+- **.archived_orphans/getrows.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ggml-alloc.c** — Defines symbols called by other active files
+- **.archived_orphans/ggml-backend-reg.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ggml-backend.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ggml-blas.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ggml-cann.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ggml-cpu.c** — Defines symbols called by other active files
+- **.archived_orphans/ggml-cpu.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ggml-hexagon.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ggml-metal-common.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ggml-metal-device.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ggml-metal-ops.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ggml-metal.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ggml-opencl.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ggml-opt.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ggml-quants.c** — Defines symbols called by other active files
+- **.archived_orphans/ggml-rpc.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ggml-sycl.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ggml-threading.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ggml-webgpu.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ggml-zdnn.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ggml.c** — Defines symbols called by other active files
+- **.archived_orphans/ggml.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ggml_masm_backend.cpp** — Defines symbols called by other active files
+- **.archived_orphans/gguf.cpp** — Defines symbols called by other active files
+- **.archived_orphans/gguf_api_server.cpp** — Defines symbols called by other active files
+- **.archived_orphans/gguf_burstzone_patcher.cpp** — Defines symbols called by other active files
+- **.archived_orphans/gguf_diagnostic.cpp** — Defines symbols called by other active files
+- **.archived_orphans/gguf_hotpatch_tester.cpp** — Defines symbols called by other active files
+- **.archived_orphans/gguf_loader_noqt.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/gguf_loader_stub.cpp** — Defines symbols called by other active files
+- **.archived_orphans/gguf_parser.cpp** — Defines symbols called by other active files
+- **.archived_orphans/gguf_proxy_server.cpp** — Defines symbols called by other active files
+- **.archived_orphans/gguf_server.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ghost_paging_main.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ghost_text_renderer.cpp** — Defines symbols called by other active files
+- **.archived_orphans/git_client.cpp** — Defines symbols called by other active files
+- **.archived_orphans/gitignore_parser.cpp** — Defines symbols called by other active files
+- **.archived_orphans/gla.cpp** — Defines symbols called by other active files
+- **.archived_orphans/gpu_backend_selector.cpp** — Defines symbols called by other active files
+- **.archived_orphans/gpu_dma_complete_reverse_engineered.asm** — Defines symbols called by other active files
+- **.archived_orphans/gpu_inference_benchmark.cpp** — Defines symbols called by other active files
+- **.archived_orphans/gui.cpp** — Defines symbols called by other active files
+- **.archived_orphans/gui/llama_dll.asm** — Defines symbols called by other active files
+- **.archived_orphans/gui/server_8080.asm** — Defines symbols called by other active files
+- **.archived_orphans/gui/webserver.asm** — Defines symbols called by other active files
+- **.archived_orphans/gui_bridge.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/gui_main.cpp** — Defines symbols called by other active files
+- **.archived_orphans/gzip_masm_store.cpp** — Defines symbols called by other active files
+- **.archived_orphans/hbm.cpp** — Defines symbols called by other active files
+- **.archived_orphans/header_test.cpp** — Defines symbols called by other active files
+- **.archived_orphans/health_check_server.cpp** — Defines symbols called by other active files
+- **.archived_orphans/hf_downloader.cpp** — Defines symbols called by other active files
+- **.archived_orphans/hf_hub_client.cpp** — Defines symbols called by other active files
+- **.archived_orphans/hot_reload.cpp** — Defines symbols called by other active files
+- **.archived_orphans/hotpatch.cpp** — Defines symbols called by other active files
+- **.archived_orphans/hotpatch_engine_real.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/htp-dma.c** — Defines symbols called by other active files
+- **.archived_orphans/htp-utils.c** — Defines symbols called by other active files
+- **.archived_orphans/hvx-exp.c** — Defines symbols called by other active files
+- **.archived_orphans/hvx-inverse.c** — Defines symbols called by other active files
+- **.archived_orphans/hvx-sigmoid.c** — Defines symbols called by other active files
+- **.archived_orphans/hvx-utils.c** — Defines symbols called by other active files
+- **.archived_orphans/hybrid_cloud_manager.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ide_agent_bridge.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/ide_agent_bridge_hot_patching_integration.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ide_agent_bridge_hot_patching_integration_lsp.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/ide_auditor.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ide_engine_logic.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ide_main.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ide_orchestrator.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/im2col.cpp** — Defines symbols called by other active files
+- **.archived_orphans/image_generator_example.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ime.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ime1_kernels.cpp** — Defines symbols called by other active files
+- **.archived_orphans/inference_engine.cpp** — Defines symbols called by other active files
+- **.archived_orphans/inference_engine_noqt.cpp** — Defines symbols called by other active files
+- **.archived_orphans/inference_engine_stub.cpp** — Defines symbols called by other active files
+- **.archived_orphans/inflate_deflate_cpp.cpp** — Defines symbols called by other active files
+- **.archived_orphans/inline_edit_engine.cpp** — Defines symbols called by other active files
+- **.archived_orphans/instruction_loader_test.cpp** — Defines symbols called by other active files
+- **.archived_orphans/intelligent_codebase_engine.cpp** — Defines symbols called by other active files
+- **.archived_orphans/intelligent_error_analysis.cpp** — Defines symbols called by other active files
+- **.archived_orphans/interconnect/RawrXD_Agentic_Router.asm** — Defines symbols called by other active files
+- **.archived_orphans/interconnect/RawrXD_HTTP_Router.asm** — Defines symbols called by other active files
+- **.archived_orphans/interconnect/RawrXD_JSON_Parser.asm** — Defines symbols called by other active files
+- **.archived_orphans/interconnect/RawrXD_Model_StateMachine.asm** — Defines symbols called by other active files
+- **.archived_orphans/interconnect/RawrXD_RingBuffer_Consumer.asm** — Defines symbols called by other active files
+- **.archived_orphans/interconnect/RawrXD_Streaming_Formatter.asm** — Defines symbols called by other active files
+- **.archived_orphans/interpretability_panel.cpp** — Defines symbols called by other active files
+- **.archived_orphans/interpretability_panel_enhanced.cpp** — Defines symbols called by other active files
+- **.archived_orphans/io_factory.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/itsmehrawrxd-master/bare_metal_assembler.asm** — Defines symbols called by other active files
+- **.archived_orphans/itsmehrawrxd-master/bash_compiler_from_scratch.asm** — Defines symbols called by other active files
+- **.archived_orphans/itsmehrawrxd-master/powershell_compiler_from_scratch.asm** — Defines symbols called by other active files
+- **.archived_orphans/itsmehrawrxd-master/src/templates/assembly/polymorph_ssl.asm** — Defines symbols called by other active files
+- **.archived_orphans/itsmehrawrxd-master/src/templates/assembly/stealthinj.asm** — Defines symbols called by other active files
+- **.archived_orphans/itsmehrawrxd-master/universal_cross_platform_compiler.asm** — Defines symbols called by other active files
+- **.archived_orphans/kernels.cpp** — Defines symbols called by other active files
+- **.archived_orphans/kernels/deflate_godmode_masm.asm** — Defines symbols called by other active files
+- **.archived_orphans/kernels/deflate_masm.asm** — Defines symbols called by other active files
+- **.archived_orphans/kernels/editor/editor.asm** — Defines symbols called by other active files
+- **.archived_orphans/kleidiai.cpp** — Defines symbols called by other active files
+- **.archived_orphans/kv_cache_mgr.asm** — Defines symbols called by other active files
+- **.archived_orphans/language_server_integration.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/language_server_integration_impl.cpp** — Defines symbols called by other active files
+- **.archived_orphans/language_support_system.cpp** — Defines symbols called by other active files
+- **.archived_orphans/language_terraformer.cpp** — Defines symbols called by other active files
+- **.archived_orphans/layer_quant_widget.cpp** — Defines symbols called by other active files
+- **.archived_orphans/library_integration.cpp** — Defines symbols called by other active files
+- **.archived_orphans/llm_router.cpp** — Defines symbols called by other active files
+- **.archived_orphans/lsp_client.cpp** — Defines symbols called by other active files
+- **.archived_orphans/lsp_client_unified.cpp** — Defines symbols called by other active files
+- **.archived_orphans/lsp_jsonrpc.asm** — Defines symbols called by other active files
+- **.archived_orphans/main-minimal.cpp** — Defines symbols called by other active files
+- **.archived_orphans/main-simple.cpp** — Defines symbols called by other active files
+- **.archived_orphans/main.c** — Defines symbols called by other active files
+- **.archived_orphans/main_broken.cpp** — Defines symbols called by other active files
+- **.archived_orphans/main_gui.cpp** — Defines symbols called by other active files
+- **.archived_orphans/main_kernels.cpp** — Defines symbols called by other active files
+- **.archived_orphans/main_old_cli.cpp** — Defines symbols called by other active files
+- **.archived_orphans/main_production.cpp** — Defines symbols called by other active files
+- **.archived_orphans/main_production_test.cpp** — Defines symbols called by other active files
+- **.archived_orphans/main_qt.cpp** — Defines symbols called by other active files
+- **.archived_orphans/main_simple.cpp** — Defines symbols called by other active files
+- **.archived_orphans/main_v5.cpp** — Defines symbols called by other active files
+- **.archived_orphans/mainwindow.cpp** — Defines symbols called by other active files
+- **.archived_orphans/mainwindow_integration_tests.cpp** — Defines symbols called by other active files
+- **.archived_orphans/mainwindow_qt_original.cpp** — Defines symbols called by other active files
+- **.archived_orphans/masm_cli_compiler.cpp** — Defines symbols called by other active files
+- **.archived_orphans/masm_decompressor.cpp** — Defines symbols called by other active files
+- **.archived_orphans/masm_editor_widget.cpp** — Defines symbols called by other active files
+- **.archived_orphans/matmul-ops.c** — Defines symbols called by other active files
+- **.archived_orphans/memory_cleanup_phase_integration.asm** — Name matches critical keyword pattern
+- **.archived_orphans/memory_error_real.cpp** — Defines symbols called by other active files
+- **.archived_orphans/memory_manager.cpp** — Defines symbols called by other active files
+- **.archived_orphans/memory_manager_real.cpp** — Defines symbols called by other active files
+- **.archived_orphans/memory_mapped_file.cpp** — Defines symbols called by other active files
+- **.archived_orphans/memory_ownership.cpp** — Defines symbols called by other active files
+- **.archived_orphans/memory_plugins.cpp** — Defines symbols called by other active files
+- **.archived_orphans/memory_space_manager.cpp** — Defines symbols called by other active files
+- **.archived_orphans/meta_learn.cpp** — Defines symbols called by other active files
+- **.archived_orphans/meta_planner.cpp** — Defines symbols called by other active files
+- **.archived_orphans/metadata_guard.cpp** — Defines symbols called by other active files
+- **.archived_orphans/metrics_collector.cpp** — Defines symbols called by other active files
+- **.archived_orphans/metrics_dashboard.cpp** — Defines symbols called by other active files
+- **.archived_orphans/middleware/rawrxd_middleware.asm** — Defines symbols called by other active files
+- **.archived_orphans/minimal_ide_main.cpp** — Defines symbols called by other active files
+- **.archived_orphans/minimal_main.cpp** — Defines symbols called by other active files
+- **.archived_orphans/minimal_qt_test.cpp** — Defines symbols called by other active files
+- **.archived_orphans/minimal_test.cpp** — Defines symbols called by other active files
+- **.archived_orphans/mmf.cpp** — Defines symbols called by other active files
+- **.archived_orphans/mmf_diagnostic.cpp** — Defines symbols called by other active files
+- **.archived_orphans/mmq.cpp** — Defines symbols called by other active files
+- **.archived_orphans/mmvq.cpp** — Defines symbols called by other active files
+- **.archived_orphans/model_benchmark_console.cpp** — Defines symbols called by other active files
+- **.archived_orphans/model_interface.cpp** — Defines symbols called by other active files
+- **.archived_orphans/model_loader.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/model_loader_thread.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/model_queue.cpp** — Defines symbols called by other active files
+- **.archived_orphans/model_registry.cpp** — Defines symbols called by other active files
+- **.archived_orphans/model_router_adapter.cpp** — Defines symbols called by other active files
+- **.archived_orphans/model_router_cli_test.cpp** — Defines symbols called by other active files
+- **.archived_orphans/model_router_console.cpp** — Defines symbols called by other active files
+- **.archived_orphans/model_trainer.cpp** — Defines symbols called by other active files
+- **.archived_orphans/monaco_settings_dialog.cpp** — Defines symbols called by other active files
+- **.archived_orphans/multi_agent_parallel.cpp** — Defines symbols called by other active files
+- **.archived_orphans/multi_file_search.cpp** — Defines symbols called by other active files
+- **.archived_orphans/multimodal_engine.cpp** — Defines symbols called by other active files
+- **.archived_orphans/native_editor.cpp** — Defines symbols called by other active files
+- **.archived_orphans/native_quant.cpp** — Defines symbols called by other active files
+- **.archived_orphans/net_impl_win32.cpp** — Defines symbols called by other active files
+- **.archived_orphans/nf4_decompressor_real.cpp** — Defines symbols called by other active files
+- **.archived_orphans/nf4_decompressor_unified.cpp** — Defines symbols called by other active files
+- **.archived_orphans/node_modules/ffi-napi/deps/libffi/src/types.c** — Defines symbols called by other active files
+- **.archived_orphans/norm.cpp** — Defines symbols called by other active files
+- **.archived_orphans/nvme_oracle_host.cpp** — Defines symbols called by other active files
+- **.archived_orphans/nvme_oracle_host_standalone.cpp** — Defines symbols called by other active files
+- **.archived_orphans/nvme_thermal_sidecar_entry.asm** — Name matches critical keyword pattern
+- **.archived_orphans/nvme_thermal_stressor.cpp** — Defines symbols called by other active files
+- **.archived_orphans/observability_dashboard.cpp** — Defines symbols called by other active files
+- **.archived_orphans/oc_stress.cpp** — Defines symbols called by other active files
+- **.archived_orphans/offline_cache_store.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ollama_client.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ollama_hotpatch_proxy.cpp** — Defines symbols called by other active files
+- **.archived_orphans/ollama_proxy.cpp** — Defines symbols called by other active files
+- **.archived_orphans/omega_pro.asm** — Defines symbols called by other active files
+- **.archived_orphans/omega_pro_v3.asm** — Defines symbols called by other active files
+- **.archived_orphans/omega_pro_v4.asm** — Defines symbols called by other active files
+- **.archived_orphans/ops.cpp** — Defines symbols called by other active files
+- **.archived_orphans/outprod.cpp** — Defines symbols called by other active files
+- **.archived_orphans/overclock_governor.cpp** — Defines symbols called by other active files
+- **.archived_orphans/overclock_vendor.cpp** — Defines symbols called by other active files
+- **.archived_orphans/pad.cpp** — Defines symbols called by other active files
+- **.archived_orphans/pad_reflect_1d.cpp** — Defines symbols called by other active files
+- **.archived_orphans/paint_app.cpp** — Defines symbols called by other active files
+- **.archived_orphans/paint_main.cpp** — Defines symbols called by other active files
+- **.archived_orphans/performance_monitor.cpp** — Defines symbols called by other active files
+- **.archived_orphans/performance_optimizer_integration.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/phase_1_2_integration_demo.cpp** — Defines symbols called by other active files
+- **.archived_orphans/phase_integration_real.cpp** — Defines symbols called by other active files
+- **.archived_orphans/plan_mode_handler.cpp** — Defines symbols called by other active files
+- **.archived_orphans/plan_orchestrator.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/planning_agent.cpp** — Defines symbols called by other active files
+- **.archived_orphans/plugin_loader.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/production_feature_test.cpp** — Defines symbols called by other active files
+- **.archived_orphans/production_integration_example.cpp** — Defines symbols called by other active files
+- **.archived_orphans/production_integration_test.cpp** — Defines symbols called by other active files
+- **.archived_orphans/project_detector.cpp** — Defines symbols called by other active files
+- **.archived_orphans/project_explorer.cpp** — Defines symbols called by other active files
+- **.archived_orphans/project_manager.cpp** — Defines symbols called by other active files
+- **.archived_orphans/proof.asm** — Defines symbols called by other active files
+- **.archived_orphans/qt_directory_manager.cpp** — Defines symbols called by other active files
+- **.archived_orphans/qt_file_reader.cpp** — Defines symbols called by other active files
+- **.archived_orphans/qt_file_writer.cpp** — Defines symbols called by other active files
+- **.archived_orphans/quant_utils.cpp** — Defines symbols called by other active files
+- **.archived_orphans/quants.c** — Defines symbols called by other active files
+- **.archived_orphans/rawrxd_cli.cpp** — Defines symbols called by other active files
+- **.archived_orphans/rawrxd_cli_compiler.cpp** — Defines symbols called by other active files
+- **.archived_orphans/rawrxd_inference_core.cpp** — Defines symbols called by other active files
+- **.archived_orphans/rawrxd_lsp_bridge.asm** — Defines symbols called by other active files
+- **.archived_orphans/rawrxd_neural_core.asm** — Defines symbols called by other active files
+- **.archived_orphans/rawrxd_system.cpp** — Defines symbols called by other active files
+- **.archived_orphans/react_generator.cpp** — Defines symbols called by other active files
+- **.archived_orphans/react_server_generator.cpp** — Defines symbols called by other active files
+- **.archived_orphans/real_multi_model_benchmark.cpp** — Defines symbols called by other active files
+- **.archived_orphans/real_time_completion_engine.cpp** — Defines symbols called by other active files
+- **.archived_orphans/real_time_completion_engine_v2.cpp** — Defines symbols called by other active files
+- **.archived_orphans/realtime_analyzer.cpp** — Defines symbols called by other active files
+- **.archived_orphans/realtime_streaming.cpp** — Defines symbols called by other active files
+- **.archived_orphans/realtime_streaming_complete.cpp** — Defines symbols called by other active files
+- **.archived_orphans/regression_suite.cpp** — Defines symbols called by other active files
+- **.archived_orphans/release_agent.cpp** — Defines symbols called by other active files
+- **.archived_orphans/repack.cpp** — Defines symbols called by other active files
+- **.archived_orphans/repeat_back.cpp** — Defines symbols called by other active files
+- **.archived_orphans/robust_loader.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/roll.cpp** — Defines symbols called by other active files
+- **.archived_orphans/rollback.cpp** — Defines symbols called by other active files
+- **.archived_orphans/rope-ops.c** — Defines symbols called by other active files
+- **.archived_orphans/rope.cpp** — Defines symbols called by other active files
+- **.archived_orphans/scalar_server.cpp** — Defines symbols called by other active files
+- **.archived_orphans/security_manager.cpp** — Defines symbols called by other active files
+- **.archived_orphans/self_test_gate.cpp** — Defines symbols called by other active files
+- **.archived_orphans/semantic_diff_analyzer.cpp** — Defines symbols called by other active files
+- **.archived_orphans/semantic_store.cpp** — Defines symbols called by other active files
+- **.archived_orphans/sentencepiece_tokenizer.cpp** — Defines symbols called by other active files
+- **.archived_orphans/sentry_integration.cpp** — Defines symbols called by other active files
+- **.archived_orphans/set.cpp** — Defines symbols called by other active files
+- **.archived_orphans/set_rows.cpp** — Defines symbols called by other active files
+- **.archived_orphans/settings.cpp** — Defines symbols called by other active files
+- **.archived_orphans/settings_dialog.cpp** — Defines symbols called by other active files
+- **.archived_orphans/settings_dialog_visual.cpp** — Defines symbols called by other active files
+- **.archived_orphans/settings_manager.cpp** — Defines symbols called by other active files
+- **.archived_orphans/settings_manager_real.cpp** — Defines symbols called by other active files
+- **.archived_orphans/settings_old.cpp** — Defines symbols called by other active files
+- **.archived_orphans/sgemm.cpp** — Defines symbols called by other active files
+- **.archived_orphans/sign_binary.cpp** — Defines symbols called by other active files
+- **.archived_orphans/simple_gpu_test.cpp** — Defines symbols called by other active files
+- **.archived_orphans/simple_test.cpp** — Defines symbols called by other active files
+- **.archived_orphans/sla_manager.cpp** — Defines symbols called by other active files
+- **.archived_orphans/smart_rewrite_engine_integration.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/smoke_test.cpp** — Defines symbols called by other active files
+- **.archived_orphans/smoke_test_standalone.cpp** — Defines symbols called by other active files
+- **.archived_orphans/soft_throttle_dispatch.asm** — Name matches critical keyword pattern
+- **.archived_orphans/softmax-ops.c** — Defines symbols called by other active files
+- **.archived_orphans/softmax.cpp** — Defines symbols called by other active files
+- **.archived_orphans/sovereign_bootstrap.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/sovereign_cluster_report.cpp** — Defines symbols called by other active files
+- **.archived_orphans/sovereign_dashboard_widget.cpp** — Defines symbols called by other active files
+- **.archived_orphans/sqlite3_stubs.cpp** — Defines symbols called by other active files
+- **.archived_orphans/src/CodexPro.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/CodexUltimate.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/CodexUltimate_fixed.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/CodexUltimate_simple.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/OmegaPro.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/RawrXD_CLI.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/RawrXD_GPU_Memory.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/RawrXD_GUI_IDE.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/RawrXD_HTTP_Router.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/RawrXD_Lexer_AVX2.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/RawrXD_Model_StateMachine.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/RawrXD_OmegaDeobfuscator.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/direct_io/nvme_oracle_service.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/direct_io/nvme_query.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/direct_io/quantum_auth.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/foundation/Phase1_Master.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/loader/Phase2_Master.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/omega_final.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/omega_final_working.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/omega_max_v31.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/omega_pro.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/omega_pro_maximum.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/omega_pro_v4.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/omega_professional.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/omega_simple.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/rawrxd_kernels.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/reverse_engineering/deobfuscator/RawrXD_MetaReverse.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/reverse_engineering/deobfuscator/RawrXD_OmegaDeobfuscator.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/reverse_engineering/omega_suite/src_variants/CodexPro.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/reverse_engineering/omega_suite/src_variants/CodexUltimate.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/reverse_engineering/omega_suite/src_variants/CodexUltimate_fixed.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/reverse_engineering/omega_suite/src_variants/CodexUltimate_simple.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/reverse_engineering/omega_suite/src_variants/OmegaPro.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/reverse_engineering/omega_suite/src_variants/omega_final.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/reverse_engineering/omega_suite/src_variants/omega_final_working.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/reverse_engineering/omega_suite/src_variants/omega_max_v31.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/reverse_engineering/omega_suite/src_variants/omega_pro.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/reverse_engineering/omega_suite/src_variants/omega_pro_maximum.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/reverse_engineering/omega_suite/src_variants/omega_pro_v4.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/reverse_engineering/omega_suite/src_variants/omega_professional.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/reverse_engineering/omega_suite/src_variants/omega_simple.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/reverse_engineering/omega_suite/v3/OmegaProProfessional.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/reverse_engineering/omega_suite/v3/OmegaProProfessional_fixed.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/reverse_engineering/omega_suite/v3/OmegaPro_v3_fixed.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/reverse_engineering/omega_suite/v3/omega_pro.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/reverse_engineering/omega_suite/v3/omega_pro_root.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/reverse_engineering/omega_suite/v3/omega_pro_v3.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/reverse_engineering/omega_suite/v3/omega_simple.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/reverse_engineering/omega_suite/v3/test_omega.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/reverse_engineering/omega_suite/v4/OmegaPolyglotMax.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/reverse_engineering/omega_suite/v4/OmegaPolyglotPro.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/reverse_engineering/omega_suite/v4/OmegaPolyglot_v4.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/reverse_engineering/omega_suite/v4/OmegaPolyglot_v4_fixed.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/reverse_engineering/omega_suite/v4/omega_pro_v4.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/reverse_engineering/omega_suite/v5/Omega-Install-Reverser-Protected.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/reverse_engineering/omega_suite/v7/CodexPro.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/reverse_engineering/omega_suite/v7/CodexProfessional.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/reverse_engineering/omega_suite/v7/CodexReverse.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/reverse_engineering/omega_suite/v7/CodexUltimate.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/reverse_engineering/omega_suite/v7/CodexUltra.asm** — Defines symbols called by other active files
+- **.archived_orphans/src/reverse_engineering/security_toolkit/RawrXD_IDE_unified.asm** — Defines symbols called by other active files
+- **.archived_orphans/ssm_conv.cpp** — Defines symbols called by other active files
+- **.archived_orphans/startup_readiness_checker.cpp** — Defines symbols called by other active files
+- **.archived_orphans/streaming_completion_engine.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/streaming_engine.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/streaming_gguf_loader_enhanced.cpp** — Defines symbols called by other active files
+- **.archived_orphans/streaming_gguf_loader_enhanced_v1_1.cpp** — Defines symbols called by other active files
+- **.archived_orphans/streaming_gguf_loader_qt.cpp** — Defines symbols called by other active files
+- **.archived_orphans/streaming_inference_api.cpp** — Defines symbols called by other active files
+- **.archived_orphans/streaming_token_progress.cpp** — Defines symbols called by other active files
+- **.archived_orphans/stub_main.cpp** — Defines symbols called by other active files
+- **.archived_orphans/sycl_hw.cpp** — Defines symbols called by other active files
+- **.archived_orphans/syntax_engine.cpp** — Defines symbols called by other active files
+- **.archived_orphans/telemetry.cpp** — Defines symbols called by other active files
+- **.archived_orphans/telemetry_optin_dialog.cpp** — Defines symbols called by other active files
+- **.archived_orphans/terminal_unrestricted.cpp** — Defines symbols called by other active files
+- **.archived_orphans/terraform.asm** — Defines symbols called by other active files
+- **.archived_orphans/terraform_v11.asm** — Defines symbols called by other active files
+- **.archived_orphans/test.cpp** — Defines symbols called by other active files
+- **.archived_orphans/test_40gb_loaders.cpp** — Defines symbols called by other active files
+- **.archived_orphans/test_agentic_executor.cpp** — Defines symbols called by other active files
+- **.archived_orphans/test_bridge.cpp** — Defines symbols called by other active files
+- **.archived_orphans/test_chat_console.cpp** — Defines symbols called by other active files
+- **.archived_orphans/test_chat_e2e.cpp** — Defines symbols called by other active files
+- **.archived_orphans/test_chat_streaming.cpp** — Defines symbols called by other active files
+- **.archived_orphans/test_deobf.cpp** — Defines symbols called by other active files
+- **.archived_orphans/test_enum.cpp** — Defines symbols called by other active files
+- **.archived_orphans/test_http_chat_server.cpp** — Defines symbols called by other active files
+- **.archived_orphans/test_http_server.cpp** — Defines symbols called by other active files
+- **.archived_orphans/test_ide_main.cpp** — Defines symbols called by other active files
+- **.archived_orphans/test_integration.cpp** — Defines symbols called by other active files
+- **.archived_orphans/test_kv_cache.cpp** — Defines symbols called by other active files
+- **.archived_orphans/test_masm_ops.cpp** — Defines symbols called by other active files
+- **.archived_orphans/test_minimal_streaming.cpp** — Defines symbols called by other active files
+- **.archived_orphans/test_missing_logic.cpp** — Defines symbols called by other active files
+- **.archived_orphans/test_monaco_verification.cpp** — Defines symbols called by other active files
+- **.archived_orphans/test_net_ops.cpp** — Defines symbols called by other active files
+- **.archived_orphans/test_omega.asm** — Defines symbols called by other active files
+- **.archived_orphans/test_orchestrator_modules.cpp** — Defines symbols called by other active files
+- **.archived_orphans/test_qt.cpp** — Defines symbols called by other active files
+- **.archived_orphans/test_runner.cpp** — Defines symbols called by other active files
+- **.archived_orphans/test_self_audit.cpp** — Defines symbols called by other active files
+- **.archived_orphans/test_simple.cpp** — Defines symbols called by other active files
+- **.archived_orphans/test_sloloris.cpp** — Defines symbols called by other active files
+- **.archived_orphans/test_streaming_gguf_loader.cpp** — Defines symbols called by other active files
+- **.archived_orphans/test_titan_integration.cpp** — Defines symbols called by other active files
+- **.archived_orphans/test_unbraid.cpp** — Defines symbols called by other active files
+- **.archived_orphans/test_wsprintf.asm** — Defines symbols called by other active files
+- **.archived_orphans/tests/test_marketplace_installer.asm** — Defines symbols called by other active files
+- **.archived_orphans/thermal_dashboard_plugin.cpp** — Defines symbols called by other active files
+- **.archived_orphans/thread_contention_profiler.cpp** — Defines symbols called by other active files
+- **.archived_orphans/token_generator.cpp** — Defines symbols called by other active files
+- **.archived_orphans/tokenizer.cpp** — Defines symbols called by other active files
+- **.archived_orphans/tokenizer_language_selector.cpp** — Defines symbols called by other active files
+- **.archived_orphans/tokenizer_selector.cpp** — Defines symbols called by other active files
+- **.archived_orphans/tool_registry_init.cpp** — Defines symbols called by other active files
+- **.archived_orphans/tool_registry_thermal.cpp** — Defines symbols called by other active files
+- **.archived_orphans/tool_server.cpp** — Defines symbols called by other active files
+- **.archived_orphans/toolchain_bridge.cpp** — Defines symbols called by other active files
+- **.archived_orphans/toolchain_bridge_session.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/toolchain_integration.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/tools/RawrXD_AuditAnything.asm** — Defines symbols called by other active files
+- **.archived_orphans/tools/RawrXD_FileAudit.asm** — Defines symbols called by other active files
+- **.archived_orphans/training_dialog.cpp** — Defines symbols called by other active files
+- **.archived_orphans/traits.cpp** — Defines symbols called by other active files
+- **.archived_orphans/transformer_block_scalar.cpp** — Defines symbols called by other active files
+- **.archived_orphans/transformer_inference_noqt.cpp** — Defines symbols called by other active files
+- **.archived_orphans/transformer_math.cpp** — Defines symbols called by other active files
+- **.archived_orphans/tsembd.cpp** — Defines symbols called by other active files
+- **.archived_orphans/unary-ops.c** — Defines symbols called by other active files
+- **.archived_orphans/unary-ops.cpp** — Defines symbols called by other active files
+- **.archived_orphans/unified_backend.cpp** — Defines symbols called by other active files
+- **.archived_orphans/unified_engine_coordinator.cpp** — Name matches critical keyword pattern
+- **.archived_orphans/universal_generator.cpp** — Defines symbols called by other active files
+- **.archived_orphans/universal_generator_service.cpp** — Defines symbols called by other active files
+- **.archived_orphans/universal_model_router.cpp** — Defines symbols called by other active files
+- **.archived_orphans/utils.cpp** — Defines symbols called by other active files
+- **.archived_orphans/vec.cpp** — Defines symbols called by other active files
+- **.archived_orphans/version_control_widget.cpp** — Defines symbols called by other active files
+- **.archived_orphans/vocabulary_loader.cpp** — Defines symbols called by other active files
+- **.archived_orphans/voice_processor.cpp** — Defines symbols called by other active files
+- **.archived_orphans/vscode_extension_compat.cpp** — Defines symbols called by other active files
+- **.archived_orphans/vsix_installer.cpp** — Defines symbols called by other active files
+- **.archived_orphans/vsix_loader.cpp** — Defines symbols called by other active files
+- **.archived_orphans/vulkan-shaders-gen.cpp** — Defines symbols called by other active files
+- **.archived_orphans/vulkan_compute_real.cpp** — Defines symbols called by other active files
+- **.archived_orphans/vulkan_compute_stub.cpp** — Defines symbols called by other active files
+- **.archived_orphans/vulkan_compute_unified.cpp** — Defines symbols called by other active files
+- **.archived_orphans/vulkan_mm.cpp** — Defines symbols called by other active files
+- **.archived_orphans/vulkan_stubs.cpp** — Defines symbols called by other active files
+- **.archived_orphans/websocket_hub.cpp** — Defines symbols called by other active files
+- **.archived_orphans/websocket_server.cpp** — Defines symbols called by other active files
+- **.archived_orphans/week5_final_integration.asm** — Defines symbols called by other active files
+- **.archived_orphans/wkv.cpp** — Defines symbols called by other active files
+- **.archived_orphans/worker-pool.c** — Defines symbols called by other active files
+- **.archived_orphans/zero_day_agentic_engine.cpp** — Name matches critical keyword pattern
+- **.archived_orphans_ultra/src/RawrXD_Application.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/RawrXD_InferenceCore.asm** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/RawrXD_Inference_Engine.asm** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/RawrXD_Swarm_Orchestrator.asm** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/action_executor.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/agentic/build_agentic/CMakeFiles/4.2.0/CompilerIdC/CMakeCCompilerId.c** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/agentic/build_agentic/CMakeFiles/4.2.0/CompilerIdCXX/CMakeCXXCompilerId.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/agentic/directstorage_real.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/agentic/nf4_decompressor_real.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/agentic/vulkan_compute_real.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/agentic_copilot_bridge.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/ai_model_caller_real.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/ai_workers/ai_digestion_engine.cpp** — Name matches critical keyword pattern
+- **.archived_orphans_ultra/src/ai_workers/ai_workers.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/build/CMakeFiles/4.2.0/CompilerIdCXX/CMakeCXXCompilerId.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/ci_cd_settings.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/digestion/digestion_reverse_engineering.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/directstorage_real.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/enhanced_cli.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/enhanced_model_loader.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/ggml-cpu/amx/mmq.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/ggml-cpu/arch/arm/cpu-feats.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/ggml-cpu/arch/arm/quants.c** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/ggml-cpu/arch/arm/repack.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/ggml-cpu/arch/loongarch/quants.c** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/ggml-cpu/arch/powerpc/cpu-feats.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/ggml-cpu/arch/powerpc/quants.c** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/ggml-cpu/arch/riscv/quants.c** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/ggml-cpu/arch/s390/quants.c** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/ggml-cpu/arch/wasm/quants.c** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/ggml-cpu/quants.c** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/ggml-cpu/repack.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/hf_hub_client.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/modules/inference_engine.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/multi_file_search.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/nf4_decompressor_real.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/orchestration/checkpoint_manager.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/orchestration/distributed_trainer.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/qtapp/MainWindow.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/qtapp/MainWindowSimple.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/qtapp/interpretability_panel.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/qtapp/settings_manager.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/qtapp/simple_gpu_test.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/qtapp/tokenizer_selector.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/security_manager.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/simple_test.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/token_generator.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/tokenizer_selector.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/toolchain_bridge.cpp** — Defines symbols called by other active files
+- **.archived_orphans_ultra/src/vsix_loader.cpp** — Defines symbols called by other active files
+- **.ultra_archived/codec.cpp** — Defines symbols called by other active files
+- **.ultra_archived/cpu-feats.cpp** — Defines symbols called by other active files
+- **.ultra_archived/minimal_qt_test.cpp** — Defines symbols called by other active files
+- **.ultra_archived/minimal_test.cpp** — Defines symbols called by other active files
+- **.ultra_archived/smoke_test.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/examples/common-ggml.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/examples/common.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/examples/gpt-2/main-alloc.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/examples/gpt-2/main-backend.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/examples/gpt-2/main-batched.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/examples/gpt-2/main-ctx.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/examples/gpt-2/main-sched.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/examples/gpt-2/quantize.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/examples/gpt-j/quantize.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/examples/mnist/mnist-common.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/examples/mnist/mnist-eval.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/examples/mnist/mnist-train.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/examples/perf-metal/perf-metal.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/examples/sam/sam.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/examples/simple/simple-backend.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/examples/simple/simple-ctx.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/examples/test-cmake/test-cmake.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/examples/yolo/yolo-image.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/examples/yolo/yolov3-tiny.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-alloc.c** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-backend-reg.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-backend.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-blas/ggml-blas.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-cann/acl_tensor.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-cann/aclnn_ops.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-cann/ggml-cann.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-cpu/amx/amx.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-cpu/amx/mmq.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-cpu/arch/arm/cpu-feats.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-cpu/arch/arm/quants.c** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-cpu/arch/arm/repack.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-cpu/arch/loongarch/quants.c** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-cpu/arch/powerpc/cpu-feats.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-cpu/arch/powerpc/quants.c** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-cpu/arch/riscv/quants.c** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-cpu/arch/riscv/repack.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-cpu/arch/s390/cpu-feats.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-cpu/arch/s390/quants.c** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-cpu/arch/wasm/quants.c** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-cpu/arch/x86/cpu-feats.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-cpu/arch/x86/quants.c** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-cpu/binary-ops.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-cpu/ggml-cpu.c** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-cpu/ggml-cpu.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-cpu/hbm.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-cpu/kleidiai/kernels.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-cpu/kleidiai/kleidiai.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-cpu/llamafile/sgemm.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-cpu/ops.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-cpu/quants.c** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-cpu/repack.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-cpu/spacemit/ime.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-cpu/spacemit/ime1_kernels.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-cpu/traits.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-cpu/unary-ops.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-cpu/vec.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-hexagon/ggml-hexagon.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-hexagon/htp-utils.c** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-hexagon/htp/act-ops.c** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-hexagon/htp/binary-ops.c** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-hexagon/htp/htp-dma.c** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-hexagon/htp/hvx-exp.c** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-hexagon/htp/hvx-inverse.c** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-hexagon/htp/hvx-sigmoid.c** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-hexagon/htp/hvx-utils.c** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-hexagon/htp/main.c** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-hexagon/htp/matmul-ops.c** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-hexagon/htp/rope-ops.c** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-hexagon/htp/softmax-ops.c** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-hexagon/htp/unary-ops.c** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-hexagon/htp/worker-pool.c** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-metal/ggml-metal-common.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-metal/ggml-metal-device.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-metal/ggml-metal-ops.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-metal/ggml-metal.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-opencl/ggml-opencl.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-opt.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-quants.c** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-rpc/ggml-rpc.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-sycl/binbcast.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-sycl/common.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-sycl/concat.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-sycl/conv.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-sycl/convert.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-sycl/count-equal.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-sycl/cpy.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-sycl/dmmv.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-sycl/element_wise.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-sycl/getrows.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-sycl/ggml-sycl.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-sycl/gla.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-sycl/im2col.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-sycl/mmq.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-sycl/mmvq.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-sycl/norm.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-sycl/outprod.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-sycl/pad.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-sycl/pad_reflect_1d.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-sycl/repeat_back.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-sycl/roll.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-sycl/rope.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-sycl/set.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-sycl/set_rows.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-sycl/softmax.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-sycl/ssm_conv.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-sycl/sycl_hw.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-sycl/tsembd.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-sycl/wkv.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-threading.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-vulkan/vulkan-shaders/vulkan-shaders-gen.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-webgpu/ggml-webgpu.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-zdnn/ggml-zdnn.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-zdnn/mmf.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml-zdnn/utils.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml.c** — Defines symbols called by other active files
+- **3rdparty/ggml/src/ggml.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/src/gguf.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/tests/test-arange.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/tests/test-backend-ops.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/tests/test-cont.c** — Defines symbols called by other active files
+- **3rdparty/ggml/tests/test-conv-transpose.c** — Defines symbols called by other active files
+- **3rdparty/ggml/tests/test-conv1d-dw-c1.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/tests/test-conv1d-dw-c2.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/tests/test-conv1d.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/tests/test-conv2d-dw.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/tests/test-conv2d.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/tests/test-customop.c** — Defines symbols called by other active files
+- **3rdparty/ggml/tests/test-dup.c** — Defines symbols called by other active files
+- **3rdparty/ggml/tests/test-interpolate.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/tests/test-opt.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/tests/test-pad-reflect-1d.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/tests/test-pool.c** — Defines symbols called by other active files
+- **3rdparty/ggml/tests/test-quantize-fns.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/tests/test-quantize-perf.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/tests/test-rel-pos.c** — Defines symbols called by other active files
+- **3rdparty/ggml/tests/test-roll.cpp** — Defines symbols called by other active files
+- **3rdparty/ggml/tests/test-timestep_embedding.cpp** — Defines symbols called by other active files
+- **CodexAIReverseEngine.asm** — Defines symbols called by other active files
+- **OrganizedPiProject/misc/Desktop/modern_browser_strike.cpp** — Defines symbols called by other active files
+- **OrganizedPiProject/misc/Desktop/opengl_main.cpp** — Defines symbols called by other active files
+- **OrganizedPiProject/misc/Desktop/secure-ide-asm/ai_engine.asm** — Name matches critical keyword pattern
+- **OrganizedPiProject/misc/Desktop/secure-ide-asm/main.asm** — Name matches critical keyword pattern
+- **OrganizedPiProject/misc/Desktop/secure-ide-asm/main_gui_editor.asm** — Name matches critical keyword pattern
+- **OrganizedPiProject/projects/Eng Src/Star5IDE/Agent.cpp** — Defines symbols called by other active files
+- **OrganizedPiProject/projects/Eng Src/Star5IDE/Config.cpp** — Defines symbols called by other active files
+- **OrganizedPiProject/projects/Eng Src/Star5IDE/LayoutManager.cpp** — Defines symbols called by other active files
+- **OrganizedPiProject/projects/Eng Src/Star5IDE/NotepadIDE.cpp** — Defines symbols called by other active files
+- **OrganizedPiProject/projects/Eng Src/Star5IDE/PropagationPreview.cpp** — Defines symbols called by other active files
+- **OrganizedPiProject/projects/src/main/cpp/hello.cpp** — Defines symbols called by other active files
+- **OrganizedPiProject/projects/unified-workspace/ide-suite/HelloPi.c** — Defines symbols called by other active files
+- **OrganizedPiProject/src/main/native/HelloPi.c** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/RawrXD-ModelLoader.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/Tiny-Home/src/aes.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/Tiny-Home/src/hotkey.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/Tiny-Home/src/llm.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/Tiny-Home/src/network.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/Tiny-Home/src/viewer.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/build/CMakeFiles/4.2.0/CompilerIdCXX/CMakeCXXCompilerId.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/src/backend/agentic_tools.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/src/backend/ollama_client.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/src/backend/websocket_server.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/src/baseline_profile.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/src/bench_main.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/src/chromatic_main.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/src/context/semantic_store.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/src/editor_buffer.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/src/gui.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/src/gzip_masm_store.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/src/hf_downloader.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/src/ide_main.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/src/ide_window.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/src/llm_adapter/GGUFRunner.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/src/main-minimal.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/src/main-simple.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/src/oc_stress.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/src/overclock_governor.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/src/overclock_vendor.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/src/qtapp/MainWindow.cpp** — Name matches critical keyword pattern
+- **RawrXD-ModelLoader/src/qtapp/MainWindowSimple.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/src/qtapp/TerminalManager.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/src/qtapp/main_qt.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/src/qtapp/main_simple.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/src/rawrxd_cli.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/src/session/ai_session.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/src/settings.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/src/syntax_engine.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/src/telemetry.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/src/telemetry/ai_metrics.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/src/telemetry/ai_metrics_stub.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/src/tools/file_ops.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/src/tools/git_client.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/src/ui/chromatic_window.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/src/win32app/simple_test.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/src/win32app/test_runner.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/tests/bench_compact_zlib.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/tests/bench_deflate_50mb.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/tests/bench_deflate_brutal.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/tests/bench_deflate_brutal_arm64.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/tests/bench_deflate_brutal_speed.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/tests/bench_deflate_masm.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/tests/bench_deflate_neon.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/tests/bench_deflate_qt.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/tests/bench_flash_all_quant.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/tests/bench_flash_asm_final.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/tests/bench_flash_asm_puppeteer.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/tests/bench_flash_asm_puppeteer_x3.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/tests/bench_flash_attn.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/tests/bench_q4_0_end2end.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/tests/bench_q8_0_end2end.cpp** — Defines symbols called by other active files
+- **RawrXD-ModelLoader/tests/gguf_inference_cli.cpp** — Defines symbols called by other active files
+- **RawrZ-Security/RawrZ-Payload-Builder/calc_aes-256-gcm_stub.cpp** — Defines symbols called by other active files
+- **RawrZ-Security/RawrZ-Payload-Builder/mirc-camellia-payload.cpp** — Defines symbols called by other active files
+- **RawrZ-Security/RawrZ-Payload-Builder/rawrz_loader.cpp** — Defines symbols called by other active files
+- **RawrZ-Security/RawrZ-Payload-Builder/src/native-engines/cpp-stub-generator.cpp** — Defines symbols called by other active files
+- **RawrZ-Security/RawrZ-Payload-Builder/test_payload.cpp** — Defines symbols called by other active files
+- **Ship/DLL_Test.cpp** — Defines symbols called by other active files
+- **Ship/Example_Application.cpp** — Defines symbols called by other active files
+- **Ship/Integration.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_AICompletion.c** — Defines symbols called by other active files
+- **Ship/RawrXD_AdvancedCodingAgent.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_AgentCoordinator.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_AgentCoordinator_Minimal.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_AgentPool.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_Agent_Final.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_AgenticController.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_AgenticEngine.c** — Defines symbols called by other active files
+- **Ship/RawrXD_AgenticEngine.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_CLI_Standalone.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_CommandCLI.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_Configuration.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_CopilotBridge.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_Core.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_ErrorHandler.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_Executor.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_FileBrowser.c** — Defines symbols called by other active files
+- **Ship/RawrXD_FileManager_Win32.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_FileOperations.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_FoundationTest.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_Foundation_Integration.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_InferenceEngine.c** — Defines symbols called by other active files
+- **Ship/RawrXD_InferenceEngine_Win32.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_LSPClient.c** — Defines symbols called by other active files
+- **Ship/RawrXD_MASM_CLI_Main.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_MainWindow_Win32.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_MemoryManager.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_ModelLoader.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_ModelRouter.c** — Defines symbols called by other active files
+- **Ship/RawrXD_NativeModelBridge.asm** — Name matches critical keyword pattern
+- **Ship/RawrXD_NativeModelBridge_CLEAN.asm** — Name matches critical keyword pattern
+- **Ship/RawrXD_NativeModelBridge_FRESH.asm** — Name matches critical keyword pattern
+- **Ship/RawrXD_NativeModelBridge_PRODUCTION.asm** — Name matches critical keyword pattern
+- **Ship/RawrXD_NativeModelBridge_TEST.asm** — Name matches critical keyword pattern
+- **Ship/RawrXD_NativeModelBridge_v2_FIXED.asm** — Name matches critical keyword pattern
+- **Ship/RawrXD_PlanOrchestrator.c** — Defines symbols called by other active files
+- **Ship/RawrXD_ResourceManager_Win32.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_Settings.c** — Defines symbols called by other active files
+- **Ship/RawrXD_SettingsManager_Win32.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_Streaming_Orchestrator.asm** — Name matches critical keyword pattern
+- **Ship/RawrXD_SyntaxHL.c** — Defines symbols called by other active files
+- **Ship/RawrXD_SystemMonitor.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_TaskScheduler.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_TerminalManager_Win32.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_TerminalMgr.c** — Defines symbols called by other active files
+- **Ship/RawrXD_TestBeacon.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_TestRunner.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_Test_Components.cpp** — Included by 1 file(s)
+- **Ship/RawrXD_TextEditor_Win32.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_Titan_Engine.asm** — Defines symbols called by other active files
+- **Ship/RawrXD_Win32_IDE.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_Win32_IDE_CLEAN.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_Win32_IDE_OLD.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_Win32_IDE_test.cpp** — Defines symbols called by other active files
+- **Ship/RawrXD_host.c** — Defines symbols called by other active files
+- **Ship/Titan_InferenceCore.asm** — Name matches critical keyword pattern
+- **Ship/Titan_Streaming_Orchestrator_Fixed.asm** — Name matches critical keyword pattern
+- **Ship/agentic_block.cpp** — Defines symbols called by other active files
+- **Ship/benchmark_suite.cpp** — Defines symbols called by other active files
+- **Ship/build/CMakeFiles/4.2.0/CompilerIdCXX/CMakeCXXCompilerId.cpp** — Defines symbols called by other active files
+- **Ship/build_ide/CMakeFiles/4.2.0/CompilerIdCXX/CMakeCXXCompilerId.cpp** — Defines symbols called by other active files
+- **Ship/build_ide/CMakeFiles/ShowIncludes/main.c** — Defines symbols called by other active files
+- **Ship/cli_backend.cpp** — Defines symbols called by other active files
+- **Ship/rawrxd_bridge.asm** — Defines symbols called by other active files
+- **Ship/src/agentic/monaco/MonacoIntegration.cpp** — Defines symbols called by other active files
+- **Ship/src/agentic/terminal/TerminalEmulator.cpp** — Defines symbols called by other active files
+- **Ship/src/cli_main.cpp** — Defines symbols called by other active files
+- **Ship/src/stress_test.cpp** — Defines symbols called by other active files
+- **Ship/stub_native_bridge.cpp** — Defines symbols called by other active files
+- **Ship/stub_titan_kernel.cpp** — Defines symbols called by other active files
+- **Ship/test_dll.c** — Defines symbols called by other active files
+- **Ship/test_file_operations.cpp** — Defines symbols called by other active files
+- **Ship/test_suite.cpp** — Defines symbols called by other active files
+- **Ship/test_tree.cpp** — Defines symbols called by other active files
+- **Ship/tools/cli_main.cpp** — Defines symbols called by other active files
+- **Ship/tools/stress_test.cpp** — Defines symbols called by other active files
+- **Tiny-Home/src/aes.cpp** — Defines symbols called by other active files
+- **Tiny-Home/src/hotkey.cpp** — Defines symbols called by other active files
+- **Tiny-Home/src/llm.cpp** — Defines symbols called by other active files
+- **Tiny-Home/src/network.cpp** — Defines symbols called by other active files
+- **Tiny-Home/src/viewer.cpp** — Defines symbols called by other active files
+- **asm/RawrXD_120B_Loader.asm** — Defines symbols called by other active files
+- **asm/Win32IDE_Sidebar_Core.asm** — Defines symbols called by other active files
+- **build/CMakeFiles/4.2.0/CompilerIdC/CMakeCCompilerId.c** — Defines symbols called by other active files
+- **build/CMakeFiles/4.2.0/CompilerIdCXX/CMakeCXXCompilerId.cpp** — Defines symbols called by other active files
+- **build/CMakeFiles/ShowIncludes/main.c** — Defines symbols called by other active files
+- **build/RawrXD_KQuant_Dequant.asm.e766d0cf77d1.patched.asm** — Defines symbols called by other active files
+- **build_clean/CMakeFiles/4.2.0/CompilerIdC/CMakeCCompilerId.c** — Defines symbols called by other active files
+- **build_clean/CMakeFiles/4.2.0/CompilerIdCXX/CMakeCXXCompilerId.cpp** — Defines symbols called by other active files
+- **build_clean/CMakeFiles/ShowIncludes/main.c** — Defines symbols called by other active files
+- **build_clean/Release/CMakeFiles/4.2.0/CompilerIdCXX/CMakeCXXCompilerId.cpp** — Defines symbols called by other active files
+- **build_clean/Release/CMakeFiles/ShowIncludes/main.c** — Defines symbols called by other active files
+- **build_fresh/CMakeFiles/4.2.0/CompilerIdC/CMakeCCompilerId.c** — Defines symbols called by other active files
+- **build_fresh/CMakeFiles/4.2.0/CompilerIdCXX/CMakeCXXCompilerId.cpp** — Defines symbols called by other active files
+- **build_fresh/CMakeFiles/ShowIncludes/main.c** — Defines symbols called by other active files
+- **build_gmake/CMakeFiles/4.2.0/CompilerIdC/CMakeCCompilerId.c** — Defines symbols called by other active files
+- **build_gmake/CMakeFiles/4.2.0/CompilerIdCXX/CMakeCXXCompilerId.cpp** — Defines symbols called by other active files
+- **build_gold/CMakeFiles/4.2.0/CompilerIdC/CMakeCCompilerId.c** — Defines symbols called by other active files
+- **build_gold/CMakeFiles/4.2.0/CompilerIdCXX/CMakeCXXCompilerId.cpp** — Defines symbols called by other active files
+- **build_gold/CMakeFiles/ShowIncludes/main.c** — Defines symbols called by other active files
+- **build_ide_ninja/CMakeFiles/4.2.0/CompilerIdC/CMakeCCompilerId.c** — Defines symbols called by other active files
+- **build_ide_ninja/CMakeFiles/4.2.0/CompilerIdCXX/CMakeCXXCompilerId.cpp** — Defines symbols called by other active files
+- **build_ide_ninja/CMakeFiles/ShowIncludes/main.c** — Defines symbols called by other active files
+- **build_manual/CMakeFiles/4.2.0/CompilerIdCXX/CMakeCXXCompilerId.cpp** — Defines symbols called by other active files
+- **build_mingw/CMakeFiles/4.2.0/CompilerIdCXX/CMakeCXXCompilerId.cpp** — Defines symbols called by other active files
+- **build_msvc/CMakeFiles/4.2.0/CompilerIdCXX/CMakeCXXCompilerId.cpp** — Defines symbols called by other active files
+- **build_msvc/CMakeFiles/ShowIncludes/main.c** — Defines symbols called by other active files
+- **build_nasm/CMakeFiles/4.2.0/CompilerIdCXX/CMakeCXXCompilerId.cpp** — Defines symbols called by other active files
+- **build_native/CMakeFiles/4.2.0/CompilerIdCXX/CMakeCXXCompilerId.cpp** — Defines symbols called by other active files
+- **build_new/CMakeFiles/4.2.0/CompilerIdC/CMakeCCompilerId.c** — Defines symbols called by other active files
+- **build_new/CMakeFiles/4.2.0/CompilerIdCXX/CMakeCXXCompilerId.cpp** — Defines symbols called by other active files
+- **build_new/CMakeFiles/ShowIncludes/main.c** — Defines symbols called by other active files
+- **build_prod/CMakeFiles/4.2.0/CompilerIdC/CMakeCCompilerId.c** — Defines symbols called by other active files
+- **build_prod/CMakeFiles/4.2.0/CompilerIdCXX/CMakeCXXCompilerId.cpp** — Defines symbols called by other active files
+- **build_prod/CMakeFiles/ShowIncludes/main.c** — Defines symbols called by other active files
+- **build_qt_free/CMakeFiles/4.2.0/CompilerIdC/CMakeCCompilerId.c** — Defines symbols called by other active files
+- **build_qt_free/CMakeFiles/4.2.0/CompilerIdCXX/CMakeCXXCompilerId.cpp** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/adler32.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/compress.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/contrib/blast/blast.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/contrib/infback9/infback9.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/contrib/infback9/inftree9.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/contrib/iostream/test.cpp** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/contrib/iostream/zfstream.cpp** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/contrib/iostream2/zstream_test.cpp** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/contrib/minizip/ioapi.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/contrib/minizip/iowin32.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/contrib/minizip/miniunz.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/contrib/minizip/minizip.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/contrib/minizip/mztools.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/contrib/minizip/unzip.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/contrib/minizip/zip.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/contrib/puff/puff.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/contrib/puff/pufftest.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/contrib/testzlib/testzlib.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/contrib/untgz/untgz.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/crc32.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/deflate.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/examples/enough.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/examples/fitblk.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/examples/gun.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/examples/gzappend.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/examples/gzjoin.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/examples/gzlog.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/examples/gznorm.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/examples/zpipe.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/examples/zran.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/gzclose.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/gzlib.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/gzread.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/gzwrite.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/infback.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/inffast.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/inflate.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/inftrees.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/test/example.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/test/infcover.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/test/minigzip.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/trees.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/uncompr.c** — Defines symbols called by other active files
+- **build_qt_free/_deps/zlib-src/zutil.c** — Defines symbols called by other active files
+- **build_temp/CMakeFiles/4.2.0/CompilerIdC/CMakeCCompilerId.c** — Defines symbols called by other active files
+- **build_temp/CMakeFiles/4.2.0/CompilerIdCXX/CMakeCXXCompilerId.cpp** — Defines symbols called by other active files
+- **build_test_parse/CMakeFiles/4.2.0/CompilerIdC/CMakeCCompilerId.c** — Defines symbols called by other active files
+- **build_test_parse/CMakeFiles/4.2.0/CompilerIdCXX/CMakeCXXCompilerId.cpp** — Defines symbols called by other active files
+- **build_test_parse/CMakeFiles/ShowIncludes/main.c** — Defines symbols called by other active files
+- **build_universal/CMakeFiles/4.2.0/CompilerIdC/CMakeCCompilerId.c** — Defines symbols called by other active files
+- **build_universal/CMakeFiles/4.2.0/CompilerIdCXX/CMakeCXXCompilerId.cpp** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/adler32.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/compress.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/contrib/blast/blast.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/contrib/infback9/infback9.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/contrib/infback9/inftree9.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/contrib/iostream/test.cpp** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/contrib/iostream/zfstream.cpp** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/contrib/iostream2/zstream_test.cpp** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/contrib/minizip/ioapi.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/contrib/minizip/iowin32.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/contrib/minizip/miniunz.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/contrib/minizip/minizip.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/contrib/minizip/mztools.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/contrib/minizip/unzip.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/contrib/minizip/zip.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/contrib/puff/puff.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/contrib/puff/pufftest.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/contrib/testzlib/testzlib.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/contrib/untgz/untgz.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/crc32.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/deflate.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/examples/enough.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/examples/fitblk.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/examples/gun.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/examples/gzappend.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/examples/gzjoin.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/examples/gzlog.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/examples/gznorm.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/examples/zpipe.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/examples/zran.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/gzclose.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/gzlib.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/gzread.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/gzwrite.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/infback.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/inffast.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/inflate.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/inftrees.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/test/example.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/test/infcover.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/test/minigzip.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/trees.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/uncompr.c** — Defines symbols called by other active files
+- **build_universal/_deps/zlib-src/zutil.c** — Defines symbols called by other active files
+- **build_verify/CMakeFiles/4.2.0/CompilerIdCXX/CMakeCXXCompilerId.cpp** — Defines symbols called by other active files
+- **build_verify/CMakeFiles/ShowIncludes/main.c** — Defines symbols called by other active files
+- **build_win32_gui_test/CMakeFiles/4.2.0/CompilerIdCXX/CMakeCXXCompilerId.cpp** — Defines symbols called by other active files
+- **build_win32_gui_test/CMakeFiles/ShowIncludes/main.c** — Defines symbols called by other active files
+- **cameleon/CameleonCore.asm** — Name matches critical keyword pattern
+- **compilers/_patched/eon_compiler_main.asm** — Name matches critical keyword pattern
+- **deobf/test_deobf.cpp** — Defines symbols called by other active files
+- **dist/RawrXD_Enterprise_v3.0/extras/codex_reverse_engine/codex_reverse_engine.c** — Defines symbols called by other active files
+- **dist/RawrXD_Enterprise_v3.0/extras/powershield/rawr-assist/node_modules/@tootallnate/quickjs-emscripten/c/interface.c** — Defines symbols called by other active files
+- **dist/RawrXD_Enterprise_v3.0/extras/powershield/test-projects/test-nasm-app/main.asm** — Name matches critical keyword pattern
+- **enterprise/EnterpriseAIReasoningEngine.cpp** — Defines symbols called by other active files
+- **enterprise/EnterpriseAgentBridge.cpp** — Defines symbols called by other active files
+- **enterprise/EnterpriseAutonomousCodeReview.cpp** — Defines symbols called by other active files
+- **enterprise/EnterpriseAutonomousMissionExecutor.cpp** — Defines symbols called by other active files
+- **enterprise/EnterpriseMetrics.cpp** — Defines symbols called by other active files
+- **enterprise/EnterpriseSecurity.cpp** — Defines symbols called by other active files
+- **enterprise/EnterpriseTelemetry.cpp** — Defines symbols called by other active files
+- **enterprise/EnterpriseWorkflowEngine.cpp** — Defines symbols called by other active files
+- **enterprise/QuantumSafeSecurity.cpp** — Defines symbols called by other active files
+- **enterprise/ToolScheduler.cpp** — Defines symbols called by other active files
+- **examples/common-ggml.cpp** — Defines symbols called by other active files
+- **examples/common.cpp** — Defines symbols called by other active files
+- **examples/enhanced_streaming_loader_examples.cpp** — Defines symbols called by other active files
+- **examples/gguf_server_example.cpp** — Defines symbols called by other active files
+- **examples/gpt-2/main-alloc.cpp** — Defines symbols called by other active files
+- **examples/gpt-2/main-backend.cpp** — Defines symbols called by other active files
+- **examples/gpt-2/main-batched.cpp** — Defines symbols called by other active files
+- **examples/gpt-2/main-ctx.cpp** — Defines symbols called by other active files
+- **examples/gpt-2/main-sched.cpp** — Defines symbols called by other active files
+- **examples/gpt-2/quantize.cpp** — Defines symbols called by other active files
+- **examples/gpt-j/quantize.cpp** — Defines symbols called by other active files
+- **examples/mnist/mnist-common.cpp** — Defines symbols called by other active files
+- **examples/mnist/mnist-eval.cpp** — Defines symbols called by other active files
+- **examples/mnist/mnist-train.cpp** — Defines symbols called by other active files
+- **examples/perf-metal/perf-metal.cpp** — Defines symbols called by other active files
+- **examples/sam/sam.cpp** — Defines symbols called by other active files
+- **examples/simple/simple-backend.cpp** — Defines symbols called by other active files
+- **examples/simple/simple-ctx.cpp** — Defines symbols called by other active files
+- **examples/test-cmake/test-cmake.cpp** — Defines symbols called by other active files
+- **examples/yolo/yolo-image.cpp** — Defines symbols called by other active files
+- **examples/yolo/yolov3-tiny.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/Extensions/fabioz.vscode-pydev-0.16.0-universal/server/plugins/org.python.pydev.core_13.1.0.202509210817/pysrc/pydevd_attach_to_process/linux_and_mac/attach.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/Extensions/fabioz.vscode-pydev-0.16.0-universal/server/plugins/org.python.pydev.core_13.1.0.202509210817/pysrc/pydevd_attach_to_process/windows/attach.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/Extensions/fabioz.vscode-pydev-0.16.0-universal/server/plugins/org.python.pydev.core_13.1.0.202509210817/pysrc/pydevd_attach_to_process/windows/inject_dll.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/Extensions/fabioz.vscode-pydev-0.16.0-universal/server/plugins/org.python.pydev.core_13.1.0.202509210817/pysrc/pydevd_attach_to_process/windows/run_code_on_dllmain.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/Extensions/fabioz.vscode-pydev-python-debugger-0.3.0-universal/PyDev.Debugger/pydevd_attach_to_process/linux_and_mac/attach.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/Extensions/fabioz.vscode-pydev-python-debugger-0.3.0-universal/PyDev.Debugger/pydevd_attach_to_process/windows/attach.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/Extensions/fabioz.vscode-pydev-python-debugger-0.3.0-universal/PyDev.Debugger/pydevd_attach_to_process/windows/inject_dll.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/Extensions/fabioz.vscode-pydev-python-debugger-0.3.0-universal/PyDev.Debugger/pydevd_attach_to_process/windows/run_code_on_dllmain.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/Extensions/ms-python.debugpy-2025.18.0-win32-x64/bundled/libs/debugpy/_vendored/pydevd/pydevd_attach_to_process/linux_and_mac/attach.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/Extensions/ms-python.debugpy-2025.18.0-win32-x64/bundled/libs/debugpy/_vendored/pydevd/pydevd_attach_to_process/windows/attach.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/Extensions/ms-python.debugpy-2025.18.0-win32-x64/bundled/libs/debugpy/_vendored/pydevd/pydevd_attach_to_process/windows/inject_dll.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/Extensions/ms-python.debugpy-2025.18.0-win32-x64/bundled/libs/debugpy/_vendored/pydevd/pydevd_attach_to_process/windows/run_code_on_dllmain.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-103a9798/YqaS.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-11696880/M6lS.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-11696880/Rs4a.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-11696880/vzt0.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-12178f38/jFRI.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-129fd299/XPMF.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-13369bc0/3hnH.c** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-13cbd968/To0A.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-162e4ebb/QeNH.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-18893d41/T6rM.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-18c23821/DIvp.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-19df708e/zuL4.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-1a984de7/4m1R.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-1a984de7/HVt2.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-1a984de7/JPqR.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-1a984de7/Yz3w.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-1ba43ede/0GUl.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-1d176c28/VBDy.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-1df241a7/uxe1.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-1e740c57/sWSO.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-205fea27/DE4w.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-2080b3ab/b2mN.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-22f314a/TUpI.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-2437e20a/6aO4.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-24f13e53/9AZs.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-256e45e9/ukxb.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-261d5bff/vGYP.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-262d79da/3Rh2.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-262d79da/82NE.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-262d79da/BZbU.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-262d79da/BhAV.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-262d79da/Z1Wz.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-262d79da/g74J.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-262d79da/gbV3.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-262d79da/rarQ.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-288b12d6/onY3.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-28992a57/JuwY.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-2a1610d8/rIvk.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-2b9efb6f/3Qgn.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-2ba21bb7/KJtH.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-2fc6f8c8/DXrF.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-2fc6f8c8/xuse.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-30369540/vw8O.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-312c797f/sbYo.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-31b0b5ad/j5Qr.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-3628e19a/j3wc.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-3780c5d7/Undo.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-38b4ea51/5gMd.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-394e061a/0dW4.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-394e061a/6h7F.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-394e061a/HcL2.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-394e061a/jLDz.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-394e061a/sgjU.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-394e061a/w52J.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-39f55f8d/BVJC.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-3ab3b0c1/xOBO.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-3ba8847b/kWZq.cpp** — Defines symbols called by other active files
+- **extracted_chats/cursor/History/-3bb33237/D2Ly.c** — Defines symbols called by other active files
+- **gpu_dma_complete_reverse_engineered.asm** — Defines symbols called by other active files
+- **ide/cli/codex_cli_ide.cpp** — Defines symbols called by other active files
+- **ide/gui/codex_gui_ide.cpp** — Defines symbols called by other active files
+- **integration_layer.asm** — Defines symbols called by other active files
+- **interconnect/RawrXD_Core_Utils.asm** — Name matches critical keyword pattern
+- **interconnect/RawrXD_DllMain.asm** — Name matches critical keyword pattern
+- **interconnect/RawrXD_Swarm_Orchestrator.asm** — Defines symbols called by other active files
+- **itsmehrawrxd-master/06-Test-Files/Test payload data for assembly_aes-256-gcm_stub.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/06-Test-Files/Test payload data for c_aes-256-gcm_stub.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/06-Test-Files/Test payload data for cpp_aes-256-gcm_stub.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/06-Test-Files/Test payload data for dll_aes-256-gcm_stub.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/06-Test-Files/Test payload data for dylib_aes-256-gcm_stub.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/06-Test-Files/Test payload data for so_aes-256-gcm_stub.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/06-Test-Files/Test payload for console_aes-256-gcm_stub.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/06-Test-Files/Test payload for driver_aes-256-gcm_stub.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/06-Test-Files/Test payload for library_aes-256-gcm_stub.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/06-Test-Files/Test payload for linux-x64_aes-256-gcm_stub.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/06-Test-Files/Test payload for linux-x86_aes-256-gcm_stub.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/06-Test-Files/Test payload for service_aes-256-gcm_stub.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/06-Test-Files/Test payload for win32-x64_aes-256-gcm_stub.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/06-Test-Files/Test payload for win32-x86_aes-256-gcm_stub.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/06-Test-Files/Test payload for windows_aes-256-gcm_stub.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/06-Test-Files/Test payload with chacha20_aes-256-gcm_stub.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/06-Test-Files/test-advanced-data_aes-256-gcm_stub.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/06-Test-Files/test-executable_aes-256-gcm_stub.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/06-Test-Files/test_aes-256-gcm_stub.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/09-Generated-Files/generated_bots/ircbot_rawrz_bot_1758461125764.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/10-Temp-Files/loader.c** — Name matches critical keyword pattern
+- **itsmehrawrxd-master/10-Temp-Files/test_aes-256-gcm_stub.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/Eon-ASM/compilers/eon_bootstrap_compiler.asm** — Name matches critical keyword pattern
+- **itsmehrawrxd-master/Eon-ASM/compilers/eon_compiler.c** — Defines symbols called by other active files
+- **itsmehrawrxd-master/Eon-ASM/compilers/eon_compiler_complete.c** — Defines symbols called by other active files
+- **itsmehrawrxd-master/Eon-ASM/compilers/eon_compiler_main.asm** — Name matches critical keyword pattern
+- **itsmehrawrxd-master/Eon-ASM/compilers/eon_lexer_complete.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/Eon-ASM/compilers/eon_lexer_core.asm** — Name matches critical keyword pattern
+- **itsmehrawrxd-master/Eon-ASM/compilers/eon_llvm_compiler.c** — Defines symbols called by other active files
+- **itsmehrawrxd-master/Eon-ASM/compilers/eon_template_engine.asm** — Name matches critical keyword pattern
+- **itsmehrawrxd-master/Eon-ASM/compilers/eon_token_definitions.asm** — Name matches critical keyword pattern
+- **itsmehrawrxd-master/Eon-ASM/examples/eon_compiler/src/main.c** — Defines symbols called by other active files
+- **itsmehrawrxd-master/Eon-ASM/examples/eon_compiler/src/parser.c** — Defines symbols called by other active files
+- **itsmehrawrxd-master/Eon-ASM/examples/eon_compiler/src/symtab.c** — Defines symbols called by other active files
+- **itsmehrawrxd-master/agent/compiler_agent.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/agentic_core.asm** — Defines symbols called by other active files
+- **itsmehrawrxd-master/ai/agent/meta_agent_advanced.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/ai/agent/wrappers/external_agents.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/ai/ai_core_hybrid.cpp** — Name matches critical keyword pattern
+- **itsmehrawrxd-master/ai/cognitive/state_manager.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/ai/custom_ai_models.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/ai/ei/module.cpp** — Included by 1 file(s)
+- **itsmehrawrxd-master/ai/enhanced_ai_models.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/ai/ide-debug.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/ai/ide-review.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/ai/ide-vdb.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/ai/in_memory_db.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/ai/metacognition/self_correction.cpp** — Included by 1 file(s)
+- **itsmehrawrxd-master/ai/project_knowledge_graph.cpp** — Included by 1 file(s)
+- **itsmehrawrxd-master/ai/providers/keyless_provider.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/ai/sensor_fusion/fusion_engine.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/ai/tke/engine.cpp** — Included by 1 file(s)
+- **itsmehrawrxd-master/bootstrap_reverser.asm** — Name matches critical keyword pattern
+- **itsmehrawrxd-master/bootstrapping_validation.asm** — Name matches critical keyword pattern
+- **itsmehrawrxd-master/cognitive_agents_integration.asm** — Name matches critical keyword pattern
+- **itsmehrawrxd-master/core/in_memory_fs.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/cpp_bootstrap_compiler.cpp** — Name matches critical keyword pattern
+- **itsmehrawrxd-master/generator/universal_codegen.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/ide_final.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/language_core/dla.cpp** — Included by 1 file(s)
+- **itsmehrawrxd-master/language_core/ulr.cpp** — Included by 1 file(s)
+- **itsmehrawrxd-master/llm/dynamic_loader.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/llm/inference_engine.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/n0mn0m_meta_engine.asm** — Name matches critical keyword pattern
+- **itsmehrawrxd-master/n0mn0m_quad_engine.asm** — Name matches critical keyword pattern
+- **itsmehrawrxd-master/n0mn0m_scripting_engine.asm** — Name matches critical keyword pattern
+- **itsmehrawrxd-master/n0mn0m_template_engine.asm** — Name matches critical keyword pattern
+- **itsmehrawrxd-master/nlp/nl_to_distraction.cpp** — Included by 1 file(s)
+- **itsmehrawrxd-master/online_ide_workspace/source/test_cpp.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/online_ide_workspace/source/test_online.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/os/event_bus.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/security/pms/framework.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/semantic_analyzer_test.c** — Defines symbols called by other active files
+- **itsmehrawrxd-master/src/templates/simple-loader.c** — Name matches critical keyword pattern
+- **itsmehrawrxd-master/super_generator_init.asm** — Name matches critical keyword pattern
+- **itsmehrawrxd-master/template_generator_main.asm** — Name matches critical keyword pattern
+- **itsmehrawrxd-master/test_aes-256-gcm_stub.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/test_program.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/toolchain/adaptive_compiler.cpp** — Included by 1 file(s)
+- **itsmehrawrxd-master/toolchain/cmake_parser.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/toolchain/msbuild_bridge.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/toolchain/vs_importer.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/ui/context_ui.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/ui/visual_flow.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/working_cpp_compiler_10.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/working_cpp_compiler_11.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/working_cpp_compiler_13.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/working_cpp_compiler_14.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/working_cpp_compiler_2.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/working_cpp_compiler_5.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/working_cpp_compiler_6.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/working_cpp_compiler_7.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/working_cpp_compiler_8.cpp** — Defines symbols called by other active files
+- **itsmehrawrxd-master/working_cpp_compiler_9.cpp** — Defines symbols called by other active files
+- **jthread_test.cpp** — Defines symbols called by other active files
+- **jthread_test_flags.cpp** — Defines symbols called by other active files
+- **main_native.cpp** — Defines symbols called by other active files
+- **mmap_loader.asm** — Defines symbols called by other active files
+- **native/gguf_native_loader.cpp** — Defines symbols called by other active files
+- **native_core/gguf_native_loader.cpp** — Defines symbols called by other active files
+- **native_core/main_native.cpp** — Defines symbols called by other active files
+- **native_gguf_loader.cpp** — Defines symbols called by other active files
+- **native_inference/build/CMakeFiles/4.2.0/CompilerIdCXX/CMakeCXXCompilerId.cpp** — Defines symbols called by other active files
+- **native_inference/native_gguf_loader.cpp** — Defines symbols called by other active files
+- **native_inference/native_gguf_loader_old.cpp** — Defines symbols called by other active files
+- **native_inference/native_inference_engine.cpp** — Defines symbols called by other active files
+- **native_inference/test_gguf.cpp** — Defines symbols called by other active files
+- **native_inference/test_main.cpp** — Defines symbols called by other active files
+- **native_inference/test_terraform_integration.cpp** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/closure.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/aarch64/ffi.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/alpha/ffi.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/arc/ffi.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/arm/ffi.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/avr32/ffi.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/bfin/ffi.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/closures.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/cris/ffi.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/debug.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/dlmalloc.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/frv/ffi.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/ia64/ffi.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/java_raw_api.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/m32r/ffi.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/m68k/ffi.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/metag/ffi.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/microblaze/ffi.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/mips/ffi.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/moxie/ffi.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/nios2/ffi.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/or1k/ffi.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/pa/ffi.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/powerpc/ffi.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/powerpc/ffi_darwin.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/powerpc/ffi_linux64.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/powerpc/ffi_sysv.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/prep_cif.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/raw_api.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/riscv/ffi.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/s390/ffi.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/sh/ffi.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/sh64/ffi.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/sparc/ffi.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/sparc/ffi64.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/tile/ffi.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/vax/ffi.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/x86/ffi.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/x86/ffi64.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/x86/ffiw64.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/src/xtensa/ffi.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/test.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.bhaible/test-call.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.bhaible/test-callback.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.bhaible/testcases.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/align_mixed.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/align_stdcall.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/closure_fn0.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/closure_fn1.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/closure_fn2.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/closure_fn3.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/closure_fn4.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/closure_fn5.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/closure_fn6.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/closure_loc_fn0.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/closure_stdcall.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/closure_thiscall.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_12byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_16byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_18byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_19byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_1_1byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_20byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_20byte1.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_24byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_2byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_3_1byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_3byte1.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_3byte2.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_4_1byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_4byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_5_1_byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_5byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_64byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_6_1_byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_6byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_7_1_byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_7byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_8byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_9byte1.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_9byte2.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_align_double.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_align_float.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_align_longdouble.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_align_longdouble_split.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_align_longdouble_split2.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_align_pointer.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_align_sint16.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_align_sint32.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_align_sint64.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_align_uint16.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_align_uint32.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_align_uint64.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_dbls_struct.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_double.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_double_va.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_float.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_longdouble.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_longdouble_va.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_multi_schar.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_multi_sshort.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_multi_sshortchar.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_multi_uchar.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_multi_ushort.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_multi_ushortchar.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_pointer.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_pointer_stack.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_schar.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_sint.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_sshort.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_uchar.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_uint.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_ulonglong.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/cls_ushort.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/err_bad_abi.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/err_bad_typedef.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/fastthis1_win32.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/fastthis2_win32.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/fastthis3_win32.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/float.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/float1.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/float2.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/float3.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/float4.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/float_va.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/many.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/many2.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/many2_win32.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/many_double.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/many_mixed.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/many_win32.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/negint.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/nested_struct.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/nested_struct1.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/nested_struct10.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/nested_struct2.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/nested_struct3.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/nested_struct4.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/nested_struct5.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/nested_struct6.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/nested_struct7.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/nested_struct8.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/nested_struct9.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/pr1172638.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/problem1.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/promotion.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/pyobjc-tc.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/return_dbl.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/return_dbl1.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/return_dbl2.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/return_fl.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/return_fl1.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/return_fl2.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/return_fl3.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/return_ldl.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/return_ll.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/return_ll1.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/return_sc.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/return_sl.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/return_uc.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/return_ul.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/stret_large.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/stret_large2.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/stret_medium.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/stret_medium2.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/strlen.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/strlen2.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/strlen2_win32.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/strlen3.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/strlen4.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/strlen_win32.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/struct1.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/struct10.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/struct1_win32.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/struct2.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/struct2_win32.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/struct3.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/struct4.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/struct5.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/struct6.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/struct7.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/struct8.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/struct9.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/testclosure.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.call/uninitialized.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/closure_fn0.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/closure_fn1.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/closure_fn2.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/closure_fn3.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/closure_fn4.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/closure_fn5.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/closure_fn6.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/closure_loc_fn0.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/closure_simple.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_12byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_16byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_18byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_19byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_1_1byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_20byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_20byte1.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_24byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_2byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_3_1byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_3byte1.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_3byte2.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_3float.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_4_1byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_4byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_5_1_byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_5byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_64byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_6_1_byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_6byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_7_1_byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_7byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_8byte.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_9byte1.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_9byte2.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_align_double.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_align_float.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_align_longdouble.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_align_longdouble_split.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_align_longdouble_split2.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_align_pointer.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_align_sint16.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_align_sint32.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_align_sint64.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_align_uint16.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_align_uint32.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_align_uint64.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_dbls_struct.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_double.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_double_va.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_float.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_longdouble.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_longdouble_va.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_many_mixed_args.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_many_mixed_float_double.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_multi_schar.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_multi_sshort.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_multi_sshortchar.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_multi_uchar.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_multi_ushort.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_multi_ushortchar.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_pointer.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_pointer_stack.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_schar.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_sint.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_sshort.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_uchar.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_uchar_va.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_uint.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_uint_va.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_ulong_va.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_ulonglong.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_ushort.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/cls_ushort_va.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/err_bad_abi.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/nested_struct.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/nested_struct1.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/nested_struct10.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/nested_struct11.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/nested_struct2.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/nested_struct3.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/nested_struct4.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/nested_struct5.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/nested_struct6.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/nested_struct7.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/nested_struct8.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/nested_struct9.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/problem1.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/stret_large.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/stret_large2.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/stret_medium.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/stret_medium2.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.closures/testclosure.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.complex/complex_int.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.go/aa-direct.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/deps/libffi/testsuite/libffi.go/closure1.c** — Defines symbols called by other active files
+- **node_modules/ffi-napi/example/factorial/factorial.c** — Defines symbols called by other active files
+- **plugins/hello_world/hello_world.cpp** — Defines symbols called by other active files
+- **plugins/universal_generator/plugin.cpp** — Defines symbols called by other active files
+- **temp/pattern-sources/RawrXD_PatternBridge.asm** — Name matches critical keyword pattern
+- **test/Phase1_Test.cpp** — Defines symbols called by other active files
+- **test/Phase2_Test.cpp** — Defines symbols called by other active files
+- **test/Phase5_Test.cpp** — Defines symbols called by other active files
+- **test/test_editorwidget.cpp** — Defines symbols called by other active files
+- **test_7_systems.cpp** — Defines symbols called by other active files
+- **test_agent_hot_patcher.cpp** — Defines symbols called by other active files
+- **test_agent_hot_patcher_integration.cpp** — Defines symbols called by other active files
+- **test_chat_integration.cpp** — Defines symbols called by other active files
+- **test_complex_includes.cpp** — Defines symbols called by other active files
+- **test_conflict.cpp** — Defines symbols called by other active files
+- **test_conflict_2.cpp** — Defines symbols called by other active files
+- **test_http_chat_integration.cpp** — Defines symbols called by other active files
+- **test_ioctl_header.cpp** — Defines symbols called by other active files
+- **test_keyword_hashtable.cpp** — Defines symbols called by other active files
+- **test_masm_integration.cpp** — Defines symbols called by other active files
+- **test_mock_output/test_c.c** — Defines symbols called by other active files
+- **test_mock_output/test_cpp.cpp** — Defines symbols called by other active files
+- **test_mock_output/test_cross.c** — Defines symbols called by other active files
+- **test_model_trainer_validation.cpp** — Defines symbols called by other active files
+- **test_native_http_integration.cpp** — Defines symbols called by other active files
+- **test_network_relay.cpp** — Defines symbols called by other active files
+- **test_output_20260117_104846/test_c.c** — Defines symbols called by other active files
+- **test_output_20260117_104846/test_cpp.cpp** — Defines symbols called by other active files
+- **test_output_20260117_104846/test_cross.c** — Defines symbols called by other active files
+- **test_output_20260117_112243/test_c.c** — Defines symbols called by other active files
+- **test_output_20260117_112243/test_cpp.cpp** — Defines symbols called by other active files
+- **test_output_20260117_112243/test_cross.c** — Defines symbols called by other active files
+- **test_output_20260117_112652/test_c.c** — Defines symbols called by other active files
+- **test_output_20260117_112652/test_cpp.cpp** — Defines symbols called by other active files
+- **test_output_20260117_112652/test_cross.c** — Defines symbols called by other active files
+- **test_output_20260117_112729/test_c.c** — Defines symbols called by other active files
+- **test_output_20260117_112729/test_cpp.cpp** — Defines symbols called by other active files
+- **test_output_20260117_112729/test_cross.c** — Defines symbols called by other active files
+- **test_output_20260117_112955/test_c.c** — Defines symbols called by other active files
+- **test_output_20260117_112955/test_cpp.cpp** — Defines symbols called by other active files
+- **test_output_20260117_112955/test_cross.c** — Defines symbols called by other active files
+- **test_output_20260117_113118/test_c.c** — Defines symbols called by other active files
+- **test_output_20260117_113118/test_cpp.cpp** — Defines symbols called by other active files
+- **test_output_20260117_113118/test_cross.c** — Defines symbols called by other active files
+- **test_output_20260117_114817/test_c.c** — Defines symbols called by other active files
+- **test_output_20260117_114817/test_cpp.cpp** — Defines symbols called by other active files
+- **test_output_20260117_114817/test_cross.c** — Defines symbols called by other active files
+- **test_output_20260117_120008/test_c.c** — Defines symbols called by other active files
+- **test_output_20260117_120008/test_cpp.cpp** — Defines symbols called by other active files
+- **test_output_20260117_120008/test_cross.c** — Defines symbols called by other active files
+- **test_output_20260117_120008/test_javascript.exe.wrapper.cpp** — Defines symbols called by other active files
+- **test_output_20260117_120008/test_python.exe.wrapper.cpp** — Defines symbols called by other active files
+- **test_output_20260219_085759/test_c.c** — Defines symbols called by other active files
+- **test_output_20260219_085759/test_cpp.cpp** — Defines symbols called by other active files
+- **test_output_20260219_085759/test_cross.c** — Defines symbols called by other active files
+- **test_p2p.cpp** — Defines symbols called by other active files
+- **test_persistence.cpp** — Defines symbols called by other active files
+- **test_regex.cpp** — Defines symbols called by other active files
+- **test_stop_token.cpp** — Defines symbols called by other active files
+- **test_stop_token_windows_first.cpp** — Defines symbols called by other active files
+- **test_stub.cpp** — Defines symbols called by other active files
+- **test_suite/tests/TestEnterpriseAgentBridge.cpp** — Defines symbols called by other active files
+- **test_suite/tests/TestQuantumSafeSecurity.cpp** — Defines symbols called by other active files
+- **test_thread_compare.cpp** — Defines symbols called by other active files
+- **tests/bench_compact_zlib.cpp** — Defines symbols called by other active files
+- **tests/bench_deflate_50mb.cpp** — Defines symbols called by other active files
+- **tests/bench_deflate_brutal.cpp** — Defines symbols called by other active files
+- **tests/bench_deflate_brutal_arm64.cpp** — Defines symbols called by other active files
+- **tests/bench_deflate_brutal_speed.cpp** — Defines symbols called by other active files
+- **tests/bench_deflate_masm.cpp** — Defines symbols called by other active files
+- **tests/bench_deflate_neon.cpp** — Defines symbols called by other active files
+- **tests/bench_deflate_qt.cpp** — Defines symbols called by other active files
+- **tests/bench_flash_all_quant.cpp** — Defines symbols called by other active files
+- **tests/bench_flash_asm_final.cpp** — Defines symbols called by other active files
+- **tests/bench_flash_asm_puppeteer.cpp** — Defines symbols called by other active files
+- **tests/bench_flash_asm_puppeteer_x3.cpp** — Defines symbols called by other active files
+- **tests/bench_flash_attn.cpp** — Defines symbols called by other active files
+- **tests/bench_q2k_vs_q4k_e2e.cpp** — Defines symbols called by other active files
+- **tests/bench_q4_0_end2end.cpp** — Defines symbols called by other active files
+- **tests/bench_q8_0_end2end.cpp** — Defines symbols called by other active files
+- **tests/benchmark_coldburst.cpp** — Defines symbols called by other active files
+- **tests/benchmark_completions.cpp** — Defines symbols called by other active files
+- **tests/benchmark_completions_full.cpp** — Defines symbols called by other active files
+- **tests/benchmark_ioring_performance.cpp** — Defines symbols called by other active files
+- **tests/benchmark_production_verification.cpp** — Defines symbols called by other active files
+- **tests/benchmark_zerocopy_microbench.cpp** — Defines symbols called by other active files
+- **tests/fuzz_test_agentic_file_operations.cpp** — Defines symbols called by other active files
+- **tests/gguf_inference_cli.cpp** — Defines symbols called by other active files
+- **tests/harness_sovereign_thermal.cpp** — Defines symbols called by other active files
+- **tests/harness_vram_budget.cpp** — Defines symbols called by other active files
+- **tests/integration/test_phase2_integration.cpp** — Defines symbols called by other active files
+- **tests/masm/writers_test.cpp** — Defines symbols called by other active files
+- **tests/mmf_diagnostic.cpp** — Defines symbols called by other active files
+- **tests/model_registry_test.cpp** — Defines symbols called by other active files
+- **tests/native/test_gguf_loader.cpp** — Defines symbols called by other active files
+- **tests/native/test_metrics_server.cpp** — Defines symbols called by other active files
+- **tests/native/test_quantization.cpp** — Defines symbols called by other active files
+- **tests/nvme_temp_diagnostic.cpp** — Defines symbols called by other active files
+- **tests/nvme_thermal_reader.cpp** — Defines symbols called by other active files
+- **tests/nvme_thermal_sidecar_clean.cpp** — Defines symbols called by other active files
+- **tests/nvme_thermal_sidecar_cpp.cpp** — Defines symbols called by other active files
+- **tests/performance/test_phase2_performance.cpp** — Defines symbols called by other active files
+- **tests/quant_correctness_tests.cpp** — Defines symbols called by other active files
+- **tests/quant_engine_smoke.cpp** — Defines symbols called by other active files
+- **tests/quant_scalar_smoke.cpp** — Defines symbols called by other active files
+- **tests/sandboxed_terminal_test.cpp** — Defines symbols called by other active files
+- **tests/semantic_diff_analyzer_test.cpp** — Defines symbols called by other active files
+- **tests/test-arange.cpp** — Defines symbols called by other active files
+- **tests/test-backend-ops.cpp** — Defines symbols called by other active files
+- **tests/test-cont.c** — Defines symbols called by other active files
+- **tests/test-conv-transpose.c** — Defines symbols called by other active files
+- **tests/test-conv1d-dw-c1.cpp** — Defines symbols called by other active files
+- **tests/test-conv1d-dw-c2.cpp** — Defines symbols called by other active files
+- **tests/test-conv1d.cpp** — Defines symbols called by other active files
+- **tests/test-conv2d-dw.cpp** — Defines symbols called by other active files
+- **tests/test-conv2d.cpp** — Defines symbols called by other active files
+- **tests/test-customop.c** — Defines symbols called by other active files
+- **tests/test-dup.c** — Defines symbols called by other active files
+- **tests/test-interpolate.cpp** — Defines symbols called by other active files
+- **tests/test-opt.cpp** — Defines symbols called by other active files
+- **tests/test-pad-reflect-1d.cpp** — Defines symbols called by other active files
+- **tests/test-pool.c** — Defines symbols called by other active files
+- **tests/test-quantize-fns.cpp** — Defines symbols called by other active files
+- **tests/test-quantize-perf.cpp** — Defines symbols called by other active files
+- **tests/test-rel-pos.c** — Defines symbols called by other active files
+- **tests/test-roll.cpp** — Defines symbols called by other active files
+- **tests/test-timestep_embedding.cpp** — Defines symbols called by other active files
+- **tests/test_agent_coordinator.cpp** — Defines symbols called by other active files
+- **tests/test_agent_coordinator_integration.cpp** — Defines symbols called by other active files
+- **tests/test_agentic_file_operations.cpp** — Defines symbols called by other active files
+- **tests/test_agentic_mini_pc_800b.cpp** — Defines symbols called by other active files
+- **tests/test_ai_completions.cpp** — Defines symbols called by other active files
+- **tests/test_ai_merge_resolver.cpp** — Defines symbols called by other active files
+- **tests/test_deflate_masm.cpp** — Defines symbols called by other active files
+- **tests/test_disk_recovery_agent.cpp** — Defines symbols called by other active files
+- **tests/test_enhanced_streaming_gguf_loader.cpp** — Defines symbols called by other active files
+- **tests/test_gguf_integration.cpp** — Defines symbols called by other active files
+- **tests/test_gguf_loader.cpp** — Defines symbols called by other active files
+- **tests/test_gguf_loader_simple.cpp** — Defines symbols called by other active files
+- **tests/test_gpu_hybrid.cpp** — Defines symbols called by other active files
+- **tests/test_instructions_provider.cpp** — Defines symbols called by other active files
+- **tests/test_ioring_loader.cpp** — Defines symbols called by other active files
+- **tests/test_llm_connectivity.cpp** — Defines symbols called by other active files
+- **tests/test_nvme_temp.cpp** — Defines symbols called by other active files
+- **tests/test_nvme_temp_simple.cpp** — Defines symbols called by other active files
+- **tests/test_production_regression.cpp** — Defines symbols called by other active files
+- **tests/test_qt_ai_integration.cpp** — Defines symbols called by other active files
+- **tests/test_sandboxed_terminal.cpp** — Defines symbols called by other active files
+- **tests/test_semantic_diff_analyzer.cpp** — Defines symbols called by other active files
+- **tests/test_streaming_gguf_loader.cpp** — Defines symbols called by other active files
+- **tests/test_thermal_system.cpp** — Defines symbols called by other active files
+- **tests/test_thermal_tools.cpp** — Defines symbols called by other active files
+- **tests/test_tool_registry.cpp** — Defines symbols called by other active files
+- **tests/test_voice_processor.cpp** — Defines symbols called by other active files
+- **tests/test_zero_retention_manager.cpp** — Defines symbols called by other active files
+- **tests/unit/test_additional_components.cpp** — Defines symbols called by other active files
+- **tests/unit/test_distributed_trainer.cpp** — Defines symbols called by other active files
+- **tests/unit/test_security_manager.cpp** — Defines symbols called by other active files
+- **tests/unit/test_xss_sanitizer.cpp** — Defines symbols called by other active files
+- **tests/voice_processor_test.cpp** — Defines symbols called by other active files
+- **tests/zero_retention_manager_test.cpp** — Defines symbols called by other active files
+- **thread_test.cpp** — Defines symbols called by other active files
+- **toolchain/from_scratch/phase1_assembler/asm_lexer.c** — Defines symbols called by other active files
+- **toolchain/from_scratch/phase1_assembler/asm_parser.c** — Defines symbols called by other active files
+- **toolchain/from_scratch/phase1_assembler/build/CMakeFiles/4.2.0/CompilerIdC/CMakeCCompilerId.c** — Defines symbols called by other active files
+- **toolchain/from_scratch/phase1_assembler/coff_writer.c** — Defines symbols called by other active files
+- **toolchain/from_scratch/phase1_assembler/enc_test.c** — Defines symbols called by other active files
+- **toolchain/from_scratch/phase1_assembler/main.c** — Defines symbols called by other active files
+- **toolchain/from_scratch/phase1_assembler/x64_encoder.c** — Defines symbols called by other active files
+- **toolchain/from_scratch/phase2_linker/build/CMakeFiles/4.2.0/CompilerIdC/CMakeCCompilerId.c** — Defines symbols called by other active files
+- **toolchain/from_scratch/phase2_linker/build_gmake/CMakeFiles/4.2.0/CompilerIdC/CMakeCCompilerId.c** — Defines symbols called by other active files
+- **toolchain/from_scratch/phase2_linker/build_new/CMakeFiles/4.2.0/CompilerIdC/CMakeCCompilerId.c** — Defines symbols called by other active files
+- **toolchain/from_scratch/phase2_linker/coff_reader.c** — Defines symbols called by other active files
+- **toolchain/from_scratch/phase2_linker/entry_stub.c** — Name matches critical keyword pattern
+- **toolchain/from_scratch/phase2_linker/main.c** — Defines symbols called by other active files
+- **toolchain/from_scratch/phase2_linker/pe_writer.c** — Defines symbols called by other active files
+- **toolchain/from_scratch/phase2_linker/rawrxd_check.c** — Defines symbols called by other active files
+- **toolchain/from_scratch/phase2_linker/reloc_resolver.c** — Defines symbols called by other active files
+- **toolchain/from_scratch/phase2_linker/section_merge.c** — Defines symbols called by other active files
+- **toolchain/from_scratch/phase3_imports/build/CMakeFiles/4.2.0/CompilerIdC/CMakeCCompilerId.c** — Defines symbols called by other active files
+- **toolchain/from_scratch/phase3_imports/import_builder.c** — Defines symbols called by other active files
+- **toolchain/from_scratch/phase3_imports/import_test.c** — Defines symbols called by other active files
+- **toolchain/from_scratch/phase4_resources/build/CMakeFiles/4.2.0/CompilerIdC/CMakeCCompilerId.c** — Defines symbols called by other active files
+- **toolchain/from_scratch/phase4_resources/resource_builder.c** — Defines symbols called by other active files
+- **toolchain/from_scratch/phase4_resources/resource_test.c** — Defines symbols called by other active files
+- **tools/cli_main.cpp** — Defines symbols called by other active files
+- **tools/license_creator/build/CMakeFiles/4.2.0/CompilerIdCXX/CMakeCXXCompilerId.cpp** — Defines symbols called by other active files
+- **tools/stress_test.cpp** — Defines symbols called by other active files
+- **traits_test.cpp** — Defines symbols called by other active files
+
+## Missing Files (Build Will Break)
+
+- `${QUICKJS_DIR}/cutils.c`
+- `${QUICKJS_DIR}/libbf.c`
+- `${QUICKJS_DIR}/libregexp.c`
+- `${QUICKJS_DIR}/libunicode.c`
+- `${QUICKJS_DIR}/quickjs-libc.c`
+- `${QUICKJS_DIR}/quickjs.c`
+- `model_llm_harvester.asm`
+
+### Present Instead Of Missing
+- `src/asm/RawrXD_Telemetry_Kernel.asm` (exists in workspace)
+
+## Safe To Archive (Orphans)
+
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/AgentChatPane_Dump.hpp
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/FileExplorer.hpp
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/GGUFManifestExtractor.h
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/MASM_STACK_ALIGNMENT_AUDIT_REPORT.asm
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/NEON_MONACO_HACK.ASM
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/NEON_VULKAN_FABRIC_STUB.asm
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/PagedKVCache.h
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/PathResolver.h
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/Phase4_Test_Harness.asm
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/QtGUIStubs.hpp
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/RawrXD_AVX512_Production.asm
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/RawrXD_AVX512_Real.asm
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/RawrXD_Agentic_Router.asm
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/RawrXD_Arch_Stub.asm
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/RawrXD_Complete_Interconnect.asm
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/RawrXD_FlashAttention_AVX512.asm
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/RawrXD_HTTP_Router.asm
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/RawrXD_HttpChatServer.asm
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/RawrXD_Inference_AVX512.asm
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/RawrXD_JSON_Parser.asm
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/RawrXD_LazyTensorPager.asm
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/RawrXD_Lexer_AVX2.asm
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/RawrXD_Low_Priority_P3.asm
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/RawrXD_Model_StateMachine.asm
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/RawrXD_NanoQuant_Streaming.asm
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/RawrXD_PipeServer.asm
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/RawrXD_RingBuffer_Consumer.asm
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/RawrXD_SIMDClassifier.asm
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/RawrXD_SPSC_Queue.hpp
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/RawrXD_Sidebar_x64.h
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/RawrXD_SignalSlot_Wiring.h
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/RawrXD_StreamingWeights.asm
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/RawrXD_Streaming_Formatter.asm
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/RawrXD_System_Primitives.asm
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/RawrXD_Titan.asm
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/RawrXD_Tokenizer.asm
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/RawrXD_TriggerTest.cpp
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/RawrXD_WebView2.asm
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/SEH_wrapper.asm
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/Week1_API.h
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/Win32IDE_AutonomousAgent.h
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/Win32IDE_Sidebar_Pure_Minimal.asm
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/Win32IDE_Sidebar_Pure_Simple.asm
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/Win32IDE_Sidebar_minimal.asm
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/Win32IDE_Tier5Cosmetics.h
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/adaptive_burst_router.asm
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/advanced_coding_agent.cpp
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/agent_correction_system.h
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/agentic_text_edit.cpp
+- .archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/attention.asm
+- ... and 882 more
+
+## Root-Level Artifacts
+- Build binaries: 58
+- Build logs: 97 + 129 txt
+- Status docs: 391
+- Maintenance scripts: 76
+
+## Duplicates & Versions
+- Duplicate file pairs: 1282
+- Versioned/backup files: 219

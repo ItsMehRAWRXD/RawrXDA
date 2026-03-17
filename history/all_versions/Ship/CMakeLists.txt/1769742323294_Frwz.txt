@@ -1,0 +1,274 @@
+# CMakeLists.txt - RawrXD Agent Build Configuration
+# Pure C++20 / Win32 - Zero Qt Dependencies
+
+cmake_minimum_required(VERSION 3.20)
+project(RawrXD_Agent VERSION 1.0.0 LANGUAGES CXX)
+
+# C++20 standard
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Windows-specific settings
+if(WIN32)
+    add_definitions(-DUNICODE -D_UNICODE -DWIN32_LEAN_AND_MEAN -DNOMINMAX)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
+# Source files
+set(AGENT_HEADERS
+    agent_kernel_main.hpp
+    QtReplacements.hpp
+    ToolExecutionEngine.hpp
+    LLMClient.hpp
+    AgentOrchestrator.hpp
+    ToolImplementations.hpp
+    Win32UIIntegration.hpp
+    RawrXD_Agent.hpp
+)
+
+set(AGENT_SOURCES
+    Integration.cpp
+    NativeHttpServerStubs.cpp
+)
+
+# MASM HTTP server libraries (prebuilt)
+if(MSVC)
+    set(RAWRXD_MASM_DIR "${CMAKE_CURRENT_LIST_DIR}/../src/masm")
+    set(RAWRXD_HTTP_CHAT_LIB "${RAWRXD_MASM_DIR}/RawrXD_HttpChatServer.lib")
+    set(RAWRXD_NATIVE_HTTP_LIB "${RAWRXD_MASM_DIR}/RawrXD_NativeHttpServer.lib")
+    set(RAWRXD_INFERENCE_LIB "${CMAKE_CURRENT_LIST_DIR}/RawrXD_InferenceEngine_Win32.lib")
+
+    if(EXISTS "${RAWRXD_HTTP_CHAT_LIB}")
+        add_library(http_chat_server STATIC IMPORTED)
+        set_target_properties(http_chat_server PROPERTIES
+            IMPORTED_LOCATION "${RAWRXD_HTTP_CHAT_LIB}"
+            INTERFACE_INCLUDE_DIRECTORIES "${RAWRXD_MASM_DIR}"
+        )
+    endif()
+
+    if(EXISTS "${RAWRXD_NATIVE_HTTP_LIB}")
+        add_library(native_http_server STATIC IMPORTED)
+        set_target_properties(native_http_server PROPERTIES
+            IMPORTED_LOCATION "${RAWRXD_NATIVE_HTTP_LIB}"
+            INTERFACE_INCLUDE_DIRECTORIES "${RAWRXD_MASM_DIR}"
+        )
+    endif()
+
+    if(EXISTS "${RAWRXD_INFERENCE_LIB}")
+        add_library(rawrxd_inference_engine STATIC IMPORTED)
+        set_target_properties(rawrxd_inference_engine PROPERTIES
+            IMPORTED_LOCATION "${RAWRXD_INFERENCE_LIB}"
+        )
+    endif()
+endif()
+
+# Console Agent
+add_executable(RawrXD_Agent_Console
+    ${AGENT_SOURCES}
+    ${AGENT_HEADERS}
+)
+
+target_compile_definitions(RawrXD_Agent_Console PRIVATE
+    _CONSOLE
+)
+
+target_link_libraries(RawrXD_Agent_Console PRIVATE
+    winhttp
+    ws2_32
+    comctl32
+    ole32
+    shell32
+    shlwapi
+    httpapi
+    # Link HTTP Chat Server MASM module
+    http_chat_server
+    # Link Native HTTP Server (kernel-mode http.sys)
+    native_http_server
+    # Link inference engine for native server externs
+    rawrxd_inference_engine
+)
+
+if(MSVC)
+    target_link_options(RawrXD_Agent_Console PRIVATE /LARGEADDRESSAWARE:NO)
+endif()
+
+# GUI Agent
+add_executable(RawrXD_Agent_GUI WIN32
+    ${AGENT_SOURCES}
+    ${AGENT_HEADERS}
+)
+
+target_link_libraries(RawrXD_Agent_GUI PRIVATE
+    winhttp
+    ws2_32
+    comctl32
+    ole32
+    shell32
+    shlwapi
+    wininet
+    httpapi
+    # Link HTTP Chat Server MASM module
+    http_chat_server
+    # Link Native HTTP Server (kernel-mode http.sys)
+    native_http_server
+    # Link inference engine for native server externs
+    rawrxd_inference_engine
+)
+
+if(MSVC)
+    target_link_options(RawrXD_Agent_GUI PRIVATE /LARGEADDRESSAWARE:NO)
+endif()
+
+# Example Application
+add_executable(RawrXD_Agent_Example
+    Example_Application.cpp
+    ${AGENT_HEADERS}
+)
+
+target_link_libraries(RawrXD_Agent_Example PRIVATE
+    winhttp
+    ws2_32
+    comctl32
+    ole32
+    shell32
+    shlwapi
+)
+
+# ═════════════════════════════════════════════════════════════════════════════
+# INTEGRATION TEST SUITE - 27 Tests, 6 Categories
+# ═════════════════════════════════════════════════════════════════════════════
+
+add_executable(RawrXD_TestRunner
+    RawrXD_TestRunner.cpp
+    RawrXD_Test_Components.cpp
+)
+
+target_link_libraries(RawrXD_TestRunner PRIVATE
+    kernel32
+    user32
+    psapi
+    dbghelp
+    shlwapi
+    winhttp
+    ws2_32
+    comctl32
+    ole32
+    shell32
+    gdi32
+)
+
+set_target_properties(RawrXD_TestRunner PROPERTIES
+    VS_PLATFORM_TOOLSET "v143"
+)
+
+# Enable testing
+enable_testing()
+
+# Basic test run
+add_test(NAME "All_Tests"
+    COMMAND RawrXD_TestRunner
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+set_tests_properties("All_Tests" PROPERTIES TIMEOUT 60 LABELS "integration")
+
+# Category tests
+add_test(NAME "Core_Infrastructure"
+    COMMAND RawrXD_TestRunner --category CoreInfra
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+set_tests_properties("Core_Infrastructure" PROPERTIES TIMEOUT 30 LABELS "core")
+
+add_test(NAME "Hidden_Logic"
+    COMMAND RawrXD_TestRunner --category HiddenLogic
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+set_tests_properties("Hidden_Logic" PROPERTIES TIMEOUT 30 LABELS "logic")
+
+add_test(NAME "AI_Systems"
+    COMMAND RawrXD_TestRunner --category AIEngine
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+set_tests_properties("AI_Systems" PROPERTIES TIMEOUT 45 LABELS "ai")
+
+add_test(NAME "Tools_Integration"
+    COMMAND RawrXD_TestRunner --category Tools
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+set_tests_properties("Tools_Integration" PROPERTIES TIMEOUT 30 LABELS "tools")
+
+add_test(NAME "Performance"
+    COMMAND RawrXD_TestRunner --category Performance
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+set_tests_properties("Performance" PROPERTIES TIMEOUT 45 LABELS "perf")
+
+add_test(NAME "Stress_Tests"
+    COMMAND RawrXD_TestRunner --category Stress
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+set_tests_properties("Stress_Tests" PROPERTIES TIMEOUT 120 LABELS "stress")
+
+# Custom test targets
+add_custom_target(test_list
+    COMMAND RawrXD_TestRunner --list
+    DEPENDS RawrXD_TestRunner
+    COMMENT "Listing all available tests...")
+
+add_custom_target(test_xml
+    COMMAND RawrXD_TestRunner --output test_results.xml --xml
+    DEPENDS RawrXD_TestRunner
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMENT "Running tests with XML output...")
+
+add_custom_target(test_strict
+    COMMAND RawrXD_TestRunner --stop-on-failure
+    DEPENDS RawrXD_TestRunner
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMENT "Running tests with strict mode...")
+
+# ═════════════════════════════════════════════════════════════════════════════
+
+# Test Suite (legacy)
+add_executable(RawrXD_Agent_Tests
+    test_suite.cpp
+    ${AGENT_HEADERS}
+)
+
+target_link_libraries(RawrXD_Agent_Tests PRIVATE
+    winhttp
+    ws2_32
+    comctl32
+    ole32
+    shell32
+    shlwapi
+)
+
+# Benchmark Suite
+add_executable(RawrXD_Agent_Benchmark
+    benchmark_suite.cpp
+    ${AGENT_HEADERS}
+)
+
+target_link_libraries(RawrXD_Agent_Benchmark PRIVATE
+    winhttp
+    ws2_32
+    comctl32
+    ole32
+    shell32
+    shlwapi
+)
+
+# Install targets
+install(TARGETS
+    RawrXD_Agent_Console
+    RawrXD_Agent_GUI
+    RawrXD_Agent_Example
+    RawrXD_TestRunner
+    RUNTIME DESTINATION bin
+)
+
+install(FILES ${AGENT_HEADERS}
+    RawrXD_IntegrationTest.hpp
+    DESTINATION include/RawrXD
+)
+
+# CPack configuration
+set(CPACK_PACKAGE_NAME "RawrXD_Agent")
+set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+set(CPACK_PACKAGE_VENDOR "RawrXD")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Autonomous AI Coding Agent")
+include(CPack)

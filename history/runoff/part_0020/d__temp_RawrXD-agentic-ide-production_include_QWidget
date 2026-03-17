@@ -1,0 +1,7 @@
+#pragma once
+#include "../src/qt_stubs.h"
+class QWidget {
+public:
+    QWidget(QWidget* parent = nullptr) {}
+    virtual ~QWidget() = default;
+};

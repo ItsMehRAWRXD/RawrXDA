@@ -1,0 +1,64 @@
+{
+  "_comment": "RawrXD Engine + Ollama: use Override OpenAI Base URL in Cursor Settings > Models and point to the RawrXD server (e.g. http://localhost:8080). Model IDs below are returned by GET /v1/models and GET /api/models (local + Ollama when running).",
+  "openai.baseUrl": "http://localhost:8080",
+  "cursor.cpp.model.baseUrl": "http://localhost:8080",
+  "cursor.general.openaiBaseUrl": "http://localhost:8080",
+  "cursor.models.ids": [
+    "rawrxd",
+    "llama3",
+    "llama2",
+    "mistral",
+    "codellama",
+    "phi",
+    "gemma",
+    "neural-chat",
+    "BigDaddyG-Q4_K_M"
+  ],
+  "git.ignoreLimitWarning": true,
+
+  // ─── File Associations ───
+  "files.associations": {
+    "*.asm": "masm",
+    "*.inc": "masm",
+    "*.mac": "masm",
+    "*.hpp": "cpp",
+    "*.h": "cpp"
+  },
+
+  // ─── Editor: ASM tab width ───
+  "[masm]": {
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true,
+    "editor.rulers": [80, 120]
+  },
+
+  // ─── Editor: C++ ───
+  "[cpp]": {
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true,
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "ms-vscode.cpptools"
+  },
+
+  // ─── Build output exclusions ───
+  "files.exclude": {
+    "**/obj/**": true,
+    "**/*.obj": true,
+    "**/*.pdb": true,
+    "**/*.ilk": true
+  },
+  "search.exclude": {
+    "**/obj": true,
+    "**/bin": true,
+    "**/node_modules": true
+  },
+
+  // ─── Terminal: default to PowerShell ───
+  "terminal.integrated.defaultProfile.windows": "PowerShell",
+
+  // ─── C/C++ IntelliSense ───
+  "C_Cpp.default.intelliSenseMode": "windows-msvc-x64",
+  "C_Cpp.default.cppStandard": "c++20",
+  "C_Cpp.default.cStandard": "c17",
+  "C_Cpp.errorSquiggles": "enabled"
+}

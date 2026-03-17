@@ -4,18 +4,19 @@
 // C++20, no Qt. JWT & enterprise auth; config from enterprise.json.
 
 #include <string>
+#include <functional>
 
 class EnterpriseAuthManager
 {
 public:
-    using AuthSucceededFn = void(*)(const std::string& upn);
-    using AuthFailedFn    = void(*)(const std::string& reason);
+    using AuthSucceededFn = std::function<void(const std::string& upn)>;
+    using AuthFailedFn    = std::function<void(const std::string& reason)>;
 
     EnterpriseAuthManager() = default;
     ~EnterpriseAuthManager() = default;
 
-    void setOnAuthenticationSucceeded(AuthSucceededFn f) { m_onSucceeded = f; }
-    void setOnAuthenticationFailed(AuthFailedFn f)         { m_onFailed = f; }
+    void setOnAuthenticationSucceeded(AuthSucceededFn f) { m_onSucceeded = std::move(f); }
+    void setOnAuthenticationFailed(AuthFailedFn f)         { m_onFailed = std::move(f); }
 
     bool loadConfig(const std::string& configPath);
     bool authenticateWithToken(const std::string& bearerToken);
@@ -34,8 +35,8 @@ private:
     std::string m_userUPN;
     bool m_authenticated = false;
 
-    AuthSucceededFn m_onSucceeded = nullptr;
-    AuthFailedFn    m_onFailed = nullptr;
+    AuthSucceededFn m_onSucceeded;
+    AuthFailedFn    m_onFailed;
 };
 
 #endif // ENTERPRISE_AUTH_MANAGER_H

@@ -104,6 +104,24 @@ That communicates the truth without fake precision.
 
 ---
 
+## % to Cursor / GitHub Copilot likeness
+
+**One number (with caveat):** RawrXD is **~55–65%** “like” Cursor/Copilot on **general IDE + AI feature overlap** (same capability areas: editor, AI chat, completion, debug, refactor, extensions, etc.). The rest is either not yet wired (completion to keystrokes, ghost text, diagnostics in editor, DAP, test explorer, Git UI) or out of scope (collab, web IDE).
+
+**By user profile:**
+
+| Profile | RawrXD “likeness” to Cursor/Copilot | Meaning |
+|--------|--------------------------------------|--------|
+| **Profile A** (Security / RE / air-gap) | **~90%+** | For this segment, RawrXD covers what matters; Cursor is a poor fit (cloud, no RE). |
+| **Profile B** (Cloud-first web dev) | **~50–60%** | RawrXD has editor + chat + backend; **ecosystem + collab UI wired** (View > Extension Marketplace, View > Collaboration); full extension host (Next 7) in progress. |
+
+**Capability-area shorthand:**  
+Roughly **2/3** of Cursor/Copilot capability areas are at “present or wired” in RawrXD (editor, AI chat, streaming, RE, security, debugger, LSP, parity menu, VSIX core, **extension marketplace with persistence**, **collaboration panel**); **1/3** are partial or roadmap (completion UX, ghost text, diagnostics in editor, DAP UI, test explorer, Git UI, full extension host Next 7). So: **~65% capability overlap**, **~55% UX parity** for a generic “web dev” workflow.
+
+Use **Profile A/B** for investor slides; use **55–65%** only with the “general overlap, not better-at-everything” caveat.
+
+---
+
 ## What Cursor Wins On
 
 - Cloud model quality (e.g. frontier models vs. local 14B).
@@ -147,9 +165,9 @@ Self-hosting (dogfooding) is the stress test. If RawrXD can handle its own MASM 
 On the **core** dev loop, the remaining gap is mostly:
 
 - **Polish** — keybindings, themes, onboarding.
-- **Ecosystem** — extensions, marketplace.
+- **Ecosystem** — extensions, marketplace (**done:** View > Extension Marketplace, install + enable/disable with persistence across restarts).
 - **Cloud optionality** — bridge, not default.
-- **Collaboration** — team workflows.
+- **Collaboration** — team workflows (**done:** View > Collaboration panel; CRDT/WebSocket server integration planned).
 
 That’s why the “anti-Cursor” framing is correct: you’re not competing for the average web dev; you’re building the bunker for systems engineers and security researchers.
 

@@ -899,6 +899,7 @@ void Win32IDE::shutdownHoverTooltip() {
     if (m_hoverBoldFont) { DeleteObject(m_hoverBoldFont); m_hoverBoldFont = nullptr; }
 }
 
+#if !defined(RAWRXD_USE_DEDICATED_HOVER)
 void Win32IDE::showHoverTooltip(int screenX, int screenY, const std::string& content) {
     dismissHoverTooltip();
 
@@ -957,7 +958,9 @@ void Win32IDE::showHoverTooltip(int screenX, int screenY, const std::string& con
     // Auto-dismiss timer (5 seconds)
     SetTimer(m_hwndMain, 9200, 5000, nullptr);
 }
+#endif
 
+#if !defined(RAWRXD_USE_DEDICATED_HOVER)
 void Win32IDE::dismissHoverTooltip() {
     KillTimer(m_hwndMain, 9200);
     if (m_hwndHoverPopup) {
@@ -967,6 +970,7 @@ void Win32IDE::dismissHoverTooltip() {
     m_hoverVisible = false;
     m_hoverContent.clear();
 }
+#endif
 
 void Win32IDE::onEditorMouseHover(int charPos) {
     if (!m_hwndEditor || charPos < 0) return;
@@ -1015,6 +1019,7 @@ void Win32IDE::onEditorMouseHover(int charPos) {
     showHoverTooltip(screenPt.x, screenPt.y, content);
 }
 
+#if !defined(RAWRXD_USE_DEDICATED_HOVER)
 LRESULT CALLBACK Win32IDE::HoverTooltipProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     Win32IDE* ide = (Win32IDE*)GetPropA(hwnd, "IDE_PTR");
     switch (msg) {
@@ -1088,6 +1093,7 @@ LRESULT CALLBACK Win32IDE::HoverTooltipProc(HWND hwnd, UINT msg, WPARAM wParam, 
     }
     return DefWindowProcA(hwnd, msg, wParam, lParam);
 }
+#endif
 
 
 // ============================================================================
@@ -1170,27 +1176,40 @@ void Win32IDE::triggerSignatureHelp() {
         return;
     }
 
-    // Try LSP signature help
+    // Prefer real LSP signatureHelp and fall back to local symbol heuristics.
     std::string sigContent;
     int paramIdx = commaCount;
     int totalParams = 0;
-
-    // Try to get signature from LSP
-    // For now, use local heuristics based on outline symbols
-    for (const auto& sym : m_outlineSymbols) {
-        if (sym.name == funcName || sym.name.find("::" + funcName) != std::string::npos) {
-            sigContent = sym.detail;
-            // Count parameters from detail string
-            int pCount = 0;
-            for (char c : sigContent) {
-                if (c == ',') pCount++;
-            }
-            totalParams = pCount + 1; // N commas = N+1 params
-            break;
+    auto countParamsFromSignature = [](const std::string& signature) -> int {
+        size_t open = signature.find('(');
+        size_t close = signature.rfind(')');
+        if (open == std::string::npos || close == std::string::npos || close <= open + 1) {
+            return 1;
         }
-        for (const auto& child : sym.children) {
-            if (child.name == funcName) {
-                sigContent = child.detail;
+
+        int commas = 0;
+        for (size_t i = open + 1; i < close; ++i) {
+            if (signature[i] == ',') {
+                commas++;
+            }
+        }
+        return commas + 1;
+    };
+
+    if (!m_currentFile.empty() && m_lspInitialized) {
+        std::string uri = filePathToUri(m_currentFile);
+        auto sig = lspSignatureHelp(uri, lineIndex, col, 1);
+        if (sig.valid && !sig.activeSignatureLabel.empty()) {
+            sigContent = sig.activeSignatureLabel;
+            paramIdx = sig.activeParameter >= 0 ? sig.activeParameter : commaCount;
+            totalParams = countParamsFromSignature(sigContent);
+        }
+    }
+
+    if (sigContent.empty()) {
+        for (const auto& sym : m_outlineSymbols) {
+            if (sym.name == funcName || sym.name.find("::" + funcName) != std::string::npos) {
+                sigContent = sym.detail;
                 int pCount = 0;
                 for (char c : sigContent) {
                     if (c == ',') pCount++;
@@ -1198,14 +1217,28 @@ void Win32IDE::triggerSignatureHelp() {
                 totalParams = pCount + 1;
                 break;
             }
+            for (const auto& child : sym.children) {
+                if (child.name == funcName) {
+                    sigContent = child.detail;
+                    int pCount = 0;
+                    for (char c : sigContent) {
+                        if (c == ',') pCount++;
+                    }
+                    totalParams = pCount + 1;
+                    break;
+                }
+            }
+            if (!sigContent.empty()) break;
         }
-        if (!sigContent.empty()) break;
     }
 
     if (sigContent.empty()) {
         sigContent = funcName + "(...)";
         totalParams = 1;
     }
+    if (totalParams < 1) totalParams = 1;
+    if (paramIdx < 0) paramIdx = 0;
+    if (paramIdx >= totalParams) paramIdx = totalParams - 1;
 
     m_signatureContent = sigContent;
     m_signatureActiveParam = paramIdx;
@@ -1605,6 +1638,7 @@ LRESULT CALLBACK Win32IDE::ReferencePanelProc(HWND hwnd, UINT msg, WPARAM wParam
 //
 // ============================================================================
 
+#if !defined(RAWRXD_USE_DEDICATED_CODELENS)
 void Win32IDE::initCodeLens() {
     m_codeLensEnabled = true;
     m_codeLensEntries.clear();
@@ -1614,12 +1648,16 @@ void Win32IDE::initCodeLens() {
         FIXED_PITCH | FF_MODERN, "Consolas");
     LOG_INFO("[CodeLens] Reference counts initialized");
 }
+#endif
 
+#if !defined(RAWRXD_USE_DEDICATED_CODELENS)
 void Win32IDE::shutdownCodeLens() {
     m_codeLensEntries.clear();
     if (m_codeLensFont) { DeleteObject(m_codeLensFont); m_codeLensFont = nullptr; }
 }
+#endif
 
+#if !defined(RAWRXD_USE_DEDICATED_CODELENS)
 void Win32IDE::refreshCodeLens() {
     m_codeLensEntries.clear();
 
@@ -1666,6 +1704,7 @@ void Win32IDE::refreshCodeLens() {
 
     LOG_INFO("[CodeLens] Refreshed: " + std::to_string(m_codeLensEntries.size()) + " entries");
 }
+#endif
 
 int Win32IDE::countSymbolReferences(const std::string& symbol) {
     if (symbol.empty() || !m_hwndEditor) return 0;
@@ -1751,6 +1790,7 @@ void Win32IDE::toggleCodeLens() {
 //
 // ============================================================================
 
+#if !defined(RAWRXD_USE_DEDICATED_INLAY)
 void Win32IDE::initInlayHints() {
     m_inlayHintsEnabled = true;
     m_inlayHintEntries.clear();
@@ -1760,12 +1800,16 @@ void Win32IDE::initInlayHints() {
         FIXED_PITCH | FF_MODERN, "Consolas");
     LOG_INFO("[InlayHints] Type hint system initialized");
 }
+#endif
 
+#if !defined(RAWRXD_USE_DEDICATED_INLAY)
 void Win32IDE::shutdownInlayHints() {
     m_inlayHintEntries.clear();
     if (m_inlayHintFont) { DeleteObject(m_inlayHintFont); m_inlayHintFont = nullptr; }
 }
+#endif
 
+#if !defined(RAWRXD_USE_DEDICATED_INLAY)
 void Win32IDE::refreshInlayHints() {
     m_inlayHintEntries.clear();
 
@@ -1862,6 +1906,7 @@ void Win32IDE::refreshInlayHints() {
 
     LOG_INFO("[InlayHints] Refreshed: " + std::to_string(m_inlayHintEntries.size()) + " hints");
 }
+#endif
 
 std::string Win32IDE::inferTypeFromExpression(const std::string& expr) {
     if (expr.empty()) return "";

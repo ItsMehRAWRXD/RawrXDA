@@ -1,11 +1,33 @@
 #pragma once
 
-#define GGML_COMMON_DECL_C
-#include "ggml-common.h"
-
 #include "ggml.h"
 
 // GGML internal header
+#ifdef GGML_COMMON_DECL_C
+#include "ggml-common.h"
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+// Define GGML_API if not defined
+#ifndef GGML_API
+#ifdef _WIN32
+#   define GGML_API __declspec(dllexport)
+#else
+#   define GGML_API
+#endif
+#endif
+
+// Define GGML_RESTRICT if not defined
+#ifndef GGML_RESTRICT
+#ifdef _MSC_VER
+#   define GGML_RESTRICT __restrict
+#else
+#   define GGML_RESTRICT __restrict__
+#endif
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -14,6 +36,24 @@ extern "C" {
 // NOTE: these functions are defined as GGML_API because they used by the CPU backend
 
 // Quantization
+typedef struct block_q4_0 block_q4_0;
+typedef struct block_q4_1 block_q4_1;
+typedef struct block_q5_0 block_q5_0;
+typedef struct block_q5_1 block_q5_1;
+typedef struct block_q8_0 block_q8_0;
+typedef struct block_q8_1 block_q8_1;
+typedef struct block_mxfp4 block_mxfp4;
+typedef struct block_q2_K block_q2_K;
+typedef struct block_q3_K block_q3_K;
+typedef struct block_q4_K block_q4_K;
+typedef struct block_q5_K block_q5_K;
+typedef struct block_q6_K block_q6_K;
+typedef struct block_q8_K block_q8_K;
+typedef struct block_tq1_0 block_tq1_0;
+typedef struct block_tq2_0 block_tq2_0;
+typedef struct block_iq3_xxs block_iq3_xxs;
+typedef struct block_iq4_nl block_iq4_nl;
+
 GGML_API void quantize_row_q4_0_ref(const float * GGML_RESTRICT x, block_q4_0 * GGML_RESTRICT y, int64_t k);
 GGML_API void quantize_row_q4_1_ref(const float * GGML_RESTRICT x, block_q4_1 * GGML_RESTRICT y, int64_t k);
 GGML_API void quantize_row_q5_0_ref(const float * GGML_RESTRICT x, block_q5_0 * GGML_RESTRICT y, int64_t k);

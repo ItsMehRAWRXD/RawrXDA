@@ -1,0 +1,6 @@
+// cpp-httplib integration placeholder
+// Download cpp-httplib from: https://github.com/yhirose/cpp-httplib
+// Place httplib.h here for full HTTP server capabilities
+// 
+// Alternative: Use FetchContent in CMake to automatically download
+// For now, using native Winsock implementation in api_server.cpp

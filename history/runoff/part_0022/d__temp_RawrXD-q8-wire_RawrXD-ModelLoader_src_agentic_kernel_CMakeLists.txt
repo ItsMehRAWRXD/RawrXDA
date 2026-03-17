@@ -1,0 +1,132 @@
+# CMakeLists.txt for RawrXD Agentic Kernel
+# Integrates Phase-2 C++ and MASM64 components with AVX-512 support
+
+cmake_minimum_required(VERSION 3.20)
+
+project(RawrXD-AgenticKernel)
+
+enable_language(C)
+enable_language(CXX)
+enable_language(ASM_MASM)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# MASM Configuration
+set(CMAKE_ASM_MASM_COMPILE_OBJECT "<CMAKE_C_COMPILER> <DEFINES> <INCLUDES> <FLAGS> /c <SOURCE> /Fo<OBJECT>")
+set(CMAKE_ASM_MASM_FLAGS "/nologo /W3 /WX /arch:AVX512 /DWIN64 /D_WIN64")
+
+# C++ Compiler Flags
+set(MSVC_RUNTIME_LIBRARY "dynamic")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:AVX2 /permissive- /W4 /WX /EHsc /Gd")
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    set(CMAKE_CXX_FLAGS_RELEASE "/O2 /Ob2 /Oi /Ot /GL")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /LTCG")
+endif()
+
+# Include Directories
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../win32app
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../core/logging
+    C:/masm32/include
+    C:/masm32/lib
+)
+
+# Phase-2 C++ Component
+add_library(RawrXD-KernelPhase2-CPP OBJECT
+    src/RawrXD_PredictiveCommandKernel.cpp
+)
+target_compile_options(RawrXD-KernelPhase2-CPP PRIVATE /arch:AVX2 /fp:precise)
+target_include_directories(RawrXD-KernelPhase2-CPP PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+# Phase-2 MASM64 Component
+add_library(RawrXD-KernelPhase2-MASM OBJECT
+    src/RawrXD_AgentKernel_Phase2.asm
+)
+set_source_files_properties(src/RawrXD_AgentKernel_Phase2.asm
+    PROPERTIES
+    LANGUAGE ASM_MASM
+    COMPILE_FLAGS "/nologo /W3 /arch:AVX512 /Fo"
+)
+
+# Phase-3 Producer MASM64 Component
+add_library(RawrXD-ProducerPhase3-MASM OBJECT
+    src/RawrXD_MmfProducer_Phase3.asm
+)
+set_source_files_properties(src/RawrXD_MmfProducer_Phase3.asm
+    PROPERTIES
+    LANGUAGE ASM_MASM
+    COMPILE_FLAGS "/nologo /W3 /arch:AVX512 /Fo"
+)
+
+# Phase-3 Hotpatch MASM64 Component
+add_library(RawrXD-HotpatchPhase3-MASM OBJECT
+    src/RawrXD_HotpatchEngine_Phase3.asm
+)
+set_source_files_properties(src/RawrXD_HotpatchEngine_Phase3.asm
+    PROPERTIES
+    LANGUAGE ASM_MASM
+    COMPILE_FLAGS "/nologo /W3 /arch:AVX512 /Fo"
+)
+
+# C++ Bridge Layer
+add_library(RawrXD-AgentKernelBridge OBJECT
+    src/AgentKernelBridge.cpp
+)
+target_compile_options(RawrXD-AgentKernelBridge PRIVATE /arch:AVX2)
+
+# SelfManifestor Component
+add_library(RawrXD-SelfManifestor OBJECT
+    src/RawrXD_SelfManifestor.cpp
+)
+target_compile_options(RawrXD-SelfManifestor PRIVATE /arch:AVX2 /std:c++latest)
+
+# Unified Kernel Library (combines all components)
+add_library(RawrXD-AgenticKernel STATIC
+    $<TARGET_OBJECTS:RawrXD-KernelPhase2-CPP>
+    $<TARGET_OBJECTS:RawrXD-KernelPhase2-MASM>
+    $<TARGET_OBJECTS:RawrXD-ProducerPhase3-MASM>
+    $<TARGET_OBJECTS:RawrXD-HotpatchPhase3-MASM>
+    $<TARGET_OBJECTS:RawrXD-AgentKernelBridge>
+    $<TARGET_OBJECTS:RawrXD-SelfManifestor>
+)
+
+target_link_libraries(RawrXD-AgenticKernel
+    PRIVATE
+    kernel32.lib
+    user32.lib
+    ntdll.lib
+    Winmm.lib
+    ThreadPool.lib
+)
+
+# Installation
+install(TARGETS RawrXD-AgenticKernel
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+)
+
+install(FILES
+    include/RawrXD_PredictiveCommandKernel.hpp
+    include/RawrXD_SelfManifestor.hpp
+    DESTINATION include
+)
+
+# Compiler Warning Configuration
+if(MSVC)
+    add_compile_options(/W4 /WX)
+    # Suppress warnings for __assume and other compiler builtins
+    add_compile_options(/wd4710 /wd4711)
+endif()
+
+# Optimization for MASM (align procedures to 16-byte boundaries for better cache)
+set(CMAKE_ASM_MASM_FLAGS "${CMAKE_ASM_MASM_FLAGS} /ALIGN:16")
+
+message(STATUS "RawrXD Agentic Kernel Build Configuration:")
+message(STATUS "  C++ Standard: ${CMAKE_CXX_STANDARD}")
+message(STATUS "  MASM Arch: AVX-512")
+message(STATUS "  Build Type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "  Target Arch: x64")

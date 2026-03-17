@@ -1,0 +1,40 @@
+
+LineNumber Line
+---------- ----
+       314     ; For brevity, showing pattern. Full impl processes all 64 values.
+      1379     ; Process remainder (not shown for brevity)
+      8545     ; For now, just mark count as 0
+      8583     ; (Detailed parsing omitted for brevity - production code would iterate)
+     15654     ; (Simplified for brevity)
+     15672     ; (Implementation omitted for brevity)
+     15976     ; (Implementation omitted for brevity)
+     17200     ; (Complex implementation - omitted for brevity)
+     27764     ; Simplified: just do linear transformations
+     36752     ; Set model parameters (hardcoded for now; real implementation reads from file header)
+     37214     ; For now, just mark as pending
+     38341     ; For now, just return success
+     38817     ; If no frequency, just return counter
+     40813     ; Parse key-value pairs (simplified - skip for now)
+     40834     ; For now, just zero the entry
+     41086     ; Skip for now - would need proper layout
+     44182     ; For this stub, we just do a simple scan
+     45141     ; Simplified - check bounds omitted for brevity
+     51910     ; Just print first 3 for brevity
+     55747 ; Simplified version: just does the copy and returns the length.
+     78442 ; Full buffer scan: strcpy/strcat/sprintf -> buffer_overflow; "password" -> hardcoded;
+     78603     mov     [rdi + SA_HARDCODED_SECRETS], r11d
+     81270     ; DisableThreadLibraryCalls — if we somehow get here, just return TRUE.
+     82628     ; rdx was just zeroed, but we need the rounded size
+    104221     ; Just copy the first K nodes found (simplified — production uses min-heap)
+    113551     jmp     @hap_store_done             ; Simplified: just do one sample
+    117076     ; Just do scalar for remaining k iterations
+    132855     ; (Full Blake2b G-rounds omitted for build-speed; upgrade path is clear)
+    136234     ; For now, just return E_NOINTERFACE for the problematic case. But that's wrong.
+    136236     ; RESTRUCTURED: We'll just do sequential GUID comparisons using our
+    151674     ; 2. Stub "public key" (just copy private for now)
+    151942     ; For SQ0, QID=0, so just DoorbellBase
+    161708     ; For now, just zero out the pools
+    172246     ; ... (Stub for brevity, same ring logic)
+    176620     ; No original function - just return
+
+

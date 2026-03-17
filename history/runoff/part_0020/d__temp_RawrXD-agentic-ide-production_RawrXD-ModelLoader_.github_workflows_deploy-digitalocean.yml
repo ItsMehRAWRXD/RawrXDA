@@ -1,0 +1,44 @@
+name: Deploy to DigitalOcean App Platform
+on:
+  push:
+    branches: [main, production-lazy-init]
+    paths:
+      - 'deploy/**'
+      - '.do/**'
+      - '.github/workflows/deploy-digitalocean.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy llama.cpp server to DigitalOcean
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: deploy/docker
+          dockerfile: deploy/docker/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/llama-server:latest
+            ghcr.io/${{ github.repository }}/llama-server:${{ github.sha }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy to DigitalOcean
+        uses: digitalocean/app_action@main
+        with:
+          app_spec_path: .do/app.yaml
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+      - name: Deployment Status
+        run: |
+          echo "✓ Docker image built and pushed to GitHub Container Registry"
+          echo "✓ DigitalOcean App Platform deployment triggered"
+          echo "Monitor at: https://cloud.digitalocean.com/apps"

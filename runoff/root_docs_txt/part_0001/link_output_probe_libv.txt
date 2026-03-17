@@ -1,0 +1,19 @@
+   Creating library .\bin\RawrXD-Win32IDE.lib and object .\bin\RawrXD-Win32IDE.exp
+Generating code
+Finished generating code
+libvcruntime.lib(ehhelpers.obj) : error LNK2005: __std_terminate already defined in vcruntime.lib(VCRUNTIME140.dll)
+libucrt.lib(exit.obj) : error LNK2005: exit already defined in ucrt.lib(api-ms-win-crt-runtime-l1-1-0.dll)
+libucrt.lib(invalid_parameter.obj) : error LNK2005: _invoke_watson already defined in ucrt.lib(api-ms-win-crt-runtime-l1-1-0.dll)
+libucrt.lib(fflush.obj) : error LNK2005: fflush already defined in ucrt.lib(api-ms-win-crt-stdio-l1-1-0.dll)
+libucrt.lib(_file.obj) : error LNK2005: __acrt_iob_func already defined in ucrt.lib(api-ms-win-crt-stdio-l1-1-0.dll)
+libucrt.lib(_file.obj) : error LNK2005: _get_stream_buffer_pointers already defined in ucrt.lib(api-ms-win-crt-stdio-l1-1-0.dll)
+libucrt.lib(_file.obj) : error LNK2005: _lock_file already defined in ucrt.lib(api-ms-win-crt-filesystem-l1-1-0.dll)
+libucrt.lib(_file.obj) : error LNK2005: _unlock_file already defined in ucrt.lib(api-ms-win-crt-filesystem-l1-1-0.dll)
+libucrt.lib(errno.obj) : error LNK2005: _errno already defined in ucrt.lib(api-ms-win-crt-runtime-l1-1-0.dll)
+libucrt.lib(strnlen.obj) : error LNK2005: strnlen already defined in ucrt.lib(api-ms-win-crt-string-l1-1-0.dll)
+libucrt.lib(strnlen.obj) : error LNK2005: wcslen already defined in ucrt.lib(api-ms-win-crt-string-l1-1-0.dll)
+libucrt.lib(strnicmp.obj) : error LNK2005: _strnicmp already defined in ucrt.lib(api-ms-win-crt-string-l1-1-0.dll)
+libucrt.lib(atox.obj) : error LNK2005: atoi already defined in ucrt.lib(api-ms-win-crt-convert-l1-1-0.dll)
+libucrt.lib(atox.obj) : error LNK2005: atoll already defined in ucrt.lib(api-ms-win-crt-convert-l1-1-0.dll)
+ucrt.lib(api-ms-win-crt-locale-l1-1-0.dll) : error LNK2005: ___lc_codepage_func already defined in libucrt.lib(initctype.obj)
+.\bin\RawrXD-Win32IDE.exe : fatal error LNK1169: one or more multiply defined symbols found

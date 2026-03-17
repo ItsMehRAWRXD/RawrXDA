@@ -1,0 +1,23 @@
+BATCH5_FINAL 2026-03-02T17:55:38.8193992-05:00
+BUILD1_EXIT=1
+
+
+bin\RawrXD-Win32IDE.exe : fatal error LNK1120: 174 unresolved externals
+
+
+ninja: build stopped: subcommand failed.
+BUILD2_EXIT=1
+
+
+bin\RawrXD-Win32IDE.exe : fatal error LNK1120: 174 unresolved externals
+
+
+ninja: build stopped: subcommand failed.
+BUILD3_EXIT=1
+
+
+bin\RawrXD-Win32IDE.exe : fatal error LNK1120: 174 unresolved externals
+
+
+ninja: build stopped: subcommand failed.
+SHA256=CC25E021477209DAABF3E19C9B02814A070F93E6198E80497340A056BF0A1B67

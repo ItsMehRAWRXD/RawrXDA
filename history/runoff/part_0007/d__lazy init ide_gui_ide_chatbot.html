@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RawrXD IDE Assistant - GUI</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .chat-container {
+      width: 100%;
+      max-width: 900px;
+      height: 90vh;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .chat-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 25px;
+      text-align: center;
+      border-bottom: 3px solid rgba(255, 255, 255, 0.2);
+      position: relative;
+    }
+
+    .chat-header h1 {
+      font-size: 28px;
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+
+    .chat-header p {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    .quick-actions {
+      background: #f8f9fa;
+      padding: 15px;
+      border-bottom: 1px solid #e0e0e0;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .quick-btn {
+      padding: 8px 16px;
+      background: white;
+      border: 2px solid #667eea;
+      border-radius: 20px;
+      color: #667eea;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-weight: 500;
+    }
+
+    .quick-btn:hover {
+      background: #667eea;
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      background: #f8f9fa;
+    }
+
+    .message {
+      margin-bottom: 20px;
+      animation: fadeIn 0.3s ease-in;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .message-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .message-avatar {
+      width: 35px;
+      height: 35px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      margin-right: 10px;
+    }
+
+    .user-avatar {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .assistant-avatar {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .message-name {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .user-name {
+      color: #667eea;
+    }
+
+    .assistant-name {
+      color: #f5576c;
+    }
+
+    .message-time {
+      font-size: 12px;
+      color: #999;
+      margin-left: 10px;
+    }
+
+    .message-content {
+      background: white;
+      padding: 15px 20px;
+      border-radius: 15px;
+      margin-left: 45px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      line-height: 1.6;
+    }
+
+    .user-message .message-content {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .code-block {
+      background: #2d2d2d;
+      color: #f8f8f2;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 10px 0;
+      overflow-x: auto;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .code-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #444;
+    }
+
+    .code-lang {
+      color: #a6e22e;
+      font-weight: 600;
+    }
+
+    .copy-btn {
+      background: #444;
+      color: white;
+      border: none;
+      padding: 5px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background 0.3s;
+    }
+
+    .copy-btn:hover {
+      background: #555;
+    }
+
+    .chat-input-container {
+      padding: 20px;
+      background: white;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .chat-input-wrapper {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .chat-input {
+      flex: 1;
+      padding: 15px 20px;
+      border: 2px solid #e0e0e0;
+      border-radius: 25px;
+      font-size: 15px;
+      outline: none;
+      transition: all 0.3s;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .chat-input:focus {
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .send-btn {
+      width: 50px;
+      height: 50px;
+      border: none;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .send-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .send-btn:active {
+      transform: scale(0.95);
+    }
+
+    .language-selector {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .language-selector:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .language-dropdown {
+      position: absolute;
+      top: 50px;
+      right: 0;
+      background: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      max-height: 400px;
+      overflow-y: auto;
+      z-index: 1000;
+      min-width: 180px;
+      display: none;
+    }
+
+    .language-dropdown.active {
+      display: block;
+    }
+
+    .language-option {
+      padding: 10px 15px;
+      cursor: pointer;
+      transition: background 0.2s;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .language-option:hover {
+      background: #f8f9fa;
+    }
+
+    .language-option.active {
+      background: #667eea;
+      color: white;
+    }
+
+    .typing-indicator {
+      display: none;
+      padding: 15px 20px;
+      background: white;
+      border-radius: 15px;
+      margin-left: 45px;
+      width: fit-content;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .typing-indicator.active {
+      display: block;
+    }
+
+    .typing-dots {
+      display: flex;
+      gap: 5px;
+    }
+
+    .typing-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #999;
+      animation: typing 1.4s infinite;
+    }
+
+    .typing-dot:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .typing-dot:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes typing {
+
+      0%,
+      60%,
+      100% {
+        transform: translateY(0);
+      }
+
+      30% {
+        transform: translateY(-10px);
+      }
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #999;
+      padding: 10px 20px;
+      background: #f8f9fa;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #4caf50;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.5;
+      }
+    }
+
+    /* Scrollbar styling */
+    .chat-messages::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .chat-messages::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+
+    .chat-messages::-webkit-scrollbar-thumb {
+      background: #667eea;
+      border-radius: 4px;
+    }
+
+    .chat-messages::-webkit-scrollbar-thumb:hover {
+      background: #764ba2;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="chat-container">
+    <div class="chat-header">
+      <button class="language-selector" onclick="toggleLanguageDropdown()" title="Switch Language">
+        🌍 Language
+      </button>
+      <div class="language-dropdown" id="languageDropdown"></div>
+      <h1>🤖 RawrXD IDE Assistant</h1>
+      <p>Your AI-Powered Development Helper</p>
+    </div>
+
+    <div class="quick-actions">
+      <button class="quick-btn" onclick="askQuestion('How do I send a swarm to a directory?')">🤖 Swarm Help</button>
+      <button class="quick-btn" onclick="askQuestion('How do I add a todo?')">✅ Todo Help</button>
+      <button class="quick-btn" onclick="askQuestion('How do I create a model?')">🧠 Model Help</button>
+      <button class="quick-btn" onclick="askQuestion('How do I benchmark model formats?')">📊 Benchmark Help</button>
+      <button class="quick-btn" onclick="askQuestion('Where are the important files?')">📁 File Locations</button>
+      <button class="quick-btn" onclick="openBrowser()">🌐 Web Browser</button>
+      <button class="quick-btn" onclick="askQuestion('How do I update graphics drivers?')">🎮 Driver Help</button>
+    </div>
+
+    <div class="chat-messages" id="chatMessages">
+      <!-- Messages will be added here -->
+    </div>
+
+    <div class="status-indicator">
+      <span class="status-dot"></span>
+      <span id="statusText">Ready to help</span>
+    </div>
+
+    <div class="chat-input-container">
+      <div class="chat-input-wrapper">
+        <input type="text" class="chat-input" id="chatInput" placeholder="Ask me anything about RawrXD IDE..."
+          onkeypress="handleKeyPress(event)">
+        <button class="send-btn" onclick="sendMessage()">
+          ➤
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Configuration
+    const API_ENDPOINT = 'http://localhost:8080/ask';
+
+    // 🌍 MULTI-LANGUAGE SUPPORT
+    const supportedLanguages = {
+      'English': { code: 'en', native: 'English', emoji: '🇬🇧' },
+      'Spanish': { code: 'es', native: 'Español', emoji: '🇪🇸' },
+      'French': { code: 'fr', native: 'Français', emoji: '🇫🇷' },
+      'German': { code: 'de', native: 'Deutsch', emoji: '🇩🇪' },
+      'Italian': { code: 'it', native: 'Italiano', emoji: '🇮🇹' },
+      'Portuguese': { code: 'pt', native: 'Português', emoji: '🇵🇹' },
+      'Russian': { code: 'ru', native: 'Русский', emoji: '🇷🇺' },
+      'Japanese': { code: 'ja', native: '日本語', emoji: '🇯🇵' },
+      'Chinese': { code: 'zh', native: '中文', emoji: '🇨🇳' },
+      'Korean': { code: 'ko', native: '한국어', emoji: '🇰🇷' },
+      'Arabic': { code: 'ar', native: 'العربية', emoji: '🇸🇦' },
+      'Hindi': { code: 'hi', native: 'हिन्दी', emoji: '🇮🇳' },
+      'Dutch': { code: 'nl', native: 'Nederlands', emoji: '🇳🇱' },
+      'Swedish': { code: 'sv', native: 'Svenska', emoji: '🇸🇪' },
+      'Polish': { code: 'pl', native: 'Polski', emoji: '🇵🇱' },
+      'Turkish': { code: 'tr', native: 'Türkçe', emoji: '🇹🇷' },
+      'Greek': { code: 'el', native: 'Ελληνικά', emoji: '🇬🇷' },
+      'Hebrew': { code: 'he', native: 'עברית', emoji: '🇮🇱' },
+      'Thai': { code: 'th', native: 'ไทย', emoji: '🇹🇭' },
+      'Vietnamese': { code: 'vi', native: 'Tiếng Việt', emoji: '🇻🇳' }
+    };
+
+    let currentLanguage = 'English';
+    let autoDetectLanguage = true;
+
+    function initializeLanguageSelector() {
+      const dropdown = document.getElementById('languageDropdown');
+      dropdown.innerHTML = '';
+
+      Object.keys(supportedLanguages).forEach(lang => {
+        const langData = supportedLanguages[lang];
+        const option = document.createElement('div');
+        option.className = 'language-option' + (lang === currentLanguage ? ' active' : '');
+        option.innerHTML = `${langData.emoji} ${langData.native}`;
+        option.onclick = () => switchLanguage(lang);
+        dropdown.appendChild(option);
+      });
+    }
+
+    function toggleLanguageDropdown() {
+      const dropdown = document.getElementById('languageDropdown');
+      dropdown.classList.toggle('active');
+      if (dropdown.classList.contains('active')) {
+        initializeLanguageSelector();
+      }
+    }
+
+    function switchLanguage(language) {
+      currentLanguage = language;
+      const dropdown = document.getElementById('languageDropdown');
+      dropdown.classList.remove('active');
+
+      // Update active state
+      document.querySelectorAll('.language-option').forEach(opt => {
+        opt.classList.remove('active');
+      });
+
+      // Notify user
+      const langData = supportedLanguages[language];
+      addAssistantMessage(`🌍 Language switched to ${langData.emoji} ${langData.native}! I'll now respond in this language.`);
+    }
+
+    function detectLanguage(text) {
+      const languagePatterns = {
+        'Spanish': ['hola', 'como', 'qué', 'donde', 'porque', 'gracias', 'ayuda'],
+        'French': ['bonjour', 'comment', 'quoi', 'où', 'pourquoi', 'merci', 'aide'],
+        'German': ['hallo', 'wie', 'was', 'wo', 'warum', 'danke', 'hilfe'],
+        'Italian': ['ciao', 'come', 'cosa', 'dove', 'perche', 'grazie', 'aiuto'],
+        'Portuguese': ['ola', 'como', 'onde', 'porque', 'obrigado', 'ajuda'],
+        'Russian': ['привет', 'как', 'что', 'где', 'почему', 'спасибо'],
+        'Japanese': ['こんにちは', 'どうして', 'なに', 'どこ', 'ありがとう'],
+        'Chinese': ['你好', '怎样', '什么', '哪里', '为什么', '谢谢'],
+        'Korean': ['안녕', '어떻게', '무엇', '어디', '왜', '감사합니다'],
+        'Arabic': ['مرحبا', 'كيف', 'ماذا', 'أين', 'لماذا', 'شكرا']
+      };
+
+      const lowerText = text.toLowerCase();
+      let bestMatch = 'English';
+      let bestScore = 0;
+
+      for (const [lang, patterns] of Object.entries(languagePatterns)) {
+        let score = 0;
+        patterns.forEach(pattern => {
+          if (lowerText.includes(pattern)) score++;
+        });
+        if (score > bestScore) {
+          bestScore = score;
+          bestMatch = lang;
+        }
+      }
+
+      return bestMatch;
+    }
+
+    // Initialize language selector on load
+    document.addEventListener('DOMContentLoaded', initializeLanguageSelector);
+
+    // Initialize chat
+    window.onload = function () {
+      addAssistantMessage(getGreeting());
+    };
+
+    function getGreeting() {
+      const greetings = {
+        'English': `👋 Hello! I'm the RawrXD IDE Assistant!
+
+I can help you with:
+- 🤖 Swarm operations and directory management
+- ✅ Todo management (add, parse, agentic creation)
+- 🧠 Model creation, training, and operations
+- 📊 Benchmarking and performance testing
+- ⚡ Advanced operations (quantization, pruning)
+- 🌐 Web browsing for documentation and driver downloads
+- 🎮 Graphics driver updates (NVIDIA, AMD, Intel)
+- 🌍 Multi-language support (20+ languages)
+
+Click the quick action buttons above or ask me anything!`,
+        
+        'Spanish': `👋 ¡Hola! ¡Soy el Asistente RawrXD IDE!
+
+Puedo ayudarte con:
+- 🤖 Operaciones de enjambre y gestión de directorios
+- ✅ Gestión de tareas (agregar, analizar, crear agentivo)
+- 🧠 Creación, entrenamiento y operaciones de modelos
+- 📊 Pruebas de evaluación comparativa y rendimiento
+- ⚡ Operaciones avanzadas (cuantificación, poda)
+- 🌐 Navegación web para descargas de documentación y controladores
+- 🎮 Actualizaciones de controladores gráficos (NVIDIA, AMD, Intel)
+- 🌍 Soporte multilingüe (20+ idiomas)
+
+¡Haz clic en los botones de acción rápida o pregúntame cualquier cosa!`,
+
+        'French': `👋 Bonjour ! Je suis l'Assistant RawrXD IDE !
+
+Je peux vous aider avec :
+- 🤖 Opérations d'essaim et gestion de répertoires
+- ✅ Gestion des tâches (ajouter, analyser, création agentique)
+- 🧠 Création, formation et opérations de modèles
+- 📊 Tests de performance et de benchmarking
+- ⚡ Opérations avancées (quantification, élagage)
+- 🌐 Navigation web pour les téléchargements de documentation et de pilotes
+- 🎮 Mises à jour des pilotes graphiques (NVIDIA, AMD, Intel)
+- 🌍 Support multilingue (20+ langues)
+
+Cliquez sur les boutons d'action rapide ou posez-moi des questions !`,
+
+        'German': `👋 Hallo! Ich bin der RawrXD IDE-Assistent!
+
+Ich kann dir bei folgendem helfen:
+- 🤖 Schwarm-Operationen und Verzeichnisverwaltung
+- ✅ Aufgabenverwaltung (hinzufügen, analysieren, agentengesteuerte Erstellung)
+- 🧠 Modellerstellung, Training und Operationen
+- 📊 Benchmark- und Leistungstests
+- ⚡ Fortgeschrittene Operationen (Quantisierung, Pruning)
+- 🌐 Webbrowsing für Dokumentations- und Treiberdownloads
+- 🎮 Grafiktreiberaktualisierungen (NVIDIA, AMD, Intel)
+- 🌍 Mehrsprachige Unterstützung (20+ Sprachen)
+
+Klicken Sie auf die Schnellaktionsschaltflächen oder fragen Sie mich alles!`,
+
+        'Japanese': `👋 こんにちは！RawrXD IDEアシスタントです！
+
+お手伝いできることは：
+- 🤖 スウォーム操作とディレクトリ管理
+- ✅ タスク管理（追加、解析、エージェント生成）
+- 🧠 モデルの作成、トレーニング、および操作
+- 📊 ベンチマークとパフォーマンステスト
+- ⚡ 高度な操作（量子化、剪定）
+- 🌐 ドキュメントとドライバーダウンロード用のウェブブラウジング
+- 🎮 グラフィックスドライバー更新（NVIDIA、AMD、Intel）
+- 🌍 多言語サポート（20+言語）
+
+上のクイックアクションボタンをクリックするか、何か質問してください！`,
+
+        'Chinese': `👋 你好！我是RawrXD IDE助手！
+
+我可以帮助您：
+- 🤖 群体操作和目录管理
+- ✅ 任务管理（添加、解析、代理生成）
+- 🧠 模型创建、培训和操作
+- 📊 基准测试和性能测试
+- ⚡ 高级操作（量化、剪枝）
+- 🌐 文档和驱动程序下载的网络浏览
+- 🎮 图形驱动程序更新（NVIDIA、AMD、Intel）
+- 🌍 多语言支持（20+种语言）
+
+单击上面的快速操作按钮或问我任何问题！`,
+
+        'Arabic': `👋 مرحبا! أنا مساعد RawrXD IDE!
+
+يمكنني مساعدتك في:
+- 🤖 عمليات السرب وإدارة الدليل
+- ✅ إدارة المهام (إضافة، تحليل، إنشاء وكيل)
+- 🧠 إنشاء النموذج والتدريب والعمليات
+- 📊 اختبار المعايير واختبار الأداء
+- ⚡ العمليات المتقدمة (التكميم، التقليم)
+- 🌐 تصفح الويب لتنزيلات التوثيق والمحرك
+- 🎮 تحديثات برنامج تشغيل الرسومات (NVIDIA و AMD و Intel)
+- 🌍 دعم متعدد اللغات (20+ لغة)
+
+انقر على أزرار الإجراء السريع أو اسأل عن أي شيء!`,
+
+        'Portuguese': `👋 Olá! Sou o Assistente RawrXD IDE!
+
+Posso ajudá-lo com:
+- 🤖 Operações de enxame e gerenciamento de diretórios
+- ✅ Gerenciamento de tarefas (adicionar, analisar, criação agentiva)
+- 🧠 Criação, treinamento e operações de modelo
+- 📊 Testes de benchmark e desempenho
+- ⚡ Operações avançadas (quantização, poda)
+- 🌐 Navegação na web para downloads de documentação e drivers
+- 🎮 Atualizações de drivers gráficos (NVIDIA, AMD, Intel)
+- 🌍 Suporte multilíngue (20+ idiomas)
+
+Clique nos botões de ação rápida acima ou pergunte-me qualquer coisa!`,
+
+        'Russian': `👋 Привет! Я ассистент RawrXD IDE!
+
+Я могу помочь вам с:
+- 🤖 Операциями роя и управлением каталогами
+- ✅ Управлением задачами (добавление, анализ, создание агента)
+- 🧠 Созданием, обучением и операциями модели
+- 📊 Тестированием производительности и сравнительными тестами
+- ⚡ Продвинутыми операциями (квантованием, обрезкой)
+- 🌐 Веб-навигацией для загрузки документации и драйверов
+- 🎮 Обновлением драйверов графики (NVIDIA, AMD, Intel)
+- 🌍 Поддержкой многоязычности (20+ языков)
+
+Нажмите на кнопки быстрых действий выше или спросите что угодно!`,
+
+        'Korean': `👋 안녕하세요! RawrXD IDE 어시스턴트입니다!
+
+다음 작업을 도와드릴 수 있습니다:
+- 🤖 스웜 작업 및 디렉토리 관리
+- ✅ 작업 관리 (추가, 분석, 에이전트 생성)
+- 🧠 모델 생성, 교육 및 작업
+- 📊 벤치마크 및 성능 테스트
+- ⚡ 고급 작업 (양자화, 가지치기)
+- 🌐 설명서 및 드라이버 다운로드용 웹 브라우징
+- 🎮 그래픽 드라이버 업데이트 (NVIDIA, AMD, Intel)
+- 🌍 다국어 지원 (20+ 언어)
+
+위의 빠른 작업 버튼을 클릭하거나 저에게 무엇이든 물어보세요!`,
+
+        'Italian': `👋 Ciao! Sono l'Assistente RawrXD IDE!
+
+Posso aiutarti con:
+- 🤖 Operazioni di sciame e gestione delle directory
+- ✅ Gestione delle attività (aggiungere, analizzare, creazione agentiva)
+- 🧠 Creazione, addestramento e operazioni del modello
+- 📊 Test di benchmark e prestazioni
+- ⚡ Operazioni avanzate (quantizzazione, potatura)
+- 🌐 Navigazione web per download di documentazione e driver
+- 🎮 Aggiornamenti dei driver grafici (NVIDIA, AMD, Intel)
+- 🌍 Supporto multilingue (20+ lingue)
+
+Fai clic sui pulsanti di azione rapida sopra o chiedimi qualsiasi cosa!`,
+
+        'Dutch': `👋 Hallo! Ik ben de RawrXD IDE-assistent!
+
+Ik kan je helpen met:
+- 🤖 Zwermoperaties en directorybeheer
+- ✅ Taakbeheer (toevoegen, analyseren, agentisch creatie)
+- 🧠 Modelcreatie, training en operaties
+- 📊 Benchmark- en prestatietests
+- ⚡ Geavanceerde operaties (kwantisering, snoeien)
+- 🌐 Webbrowsen voor downloads van documentatie en stuurprogramma's
+- 🎮 Grafiektuurprogramma-updates (NVIDIA, AMD, Intel)
+- 🌍 Meertalige ondersteuning (20+ talen)
+
+Klik op de snelactioknoppen hierboven of stel me vragen!`,
+
+        'Turkish': `👋 Merhaba! RawrXD IDE Asistanı'yım!
+
+Şunlarla yardımcı olabilirim:
+- 🤖 Swarm işlemleri ve dizin yönetimi
+- ✅ Görev yönetimi (ekle, analiz et, ajanlı oluştur)
+- 🧠 Model oluşturma, eğitim ve işlemler
+- 📊 Kıyaslama ve performans testleri
+- ⚡ Gelişmiş işlemler (niceleme, budama)
+- 🌐 Belgeler ve sürücü indirmeleri için web taraması
+- 🎮 Grafik sürücü güncellemeleri (NVIDIA, AMD, Intel)
+- 🌍 Çok dilli destek (20+ dil)
+
+Yukarıdaki hızlı eylem düğmelerine tıklayın veya bana her şey sorun!`,
+
+        'Polish': `👋 Cześć! Jestem asystentem RawrXD IDE!
+
+Mogę Ci pomóc w:
+- 🤖 Operacjach roju i zarządzaniu katalogami
+- ✅ Zarządzaniu zadaniami (dodawanie, analiza, tworzenie agentyczne)
+- 🧠 Tworzeniu, szkoleniu i operacjach modelu
+- 📊 Testach wydajności i benchmark'ach
+- ⚡ Zaawansowanych operacjach (kwantyzacja, przycinanie)
+- 🌐 Przeglądaniu sieci w celu pobrania dokumentacji i sterowników
+- 🎮 Aktualizacjach sterowników grafiki (NVIDIA, AMD, Intel)
+- 🌍 Obsłudze wielojęzycznej (20+ języków)
+
+Kliknij na przyciski szybkich akcji powyżej lub zapytaj mnie o cokolwiek!`,
+
+        'Swedish': `👋 Hej! Jag är RawrXD IDE-assistenten!
+
+Jag kan hjälpa dig med:
+- 🤖 Svärmoperationer och kataloghantering
+- ✅ Uppgiftshantering (lägg till, analysera, agentiv skapande)
+- 🧠 Modellskapande, träning och operationer
+- 📊 Benchmarktest och prestandatester
+- ⚡ Avancerade operationer (kvantisering, beskärning)
+- 🌐 Webbbläsning för dokumentations- och drivrutinsdownloads
+- 🎮 Grafikdrivrutinsuppdateringar (NVIDIA, AMD, Intel)
+- 🌍 Flerspråkigt stöd (20+ språk)
+
+Klicka på snabbåtgärdsknappar ovan eller fråga mig vad som helst!`,
+
+        'Vietnamese': `👋 Xin chào! Tôi là Trợ lý RawrXD IDE!
+
+Tôi có thể giúp bạn với:
+- 🤖 Hoạt động bầy và quản lý thư mục
+- ✅ Quản lý công việc (thêm, phân tích, tạo tác nhân)
+- 🧠 Tạo mô hình, đào tạo và hoạt động
+- 📊 Kiểm tra hiệu suất và so sánh
+- ⚡ Hoạt động nâng cao (lượng tử hóa, cắt tỉa)
+- 🌐 Duyệt web để tải tài liệu và trình điều khiển
+- 🎮 Cập nhật trình điều khiển đồ họa (NVIDIA, AMD, Intel)
+- 🌍 Hỗ trợ đa ngôn ngữ (20+ ngôn ngữ)
+
+Nhấp vào các nút hành động nhanh ở trên hoặc hỏi tôi bất cứ điều gì!`,
+
+        'Thai': `👋 สวัสดี! ฉันเป็นผู้ช่วย RawrXD IDE!
+
+ฉันสามารถช่วยคุณได้ด้วย:
+- 🤖 การดำเนินการของฝูงและการจัดการไดเรกทอรี
+- ✅ การจัดการงาน (เพิ่ม วิเคราะห์ การสร้างเอเจนต์)
+- 🧠 การสร้าง การฝึก และการดำเนินการของโมเดล
+- 📊 การทดสอบประสิทธิภาพและการเปรียบเทียบ
+- ⚡ การดำเนินการขั้นสูง (การหาปริมาณ การตัดแต่ง)
+- 🌐 การท่องเว็บสำหรับการดาวน์โหลดเอกสารและไดรเวอร์
+- 🎮 อัปเดตไดรเวอร์กราฟิก (NVIDIA AMD Intel)
+- 🌍 รองรับหลายภาษา (20+ ภาษา)
+
+คลิกปุ่มการดำเนินการด่วนด้านบนหรือถามฉันอะไรก็ได้!`,
+
+        'Hebrew': `👋 שלום! אני עוזר RawrXD IDE!
+
+אני יכול לעזור לך עם:
+- 🤖 פעולות בהמון וניהול תיקייה
+- ✅ ניהול משימות (הוסף, נתח, יצירה סוכן)
+- 🧠 יצירת מודל, הדרכה והפעלות
+- 📊 בדיקות ביצוע וביצוע
+- ⚡ פעולות מתקדמות (קוונטיזציה, גיזום)
+- 🌐 עיון באינטרנט להורדת תיעוד ונהגים
+- 🎮 עדכוני התקן גרפיקה (NVIDIA, AMD, Intel)
+- 🌍 תמיכה רב-לשונית (20+ שפות)
+
+לחץ על לחצני פעולה מהירה למעלה או שאל אותי על כל דבר!`,
+
+        'Greek': `👋 Γεια! Είμαι ο Βοηθός RawrXD IDE!
+
+Μπορώ να σε βοηθήσω με:
+- 🤖 Λειτουργίες σμήνους και διαχείριση καταλόγου
+- ✅ Διαχείριση εργασιών (προσθήκη, ανάλυση, δημιουργία πράκτορα)
+- 🧠 Δημιουργία, εκπαίδευση και λειτουργίες μοντέλου
+- 📊 Δοκιμές απόδοσης και σύγκριση
+- ⚡ Προηγμένες λειτουργίες (κβαντοποίηση, κλάδεμα)
+- 🌐 Περιήγηση στο Web για λήψεις τεκμηρίωσης και προγραμμάτων
+- 🎮 Ενημερώσεις προγράμματος οδήγησης γραφικών (NVIDIA, AMD, Intel)
+- 🌍 Υποστήριξη πολυγλωσσικής (20+ γλώσσες)
+
+Κάντε κλικ στα κουμπιά γρήγορης ενέργειας παραπάνω ή ρωτήστε με για οτιδήποτε!`,
+
+        'Hindi': `👋 नमस्ते! मैं RawrXD IDE सहायक हूँ!
+
+मैं आपकी मदद कर सकता हूँ:
+- 🤖 झुंड संचालन और निर्देशिका प्रबंधन
+- ✅ कार्य प्रबंधन (जोड़ें, विश्लेषण करें, एजेंट निर्माण)
+- 🧠 मॉडल निर्माण, प्रशिक्षण और संचालन
+- 📊 बेंचमार्क और प्रदर्शन परीक्षण
+- ⚡ उन्नत संचालन (परिमाणीकरण, छंटाई)
+- 🌐 दस्तावेज़ और ड्राइवर डाउनलोड के लिए वेब ब्राउज़िंग
+- 🎮 ग्राफिक्स ड्राइवर अपडेट (NVIDIA, AMD, Intel)
+- 🌍 बहुभाषी समर्थन (20+ भाषाएं)
+
+ऊपर त्वरित कार्य बटन पर क्लिक करें या मुझसे कुछ भी पूछें!`
+      };
+
+      return greetings[currentLanguage] || greetings['English'];
+    }
+
+    function handleKeyPress(event) {
+      if (event.key === 'Enter') {
+        sendMessage();
+      }
+    }
+
+    function askQuestion(question) {
+      document.getElementById('chatInput').value = question;
+      sendMessage();
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById('chatInput');
+      const question = input.value.trim();
+
+      if (!question) return;
+
+      // Auto-detect language if enabled
+      if (autoDetectLanguage) {
+        const detectedLang = detectLanguage(question);
+        if (detectedLang !== 'English' && detectedLang !== currentLanguage) {
+          currentLanguage = detectedLang;
+          updateLanguageButton();
+        }
+      }
+
+      // Add user message
+      addUserMessage(question);
+      input.value = '';
+
+      // Show typing indicator
+      showTypingIndicator();
+
+      // Get answer (try API first, fallback to local)
+      try {
+        const answer = await getAnswer(question);
+        hideTypingIndicator();
+        addAssistantMessage(answer);
+      } catch (error) {
+        hideTypingIndicator();
+        // Fallback to local knowledge base
+        const answer = getLocalAnswer(question);
+        addAssistantMessage(answer);
+      }
+    }
+
+    function updateLanguageButton() {
+      const langData = supportedLanguages[currentLanguage];
+      const btn = document.querySelector('.language-selector');
+      btn.innerHTML = `${langData.emoji} ${currentLanguage}`;
+    }
+
+    async function getAnswer(question) {
+      const response = await fetch(API_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ question: question })
+      });
+
+      if (!response.ok) {
+        throw new Error('API request failed');
+      }
+
+      const data = await response.json();
+      return data.answer;
+    }
+
+    function getLocalAnswer(question) {
+      question = question.toLowerCase();
+
+      // Swarm questions
+      if (question.match(/swarm.*directory|send.*swarm/)) {
+        return getSwarmDirectoryAnswer();
+      }
+      if (question.match(/monitor.*swarm/)) {
+        return getSwarmMonitorAnswer();
+      }
+
+      // Todo questions
+      if (question.match(/add.*todo|create.*todo/)) {
+        return getAddTodoAnswer();
+      }
+      if (question.match(/view.*todo|list.*todo/)) {
+        return getListTodoAnswer();
+      }
+
+      // Model questions
+      if (question.match(/create.*model|build.*model/)) {
+        return getCreateModelAnswer();
+      }
+      if (question.match(/train.*model/)) {
+        return getTrainModelAnswer();
+      }
+
+      // Benchmark questions
+      if (question.match(/benchmark|performance|test/)) {
+        return getBenchmarkAnswer();
+      }
+
+      // Driver and hardware help
+      if (question.match(/driver|graphics|gpu|nvidia|amd|update.*driver/)) {
+        return getDriverHelpAnswer(question);
+      }
+
+      // Browser/web help
+      if (question.match(/browser|search|web|google|documentation/)) {
+        return getBrowserHelpAnswer();
+      }
+
+      // File locations
+      if (question.match(/file|location|where|find/)) {
+        return getFileLocationsAnswer();
+      }
+
+      return `❓ I'm not sure about that. Try asking:
+• "How do I send a swarm to a directory?"
+• "How do I add a todo?"
+• "How do I create a model?"
+• "How do I update graphics drivers?"
+• "Where are the important files?"`;
+    }
+
+    function getSwarmDirectoryAnswer() {
+      return `To send a swarm to a specific directory:
+
+**METHOD 1: Using Swarm Control Script**
+\`\`\`powershell
+.\\swarm_control.ps1 -Operation deploy -TargetDirectory "D:\\target\\path" -SwarmSize 5
+\`\`\`
+
+**METHOD 2: Programmatic Approach**
+\`\`\`powershell
+Import-Module .\\SwarmManager.psm1
+$swarm = New-Swarm -Size 5 -WorkingDirectory "D:\\target\\path"
+Start-Swarm -Swarm $swarm -Task "Your task description"
+\`\`\`
+
+**What they'll do:**
+The swarm agents will:
+1. Navigate to the specified directory
+2. Scan available files and structure
+3. Execute the task you've assigned
+4. Report results back to the control center`;
+    }
+
+    function getSwarmMonitorAnswer() {
+      return `Monitor swarms using:
+
+\`\`\`powershell
+.\\swarm_control.ps1 -Operation monitor -Watch
+\`\`\`
+
+Or check status:
+\`\`\`powershell
+.\\swarm_control.ps1 -Operation status
+\`\`\``;
+    }
+
+    function getAddTodoAnswer() {
+      return `Add todos using any of these methods:
+
+**METHOD 1: Manual Add**
+\`\`\`powershell
+.\\todo_manager.ps1 -Operation add -TodoText "Implement feature" -Priority High
+\`\`\`
+
+**METHOD 2: Parse !todos Command**
+\`\`\`powershell
+.\\todo_manager.ps1 -Operation parse -Command "!todos 1. First task 2. Second task 3. Third task"
+\`\`\`
+
+**METHOD 3: Agentic Creation (AI-Generated)**
+\`\`\`powershell
+.\\todo_manager.ps1 -Operation agentic-create -Context "Build REST API server"
+\`\`\`
+
+Maximum: 25 todos per list`;
+    }
+
+    function getListTodoAnswer() {
+      return `View todos:
+
+\`\`\`powershell
+# Simple list
+.\\todo_manager.ps1 -Operation list
+
+# Detailed view
+.\\todo_manager.ps1 -Operation list -Verbose
+
+# Filter by status
+.\\todo_manager.ps1 -Operation list -Status pending
+\`\`\``;
+    }
+
+    function getCreateModelAnswer() {
+      return `Create models using:
+
+**Zero-Dependency Model Maker**
+\`\`\`powershell
+.\\model_maker_zero_dep.ps1 -Size 7B -Quantization Q4_K -OutputPath "model.gguf"
+\`\`\`
+
+**With Custom Prompt**
+\`\`\`powershell
+.\\model_maker_zero_dep.ps1 -Size 7B -SystemPrompt "You are a kernel reverse engineer specialist"
+\`\`\`
+
+Available sizes: 7B, 13B, 30B, 50B, 120B, 800B
+Quantization: Q4_K, Q8_0, FP16, FP32`;
+    }
+
+    function getTrainModelAnswer() {
+      return `Train models autonomously:
+
+\`\`\`powershell
+.\\autonomous_finetune_bench.ps1 -Operation autonomous-train -TrainingFiles "data/*.txt" -Duration 24 -Win32Integration
+\`\`\`
+
+Parameters:
+- Duration: Hours to train
+- Iterations: Number of iterations
+- LearningRate: Default 1e-5
+- BatchSize: Default 4`;
+    }
+
+    function getBenchmarkAnswer() {
+      return `Benchmark model formats:
+
+\`\`\`powershell
+.\\autonomous_finetune_bench.ps1 -Operation benchmark -ModelFormats @("gguf", "blob", "safetensors") -Iterations 100
+\`\`\`
+
+Compare cloud vs local:
+\`\`\`powershell
+.\\autonomous_finetune_bench.ps1 -Operation cloud-vs-local -ModelName "llama-7b"
+\`\`\``;
+    }
+
+    function getFileLocationsAnswer() {
+      return `**Key File Locations:**
+
+Scripts:
+• D:\\lazy init ide\\scripts\\todo_manager.ps1
+• D:\\lazy init ide\\scripts\\model_agent_making_station.ps1
+• D:\\lazy init ide\\scripts\\autonomous_finetune_bench.ps1
+
+Modules:
+• D:\\lazy init ide\\scripts\\TodoManager.psm1
+• D:\\lazy init ide\\scripts\\Advanced-Model-Operations.psm1
+
+Data:
+• D:\\lazy init ide\\data\\todos.json
+• D:\\lazy init ide\\data\\models\\`;
+    }
+
+    function getDriverHelpAnswer(question) {
+      const isNvidia = question.match(/nvidia|geforce|rtx|gtx/i);
+      const isAMD = question.match(/amd|radeon|rx/i);
+
+      let answer = `**Graphics Driver Update Guide**\n\n`;
+
+      if (isNvidia) {
+        answer += `**NVIDIA Drivers:**\n\n`;
+        answer += `1. **Automatic Detection:**\n`;
+        answer += `   🌐 Visit: https://www.nvidia.com/download/index.aspx\n`;
+        answer += `   Click "Auto-Detect Your GPU" for easy installation\n\n`;
+        answer += `2. **Manual Download:**\n`;
+        answer += `   • Product Type: GeForce / RTX / GTX / Quadro\n`;
+        answer += `   • Operating System: Windows 10/11 64-bit\n`;
+        answer += `   • Download Type: Game Ready Driver (GRD) or Studio Driver\n\n`;
+        answer += `3. **Using GeForce Experience:**\n`;
+        answer += `   \`\`\`powershell\n`;
+        answer += `   # Install GeForce Experience\n`;
+        answer += `   Start-Process "https://www.nvidia.com/en-us/geforce/geforce-experience/"\n`;
+        answer += `   \`\`\`\n`;
+        answer += `   Then use the "Drivers" tab for automatic updates\n\n`;
+        answer += `4. **Command Line Check:**\n`;
+        answer += `   \`\`\`powershell\n`;
+        answer += `   nvidia-smi  # Check current driver version\n`;
+        answer += `   \`\`\`\n`;
+      } else if (isAMD) {
+        answer += `**AMD Drivers:**\n\n`;
+        answer += `1. **Auto-Detect Tool:**\n`;
+        answer += `   🌐 Visit: https://www.amd.com/en/support\n`;
+        answer += `   Click "Auto-Detect and Install" for automatic installation\n\n`;
+        answer += `2. **Manual Download:**\n`;
+        answer += `   • Select: Graphics → Radeon RX Series\n`;
+        answer += `   • Choose your specific GPU model\n`;
+        answer += `   • Download: Adrenalin Edition\n\n`;
+        answer += `3. **Using AMD Software:**\n`;
+        answer += `   Open AMD Software → Settings → Updates\n`;
+        answer += `   Check for driver updates automatically\n\n`;
+        answer += `4. **Command Line Check:**\n`;
+        answer += `   \`\`\`powershell\n`;
+        answer += `   dxdiag  # Check display adapter info\n`;
+        answer += `   \`\`\`\n`;
+      } else {
+        answer += `**General Graphics Driver Update:**\n\n`;
+        answer += `**Option 1: Windows Update**\n`;
+        answer += `\`\`\`powershell\n`;
+        answer += `# Check for Windows updates (includes drivers)\n`;
+        answer += `Start-Process ms-settings:windowsupdate\n`;
+        answer += `\`\`\`\n\n`;
+        answer += `**Option 2: Device Manager**\n`;
+        answer += `\`\`\`powershell\n`;
+        answer += `# Open Device Manager\n`;
+        answer += `devmgmt.msc\n`;
+        answer += `# Right-click Display Adapters → Update Driver\n`;
+        answer += `\`\`\`\n\n`;
+        answer += `**Option 3: Identify Your GPU**\n`;
+        answer += `\`\`\`powershell\n`;
+        answer += `# Find your graphics card\n`;
+        answer += `Get-WmiObject Win32_VideoController | Select-Object Name, DriverVersion, DriverDate\n`;
+        answer += `\`\`\`\n\n`;
+        answer += `**NVIDIA:** https://www.nvidia.com/download/index.aspx\n`;
+        answer += `**AMD:** https://www.amd.com/en/support\n`;
+        answer += `**Intel:** https://downloadcenter.intel.com/\n`;
+      }
+
+      answer += `\n**🔧 Need specific help?** Ask me:\n`;
+      answer += `• "How do I update NVIDIA drivers?"\n`;
+      answer += `• "How do I update AMD drivers?"\n`;
+      answer += `• "Open browser for driver downloads"\n`;
+
+      return answer;
+    }
+
+    function getBrowserHelpAnswer() {
+      return `**Built-in Web Browser Access**
+
+I can help you open web pages for:
+
+**Driver Downloads:**
+• NVIDIA: nvidia.com/download
+• AMD: amd.com/support  
+• Intel: intel.com/support
+
+**Documentation:**
+• Python: docs.python.org
+• PowerShell: docs.microsoft.com/powershell
+• Qt: doc.qt.io
+
+**Development Resources:**
+• Stack Overflow
+• GitHub
+• Dev Communities
+
+**How to use:**
+1. Click the 🌐 Web Browser button above
+2. Or ask me: "Open browser for [topic]"
+3. Or use: "Search for [query]"
+
+**Examples:**
+• "Open browser for NVIDIA drivers"
+• "Search for Python documentation"  
+• "Open GitHub"`;
+    }
+
+    function openBrowser(url = '') {
+      if (!url) {
+        // Show browser panel with helpful links
+        const browserPanel = createBrowserPanel();
+        addAssistantMessage(browserPanel);
+      } else {
+        // Open specific URL
+        window.open(url, '_blank');
+        addAssistantMessage(`🌐 Opening: ${url}`);
+      }
+    }
+
+    function createBrowserPanel() {
+      return `**🌐 Quick Web Access**
+
+**Driver Downloads:**
+• <a href="#" onclick="window.open('https://www.nvidia.com/download/index.aspx', '_blank'); return false;">NVIDIA Drivers</a>
+• <a href="#" onclick="window.open('https://www.amd.com/en/support', '_blank'); return false;">AMD Drivers</a>
+• <a href="#" onclick="window.open('https://downloadcenter.intel.com/', '_blank'); return false;">Intel Drivers</a>
+
+**Development Documentation:**
+• <a href="#" onclick="window.open('https://docs.python.org/', '_blank'); return false;">Python Docs</a>
+• <a href="#" onclick="window.open('https://docs.microsoft.com/powershell/', '_blank'); return false;">PowerShell Docs</a>
+• <a href="#" onclick="window.open('https://doc.qt.io/', '_blank'); return false;">Qt Documentation</a>
+
+**AI & ML Resources:**
+• <a href="#" onclick="window.open('https://huggingface.co/', '_blank'); return false;">Hugging Face</a>
+• <a href="#" onclick="window.open('https://ollama.ai/', '_blank'); return false;">Ollama</a>
+• <a href="#" onclick="window.open('https://pytorch.org/docs/', '_blank'); return false;">PyTorch Docs</a>
+
+**Developer Communities:**
+• <a href="#" onclick="window.open('https://stackoverflow.com/', '_blank'); return false;">Stack Overflow</a>
+• <a href="#" onclick="window.open('https://github.com/', '_blank'); return false;">GitHub</a>
+• <a href="#" onclick="window.open('https://reddit.com/r/programming', '_blank'); return false;">r/programming</a>
+
+💡 **Tip:** You can also ask me to "search for [topic]" and I'll help you find what you need!`;
+    }
+
+    function addUserMessage(text) {
+      const messagesContainer = document.getElementById('chatMessages');
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      const messageHTML = `
+                <div class="message user-message">
+                    <div class="message-header">
+                        <div class="message-avatar user-avatar">👤</div>
+                        <span class="message-name user-name">You</span>
+                        <span class="message-time">${time}</span>
+                    </div>
+                    <div class="message-content">${escapeHtml(text)}</div>
+                </div>
+            `;
+
+      messagesContainer.innerHTML += messageHTML;
+      scrollToBottom();
+    }
+
+    function addAssistantMessage(text) {
+      const messagesContainer = document.getElementById('chatMessages');
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      // Process text for code blocks
+      text = processCodeBlocks(text);
+
+      const messageHTML = `
+                <div class="message assistant-message">
+                    <div class="message-header">
+                        <div class="message-avatar assistant-avatar">🤖</div>
+                        <span class="message-name assistant-name">Assistant</span>
+                        <span class="message-time">${time}</span>
+                    </div>
+                    <div class="message-content">${text}</div>
+                </div>
+            `;
+
+      messagesContainer.innerHTML += messageHTML;
+      scrollToBottom();
+    }
+
+    function showTypingIndicator() {
+      const messagesContainer = document.getElementById('chatMessages');
+      const indicatorHTML = `
+                <div class="message assistant-message" id="typingIndicator">
+                    <div class="message-header">
+                        <div class="message-avatar assistant-avatar">🤖</div>
+                        <span class="message-name assistant-name">Assistant</span>
+                    </div>
+                    <div class="typing-indicator active">
+                        <div class="typing-dots">
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+      messagesContainer.innerHTML += indicatorHTML;
+      scrollToBottom();
+    }
+
+    function hideTypingIndicator() {
+      const indicator = document.getElementById('typingIndicator');
+      if (indicator) {
+        indicator.remove();
+      }
+    }
+
+    function processCodeBlocks(text) {
+      // Replace ```language ... ``` with styled code blocks
+      text = text.replace(/```(\w+)\n([\s\S]*?)```/g, function (match, lang, code) {
+        const escaped = escapeHtml(code.trim());
+        return `<div class="code-block">
+                    <div class="code-header">
+                        <span class="code-lang">${lang}</span>
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                    </div>
+                    <pre><code>${escaped}</code></pre>
+                </div>`;
+      });
+
+      // Convert newlines to <br>
+      text = text.replace(/\n/g, '<br>');
+
+      // Bold text
+      text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+      // Inline code
+      text = text.replace(/`([^`]+)`/g, '<code style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px;">$1</code>');
+
+      return text;
+    }
+
+    function copyCode(button) {
+      const codeBlock = button.closest('.code-block');
+      const code = codeBlock.querySelector('code').textContent;
+
+      navigator.clipboard.writeText(code).then(() => {
+        button.textContent = 'Copied!';
+        setTimeout(() => {
+          button.textContent = 'Copy';
+        }, 2000);
+      });
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function scrollToBottom() {
+      const messagesContainer = document.getElementById('chatMessages');
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+  </script>
+</body>
+
+</html>

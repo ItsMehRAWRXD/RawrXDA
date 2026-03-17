@@ -81,6 +81,8 @@ public:
     uint8_t* ParseTensorInfo(uint8_t* ptr, Tensor& t);
     void LoadTensorAsync(Tensor& t);
     void DequantAndUploadQ4_0(Tensor& t, void* blocks, size_t N);
+    void DequantAndUploadQ8_0(Tensor& t, void* blocks, size_t N);
+    void DequantAndUploadQ4_K(Tensor& t, void* blocks, size_t N);
     void UploadF32(Tensor& t, void* data, size_t N);
     void CreateGPUBuffer(Tensor& t, void* data, size_t size);
     void UploadViaStaging(void* data, size_t size, VkBuffer dstBuffer);

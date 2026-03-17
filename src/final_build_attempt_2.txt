@@ -1,0 +1,1509 @@
+In file included from telemetry.h:7,
+                 from rawrxd_cli.cpp:4:
+./nlohmann/json.hpp:442:1: error: expected declaration before '}' token
+  442 | } // namespace nlohmann
+      | ^
+./nlohmann/json.hpp:444:66: error: specialization of 'T nlohmann::json::get() const [with T = std::__cxx11::basic_string<char>]' after instantiation
+  444 | template<> inline std::string nlohmann::json::get<std::string>() const { return m_string; }
+      |                                                                  ^~~~~
+telemetry.h:40:108: error: 'nlohmann::json::object' cannot be used as a function
+   40 |     void recordEvent(const std::string& event_name, const nlohmann::json& metadata = nlohmann::json::object());
+      |                                                                                      ~~~~~~~~~~~~~~~~~~~~~~^~
+rawrxd_cli.cpp: In function 'int main(int, char**)':
+rawrxd_cli.cpp:256:65: error: request for member 'has_value' in '((std::__shared_ptr_access<RawrXD::CPUInferenceEngine, __gnu_cxx::_S_atomic, false, false>*)(& state.CLIState::inference_engine))->std::__shared_ptr_access<RawrXD::CPUInferenceEngine, __gnu_cxx::_S_atomic, false, false>::operator->()->RawrXD::CPUInferenceEngine::LoadModel(state.CLIState::model_path)', which is of non-class type 'bool'
+  256 |         if (state.inference_engine->LoadModel(state.model_path).has_value()) {
+      |                                                                 ^~~~~~~~~
+rawrxd_cli.cpp:272:12: error: 'struct GenerationConfig' has no member named 'top_p'
+  272 |     config.top_p = state.top_p;
+      |            ^~~~~
+rawrxd_cli.cpp:274:12: error: 'struct GenerationConfig' has no member named 'maxMode'
+  274 |     config.maxMode = state.enable_max_mode;
+      |            ^~~~~~~
+rawrxd_cli.cpp:275:12: error: 'struct GenerationConfig' has no member named 'deepThinking'
+  275 |     config.deepThinking = state.enable_deep_thinking;
+      |            ^~~~~~~~~~~~
+rawrxd_cli.cpp:276:12: error: 'struct GenerationConfig' has no member named 'deepResearch'
+  276 |     config.deepResearch = state.enable_deep_research;
+      |            ^~~~~~~~~~~~
+rawrxd_cli.cpp:277:12: error: 'struct GenerationConfig' has no member named 'noRefusal'
+  277 |     config.noRefusal = state.enable_no_refusal;
+      |            ^~~~~~~~~
+rawrxd_cli.cpp:278:12: error: 'struct GenerationConfig' has no member named 'autoCorrect'
+  278 |     config.autoCorrect = state.enable_autocorrect;
+      |            ^~~~~~~~~~~
+rawrxd_cli.cpp:279:38: error: cannot convert 'GenerationConfig' to 'const AgenticEngine::GenerationConfig&'
+  279 |     state.agent_engine->updateConfig(config);
+      |                                      ^~~~~~
+      |                                      |
+      |                                      GenerationConfig
+In file included from rawrxd_cli.cpp:2:
+agentic_engine.h:106:47: note: initializing argument 1 of 'void AgenticEngine::updateConfig(const GenerationConfig&)'
+  106 |     void updateConfig(const GenerationConfig& config);
+      |                       ~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~
+rawrxd_cli.cpp:310:41: error: no matching function for call to 'AgenticEngine::generateCode(std::string&, main(int, char**)::<lambda(const std::string&)>)'
+  310 |         state.agent_engine->generateCode(chat_prompt, [](const std::string& token) {
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  311 |             std::cout << token;
+      |             ~~~~~~~~~~~~~~~~~~~          
+  312 |             std::cout.flush();
+      |             ~~~~~~~~~~~~~~~~~~           
+  313 |         });
+      |         ~~                               
+rawrxd_cli.cpp:310:41: note: there is 1 candidate
+agentic_engine.h:33:17: note: candidate 1: 'std::string AgenticEngine::generateCode(const std::string&)'
+   33 |     std::string generateCode(const std::string& prompt);
+      |                 ^~~~~~~~~~~~
+agentic_engine.h:33:17: note: candidate expects 1 argument, 2 provided
+In file included from C:/msys64/mingw64/include/c++/15.2.0/vector:66,
+                 from cpu_inference_engine.h:3,
+                 from rawrxd_cli.cpp:1:
+C:/msys64/mingw64/include/c++/15.2.0/bits/stl_construct.h: In instantiation of 'void std::_Construct(_Tp*, _Args&& ...) [with _Tp = RawrXD::CPUInferenceEngine; _Args = {}]':
+C:/msys64/mingw64/include/c++/15.2.0/bits/alloc_traits.h:805:19:   required from 'static void std::allocator_traits<std::allocator<void> >::construct(allocator_type&, _Up*, _Args&& ...) [with _Up = RawrXD::CPUInferenceEngine; _Args = {}; allocator_type = std::allocator<void>]'
+  805 |         { std::_Construct(__p, std::forward<_Args>(__args)...); }
+      |           ~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/shared_ptr_base.h:606:39:   required from 'std::_Sp_counted_ptr_inplace<_Tp, _Alloc, _Lp>::_Sp_counted_ptr_inplace(_Alloc, _Args&& ...) [with _Args = {}; _Tp = RawrXD::CPUInferenceEngine; _Alloc = std::allocator<void>; __gnu_cxx::_Lock_policy _Lp = __gnu_cxx::_S_atomic]'
+  606 |           allocator_traits<_Alloc>::construct(__a, _M_ptr(),
+      |           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~
+  607 |               std::forward<_Args>(__args)...); // might throw
+      |               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+C:/msys64/mingw64/include/c++/15.2.0/bits/shared_ptr_base.h:969:16:   required from 'std::__shared_count<_Lp>::__shared_count(_Tp*&, std::_Sp_alloc_shared_tag<_Alloc>, _Args&& ...) [with _Tp = RawrXD::CPUInferenceEngine; _Alloc = std::allocator<void>; _Args = {}; __gnu_cxx::_Lock_policy _Lp = __gnu_cxx::_S_atomic]'
+  969 |           auto __pi = ::new (__mem)
+      |                       ^~~~~~~~~~~~~
+  970 |             _Sp_cp_type(__a._M_a, std::forward<_Args>(__args)...);
+      |             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/shared_ptr_base.h:1719:14:   required from 'std::__shared_ptr<_Tp, _Lp>::__shared_ptr(std::_Sp_alloc_shared_tag<_Tp>, _Args&& ...) [with _Alloc = std::allocator<void>; _Args = {}; _Tp = RawrXD::CPUInferenceEngine; __gnu_cxx::_Lock_policy _Lp = __gnu_cxx::_S_atomic]'
+ 1719 |         : _M_ptr(), _M_refcount(_M_ptr, __tag, std::forward<_Args>(__args)...)
+      |                     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/shared_ptr.h:463:59:   required from 'std::shared_ptr<_Tp>::shared_ptr(std::_Sp_alloc_shared_tag<_Tp>, _Args&& ...) [with _Alloc = std::allocator<void>; _Args = {}; _Tp = RawrXD::CPUInferenceEngine]'
+  463 |         : __shared_ptr<_Tp>(__tag, std::forward<_Args>(__args)...)
+      |                                                                  ^
+C:/msys64/mingw64/include/c++/15.2.0/bits/shared_ptr.h:1007:14:   required from 'std::shared_ptr<typename std::enable_if<(! std::is_array<_Tp>::value), _Tp>::type> std::make_shared(_Args&& ...) [with _Tp = RawrXD::CPUInferenceEngine; _Args = {}; typename enable_if<(! is_array<_Tp>::value), _Tp>::type = RawrXD::CPUInferenceEngine]'
+ 1007 |       return shared_ptr<_Tp>(_Sp_alloc_shared_tag<_Alloc>{__a},
+      |              ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 1008 |                              std::forward<_Args>(__args)...);
+      |                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+rawrxd_cli.cpp:239:74:   required from here
+  239 |     state.inference_engine = std::make_shared<RawrXD::CPUInferenceEngine>();
+      |                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~
+C:/msys64/mingw64/include/c++/15.2.0/bits/stl_construct.h:133:7: error: invalid new-expression of abstract class type 'RawrXD::CPUInferenceEngine'
+  133 |       ::new(static_cast<void*>(__p)) _Tp(std::forward<_Args>(__args)...);
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+cpu_inference_engine.h:71:7: note:   because the following virtual functions are pure within 'RawrXD::CPUInferenceEngine':
+   71 | class CPUInferenceEngine : public InferenceEngine {
+      |       ^~~~~~~~~~~~~~~~~~
+In file included from cpu_inference_engine.h:12:
+inference_engine.h:35:34: note:     'virtual std::vector<int> RawrXD::InferenceEngine::Generate(const std::vector<int>&, int)'
+   35 |     virtual std::vector<int32_t> Generate(const std::vector<int32_t>& input_tokens, int max_tokens = 100) = 0;
+      |                                  ^~~~~~~~
+cpu_inference_engine.cpp:6:10: fatal error: license_enforcement.h: No such file or directory
+    6 | #include "license_enforcement.h"
+      |          ^~~~~~~~~~~~~~~~~~~~~~~
+compilation terminated.
+In file included from api_server.cpp:25:
+C:/msys64/mingw64/include/winsock2.h:15:2: warning: #warning Please include winsock2.h before windows.h [-Wcpp]
+   15 | #warning Please include winsock2.h before windows.h
+      |  ^~~~~~~
+api_server.cpp: In member function 'bool APIServer::Start(uint16_t)':
+api_server.cpp:70:25: error: variable 'PatchResult mmfResult' has initializer but incomplete type
+   70 |             PatchResult mmfResult = mmf.initialize(1, "RawrXD-APIServer"); // processType=1 (React/Web bridge)
+      |                         ^~~~~~~~~
+api_server.cpp:70:51: error: invalid use of incomplete type 'struct PatchResult'
+   70 |             PatchResult mmfResult = mmf.initialize(1, "RawrXD-APIServer"); // processType=1 (React/Web bridge)
+      |                                     ~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~
+In file included from api_server.cpp:5:
+core/rawrxd_state_mmf.hpp:53:8: note: forward declaration of 'struct PatchResult'
+   53 | struct PatchResult;
+      |        ^~~~~~~~~~~
+api_server.cpp: In lambda function:
+api_server.cpp:114:53: error: 'GetWSClientCount' was not declared in this scope; did you mean 'GetClientRect'?
+  114 |                             " WS=" + std::to_string(GetWSClientCount()));
+      |                                                     ^~~~~~~~~~~~~~~~
+      |                                                     GetClientRect
+api_server.cpp:136:51: error: invalid use of incomplete type 'struct PatchResult'
+  136 |                             mmf.publishMemoryStats(mmfMem);
+      |                             ~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~
+core/rawrxd_state_mmf.hpp:53:8: note: forward declaration of 'struct PatchResult'
+   53 | struct PatchResult;
+      |        ^~~~~~~~~~~
+api_server.cpp: In member function 'bool APIServer::Stop()':
+api_server.cpp:168:9: error: 'ws_push_running_' was not declared in this scope; did you mean 'is_running_'?
+  168 |         ws_push_running_ = false;
+      |         ^~~~~~~~~~~~~~~~
+      |         is_running_
+api_server.cpp:169:13: error: 'ws_push_thread_' was not declared in this scope
+  169 |         if (ws_push_thread_ && ws_push_thread_->joinable()) {
+      |             ^~~~~~~~~~~~~~~
+api_server.cpp:176:46: error: 'ws_clients_mutex_' was not declared in this scope
+  176 |             std::lock_guard<std::mutex> lock(ws_clients_mutex_);
+      |                                              ^~~~~~~~~~~~~~~~~
+api_server.cpp:177:13: error: 'ws_clients_' was not declared in this scope
+  177 |             ws_clients_.clear();
+      |             ^~~~~~~~~~~
+api_server.cpp:188:31: error: invalid use of incomplete type 'struct PatchResult'
+  188 |             mmf.broadcastEvent(0xFF, "APIServer shutting down");
+      |             ~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+core/rawrxd_state_mmf.hpp:53:8: note: forward declaration of 'struct PatchResult'
+   53 | struct PatchResult;
+      |        ^~~~~~~~~~~
+api_server.cpp:196:42: error: 'ws_messages_sent_' was not declared in this scope
+  196 |             " WS_Sent=" + std::to_string(ws_messages_sent_.load()) +
+      |                                          ^~~~~~~~~~~~~~~~~
+api_server.cpp:197:42: error: 'ws_messages_received_' was not declared in this scope
+  197 |             " WS_Recv=" + std::to_string(ws_messages_received_.load()));
+      |                                          ^~~~~~~~~~~~~~~~~~~~~
+api_server.cpp: At global scope:
+api_server.cpp:256:6: error: no declaration matches 'void APIServer::HandleChatCompletionsRequest(const std::string&, std::string&)'
+  256 | void APIServer::HandleChatCompletionsRequest(const std::string& request, std::string& response) {
+      |      ^~~~~~~~~
+api_server.cpp:256:6: note: no functions named 'void APIServer::HandleChatCompletionsRequest(const std::string&, std::string&)'
+In file included from api_server.cpp:1:
+api_server.h:34:7: note: 'class APIServer' defined here
+   34 | class APIServer {
+      |       ^~~~~~~~~
+api_server.cpp:310:6: error: no declaration matches 'void APIServer::HandleTagsRequest(std::string&)'
+  310 | void APIServer::HandleTagsRequest(std::string& response) {
+      |      ^~~~~~~~~
+api_server.cpp:310:6: note: no functions named 'void APIServer::HandleTagsRequest(std::string&)'
+api_server.h:34:7: note: 'class APIServer' defined here
+   34 | class APIServer {
+      |       ^~~~~~~~~
+api_server.cpp:329:6: error: no declaration matches 'void APIServer::HandlePullRequest(const std::string&, std::string&)'
+  329 | void APIServer::HandlePullRequest(const std::string& request, std::string& response) {
+      |      ^~~~~~~~~
+api_server.cpp:329:6: note: no functions named 'void APIServer::HandlePullRequest(const std::string&, std::string&)'
+api_server.h:34:7: note: 'class APIServer' defined here
+   34 | class APIServer {
+      |       ^~~~~~~~~
+api_server.cpp: In member function 'std::string APIServer::GenerateCompletion(const std::string&)':
+api_server.cpp:378:43: error: 'CPUInferenceEngine' does not name a type
+  378 |             auto* cpuEngine = static_cast<CPUInferenceEngine*>(app_state_.inference_engine);
+      |                                           ^~~~~~~~~~~~~~~~~~
+api_server.cpp:378:61: error: expected '>' before '*' token
+  378 |             auto* cpuEngine = static_cast<CPUInferenceEngine*>(app_state_.inference_engine);
+      |                                                             ^
+api_server.cpp:406:42: error: invalid use of incomplete type 'struct PatchResult'
+  406 |                     mmf.publishModelState(modelState);
+      |                     ~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~
+core/rawrxd_state_mmf.hpp:53:8: note: forward declaration of 'struct PatchResult'
+   53 | struct PatchResult;
+      |        ^~~~~~~~~~~
+api_server.cpp:423:34: error: invalid use of incomplete type 'struct PatchResult'
+  423 |             mmf.publishModelState(modelState);
+      |             ~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~
+core/rawrxd_state_mmf.hpp:53:8: note: forward declaration of 'struct PatchResult'
+   53 | struct PatchResult;
+      |        ^~~~~~~~~~~
+api_server.cpp:429:39: error: 'CPUInferenceEngine' does not name a type
+  429 |         auto* cpuEngine = static_cast<CPUInferenceEngine*>(app_state_.inference_engine);
+      |                                       ^~~~~~~~~~~~~~~~~~
+api_server.cpp:429:57: error: expected '>' before '*' token
+  429 |         auto* cpuEngine = static_cast<CPUInferenceEngine*>(app_state_.inference_engine);
+      |                                                         ^
+api_server.cpp:457:34: error: invalid use of incomplete type 'struct PatchResult'
+  457 |             mmf.publishModelState(modelState);
+      |             ~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~
+core/rawrxd_state_mmf.hpp:53:8: note: forward declaration of 'struct PatchResult'
+   53 | struct PatchResult;
+      |        ^~~~~~~~~~~
+api_server.cpp: At global scope:
+api_server.cpp:468:13: error: no declaration matches 'std::string APIServer::GenerateChatCompletion(const std::vector<ChatMessage>&)'
+  468 | std::string APIServer::GenerateChatCompletion(const std::vector<ChatMessage>& messages) {
+      |             ^~~~~~~~~
+api_server.cpp:468:13: note: no functions named 'std::string APIServer::GenerateChatCompletion(const std::vector<ChatMessage>&)'
+api_server.h:34:7: note: 'class APIServer' defined here
+   34 | class APIServer {
+      |       ^~~~~~~~~
+api_server.cpp: In member function 'void APIServer::InitializeHttpServer()':
+api_server.cpp:567:9: error: 'start_time_' was not declared in this scope; did you mean 'strftime'?
+  567 |         start_time_ = std::chrono::steady_clock::now();
+      |         ^~~~~~~~~~~
+      |         strftime
+api_server.cpp: In member function 'void APIServer::ProcessPendingRequests()':
+api_server.cpp:582:42: error: 'request_queue_mutex_' was not declared in this scope
+  582 |         std::lock_guard<std::mutex> lock(request_queue_mutex_);
+      |                                          ^~~~~~~~~~~~~~~~~~~~
+api_server.cpp:585:17: error: 'pending_requests_' was not declared in this scope
+  585 |         while (!pending_requests_.empty() && is_running_.load()) {
+      |                 ^~~~~~~~~~~~~~~~~
+api_server.cpp:595:21: error: 'HandleChatCompletionsRequest' was not declared in this scope; did you mean 'HandleChatCompletion'?
+  595 |                     HandleChatCompletionsRequest(request.body, response_body);
+      |                     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                     HandleChatCompletion
+api_server.cpp:597:21: error: 'HandleTagsRequest' was not declared in this scope; did you mean 'HandleGenerateRequest'?
+  597 |                     HandleTagsRequest(response_body);
+      |                     ^~~~~~~~~~~~~~~~~
+      |                     HandleGenerateRequest
+api_server.cpp:599:21: error: 'HandlePullRequest' was not declared in this scope
+  599 |                     HandlePullRequest(request.body, response_body);
+      |                     ^~~~~~~~~~~~~~~~~
+api_server.cpp:601:21: error: 'HandleDumpBinRequest' was not declared in this scope
+  601 |                     HandleDumpBinRequest(request.body, response_body);
+      |                     ^~~~~~~~~~~~~~~~~~~~
+api_server.cpp:603:21: error: 'HandlePullRequest' was not declared in this scope
+  603 |                     HandlePullRequest(request.body, response_body);
+      |                     ^~~~~~~~~~~~~~~~~
+api_server.cpp:637:38: error: 'GetFullMemoryStatsJson' was not declared in this scope
+  637 |                      response_body = GetFullMemoryStatsJson();
+      |                                      ^~~~~~~~~~~~~~~~~~~~~~
+api_server.cpp:642:38: error: 'GetFullStateJson' was not declared in this scope
+  642 |                      response_body = GetFullStateJson();
+      |                                      ^~~~~~~~~~~~~~~~
+api_server.cpp:646:57: error: 'ws_clients_mutex_' was not declared in this scope
+  646 |                      std::lock_guard<std::mutex> wsLock(ws_clients_mutex_);
+      |                                                         ^~~~~~~~~~~~~~~~~
+api_server.cpp:647:39: error: 'ws_clients_' was not declared in this scope
+  647 |                      size_t wsCount = ws_clients_.size();
+      |                                       ^~~~~~~~~~~
+api_server.cpp:649:70: error: 'ws_messages_sent_' was not declared in this scope
+  649 |                          + ",\"ws_messages_sent\":" + std::to_string(ws_messages_sent_.load())
+      |                                                                      ^~~~~~~~~~~~~~~~~
+api_server.cpp:650:74: error: 'ws_messages_received_' was not declared in this scope
+  650 |                          + ",\"ws_messages_received\":" + std::to_string(ws_messages_received_.load())
+      |                                                                          ^~~~~~~~~~~~~~~~~~~~~
+api_server.cpp:674:41: error: 'ProxyToCotEngine' was not declared in this scope
+  674 |                           bool cot_ok = ProxyToCotEngine(cot_request, cot_response);
+      |                                         ^~~~~~~~~~~~~~~~
+api_server.cpp:694:32: error: 'ProxyToCotEngine' was not declared in this scope
+  694 |                      bool ok = ProxyToCotEngine("", metrics_response, "/api/cot/metrics", "GET");
+      |                                ^~~~~~~~~~~~~~~~
+api_server.cpp: At global scope:
+api_server.cpp:944:6: error: no declaration matches 'void APIServer::LogRequestReceived(const std::string&, size_t)'
+  944 | void APIServer::LogRequestReceived(const std::string& endpoint, size_t content_length) {
+      |      ^~~~~~~~~
+api_server.cpp:944:6: note: no functions named 'void APIServer::LogRequestReceived(const std::string&, size_t)'
+api_server.h:34:7: note: 'class APIServer' defined here
+   34 | class APIServer {
+      |       ^~~~~~~~~
+api_server.cpp:949:6: error: no declaration matches 'void APIServer::LogRequestCompleted(const std::string&, size_t)'
+  949 | void APIServer::LogRequestCompleted(const std::string& endpoint, size_t response_length) {
+      |      ^~~~~~~~~
+api_server.cpp:949:6: note: no functions named 'void APIServer::LogRequestCompleted(const std::string&, size_t)'
+api_server.h:34:7: note: 'class APIServer' defined here
+   34 | class APIServer {
+      |       ^~~~~~~~~
+api_server.cpp:954:6: error: no declaration matches 'void APIServer::LogRequestError(const std::string&, const std::string&)'
+  954 | void APIServer::LogRequestError(const std::string& endpoint, const std::string& error) {
+      |      ^~~~~~~~~
+api_server.cpp:954:6: note: no functions named 'void APIServer::LogRequestError(const std::string&, const std::string&)'
+api_server.h:34:7: note: 'class APIServer' defined here
+   34 | class APIServer {
+      |       ^~~~~~~~~
+api_server.cpp:959:6: error: no declaration matches 'void APIServer::LogServerError(const std::string&)'
+  959 | void APIServer::LogServerError(const std::string& error) {
+      |      ^~~~~~~~~
+api_server.cpp:959:6: note: no functions named 'void APIServer::LogServerError(const std::string&)'
+api_server.h:34:7: note: 'class APIServer' defined here
+   34 | class APIServer {
+      |       ^~~~~~~~~
+api_server.cpp:964:6: error: no declaration matches 'void APIServer::RecordRequestMetrics(const std::string&, std::chrono::milliseconds, bool)'
+  964 | void APIServer::RecordRequestMetrics(const std::string& endpoint,
+      |      ^~~~~~~~~
+api_server.cpp:964:6: note: no functions named 'void APIServer::RecordRequestMetrics(const std::string&, std::chrono::milliseconds, bool)'
+api_server.h:34:7: note: 'class APIServer' defined here
+   34 | class APIServer {
+      |       ^~~~~~~~~
+api_server.cpp:1060:13: error: no declaration matches 'std::string APIServer::WSComputeAcceptKey(const std::string&)'
+ 1060 | std::string APIServer::WSComputeAcceptKey(const std::string& clientKey) {
+      |             ^~~~~~~~~
+api_server.cpp:1060:13: note: no functions named 'std::string APIServer::WSComputeAcceptKey(const std::string&)'
+api_server.h:34:7: note: 'class APIServer' defined here
+   34 | class APIServer {
+      |       ^~~~~~~~~
+api_server.cpp:1082:6: error: no declaration matches 'bool APIServer::HandleWebSocketUpgrade(const HttpRequest&, void*)'
+ 1082 | bool APIServer::HandleWebSocketUpgrade(const HttpRequest& request, void* clientSocket) {
+      |      ^~~~~~~~~
+api_server.cpp:1082:6: note: no functions named 'bool APIServer::HandleWebSocketUpgrade(const HttpRequest&, void*)'
+api_server.h:34:7: note: 'class APIServer' defined here
+   34 | class APIServer {
+      |       ^~~~~~~~~
+api_server.cpp:1152:6: error: no declaration matches 'void APIServer::WSProcessMessage(uint64_t, const std::string&)'
+ 1152 | void APIServer::WSProcessMessage(uint64_t clientId, const std::string& message) {
+      |      ^~~~~~~~~
+api_server.cpp:1152:6: note: no functions named 'void APIServer::WSProcessMessage(uint64_t, const std::string&)'
+api_server.h:34:7: note: 'class APIServer' defined here
+   34 | class APIServer {
+      |       ^~~~~~~~~
+api_server.cpp:1215:6: error: no declaration matches 'bool APIServer::SendWSText(uint64_t, const std::string&)'
+ 1215 | bool APIServer::SendWSText(uint64_t clientId, const std::string& payload) {
+      |      ^~~~~~~~~
+api_server.cpp:1215:6: note: no functions named 'bool APIServer::SendWSText(uint64_t, const std::string&)'
+api_server.h:34:7: note: 'class APIServer' defined here
+   34 | class APIServer {
+      |       ^~~~~~~~~
+api_server.cpp:1266:1: error: 'WSFrame' does not name a type
+ 1266 | WSFrame APIServer::WSParseFrame(const uint8_t* data, size_t len, size_t* consumed) {
+      | ^~~~~~~
+api_server.cpp:1314:22: error: 'std::vector<unsigned char> APIServer::WSEncodeFrame' is not a static data member of 'class APIServer'
+ 1314 | std::vector<uint8_t> APIServer::WSEncodeFrame(WSFrame::Opcode opcode, const std::string& payload) {
+      |                      ^~~~~~~~~
+api_server.cpp:1314:47: error: 'WSFrame' has not been declared
+ 1314 | std::vector<uint8_t> APIServer::WSEncodeFrame(WSFrame::Opcode opcode, const std::string& payload) {
+      |                                               ^~~~~~~
+api_server.cpp:1314:71: error: expected primary-expression before 'const'
+ 1314 | std::vector<uint8_t> APIServer::WSEncodeFrame(WSFrame::Opcode opcode, const std::string& payload) {
+      |                                                                       ^~~~~
+api_server.cpp:1314:99: error: expected ',' or ';' before '{' token
+ 1314 | std::vector<uint8_t> APIServer::WSEncodeFrame(WSFrame::Opcode opcode, const std::string& payload) {
+      |                                                                                                   ^
+api_server.cpp:1340:6: error: no declaration matches 'void APIServer::WSPushThread()'
+ 1340 | void APIServer::WSPushThread() {
+      |      ^~~~~~~~~
+api_server.cpp:1340:6: note: no functions named 'void APIServer::WSPushThread()'
+api_server.h:34:7: note: 'class APIServer' defined here
+   34 | class APIServer {
+      |       ^~~~~~~~~
+api_server.cpp:1418:6: error: no declaration matches 'void APIServer::BroadcastMemoryStats()'
+ 1418 | void APIServer::BroadcastMemoryStats() {
+      |      ^~~~~~~~~
+api_server.cpp:1418:6: note: no functions named 'void APIServer::BroadcastMemoryStats()'
+api_server.h:34:7: note: 'class APIServer' defined here
+   34 | class APIServer {
+      |       ^~~~~~~~~
+api_server.cpp:1452:6: error: no declaration matches 'void APIServer::BroadcastModelState()'
+ 1452 | void APIServer::BroadcastModelState() {
+      |      ^~~~~~~~~
+api_server.cpp:1452:6: note: no functions named 'void APIServer::BroadcastModelState()'
+api_server.h:34:7: note: 'class APIServer' defined here
+   34 | class APIServer {
+      |       ^~~~~~~~~
+api_server.cpp:1489:6: error: no declaration matches 'void APIServer::BroadcastPatchEvent(const std::string&)'
+ 1489 | void APIServer::BroadcastPatchEvent(const std::string& eventJson) {
+      |      ^~~~~~~~~
+api_server.cpp:1489:6: note: no functions named 'void APIServer::BroadcastPatchEvent(const std::string&)'
+api_server.h:34:7: note: 'class APIServer' defined here
+   34 | class APIServer {
+      |       ^~~~~~~~~
+api_server.cpp:1498:6: error: no declaration matches 'void APIServer::BroadcastFullState()'
+ 1498 | void APIServer::BroadcastFullState() {
+      |      ^~~~~~~~~
+api_server.cpp:1498:6: note: no functions named 'void APIServer::BroadcastFullState()'
+api_server.h:34:7: note: 'class APIServer' defined here
+   34 | class APIServer {
+      |       ^~~~~~~~~
+api_server.cpp:1513:6: error: no declaration matches 'void APIServer::WSCleanupDeadClients()'
+ 1513 | void APIServer::WSCleanupDeadClients() {
+      |      ^~~~~~~~~
+api_server.cpp:1513:6: note: no functions named 'void APIServer::WSCleanupDeadClients()'
+api_server.h:34:7: note: 'class APIServer' defined here
+   34 | class APIServer {
+      |       ^~~~~~~~~
+api_server.cpp:1544:8: error: no declaration matches 'size_t APIServer::GetWSClientCount() const'
+ 1544 | size_t APIServer::GetWSClientCount() const {
+      |        ^~~~~~~~~
+api_server.cpp:1544:8: note: no functions named 'size_t APIServer::GetWSClientCount() const'
+api_server.h:34:7: note: 'class APIServer' defined here
+   34 | class APIServer {
+      |       ^~~~~~~~~
+api_server.cpp:1553:13: error: no declaration matches 'std::string APIServer::GetFullStateJson() const'
+ 1553 | std::string APIServer::GetFullStateJson() const {
+      |             ^~~~~~~~~
+api_server.cpp:1553:13: note: no functions named 'std::string APIServer::GetFullStateJson() const'
+api_server.h:34:7: note: 'class APIServer' defined here
+   34 | class APIServer {
+      |       ^~~~~~~~~
+api_server.cpp:1625:6: error: no declaration matches 'bool APIServer::ProxyToCotEngine(const std::string&, std::string&, const std::string&, const std::string&)'
+ 1625 | bool APIServer::ProxyToCotEngine(const std::string& request_body, std::string& response,
+      |      ^~~~~~~~~
+api_server.cpp:1625:6: note: no functions named 'bool APIServer::ProxyToCotEngine(const std::string&, std::string&, const std::string&, const std::string&)'
+api_server.h:34:7: note: 'class APIServer' defined here
+   34 | class APIServer {
+      |       ^~~~~~~~~
+In file included from telemetry.h:7,
+                 from telemetry.cpp:1:
+./nlohmann/json.hpp:442:1: error: expected declaration before '}' token
+  442 | } // namespace nlohmann
+      | ^
+./nlohmann/json.hpp:444:66: error: specialization of 'T nlohmann::json::get() const [with T = std::__cxx11::basic_string<char>]' after instantiation
+  444 | template<> inline std::string nlohmann::json::get<std::string>() const { return m_string; }
+      |                                                                  ^~~~~
+telemetry.h:40:108: error: 'nlohmann::json::object' cannot be used as a function
+   40 |     void recordEvent(const std::string& event_name, const nlohmann::json& metadata = nlohmann::json::object());
+      |                                                                                      ~~~~~~~~~~~~~~~~~~~~~~^~
+telemetry.cpp: In constructor 'Telemetry::Telemetry()':
+telemetry.cpp:41:55: error: 'nlohmann::json::array' cannot be used as a function
+   41 |     : is_enabled_(true), events_(nlohmann::json::array()) {
+      |                                  ~~~~~~~~~~~~~~~~~~~~~^~
+telemetry.cpp: In function 'bool telemetry::InitializeHardware()':
+telemetry.cpp:256:75: warning: passing NULL to non-pointer argument 5 of 'virtual HRESULT IWbemLocator::ConnectServer(BSTR, BSTR, BSTR, BSTR, LONG, BSTR, IWbemContext*, IWbemServices**)' [-Wconversion-null]
+  256 |         hr = g_pLocator->ConnectServer(BSTR(L"ROOT\\WMI"), NULL, NULL, 0, NULL, 0, 0, &g_pServices);
+      |                                                                           ^~~~
+In file included from C:/msys64/mingw64/include/wbemidl.h:13,
+                 from telemetry.cpp:12:
+C:/msys64/mingw64/include/wbemcli.h:1538:14: note: declared here
+ 1538 |         LONG lSecurityFlags,
+      |         ~~~~~^~~~~~~~~~~~~~
+settings.cpp: In static member function 'static bool Settings::SaveCompute(const AppState&, const std::string&)':
+settings.cpp:191:36: error: 'const struct AppState' has no member named 'is_gpu_enabled'
+  191 |     ofs << "enable_gpu=" << (state.is_gpu_enabled ? "1" : "0") << "\n";
+      |                                    ^~~~~~~~~~~~~~
+settings.cpp:192:37: error: 'const struct AppState' has no member named 'thread_count'
+  192 |     ofs << "thread_count=" << state.thread_count << "\n";
+      |                                     ^~~~~~~~~~~~
+settings.cpp:193:38: error: 'const struct AppState' has no member named 'vram_limit_mb'
+  193 |     ofs << "vram_limit_mb=" << state.vram_limit_mb << "\n";
+      |                                      ^~~~~~~~~~~~~
+In file included from telemetry.h:7,
+                 from overclock_governor.cpp:3:
+./nlohmann/json.hpp:442:1: error: expected declaration before '}' token
+  442 | } // namespace nlohmann
+      | ^
+./nlohmann/json.hpp:444:66: error: specialization of 'T nlohmann::json::get() const [with T = std::__cxx11::basic_string<char>]' after instantiation
+  444 | template<> inline std::string nlohmann::json::get<std::string>() const { return m_string; }
+      |                                                                  ^~~~~
+telemetry.h:40:108: error: 'nlohmann::json::object' cannot be used as a function
+   40 |     void recordEvent(const std::string& event_name, const nlohmann::json& metadata = nlohmann::json::object());
+      |                                                                                      ~~~~~~~~~~~~~~~~~~~~~~^~
+overclock_governor.cpp: In member function 'void OverclockGovernor::RunLoop(AppState*)':
+overclock_governor.cpp:55:5: error: 'baseline_profile' has not been declared
+   55 |     baseline_profile::Load(*state);
+      |     ^~~~~~~~~~~~~~~~
+overclock_governor.cpp:63:16: error: 'struct AppState' has no member named 'target_all_core_mhz'
+   63 |     if (state->target_all_core_mhz > 0) {
+      |                ^~~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:65:64: error: 'struct AppState' has no member named 'target_all_core_mhz'
+   65 |         baseDetectMhz = std::max(3000u, std::min(6500u, state->target_all_core_mhz));
+      |                                                                ^~~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:66:37: error: 'struct AppState' has no member named 'target_all_core_mhz'
+   66 |         if (baseDetectMhz != state->target_all_core_mhz) {
+      |                                     ^~~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:67:13: error: 'logEvent' was not declared in this scope
+   67 |             logEvent("target_freq_clamped", baseDetectMhz, 0);
+      |             ^~~~~~~~
+overclock_governor.cpp:69:23: error: 'struct AppState' has no member named 'baseline_loaded'
+   69 |     } else if (state->baseline_loaded && state->baseline_detected_mhz > 0) {
+      |                       ^~~~~~~~~~~~~~~
+overclock_governor.cpp:69:49: error: 'struct AppState' has no member named 'baseline_detected_mhz'
+   69 |     } else if (state->baseline_loaded && state->baseline_detected_mhz > 0) {
+      |                                                 ^~~~~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:71:32: error: 'struct AppState' has no member named 'baseline_detected_mhz'
+   71 |         baseDetectMhz = state->baseline_detected_mhz;
+      |                                ^~~~~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:74:12: error: 'struct AppState' has no member named 'baseline_detected_mhz'
+   74 |     state->baseline_detected_mhz = baseDetectMhz;
+      |            ^~~~~~~~~~~~~~~~~~~~~
+overclock_governor.cpp: In lambda function:
+overclock_governor.cpp:96:39: error: 'struct AppState' has no member named 'current_cpu_temp_c'; did you mean 'current_cpu_temp'?
+   96 |             << " cpu_temp=" << state->current_cpu_temp_c << "°C"
+      |                                       ^~~~~~~~~~~~~~~~~~
+      |                                       current_cpu_temp
+overclock_governor.cpp:97:39: error: 'struct AppState' has no member named 'current_gpu_hotspot_c'; did you mean 'current_gpu_power'?
+   97 |             << " gpu_temp=" << state->current_gpu_hotspot_c << "°C"
+      |                                       ^~~~~~~~~~~~~~~~~~~~~
+      |                                       current_gpu_power
+overclock_governor.cpp: In member function 'void OverclockGovernor::RunLoop(AppState*)':
+overclock_governor.cpp:116:20: error: 'TelemetrySnapshot' is not a member of 'telemetry'; did you mean 'TelemetrySnapshot'?
+  116 |         telemetry::TelemetrySnapshot snap;
+      |                    ^~~~~~~~~~~~~~~~~
+telemetry.h:10:8: note: 'TelemetrySnapshot' declared here
+   10 | struct TelemetrySnapshot {
+      |        ^~~~~~~~~~~~~~~~~
+overclock_governor.cpp:117:25: error: 'snap' was not declared in this scope
+  117 |         telemetry::Poll(snap);
+      |                         ^~~~
+overclock_governor.cpp:120:20: error: 'struct AppState' has no member named 'current_cpu_temp_c'; did you mean 'current_cpu_temp'?
+  120 |             state->current_cpu_temp_c = (uint32_t)std::lround(snap.cpuTempC);
+      |                    ^~~~~~~~~~~~~~~~~~
+      |                    current_cpu_temp
+overclock_governor.cpp:128:20: error: 'struct AppState' has no member named 'current_gpu_hotspot_c'; did you mean 'current_gpu_power'?
+  128 |             state->current_gpu_hotspot_c = (uint32_t)std::lround(snap.gpuTempC);
+      |                    ^~~~~~~~~~~~~~~~~~~~~
+      |                    current_gpu_power
+overclock_governor.cpp:132:16: error: 'struct AppState' has no member named 'current_cpu_freq_mhz'; did you mean 'current_cpu_temp'?
+  132 |         state->current_cpu_freq_mhz = baseDetectMhz + appliedOffset;
+      |                ^~~~~~~~~~~~~~~~~~~~
+      |                current_cpu_temp
+overclock_governor.cpp:133:16: error: 'struct AppState' has no member named 'current_gpu_freq_mhz'; did you mean 'current_gpu_temp'?
+  133 |         state->current_gpu_freq_mhz = 0; // GPU management initialized below
+      |                ^~~~~~~~~~~~~~~~~~~~
+      |                current_gpu_temp
+overclock_governor.cpp:137:48: error: 'struct AppState' has no member named 'max_cpu_temp_c'
+  137 |                       (snap.cpuTempC >= state->max_cpu_temp_c ||
+      |                                                ^~~~~~~~~~~~~~
+overclock_governor.cpp:138:70: error: 'struct AppState' has no member named 'max_cpu_temp_c'
+  138 |                        (lastWasThrottled && snap.cpuTempC >= (state->max_cpu_temp_c - thermalHysteresis)));
+      |                                                                      ^~~~~~~~~~~~~~
+overclock_governor.cpp:141:48: error: 'struct AppState' has no member named 'max_gpu_hotspot_c'
+  141 |                       (snap.gpuTempC >= state->max_gpu_hotspot_c ||
+      |                                                ^~~~~~~~~~~~~~~~~
+overclock_governor.cpp:142:70: error: 'struct AppState' has no member named 'max_gpu_hotspot_c'
+  142 |                        (lastWasThrottled && snap.gpuTempC >= (state->max_gpu_hotspot_c - thermalHysteresis)));
+      |                                                                      ^~~~~~~~~~~~~~~~~
+overclock_governor.cpp:153:43: error: 'struct AppState' has no member named 'max_cpu_temp_c'
+  153 |         float cpuHeadroom = (float)state->max_cpu_temp_c - (float)state->current_cpu_temp_c;
+      |                                           ^~~~~~~~~~~~~~
+overclock_governor.cpp:153:74: error: 'struct AppState' has no member named 'current_cpu_temp_c'; did you mean 'current_cpu_temp'?
+  153 |         float cpuHeadroom = (float)state->max_cpu_temp_c - (float)state->current_cpu_temp_c;
+      |                                                                          ^~~~~~~~~~~~~~~~~~
+      |                                                                          current_cpu_temp
+overclock_governor.cpp:157:16: error: 'struct AppState' has no member named 'pid_integral'
+  157 |         state->pid_integral += cpuError;
+      |                ^~~~~~~~~~~~
+overclock_governor.cpp:158:20: error: 'struct AppState' has no member named 'pid_integral'
+  158 |         if (state->pid_integral > state->pid_integral_clamp) {
+      |                    ^~~~~~~~~~~~
+overclock_governor.cpp:158:42: error: 'struct AppState' has no member named 'pid_integral_clamp'
+  158 |         if (state->pid_integral > state->pid_integral_clamp) {
+      |                                          ^~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:159:20: error: 'struct AppState' has no member named 'pid_integral'
+  159 |             state->pid_integral = state->pid_integral_clamp;
+      |                    ^~~~~~~~~~~~
+overclock_governor.cpp:159:42: error: 'struct AppState' has no member named 'pid_integral_clamp'
+  159 |             state->pid_integral = state->pid_integral_clamp;
+      |                                          ^~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:161:20: error: 'struct AppState' has no member named 'pid_integral'
+  161 |         if (state->pid_integral < -state->pid_integral_clamp) {
+      |                    ^~~~~~~~~~~~
+overclock_governor.cpp:161:43: error: 'struct AppState' has no member named 'pid_integral_clamp'
+  161 |         if (state->pid_integral < -state->pid_integral_clamp) {
+      |                                           ^~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:162:20: error: 'struct AppState' has no member named 'pid_integral'
+  162 |             state->pid_integral = -state->pid_integral_clamp;
+      |                    ^~~~~~~~~~~~
+overclock_governor.cpp:162:43: error: 'struct AppState' has no member named 'pid_integral_clamp'
+  162 |             state->pid_integral = -state->pid_integral_clamp;
+      |                                           ^~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:165:49: error: 'struct AppState' has no member named 'pid_last_error'
+  165 |         float cpuDerivative = cpuError - state->pid_last_error;
+      |                                                 ^~~~~~~~~~~~~~
+overclock_governor.cpp:166:37: error: 'struct AppState' has no member named 'pid_kp'
+  166 |         float cpuPidOutput = state->pid_kp * cpuError +
+      |                                     ^~~~~~
+overclock_governor.cpp:167:37: error: 'struct AppState' has no member named 'pid_ki'
+  167 |                              state->pid_ki * state->pid_integral +
+      |                                     ^~~~~~
+overclock_governor.cpp:167:53: error: 'struct AppState' has no member named 'pid_integral'
+  167 |                              state->pid_ki * state->pid_integral +
+      |                                                     ^~~~~~~~~~~~
+overclock_governor.cpp:168:37: error: 'struct AppState' has no member named 'pid_kd'
+  168 |                              state->pid_kd * cpuDerivative;
+      |                                     ^~~~~~
+overclock_governor.cpp:169:16: error: 'struct AppState' has no member named 'pid_last_error'
+  169 |         state->pid_last_error = cpuError;
+      |                ^~~~~~~~~~~~~~
+overclock_governor.cpp:172:16: error: 'struct AppState' has no member named 'pid_current_output'
+  172 |         state->pid_current_output = cpuPidOutput;
+      |                ^~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:173:16: error: 'struct AppState' has no member named 'thermal_headroom_c'
+  173 |         state->thermal_headroom_c = cpuHeadroom;
+      |                ^~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:176:43: error: 'struct AppState' has no member named 'max_gpu_hotspot_c'
+  176 |         float gpuHeadroom = (float)state->max_gpu_hotspot_c - (float)state->current_gpu_hotspot_c;
+      |                                           ^~~~~~~~~~~~~~~~~
+overclock_governor.cpp:176:77: error: 'struct AppState' has no member named 'current_gpu_hotspot_c'; did you mean 'current_gpu_power'?
+  176 |         float gpuHeadroom = (float)state->max_gpu_hotspot_c - (float)state->current_gpu_hotspot_c;
+      |                                                                             ^~~~~~~~~~~~~~~~~~~~~
+      |                                                                             current_gpu_power
+overclock_governor.cpp:180:16: error: 'struct AppState' has no member named 'gpu_pid_integral'
+  180 |         state->gpu_pid_integral += gpuError;
+      |                ^~~~~~~~~~~~~~~~
+overclock_governor.cpp:181:20: error: 'struct AppState' has no member named 'gpu_pid_integral'
+  181 |         if (state->gpu_pid_integral > state->gpu_pid_integral_clamp) {
+      |                    ^~~~~~~~~~~~~~~~
+overclock_governor.cpp:181:46: error: 'struct AppState' has no member named 'gpu_pid_integral_clamp'
+  181 |         if (state->gpu_pid_integral > state->gpu_pid_integral_clamp) {
+      |                                              ^~~~~~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:182:20: error: 'struct AppState' has no member named 'gpu_pid_integral'
+  182 |             state->gpu_pid_integral = state->gpu_pid_integral_clamp;
+      |                    ^~~~~~~~~~~~~~~~
+overclock_governor.cpp:182:46: error: 'struct AppState' has no member named 'gpu_pid_integral_clamp'
+  182 |             state->gpu_pid_integral = state->gpu_pid_integral_clamp;
+      |                                              ^~~~~~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:184:20: error: 'struct AppState' has no member named 'gpu_pid_integral'
+  184 |         if (state->gpu_pid_integral < -state->gpu_pid_integral_clamp) {
+      |                    ^~~~~~~~~~~~~~~~
+overclock_governor.cpp:184:47: error: 'struct AppState' has no member named 'gpu_pid_integral_clamp'
+  184 |         if (state->gpu_pid_integral < -state->gpu_pid_integral_clamp) {
+      |                                               ^~~~~~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:185:20: error: 'struct AppState' has no member named 'gpu_pid_integral'
+  185 |             state->gpu_pid_integral = -state->gpu_pid_integral_clamp;
+      |                    ^~~~~~~~~~~~~~~~
+overclock_governor.cpp:185:47: error: 'struct AppState' has no member named 'gpu_pid_integral_clamp'
+  185 |             state->gpu_pid_integral = -state->gpu_pid_integral_clamp;
+      |                                               ^~~~~~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:188:49: error: 'struct AppState' has no member named 'gpu_pid_last_error'
+  188 |         float gpuDerivative = gpuError - state->gpu_pid_last_error;
+      |                                                 ^~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:189:37: error: 'struct AppState' has no member named 'gpu_pid_kp'
+  189 |         float gpuPidOutput = state->gpu_pid_kp * gpuError +
+      |                                     ^~~~~~~~~~
+overclock_governor.cpp:190:37: error: 'struct AppState' has no member named 'gpu_pid_ki'
+  190 |                              state->gpu_pid_ki * state->gpu_pid_integral +
+      |                                     ^~~~~~~~~~
+overclock_governor.cpp:190:57: error: 'struct AppState' has no member named 'gpu_pid_integral'
+  190 |                              state->gpu_pid_ki * state->gpu_pid_integral +
+      |                                                         ^~~~~~~~~~~~~~~~
+overclock_governor.cpp:191:37: error: 'struct AppState' has no member named 'gpu_pid_kd'
+  191 |                              state->gpu_pid_kd * gpuDerivative;
+      |                                     ^~~~~~~~~~
+overclock_governor.cpp:192:16: error: 'struct AppState' has no member named 'gpu_pid_last_error'
+  192 |         state->gpu_pid_last_error = gpuError;
+      |                ^~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:201:20: error: 'struct AppState' has no member named 'applied_core_offset_mhz'
+  201 |             state->applied_core_offset_mhz = appliedOffset;
+      |                    ^~~~~~~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:204:20: error: 'struct AppState' has no member named 'governor_last_fault'; did you mean 'governor_status'?
+  204 |             state->governor_last_fault = cpuHot ? "cpu_thermal" : "gpu_thermal";
+      |                    ^~~~~~~~~~~~~~~~~~~
+      |                    governor_status
+overclock_governor.cpp:213:24: error: 'struct AppState' has no member named 'applied_core_offset_mhz'
+  213 |                 state->applied_core_offset_mhz = 0;
+      |                        ^~~~~~~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:217:24: error: 'struct AppState' has no member named 'governor_last_fault'; did you mean 'governor_status'?
+  217 |                 state->governor_last_fault = "rollback_after_faults";
+      |                        ^~~~~~~~~~~~~~~~~~~
+      |                        governor_status
+overclock_governor.cpp:235:28: error: 'struct AppState' has no member named 'target_all_core_mhz'
+  235 |                 if (state->target_all_core_mhz > 0) {
+      |                            ^~~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:236:49: error: 'struct AppState' has no member named 'target_all_core_mhz'
+  236 |                     int maxOffset = (int)state->target_all_core_mhz - (int)baseDetectMhz;
+      |                                                 ^~~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:243:28: error: 'struct AppState' has no member named 'applied_core_offset_mhz'
+  243 |                     state->applied_core_offset_mhz = appliedOffset;
+      |                            ^~~~~~~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:250:56: error: 'struct AppState' has no member named 'pid_integral'
+  250 |                     if ((cpuDesiredDelta > 0 && state->pid_integral < 0) ||
+      |                                                        ^~~~~~~~~~~~
+overclock_governor.cpp:251:56: error: 'struct AppState' has no member named 'pid_integral'
+  251 |                         (cpuDesiredDelta < 0 && state->pid_integral > 0)) {
+      |                                                        ^~~~~~~~~~~~
+overclock_governor.cpp:252:32: error: 'struct AppState' has no member named 'pid_integral'
+  252 |                         state->pid_integral *= 0.5f; // Soft reset
+      |                                ^~~~~~~~~~~~
+overclock_governor.cpp:271:32: error: 'struct AppState' has no member named 'baseline_stable_offset_mhz'
+  271 |     if (appliedOffset > state->baseline_stable_offset_mhz) {
+      |                                ^~~~~~~~~~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:272:16: error: 'struct AppState' has no member named 'baseline_stable_offset_mhz'
+  272 |         state->baseline_stable_offset_mhz = appliedOffset;
+      |                ^~~~~~~~~~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:276:5: error: 'baseline_profile' has not been declared
+  276 |     baseline_profile::Save(*state);
+      |     ^~~~~~~~~~~~~~~~
+modules/vsix_loader.cpp:388:2: warning: missing terminating " character
+  388 | )";
+      |  ^
+modules/vsix_loader.cpp:388:2: error: missing terminating " character
+  388 | )";
+      |  ^~
+In file included from modules/vsix_loader.h:6,
+                 from modules/vsix_loader.cpp:1:
+./nlohmann/json.hpp:442:1: error: expected declaration before '}' token
+  442 | } // namespace nlohmann
+      | ^
+./nlohmann/json.hpp:444:66: error: specialization of 'T nlohmann::json::get() const [with T = std::__cxx11::basic_string<char>]' after instantiation
+  444 | template<> inline std::string nlohmann::json::get<std::string>() const { return m_string; }
+      |                                                                  ^~~~~
+modules/vsix_loader.cpp: In member function 'bool VSIXLoader::ExtractVSIX(const std::string&, const std::filesystem::__cxx11::path&)':
+modules/vsix_loader.cpp:46:5: error: 'zip' was not declared in this scope
+   46 |     zip* z = zip_open(vsix_path.c_str(), 0, &err);
+      |     ^~~
+modules/vsix_loader.cpp:46:10: error: 'z' was not declared in this scope
+   46 |     zip* z = zip_open(vsix_path.c_str(), 0, &err);
+      |          ^
+modules/vsix_loader.cpp:46:14: error: 'zip_open' was not declared in this scope
+   46 |     zip* z = zip_open(vsix_path.c_str(), 0, &err);
+      |              ^~~~~~~~
+modules/vsix_loader.cpp:51:5: error: 'zip_int64_t' was not declared in this scope; did you mean 'uint64_t'?
+   51 |     zip_int64_t num_entries = zip_get_num_entries(z, 0);
+      |     ^~~~~~~~~~~
+      |     uint64_t
+modules/vsix_loader.cpp:52:21: error: expected ';' before 'i'
+   52 |     for (zip_int64_t i = 0; i < num_entries; i++) {
+      |                     ^~
+      |                     ;
+modules/vsix_loader.cpp:52:29: error: 'i' was not declared in this scope
+   52 |     for (zip_int64_t i = 0; i < num_entries; i++) {
+      |                             ^
+modules/vsix_loader.cpp:52:33: error: 'num_entries' was not declared in this scope
+   52 |     for (zip_int64_t i = 0; i < num_entries; i++) {
+      |                                 ^~~~~~~~~~~
+modules/vsix_loader.cpp:53:28: error: 'zip_get_name' was not declared in this scope
+   53 |         const char* name = zip_get_name(z, i, 0);
+      |                            ^~~~~~~~~~~~
+modules/vsix_loader.cpp:59:9: error: 'zip_file' was not declared in this scope
+   59 |         zip_file* f = zip_fopen_index(z, i, 0);
+      |         ^~~~~~~~
+modules/vsix_loader.cpp:59:19: error: 'f' was not declared in this scope
+   59 |         zip_file* f = zip_fopen_index(z, i, 0);
+      |                   ^
+modules/vsix_loader.cpp:59:23: error: 'zip_fopen_index' was not declared in this scope
+   59 |         zip_file* f = zip_fopen_index(z, i, 0);
+      |                       ^~~~~~~~~~~~~~~
+modules/vsix_loader.cpp:64:20: error: expected ';' before 'bytes_read'
+   64 |         zip_int64_t bytes_read;
+      |                    ^~~~~~~~~~~
+      |                    ;
+modules/vsix_loader.cpp:66:17: error: 'bytes_read' was not declared in this scope
+   66 |         while ((bytes_read = zip_fread(f, buffer, sizeof(buffer))) > 0) {
+      |                 ^~~~~~~~~~
+modules/vsix_loader.cpp:66:30: error: 'zip_fread' was not declared in this scope
+   66 |         while ((bytes_read = zip_fread(f, buffer, sizeof(buffer))) > 0) {
+      |                              ^~~~~~~~~
+modules/vsix_loader.cpp:70:9: error: 'zip_fclose' was not declared in this scope; did you mean 'fclose'?
+   70 |         zip_fclose(f);
+      |         ^~~~~~~~~~
+      |         fclose
+modules/vsix_loader.cpp:74:5: error: 'zip_close' was not declared in this scope; did you mean '_pclose'?
+   74 |     zip_close(z);
+      |     ^~~~~~~~~
+      |     _pclose
+modules/vsix_loader.cpp: In member function 'bool VSIXLoader::LoadPluginFromDirectory(const std::filesystem::__cxx11::path&)':
+modules/vsix_loader.cpp:88:23: error: no match for 'operator>>' (operand types are 'std::ifstream' {aka 'std::basic_ifstream<char>'} and 'nlohmann::json')
+   88 |         manifest_file >> manifest;
+      |         ~~~~~~~~~~~~~ ^~ ~~~~~~~~
+      |         |                |
+      |         |                nlohmann::json
+      |         std::ifstream {aka std::basic_ifstream<char>}
+modules/vsix_loader.cpp:88:23: note: there are 34 candidates
+   88 |         manifest_file >> manifest;
+      |         ~~~~~~~~~~~~~~^~~~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/sstream:42,
+                 from C:/msys64/mingw64/include/c++/15.2.0/bits/quoted_string.h:40,
+                 from C:/msys64/mingw64/include/c++/15.2.0/iomanip:55,
+                 from C:/msys64/mingw64/include/c++/15.2.0/bits/fs_path.h:38,
+                 from C:/msys64/mingw64/include/c++/15.2.0/filesystem:54,
+                 from modules/vsix_loader.h:5:
+C:/msys64/mingw64/include/c++/15.2.0/istream:172:7: note: candidate 1: 'std::basic_istream<_CharT, _Traits>::__istream_type& std::basic_istream<_CharT, _Traits>::operator>>(bool&) [with _CharT = char; _Traits = std::char_traits<char>; __istream_type = std::basic_istream<char>]'
+  172 |       operator>>(bool& __n)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:172:24: note: no known conversion for argument 1 from 'nlohmann::json' to 'bool&'
+  172 |       operator>>(bool& __n)
+      |                  ~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:176:7: note: candidate 2: 'std::basic_istream<_CharT, _Traits>& std::basic_istream<_CharT, _Traits>::operator>>(short int&) [with _CharT = char; _Traits = std::char_traits<char>]'
+  176 |       operator>>(short& __n);
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:176:25: note: no known conversion for argument 1 from 'nlohmann::json' to 'short int&'
+  176 |       operator>>(short& __n);
+      |                  ~~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:179:7: note: candidate 3: 'std::basic_istream<_CharT, _Traits>::__istream_type& std::basic_istream<_CharT, _Traits>::operator>>(short unsigned int&) [with _CharT = char; _Traits = std::char_traits<char>; __istream_type = std::basic_istream<char>]'
+  179 |       operator>>(unsigned short& __n)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:179:34: note: no known conversion for argument 1 from 'nlohmann::json' to 'short unsigned int&'
+  179 |       operator>>(unsigned short& __n)
+      |                  ~~~~~~~~~~~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:183:7: note: candidate 4: 'std::basic_istream<_CharT, _Traits>& std::basic_istream<_CharT, _Traits>::operator>>(int&) [with _CharT = char; _Traits = std::char_traits<char>]'
+  183 |       operator>>(int& __n);
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:183:23: note: no known conversion for argument 1 from 'nlohmann::json' to 'int&'
+  183 |       operator>>(int& __n);
+      |                  ~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:186:7: note: candidate 5: 'std::basic_istream<_CharT, _Traits>::__istream_type& std::basic_istream<_CharT, _Traits>::operator>>(unsigned int&) [with _CharT = char; _Traits = std::char_traits<char>; __istream_type = std::basic_istream<char>]'
+  186 |       operator>>(unsigned int& __n)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:186:32: note: no known conversion for argument 1 from 'nlohmann::json' to 'unsigned int&'
+  186 |       operator>>(unsigned int& __n)
+      |                  ~~~~~~~~~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:190:7: note: candidate 6: 'std::basic_istream<_CharT, _Traits>::__istream_type& std::basic_istream<_CharT, _Traits>::operator>>(long int&) [with _CharT = char; _Traits = std::char_traits<char>; __istream_type = std::basic_istream<char>]'
+  190 |       operator>>(long& __n)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:190:24: note: no known conversion for argument 1 from 'nlohmann::json' to 'long int&'
+  190 |       operator>>(long& __n)
+      |                  ~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:194:7: note: candidate 7: 'std::basic_istream<_CharT, _Traits>::__istream_type& std::basic_istream<_CharT, _Traits>::operator>>(long unsigned int&) [with _CharT = char; _Traits = std::char_traits<char>; __istream_type = std::basic_istream<char>]'
+  194 |       operator>>(unsigned long& __n)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:194:33: note: no known conversion for argument 1 from 'nlohmann::json' to 'long unsigned int&'
+  194 |       operator>>(unsigned long& __n)
+      |                  ~~~~~~~~~~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:201:7: note: candidate 8: 'std::basic_istream<_CharT, _Traits>::__istream_type& std::basic_istream<_CharT, _Traits>::operator>>(long long int&) [with _CharT = char; _Traits = std::char_traits<char>; __istream_type = std::basic_istream<char>]'
+  201 |       operator>>(long long& __n)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:201:29: note: no known conversion for argument 1 from 'nlohmann::json' to 'long long int&'
+  201 |       operator>>(long long& __n)
+      |                  ~~~~~~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:205:7: note: candidate 9: 'std::basic_istream<_CharT, _Traits>::__istream_type& std::basic_istream<_CharT, _Traits>::operator>>(long long unsigned int&) [with _CharT = char; _Traits = std::char_traits<char>; __istream_type = std::basic_istream<char>]'
+  205 |       operator>>(unsigned long long& __n)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:205:38: note: no known conversion for argument 1 from 'nlohmann::json' to 'long long unsigned int&'
+  205 |       operator>>(unsigned long long& __n)
+      |                  ~~~~~~~~~~~~~~~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:221:7: note: candidate 10: 'std::basic_istream<_CharT, _Traits>::__istream_type& std::basic_istream<_CharT, _Traits>::operator>>(float&) [with _CharT = char; _Traits = std::char_traits<char>; __istream_type = std::basic_istream<char>]'
+  221 |       operator>>(float& __f)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:221:25: note: no known conversion for argument 1 from 'nlohmann::json' to 'float&'
+  221 |       operator>>(float& __f)
+      |                  ~~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:225:7: note: candidate 11: 'std::basic_istream<_CharT, _Traits>::__istream_type& std::basic_istream<_CharT, _Traits>::operator>>(double&) [with _CharT = char; _Traits = std::char_traits<char>; __istream_type = std::basic_istream<char>]'
+  225 |       operator>>(double& __f)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:225:26: note: no known conversion for argument 1 from 'nlohmann::json' to 'double&'
+  225 |       operator>>(double& __f)
+      |                  ~~~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:229:7: note: candidate 12: 'std::basic_istream<_CharT, _Traits>::__istream_type& std::basic_istream<_CharT, _Traits>::operator>>(long double&) [with _CharT = char; _Traits = std::char_traits<char>; __istream_type = std::basic_istream<char>]'
+  229 |       operator>>(long double& __f)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:229:31: note: no known conversion for argument 1 from 'nlohmann::json' to 'long double&'
+  229 |       operator>>(long double& __f)
+      |                  ~~~~~~~~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:330:7: note: candidate 13: 'std::basic_istream<_CharT, _Traits>::__istream_type& std::basic_istream<_CharT, _Traits>::operator>>(void*&) [with _CharT = char; _Traits = std::char_traits<char>; __istream_type = std::basic_istream<char>]'
+  330 |       operator>>(void*& __p)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:330:25: note: no known conversion for argument 1 from 'nlohmann::json' to 'void*&'
+  330 |       operator>>(void*& __p)
+      |                  ~~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:124:7: note: candidate 14: 'std::basic_istream<_CharT, _Traits>::__istream_type& std::basic_istream<_CharT, _Traits>::operator>>(__istream_type& (*)(__istream_type&)) [with _CharT = char; _Traits = std::char_traits<char>; __istream_type = std::basic_istream<char>]'
+  124 |       operator>>(__istream_type& (*__pf)(__istream_type&))
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:124:36: note: no known conversion for argument 1 from 'nlohmann::json' to 'std::basic_istream<char>::__istream_type& (*)(std::basic_istream<char>::__istream_type&)' {aka 'std::basic_istream<char>& (*)(std::basic_istream<char>&)'}
+  124 |       operator>>(__istream_type& (*__pf)(__istream_type&))
+      |                  ~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:128:7: note: candidate 15: 'std::basic_istream<_CharT, _Traits>::__istream_type& std::basic_istream<_CharT, _Traits>::operator>>(__ios_type& (*)(__ios_type&)) [with _CharT = char; _Traits = std::char_traits<char>; __istream_type = std::basic_istream<char>; __ios_type = std::basic_ios<char>]'
+  128 |       operator>>(__ios_type& (*__pf)(__ios_type&))
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:128:32: note: no known conversion for argument 1 from 'nlohmann::json' to 'std::basic_istream<char>::__ios_type& (*)(std::basic_istream<char>::__ios_type&)' {aka 'std::basic_ios<char>& (*)(std::basic_ios<char>&)'}
+  128 |       operator>>(__ios_type& (*__pf)(__ios_type&))
+      |                  ~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:135:7: note: candidate 16: 'std::basic_istream<_CharT, _Traits>::__istream_type& std::basic_istream<_CharT, _Traits>::operator>>(std::ios_base& (*)(std::ios_base&)) [with _CharT = char; _Traits = std::char_traits<char>; __istream_type = std::basic_istream<char>]'
+  135 |       operator>>(ios_base& (*__pf)(ios_base&))
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:135:30: note: no known conversion for argument 1 from 'nlohmann::json' to 'std::ios_base& (*)(std::ios_base&)'
+  135 |       operator>>(ios_base& (*__pf)(ios_base&))
+      |                  ~~~~~~~~~~~~^~~~~~~~~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:354:7: note: candidate 17: 'std::basic_istream<_CharT, _Traits>& std::basic_istream<_CharT, _Traits>::operator>>(__streambuf_type*) [with _CharT = char; _Traits = std::char_traits<char>; __streambuf_type = std::basic_streambuf<char>]'
+  354 |       operator>>(__streambuf_type* __sb);
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:354:36: note: no known conversion for argument 1 from 'nlohmann::json' to 'std::basic_istream<char>::__streambuf_type*' {aka 'std::basic_streambuf<char>*'}
+  354 |       operator>>(__streambuf_type* __sb);
+      |                  ~~~~~~~~~~~~~~~~~~^~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/string:57,
+                 from modules/vsix_loader.h:2:
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.tcc:866:5: note: candidate 18: 'template<class _CharT, class _Traits, class _Alloc> std::basic_istream<_CharT, _Traits>& std::operator>>(basic_istream<_CharT, _Traits>&, __cxx11::basic_string<_CharT, _Traits, _Alloc>&)'
+  866 |     operator>>(basic_istream<_CharT, _Traits>& __in,
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.tcc:866:5: note: template argument deduction/substitution failed:
+modules/vsix_loader.cpp:88:26: note:   'nlohmann::json' is not derived from 'std::__cxx11::basic_string<_CharT, _Traits, _Alloc>'
+   88 |         manifest_file >> manifest;
+      |                          ^~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/memory_resource.h:40,
+                 from C:/msys64/mingw64/include/c++/15.2.0/string:72:
+C:/msys64/mingw64/include/c++/15.2.0/cstddef:136:5: note: candidate 19: 'template<class _IntegerType> constexpr std::__byte_op_t<_IntegerType> std::operator>>(byte, _IntegerType)'
+  136 |     operator>>(byte __b, _IntegerType __shift) noexcept
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/cstddef:136:5: note: template argument deduction/substitution failed:
+modules/vsix_loader.cpp:88:9: note:   cannot convert 'manifest_file' (type 'std::ifstream' {aka 'std::basic_ifstream<char>'}) to type 'std::byte'
+   88 |         manifest_file >> manifest;
+      |         ^~~~~~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/istream:1111:
+C:/msys64/mingw64/include/c++/15.2.0/bits/istream.tcc:983:5: note: candidate 20: 'template<class _CharT, class _Traits> std::basic_istream<_CharT, _Traits>& std::operator>>(basic_istream<_CharT, _Traits>&, _CharT&)'
+  983 |     operator>>(basic_istream<_CharT, _Traits>& __in, _CharT& __c)
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/istream.tcc:983:5: note: template argument deduction/substitution failed:
+modules/vsix_loader.cpp:88:26: note:   deduced conflicting types for parameter '_CharT' ('char' and 'nlohmann::json')
+   88 |         manifest_file >> manifest;
+      |                          ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:851:5: note: candidate 21: 'template<class _Traits> std::basic_istream<char, _Traits>& std::operator>>(basic_istream<char, _Traits>&, unsigned char&)'
+  851 |     operator>>(basic_istream<char, _Traits>& __in, unsigned char& __c)
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:851:5: note: template argument deduction/substitution failed:
+modules/vsix_loader.cpp:88:26: note:   cannot convert 'manifest' (type 'nlohmann::json') to type 'unsigned char&'
+   88 |         manifest_file >> manifest;
+      |                          ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:856:5: note: candidate 22: 'template<class _Traits> std::basic_istream<char, _Traits>& std::operator>>(basic_istream<char, _Traits>&, signed char&)'
+  856 |     operator>>(basic_istream<char, _Traits>& __in, signed char& __c)
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:856:5: note: template argument deduction/substitution failed:
+modules/vsix_loader.cpp:88:26: note:   cannot convert 'manifest' (type 'nlohmann::json') to type 'signed char&'
+   88 |         manifest_file >> manifest;
+      |                          ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:898:5: note: candidate 23: 'template<class _CharT, class _Traits> std::basic_istream<_CharT, _Traits>& std::operator>>(basic_istream<_CharT, _Traits>&, _CharT*)'
+  898 |     operator>>(basic_istream<_CharT, _Traits>& __in, _CharT* __s)
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:898:5: note: template argument deduction/substitution failed:
+modules/vsix_loader.cpp:88:26: note:   mismatched types '_CharT*' and 'nlohmann::json'
+   88 |         manifest_file >> manifest;
+      |                          ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:941:5: note: candidate 24: 'template<class _Traits> std::basic_istream<char, _Traits>& std::operator>>(basic_istream<char, _Traits>&, unsigned char*)'
+  941 |     operator>>(basic_istream<char, _Traits>& __in, unsigned char* __s)
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:941:5: note: template argument deduction/substitution failed:
+modules/vsix_loader.cpp:88:26: note:   cannot convert 'manifest' (type 'nlohmann::json') to type 'unsigned char*'
+   88 |         manifest_file >> manifest;
+      |                          ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:947:5: note: candidate 25: 'template<class _Traits> std::basic_istream<char, _Traits>& std::operator>>(basic_istream<char, _Traits>&, signed char*)'
+  947 |     operator>>(basic_istream<char, _Traits>& __in, signed char* __s)
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:947:5: note: template argument deduction/substitution failed:
+modules/vsix_loader.cpp:88:26: note:   cannot convert 'manifest' (type 'nlohmann::json') to type 'signed char*'
+   88 |         manifest_file >> manifest;
+      |                          ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:1101:5: note: candidate 26: 'template<class _Istream, class _Tp> _Istream&& std::operator>>(_Istream&&, _Tp&&)'
+ 1101 |     operator>>(_Istream&& __is, _Tp&& __x)
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:1101:5: note: template argument deduction/substitution failed:
+C:/msys64/mingw64/include/c++/15.2.0/istream: In substitution of 'template<class _Istream, class _Tp> _Istream&& std::operator>>(_Istream&&, _Tp&&) [with _Istream = std::basic_ifstream<char>&; _Tp = nlohmann::json&]':
+modules/vsix_loader.cpp:88:26:   required from here
+   88 |         manifest_file >> manifest;
+      |                          ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:1101:5: error: no type named 'type' in 'struct std::enable_if<false, void>'
+ 1101 |     operator>>(_Istream&& __is, _Tp&& __x)
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/iomanip:81:5: note: candidate 27: 'template<class _CharT, class _Traits> std::basic_istream<_CharT, _Traits>& std::operator>>(basic_istream<_CharT, _Traits>&, _Resetiosflags)'
+   81 |     operator>>(basic_istream<_CharT, _Traits>& __is, _Resetiosflags __f)
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/iomanip:81:5: note: template argument deduction/substitution failed:
+modules/vsix_loader.cpp:88:26: note:   cannot convert 'manifest' (type 'nlohmann::json') to type 'std::_Resetiosflags'
+   88 |         manifest_file >> manifest;
+      |                          ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/iomanip:111:5: note: candidate 28: 'template<class _CharT, class _Traits> std::basic_istream<_CharT, _Traits>& std::operator>>(basic_istream<_CharT, _Traits>&, _Setiosflags)'
+  111 |     operator>>(basic_istream<_CharT, _Traits>& __is, _Setiosflags __f)
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/iomanip:111:5: note: template argument deduction/substitution failed:
+modules/vsix_loader.cpp:88:26: note:   cannot convert 'manifest' (type 'nlohmann::json') to type 'std::_Setiosflags'
+   88 |         manifest_file >> manifest;
+      |                          ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/iomanip:142:5: note: candidate 29: 'template<class _CharT, class _Traits> std::basic_istream<_CharT, _Traits>& std::operator>>(basic_istream<_CharT, _Traits>&, _Setbase)'
+  142 |     operator>>(basic_istream<_CharT, _Traits>& __is, _Setbase __f)
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/iomanip:142:5: note: template argument deduction/substitution failed:
+modules/vsix_loader.cpp:88:26: note:   cannot convert 'manifest' (type 'nlohmann::json') to type 'std::_Setbase'
+   88 |         manifest_file >> manifest;
+      |                          ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/iomanip:182:5: note: candidate 30: 'template<class _CharT, class _Traits> std::basic_istream<_CharT, _Traits>& std::operator>>(basic_istream<_CharT, _Traits>&, _Setfill<_CharT>)'
+  182 |     operator>>(basic_istream<_CharT, _Traits>& __is, _Setfill<_CharT> __f)
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/iomanip:182:5: note: template argument deduction/substitution failed:
+modules/vsix_loader.cpp:88:26: note:   'nlohmann::json' is not derived from 'std::_Setfill<_CharT>'
+   88 |         manifest_file >> manifest;
+      |                          ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/iomanip:212:5: note: candidate 31: 'template<class _CharT, class _Traits> std::basic_istream<_CharT, _Traits>& std::operator>>(basic_istream<_CharT, _Traits>&, _Setprecision)'
+  212 |     operator>>(basic_istream<_CharT, _Traits>& __is, _Setprecision __f)
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/iomanip:212:5: note: template argument deduction/substitution failed:
+modules/vsix_loader.cpp:88:26: note:   cannot convert 'manifest' (type 'nlohmann::json') to type 'std::_Setprecision'
+   88 |         manifest_file >> manifest;
+      |                          ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/iomanip:242:5: note: candidate 32: 'template<class _CharT, class _Traits> std::basic_istream<_CharT, _Traits>& std::operator>>(basic_istream<_CharT, _Traits>&, _Setw)'
+  242 |     operator>>(basic_istream<_CharT, _Traits>& __is, _Setw __f)
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/iomanip:242:5: note: template argument deduction/substitution failed:
+modules/vsix_loader.cpp:88:26: note:   cannot convert 'manifest' (type 'nlohmann::json') to type 'std::_Setw'
+   88 |         manifest_file >> manifest;
+      |                          ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/iomanip:276:5: note: candidate 33: 'template<class _CharT, class _Traits, class _MoneyT> std::basic_istream<_CharT, _Traits>& std::operator>>(basic_istream<_CharT, _Traits>&, _Get_money<_MoneyT>)'
+  276 |     operator>>(basic_istream<_CharT, _Traits>& __is, _Get_money<_MoneyT> __f)
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/iomanip:276:5: note: template argument deduction/substitution failed:
+modules/vsix_loader.cpp:88:26: note:   'nlohmann::json' is not derived from 'std::_Get_money<_MoneyT>'
+   88 |         manifest_file >> manifest;
+      |                          ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/iomanip:430:5: note: candidate 34: 'template<class _CharT, class _Traits> std::basic_istream<_CharT, _Traits>& std::operator>>(basic_istream<_CharT, _Traits>&, _Get_time<_CharT>)'
+  430 |     operator>>(basic_istream<_CharT, _Traits>& __is, _Get_time<_CharT> __f)
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/iomanip:430:5: note: template argument deduction/substitution failed:
+modules/vsix_loader.cpp:88:26: note:   'nlohmann::json' is not derived from 'std::_Get_time<_CharT>'
+   88 |         manifest_file >> manifest;
+      |                          ^~~~~~~~
+modules/vsix_loader.cpp:98:31: error: no match for 'operator=' (operand types are 'std::string' {aka 'std::__cxx11::basic_string<char>'} and 'nlohmann::json')
+   98 |     plugin->id = manifest["id"];
+      |                               ^
+modules/vsix_loader.cpp:98:31: note: there are 6 candidates
+In file included from C:/msys64/mingw64/include/c++/15.2.0/string:56:
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:1028:8: note: candidate 1: 'template<class _Tp> std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::_If_sv<_Tp, std::__cxx11::basic_string<_CharT, _Traits, _Alloc>&> std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::operator=(const _Tp&) [with _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]'
+ 1028 |        operator=(const _Tp& __svt)
+      |        ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:1028:8: note: template argument deduction/substitution failed:
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/char_traits.h:52,
+                 from C:/msys64/mingw64/include/c++/15.2.0/string:44:
+C:/msys64/mingw64/include/c++/15.2.0/type_traits: In substitution of 'template<bool _Cond, class _Tp> using std::enable_if_t = typename std::enable_if::type [with bool _Cond = false; _Tp = std::__cxx11::basic_string<char>&]':
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:160:8:   required by substitution of 'template<class _CharT, class _Traits, class _Alloc> template<class _Tp, class _Res> using std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::_If_sv = std::enable_if_t<((bool)std::__and_<std::is_convertible<const _Tp&, std::basic_string_view<_CharT, _Traits> >, std::__not_<std::is_convertible<const _Tp*, const std::__cxx11::basic_string<_CharT, _Traits, _Alloc>*> >, std::__not_<std::is_convertible<const _Tp&, const _CharT*> > >::value), _Res> [with _Tp = nlohmann::json; _Res = std::__cxx11::basic_string<char>&; _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]'
+  160 |         using _If_sv = enable_if_t<
+      |               ^~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:1028:8:   required by substitution of 'template<class _Tp> std::__cxx11::basic_string<char>::_If_sv<_Tp, std::__cxx11::basic_string<char>&> std::__cxx11::basic_string<char>::operator=(const _Tp&) [with _Tp = nlohmann::json]'
+ 1028 |        operator=(const _Tp& __svt)
+      |        ^~~~~~~~
+modules/vsix_loader.cpp:98:31:   required from here
+   98 |     plugin->id = manifest["id"];
+      |                               ^
+C:/msys64/mingw64/include/c++/15.2.0/type_traits:2837:11: error: no type named 'type' in 'struct std::enable_if<false, std::__cxx11::basic_string<char>&>'
+ 2837 |     using enable_if_t = typename enable_if<_Cond, _Tp>::type;
+      |           ^~~~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:904:7: note: candidate 2: 'std::__cxx11::basic_string<_CharT, _Traits, _Alloc>& std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::operator=(const std::__cxx11::basic_string<_CharT, _Traits, _Alloc>&) [with _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]'
+  904 |       operator=(const basic_string& __str)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:904:37: note: no known conversion for argument 1 from 'nlohmann::json' to 'const std::__cxx11::basic_string<char>&'
+  904 |       operator=(const basic_string& __str)
+      |                 ~~~~~~~~~~~~~~~~~~~~^~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:915:7: note: candidate 3: 'std::__cxx11::basic_string<_CharT, _Traits, _Alloc>& std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::operator=(const _CharT*) [with _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]'
+  915 |       operator=(const _CharT* __s)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:915:31: note: no known conversion for argument 1 from 'nlohmann::json' to 'const char*'
+  915 |       operator=(const _CharT* __s)
+      |                 ~~~~~~~~~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:927:7: note: candidate 4: 'std::__cxx11::basic_string<_CharT, _Traits, _Alloc>& std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::operator=(_CharT) [with _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]'
+  927 |       operator=(_CharT __c)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:927:24: note: no known conversion for argument 1 from 'nlohmann::json' to 'char'
+  927 |       operator=(_CharT __c)
+      |                 ~~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:945:7: note: candidate 5: 'std::__cxx11::basic_string<_CharT, _Traits, _Alloc>& std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::operator=(std::__cxx11::basic_string<_CharT, _Traits, _Alloc>&&) [with _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]'
+  945 |       operator=(basic_string&& __str)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:945:32: note: no known conversion for argument 1 from 'nlohmann::json' to 'std::__cxx11::basic_string<char>&&'
+  945 |       operator=(basic_string&& __str)
+      |                 ~~~~~~~~~~~~~~~^~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:1013:7: note: candidate 6: 'std::__cxx11::basic_string<_CharT, _Traits, _Alloc>& std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::operator=(std::initializer_list<_Tp>) [with _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]'
+ 1013 |       operator=(initializer_list<_CharT> __l)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:1013:42: note: no known conversion for argument 1 from 'nlohmann::json' to 'std::initializer_list<char>'
+ 1013 |       operator=(initializer_list<_CharT> __l)
+      |                 ~~~~~~~~~~~~~~~~~~~~~~~~~^~~
+modules/vsix_loader.cpp:99:35: error: no match for 'operator=' (operand types are 'std::string' {aka 'std::__cxx11::basic_string<char>'} and 'nlohmann::json')
+   99 |     plugin->name = manifest["name"];
+      |                                   ^
+modules/vsix_loader.cpp:99:35: note: there are 6 candidates
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:1028:8: note: candidate 1: 'template<class _Tp> std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::_If_sv<_Tp, std::__cxx11::basic_string<_CharT, _Traits, _Alloc>&> std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::operator=(const _Tp&) [with _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]'
+ 1028 |        operator=(const _Tp& __svt)
+      |        ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:1028:8: note: template argument deduction/substitution failed:
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:904:7: note: candidate 2: 'std::__cxx11::basic_string<_CharT, _Traits, _Alloc>& std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::operator=(const std::__cxx11::basic_string<_CharT, _Traits, _Alloc>&) [with _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]'
+  904 |       operator=(const basic_string& __str)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:904:37: note: no known conversion for argument 1 from 'nlohmann::json' to 'const std::__cxx11::basic_string<char>&'
+  904 |       operator=(const basic_string& __str)
+      |                 ~~~~~~~~~~~~~~~~~~~~^~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:915:7: note: candidate 3: 'std::__cxx11::basic_string<_CharT, _Traits, _Alloc>& std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::operator=(const _CharT*) [with _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]'
+  915 |       operator=(const _CharT* __s)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:915:31: note: no known conversion for argument 1 from 'nlohmann::json' to 'const char*'
+  915 |       operator=(const _CharT* __s)
+      |                 ~~~~~~~~~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:927:7: note: candidate 4: 'std::__cxx11::basic_string<_CharT, _Traits, _Alloc>& std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::operator=(_CharT) [with _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]'
+  927 |       operator=(_CharT __c)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:927:24: note: no known conversion for argument 1 from 'nlohmann::json' to 'char'
+  927 |       operator=(_CharT __c)
+      |                 ~~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:945:7: note: candidate 5: 'std::__cxx11::basic_string<_CharT, _Traits, _Alloc>& std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::operator=(std::__cxx11::basic_string<_CharT, _Traits, _Alloc>&&) [with _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]'
+  945 |       operator=(basic_string&& __str)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:945:32: note: no known conversion for argument 1 from 'nlohmann::json' to 'std::__cxx11::basic_string<char>&&'
+  945 |       operator=(basic_string&& __str)
+      |                 ~~~~~~~~~~~~~~~^~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:1013:7: note: candidate 6: 'std::__cxx11::basic_string<_CharT, _Traits, _Alloc>& std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::operator=(std::initializer_list<_Tp>) [with _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]'
+ 1013 |       operator=(initializer_list<_CharT> __l)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:1013:42: note: no known conversion for argument 1 from 'nlohmann::json' to 'std::initializer_list<char>'
+ 1013 |       operator=(initializer_list<_CharT> __l)
+      |                 ~~~~~~~~~~~~~~~~~~~~~~~~~^~~
+modules/vsix_loader.cpp:100:41: error: no match for 'operator=' (operand types are 'std::string' {aka 'std::__cxx11::basic_string<char>'} and 'nlohmann::json')
+  100 |     plugin->version = manifest["version"];
+      |                                         ^
+modules/vsix_loader.cpp:100:41: note: there are 6 candidates
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:1028:8: note: candidate 1: 'template<class _Tp> std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::_If_sv<_Tp, std::__cxx11::basic_string<_CharT, _Traits, _Alloc>&> std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::operator=(const _Tp&) [with _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]'
+ 1028 |        operator=(const _Tp& __svt)
+      |        ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:1028:8: note: template argument deduction/substitution failed:
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:904:7: note: candidate 2: 'std::__cxx11::basic_string<_CharT, _Traits, _Alloc>& std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::operator=(const std::__cxx11::basic_string<_CharT, _Traits, _Alloc>&) [with _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]'
+  904 |       operator=(const basic_string& __str)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:904:37: note: no known conversion for argument 1 from 'nlohmann::json' to 'const std::__cxx11::basic_string<char>&'
+  904 |       operator=(const basic_string& __str)
+      |                 ~~~~~~~~~~~~~~~~~~~~^~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:915:7: note: candidate 3: 'std::__cxx11::basic_string<_CharT, _Traits, _Alloc>& std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::operator=(const _CharT*) [with _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]'
+  915 |       operator=(const _CharT* __s)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:915:31: note: no known conversion for argument 1 from 'nlohmann::json' to 'const char*'
+  915 |       operator=(const _CharT* __s)
+      |                 ~~~~~~~~~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:927:7: note: candidate 4: 'std::__cxx11::basic_string<_CharT, _Traits, _Alloc>& std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::operator=(_CharT) [with _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]'
+  927 |       operator=(_CharT __c)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:927:24: note: no known conversion for argument 1 from 'nlohmann::json' to 'char'
+  927 |       operator=(_CharT __c)
+      |                 ~~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:945:7: note: candidate 5: 'std::__cxx11::basic_string<_CharT, _Traits, _Alloc>& std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::operator=(std::__cxx11::basic_string<_CharT, _Traits, _Alloc>&&) [with _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]'
+  945 |       operator=(basic_string&& __str)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:945:32: note: no known conversion for argument 1 from 'nlohmann::json' to 'std::__cxx11::basic_string<char>&&'
+  945 |       operator=(basic_string&& __str)
+      |                 ~~~~~~~~~~~~~~~^~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:1013:7: note: candidate 6: 'std::__cxx11::basic_string<_CharT, _Traits, _Alloc>& std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::operator=(std::initializer_list<_Tp>) [with _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]'
+ 1013 |       operator=(initializer_list<_CharT> __l)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:1013:42: note: no known conversion for argument 1 from 'nlohmann::json' to 'std::initializer_list<char>'
+ 1013 |       operator=(initializer_list<_CharT> __l)
+      |                 ~~~~~~~~~~~~~~~~~~~~~~~~~^~~
+modules/vsix_loader.cpp:101:49: error: no match for 'operator=' (operand types are 'std::string' {aka 'std::__cxx11::basic_string<char>'} and 'nlohmann::json')
+  101 |     plugin->description = manifest["description"];
+      |                                                 ^
+modules/vsix_loader.cpp:101:49: note: there are 6 candidates
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:1028:8: note: candidate 1: 'template<class _Tp> std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::_If_sv<_Tp, std::__cxx11::basic_string<_CharT, _Traits, _Alloc>&> std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::operator=(const _Tp&) [with _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]'
+ 1028 |        operator=(const _Tp& __svt)
+      |        ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:1028:8: note: template argument deduction/substitution failed:
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:904:7: note: candidate 2: 'std::__cxx11::basic_string<_CharT, _Traits, _Alloc>& std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::operator=(const std::__cxx11::basic_string<_CharT, _Traits, _Alloc>&) [with _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]'
+  904 |       operator=(const basic_string& __str)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:904:37: note: no known conversion for argument 1 from 'nlohmann::json' to 'const std::__cxx11::basic_string<char>&'
+  904 |       operator=(const basic_string& __str)
+      |                 ~~~~~~~~~~~~~~~~~~~~^~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:915:7: note: candidate 3: 'std::__cxx11::basic_string<_CharT, _Traits, _Alloc>& std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::operator=(const _CharT*) [with _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]'
+  915 |       operator=(const _CharT* __s)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:915:31: note: no known conversion for argument 1 from 'nlohmann::json' to 'const char*'
+  915 |       operator=(const _CharT* __s)
+      |                 ~~~~~~~~~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:927:7: note: candidate 4: 'std::__cxx11::basic_string<_CharT, _Traits, _Alloc>& std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::operator=(_CharT) [with _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]'
+  927 |       operator=(_CharT __c)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:927:24: note: no known conversion for argument 1 from 'nlohmann::json' to 'char'
+  927 |       operator=(_CharT __c)
+      |                 ~~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:945:7: note: candidate 5: 'std::__cxx11::basic_string<_CharT, _Traits, _Alloc>& std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::operator=(std::__cxx11::basic_string<_CharT, _Traits, _Alloc>&&) [with _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]'
+  945 |       operator=(basic_string&& __str)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:945:32: note: no known conversion for argument 1 from 'nlohmann::json' to 'std::__cxx11::basic_string<char>&&'
+  945 |       operator=(basic_string&& __str)
+      |                 ~~~~~~~~~~~~~~~^~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:1013:7: note: candidate 6: 'std::__cxx11::basic_string<_CharT, _Traits, _Alloc>& std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::operator=(std::initializer_list<_Tp>) [with _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]'
+ 1013 |       operator=(initializer_list<_CharT> __l)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:1013:42: note: no known conversion for argument 1 from 'nlohmann::json' to 'std::initializer_list<char>'
+ 1013 |       operator=(initializer_list<_CharT> __l)
+      |                 ~~~~~~~~~~~~~~~~~~~~~~~~~^~~
+modules/vsix_loader.cpp:102:39: error: no match for 'operator=' (operand types are 'std::string' {aka 'std::__cxx11::basic_string<char>'} and 'nlohmann::json')
+  102 |     plugin->author = manifest["author"];
+      |                                       ^
+modules/vsix_loader.cpp:102:39: note: there are 6 candidates
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:1028:8: note: candidate 1: 'template<class _Tp> std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::_If_sv<_Tp, std::__cxx11::basic_string<_CharT, _Traits, _Alloc>&> std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::operator=(const _Tp&) [with _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]'
+ 1028 |        operator=(const _Tp& __svt)
+      |        ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:1028:8: note: template argument deduction/substitution failed:
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:904:7: note: candidate 2: 'std::__cxx11::basic_string<_CharT, _Traits, _Alloc>& std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::operator=(const std::__cxx11::basic_string<_CharT, _Traits, _Alloc>&) [with _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]'
+  904 |       operator=(const basic_string& __str)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:904:37: note: no known conversion for argument 1 from 'nlohmann::json' to 'const std::__cxx11::basic_string<char>&'
+  904 |       operator=(const basic_string& __str)
+      |                 ~~~~~~~~~~~~~~~~~~~~^~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:915:7: note: candidate 3: 'std::__cxx11::basic_string<_CharT, _Traits, _Alloc>& std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::operator=(const _CharT*) [with _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]'
+  915 |       operator=(const _CharT* __s)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:915:31: note: no known conversion for argument 1 from 'nlohmann::json' to 'const char*'
+  915 |       operator=(const _CharT* __s)
+      |                 ~~~~~~~~~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:927:7: note: candidate 4: 'std::__cxx11::basic_string<_CharT, _Traits, _Alloc>& std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::operator=(_CharT) [with _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]'
+  927 |       operator=(_CharT __c)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:927:24: note: no known conversion for argument 1 from 'nlohmann::json' to 'char'
+  927 |       operator=(_CharT __c)
+      |                 ~~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:945:7: note: candidate 5: 'std::__cxx11::basic_string<_CharT, _Traits, _Alloc>& std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::operator=(std::__cxx11::basic_string<_CharT, _Traits, _Alloc>&&) [with _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]'
+  945 |       operator=(basic_string&& __str)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:945:32: note: no known conversion for argument 1 from 'nlohmann::json' to 'std::__cxx11::basic_string<char>&&'
+  945 |       operator=(basic_string&& __str)
+      |                 ~~~~~~~~~~~~~~~^~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:1013:7: note: candidate 6: 'std::__cxx11::basic_string<_CharT, _Traits, _Alloc>& std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::operator=(std::initializer_list<_Tp>) [with _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]'
+ 1013 |       operator=(initializer_list<_CharT> __l)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:1013:42: note: no known conversion for argument 1 from 'nlohmann::json' to 'std::initializer_list<char>'
+ 1013 |       operator=(initializer_list<_CharT> __l)
+      |                 ~~~~~~~~~~~~~~~~~~~~~~~~~^~~
+modules/vsix_loader.cpp:110:39: error: no matching function for call to 'std::vector<std::__cxx11::basic_string<char> >::push_back(const std::pair<const std::__cxx11::basic_string<char>, nlohmann::json>&)'
+  110 |             plugin->commands.push_back(cmd);
+      |             ~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~
+modules/vsix_loader.cpp:110:39: note: there are 2 candidates
+In file included from C:/msys64/mingw64/include/c++/15.2.0/vector:68,
+                 from modules/vsix_loader.h:3:
+C:/msys64/mingw64/include/c++/15.2.0/bits/stl_vector.h:1416:7: note: candidate 1: 'void std::vector<_Tp, _Alloc>::push_back(const value_type&) [with _Tp = std::__cxx11::basic_string<char>; _Alloc = std::allocator<std::__cxx11::basic_string<char> >; value_type = std::__cxx11::basic_string<char>]'
+ 1416 |       push_back(const value_type& __x)
+      |       ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/stl_vector.h:1416:35: note: no known conversion for argument 1 from 'const std::pair<const std::__cxx11::basic_string<char>, nlohmann::json>' to 'const std::vector<std::__cxx11::basic_string<char> >::value_type&' {aka 'const std::__cxx11::basic_string<char>&'}
+ 1416 |       push_back(const value_type& __x)
+      |                 ~~~~~~~~~~~~~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/stl_vector.h:1433:7: note: candidate 2: 'void std::vector<_Tp, _Alloc>::push_back(value_type&&) [with _Tp = std::__cxx11::basic_string<char>; _Alloc = std::allocator<std::__cxx11::basic_string<char> >; value_type = std::__cxx11::basic_string<char>]'
+ 1433 |       push_back(value_type&& __x)
+      |       ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/stl_vector.h:1433:30: note: no known conversion for argument 1 from 'const std::pair<const std::__cxx11::basic_string<char>, nlohmann::json>' to 'std::vector<std::__cxx11::basic_string<char> >::value_type&&' {aka 'std::__cxx11::basic_string<char>&&'}
+ 1433 |       push_back(value_type&& __x)
+      |                 ~~~~~~~~~~~~~^~~
+modules/vsix_loader.cpp:117:43: error: no matching function for call to 'std::vector<std::__cxx11::basic_string<char> >::push_back(const std::pair<const std::__cxx11::basic_string<char>, nlohmann::json>&)'
+  117 |             plugin->dependencies.push_back(dep);
+      |             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~
+modules/vsix_loader.cpp:117:43: note: there are 2 candidates
+C:/msys64/mingw64/include/c++/15.2.0/bits/stl_vector.h:1416:7: note: candidate 1: 'void std::vector<_Tp, _Alloc>::push_back(const value_type&) [with _Tp = std::__cxx11::basic_string<char>; _Alloc = std::allocator<std::__cxx11::basic_string<char> >; value_type = std::__cxx11::basic_string<char>]'
+ 1416 |       push_back(const value_type& __x)
+      |       ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/stl_vector.h:1416:35: note: no known conversion for argument 1 from 'const std::pair<const std::__cxx11::basic_string<char>, nlohmann::json>' to 'const std::vector<std::__cxx11::basic_string<char> >::value_type&' {aka 'const std::__cxx11::basic_string<char>&'}
+ 1416 |       push_back(const value_type& __x)
+      |                 ~~~~~~~~~~~~~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/stl_vector.h:1433:7: note: candidate 2: 'void std::vector<_Tp, _Alloc>::push_back(value_type&&) [with _Tp = std::__cxx11::basic_string<char>; _Alloc = std::allocator<std::__cxx11::basic_string<char> >; value_type = std::__cxx11::basic_string<char>]'
+ 1433 |       push_back(value_type&& __x)
+      |       ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/stl_vector.h:1433:30: note: no known conversion for argument 1 from 'const std::pair<const std::__cxx11::basic_string<char>, nlohmann::json>' to 'std::vector<std::__cxx11::basic_string<char> >::value_type&&' {aka 'std::__cxx11::basic_string<char>&&'}
+ 1433 |       push_back(value_type&& __x)
+      |                 ~~~~~~~~~~~~~^~~
+modules/vsix_loader.cpp:123:72: error: 'class nlohmann::json' has no member named 'items'
+  123 |         for (const auto& [cmd, handler] : manifest["command_handlers"].items()) {
+      |                                                                        ^~~~~
+modules/vsix_loader.cpp: In lambda function:
+modules/vsix_loader.cpp:126:47: error: 'handler' is not captured
+  126 |                 std::cout << "Executing: " << handler << std::endl;
+      |                                               ^~~~~~~
+modules/vsix_loader.cpp:124:42: note: the lambda has no capture-default
+  124 |             RegisterCommand(cmd, [handler]() {
+      |                                          ^
+modules/vsix_loader.cpp:123:32: note: '<typeprefixerror>handler' declared here
+  123 |         for (const auto& [cmd, handler] : manifest["command_handlers"].items()) {
+      |                                ^~~~~~~
+modules/vsix_loader.cpp: In member function 'bool VSIXLoader::LoadPluginFromDirectory(const std::filesystem::__cxx11::path&)':
+modules/vsix_loader.cpp:133:73: error: 'class nlohmann::json' has no member named 'items'
+  133 |         for (const auto& [engine_id, engine_path] : manifest["engines"].items()) {
+      |                                                                         ^~~~~
+modules/vsix_loader.cpp: In member function 'std::string VSIXLoader::GetCLIHelp()':
+modules/vsix_loader.cpp:384:4: error: 'deepthinking' was not declared in this scope
+  384 |   /deepthinking on
+      |    ^~~~~~~~~~~~
+modules/vsix_loader.cpp:384:16: error: expected ';' before 'on'
+  384 |   /deepthinking on
+      |                ^~~
+      |                ;
+modules/vsix_loader.cpp:384:17: error: 'on' was not declared in this scope; did you mean 'yn'?
+  384 |   /deepthinking on
+      |                 ^~
+      |                 yn
+modules/vsix_loader.cpp:385:4: error: 'context' was not declared in this scope; did you mean 'IContext'?
+  385 |   /context 64k
+      |    ^~~~~~~
+      |    IContext
+modules/vsix_loader.cpp: In member function 'void VSIXLoader::LoadPluginState()':
+modules/vsix_loader.cpp:506:14: error: no match for 'operator>>' (operand types are 'std::ifstream' {aka 'std::basic_ifstream<char>'} and 'nlohmann::json')
+  506 |         file >> state;
+      |         ~~~~ ^~ ~~~~~
+      |         |       |
+      |         |       nlohmann::json
+      |         std::ifstream {aka std::basic_ifstream<char>}
+modules/vsix_loader.cpp:506:14: note: there are 34 candidates
+  506 |         file >> state;
+      |         ~~~~~^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:172:7: note: candidate 1: 'std::basic_istream<_CharT, _Traits>::__istream_type& std::basic_istream<_CharT, _Traits>::operator>>(bool&) [with _CharT = char; _Traits = std::char_traits<char>; __istream_type = std::basic_istream<char>]'
+  172 |       operator>>(bool& __n)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:172:24: note: no known conversion for argument 1 from 'nlohmann::json' to 'bool&'
+  172 |       operator>>(bool& __n)
+      |                  ~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:176:7: note: candidate 2: 'std::basic_istream<_CharT, _Traits>& std::basic_istream<_CharT, _Traits>::operator>>(short int&) [with _CharT = char; _Traits = std::char_traits<char>]'
+  176 |       operator>>(short& __n);
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:176:25: note: no known conversion for argument 1 from 'nlohmann::json' to 'short int&'
+  176 |       operator>>(short& __n);
+      |                  ~~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:179:7: note: candidate 3: 'std::basic_istream<_CharT, _Traits>::__istream_type& std::basic_istream<_CharT, _Traits>::operator>>(short unsigned int&) [with _CharT = char; _Traits = std::char_traits<char>; __istream_type = std::basic_istream<char>]'
+  179 |       operator>>(unsigned short& __n)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:179:34: note: no known conversion for argument 1 from 'nlohmann::json' to 'short unsigned int&'
+  179 |       operator>>(unsigned short& __n)
+      |                  ~~~~~~~~~~~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:183:7: note: candidate 4: 'std::basic_istream<_CharT, _Traits>& std::basic_istream<_CharT, _Traits>::operator>>(int&) [with _CharT = char; _Traits = std::char_traits<char>]'
+  183 |       operator>>(int& __n);
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:183:23: note: no known conversion for argument 1 from 'nlohmann::json' to 'int&'
+  183 |       operator>>(int& __n);
+      |                  ~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:186:7: note: candidate 5: 'std::basic_istream<_CharT, _Traits>::__istream_type& std::basic_istream<_CharT, _Traits>::operator>>(unsigned int&) [with _CharT = char; _Traits = std::char_traits<char>; __istream_type = std::basic_istream<char>]'
+  186 |       operator>>(unsigned int& __n)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:186:32: note: no known conversion for argument 1 from 'nlohmann::json' to 'unsigned int&'
+  186 |       operator>>(unsigned int& __n)
+      |                  ~~~~~~~~~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:190:7: note: candidate 6: 'std::basic_istream<_CharT, _Traits>::__istream_type& std::basic_istream<_CharT, _Traits>::operator>>(long int&) [with _CharT = char; _Traits = std::char_traits<char>; __istream_type = std::basic_istream<char>]'
+  190 |       operator>>(long& __n)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:190:24: note: no known conversion for argument 1 from 'nlohmann::json' to 'long int&'
+  190 |       operator>>(long& __n)
+      |                  ~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:194:7: note: candidate 7: 'std::basic_istream<_CharT, _Traits>::__istream_type& std::basic_istream<_CharT, _Traits>::operator>>(long unsigned int&) [with _CharT = char; _Traits = std::char_traits<char>; __istream_type = std::basic_istream<char>]'
+  194 |       operator>>(unsigned long& __n)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:194:33: note: no known conversion for argument 1 from 'nlohmann::json' to 'long unsigned int&'
+  194 |       operator>>(unsigned long& __n)
+      |                  ~~~~~~~~~~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:201:7: note: candidate 8: 'std::basic_istream<_CharT, _Traits>::__istream_type& std::basic_istream<_CharT, _Traits>::operator>>(long long int&) [with _CharT = char; _Traits = std::char_traits<char>; __istream_type = std::basic_istream<char>]'
+  201 |       operator>>(long long& __n)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:201:29: note: no known conversion for argument 1 from 'nlohmann::json' to 'long long int&'
+  201 |       operator>>(long long& __n)
+      |                  ~~~~~~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:205:7: note: candidate 9: 'std::basic_istream<_CharT, _Traits>::__istream_type& std::basic_istream<_CharT, _Traits>::operator>>(long long unsigned int&) [with _CharT = char; _Traits = std::char_traits<char>; __istream_type = std::basic_istream<char>]'
+  205 |       operator>>(unsigned long long& __n)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:205:38: note: no known conversion for argument 1 from 'nlohmann::json' to 'long long unsigned int&'
+  205 |       operator>>(unsigned long long& __n)
+      |                  ~~~~~~~~~~~~~~~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:221:7: note: candidate 10: 'std::basic_istream<_CharT, _Traits>::__istream_type& std::basic_istream<_CharT, _Traits>::operator>>(float&) [with _CharT = char; _Traits = std::char_traits<char>; __istream_type = std::basic_istream<char>]'
+  221 |       operator>>(float& __f)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:221:25: note: no known conversion for argument 1 from 'nlohmann::json' to 'float&'
+  221 |       operator>>(float& __f)
+      |                  ~~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:225:7: note: candidate 11: 'std::basic_istream<_CharT, _Traits>::__istream_type& std::basic_istream<_CharT, _Traits>::operator>>(double&) [with _CharT = char; _Traits = std::char_traits<char>; __istream_type = std::basic_istream<char>]'
+  225 |       operator>>(double& __f)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:225:26: note: no known conversion for argument 1 from 'nlohmann::json' to 'double&'
+  225 |       operator>>(double& __f)
+      |                  ~~~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:229:7: note: candidate 12: 'std::basic_istream<_CharT, _Traits>::__istream_type& std::basic_istream<_CharT, _Traits>::operator>>(long double&) [with _CharT = char; _Traits = std::char_traits<char>; __istream_type = std::basic_istream<char>]'
+  229 |       operator>>(long double& __f)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:229:31: note: no known conversion for argument 1 from 'nlohmann::json' to 'long double&'
+  229 |       operator>>(long double& __f)
+      |                  ~~~~~~~~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:330:7: note: candidate 13: 'std::basic_istream<_CharT, _Traits>::__istream_type& std::basic_istream<_CharT, _Traits>::operator>>(void*&) [with _CharT = char; _Traits = std::char_traits<char>; __istream_type = std::basic_istream<char>]'
+  330 |       operator>>(void*& __p)
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:330:25: note: no known conversion for argument 1 from 'nlohmann::json' to 'void*&'
+  330 |       operator>>(void*& __p)
+      |                  ~~~~~~~^~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:124:7: note: candidate 14: 'std::basic_istream<_CharT, _Traits>::__istream_type& std::basic_istream<_CharT, _Traits>::operator>>(__istream_type& (*)(__istream_type&)) [with _CharT = char; _Traits = std::char_traits<char>; __istream_type = std::basic_istream<char>]'
+  124 |       operator>>(__istream_type& (*__pf)(__istream_type&))
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:124:36: note: no known conversion for argument 1 from 'nlohmann::json' to 'std::basic_istream<char>::__istream_type& (*)(std::basic_istream<char>::__istream_type&)' {aka 'std::basic_istream<char>& (*)(std::basic_istream<char>&)'}
+  124 |       operator>>(__istream_type& (*__pf)(__istream_type&))
+      |                  ~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:128:7: note: candidate 15: 'std::basic_istream<_CharT, _Traits>::__istream_type& std::basic_istream<_CharT, _Traits>::operator>>(__ios_type& (*)(__ios_type&)) [with _CharT = char; _Traits = std::char_traits<char>; __istream_type = std::basic_istream<char>; __ios_type = std::basic_ios<char>]'
+  128 |       operator>>(__ios_type& (*__pf)(__ios_type&))
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:128:32: note: no known conversion for argument 1 from 'nlohmann::json' to 'std::basic_istream<char>::__ios_type& (*)(std::basic_istream<char>::__ios_type&)' {aka 'std::basic_ios<char>& (*)(std::basic_ios<char>&)'}
+  128 |       operator>>(__ios_type& (*__pf)(__ios_type&))
+      |                  ~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:135:7: note: candidate 16: 'std::basic_istream<_CharT, _Traits>::__istream_type& std::basic_istream<_CharT, _Traits>::operator>>(std::ios_base& (*)(std::ios_base&)) [with _CharT = char; _Traits = std::char_traits<char>; __istream_type = std::basic_istream<char>]'
+  135 |       operator>>(ios_base& (*__pf)(ios_base&))
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:135:30: note: no known conversion for argument 1 from 'nlohmann::json' to 'std::ios_base& (*)(std::ios_base&)'
+  135 |       operator>>(ios_base& (*__pf)(ios_base&))
+      |                  ~~~~~~~~~~~~^~~~~~~~~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:354:7: note: candidate 17: 'std::basic_istream<_CharT, _Traits>& std::basic_istream<_CharT, _Traits>::operator>>(__streambuf_type*) [with _CharT = char; _Traits = std::char_traits<char>; __streambuf_type = std::basic_streambuf<char>]'
+  354 |       operator>>(__streambuf_type* __sb);
+      |       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:354:36: note: no known conversion for argument 1 from 'nlohmann::json' to 'std::basic_istream<char>::__streambuf_type*' {aka 'std::basic_streambuf<char>*'}
+  354 |       operator>>(__streambuf_type* __sb);
+      |                  ~~~~~~~~~~~~~~~~~~^~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.tcc:866:5: note: candidate 18: 'template<class _CharT, class _Traits, class _Alloc> std::basic_istream<_CharT, _Traits>& std::operator>>(basic_istream<_CharT, _Traits>&, __cxx11::basic_string<_CharT, _Traits, _Alloc>&)'
+  866 |     operator>>(basic_istream<_CharT, _Traits>& __in,
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.tcc:866:5: note: template argument deduction/substitution failed:
+modules/vsix_loader.cpp:506:17: note:   'nlohmann::json' is not derived from 'std::__cxx11::basic_string<_CharT, _Traits, _Alloc>'
+  506 |         file >> state;
+      |                 ^~~~~
+C:/msys64/mingw64/include/c++/15.2.0/cstddef:136:5: note: candidate 19: 'template<class _IntegerType> constexpr std::__byte_op_t<_IntegerType> std::operator>>(byte, _IntegerType)'
+  136 |     operator>>(byte __b, _IntegerType __shift) noexcept
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/cstddef:136:5: note: template argument deduction/substitution failed:
+modules/vsix_loader.cpp:506:9: note:   cannot convert 'file' (type 'std::ifstream' {aka 'std::basic_ifstream<char>'}) to type 'std::byte'
+  506 |         file >> state;
+      |         ^~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/istream.tcc:983:5: note: candidate 20: 'template<class _CharT, class _Traits> std::basic_istream<_CharT, _Traits>& std::operator>>(basic_istream<_CharT, _Traits>&, _CharT&)'
+  983 |     operator>>(basic_istream<_CharT, _Traits>& __in, _CharT& __c)
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/istream.tcc:983:5: note: template argument deduction/substitution failed:
+modules/vsix_loader.cpp:506:17: note:   deduced conflicting types for parameter '_CharT' ('char' and 'nlohmann::json')
+  506 |         file >> state;
+      |                 ^~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:851:5: note: candidate 21: 'template<class _Traits> std::basic_istream<char, _Traits>& std::operator>>(basic_istream<char, _Traits>&, unsigned char&)'
+  851 |     operator>>(basic_istream<char, _Traits>& __in, unsigned char& __c)
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:851:5: note: template argument deduction/substitution failed:
+modules/vsix_loader.cpp:506:17: note:   cannot convert 'state' (type 'nlohmann::json') to type 'unsigned char&'
+  506 |         file >> state;
+      |                 ^~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:856:5: note: candidate 22: 'template<class _Traits> std::basic_istream<char, _Traits>& std::operator>>(basic_istream<char, _Traits>&, signed char&)'
+  856 |     operator>>(basic_istream<char, _Traits>& __in, signed char& __c)
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:856:5: note: template argument deduction/substitution failed:
+modules/vsix_loader.cpp:506:17: note:   cannot convert 'state' (type 'nlohmann::json') to type 'signed char&'
+  506 |         file >> state;
+      |                 ^~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:898:5: note: candidate 23: 'template<class _CharT, class _Traits> std::basic_istream<_CharT, _Traits>& std::operator>>(basic_istream<_CharT, _Traits>&, _CharT*)'
+  898 |     operator>>(basic_istream<_CharT, _Traits>& __in, _CharT* __s)
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:898:5: note: template argument deduction/substitution failed:
+modules/vsix_loader.cpp:506:17: note:   mismatched types '_CharT*' and 'nlohmann::json'
+  506 |         file >> state;
+      |                 ^~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:941:5: note: candidate 24: 'template<class _Traits> std::basic_istream<char, _Traits>& std::operator>>(basic_istream<char, _Traits>&, unsigned char*)'
+  941 |     operator>>(basic_istream<char, _Traits>& __in, unsigned char* __s)
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:941:5: note: template argument deduction/substitution failed:
+modules/vsix_loader.cpp:506:17: note:   cannot convert 'state' (type 'nlohmann::json') to type 'unsigned char*'
+  506 |         file >> state;
+      |                 ^~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:947:5: note: candidate 25: 'template<class _Traits> std::basic_istream<char, _Traits>& std::operator>>(basic_istream<char, _Traits>&, signed char*)'
+  947 |     operator>>(basic_istream<char, _Traits>& __in, signed char* __s)
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:947:5: note: template argument deduction/substitution failed:
+modules/vsix_loader.cpp:506:17: note:   cannot convert 'state' (type 'nlohmann::json') to type 'signed char*'
+  506 |         file >> state;
+      |                 ^~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:1101:5: note: candidate 26: 'template<class _Istream, class _Tp> _Istream&& std::operator>>(_Istream&&, _Tp&&)'
+ 1101 |     operator>>(_Istream&& __is, _Tp&& __x)
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:1101:5: note: template argument deduction/substitution failed:
+C:/msys64/mingw64/include/c++/15.2.0/istream: In substitution of 'template<class _Istream, class _Tp> _Istream&& std::operator>>(_Istream&&, _Tp&&) [with _Istream = std::basic_ifstream<char>&; _Tp = nlohmann::json&]':
+modules/vsix_loader.cpp:506:17:   required from here
+  506 |         file >> state;
+      |                 ^~~~~
+C:/msys64/mingw64/include/c++/15.2.0/istream:1101:5: error: no type named 'type' in 'struct std::enable_if<false, void>'
+ 1101 |     operator>>(_Istream&& __is, _Tp&& __x)
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/iomanip:81:5: note: candidate 27: 'template<class _CharT, class _Traits> std::basic_istream<_CharT, _Traits>& std::operator>>(basic_istream<_CharT, _Traits>&, _Resetiosflags)'
+   81 |     operator>>(basic_istream<_CharT, _Traits>& __is, _Resetiosflags __f)
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/iomanip:81:5: note: template argument deduction/substitution failed:
+modules/vsix_loader.cpp:506:17: note:   cannot convert 'state' (type 'nlohmann::json') to type 'std::_Resetiosflags'
+  506 |         file >> state;
+      |                 ^~~~~
+C:/msys64/mingw64/include/c++/15.2.0/iomanip:111:5: note: candidate 28: 'template<class _CharT, class _Traits> std::basic_istream<_CharT, _Traits>& std::operator>>(basic_istream<_CharT, _Traits>&, _Setiosflags)'
+  111 |     operator>>(basic_istream<_CharT, _Traits>& __is, _Setiosflags __f)
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/iomanip:111:5: note: template argument deduction/substitution failed:
+modules/vsix_loader.cpp:506:17: note:   cannot convert 'state' (type 'nlohmann::json') to type 'std::_Setiosflags'
+  506 |         file >> state;
+      |                 ^~~~~
+C:/msys64/mingw64/include/c++/15.2.0/iomanip:142:5: note: candidate 29: 'template<class _CharT, class _Traits> std::basic_istream<_CharT, _Traits>& std::operator>>(basic_istream<_CharT, _Traits>&, _Setbase)'
+  142 |     operator>>(basic_istream<_CharT, _Traits>& __is, _Setbase __f)
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/iomanip:142:5: note: template argument deduction/substitution failed:
+modules/vsix_loader.cpp:506:17: note:   cannot convert 'state' (type 'nlohmann::json') to type 'std::_Setbase'
+  506 |         file >> state;
+      |                 ^~~~~
+C:/msys64/mingw64/include/c++/15.2.0/iomanip:182:5: note: candidate 30: 'template<class _CharT, class _Traits> std::basic_istream<_CharT, _Traits>& std::operator>>(basic_istream<_CharT, _Traits>&, _Setfill<_CharT>)'
+  182 |     operator>>(basic_istream<_CharT, _Traits>& __is, _Setfill<_CharT> __f)
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/iomanip:182:5: note: template argument deduction/substitution failed:
+modules/vsix_loader.cpp:506:17: note:   'nlohmann::json' is not derived from 'std::_Setfill<_CharT>'
+  506 |         file >> state;
+      |                 ^~~~~
+C:/msys64/mingw64/include/c++/15.2.0/iomanip:212:5: note: candidate 31: 'template<class _CharT, class _Traits> std::basic_istream<_CharT, _Traits>& std::operator>>(basic_istream<_CharT, _Traits>&, _Setprecision)'
+  212 |     operator>>(basic_istream<_CharT, _Traits>& __is, _Setprecision __f)
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/iomanip:212:5: note: template argument deduction/substitution failed:
+modules/vsix_loader.cpp:506:17: note:   cannot convert 'state' (type 'nlohmann::json') to type 'std::_Setprecision'
+  506 |         file >> state;
+      |                 ^~~~~
+C:/msys64/mingw64/include/c++/15.2.0/iomanip:242:5: note: candidate 32: 'template<class _CharT, class _Traits> std::basic_istream<_CharT, _Traits>& std::operator>>(basic_istream<_CharT, _Traits>&, _Setw)'
+  242 |     operator>>(basic_istream<_CharT, _Traits>& __is, _Setw __f)
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/iomanip:242:5: note: template argument deduction/substitution failed:
+modules/vsix_loader.cpp:506:17: note:   cannot convert 'state' (type 'nlohmann::json') to type 'std::_Setw'
+  506 |         file >> state;
+      |                 ^~~~~
+C:/msys64/mingw64/include/c++/15.2.0/iomanip:276:5: note: candidate 33: 'template<class _CharT, class _Traits, class _MoneyT> std::basic_istream<_CharT, _Traits>& std::operator>>(basic_istream<_CharT, _Traits>&, _Get_money<_MoneyT>)'
+  276 |     operator>>(basic_istream<_CharT, _Traits>& __is, _Get_money<_MoneyT> __f)
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/iomanip:276:5: note: template argument deduction/substitution failed:
+modules/vsix_loader.cpp:506:17: note:   'nlohmann::json' is not derived from 'std::_Get_money<_MoneyT>'
+  506 |         file >> state;
+      |                 ^~~~~
+C:/msys64/mingw64/include/c++/15.2.0/iomanip:430:5: note: candidate 34: 'template<class _CharT, class _Traits> std::basic_istream<_CharT, _Traits>& std::operator>>(basic_istream<_CharT, _Traits>&, _Get_time<_CharT>)'
+  430 |     operator>>(basic_istream<_CharT, _Traits>& __is, _Get_time<_CharT> __f)
+      |     ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/iomanip:430:5: note: template argument deduction/substitution failed:
+modules/vsix_loader.cpp:506:17: note:   'nlohmann::json' is not derived from 'std::_Get_time<_CharT>'
+  506 |         file >> state;
+      |                 ^~~~~
+modules/vsix_loader.cpp:512:38: error: no match for 'operator[]' (operand types are 'const std::pair<const std::__cxx11::basic_string<char>, nlohmann::json>' and 'const char [3]')
+  512 |         std::string id = plugin_state["id"];
+      |                                      ^
+modules/vsix_loader.cpp:513:36: error: no match for 'operator[]' (operand types are 'const std::pair<const std::__cxx11::basic_string<char>, nlohmann::json>' and 'const char [8]')
+  513 |         bool enabled = plugin_state["enabled"];
+      |                                    ^

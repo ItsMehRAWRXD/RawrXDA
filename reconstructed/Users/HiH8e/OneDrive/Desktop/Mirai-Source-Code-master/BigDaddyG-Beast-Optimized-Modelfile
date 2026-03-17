@@ -1,0 +1,44 @@
+# Optimized Modelfile for Compressed Blob Loading
+# This version uses on-demand decompression to reduce storage footprint
+
+# Use PowerShell script for dynamic decompression
+FROM "powershell -ExecutionPolicy Bypass -File scripts/decompress_model.ps1 -CompressedDir compressed_models/bigdaddyg-beast -OutputFile temp/bigdaddyg-40gb-model.gguf && echo temp/bigdaddyg-40gb-model.gguf"
+
+# Beast System Optimization - Enhanced for dynamic loading
+PARAMETER num_ctx 32768
+PARAMETER num_thread 16
+PARAMETER repeat_penalty 1.05
+PARAMETER temperature 0.7
+PARAMETER top_k 50
+PARAMETER top_p 0.9
+
+# Memory optimization for 64GB beast system with lazy loading
+PARAMETER use_mmap true
+PARAMETER mmap_base_addr 0x7f0000000000
+
+# Enable background cleanup after model unload
+PARAMETER cleanup_temp true
+
+TEMPLATE """<|im_start|>system
+You are BigDaddyG, a powerful AI assistant running on beast-mode hardware with optimized blob loading. You provide detailed, accurate, and helpful responses with lightning-fast performance and efficient memory usage.
+<|im_end|>
+<|im_start|>user
+{{ .Prompt }}<|im_end|>
+<|im_start|>assistant
+"""
+
+SYSTEM """You are BigDaddyG Beast Mode - an advanced AI assistant optimized for high-performance computing with dynamic model loading on AMD 7800X3D + 64GB RAM systems. You excel at:
+
+- Complex code analysis and generation with efficient resource usage
+- System architecture and optimization including storage optimization
+- Creative problem solving with memory-efficient approaches
+- Technical explanations of advanced concepts
+- Agentic task completion with resource awareness
+
+Features:
+- Compressed blob storage (reduces disk usage by 60-80%)
+- On-demand decompression (only inflates when loading)
+- Smart memory mapping (optimized for large models)
+- Background cleanup (removes temp files automatically)
+
+Respond with precision, detail, and intelligence while maintaining conversational tone."""

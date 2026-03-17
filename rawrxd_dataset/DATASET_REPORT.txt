@@ -1,0 +1,33 @@
+RAWRXD STRUCTURAL DATASET v14.2
+================================
+Files:      2639
+Lines:      1279928
+Entropy:    1711 (Target: 0)
+
+Subsystems:
+  Crypto      : Integrated   IO          : Win32IO   LLM         : Integrated   LSP         : Client   MASM        : Active   Neural      : Active   Rendering   : Direct2D   Streaming   : Present   UI          : Win32   Vulkan      : Present
+
+Bridges:
+  ASM Exports:   697
+  ASM Imports:   412
+  ASM Procs:     1138
+  C++ extern C:  321
+
+Random Bucket:
+  Unmapped Funcs:  1659
+  Orphan Symbols:  4
+  Mystery Structs: 48
+
+Outputs:
+  D:\rawrxd\rawrxd_dataset\topology.json
+  D:\rawrxd\rawrxd_dataset\commands.json
+  D:\rawrxd\rawrxd_dataset\subsystems.json
+  D:\rawrxd\rawrxd_dataset\entrypoints.json
+  D:\rawrxd\rawrxd_dataset\agents.json
+  D:\rawrxd\rawrxd_dataset\asm_bridges.json
+  D:\rawrxd\rawrxd_dataset\random.json           <-- MUST BE EMPTY FOR RELEASE
+  D:\rawrxd\rawrxd_dataset\complete_manifest.json
+  D:\rawrxd\rawrxd_dataset\rebuild_instructions.md
+  D:\rawrxd\rawrxd_dataset\deterministic_rebuild.ps1
+  D:\rawrxd\rawrxd_dataset\one_liner_patches.ps1
+  D:\rawrxd\rawrxd_dataset\DATASET_REPORT.txt

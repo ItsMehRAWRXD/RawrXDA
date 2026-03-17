@@ -1,0 +1,210 @@
+/*=============================================================================
+ * RawrXD_IDE_Resources.rc
+ * Resource script: menus, accelerators, version info, manifest
+ *
+ * Compile with: rc.exe /fo RawrXD_IDE_Resources.res RawrXD_IDE_Resources.rc
+ *===========================================================================*/
+
+#include <windows.h>
+#include <richedit.h>
+
+/* ── Duplicate the IDs we need (rc.exe cannot parse full C++ headers) ──── */
+#define IDM_FILE_NEW            2001
+#define IDM_FILE_OPEN           2002
+#define IDM_FILE_SAVE           2003
+#define IDM_FILE_SAVEAS         2004
+#define IDM_FILE_CLOSE          2005
+#define IDM_FILE_EXIT           2006
+
+#define IDM_EDIT_UNDO           2101
+#define IDM_EDIT_REDO           2102
+#define IDM_EDIT_CUT            2103
+#define IDM_EDIT_COPY           2104
+#define IDM_EDIT_PASTE          2105
+#define IDM_EDIT_SELECTALL      2106
+#define IDM_EDIT_FIND           2107
+#define IDM_EDIT_REPLACE        2108
+#define IDM_EDIT_GOTO           2109
+
+#define IDM_BUILD_BUILD         2201
+#define IDM_BUILD_REBUILD       2202
+#define IDM_BUILD_RUN           2203
+#define IDM_BUILD_CLEAN         2204
+#define IDM_BUILD_STOP          2205
+
+#define IDM_TOOLS_PE_INSPECTOR  2301
+#define IDM_TOOLS_INSTR_ENCODER 2302
+#define IDM_TOOLS_EXT_MANAGER   2303
+#define IDM_TOOLS_OPTIONS       2304
+
+#define IDM_VIEW_FILEBROWSER    2401
+#define IDM_VIEW_OUTPUT         2402
+#define IDM_VIEW_WIDGET         2403
+#define IDM_VIEW_FULLSCREEN     2404
+#define IDM_VIEW_DARK_THEME     2405
+#define IDM_VIEW_LIGHT_THEME    2406
+
+#define IDM_HELP_ABOUT          2501
+#define IDM_HELP_DOCS           2502
+
+#define IDA_MAIN_ACCEL          3001
+#define IDR_MAINMENU            5000
+
+/* ── Application icon (embedded as raw if present) ──────────────────────── */
+/* If you have an icon file, uncomment the next line:
+   IDI_RAWRXD_ICON ICON "rawrxd.ico"
+*/
+
+/* ── Main menu bar ──────────────────────────────────────────────────────── */
+IDR_MAINMENU MENU
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "&New\tCtrl+N",            IDM_FILE_NEW
+        MENUITEM "&Open...\tCtrl+O",        IDM_FILE_OPEN
+        MENUITEM SEPARATOR
+        MENUITEM "&Save\tCtrl+S",           IDM_FILE_SAVE
+        MENUITEM "Save &As...\tCtrl+Shift+S", IDM_FILE_SAVEAS
+        MENUITEM SEPARATOR
+        MENUITEM "&Close\tCtrl+W",          IDM_FILE_CLOSE
+        MENUITEM SEPARATOR
+        MENUITEM "E&xit\tAlt+F4",           IDM_FILE_EXIT
+    END
+
+    POPUP "&Edit"
+    BEGIN
+        MENUITEM "&Undo\tCtrl+Z",           IDM_EDIT_UNDO
+        MENUITEM "&Redo\tCtrl+Y",           IDM_EDIT_REDO
+        MENUITEM SEPARATOR
+        MENUITEM "Cu&t\tCtrl+X",            IDM_EDIT_CUT
+        MENUITEM "&Copy\tCtrl+C",           IDM_EDIT_COPY
+        MENUITEM "&Paste\tCtrl+V",          IDM_EDIT_PASTE
+        MENUITEM SEPARATOR
+        MENUITEM "Select &All\tCtrl+A",     IDM_EDIT_SELECTALL
+        MENUITEM SEPARATOR
+        MENUITEM "&Find...\tCtrl+F",        IDM_EDIT_FIND
+        MENUITEM "&Replace...\tCtrl+H",     IDM_EDIT_REPLACE
+        MENUITEM "&Go to Line...\tCtrl+G",  IDM_EDIT_GOTO
+    END
+
+    POPUP "&View"
+    BEGIN
+        MENUITEM "File &Browser\tCtrl+E",   IDM_VIEW_FILEBROWSER
+        MENUITEM "&Output Panel\tCtrl+`",   IDM_VIEW_OUTPUT
+        MENUITEM "&Widget Panel",           IDM_VIEW_WIDGET
+        MENUITEM SEPARATOR
+        MENUITEM "&Fullscreen\tF11",        IDM_VIEW_FULLSCREEN
+        MENUITEM SEPARATOR
+        MENUITEM "&Dark Theme",             IDM_VIEW_DARK_THEME
+        MENUITEM "&Light Theme",            IDM_VIEW_LIGHT_THEME
+    END
+
+    POPUP "&Build"
+    BEGIN
+        MENUITEM "&Build PE\tF7",           IDM_BUILD_BUILD
+        MENUITEM "&Rebuild\tCtrl+Shift+B",  IDM_BUILD_REBUILD
+        MENUITEM SEPARATOR
+        MENUITEM "&Run\tF5",                IDM_BUILD_RUN
+        MENUITEM SEPARATOR
+        MENUITEM "&Clean",                  IDM_BUILD_CLEAN
+        MENUITEM "&Stop Build",             IDM_BUILD_STOP
+    END
+
+    POPUP "&Tools"
+    BEGIN
+        MENUITEM "PE &Inspector",           IDM_TOOLS_PE_INSPECTOR
+        MENUITEM "Instruction &Encoder",    IDM_TOOLS_INSTR_ENCODER
+        MENUITEM "Extension &Manager",      IDM_TOOLS_EXT_MANAGER
+        MENUITEM SEPARATOR
+        MENUITEM "&Options...",             IDM_TOOLS_OPTIONS
+    END
+
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "&Documentation",          IDM_HELP_DOCS
+        MENUITEM SEPARATOR
+        MENUITEM "&About RawrXD IDE",       IDM_HELP_ABOUT
+    END
+END
+
+/* ── Accelerator table ──────────────────────────────────────────────────── */
+IDA_MAIN_ACCEL ACCELERATORS
+BEGIN
+    "N",        IDM_FILE_NEW,       VIRTKEY, CONTROL
+    "O",        IDM_FILE_OPEN,      VIRTKEY, CONTROL
+    "S",        IDM_FILE_SAVE,      VIRTKEY, CONTROL
+    "S",        IDM_FILE_SAVEAS,    VIRTKEY, CONTROL, SHIFT
+    "W",        IDM_FILE_CLOSE,     VIRTKEY, CONTROL
+
+    "Z",        IDM_EDIT_UNDO,      VIRTKEY, CONTROL
+    "Y",        IDM_EDIT_REDO,      VIRTKEY, CONTROL
+    "X",        IDM_EDIT_CUT,       VIRTKEY, CONTROL
+    "C",        IDM_EDIT_COPY,      VIRTKEY, CONTROL
+    "V",        IDM_EDIT_PASTE,     VIRTKEY, CONTROL
+    "A",        IDM_EDIT_SELECTALL, VIRTKEY, CONTROL
+    "F",        IDM_EDIT_FIND,      VIRTKEY, CONTROL
+    "H",        IDM_EDIT_REPLACE,   VIRTKEY, CONTROL
+    "G",        IDM_EDIT_GOTO,      VIRTKEY, CONTROL
+
+    VK_F7,      IDM_BUILD_BUILD,    VIRTKEY
+    "B",        IDM_BUILD_BUILD,    VIRTKEY, CONTROL
+    "B",        IDM_BUILD_REBUILD,  VIRTKEY, CONTROL, SHIFT
+    VK_F5,      IDM_BUILD_RUN,      VIRTKEY
+
+    "E",        IDM_VIEW_FILEBROWSER, VIRTKEY, CONTROL
+    VK_OEM_3,   IDM_VIEW_OUTPUT,    VIRTKEY, CONTROL     /* Ctrl+` */
+    VK_F11,     IDM_VIEW_FULLSCREEN, VIRTKEY
+END
+
+/* ── Version info ───────────────────────────────────────────────────────── */
+1 VERSIONINFO
+FILEVERSION     1,0,0,0
+PRODUCTVERSION  1,0,0,0
+FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
+FILEFLAGS       0
+FILEOS          VOS_NT_WINDOWS32
+FILETYPE        VFT_APP
+FILESUBTYPE     VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName",      "RawrXD Project"
+            VALUE "FileDescription",  "RawrXD IDE - Win32 GUI Shell"
+            VALUE "FileVersion",      "1.0.0.0"
+            VALUE "InternalName",     "RawrXd_IDE"
+            VALUE "LegalCopyright",   "(C) RawrXD Project"
+            VALUE "OriginalFilename", "RawrXD_IDE.exe"
+            VALUE "ProductName",      "RawrXD IDE"
+            VALUE "ProductVersion",   "1.0.0.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0409, 0x04B0
+    END
+END
+
+/* ── DPI manifest  ──────────────────────────────────────────────────────── */
+/* Embed a manifest for per-monitor DPI awareness and visual styles */
+1 24 /* RT_MANIFEST */
+BEGIN
+    "<?xml version=""1.0"" encoding=""UTF-8"" standalone=""yes""?>\r\n"
+    "<assembly xmlns=""urn:schemas-microsoft-com:asm.v1"" manifestVersion=""1.0"">\r\n"
+    "  <assemblyIdentity type=""win32"" name=""RawrXD.IDE"" version=""1.0.0.0"" />\r\n"
+    "  <dependency>\r\n"
+    "    <dependentAssembly>\r\n"
+    "      <assemblyIdentity type=""win32"" name=""Microsoft.Windows.Common-Controls"" "
+    "version=""6.0.0.0"" processorArchitecture=""amd64"" "
+    "publicKeyToken=""6595b64144ccf1df"" language=""*"" />\r\n"
+    "    </dependentAssembly>\r\n"
+    "  </dependency>\r\n"
+    "  <application xmlns=""urn:schemas-microsoft-com:asm.v3"">\r\n"
+    "    <windowsSettings>\r\n"
+    "      <dpiAware xmlns=""http://schemas.microsoft.com/SMI/2005/WindowsSettings"">true/pm</dpiAware>\r\n"
+    "      <dpiAwareness xmlns=""http://schemas.microsoft.com/SMI/2016/WindowsSettings"">PerMonitorV2,PerMonitor</dpiAwareness>\r\n"
+    "    </windowsSettings>\r\n"
+    "  </application>\r\n"
+    "</assembly>\r\n"
+END

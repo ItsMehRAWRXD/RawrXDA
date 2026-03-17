@@ -1,0 +1,613 @@
+# ============================================================
+# RawrXD Test Suite - CTest Registration
+# ============================================================
+# This file registers tests defined in the parent CMakeLists.txt with CTest
+# and adds additional tests not already defined there.
+#
+# Tests ALREADY defined in parent CMakeLists.txt (do NOT redefine):
+# - test_gguf_loader
+# - test_gguf_loader_simple
+# - test_agent_coordinator
+# - test_agent_coordinator_integration
+# - quant_correctness_tests
+# - quant_engine_test
+# - quant_scalar_smoke
+# - test_kv_cache
+# - test_chat_streaming
+# - test_terminal
+# - test_ide_main
+# - test_header
+
+cmake_minimum_required(VERSION 3.20)
+
+# Enable testing
+enable_testing()
+
+# Optional dependencies
+set(RAWRXD_GTEST_HEADER "${CMAKE_SOURCE_DIR}/3rdparty/googletest/googletest/include/gtest/gtest.h")
+if(EXISTS "${RAWRXD_GTEST_HEADER}")
+    set(RAWRXD_HAS_GTEST ON CACHE BOOL "GTest header available" FORCE)
+else()
+    set(RAWRXD_HAS_GTEST OFF CACHE BOOL "GTest header available" FORCE)
+endif()
+
+option(RAWRXD_ENABLE_TOOL_REGISTRY_TEST "Enable tool registry test (requires matching ToolRegistry API)" OFF)
+
+message(STATUS "========================================")
+message(STATUS "Registering Tests with CTest")
+message(STATUS "========================================")
+
+# Register existing tests from parent CMakeLists.txt with CTest
+# These targets already exist, we just register them for ctest discovery
+if(TARGET test_gguf_loader)
+    add_test(NAME test_gguf_loader COMMAND test_gguf_loader)
+    message(STATUS "  ✓ Registered test_gguf_loader")
+endif()
+
+if(TARGET test_gguf_loader_simple)
+    add_test(NAME test_gguf_loader_simple COMMAND test_gguf_loader_simple)
+    message(STATUS "  ✓ Registered test_gguf_loader_simple")
+endif()
+
+if(TARGET test_agent_coordinator)
+    add_test(NAME test_agent_coordinator COMMAND test_agent_coordinator)
+    message(STATUS "  ✓ Registered test_agent_coordinator")
+endif()
+
+if(TARGET test_agent_coordinator_integration)
+    add_test(NAME test_agent_coordinator_integration COMMAND test_agent_coordinator_integration)
+    message(STATUS "  ✓ Registered test_agent_coordinator_integration")
+endif()
+
+if(TARGET quant_correctness_tests)
+    add_test(NAME quant_correctness_tests COMMAND quant_correctness_tests)
+    message(STATUS "  ✓ Registered quant_correctness_tests")
+endif()
+
+if(TARGET quant_engine_test)
+    add_test(NAME quant_engine_test COMMAND quant_engine_test)
+    message(STATUS "  ✓ Registered quant_engine_test")
+endif()
+
+if(TARGET quant_scalar_smoke)
+    add_test(NAME quant_scalar_smoke COMMAND quant_scalar_smoke)
+    message(STATUS "  ✓ Registered quant_scalar_smoke")
+endif()
+
+if(TARGET test_kv_cache)
+    add_test(NAME test_kv_cache COMMAND test_kv_cache)
+    message(STATUS "  ✓ Registered test_kv_cache")
+endif()
+
+# ============================================================
+# NEW TESTS - Qt-free, C++20 native test framework
+# ============================================================
+
+# AI Completions Test
+if(NOT TARGET test_ai_completions AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_ai_completions.cpp")
+    add_executable(test_ai_completions test_ai_completions.cpp)
+    target_include_directories(test_ai_completions PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_ai_completions PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+    add_test(NAME test_ai_completions COMMAND test_ai_completions)
+    message(STATUS "  ✓ Added test_ai_completions")
+endif()
+
+# LLM Connectivity Test
+if(NOT TARGET test_llm_connectivity AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_llm_connectivity.cpp")
+    add_executable(test_llm_connectivity
+        test_llm_connectivity.cpp
+        ${CMAKE_SOURCE_DIR}/src/llm_adapter/llm_http_client.cpp
+    )
+    target_include_directories(test_llm_connectivity PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/llm_adapter
+    )
+    set_target_properties(test_llm_connectivity PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+    if(WIN32)
+        target_link_libraries(test_llm_connectivity PRIVATE ws2_32 winhttp)
+    endif()
+    add_test(NAME test_llm_connectivity COMMAND test_llm_connectivity)
+    message(STATUS "  ✓ Added test_llm_connectivity")
+endif()
+
+# Tool Registry Test (optional, API-dependent)
+if(RAWRXD_ENABLE_TOOL_REGISTRY_TEST AND NOT TARGET test_tool_registry AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_tool_registry.cpp")
+    add_executable(test_tool_registry test_tool_registry.cpp)
+    target_include_directories(test_tool_registry PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_tool_registry PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+    add_test(NAME test_tool_registry COMMAND test_tool_registry)
+    message(STATUS "  ✓ Added test_tool_registry")
+endif()
+
+# Voice Processor Test (requires GTest)
+if(RAWRXD_HAS_GTEST AND NOT TARGET test_voice_processor AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_voice_processor.cpp")
+    add_executable(test_voice_processor test_voice_processor.cpp)
+    target_include_directories(test_voice_processor PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_voice_processor PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+    add_test(NAME test_voice_processor COMMAND test_voice_processor)
+    message(STATUS "  ✓ Added test_voice_processor")
+endif()
+
+# Zero Retention Manager Test (requires GTest)
+if(RAWRXD_HAS_GTEST AND NOT TARGET test_zero_retention_manager AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_zero_retention_manager.cpp")
+    add_executable(test_zero_retention_manager test_zero_retention_manager.cpp)
+    target_include_directories(test_zero_retention_manager PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_zero_retention_manager PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+    add_test(NAME test_zero_retention_manager COMMAND test_zero_retention_manager)
+    message(STATUS "  ✓ Added test_zero_retention_manager")
+endif()
+
+# Semantic Diff Analyzer Test
+if(NOT TARGET test_semantic_diff_analyzer AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_semantic_diff_analyzer.cpp")
+    add_executable(test_semantic_diff_analyzer test_semantic_diff_analyzer.cpp)
+    target_include_directories(test_semantic_diff_analyzer PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_semantic_diff_analyzer PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+    add_test(NAME test_semantic_diff_analyzer COMMAND test_semantic_diff_analyzer)
+    message(STATUS "  ✓ Added test_semantic_diff_analyzer")
+endif()
+
+# AI Merge Resolver Test
+if(NOT TARGET test_ai_merge_resolver AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_ai_merge_resolver.cpp")
+    add_executable(test_ai_merge_resolver test_ai_merge_resolver.cpp)
+    target_include_directories(test_ai_merge_resolver PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_ai_merge_resolver PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+    if(WIN32)
+        target_link_libraries(test_ai_merge_resolver PRIVATE ws2_32 winhttp)
+    endif()
+    add_test(NAME test_ai_merge_resolver COMMAND test_ai_merge_resolver)
+    message(STATUS "  ✓ Added test_ai_merge_resolver")
+endif()
+
+# Sandboxed Terminal Test
+if(NOT TARGET test_sandboxed_terminal AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_sandboxed_terminal.cpp")
+    add_executable(test_sandboxed_terminal test_sandboxed_terminal.cpp)
+    target_include_directories(test_sandboxed_terminal PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_sandboxed_terminal PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+    add_test(NAME test_sandboxed_terminal COMMAND test_sandboxed_terminal)
+    message(STATUS "  ✓ Added test_sandboxed_terminal")
+endif()
+
+# Agentic File Operations Test
+if(NOT TARGET test_agentic_file_operations AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_agentic_file_operations.cpp")
+    add_executable(test_agentic_file_operations test_agentic_file_operations.cpp)
+    target_include_directories(test_agentic_file_operations PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_agentic_file_operations PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+    add_test(NAME test_agentic_file_operations COMMAND test_agentic_file_operations)
+    message(STATUS "  ✓ Added test_agentic_file_operations")
+endif()
+
+# Enterprise License Regression Test
+if(NOT TARGET test_enterprise_license_regression AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_enterprise_license_regression.cpp")
+    add_executable(test_enterprise_license_regression
+        test_enterprise_license_regression.cpp
+        ${CMAKE_SOURCE_DIR}/src/core/enterprise_license.cpp
+        ${CMAKE_SOURCE_DIR}/src/core/enterprise_license_stubs.cpp
+        ${CMAKE_SOURCE_DIR}/src/core/enterprise_feature_manager.cpp
+        ${CMAKE_SOURCE_DIR}/src/agentic_observability.cpp
+    )
+    target_include_directories(test_enterprise_license_regression PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    if(MSVC)
+        target_compile_options(test_enterprise_license_regression PRIVATE /U RAWR_HAS_MASM /DRAWR_HAS_MASM=0)
+    endif()
+    target_compile_definitions(test_enterprise_license_regression PRIVATE RAWR_HAS_MASM=0)
+    set_target_properties(test_enterprise_license_regression PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+    add_test(NAME test_enterprise_license_regression COMMAND test_enterprise_license_regression)
+    message(STATUS "  ✓ Added test_enterprise_license_regression")
+endif()
+
+# Model Registry Test
+if(NOT TARGET model_registry_test AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/model_registry_test.cpp")
+    add_executable(model_registry_test model_registry_test.cpp)
+    target_include_directories(model_registry_test PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(model_registry_test PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+    add_test(NAME model_registry_test COMMAND model_registry_test)
+    message(STATUS "  ✓ Added model_registry_test")
+endif()
+
+# GGUF Integration Test (requires GTest)
+if(RAWRXD_HAS_GTEST AND NOT TARGET test_gguf_integration AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_gguf_integration.cpp")
+    add_executable(test_gguf_integration test_gguf_integration.cpp)
+    target_include_directories(test_gguf_integration PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_gguf_integration PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+    add_test(NAME test_gguf_integration COMMAND test_gguf_integration)
+    message(STATUS "  ✓ Added test_gguf_integration")
+endif()
+
+# License Validation Suite - Phase 1 & 2 Gate Testing
+if(NOT TARGET license_validation_suite AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/license_validation_suite.cpp")
+    add_executable(license_validation_suite
+        license_validation_suite.cpp
+        ${CMAKE_SOURCE_DIR}/src/license_enforcement.cpp
+        ${CMAKE_SOURCE_DIR}/src/enterprise_license.cpp
+        ${CMAKE_SOURCE_DIR}/src/feature_flags_runtime.cpp
+        ${CMAKE_SOURCE_DIR}/src/telemetry/logger.cpp
+        ${CMAKE_SOURCE_DIR}/src/telemetry/UnifiedTelemetryCore.cpp
+    )
+    target_include_directories(license_validation_suite PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    set_target_properties(license_validation_suite PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        CXX_STANDARD 20
+    )
+    if(WIN32)
+        target_link_libraries(license_validation_suite PRIVATE
+            kernel32 user32 advapi32
+        )
+    endif()
+    add_test(NAME license_validation_suite COMMAND license_validation_suite)
+    message(STATUS "  ✓ Added license_validation_suite (Phase 1 & 2 gate enforcement testing)")
+endif()
+
+# ============================================================
+# Test Summary
+# ============================================================
+
+# Production Regression Test Suite (Qt-free, no external deps)
+if(NOT TARGET test_production_regression AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_production_regression.cpp")
+    add_executable(test_production_regression
+        test_production_regression.cpp
+        ${CMAKE_SOURCE_DIR}/src/agentic_observability.cpp
+        ${CMAKE_SOURCE_DIR}/src/agentic_error_handler.cpp
+        ${CMAKE_SOURCE_DIR}/src/agentic_loop_state.cpp
+        ${CMAKE_SOURCE_DIR}/src/centralized_exception_handler.cpp
+        ${CMAKE_SOURCE_DIR}/src/error_recovery_system.cpp
+        ${CMAKE_SOURCE_DIR}/src/production_config_manager.cpp
+    )
+    target_include_directories(test_production_regression PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/3rdparty
+    )
+    set_target_properties(test_production_regression PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        CXX_STANDARD 20
+    )
+    add_test(NAME test_production_regression COMMAND test_production_regression)
+    message(STATUS "  ✓ Added test_production_regression (Qt-free regression suite)")
+endif()
+
+# Instructions Provider Test (getAllContent aggregation, priority sort, hot-reload watcher)
+if(NOT TARGET test_instructions_provider AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_instructions_provider.cpp")
+    add_executable(test_instructions_provider
+        test_instructions_provider.cpp
+        ${CMAKE_SOURCE_DIR}/src/core/instructions_provider.cpp
+    )
+    target_include_directories(test_instructions_provider PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    set_target_properties(test_instructions_provider PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        CXX_STANDARD 20
+    )
+    if(WIN32)
+        target_link_libraries(test_instructions_provider PRIVATE shell32 ole32)
+    endif()
+    add_test(NAME test_instructions_provider COMMAND test_instructions_provider)
+    message(STATUS "  ✓ Added test_instructions_provider")
+# ============================================================
+# Track A: License Validation Infrastructure
+# ============================================================
+
+# License Gate Validator (Track A - automated test suite)
+if(NOT TARGET license_gate_validator AND EXISTS "${CMAKE_SOURCE_DIR}/src/tools/license_gate_validator.cpp")
+    add_executable(license_gate_validator
+        ${CMAKE_SOURCE_DIR}/src/tools/license_gate_validator.cpp
+        ${CMAKE_SOURCE_DIR}/src/enterprise_license.cpp
+        ${CMAKE_SOURCE_DIR}/src/license_enforcement.cpp
+    )
+    target_include_directories(license_gate_validator PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    set_target_properties(license_gate_validator PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tools"
+        CXX_STANDARD 20
+    )
+    target_compile_definitions(license_gate_validator PRIVATE BUILD_VALIDATOR_TEST)
+    add_test(NAME license_gate_validator COMMAND license_gate_validator)
+    message(STATUS "  ✓ Added license_gate_validator (162+ test cases)")
+endif()
+
+# License Key Generator (Track A - key generation tool)
+if(NOT TARGET license_key_generator AND EXISTS "${CMAKE_SOURCE_DIR}/src/tools/license_key_generator.cpp")
+    add_executable(license_key_generator
+        ${CMAKE_SOURCE_DIR}/src/tools/license_key_generator.cpp
+    )
+    target_include_directories(license_key_generator PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    set_target_properties(license_key_generator PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tools"
+        CXX_STANDARD 20
+    )
+    target_compile_definitions(license_key_generator PRIVATE BUILD_KEYGEN_TEST)
+    if(WIN32)
+        target_link_libraries(license_key_generator PRIVATE advapi32)  # CryptAPI
+    endif()
+    message(STATUS "  ✓ Added license_key_generator (RSA-2048 signing)")
+endif()
+
+# ============================================================
+# Track B: Professional Feature Tests
+# ============================================================
+
+# CUDA Inference Engine Test (Track B - GPU acceleration)
+if(NOT TARGET cuda_test AND EXISTS "${CMAKE_SOURCE_DIR}/src/gpu/cuda_inference_engine.cpp")
+    add_executable(cuda_test
+        ${CMAKE_SOURCE_DIR}/src/gpu/cuda_inference_engine.cpp
+        ${CMAKE_SOURCE_DIR}/src/enterprise_license.cpp
+        ${CMAKE_SOURCE_DIR}/src/license_enforcement.cpp
+    )
+    target_include_directories(cuda_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    set_target_properties(cuda_test PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        CXX_STANDARD 20
+    )
+    target_compile_definitions(cuda_test PRIVATE BUILD_CUDA_TEST)
+    # Optional: Link CUDA libraries if available
+    # find_package(CUDA)
+    # if(CUDA_FOUND)
+    #     target_compile_definitions(cuda_test PRIVATE RAWR_HAS_CUDA)
+    #     target_link_libraries(cuda_test PRIVATE ${CUDA_LIBRARIES})
+    # endif()
+    add_test(NAME cuda_test COMMAND cuda_test)
+    message(STATUS "  ✓ Added cuda_test (CUDA backend - stub mode)")
+endif()
+
+# Grammar Constrained Generation Test (Track B - EBNF/JSON schema)
+if(NOT TARGET grammar_test AND EXISTS "${CMAKE_SOURCE_DIR}/src/llm/grammar_engine.cpp")
+    add_executable(grammar_test
+        ${CMAKE_SOURCE_DIR}/src/llm/grammar_engine.cpp
+        ${CMAKE_SOURCE_DIR}/src/enterprise_license.cpp
+        ${CMAKE_SOURCE_DIR}/src/license_enforcement.cpp
+    )
+    target_include_directories(grammar_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    set_target_properties(grammar_test PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        CXX_STANDARD 20
+    )
+    target_compile_definitions(grammar_test PRIVATE BUILD_GRAMMAR_TEST)
+    add_test(NAME grammar_test COMMAND grammar_test)
+    message(STATUS "  ✓ Added grammar_test (EBNF parser)")
+endif()
+
+# LoRA Adapter Test (Track B - parameter-efficient fine-tuning)
+if(NOT TARGET lora_test AND EXISTS "${CMAKE_SOURCE_DIR}/src/llm/lora_adapter.cpp")
+    add_executable(lora_test
+        ${CMAKE_SOURCE_DIR}/src/llm/lora_adapter.cpp
+        ${CMAKE_SOURCE_DIR}/src/enterprise_license.cpp
+        ${CMAKE_SOURCE_DIR}/src/license_enforcement.cpp
+    )
+    target_include_directories(lora_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    set_target_properties(lora_test PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        CXX_STANDARD 20
+    )
+    target_compile_definitions(lora_test PRIVATE BUILD_LORA_TEST)
+    add_test(NAME lora_test COMMAND lora_test)
+    message(STATUS "  ✓ Added lora_test (LoRA adapter)")
+endif()
+
+# Response Cache Test (Track B - LRU caching)
+if(NOT TARGET cache_test AND EXISTS "${CMAKE_SOURCE_DIR}/src/cache/response_cache.cpp")
+    add_executable(cache_test
+        ${CMAKE_SOURCE_DIR}/src/cache/response_cache.cpp
+        ${CMAKE_SOURCE_DIR}/src/enterprise_license.cpp
+        ${CMAKE_SOURCE_DIR}/src/license_enforcement.cpp
+    )
+    target_include_directories(cache_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    set_target_properties(cache_test PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        CXX_STANDARD 20
+    )
+    target_compile_definitions(cache_test PRIVATE BUILD_CACHE_TEST)
+    # Optional: Link Redis client if available
+    # find_library(HIREDIS_LIB hiredis)
+    # if(HIREDIS_LIB)
+    #     target_compile_definitions(cache_test PRIVATE RAWR_HAS_REDIS)
+    #     target_link_libraries(cache_test PRIVATE ${HIREDIS_LIB})
+    # endif()
+    add_test(NAME cache_test COMMAND cache_test)
+    message(STATUS "  ✓ Added cache_test (response caching)")
+endif()
+
+# ============================================================
+# Track C: Sovereign Tier Security Tests
+# ============================================================
+
+# Air-Gapped Deployment Test (Track C - offline deployment)
+if(NOT TARGET airgap_test AND EXISTS "${CMAKE_SOURCE_DIR}/src/security/airgap_deployer.cpp")
+    add_executable(airgap_test
+        ${CMAKE_SOURCE_DIR}/src/security/airgap_deployer.cpp
+        ${CMAKE_SOURCE_DIR}/src/enterprise_license.cpp
+        ${CMAKE_SOURCE_DIR}/src/license_enforcement.cpp
+    )
+    target_include_directories(airgap_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    set_target_properties(airgap_test PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        CXX_STANDARD 20
+    )
+    target_compile_definitions(airgap_test PRIVATE BUILD_AIRGAP_TEST)
+    add_test(NAME airgap_test COMMAND airgap_test)
+    message(STATUS "  ✓ Added airgap_test (air-gapped deployment)")
+endif()
+
+# HSM Integration Test (Track C - hardware security module)
+if(NOT TARGET hsm_test AND EXISTS "${CMAKE_SOURCE_DIR}/src/security/hsm_integration.cpp")
+    add_executable(hsm_test
+        ${CMAKE_SOURCE_DIR}/src/security/hsm_integration.cpp
+        ${CMAKE_SOURCE_DIR}/src/enterprise_license.cpp
+        ${CMAKE_SOURCE_DIR}/src/license_enforcement.cpp
+    )
+    target_include_directories(hsm_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    set_target_properties(hsm_test PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        CXX_STANDARD 20
+    )
+    target_compile_definitions(hsm_test PRIVATE BUILD_HSM_TEST)
+    # Optional: Link PKCS#11 library if available
+    # find_library(PKCS11_LIB pkcs11)
+    # if(PKCS11_LIB)
+    #     target_compile_definitions(hsm_test PRIVATE RAWR_HAS_PKCS11)
+    #     target_link_libraries(hsm_test PRIVATE ${PKCS11_LIB})
+    # endif()
+    add_test(NAME hsm_test COMMAND hsm_test)
+    message(STATUS "  ✓ Added hsm_test (HSM/PKCS#11 - stub mode)")
+endif()
+
+# FIPS 140-2 Compliance Test (Track C - government crypto)
+if(NOT TARGET fips_test AND EXISTS "${CMAKE_SOURCE_DIR}/src/security/fips_compliance.cpp")
+    add_executable(fips_test
+        ${CMAKE_SOURCE_DIR}/src/security/fips_compliance.cpp
+        ${CMAKE_SOURCE_DIR}/src/enterprise_license.cpp
+        ${CMAKE_SOURCE_DIR}/src/license_enforcement.cpp
+    )
+    target_include_directories(fips_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    set_target_properties(fips_test PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        CXX_STANDARD 20
+    )
+    target_compile_definitions(fips_test PRIVATE BUILD_FIPS_TEST)
+    # Optional: Link OpenSSL FIPS module if available
+    # find_package(OpenSSL)
+    # if(OPENSSL_FOUND)
+    #     target_compile_definitions(fips_test PRIVATE RAWR_HAS_FIPS)
+    #     target_link_libraries(fips_test PRIVATE OpenSSL::Crypto)
+    # endif()
+    add_test(NAME fips_test COMMAND fips_test)
+    message(STATUS "  ✓ Added fips_test (FIPS 140-2 - stub mode)")
+endif()
+
+# Security Policy Engine Test (Track C - custom policies)
+if(NOT TARGET policy_test AND EXISTS "${CMAKE_SOURCE_DIR}/src/security/policy_engine.cpp")
+    add_executable(policy_test
+        ${CMAKE_SOURCE_DIR}/src/security/policy_engine.cpp
+        ${CMAKE_SOURCE_DIR}/src/enterprise_license.cpp
+        ${CMAKE_SOURCE_DIR}/src/license_enforcement.cpp
+    )
+    target_include_directories(policy_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    set_target_properties(policy_test PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        CXX_STANDARD 20
+    )
+    target_compile_definitions(policy_test PRIVATE BUILD_POLICY_TEST)
+    add_test(NAME policy_test COMMAND policy_test)
+    message(STATUS "  ✓ Added policy_test (security policies)")
+endif()
+
+# Sovereign Key Management Test (Track C - independent key mgmt)
+if(NOT TARGET keymgmt_test AND EXISTS "${CMAKE_SOURCE_DIR}/src/security/sovereign_keymgmt.cpp")
+    add_executable(keymgmt_test
+        ${CMAKE_SOURCE_DIR}/src/security/sovereign_keymgmt.cpp
+        ${CMAKE_SOURCE_DIR}/src/enterprise_license.cpp
+        ${CMAKE_SOURCE_DIR}/src/license_enforcement.cpp
+    )
+    target_include_directories(keymgmt_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    set_target_properties(keymgmt_test PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        CXX_STANDARD 20
+    )
+    target_compile_definitions(keymgmt_test PRIVATE BUILD_KEYMGMT_TEST)
+    add_test(NAME keymgmt_test COMMAND keymgmt_test)
+    message(STATUS "  ✓ Added keymgmt_test (sovereign key management)")
+endif()
+
+# Classified Network Test (Track C - SCIF-level isolation)
+if(NOT TARGET classnet_test AND EXISTS "${CMAKE_SOURCE_DIR}/src/security/classified_network.cpp")
+    add_executable(classnet_test
+        ${CMAKE_SOURCE_DIR}/src/security/classified_network.cpp
+        ${CMAKE_SOURCE_DIR}/src/enterprise_license.cpp
+        ${CMAKE_SOURCE_DIR}/src/license_enforcement.cpp
+    )
+    target_include_directories(classnet_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    set_target_properties(classnet_test PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        CXX_STANDARD 20
+    )
+    target_compile_definitions(classnet_test PRIVATE BUILD_CLASSNET_TEST)
+    add_test(NAME classnet_test COMMAND classnet_test)
+    message(STATUS "  ✓ Added classnet_test (classified network)")
+endif()
+
+# Immutable Audit Log Test (Track C - blockchain audit trail)
+if(NOT TARGET auditlog_test AND EXISTS "${CMAKE_SOURCE_DIR}/src/security/audit_log_immutable.cpp")
+    add_executable(auditlog_test
+        ${CMAKE_SOURCE_DIR}/src/security/audit_log_immutable.cpp
+        ${CMAKE_SOURCE_DIR}/src/enterprise_license.cpp
+        ${CMAKE_SOURCE_DIR}/src/license_enforcement.cpp
+    )
+    target_include_directories(auditlog_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    set_target_properties(auditlog_test PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        CXX_STANDARD 20
+    )
+    target_compile_definitions(auditlog_test PRIVATE BUILD_AUDITLOG_TEST)
+    add_test(NAME auditlog_test COMMAND auditlog_test)
+    message(STATUS "  ✓ Added auditlog_test (immutable audit logs)")
+endif()
+
+# Kubernetes Adapter Test (Track C - enterprise orchestration)
+if(NOT TARGET k8s_test AND EXISTS "${CMAKE_SOURCE_DIR}/src/orchestration/kubernetes_adapter.cpp")
+    add_executable(k8s_test
+        ${CMAKE_SOURCE_DIR}/src/orchestration/kubernetes_adapter.cpp
+        ${CMAKE_SOURCE_DIR}/src/enterprise_license.cpp
+        ${CMAKE_SOURCE_DIR}/src/license_enforcement.cpp
+    )
+    target_include_directories(k8s_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    set_target_properties(k8s_test PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        CXX_STANDARD 20
+    )
+    target_compile_definitions(k8s_test PRIVATE BUILD_K8S_TEST)
+    add_test(NAME k8s_test COMMAND k8s_test)
+    message(STATUS "  ✓ Added k8s_test (Kubernetes adapter)")
+endif()
+
+endif()
+
+message(STATUS "========================================")
+message(STATUS "Test Suite Registration Complete")
+message(STATUS "Run tests: ctest --output-on-failure -C Release")
+message(STATUS "Run specific: ctest -R <name> -V -C Release")
+message(STATUS "========================================")

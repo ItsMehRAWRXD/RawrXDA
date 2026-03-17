@@ -5,7 +5,7 @@
 #include <chrono>
 #include <random>
 #include <fstream>
-#include "nlohmann/json.hpp"
+#include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
 using namespace RawrXD; // For CPUInferenceEngine

@@ -84,7 +84,9 @@ typedef VkResult (*PFN_vkDeviceWaitIdle)(VkDevice);
 // ============================================================================
 // VulkanRenderer — Production Vulkan backend with dynamic loading
 // ============================================================================
-class VulkanRenderer : public RawrXD::IRenderer {
+namespace RawrXD {
+
+class VulkanRenderer : public IRenderer {
 public:
     VulkanRenderer() : m_vkModule(nullptr), m_initialized(false) {}
     ~VulkanRenderer() override {
@@ -760,7 +762,9 @@ private:
     size_t m_pendingCaretColumn = 0;
 };
 
+} // namespace RawrXD
+
 // Factory helper
 RawrXD::IRenderer* CreateVulkanRenderer() {
-    return new VulkanRenderer();
+    return new RawrXD::VulkanRenderer();
 }

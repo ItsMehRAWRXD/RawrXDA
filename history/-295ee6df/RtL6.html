@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Diggz Streamer - Local</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #0a0a0a; color: #fff; font-family: 'Segoe UI', system-ui, sans-serif; }
+        
+        .navbar { position: fixed; top: 0; width: 100%; background: rgba(0,0,0,0.95); backdrop-filter: blur(20px); z-index: 100; padding: 15px 0; }
+        .nav-content { max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; padding: 0 30px; }
+        .logo { font-size: 28px; font-weight: 700; background: linear-gradient(45deg, #ff6b6b, #4ecdc4); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+        .nav-search { flex: 1; max-width: 500px; margin: 0 40px; position: relative; }
+        .nav-search input { width: 100%; padding: 12px 50px 12px 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 25px; color: #fff; font-size: 16px; }
+        .nav-search input::placeholder { color: rgba(255,255,255,0.6); }
+        .search-btn { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #fff; font-size: 18px; cursor: pointer; }
+        .api-setup { display: flex; gap: 10px; }
+        .api-setup input { padding: 8px 15px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 20px; color: #fff; font-size: 14px; }
+        .api-setup button { background: #4ecdc4; color: #fff; border: none; padding: 8px 15px; border-radius: 20px; cursor: pointer; font-size: 14px; }
+        
+        .hero { height: 100vh; background: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.7)), radial-gradient(circle at 30% 20%, #ff6b6b22, transparent), radial-gradient(circle at 70% 80%, #4ecdc422, transparent); display: flex; align-items: center; justify-content: center; text-align: center; }
+        .hero-content h1 { font-size: 4rem; margin-bottom: 20px; background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+        .hero-content p { font-size: 1.5rem; opacity: 0.8; margin-bottom: 40px; }
+        
+        .container { max-width: 1400px; margin: 0 auto; padding: 40px 30px; }
+        .section-title { font-size: 2.5rem; margin-bottom: 30px; text-align: center; }
+        .categories { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; margin-bottom: 60px; }
+        .category { background: linear-gradient(135deg, rgba(255,107,107,0.1), rgba(78,205,196,0.1)); padding: 40px; border-radius: 20px; text-align: center; cursor: pointer; transition: all 0.4s ease; border: 1px solid rgba(255,255,255,0.1); }
+        .category:hover { transform: translateY(-10px) scale(1.02); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+        .category-icon { font-size: 4rem; margin-bottom: 20px; }
+        .category h3 { font-size: 1.8rem; margin-bottom: 10px; }
+        .category p { opacity: 0.7; font-size: 1.1rem; }
+        
+        .content-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 30px; }
+        .content-card { background: linear-gradient(145deg, #1a1a1a, #2a2a2a); border-radius: 20px; overflow: hidden; transition: all 0.4s ease; border: 1px solid rgba(255,255,255,0.1); }
+        .content-card:hover { transform: translateY(-8px); box-shadow: 0 25px 50px rgba(0,0,0,0.4); }
+        .card-poster { height: 280px; background: linear-gradient(45deg, #ff6b6b, #4ecdc4); display: flex; align-items: center; justify-content: center; font-size: 4rem; position: relative; overflow: hidden; }
+        .card-poster::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(45deg, rgba(255,107,107,0.8), rgba(78,205,196,0.8)); }
+        .card-poster span { position: relative; z-index: 1; }
+        .card-info { padding: 25px; }
+        .card-title { font-size: 1.4rem; margin-bottom: 10px; font-weight: 600; }
+        .card-meta { color: rgba(255,255,255,0.6); margin-bottom: 20px; font-size: 1rem; }
+        .play-button { background: linear-gradient(45deg, #ff6b6b, #4ecdc4); color: #fff; border: none; padding: 12px 30px; border-radius: 25px; cursor: pointer; font-weight: 600; font-size: 1rem; transition: all 0.3s ease; width: 100%; }
+        .play-button:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(255,107,107,0.3); }
+        
+        .player-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; z-index: 1000; }
+        .player-container { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 40px; }
+        .player-wrapper { width: 100%; max-width: 1200px; position: relative; }
+        .video-player { width: 100%; height: 70vh; border-radius: 15px; }
+        .player-controls { position: absolute; top: 20px; right: 20px; }
+        .close-player { background: rgba(255,255,255,0.2); color: #fff; border: none; padding: 15px; border-radius: 50%; cursor: pointer; font-size: 24px; backdrop-filter: blur(10px); }
+        .close-player:hover { background: rgba(255,255,255,0.3); }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-content">
+            <div class="logo">🎬 DIGGZ</div>
+            <div class="nav-search">
+                <input type="text" id="searchInput" placeholder="Search movies, shows, anime..." onkeypress="if(event.key==='Enter') search()">
+                <button class="search-btn" onclick="search()">🔍</button>
+            </div>
+            <div class="api-setup">
+                <input type="password" id="apiKey" placeholder="Real-Debrid API Key">
+                <button onclick="setApiKey()">Set Key</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="hero">
+        <div class="hero-content">
+            <h1>DIGGZ STREAMER</h1>
+            <p>Premium streaming with Real-Debrid integration</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2 class="section-title">Browse Categories</h2>
+        <div class="categories">
+            <div class="category" onclick="loadCategory('movies')">
+                <div class="category-icon">🎬</div>
+                <h3>Movies</h3>
+                <p>Latest blockbusters & classics</p>
+            </div>
+            <div class="category" onclick="loadCategory('tv')">
+                <div class="category-icon">📺</div>
+                <h3>TV Shows</h3>
+                <p>Binge-worthy series</p>
+            </div>
+            <div class="category" onclick="loadCategory('anime')">
+                <div class="category-icon">🎌</div>
+                <h3>Anime</h3>
+                <p>Japanese animation</p>
+            </div>
+            <div class="category" onclick="loadCategory('sports')">
+                <div class="category-icon">⚽</div>
+                <h3>Sports</h3>
+                <p>Live events & replays</p>
+            </div>
+        </div>
+
+        <div id="results" class="content-grid"></div>
+    </div>
+
+    <div id="playerOverlay" class="player-overlay">
+        <div class="player-container">
+            <div class="player-wrapper">
+                <div class="player-controls">
+                    <button class="close-player" onclick="closePlayer()">×</button>
+                </div>
+                <video id="videoPlayer" class="video-player" controls></video>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Real-Debrid API integration
+        let RD_API_KEY = '';
+        const RD_BASE_URL = 'https://api.real-debrid.com/rest/1.0';
+        
+        // Load saved API key
+        try {
+            RD_API_KEY = localStorage.getItem('rdApiKey') || '';
+            if (RD_API_KEY) {
+                document.getElementById('apiKey').value = RD_API_KEY;
+            }
+        } catch(e) {}
+
+        // Content database with magnet links
+        const diggzContent = {
+            movies: [
+                { 
+                    title: 'Avatar: The Way of Water', 
+                    year: '2022', 
+                    genre: 'Sci-Fi', 
+                    poster: '🌊',
+                    magnet: 'magnet:?xt=urn:btih:dd8255ecdc7ca55fb0bbf81323d87062db1f6d1c&dn=Avatar.The.Way.of.Water.2022.2160p.WEB-DL.x265.10bit.HDR.DDP5.1.Atmos-NOGRP'
+                },
+                { 
+                    title: 'Top Gun: Maverick', 
+                    year: '2022', 
+                    genre: 'Action', 
+                    poster: '✈️',
+                    magnet: 'magnet:?xt=urn:btih:8b8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e&dn=Top.Gun.Maverick.2022.2160p.WEB-DL.x265.10bit.HDR.DDP5.1.Atmos-NOGRP'
+                },
+                { 
+                    title: 'Black Panther: Wakanda Forever', 
+                    year: '2022', 
+                    genre: 'Action', 
+                    poster: '🐾',
+                    magnet: 'magnet:?xt=urn:btih:9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c&dn=Black.Panther.Wakanda.Forever.2022.2160p.WEB-DL.x265.10bit.HDR.DDP5.1.Atmos-NOGRP'
+                }
+            ],
+            tv: [
+                { 
+                    title: 'House of the Dragon S01', 
+                    year: '2022', 
+                    genre: 'Fantasy', 
+                    poster: '🐉',
+                    magnet: 'magnet:?xt=urn:btih:1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a&dn=House.of.the.Dragon.S01.COMPLETE.2160p.WEB-DL.x265.10bit.HDR.DDP5.1.Atmos-NOGRP'
+                },
+                { 
+                    title: 'The Bear S02', 
+                    year: '2022', 
+                    genre: 'Comedy', 
+                    poster: '🐻',
+                    magnet: 'magnet:?xt=urn:btih:2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b&dn=The.Bear.S02.COMPLETE.1080p.WEB-DL.x264.DD5.1-NOGRP'
+                },
+                { 
+                    title: 'Stranger Things S04', 
+                    year: '2022', 
+                    genre: 'Horror', 
+                    poster: '👾',
+                    magnet: 'magnet:?xt=urn:btih:3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c&dn=Stranger.Things.S04.COMPLETE.2160p.WEB-DL.x265.10bit.HDR.DDP5.1.Atmos-NOGRP'
+                }
+            ],
+            anime: [
+                { 
+                    title: 'Demon Slayer S03', 
+                    year: '2023', 
+                    genre: 'Action', 
+                    poster: '⚔️',
+                    magnet: 'magnet:?xt=urn:btih:4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d&dn=Demon.Slayer.S03.COMPLETE.1080p.WEB-DL.x264.AAC-NOGRP'
+                },
+                { 
+                    title: 'Attack on Titan Final', 
+                    year: '2023', 
+                    genre: 'Action', 
+                    poster: '🏰',
+                    magnet: 'magnet:?xt=urn:btih:5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e&dn=Attack.on.Titan.Final.Season.COMPLETE.1080p.WEB-DL.x264.AAC-NOGRP'
+                }
+            ],
+            sports: [
+                { 
+                    title: 'Premier League 2023', 
+                    year: '2023', 
+                    genre: 'Sports', 
+                    poster: '⚽',
+                    magnet: 'magnet:?xt=urn:btih:6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f&dn=Premier.League.2023.Highlights.1080p.WEB-DL.x264-NOGRP'
+                },
+                { 
+                    title: 'NBA Finals 2023', 
+                    year: '2023', 
+                    genre: 'Sports', 
+                    poster: '🏀',
+                    magnet: 'magnet:?xt=urn:btih:7g7g7g7g7g7g7g7g7g7g7g7g7g7g7g7g7g7g7g7g&dn=NBA.Finals.2023.COMPLETE.1080p.WEB-DL.x264-NOGRP'
+                }
+            ]
+        };
+
+        function setApiKey() {
+            const key = document.getElementById('apiKey').value;
+            if (!key) return alert('Enter Real-Debrid API key');
+            RD_API_KEY = key;
+            try {
+                localStorage.setItem('rdApiKey', key);
+            } catch(e) {}
+            alert('API key saved! You can now stream content.');
+        }
+
+        function loadCategory(category) {
+            const results = document.getElementById('results');
+            const content = diggzContent[category] || [];
+            
+            results.innerHTML = content.map(item => 
+                '<div class="content-card">' +
+                    '<div class="card-poster"><span>' + item.poster + '</span></div>' +
+                    '<div class="card-info">' +
+                        '<div class="card-title">' + item.title + '</div>' +
+                        '<div class="card-meta">' + item.year + ' • ' + item.genre + '</div>' +
+                        '<button class="play-button" onclick="playContent(\'' + item.magnet + '\', \'' + item.title + '\')">▶ Stream Now</button>' +
+                    '</div>' +
+                '</div>'
+            ).join('');
+        }
+
+        function search() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            if (!query) return;
+            
+            const allContent = [].concat(diggzContent.movies, diggzContent.tv, diggzContent.anime, diggzContent.sports);
+            const filtered = allContent.filter(function(item) {
+                return item.title.toLowerCase().indexOf(query) !== -1;
+            });
+            
+            const results = document.getElementById('results');
+            results.innerHTML = filtered.map(function(item) {
+                return '<div class="content-card">' +
+                    '<div class="card-poster"><span>' + item.poster + '</span></div>' +
+                    '<div class="card-info">' +
+                        '<div class="card-title">' + item.title + '</div>' +
+                        '<div class="card-meta">' + item.year + ' • ' + item.genre + '</div>' +
+                        '<button class="play-button" onclick="playContent(\'' + item.magnet + '\', \'' + item.title + '\')">▶ Stream Now</button>' +
+                    '</div>' +
+                '</div>';
+            }).join('');
+        }
+
+        async function playContent(magnetLink, title) {
+            if (!RD_API_KEY) {
+                alert('Please set your Real-Debrid API key first');
+                return;
+            }
+
+            try {
+                // Show loading
+                const player = document.getElementById('playerOverlay');
+                const video = document.getElementById('videoPlayer');
+                player.style.display = 'block';
+                video.innerHTML = '<div style="color:white;text-align:center;padding:50px;font-size:18px;">🔄 Processing with Real-Debrid...</div>';
+
+                // Add magnet to Real-Debrid
+                const addResponse = await fetch(RD_BASE_URL + '/torrents/addMagnet', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + RD_API_KEY,
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: 'magnet=' + encodeURIComponent(magnetLink)
+                });
+
+                if (!addResponse.ok) throw new Error('Failed to add magnet');
+                const addData = await addResponse.json();
+
+                // Select all files
+                await fetch(RD_BASE_URL + '/torrents/selectFiles/' + addData.id, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + RD_API_KEY,
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: 'files=all'
+                });
+
+                // Wait for processing and get info
+                let torrentInfo;
+                let attempts = 0;
+                do {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    const infoResponse = await fetch(RD_BASE_URL + '/torrents/info/' + addData.id, {
+                        headers: { 'Authorization': 'Bearer ' + RD_API_KEY }
+                    });
+                    torrentInfo = await infoResponse.json();
+                    attempts++;
+                } while (torrentInfo.status !== 'downloaded' && attempts < 30);
+
+                if (torrentInfo.status !== 'downloaded') {
+                    throw new Error('Torrent processing timeout');
+                }
+
+                // Get the largest video file
+                const videoFile = torrentInfo.links.reduce((largest, current) => {
+                    const currentSize = parseInt(current.split('/').pop().match(/\d+/)?.[0] || '0');
+                    const largestSize = parseInt(largest.split('/').pop().match(/\d+/)?.[0] || '0');
+                    return currentSize > largestSize ? current : largest;
+                });
+
+                // Unrestrict the link
+                const unrestrictResponse = await fetch(RD_BASE_URL + '/unrestrict/link', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + RD_API_KEY,
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: 'link=' + encodeURIComponent(videoFile)
+                });
+
+                const unrestrictData = await unrestrictResponse.json();
+                
+                // Play the video
+                video.innerHTML = '';
+                video.src = unrestrictData.download;
+                video.play();
+
+            } catch (error) {
+                console.error('Streaming error:', error);
+                alert('Streaming failed: ' + error.message + '\n\nPlease check your Real-Debrid API key and try again.');
+                closePlayer();
+            }
+        }
+
+        function closePlayer() {
+            const player = document.getElementById('playerOverlay');
+            const video = document.getElementById('videoPlayer');
+            
+            player.style.display = 'none';
+            video.pause();
+            video.src = '';
+            video.innerHTML = '';
+        }
+
+        // Load movies by default
+        window.onload = function() {
+            loadCategory('movies');
+        };
+    </script>
+</body>
+</html>

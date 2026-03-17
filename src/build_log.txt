@@ -1,0 +1,1961 @@
+In file included from C:/msys64/mingw64/include/c++/15.2.0/thread:47,
+                 from api_server.h:4,
+                 from rawrxd_cli.cpp:3:
+C:/msys64/mingw64/include/c++/15.2.0/bits/std_thread.h:54:1: error: expected unqualified-id before 'namespace'
+   54 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/chrono.h:39,
+                 from C:/msys64/mingw64/include/c++/15.2.0/bits/this_thread_sleep.h:38,
+                 from C:/msys64/mingw64/include/c++/15.2.0/thread:48:
+C:/msys64/mingw64/include/c++/15.2.0/ratio:47:1: error: expected unqualified-id before 'namespace'
+   47 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/chrono.h:41:
+C:/msys64/mingw64/include/c++/15.2.0/limits:165:1: error: expected unqualified-id before 'namespace'
+  165 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/chrono.h:43:
+C:/msys64/mingw64/include/c++/15.2.0/ctime:60:1: error: expected unqualified-id before 'namespace'
+   60 | namespace std
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/chrono.h:45:
+C:/msys64/mingw64/include/c++/15.2.0/bits/parse_numbers.h:44:1: error: expected unqualified-id before 'namespace'
+   44 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/chrono.h:53:1: error: expected unqualified-id before 'namespace'
+   53 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/this_thread_sleep.h:45:1: error: expected unqualified-id before 'namespace'
+   45 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/thread:58:1: error: expected unqualified-id before 'namespace'
+   58 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from api_server.h:5:
+C:/msys64/mingw64/include/c++/15.2.0/atomic:56:1: error: expected unqualified-id before 'namespace'
+   56 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/mutex:49,
+                 from api_server.h:6:
+C:/msys64/mingw64/include/c++/15.2.0/bits/std_mutex.h:45:1: error: expected unqualified-id before 'namespace'
+   45 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/mutex:50:
+C:/msys64/mingw64/include/c++/15.2.0/bits/unique_lock.h:46:1: error: expected unqualified-id before 'namespace'
+   46 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/mutex:64:1: error: expected unqualified-id before 'namespace'
+   64 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from api_server.h:9:
+C:/msys64/mingw64/include/c++/15.2.0/chrono:63:1: error: expected unqualified-id before 'namespace'
+   63 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from api_server.h:10:
+gui.h:7:24: error: field 'current_cpu_temp' has incomplete type 'std::atomic<float>'
+    7 |     std::atomic<float> current_cpu_temp{0.0f};
+      |                        ^~~~~~~~~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/shared_ptr_atomic.h:33,
+                 from C:/msys64/mingw64/include/c++/15.2.0/memory:83,
+                 from cpu_inference_engine.h:5,
+                 from rawrxd_cli.cpp:1:
+C:/msys64/mingw64/include/c++/15.2.0/bits/atomic_base.h:173:12: note: declaration of 'struct std::atomic<float>'
+  173 |     struct atomic;
+      |            ^~~~~~
+gui.h:8:24: error: field 'current_gpu_temp' has incomplete type 'std::atomic<float>'
+    8 |     std::atomic<float> current_gpu_temp{0.0f};
+      |                        ^~~~~~~~~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/atomic_base.h:173:12: note: declaration of 'struct std::atomic<float>'
+  173 |     struct atomic;
+      |            ^~~~~~
+gui.h:9:24: error: field 'current_cpu_power' has incomplete type 'std::atomic<float>'
+    9 |     std::atomic<float> current_cpu_power{0.0f};
+      |                        ^~~~~~~~~~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/atomic_base.h:173:12: note: declaration of 'struct std::atomic<float>'
+  173 |     struct atomic;
+      |            ^~~~~~
+gui.h:10:24: error: field 'current_gpu_power' has incomplete type 'std::atomic<float>'
+   10 |     std::atomic<float> current_gpu_power{0.0f};
+      |                        ^~~~~~~~~~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/atomic_base.h:173:12: note: declaration of 'struct std::atomic<float>'
+  173 |     struct atomic;
+      |            ^~~~~~
+gui.h:25:23: error: field 'model_ready' has incomplete type 'std::atomic<bool>'
+   25 |     std::atomic<bool> model_ready{false};
+      |                       ^~~~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/atomic_base.h:173:12: note: declaration of 'struct std::atomic<bool>'
+  173 |     struct atomic;
+      |            ^~~~~~
+api_server.h:13:1: error: expected unqualified-id before 'namespace'
+   13 | namespace RawrXD { class CPUInferenceEngine; }
+      | ^~~~~~~~~
+api_server.h:67:62: error: 'std::chrono' has not been declared
+   67 |     void LogRequestMetrics(const std::string& endpoint, std::chrono::milliseconds duration, bool success);
+      |                                                              ^~~~~~
+api_server.h:67:83: error: expected ',' or '...' before 'duration'
+   67 |     void LogRequestMetrics(const std::string& endpoint, std::chrono::milliseconds duration, bool success);
+      |                                                                                   ^~~~~~~~
+api_server.h:71:23: error: field 'is_running_' has incomplete type 'std::atomic<bool>'
+   71 |     std::atomic<bool> is_running_;
+      |                       ^~~~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/atomic_base.h:173:12: note: declaration of 'struct std::atomic<bool>'
+  173 |     struct atomic;
+      |            ^~~~~~
+api_server.h:73:26: error: 'thread' is not a member of 'std'
+   73 |     std::unique_ptr<std::thread> server_thread_;
+      |                          ^~~~~~
+api_server.h:11:1: note: 'std::thread' is defined in header '<thread>'; this is probably fixable by adding '#include <thread>'
+   10 | #include "gui.h"
+  +++ |+#include <thread>
+   11 | 
+api_server.h:73:32: error: template argument 1 is invalid
+   73 |     std::unique_ptr<std::thread> server_thread_;
+      |                                ^
+api_server.h:73:32: error: template argument 2 is invalid
+api_server.h:79:23: error: field 'total_requests_' has incomplete type 'std::atomic<long int>'
+   79 |     std::atomic<long> total_requests_{0};
+      |                       ^~~~~~~~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/atomic_base.h:173:12: note: declaration of 'struct std::atomic<long int>'
+  173 |     struct atomic;
+      |            ^~~~~~
+api_server.h:80:23: error: field 'successful_requests_' has incomplete type 'std::atomic<long int>'
+   80 |     std::atomic<long> successful_requests_{0};
+      |                       ^~~~~~~~~~~~~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/atomic_base.h:173:12: note: declaration of 'struct std::atomic<long int>'
+  173 |     struct atomic;
+      |            ^~~~~~
+api_server.h:81:23: error: field 'failed_requests_' has incomplete type 'std::atomic<long int>'
+   81 |     std::atomic<long> failed_requests_{0};
+      |                       ^~~~~~~~~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/atomic_base.h:173:12: note: declaration of 'struct std::atomic<long int>'
+  173 |     struct atomic;
+      |            ^~~~~~
+api_server.h:82:23: error: field 'active_connections_' has incomplete type 'std::atomic<long int>'
+   82 |     std::atomic<long> active_connections_{0};
+      |                       ^~~~~~~~~~~~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/atomic_base.h:173:12: note: declaration of 'struct std::atomic<long int>'
+  173 |     struct atomic;
+      |            ^~~~~~
+api_server.h:85:10: error: 'mutex' in namespace 'std' does not name a type
+   85 |     std::mutex rate_limit_mutex_;
+      |          ^~~~~
+api_server.h:11:1: note: 'std::mutex' is defined in header '<mutex>'; this is probably fixable by adding '#include <mutex>'
+   10 | #include "gui.h"
+  +++ |+#include <mutex>
+   11 | 
+api_server.h:86:32: error: 'chrono' is not a member of 'std'
+   86 |     std::map<std::string, std::chrono::steady_clock::time_point> last_request_times_;
+      |                                ^~~~~~
+api_server.h:86:64: error: template argument 2 is invalid
+   86 |     std::map<std::string, std::chrono::steady_clock::time_point> last_request_times_;
+      |                                                                ^
+api_server.h:86:64: error: template argument 4 is invalid
+In file included from settings.h:5,
+                 from rawrxd_cli.cpp:5:
+C:/msys64/mingw64/include/c++/15.2.0/any:50:1: error: expected unqualified-id before 'namespace'
+   50 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+settings.h:86:54: error: 'any' in namespace 'std' does not name a type
+   86 |     void setValue(const std::string& key, const std::any& value);
+      |                                                      ^~~
+settings.h:6:1: note: 'std::any' is defined in header '<any>'; this is probably fixable by adding '#include <any>'
+    5 | #include <any>
+  +++ |+#include <any>
+    6 | #include <memory>
+settings.h:87:10: error: 'any' in namespace 'std' does not name a type
+   87 |     std::any getValue(const std::string& key, const std::any& default_value);
+      |          ^~~
+settings.h:87:5: note: 'std::any' is defined in header '<any>'; this is probably fixable by adding '#include <any>'
+   87 |     std::any getValue(const std::string& key, const std::any& default_value);
+      |     ^~~
+In file included from rawrxd_cli.cpp:6:
+overclock_governor.h:27:23: error: field 'running_' has incomplete type 'std::atomic<bool>'
+   27 |     std::atomic<bool> running_{false};
+      |                       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/atomic_base.h:173:12: note: declaration of 'struct std::atomic<bool>'
+  173 |     struct atomic;
+      |            ^~~~~~
+overclock_governor.h:28:10: error: 'thread' in namespace 'std' does not name a type
+   28 |     std::thread worker_{};
+      |          ^~~~~~
+overclock_governor.h:1:1: note: 'std::thread' is defined in header '<thread>'; this is probably fixable by adding '#include <thread>'
+  +++ |+#include <thread>
+    1 | #pragma once
+In file included from rawrxd_cli.cpp:7:
+overclock_vendor.h:7:1: error: expected unqualified-id before 'namespace'
+    7 | namespace overclock_vendor {
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/filesystem:53,
+                 from modules/vsix_loader.h:5,
+                 from rawrxd_cli.cpp:8:
+C:/msys64/mingw64/include/c++/15.2.0/bits/fs_fwd.h:39:1: error: expected unqualified-id before 'namespace'
+   39 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/locale:45,
+                 from C:/msys64/mingw64/include/c++/15.2.0/bits/fs_path.h:36,
+                 from C:/msys64/mingw64/include/c++/15.2.0/filesystem:54:
+C:/msys64/mingw64/include/c++/15.2.0/bits/locale_facets_nonio.h:43:1: error: expected unqualified-id before 'namespace'
+   43 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/locale_facets_nonio.h:354:
+C:/msys64/mingw64/include/c++/15.2.0/x86_64-w64-mingw32/bits/time_members.h:37:1: error: expected unqualified-id before 'namespace'
+   37 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/locale_facets_nonio.h:356:1: error: expected unqualified-id before 'namespace'
+  356 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/locale_facets_nonio.h:2066:
+C:/msys64/mingw64/include/c++/15.2.0/x86_64-w64-mingw32/bits/messages_members.h:36:1: error: expected unqualified-id before 'namespace'
+   36 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/locale_facets_nonio.h:2071:
+C:/msys64/mingw64/include/c++/15.2.0/bits/locale_facets_nonio.tcc:37:1: error: expected unqualified-id before 'namespace'
+   37 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/locale:47:
+C:/msys64/mingw64/include/c++/15.2.0/bits/locale_conv.h:42:1: error: expected unqualified-id before 'namespace'
+   42 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/quoted_string.h:40,
+                 from C:/msys64/mingw64/include/c++/15.2.0/iomanip:55,
+                 from C:/msys64/mingw64/include/c++/15.2.0/bits/fs_path.h:38:
+C:/msys64/mingw64/include/c++/15.2.0/sstream:57:1: error: expected unqualified-id before 'namespace'
+   57 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/sstream:1255:
+C:/msys64/mingw64/include/c++/15.2.0/bits/sstream.tcc:43:1: error: expected unqualified-id before 'namespace'
+   43 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/quoted_string.h:42:1: error: expected unqualified-id before 'namespace'
+   42 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/iomanip:59:1: error: expected unqualified-id before 'namespace'
+   59 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/fs_path.h:39:
+C:/msys64/mingw64/include/c++/15.2.0/codecvt:45:1: error: expected unqualified-id before 'namespace'
+   45 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/fs_path.h:57:1: error: expected unqualified-id before 'namespace'
+   57 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/filesystem:55:
+C:/msys64/mingw64/include/c++/15.2.0/bits/fs_dir.h:45:1: error: expected unqualified-id before 'namespace'
+   45 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/filesystem:56:
+C:/msys64/mingw64/include/c++/15.2.0/bits/fs_ops.h:37:1: error: expected unqualified-id before 'namespace'
+   37 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from modules/vsix_loader.h:6:
+./nlohmann/json.hpp:5:1: error: expected unqualified-id before 'namespace'
+    5 | namespace nlohmann {
+      | ^~~~~~~~~
+modules/vsix_loader.h:17:10: error: 'filesystem' in namespace 'std' does not name a type; did you mean 'system'?
+   17 |     std::filesystem::path install_path;
+      |          ^~~~~~~~~~
+      |          system
+modules/vsix_loader.h:21:5: error: 'nlohmann' does not name a type
+   21 |     nlohmann::json manifest;
+      |     ^~~~~~~~
+modules/vsix_loader.h:25:30: error: 'nlohmann' does not name a type
+   25 |     std::function<void(const nlohmann::json&)> onConfigure;
+      |                              ^~~~~~~~
+modules/vsix_loader.h:25:44: error: expected unqualified-id before '&' token
+   25 |     std::function<void(const nlohmann::json&)> onConfigure;
+      |                                            ^
+modules/vsix_loader.h:25:44: error: expected ')' before '&' token
+   25 |     std::function<void(const nlohmann::json&)> onConfigure;
+      |                       ~                    ^
+      |                                            )
+modules/vsix_loader.h:25:45: error: expected template-argument before ')' token
+   25 |     std::function<void(const nlohmann::json&)> onConfigure;
+      |                                             ^
+modules/vsix_loader.h:25:45: error: expected '>' before ')' token
+modules/vsix_loader.h:25:45: error: expected unqualified-id before ')' token
+modules/vsix_loader.h:30:10: error: 'filesystem' in namespace 'std' does not name a type; did you mean 'system'?
+   30 |     std::filesystem::path plugins_dir_;
+      |          ^~~~~~~~~~
+      |          system
+modules/vsix_loader.h:32:10: error: 'mutex' in namespace 'std' does not name a type
+   32 |     std::mutex mutex_;
+      |          ^~~~~
+modules/vsix_loader.h:7:1: note: 'std::mutex' is defined in header '<mutex>'; this is probably fixable by adding '#include <mutex>'
+    6 | #include <nlohmann/json.hpp>
+  +++ |+#include <mutex>
+    7 | #include <mutex>
+modules/vsix_loader.h:46:62: error: 'nlohmann' does not name a type
+   46 |     bool ConfigurePlugin(const std::string& plugin_id, const nlohmann::json& config);
+      |                                                              ^~~~~~~~
+modules/vsix_loader.h:46:76: error: expected unqualified-id before '&' token
+   46 |     bool ConfigurePlugin(const std::string& plugin_id, const nlohmann::json& config);
+      |                                                                            ^
+modules/vsix_loader.h:46:76: error: expected ')' before '&' token
+   46 |     bool ConfigurePlugin(const std::string& plugin_id, const nlohmann::json& config);
+      |                         ~                                                  ^
+      |                                                                            )
+modules/vsix_loader.h:46:76: error: expected ';' at end of member declaration
+   46 |     bool ConfigurePlugin(const std::string& plugin_id, const nlohmann::json& config);
+      |                                                                            ^
+      |                                                                             ;
+modules/vsix_loader.h:46:78: error: 'config' does not name a type
+   46 |     bool ConfigurePlugin(const std::string& plugin_id, const nlohmann::json& config);
+      |                                                                              ^~~~~~
+modules/vsix_loader.h:53:5: error: 'nlohmann' does not name a type
+   53 |     nlohmann::json GetPluginConfig(const std::string& plugin_id);
+      |     ^~~~~~~~
+modules/vsix_loader.h:86:63: error: 'filesystem' in namespace 'std' does not name a type; did you mean 'system'?
+   86 |     bool ExtractVSIX(const std::string& vsix_path, const std::filesystem::path& extract_dir);
+      |                                                               ^~~~~~~~~~
+      |                                                               system
+modules/vsix_loader.h:86:79: error: expected unqualified-id before '&' token
+   86 |     bool ExtractVSIX(const std::string& vsix_path, const std::filesystem::path& extract_dir);
+      |                                                                               ^
+modules/vsix_loader.h:86:79: error: expected ')' before '&' token
+   86 |     bool ExtractVSIX(const std::string& vsix_path, const std::filesystem::path& extract_dir);
+      |                     ~                                                         ^
+      |                                                                               )
+modules/vsix_loader.h:86:79: error: expected ';' at end of member declaration
+   86 |     bool ExtractVSIX(const std::string& vsix_path, const std::filesystem::path& extract_dir);
+      |                                                                               ^
+      |                                                                                ;
+modules/vsix_loader.h:86:81: error: 'extract_dir' does not name a type
+   86 |     bool ExtractVSIX(const std::string& vsix_path, const std::filesystem::path& extract_dir);
+      |                                                                                 ^~~~~~~~~~~
+modules/vsix_loader.h:87:33: error: 'nlohmann' does not name a type
+   87 |     bool ValidateManifest(const nlohmann::json& manifest);
+      |                                 ^~~~~~~~
+modules/vsix_loader.h:87:47: error: expected unqualified-id before '&' token
+   87 |     bool ValidateManifest(const nlohmann::json& manifest);
+      |                                               ^
+modules/vsix_loader.h:87:47: error: expected ')' before '&' token
+   87 |     bool ValidateManifest(const nlohmann::json& manifest);
+      |                          ~                    ^
+      |                                               )
+modules/vsix_loader.h:87:47: error: expected ';' at end of member declaration
+   87 |     bool ValidateManifest(const nlohmann::json& manifest);
+      |                                               ^
+      |                                                ;
+modules/vsix_loader.h:87:49: error: 'manifest' does not name a type
+   87 |     bool ValidateManifest(const nlohmann::json& manifest);
+      |                                                 ^~~~~~~~
+modules/vsix_loader.h:88:45: error: 'filesystem' in namespace 'std' does not name a type; did you mean 'system'?
+   88 |     bool LoadPluginFromDirectory(const std::filesystem::path& plugin_dir);
+      |                                             ^~~~~~~~~~
+      |                                             system
+modules/vsix_loader.h:88:61: error: expected unqualified-id before '&' token
+   88 |     bool LoadPluginFromDirectory(const std::filesystem::path& plugin_dir);
+      |                                                             ^
+modules/vsix_loader.h:88:61: error: expected ')' before '&' token
+   88 |     bool LoadPluginFromDirectory(const std::filesystem::path& plugin_dir);
+      |                                 ~                           ^
+      |                                                             )
+modules/vsix_loader.h:88:61: error: expected ';' at end of member declaration
+   88 |     bool LoadPluginFromDirectory(const std::filesystem::path& plugin_dir);
+      |                                                             ^
+      |                                                              ;
+modules/vsix_loader.h:88:63: error: 'plugin_dir' does not name a type
+   88 |     bool LoadPluginFromDirectory(const std::filesystem::path& plugin_dir);
+      |                                                               ^~~~~~~~~~
+In file included from rawrxd_cli.cpp:9:
+interactive_shell.h:10:7: error: 'AgenticEngine::AgenticEngine' has the same name as the class in which it is declared
+   10 | class AgenticEngine;
+      |       ^~~~~~~~~~~~~
+interactive_shell.h:13:1: error: expected unqualified-id before 'namespace'
+   13 | namespace RawrXD { class ReactServerGenerator; }
+      | ^~~~~~~~~
+interactive_shell.h:14:15: error: using-declaration for non-member at class scope
+   14 | using RawrXD::ReactServerGenerator;
+      |               ^~~~~~~~~~~~~~~~~~~~
+interactive_shell.h:28:23: error: field 'running_' has incomplete type 'std::atomic<bool>'
+   28 |     std::atomic<bool> running_;
+      |                       ^~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/atomic_base.h:173:12: note: declaration of 'struct std::atomic<bool>'
+  173 |     struct atomic;
+      |            ^~~~~~
+interactive_shell.h:29:10: error: 'thread' in namespace 'std' does not name a type
+   29 |     std::thread shell_thread_;
+      |          ^~~~~~
+interactive_shell.h:1:1: note: 'std::thread' is defined in header '<thread>'; this is probably fixable by adding '#include <thread>'
+  +++ |+#include <thread>
+    1 | #pragma once
+interactive_shell.h:30:18: error: 'mutex' in namespace 'std' does not name a type
+   30 |     mutable std::mutex execution_mutex_;
+      |                  ^~~~~
+interactive_shell.h:1:1: note: 'std::mutex' is defined in header '<mutex>'; this is probably fixable by adding '#include <mutex>'
+  +++ |+#include <mutex>
+    1 | #pragma once
+interactive_shell.h:34:5: error: 'ReactServerGenerator' does not name a type
+   34 |     ReactServerGenerator* react_generator_;
+      |     ^~~~~~~~~~~~~~~~~~~~
+interactive_shell.h:47:16: error: 'ReactServerGenerator' has not been declared
+   47 |                ReactServerGenerator* react_generator,
+      |                ^~~~~~~~~~~~~~~~~~~~
+interactive_shell.h:104:1: error: storage class specified for 'g_shell'
+  104 | extern std::unique_ptr<InteractiveShell> g_shell;
+      | ^~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/regex:42,
+                 from advanced_features.h:3,
+                 from rawrxd_cli.cpp:11:
+C:/msys64/mingw64/include/c++/15.2.0/bitset:73:1: error: expected unqualified-id before 'namespace'
+   73 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bitset:1715:1: error: expected unqualified-id before 'namespace'
+ 1715 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/deque:68,
+                 from C:/msys64/mingw64/include/c++/15.2.0/stack:68,
+                 from C:/msys64/mingw64/include/c++/15.2.0/regex:45:
+C:/msys64/mingw64/include/c++/15.2.0/bits/stl_deque.h:75:1: error: expected unqualified-id before 'namespace'
+   75 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/deque:71:
+C:/msys64/mingw64/include/c++/15.2.0/bits/deque.tcc:61:1: error: expected unqualified-id before 'namespace'
+   61 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/deque:86:1: error: expected unqualified-id before 'namespace'
+   86 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/stack:69:
+C:/msys64/mingw64/include/c++/15.2.0/bits/stl_stack.h:69:1: error: expected unqualified-id before 'namespace'
+   69 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/stl_algo.h:59,
+                 from C:/msys64/mingw64/include/c++/15.2.0/regex:54:
+C:/msys64/mingw64/include/c++/15.2.0/bits/algorithmfwd.h:47:1: error: expected unqualified-id before 'namespace'
+   47 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/stl_algo.h:61:
+C:/msys64/mingw64/include/c++/15.2.0/bits/stl_heap.h:63:1: error: expected unqualified-id before 'namespace'
+   63 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/stl_algo.h:65:
+C:/msys64/mingw64/include/c++/15.2.0/bits/uniform_int_dist.h:41:1: error: expected unqualified-id before 'namespace'
+   41 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/stl_algo.h:80:1: error: expected unqualified-id before 'namespace'
+   80 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/regex:65:
+C:/msys64/mingw64/include/c++/15.2.0/bits/regex_constants.h:33:1: error: expected unqualified-id before 'namespace'
+   33 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/regex:66:
+C:/msys64/mingw64/include/c++/15.2.0/bits/regex_error.h:33:1: error: expected unqualified-id before 'namespace'
+   33 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/regex:67:
+C:/msys64/mingw64/include/c++/15.2.0/bits/regex_automaton.h:39:1: error: expected unqualified-id before 'namespace'
+   39 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/regex_automaton.h:405:
+C:/msys64/mingw64/include/c++/15.2.0/bits/regex_automaton.tcc:31:1: error: expected unqualified-id before 'namespace'
+   31 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/regex:68:
+C:/msys64/mingw64/include/c++/15.2.0/bits/regex_scanner.h:31:1: error: expected unqualified-id before 'namespace'
+   31 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/regex_scanner.h:271:
+C:/msys64/mingw64/include/c++/15.2.0/bits/regex_scanner.tcc:49:1: error: expected unqualified-id before 'namespace'
+   49 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/regex:69:
+C:/msys64/mingw64/include/c++/15.2.0/bits/regex_compiler.h:31:1: error: expected unqualified-id before 'namespace'
+   31 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/regex_compiler.h:571:
+C:/msys64/mingw64/include/c++/15.2.0/bits/regex_compiler.tcc:61:1: error: expected unqualified-id before 'namespace'
+   61 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/regex:70:
+C:/msys64/mingw64/include/c++/15.2.0/bits/regex.h:38:1: error: expected unqualified-id before 'namespace'
+   38 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/regex.h:3140:
+C:/msys64/mingw64/include/c++/15.2.0/bits/regex.tcc:31:1: error: expected unqualified-id before 'namespace'
+   31 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/regex:71:
+C:/msys64/mingw64/include/c++/15.2.0/bits/regex_executor.h:33:1: error: expected unqualified-id before 'namespace'
+   33 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/regex_executor.h:312:
+C:/msys64/mingw64/include/c++/15.2.0/bits/regex_executor.tcc:31:1: error: expected unqualified-id before 'namespace'
+   31 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/regex:78:1: error: expected unqualified-id before 'namespace'
+   78 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from rawrxd_cli.cpp:12:
+modules/react_generator.h:6:1: error: expected unqualified-id before 'namespace'
+    6 | namespace RawrXD {
+      | ^~~~~~~~~
+In file included from rawrxd_cli.cpp:13:
+modules/engine_manager.h:58:1: error: storage class specified for 'g_engine_manager'
+   58 | extern std::unique_ptr<EngineManager> g_engine_manager;
+      | ^~~~~~
+In file included from rawrxd_cli.cpp:14:
+modules/codex_ultimate.h:53:1: error: storage class specified for 'g_codex'
+   53 | extern std::unique_ptr<CodexUltimate> g_codex;
+      | ^~~~~~
+In file included from rawrxd_cli.cpp:15:
+C:/msys64/mingw64/include/c++/15.2.0/iostream:46:1: error: expected unqualified-id before 'namespace'
+   46 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from rawrxd_cli.cpp:18:
+C:/msys64/mingw64/include/conio.h:14:8: error: expected unqualified-id before string constant
+   14 | extern "C" {
+      |        ^~~
+In file included from C:/msys64/mingw64/include/conio.h:316:
+C:/msys64/mingw64/include/sec_api/conio_s.h:22:8: error: expected unqualified-id before string constant
+   22 | extern "C" {
+      |        ^~~
+rawrxd_cli.cpp:24:7: error: expected nested-name-specifier before 'namespace'
+   24 | using namespace std::chrono_literals;
+      |       ^~~~~~~~~
+rawrxd_cli.cpp:357:2: error: expected '}' at end of input
+  357 | }
+      |  ^
+In file included from rawrxd_cli.cpp:2:
+agentic_engine.h:18:21: note: to match this '{'
+   18 | class AgenticEngine {
+      |                     ^
+interactive_shell.h:43:51: error: could not convert '<brace-enclosed initializer list>()' from '<brace-enclosed initializer list>' to 'const AgenticEngine::ShellConfig&'
+   43 |     InteractiveShell(const ShellConfig& config = {});
+      |                                                   ^
+      |                                                   |
+      |                                                   <brace-enclosed initializer list>
+agentic_engine.h: In member function 'void AgenticEngine::setInferenceEngine(RawrXD::InferenceEngine*)':
+agentic_engine.h:80:64: error: 'm_inferenceEngine' was not declared in this scope; did you mean 'inferenceEngine'?
+   80 |     void setInferenceEngine(RawrXD::InferenceEngine* engine) { m_inferenceEngine = engine; }
+      |                                                                ^~~~~~~~~~~~~~~~~
+      |                                                                inferenceEngine
+agentic_engine.h: In member function 'RawrXD::InferenceEngine* AgenticEngine::inferenceEngine() const':
+agentic_engine.h:81:63: error: 'm_inferenceEngine' was not declared in this scope; did you mean 'inferenceEngine'?
+   81 |     RawrXD::InferenceEngine* inferenceEngine() const { return m_inferenceEngine; }
+      |                                                               ^~~~~~~~~~~~~~~~~
+      |                                                               inferenceEngine
+agentic_engine.h: In member function 'void AgenticEngine::setChatProvider(std::function<std::__cxx11::basic_string<char>(const std::__cxx11::basic_string<char>&)>)':
+agentic_engine.h:86:79: error: 'm_chatProvider' was not declared in this scope; did you mean 'setChatProvider'?
+   86 |     void setChatProvider(std::function<std::string(const std::string&)> fn) { m_chatProvider = std::move(fn); }
+      |                                                                               ^~~~~~~~~~~~~~
+      |                                                                               setChatProvider
+agentic_engine.h: In member function 'void AgenticEngine::clearChatProvider()':
+agentic_engine.h:87:32: error: 'm_chatProvider' was not declared in this scope; did you mean 'setChatProvider'?
+   87 |     void clearChatProvider() { m_chatProvider = nullptr; }
+      |                                ^~~~~~~~~~~~~~
+      |                                setChatProvider
+agentic_engine.h: In member function 'bool AgenticEngine::isModelLoaded() const':
+agentic_engine.h:90:13: error: 'm_chatProvider' was not declared in this scope; did you mean 'setChatProvider'?
+   90 |         if (m_chatProvider) return true;
+      |             ^~~~~~~~~~~~~~
+      |             setChatProvider
+agentic_engine.h:91:16: error: 'm_inferenceEngine' was not declared in this scope; did you mean 'inferenceEngine'?
+   91 |         return m_inferenceEngine && m_inferenceEngine->IsModelLoaded();
+      |                ^~~~~~~~~~~~~~~~~
+      |                inferenceEngine
+agentic_engine.h: In member function 'std::string AgenticEngine::currentModelPath() const':
+agentic_engine.h:93:51: error: 'm_currentModelPath' was not declared in this scope; did you mean 'currentModelPath'?
+   93 |     std::string currentModelPath() const { return m_currentModelPath; }
+      |                                                   ^~~~~~~~~~~~~~~~~~
+      |                                                   currentModelPath
+rawrxd_cli.cpp: In member function 'void AgenticEngine::EnsureDirectories()':
+rawrxd_cli.cpp:62:10: error: 'std::filesystem' has not been declared; did you mean 'std::system'?
+   62 |     std::filesystem::create_directories("plugins");
+      |          ^~~~~~~~~~
+rawrxd_cli.cpp:63:10: error: 'std::filesystem' has not been declared; did you mean 'std::system'?
+   63 |     std::filesystem::create_directories("memory_modules");
+      |          ^~~~~~~~~~
+rawrxd_cli.cpp:64:10: error: 'std::filesystem' has not been declared; did you mean 'std::system'?
+   64 |     std::filesystem::create_directories("models");
+      |          ^~~~~~~~~~
+rawrxd_cli.cpp:65:10: error: 'std::filesystem' has not been declared; did you mean 'std::system'?
+   65 |     std::filesystem::create_directories("sessions");
+      |          ^~~~~~~~~~
+rawrxd_cli.cpp:66:10: error: 'std::filesystem' has not been declared; did you mean 'std::system'?
+   66 |     std::filesystem::create_directories("projects");
+      |          ^~~~~~~~~~
+rawrxd_cli.cpp:67:10: error: 'std::filesystem' has not been declared; did you mean 'std::system'?
+   67 |     std::filesystem::create_directories("models/800b");
+      |          ^~~~~~~~~~
+rawrxd_cli.cpp:68:10: error: 'std::filesystem' has not been declared; did you mean 'std::system'?
+   68 |     std::filesystem::create_directories("engines");
+      |          ^~~~~~~~~~
+rawrxd_cli.cpp: In member function 'void AgenticEngine::PrintBanner()':
+rawrxd_cli.cpp:72:10: error: 'cout' is not a member of 'std'
+   72 |     std::cout << R"(
+      |          ^~~~
+rawrxd_cli.cpp:19:1: note: 'std::cout' is defined in header '<iostream>'; this is probably fixable by adding '#include <iostream>'
+   18 | #include <conio.h>
+  +++ |+#include <iostream>
+   19 | #include <string>
+rawrxd_cli.cpp: In member function 'int AgenticEngine::main(int, char**)':
+rawrxd_cli.cpp:154:18: error: 'cout' is not a member of 'std'
+  154 |             std::cout << R"(
+      |                  ^~~~
+rawrxd_cli.cpp:154:18: note: 'std::cout' is defined in header '<iostream>'; this is probably fixable by adding '#include <iostream>'
+rawrxd_cli.cpp:245:18: error: 'cout' is not a member of 'std'
+  245 |             std::cout << "Enter model path (GGUF/Blob): ";
+      |                  ^~~~
+rawrxd_cli.cpp:245:18: note: 'std::cout' is defined in header '<iostream>'; this is probably fixable by adding '#include <iostream>'
+rawrxd_cli.cpp:246:31: error: 'cin' is not a member of 'std'
+  246 |             std::getline(std::cin, state.model_path);
+      |                               ^~~
+rawrxd_cli.cpp:246:31: note: 'std::cin' is defined in header '<iostream>'; this is probably fixable by adding '#include <iostream>'
+rawrxd_cli.cpp:256:14: error: 'cout' is not a member of 'std'
+  256 |         std::cout << "[Loading] " << state.model_path << "..." << std::endl;
+      |              ^~~~
+rawrxd_cli.cpp:256:14: note: 'std::cout' is defined in header '<iostream>'; this is probably fixable by adding '#include <iostream>'
+rawrxd_cli.cpp:259:18: error: 'cout' is not a member of 'std'
+  259 |             std::cout << "[Success] Model loaded: " << state.model_path << std::endl;
+      |                  ^~~~
+rawrxd_cli.cpp:259:18: note: 'std::cout' is defined in header '<iostream>'; this is probably fixable by adding '#include <iostream>'
+rawrxd_cli.cpp:261:18: error: 'cerr' is not a member of 'std'
+  261 |             std::cerr << "[Error] Failed to load model: " << state.model_path << std::endl;
+      |                  ^~~~
+rawrxd_cli.cpp:261:18: note: 'std::cerr' is defined in header '<iostream>'; this is probably fixable by adding '#include <iostream>'
+rawrxd_cli.cpp:280:25: error: 'using std::__shared_ptr_access<AgenticEngine, __gnu_cxx::_S_atomic, false, false>::element_type = class AgenticEngine' {aka 'class AgenticEngine'} has no member named 'updateConfig'
+  280 |     state.agent_engine->updateConfig(config);
+      |                         ^~~~~~~~~~~~
+rawrxd_cli.cpp:285:10: error: 'cout' is not a member of 'std'
+  285 |     std::cout << "[API] Server started on http://localhost:11434" << std::endl;
+      |          ^~~~
+rawrxd_cli.cpp:285:10: note: 'std::cout' is defined in header '<iostream>'; this is probably fixable by adding '#include <iostream>'
+rawrxd_cli.cpp:291:14: error: 'cout' is not a member of 'std'
+  291 |         std::cout << "[Governor] Started" << std::endl;
+      |              ^~~~
+rawrxd_cli.cpp:291:14: note: 'std::cout' is defined in header '<iostream>'; this is probably fixable by adding '#include <iostream>'
+rawrxd_cli.cpp:310:14: error: 'cout' is not a member of 'std'
+  310 |         std::cout << "[Chat] Running prompt: " << chat_prompt << std::endl;
+      |              ^~~~
+rawrxd_cli.cpp:310:14: note: 'std::cout' is defined in header '<iostream>'; this is probably fixable by adding '#include <iostream>'
+rawrxd_cli.cpp: In lambda function:
+rawrxd_cli.cpp:312:18: error: 'cout' is not a member of 'std'
+  312 |             std::cout << token;
+      |                  ^~~~
+rawrxd_cli.cpp:312:18: note: 'std::cout' is defined in header '<iostream>'; this is probably fixable by adding '#include <iostream>'
+rawrxd_cli.cpp:313:18: error: 'cout' is not a member of 'std'
+  313 |             std::cout.flush();
+      |                  ^~~~
+rawrxd_cli.cpp:313:18: note: 'std::cout' is defined in header '<iostream>'; this is probably fixable by adding '#include <iostream>'
+rawrxd_cli.cpp: In member function 'int AgenticEngine::main(int, char**)':
+rawrxd_cli.cpp:315:14: error: 'cout' is not a member of 'std'
+  315 |         std::cout << std::endl;
+      |              ^~~~
+rawrxd_cli.cpp:315:14: note: 'std::cout' is defined in header '<iostream>'; this is probably fixable by adding '#include <iostream>'
+rawrxd_cli.cpp: In lambda function:
+rawrxd_cli.cpp:322:32: error: 'cout' is not a member of 'std'
+  322 |                           std::cout << output;
+      |                                ^~~~
+rawrxd_cli.cpp:322:32: note: 'std::cout' is defined in header '<iostream>'; this is probably fixable by adding '#include <iostream>'
+rawrxd_cli.cpp: In member function 'int AgenticEngine::main(int, char**)':
+rawrxd_cli.cpp:330:10: error: 'cout' is not a member of 'std'
+  330 |     std::cout << "\n=== RawrXD Interactive AI Shell v6.0 Ready ===\n";
+      |          ^~~~
+rawrxd_cli.cpp:330:10: note: 'std::cout' is defined in header '<iostream>'; this is probably fixable by adding '#include <iostream>'
+rawrxd_cli.cpp:331:10: error: 'cout' is not a member of 'std'
+  331 |     std::cout << "Model: " << state.model_path << "\n";
+      |          ^~~~
+rawrxd_cli.cpp:331:10: note: 'std::cout' is defined in header '<iostream>'; this is probably fixable by adding '#include <iostream>'
+rawrxd_cli.cpp:332:10: error: 'cout' is not a member of 'std'
+  332 |     std::cout << "Context: " << state.context_size / 1024 << "K\n";
+      |          ^~~~
+rawrxd_cli.cpp:332:10: note: 'std::cout' is defined in header '<iostream>'; this is probably fixable by adding '#include <iostream>'
+rawrxd_cli.cpp:333:10: error: 'cout' is not a member of 'std'
+  333 |     std::cout << "Engine: " << state.engine_manager->GetCurrentEngine() << "\n";
+      |          ^~~~
+rawrxd_cli.cpp:333:10: note: 'std::cout' is defined in header '<iostream>'; this is probably fixable by adding '#include <iostream>'
+rawrxd_cli.cpp:334:10: error: 'cout' is not a member of 'std'
+  334 |     std::cout << "Modes: " << (state.enable_max_mode ? "Max " : "")
+      |          ^~~~
+rawrxd_cli.cpp:334:10: note: 'std::cout' is defined in header '<iostream>'; this is probably fixable by adding '#include <iostream>'
+rawrxd_cli.cpp:339:10: error: 'cout' is not a member of 'std'
+  339 |     std::cout << "Type /help for commands, /exit to quit\n\n";
+      |          ^~~~
+rawrxd_cli.cpp:339:10: note: 'std::cout' is defined in header '<iostream>'; this is probably fixable by adding '#include <iostream>'
+rawrxd_cli.cpp:343:14: error: 'std::this_thread' has not been declared
+  343 |         std::this_thread::sleep_for(100ms);
+      |              ^~~~~~~~~~~
+rawrxd_cli.cpp:19:1: note: 'std::this_thread' is defined in header '<thread>'; this is probably fixable by adding '#include <thread>'
+   18 | #include <conio.h>
+  +++ |+#include <thread>
+   19 | #include <string>
+rawrxd_cli.cpp:343:37: error: unable to find numeric literal operator 'operator""ms'
+  343 |         std::this_thread::sleep_for(100ms);
+      |                                     ^~~~~
+rawrxd_cli.cpp:349:14: error: 'cout' is not a member of 'std'
+  349 |         std::cout << "[Governor] Stopped\n";
+      |              ^~~~
+rawrxd_cli.cpp:349:14: note: 'std::cout' is defined in header '<iostream>'; this is probably fixable by adding '#include <iostream>'
+rawrxd_cli.cpp:353:10: error: 'cout' is not a member of 'std'
+  353 |     std::cout << "[API] Stopped\n";
+      |          ^~~~
+rawrxd_cli.cpp:353:10: note: 'std::cout' is defined in header '<iostream>'; this is probably fixable by adding '#include <iostream>'
+rawrxd_cli.cpp:355:10: error: 'cout' is not a member of 'std'
+  355 |     std::cout << "\n[Shutdown] RawrXD terminated gracefully.\n";
+      |          ^~~~
+rawrxd_cli.cpp:355:10: note: 'std::cout' is defined in header '<iostream>'; this is probably fixable by adding '#include <iostream>'
+rawrxd_cli.cpp: At global scope:
+rawrxd_cli.cpp:357:2: error: expected unqualified-id at end of input
+  357 | }
+      |  ^
+In file included from C:/msys64/mingw64/include/c++/15.2.0/vector:66,
+                 from cpu_inference_engine.h:3:
+C:/msys64/mingw64/include/c++/15.2.0/bits/stl_construct.h: In instantiation of 'void std::_Construct(_Tp*, _Args&& ...) [with _Tp = RawrXD::CPUInferenceEngine; _Args = {}]':
+C:/msys64/mingw64/include/c++/15.2.0/bits/alloc_traits.h:805:19:   required from 'static void std::allocator_traits<std::allocator<void> >::construct(allocator_type&, _Up*, _Args&& ...) [with _Up = RawrXD::CPUInferenceEngine; _Args = {}; allocator_type = std::allocator<void>]'
+  805 |         { std::_Construct(__p, std::forward<_Args>(__args)...); }
+      |           ~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/shared_ptr_base.h:606:39:   required from 'std::_Sp_counted_ptr_inplace<_Tp, _Alloc, _Lp>::_Sp_counted_ptr_inplace(_Alloc, _Args&& ...) [with _Args = {}; _Tp = RawrXD::CPUInferenceEngine; _Alloc = std::allocator<void>; __gnu_cxx::_Lock_policy _Lp = __gnu_cxx::_S_atomic]'
+  606 |           allocator_traits<_Alloc>::construct(__a, _M_ptr(),
+      |           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~
+  607 |               std::forward<_Args>(__args)...); // might throw
+      |               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+C:/msys64/mingw64/include/c++/15.2.0/bits/shared_ptr_base.h:969:16:   required from 'std::__shared_count<_Lp>::__shared_count(_Tp*&, std::_Sp_alloc_shared_tag<_Alloc>, _Args&& ...) [with _Tp = RawrXD::CPUInferenceEngine; _Alloc = std::allocator<void>; _Args = {}; __gnu_cxx::_Lock_policy _Lp = __gnu_cxx::_S_atomic]'
+  969 |           auto __pi = ::new (__mem)
+      |                       ^~~~~~~~~~~~~
+  970 |             _Sp_cp_type(__a._M_a, std::forward<_Args>(__args)...);
+      |             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/shared_ptr_base.h:1719:14:   required from 'std::__shared_ptr<_Tp, _Lp>::__shared_ptr(std::_Sp_alloc_shared_tag<_Tp>, _Args&& ...) [with _Alloc = std::allocator<void>; _Args = {}; _Tp = RawrXD::CPUInferenceEngine; __gnu_cxx::_Lock_policy _Lp = __gnu_cxx::_S_atomic]'
+ 1719 |         : _M_ptr(), _M_refcount(_M_ptr, __tag, std::forward<_Args>(__args)...)
+      |                     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/shared_ptr.h:463:59:   required from 'std::shared_ptr<_Tp>::shared_ptr(std::_Sp_alloc_shared_tag<_Tp>, _Args&& ...) [with _Alloc = std::allocator<void>; _Args = {}; _Tp = RawrXD::CPUInferenceEngine]'
+  463 |         : __shared_ptr<_Tp>(__tag, std::forward<_Args>(__args)...)
+      |                                                                  ^
+C:/msys64/mingw64/include/c++/15.2.0/bits/shared_ptr.h:1007:14:   required from 'std::shared_ptr<typename std::enable_if<(! std::is_array<_Tp>::value), _Tp>::type> std::make_shared(_Args&& ...) [with _Tp = RawrXD::CPUInferenceEngine; _Args = {}; typename enable_if<(! is_array<_Tp>::value), _Tp>::type = RawrXD::CPUInferenceEngine]'
+ 1007 |       return shared_ptr<_Tp>(_Sp_alloc_shared_tag<_Alloc>{__a},
+      |              ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 1008 |                              std::forward<_Args>(__args)...);
+      |                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+rawrxd_cli.cpp:240:74:   required from here
+  240 |     state.inference_engine = std::make_shared<RawrXD::CPUInferenceEngine>();
+      |                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~
+C:/msys64/mingw64/include/c++/15.2.0/bits/stl_construct.h:133:7: error: invalid new-expression of abstract class type 'RawrXD::CPUInferenceEngine'
+  133 |       ::new(static_cast<void*>(__p)) _Tp(std::forward<_Args>(__args)...);
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+cpu_inference_engine.h:71:7: note:   because the following virtual functions are pure within 'RawrXD::CPUInferenceEngine':
+   71 | class CPUInferenceEngine : public InferenceEngine {
+      |       ^~~~~~~~~~~~~~~~~~
+In file included from cpu_inference_engine.h:12:
+inference_engine.h:35:34: note:     'virtual std::vector<int> RawrXD::InferenceEngine::Generate(const std::vector<int>&, int)'
+   35 |     virtual std::vector<int32_t> Generate(const std::vector<int32_t>& input_tokens, int max_tokens = 100) = 0;
+      |                                  ^~~~~~~~
+cpu_inference_engine.cpp:5:41: error: 'std::shared_ptr<RawrXD::CPUInferenceEngine> RawrXD::CPUInferenceEngine::instance' is not a static data member of 'class RawrXD::CPUInferenceEngine'
+    5 |     std::shared_ptr<CPUInferenceEngine> CPUInferenceEngine::instance = nullptr;
+      |                                         ^~~~~~~~~~~~~~~~~~
+cpu_inference_engine.cpp:6:41: error: no declaration matches 'std::shared_ptr<RawrXD::CPUInferenceEngine> RawrXD::CPUInferenceEngine::getInstance()'
+    6 |     std::shared_ptr<CPUInferenceEngine> CPUInferenceEngine::getInstance() {
+      |                                         ^~~~~~~~~~~~~~~~~~
+In file included from cpu_inference_engine.cpp:1:
+cpu_inference_engine.h:77:32: note: candidate is: 'static RawrXD::CPUInferenceEngine* RawrXD::CPUInferenceEngine::getInstance()'
+   77 |     static CPUInferenceEngine* getInstance();
+      |                                ^~~~~~~~~~~
+cpu_inference_engine.h:71:7: note: 'class RawrXD::CPUInferenceEngine' defined here
+   71 | class CPUInferenceEngine : public InferenceEngine {
+      |       ^~~~~~~~~~~~~~~~~~
+cpu_inference_engine.cpp:12:26: error: no declaration matches 'std::vector<int> RawrXD::CPUInferenceEngine::Generate(const std::vector<int>&, int)'
+   12 |     std::vector<int32_t> CPUInferenceEngine::Generate(const std::vector<int32_t>& input, int max_tokens) { return {4, 5, 6}; }
+      |                          ^~~~~~~~~~~~~~~~~~
+cpu_inference_engine.cpp:12:26: note: no functions named 'std::vector<int> RawrXD::CPUInferenceEngine::Generate(const std::vector<int>&, int)'
+cpu_inference_engine.h:71:7: note: 'class RawrXD::CPUInferenceEngine' defined here
+   71 | class CPUInferenceEngine : public InferenceEngine {
+      |       ^~~~~~~~~~~~~~~~~~
+cpu_inference_engine.cpp:13:10: error: 'optional' in namespace 'std' does not name a template type
+   13 |     std::optional<bool> CPUInferenceEngine::LoadModel(const std::string& path) {
+      |          ^~~~~~~~
+cpu_inference_engine.cpp:3:1: note: 'std::optional' is defined in header '<optional>'; this is probably fixable by adding '#include <optional>'
+    2 | #include <iostream>
+  +++ |+#include <optional>
+    3 | 
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/ios_base.h:43,
+                 from C:/msys64/mingw64/include/c++/15.2.0/ios:46,
+                 from C:/msys64/mingw64/include/c++/15.2.0/bits/ostream.h:43,
+                 from C:/msys64/mingw64/include/c++/15.2.0/ostream:42,
+                 from C:/msys64/mingw64/include/c++/15.2.0/iostream:43,
+                 from agentic_engine.cpp:3:
+C:/msys64/mingw64/include/c++/15.2.0/bits/locale_classes.h:49:1: error: expected unqualified-id before 'namespace'
+   49 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/locale_classes.h:896:
+C:/msys64/mingw64/include/c++/15.2.0/bits/locale_classes.tcc:47:1: error: expected unqualified-id before 'namespace'
+   47 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/system_error:45,
+                 from C:/msys64/mingw64/include/c++/15.2.0/bits/ios_base.h:48:
+C:/msys64/mingw64/include/c++/15.2.0/stdexcept:43:1: error: expected unqualified-id before 'namespace'
+   43 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/system_error:50:1: error: expected unqualified-id before 'namespace'
+   50 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/system_error:600:1: error: expected unqualified-id before 'namespace'
+  600 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/ios_base.h:51:1: error: expected unqualified-id before 'namespace'
+   51 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/ios:47:
+C:/msys64/mingw64/include/c++/15.2.0/streambuf:49:1: error: expected unqualified-id before 'namespace'
+   49 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/streambuf:862:
+C:/msys64/mingw64/include/c++/15.2.0/bits/streambuf.tcc:44:1: error: expected unqualified-id before 'namespace'
+   44 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/cwctype:55,
+                 from C:/msys64/mingw64/include/c++/15.2.0/bits/locale_facets.h:41,
+                 from C:/msys64/mingw64/include/c++/15.2.0/bits/basic_ios.h:39,
+                 from C:/msys64/mingw64/include/c++/15.2.0/ios:48:
+C:/msys64/mingw64/include/wctype.h:12:8: error: expected unqualified-id before string constant
+   12 | extern "C" {
+      |        ^~~
+C:/msys64/mingw64/include/c++/15.2.0/cwctype:82:1: error: expected unqualified-id before 'namespace'
+   82 | namespace std
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/locale_facets.h:43:
+C:/msys64/mingw64/include/c++/15.2.0/x86_64-w64-mingw32/bits/ctype_base.h:37:1: error: expected unqualified-id before 'namespace'
+   37 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/locale_facets.h:50:
+C:/msys64/mingw64/include/c++/15.2.0/bits/streambuf_iterator.h:41:1: error: expected unqualified-id before 'namespace'
+   41 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/locale_facets.h:52:1: error: expected unqualified-id before 'namespace'
+   52 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/locale_facets.h:1548:
+C:/msys64/mingw64/include/c++/15.2.0/x86_64-w64-mingw32/bits/ctype_inline.h:37:1: error: expected unqualified-id before 'namespace'
+   37 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/locale_facets.h:1550:1: error: expected unqualified-id before 'namespace'
+ 1550 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/locale_facets.h:2701:
+C:/msys64/mingw64/include/c++/15.2.0/bits/locale_facets.tcc:39:1: error: expected unqualified-id before 'namespace'
+   39 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_ios.h:43:1: error: expected unqualified-id before 'namespace'
+   43 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/basic_ios.h:531:
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_ios.tcc:40:1: error: expected unqualified-id before 'namespace'
+   40 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/ostream.h:49:1: error: expected unqualified-id before 'namespace'
+   49 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/ostream:50:1: error: expected unqualified-id before 'namespace'
+   50 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/ostream:294:
+C:/msys64/mingw64/include/c++/15.2.0/bits/ostream.tcc:45:1: error: expected unqualified-id before 'namespace'
+   45 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/iostream:44:
+C:/msys64/mingw64/include/c++/15.2.0/istream:45:1: error: expected unqualified-id before 'namespace'
+   45 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/istream:1111:
+C:/msys64/mingw64/include/c++/15.2.0/bits/istream.tcc:46:1: error: expected unqualified-id before 'namespace'
+   46 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/iostream:46:1: error: expected unqualified-id before 'namespace'
+   46 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/stl_algo.h:59,
+                 from C:/msys64/mingw64/include/c++/15.2.0/algorithm:63,
+                 from agentic_engine.cpp:4:
+C:/msys64/mingw64/include/c++/15.2.0/bits/algorithmfwd.h:47:1: error: expected unqualified-id before 'namespace'
+   47 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/stl_algo.h:61:
+C:/msys64/mingw64/include/c++/15.2.0/bits/stl_heap.h:63:1: error: expected unqualified-id before 'namespace'
+   63 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/stl_algo.h:65:
+C:/msys64/mingw64/include/c++/15.2.0/bits/uniform_int_dist.h:41:1: error: expected unqualified-id before 'namespace'
+   41 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/stl_algo.h:80:1: error: expected unqualified-id before 'namespace'
+   80 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/algorithm:89:
+C:/msys64/mingw64/include/c++/15.2.0/pstl/glue_algorithm_defs.h:18:1: error: expected unqualified-id before 'namespace'
+   18 | namespace std
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/cmath:55,
+                 from agentic_engine.cpp:5:
+C:/msys64/mingw64/include/math.h:75:8: error: expected unqualified-id before string constant
+   75 | extern "C++" {
+      |        ^~~~~
+C:/msys64/mingw64/include/math.h:109:8: error: expected unqualified-id before string constant
+  109 | extern "C" {
+      |        ^~~
+C:/msys64/mingw64/include/c++/15.2.0/cmath:90:8: error: expected unqualified-id before string constant
+   90 | extern "C++"
+      |        ^~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/variant:48,
+                 from agentic_engine.cpp:6:
+C:/msys64/mingw64/include/c++/15.2.0/bits/monostate.h:42:1: error: expected unqualified-id before 'namespace'
+   42 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/variant:63:1: error: expected unqualified-id before 'namespace'
+   63 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+agentic_engine.cpp:9:1: error: expected unqualified-id before 'namespace'
+    9 | namespace RawrXD {
+      | ^~~~~~~~~
+In file included from agentic_engine.cpp:18:
+C:/msys64/mingw64/include/c++/15.2.0/sstream:57:1: error: expected unqualified-id before 'namespace'
+   57 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/sstream:1255:
+C:/msys64/mingw64/include/c++/15.2.0/bits/sstream.tcc:43:1: error: expected unqualified-id before 'namespace'
+   43 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/fstream:44,
+                 from agentic_engine.cpp:24:
+C:/msys64/mingw64/include/c++/15.2.0/bits/codecvt.h:49:1: error: expected unqualified-id before 'namespace'
+   49 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/x86_64-w64-mingw32/bits/basic_file.h:40,
+                 from C:/msys64/mingw64/include/c++/15.2.0/fstream:46:
+C:/msys64/mingw64/include/c++/15.2.0/x86_64-w64-mingw32/bits/c++io.h:38:1: error: expected unqualified-id before 'namespace'
+   38 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/x86_64-w64-mingw32/bits/basic_file.h:44:1: error: expected unqualified-id before 'namespace'
+   44 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/fstream:59:1: error: expected unqualified-id before 'namespace'
+   59 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/fstream:1372:
+C:/msys64/mingw64/include/c++/15.2.0/bits/fstream.tcc:48:1: error: expected unqualified-id before 'namespace'
+   48 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/regex:42,
+                 from agentic_engine.cpp:27:
+C:/msys64/mingw64/include/c++/15.2.0/bitset:73:1: error: expected unqualified-id before 'namespace'
+   73 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bitset:1715:1: error: expected unqualified-id before 'namespace'
+ 1715 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/locale:45,
+                 from C:/msys64/mingw64/include/c++/15.2.0/regex:43:
+C:/msys64/mingw64/include/c++/15.2.0/bits/locale_facets_nonio.h:43:1: error: expected unqualified-id before 'namespace'
+   43 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/locale_facets_nonio.h:354:
+C:/msys64/mingw64/include/c++/15.2.0/x86_64-w64-mingw32/bits/time_members.h:37:1: error: expected unqualified-id before 'namespace'
+   37 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/locale_facets_nonio.h:356:1: error: expected unqualified-id before 'namespace'
+  356 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/locale_facets_nonio.h:2066:
+C:/msys64/mingw64/include/c++/15.2.0/x86_64-w64-mingw32/bits/messages_members.h:36:1: error: expected unqualified-id before 'namespace'
+   36 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/locale_facets_nonio.h:2071:
+C:/msys64/mingw64/include/c++/15.2.0/bits/locale_facets_nonio.tcc:37:1: error: expected unqualified-id before 'namespace'
+   37 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/locale:47:
+C:/msys64/mingw64/include/c++/15.2.0/bits/locale_conv.h:42:1: error: expected unqualified-id before 'namespace'
+   42 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/deque:68,
+                 from C:/msys64/mingw64/include/c++/15.2.0/stack:68,
+                 from C:/msys64/mingw64/include/c++/15.2.0/regex:45:
+C:/msys64/mingw64/include/c++/15.2.0/bits/stl_deque.h:75:1: error: expected unqualified-id before 'namespace'
+   75 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/deque:71:
+C:/msys64/mingw64/include/c++/15.2.0/bits/deque.tcc:61:1: error: expected unqualified-id before 'namespace'
+   61 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/deque:86:1: error: expected unqualified-id before 'namespace'
+   86 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/stack:69:
+C:/msys64/mingw64/include/c++/15.2.0/bits/stl_stack.h:69:1: error: expected unqualified-id before 'namespace'
+   69 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/regex:57:
+C:/msys64/mingw64/include/c++/15.2.0/bits/stl_tree.h:85:1: error: expected unqualified-id before 'namespace'
+   85 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/regex:58:
+C:/msys64/mingw64/include/c++/15.2.0/bits/stl_map.h:69:1: error: expected unqualified-id before 'namespace'
+   69 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/regex:65:
+C:/msys64/mingw64/include/c++/15.2.0/bits/regex_constants.h:33:1: error: expected unqualified-id before 'namespace'
+   33 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/regex:66:
+C:/msys64/mingw64/include/c++/15.2.0/bits/regex_error.h:33:1: error: expected unqualified-id before 'namespace'
+   33 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/regex:67:
+C:/msys64/mingw64/include/c++/15.2.0/bits/regex_automaton.h:39:1: error: expected unqualified-id before 'namespace'
+   39 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/regex_automaton.h:405:
+C:/msys64/mingw64/include/c++/15.2.0/bits/regex_automaton.tcc:31:1: error: expected unqualified-id before 'namespace'
+   31 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/regex:68:
+C:/msys64/mingw64/include/c++/15.2.0/bits/regex_scanner.h:31:1: error: expected unqualified-id before 'namespace'
+   31 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/regex_scanner.h:271:
+C:/msys64/mingw64/include/c++/15.2.0/bits/regex_scanner.tcc:49:1: error: expected unqualified-id before 'namespace'
+   49 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/regex:69:
+C:/msys64/mingw64/include/c++/15.2.0/bits/regex_compiler.h:31:1: error: expected unqualified-id before 'namespace'
+   31 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/regex_compiler.h:571:
+C:/msys64/mingw64/include/c++/15.2.0/bits/regex_compiler.tcc:61:1: error: expected unqualified-id before 'namespace'
+   61 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/regex:70:
+C:/msys64/mingw64/include/c++/15.2.0/bits/regex.h:38:1: error: expected unqualified-id before 'namespace'
+   38 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/regex.h:3140:
+C:/msys64/mingw64/include/c++/15.2.0/bits/regex.tcc:31:1: error: expected unqualified-id before 'namespace'
+   31 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/regex:71:
+C:/msys64/mingw64/include/c++/15.2.0/bits/regex_executor.h:33:1: error: expected unqualified-id before 'namespace'
+   33 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/regex_executor.h:312:
+C:/msys64/mingw64/include/c++/15.2.0/bits/regex_executor.tcc:31:1: error: expected unqualified-id before 'namespace'
+   31 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/regex:78:1: error: expected unqualified-id before 'namespace'
+   78 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/filesystem:53,
+                 from agentic_engine.cpp:30:
+C:/msys64/mingw64/include/c++/15.2.0/bits/fs_fwd.h:39:1: error: expected unqualified-id before 'namespace'
+   39 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/iomanip:55,
+                 from C:/msys64/mingw64/include/c++/15.2.0/bits/fs_path.h:38,
+                 from C:/msys64/mingw64/include/c++/15.2.0/filesystem:54:
+C:/msys64/mingw64/include/c++/15.2.0/bits/quoted_string.h:42:1: error: expected unqualified-id before 'namespace'
+   42 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/iomanip:59:1: error: expected unqualified-id before 'namespace'
+   59 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/fs_path.h:39:
+C:/msys64/mingw64/include/c++/15.2.0/codecvt:45:1: error: expected unqualified-id before 'namespace'
+   45 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/fs_path.h:57:1: error: expected unqualified-id before 'namespace'
+   57 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/filesystem:55:
+C:/msys64/mingw64/include/c++/15.2.0/bits/fs_dir.h:45:1: error: expected unqualified-id before 'namespace'
+   45 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/filesystem:56:
+C:/msys64/mingw64/include/c++/15.2.0/bits/fs_ops.h:37:1: error: expected unqualified-id before 'namespace'
+   37 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/unordered_set:43,
+                 from agentic_engine.cpp:39:
+C:/msys64/mingw64/include/c++/15.2.0/bits/unordered_set.h:41:1: error: expected unqualified-id before 'namespace'
+   41 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/unordered_set:61:1: error: expected unqualified-id before 'namespace'
+   61 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/numeric:64,
+                 from agentic_engine.cpp:42:
+C:/msys64/mingw64/include/c++/15.2.0/bits/stl_numeric.h:64:1: error: expected unqualified-id before 'namespace'
+   64 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/numeric:110:1: error: expected unqualified-id before 'namespace'
+  110 | namespace std _GLIBCXX_VISIBILITY(default)
+      | ^~~~~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/numeric:777:
+C:/msys64/mingw64/include/c++/15.2.0/pstl/glue_numeric_defs.h:15:1: error: expected unqualified-id before 'namespace'
+   15 | namespace std
+      | ^~~~~~~~~
+In file included from agentic_engine.cpp:64:
+rawrxd_telemetry_exports.h:21:8: error: expected unqualified-id before string constant
+   21 | extern "C" {
+      |        ^~~
+agentic_engine.cpp:74:12: error: ISO C++ forbids in-class initialization of non-const static member 'AgenticEngine::g_positiveCount'
+   74 | static int g_positiveCount = 0;
+      |            ^~~~~~~~~~~~~~~
+agentic_engine.cpp:75:12: error: ISO C++ forbids in-class initialization of non-const static member 'AgenticEngine::g_negativeCount'
+   75 | static int g_negativeCount = 0;
+      |            ^~~~~~~~~~~~~~~
+agentic_engine.cpp:77:13: error: ISO C++ forbids in-class initialization of non-const static member 'AgenticEngine::g_prefVerbose'
+   77 | static bool g_prefVerbose = false;
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:78:20: error: in-class initialization of static data member 'std::string AgenticEngine::g_prefLanguage' of non-literal type
+   78 | static std::string g_prefLanguage = "en";
+      |                    ^~~~~~~~~~~~~~
+agentic_engine.cpp:78:37: error: call to non-'constexpr' function 'std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::basic_string(const _CharT*, const _Alloc&) [with <template-parameter-2-1> = std::allocator<char>; _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]'
+   78 | static std::string g_prefLanguage = "en";
+      |                                     ^~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/string:56,
+                 from AppState.h:2,
+                 from agentic_engine.cpp:1:
+C:/msys64/mingw64/include/c++/15.2.0/bits/basic_string.h:706:7: note: 'std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::basic_string(const _CharT*, const _Alloc&) [with <template-parameter-2-1> = std::allocator<char>; _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]' declared here
+  706 |       basic_string(const _CharT* __s, const _Alloc& __a = _Alloc())
+      |       ^~~~~~~~~~~~
+agentic_engine.cpp:80:1: error: extra qualification 'AgenticEngine::' on member 'AgenticEngine' [-fpermissive]
+   80 | AgenticEngine::AgenticEngine() : m_inferenceEngine(nullptr) {}
+      | ^~~~~~~~~~~~~
+agentic_engine.cpp:80:1: error: 'AgenticEngine::AgenticEngine()' cannot be overloaded with 'AgenticEngine::AgenticEngine()'
+In file included from agentic_engine.cpp:2:
+agentic_engine.h:20:14: note: previous declaration 'AgenticEngine::AgenticEngine()'
+   20 |     explicit AgenticEngine();
+      |              ^~~~~~~~~~~~~
+agentic_engine.cpp:82:1: error: extra qualification 'AgenticEngine::' on member 'AgenticEngine' [-fpermissive]
+   82 | AgenticEngine::~AgenticEngine() {}
+      | ^~~~~~~~~~~~~
+agentic_engine.cpp:82:1: error: 'AgenticEngine::~AgenticEngine()' cannot be overloaded with 'virtual AgenticEngine::~AgenticEngine()'
+agentic_engine.h:21:13: note: previous declaration 'virtual AgenticEngine::~AgenticEngine()'
+   21 |     virtual ~AgenticEngine();
+      |             ^
+agentic_engine.cpp:84:6: error: extra qualification 'AgenticEngine::' on member 'initialize' [-fpermissive]
+   84 | void AgenticEngine::initialize() {
+      |      ^~~~~~~~~~~~~
+agentic_engine.cpp:84:6: error: 'void AgenticEngine::initialize()' cannot be overloaded with 'void AgenticEngine::initialize()'
+agentic_engine.h:23:10: note: previous declaration 'void AgenticEngine::initialize()'
+   23 |     void initialize();
+      |          ^~~~~~~~~~
+agentic_engine.cpp:88:13: error: extra qualification 'AgenticEngine::' on member 'analyzeCode' [-fpermissive]
+   88 | std::string AgenticEngine::analyzeCode(const std::string& code) {
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:88:13: error: 'std::string AgenticEngine::analyzeCode(const std::string&)' cannot be overloaded with 'std::string AgenticEngine::analyzeCode(const std::string&)'
+agentic_engine.h:26:17: note: previous declaration 'std::string AgenticEngine::analyzeCode(const std::string&)'
+   26 |     std::string analyzeCode(const std::string& code);
+      |                 ^~~~~~~~~~~
+agentic_engine.cpp:92:13: error: extra qualification 'AgenticEngine::' on member 'analyzeCodeQuality' [-fpermissive]
+   92 | std::string AgenticEngine::analyzeCodeQuality(const std::string& code) {
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:92:13: error: 'std::string AgenticEngine::analyzeCodeQuality(const std::string&)' cannot be overloaded with 'std::string AgenticEngine::analyzeCodeQuality(const std::string&)'
+agentic_engine.h:27:17: note: previous declaration 'std::string AgenticEngine::analyzeCodeQuality(const std::string&)'
+   27 |     std::string analyzeCodeQuality(const std::string& code);
+      |                 ^~~~~~~~~~~~~~~~~~
+agentic_engine.cpp:96:13: error: extra qualification 'AgenticEngine::' on member 'detectPatterns' [-fpermissive]
+   96 | std::string AgenticEngine::detectPatterns(const std::string& code) {
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:96:13: error: 'std::string AgenticEngine::detectPatterns(const std::string&)' cannot be overloaded with 'std::string AgenticEngine::detectPatterns(const std::string&)'
+agentic_engine.h:28:17: note: previous declaration 'std::string AgenticEngine::detectPatterns(const std::string&)'
+   28 |     std::string detectPatterns(const std::string& code);
+      |                 ^~~~~~~~~~~~~~
+agentic_engine.cpp:100:13: error: extra qualification 'AgenticEngine::' on member 'calculateMetrics' [-fpermissive]
+  100 | std::string AgenticEngine::calculateMetrics(const std::string& code) {
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:100:13: error: 'std::string AgenticEngine::calculateMetrics(const std::string&)' cannot be overloaded with 'std::string AgenticEngine::calculateMetrics(const std::string&)'
+agentic_engine.h:29:17: note: previous declaration 'std::string AgenticEngine::calculateMetrics(const std::string&)'
+   29 |     std::string calculateMetrics(const std::string& code);
+      |                 ^~~~~~~~~~~~~~~~
+agentic_engine.cpp:239:13: error: extra qualification 'AgenticEngine::' on member 'suggestImprovements' [-fpermissive]
+  239 | std::string AgenticEngine::suggestImprovements(const std::string& code) {
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:239:13: error: 'std::string AgenticEngine::suggestImprovements(const std::string&)' cannot be overloaded with 'std::string AgenticEngine::suggestImprovements(const std::string&)'
+agentic_engine.h:30:17: note: previous declaration 'std::string AgenticEngine::suggestImprovements(const std::string&)'
+   30 |     std::string suggestImprovements(const std::string& code);
+      |                 ^~~~~~~~~~~~~~~~~~~
+agentic_engine.cpp:243:13: error: extra qualification 'AgenticEngine::' on member 'generateCode' [-fpermissive]
+  243 | std::string AgenticEngine::generateCode(const std::string& prompt) {
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:247:13: error: extra qualification 'AgenticEngine::' on member 'generateFunction' [-fpermissive]
+  247 | std::string AgenticEngine::generateFunction(const std::string& signature, const std::string& description) {
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:247:13: error: 'std::string AgenticEngine::generateFunction(const std::string&, const std::string&)' cannot be overloaded with 'std::string AgenticEngine::generateFunction(const std::string&, const std::string&)'
+agentic_engine.h:34:17: note: previous declaration 'std::string AgenticEngine::generateFunction(const std::string&, const std::string&)'
+   34 |     std::string generateFunction(const std::string& signature, const std::string& description);
+      |                 ^~~~~~~~~~~~~~~~
+agentic_engine.cpp:251:13: error: extra qualification 'AgenticEngine::' on member 'generateClass' [-fpermissive]
+  251 | std::string AgenticEngine::generateClass(const std::string& className, const std::string& spec) {
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:251:13: error: 'std::string AgenticEngine::generateClass(const std::string&, const std::string&)' cannot be overloaded with 'std::string AgenticEngine::generateClass(const std::string&, const std::string&)'
+agentic_engine.h:35:17: note: previous declaration 'std::string AgenticEngine::generateClass(const std::string&, const std::string&)'
+   35 |     std::string generateClass(const std::string& className, const std::string& spec);
+      |                 ^~~~~~~~~~~~~
+agentic_engine.cpp:255:13: error: extra qualification 'AgenticEngine::' on member 'generateTests' [-fpermissive]
+  255 | std::string AgenticEngine::generateTests(const std::string& code) {
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:255:13: error: 'std::string AgenticEngine::generateTests(const std::string&)' cannot be overloaded with 'std::string AgenticEngine::generateTests(const std::string&)'
+agentic_engine.h:36:17: note: previous declaration 'std::string AgenticEngine::generateTests(const std::string&)'
+   36 |     std::string generateTests(const std::string& code);
+      |                 ^~~~~~~~~~~~~
+agentic_engine.cpp:259:13: error: extra qualification 'AgenticEngine::' on member 'refactorCode' [-fpermissive]
+  259 | std::string AgenticEngine::refactorCode(const std::string& code, const std::string& refactoringType) {
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:259:13: error: 'std::string AgenticEngine::refactorCode(const std::string&, const std::string&)' cannot be overloaded with 'std::string AgenticEngine::refactorCode(const std::string&, const std::string&)'
+agentic_engine.h:37:17: note: previous declaration 'std::string AgenticEngine::refactorCode(const std::string&, const std::string&)'
+   37 |     std::string refactorCode(const std::string& code, const std::string& refactoringType);
+      |                 ^~~~~~~~~~~~
+agentic_engine.cpp:263:13: error: extra qualification 'AgenticEngine::' on member 'planTask' [-fpermissive]
+  263 | std::string AgenticEngine::planTask(const std::string& goal) {
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:263:13: error: 'std::string AgenticEngine::planTask(const std::string&)' cannot be overloaded with 'std::string AgenticEngine::planTask(const std::string&)'
+agentic_engine.h:40:17: note: previous declaration 'std::string AgenticEngine::planTask(const std::string&)'
+   40 |     std::string planTask(const std::string& goal);
+      |                 ^~~~~~~~
+agentic_engine.cpp:267:13: error: extra qualification 'AgenticEngine::' on member 'decomposeTask' [-fpermissive]
+  267 | std::string AgenticEngine::decomposeTask(const std::string& task) {
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:267:13: error: 'std::string AgenticEngine::decomposeTask(const std::string&)' cannot be overloaded with 'std::string AgenticEngine::decomposeTask(const std::string&)'
+agentic_engine.h:41:17: note: previous declaration 'std::string AgenticEngine::decomposeTask(const std::string&)'
+   41 |     std::string decomposeTask(const std::string& task);
+      |                 ^~~~~~~~~~~~~
+agentic_engine.cpp:271:13: error: extra qualification 'AgenticEngine::' on member 'generateWorkflow' [-fpermissive]
+  271 | std::string AgenticEngine::generateWorkflow(const std::string& project) {
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:271:13: error: 'std::string AgenticEngine::generateWorkflow(const std::string&)' cannot be overloaded with 'std::string AgenticEngine::generateWorkflow(const std::string&)'
+agentic_engine.h:42:17: note: previous declaration 'std::string AgenticEngine::generateWorkflow(const std::string&)'
+   42 |     std::string generateWorkflow(const std::string& project);
+      |                 ^~~~~~~~~~~~~~~~
+agentic_engine.cpp:275:13: error: extra qualification 'AgenticEngine::' on member 'estimateComplexity' [-fpermissive]
+  275 | std::string AgenticEngine::estimateComplexity(const std::string& task) {
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:275:13: error: 'std::string AgenticEngine::estimateComplexity(const std::string&)' cannot be overloaded with 'std::string AgenticEngine::estimateComplexity(const std::string&)'
+agentic_engine.h:43:17: note: previous declaration 'std::string AgenticEngine::estimateComplexity(const std::string&)'
+   43 |     std::string estimateComplexity(const std::string& task);
+      |                 ^~~~~~~~~~~~~~~~~~
+agentic_engine.cpp:279:13: error: extra qualification 'AgenticEngine::' on member 'understandIntent' [-fpermissive]
+  279 | std::string AgenticEngine::understandIntent(const std::string& userInput) {
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:279:13: error: 'std::string AgenticEngine::understandIntent(const std::string&)' cannot be overloaded with 'std::string AgenticEngine::understandIntent(const std::string&)'
+agentic_engine.h:46:17: note: previous declaration 'std::string AgenticEngine::understandIntent(const std::string&)'
+   46 |     std::string understandIntent(const std::string& userInput);
+      |                 ^~~~~~~~~~~~~~~~
+agentic_engine.cpp:283:13: error: extra qualification 'AgenticEngine::' on member 'extractEntities' [-fpermissive]
+  283 | std::string AgenticEngine::extractEntities(const std::string& text) {
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:283:13: error: 'std::string AgenticEngine::extractEntities(const std::string&)' cannot be overloaded with 'std::string AgenticEngine::extractEntities(const std::string&)'
+agentic_engine.h:47:17: note: previous declaration 'std::string AgenticEngine::extractEntities(const std::string&)'
+   47 |     std::string extractEntities(const std::string& text);
+      |                 ^~~~~~~~~~~~~~~
+agentic_engine.cpp:287:13: error: extra qualification 'AgenticEngine::' on member 'generateNaturalResponse' [-fpermissive]
+  287 | std::string AgenticEngine::generateNaturalResponse(const std::string& query, const std::string& context) {
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:287:13: error: 'std::string AgenticEngine::generateNaturalResponse(const std::string&, const std::string&)' cannot be overloaded with 'std::string AgenticEngine::generateNaturalResponse(const std::string&, const std::string&)'
+agentic_engine.h:48:17: note: previous declaration 'std::string AgenticEngine::generateNaturalResponse(const std::string&, const std::string&)'
+   48 |     std::string generateNaturalResponse(const std::string& query, const std::string& context);
+      |                 ^~~~~~~~~~~~~~~~~~~~~~~
+agentic_engine.cpp:291:13: error: extra qualification 'AgenticEngine::' on member 'summarizeCode' [-fpermissive]
+  291 | std::string AgenticEngine::summarizeCode(const std::string& code) {
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:291:13: error: 'std::string AgenticEngine::summarizeCode(const std::string&)' cannot be overloaded with 'std::string AgenticEngine::summarizeCode(const std::string&)'
+agentic_engine.h:49:17: note: previous declaration 'std::string AgenticEngine::summarizeCode(const std::string&)'
+   49 |     std::string summarizeCode(const std::string& code);
+      |                 ^~~~~~~~~~~~~
+agentic_engine.cpp:295:13: error: extra qualification 'AgenticEngine::' on member 'explainError' [-fpermissive]
+  295 | std::string AgenticEngine::explainError(const std::string& errorMessage) {
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:295:13: error: 'std::string AgenticEngine::explainError(const std::string&)' cannot be overloaded with 'std::string AgenticEngine::explainError(const std::string&)'
+agentic_engine.h:50:17: note: previous declaration 'std::string AgenticEngine::explainError(const std::string&)'
+   50 |     std::string explainError(const std::string& errorMessage);
+      |                 ^~~~~~~~~~~~
+agentic_engine.cpp:299:6: error: extra qualification 'AgenticEngine::' on member 'collectFeedback' [-fpermissive]
+  299 | void AgenticEngine::collectFeedback(const std::string& requestId, bool positive, const std::string& comment) {
+      |      ^~~~~~~~~~~~~
+agentic_engine.cpp:299:6: error: 'void AgenticEngine::collectFeedback(const std::string&, bool, const std::string&)' cannot be overloaded with 'void AgenticEngine::collectFeedback(const std::string&, bool, const std::string&)'
+agentic_engine.h:53:10: note: previous declaration 'void AgenticEngine::collectFeedback(const std::string&, bool, const std::string&)'
+   53 |     void collectFeedback(const std::string& responseId, bool positive, const std::string& comment);
+      |          ^~~~~~~~~~~~~~~
+agentic_engine.cpp:318:6: error: extra qualification 'AgenticEngine::' on member 'trainFromFeedback' [-fpermissive]
+  318 | void AgenticEngine::trainFromFeedback() {
+      |      ^~~~~~~~~~~~~
+agentic_engine.cpp:318:6: error: 'void AgenticEngine::trainFromFeedback()' cannot be overloaded with 'void AgenticEngine::trainFromFeedback()'
+agentic_engine.h:54:10: note: previous declaration 'void AgenticEngine::trainFromFeedback()'
+   54 |     void trainFromFeedback();
+      |          ^~~~~~~~~~~~~~~~~
+agentic_engine.cpp:343:13: error: extra qualification 'AgenticEngine::' on member 'getLearningStats' [-fpermissive]
+  343 | std::string AgenticEngine::getLearningStats() const {
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:343:13: error: 'std::string AgenticEngine::getLearningStats() const' cannot be overloaded with 'std::string AgenticEngine::getLearningStats() const'
+agentic_engine.h:55:17: note: previous declaration 'std::string AgenticEngine::getLearningStats() const'
+   55 |     std::string getLearningStats() const;
+      |                 ^~~~~~~~~~~~~~~~
+agentic_engine.cpp:360:6: error: extra qualification 'AgenticEngine::' on member 'adaptToUserPreferences' [-fpermissive]
+  360 | void AgenticEngine::adaptToUserPreferences(const std::string& preferencesJson) {
+      |      ^~~~~~~~~~~~~
+agentic_engine.cpp:360:6: error: 'void AgenticEngine::adaptToUserPreferences(const std::string&)' cannot be overloaded with 'void AgenticEngine::adaptToUserPreferences(const std::string&)'
+agentic_engine.h:56:10: note: previous declaration 'void AgenticEngine::adaptToUserPreferences(const std::string&)'
+   56 |     void adaptToUserPreferences(const std::string& preferences);
+      |          ^~~~~~~~~~~~~~~~~~~~~~
+agentic_engine.cpp:383:6: error: extra qualification 'AgenticEngine::' on member 'validateInput' [-fpermissive]
+  383 | bool AgenticEngine::validateInput(const std::string& input) {
+      |      ^~~~~~~~~~~~~
+agentic_engine.cpp:383:6: error: 'bool AgenticEngine::validateInput(const std::string&)' cannot be overloaded with 'bool AgenticEngine::validateInput(const std::string&)'
+agentic_engine.h:59:10: note: previous declaration 'bool AgenticEngine::validateInput(const std::string&)'
+   59 |     bool validateInput(const std::string& input);
+      |          ^~~~~~~~~~~~~
+agentic_engine.cpp:405:13: error: extra qualification 'AgenticEngine::' on member 'sanitizeCode' [-fpermissive]
+  405 | std::string AgenticEngine::sanitizeCode(const std::string& code) {
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:405:13: error: 'std::string AgenticEngine::sanitizeCode(const std::string&)' cannot be overloaded with 'std::string AgenticEngine::sanitizeCode(const std::string&)'
+agentic_engine.h:60:17: note: previous declaration 'std::string AgenticEngine::sanitizeCode(const std::string&)'
+   60 |     std::string sanitizeCode(const std::string& code);
+      |                 ^~~~~~~~~~~~
+agentic_engine.cpp:438:6: error: extra qualification 'AgenticEngine::' on member 'isCommandSafe' [-fpermissive]
+  438 | bool AgenticEngine::isCommandSafe(const std::string& command) {
+      |      ^~~~~~~~~~~~~
+agentic_engine.cpp:438:6: error: 'bool AgenticEngine::isCommandSafe(const std::string&)' cannot be overloaded with 'bool AgenticEngine::isCommandSafe(const std::string&)'
+agentic_engine.h:61:10: note: previous declaration 'bool AgenticEngine::isCommandSafe(const std::string&)'
+   61 |     bool isCommandSafe(const std::string& command);
+      |          ^~~~~~~~~~~~~
+agentic_engine.cpp:470:13: error: extra qualification 'AgenticEngine::' on member 'writeFile' [-fpermissive]
+  470 | std::string AgenticEngine::writeFile(const std::string& filepath, const std::string& content) {
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:470:13: error: 'std::string AgenticEngine::writeFile(const std::string&, const std::string&)' cannot be overloaded with 'std::string AgenticEngine::writeFile(const std::string&, const std::string&)'
+agentic_engine.h:66:17: note: previous declaration 'std::string AgenticEngine::writeFile(const std::string&, const std::string&)'
+   66 |     std::string writeFile(const std::string& filepath, const std::string& content);
+      |                 ^~~~~~~~~
+agentic_engine.cpp:482:13: error: extra qualification 'AgenticEngine::' on member 'listDir' [-fpermissive]
+  482 | std::string AgenticEngine::listDir(const std::string& path) {
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:482:13: error: 'std::string AgenticEngine::listDir(const std::string&)' cannot be overloaded with 'std::string AgenticEngine::listDir(const std::string&)'
+agentic_engine.h:67:17: note: previous declaration 'std::string AgenticEngine::listDir(const std::string&)'
+   67 |     std::string listDir(const std::string& path);
+      |                 ^~~~~~~
+agentic_engine.cpp:496:13: error: extra qualification 'AgenticEngine::' on member 'grepFiles' [-fpermissive]
+  496 | std::string AgenticEngine::grepFiles(const std::string& pattern, const std::string& path) {
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:496:13: error: 'std::string AgenticEngine::grepFiles(const std::string&, const std::string&)' cannot be overloaded with 'std::string AgenticEngine::grepFiles(const std::string&, const std::string&)'
+agentic_engine.h:64:17: note: previous declaration 'std::string AgenticEngine::grepFiles(const std::string&, const std::string&)'
+   64 |     std::string grepFiles(const std::string& pattern, const std::string& path = ".");
+      |                 ^~~~~~~~~
+agentic_engine.cpp:571:13: error: extra qualification 'AgenticEngine::' on member 'readFile' [-fpermissive]
+  571 | std::string AgenticEngine::readFile(const std::string& filePath, int startLine, int endLine) {
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:571:13: error: 'std::string AgenticEngine::readFile(const std::string&, int, int)' cannot be overloaded with 'std::string AgenticEngine::readFile(const std::string&, int, int)'
+agentic_engine.h:65:17: note: previous declaration 'std::string AgenticEngine::readFile(const std::string&, int, int)'
+   65 |     std::string readFile(const std::string& filepath, int startLine = -1, int endLine = -1);
+      |                 ^~~~~~~~
+agentic_engine.cpp:608:13: error: extra qualification 'AgenticEngine::' on member 'searchFiles' [-fpermissive]
+  608 | std::string AgenticEngine::searchFiles(const std::string& query, const std::string& path) {
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:608:13: error: 'std::string AgenticEngine::searchFiles(const std::string&, const std::string&)' cannot be overloaded with 'std::string AgenticEngine::searchFiles(const std::string&, const std::string&)'
+agentic_engine.h:68:17: note: previous declaration 'std::string AgenticEngine::searchFiles(const std::string&, const std::string&)'
+   68 |     std::string searchFiles(const std::string& query, const std::string& path = ".");
+      |                 ^~~~~~~~~~~
+agentic_engine.cpp:689:13: error: extra qualification 'AgenticEngine::' on member 'referenceSymbol' [-fpermissive]
+  689 | std::string AgenticEngine::referenceSymbol(const std::string& symbol) {
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:689:13: error: 'std::string AgenticEngine::referenceSymbol(const std::string&)' cannot be overloaded with 'std::string AgenticEngine::referenceSymbol(const std::string&)'
+agentic_engine.h:69:17: note: previous declaration 'std::string AgenticEngine::referenceSymbol(const std::string&)'
+   69 |     std::string referenceSymbol(const std::string& symbol);
+      |                 ^~~~~~~~~~~~~~~
+agentic_engine.cpp:776:6: error: extra qualification 'AgenticEngine::' on member 'updateConfig' [-fpermissive]
+  776 | void AgenticEngine::updateConfig(const GenerationConfig& config) {
+      |      ^~~~~~~~~~~~~
+agentic_engine.cpp:786:13: error: extra qualification 'AgenticEngine::' on member 'runDumpbin' [-fpermissive]
+  786 | std::string AgenticEngine::runDumpbin(const std::string& filePath, const std::string& mode) {
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:786:13: error: 'std::string AgenticEngine::runDumpbin(const std::string&, const std::string&)' cannot be overloaded with 'std::string AgenticEngine::runDumpbin(const std::string&, const std::string&)'
+agentic_engine.h:75:17: note: previous declaration 'std::string AgenticEngine::runDumpbin(const std::string&, const std::string&)'
+   75 |     std::string runDumpbin(const std::string& filePath, const std::string& mode);
+      |                 ^~~~~~~~~~
+agentic_engine.cpp:794:13: error: extra qualification 'AgenticEngine::' on member 'runCodex' [-fpermissive]
+  794 | std::string AgenticEngine::runCodex(const std::string& filePath) {
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:794:13: error: 'std::string AgenticEngine::runCodex(const std::string&)' cannot be overloaded with 'std::string AgenticEngine::runCodex(const std::string&)'
+agentic_engine.h:76:17: note: previous declaration 'std::string AgenticEngine::runCodex(const std::string&)'
+   76 |     std::string runCodex(const std::string& filePath);
+      |                 ^~~~~~~~
+agentic_engine.cpp:826:13: error: extra qualification 'AgenticEngine::' on member 'runCompiler' [-fpermissive]
+  826 | std::string AgenticEngine::runCompiler(const std::string& sourceFile, const std::string& target) {
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:826:13: error: 'std::string AgenticEngine::runCompiler(const std::string&, const std::string&)' cannot be overloaded with 'std::string AgenticEngine::runCompiler(const std::string&, const std::string&)'
+agentic_engine.h:77:17: note: previous declaration 'std::string AgenticEngine::runCompiler(const std::string&, const std::string&)'
+   77 |     std::string runCompiler(const std::string& sourceFile, const std::string& target);
+      |                 ^~~~~~~~~~~
+agentic_engine.cpp:838:13: error: extra qualification 'AgenticEngine::' on member 'executeCommand' [-fpermissive]
+  838 | std::string AgenticEngine::executeCommand(const std::string& command, bool isPowerShell) {
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:838:13: error: 'std::string AgenticEngine::executeCommand(const std::string&, bool)' cannot be overloaded with 'std::string AgenticEngine::executeCommand(const std::string&, bool)'
+agentic_engine.h:72:17: note: previous declaration 'std::string AgenticEngine::executeCommand(const std::string&, bool)'
+   72 |     std::string executeCommand(const std::string& command, bool isPowerShell = false);
+      |                 ^~~~~~~~~~~~~~
+agentic_engine.cpp:871:13: error: extra qualification 'AgenticEngine::' on member 'chat' [-fpermissive]
+  871 | std::string AgenticEngine::chat(const std::string& message) {
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:900:13: error: extra qualification 'AgenticEngine::' on member 'runSubAgent' [-fpermissive]
+  900 | std::string AgenticEngine::runSubAgent(const std::string& description, const std::string& prompt) {
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:905:13: error: extra qualification 'AgenticEngine::' on member 'executeChain' [-fpermissive]
+  905 | std::string AgenticEngine::executeChain(const std::vector<std::string>& steps,
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:929:13: error: extra qualification 'AgenticEngine::' on member 'executeSwarm' [-fpermissive]
+  929 | std::string AgenticEngine::executeSwarm(const std::vector<std::string>& prompts,
+      |             ^~~~~~~~~~~~~
+agentic_engine.cpp:963:2: error: expected '}' at end of input
+  963 | }
+      |  ^
+agentic_engine.h:18:21: note: to match this '{'
+   18 | class AgenticEngine {
+      |                     ^
+agentic_engine.h: In member function 'void AgenticEngine::setInferenceEngine(RawrXD::InferenceEngine*)':
+agentic_engine.h:80:64: error: 'm_inferenceEngine' was not declared in this scope; did you mean 'inferenceEngine'?
+   80 |     void setInferenceEngine(RawrXD::InferenceEngine* engine) { m_inferenceEngine = engine; }
+      |                                                                ^~~~~~~~~~~~~~~~~
+      |                                                                inferenceEngine
+agentic_engine.h: In member function 'RawrXD::InferenceEngine* AgenticEngine::inferenceEngine() const':
+agentic_engine.h:81:63: error: 'm_inferenceEngine' was not declared in this scope; did you mean 'inferenceEngine'?
+   81 |     RawrXD::InferenceEngine* inferenceEngine() const { return m_inferenceEngine; }
+      |                                                               ^~~~~~~~~~~~~~~~~
+      |                                                               inferenceEngine
+agentic_engine.h: In member function 'void AgenticEngine::setChatProvider(std::function<std::__cxx11::basic_string<char>(const std::__cxx11::basic_string<char>&)>)':
+agentic_engine.h:86:79: error: 'm_chatProvider' was not declared in this scope; did you mean 'setChatProvider'?
+   86 |     void setChatProvider(std::function<std::string(const std::string&)> fn) { m_chatProvider = std::move(fn); }
+      |                                                                               ^~~~~~~~~~~~~~
+      |                                                                               setChatProvider
+agentic_engine.h: In member function 'void AgenticEngine::clearChatProvider()':
+agentic_engine.h:87:32: error: 'm_chatProvider' was not declared in this scope; did you mean 'setChatProvider'?
+   87 |     void clearChatProvider() { m_chatProvider = nullptr; }
+      |                                ^~~~~~~~~~~~~~
+      |                                setChatProvider
+agentic_engine.h: In member function 'bool AgenticEngine::isModelLoaded() const':
+agentic_engine.h:90:13: error: 'm_chatProvider' was not declared in this scope; did you mean 'setChatProvider'?
+   90 |         if (m_chatProvider) return true;
+      |             ^~~~~~~~~~~~~~
+      |             setChatProvider
+agentic_engine.h:91:16: error: 'm_inferenceEngine' was not declared in this scope; did you mean 'inferenceEngine'?
+   91 |         return m_inferenceEngine && m_inferenceEngine->IsModelLoaded();
+      |                ^~~~~~~~~~~~~~~~~
+      |                inferenceEngine
+agentic_engine.h: In member function 'std::string AgenticEngine::currentModelPath() const':
+agentic_engine.h:93:51: error: 'm_currentModelPath' was not declared in this scope; did you mean 'currentModelPath'?
+   93 |     std::string currentModelPath() const { return m_currentModelPath; }
+      |                                                   ^~~~~~~~~~~~~~~~~~
+      |                                                   currentModelPath
+agentic_engine.cpp: In constructor 'AgenticEngine::AgenticEngine()':
+agentic_engine.cpp:80:34: error: class 'AgenticEngine' does not have any field named 'm_inferenceEngine'
+   80 | AgenticEngine::AgenticEngine() : m_inferenceEngine(nullptr) {}
+      |                                  ^~~~~~~~~~~~~~~~~
+agentic_engine.cpp: In member function 'std::string AgenticEngine::calculateMetrics(const std::string&)':
+agentic_engine.cpp:114:35: error: variable 'std::istringstream stream' has initializer but incomplete type
+  114 |     std::istringstream stream(code);
+      |                                   ^
+agentic_engine.cpp:173:27: error: 'regex' in namespace 'std' does not name a type
+  173 |         static const std::regex decisionPattern(
+      |                           ^~~~~
+agentic_engine.cpp:176:14: error: 'sregex_iterator' is not a member of 'std'; did you mean 'reverse_iterator'?
+  176 |         std::sregex_iterator it(trimmed.begin(), trimmed.end(), decisionPattern);
+      |              ^~~~~~~~~~~~~~~
+      |              reverse_iterator
+agentic_engine.cpp:177:14: error: 'sregex_iterator' is not a member of 'std'; did you mean 'reverse_iterator'?
+  177 |         std::sregex_iterator end;
+      |              ^~~~~~~~~~~~~~~
+      |              reverse_iterator
+agentic_engine.cpp:178:64: error: 'it' was not declared in this scope; did you mean 'int'?
+  178 |         cyclomaticComplexity += static_cast<int>(std::distance(it, end));
+      |                                                                ^~
+      |                                                                int
+agentic_engine.cpp:178:68: error: 'end' was not declared in this scope; did you mean 'std::end'?
+  178 |         cyclomaticComplexity += static_cast<int>(std::distance(it, end));
+      |                                                                    ^~~
+      |                                                                    std::end
+In file included from C:/msys64/mingw64/include/c++/15.2.0/string:55:
+C:/msys64/mingw64/include/c++/15.2.0/bits/range_access.h:122:37: note: 'std::end' declared here
+  122 |   template<typename _Tp> const _Tp* end(const valarray<_Tp>&) noexcept;
+      |                                     ^~~
+agentic_engine.cpp:181:27: error: 'regex' in namespace 'std' does not name a type
+  181 |         static const std::regex funcPattern(
+      |                           ^~~~~
+agentic_engine.cpp:184:18: error: 'regex_search' is not a member of 'std'
+  184 |         if (std::regex_search(trimmed, funcPattern)) {
+      |                  ^~~~~~~~~~~~
+agentic_engine.cpp:184:40: error: 'funcPattern' was not declared in this scope
+  184 |         if (std::regex_search(trimmed, funcPattern)) {
+      |                                        ^~~~~~~~~~~
+agentic_engine.cpp:189:27: error: 'regex' in namespace 'std' does not name a type
+  189 |         static const std::regex classPattern(
+      |                           ^~~~~
+agentic_engine.cpp:192:18: error: 'regex_search' is not a member of 'std'
+  192 |         if (std::regex_search(trimmed, classPattern)) {
+      |                  ^~~~~~~~~~~~
+agentic_engine.cpp:192:40: error: 'classPattern' was not declared in this scope
+  192 |         if (std::regex_search(trimmed, classPattern)) {
+      |                                        ^~~~~~~~~~~~
+agentic_engine.cpp:200:68: error: 'log10' was not declared in this scope
+  200 |         double halsteadVolume = static_cast<double>(totalTokens) * log10(static_cast<double>(totalTokens));
+      |                                                                    ^~~~~
+agentic_engine.cpp:202:27: error: 'log' was not declared in this scope; did you mean 'long'?
+  202 |             171.0 - 5.2 * log(halsteadVolume) - 0.23 * cyclomaticComplexity - 16.2 * log(static_cast<double>(codeLines)));
+      |                           ^~~
+      |                           long
+agentic_engine.cpp:220:24: error: aggregate 'std::ostringstream json' has incomplete type and cannot be defined
+  220 |     std::ostringstream json;
+      |                        ^~~~
+agentic_engine.cpp: In member function 'void AgenticEngine::trainFromFeedback()':
+agentic_engine.cpp:327:36: error: variable 'std::istringstream iss' has initializer but incomplete type
+  327 |             std::istringstream iss(fb.comment);
+      |                                    ^~
+agentic_engine.cpp:330:22: error: 'transform' is not a member of 'std'
+  330 |                 std::transform(word.begin(), word.end(), word.begin(), ::tolower);
+      |                      ^~~~~~~~~
+agentic_engine.cpp: In member function 'std::string AgenticEngine::getLearningStats() const':
+agentic_engine.cpp:345:24: error: aggregate 'std::ostringstream oss' has incomplete type and cannot be defined
+  345 |     std::ostringstream oss;
+      |                        ^~~
+agentic_engine.cpp:353:21: error: 'fixed' is not a member of 'std'
+  353 |         oss << std::fixed << std::setprecision(3) << (double)g_positiveCount / (double)total;
+      |                     ^~~~~
+agentic_engine.cpp:65:1: note: 'std::fixed' is defined in header '<ios>'; this is probably fixable by adding '#include <ios>'
+   64 | #include "rawrxd_telemetry_exports.h"
+  +++ |+#include <ios>
+   65 | #include <cmath>
+agentic_engine.cpp:353:35: error: 'setprecision' is not a member of 'std'
+  353 |         oss << std::fixed << std::setprecision(3) << (double)g_positiveCount / (double)total;
+      |                                   ^~~~~~~~~~~~
+agentic_engine.cpp:65:1: note: 'std::setprecision' is defined in header '<iomanip>'; this is probably fixable by adding '#include <iomanip>'
+   64 | #include "rawrxd_telemetry_exports.h"
+  +++ |+#include <iomanip>
+   65 | #include <cmath>
+agentic_engine.cpp: In member function 'bool AgenticEngine::validateInput(const std::string&)':
+agentic_engine.cpp:397:10: error: 'transform' is not a member of 'std'
+  397 |     std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+      |          ^~~~~~~~~
+agentic_engine.cpp: In member function 'bool AgenticEngine::isCommandSafe(const std::string&)':
+agentic_engine.cpp:453:10: error: 'transform' is not a member of 'std'
+  453 |     std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+      |          ^~~~~~~~~
+agentic_engine.cpp: In member function 'std::string AgenticEngine::writeFile(const std::string&, const std::string&)':
+agentic_engine.cpp:473:24: error: variable 'std::ofstream file' has initializer but incomplete type
+  473 |     std::ofstream file(filepath, std::ios::out | std::ios::trunc);
+      |                        ^~~~~~~~
+agentic_engine.cpp:65:1: note: 'std::ofstream' is defined in header '<fstream>'; this is probably fixable by adding '#include <fstream>'
+   64 | #include "rawrxd_telemetry_exports.h"
+  +++ |+#include <fstream>
+   65 | #include <cmath>
+agentic_engine.cpp:473:44: error: incomplete type 'std::ios' {aka 'std::basic_ios<char>'} used in nested name specifier
+  473 |     std::ofstream file(filepath, std::ios::out | std::ios::trunc);
+      |                                            ^~~
+agentic_engine.cpp:473:60: error: incomplete type 'std::ios' {aka 'std::basic_ios<char>'} used in nested name specifier
+  473 |     std::ofstream file(filepath, std::ios::out | std::ios::trunc);
+      |                                                            ^~~~~
+agentic_engine.cpp: In member function 'std::string AgenticEngine::listDir(const std::string&)':
+agentic_engine.cpp:483:24: error: aggregate 'std::ostringstream oss' has incomplete type and cannot be defined
+  483 |     std::ostringstream oss;
+      |                        ^~~
+agentic_engine.cpp:486:51: error: 'directory_iterator' is not a member of 'std::filesystem'
+  486 |         for (const auto& entry : std::filesystem::directory_iterator(path)) {
+      |                                                   ^~~~~~~~~~~~~~~~~~
+agentic_engine.cpp: In member function 'std::string AgenticEngine::grepFiles(const std::string&, const std::string&)':
+agentic_engine.cpp:497:24: error: aggregate 'std::ostringstream results' has incomplete type and cannot be defined
+  497 |     std::ostringstream results;
+      |                        ^~~~~~~
+agentic_engine.cpp:502:14: error: 'regex' is not a member of 'std'
+  502 |         std::regex searchRegex(pattern, std::regex::ECMAScript | std::regex::icase);
+      |              ^~~~~
+agentic_engine.cpp:505:51: error: 'recursive_directory_iterator' is not a member of 'std::filesystem'
+  505 |         for (const auto& entry : std::filesystem::recursive_directory_iterator(
+      |                                                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+agentic_engine.cpp:506:46: error: 'std::filesystem::directory_options' has not been declared
+  506 |                 searchPath, std::filesystem::directory_options::skip_permission_denied)) {
+      |                                              ^~~~~~~~~~~~~~~~~
+agentic_engine.cpp:512:18: error: 'transform' is not a member of 'std'
+  512 |             std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+      |                  ^~~~~~~~~
+agentic_engine.cpp:513:31: error: 'unordered_set' in namespace 'std' does not name a template type
+  513 |             static const std::unordered_set<std::string> textExts = {
+      |                               ^~~~~~~~~~~~~
+agentic_engine.cpp:65:1: note: 'std::unordered_set' is defined in header '<unordered_set>'; this is probably fixable by adding '#include <unordered_set>'
+   64 | #include "rawrxd_telemetry_exports.h"
+  +++ |+#include <unordered_set>
+   65 | #include <cmath>
+agentic_engine.cpp:521:18: error: 'textExts' was not declared in this scope
+  521 |             if (!textExts.count(ext)) continue;
+      |                  ^~~~~~~~
+agentic_engine.cpp:526:32: error: variable 'std::ifstream file' has initializer but incomplete type
+  526 |             std::ifstream file(entry.path(), std::ios::in);
+      |                                ^~~~~
+agentic_engine.cpp:526:32: note: 'std::ifstream' is defined in header '<fstream>'; this is probably fixable by adding '#include <fstream>'
+agentic_engine.cpp:526:56: error: incomplete type 'std::ios' {aka 'std::basic_ios<char>'} used in nested name specifier
+  526 |             std::ifstream file(entry.path(), std::ios::in);
+      |                                                        ^~
+agentic_engine.cpp:535:26: error: 'regex_search' is not a member of 'std'
+  535 |                 if (std::regex_search(line, searchRegex)) {
+      |                          ^~~~~~~~~~~~
+agentic_engine.cpp:535:45: error: 'searchRegex' was not declared in this scope
+  535 |                 if (std::regex_search(line, searchRegex)) {
+      |                                             ^~~~~~~~~~~
+agentic_engine.cpp:541:36: error: expected unqualified-id before '&' token
+  541 |     } catch (const std::regex_error& e) {
+      |                                    ^
+agentic_engine.cpp:541:36: error: expected ')' before '&' token
+agentic_engine.cpp:541:13: note: to match this '('
+  541 |     } catch (const std::regex_error& e) {
+      |             ^
+agentic_engine.cpp:541:36: error: expected '{' before '&' token
+  541 |     } catch (const std::regex_error& e) {
+      |                                    ^
+agentic_engine.cpp:541:38: error: 'e' was not declared in this scope
+  541 |     } catch (const std::regex_error& e) {
+      |                                      ^
+agentic_engine.cpp:563:7: error: expected primary-expression before 'catch'
+  563 |     } catch (const std::filesystem::filesystem_error& e) {
+      |       ^~~~~
+agentic_engine.cpp: In member function 'std::string AgenticEngine::readFile(const std::string&, int, int)':
+agentic_engine.cpp:572:24: error: variable 'std::ifstream file' has initializer but incomplete type
+  572 |     std::ifstream file(filePath, std::ios::in);
+      |                        ^~~~~~~~
+agentic_engine.cpp:572:24: note: 'std::ifstream' is defined in header '<fstream>'; this is probably fixable by adding '#include <fstream>'
+agentic_engine.cpp:572:44: error: incomplete type 'std::ios' {aka 'std::basic_ios<char>'} used in nested name specifier
+  572 |     std::ifstream file(filePath, std::ios::in);
+      |                                            ^~
+agentic_engine.cpp:577:24: error: aggregate 'std::ostringstream result' has incomplete type and cannot be defined
+  577 |     std::ostringstream result;
+      |                        ^~~~~~
+agentic_engine.cpp: In member function 'std::string AgenticEngine::searchFiles(const std::string&, const std::string&)':
+agentic_engine.cpp:609:24: error: aggregate 'std::ostringstream results' has incomplete type and cannot be defined
+  609 |     std::ostringstream results;
+      |                        ^~~~~~~
+agentic_engine.cpp:618:37: error: variable 'std::istringstream iss' has initializer but incomplete type
+  618 |         std::istringstream iss(query);
+      |                                     ^
+agentic_engine.cpp:621:18: error: 'transform' is not a member of 'std'
+  621 |             std::transform(term.begin(), term.end(), term.begin(), ::tolower);
+      |                  ^~~~~~~~~
+agentic_engine.cpp:627:51: error: 'recursive_directory_iterator' is not a member of 'std::filesystem'
+  627 |         for (const auto& entry : std::filesystem::recursive_directory_iterator(
+      |                                                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+agentic_engine.cpp:628:46: error: 'std::filesystem::directory_options' has not been declared
+  628 |                 searchPath, std::filesystem::directory_options::skip_permission_denied)) {
+      |                                              ^~~~~~~~~~~~~~~~~
+agentic_engine.cpp:635:18: error: 'transform' is not a member of 'std'
+  635 |             std::transform(filenameLower.begin(), filenameLower.end(), filenameLower.begin(), ::tolower);
+      |                  ^~~~~~~~~
+agentic_engine.cpp:653:18: error: 'transform' is not a member of 'std'
+  653 |             std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+      |                  ^~~~~~~~~
+agentic_engine.cpp:654:31: error: 'unordered_set' in namespace 'std' does not name a template type
+  654 |             static const std::unordered_set<std::string> textExts = {
+      |                               ^~~~~~~~~~~~~
+agentic_engine.cpp:654:26: note: 'std::unordered_set' is defined in header '<unordered_set>'; this is probably fixable by adding '#include <unordered_set>'
+  654 |             static const std::unordered_set<std::string> textExts = {
+      |                          ^~~
+agentic_engine.cpp:658:18: error: 'textExts' was not declared in this scope
+  658 |             if (!textExts.count(ext)) continue;
+      |                  ^~~~~~~~
+agentic_engine.cpp:661:32: error: variable 'std::ifstream file' has initializer but incomplete type
+  661 |             std::ifstream file(entry.path(), std::ios::in);
+      |                                ^~~~~
+agentic_engine.cpp:661:32: note: 'std::ifstream' is defined in header '<fstream>'; this is probably fixable by adding '#include <fstream>'
+agentic_engine.cpp:661:56: error: incomplete type 'std::ios' {aka 'std::basic_ios<char>'} used in nested name specifier
+  661 |             std::ifstream file(entry.path(), std::ios::in);
+      |                                                        ^~
+agentic_engine.cpp:664:69: error: invalid use of incomplete type 'class std::istreambuf_iterator<char>'
+  664 |             std::string content((std::istreambuf_iterator<char>(file)),
+      |                                                                     ^
+In file included from C:/msys64/mingw64/include/c++/15.2.0/bits/localefwd.h:43,
+                 from C:/msys64/mingw64/include/c++/15.2.0/string:47:
+C:/msys64/mingw64/include/c++/15.2.0/iosfwd:129:11: note: declaration of 'class std::istreambuf_iterator<char>'
+  129 |     class istreambuf_iterator;
+      |           ^~~~~~~~~~~~~~~~~~~
+agentic_engine.cpp:665:65: error: invalid use of incomplete type 'class std::istreambuf_iterator<char>'
+  665 |                                  std::istreambuf_iterator<char>());
+      |                                                                 ^
+C:/msys64/mingw64/include/c++/15.2.0/iosfwd:129:11: note: declaration of 'class std::istreambuf_iterator<char>'
+  129 |     class istreambuf_iterator;
+      |           ^~~~~~~~~~~~~~~~~~~
+agentic_engine.cpp:667:18: error: 'transform' is not a member of 'std'
+  667 |             std::transform(contentLower.begin(), contentLower.end(), contentLower.begin(), ::tolower);
+      |                  ^~~~~~~~~
+agentic_engine.cpp:681:53: error: expected unqualified-id before '&' token
+  681 |     } catch (const std::filesystem::filesystem_error& e) {
+      |                                                     ^
+agentic_engine.cpp:681:53: error: expected ')' before '&' token
+agentic_engine.cpp:681:13: note: to match this '('
+  681 |     } catch (const std::filesystem::filesystem_error& e) {
+      |             ^
+agentic_engine.cpp:681:53: error: expected '{' before '&' token
+  681 |     } catch (const std::filesystem::filesystem_error& e) {
+      |                                                     ^
+agentic_engine.cpp:681:55: error: 'e' was not declared in this scope
+  681 |     } catch (const std::filesystem::filesystem_error& e) {
+      |                                                       ^
+agentic_engine.cpp: In member function 'std::string AgenticEngine::referenceSymbol(const std::string&)':
+agentic_engine.cpp:692:24: error: aggregate 'std::ostringstream results' has incomplete type and cannot be defined
+  692 |     std::ostringstream results;
+      |                        ^~~~~~~
+agentic_engine.cpp:699:14: error: 'regex' is not a member of 'std'
+  699 |         std::regex defPattern(
+      |              ^~~~~
+agentic_engine.cpp:704:14: error: 'regex' is not a member of 'std'
+  704 |         std::regex callPattern(
+      |              ^~~~~
+agentic_engine.cpp:708:14: error: 'regex' is not a member of 'std'
+  708 |         std::regex memberPattern(
+      |              ^~~~~
+agentic_engine.cpp:714:51: error: 'recursive_directory_iterator' is not a member of 'std::filesystem'
+  714 |         for (const auto& entry : std::filesystem::recursive_directory_iterator(
+      |                                                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+agentic_engine.cpp:715:46: error: 'std::filesystem::directory_options' has not been declared
+  715 |                 searchPath, std::filesystem::directory_options::skip_permission_denied)) {
+      |                                              ^~~~~~~~~~~~~~~~~
+agentic_engine.cpp:720:18: error: 'transform' is not a member of 'std'
+  720 |             std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+      |                  ^~~~~~~~~
+agentic_engine.cpp:721:31: error: 'unordered_set' in namespace 'std' does not name a template type
+  721 |             static const std::unordered_set<std::string> codeExts = {
+      |                               ^~~~~~~~~~~~~
+agentic_engine.cpp:721:26: note: 'std::unordered_set' is defined in header '<unordered_set>'; this is probably fixable by adding '#include <unordered_set>'
+  721 |             static const std::unordered_set<std::string> codeExts = {
+      |                          ^~~
+agentic_engine.cpp:725:18: error: 'codeExts' was not declared in this scope; did you mean 'codex'?
+  725 |             if (!codeExts.count(ext)) continue;
+      |                  ^~~~~~~~
+      |                  codex
+agentic_engine.cpp:728:32: error: variable 'std::ifstream file' has initializer but incomplete type
+  728 |             std::ifstream file(entry.path(), std::ios::in);
+      |                                ^~~~~
+agentic_engine.cpp:728:32: note: 'std::ifstream' is defined in header '<fstream>'; this is probably fixable by adding '#include <fstream>'
+agentic_engine.cpp:728:56: error: incomplete type 'std::ios' {aka 'std::basic_ios<char>'} used in nested name specifier
+  728 |             std::ifstream file(entry.path(), std::ios::in);
+      |                                                        ^~
+agentic_engine.cpp:741:26: error: 'regex_search' is not a member of 'std'
+  741 |                 if (std::regex_search(line, defPattern)) {
+      |                          ^~~~~~~~~~~~
+agentic_engine.cpp:741:45: error: 'defPattern' was not declared in this scope; did you mean 'detectPatterns'?
+  741 |                 if (std::regex_search(line, defPattern)) {
+      |                                             ^~~~~~~~~~
+      |                                             detectPatterns
+agentic_engine.cpp:744:33: error: 'regex_search' is not a member of 'std'
+  744 |                 } else if (std::regex_search(line, callPattern)) {
+      |                                 ^~~~~~~~~~~~
+agentic_engine.cpp:744:52: error: 'callPattern' was not declared in this scope
+  744 |                 } else if (std::regex_search(line, callPattern)) {
+      |                                                    ^~~~~~~~~~~
+agentic_engine.cpp:747:33: error: 'regex_search' is not a member of 'std'
+  747 |                 } else if (std::regex_search(line, memberPattern)) {
+      |                                 ^~~~~~~~~~~~
+agentic_engine.cpp:747:52: error: 'memberPattern' was not declared in this scope
+  747 |                 } else if (std::regex_search(line, memberPattern)) {
+      |                                                    ^~~~~~~~~~~~~
+agentic_engine.cpp:757:36: error: expected unqualified-id before '&' token
+  757 |     } catch (const std::regex_error&) {
+      |                                    ^
+agentic_engine.cpp:757:36: error: expected ')' before '&' token
+agentic_engine.cpp:757:13: note: to match this '('
+  757 |     } catch (const std::regex_error&) {
+      |             ^
+agentic_engine.cpp:757:36: error: expected '{' before '&' token
+  757 |     } catch (const std::regex_error&) {
+      |                                    ^
+agentic_engine.cpp:757:37: error: expected primary-expression before ')' token
+  757 |     } catch (const std::regex_error&) {
+      |                                     ^
+agentic_engine.cpp:760:7: error: expected primary-expression before 'catch'
+  760 |     } catch (const std::filesystem::filesystem_error& e) {
+      |       ^~~~~
+agentic_engine.cpp:764:24: error: aggregate 'std::ostringstream summary' has incomplete type and cannot be defined
+  764 |     std::ostringstream summary;
+      |                        ^~~~~~~
+agentic_engine.cpp: In member function 'void AgenticEngine::updateConfig(const GenerationConfig&)':
+agentic_engine.cpp:777:14: error: passing 'const AgenticEngine::GenerationConfig' as 'this' argument discards qualifiers [-fpermissive]
+  777 |     config = config;
+      |              ^~~~~~
+agentic_engine.h:96:12: note:   in call to 'constexpr AgenticEngine::GenerationConfig& AgenticEngine::GenerationConfig::operator=(const AgenticEngine::GenerationConfig&)'
+   96 |     struct GenerationConfig { float temperature; float top_p; int max_tokens; bool maxMode; bool deepThinking; bool deepResearch; bool noRefusal; bool autoCorrect; };
+      |            ^~~~~~~~~~~~~~~~
+agentic_engine.cpp:778:9: error: 'm_inferenceEngine' was not declared in this scope; did you mean 'inferenceEngine'?
+  778 |     if (m_inferenceEngine) {
+      |         ^~~~~~~~~~~~~~~~~
+      |         inferenceEngine
+agentic_engine.cpp: In member function 'std::string AgenticEngine::runDumpbin(const std::string&, const std::string&)':
+agentic_engine.cpp:787:13: error: 'RawrXD::ReverseEngineering' has not been declared
+  787 |     RawrXD::ReverseEngineering::RawrDumpBin db;
+      |             ^~~~~~~~~~~~~~~~~~
+agentic_engine.cpp:788:35: error: 'db' was not declared in this scope
+  788 |     if (mode == "headers") return db.DumpHeaders(filePath);
+      |                                   ^~
+agentic_engine.cpp:789:35: error: 'db' was not declared in this scope
+  789 |     if (mode == "imports") return db.DumpImports(filePath);
+      |                                   ^~
+agentic_engine.cpp:790:35: error: 'db' was not declared in this scope
+  790 |     if (mode == "exports") return db.DumpExports(filePath);
+      |                                   ^~
+agentic_engine.cpp:791:12: error: 'db' was not declared in this scope
+  791 |     return db.DumpHeaders(filePath); // default
+      |            ^~
+agentic_engine.cpp: In member function 'std::string AgenticEngine::runCodex(const std::string&)':
+agentic_engine.cpp:795:13: error: 'RawrXD::ReverseEngineering' has not been declared
+  795 |     RawrXD::ReverseEngineering::RawrCodex codex;
+      |             ^~~~~~~~~~~~~~~~~~
+agentic_engine.cpp:798:31: error: 'struct AgenticEngine::Codex' has no member named 'GetSections'
+  798 |         auto sections = codex.GetSections();
+      |                               ^~~~~~~~~~~
+agentic_engine.cpp:804:30: error: 'struct AgenticEngine::Codex' has no member named 'GetImports'
+  804 |         auto imports = codex.GetImports();
+      |                              ^~~~~~~~~~
+agentic_engine.cpp:809:30: error: 'struct AgenticEngine::Codex' has no member named 'GetExports'
+  809 |         auto exports = codex.GetExports();
+      |                              ^~~~~~~~~~
+agentic_engine.cpp:814:28: error: 'struct AgenticEngine::Codex' has no member named 'DetectVulnerabilities'
+  814 |         auto vulns = codex.DetectVulnerabilities();
+      |                            ^~~~~~~~~~~~~~~~~~~~~
+agentic_engine.cpp: In member function 'std::string AgenticEngine::runCompiler(const std::string&, const std::string&)':
+agentic_engine.cpp:827:13: error: 'RawrXD::ReverseEngineering' has not been declared
+  827 |     RawrXD::ReverseEngineering::RawrCompiler compiler;
+      |             ^~~~~~~~~~~~~~~~~~
+agentic_engine.cpp:828:19: error: 'compiler' was not declared in this scope; did you mean 'runCompiler'?
+  828 |     auto result = compiler.CompileSource(sourceFile);
+      |                   ^~~~~~~~
+      |                   runCompiler
+agentic_engine.cpp: In member function 'std::string AgenticEngine::chat(const std::string&)':
+agentic_engine.cpp:873:9: error: 'm_chatProvider' was not declared in this scope; did you mean 'setChatProvider'?
+  873 |     if (m_chatProvider) {
+      |         ^~~~~~~~~~~~~~
+      |         setChatProvider
+agentic_engine.cpp:876:10: error: 'm_inferenceEngine' was not declared in this scope; did you mean 'inferenceEngine'?
+  876 |     if (!m_inferenceEngine) return "[Error: No Inference Engine]";
+      |          ^~~~~~~~~~~~~~~~~
+      |          inferenceEngine
+agentic_engine.cpp:878:65: error: 'm_inferenceEngine' was not declared in this scope; did you mean 'inferenceEngine'?
+  878 |     auto* cpuEngine = dynamic_cast<RawrXD::CPUInferenceEngine*>(m_inferenceEngine);
+      |                                                                 ^~~~~~~~~~~~~~~~~
+      |                                                                 inferenceEngine
+agentic_engine.cpp:881:13: error: 'NativeAgent' is not a member of 'RawrXD'
+  881 |     RawrXD::NativeAgent agent(nullptr);
+      |             ^~~~~~~~~~~
+agentic_engine.cpp:884:5: error: 'agent' was not declared in this scope
+  884 |     agent.SetMaxMode(true);
+      |     ^~~~~
+agentic_engine.cpp:885:24: error: 'config' was not declared in this scope
+  885 |     agent.SetDeepThink(config.deepThinking);
+      |                        ^~~~~~
+agentic_engine.cpp: At global scope:
+agentic_engine.cpp:963:2: error: expected unqualified-id at end of input
+  963 | }
+      |  ^
+telemetry.cpp:40:1: error: 'Telemetry' does not name a type
+   40 | Telemetry::Telemetry()
+      | ^~~~~~~~~
+telemetry.cpp:50:1: error: 'Telemetry' does not name a type
+   50 | Telemetry::~Telemetry() {
+      | ^~~~~~~~~
+telemetry.cpp:55:6: error: 'Telemetry' has not been declared
+   55 | void Telemetry::initializeHardware() {
+      |      ^~~~~~~~~
+telemetry.cpp: In function 'void initializeHardware()':
+telemetry.cpp:56:10: error: 'is_enabled_' was not declared in this scope
+   56 |     if (!is_enabled_) return;
+      |          ^~~~~~~~~~~
+telemetry.cpp:58:5: error: 'telemetry' has not been declared
+   58 |     telemetry::InitializeHardware();
+      |     ^~~~~~~~~
+telemetry.cpp: At global scope:
+telemetry.cpp:75:6: error: 'Telemetry' has not been declared
+   75 | void Telemetry::recordEvent(const std::string& event_name, const nlohmann::json& metadata) {
+      |      ^~~~~~~~~
+telemetry.cpp:75:66: error: 'nlohmann' does not name a type
+   75 | void Telemetry::recordEvent(const std::string& event_name, const nlohmann::json& metadata) {
+      |                                                                  ^~~~~~~~
+telemetry.cpp:75:80: error: expected unqualified-id before '&' token
+   75 | void Telemetry::recordEvent(const std::string& event_name, const nlohmann::json& metadata) {
+      |                                                                                ^
+telemetry.cpp:75:80: error: expected ')' before '&' token
+   75 | void Telemetry::recordEvent(const std::string& event_name, const nlohmann::json& metadata) {
+      |                            ~                                                   ^
+      |                                                                                )
+telemetry.cpp:75:82: error: expected initializer before 'metadata'
+   75 | void Telemetry::recordEvent(const std::string& event_name, const nlohmann::json& metadata) {
+      |                                                                                  ^~~~~~~~
+telemetry.cpp:86:6: error: 'Telemetry' has not been declared
+   86 | bool Telemetry::saveTelemetry(const std::string& filepath) {
+      |      ^~~~~~~~~
+telemetry.cpp: In function 'bool saveTelemetry(const std::string&)':
+telemetry.cpp:87:10: error: 'is_enabled_' was not declared in this scope
+   87 |     if (!is_enabled_) return false;
+      |          ^~~~~~~~~~~
+telemetry.cpp:88:5: error: 'nlohmann' has not been declared
+   88 |     nlohmann::json root;
+      |     ^~~~~~~~
+telemetry.cpp:89:5: error: 'root' was not declared in this scope
+   89 |     root["events"] = events_;
+      |     ^~~~
+telemetry.cpp:89:22: error: 'events_' was not declared in this scope
+   89 |     root["events"] = events_;
+      |                      ^~~~~~~
+telemetry.cpp: At global scope:
+telemetry.cpp:97:6: error: 'Telemetry' has not been declared
+   97 | void Telemetry::enableTelemetry(bool enable) {
+      |      ^~~~~~~~~
+telemetry.cpp: In function 'void enableTelemetry(bool)':
+telemetry.cpp:98:5: error: 'is_enabled_' was not declared in this scope
+   98 |     is_enabled_ = enable;
+      |     ^~~~~~~~~~~
+telemetry.cpp:100:9: error: 'telemetry' has not been declared
+  100 |         telemetry::Initialize();
+      |         ^~~~~~~~~
+telemetry.cpp:102:9: error: 'telemetry' has not been declared
+  102 |         telemetry::Shutdown();
+      |         ^~~~~~~~~
+telemetry.cpp: In function 'bool telemetry::InitializeHardware()':
+telemetry.cpp:256:75: warning: passing NULL to non-pointer argument 5 of 'virtual HRESULT IWbemLocator::ConnectServer(BSTR, BSTR, BSTR, BSTR, LONG, BSTR, IWbemContext*, IWbemServices**)' [-Wconversion-null]
+  256 |         hr = g_pLocator->ConnectServer(BSTR(L"ROOT\\WMI"), NULL, NULL, 0, NULL, 0, 0, &g_pServices);
+      |                                                                           ^~~~
+In file included from C:/msys64/mingw64/include/wbemidl.h:13,
+                 from telemetry.cpp:12:
+C:/msys64/mingw64/include/wbemcli.h:1538:14: note: declared here
+ 1538 |         LONG lSecurityFlags,
+      |         ~~~~~^~~~~~~~~~~~~~
+telemetry.cpp: At global scope:
+telemetry.cpp:351:11: error: 'TelemetrySnapshot' was not declared in this scope
+  351 | bool Poll(TelemetrySnapshot& out) {
+      |           ^~~~~~~~~~~~~~~~~
+telemetry.cpp:351:30: error: 'out' was not declared in this scope
+  351 | bool Poll(TelemetrySnapshot& out) {
+      |                              ^~~
+settings.cpp: In static member function 'static bool Settings::SaveCompute(const AppState&, const std::string&)':
+settings.cpp:191:36: error: 'const struct AppState' has no member named 'is_gpu_enabled'
+  191 |     ofs << "enable_gpu=" << (state.is_gpu_enabled ? "1" : "0") << "\n";
+      |                                    ^~~~~~~~~~~~~~
+settings.cpp:192:37: error: 'const struct AppState' has no member named 'thread_count'
+  192 |     ofs << "thread_count=" << state.thread_count << "\n";
+      |                                     ^~~~~~~~~~~~
+settings.cpp:193:38: error: 'const struct AppState' has no member named 'vram_limit_mb'
+  193 |     ofs << "vram_limit_mb=" << state.vram_limit_mb << "\n";
+      |                                      ^~~~~~~~~~~~~
+In file included from overclock_governor.cpp:4:
+gui.h:5:8: error: redefinition of 'struct AppState'
+    5 | struct AppState {
+      |        ^~~~~~~~
+In file included from overclock_governor.cpp:1:
+AppState.h:15:8: note: previous definition of 'struct AppState'
+   15 | struct AppState {
+      |        ^~~~~~~~
+overclock_governor.cpp: In static member function 'static int OverclockGovernor::ComputeCpuDesiredDelta(float, const AppState&)':
+overclock_governor.cpp:37:45: error: 'const struct AppState' has no member named 'boost_step_mhz'
+   37 |     return ComputePidDelta(pidOutput, state.boost_step_mhz);
+      |                                             ^~~~~~~~~~~~~~
+overclock_governor.cpp: In static member function 'static int OverclockGovernor::ComputeGpuDesiredDelta(float, const AppState&)':
+overclock_governor.cpp:42:48: error: 'const struct AppState' has no member named 'boost_step_mhz'
+   42 |     return ComputePidDelta(gpuPidOutput, state.boost_step_mhz);
+      |                                                ^~~~~~~~~~~~~~
+overclock_governor.cpp: In member function 'void OverclockGovernor::RunLoop(AppState*)':
+overclock_governor.cpp:127:9: error: 'telemetry' has not been declared
+  127 |         telemetry::TelemetrySnapshot snap;
+      |         ^~~~~~~~~
+overclock_governor.cpp:128:9: error: 'telemetry' has not been declared
+  128 |         telemetry::Poll(snap);
+      |         ^~~~~~~~~
+overclock_governor.cpp:128:25: error: 'snap' was not declared in this scope
+  128 |         telemetry::Poll(snap);
+      |                         ^~~~
+overclock_governor.cpp:211:69: error: 'struct AppState' has no member named 'boost_step_mhz'
+  211 |             appliedOffset = std::max(0, appliedOffset - (int)state->boost_step_mhz);
+      |                                                                     ^~~~~~~~~~~~~~

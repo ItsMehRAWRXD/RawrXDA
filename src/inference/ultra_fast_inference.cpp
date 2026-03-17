@@ -35,7 +35,7 @@ private:
     std::unique_ptr<SimpleTokenizer> tokenizer_;
     std::vector<float> kv_cache_;
     std::vector<float> model_weights_;
-    VulkanCompute* vulkan_engine_;
+    CPUInference::VulkanCompute* vulkan_engine_;
     std::vector<int32_t> generateWithKVCache(const std::vector<int32_t>& prompt_tokens, int max_tokens);
     int32_t runForwardPass(const std::vector<int32_t>& tokens);
 };
@@ -601,20 +601,11 @@ void AutonomousInferenceEngine::monitorCPUUtilization() {}
 
 UltraFastInferenceEngine::UltraFastInferenceEngine(const InferenceConfig& config)
     : config_(config), tokenizer_(nullptr), kv_cache_(), model_weights_(), vulkan_engine_(nullptr) {
-    if (config_.enable_gpu) {
-        vulkan_engine_ = new VulkanCompute();
-        if (!vulkan_engine_->Initialize()) {
-            delete vulkan_engine_;
-            vulkan_engine_ = nullptr;
-        }
-    }
+    (void)config_;
 }
 
 UltraFastInferenceEngine::~UltraFastInferenceEngine() {
-    if (vulkan_engine_) {
-        vulkan_engine_->Cleanup();
-        delete vulkan_engine_;
-    }
+    vulkan_engine_ = nullptr;
 }
 
 void UltraFastInferenceEngine::loadModel(const std::string& model_path) {

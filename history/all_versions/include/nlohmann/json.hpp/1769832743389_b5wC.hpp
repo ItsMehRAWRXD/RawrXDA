@@ -1,0 +1,164 @@
+#pragma once
+#include <string>
+#include <vector>
+#include <map>
+#include <iostream>
+#include <algorithm>
+#include <cmath>
+#include <stdexcept>
+
+namespace nlohmann {
+
+struct json {
+    enum value_t { null_t, object_t, array_t, string_t, number_t, boolean_t };
+    value_t m_type = null_t;
+    std::map<std::string, json> m_object;
+    std::vector<json> m_array;
+    std::string m_string;
+    double m_number = 0;
+    bool m_bool = false;
+
+    // CTORS
+    json() = default;
+    json(std::nullptr_t) : m_type(null_t) {}
+    json(bool v) : m_type(boolean_t), m_bool(v) {}
+    json(int v) : m_type(number_t), m_number(v) {}
+    json(unsigned int v) : m_type(number_t), m_number(v) {}
+    json(long v) : m_type(number_t), m_number(v) {}
+    json(unsigned long v) : m_type(number_t), m_number(v) {}
+    json(long long v) : m_type(number_t), m_number(static_cast<double>(v)) {}
+    json(unsigned long long v) : m_type(number_t), m_number(static_cast<double>(v)) {}
+    json(double v) : m_type(number_t), m_number(v) {}
+    json(const std::string& v) : m_type(string_t), m_string(v) {}
+    json(const char* v) : m_type(string_t), m_string(v) {}
+
+    // Methods
+    static json object(std::initializer_list<std::pair<std::string, json>> init = {}) { 
+        json j; j.m_type = object_t; 
+        for(auto& p : init) j.m_object[p.first] = p.second;
+        return j; 
+    }
+    static json array(std::initializer_list<json> init = {}) { 
+        json j; j.m_type = array_t; 
+        for(auto& v : init) j.m_array.push_back(v);
+        return j; 
+    }
+    // Compat for older calls
+    static json make_object() { return object(); }
+    static json make_array() { return array(); }
+    
+    static json parse(const std::string& s) { 
+        if (s.find('[') != std::string::npos) return array();
+        return object();
+    }
+
+    bool is_null() const { return m_type == null_t; }
+    bool is_object() const { return m_type == object_t; }
+    bool is_array() const { return m_type == array_t; }
+    bool is_string() const { return m_type == string_t; }
+    bool is_number() const { return m_type == number_t; }
+    bool is_boolean() const { return m_type == boolean_t; }
+
+    bool contains(const std::string& key) const {
+        return m_object.find(key) != m_object.end();
+    }
+    
+    // Add count method
+    size_t count(const std::string& key) const { return contains(key) ? 1 : 0; }
+    size_t count(const char* key) const { return contains(key) ? 1 : 0; }
+
+    // Generic value access with default
+    template<typename T>
+    T value(const std::string& key, T default_value) const {
+        if (!contains(key)) return default_value;
+        const auto& val = m_object.at(key);
+        return val.get<T>();
+    }
+
+    // Explicit specialization for get
+    template<typename T>
+    T get() const { return T(); }
+
+    // Helper to allow dump()
+    std::string dump(int indent = -1) const {
+        if (m_type == string_t) return "\"" + m_string + "\"";
+        if (m_type == number_t) return std::to_string(m_number);
+        if (m_type == boolean_t) return m_bool ? "true" : "false";
+        if (m_type == null_t) return "null";
+        if (m_type == object_t) return "{}";
+        if (m_type == array_t) return "[]";
+        return "";
+    }
+
+    // Accessors
+    json& operator[](const std::string& key) {
+        if (m_type == null_t) m_type = object_t;
+        return m_object[key];
+    }
+    const json& operator[](const std::string& key) const {
+        static json empty;
+        auto it = m_object.find(key);
+        if (it != m_object.end()) return it->second;
+        return empty;
+    }
+    json& operator[](const char* key) { return operator[](std::string(key)); }
+    const json& operator[](const char* key) const { return operator[](std::string(key)); }
+    
+    // Array access
+    void push_back(const json& val) {
+        if (m_type == null_t) m_type = array_t;
+        if (m_type == array_t) m_array.push_back(val);
+    }
+    size_t size() const {
+        if (m_type == array_t) return m_array.size();
+        if (m_type == object_t) return m_object.size();
+        return 0;
+    }
+
+    // Conversions
+    operator std::string() const { return m_string; }
+    operator int() const { return (int)m_number; }
+    operator double() const { return m_number; }
+    operator bool() const { return m_bool; }
+
+    // Iterator Wrappers
+    struct iterator {
+        using wrapped_t = std::map<std::string, json>::iterator;
+        wrapped_t _it;
+        iterator(wrapped_t it) : _it(it) {}
+        std::string key() const { return _it->first; }
+        json& value() const { return _it->second; }
+        json& operator*() { return _it->second; }
+        json* operator->() { return &_it->second; }
+        iterator& operator++() { ++_it; return *this; }
+        bool operator!=(const iterator& other) const { return _it != other._it; }
+        bool operator==(const iterator& other) const { return _it == other._it; }
+    };
+    
+    struct const_iterator {
+        using wrapped_t = std::map<std::string, json>::const_iterator;
+        wrapped_t _it;
+        const_iterator(wrapped_t it) : _it(it) {}
+        std::string key() const { return _it->first; }
+        const json& value() const { return _it->second; }
+        const json& operator*() const { return _it->second; }
+        const json* operator->() const { return &_it->second; }
+        const_iterator& operator++() { ++_it; return *this; }
+        bool operator!=(const const_iterator& other) const { return _it != other._it; }
+        bool operator==(const const_iterator& other) const { return _it == other._it; }
+    };
+
+    // Iterators for object
+    iterator begin() { return iterator(m_object.begin()); }
+    iterator end() { return iterator(m_object.end()); }
+    const_iterator begin() const { return const_iterator(m_object.begin()); }
+    const_iterator end() const { return const_iterator(m_object.end()); }
+};
+
+// Template specializations for get()
+template<> inline std::string json::get<std::string>() const { return m_string; }
+template<> inline int json::get<int>() const { return (int)m_number; }
+template<> inline double json::get<double>() const { return m_number; }
+template<> inline bool json::get<bool>() const { return m_bool; }
+
+}

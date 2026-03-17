@@ -1,0 +1,118 @@
+{
+  // PowerShell Settings
+  "powershell.enableProfileLoading": true,
+  "powershell.experimental": true,
+  "powershell.scriptAnalysis.enable": true,
+  "powershell.codeFormatting.preset": "OTBS",
+  "powershell.codeFormatting.openBraceOnSameLine": false,
+  "powershell.codeFormatting.newLineAfterOpenBrace": true,
+  "powershell.codeFormatting.newLineAfterCloseBrace": true,
+  "powershell.codeFormatting.whitespaceBeforeOpenBrace": true,
+  "powershell.codeFormatting.whitespaceBeforeOpenParen": true,
+  "powershell.codeFormatting.whitespaceAroundOperator": true,
+  "powershell.codeFormatting.whitespaceAfterSeparator": true,
+  "powershell.codeFormatting.whitespaceInsideBrace": true,
+  "powershell.codeFormatting.whitespaceAroundPipe": true,
+  "powershell.codeFormatting.alignPropertyValuePairs": true,
+  "powershell.codeFormatting.useCorrectCasing": true,
+  // Editor Settings (matching your config.json)
+  "editor.tabSize": 4,
+  "editor.insertSpaces": true,
+  "editor.detectIndentation": false,
+  "editor.wordWrap": "off",
+  "editor.lineNumbers": "on",
+  "editor.fontFamily": "Consolas",
+  "editor.fontSize": 10,
+  "editor.autoIndent": "full",
+  "editor.renderWhitespace": "none",
+  "editor.formatOnSave": false,
+  "editor.formatOnPaste": false,
+  "editor.autoSave": "afterDelay",
+  "editor.autoSaveDelay": 30000,
+  // File Associations
+  "files.associations": {
+    "*.ps1": "powershell",
+    "*.psm1": "powershell",
+    "*.psd1": "powershell"
+  },
+  // File Explorer
+  "files.exclude": {
+    "**/.git": true,
+    "**/.DS_Store": true,
+    "**/node_modules": true,
+    "**/*.exe": false,
+    "**/*.exe.WebView2": true
+  },
+  // Search Exclusions
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/bower_components": true,
+    "**/*.code-search": true,
+    "**/*.exe.WebView2": true,
+    "**/artifacts": true,
+    "**/logs": true,
+    "**/training_output": true
+  },
+  // Terminal Settings
+  "terminal.integrated.defaultProfile.windows": "PowerShell",
+  "terminal.integrated.shell.osx": "/bin/bash",
+  "terminal.integrated.shell.linux": "/bin/bash",
+  "terminal.integrated.shell.windows": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+  "terminal.integrated.fontFamily": "Consolas",
+  "terminal.integrated.fontSize": 10,
+  // Git Settings
+  "git.enabled": true,
+  "git.autofetch": true,
+  "git.confirmSync": false,
+  // Language Specific
+  "[powershell]": {
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true,
+    "editor.formatOnSave": false
+  },
+  "[json]": {
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true
+  },
+  "[markdown]": {
+    "editor.wordWrap": "on",
+    "editor.quickSuggestions": {
+      "comments": "off",
+      "strings": "off",
+      "other": "off"
+    }
+  },
+  // Workspace Settings
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/node_modules/**": true,
+    "**/*.exe.WebView2/**": true,
+    "**/artifacts/**": true,
+    "**/logs/**": true
+  },
+  // IntelliSense
+  "editor.quickSuggestions": {
+    "other": true,
+    "comments": false,
+    "strings": true
+  },
+  "editor.suggestSelection": "first",
+  "editor.acceptSuggestionOnCommitCharacter": true,
+  // Bracket Pair Colorization
+  "editor.bracketPairColorization.enabled": true,
+  "editor.guides.bracketPairs": "active",
+  // GitHub Copilot Settings
+  "github.copilot.enable": {
+    "*": true
+  },
+  "github.copilot.editor.enableAutoCompletions": true,
+  "github.copilot.chat.enabled": true,
+  "github.copilot.editor.enableCodeActions": true,
+  // Amazon Q Settings (fixes connection issues)
+  "amazonQ.telemetry": true,
+  "amazonQ.workspaceIndex": true,
+  "amazonQ.workspaceIndexMaxSize": 1000000,
+  "amazonQ.workspaceIndexMaxFileSize": 200,
+  "editor.guides.highlightActiveIndentation": true
+}

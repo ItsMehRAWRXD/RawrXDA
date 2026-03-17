@@ -1,0 +1,6 @@
+{
+  "validateInputs": true,
+  "allowedScripts": [
+    "*.ps1"
+  ]
+}

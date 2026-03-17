@@ -29,12 +29,17 @@ public:
     // GPU-accelerated Softmax with CPU parity check
     bool Softmax(float* data, uint32_t size, bool enableParityCheck = true);
 
+    // GPU-accelerated RMSNorm with CPU parity check
+    bool RMSNorm(float* data, const float* gamma, uint32_t size, float eps = 1e-5f, bool enableParityCheck = true);
+
     // Statistics for performance monitoring
     struct Stats {
         uint64_t gpuMatVecCalls = 0;
         uint64_t cpuMatVecFallbacks = 0;
         uint64_t gpuSoftmaxCalls = 0;
         uint64_t cpuSoftmaxFallbacks = 0;
+        uint64_t gpuRMSNormCalls = 0;
+        uint64_t cpuRMSNormFallbacks = 0;
         uint64_t parityFailures = 0;
         double avgParityCheckTimeMs = 0.0;
     };

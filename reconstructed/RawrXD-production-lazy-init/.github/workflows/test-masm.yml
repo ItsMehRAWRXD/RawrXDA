@@ -1,0 +1,25 @@
+name: MASM CPU Backend CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-test-masm:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install MSBuild tools
+        uses: microsoft/setup-msbuild@v1
+      - name: Configure CMake
+        run: |
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DENABLE_PURE_MASM_CPU_BACKEND=ON -DCMAKE_BUILD_TYPE=Release
+      - name: Build masm_kernels and test
+        run: |
+          cmake --build build --config Release --target masm_kernels test_masm_dot -- /m
+      - name: Run test_masm_dot
+        run: |
+          build\Release\test_masm_dot.exe
+        continue-on-error: false

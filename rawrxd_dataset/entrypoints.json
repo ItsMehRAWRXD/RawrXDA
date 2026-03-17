@@ -1,0 +1,690 @@
+{
+  "WinProc": [
+    {
+      "Type": "WindowProc",
+      "Name": "ChatPanelProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "EditPromptProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "AgentPanelProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "WndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "WndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "EditorSubclassProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "OverlayWndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "WndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "WindowProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "handleMessageInternal"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "WindowProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "FloatingPanelProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "WndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "WndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "WndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "WndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "WndProcRouter"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "Sidebar_WndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "WndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "WndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "WndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "WndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "preprocessMessage"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "ChatPanelProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "EditPromptProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "AgentPanelProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "WndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "WndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "WndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "EditorSubclassProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "OverlayWndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "WndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "WindowProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "handleMessageInternal"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "WindowProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "FloatingPanelProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "WndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "WndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "WndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "WndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "WndProcRouter"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "Sidebar_WndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "WndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "WndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "WndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "WndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "airePanelWndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "entPanelWndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "auditDashboardWndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "crashDialogWndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "DecompSplitProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "DecompPaneProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "DisasmPaneProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "DecompPaneProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "DisasmPaneProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "DecompSplitProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "SplitterBarProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "emojiPickerWndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "gauntletWndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "gauntletWndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "ViewerWndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "marketplaceWndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "networkPanelWndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "provablePanelWndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "shortcutEditorWndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "SourceFilePickerWndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "telDashboardWndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "testExplorerWndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "MinimapWndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "MinimapWndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "SettingsGUIProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "WindowProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "handleMessage"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "ModelProgressProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "SplitterBarProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "MinimapWndProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "LineNumberProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "AnnotationOverlayProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "CommandPaletteProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "CommandPaletteInputProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "EditorSubclassProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "FloatingPanelProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "GitPanelProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "ModulePanelProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "CommitDialogProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "FileExplorerProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "FileExplorerContainerProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "ActivityBarProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "SidebarProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "SidebarContentProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "ExplorerTreeProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "CommandInputProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "SidebarProcImpl"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "ActivityBarButtonProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "SecondarySidebarProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "PowerShellPanelProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "PowerShellInputProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "GitDiffPanelProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "TerminalTabBarProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "HoverTooltipProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "SignatureHelpProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "RenamePreviewProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "ReferencePanelProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "BreadcrumbProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "TabBarDragProc"
+    },
+    {
+      "Type": "WindowProc",
+      "Name": "preprocessMessage"
+    }
+  ],
+  "DllMain": {
+    "Signature": "DllMain",
+    "Found": true
+  },
+  "ThreadProcs": [
+    {
+      "Type": "ThreadProc",
+      "Name": "rebalanceThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "OrchestratorThreadProc"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "schedulerThreadProc"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "workerThreadProc"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "fileWatcherThreadProc"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "AgentThreadProc"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "MonitorThreadProc"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "BeaconThreadProc"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "extensionHostThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "monitorThreadProc"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "keyRotationThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "monitorThreadProc"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "WatchdogThreadProc"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "listenerThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "iocpWorkerThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "heartbeatThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "discoveryThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "schedulerThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "timeoutMonitorThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "receiverThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "heartbeatSenderThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "taskExecutorThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "AutoExportThreadProc"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "PipeServerThreadProc"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "FileWatchThreadProc"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "pressureMonitorThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "mergeThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "fileWatcherThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "signalingThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "rebalanceThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "OrchestratorThreadProc"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "schedulerThreadProc"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "workerThreadProc"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "fileWatcherThreadProc"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "AgentThreadProc"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "MonitorThreadProc"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "BeaconThreadProc"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "asyncCheckThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "ContentionTestThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "ConcurrentTestThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "ProtectedTestThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "DEFLATEWorkerProc"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "extensionHostThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "monitorThreadProc"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "fileWatcherThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "keyRotationThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "monitorThreadProc"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "WatchdogThreadProc"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "listenerThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "iocpWorkerThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "heartbeatThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "discoveryThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "schedulerThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "timeoutMonitorThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "receiverThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "heartbeatSenderThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "taskExecutorThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "PipeServerThreadProc"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "FileWatchThreadProc"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "pressureMonitorThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "mergeThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "fileWatcherThread"
+    },
+    {
+      "Type": "ThreadProc",
+      "Name": "signalingThread"
+    }
+  ],
+  "WinMain": {
+    "Signature": "WINAPI WinMain",
+    "Found": true
+  }
+}

@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: production
+  labels:
+    name: production
+    environment: production
+  annotations:
+    description: "Production namespace for cloud infrastructure"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    name: monitoring
+    environment: production
+  annotations:
+    description: "Monitoring namespace for Prometheus, Grafana, ELK stack"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: istio-system
+  labels:
+    name: istio-system
+    environment: production
+  annotations:
+    description: "Service mesh namespace"

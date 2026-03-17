@@ -1,0 +1,67 @@
+libcpmt.lib(thread0.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(uncaught_exceptions.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xthrow.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(iomanip.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(mutex.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xtime.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(cond.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(locale0.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(syserror.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(fiopen.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xnotify.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(cthread.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xstrxfrm.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xstrcoll.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xrngdev.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(cout.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xlock.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(winapisupp.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(locale.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(iosptrs.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(StlLCMapStringA.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(StlCompareStringA.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(_tolower.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(_toupper.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(ios.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xmtx.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xwctomb.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(wlocale.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xlocale.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xstol.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xstoul.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xstoll.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xstoull.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xdateord.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xmbtowc.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xwcscoll.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xwcsxfrm.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xgetwctype.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xtowlower.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xtowupper.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(StlCompareStringW.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(StlLCMapStringW.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+   Creating library .\bin\RawrXD-Win32IDE.lib and object .\bin\RawrXD-Win32IDE.exp
+LINK : warning LNK4098: defaultlib 'MSVCRT' conflicts with use of other libs; use /NODEFAULTLIB:library
+core_agentic_task_graph.obj : error LNK2001: unresolved external symbol __imp_system
+core_agentic_task_graph.obj : error LNK2001: unresolved external symbol __imp__mkdir
+core_alert_system.obj : error LNK2001: unresolved external symbol __imp__localtime64_s
+core_autonomous_debugger.obj : error LNK2001: unresolved external symbol __imp_strncpy
+core_autonomous_debugger.obj : error LNK2001: unresolved external symbol __imp__time64
+core_auto_discovery.obj : error LNK2001: unresolved external symbol __imp__strdup
+core_code_linter.obj : error LNK2001: unresolved external symbol __imp__stricmp
+core_directml_compute.obj : error LNK2001: unresolved external symbol __imp_ldexp
+core_directml_compute.obj : error LNK2001: unresolved external symbol __imp__localtime64
+core_layer_offload_manager.obj : error LNK2001: unresolved external symbol __imp__aligned_free
+core_layer_offload_manager.obj : error LNK2001: unresolved external symbol __imp__aligned_malloc
+core_missing_handler_stubs.obj : error LNK2001: unresolved external symbol __imp__pclose
+core_missing_handler_stubs.obj : error LNK2001: unresolved external symbol __imp_fgets
+core_missing_handler_stubs.obj : error LNK2001: unresolved external symbol __imp__popen
+core_missing_handler_stubs.obj : error LNK2001: unresolved external symbol __imp_atof
+core_model_training_pipeline.obj : error LNK2001: unresolved external symbol __imp_roundf
+core_pdb_native.obj : error LNK2001: unresolved external symbol __imp_strcat_s
+core_reasoning_schema_versioning.obj : error LNK2001: unresolved external symbol __imp___stdio_common_vsscanf
+core_webrtc_signaling.obj : error LNK2001: unresolved external symbol __imp_rand
+win32app_IDEDiagnosticAutoHealer.obj : error LNK2001: unresolved external symbol __imp_ungetwc
+win32app_IDEDiagnosticAutoHealer.obj : error LNK2001: unresolved external symbol __imp_fgetwc
+win32app_Win32IDE_CrashReporter.obj : error LNK2001: unresolved external symbol __imp_remove
+.\bin\RawrXD-Win32IDE.exe : fatal error LNK1120: 22 unresolved externals

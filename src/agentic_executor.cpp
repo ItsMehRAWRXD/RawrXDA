@@ -35,101 +35,41 @@ void AgenticExecutor::initialize(AgenticEngine* engine, InferenceEngine* inferen
     m_modelTrainer = std::make_unique<ModelTrainer>(); 
 }
 
-// ========== MAIN AGENTIC EXECUTION ==========
+// ========== NATIVE TITAN KERNEL HANDOFF (x64 MASM) ==========
+extern "C" void* Titan_EntryPoint();
+extern "C" uint64_t Titan_ExecuteTask(const char* task_json, uint64_t length);
 
 json AgenticExecutor::executeUserRequest(const std::string& request)
 {
-    logMessage("Starting execution: " + request);
+    logMessage("Routing to TITAN x64 Kernel: " + request);
+
+    // Prepare Task for MASM Kernel
+    uint64_t status = Titan_ExecuteTask(request.c_str(), request.length());
 
     json result;
     result["request"] = request;
-    
+    result["kernel_status"] = status;
+    result["routing"] = "MASM_TITAN_0x5854494A";
+
     auto now = std::chrono::system_clock::now();
     result["timestamp"] = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
 
-    try {
-        // Step 1: Decompose the task using the model
-        json steps = decomposeTask(request);
-        result["steps"] = steps;
-        result["total_steps"] = steps.size();
-
-        // Step 2: Execute each step
-        json executionResults = json::array();
-        int successCount = 0;
-
-        for (size_t i = 0; i < steps.size(); ++i) {
-            json step = steps[i];
-            
-            std::string desc = step.value("description", "Step " + std::to_string(i+1));
-            stepStarted(desc);
-            taskProgress(i + 1, steps.size());
-
-            bool success = executeStep(step);
-            
-            json stepResult;
-            stepResult["step_number"] = i + 1;
-            stepResult["description"] = desc;
-            stepResult["success"] = success;
-            stepResult["timestamp"] = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-
-            executionResults.push_back(stepResult);
-
-            if (success) {
-                successCount++;
-                stepCompleted(desc, true);
-            } else {
-                stepCompleted(desc, false);
-                
-                // Try to recover from failure
-                if (m_currentRetryCount < m_maxRetries) {
-                    json retryResult = retryWithCorrection(step);
-                    if (retryResult.value("success", false)) {
-                        successCount++;
-                        stepResult["recovered"] = true;
-                    }
-                }
-            }
-        }
-
-        result["execution_results"] = executionResults;
-        result["success_count"] = successCount;
-        result["success_rate"] = steps.empty() ? 0.0 : (successCount * 100.0) / steps.size();
-        result["overall_success"] = steps.empty() ? false : (successCount == steps.size());
-
-        executionComplete(result);
-        return result;
-    } catch (const std::exception& e) {
-        errorOccurred(e.what());
-        result["error"] = e.what();
-        return result;
+    if (status == 0) {
+        logMessage("TITAN Kernel Execution Success.");
+        result["overall_success"] = true;
+    } else {
+        errorOccurred("TITAN Kernel Reported Error: " + std::to_string(status));
+        result["overall_success"] = false;
+        result["error_code"] = status;
     }
+
+    return result;
 }
 
 json AgenticExecutor::decomposeTask(const std::string& goal)
 {
-    if (!m_agenticEngine) {
-        return json::array();
-    }
-    
-    std::string fullPrompt = "You are an autonomous AI agent. Decompose this task into actionable JSON steps: " + goal + 
-                           "\nReturn ONLY a JSON array of objects with keys: action, description, params.";
-                           
-    std::string response = m_agenticEngine ? m_agenticEngine->processQuery(fullPrompt) : "[]";
-    
-    // Attempt to parse JSON response
-    try {
-        // Attempt to find JSON array in response
-        size_t start = response.find('[');
-        size_t end = response.rfind(']');
-        if (start != std::string::npos && end != std::string::npos && end > start) {
-            std::string jsonStr = response.substr(start, end - start + 1);
-            return json::parse(jsonStr);
-        }
-        return json::array();
-    } catch (...) {
-        logMessage("Failed to parse decomposition plan: " + response);
-        return json::array();
-    }
+    // Routing decomposition to the same kernel via task metadata
+    return executeUserRequest("{\"action\":\"DECOMPOSE\", \"goal\":\"" + goal + "\"}");
 }
 // ========== STEP EXECUTION ==========
 

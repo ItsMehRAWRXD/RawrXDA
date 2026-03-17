@@ -1,0 +1,47 @@
+cmake_minimum_required(VERSION 3.20)
+project(RawrXD VERSION 7.1.0 LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+if(NOT MSVC)
+    add_compile_options(-O3 -march=native -Wall -fopenmp -std=gnu++20)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS -D_WIN32_WINNT=0x0602)
+else()
+    add_compile_options(/O2 /arch:AVX2 /GL /W4 /EHsc /openmp)
+endif()
+
+find_package(Threads REQUIRED)
+add_definitions(-DBRUTAL_COMPRESSION_ONLY -DNOMINMAX -DWIN32_LEAN_AND_MEAN)
+
+set(SOURCES
+    ../src/main.cpp
+    ../src/memory_core.cpp
+    ../src/hot_patcher.cpp
+    ../src/runtime_core.cpp
+    ../src/tool_registry.cpp
+    ../src/cpu_inference_engine.cpp
+    ../src/gguf_loader.cpp
+    ../src/gguf_vocab_resolver.cpp
+    ../src/engine/gguf_core.cpp
+    ../src/engine/transformer.cpp
+    ../src/engine/bpe_tokenizer.cpp
+    ../src/engine/sampler.cpp
+    ../src/engine/rawr_engine.cpp
+    ../src/engine/sovereign_engines.cpp
+    ../src/engine/inference_kernels.cpp
+    ../src/codec/compression.cpp
+    ../src/codec/brutal_gzip.cpp
+    ../src/compression_interface.cpp
+)
+
+add_executable(RawrShell ${SOURCES})
+target_include_directories(RawrShell PRIVATE ../src ../src/engine ../include)
+target_link_libraries(RawrShell PRIVATE Threads::Threads)
+if(NOT MSVC)
+    target_link_libraries(RawrShell PRIVATE gomp)
+endif()
+if(WIN32)
+    target_link_libraries(RawrShell PRIVATE shlwapi psapi dbghelp comctl32 comdlg32 shell32 ole32 oleaut32 uuid winhttp)
+endif()
+set_target_properties(RawrShell PROPERTIES RUNTIME_OUTPUT_DIRECTORY bin OUTPUT_NAME RawrShell)

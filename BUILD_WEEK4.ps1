@@ -24,9 +24,31 @@ $ASM_FILE = "$WEEK4_DIR\WEEK4_DELIVERABLE.asm"
 $OBJ_FILE = "$BUILD_DIR\WEEK4_DELIVERABLE.obj"
 $EXE_FILE = "$OUTPUT_DIR\Week4_TestSuite.exe"
 
-# Assembler configuration
-$ML64 = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC\14.42.34433\bin\Hostx64\x64\ml64.exe"
-$LINK = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC\14.42.34433\bin\Hostx64\x64\link.exe"
+# Assembler configuration — auto-detect
+function _FindMSVC_Week4 {
+    $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+    if (Test-Path $vswhere) {
+        $vsPath = & $vswhere -latest -products * `
+            -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+            -property installationPath 2>$null
+        if ($vsPath -and (Test-Path "$vsPath\VC\Tools\MSVC")) {
+            $v = Get-ChildItem -Directory "$vsPath\VC\Tools\MSVC" | Sort-Object Name -Descending | Select-Object -First 1
+            if ($v) { return $v.FullName }
+        }
+    }
+    foreach ($b in @("C:\VS2022Enterprise\VC\Tools\MSVC",
+                     "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC",
+                     "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC")) {
+        if (Test-Path $b) {
+            $v = Get-ChildItem -Directory $b | Sort-Object Name -Descending | Select-Object -First 1
+            if ($v) { return $v.FullName }
+        }
+    }
+    throw "MSVC not found."
+}
+$_msvc = _FindMSVC_Week4
+$ML64 = Join-Path $_msvc "bin\Hostx64\x64\ml64.exe"
+$LINK = Join-Path $_msvc "bin\Hostx64\x64\link.exe"
 
 $ASM_FLAGS = @(
     "/c"                              # Compile only

@@ -1,0 +1,52 @@
+{
+  "model": "bigdaddyg-god-fast",
+  "source_blob": "F:\\OllamaModels\\blobs\\sha256-68bbe6dc9cf42eb60c9a7f96137fb8d472f752de6ebf53e9942f267f1a1e2577",
+  "architecture": "llama-69b",
+  "quantization": "Q4_K_M",
+  "total_size_gb": 36.2,
+  "total_layers": 80,
+  "hidden_dim": 8192,
+  "num_heads": 64,
+  "num_kv_heads": 8,
+  "vocab_size": 128256,
+
+  "offload_strategy": "hybrid_gpu_cpu",
+  "gpu": {
+    "device": "AMD Radeon RX 7800 XT",
+    "vram_total_gb": 16,
+    "vram_usable_gb": 14,
+    "layers_offloaded": 30,
+    "mb_per_layer": 453,
+    "kv_cache_budget_gb": 1.5,
+    "driver_reserve_gb": 0.5
+  },
+  "cpu": {
+    "device": "AMD Ryzen 7 7800X3D",
+    "cores": 8,
+    "threads": 16,
+    "l3_cache_mb": 96,
+    "layers_offloaded": 50,
+    "threads_for_inference": 12,
+    "threads_reserved_system": 4
+  },
+
+  "context_size": 4096,
+  "batch_size": 512,
+
+  "vram_scaler": {
+    "enabled": true,
+    "prefetch_depth": 2,
+    "adaptive_prefetch": true,
+    "pin_embedding_layer": true,
+    "pin_output_layer": true,
+    "lru_eviction": true,
+    "max_zones": 30
+  },
+
+  "speed_estimates": {
+    "naive_oversubscribed_tok_s": 0.86,
+    "hybrid_offload_tok_s": "8-15",
+    "with_vram_paging_tok_s": "4-8",
+    "theoretical_max_tok_s": 25
+  }
+}

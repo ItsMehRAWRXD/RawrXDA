@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sovereign Thermal HUD</title>
+    <style>
+        body {
+            background-color: #0d1117;
+            color: #c9d1d9;
+            font-family: 'Consolas', 'Courier New', monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        h1 { color: #58a6ff; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 15px;
+            text-align: center;
+            width: 120px;
+        }
+        .temp-val {
+            font-size: 2.5em;
+            font-weight: bold;
+            display: block;
+            margin: 10px 0;
+        }
+        .drive-id { font-size: 0.8em; color: #8b949e; }
+        .status-header {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #30363d;
+            padding-bottom: 10px;
+        }
+        /* Color Mapping */
+        .cool { color: #3fb950; }   /* < 45 */
+        .warm { color: #d29922; }   /* 45-65 */
+        .hot { color: #f85149; }    /* > 65 */
+
+        #log {
+            width: 100%;
+            max-width: 800px;
+            height: 200px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            overflow-y: scroll;
+            padding: 10px;
+            font-size: 0.8em;
+            color: #8b949e;
+        }
+        .log-entry { margin-bottom: 4px; border-bottom: 1px solid #21262d; }
+    </style>
+</head>
+<body>
+
+    <div class="status-header">
+        <div>ENGINE: <span id="engine-status" style="color: #58a6ff">OFFLINE</span></div>
+        <div>UPDATES: <span id="update-rate">0</span> Hz</div>
+        <div>DELTA: <span id="delta-val">0</span>°C</div>
+    </div>
+
+    <div class="grid">
+        <div class="card" id="card-0"><span class="drive-id">NVMe 0</span><span class="temp-val" id="t0">--</span></div>
+        <div class="card" id="card-1"><span class="drive-id">NVMe 1</span><span class="temp-val" id="t1">--</span></div>
+        <div class="card" id="card-2"><span class="drive-id">NVMe 2</span><span class="temp-val" id="t2">--</span></div>
+        <div class="card" id="card-3"><span class="drive-id">NVMe 3</span><span class="temp-val" id="t3">--</span></div>
+        <div class="card" id="card-4"><span class="drive-id">NVMe 4</span><span class="temp-val" id="t4">--</span></div>
+    </div>
+
+    <canvas id="chart" width="800" height="200" style="background: #161b22; border-radius: 6px;"></canvas>
+
+    <div id="log" style="margin-top: 20px;"></div>
+
+    <script>
+        const ws = new WebSocket(`ws://${location.host}`);
+        let lastTime = Date.now();
+        let updateCount = 0;
+        
+        // Simple Chart Data
+        const maxPoints = 100;
+        const history = [[], [], [], [], []]; // 5 drives
+        const chartCtx = document.getElementById('chart').getContext('2d');
+        const colors = ['#3fb950', '#d29922', '#f85149', '#58a6ff', '#a371f7'];
+
+        // FPS Counter
+        setInterval(() => {
+            document.getElementById('update-rate').innerText = updateCount;
+            updateCount = 0;
+        }, 1000);
+
+        function getColor(temp) {
+            if (temp < 45) return 'cool';
+            if (temp < 65) return 'warm';
+            return 'hot';
+        }
+
+        function drawChart() {
+            const width = chartCtx.canvas.width;
+            const height = chartCtx.canvas.height;
+            chartCtx.clearRect(0, 0, width, height);
+
+            // Draw guidelines (35C, 65C, 75C)
+            // Scale: 20C to 90C
+            const minT = 20;
+            const maxT = 90;
+            const range = maxT - minT;
+
+            function yPos(temp) {
+                return height - ((temp - minT) / range) * height;
+            }
+
+            // Grid
+            chartCtx.strokeStyle = '#30363d';
+            chartCtx.beginPath();
+            [35, 65, 75].forEach(t => {
+                const y = yPos(t);
+                chartCtx.moveTo(0, y);
+                chartCtx.lineTo(width, y);
+            });
+            chartCtx.stroke();
+
+            // Lines
+            history.forEach((driveData, idx) => {
+                if (driveData.length < 2) return;
+                chartCtx.strokeStyle = colors[idx];
+                chartCtx.lineWidth = 2;
+                chartCtx.beginPath();
+                driveData.forEach((temp, i) => {
+                    const x = (i / maxPoints) * width;
+                    const y = yPos(temp);
+                    if (i === 0) chartCtx.moveTo(x, y);
+                    else chartCtx.lineTo(x, y);
+                });
+                chartCtx.stroke();
+            });
+        }
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            updateCount++;
+            
+            document.getElementById('engine-status').innerText = data.status.toUpperCase();
+            document.getElementById('engine-status').style.color = '#3fb950';
+
+            const temps = [data.t0, data.t1, data.t2, data.t3, data.t4];
+            
+            // Calculate Delta
+            const min = Math.min(...temps.filter(t => t > 0));
+            const max = Math.max(...temps);
+            document.getElementById('delta-val').innerText = (max - min);
+
+            temps.forEach((t, i) => {
+                const el = document.getElementById(`t${i}`);
+                el.innerText = t;
+                el.className = `temp-val ${getColor(t)}`;
+                
+                // Update Chart History
+                history[i].push(t);
+                if (history[i].length > maxPoints) history[i].shift();
+            });
+
+            drawChart();
+        };
+
+        ws.onclose = () => {
+            document.getElementById('engine-status').innerText = 'DISCONNECTED';
+            document.getElementById('engine-status').style.color = '#f85149';
+        };
+    </script>
+</body>
+</html>

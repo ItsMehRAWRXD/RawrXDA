@@ -214,12 +214,12 @@ nlohmann::json CloudApiClient::buildRequestBody(const std::string& prompt, const
     nlohmann::json body;
     if (config.provider == "openai" || config.provider == "azure") {
         body["model"] = config.model;
-        body["messages"] = nlohmann::json::array({ {{"role", "user"}, {"content", prompt}} });
+        body["messages"] = nlohmann::json::array({ nlohmann::json::object({{"role", "user"}, {"content", prompt}}) });
         body["temperature"] = config.temperature;
         body["max_tokens"] = config.maxTokens;
     } else if (config.provider == "anthropic") {
         body["model"] = config.model;
-        body["messages"] = nlohmann::json::array({ {{"role", "user"}, {"content", prompt}} });
+        body["messages"] = nlohmann::json::array({ nlohmann::json::object({{"role", "user"}, {"content", prompt}}) });
         body["max_tokens"] = config.maxTokens;
     } else {
         body["model"] = config.model;

@@ -1,16 +1,10 @@
-default reldefault rel
+default rel
 
+extern ExitProcess
 
-
-
-
-
-
-
-  call ExitProcess  xor ecx, ecx  sub rsp, 32start:global startsection .textextern ExitProcessextern ExitProcess
 section .text
 global start
 start:
-  sub rsp, 32
-  xor ecx, ecx
-  call ExitProcess
+    sub rsp, 40
+    xor ecx, ecx
+    call ExitProcess

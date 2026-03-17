@@ -1,0 +1,22 @@
+name: MASM Build
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-masm:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup MSVC
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Run MASM AutoPatch Builder
+      run: .\MASM-AutoPatch-Builder.ps1
+      shell: pwsh

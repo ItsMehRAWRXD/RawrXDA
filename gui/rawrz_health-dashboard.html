@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RawrZ Health Dashboard - Real System Monitoring</title>
+    <style>
+        body { 
+            background: #000; 
+            color: #0f0; 
+            font-family: 'Courier New', monospace; 
+            padding: 20px; 
+            margin: 0;
+        }
+        .container { 
+            max-width: 1400px; 
+            margin: 0 auto; 
+        }
+        h1 { 
+            text-align: center; 
+            color: #0f0; 
+            text-shadow: 0 0 10px #0f0; 
+            margin-bottom: 30px;
+        }
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .panel { 
+            border: 2px solid #0f0; 
+            padding: 20px; 
+            background: rgba(0,255,0,0.05); 
+            border-radius: 8px;
+        }
+        .status-card {
+            background: rgba(0,255,0,0.02);
+            border: 1px solid #0f0;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .status-online { border-color: #0f0; color: #0f0; }
+        .status-offline { border-color: #f00; color: #f00; }
+        .status-warning { border-color: #ff0; color: #ff0; }
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            padding: 5px;
+            background: rgba(0,255,0,0.02);
+            border-radius: 3px;
+        }
+        .metric-label { color: #0ff; }
+        .metric-value { color: #0f0; font-weight: bold; }
+        .btn { 
+            background: #111; 
+            color: #0f0; 
+            border: 2px solid #0f0; 
+            padding: 10px 20px; 
+            cursor: pointer; 
+            margin: 5px; 
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+        .btn:hover { 
+            background: #0f0; 
+            color: #000; 
+        }
+        .refresh-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #0f0;
+            color: #000;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .engine-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #0f0;
+            padding: 10px;
+            background: #111;
+            border-radius: 4px;
+        }
+        .engine-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px;
+            margin: 2px 0;
+            background: rgba(0,255,0,0.02);
+            border-radius: 3px;
+        }
+        .engine-name { color: #0ff; }
+        .engine-status { 
+            color: #0f0; 
+            font-weight: bold;
+        }
+        .engine-status.failed { color: #f00; }
+        .loading {
+            color: #ff0;
+            animation: pulse 1s infinite;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #333;
+            border: 1px solid #0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0f0, #0ff);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .alert-panel {
+            border: 2px solid #ff0;
+            background: rgba(255,255,0,0.1);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .alert-critical {
+            border-color: #f00;
+            background: rgba(255,0,0,0.1);
+        }
+        .alert-warning {
+            border-color: #ff0;
+            background: rgba(255,255,0,0.1);
+        }
+        .alert-info {
+            border-color: #0ff;
+            background: rgba(0,255,255,0.1);
+        }
+        .system-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .metric-card {
+            background: rgba(0,255,0,0.02);
+            border: 1px solid #0f0;
+            padding: 15px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #0f0;
+        }
+        .metric-label {
+            color: #0ff;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+        .chart-container {
+            height: 200px;
+            background: #111;
+            border: 1px solid #0f0;
+            border-radius: 4px;
+            margin: 10px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        .chart-line {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #0f0;
+            animation: chartPulse 2s infinite;
+        }
+        @keyframes chartPulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <button class="refresh-btn" onclick="refreshAll()">🔄 Refresh</button>
+    
+    <div class="container">
+        <h1>🏥 RawrZ Security Platform - Health Dashboard</h1>
+        
+        <div class="dashboard-grid">
+            <div class="panel">
+                <h3>📊 System Status</h3>
+                <div class="status-card" id="systemStatus">
+                    <div class="loading">Loading system status...</div>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Uptime:</span>
+                    <span class="metric-value" id="uptime">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Version:</span>
+                    <span class="metric-value" id="version">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Service:</span>
+                    <span class="metric-value" id="service">-</span>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h3>🔧 Engine Health</h3>
+                <div class="status-card" id="engineHealth">
+                    <div class="loading">Loading engine health...</div>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Total Engines:</span>
+                    <span class="metric-value" id="totalEngines">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Healthy:</span>
+                    <span class="metric-value" id="healthyEngines">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Failed:</span>
+                    <span class="metric-value" id="failedEngines">-</span>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h3>📈 Performance Metrics</h3>
+                <div class="metric">
+                    <span class="metric-label">Memory Usage:</span>
+                    <span class="metric-value" id="memoryUsage">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">CPU Usage:</span>
+                    <span class="metric-value" id="cpuUsage">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Active Connections:</span>
+                    <span class="metric-value" id="connections">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Requests Processed:</span>
+                    <span class="metric-value" id="requests">-</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h3>🔍 Engine Details</h3>
+            <div class="engine-list" id="engineList">
+                <div class="loading">Loading engine details...</div>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h3>🛠️ System Actions</h3>
+            <button class="btn" onclick="refreshAll()">Refresh All Data</button>
+            <button class="btn" onclick="testAPI()">Test API Connection</button>
+            <button class="btn" onclick="exportHealthReport()">Export Health Report</button>
+        </div>
+    </div>
+
+    <script>
+        let refreshInterval;
+        
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            refreshAll();
+            // Auto-refresh every 30 seconds
+            refreshInterval = setInterval(refreshAll, 30000);
+        });
+        
+        async function refreshAll() {
+            await loadSystemStatus();
+            await loadEngineHealth();
+            await loadEngineDetails();
+        }
+        
+        async function loadSystemStatus() {
+            try {
+                const response = await fetch('/api/health');
+                const result = await response.json();
+                
+                const statusCard = document.getElementById('systemStatus');
+                
+                if (result.success) {
+                    statusCard.innerHTML = `<div class="status-online">✅ System Online</div>`;
+                    statusCard.className = 'status-card status-online';
+                    
+                    document.getElementById('uptime').textContent = `${result.uptime.toFixed(2)}s`;
+                    document.getElementById('version').textContent = result.version;
+                    document.getElementById('service').textContent = result.service;
+                } else {
+                    statusCard.innerHTML = `<div class="status-offline">❌ System Error</div>`;
+                    statusCard.className = 'status-card status-offline';
+                }
+            } catch (error) {
+                const statusCard = document.getElementById('systemStatus');
+                statusCard.innerHTML = `<div class="status-offline">❌ System Offline</div>`;
+                statusCard.className = 'status-card status-offline';
+            }
+        }
+        
+        async function loadEngineHealth() {
+            try {
+                const response = await fetch('/api/engines/health');
+                const result = await response.json();
+                
+                const healthCard = document.getElementById('engineHealth');
+                
+                if (result.success) {
+                    const healthPercentage = ((result.healthyEngines / result.totalEngines) * 100).toFixed(1);
+                    
+                    if (result.failedEngines === 0) {
+                        healthCard.innerHTML = `<div class="status-online">✅ All Engines Healthy (${healthPercentage}%)</div>`;
+                        healthCard.className = 'status-card status-online';
+                    } else if (result.failedEngines < result.totalEngines / 2) {
+                        healthCard.innerHTML = `<div class="status-warning">⚠️ Some Engines Failed (${healthPercentage}%)</div>`;
+                        healthCard.className = 'status-card status-warning';
+                    } else {
+                        healthCard.innerHTML = `<div class="status-offline">❌ Multiple Engine Failures (${healthPercentage}%)</div>`;
+                        healthCard.className = 'status-card status-offline';
+                    }
+                    
+                    document.getElementById('totalEngines').textContent = result.totalEngines;
+                    document.getElementById('healthyEngines').textContent = result.healthyEngines;
+                    document.getElementById('failedEngines').textContent = result.failedEngines;
+                } else {
+                    healthCard.innerHTML = `<div class="status-offline">❌ Engine Health Check Failed</div>`;
+                    healthCard.className = 'status-card status-offline';
+                }
+            } catch (error) {
+                const healthCard = document.getElementById('engineHealth');
+                healthCard.innerHTML = `<div class="status-offline">❌ Engine Health Unavailable</div>`;
+                healthCard.className = 'status-card status-offline';
+            }
+        }
+        
+        async function loadEngineDetails() {
+            try {
+                const response = await fetch('/api/engines');
+                const result = await response.json();
+                
+                const engineList = document.getElementById('engineList');
+                
+                if (result.success) {
+                    engineList.innerHTML = result.engines.map(engine => `
+                        <div class="engine-item">
+                            <span class="engine-name">${engine.name}</span>
+                            <span class="engine-status ${engine.status === 'active' ? '' : 'failed'}">
+                                ${engine.status === 'active' ? '✅ Active' : '❌ Inactive'}
+                            </span>
+                        </div>
+                    `).join('');
+                } else {
+                    engineList.innerHTML = '<div class="status-offline">Failed to load engine details</div>';
+                }
+            } catch (error) {
+                const engineList = document.getElementById('engineList');
+                engineList.innerHTML = '<div class="status-offline">Engine details unavailable</div>';
+            }
+        }
+        
+        async function testAPI() {
+            const startTime = Date.now();
+            try {
+                const response = await fetch('/api/health');
+                const result = await response.json();
+                const endTime = Date.now();
+                const responseTime = endTime - startTime;
+                
+                if (result.success) {
+                    alert(`✅ API Test Successful\nResponse Time: ${responseTime}ms\nStatus: ${result.status}`);
+                } else {
+                    alert(`❌ API Test Failed\nResponse: ${JSON.stringify(result)}`);
+                }
+            } catch (error) {
+                alert(`❌ API Test Error\nError: ${error.message}`);
+            }
+        }
+        
+        function exportHealthReport() {
+            const report = {
+                timestamp: new Date().toISOString(),
+                systemStatus: document.getElementById('systemStatus').textContent,
+                uptime: document.getElementById('uptime').textContent,
+                version: document.getElementById('version').textContent,
+                totalEngines: document.getElementById('totalEngines').textContent,
+                healthyEngines: document.getElementById('healthyEngines').textContent,
+                failedEngines: document.getElementById('failedEngines').textContent
+            };
+            
+            const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `rawrz-health-report-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        }
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+        });
+    </script>
+</body>
+</html>

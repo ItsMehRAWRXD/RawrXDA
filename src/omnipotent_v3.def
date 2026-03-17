@@ -1,0 +1,20 @@
+LIBRARY RawrXD_Singularity_120B
+EXPORTS
+    SwarmV_Sovereign_Omnipotent_Seal_v2026
+    SwarmV36_Tiered_L1_VRAM_BAR_Controller
+    SwarmV36_Tiered_L2_DDR5_DMAReader
+    SwarmV36_Tiered_L3_NVMe_RAID0_Fetch
+    SwarmV36_MoE_4_16_Expert_Pruning
+    SwarmV36_120B_Tiered_Singularity_Seal
+    SwarmV40_Telemetry_Capture_Kernel
+    SwarmV194_MoE_Locality_Audit
+    SwarmV201_Expert_Thread_Pinning
+    SwarmV202_VNNI_Unroll_4x
+    SwarmV203_NVMe_Direct_Inject
+    SwarmV204_MoE_Anticipator
+    SwarmV205_KV_Adapt_Quant
+    SwarmV206_Medusa_MultiV
+    SwarmV207_Signal_Lock
+    SwarmV208_Ollama_Path_Resolver
+    SwarmV209_L1_Cache_Manager
+    SwarmV210_SmokeTest_Hook

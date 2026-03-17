@@ -1,0 +1,14 @@
+# Full path of the current script
+$CurrentScriptPath = $PSCommandPath
+Write-Output "Current Script Path: $CurrentScriptPath"
+
+# Directory of the current script
+$CurrentScriptDirectory = Split-Path -Path $PSCommandPath
+Write-Output "Current Script Directory: $CurrentScriptDirectory"
+# Full path of the current script
+$CurrentScriptPath = $PSCommandPath
+Write-Output "Current Script Path: $CurrentScriptPath"
+
+# Directory of the current script
+$CurrentScriptDirectory = Split-Path -Path $PSCommandPath
+Write-Output "Current Script Directory: $CurrentScriptDirectory"

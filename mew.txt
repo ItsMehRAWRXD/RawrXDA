@@ -1,0 +1,52 @@
+RawrXD IDE Status Snapshot
+Timestamp: 2026-03-16
+
+Current State
+- Main window creation path is healthy: createWindow -> showWindow -> message loop.
+- Visibility hardening is now active in runtime:
+  - Post-show foreground restore path
+  - Periodic visibility watchdog timer
+  - Optional layout debug overlay for 0x0 detection
+- Runtime feature probes are deterministic and passing:
+  - --test-peek-view -> exit 0
+  - --test-autosave -> exit 0
+  - --test-terminal-split -> exit 0
+
+What Was Fixed
+1) Terminal command ID mismatch (real bug)
+- Terminal menu IDs were defined in a range that could route to the wrong handler path.
+- Corrected to terminal range IDs and added explicit clear handling.
+
+2) Window visibility reliability
+- Added periodic watchdog in Win32 core to recover from:
+  - hidden window state
+  - minimized startup state
+  - off-screen window placement
+  - tiny/collapsed window dimensions
+
+3) Layout collapse diagnostics
+- Added optional debug overlay (env gated):
+  - RAWRXD_DEBUG_LAYOUT_OVERLAY=1
+- Displays client width/height and warning when layout is too small.
+
+Implemented Runtime Assertions (7)
+1. main_window_created
+2. editor_window_created
+3. peek_overlay_created
+4. autosave_timer_started
+5. autosave_timer_stopped
+6. terminal_split_horizontal_added_pane
+7. terminal_split_vertical_added_pane
+
+Known Gaps / Follow-ups
+- Probe framework currently validates critical behavior paths but is not yet a full UI automation harness.
+- Subsystem skips (camellia/masm/swarm) can still occur based on startup phase config and are not visibility blockers.
+- Tool migration is staged; not all legacy-forwarded tools are fully refactored to per-tool contracts yet.
+
+How To Enable Layout Overlay
+- PowerShell:
+  $env:RAWRXD_DEBUG_LAYOUT_OVERLAY='1'
+  .\build\bin\RawrXD-Win32IDE.exe
+
+Operational Read
+- IDE is in runnable state with window self-healing and core feature probes green.

@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyCopilot++ IDE - PRODUCTION READY v4.0</title>
+
+    <!-- Monaco Editor with correct SRI hash -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"
+        integrity="sha512-ZG31AN9z/CQD1YDDAK4RUAvogwbJHv6bHrumrnMLzdCrVu4HeAqrUX7Jsal/cbUwXGfaMUNmQU04tQ8XXl5Znw=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <!-- Quill Editor with fallback -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"
+        onerror="console.warn('Quill CDN failed, using fallback')"></script>
+
+    <!-- CodeMirror -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/css/css.min.js"></script>
+
+    <!-- Embedded AI System -->
+    <script src="embedded-ai-system.js"></script>
+    <script src="model-loader.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1e1e1e;
+            color: #ffffff;
+            overflow: auto;
+            height: 100vh;
+        }
+
+        .menu-bar {
+            background: rgba(45, 45, 48, 0.95);
+            border-bottom: 1px solid #3e3e42;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            height: 32px;
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            position: relative;
+            z-index: 1000;
+        }
+
+        .main-container {
+            display: flex;
+            height: calc(100vh - 32px);
+        }
+
+        .sidebar {
+            width: 300px;
+            background: rgba(37, 37, 38, 0.95);
+            border-right: 1px solid #3e3e42;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-header {
+            background: rgba(45, 45, 48, 0.95);
+            padding: 8px 16px;
+            border-bottom: 1px solid #3e3e42;
+            font-weight: bold;
+            font-size: 12px;
+            text-transform: uppercase;
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+        }
+
+        .file-explorer {
+            flex: 1;
+            padding: 8px;
+        }
+
+        .file-item {
+            padding: 4px 8px;
+            cursor: pointer;
+            color: #ffffff;
+            font-size: 13px;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            transition: background 0.2s;
+        }
+
+        .file-item:hover {
+            background: rgba(62, 62, 66, 0.8);
+        }
+
+        .file-item.selected {
+            background: rgba(0, 122, 204, 0.8);
+            color: white;
+        }
+
+        .editor-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .editor-tabs {
+            display: flex;
+            background: rgba(45, 45, 48, 0.95);
+            border-bottom: 1px solid #3e3e42;
+        }
+
+        .tab {
+            padding: 8px 16px;
+            cursor: pointer;
+            color: #d4d4d4;
+            font-size: 12px;
+            border-right: 1px solid #3e3e42;
+            transition: background 0.2s;
+        }
+
+        .tab:hover {
+            background: rgba(62, 62, 66, 0.8);
+        }
+
+        .tab.active {
+            background: rgba(0, 122, 204, 0.8);
+            color: white;
+        }
+
+        .editor-area {
+            flex: 1;
+            position: relative;
+        }
+
+        .editor {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: none;
+        }
+
+        .editor.active {
+            display: block;
+        }
+
+        .terminal {
+            height: 200px;
+            background: rgba(37, 37, 38, 0.95);
+            border-top: 1px solid #3e3e42;
+            padding: 8px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .ai-panel {
+            width: 300px;
+            background: rgba(37, 37, 38, 0.95);
+            border-left: 1px solid #3e3e42;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .ai-header {
+            background: rgba(45, 45, 48, 0.95);
+            padding: 8px 16px;
+            border-bottom: 1px solid #3e3e42;
+            font-weight: bold;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .ai-content {
+            flex: 1;
+            padding: 8px;
+            overflow-y: auto;
+        }
+
+        .ai-input {
+            width: 100%;
+            padding: 8px;
+            background: rgba(62, 62, 66, 0.8);
+            border: 1px solid #3e3e42;
+            color: #ffffff;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .ai-response {
+            margin-top: 16px;
+            padding: 12px;
+            background: rgba(62, 62, 66, 0.5);
+            border-radius: 4px;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .loading {
+            color: #ffa500;
+            font-style: italic;
+        }
+
+        .error {
+            color: #ff6b6b;
+        }
+
+        .success {
+            color: #51cf66;
+        }
+
+        .ai-query {
+            color: #569cd6;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .ai-response-text {
+            color: #ffffff;
+            white-space: pre-wrap;
+            margin-bottom: 8px;
+        }
+
+        .ai-timestamp {
+            color: #6a9955;
+            font-size: 11px;
+            font-style: italic;
+        }
+
+        .retry {
+            color: #4ec9b0;
+            cursor: pointer;
+            text-decoration: underline;
+            margin-top: 8px;
+        }
+
+        .retry:hover {
+            color: #6ec9b0;
+        }
+
+        .model-info {
+            background: rgba(45, 45, 48, 0.95);
+            border: 1px solid #3e3e42;
+            border-radius: 4px;
+            padding: 8px;
+            margin: 4px 0;
+            font-size: 11px;
+            color: #6a9955;
+        }
+
+        .warning {
+            color: #ffa500;
+        }
+
+        .status-bar {
+            height: 22px;
+            background: rgba(45, 45, 48, 0.95);
+            border-top: 1px solid #3e3e42;
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+            font-size: 11px;
+            color: #d4d4d4;
+        }
+
+        .status-bar>div {
+            margin-right: 16px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="menu-bar">
+        <div style="padding: 0 16px; font-weight: bold;">MyCopilot++ IDE - PRODUCTION READY v4.0</div>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="sidebar-header">Explorer</div>
+            <div class="file-explorer" id="file-explorer">
+                <div class="loading">Loading files...</div>
+            </div>
+        </div>
+
+        <div class="editor-container">
+            <div class="editor-tabs">
+                <div class="tab active" data-editor="monaco">Monaco</div>
+                <div class="tab" data-editor="quill">Quill</div>
+                <div class="tab" data-editor="codemirror">CodeMirror</div>
+            </div>
+
+            <div class="editor-area">
+                <div id="monaco-editor" class="editor active"></div>
+                <div id="quill-editor" class="editor"></div>
+                <div id="codemirror-editor" class="editor"></div>
+            </div>
+
+            <div class="terminal" id="terminal">
+                <div class="success">MyCopilot++ IDE Terminal v4.0 - PRODUCTION READY</div>
+                <div>Type commands below or use the menu:</div>
+                <div>$ <span id="terminal-input" contenteditable="true" style="outline: none;"></span></div>
+            </div>
+        </div>
+
+        <div class="ai-panel">
+            <div class="ai-header">🤖 Embedded AI Assistant</div>
+            <div class="ai-content">
+                <div class="model-info" id="model-info">
+                    <div>Loading AI system...</div>
+                </div>
+                <div class="model-loader-view" id="model-loader-view" style="margin:8px 0;">
+                    <div style="font-size:12px; margin-bottom:6px; color:#d4d4d4;">Model Loader View</div>
+                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                        <div id="ml-view-toggle"
+                            style="display:flex; border:1px solid #3e3e42; border-radius:6px; overflow:hidden;">
+                            <button id="ml-view-local"
+                                style="padding:4px 10px; background:#2d2d30; color:#d4d4d4; border:none; cursor:pointer;">Local</button>
+                            <button id="ml-view-cloud"
+                                style="padding:4px 10px; background:#2d2d30; color:#d4d4d4; border:none; cursor:pointer; border-left:1px solid #3e3e42;">Cloud</button>
+                        </div>
+                        <label style="display:flex; align-items:center; gap:6px; font-size:12px;">
+                            <input type="checkbox" id="ml-toggle-bitrate"> Show Bitrate
+                        </label>
+                        <label style="display:flex; align-items:center; gap:6px; font-size:12px;">
+                            <input type="checkbox" id="ml-toggle-fps"> Show FPS
+                        </label>
+                    </div>
+                    <div id="ml-metrics" style="margin-top:6px; font-size:12px; color:#c5c5c5;">
+                        <div id="ml-selected-view" style="margin-bottom:4px; color:#6a9955;">View: Local</div>
+                        <div id="ml-bitrate" style="display:none;">Bitrate: —</div>
+                        <div id="ml-fps" style="display:none;">FPS: —</div>
+                    </div>
+                </div>
+                <div class="ai-response">
+                    <div class="success">Ready</div>
+                    <div>Hello! I'm your EMBEDDED AI coding assistant. I run entirely within the IDE - no external
+                        services needed! I can help with code explanation, debugging, optimization, and more. How can I
+                        assist you today?</div>
+                </div>
+                <input type="text" class="ai-input" placeholder="Ask AI anything..." id="ai-input">
+            </div>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <div id="status-line">Ready - MyCopilot++ IDE v4.0 - PRODUCTION READY</div>
+        <div id="status-info">
+            <span id="current-file">No file selected</span> |
+            <span id="editor-mode">Monaco</span> |
+            <span id="encoding">UTF-8</span> |
+            <span id="language">HTML</span> |
+            <span id="git-status">Git: main</span> |
+            <span id="debug-status">Debug: Off</span> |
+            <span id="theme-status">Theme: vs-dark</span> |
+            <span id="plugins-status">Plugins: 0</span> |
+            <span id="context-window" class="ctx-status-inline" onclick="ContextWindowWidget.toggle()"
+                title="Context Window Token Usage" style="cursor:pointer">Ctx: 0/128K ▪ 0%</span>
+        </div>
+    </div>
+
+    <script>
+        // PRODUCTION READY IDE - Enhanced with proper SRI and error handling
+        console.log('[PRODUCTION-IDE] Initializing production-ready IDE v4.0...');
+
+        // Global variables
+        let files = {};
+        let currentFile = null;
+        let currentEditor = 'monaco';
+        let monacoEditor = null;
+        let quillEditor = null;
+        let codemirrorEditor = null;
+
+        // File loading system - Embedded for CORS compatibility
+        function loadFiles() {
+            // Use template literals to avoid escaping issues
+            files = {
+                "index.html": `<!DOCTYPE html>
+<html>
+<head>
+    <title>My App</title>
+</head>
+<body>
+    <h1>Hello World!</h1>
+    <script src="script.js"></script>
+</body>
+
+</html>`,
+"hello.py": `#!/usr/bin/env python3
+
+def main():
+print("Hello from Python!")
+
+if __name__ == "__main__":
+main()`,
+"hello.js": `console.log('Hello from JavaScript!');
+
+function greet(name) {
+return \`Hello, \${name}!\`;
+}`,
+"styles.css": `body {
+font-family: Arial, sans-serif;
+margin: 0;
+padding: 20px;
+background-color: #f0f0f0;
+}
+
+h1 {
+color: #333;
+text-align: center;
+}`,
+"README.md": `# My App
+
+This is my awesome application!`
+};
+console.log(`[PRODUCTION-IDE] Loaded ${Object.keys(files).length} files`);
+updateFileExplorer();
+return true;
+}
+
+function updateFileExplorer() {
+const explorer = document.getElementById('file-explorer');
+explorer.innerHTML = '';
+
+Object.keys(files).forEach(filename => {
+const fileItem = document.createElement('div');
+fileItem.className = 'file-item';
+fileItem.textContent = filename;
+fileItem.onclick = () => openFile(filename);
+explorer.appendChild(fileItem);
+});
+}
+
+function openFile(filename) {
+currentFile = filename;
+document.getElementById('current-file').textContent = filename;
+
+// Update file selection
+document.querySelectorAll('.file-item').forEach(item => {
+item.classList.remove('selected');
+if (item.textContent === filename) {
+item.classList.add('selected');
+}
+});
+
+// Load content into current editor
+const content = files[filename] || '';
+setCurrentEditorContent(content);
+console.log(`[PRODUCTION-IDE] Opened file: ${filename}`);
+}
+
+function setCurrentEditorContent(content) {
+switch(currentEditor) {
+case 'monaco':
+if (monacoEditor) {
+monacoEditor.setValue(content);
+}
+break;
+case 'quill':
+if (quillEditor && quillEditor.root) {
+quillEditor.root.innerHTML = content;
+} else {
+const fallbackEditor = document.querySelector('#quill-editor textarea');
+if (fallbackEditor) {
+fallbackEditor.value = content;
+}
+}
+break;
+case 'codemirror':
+if (codemirrorEditor) {
+codemirrorEditor.setValue(content);
+}
+break;
+}
+}
+
+function getCurrentEditorContent() {
+switch(currentEditor) {
+case 'monaco':
+return monacoEditor ? monacoEditor.getValue() : '';
+case 'quill':
+if (quillEditor && quillEditor.root) {
+return quillEditor.root.innerHTML;
+} else {
+const fallbackEditor = document.querySelector('#quill-editor textarea');
+return fallbackEditor ? fallbackEditor.value : '';
+}
+case 'codemirror':
+return codemirrorEditor ? codemirrorEditor.getValue() : '';
+default:
+return '';
+}
+}
+
+function saveFile() {
+if (currentFile) {
+files[currentFile] = getCurrentEditorContent();
+console.log(`[PRODUCTION-IDE] Saved file: ${currentFile}`);
+showSuccess(`Saved ${currentFile}`);
+}
+}
+
+function showError(message) {
+const terminal = document.getElementById('terminal');
+const errorDiv = document.createElement('div');
+errorDiv.className = 'error';
+errorDiv.textContent = `[ERROR] ${message}`;
+terminal.appendChild(errorDiv);
+terminal.scrollTop = terminal.scrollHeight;
+}
+
+function showSuccess(message) {
+const terminal = document.getElementById('terminal');
+const successDiv = document.createElement('div');
+successDiv.className = 'success';
+successDiv.textContent = `[SUCCESS] ${message}`;
+terminal.appendChild(successDiv);
+terminal.scrollTop = terminal.scrollHeight;
+}
+
+function showInfo(message) {
+const terminal = document.getElementById('terminal');
+const infoDiv = document.createElement('div');
+infoDiv.textContent = `[INFO] ${message}`;
+terminal.appendChild(infoDiv);
+terminal.scrollTop = terminal.scrollHeight;
+}
+
+// Editor switching
+function switchEditor(editorName) {
+currentEditor = editorName;
+
+// Update tabs
+document.querySelectorAll('.tab').forEach(tab => {
+tab.classList.remove('active');
+if (tab.dataset.editor === editorName) {
+tab.classList.add('active');
+}
+});
+
+// Update editors
+document.querySelectorAll('.editor').forEach(editor => {
+editor.classList.remove('active');
+});
+document.getElementById(`${editorName}-editor`).classList.add('active');
+
+// Update status
+document.getElementById('editor-mode').textContent = editorName.charAt(0).toUpperCase() + editorName.slice(1);
+
+// Load current file content
+if (currentFile) {
+setCurrentEditorContent(files[currentFile] || '');
+}
+
+console.log(`[PRODUCTION-IDE] Switched to ${editorName} editor`);
+}
+
+// Initialize editors with enhanced error handling
+function initializeEditors() {
+console.log('[PRODUCTION-IDE] Initializing editors...');
+
+// Initialize Monaco Editor with improved error handling
+setTimeout(() => {
+try {
+if (typeof require !== 'undefined') {
+require.config({
+paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' }
+});
+
+require(['vs/editor/editor.main'], function () {
+monacoEditor = monaco.editor.create(document.getElementById('monaco-editor'), {
+value: '',
+language: 'html',
+theme: 'vs-dark',
+automaticLayout: true,
+fontSize: 14,
+lineNumbers: 'on',
+wordWrap: 'on'
+});
+
+monacoEditor.onDidChangeModelContent(() => {
+if (currentFile) {
+files[currentFile] = monacoEditor.getValue();
+}
+});
+
+console.log('[PRODUCTION-IDE] Monaco Editor initialized successfully');
+}, function (error) {
+console.warn('[PRODUCTION-IDE] Monaco module load failed, using fallback:', error);
+createMonacoFallback();
+});
+} else {
+throw new Error('RequireJS not available');
+}
+} catch (error) {
+console.error('[PRODUCTION-IDE] Monaco initialization failed:', error);
+createMonacoFallback();
+}
+}, 1000);
+
+// Initialize Quill Editor with fallback
+try {
+if (typeof Quill !== 'undefined') {
+quillEditor = new Quill('#quill-editor', {
+theme: 'snow',
+modules: {
+toolbar: [
+['bold', 'italic', 'underline'],
+['blockquote', 'code-block'],
+[{ 'list': 'ordered'}, { 'list': 'bullet' }],
+['link', 'image'],
+['clean']
+]
+}
+});
+
+quillEditor.on('text-change', () => {
+if (currentFile) {
+files[currentFile] = quillEditor.root.innerHTML;
+}
+});
+
+console.log('[PRODUCTION-IDE] Quill Editor initialized');
+} else {
+createQuillFallback();
+}
+} catch (error) {
+console.error('[PRODUCTION-IDE] Quill Editor failed:', error);
+createQuillFallback();
+}
+
+// Initialize CodeMirror Editor
+try {
+codemirrorEditor = CodeMirror(document.getElementById('codemirror-editor'), {
+value: '',
+mode: 'htmlmixed',
+theme: 'default',
+lineNumbers: true,
+indentUnit: 4,
+tabSize: 4,
+lineWrapping: true
+});
+
+codemirrorEditor.on('change', () => {
+if (currentFile) {
+files[currentFile] = codemirrorEditor.getValue();
+}
+});
+
+console.log('[PRODUCTION-IDE] CodeMirror Editor initialized');
+} catch (error) {
+console.error('[PRODUCTION-IDE] CodeMirror Editor failed:', error);
+}
+}
+
+function createMonacoFallback() {
+const monacoContainer = document.getElementById('monaco-editor');
+monacoContainer.innerHTML = `
+<textarea id="monaco-fallback"
+    style="width: 100%; height: 100%; background: #1e1e1e; color: #ffffff; border: none; padding: 10px; font-family: monospace; resize: none; font-size: 14px; line-height: 1.4;"
+    placeholder="Code Editor - Ready to use!"></textarea>
+`;
+
+const fallbackEditor = document.getElementById('monaco-fallback');
+fallbackEditor.addEventListener('input', () => {
+if (currentFile) {
+files[currentFile] = fallbackEditor.value;
+}
+});
+
+monacoEditor = {
+getValue: () => fallbackEditor.value,
+setValue: (value) => { fallbackEditor.value = value; }
+};
+
+console.log('[PRODUCTION-IDE] Monaco fallback editor created');
+}
+
+function createQuillFallback() {
+const quillContainer = document.getElementById('quill-editor');
+quillContainer.innerHTML = `
+<div style="width: 100%; height: 100%; background: #1e1e1e; color: #ffffff; border: 1px solid #3e3e42;">
+    <div style="color: #ff6b6b; margin: 10px;">[INFO] Rich text editor (Quill not available)</div>
+    <textarea
+        style="width: calc(100% - 20px); height: calc(100% - 60px); background: #1e1e1e; color: #ffffff; border: none; padding: 10px; font-family: monospace; resize: none; margin: 10px;"
+        placeholder="Rich text content..."></textarea>
+</div>
+`;
+console.log('[PRODUCTION-IDE] Quill fallback editor created');
+}
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', async function() {
+console.log('[PRODUCTION-IDE] DOM loaded, initializing...');
+
+// Load files first
+loadFiles();
+
+// Initialize editors
+initializeEditors();
+
+// Setup tab switching
+document.querySelectorAll('.tab').forEach(tab => {
+tab.addEventListener('click', () => {
+switchEditor(tab.dataset.editor);
+});
+});
+
+// Setup keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+e.preventDefault();
+saveFile();
+}
+});
+
+// Setup AI input
+document.getElementById('ai-input').addEventListener('keypress', (e) => {
+if (e.key === 'Enter') {
+const query = e.target.value;
+if (query.trim()) {
+handleAIQuery(query);
+e.target.value = '';
+}
+}
+});
+
+// Setup terminal input
+document.getElementById('terminal-input').addEventListener('keypress', (e) => {
+if (e.key === 'Enter') {
+const command = e.target.textContent.trim();
+if (command) {
+handleTerminalCommand(command);
+e.target.textContent = '';
+}
+}
+});
+
+// Initialize AI system display
+updateModelInfo();
+initModelLoaderView();
+
+showSuccess('PRODUCTION IDE initialized successfully!');
+console.log('[PRODUCTION-IDE] Initialization complete');
+});
+
+async function handleAIQuery(query) {
+const responseDiv = document.querySelector('.ai-response');
+responseDiv.innerHTML = `
+<div class="loading">🤖 Embedded AI processing your request...</div>
+`;
+
+try {
+// Use the embedded AI system
+if (window.embeddedAI && window.embeddedAI.isInitialized) {
+const result = await window.embeddedAI.generateResponse(query, {
+currentFile: currentFile,
+editorContent: getCurrentEditorContent(),
+editorType: currentEditor
+});
+
+if (result.success) {
+responseDiv.innerHTML = `
+<div class="success">🤖 AI Assistant (${result.model})</div>
+<div class="ai-query">You: "${query}"</div>
+<div class="ai-response-text">${result.response}</div>
+<div class="ai-timestamp">${new Date(result.timestamp).toLocaleTimeString()}</div>
+`;
+} else {
+responseDiv.innerHTML = `
+<div class="error">AI Error</div>
+<div>${result.error || 'Unknown error occurred'}</div>
+<div class="fallback">${result.fallback || ''}</div>
+`;
+}
+} else {
+// Fallback if embedded AI not ready
+responseDiv.innerHTML = `
+<div class="warning">AI System Loading...</div>
+<div>Please wait while the embedded AI system initializes.</div>
+<div class="retry" onclick="handleAIQuery('${query}')">🔄 Retry</div>
+`;
+}
+} catch (error) {
+console.error('[AI] Query failed:', error);
+responseDiv.innerHTML = `
+<div class="error">AI System Error</div>
+<div>Failed to process your request. Please try again.</div>
+<div class="error-details">${error.message}</div>
+`;
+}
+}
+
+function handleTerminalCommand(command) {
+const terminal = document.getElementById('terminal');
+const commandDiv = document.createElement('div');
+commandDiv.textContent = `$ ${command}`;
+terminal.appendChild(commandDiv);
+
+// Handle basic commands
+if (command === 'help') {
+showInfo('Available commands: help, list, save, clear');
+} else if (command === 'list') {
+showInfo(`Files: ${Object.keys(files).join(', ')}`);
+} else if (command === 'save') {
+saveFile();
+} else if (command === 'clear') {
+terminal.innerHTML = '<div class="success">MyCopilot++ IDE Terminal v4.0 - PRODUCTION READY</div>
+<div>Type commands below or use the menu:</div>';
+const inputDiv = document.createElement('div');
+inputDiv.innerHTML = '$ <span id="terminal-input-clear" contenteditable="true" style="outline: none;"></span>';
+terminal.appendChild(inputDiv);
+document.getElementById('terminal-input-clear').addEventListener('keypress', (e) => {
+if (e.key === 'Enter') {
+const command = e.target.textContent.trim();
+if (command) {
+handleTerminalCommand(command);
+e.target.textContent = '';
+}
+}
+});
+} else {
+showInfo(`Command not found: ${command}. Type 'help' for available commands.`);
+}
+
+terminal.scrollTop = terminal.scrollHeight;
+}
+
+function updateModelInfo() {
+const modelInfoDiv = document.getElementById('model-info');
+
+if (window.embeddedAI && window.embeddedAI.isInitialized) {
+const info = window.embeddedAI.getModelInfo();
+modelInfoDiv.innerHTML = `
+<div><strong>Model:</strong> ${info.currentModel}</div>
+<div><strong>Status:</strong> ${info.isInitialized ? 'Ready' : 'Loading...'}</div>
+<div><strong>Capabilities:</strong> ${info.capabilities.join(', ')}</div>
+<div><strong>Available Models:</strong> ${info.availableModels.length > 0 ? info.availableModels.join(', ') : 'Built-in
+    only'}</div>
+`;
+} else {
+modelInfoDiv.innerHTML = `
+<div>Initializing embedded AI system...</div>
+<div>No external dependencies required</div>
+`;
+}
+}
+
+// Update model info periodically
+setInterval(updateModelInfo, 5000);
+
+// Simple metrics store for model loader (bitrate/FPS) with smoothing
+window.MLMetrics = {
+last: { local: null, cloud: null },
+hist: { local: [], cloud: [] },
+maxHist: 25,
+record: function(type, bytesIn, bytesOut, durationMs) {
+try {
+const totalBytes = (bytesIn || 0) + (bytesOut || 0);
+const seconds = Math.max(0.001, (durationMs || 0) / 1000);
+const bitsPerSecond = (totalBytes * 8) / seconds;
+const mbps = bitsPerSecond / 1_000_000; // decimal Mbps
+const fps = 1 / seconds; // treat each inference as a frame
+const entry = {
+timestamp: Date.now(),
+mbps: mbps,
+fps: fps,
+bytesIn: bytesIn || 0,
+bytesOut: bytesOut || 0,
+durationMs: durationMs || 0
+};
+const key = (type === 'cloud') ? 'cloud' : 'local';
+this.last[key] = entry;
+this.hist[key].push(entry);
+if (this.hist[key].length > this.maxHist) this.hist[key].shift();
+} catch (e) {
+// no-op
+}
+},
+get: function(type) {
+return this.last[(type === 'cloud') ? 'cloud' : 'local'];
+},
+getAvg: function(type, n = 10) {
+const key = (type === 'cloud') ? 'cloud' : 'local';
+const arr = this.hist[key];
+if (!arr || arr.length === 0) return null;
+const slice = arr.slice(-Math.max(1, Math.min(n, arr.length)));
+const sum = slice.reduce((acc, x) => {
+acc.mbps += x.mbps;
+acc.fps += x.fps;
+return acc;
+}, { mbps: 0, fps: 0 });
+return { mbps: sum.mbps / slice.length, fps: sum.fps / slice.length, count: slice.length };
+}
+};
+
+function getAIProviderType() {
+// Determine if provider should be treated as local or cloud, based on saved settings
+try {
+const saved = JSON.parse(localStorage.getItem('mycopilot-settings') || '{}');
+const prov = (saved.ai && saved.ai.aiProvider) ? String(saved.ai.aiProvider).toLowerCase() : 'local';
+if (prov === 'local' || prov === 'ollama') return 'local';
+return 'cloud';
+} catch {
+return 'local';
+}
+}
+
+function instrumentModelMetrics() {
+try {
+// Wrap embedded AI generation to record metrics
+if (window.embeddedAI && !window.embeddedAI.__mlInstrumented) {
+const origGen = window.embeddedAI.generateResponse.bind(window.embeddedAI);
+window.embeddedAI.generateResponse = async function(prompt, context) {
+const enc = (typeof TextEncoder !== 'undefined') ? new TextEncoder() : null;
+const t0 = performance.now();
+const res = await origGen(prompt, context);
+const t1 = performance.now();
+const bytesIn = enc ? enc.encode(prompt || '').length : (prompt || '').length;
+const outText = (res && typeof res === 'object' && 'response' in res) ? (res.response || '') : String(res || '');
+const bytesOut = enc ? enc.encode(outText).length : outText.length;
+const type = getAIProviderType();
+// Only record local here; cloud will be captured via fetch/XHR
+if (type === 'local') {
+window.MLMetrics.record(type, bytesIn, bytesOut, t1 - t0);
+}
+return res;
+};
+window.embeddedAI.__mlInstrumented = true;
+}
+
+// Wrap custom model loader inference to record metrics
+if (window.modelLoader && typeof window.modelLoader.runInference === 'function' && !window.modelLoader.__mlInstrumented)
+{
+const origRun = window.modelLoader.runInference.bind(window.modelLoader);
+window.modelLoader.runInference = async function(modelName, prompt) {
+const enc = (typeof TextEncoder !== 'undefined') ? new TextEncoder() : null;
+const t0 = performance.now();
+const output = await origRun(modelName, prompt);
+const t1 = performance.now();
+const bytesIn = enc ? enc.encode(prompt || '').length : (prompt || '').length;
+const outText = (typeof output === 'string') ? output : JSON.stringify(output || '');
+const bytesOut = enc ? enc.encode(outText).length : outText.length;
+// modelLoader implies local
+window.MLMetrics.record('local', bytesIn, bytesOut, t1 - t0);
+return output;
+};
+window.modelLoader.__mlInstrumented = true;
+}
+
+// Instrument fetch for cloud metrics
+if (!window.__mlFetchInstrumented && typeof window.fetch === 'function') {
+const origFetch = window.fetch.bind(window);
+window.fetch = async function(input, init) {
+const url = (typeof input === 'string') ? input : (input?.url || '');
+const method = (init?.method || (typeof input !== 'string' ? input?.method : '') || 'GET').toUpperCase();
+let reqBytes = 0;
+try {
+const body = init?.body;
+if (typeof body === 'string') reqBytes = new TextEncoder().encode(body).length;
+else if (body instanceof Blob) reqBytes = body.size;
+else if (body instanceof ArrayBuffer) reqBytes = body.byteLength;
+else if (body && body.byteLength) reqBytes = body.byteLength;
+} catch {}
+
+const t0 = performance.now();
+const resp = await origFetch(input, init);
+const cloned = resp.clone();
+let resBytes = 0;
+try {
+const buf = await cloned.arrayBuffer();
+resBytes = buf.byteLength || 0;
+} catch {}
+const t1 = performance.now();
+
+if (isCloudInferenceUrl(url)) {
+const providerType = getAIProviderType();
+const isLocalHost = /^(https?:\/\/)?(localhost|127\.0\.0\.1)(:|\/|$)/i.test(url);
+const type = (providerType === 'local' || isLocalHost) ? 'local' : 'cloud';
+window.MLMetrics.record(type, reqBytes, resBytes, t1 - t0);
+}
+return resp;
+};
+window.__mlFetchInstrumented = true;
+}
+
+// Instrument XHR for cloud metrics
+if (!window.__mlXhrInstrumented && typeof XMLHttpRequest !== 'undefined') {
+const OrigXHR = XMLHttpRequest;
+const open = OrigXHR.prototype.open;
+const send = OrigXHR.prototype.send;
+OrigXHR.prototype.open = function(method, url) {
+this.__ml_method = (method || 'GET').toUpperCase();
+this.__ml_url = url || '';
+open.apply(this, arguments);
+};
+OrigXHR.prototype.send = function(body) {
+const url = this.__ml_url || '';
+const method = this.__ml_method || 'GET';
+let reqBytes = 0;
+try {
+if (typeof body === 'string') reqBytes = new TextEncoder().encode(body).length;
+else if (body instanceof Blob) reqBytes = body.size;
+else if (body instanceof ArrayBuffer) reqBytes = body.byteLength;
+else if (body && body.byteLength) reqBytes = body.byteLength;
+} catch {}
+const t0 = performance.now();
+this.addEventListener('loadend', () => {
+try {
+let resBytes = 0;
+if (this.response) {
+if (this.responseType === 'arraybuffer' && this.response.byteLength) resBytes = this.response.byteLength;
+else if (typeof this.response === 'string') resBytes = new TextEncoder().encode(this.response).length;
+} else if (typeof this.responseText === 'string') {
+resBytes = new TextEncoder().encode(this.responseText).length;
+}
+const t1 = performance.now();
+if (isCloudInferenceUrl(url)) {
+const providerType = getAIProviderType();
+const isLocalHost = /^(https?:\/\/)?(localhost|127\.0\.0\.1)(:|\/|$)/i.test(url);
+const type = (providerType === 'local' || isLocalHost) ? 'local' : 'cloud';
+window.MLMetrics.record(type, reqBytes, resBytes, t1 - t0);
+}
+} catch {}
+});
+return send.apply(this, arguments);
+};
+window.__mlXhrInstrumented = true;
+}
+} catch (e) {
+console.warn('[ML-VIEW] instrumentation failed:', e);
+}
+}
+
+// Model Loader View (Local/Cloud) + Bitrate/FPS toggles
+let mlState = {
+view: 'local',
+showBitrate: false,
+showFps: false,
+timer: null
+};
+
+function initModelLoaderView() {
+try {
+// Restore persisted settings
+const saved = JSON.parse(localStorage.getItem('ml-view-settings') || '{}');
+mlState.view = saved.view || 'local';
+mlState.showBitrate = !!saved.showBitrate;
+mlState.showFps = !!saved.showFps;
+
+const btnLocal = document.getElementById('ml-view-local');
+const btnCloud = document.getElementById('ml-view-cloud');
+const chkBitrate = document.getElementById('ml-toggle-bitrate');
+const chkFps = document.getElementById('ml-toggle-fps');
+
+if (!btnLocal || !btnCloud || !chkBitrate || !chkFps) return;
+
+// Apply initial UI state
+chkBitrate.checked = mlState.showBitrate;
+chkFps.checked = mlState.showFps;
+updateMlViewButtons();
+updateMlMetricsDisplay();
+
+// Ensure instrumentation is active once UI is initialized
+instrumentModelMetrics();
+
+// Wire events
+btnLocal.addEventListener('click', () => {
+mlState.view = 'local';
+persistMlState();
+updateMlViewButtons();
+updateMlMetricsDisplay();
+});
+btnCloud.addEventListener('click', () => {
+mlState.view = 'cloud';
+persistMlState();
+updateMlViewButtons();
+updateMlMetricsDisplay();
+});
+chkBitrate.addEventListener('change', (e) => {
+mlState.showBitrate = !!e.target.checked;
+persistMlState();
+updateMlMetricsDisplay();
+});
+chkFps.addEventListener('change', (e) => {
+mlState.showFps = !!e.target.checked;
+persistMlState();
+updateMlMetricsDisplay();
+});
+} catch (err) {
+console.warn('[ML-VIEW] init failed:', err);
+}
+}
+
+function updateMlViewButtons() {
+const btnLocal = document.getElementById('ml-view-local');
+const btnCloud = document.getElementById('ml-view-cloud');
+if (!btnLocal || !btnCloud) return;
+
+const activeStyle = 'background:#007acc; color:#ffffff;';
+const idleStyle = 'background:#2d2d30; color:#d4d4d4;';
+
+if (mlState.view === 'local') {
+btnLocal.style.cssText += activeStyle;
+btnCloud.style.cssText += idleStyle;
+} else {
+btnCloud.style.cssText += activeStyle;
+btnLocal.style.cssText += idleStyle;
+}
+
+const viewLbl = document.getElementById('ml-selected-view');
+if (viewLbl) viewLbl.textContent = 'View: ' + (mlState.view === 'local' ? 'Local' : 'Cloud');
+}
+
+function persistMlState() {
+try {
+localStorage.setItem('ml-view-settings', JSON.stringify({
+view: mlState.view,
+showBitrate: mlState.showBitrate,
+showFps: mlState.showFps
+}));
+} catch {}
+}
+
+function updateMlMetricsDisplay() {
+const elBitrate = document.getElementById('ml-bitrate');
+const elFps = document.getElementById('ml-fps');
+if (!elBitrate || !elFps) return;
+
+elBitrate.style.display = mlState.showBitrate ? 'block' : 'none';
+elFps.style.display = mlState.showFps ? 'block' : 'none';
+
+// Clear previous timer
+if (mlState.timer) {
+clearInterval(mlState.timer);
+mlState.timer = null;
+}
+
+if (mlState.showBitrate || mlState.showFps) {
+// Refresh UI from smoothed metrics
+mlState.timer = setInterval(() => {
+const avg = window.MLMetrics.getAvg(mlState.view, 10) || window.MLMetrics.get(mlState.view);
+if (mlState.showBitrate) {
+const mbps = avg ? avg.mbps.toFixed(2) : '—';
+elBitrate.textContent = `Bitrate: ${mbps} Mbps`;
+}
+if (mlState.showFps) {
+const fps = avg ? Math.max(0, avg.fps).toFixed(2) : '—';
+elFps.textContent = `FPS: ${fps}`;
+}
+}, 1000);
+}
+}
+
+// Cloud inference URL heuristic
+function isCloudInferenceUrl(url) {
+try {
+if (!url) return false;
+const u = String(url).toLowerCase();
+// Known cloud provider domains/paths
+const patterns = [
+'api.openai.com', 'openai.azure.com', 'azureopenai', 'anthropic.com', 'bedrock', 'amazonaws.com',
+'googleapis.com', 'gemini', 'vertexai', 'cohere.ai', 'perplexity.ai', 'groq.com',
+'kimi.moonshot', 'deepseek', '/v1/chat/completions', '/v1/messages'
+];
+// Treat localhost/127.* as local even if patterns match
+if (/^(https?:\/\/)?(localhost|127\.0\.0\.1)(:|\/|$)/i.test(u)) return false;
+return patterns.some(p => u.includes(p));
+} catch {
+return false;
+}
+}
+
+console.log('[PRODUCTION-IDE] Script loaded');
+</script>
+
+<!-- Context Window Token Usage Widget -->
+<script src="context-window-widget.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        ContextWindowWidget.init({
+            maxTokens: 128000,
+            position: 'both',
+            statusBarId: 'status-info'
+        });
+        ContextWindowWidget.update({
+            system: 4864,
+            tools: 11776,
+            userContext: 2048,
+            messages: 34176,
+            toolResults: 46848
+        });
+        ContextWindowWidget.autoTrack({ chatContainerId: 'ai-chat' });
+    });
+</script>
+</body>
+
+</html>

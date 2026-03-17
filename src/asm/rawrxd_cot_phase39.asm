@@ -350,6 +350,19 @@ CoT_SelectCopyEngine PROC FRAME
     ; EBX bit 16 = AVX-512F
     bt      ebx, CPUID_AVX512F_BIT
     jnc     @@sce_no_avx512
+
+    ; ── XGETBV gate: verify OS has enabled AVX-512 XSTATE ────────────
+    ; Without this, the CPU advertises AVX-512F but the OS may not have
+    ; enabled the ZMM register file (XCR0 bits 5/6/7).  Executing a ZMM
+    ; instruction would #UD.
+    push    rbx                         ; XGETBV clobbers nothing we need,
+    xor     ecx, ecx                    ; but guard RBX just in case
+    xgetbv                              ; EDX:EAX = XCR0
+    pop     rbx
+    and     eax, 0E0h                   ; bits 5+6+7 = opmask + ZMM_hi256 + hi16_ZMM
+    cmp     eax, 0E0h
+    jne     @@sce_no_avx512             ; OS didn't enable AVX-512 state
+
     mov     DWORD PTR [g_hasAVX512F], 1
 @@sce_no_avx512:
 

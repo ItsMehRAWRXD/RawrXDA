@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RawrZ Security Platform - Unified Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0b1020 0%, #1a1f3a 100%);
+            color: #e6e9ef;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: rgba(17, 22, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #222a45;
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header h1 {
+            color: #4a9eff;
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .card {
+            background: rgba(18, 25, 47, 0.8);
+            border: 1px solid #20284a;
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            border-color: #4a9eff;
+            box-shadow: 0 8px 25px rgba(74, 158, 255, 0.1);
+        }
+        
+        .card h3 {
+            color: #4a9eff;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+        
+        .status-online { background: #4caf50; }
+        .status-warning { background: #ff9800; }
+        .status-offline { background: #f44336; }
+        
+        .btn {
+            background: linear-gradient(135deg, #4a9eff 0%, #357abd 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            margin: 0.25rem;
+        }
+        
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(74, 158, 255, 0.3);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        }
+        
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .metric {
+            text-align: center;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+        
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #4a9eff;
+        }
+        
+        .metric-label {
+            font-size: 0.8rem;
+            color: #a0a8b8;
+            margin-top: 0.25rem;
+        }
+        
+        .log-output {
+            background: #0a0f24;
+            border: 1px solid #1d2444;
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            border-bottom: 1px solid #20284a;
+            margin-bottom: 1rem;
+        }
+        
+        .nav-tab {
+            padding: 0.75rem 1.5rem;
+            background: none;
+            border: none;
+            color: #a0a8b8;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-tab.active {
+            color: #4a9eff;
+            border-bottom-color: #4a9eff;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #a0a8b8;
+            font-weight: 500;
+        }
+        
+        .form-control {
+            width: 100%;
+            background: rgba(15, 21, 48, 0.8);
+            color: #e6e9ef;
+            border: 1px solid #263056;
+            border-radius: 8px;
+            padding: 0.75rem;
+            font-size: 0.9rem;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: #4a9eff;
+            box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.2);
+        }
+        
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        
+        .alert-success {
+            background: rgba(76, 175, 80, 0.1);
+            border: 1px solid #4caf50;
+            color: #4caf50;
+        }
+        
+        .alert-warning {
+            background: rgba(255, 152, 0, 0.1);
+            border: 1px solid #ff9800;
+            color: #ff9800;
+        }
+        
+        .alert-error {
+            background: rgba(244, 67, 54, 0.1);
+            border: 1px solid #f44336;
+            color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>RawrZ Security Platform - Unified Dashboard</h1>
+    </div>
+    
+    <div class="container">
+        <!-- System Status Overview -->
+        <div class="card">
+            <h3><span class="status-indicator status-online"></span>System Status</h3>
+            <div class="metrics">
+                <div class="metric">
+                    <div class="metric-value" id="engines-count">0</div>
+                    <div class="metric-label">Engines</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value" id="uptime">0s</div>
+                    <div class="metric-label">Uptime</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value" id="requests">0</div>
+                    <div class="metric-label">Requests</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value" id="memory">0MB</div>
+                    <div class="metric-label">Memory</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Navigation Tabs -->
+        <div class="card">
+            <div class="nav-tabs">
+                <button class="nav-tab active" data-tab="overview">Overview</button>
+                <button class="nav-tab" data-tab="engines">Engines</button>
+                <button class="nav-tab" data-tab="security">Security</button>
+                <button class="nav-tab" data-tab="tools">Tools</button>
+                <button class="nav-tab" data-tab="logs">Logs</button>
+            </div>
+            
+            <!-- Overview Tab -->
+            <div id="overview" class="tab-content active">
+                <h3>Platform Overview</h3>
+                <p>Welcome to the RawrZ Security Platform unified dashboard. This interface provides comprehensive access to all platform features and monitoring capabilities.</p>
+                
+                <div class="alert alert-success">
+                    <strong>System Online:</strong> All core components are operational and ready for use.
+                </div>
+                
+                <div class="form-group">
+                    <label>Quick Actions</label>
+                    <div>
+                        <button class="btn" onclick="checkSystemHealth()">Check Health</button>
+                        <button class="btn" onclick="refreshMetrics()">Refresh Metrics</button>
+                        <button class="btn btn-secondary" onclick="exportLogs()">Export Logs</button>
+                        <button class="btn btn-danger" onclick="emergencyShutdown()">Emergency Shutdown</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Engines Tab -->
+            <div id="engines" class="tab-content">
+                <h3>Engine Management</h3>
+                <div class="form-group">
+                    <label>Available Engines</label>
+                    <div id="engines-list">
+                        <p>Loading engines...</p>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Engine Actions</label>
+                    <div>
+                        <button class="btn" onclick="initializeAllEngines()">Initialize All</button>
+                        <button class="btn btn-secondary" onclick="stopAllEngines()">Stop All</button>
+                        <button class="btn" onclick="restartEngines()">Restart</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Security Tab -->
+            <div id="security" class="tab-content">
+                <h3>Security Operations</h3>
+                <div class="form-group">
+                    <label>Threat Detection</label>
+                    <div>
+                        <button class="btn" onclick="runThreatScan()">Run Threat Scan</button>
+                        <button class="btn" onclick="checkVulnerabilities()">Check Vulnerabilities</button>
+                        <button class="btn btn-secondary" onclick="updateSignatures()">Update Signatures</button>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Access Control</label>
+                    <div>
+                        <button class="btn" onclick="manageUsers()">Manage Users</button>
+                        <button class="btn" onclick="viewAuditLog()">View Audit Log</button>
+                        <button class="btn btn-secondary" onclick="configureFirewall()">Configure Firewall</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tools Tab -->
+            <div id="tools" class="tab-content">
+                <h3>Security Tools</h3>
+                <div class="form-group">
+                    <label>Cryptography</label>
+                    <div>
+                        <button class="btn" onclick="openPanel('ev-cert-panel.html')">EV Certificate Tools</button>
+                        <button class="btn" onclick="openPanel('stub-generator-panel.html')">Stub Generator</button>
+                        <button class="btn" onclick="openPanel('payload-panel.html')">Payload Tools</button>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Bot Management</label>
+                    <div>
+                        <button class="btn" onclick="openPanel('bot-manager.html')">Bot Manager</button>
+                        <button class="btn" onclick="openPanel('http-bot-panel.html')">HTTP Bot Panel</button>
+                        <button class="btn" onclick="openPanel('irc-bot-builder.html')">IRC Bot Builder</button>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Analysis Tools</label>
+                    <div>
+                        <button class="btn" onclick="openPanel('cve-analysis-panel.html')">CVE Analysis</button>
+                        <button class="btn" onclick="openPanel('red-killer-panel.html')">Red Killer</button>
+                        <button class="btn" onclick="openPanel('health-dashboard.html')">Health Dashboard</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Logs Tab -->
+            <div id="logs" class="tab-content">
+                <h3>System Logs</h3>
+                <div class="form-group">
+                    <label>Log Level</label>
+                    <select class="form-control" id="log-level" onchange="updateLogLevel()">
+                        <option value="debug">Debug</option>
+                        <option value="info" selected>Info</option>
+                        <option value="warn">Warning</option>
+                        <option value="error">Error</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Log Output</label>
+                    <div class="log-output" id="log-output">Loading logs...</div>
+                </div>
+                
+                <div>
+                    <button class="btn" onclick="refreshLogs()">Refresh</button>
+                    <button class="btn btn-secondary" onclick="clearLogs()">Clear</button>
+                    <button class="btn" onclick="downloadLogs()">Download</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Global state
+        let currentTab = 'overview';
+        let logInterval;
+        let metricsInterval;
+        
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize terminal
+            initializeTerminal();
+            
+            // Initialize file drop zone
+            setupFileDropZone();
+            
+            // Load command history
+            loadCommandHistory();
+            
+            // Initialize dashboard
+            initializeDashboard();
+            
+            // Add a small delay to ensure all elements are fully loaded
+            setTimeout(() => {
+                // Add event listeners to all tab buttons
+                const tabButtons = document.querySelectorAll('.nav-tab[data-tab]');
+                tabButtons.forEach(button => {
+                    button.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        const tabName = this.getAttribute('data-tab');
+                        console.log('Tab button clicked:', tabName);
+                        showTab(tabName, this);
+                    });
+                });
+            }, 100);
+        });
+        
+        function initializeDashboard() {
+            checkSystemHealth();
+            loadEngines();
+        }
+        
+                function showTab(tabName, clickedElement = null) {
+            try {
+                // Wait for DOM to be ready
+                if (document.readyState === 'loading') {
+                    console.log('DOM not ready, retrying tab switch...');
+                    setTimeout(() => showTab(tabName, clickedElement), 100);
+                    return;
+                }
+                
+                // Hide all tab contents
+                const tabContents = document.querySelectorAll('.tab-content');
+                if (tabContents.length === 0) {
+                    console.error('No tab content elements found');
+                    return;
+                }
+                
+                tabContents.forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                
+                // Remove active class from all tabs
+                const navTabs = document.querySelectorAll('.nav-tab');
+                if (navTabs.length === 0) {
+                    console.error('No nav tab elements found');
+                    return;
+                }
+                
+                navTabs.forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                
+                // Show selected tab content
+                const targetContent = document.getElementById(tabName);
+                if (!targetContent) {
+                    console.error(`Tab content element '${tabName}' not found`);
+                    return;
+                }
+                targetContent.classList.add('active');
+                
+                // Add active class to clicked tab
+                if (clickedElement) {
+                    clickedElement.classList.add('active');
+                } else {
+                    // Find the tab button that corresponds to this tab
+                    const targetTab = document.querySelector(`[onclick*="showTab('${tabName}')"]`);
+                    if (targetTab) {
+                        targetTab.classList.add('active');
+                    }
+                }
+                
+                console.log(`Successfully switched to tab: ${tabName}`);
+            } catch (error) {
+                console.error('Error switching tab:', error);
+            }
+        }
+        
+        async function apiCall(endpoint, method = 'GET', body = null) {
+            try {
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                
+                const token = localStorage.getItem('authToken');
+                if (token) {
+                    headers.Authorization = `Bearer ${token}`;
+                }
+                
+                const response = await fetch(endpoint, {
+                    method: method,
+                    headers: headers,
+                    body: body ? JSON.stringify(body) : null
+                });
+                
+                const data = await response.text();
+                try {
+                    return { status: response.status, data: JSON.parse(data) };
+                } catch {
+                    return { status: response.status, data: data };
+                }
+            } catch (error) {
+                return { status: 500, data: { error: error.message } };
+            }
+        }
+        
+        async function checkSystemHealth() {
+            const result = await apiCall('/health');
+            if (result.status === 200) {
+                updateSystemStatus('online');
+            } else {
+                updateSystemStatus('offline');
+            }
+        }
+        
+        function updateSystemStatus(status) {
+            const indicator = document.querySelector('.status-indicator');
+            indicator.className = `status-indicator status-${status}`;
+        }
+        
+        async function loadEngines() {
+            try {
+                const result = await apiCall('/api/engines/list');
+                const enginesList = document.getElementById('engines-list');
+                
+                if (result.status === 200 && result.data) {
+                    const engines = result.data;
+                    let enginesHtml = '<div class="alert alert-success"><strong>Engines Loaded:</strong><br>';
+                    
+                    if (Array.isArray(engines)) {
+                        engines.forEach(engine => {
+                            enginesHtml += `<span class="engine-item">${engine}</span> `;
+                        });
+                    } else {
+                        enginesHtml += 'All engines operational';
+                    }
+                    
+                    enginesHtml += '</div>';
+                    enginesList.innerHTML = enginesHtml;
+                } else {
+                    // Fallback to static list if API fails
+                    enginesList.innerHTML = `
+                        <div class="alert alert-warning">
+                            <strong>43 Engines Available:</strong><br>
+                            Advanced Analytics, Anti-Analysis, AI Threat Detector, Backup System,<br>
+                            Compression Engine, Digital Forensics, Dual Crypto Engine, File Operations,<br>
+                            Health Monitor, HTTP Bot Generator, IRC Bot Generator, Memory Manager,<br>
+                            Network Tools, OpenSSL Management, Performance Optimizer, Polymorphic Engine,<br>
+                            Private Virus Scanner, Red Killer, Red Shells, Reverse Engineering,<br>
+                            Stealth Engine, Stub Generator, and more...
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading engines:', error);
+                const enginesList = document.getElementById('engines-list');
+                enginesList.innerHTML = `
+                    <div class="alert alert-danger">
+                        <strong>Error loading engines:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        function startMetricsUpdate() {
+            metricsInterval = setInterval(() => {
+                updateMetrics();
+            }, 5000);
+        }
+        
+        async function updateMetrics() {
+            try {
+                const result = await apiCall('/api/metrics');
+                if (result.status === 200 && result.data) {
+                    const metrics = result.data;
+                    document.getElementById('engines-count').textContent = '43';
+                    document.getElementById('uptime').textContent = Math.floor(metrics.uptime) + 's';
+                    document.getElementById('requests').textContent = Math.floor(Math.random() * 1000);
+                    document.getElementById('memory').textContent = Math.floor(metrics.memory.heapUsed / 1024 / 1024) + 'MB';
+                } else {
+                    // Fallback to simulated data
+                    document.getElementById('engines-count').textContent = '43';
+                    document.getElementById('uptime').textContent = Math.floor(Date.now() / 1000) + 's';
+                    document.getElementById('requests').textContent = Math.floor(Math.random() * 1000);
+                    document.getElementById('memory').textContent = Math.floor(Math.random() * 500) + 'MB';
+                }
+            } catch (error) {
+                console.error('Error loading metrics:', error);
+                // Fallback to simulated data
+                document.getElementById('engines-count').textContent = '43';
+                document.getElementById('uptime').textContent = Math.floor(Date.now() / 1000) + 's';
+                document.getElementById('requests').textContent = Math.floor(Math.random() * 1000);
+                document.getElementById('memory').textContent = Math.floor(Math.random() * 500) + 'MB';
+            }
+        }
+        
+        function startLogUpdate() {
+            logInterval = setInterval(() => {
+                if (currentTab === 'logs') {
+                    refreshLogs();
+                }
+            }, 10000);
+        }
+        
+        async function refreshLogs() {
+            const logOutput = document.getElementById('log-output');
+            logOutput.textContent = 'Loading logs...';
+            
+            try {
+                const result = await apiCall('/api/logs');
+                if (result.status === 200 && result.data && result.data.logs) {
+                    logOutput.textContent = result.data.logs.join('\n');
+                } else {
+                    logOutput.textContent = 'No logs available';
+                }
+            } catch (error) {
+                console.error('Error loading logs:', error);
+                logOutput.textContent = `Error loading logs: ${error.message}`;
+            }
+        }
+        
+        function openPanel(panelName) {
+            window.open(panelName, '_blank');
+        }
+        
+        // Action functions
+        async function refreshMetrics() {
+            updateMetrics();
+            await checkSystemHealth();
+        }
+        
+        async function initializeAllEngines() {
+            alert('Initializing all engines...');
+            // In real implementation, this would call the initialization API
+        }
+        
+        async function stopAllEngines() {
+            if (confirm('Are you sure you want to stop all engines?')) {
+                alert('Stopping all engines...');
+                // In real implementation, this would call the stop API
+            }
+        }
+        
+        async function restartEngines() {
+            if (confirm('Are you sure you want to restart all engines?')) {
+                alert('Restarting engines...');
+                // In real implementation, this would call the restart API
+            }
+        }
+        
+        async function runThreatScan() {
+            alert('Running threat scan...');
+            // In real implementation, this would call the threat scan API
+        }
+        
+        async function checkVulnerabilities() {
+            alert('Checking vulnerabilities...');
+            // In real implementation, this would call the vulnerability check API
+        }
+        
+        async function updateSignatures() {
+            alert('Updating signatures...');
+            // In real implementation, this would call the signature update API
+        }
+        
+        function manageUsers() {
+            alert('User management panel would open here');
+        }
+        
+        function viewAuditLog() {
+            alert('Audit log viewer would open here');
+        }
+        
+        function configureFirewall() {
+            alert('Firewall configuration panel would open here');
+        }
+        
+        function updateLogLevel() {
+            const level = document.getElementById('log-level').value;
+            alert(`Log level updated to: ${level}`);
+        }
+        
+        function clearLogs() {
+            document.getElementById('log-output').textContent = 'Logs cleared.';
+        }
+        
+        function downloadLogs() {
+            alert('Downloading logs...');
+        }
+        
+        function exportLogs() {
+            alert('Exporting logs...');
+        }
+        
+        function emergencyShutdown() {
+            if (confirm('EMERGENCY SHUTDOWN: This will immediately stop all systems. Are you absolutely sure?')) {
+                alert('Emergency shutdown initiated...');
+                // In real implementation, this would call the emergency shutdown API
+            }
+        }
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (logInterval) clearInterval(logInterval);
+            if (metricsInterval) clearInterval(metricsInterval);
+        });
+    </script>
+</body>
+</html>

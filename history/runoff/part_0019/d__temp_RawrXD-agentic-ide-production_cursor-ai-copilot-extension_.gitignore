@@ -1,0 +1,14 @@
+.gitignore
+.vscode-test/
+.vscode/
+dist/
+node_modules/
+out/
+*.vsix
+*.log
+.DS_Store
+.env
+.env.local
+*.swp
+*.swo
+*~

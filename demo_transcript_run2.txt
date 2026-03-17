@@ -1,0 +1,42 @@
+23:41:57.387 | === RAWRXD SELF-HEALING DEMO ===
+23:41:57.388 | Start: 03/13/2026 23:41:57
+23:41:57.390 | Build env injected (MSVC+SDK): msvc=C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717 sdk=C:\Program Files (x86)\Windows Kits\10
+23:41:57.391 | Build command: cmake --build build_prod --config Release --target test_autonomous_pipeline 2>&1
+23:41:57.391 | [PHASE 0] Baseline check before controlled break...
+23:41:57.570 | Baseline exit code: 0
+23:41:57.572 | Baseline errors: 0
+23:41:57.572 | [PHASE 1] Injecting intentional build failure...
+23:41:57.577 | Injected break into: tests\test_autonomous_pipeline.cpp
+23:41:57.577 | [PHASE 2] Verifying build fails without fix...
+23:41:58.545 | Pre-fix exit code: 2
+23:41:58.546 | Pre-fix errors: 8
+23:41:58.547 | [PHASE 3] Triggering executeAutoFix()...
+23:41:58.550 | Healing executable: D:\rawrxd\bin\RawrXD_Sovereign.exe
+23:42:02.482 | WARNING: Healing process timeout; terminating PID=22584
+23:42:02.489 | Healing exit code: 0
+23:42:02.492 | Healing duration: 3.94s
+23:42:02.492 | Healing output: <none>
+23:42:02.493 | [PHASE 4] Verifying post-healing build...
+23:42:03.432 | Post-fix exit code: 2
+23:42:03.432 | Post-fix errors: 8
+23:42:03.433 | FAILURE: Build still broken after healing — inspect telemetry
+23:42:03.434 | POST> Building CXX object CMakeFiles/test_autonomous_pipeline.dir/tests/test_autonomous_pipeline.cpp.obj
+23:42:03.434 | POST> test_autonomous_pipeline.cpp
+23:42:03.434 | POST> D:\rawrxd\tests\test_autonomous_pipeline.cpp(49): error C2065: 'undefined_symbol_for_demo': undeclared identifier
+23:42:03.435 | POST> D:\rawrxd\tests\test_autonomous_pipeline.cpp(51): error C2143: syntax error: missing ')' before '}'
+23:42:03.435 | POST> D:\rawrxd\tests\test_autonomous_pipeline.cpp(50): error C3861: 'syntax_error_here': identifier not found
+23:42:03.436 | POST> D:\rawrxd\tests\test_autonomous_pipeline.cpp(51): error C2143: syntax error: missing ';' before '}'
+23:42:03.436 | POST> mingw32-make[3]: *** [CMakeFiles\test_autonomous_pipeline.dir\build.make:78: CMakeFiles/test_autonomous_pipeline.dir/tests/test_autonomous_pipeline.cpp.obj] Error 2
+23:42:03.436 | POST> mingw32-make[2]: *** [CMakeFiles\Makefile2:837: CMakeFiles/test_autonomous_pipeline.dir/all] Error 2
+23:42:03.437 | POST> mingw32-make[1]: *** [CMakeFiles\Makefile2:844: CMakeFiles/test_autonomous_pipeline.dir/rule] Error 2
+23:42:03.437 | POST> mingw32-make: *** [Makefile:396: test_autonomous_pipeline] Error 2
+23:42:03.438 | [PHASE 5] Analyzing telemetry...
+23:42:03.438 | WARNING: Telemetry file not produced
+23:42:03.439 | [PHASE 6] Generating valuation artifacts...
+23:42:03.630 | Artifact: demo_summary.json
+23:42:03.630 | [PHASE 7] Cleaning demo injection...
+23:42:03.633 | Restored original file: tests\test_autonomous_pipeline.cpp
+23:42:03.633 | === DEMO COMPLETE ===
+23:42:03.635 | Duration: 00:06.247
+23:42:03.635 | Status: PARTIAL — Review required
+23:42:03.636 | Artifacts: self_healing_demo_20260313_234157.log, demo_summary.json, healing_telemetry.json

@@ -17,8 +17,9 @@
 ;  12. SwarmCoord_Init       — beacon-based work distribution
 ;  13. ExtHostInit           — extension host (sandboxed DLL loader)
 ;  14. WebView2Init          — WebView2 shell (graceful GDI fallback)
-;  15. CLI parse             — --bench, --model, --prompt flags
+;  15. CLI parse             — --bench, --model, --prompt, --build flags
 ;  16. UIMainLoop            — window + message pump (blocks until WM_QUIT)
+;      OR --build            — WritePEFile + SavePEToDisk (sovereign PE emit)
 
 EXTERN InferenceEngineInit:PROC
 EXTERN UIMainLoop:PROC
@@ -31,11 +32,43 @@ EXTERN Test_Init:PROC
 EXTERN Task_Init:PROC
 EXTERN Swarm_Init:PROC
 EXTERN SwarmCoord_Init:PROC
+EXTERN SwarmNet_Init:PROC
+EXTERN Consensus_Init:PROC
+EXTERN Batch_Init:PROC
+EXTERN StressTest_Run:PROC
+EXTERN StressTest_LogStats:PROC
 EXTERN StreamLoaderInit:PROC
 EXTERN StreamMapModel:PROC
 EXTERN WebView2Init:PROC
 EXTERN ExtHostInit:PROC
+EXTERN Mesh_Init:PROC
+
+; PE Writer — Final Directive (Non-Stubbed)
+
+EXTERN Emit_DOSHeader:PROC
+EXTERN Emit_NTHeaders:PROC
+EXTERN Emit_SectionHeaders:PROC
+EXTERN Emit_ImportTable:PROC
+EXTERN Emit_RelocTable:PROC
+EXTERN Emit_Payload:PROC
+EXTERN SavePEToDisk:PROC
+EXTERN WritePEFile:PROC
+EXTERN g_peBuffer:QWORD
+EXTERN g_cursor:QWORD
+EXTERN g_peSize:QWORD        ; PE file byte count — set by Emit_* path or WritePEFile
+
+; Phase 9B: Async pager
+EXTERN AsyncPage_Init:PROC
+EXTERN AsyncPage_Shutdown:PROC
+
+; Phase 9C: Ollama inference client
+EXTERN OllamaClient_Init:PROC
+EXTERN OllamaClient_Shutdown:PROC
+
+; Phase A: Inference Router (sovereign backend selection)
+EXTERN InferenceRouter_Init:PROC
 EXTERN RunInference:PROC
+EXTERN HeapAlloc:PROC
 EXTERN HeapCreate:PROC
 EXTERN GetModuleHandleW:PROC
 EXTERN GetCommandLineW:PROC
@@ -45,6 +78,8 @@ EXTERN WriteFile:PROC
 EXTERN GetStdHandle:PROC
 EXTERN CommandLineToArgvW:PROC
 EXTERN lstrcmpiW:PROC
+EXTERN RawrXD_RunExternalTestsW:PROC
+EXTERN RawrXD_HealBuild:PROC
 
 PUBLIC WinMain
 PUBLIC WinMainCRTStartup
@@ -61,16 +96,26 @@ g_hInstance   dq 0
 g_hHeap       dq 0
 g_cmdShow     dd 0
 g_benchMode   dd 0                  ; 1 = --benchmark mode
+g_buildMode   dd 0                  ; 1 = --build mode (PE writer)
 g_pModelPath  dq 0                  ; pointer to --model argument (wide)
 g_pPrompt     dq 0                  ; pointer to --prompt argument (wide)
+g_pLSPPath    dq 0                  ; pointer to --lsp argument (wide), defaults to szLSPDefault
 g_cmdLineW    dq 0                  ; raw GetCommandLineW result
 g_benchStart  dq 0                  ; GetTickCount64 at bench start
 g_benchTokens dd 0                  ; tokens generated in bench
 g_hStdOut     dq 0                  ; stdout handle for bench output
+g_multiNode   dd 0                  ; 1 = --multi-node mode
+g_stressMode  dd 0                  ; 1 = --stress mode
+g_healBuildMode dd 0                 ; 1 = --heal-build mode
+g_pHealBuildCmd dq 0                 ; pointer to build command arg  (wide)
+g_pHealBuildSrc dq 0                 ; pointer to source root arg    (wide)
+g_testMode    dd 0                   ; 1 = --run-tests mode
+g_pTestRunner dq 0                   ; pointer to --test-runner arg (wide)
+g_pTestArgs   dq 0                   ; pointer to --test-args arg   (wide)
 
-.data?
+.data
 align 8
-g_benchBuf    db 256 dup(?)         ; output buffer for benchmark results
+g_benchBuf    db 256 dup(0)         ; output buffer for benchmark results
 
 .const
 szClassName   db "RawrXD_Monolithic",0
@@ -80,6 +125,19 @@ szBench       dw '-','-','b','e','n','c','h',0
 szBenchmark   dw '-','-','b','e','n','c','h','m','a','r','k',0
 szModel       dw '-','-','m','o','d','e','l',0
 szPrompt      dw '-','-','p','r','o','m','p','t',0
+szNodes       dw '-','-','m','u','l','t','i','-','n','o','d','e',0
+szBuild       dw '-','-','b','u','i','l','d',0
+szStress      dw '-','-','s','t','r','e','s','s',0
+szLSP         dw '-','-','l','s','p',0
+szRunTests    dw '-','-','r','u','n','-','t','e','s','t','s',0
+szTestRunner  dw '-','-','t','e','s','t','-','r','u','n','n','e','r',0
+szTestArgs    dw '-','-','t','e','s','t','-','a','r','g','s',0
+szAutofix     dw '-','-','a','u','t','o','f','i','x',0
+szHealBuild   dw '-','-','h','e','a','l','-','b','u','i','l','d',0
+szBuildCmd    dw '-','-','b','u','i','l','d','-','c','o','m','m','a','n','d',0
+szWorkspace   dw '-','-','w','o','r','k','s','p','a','c','e','-','r','o','o','t',0
+; Default LSP server path (wide, can be overridden by --lsp <path>)
+szLSPDefault  dw 'c','l','a','n','g','d','.','e','x','e',0
 ; Benchmark output template (narrow for WriteFile)
 szBenchHdr    db "RawrXD Benchmark Results",13,10
               db "========================",13,10,0
@@ -119,62 +177,111 @@ WinMain PROC FRAME
     jz      @fail
     mov     g_hHeap, rax
 
-    ; 2. Beacon first — all other modules signal through this
-    call    BeaconRouterInit
-    test    eax, eax
-    jnz     @fail
-
-    ; 3. Inference engine (depends on heap, uses beacon slot 2)
-    call    InferenceEngineInit
-
-    ; 4. Stream loader — VEH + LRU for demand-paged GGUF
-    call    StreamLoaderInit
-
-    ; 5. Model loader — SRWLOCK hot-swap
-    call    ModelLoaderInit
-
-    ; 6. LSP bridge (stub)
-    xor     rcx, rcx
-    call    LSPBridgeInit
-
-    ; 7. Agent core (depends on Inference + Beacon)
-    call    AgentCoreInit
-
-    ; 8. DAP engine (debug adapter protocol)
-    call    DAP_Init
-
-    ; 9. Test explorer (test discovery + execution)
-    call    Test_Init
-
-    ; 10. Task runner (task configs + process management)
-    call    Task_Init
-
-    ; 11. Swarm — multi-GPU Vulkan orchestrator (graceful fallback)
-    call    Swarm_Init
-
-    ; 12. Swarm coordinator — beacon-based work distribution
-    call    SwarmCoord_Init
-
-    ; 13. Extension host — sandboxed DLL loader
-    call    ExtHostInit
-
-    ; 14. WebView2 shell — graceful GDI fallback if loader absent
-    call    WebView2Init
-
-    ; 15. Parse CLI flags: --bench, --model <path>, --prompt <text>
+    ; Parse CLI before any optional subsystem startup.
+    ; Interactive mode stays on the minimal stable path and only
+    ; explicit headless modes initialize heavier subsystems.
     call    ParseCommandLine
 
-    ; 16. Branch: benchmark mode or interactive UI
+    ; 17. Branch: build mode, benchmark mode, or interactive UI
+    cmp     g_buildMode, 0
+    jne     @build_self
+
+    cmp     g_stressMode, 0
+    jne     @stress_test
+
+    cmp     g_testMode, 0
+    jne     @run_tests
+
+    cmp     g_healBuildMode, 0
+    jne     @heal_build
+
     cmp     g_benchMode, 0
     jne     @benchmark
 
-    ; ── Interactive mode ──────────────────────────────────────
+    ; ── Interactive mode ──────────────────────────────────────────
+    ; Bring up full IDE subsystems on the canonical runtime path.
+    ; This keeps ghost-text + router + debug/lsp/task surfaces aligned
+    ; with parity expectations instead of UI-only startup.
+    call    BeaconRouterInit
+    call    InferenceEngineInit
+    call    StreamLoaderInit
+    call    ModelLoaderInit
+    call    InferenceRouter_Init
+    call    AgentCoreInit
+    call    LSPBridgeInit
+    call    DAP_Init
+    call    Test_Init
+    call    Task_Init
+    call    ExtHostInit
+    call    WebView2Init
     call    UIMainLoop
     xor     eax, eax
     jmp     @exit
 
+    ; ── Stress test mode (--stress) ───────────────────────────
+@stress_test:
+    call    SwarmNet_Init
+    call    Consensus_Init
+    call    Mesh_Init
+    call    StressTest_Run
+    call    StressTest_LogStats
+    xor     eax, eax
+    jmp     @exit
+
+    ; ── External test runner mode (--run-tests) ───────────────
+@run_tests:
+    mov     rcx, g_pTestRunner
+    mov     rdx, g_pTestArgs
+    call    RawrXD_RunExternalTestsW
+    jmp     @exit
+
+    ; ── Build-self mode (--build) ──────────────────────────────
+@build_self:
+    call    WritePEFile
+    test    rax, rax
+    jz      @fail
+    call    SavePEToDisk
+    test    eax, eax
+    jz      @fail
+    xor     eax, eax
+    jmp     @exit
+
+    ; ── Heal-build mode (--autofix / --heal-build) ────────────
+@heal_build:
+    call    BeaconRouterInit
+    call    InferenceEngineInit
+    call    StreamLoaderInit
+    call    ModelLoaderInit
+    call    InferenceRouter_Init
+    call    AgentCoreInit
+
+    ; Load model if --model was supplied
+    mov     rcx, g_pModelPath
+    test    rcx, rcx
+    jz      @hb_no_model
+    call    StreamMapModel
+@hb_no_model:
+
+    ; Attempt build, diagnose errors, apply fix — up to 3 attempts
+    mov     r12d, 3                      ; max attempts
+@hb_retry:
+    mov     rcx, g_pHealBuildCmd         ; build command (wide)
+    mov     rdx, g_pHealBuildSrc         ; workspace root (wide)
+    call    RawrXD_HealBuild
+    test    eax, eax
+    jz      @hb_done                     ; 0 = success
+    dec     r12d
+    jnz     @hb_retry
+    mov     eax, 1                       ; exhausted retries
+@hb_done:
+    jmp     @exit
+
     ; ── Benchmark mode ────────────────────────────────────────
 @benchmark:
+    call    InferenceEngineInit
+    call    StreamLoaderInit
+    call    ModelLoaderInit
+    call    InferenceRouter_Init
     call    GetTickCount64
     mov     g_benchStart, rax
 
@@ -185,6 +292,7 @@ WinMain PROC FRAME
     call    StreamMapModel
 
 @bench_infer:
+    mov     rcx, g_pPrompt               ; Pass --prompt text (or NULL)
     call    RunInference
 
     ; Elapsed = GetTickCount64() - start
@@ -273,11 +381,113 @@ ParseCommandLine PROC FRAME
     test    eax, eax
     jz      @pcl_prompt
 
+    ; ── try --build ───────────────────────────
+    mov     rcx, r12
+    lea     rdx, [szBuild]
+    call    lstrcmpiW
+    test    eax, eax
+    jz      @pcl_build
+
+    ; ── try --stress ──────────────────────────
+    mov     rcx, r12
+    lea     rdx, [szStress]
+    call    lstrcmpiW
+    test    eax, eax
+    jz      @pcl_stress
+
+    ; ── try --run-tests ───────────────────────
+    mov     rcx, r12
+    lea     rdx, [szRunTests]
+    call    lstrcmpiW
+    test    eax, eax
+    jz      @pcl_run_tests
+
+    ; ── try --test-runner ─────────────────────
+    mov     rcx, r12
+    lea     rdx, [szTestRunner]
+    call    lstrcmpiW
+    test    eax, eax
+    jz      @pcl_test_runner
+
+    ; ── try --test-args ───────────────────────
+    mov     rcx, r12
+    lea     rdx, [szTestArgs]
+    call    lstrcmpiW
+    test    eax, eax
+    jz      @pcl_test_args
+
+    ; ── try --lsp ─────────────────────────────
+    mov     rcx, r12
+    lea     rdx, [szLSP]
+    call    lstrcmpiW
+    test    eax, eax
+    jz      @pcl_lsp
+    ; ── try --autofix ─────────────────────────────────────────
+    mov     rcx, r12
+    lea     rdx, [szAutofix]
+    call    lstrcmpiW
+    test    eax, eax
+    jz      @pcl_autofix
+
+    ; ── try --heal-build ──────────────────────────────────────
+    mov     rcx, r12
+    lea     rdx, [szHealBuild]
+    call    lstrcmpiW
+    test    eax, eax
+    jz      @pcl_autofix
+
+    ; ── try --build-command ───────────────────────────────────
+    mov     rcx, r12
+    lea     rdx, [szBuildCmd]
+    call    lstrcmpiW
+    test    eax, eax
+    jz      @pcl_build_cmd
+
+    ; ── try --workspace-root ──────────────────────────────────
+    mov     rcx, r12
+    lea     rdx, [szWorkspace]
+    call    lstrcmpiW
+    test    eax, eax
+    jz      @pcl_workspace
     inc     ebx
     jmp     @pcl_loop
 
 @pcl_bench:
     mov     g_benchMode, 1
+    inc     ebx
+    jmp     @pcl_loop
+
+@pcl_stress:
+    mov     g_stressMode, 1
+    inc     ebx
+    jmp     @pcl_loop
+
+@pcl_run_tests:
+    mov     g_testMode, 1
+    inc     ebx
+    jmp     @pcl_loop
+
+@pcl_test_runner:
+    mov     g_testMode, 1
+    inc     ebx
+    cmp     ebx, edi
+    jge     @pcl_done
+    mov     rax, [rsi + rbx*8]
+    mov     g_pTestRunner, rax
+    inc     ebx
+    jmp     @pcl_loop
+
+@pcl_test_args:
+    inc     ebx
+    cmp     ebx, edi
+    jge     @pcl_done
+    mov     rax, [rsi + rbx*8]
+    mov     g_pTestArgs, rax
+    inc     ebx
+    jmp     @pcl_loop
+
+@pcl_build:
+    mov     g_buildMode, 1
     inc     ebx
     jmp     @pcl_loop
 
@@ -296,6 +506,38 @@ ParseCommandLine PROC FRAME
     jge     @pcl_done
     mov     rax, [rsi + rbx*8]
     mov     g_pPrompt, rax
+    inc     ebx
+    jmp     @pcl_loop
+
+@pcl_autofix:
+    mov     g_healBuildMode, 1
+    inc     ebx
+    jmp     @pcl_loop
+
+@pcl_build_cmd:
+    inc     ebx
+    cmp     ebx, edi
+    jge     @pcl_done
+    mov     rax, [rsi + rbx*8]
+    mov     g_pHealBuildCmd, rax
+    inc     ebx
+    jmp     @pcl_loop
+
+@pcl_workspace:
+    inc     ebx
+    cmp     ebx, edi
+    jge     @pcl_done
+    mov     rax, [rsi + rbx*8]
+    mov     g_pHealBuildSrc, rax
+    inc     ebx
+    jmp     @pcl_loop
+
+@pcl_lsp:
+    inc     ebx
+    cmp     ebx, edi
+    jge     @pcl_done
+    mov     rax, [rsi + rbx*8]
+    mov     g_pLSPPath, rax
     inc     ebx
     jmp     @pcl_loop
 

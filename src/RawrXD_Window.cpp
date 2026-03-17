@@ -58,13 +58,16 @@ void Window::create(Window* parent_, const String& title, DWORD style, DWORD exS
         classRegistered = true;
     }
     
-    HWND parentHwnd = parent ? parent->nativeHandle() : nullptr;
-    
-    CreateWindowExW(exStyle, className, title.c_str(), style,
+    HWND hwnd_ = CreateWindowExW(exStyle, className, title.c_str(), style,
                     CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
                     parentHwnd, nullptr, GetModuleHandleW(nullptr), this);
+    
+    if (hwnd_ && !hwnd) {
+        hwnd = hwnd_;
+        SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)this);
+    }
                     
-    // hwnd is set in WndProc WM_NCCREATE
+    // hwnd is set in WndProc WM_NCCREATE or here as fallback
 }
 
 
@@ -127,9 +130,9 @@ LRESULT Window::handleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             closeEvent();
             return 0;
         case WM_DESTROY:
-             // If this is the main window, we might want to post quit message, 
-             // but 'Window' shouldn't decide that. Application should.
-             // For now, doing nothing.
+             if (!parent) {
+                 PostQuitMessage(0);
+             }
             return 0;
     }
     return DefWindowProc(hwnd, msg, wParam, lParam);

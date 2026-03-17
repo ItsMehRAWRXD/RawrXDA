@@ -1,0 +1,75 @@
+#pragma once
+#include <stdint.h>
+#include <stdbool.h>
+#include <stddef.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifndef GGML_API
+#  ifdef GGML_SHARED
+#    ifdef _WIN32
+#      ifdef GGML_BUILD
+#        define GGML_API __declspec(dllexport)
+#      else
+#        define GGML_API __declspec(dllimport)
+#      endif
+#    else
+#      define GGML_API __attribute__ ((visibility ("default")))
+#    endif
+#  else
+#    define GGML_API
+#  endif
+#endif
+
+#ifndef GGML_RESTRICT
+#  if defined(_MSC_VER) && !defined(__clang__)
+#    define GGML_RESTRICT __restrict
+#  else
+#    define GGML_RESTRICT __restrict__
+#  endif
+#endif
+
+#define GGML_MAX_DIMS 4
+
+enum ggml_type {
+    GGML_TYPE_F32  = 0,
+    GGML_TYPE_F16  = 1,
+    GGML_TYPE_Q4_0 = 2,
+    GGML_TYPE_Q4_1 = 3,
+    GGML_TYPE_Q5_0 = 4,
+    GGML_TYPE_Q5_1 = 5,
+    GGML_TYPE_Q8_0 = 6,
+    GGML_TYPE_Q8_1 = 7,
+    GGML_TYPE_I8,
+    GGML_TYPE_I16,
+    GGML_TYPE_I32,
+    GGML_TYPE_COUNT,
+};
+
+enum ggml_op {
+    GGML_OP_NONE = 0,
+    GGML_OP_RESHAPE,
+    GGML_OP_TRANSPOSE,
+    GGML_OP_VIEW,
+    GGML_OP_PERMUTE,
+    GGML_OP_COUNT,
+};
+
+// Minimum GGML types to satisfy GGUF
+typedef uint16_t ggml_fp16_t;
+
+struct ggml_context;
+
+struct ggml_tensor {
+    enum ggml_type type;
+    int64_t ne[GGML_MAX_DIMS];
+    size_t  nb[GGML_MAX_DIMS];
+    void *  data;
+    char    name[64];
+};
+
+#ifdef __cplusplus
+}
+#endif

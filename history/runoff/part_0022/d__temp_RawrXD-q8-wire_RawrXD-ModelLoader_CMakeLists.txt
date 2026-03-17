@@ -1,0 +1,1838 @@
+cmake_minimum_required(VERSION 3.20)
+project(RawrXD-ModelLoader VERSION 1.0.13)
+add_definitions(-DNOMINMAX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Pin MSVC runtime for deterministic builds
+if(MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+endif()
+
+# Detect compiler and set output directory suffix
+if(MINGW)
+    set(COMPILER_SUFFIX "mingw")
+elseif(MSVC)
+    set(COMPILER_SUFFIX "msvc")
+else()
+    set(COMPILER_SUFFIX "other")
+endif()
+
+# Build options
+option(ENABLE_COPILOT "Enable Copilot streaming integration for Win32 IDE" OFF)
+option(ENABLE_VULKAN "Enable Vulkan GPU acceleration" ON)
+
+# Force Windows SDK version that ships all required headers
+set(CMAKE_SYSTEM_VERSION "10.0.22621.0")
+
+# Prevent legacy DirectX SDK (June 2010) from polluting include paths
+set(DIRECTX_INCLUDE_DIR "" CACHE STRING "" FORCE)
+set(D3D11_INCLUDE_DIR "" CACHE STRING "" FORCE)
+
+# Set Qt path
+# Qt path: prefer environment-provided Qt6_DIR (e.g. C:/Qt/6.7.3/msvc2022_64/lib/cmake/Qt6)
+# or CMAKE_PREFIX_PATH (e.g. C:/Qt/6.7.3/msvc2022_64)
+if(DEFINED ENV{Qt6_DIR})
+    message(STATUS "Using Qt6 from ENV Qt6_DIR=$ENV{Qt6_DIR}")
+    # Qt6_DIR should point to .../lib/cmake/Qt6, so use parent for PREFIX_PATH
+    get_filename_component(QT_CMAKE_DIR "$ENV{Qt6_DIR}" DIRECTORY)
+    get_filename_component(QT_LIB_DIR "${QT_CMAKE_DIR}" DIRECTORY)
+    get_filename_component(QT_ROOT_DIR "${QT_LIB_DIR}" DIRECTORY)
+    set(CMAKE_PREFIX_PATH "${QT_ROOT_DIR}")
+    message(STATUS "Set CMAKE_PREFIX_PATH to ${CMAKE_PREFIX_PATH}")
+endif()
+
+# Explicitly specify Qt6 paths
+set(Qt6_DIR "C:/Qt/6.7.3/msvc2022_64/lib/cmake/Qt6")
+list(APPEND CMAKE_PREFIX_PATH "C:/Qt/6.7.3/msvc2022_64")
+
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Sql Concurrent Test Charts)
+
+if(Qt6_FOUND)
+    message(STATUS "Qt6 found: ${Qt6_VERSION}")
+    add_definitions(-DHAVE_QT_CORE -DQT_NO_OPENGL)
+    include_directories(${Qt6_INCLUDE_DIRS})
+    link_libraries(Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network Qt6::Sql Qt6::Concurrent Qt6::Test Qt6::Charts)
+else()
+    message(WARNING "Qt6 not found. Qt-based benchmarks will be skipped.")
+endif()
+
+# ============================================================
+# GGML Submodule Integration (Quantized Transformer Kernels)
+# ============================================================
+if(EXISTS "${CMAKE_SOURCE_DIR}/3rdparty/ggml/CMakeLists.txt")
+    message(STATUS "Adding ggml submodule for quantized inference")
+    
+    # ggml build options - disable unnecessary components
+    set(GGML_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(GGML_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(GGML_AVX2 ON CACHE BOOL "" FORCE)  # Enable AVX2 for speed
+    set(GGML_STATIC ON CACHE BOOL "" FORCE)
+    set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+    
+    # Enable GPU backends
+    set(GGML_VULKAN ON CACHE BOOL "" FORCE)  # Vulkan for AMD/NVIDIA/Intel
+    set(GGML_CUDA OFF CACHE BOOL "" FORCE)   # CUDA for NVIDIA only
+    set(GGML_METAL OFF CACHE BOOL "" FORCE)  # Metal for macOS only
+    
+    # Add our include directory first to provide missing Windows SDK headers
+    include_directories(BEFORE SYSTEM ${CMAKE_SOURCE_DIR}/include)
+    
+    # Export include path for nested ExternalProject builds (Vulkan shader gen)
+    set(CMAKE_INCLUDE_PATH "${CMAKE_SOURCE_DIR}/include" CACHE STRING "" FORCE)
+    set(ENV{INCLUDE} "${CMAKE_SOURCE_DIR}/include;$ENV{INCLUDE}")
+    
+    add_subdirectory(3rdparty/ggml EXCLUDE_FROM_ALL)
+    
+    # Create ggml interface library for clean linking
+    add_library(ggml_interface INTERFACE)
+    target_link_libraries(ggml_interface INTERFACE ggml)
+    target_include_directories(ggml_interface INTERFACE 
+        ${CMAKE_SOURCE_DIR}/3rdparty/ggml/include
+        ${CMAKE_SOURCE_DIR}/3rdparty/ggml/src
+    )
+    
+    # Suppress ggml warnings and add our stubs
+    if(TARGET ggml)
+        target_include_directories(ggml BEFORE PRIVATE ${CMAKE_SOURCE_DIR}/include)
+        if(MSVC)
+            target_compile_options(ggml PRIVATE /W0)
+        else()
+            target_compile_options(ggml PRIVATE -w)
+        endif()
+    endif()
+else()
+    message(WARNING "ggml submodule not found - quantized inference will use fallback")
+endif()
+
+# ============================================================
+# GPU Backend Detection (CUDA, ROCm/HIP, Vulkan)
+# ============================================================
+option(ENABLE_CUDA "Enable NVIDIA CUDA support" ON)
+option(ENABLE_HIP "Enable AMD ROCm/HIP support" ON)
+option(ENABLE_VULKAN "Enable Vulkan Compute support" ON)
+
+# Try to find CUDA (NVIDIA)
+if(ENABLE_CUDA)
+    find_package(CUDAToolkit QUIET)
+    if(CUDAToolkit_FOUND)
+        message(STATUS "CUDA Toolkit found: ${CUDAToolkit_VERSION}")
+        add_compile_definitions(HAVE_CUDA=1)
+        set(GPU_BACKEND_LIBS ${GPU_BACKEND_LIBS} CUDA::cudart CUDA::cuda_driver)
+    else()
+        message(STATUS "CUDA Toolkit not found - NVIDIA GPU support disabled")
+    endif()
+endif()
+
+# Try to find ROCm/HIP (AMD)
+if(ENABLE_HIP)
+    find_package(hip QUIET)
+    if(hip_FOUND)
+        message(STATUS "ROCm/HIP found: ${hip_VERSION}")
+        add_compile_definitions(HAVE_HIP=1)
+        set(GPU_BACKEND_LIBS ${GPU_BACKEND_LIBS} hip::host)
+    else()
+        # Try alternative: check if hipcc compiler exists
+        find_program(HIPCC_EXECUTABLE hipcc)
+        if(HIPCC_EXECUTABLE)
+            message(STATUS "HIP compiler found at ${HIPCC_EXECUTABLE}")
+            add_compile_definitions(HAVE_HIP=1)
+            # Manual HIP setup for Windows
+            if(DEFINED ENV{HIP_PATH})
+                set(HIP_INCLUDE_DIRS "$ENV{HIP_PATH}/include")
+                set(HIP_LIBRARIES "$ENV{HIP_PATH}/lib/amdhip64.lib")
+                include_directories(${HIP_INCLUDE_DIRS})
+                link_libraries(${HIP_LIBRARIES})
+                message(STATUS "Using HIP from HIP_PATH: $ENV{HIP_PATH}")
+            endif()
+        else()
+            message(STATUS "ROCm/HIP not found - AMD GPU support disabled")
+            message(STATUS "To enable AMD GPU: Install ROCm for Windows and set HIP_PATH")
+        endif()
+    endif()
+endif()
+
+# Try to find Vulkan (Cross-platform)
+if(ENABLE_VULKAN)
+    find_package(Vulkan QUIET)
+    if(Vulkan_FOUND)
+        message(STATUS "Vulkan found: ${Vulkan_VERSION}")
+        add_compile_definitions(HAVE_VULKAN=1)
+        set(GPU_BACKEND_LIBS ${GPU_BACKEND_LIBS} Vulkan::Vulkan)
+    else()
+        message(STATUS "Vulkan not found - Vulkan Compute support disabled")
+    endif()
+endif()
+
+if(NOT CUDAToolkit_FOUND AND NOT hip_FOUND AND NOT HIPCC_EXECUTABLE AND NOT Vulkan_FOUND)
+    message(WARNING "========================================")
+    message(WARNING "NO GPU BACKEND DETECTED")
+    message(WARNING "Application will run in CPU-only mode")
+    message(WARNING "========================================")
+    message(WARNING "Detected GPU: Run 'Get-WmiObject Win32_VideoController | Select Name'")
+    message(WARNING "For NVIDIA: Install CUDA Toolkit from developer.nvidia.com")
+    message(WARNING "For AMD: Install ROCm for Windows from rocm.docs.amd.com")
+    message(WARNING "========================================")
+endif()
+
+# ============================================================
+# Advanced Orchestration Modules (Phase 1-6 Implementation)
+# ============================================================
+message(STATUS "Adding advanced orchestration modules for AI-native IDE")
+add_subdirectory(src/orchestration)
+add_subdirectory(src/git)
+add_subdirectory(src/terminal)
+add_subdirectory(src/agent)
+
+# ============================================================
+# Agentic Framework (Phase-2/3: CommandRegistry + Kernel + MMF + Hotpatch)
+# ============================================================
+message(STATUS "Adding RawrXD Agentic Framework with Phase-2/3 components")
+add_subdirectory(src/agentic)
+
+# Qt-based IDE shell (separate executable, no Vulkan)
+if(MSVC)
+    find_package(Qt6 COMPONENTS Widgets Network Concurrent QUIET)
+    if(Qt6_FOUND) # Enabled to build Qt shell
+        message(STATUS "Building Qt Shell with Qt version: ${Qt6_VERSION}")
+        
+        # Enable Qt MOC for QObject classes
+        set(CMAKE_AUTOMOC ON)
+
+        # Create a simple Qt console app for now
+        add_executable(RawrXD-QtShell 
+            src/qtapp/main_qt.cpp
+            src/qtapp/MainWindow.cpp
+            src/qtapp/MainWindow.h
+            src/qtapp/ComponentFactory.cpp
+            src/qtapp/ComponentFactory.h
+            src/qtapp/CommandPalette.cpp
+            src/qtapp/CommandPalette.hpp
+            src/qtapp/AIChatPanel.cpp
+            src/qtapp/AIChatPanel.hpp
+            # src/qtapp/MainWindow_AI_Integration.cpp  # REMOVED - duplicate symbols with MainWindow.cpp
+            # src/qtapp/ActivityBar.cpp
+            # src/qtapp/ActivityBar.h
+            # src/qtapp/ActivityBarButton.cpp
+            # src/qtapp/ActivityBarButton.h
+            # src/qtapp/TerminalWidget.cpp
+            # src/qtapp/TerminalWidget.h
+            # src/qtapp/TerminalManager.cpp
+            # src/qtapp/TerminalManager.h
+            # src/qtapp/gguf_loader.hpp
+            # src/qtapp/gguf_loader.cpp
+            # src/qtapp/inference_engine.hpp
+            # src/qtapp/inference_engine.cpp
+            # src/qtapp/transformer_inference.hpp
+            # src/qtapp/transformer_inference.cpp
+            # src/qtapp/bpe_tokenizer.hpp
+            # src/qtapp/bpe_tokenizer.cpp
+            # src/qtapp/sentencepiece_tokenizer.hpp
+            # src/qtapp/sentencepiece_tokenizer.cpp
+            # src/qtapp/vocabulary_loader.hpp
+            # src/qtapp/vocabulary_loader.cpp
+            # src/qtapp/gguf_server.hpp
+            # src/qtapp/gguf_server.cpp
+            # src/qtapp/inflate_deflate_cpp.cpp
+            # src/qtapp/ai_switcher.hpp
+            # src/qtapp/ai_switcher.cpp
+            # src/qtapp/unified_backend.hpp
+            # src/qtapp/unified_backend.cpp
+            # src/qtapp/layer_quant_widget.hpp
+            # src/qtapp/layer_quant_widget.cpp
+            # src/qtapp/streaming_inference.hpp
+            # src/qtapp/streaming_inference.cpp
+            # src/qtapp/model_monitor.hpp
+            # src/qtapp/model_monitor.cpp
+            # src/qtapp/command_palette.hpp
+            # src/qtapp/command_palette.cpp
+            # src/qtapp/ai_chat_panel.hpp
+            # src/qtapp/ai_chat_panel.cpp
+            # src/qtapp/model_memory_hotpatch.hpp
+            # src/qtapp/model_memory_hotpatch.cpp
+            # src/qtapp/byte_level_hotpatcher.hpp
+            # src/qtapp/byte_level_hotpatcher.cpp
+            # src/qtapp/gguf_server_hotpatch.hpp
+            # src/qtapp/gguf_server_hotpatch.cpp
+            # src/qtapp/unified_hotpatch_manager.hpp
+            # src/qtapp/unified_hotpatch_manager.cpp
+            # src/qtapp/proxy_hotpatcher.hpp
+            # src/qtapp/proxy_hotpatcher.cpp
+            # Production-ready enterprise components
+            # src/qtapp/model_queue.hpp
+            # src/qtapp/model_queue.cpp
+            # src/qtapp/streaming_inference_api.hpp
+            # src/qtapp/streaming_inference_api.cpp
+            # src/qtapp/gpu_backend.hpp
+            # src/qtapp/gpu_backend.cpp
+            # src/qtapp/metrics_collector.hpp
+            # src/qtapp/metrics_collector.cpp
+            # src/qtapp/backup_manager.hpp
+            # src/qtapp/backup_manager.cpp
+              # src/qtapp/compliance_logger.hpp  # TEMPORARILY DISABLED - Windows header enum conflicts
+              # src/qtapp/compliance_logger.cpp  # MOC issue RESOLVED but case expression errors remain
+            # src/qtapp/sla_manager.hpp
+            # src/qtapp/sla_manager.cpp
+            # ============================================================
+            # Phase 3: Production Enhancement Components (5,280 LOC)
+            # ============================================================
+            # src/qtapp/security_manager.cpp
+            # src/qtapp/security_manager.h
+            # src/qtapp/distributed_trainer.cpp    # Temporarily disabled due to compilation issues
+            # src/qtapp/distributed_trainer.h      # Temporarily disabled due to compilation issues
+            # src/qtapp/interpretability_panel.cpp  # Temporarily disabled due to compilation issues
+            # src/qtapp/interpretability_panel.h    # Temporarily disabled due to compilation issues
+            # include/checkpoint_manager.h
+            # src/qtapp/checkpoint_manager.cpp
+            # include/tokenizer_selector.h
+            # src/qtapp/tokenizer_selector.cpp
+            # include/ci_cd_settings.h
+            # src/qtapp/ci_cd_settings.cpp
+            # src/qtapp/settings_manager.h
+            # src/qtapp/settings_manager.cpp
+            # src/qtapp/advanced_checkpoint_manager.cpp
+            # src/qtapp/advanced_checkpoint_manager.h
+            # src/qtapp/tokenizer_language_selector.cpp
+            # src/qtapp/tokenizer_language_selector.h
+            # src/qtapp/ci_pipeline_manager.cpp
+            # src/qtapp/ci_pipeline_manager.h
+            # src/qtapp/codec.h
+            # src/qtapp/codec.cpp
+            # ============================================================
+            # Phase 4: AI Code Assistant (Code Completion with MASM Transport)
+            # ============================================================
+            # src/qtapp/ai_code_assistant.h
+            # src/qtapp/ai_code_assistant.cpp
+            # src/qtapp/ai_code_assistant_panel.h
+            # src/qtapp/ai_code_assistant_panel.cpp
+            # src/agent/agentic_puppeteer.hpp
+            # src/agent/agentic_puppeteer.cpp
+            # src/agent/agentic_failure_detector.hpp
+            # src/agent/agentic_failure_detector.cpp
+            # src/agent/agentic_copilot_bridge.hpp
+            # src/agent/agentic_copilot_bridge.cpp
+            # ============================================================
+            # Hot-Patching System: Real-time hallucination detection & correction
+            # ============================================================
+            # src/agent/agent_hot_patcher.cpp
+            # src/agent/gguf_proxy_server.cpp
+            # src/agent/ide_agent_bridge_hot_patching_integration.cpp
+            # src/llm_adapter/QuantBackend.cpp
+            # src/llm_adapter/QuantBackend.h
+            # src/agent/auto_bootstrap.cpp
+            # Missing agent implementations for MainWindow
+            # src/agent/action_executor.cpp
+            # src/agent/meta_planner.cpp
+            # src/agent/model_invoker.cpp
+            # Missing widget implementations
+            # src/qtapp/widgets/masm_editor_widget.cpp
+            # src/qtapp/widgets/hotpatch_panel.cpp
+            # src/qtapp/widgets/settings_dialog.cpp
+            # src/qtapp/widgets/project_explorer.cpp
+            # Missing utils implementations
+            # src/qtapp/utils/qt_file_writer.cpp
+            # src/qtapp/utils/qt_directory_manager.cpp
+            # src/qtapp/utils/settings_manager.cpp
+            # src/qtapp/utils/shortcut_manager.cpp
+            # src/qtapp/utils/project_detector.cpp
+            # src/agent/zero_touch.cpp
+            # kernels/quant_ladder_avx2.cpp  # Conflicts with ggml quantization functions
+            # src/agent/planner.cpp
+            # src/agent/self_patch.cpp
+            # src/agent/sign_binary.cpp
+            # src/agent/release_agent.cpp
+            # src/agent/meta_learn.cpp
+            # src/agent/hot_reload.cpp
+            # src/agent/auto_update.cpp
+            # src/agent/planner.cpp
+            # src/agent/self_patch.cpp
+            # src/agent/release_agent.cpp
+            # src/agent/zero_touch.cpp
+            # src/agent/sentry_integration.hpp
+            # src/agent/sentry_integration.cpp
+            # src/agent/code_signer.hpp
+            # src/agent/code_signer.cpp
+            # src/agent/telemetry_collector.hpp
+            # src/agent/telemetry_collector.cpp
+            # Code quality improvement modules
+            # src/utils/ErrorReporter.hpp
+            # src/utils/ErrorReporter.cpp
+            # src/model_loader/GGUFConstants.hpp
+            # src/utils/Diagnostics.hpp
+            # src/utils/Diagnostics.cpp
+        )
+        
+        add_library(self_test_gate STATIC
+            src/agent/self_test.cpp
+            src/agent/self_test_gate.cpp
+            src/agent/rollback.cpp
+        )
+        target_link_libraries(self_test_gate PRIVATE Qt6::Core Qt6::Network)
+        target_include_directories(self_test_gate PRIVATE ${CMAKE_SOURCE_DIR}/src/agent)
+
+        # Small shared quant utils library (used by QtShell and tests)
+        add_library(quant_utils STATIC src/qtapp/quant_utils.cpp)
+        target_include_directories(quant_utils PUBLIC ${CMAKE_SOURCE_DIR}/src/qtapp ${CMAKE_SOURCE_DIR}/include)
+        target_link_libraries(quant_utils PUBLIC Qt6::Core)
+        
+        # Find OpenSSL for SecurityManager encryption/HMAC (optional, with fallback)
+        find_package(OpenSSL QUIET)
+        if(OpenSSL_FOUND)
+            message(STATUS "OpenSSL found - SecurityManager encryption enabled")
+            add_compile_definitions(HAVE_OPENSSL=1)
+        else()
+            message(STATUS "OpenSSL not found - SecurityManager will use basic hash-only mode")
+        endif()
+        
+        # Find zlib for CheckpointManager compression (optional with fallback)
+        find_package(ZLIB QUIET)
+        if(ZLIB_FOUND)
+            message(STATUS "ZLIB found - CheckpointManager compression enabled")
+            add_compile_definitions(HAVE_ZLIB=1)
+        else()
+            message(STATUS "ZLIB not found - CheckpointManager will use no compression")
+        endif()
+
+        # Link Qt modules including WebSockets for swarm collaboration
+target_link_libraries(RawrXD-QtShell PRIVATE
+            Qt6::Core
+            Qt6::Gui
+            Qt6::Widgets
+            Qt6::Network
+            Qt6::Sql
+            Qt6::Concurrent
+            # brutal_gzip
+            # self_test_gate
+            # quant_utils
+        )
+        
+        # Conditionally link OpenSSL if found
+        if(OpenSSL_FOUND)
+            target_link_libraries(RawrXD-QtShell PRIVATE OpenSSL::Crypto OpenSSL::SSL)
+        endif()
+        
+        # Conditionally link ZLIB if found
+        if(ZLIB_FOUND)
+            target_link_libraries(RawrXD-QtShell PRIVATE ZLIB::ZLIB)
+        endif()
+        
+        # Try to find Qt WebSockets (optional for swarm editing)
+        find_package(Qt6 COMPONENTS WebSockets QUIET)
+        if(Qt6WebSockets_FOUND)
+            target_link_libraries(RawrXD-QtShell PRIVATE Qt6::WebSockets)
+            target_compile_definitions(RawrXD-QtShell PRIVATE HAVE_QT_WEBSOCKETS=1)
+            message(STATUS "Qt WebSockets found - swarm collaboration enabled")
+        else()
+            message(STATUS "Qt WebSockets not found - swarm collaboration disabled")
+        endif()
+        
+        # Link ggml if available
+        if(TARGET ggml)
+            target_link_libraries(RawrXD-QtShell PRIVATE ggml_interface)
+            target_compile_definitions(RawrXD-QtShell PRIVATE HAVE_GGML=1)
+            message(STATUS "RawrXD-QtShell: ggml quantization enabled")
+        endif()
+        
+        target_include_directories(RawrXD-QtShell PRIVATE 
+            include 
+            ${CMAKE_SOURCE_DIR}/src 
+            ${CMAKE_SOURCE_DIR}/src/qtapp 
+            ${CMAKE_SOURCE_DIR}/src/llm_adapter 
+            ${CMAKE_SOURCE_DIR}/src/agent
+            ${CMAKE_SOURCE_DIR}/src/utils
+            ${CMAKE_SOURCE_DIR}/src/model_loader
+        )
+        
+        set_target_properties(RawrXD-QtShell PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+            WIN32_EXECUTABLE FALSE
+        )
+
+        if(MSVC)
+            target_compile_options(RawrXD-QtShell PRIVATE /EHsc $<$<CONFIG:Release>:/O2>)
+        else()
+            target_compile_options(RawrXD-QtShell PRIVATE -fexceptions $<$<CONFIG:Release>:-O2>)
+        endif()
+        
+        # ---------- Production Feature Test: Real component testing ----------
+        add_executable(production_feature_test
+            src/qtapp/production_feature_test.cpp
+            src/qtapp/gpu_backend.cpp
+            src/qtapp/metrics_collector.cpp
+            src/qtapp/backup_manager.cpp
+            src/qtapp/sla_manager.cpp
+        )
+        
+        target_link_libraries(production_feature_test PRIVATE
+            Qt6::Core
+            Qt6::Gui
+            Qt6::Widgets
+            Qt6::Network
+            ${GPU_BACKEND_LIBS}
+        )
+        
+        # Link Vulkan if enabled
+        if(Vulkan_FOUND)
+            target_link_libraries(production_feature_test PRIVATE Vulkan::Vulkan)
+        endif()
+        
+        target_include_directories(production_feature_test PRIVATE 
+            include 
+            ${CMAKE_SOURCE_DIR}/src 
+            ${CMAKE_SOURCE_DIR}/src/qtapp
+        )
+        
+        # Explicitly apply GPU backend definitions
+        if(CUDAToolkit_FOUND)
+            target_compile_definitions(production_feature_test PRIVATE HAVE_CUDA=1)
+        endif()
+        if(hip_FOUND OR HIPCC_EXECUTABLE)
+            target_compile_definitions(production_feature_test PRIVATE HAVE_HIP=1)
+        endif()
+        if(Vulkan_FOUND)
+            target_compile_definitions(production_feature_test PRIVATE HAVE_VULKAN=1)
+        endif()
+        
+        set_target_properties(production_feature_test PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+        )
+        
+        # ---------- Simple GPU Test: Quick Vulkan verification ----------
+        add_executable(simple_gpu_test
+            src/qtapp/simple_gpu_test.cpp
+            src/qtapp/gpu_backend.cpp
+            src/qtapp/metrics_collector.cpp
+        )
+        
+        target_link_libraries(simple_gpu_test PRIVATE
+            Qt6::Core
+            ${GPU_BACKEND_LIBS}
+        )
+        
+        # Link ggml for Vulkan compute support
+        if(TARGET ggml)
+            target_link_libraries(simple_gpu_test PRIVATE ggml)
+        endif()
+        
+        if(Vulkan_FOUND)
+            target_link_libraries(simple_gpu_test PRIVATE Vulkan::Vulkan)
+        endif()
+        
+        target_include_directories(simple_gpu_test PRIVATE 
+            include 
+            ${CMAKE_SOURCE_DIR}/src 
+            ${CMAKE_SOURCE_DIR}/src/qtapp
+            ${CMAKE_SOURCE_DIR}/3rdparty/ggml/include
+        )
+        
+        # Explicitly apply GPU backend definitions
+        if(CUDAToolkit_FOUND)
+            target_compile_definitions(simple_gpu_test PRIVATE HAVE_CUDA=1)
+        endif()
+        if(hip_FOUND OR HIPCC_EXECUTABLE)
+            target_compile_definitions(simple_gpu_test PRIVATE HAVE_HIP=1)
+        endif()
+        if(Vulkan_FOUND)
+            target_compile_definitions(simple_gpu_test PRIVATE HAVE_VULKAN=1)
+        endif()
+        
+        set_target_properties(simple_gpu_test PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+        )
+        
+        # ---------- GPU Inference Benchmark: Real GGUF model performance test ----------
+        add_executable(gpu_inference_benchmark
+            src/qtapp/gpu_inference_benchmark.cpp
+            src/qtapp/inference_engine.cpp
+            src/qtapp/gguf_loader.cpp
+            src/qtapp/transformer_inference.cpp
+            src/qtapp/bpe_tokenizer.cpp
+            src/qtapp/sentencepiece_tokenizer.cpp
+            src/qtapp/vocabulary_loader.cpp
+            src/qtapp/gpu_backend.cpp
+            src/qtapp/metrics_collector.cpp
+            src/qtapp/quant_utils.cpp
+        )
+        
+        target_link_libraries(gpu_inference_benchmark PRIVATE
+            Qt6::Core
+            ${GPU_BACKEND_LIBS}
+        )
+        
+        if(TARGET ggml)
+            target_link_libraries(gpu_inference_benchmark PRIVATE ggml)
+        endif()
+        
+        if(Vulkan_FOUND)
+            target_link_libraries(gpu_inference_benchmark PRIVATE Vulkan::Vulkan)
+            target_compile_definitions(gpu_inference_benchmark PRIVATE HAVE_VULKAN=1)
+        endif()
+        
+        target_include_directories(gpu_inference_benchmark PRIVATE 
+            include 
+            ${CMAKE_SOURCE_DIR}/src 
+            ${CMAKE_SOURCE_DIR}/src/qtapp
+            ${CMAKE_SOURCE_DIR}/3rdparty/ggml/include
+        )
+        
+        set_target_properties(gpu_inference_benchmark PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+        )
+        
+        # ---------- Minimal Qt Test ----------
+        add_executable(minimal_qt_test
+            src/qtapp/minimal_qt_test.cpp
+            src/qtapp/inference_engine.cpp
+            src/qtapp/gguf_loader.cpp
+            src/qtapp/transformer_inference.cpp
+            src/qtapp/bpe_tokenizer.cpp
+            src/qtapp/sentencepiece_tokenizer.cpp
+            src/qtapp/vocabulary_loader.cpp
+            src/qtapp/gpu_backend.cpp
+            src/qtapp/metrics_collector.cpp
+            src/qtapp/quant_utils.cpp
+        )
+        
+        target_link_libraries(minimal_qt_test PRIVATE 
+            Qt6::Core
+            ${GPU_BACKEND_LIBS}
+        )
+        
+        if(TARGET ggml)
+            target_link_libraries(minimal_qt_test PRIVATE ggml)
+        endif()
+        
+        if(Vulkan_Found)
+            target_link_libraries(minimal_qt_test PRIVATE Vulkan::Vulkan)
+            target_compile_definitions(minimal_qt_test PRIVATE HAVE_VULKAN=1)
+        endif()
+        
+        target_include_directories(minimal_qt_test PRIVATE 
+            include 
+            ${CMAKE_SOURCE_DIR}/src 
+            ${CMAKE_SOURCE_DIR}/src/qtapp
+            ${CMAKE_SOURCE_DIR}/3rdparty/ggml/include
+        )
+        
+        set_target_properties(minimal_qt_test PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+        )
+        
+        # ---------- Super Minimal Qt Test (just UI, no inference) ----------
+        add_executable(super_minimal_test
+            src/qtapp/minimal_main.cpp
+            src/qtapp/MinimalWindow.cpp
+        )
+        
+        target_link_libraries(super_minimal_test PRIVATE 
+            Qt6::Core
+            Qt6::Gui
+            Qt6::Widgets
+        )
+        
+        set_target_properties(super_minimal_test PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+        )
+        
+        # ---------- Minimal IDE Test (VS Code-like layout, no heavy components) ----------
+        add_executable(minimal_ide_test
+            src/qtapp/minimal_ide_main.cpp
+            src/qtapp/MainWindowMinimal.cpp
+        )
+        
+        target_link_libraries(minimal_ide_test PRIVATE 
+            Qt6::Core
+            Qt6::Gui
+            Qt6::Widgets
+        )
+        
+        set_target_properties(minimal_ide_test PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+        )
+        
+        # ---------- GGUF Hotpatch Tester: Command-line tool for real hotpatch testing ----------
+        add_executable(gguf_hotpatch_tester
+            src/qtapp/gguf_hotpatch_tester.cpp
+            src/qtapp/inference_engine.cpp
+            src/qtapp/gguf_loader.cpp
+            src/qtapp/transformer_inference.cpp
+            src/qtapp/bpe_tokenizer.cpp
+            src/qtapp/sentencepiece_tokenizer.cpp
+            src/qtapp/vocabulary_loader.cpp
+            src/qtapp/gpu_backend.cpp
+            src/qtapp/metrics_collector.cpp
+            src/qtapp/quant_utils.cpp
+        )
+        
+        target_link_libraries(gguf_hotpatch_tester PRIVATE
+            Qt6::Core
+            ${GPU_BACKEND_LIBS}
+        )
+        
+        if(TARGET ggml)
+            target_link_libraries(gguf_hotpatch_tester PRIVATE ggml)
+        endif()
+        
+        if(Vulkan_FOUND)
+            target_link_libraries(gguf_hotpatch_tester PRIVATE Vulkan::Vulkan)
+            target_compile_definitions(gguf_hotpatch_tester PRIVATE HAVE_VULKAN=1)
+        endif()
+        
+        target_include_directories(gguf_hotpatch_tester PRIVATE 
+            include 
+            ${CMAKE_SOURCE_DIR}/src 
+            ${CMAKE_SOURCE_DIR}/src/qtapp
+            ${CMAKE_SOURCE_DIR}/3rdparty/ggml/include
+        )
+        
+        set_target_properties(gguf_hotpatch_tester PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+        )
+        
+        # Note: RawrXD-Agent is now defined in src/agent/CMakeLists.txt using the 
+        # rawrxd_agent_kernel static library (pure Win32/C++20, zero Qt)
+        
+    else()
+        message(STATUS "Qt6 not found, skipping RawrXD-QtShell")
+    endif()
+else()
+    message(STATUS "MSVC not detected; skipping Qt6 targets to avoid MinGW/MSVC mismatch")
+endif()
+
+# Win32-based IDE (MSVC only to match Qt)
+if(MSVC) # Re-enabled to test
+    add_executable(RawrXD-Win32IDE 
+        src/win32app/main_win32.cpp
+        src/win32app/Win32IDE.cpp
+        src/win32app/Win32IDE.h
+        src/win32app/Win32IDE_Sidebar.cpp
+        src/win32app/Win32IDE_VSCodeUI.cpp
+        src/win32app/Win32IDE_PowerShellPanel.cpp
+        src/win32app/Win32IDE_PowerShell.cpp
+        src/win32app/Win32IDE_Logger.cpp
+        src/win32app/TransparentRenderer.cpp
+        src/win32app/TransparentRenderer.h
+        src/win32app/Win32TerminalManager.cpp
+        src/win32app/Win32TerminalManager.h
+        src/win32app/Win32IDE_FileOps.cpp
+        src/win32app/Win32IDE_Commands.cpp
+        src/win32app/Win32IDE_Debugger.cpp
+        src/win32app/Win32IDE_AgenticBridge.h
+        src/win32app/Win32IDE_AgenticBridge.cpp
+        src/win32app/Win32IDE_AgentCommands.cpp
+        src/win32app/Win32IDE_Autonomy.h
+        src/win32app/Win32IDE_Autonomy.cpp
+        # Production-Ready Framework Components
+        src/win32app/CommandRegistry.hpp
+        src/win32app/CommandRegistry.cpp
+        src/win32app/Win32Menu.cpp
+        src/win32app/Win32Menu.hpp
+        src/win32app/Win32ContextMenu.cpp
+        src/win32app/Win32ContextMenu.hpp
+        src/win32app/Win32Breadcrumb.cpp
+        src/win32app/Win32Breadcrumb.hpp
+        src/win32app/Win32FileExplorer.cpp
+        src/win32app/Win32FileExplorer.hpp
+        src/win32app/Win32SettingsRegistry.cpp
+        src/win32app/Win32SettingsRegistry.hpp
+        src/win32app/Win32IDE_CommandBridge.cpp
+        src/gguf_loader.cpp
+        src/streaming_gguf_loader.cpp
+        src/utils/InferenceSettingsManager.cpp
+        src/utils/SettingsManager.cpp
+        src/utils/ErrorReporter.cpp
+        src/utils/Diagnostics.cpp
+        src/utils/codec.cpp
+        $<$<BOOL:${ENABLE_VULKAN}>:src/win32app/VulkanRenderer.cpp>
+        $<$<BOOL:${ENABLE_COPILOT}>:src/win32app/Win32IDE_CopilotIntegration.cpp>
+        $<$<BOOL:${ENABLE_COPILOT}>:src/win32app/CopilotStreaming.cpp>
+        # Agentic navigation integration
+        src/agentic/AgenticNavigator.cpp
+        src/agentic/AgenticCopilotIntegration.cpp
+        # Enterprise License & Feature Registry
+        src/enterprise_license.cpp
+        src/feature_flags_runtime.cpp
+        src/license_enforcement.cpp
+        src/dual_engine_inference.cpp
+        src/win32app/feature_registry_panel.cpp
+        src/win32app/feature_registry_panel.h
+    )
+    
+    target_link_libraries(RawrXD-Win32IDE PRIVATE
+        comctl32
+        d3d11
+        dxgi
+        dcomp
+        dwmapi
+        d2d1
+        dwrite
+        d3dcompiler
+        winhttp
+        shlwapi
+        shell32
+        RawrXDOrchestration
+        RawrXDGit
+        RawrXDTerminal
+        RawrXD-Win32IDEBridge
+        RawrXD-AgenticFramework
+    )
+    
+    # Add include dir first to pick up our d3d10effect.h and ggml.h stubs before system SDK
+    target_include_directories(RawrXD-Win32IDE BEFORE PRIVATE 
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src/win32app
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/utils
+        ${CMAKE_SOURCE_DIR}/3rdparty/json/include  # nlohmann/json for CommandRegistry
+    )
+    
+    # Compiler options - MSVC only now
+    target_compile_options(RawrXD-Win32IDE PRIVATE /EHsc /O2)
+    
+    # Force MBCS/ANSI build to avoid Unicode string conversion issues
+    target_compile_definitions(RawrXD-Win32IDE PRIVATE _MBCS)
+    
+    set_target_properties(RawrXD-Win32IDE PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+        WIN32_EXECUTABLE TRUE
+    )
+
+    add_executable(RawrXD-SchematicStudio
+        src/win32app/SchematicStudioMain.cpp
+        src/win32app/SchematicStudio.cpp
+        src/win32app/SchematicStudio.h
+        src/win32app/IDELogger.h
+    )
+
+    target_link_libraries(RawrXD-SchematicStudio PRIVATE
+        user32
+        gdi32
+        comctl32
+        shell32
+        shlwapi
+    )
+
+    target_include_directories(RawrXD-SchematicStudio PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src/win32app
+        ${CMAKE_SOURCE_DIR}/src
+    )
+
+    set_target_properties(RawrXD-SchematicStudio PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+        WIN32_EXECUTABLE TRUE
+    )
+
+    add_executable(RawrXD-SchematicStudioTest
+        src/win32app/SchematicStudioTest.cpp
+        src/win32app/SchematicStudio.cpp
+        src/win32app/SchematicStudio.h
+        src/win32app/IDELogger.h
+    )
+
+    target_link_libraries(RawrXD-SchematicStudioTest PRIVATE
+        user32
+        gdi32
+        comctl32
+        shell32
+        shlwapi
+    )
+
+    target_include_directories(RawrXD-SchematicStudioTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src/win32app
+        ${CMAKE_SOURCE_DIR}/src
+    )
+
+    set_target_properties(RawrXD-SchematicStudioTest PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+    )
+
+    add_executable(RawrXD-WiringOracle
+        src/tools/WiringOracleMain.cpp
+        src/tools/WiringOracle.cpp
+        src/tools/WiringOracle.h
+        src/win32app/IDELogger.h
+    )
+
+    target_link_libraries(RawrXD-WiringOracle PRIVATE
+        user32
+        shlwapi
+    )
+
+    target_include_directories(RawrXD-WiringOracle PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/win32app
+    )
+
+    set_target_properties(RawrXD-WiringOracle PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+    )
+    if(ENABLE_VULKAN)
+        target_compile_definitions(RawrXD-Win32IDE PRIVATE ENABLE_VULKAN=1)
+    endif()
+    if(ENABLE_COPILOT)
+        target_compile_definitions(RawrXD-Win32IDE PRIVATE ENABLE_COPILOT=1)
+        message(STATUS "Copilot integration enabled for Win32 IDE")
+    endif()
+
+    # ── Enterprise License Creator CLI Tool ──
+    add_executable(RawrXD-LicenseCreator
+        src/license_creator.cpp
+        src/enterprise_license.cpp
+        src/feature_flags_runtime.cpp
+        src/license_enforcement.cpp
+    )
+
+    target_include_directories(RawrXD-LicenseCreator PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+    )
+
+    target_compile_features(RawrXD-LicenseCreator PRIVATE cxx_std_20)
+    target_compile_options(RawrXD-LicenseCreator PRIVATE /EHsc /O2)
+
+    set_target_properties(RawrXD-LicenseCreator PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+    )
+    message(STATUS "Enterprise License Creator target added")
+
+    # ── Full Enterprise License Creator & Auditor (v2.0) ──
+    # Includes dual-engine beacon bridge, wiring status, phase roadmap
+    add_executable(RawrXD-LicenseCreator-Full
+        src/enterprise_license_creator.cpp
+        src/enterprise_license.cpp
+        src/feature_flags_runtime.cpp
+        src/license_enforcement.cpp
+        src/dual_engine_inference.cpp
+    )
+
+    target_include_directories(RawrXD-LicenseCreator-Full PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+    )
+
+    target_compile_features(RawrXD-LicenseCreator-Full PRIVATE cxx_std_20)
+    target_compile_options(RawrXD-LicenseCreator-Full PRIVATE /EHsc /O2)
+
+    set_target_properties(RawrXD-LicenseCreator-Full PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+    )
+    message(STATUS "Full Enterprise License Creator & Auditor (v2.0) target added")
+
+endif() # End MSVC-only Win32IDE block
+
+# Terminal test executable (MSVC only, placed in bin-msvc)
+if(FALSE AND MSVC AND EXISTS "${CMAKE_SOURCE_DIR}/src/win32app/test_terminal.cpp") # Disabled until headers exist
+    add_executable(test_terminal
+        src/win32app/test_terminal.cpp
+        src/win32app/Win32TerminalManager.cpp
+        src/win32app/Win32TerminalManager.h
+    )
+    set_target_properties(test_terminal PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin-msvc"
+    )
+endif()
+
+# Chat application (MSVC only, taskbar integration)
+if(FALSE AND MSVC AND ENABLE_COPILOT AND EXISTS "${CMAKE_SOURCE_DIR}/src/win32app/main_chat.cpp") # Disabled until headers exist
+    add_executable(RawrXD-Chat
+        src/win32app/main_chat.cpp
+        src/win32app/Win32ChatApp.cpp
+        src/win32app/Win32ChatApp.h
+        src/win32app/ContextManager.h
+    )
+
+    target_link_libraries(RawrXD-Chat PRIVATE
+        comctl32
+        shell32
+        winhttp
+    )
+
+    target_include_directories(RawrXD-Chat PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+    )
+
+    target_compile_options(RawrXD-Chat PRIVATE /EHsc)
+
+    set_target_properties(RawrXD-Chat PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin-msvc"
+        WIN32_EXECUTABLE TRUE
+    )
+endif()
+
+# Vulkan SDK (optional now; can be disabled if not installed)
+option(BUILD_TESTS "Build unit tests (disables Vulkan requirement)" OFF)
+# ENABLE_VULKAN defined earlier at line 105 - removed duplicate definition
+if(ENABLE_VULKAN)
+    if(NOT BUILD_TESTS)
+        find_package(Vulkan REQUIRED)
+    else()
+        find_package(Vulkan QUIET)
+    endif()
+else()
+    message(STATUS "Vulkan disabled via ENABLE_VULKAN=OFF; skipping find_package")
+endif()
+
+
+# Compiler selection: do not force MinGW globally. Let the generator/toolchain decide.
+# If you need MinGW, configure the build folder with `-G "MinGW Makefiles"`.
+
+# Include directories
+include_directories(${CMAKE_SOURCE_DIR}/include)
+
+if(FALSE) # Disabled until headers exist
+# Add main executable
+add_executable(RawrXD-ModelLoader
+    src/main.cpp
+    src/gguf_loader.cpp
+    src/vulkan_compute.cpp
+    src/hf_downloader.cpp
+    src/gui.cpp
+    src/api_server.cpp
+    src/settings.cpp
+    src/telemetry.cpp
+    src/telemetry/ai_metrics.cpp
+    src/overclock_vendor.cpp
+    src/overclock_governor.cpp
+    src/baseline_profile.cpp
+)
+
+# Console-based IDE (non-Qt) interactive shell
+add_executable(RawrXD-CLI
+    src/rawrxd_cli.cpp
+    src/gguf_loader.cpp
+    src/vulkan_compute.cpp
+    src/hf_downloader.cpp
+    src/api_server.cpp
+    src/settings.cpp
+    src/telemetry.cpp
+    src/overclock_vendor.cpp
+    src/overclock_governor.cpp
+    src/baseline_profile.cpp
+)
+
+target_link_libraries(RawrXD-CLI PRIVATE wbemuuid pdh)
+if(Vulkan_FOUND)
+    target_link_libraries(RawrXD-CLI PRIVATE Vulkan::Vulkan)
+endif()
+set_target_properties(RawrXD-CLI PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin-${COMPILER_SUFFIX}")
+
+if(Qt6Widgets_FOUND)
+    message(STATUS "Qt6Widgets already configured above")
+endif()
+
+# Link libraries
+target_link_libraries(RawrXD-ModelLoader PRIVATE
+    ws2_32
+    winmm
+    imm32
+    ole32
+    oleaut32
+    winspool
+    advapi32
+    shell32
+    user32
+    gdi32
+    wbemuuid
+    pdh
+)
+
+if(Vulkan_FOUND)
+    target_link_libraries(RawrXD-ModelLoader PRIVATE Vulkan::Vulkan)
+endif()
+
+# Compiler flags
+if(MSVC)
+    target_compile_options(RawrXD-ModelLoader PRIVATE /O2 /EHsc)
+else()
+    target_compile_options(RawrXD-ModelLoader PRIVATE -O2 -fexceptions)
+endif()
+target_compile_definitions(RawrXD-ModelLoader PRIVATE _CRT_SECURE_NO_WARNINGS _WINDOWS)
+
+# Output directory
+set_target_properties(RawrXD-ModelLoader PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin-${COMPILER_SUFFIX}"
+)
+endif()
+
+if(FALSE) # Disabled until headers exist
+# Benchmark target
+add_executable(model_loader_bench
+    src/bench_main.cpp
+    src/gguf_loader.cpp
+    src/vulkan_compute.cpp
+    src/settings.cpp
+    src/telemetry.cpp
+)
+
+target_link_libraries(model_loader_bench PRIVATE wbemuuid pdh)
+if(Vulkan_FOUND)
+    target_link_libraries(model_loader_bench PRIVATE Vulkan::Vulkan)
+endif()
+
+# Stress test executable for overclock governor development
+add_executable(rawrxd_stress
+    src/oc_stress.cpp
+    src/telemetry.cpp
+)
+target_link_libraries(rawrxd_stress PRIVATE wbemuuid pdh)
+set_target_properties(rawrxd_stress PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin-${COMPILER_SUFFIX}")
+if(MSVC)
+    target_compile_options(model_loader_bench PRIVATE /O2 /EHsc)
+else()
+    target_compile_options(model_loader_bench PRIVATE -O2 -fexceptions)
+endif()
+set_target_properties(model_loader_bench PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin-${COMPILER_SUFFIX}"
+)
+endif()
+
+# Unit test targets (separate small executables) - DISABLED - files don't exist
+# add_executable(rawrxd_test_baseline
+#     tests/test_baseline_main.cpp
+#     src/baseline_profile.cpp
+#     src/settings.cpp
+# )
+# target_link_libraries(rawrxd_test_baseline PRIVATE wbemuuid pdh)
+# set_target_properties(rawrxd_test_baseline PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+
+# add_executable(rawrxd_test_pid
+#     tests/test_pid_main.cpp
+#     src/overclock_governor.cpp
+#     src/overclock_vendor.cpp
+#     src/settings.cpp
+# )
+# target_link_libraries(rawrxd_test_pid PRIVATE wbemuuid pdh)
+# set_target_properties(rawrxd_test_pid PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+
+if(FALSE) # Disabled until headers exist
+# Native Win32 IDE executable (no Qt dependencies)
+add_executable(RawrXD-IDE WIN32
+    src/ide_main.cpp
+    src/ide_window.cpp
+)
+
+target_include_directories(RawrXD-IDE PRIVATE include)
+target_link_libraries(RawrXD-IDE PRIVATE 
+    comctl32 
+    comdlg32 
+    shell32
+)
+
+set_target_properties(RawrXD-IDE PROPERTIES 
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+    WIN32_EXECUTABLE TRUE
+)
+endif()
+
+if(FALSE) # Disabled until headers exist
+# Simple C++ IDE with advanced features stubs
+add_executable(RawrXD-SimpleIDE
+    src/qtapp/main_simple.cpp
+    src/qtapp/MainWindowSimple.cpp
+    src/qtapp/MainWindowSimple.h
+    src/editor_buffer.cpp
+    src/syntax_engine.cpp
+    src/overclock_vendor.cpp
+    src/overclock_governor.cpp
+    src/settings.cpp
+    src/telemetry.cpp
+    src/baseline_profile.cpp
+    src/gguf_loader.cpp
+    src/telemetry/ai_metrics.cpp
+    src/session/ai_session.cpp
+    src/backend/ollama_client.cpp
+    src/backend/websocket_server.cpp
+    src/backend/agentic_tools.cpp
+    src/tools/file_ops.cpp
+    src/tools/git_client.cpp
+    src/context/indexer.cpp
+    src/context/semantic_store.cpp
+    src/ui/split_layout.cpp
+    src/ui/chat_panel.cpp
+)
+
+target_include_directories(RawrXD-SimpleIDE PRIVATE include)
+target_link_libraries(RawrXD-SimpleIDE PRIVATE 
+    user32 
+    gdi32 
+    wbemuuid 
+    pdh
+    winhttp
+    ws2_32
+)
+
+set_target_properties(RawrXD-SimpleIDE PROPERTIES 
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+)
+
+# Enable standard exception semantics and optimization for SimpleIDE
+if(MSVC)
+    target_compile_options(RawrXD-SimpleIDE PRIVATE /EHsc /O2)
+else()
+    target_compile_options(RawrXD-SimpleIDE PRIVATE -fexceptions -O2)
+endif()
+target_compile_definitions(RawrXD-SimpleIDE PRIVATE _CRT_SECURE_NO_WARNINGS)
+endif()
+
+# Chromatic Wave Demo - Chameleon/Neon effects with D3D11
+# Target: 540Hz @ 3840x2160 (4K UHD)
+add_executable(RawrXD-Chromatic WIN32
+    src/chromatic_main.cpp
+    src/ui/chromatic_window.cpp
+)
+
+target_include_directories(RawrXD-Chromatic PRIVATE 
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/include
+)
+target_link_libraries(RawrXD-Chromatic PRIVATE 
+    user32 
+    gdi32 
+    d3d11
+    dxgi
+    d3dcompiler
+)
+
+set_target_properties(RawrXD-Chromatic PROPERTIES 
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+    WIN32_EXECUTABLE TRUE
+)
+
+if(MSVC)
+    target_compile_options(RawrXD-Chromatic PRIVATE /EHsc /O2)
+else()
+    target_compile_options(RawrXD-Chromatic PRIVATE -fexceptions -O2)
+endif()
+target_compile_definitions(RawrXD-Chromatic PRIVATE _CRT_SECURE_NO_WARNINGS NOMINMAX)
+
+# Agentic IDE - Advanced AI-powered IDE with terminal integration (Qt-based GUI app)
+# Enabled with Qt6 6.7.2+ support
+if(Qt6_FOUND AND Qt6_VERSION VERSION_GREATER_EQUAL 6.7.2)
+    message(STATUS "Building RawrXD-AgenticIDE with Qt ${Qt6_VERSION}")
+    
+    # Check for required source files
+    set(AGENTICIDE_SOURCES
+        src/agentic_ide_main.cpp
+    )
+    
+    # Check if additional source files exist
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/agentic_ide.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/agentic_ide.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/scalar_server.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/scalar_server.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/agentic_chat.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/agentic_chat.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/chat_workspace.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/chat_workspace.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/multi_tab_editor.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/multi_tab_editor.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/terminal_pool.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/terminal_pool.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/agentic_engine.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/agentic_engine.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/chat_interface.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/chat_interface.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/WorkspaceManager.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/WorkspaceManager.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/agentic_copilot_bridge.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/agentic_copilot_bridge.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/ai_code_assistant.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/qtapp/ai_code_assistant.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/ai_code_assistant_panel.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/qtapp/ai_code_assistant_panel.cpp)
+    endif()
+    # Phase 3: Production Enhancement Components
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/checkpoint_manager.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/qtapp/checkpoint_manager.cpp)
+    endif()
+    # if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/distributed_trainer.cpp")  # Temporarily disabled
+    #     list(APPEND AGENTICIDE_SOURCES src/qtapp/distributed_trainer.cpp)
+    # endif()
+    # if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/interpretability_panel.cpp")  # Temporarily disabled
+    #     list(APPEND AGENTICIDE_SOURCES src/qtapp/interpretability_panel.cpp)
+    # endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/tokenizer_selector.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/qtapp/tokenizer_selector.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/ci_cd_settings.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/qtapp/ci_cd_settings.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/inflate_deflate_cpp.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/qtapp/inflate_deflate_cpp.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/file_browser.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/file_browser.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/inference_engine.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/inference_engine.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/inference_engine.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/qtapp/inference_engine.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/sentencepiece_tokenizer.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/qtapp/sentencepiece_tokenizer.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/vocabulary_loader.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/qtapp/vocabulary_loader.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/bpe_tokenizer.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/qtapp/bpe_tokenizer.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/transformer_inference.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/qtapp/transformer_inference.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/gguf_loader.hpp")
+        list(APPEND AGENTICIDE_SOURCES src/qtapp/gguf_loader.hpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/qtapp/gguf_loader.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/qtapp/gguf_loader.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/gguf_loader.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/gguf_loader.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/vulkan_compute.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/vulkan_compute.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/transformer_block_scalar.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/transformer_block_scalar.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/settings.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/settings.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/planning_agent.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/planning_agent.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/telemetry.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/telemetry.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/todo_manager.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/todo_manager.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/todo_dock.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/todo_dock.cpp)
+    endif()
+    # NOTE: inference_engine_stub.cpp is excluded because src/qtapp/inference_engine.cpp is the primary implementation
+    # if(EXISTS "${CMAKE_SOURCE_DIR}/src/inference_engine_stub.cpp")
+    #     list(APPEND AGENTICIDE_SOURCES src/inference_engine_stub.cpp)
+    # endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/agentic_executor.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/agentic_executor.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/model_trainer.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/model_trainer.cpp)
+    endif()
+    
+    # Phase 1: ModelTrainer UI Components
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/training_dialog.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/training_dialog.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/training_progress_dock.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/training_progress_dock.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/model_registry.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/model_registry.cpp)
+    endif()
+    
+    # Phase 2: Advanced Monitoring Components
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/profiler.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/profiler.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/observability_dashboard.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/observability_dashboard.cpp)
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/hardware_backend_selector.cpp")
+        list(APPEND AGENTICIDE_SOURCES src/hardware_backend_selector.cpp)
+    endif()
+    
+    # Phase 3: Production Enhancements
+    # NOTE: Phase 3 components are in src/qtapp/ and included in RawrXD-QtShell target, not here
+    # if(EXISTS "${CMAKE_SOURCE_DIR}/src/security_manager.cpp")
+    #     list(APPEND AGENTICIDE_SOURCES src/security_manager.cpp)
+    # endif()
+    # if(EXISTS "${CMAKE_SOURCE_DIR}/src/distributed_trainer.cpp")
+    #     list(APPEND AGENTICIDE_SOURCES src/distributed_trainer.cpp)
+    # endif()
+    # if(EXISTS "${CMAKE_SOURCE_DIR}/src/interpretability_panel.cpp")
+    #     list(APPEND AGENTICIDE_SOURCES src/interpretability_panel.cpp)
+    # endif()
+    # if(EXISTS "${CMAKE_SOURCE_DIR}/src/ci_cd_settings.cpp")
+    #     list(APPEND AGENTICIDE_SOURCES src/ci_cd_settings.cpp)
+    # endif()
+    # if(EXISTS "${CMAKE_SOURCE_DIR}/src/tokenizer_selector.cpp")
+    #     list(APPEND AGENTICIDE_SOURCES src/tokenizer_selector.cpp)
+    # endif()
+    # if(EXISTS "${CMAKE_SOURCE_DIR}/src/checkpoint_manager.cpp")
+    #     list(APPEND AGENTICIDE_SOURCES src/checkpoint_manager.cpp)
+    # endif()
+    
+    # Add headers for MOC processing
+    list(APPEND AGENTICIDE_SOURCES
+        include/agentic_ide.h
+        include/agentic_engine.h
+        include/agentic_executor.h
+        include/agentic_copilot_bridge.h
+        include/chat_interface.h
+        include/chat_workspace.h
+        include/multi_tab_editor.h
+        include/terminal_pool.h
+        include/file_browser.h
+        include/planning_agent.h
+        # include/inference_engine_stub.hpp  # Using qtapp/inference_engine.hpp instead
+        include/scalar_server.h
+        include/telemetry.h
+        include/transformer_block_scalar.h
+        include/todo_manager.h
+        include/todo_dock.h
+        include/training_dialog.h
+        include/training_progress_dock.h
+        include/model_registry.h
+        include/model_trainer.h
+        include/profiler.h
+        include/observability_dashboard.h
+        include/hardware_backend_selector.h
+        include/security_manager.h
+        # include/distributed_trainer.h  # Using qtapp version
+        # include/interpretability_panel.h  # Using qtapp version
+        include/ci_cd_settings.h
+        include/tokenizer_selector.h
+        include/checkpoint_manager.h
+    )
+    
+    add_executable(RawrXD-AgenticIDE WIN32 ${AGENTICIDE_SOURCES})
+    
+    # Enable Qt MOC for QObject-derived classes (Telemetry, etc.)
+    set_target_properties(RawrXD-AgenticIDE PROPERTIES AUTOMOC ON)
+
+    target_include_directories(RawrXD-AgenticIDE PRIVATE 
+        ${CMAKE_SOURCE_DIR}
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src/qtapp
+        ${CMAKE_SOURCE_DIR}/3rdparty/ggml/include
+        ${CMAKE_SOURCE_DIR}/3rdparty/ggml/src
+    )
+    target_link_libraries(RawrXD-AgenticIDE PRIVATE 
+        user32 
+        gdi32 
+        wbemuuid 
+        pdh
+        winhttp
+        ws2_32
+        comctl32
+        d3d11
+        dxgi
+        d3dcompiler
+        Qt6::Core
+        Qt6::Gui
+        Qt6::Widgets
+        Qt6::Network
+        Qt6::Sql
+        brutal_gzip
+        quant_utils
+        ggml_interface
+    )
+    
+    # Add Vulkan linkage if available
+    if(Vulkan_FOUND)
+        target_link_libraries(RawrXD-AgenticIDE PRIVATE Vulkan::Vulkan)
+        target_compile_definitions(RawrXD-AgenticIDE PRIVATE HAVE_VULKAN=1)
+    endif()
+
+    set_target_properties(RawrXD-AgenticIDE PROPERTIES 
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+        WIN32_EXECUTABLE TRUE
+    )
+
+    if(MSVC)
+        target_compile_options(RawrXD-AgenticIDE PRIVATE /EHsc /O2)
+    else()
+        target_compile_options(RawrXD-AgenticIDE PRIVATE -fexceptions -O2)
+    endif()
+    target_compile_definitions(RawrXD-AgenticIDE PRIVATE _CRT_SECURE_NO_WARNINGS)
+    
+    # Copy Qt DLLs to output directory
+    add_custom_command(TARGET RawrXD-AgenticIDE POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "$<TARGET_FILE:Qt6::Core>"
+            "$<TARGET_FILE:Qt6::Gui>"
+            "$<TARGET_FILE:Qt6::Widgets>"
+            "$<TARGET_FILE:Qt6::Network>"
+            "$<TARGET_FILE_DIR:RawrXD-AgenticIDE>"
+        COMMENT "Copying Qt DLLs to output directory"
+    )
+    
+    # Copy Qt platform plugins
+    add_custom_command(TARGET RawrXD-AgenticIDE POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory
+            "$<TARGET_FILE_DIR:RawrXD-AgenticIDE>/platforms"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${Qt6_DIR}/../../../plugins/platforms/qwindows$<$<CONFIG:Debug>:d>.dll"
+            "$<TARGET_FILE_DIR:RawrXD-AgenticIDE>/platforms/"
+        COMMENT "Copying Qt platform plugins"
+    )
+    
+    # Include smoke tests
+    if(EXISTS "${CMAKE_SOURCE_DIR}/smoke_tests.cmake")
+        include(${CMAKE_SOURCE_DIR}/smoke_tests.cmake)
+    endif()
+    
+    message(STATUS "RawrXD-AgenticIDE: Advanced AI-powered IDE enabled with Qt ${Qt6_VERSION}")
+    message(STATUS "AgenticIDE sources: ${AGENTICIDE_SOURCES}")
+else()
+    message(STATUS "Qt6 not found or version < 6.7.2; skipping RawrXD-AgenticIDE target")
+endif()
+
+message(STATUS "RawrXD-ModelLoader configured successfully with Clang C++20")
+
+if(FALSE) # Disabled until headers exist
+# IDE Test Runner - Comprehensive function testing
+add_executable(RawrXD-TestRunner
+    src/win32app/test_runner.cpp
+    src/win32app/Win32IDE.cpp
+    src/win32app/Win32IDE_Commands.cpp
+    src/win32app/Win32IDE_Debugger.cpp
+    src/win32app/Win32IDE_FileOps.cpp
+    src/win32app/Win32IDE_PowerShell.cpp
+    src/win32app/Win32IDE_PowerShellPanel.cpp
+    src/win32app/Win32IDE_Sidebar.cpp
+    src/win32app/Win32IDE_VSCodeUI.cpp
+    src/win32app/Win32IDE_AgenticBridge.cpp
+    src/win32app/Win32IDE_AgentCommands.cpp
+    src/win32app/Win32TerminalManager.cpp
+    src/win32app/TransparentRenderer.cpp
+    src/win32app/VulkanRenderer.cpp
+    src/gguf_loader.cpp
+    src/streaming_gguf_loader.cpp
+)
+
+target_include_directories(RawrXD-TestRunner PRIVATE
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/src/win32app
+)
+
+target_link_libraries(RawrXD-TestRunner PRIVATE
+    user32 gdi32 comctl32 comdlg32 shell32 shlwapi
+    d3d11 dxgi d3dcompiler
+    d2d1 dwrite dcomp dwmapi
+    winhttp
+)
+
+set_target_properties(RawrXD-TestRunner PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+    WIN32_EXECUTABLE TRUE
+)
+
+target_compile_options(RawrXD-TestRunner PRIVATE -O2)
+target_compile_definitions(RawrXD-TestRunner PRIVATE _CRT_SECURE_NO_WARNINGS NOMINMAX)
+endif()
+
+# Q8_0 AVX2 end-to-end bench
+if(EXISTS "${CMAKE_SOURCE_DIR}/tests/bench_q8_0_end2end.cpp")
+    add_executable(bench_q8_0_end2end
+        tests/bench_q8_0_end2end.cpp
+        kernels/q8_0_avx2.cc
+        kernels/matmul_kernel_avx2.cc
+    )
+    target_include_directories(bench_q8_0_end2end PRIVATE ${CMAKE_SOURCE_DIR})
+    target_compile_options(bench_q8_0_end2end PRIVATE /arch:AVX2 /O2)
+    target_compile_definitions(bench_q8_0_end2end PRIVATE __AVX2__=1)
+    set_target_properties(bench_q8_0_end2end PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+    )
+endif()
+
+# Flash-Attention AVX2 bench
+if(EXISTS "${CMAKE_SOURCE_DIR}/tests/bench_flash_attn.cpp")
+    add_executable(bench_flash_attn
+        tests/bench_flash_attn.cpp
+        kernels/flash_attn_avx2.cc
+        kernels/matmul_kernel_avx2.cc
+    )
+    target_include_directories(bench_flash_attn PRIVATE ${CMAKE_SOURCE_DIR})
+    target_compile_options(bench_flash_attn PRIVATE /arch:AVX2 /O2)
+    target_compile_definitions(bench_flash_attn PRIVATE __AVX2__=1)
+    set_target_properties(bench_flash_attn PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+    )
+endif()
+# Flash-Attention All-Quant bench
+if(EXISTS "${CMAKE_SOURCE_DIR}/tests/bench_flash_all_quant.cpp")
+    add_executable(bench_flash_all_quant
+        tests/bench_flash_all_quant.cpp
+        kernels/flash_attn_avx2.cc
+        kernels/matmul_kernel_avx2.cc
+    )
+    target_include_directories(bench_flash_all_quant PRIVATE ${CMAKE_SOURCE_DIR})
+    target_compile_options(bench_flash_all_quant PRIVATE /arch:AVX2 /O2)
+    target_compile_definitions(bench_flash_all_quant PRIVATE __AVX2__=1)
+    set_target_properties(bench_flash_all_quant PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+    )
+endif()
+
+# Flash-Attention ASM Puppeteer (Phase 4 Final Form)
+if(EXISTS "${CMAKE_SOURCE_DIR}/tests/bench_flash_asm_puppeteer.cpp")
+    if(MSVC)
+        # Assemble NASM file via custom command to avoid MSBuild flags leakage
+        set(FLASH_ASM_SRC ${CMAKE_SOURCE_DIR}/kernels/flash_attn_asm_avx2.asm)
+        set(FLASH_ASM_OBJ ${CMAKE_CURRENT_BINARY_DIR}/flash_attn_asm_avx2.obj)
+        add_custom_command(
+            OUTPUT ${FLASH_ASM_OBJ}
+            COMMAND nasm -f win64 -o ${FLASH_ASM_OBJ} ${FLASH_ASM_SRC}
+            DEPENDS ${FLASH_ASM_SRC}
+            COMMENT "Assembling flash_attn_asm_avx2.asm with nasm"
+        )
+        add_custom_target(flash_attn_asm_obj DEPENDS ${FLASH_ASM_OBJ})
+        
+        add_executable(bench_flash_asm_puppeteer
+            tests/bench_flash_asm_puppeteer.cpp
+            kernels/flash_attn_avx2.cc
+            kernels/matmul_kernel_avx2.cc
+        )
+        add_dependencies(bench_flash_asm_puppeteer flash_attn_asm_obj)
+        target_sources(bench_flash_asm_puppeteer PRIVATE ${FLASH_ASM_OBJ})
+        target_include_directories(bench_flash_asm_puppeteer PRIVATE ${CMAKE_SOURCE_DIR})
+        target_compile_options(bench_flash_asm_puppeteer PRIVATE /arch:AVX2 /O2)
+        target_compile_definitions(bench_flash_asm_puppeteer PRIVATE __AVX2__=1)
+        set_target_properties(bench_flash_asm_puppeteer PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        )
+    endif()
+endif()
+
+# MASM God-Mode deflate benchmark
+if(MSVC)
+    enable_language(ASM_MASM)
+    
+    if(EXISTS "${CMAKE_SOURCE_DIR}/tests/bench_deflate_masm.cpp")
+        add_executable(bench_deflate_godmode tests/bench_deflate_masm.cpp kernels/deflate_godmode_masm.asm)
+        target_compile_definitions(bench_deflate_godmode PRIVATE NO_ZLIB_REF=1 DEFLATE_GODMODE=1)
+        set_target_properties(bench_deflate_godmode PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests")
+    endif()
+
+    # Brutal MASM benchmark
+    if(EXISTS "${CMAKE_SOURCE_DIR}/tests/bench_deflate_brutal.cpp")
+        add_executable(bench_deflate_brutal tests/bench_deflate_brutal.cpp kernels/deflate_brutal_masm.asm)
+        set_target_properties(bench_deflate_brutal PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests")
+    endif()
+
+endif()
+
+# ARM-NEON benchmark (cross-compile or native ARM64)
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|ARM64")
+    enable_language(ASM)
+    # Existing generic NEON bench (if present)
+    if(EXISTS "${CMAKE_SOURCE_DIR}/tests/bench_deflate_neon.cpp" AND EXISTS "${CMAKE_SOURCE_DIR}/kernels/deflate_neon.S")
+        add_executable(bench_deflate_neon tests/bench_deflate_neon.cpp kernels/deflate_neon.S)
+        set_target_properties(bench_deflate_neon PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests")
+    endif()
+
+    # Brutal stored-block ARM64 bench
+    if(EXISTS "${CMAKE_SOURCE_DIR}/tests/bench_deflate_brutal_arm64.cpp" AND EXISTS "${CMAKE_SOURCE_DIR}/kernels/deflate_brutal_neon.S")
+        add_executable(bench_deflate_brutal_arm64
+            tests/bench_deflate_brutal_arm64.cpp
+            kernels/deflate_brutal_neon.S
+        )
+        set_target_properties(bench_deflate_brutal_arm64 PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests")
+    endif()
+endif()
+
+# Add benchmark for 50MB payload
+if(EXISTS "${CMAKE_SOURCE_DIR}/tests/bench_deflate_50mb.cpp")
+    add_executable(bench_deflate_50mb tests/bench_deflate_50mb.cpp)
+    target_link_libraries(bench_deflate_50mb PRIVATE brutal_gzip)
+    set_target_properties(bench_deflate_50mb PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests")
+endif()
+
+if(EXISTS "${CMAKE_SOURCE_DIR}/tests/quant_engine_smoke.cpp")
+    add_executable(quant_engine_test
+        tests/quant_engine_smoke.cpp
+    )
+    target_link_libraries(quant_engine_test PRIVATE Qt6::Core quant_utils)
+    set_target_properties(quant_engine_test PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+endif()
+
+
+
+
+
+ 
+ # Simple scalar quantization smoke test (Q5/Q6 bit-packers)
+ add_executable(quant_scalar_smoke tests/quant_scalar_smoke.cpp)
+ set_target_properties(quant_scalar_smoke PROPERTIES
+     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+    AUTOMOC OFF
+ )
+
+# Comprehensive quantization correctness tests (pack/unpack, error bounds)
+add_executable(quant_correctness_tests tests/quant_correctness_tests.cpp)
+target_link_libraries(quant_correctness_tests PRIVATE Qt6::Core quant_utils)
+set_target_properties(quant_correctness_tests PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+    AUTOMOC OFF
+)
+
+# Agent Coordinator comprehensive tests (scheduling, cancellation, failure paths)
+add_executable(test_agent_coordinator tests/test_agent_coordinator.cpp)
+target_link_libraries(test_agent_coordinator PRIVATE 
+    Qt6::Core 
+    Qt6::Test 
+    RawrXDOrchestration
+)
+target_include_directories(test_agent_coordinator PRIVATE 
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/src/orchestration
+)
+set_target_properties(test_agent_coordinator PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+    AUTOMOC ON
+)
+
+# Agent Coordinator integration tests (real GGUF model loading + inference)
+add_executable(test_agent_coordinator_integration 
+    tests/test_agent_coordinator_integration.cpp
+    src/model_loader/model_loader.cpp
+    src/inference_engine_stub.cpp
+    src/qtapp/gguf_server.cpp
+    src/gguf_loader.cpp
+)
+target_link_libraries(test_agent_coordinator_integration PRIVATE 
+    Qt6::Core 
+    Qt6::Test
+    Qt6::Network
+    RawrXDOrchestration
+)
+target_include_directories(test_agent_coordinator_integration PRIVATE 
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/src/orchestration
+    ${CMAKE_SOURCE_DIR}/src/model_loader
+    ${CMAKE_SOURCE_DIR}/src/qtapp
+    ${CMAKE_SOURCE_DIR}/include
+)
+set_target_properties(test_agent_coordinator_integration PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+    AUTOMOC ON
+)
+
+# KV Cache Infrastructure Test
+if(ENABLE_VULKAN)
+add_executable(test_kv_cache 
+    src/test_kv_cache.cpp
+    src/vulkan_compute.cpp
+)
+target_link_libraries(test_kv_cache PRIVATE Vulkan::Vulkan)
+target_include_directories(test_kv_cache PRIVATE 
+    ${CMAKE_SOURCE_DIR}/include
+    ${Vulkan_INCLUDE_DIRS}
+)
+set_target_properties(test_kv_cache PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+)
+endif()
+
+# GGUF Loader Improvements Test
+add_executable(test_gguf_loader
+    tests/test_gguf_loader.cpp
+    src/gguf_loader.cpp
+)
+target_link_libraries(test_gguf_loader PRIVATE 
+    Qt6::Core
+)
+target_include_directories(test_gguf_loader PRIVATE 
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/src
+)
+set_target_properties(test_gguf_loader PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+    AUTOMOC ON
+)
+
+# GGUF Loader Simple Test
+add_executable(test_gguf_loader_simple
+    tests/test_gguf_loader_simple.cpp
+    src/gguf_loader.cpp
+)
+target_link_libraries(test_gguf_loader_simple PRIVATE 
+    Qt6::Core
+)
+target_include_directories(test_gguf_loader_simple PRIVATE 
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/src
+)
+set_target_properties(test_gguf_loader_simple PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+    AUTOMOC ON
+)
+
+# Brutal Gzip Library auto-selects MASM on x64 and NEON on ARM64
+add_library(brutal_gzip STATIC)
+target_include_directories(brutal_gzip PUBLIC include)
+# Architecture-specific kernels get added below (MASM on x64, NEON on ARM64).
+
+if(MSVC AND CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64")
+    enable_language(ASM_MASM)
+    target_sources(brutal_gzip PRIVATE kernels/deflate_brutal_masm.asm)
+    target_compile_definitions(brutal_gzip PUBLIC HAS_BRUTAL_GZIP_MASM=1)
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|ARM64")
+    enable_language(ASM)
+    target_sources(brutal_gzip PRIVATE kernels/deflate_neon.S)
+    target_compile_definitions(brutal_gzip PUBLIC HAS_BRUTAL_GZIP_NEON=1)
+endif()
+
+# brutal-gzip implementation file (tiny C++ wrapper)
+target_sources(brutal_gzip PRIVATE src/qtapp/inflate_deflate_cpp.cpp)
+
+# Production-ready hotpatch libraries (using only existing files)
+# Memory hotpatch - header only for now until full implementation
+# add_library(memory_hotpatch STATIC src/qtapp/model_memory_hotpatch.cpp)
+# Compiled into main target for now
+
+# ============================================================================
+# RAWRXD SOVEREIGN INFRASTRUCTURE (Pure Win32/C++20 - Zero Qt)
+# ============================================================================
+
+# Sovereign IDE Executable
+add_executable(RawrXD-SovereignIDE
+    src/RawrXD_SovereignIDE.cpp
+)
+
+target_link_libraries(RawrXD-SovereignIDE
+    PRIVATE
+        rawrxd_agent_kernel_win32
+        winhttp.lib
+        shlwapi.lib
+        shell32.lib
+        psapi.lib
+        ws2_32.lib
+        comctl32.lib
+)
+
+target_compile_options(RawrXD-SovereignIDE
+    PRIVATE
+        /std:c++latest
+        /W4
+        /permissive-
+        /Zc:__cplusplus
+)
+
+set_target_properties(RawrXD-SovereignIDE PROPERTIES
+    CXX_STANDARD 20
+    CXX_STANDARD_REQUIRED ON
+    WIN32_EXECUTABLE ON
+)
+

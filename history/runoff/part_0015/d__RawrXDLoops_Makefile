@@ -1,0 +1,208 @@
+# Makefile for Underground King DAW (Unix/Linux/macOS)
+# Unified build system supporting Linux (x86-64, ALSA/EGL) and macOS (Intel/ARM64, CoreAudio/Metal)
+
+.PHONY: all clean build-linux build-macos build-both help test install uninstall
+
+# Detect platform
+UNAME_S := $(shell uname -s)
+UNAME_M := $(shell uname -m)
+
+ifeq ($(UNAME_S),Linux)
+    PLATFORM := linux
+    BUILD_DIR := build_linux
+    EXECUTABLE := $(BUILD_DIR)/king
+else ifeq ($(UNAME_S),Darwin)
+    PLATFORM := macos
+    BUILD_DIR := build_macos
+    EXECUTABLE := $(BUILD_DIR)/king
+else
+    $(error Unsupported platform: $(UNAME_S))
+endif
+
+# Source file
+ASSEMBLY_SRC := omega_unix.asm
+ASSEMBLY_ABS := $(realpath $(ASSEMBLY_SRC))
+
+# Compiler
+CC := clang
+CFLAGS_COMMON := -x assembler -Wl,-e,_Omega_Final_Start -nostdlib -fno-builtin -fno-stack-protector -fno-asynchronous-unwind-tables
+
+# Platform-specific flags
+ifeq ($(PLATFORM),linux)
+    CFLAGS := $(CFLAGS_COMMON) -lm -march=x86-64 -mtune=generic
+    LDFLAGS := -lm
+    TARGET_ARCH := x86_64-unknown-linux-gnu
+else ifeq ($(PLATFORM),macos)
+    CFLAGS := $(CFLAGS_COMMON) -framework CoreAudio -framework Metal -framework IOKit -framework IOSurface -fno-asynchronous-unwind-tables
+    LDFLAGS := -framework CoreAudio -framework Metal -framework IOKit
+    ifeq ($(UNAME_M),arm64)
+        CFLAGS += -arch arm64
+        TARGET_ARCH := arm64-apple-darwin
+    else
+        CFLAGS += -arch x86_64
+        TARGET_ARCH := x86_64-apple-darwin
+    endif
+endif
+
+# Verbosity control
+VERBOSE ?= 0
+ifeq ($(VERBOSE),1)
+    Q :=
+    ECHO := @true
+else
+    Q := @
+    ECHO := @echo
+endif
+
+# Default target
+all: build
+
+# Help target
+help:
+	$(ECHO) "Underground King DAW – Makefile"
+	$(ECHO) ""
+	$(ECHO) "Detected Platform: $(PLATFORM) ($(UNAME_M))"
+	$(ECHO) "Build Directory: $(BUILD_DIR)"
+	$(ECHO) ""
+	$(ECHO) "Targets:"
+	$(ECHO) "  make build          Build for current platform"
+	$(ECHO) "  make build-linux    Build for Linux (x86-64)"
+	$(ECHO) "  make build-macos    Build for macOS (Intel x86-64)"
+	$(ECHO) "  make build-both     Build for both Linux and macOS"
+	$(ECHO) "  make clean          Remove build artifacts"
+	$(ECHO) "  make test           Run tests (verify ELF/Mach-O format)"
+	$(ECHO) "  make install        Install to /usr/local/bin (Unix only)"
+	$(ECHO) "  make uninstall      Remove from /usr/local/bin"
+	$(ECHO) "  make help           Show this help"
+	$(ECHO) ""
+	$(ECHO) "Options:"
+	$(ECHO) "  VERBOSE=1           Show full compiler output"
+	$(ECHO) ""
+	$(ECHO) "Examples:"
+	$(ECHO) "  make build"
+	$(ECHO) "  make build-both VERBOSE=1"
+	$(ECHO) "  make install"
+	$(ECHO) ""
+
+# Build for current platform
+build: $(EXECUTABLE)
+	$(ECHO) "✓ Build complete: $(EXECUTABLE)"
+
+# Create build directory
+$(BUILD_DIR):
+	$(ECHO) "Creating build directory: $(BUILD_DIR)"
+	$(Q)mkdir -p $(BUILD_DIR)
+
+# Compile assembly to executable
+$(EXECUTABLE): $(ASSEMBLY_SRC) | $(BUILD_DIR)
+	$(ECHO) "Compiling $(ASSEMBLY_SRC) for $(PLATFORM) ($(UNAME_M))..."
+	$(Q)$(CC) $(CFLAGS) -o $@ $(ASSEMBLY_ABS) $(LDFLAGS)
+	$(ECHO) "✓ Executable: $@"
+	$(Q)ls -lh $@
+
+# Linux-specific build
+build-linux: FORCE
+	$(ECHO) "Building for Linux (x86-64)..."
+ifeq ($(PLATFORM),linux)
+	$(Q)$(MAKE) build
+else
+	$(ECHO) "⚠ Not on Linux. Cross-compilation not yet implemented."
+	$(ECHO) "  Run this target on a Linux system."
+	@exit 1
+endif
+
+# macOS-specific build
+build-macos: FORCE
+	$(ECHO) "Building for macOS ($(UNAME_M))..."
+ifeq ($(PLATFORM),macos)
+	$(Q)$(MAKE) build
+else
+	$(ECHO) "⚠ Not on macOS. Cross-compilation not yet implemented."
+	$(ECHO) "  Run this target on a macOS system."
+	@exit 1
+endif
+
+# Build for both platforms (requires Linux + macOS present)
+build-both: FORCE
+	$(ECHO) "Building for both Linux and macOS..."
+	$(ECHO) "⚠ This requires running on both platforms or Docker/qemu"
+	$(ECHO) "  Recommended: Use CI/CD pipeline (GitHub Actions, etc.)"
+	@exit 1
+
+# Clean build artifacts
+clean:
+	$(ECHO) "Cleaning build artifacts..."
+	$(Q)rm -rf build_linux build_macos
+	$(ECHO) "✓ Clean complete"
+
+# Test: Verify executable format
+test: $(EXECUTABLE)
+	$(ECHO) "Running tests..."
+	$(Q)if [ ! -f "$(EXECUTABLE)" ]; then \
+		echo "✗ Executable not found: $(EXECUTABLE)"; \
+		exit 1; \
+	fi
+ifeq ($(PLATFORM),linux)
+	$(ECHO) "  Checking ELF format (readelf)..."
+	$(Q)readelf -h $(EXECUTABLE) > /dev/null || { echo "✗ Invalid ELF format"; exit 1; }
+	$(ECHO) "  ✓ ELF header valid"
+	$(Q)readelf -s $(EXECUTABLE) | grep "_Omega_Final_Start" > /dev/null || { echo "✗ Entry point not found"; exit 1; }
+	$(ECHO) "  ✓ Entry point _Omega_Final_Start found"
+else ifeq ($(PLATFORM),macos)
+	$(ECHO) "  Checking Mach-O format..."
+	$(Q)file $(EXECUTABLE) | grep -i "mach-o" > /dev/null || { echo "✗ Invalid Mach-O format"; exit 1; }
+	$(ECHO) "  ✓ Mach-O format valid"
+	$(Q)nm -g $(EXECUTABLE) | grep "_Omega_Final_Start" > /dev/null || { echo "✗ Entry point not found"; exit 1; }
+	$(ECHO) "  ✓ Entry point _Omega_Final_Start found"
+endif
+	$(ECHO) ""
+	$(ECHO) "✓ All tests passed!"
+
+# Install to system (Unix only)
+install: $(EXECUTABLE)
+	$(ECHO) "Installing $(EXECUTABLE) to /usr/local/bin/king..."
+	$(Q)sudo cp $(EXECUTABLE) /usr/local/bin/king
+	$(Q)sudo chmod 755 /usr/local/bin/king
+	$(ECHO) "✓ Installation complete"
+	$(ECHO) "  Run with: king --ignite --8k --hybrid"
+
+# Uninstall from system
+uninstall:
+	$(ECHO) "Uninstalling /usr/local/bin/king..."
+	$(Q)sudo rm -f /usr/local/bin/king
+	$(ECHO) "✓ Uninstallation complete"
+
+# Run the executable (if built)
+run: $(EXECUTABLE)
+	$(ECHO) "Running: $(EXECUTABLE) --ignite --8k --hybrid"
+	$(Q)$(EXECUTABLE) --ignite --8k --hybrid
+
+# Development: Watch source and rebuild on changes
+watch:
+	$(ECHO) "Watching $(ASSEMBLY_SRC) for changes..."
+	$(Q)while true; do \
+		inotifywait -e modify $(ASSEMBLY_SRC); \
+		$(MAKE) clean build; \
+	done
+
+# Info target: Show build configuration
+info:
+	$(ECHO) "Underground King DAW – Build Configuration"
+	$(ECHO) "=========================================="
+	$(ECHO) "Platform:        $(PLATFORM)"
+	$(ECHO) "Architecture:    $(UNAME_M)"
+	$(ECHO) "Target:          $(TARGET_ARCH)"
+	$(ECHO) "Compiler:        $(CC) ($(shell $(CC) --version | head -1))"
+	$(ECHO) "Build Directory: $(BUILD_DIR)"
+	$(ECHO) "Executable:      $(EXECUTABLE)"
+	$(ECHO) "Assembly Source: $(ASSEMBLY_ABS)"
+	$(ECHO) "Compiler Flags:  $(CFLAGS)"
+	$(ECHO) "Linker Flags:    $(LDFLAGS)"
+	$(ECHO) ""
+
+# Phony targets (don't correspond to files)
+.PHONY: FORCE
+FORCE:
+
+# Default target (if no target specified)
+.DEFAULT_GOAL := help

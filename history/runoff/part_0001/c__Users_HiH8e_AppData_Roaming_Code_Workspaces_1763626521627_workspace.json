@@ -1,0 +1,21 @@
+{
+	"folders": [
+		{
+			"path": "../../../../../OneDrive/Desktop"
+		},
+		{
+			"path": "D:/"
+		},
+		{
+			"path": "E:/"
+		}
+	],
+	"settings": {
+		"git.ignoreLimitWarning": true,
+		"files.associations": {
+			"iostream": "cpp"
+		},
+		"dotnet.defaultSolution": "disable",
+		"powershell.cwd": "Desktop"
+	}
+}

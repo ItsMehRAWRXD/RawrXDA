@@ -1,0 +1,1 @@
+LINK : fatal error LNK1104: cannot open file 'D:\rawrxd\obj\win32app_Win32IDE_ShortcutEditor.obj'

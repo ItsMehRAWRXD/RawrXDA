@@ -25,10 +25,13 @@
 #include "editor_engine.h"
 
 #include <windows.h>
+#include <commctrl.h> // For Subclass
 #include <richedit.h>
 #include <string>
 #include <cstring>
 #include <vector>
+
+#pragma comment(lib, "comctl32.lib")
 
 // Forward declaration
 struct IDETheme;
@@ -148,6 +151,15 @@ private:
     void*                       m_errorData = nullptr;
 
     mutable EditorEngineStats   m_stats{};
+
+    // Ghost Text state
+    std::wstring m_ghostText;
+    int          m_ghostLine = -1;
+    int          m_ghostCol = -1;
+    bool         m_isPaintingGhost = false;
+
+    // Static subclass for ghost text rendering
+    static LRESULT CALLBACK SubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
 };
 
 // ============================================================================
@@ -171,6 +183,7 @@ EditorCapability RichEditEditorEngine::getCapabilities() const {
          | EditorCapability::ReadOnlyMode
          | EditorCapability::IMESupport
          | EditorCapability::ScrollBar
+         | EditorCapability::GhostText
          | EditorCapability::WordWrap;
 }
 
@@ -222,6 +235,9 @@ EditorEngineResult RichEditEditorEngine::initialize(HWND parentWindow) {
     if (m_hFont) {
         SendMessage(m_hwndEdit, WM_SETFONT, (WPARAM)m_hFont, TRUE);
     }
+
+    // Set subclass for ghost text support
+    SetWindowSubclass(m_hwndEdit, SubclassProc, 0, (DWORD_PTR)this);
 
     // Set tab stops (4 characters)
     PARAFORMAT2 pf = {};
@@ -485,14 +501,63 @@ void RichEditEditorEngine::render() {
 }
 
 // ============================================================================
-// Ghost Text — Not supported by RichEdit
+// Ghost Text — Implemented via GDI Overlay Subclassing
 // ============================================================================
-EditorEngineResult RichEditEditorEngine::setGhostText(int, int, const char*) {
-    return EditorEngineResult::error("Ghost text not supported by RichEdit fallback");
+LRESULT CALLBACK RichEditEditorEngine::SubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData) {
+    auto* self = reinterpret_cast<RichEditEditorEngine*>(dwRefData);
+    
+    // We handle ghost text in WM_PAINT pass AFTER RichEdit
+    if (uMsg == WM_PAINT) {
+        // Redraw RichEdit content
+        LRESULT res = DefSubclassProc(hWnd, uMsg, wParam, lParam);
+        
+        if (self && !self->m_ghostText.empty() && self->m_hwndEdit) {
+            HDC hdc = GetDC(hWnd);
+            POINT pt;
+            GetCaretPos(&pt);
+            
+            HFONT hOldFont = (HFONT)SelectObject(hdc, self->m_hFont);
+            SetTextColor(hdc, RGB(128, 128, 128)); // Grey
+            SetBkMode(hdc, TRANSPARENT);
+            
+            TextOutW(hdc, pt.x, pt.y, self->m_ghostText.c_str(), (int)self->m_ghostText.length());
+            
+            SelectObject(hdc, hOldFont);
+            ReleaseDC(hWnd, hdc);
+            return 0; // Handled
+        }
+        return res;
+    }
+    
+    // Subclass cleanup
+    if (uMsg == WM_NCDESTROY) {
+        RemoveWindowSubclass(hWnd, SubclassProc, uIdSubclass);
+    }
+    
+    return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+}
+
+EditorEngineResult RichEditEditorEngine::setGhostText(int line, int col, const char* text) {
+    if (!m_hwndEdit) return EditorEngineResult::error("Not initialized");
+    
+    // Convert to wide for rendering
+    int wideLen = MultiByteToWideChar(CP_UTF8, 0, text, -1, nullptr, 0);
+    m_ghostText.resize(wideLen > 0 ? wideLen - 1 : 0);
+    MultiByteToWideChar(CP_UTF8, 0, text, -1, &m_ghostText[0], (int)m_ghostText.size() + 1);
+    
+    m_ghostLine = line;
+    m_ghostCol = col;
+    
+    InvalidateRect(m_hwndEdit, NULL, FALSE);
+    return EditorEngineResult::ok("Ghost text set");
 }
 
 EditorEngineResult RichEditEditorEngine::clearGhostText() {
-    return EditorEngineResult::ok("No ghost text to clear");
+    m_ghostText.clear();
+    m_ghostLine = -1;
+    m_ghostCol = -1;
+    if (m_hwndEdit) InvalidateRect(m_hwndEdit, NULL, FALSE);
+    return EditorEngineResult::ok("Ghost text cleared");
 }
 
 // ============================================================================

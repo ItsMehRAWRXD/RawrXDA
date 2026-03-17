@@ -155,6 +155,30 @@ using EnrollmentCallback = std::function<void(const EnrollmentStatus& status)>;
 using EntropyCallback = std::function<void(double entropyBits, int samplesCollected)>;
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// Quantum Auth Manager (headless logic manager)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * @class QuantumAuthManager
+ * @brief Manages quantum-resistant key generation, storage, and enrollment
+ */
+class QuantumAuthManager
+{
+public:
+    QuantumAuthManager();
+    ~QuantumAuthManager();
+
+    double measureEntropy();
+    KeyGenerationResult generateKey(const std::string& name, KeyAlgorithm algo, KeyStrength strength);
+    std::vector<KeyMetadata> listKeys() const;
+    bool revokeKey(const std::string& keyId, const std::string& reason);
+    std::optional<KeyMetadata> getKey(const std::string& keyId) const;
+
+private:
+    std::string m_keystorePath;
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // Entropy Visualizer Widget
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -488,13 +512,15 @@ class KeyManagerDialog
     explicit KeyManagerDialog(void* parent = nullptr);
     ~KeyManagerDialog();
 
-\npublic:\n    void refreshKeyList();
+public:
+    void refreshKeyList();
     void generateNewKey();
     void revokeSelectedKey();
     void exportSelectedKey();
     void viewKeyDetails();
 
-\npublic:\n    void keyRevoked(const std::string& keyId);
+public:
+    void keyRevoked(const std::string& keyId);
     void keyExported(const std::string& keyId, const std::string& path);
 
 private:
@@ -532,18 +558,22 @@ class KeyStorage
     
     // Queries
     std::vector<KeyMetadata> getAllKeys();
-    std::vector<KeyMetadata> getKeysByPurpose(KeyPurpose purpose);
+    std::vector<KeyMetadata> getKeysByPurpose(KeyPurposes purposeMask);
     std::optional<KeyMetadata> getActiveKeyForPurpose(KeyPurpose purpose);
     
     // Lifecycle
     bool revokeKey(const std::string& keyId, const std::string& reason);
-    bool renewKey(const std::string& keyId, const // DateTime& newExpiration);
+    bool renewKey(const std::string& keyId, int64_t newExpiration);
     
     // Verification
     bool verifyKeyIntegrity(const std::string& keyId);
     bool verifyHardwareBinding(const std::string& keyId);
 
-\npublic:\n    void keyStored(const std::string& keyId);
+    // Path accessor
+    std::string getStoragePath() const;
+
+public:
+    void keyStored(const std::string& keyId);
     void keyDeleted(const std::string& keyId);
     void keyRevoked(const std::string& keyId);
 
@@ -553,7 +583,6 @@ private:
     
     void loadFromDisk();
     void saveToDisk();
-    std::string getStoragePath() const;
     std::vector<uint8_t> encryptMetadata(const std::vector<uint8_t>& data);
     std::vector<uint8_t> decryptMetadata(const std::vector<uint8_t>& data);
     
@@ -561,6 +590,7 @@ private:
     std::map<std::string, std::vector<uint8_t>> m_encryptedKeys;
     std::string m_storagePath;
     std::vector<uint8_t> m_masterKey;
+    std::function<void(const std::string&)> m_callback;
 };
 
 } // namespace rawrxd::auth

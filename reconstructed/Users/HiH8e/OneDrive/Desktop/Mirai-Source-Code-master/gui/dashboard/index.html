@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CyberForge Advanced Security Suite</title>
+  <link rel="stylesheet" href="../styles/cyberforge-main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body class="dark-cyber-theme">
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-content">
+      <div class="logo-section">
+        <i class="fas fa-shield-alt logo-icon"></i>
+        <h1 class="app-title">CyberForge</h1>
+        <span class="app-subtitle">Advanced Security Suite v2.0</span>
+      </div>
+      <div class="header-actions">
+        <div class="session-info">
+          <span id="sessionStatus" class="session-status">Active</span>
+          <span id="sessionUser" class="session-user">Researcher</span>
+        </div>
+        <button class="btn btn-icon" id="notificationsBtn" title="Notifications">
+          <i class="fas fa-bell"></i>
+          <span class="notification-badge" id="notificationCount">0</span>
+        </button>
+        <button class="btn btn-icon" id="settingsBtn" title="Settings">
+          <i class="fas fa-cog"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navigation Sidebar -->
+  <nav class="sidebar">
+    <div class="nav-section">
+      <h3 class="nav-title">Core</h3>
+      <ul class="nav-list">
+        <li class="nav-item active" data-tab="dashboard">
+          <i class="fas fa-tachometer-alt"></i>
+          <span>Dashboard</span>
+        </li>
+        <li class="nav-item" data-tab="builder">
+          <i class="fas fa-hammer"></i>
+          <span>Build Manager</span>
+        </li>
+        <li class="nav-item" data-tab="encryption">
+          <i class="fas fa-lock"></i>
+          <span>Encryption</span>
+        </li>
+        <li class="nav-item" data-tab="polymorphic">
+          <i class="fas fa-dna"></i>
+          <span>Polymorphic Engine</span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="nav-section">
+      <h3 class="nav-title">Tools</h3>
+      <ul class="nav-list">
+        <li class="nav-item" data-tab="file-encryptor">
+          <i class="fas fa-file-shield"></i>
+          <span>File Encryptor</span>
+        </li>
+        <li class="nav-item" data-tab="code-analyzer">
+          <i class="fas fa-search-plus"></i>
+          <span>Code Analyzer</span>
+        </li>
+        <li class="nav-item" data-tab="binary-packer">
+          <i class="fas fa-compress"></i>
+          <span>Binary Packer</span>
+        </li>
+        <li class="nav-item" data-tab="network-tools">
+          <i class="fas fa-network-wired"></i>
+          <span>Network Tools</span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="nav-section">
+      <h3 class="nav-title">Analytics</h3>
+      <ul class="nav-list">
+        <li class="nav-item" data-tab="statistics">
+          <i class="fas fa-chart-line"></i>
+          <span>Statistics</span>
+        </li>
+        <li class="nav-item" data-tab="logs">
+          <i class="fas fa-list-alt"></i>
+          <span>Audit Logs</span>
+        </li>
+        <li class="nav-item" data-tab="reports">
+          <i class="fas fa-file-alt"></i>
+          <span>Reports</span>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content Area -->
+  <main class="main-content">
+    <!-- Dashboard Tab -->
+    <div id="dashboard" class="tab-content active">
+      <div class="page-header">
+        <h2>Security Dashboard</h2>
+        <p>Real-time overview of CyberForge operations</p>
+      </div>
+
+      <!-- Status Cards -->
+      <div class="status-grid">
+        <div class="status-card">
+          <div class="status-icon encryption">
+            <i class="fas fa-shield-alt"></i>
+          </div>
+          <div class="status-content">
+            <h3>Encryption Engine</h3>
+            <p class="status-value" id="encryptionStatus">Active</p>
+            <small class="status-detail">Quantum-resistant ready</small>
+          </div>
+        </div>
+
+        <div class="status-card">
+          <div class="status-icon polymorphic">
+            <i class="fas fa-dna"></i>
+          </div>
+          <div class="status-content">
+            <h3>Polymorphic Engine</h3>
+            <p class="status-value" id="polymorphicStatus">Operational</p>
+            <small class="status-detail">Advanced morphing enabled</small>
+          </div>
+        </div>
+
+        <div class="status-card">
+          <div class="status-icon builds">
+            <i class="fas fa-cogs"></i>
+          </div>
+          <div class="status-content">
+            <h3>Active Builds</h3>
+            <p class="status-value" id="activeBuilds">0</p>
+            <small class="status-detail">Cross-platform ready</small>
+          </div>
+        </div>
+
+        <div class="status-card">
+          <div class="status-icon performance">
+            <i class="fas fa-tachometer-alt"></i>
+          </div>
+          <div class="status-content">
+            <h3>System Performance</h3>
+            <p class="status-value" id="systemPerformance">Optimal</p>
+            <small class="status-detail">All systems green</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="quick-actions">
+        <h3>Quick Actions</h3>
+        <div class="action-grid">
+          <button class="action-card" id="quickNewBuild">
+            <i class="fas fa-plus-circle"></i>
+            <span>New Build</span>
+          </button>
+          <button class="action-card" id="quickEncrypt">
+            <i class="fas fa-lock"></i>
+            <span>Encrypt File</span>
+          </button>
+          <button class="action-card" id="quickAnalyze">
+            <i class="fas fa-search"></i>
+            <span>Analyze Binary</span>
+          </button>
+          <button class="action-card" id="quickReport">
+            <i class="fas fa-chart-bar"></i>
+            <span>Generate Report</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="recent-activity">
+        <h3>Recent Activity</h3>
+        <div class="activity-list" id="activityList">
+          <div class="activity-item">
+            <div class="activity-icon">
+              <i class="fas fa-hammer"></i>
+            </div>
+            <div class="activity-content">
+              <span class="activity-text">Polymorphic build completed</span>
+              <span class="activity-time">2 minutes ago</span>
+            </div>
+          </div>
+          <div class="activity-item">
+            <div class="activity-icon">
+              <i class="fas fa-shield-alt"></i>
+            </div>
+            <div class="activity-content">
+              <span class="activity-text">File encryption successful</span>
+              <span class="activity-time">5 minutes ago</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Build Manager Tab -->
+    <div id="builder" class="tab-content">
+      <div class="page-header">
+        <h2>Build Manager</h2>
+        <p>Create and manage polymorphic security builds</p>
+      </div>
+
+      <div class="build-interface">
+        <!-- Build Configuration -->
+        <div class="config-panel">
+          <h3>Build Configuration</h3>
+
+          <div class="config-section">
+            <label for="buildTarget">Target Platform:</label>
+            <select id="buildTarget" class="form-control">
+              <option value="Windows x64">Windows x64</option>
+              <option value="Windows x32">Windows x32</option>
+              <option value="Linux x64">Linux x64</option>
+              <option value="Linux x32">Linux x32</option>
+              <option value="ARM64">ARM64</option>
+              <option value="ARM32">ARM32</option>
+            </select>
+          </div>
+
+          <div class="config-section">
+            <label for="outputFormat">Output Format:</label>
+            <select id="outputFormat" class="form-control">
+              <option value="EXE">Executable (.exe)</option>
+              <option value="DLL">Dynamic Library (.dll)</option>
+              <option value="Service">Windows Service</option>
+              <option value="Driver">Kernel Driver</option>
+              <option value="Standalone">Standalone Binary</option>
+            </select>
+          </div>
+
+          <div class="config-section">
+            <label>Security Features:</label>
+            <div class="feature-grid" id="securityFeatures">
+              <!-- Features will be dynamically loaded -->
+            </div>
+          </div>
+
+          <div class="config-section">
+            <label>Encryption Algorithms:</label>
+            <div class="algorithm-grid" id="encryptionAlgorithms">
+              <!-- Algorithms will be dynamically loaded -->
+            </div>
+          </div>
+
+          <div class="config-actions">
+            <button class="btn btn-primary" id="generateBuild">
+              <i class="fas fa-hammer"></i>
+              Generate Build
+            </button>
+            <button class="btn btn-secondary" id="saveConfig">
+              <i class="fas fa-save"></i>
+              Save Config
+            </button>
+            <button class="btn btn-secondary" id="loadConfig">
+              <i class="fas fa-folder-open"></i>
+              Load Config
+            </button>
+          </div>
+        </div>
+
+        <!-- Build Output -->
+        <div class="output-panel">
+          <h3>Build Output</h3>
+          <div class="build-console" id="buildConsole">
+            <div class="console-header">
+              <span>Build Console</span>
+              <button class="btn btn-icon" id="clearConsole">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+            <div class="console-content" id="consoleContent">
+              <div class="console-line">Ready to generate polymorphic builds...</div>
+            </div>
+          </div>
+
+          <!-- Build Queue -->
+          <div class="build-queue" id="buildQueue">
+            <h4>Build Queue</h4>
+            <div class="queue-list" id="queueList">
+              <!-- Queue items will be dynamically loaded -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Encryption Tab -->
+    <div id="encryption" class="tab-content">
+      <div class="page-header">
+        <h2>Encryption Manager</h2>
+        <p>Advanced quantum-resistant encryption operations</p>
+      </div>
+
+      <div class="encryption-interface">
+        <div class="encryption-panel">
+          <h3>Encryption Configuration</h3>
+
+          <div class="encryption-mode">
+            <label>Encryption Mode:</label>
+            <div class="mode-selector">
+              <button class="mode-btn active" data-mode="file">File</button>
+              <button class="mode-btn" data-mode="text">Text</button>
+              <button class="mode-btn" data-mode="folder">Folder</button>
+              <button class="mode-btn" data-mode="stream">Stream</button>
+            </div>
+          </div>
+
+          <div class="file-input-section" id="fileEncryptionSection">
+            <label for="encryptionFile">Select File:</label>
+            <div class="file-input-group">
+              <input type="text" id="encryptionFilePath" class="form-control" placeholder="No file selected" readonly>
+              <button class="btn btn-secondary" id="selectEncryptionFile">
+                <i class="fas fa-folder-open"></i>
+                Browse
+              </button>
+            </div>
+          </div>
+
+          <div class="text-input-section hidden" id="textEncryptionSection">
+            <label for="encryptionText">Enter Text:</label>
+            <textarea id="encryptionText" class="form-control" rows="5"
+              placeholder="Enter text to encrypt..."></textarea>
+          </div>
+
+          <div class="algorithm-selection">
+            <label>Encryption Algorithms:</label>
+            <div class="algorithm-presets">
+              <button class="preset-btn" data-preset="quantum">Quantum-Resistant</button>
+              <button class="preset-btn" data-preset="performance">High Performance</button>
+              <button class="preset-btn" data-preset="security">Maximum Security</button>
+              <button class="preset-btn" data-preset="custom">Custom</button>
+            </div>
+            <div class="algorithm-list" id="algorithmList">
+              <!-- Algorithms will be loaded dynamically -->
+            </div>
+          </div>
+
+          <div class="encryption-options">
+            <h4>Advanced Options</h4>
+            <div class="option-row">
+              <label>
+                <input type="checkbox" id="polymorphicLayers">
+                Polymorphic Layers
+              </label>
+              <input type="range" id="polymorphicIntensity" min="1" max="10" value="3" disabled>
+            </div>
+            <div class="option-row">
+              <label>
+                <input type="checkbox" id="antiForensics">
+                Anti-Forensics
+              </label>
+            </div>
+            <div class="option-row">
+              <label>
+                <input type="checkbox" id="keyRotation">
+                Key Rotation
+              </label>
+              <select id="rotationInterval" class="form-control small" disabled>
+                <option value="3600000">1 Hour</option>
+                <option value="86400000">24 Hours</option>
+                <option value="604800000">7 Days</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="encryption-actions">
+            <button class="btn btn-primary" id="startEncryption">
+              <i class="fas fa-lock"></i>
+              Encrypt
+            </button>
+            <button class="btn btn-secondary" id="startDecryption">
+              <i class="fas fa-unlock"></i>
+              Decrypt
+            </button>
+            <button class="btn btn-info" id="encryptionPreview">
+              <i class="fas fa-eye"></i>
+              Preview
+            </button>
+          </div>
+        </div>
+
+        <div class="encryption-results">
+          <h3>Results</h3>
+          <div class="results-tabs">
+            <button class="result-tab active" data-tab="output">Output</button>
+            <button class="result-tab" data-tab="metadata">Metadata</button>
+            <button class="result-tab" data-tab="statistics">Statistics</button>
+          </div>
+
+          <div class="result-content">
+            <div id="encryptionOutput" class="result-panel active">
+              <div class="output-header">
+                <span>Encryption Output</span>
+                <div class="output-actions">
+                  <button class="btn btn-icon" id="copyOutput" title="Copy to clipboard">
+                    <i class="fas fa-copy"></i>
+                  </button>
+                  <button class="btn btn-icon" id="saveOutput" title="Save to file">
+                    <i class="fas fa-download"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="output-content" id="outputContent">
+                <!-- Encryption output will appear here -->
+              </div>
+            </div>
+
+            <div id="encryptionMetadata" class="result-panel">
+              <div class="metadata-content" id="metadataContent">
+                <!-- Encryption metadata will appear here -->
+              </div>
+            </div>
+
+            <div id="encryptionStatistics" class="result-panel">
+              <div class="statistics-content" id="statisticsContent">
+                <!-- Encryption statistics will appear here -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Polymorphic Engine Tab -->
+    <div id="polymorphic" class="tab-content">
+      <div class="page-header">
+        <h2>Polymorphic Engine</h2>
+        <p>Advanced code morphing and anti-detection system</p>
+      </div>
+
+      <div class="polymorphic-interface">
+        <div class="morphing-controls">
+          <h3>Morphing Configuration</h3>
+
+          <div class="control-section">
+            <label>Morphing Intensity:</label>
+            <div class="intensity-selector">
+              <button class="intensity-btn" data-intensity="low">Low</button>
+              <button class="intensity-btn active" data-intensity="medium">Medium</button>
+              <button class="intensity-btn" data-intensity="high">High</button>
+              <button class="intensity-btn" data-intensity="extreme">Extreme</button>
+            </div>
+          </div>
+
+          <div class="control-section">
+            <h4>Morphing Techniques</h4>
+            <div class="technique-list">
+              <label><input type="checkbox" checked> Variable Name Morphing</label>
+              <label><input type="checkbox" checked> Function Name Morphing</label>
+              <label><input type="checkbox" checked> Control Flow Flattening</label>
+              <label><input type="checkbox" checked> String Encryption</label>
+              <label><input type="checkbox" checked> API Hashing</label>
+              <label><input type="checkbox" checked> Junk Code Injection</label>
+              <label><input type="checkbox"> Dead Code Elimination</label>
+              <label><input type="checkbox"> Instruction Substitution</label>
+            </div>
+          </div>
+
+          <div class="control-section">
+            <h4>Anti-Detection Features</h4>
+            <div class="antidetection-list">
+              <label><input type="checkbox" checked> Anti-Debugging</label>
+              <label><input type="checkbox" checked> Anti-VM Detection</label>
+              <label><input type="checkbox" checked> Sandbox Evasion</label>
+              <label><input type="checkbox" checked> Entropy Reduction</label>
+              <label><input type="checkbox"> Packer Detection</label>
+              <label><input type="checkbox"> Signature Evasion</label>
+            </div>
+          </div>
+
+          <div class="generation-actions">
+            <button class="btn btn-primary" id="generatePolymorphic">
+              <i class="fas fa-dna"></i>
+              Generate Polymorphic Code
+            </button>
+            <button class="btn btn-secondary" id="analyzeCode">
+              <i class="fas fa-microscope"></i>
+              Analyze Code
+            </button>
+          </div>
+        </div>
+
+        <div class="morphing-output">
+          <h3>Generated Code</h3>
+          <div class="code-viewer">
+            <div class="viewer-header">
+              <span>Polymorphic Code Output</span>
+              <div class="viewer-actions">
+                <button class="btn btn-icon" id="copyCode">
+                  <i class="fas fa-copy"></i>
+                </button>
+                <button class="btn btn-icon" id="saveCode">
+                  <i class="fas fa-save"></i>
+                </button>
+                <button class="btn btn-icon" id="compareVersions">
+                  <i class="fas fa-exchange-alt"></i>
+                </button>
+              </div>
+            </div>
+            <div class="code-content" id="codeContent">
+              <pre><code>// Generated polymorphic code will appear here...</code></pre>
+            </div>
+          </div>
+
+          <div class="morphing-stats">
+            <h4>Morphing Statistics</h4>
+            <div class="stats-grid">
+              <div class="stat-item">
+                <span class="stat-label">Variables Renamed:</span>
+                <span class="stat-value" id="variablesRenamed">0</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Functions Renamed:</span>
+                <span class="stat-value" id="functionsRenamed">0</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Junk Code Injected:</span>
+                <span class="stat-value" id="junkCodeInjected">0</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">String Encrypted:</span>
+                <span class="stat-value" id="stringsEncrypted">0</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">API Calls Hashed:</span>
+                <span class="stat-value" id="apiCallsHashed">0</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Generation Time:</span>
+                <span class="stat-value" id="generationTime">0ms</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Other tabs (file-encryptor, code-analyzer, etc.) would be here -->
+    <div id="file-encryptor" class="tab-content">
+      <div class="page-header">
+        <h2>File Encryptor</h2>
+        <p>Secure file encryption with quantum-resistant algorithms</p>
+      </div>
+      <div class="coming-soon">
+        <i class="fas fa-tools"></i>
+        <h3>Coming Soon</h3>
+        <p>Advanced file encryption interface in development</p>
+      </div>
+    </div>
+
+    <!-- Add other tab contents here -->
+  </main>
+
+  <!-- Status Bar -->
+  <footer class="status-bar">
+    <div class="status-left">
+      <span id="systemStatus">System: Online</span>
+      <span id="buildStatus">Builds: Ready</span>
+      <span id="encryptionEngineStatus">Encryption: Active</span>
+    </div>
+    <div class="status-right">
+      <span id="memoryUsage">Memory: 0 MB</span>
+      <span id="uptime">Uptime: 00:00:00</span>
+      <span id="currentTime">--:--:--</span>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="../scripts/cyberforge-main.js"></script>
+  <script src="../scripts/ui-controller.js"></script>
+  <script src="../scripts/encryption-controller.js"></script>
+  <script src="../scripts/build-controller.js"></script>
+</body>
+
+</html>

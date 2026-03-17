@@ -1,0 +1,200 @@
+================================================================================
+RAWRXD WIN32 IDE - ACTUAL WORKING STATUS (As of Feb 16, 2026)
+================================================================================
+
+WHAT'S ACTUALLY FUNCTIONAL RIGHT NOW
+================================================================================
+
+EDITOR:
+  ✓ Open files from file tree
+  ✓ Edit text in multiple tabs
+  ✓ Save files with Ctrl+S
+  ✓ Syntax highlighting for C++
+  ✓ Find/Replace (Ctrl+F, Ctrl+H)
+  ✓ Line numbers and status bar
+  ✓ Undo/Redo (Ctrl+Z, Ctrl+Y)
+
+FILE TREE:
+  ✓ Recursive directory browsing
+  ✓ Double-click opens file
+  ✓ Excludes .git, node_modules, etc.
+
+TERMINAL (PowerShell):
+  ✓ PowerShell integration
+  ✓ Can type commands in terminal pane
+  ✓ Press ENTER to execute
+  ✓ Output appears in terminal
+  ✓ Dual-pane layout (50/50 split)
+
+STATUS BAR:
+  ✓ Shows file path
+  ✓ Shows line/column
+  ✓ NEON health indicator
+
+WHAT'S PARTIALLY WORKING
+================================================================================
+
+DUAL PANE TERMINAL:
+  ⚠ Left pane (PowerShell) - WORKS
+  ⚠ Right pane (CLI) - Pane exists but no backend connected yet
+  ⚠ Splitter - code exists but dragging not fully implemented yet
+
+KEYBOARD SHORTCUTS:
+  ✓ Ctrl+N - New tab
+  ✓ Ctrl+O - Open file
+  ✓ Ctrl+S - Save
+  ✓ F7 - Compile (will fail - compile function is stub)
+  ✓ F5 - Run (will fail - run function is stub)
+
+WHAT'S NOT WORKING
+================================================================================
+
+AI/MODELS:
+  ✗ Titan Kernel loading - DLL doesn't exist
+  ✗ Model loading - No models, just fake dialog
+  ✗ GGUF support - Dialog pops but doesn't work
+  ✗ AI completion - No backend models
+
+BUILD SYSTEM:
+  ✗ Compile - Function exists but unimplemented
+  ✗ Run - Function exists but unimplemented
+
+CODE ANALYSIS:
+  ⚠ Issues panel exists but only detects bracket mismatches
+
+CHAT:
+  ✗ AI chat - UI exists, no backend
+
+================================================================================
+HOW TO USE IT RIGHT NOW (WORKING VERSION)
+================================================================================
+
+1. OPEN & EDIT FILES:
+   - Click on folder in left pane to expand
+   - Double-click file to open in editor
+   - Edit text
+   - Ctrl+S to save
+
+2. RUN POWERSHELL COMMANDS:
+   - Ctrl+` (backtick) to focus terminal pane
+   - Type PowerShell commands: dir, cd, python, node, etc.
+   - Press ENTER to execute
+   - See output immediately
+
+3. TRY THESE COMMANDS IN TERMINAL:
+   - dir (list files in current directory)
+   - cd d:\ (change directory)
+   - python --version (if Python installed)
+   - node --version (if Node installed)
+   - powershell commands work
+   - batch/cmd commands work
+
+4. EDIT CODE:
+   - Open a C++, Python, or text file
+   - Edit in main editor
+   - Ctrl+S to save to disk
+   - Syntax highlighting works for C++
+
+================================================================================
+NEXT STEPS TO MAKE IT BETTER
+================================================================================
+
+EASY FIXES (5-15 min each):
+  1. Implement CompileCurrentFile() to actually compile C++ or Python
+  2. Implement RunCurrentFile() to execute compiled output
+  3. Wire up CLI backend process to right pane
+  4. Make terminal splitter draggable
+  5. Add color scheme selector
+
+MEDIUM FIXES (30 min - 1 hour):
+  1. Create a simple MASM CLI tool for right pane
+  2. Add build system integration (C++, Python, etc.)
+  3. Improve code issue detection beyond brackets
+  4. Add more syntax highlighting languages
+  5. Save/restore window layout on exit
+
+HARD FIXES (requires external work):
+  1. Build/integrate Titan Kernel (requires models and inference code)
+  2. Implement AI chat backend (requires LLM services)
+  3. Add LSP server support
+  4. Implement real build system
+  5. Add WebView2 for rendered preview
+
+================================================================================
+FILES TO KNOW
+================================================================================
+
+MAIN IDE FILE:
+  - RawrXD_Win32_IDE.cpp (8500+ lines) - Main application
+
+HELPER COMPONENTS:
+  - RawrXD_Win32_IDE.exe - Compiled executable (runs this IDE)
+  - RawrXD_Performance.h - Performance monitoring
+  - Various DLLs in Ship folder - Support libraries (mostly stubs)
+
+WHAT TO DO IF YOU WANT TO CUSTOMIZE:
+  1. Edit RawrXD_Win32_IDE.cpp
+  2. Run build_ide.ps1 to compile
+  3. New RawrXD_Win32_IDE.exe will be created
+  4. Run it and test
+
+================================================================================
+ISSUES YOU MIGHT ENCOUNTER
+================================================================================
+
+TERMINAL TEXT HARD TO READ:
+  - Try typing "cd d:\" then "dir" in terminal
+  - If you see commands and output fine, it's working!
+
+IDE DOESN'T RESPOND:
+  - Check PowerShell terminal pane in bottom-left
+  - If terminal is frozen, try pressing Ctrl+C
+
+FILE SAVE FAILS:
+  - Make sure file has a full path with extension (e.g., D:\test.cpp)
+  - Can't save files without a name in the system
+
+IDE CRASHES:
+  - Look for RawrXD_Win32_IDE.exe in D:\rawrxd\Ship
+  - Just re-run it to restart
+
+================================================================================
+CURRENT ARCHITECTURE
+================================================================================
+
+UI LAYERS:
+  Frame (Main Window)
+    ├─ Menu Bar (File, Edit, View, Build, AI, Help)
+    ├─ NEON Strip (Health monitor - 15 subsystems)
+    ├─ Left Pane: File Tree (TreeView control)
+    ├─ Center: Tabbed Editor (RichEdit control)
+    └─ Bottom Area:
+        ├─ Output Panel (RichEdit - shows logs)
+        ├─ Terminal Pane (RichEdit + PowerShell process)
+        └─ Chat Panel (RichEdit - not connected)
+
+DATA FLOW:
+  User input → Main window event handler → Command dispatch → DLL/process execution
+
+PROCESSES:
+  - Main IDE process (RawrXD_Win32_IDE.exe)
+  - PowerShell child process (started on demand in terminal pane)
+  - CLI backend (NOT YET - would be separate process)
+
+================================================================================
+SUMMARY
+================================================================================
+
+This IS a functional file editor with integrated PowerShell terminal. It's NOT
+a full IDE with AI, but it does:
+  ✓ Open/edit/save files
+  ✓ Browse directory tree
+  ✓ Run shell commands
+  ✓ Display output
+  ✓ Syntax highlighting
+  ✓ Basic text editing features
+
+The foundation is solid. You can build actual compiler/build integration on top of
+this. The skeleton for AI/models exists but is not wired to actual implementations.
+
+================================================================================

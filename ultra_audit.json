@@ -1,0 +1,25 @@
+{
+  "approach": "ultra",
+  "no_mixing": "YES",
+  "strategy": "cmake tokens (basename+path) cross-ref, concurrent archive",
+  "project_root": "D:\\rawrxd",
+  "mode": "full_apply",
+  "loc": 184,
+  "elapsed_sec": 0.529,
+  "active": 590,
+  "orphan": 136,
+  "archived": 136,
+  "missing": [
+    "${QUICKJS_DIR}/cutils.c",
+    "${QUICKJS_DIR}/libbf.c",
+    "${QUICKJS_DIR}/libregexp.c",
+    "${QUICKJS_DIR}/libunicode.c",
+    "${QUICKJS_DIR}/quickjs-libc.c",
+    "${QUICKJS_DIR}/quickjs.c",
+    "${_WIN10_SDK_ROOT}/Include/${_SDK_UM_VER}/um/windows.h",
+    "Telemetry_Kernel.asm",
+    "model_llm_harvester.asm",
+    "src/win32app/ContextManager.h"
+  ],
+  "archive_dir": "D:\\rawrxd\\.archived_orphans_ultra"
+}

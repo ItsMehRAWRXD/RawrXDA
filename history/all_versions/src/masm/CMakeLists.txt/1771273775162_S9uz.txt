@@ -1,0 +1,28 @@
+# MASM-specific CMakeLists.txt
+# This file should be included from the main project's CMakeLists.txt
+
+# Add the source files for the MASM compiler library
+set(MASM_LIB_SOURCES
+    pe_writer.cpp
+    elf_writer.cpp
+    mach_o_writer.cpp
+)
+
+# MASM assembly files - temporarily disabled until MASM tools are available
+# set(MASM_ASM_SOURCES
+#     interconnect/RawrXD_DynamicTensorEngine.asm
+#     RawrXD_LazyTensorPager.asm
+# )
+
+# Create a static library for the MASM writers
+add_library(masm_writers STATIC ${MASM_LIB_SOURCES})
+
+# Set properties for assembly files (disabled)
+# set_source_files_properties(${MASM_ASM_SOURCES} PROPERTIES LANGUAGE ASM_MASM)
+
+# Create library for MASM components (disabled)
+# add_library(masm_components STATIC ${MASM_ASM_SOURCES})
+
+# Public include directory for the library
+target_include_directories(masm_writers PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+# target_include_directories(masm_components PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

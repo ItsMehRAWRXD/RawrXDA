@@ -1,0 +1,27 @@
+; RawrXD_HttpChatServer.def
+; Module definition file for DLL exports
+;
+; Build command:
+;   ml64 /c /Fo RawrXD_HttpChatServer.obj RawrXD_HttpChatServer.asm
+;   link /DLL /DEF:RawrXD_HttpChatServer.def /OUT:RawrXD_HttpChatServer.dll ^
+;        RawrXD_HttpChatServer.obj kernel32.lib user32.lib wininet.lib shlwapi.lib
+
+LIBRARY RawrXD_HttpChatServer
+
+EXPORTS
+    ; Server Management
+    StartChatServer
+    StopChatServer
+    ChatServer_IsRunning
+    
+    ; HTTP Client
+    HttpClient_Initialize
+    HttpClient_Connect
+    HttpClient_Post
+    HttpClient_Cleanup
+    
+    ; High-Level API
+    SendChatMessage
+    
+    ; Shutdown
+    RawrXD_ChatServer_Shutdown

@@ -1,0 +1,26 @@
+{
+  "windowing": {
+    "WM_CREATE": false,
+    "WM_PAINT": false,
+    "WM_DESTROY": false,
+    "CreateWindow": false,
+    "RegisterClass": false
+  },
+  "rendering": {
+    "Direct2D": false,
+    "DirectWrite": false,
+    "GDI": false,
+    "RichEdit": false
+  },
+  "messaging": {
+    "DispatchTable": false,
+    "MessageLoop": false,
+    "WinProc": false
+  },
+  "features": {
+    "FileOperations": false,
+    "CodeGeneration": false,
+    "BuildSystem": false,
+    "DebugTools": false
+  }
+}

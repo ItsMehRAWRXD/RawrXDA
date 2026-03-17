@@ -31,6 +31,8 @@ EXTERN BeaconSend:PROC
 EXTERN g_hHeap:QWORD
 EXTERN HeapAlloc:PROC
 EXTERN HeapFree:PROC
+EXTERN HeapReAlloc:PROC
+EXTERN SetEvent:PROC
 
 ; ── Exports ──────────────────────────────────────────────────────
 PUBLIC Task_Init
@@ -82,6 +84,27 @@ TASK_EVT_STARTED        equ 04002h
 TASK_EVT_COMPLETED      equ 04003h
 TASK_EVT_TERMINATED     equ 04004h
 TASK_EVT_OUTPUT         equ 04010h
+TASK_EVT_KILLED         equ 04005h
+
+; Task runtime states
+TASK_STATE_IDLE         equ 0
+TASK_STATE_RUNNING      equ 1
+TASK_STATE_COMPLETED    equ 2
+TASK_STATE_KILLED       equ 3
+
+; Task flags (bitmask in TASK_CONTEXT.tc_flags)
+TASK_FLAG_ERROR         equ 1
+TASK_FLAG_DONE          equ 2
+TASK_FLAG_COMPLETED     equ 4
+
+; Kill wait timeout (ms)
+TASK_KILL_TIMEOUT       equ 1000
+
+; Stack temp read buffer (4KB)
+TEMP_BUF_SIZE           equ 1000h
+
+; TASK_CONTEXT struct size (80 bytes)
+TASK_CONTEXT_SIZE       equ 80
 
 ; Pipe buffer
 PIPE_BUF_SIZE           equ 4096
@@ -127,6 +150,23 @@ PROCESS_INFORMATION STRUCT
     dwThreadId      dd ?
 PROCESS_INFORMATION ENDS
 
+; ── TASK_CONTEXT struct (runtime state per active task, 80 bytes) ──
+TASK_CONTEXT STRUCT
+    tc_hPipeRead     dq ?               ; +0   Read end of stdout pipe
+    tc_hPipeWrite    dq ?               ; +8   Write end of stdout pipe
+    tc_hProcess      dq ?               ; +16  Child process handle
+    tc_hThread       dq ?               ; +24  Child primary thread handle
+    tc_pOutputBuf    dq ?               ; +32  Heap-allocated output buffer
+    tc_outBufSize    dd ?               ; +40  Current buffer capacity
+    tc_outLen        dd ?               ; +44  Bytes written so far
+    tc_hEvent        dq ?               ; +48  Event signalled on new output
+    tc_taskId        dd ?               ; +56  Logical task index
+    tc_flags         dd ?               ; +60  TASK_FLAG_* bitmask
+    tc_state         dd ?               ; +64  TASK_STATE_*
+    tc_pad0          dd ?               ; +68  Alignment padding
+    tc_reserved      dq ?               ; +72  Reserved
+TASK_CONTEXT ENDS
+
 ; ═════════════════════════════════════════════════════════════════
 .data
 align 8
@@ -137,6 +177,10 @@ g_hReadPipe         dq 0               ; Stdout read pipe (active task)
 g_hWritePipe        dq 0               ; Stdout write pipe (active task)
 g_activeTaskIdx     dd -1              ; Index of running task (-1 = none)
 g_exitCode          dd 0               ; Last task exit code
+
+; Task context array for multi-task support
+g_pTaskContexts     dq 0               ; Heap pointer to TASK_CONTEXT array
+g_activeTaskCount   dd 0               ; Number of currently running tasks
 
 ; Output ring buffer pointers
 g_pOutputRing       dq 0               ; Heap pointer to ring buffer
@@ -698,144 +742,363 @@ Task_Run PROC FRAME
 Task_Run ENDP
 
 ; ────────────────────────────────────────────────────────────────
-; Task_OutputReader — Background thread: read pipe into ring buffer
-;   RCX = hPipe (passed as lpParameter)
+; Task_OutputReader — Thread proc: read child stdout, buffer output
+;   RCX = pointer to TASK_CONTEXT structure containing:
+;         +0  hPipeRead      +32 pOutputBuffer  +40 outputBufSize
+;         +44 outputLen      +48 hEvent         +56 taskId
+;         +60 flags          +64 state
 ;
-; Stack: 1 push (rbx) + 38h (56)
-;   8+8+56 = 72 → 72 mod 16 = 8 → need 40h (64)
-;   8+8+64 = 80 → 80 mod 16 = 0 ✓
+;   Main loop reads pipe into 4KB stack buffer, strips ANSI escapes,
+;   appends to pOutputBuffer (doubling via HeapReAlloc on overflow),
+;   updates outputLen atomically (lock xadd), scans for "[ERROR]"
+;   and "[DONE]" markers, signals hEvent after each chunk.
+;   On pipe break: sets TASK_FLAG_COMPLETED, signals, returns 0.
+;
+; Stack: 5 pushes (rbx,rsi,rdi,r12,r13) + 1040h
+;   8 + 40 + 4160 = 4208 → 4208 mod 16 = 0 ✓
+;   [rsp+00..1F] = shadow   [rsp+20..27] = 5th param
+;   [rsp+28..2F] = 6th param  [rsp+30..37] = bytesRead / scratch
+;   [rsp+38..3F] = scratch   [rsp+40..103F] = 4096-byte temp buf
 ; ────────────────────────────────────────────────────────────────
 Task_OutputReader PROC FRAME
     push    rbx
     .pushreg rbx
-    sub     rsp, 40h
-    .allocstack 40h
+    push    rsi
+    .pushreg rsi
+    push    rdi
+    .pushreg rdi
+    push    r12
+    .pushreg r12
+    push    r13
+    .pushreg r13
+    sub     rsp, 1040h
+    .allocstack 1040h
     .endprolog
 
-    mov     rbx, rcx                    ; rbx = hPipe
+    mov     rbx, rcx                    ; rbx = pTaskContext
+    mov     r12, [rbx]                  ; r12 = hPipeRead (cached)
+    mov     r13, [rbx+32]              ; r13 = pOutputBuffer (may move)
 
+    ; ── Main read loop ──────────────────────────────────────────
 @tor_read:
-    ; ReadFile(hPipe, buffer, bufSize, &bytesRead, NULL)
-    mov     rcx, rbx
-    lea     rdx, g_pipeReadBuf
-    mov     r8d, PIPE_BUF_SIZE - 1
-    lea     r9, [rsp+30h]              ; &bytesRead
-    mov     qword ptr [rsp+20h], 0     ; lpOverlapped
+    ; ReadFile(hPipeRead, &stackTempBuf, 4095, &bytesRead, NULL)
+    mov     rcx, r12
+    lea     rdx, [rsp+40h]
+    mov     r8d, TEMP_BUF_SIZE - 1
+    lea     r9, [rsp+30h]
+    mov     qword ptr [rsp+20h], 0
     call    ReadFile
     test    eax, eax
-    jz      @tor_done
+    jz      @tor_pipe_broken
 
-    mov     ecx, dword ptr [rsp+30h]   ; bytesRead
-    test    ecx, ecx
-    jz      @tor_done
+    mov     esi, dword ptr [rsp+30h]    ; esi = bytesRead
+    test    esi, esi
+    jz      @tor_pipe_broken
 
-    ; Write bytes into ring buffer
-    mov     rdi, g_pOutputRing
-    lea     rsi, g_pipeReadBuf
-    xor     edx, edx                    ; source offset
-@tor_copy:
-    cmp     edx, ecx
-    jge     @tor_notify
-    movzx   eax, byte ptr [rsi + rdx]
-    mov     r8d, g_ringWritePos
-    mov     byte ptr [rdi + r8], al
+    ; Null-terminate for marker scanning
+    lea     rax, [rsp+40h]
+    mov     byte ptr [rax + rsi], 0
+
+    ; ── Strip ANSI escape sequences (ESC[ … <letter>) in-place ─
+    lea     rdi, [rsp+40h]              ; write pointer
+    lea     rcx, [rsp+40h]              ; read pointer
+    xor     r8d, r8d                    ; new length
+
+@tor_strip_loop:
+    movzx   eax, byte ptr [rcx]
+    test    al, al
+    jz      @tor_strip_done
+    cmp     al, 1Bh                     ; ESC?
+    jne     @tor_strip_copy
+    cmp     byte ptr [rcx+1], '['       ; CSI?
+    jne     @tor_strip_copy
+    ; Skip ESC [ then parameter bytes until final byte (40h-7Eh)
+    add     rcx, 2
+@tor_skip_csi:
+    movzx   eax, byte ptr [rcx]
+    test    al, al
+    jz      @tor_strip_done
+    cmp     al, 40h
+    jl      @tor_skip_csi_next
+    cmp     al, 7Eh
+    jle     @tor_skip_csi_end
+@tor_skip_csi_next:
+    inc     rcx
+    jmp     @tor_skip_csi
+@tor_skip_csi_end:
+    inc     rcx                         ; consume final byte
+    jmp     @tor_strip_loop
+
+@tor_strip_copy:
+    mov     byte ptr [rdi], al
+    inc     rdi
+    inc     rcx
     inc     r8d
-    and     r8d, OUTPUT_RING_MASK
-    mov     g_ringWritePos, r8d
-    inc     edx
-    jmp     @tor_copy
+    jmp     @tor_strip_loop
 
-@tor_notify:
-    ; Send output event via Beacon (incremental)
+@tor_strip_done:
+    mov     byte ptr [rdi], 0
+    mov     esi, r8d                    ; esi = cleaned length
+    test    esi, esi
+    jz      @tor_read                   ; all stripped → next read
+
+    ; ── Check if output buffer needs growth ─────────────────────
+    mov     eax, [rbx+44]              ; current outputLen
+    add     eax, esi
+    cmp     eax, [rbx+40]              ; vs outputBufSize
+    jl      @tor_append
+
+    ; ── Double the buffer via HeapReAlloc ────────────────────────
+    mov     ecx, [rbx+40]
+    shl     ecx, 1                      ; double capacity
+    cmp     ecx, eax                    ; still enough?
+    jge     @tor_realloc_go
+    lea     ecx, [eax + TEMP_BUF_SIZE]  ; need + margin
+@tor_realloc_go:
+    mov     [rsp+38h], ecx              ; stash new size
+    mov     rcx, g_hHeap
+    xor     edx, edx                    ; flags = 0 (movable)
+    mov     r8, [rbx+32]               ; old pointer
+    mov     r9d, [rsp+38h]             ; new byte count
+    call    HeapReAlloc
+    test    rax, rax
+    jz      @tor_pipe_broken            ; alloc failed → abort
+    mov     [rbx+32], rax              ; update pOutputBuffer
+    mov     r13, rax
+    mov     ecx, [rsp+38h]
+    mov     [rbx+40], ecx              ; update outputBufSize
+
+    ; ── Append cleaned data to output buffer ────────────────────
+@tor_append:
+    mov     r13, [rbx+32]              ; reload (may have moved)
+    mov     edi, [rbx+44]              ; current outputLen
+    lea     rcx, [r13 + rdi]           ; dest = buf + outputLen
+    lea     rdx, [rsp+40h]             ; src = stripped temp buf
+    xor     r8d, r8d
+@tor_append_loop:
+    cmp     r8d, esi
+    jge     @tor_append_done
+    movzx   eax, byte ptr [rdx + r8]
+    mov     byte ptr [rcx + r8], al
+    inc     r8d
+    jmp     @tor_append_loop
+@tor_append_done:
+    ; Atomically update outputLen
+    lock xadd dword ptr [rbx+44], esi
+
+    ; ── Parse for "[ERROR]" at start of chunk ───────────────────
+    lea     rdi, [rsp+40h]
+    cmp     byte ptr [rdi],   '['
+    jne     @tor_check_done
+    cmp     byte ptr [rdi+1], 'E'
+    jne     @tor_check_done
+    cmp     byte ptr [rdi+2], 'R'
+    jne     @tor_check_done
+    cmp     byte ptr [rdi+3], 'R'
+    jne     @tor_check_done
+    cmp     byte ptr [rdi+4], 'O'
+    jne     @tor_check_done
+    cmp     byte ptr [rdi+5], 'R'
+    jne     @tor_check_done
+    cmp     byte ptr [rdi+6], ']'
+    jne     @tor_check_done
+    or      dword ptr [rbx+60], TASK_FLAG_ERROR
+    jmp     @tor_signal
+
+    ; ── Scan anywhere in chunk for "[DONE]" ─────────────────────
+@tor_check_done:
+    lea     rdi, [rsp+40h]
+@tor_scan_done:
+    movzx   eax, byte ptr [rdi]
+    test    al, al
+    jz      @tor_signal
+    cmp     al, '['
+    jne     @tor_scan_done_next
+    cmp     byte ptr [rdi+1], 'D'
+    jne     @tor_scan_done_next
+    cmp     byte ptr [rdi+2], 'O'
+    jne     @tor_scan_done_next
+    cmp     byte ptr [rdi+3], 'N'
+    jne     @tor_scan_done_next
+    cmp     byte ptr [rdi+4], 'E'
+    jne     @tor_scan_done_next
+    cmp     byte ptr [rdi+5], ']'
+    jne     @tor_scan_done_next
+    or      dword ptr [rbx+60], TASK_FLAG_DONE
+    jmp     @tor_signal
+@tor_scan_done_next:
+    inc     rdi
+    jmp     @tor_scan_done
+
+    ; ── Signal hEvent for waiting consumers ─────────────────────
+@tor_signal:
+    mov     rcx, [rbx+48]              ; hEvent
+    test    rcx, rcx
+    jz      @tor_beacon
+    call    SetEvent
+
+@tor_beacon:
     xor     ecx, ecx
-    lea     rdx, g_pipeReadBuf
+    lea     rdx, [rsp+40h]
     mov     r8d, TASK_EVT_OUTPUT
     call    BeaconSend
     jmp     @tor_read
 
-@tor_done:
-    ; Pipe closed → process finished
-    mov     rcx, rbx
-    call    CloseHandle
+    ; ── Pipe broken / closed → task finished ────────────────────
+@tor_pipe_broken:
+    or      dword ptr [rbx+60], TASK_FLAG_COMPLETED
+    mov     dword ptr [rbx+64], TASK_STATE_COMPLETED
 
-    ; Wait for process exit
-    mov     rcx, g_hActiveProcess
+    ; Final signal so consumers unblock
+    mov     rcx, [rbx+48]
     test    rcx, rcx
-    jz      @tor_send_complete
-    mov     edx, INFINITE_WAIT
-    call    WaitForSingleObject
+    jz      @tor_final_beacon
+    call    SetEvent
 
-    ; Get exit code
-    mov     rcx, g_hActiveProcess
-    lea     rdx, g_exitCode
-    call    GetExitCodeProcess
-
-    ; Close process handle
-    mov     rcx, g_hActiveProcess
-    call    CloseHandle
-    mov     g_hActiveProcess, 0
-    mov     g_activeTaskIdx, -1
-
-@tor_send_complete:
-    ; Notify UI: task completed
+@tor_final_beacon:
     xor     ecx, ecx
     lea     rdx, szTaskCompleted
     mov     r8d, TASK_EVT_COMPLETED
     call    BeaconSend
 
-    add     rsp, 40h
+    ; Thread exit code = 0
+    add     rsp, 1040h
+    pop     r13
+    pop     r12
+    pop     rdi
+    pop     rsi
     pop     rbx
     xor     eax, eax
     ret
 Task_OutputReader ENDP
 
 ; ────────────────────────────────────────────────────────────────
-; Task_Kill — Terminate the currently running task
-;   No args. Returns EAX = 1 killed, 0 no task running.
+; Task_Kill — Kill a running task by index
+;   ECX = task index (0-based into TASK_CONTEXT array)
+;   Returns: EAX = 0 success, -1 task not found / not running
 ;
-; Stack: 0 pushes, sub 28h
-;   8+40 = 48 → 0 ✓
+;   Validates index, checks state == TASK_RUNNING, calls
+;   TerminateProcess, waits 1000 ms, closes all handles
+;   (hProcess, hThread, hPipeRead, hPipeWrite), frees output
+;   buffer via HeapFree, sets state = TASK_KILLED, decrements
+;   g_activeTaskCount (interlocked), fires TASK_EVT_KILLED beacon.
+;
+; Stack: 2 pushes (rbx, rsi) + 38h (56)
+;   8 + 16 + 56 = 80 → 80 mod 16 = 0 ✓
 ; ────────────────────────────────────────────────────────────────
 Task_Kill PROC FRAME
-    sub     rsp, 28h
-    .allocstack 28h
+    push    rbx
+    .pushreg rbx
+    push    rsi
+    .pushreg rsi
+    sub     rsp, 38h
+    .allocstack 38h
     .endprolog
 
-    mov     rcx, g_hActiveProcess
-    test    rcx, rcx
-    jz      @tk_none
+    mov     ebx, ecx                    ; ebx = task index
 
-    ; TerminateProcess(hProcess, exitCode=1)
+    ; ── Validate task index ─────────────────────────────────────
+    cmp     ebx, 0
+    jl      @tk_invalid
+    cmp     ebx, MAX_TASKS
+    jge     @tk_invalid
+
+    ; ── Get task context from array ─────────────────────────────
+    mov     rax, g_pTaskContexts
+    test    rax, rax
+    jz      @tk_invalid
+    movsxd  rcx, ebx
+    imul    rcx, TASK_CONTEXT_SIZE
+    lea     rsi, [rax + rcx]            ; rsi = &taskContexts[index]
+
+    ; ── Check task is actually running ──────────────────────────
+    cmp     dword ptr [rsi+64], TASK_STATE_RUNNING
+    jne     @tk_invalid
+
+    ; ── TerminateProcess(hProcess, 1) ───────────────────────────
+    mov     rcx, [rsi+16]              ; hProcess
+    test    rcx, rcx
+    jz      @tk_close_handles
     mov     edx, 1
     call    TerminateProcess
 
-    ; Close handle
-    mov     rcx, g_hActiveProcess
-    call    CloseHandle
-    mov     g_hActiveProcess, 0
-    mov     g_activeTaskIdx, -1
+    ; ── WaitForSingleObject(hProcess, 1000ms) ───────────────────
+    mov     rcx, [rsi+16]
+    mov     edx, TASK_KILL_TIMEOUT
+    call    WaitForSingleObject
 
-    ; Close read pipe if still open
-    mov     rcx, g_hReadPipe
+    ; ── Close all handles ───────────────────────────────────────
+@tk_close_handles:
+    ; hProcess (+16)
+    mov     rcx, [rsi+16]
     test    rcx, rcx
-    jz      @tk_no_pipe
+    jz      @tk_close_thread
     call    CloseHandle
-    mov     g_hReadPipe, 0
-@tk_no_pipe:
+    mov     qword ptr [rsi+16], 0
 
-    ; Notify UI
+@tk_close_thread:
+    ; hThread (+24)
+    mov     rcx, [rsi+24]
+    test    rcx, rcx
+    jz      @tk_close_pipe_r
+    call    CloseHandle
+    mov     qword ptr [rsi+24], 0
+
+@tk_close_pipe_r:
+    ; hPipeRead (+0)
+    mov     rcx, [rsi]
+    test    rcx, rcx
+    jz      @tk_close_pipe_w
+    call    CloseHandle
+    mov     qword ptr [rsi], 0
+
+@tk_close_pipe_w:
+    ; hPipeWrite (+8)
+    mov     rcx, [rsi+8]
+    test    rcx, rcx
+    jz      @tk_free_buf
+    call    CloseHandle
+    mov     qword ptr [rsi+8], 0
+
+    ; ── Free output buffer ──────────────────────────────────────
+@tk_free_buf:
+    mov     r8, [rsi+32]               ; pOutputBuffer
+    test    r8, r8
+    jz      @tk_update_state
+    mov     rcx, g_hHeap
+    xor     edx, edx                    ; dwFlags = 0
+    call    HeapFree
+    mov     qword ptr [rsi+32], 0
+    mov     dword ptr [rsi+40], 0       ; outputBufSize = 0
+    mov     dword ptr [rsi+44], 0       ; outputLen = 0
+
+    ; ── Update task state ───────────────────────────────────────
+@tk_update_state:
+    mov     dword ptr [rsi+64], TASK_STATE_KILLED
+    mov     dword ptr [rsi+60], 0       ; clear flags
+
+    ; ── Decrement active task count (interlocked) ───────────────
+    lock dec dword ptr g_activeTaskCount
+
+    ; ── Fire TASK_KILLED beacon event ───────────────────────────
     xor     ecx, ecx
-    lea     rdx, szTaskTerminated
-    mov     r8d, TASK_EVT_TERMINATED
+    lea     rdx, szTaskKilled
+    mov     r8d, TASK_EVT_KILLED
     call    BeaconSend
 
-    add     rsp, 28h
-    mov     eax, 1
+    ; ── Return 0 (success) ──────────────────────────────────────
+    add     rsp, 38h
+    pop     rsi
+    pop     rbx
+    xor     eax, eax
     ret
 
-@tk_none:
-    add     rsp, 28h
-    xor     eax, eax
+@tk_invalid:
+    ; ── Return -1 (not found or not running) ────────────────────
+    add     rsp, 38h
+    pop     rsi
+    pop     rbx
+    mov     eax, -1
     ret
 Task_Kill ENDP
 
@@ -890,5 +1153,6 @@ szSmokeLabel        db "smoke-test",0
 szSmokeArgs         db "-ExecutionPolicy Bypass -File .\\scripts\\smoke_runtime.ps1",0
 szAuditLabel        db "audit",0
 szAuditArgs         db "-ExecutionPolicy Bypass -File .\\scripts\\audit_entropy.ps1",0
+szTaskKilled        db "Task killed",0
 
 END

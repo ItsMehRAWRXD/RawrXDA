@@ -1,0 +1,14 @@
+#pragma once
+#include "QWidget"
+#include "QScrollBar"
+#include "../src/qt_stubs.h"
+class QPlainTextEdit : public QWidget {
+public:
+    QPlainTextEdit(QWidget* parent = nullptr) : QWidget(parent) {}
+    void setPlainText(const QString&) {}
+    QString toPlainText() const { return QString(); }
+    QScrollBar* verticalScrollBar() { return &m_scroll; }
+    void textChanged() {}
+private:
+    QScrollBar m_scroll;
+};

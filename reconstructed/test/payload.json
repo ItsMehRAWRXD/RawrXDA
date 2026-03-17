@@ -1,0 +1,10 @@
+{
+  "question": "Please audit this test code for security issues",
+  "model": "dolphin3:latest",
+  "files": [
+    {
+      "name": "test.ps1",
+      "content": "function Test-Audit {\n  Write-Host 'Test function'\n  $cmd = 'powershell.exe -NoProfile'\n  Invoke-Expression $cmd\n}"
+    }
+  ]
+}

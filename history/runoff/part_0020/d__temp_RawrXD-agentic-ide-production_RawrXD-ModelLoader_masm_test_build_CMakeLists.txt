@@ -1,0 +1,32 @@
+cmake_minimum_required(VERSION 3.16)
+project(MASMPortTests)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTOUIC ON)
+set(CMAKE_AUTORCC ON)
+
+# Set Qt path
+set(CMAKE_PREFIX_PATH "C:/Qt/6.7.3/msvc2022_64")
+find_package(Qt6 COMPONENTS Core Gui Widgets REQUIRED)
+
+set(SOURCE_DIR "D:/temp/RawrXD-agentic-ide-production/RawrXD-ModelLoader/src")
+
+add_executable(masm_port_test
+    ${SOURCE_DIR}/component_test.cpp
+    ${SOURCE_DIR}/streaming_token_manager.cpp
+    ${SOURCE_DIR}/streaming_token_manager.h
+    ${SOURCE_DIR}/model_router.cpp
+    ${SOURCE_DIR}/model_router.h
+    ${SOURCE_DIR}/simple_tool_registry.cpp
+    ${SOURCE_DIR}/tool_registry.h
+    ${SOURCE_DIR}/agentic_planner.cpp
+    ${SOURCE_DIR}/agentic_planner.h
+    ${SOURCE_DIR}/command_palette.cpp
+    ${SOURCE_DIR}/command_palette.h
+    ${SOURCE_DIR}/diff_viewer.cpp
+    ${SOURCE_DIR}/diff_viewer.h
+)
+
+target_include_directories(masm_port_test PRIVATE ${SOURCE_DIR})
+target_link_libraries(masm_port_test PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets)

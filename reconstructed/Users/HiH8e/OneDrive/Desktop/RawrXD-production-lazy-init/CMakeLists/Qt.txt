@@ -1,0 +1,63 @@
+cmake_minimum_required(VERSION 3.20)
+project(RawrXD_Agentic_IDE LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
+
+# Find Qt6 (include modules used across the qtapp)
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets Gui Network WebSockets Concurrent WebEngineWidgets)
+
+# Include directories
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/win32
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/qtapp
+)
+
+# Collect all Qt application sources
+file(GLOB_RECURSE QT_SOURCES
+    "src/qtapp/*.cpp"
+)
+
+# Main executable
+add_executable(RawrXD_Agentic
+    ${QT_SOURCES}
+)
+
+# Include paths for the target
+target_include_directories(RawrXD_Agentic PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/win32
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/qtapp
+)
+
+# Link Qt libraries
+target_link_libraries(RawrXD_Agentic PRIVATE
+    Qt6::Core
+    Qt6::Widgets
+    Qt6::Gui
+    Qt6::Network
+    Qt6::WebSockets
+    Qt6::Concurrent
+    Qt6::WebEngineWidgets
+)
+
+# Compiler definitions
+target_compile_definitions(RawrXD_Agentic PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX _CRT_SECURE_NO_WARNINGS)
+
+# Set output directory
+set_target_properties(RawrXD_Agentic PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+)
+
+# Windows specific settings
+if(WIN32)
+    set_target_properties(RawrXD_Agentic PROPERTIES
+        WIN32_EXECUTABLE TRUE
+    )
+endif()

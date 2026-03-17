@@ -1,0 +1,44 @@
+Microsoft (R) Macro Assembler (x64) Version 14.44.35223.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+ Assembling: RawrXD_TextEditorGUI_FINAL_COMPLETE.asm
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(257) : error A2070:invalid instruction operands
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(258) : error A2070:invalid instruction operands
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(520) : error A2005:symbol redefinition : @K_End
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(860) : error A2070:invalid instruction operands
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(868) : error A2070:invalid instruction operands
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(899) : error A2070:invalid instruction operands
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(904) : error A2070:invalid instruction operands
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(28) : error A2006:undefined symbol : GetWindowLongPtrA
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(49) : error A2022:instruction operands must be the same size
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(52) : error A2006:undefined symbol : DefWindowProcA
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(130) : error A2006:undefined symbol : GetStockObject
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(138) : error A2006:undefined symbol : RegisterClassA
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(160) : error A2006:undefined symbol : GlobalAlloc
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(191) : error A2006:undefined symbol : CreateWindowExA
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(199) : error A2006:undefined symbol : SetWindowLongPtrA
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(220) : error A2006:undefined symbol : GlobalAlloc
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(225) : error A2006:undefined symbol : GlobalAlloc
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(253) : error A2006:undefined symbol : BeginPaintA
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(267) : error A2006:undefined symbol : GetStockObject
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(270) : error A2006:undefined symbol : FillRect
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(279) : error A2006:undefined symbol : EndPaintA
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(518) : error A2006:undefined symbol : InvalidateRect
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(564) : error A2006:undefined symbol : InvalidateRect
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(594) : error A2022:instruction operands must be the same size
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(603) : error A2006:undefined symbol : InvalidateRect
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(642) : error A2006:undefined symbol : GlobalFree
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(650) : error A2006:undefined symbol : GlobalFree
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(655) : error A2006:undefined symbol : GlobalFree
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(659) : error A2006:undefined symbol : PostQuitMessage
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(762) : error A2006:undefined symbol : CreateMenu
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(766) : error A2006:undefined symbol : CreateMenu
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(775) : error A2006:undefined symbol : AppendMenuA
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(781) : error A2006:undefined symbol : AppendMenuA
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(787) : error A2006:undefined symbol : AppendMenuA
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(794) : error A2006:undefined symbol : AppendMenuA
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(799) : error A2006:undefined symbol : SetMenu
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(831) : error A2006:undefined symbol : CreateWindowExA
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(871) : error A2006:undefined symbol : GetOpenFileNameA
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(907) : error A2006:undefined symbol : GetSaveFileNameA
+RawrXD_TextEditorGUI_FINAL_COMPLETE.asm(937) : error A2006:undefined symbol : CreateWindowExA

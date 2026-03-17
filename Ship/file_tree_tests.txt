@@ -1,0 +1,45 @@
+# RawrXD IDE File Tree Test Suite
+# Lines starting with # are comments
+# EXPECT lines after a command assert the response contains that substring
+
+PING
+EXPECT PONG
+
+HWND_MAP
+EXPECT Main=
+
+TITLE
+EXPECT RawrXD
+
+VISIBILITY
+EXPECT FileTree=
+
+TREE_COUNT
+EXPECT TREE_COUNT=0
+
+WORKSPACE
+EXPECT WORKSPACE=
+
+OPEN_FOLDER D:\rawrxd\Ship
+EXPECT OPENED=
+
+TREE_COUNT
+EXPECT TREE_COUNT=
+
+TREE_ITEMS
+EXPECT [
+
+TITLE
+EXPECT Ship
+
+LOAD_FILE D:\rawrxd\Ship\RawrXD_Win32_IDE.cpp
+EXPECT LOADED=OK
+
+EDITOR_TEXT
+EXPECT #include
+
+WORKSPACE
+EXPECT D:\rawrxd\Ship
+
+QUIT
+EXPECT BYE

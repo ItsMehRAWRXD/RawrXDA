@@ -1,0 +1,193 @@
+link_stubs_ssot_handlers.obj : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+link_stubs_win32ide_methods.obj : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+link_stubs_remaining_classes.obj : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+ucrt.lib(api-ms-win-crt-string-l1-1-0.dll) : error LNK2005: strncmp already defined in libucrt.lib(strncmp.obj)
+   Creating library .\bin\RawrXD-Win32IDE.lib and object .\bin\RawrXD-Win32IDE.exp
+asm_monolithic_main.obj : error LNK2001: unresolved external symbol Swarm_Init
+asm_monolithic_main.obj : error LNK2001: unresolved external symbol SwarmCoord_Init
+core_agentic_task_graph.obj : error LNK2001: unresolved external symbol "public: struct UnifiedResult __cdecl UnifiedHotpatchManager::pt_restore_snapshot(unsigned int)" (?pt_restore_snapshot@UnifiedHotpatchManager@@QEAA?AUUnifiedResult@@I@Z)
+core_agentic_task_graph.obj : error LNK2001: unresolved external symbol "public: struct UnifiedResult __cdecl UnifiedHotpatchManager::add_server_patch(struct ServerHotpatch *)" (?add_server_patch@UnifiedHotpatchManager@@QEAA?AUUnifiedResult@@PEAUServerHotpatch@@@Z)
+core_agentic_task_graph.obj : error LNK2001: unresolved external symbol "public: struct UnifiedResult __cdecl UnifiedHotpatchManager::apply_byte_patch(char const *,struct BytePatch const &)" (?apply_byte_patch@UnifiedHotpatchManager@@QEAA?AUUnifiedResult@@PEBDAEBUBytePatch@@@Z)
+core_agentic_task_graph.obj : error LNK2001: unresolved external symbol "public: struct UnifiedResult __cdecl UnifiedHotpatchManager::apply_memory_patch(void *,unsigned __int64,void const *)" (?apply_memory_patch@UnifiedHotpatchManager@@QEAA?AUUnifiedResult@@PEAX_KPEBX@Z)
+core_agentic_task_graph.obj : error LNK2001: unresolved external symbol "public: static class UnifiedHotpatchManager & __cdecl UnifiedHotpatchManager::instance(void)" (?instance@UnifiedHotpatchManager@@SAAEAV1@XZ)
+core_auto_repair_orchestrator.obj : error LNK2001: unresolved external symbol asm_snapshot_discard
+core_auto_repair_orchestrator.obj : error LNK2001: unresolved external symbol asm_hotpatch_flush_icache
+core_auto_repair_orchestrator.obj : error LNK2001: unresolved external symbol asm_snapshot_verify
+core_auto_repair_orchestrator.obj : error LNK2001: unresolved external symbol "public: struct UnifiedHotpatchManager::Stats const & __cdecl UnifiedHotpatchManager::getStats(void)const " (?getStats@UnifiedHotpatchManager@@QEBAAEBUStats@1@XZ)
+core_auto_repair_orchestrator.obj : error LNK2001: unresolved external symbol asm_snapshot_restore
+core_byte_level_hotpatcher.obj : error LNK2001: unresolved external symbol find_pattern_asm
+core_camellia256_bridge.obj : error LNK2001: unresolved external symbol asm_camellia256_encrypt_block
+core_camellia256_bridge.obj : error LNK2001: unresolved external symbol asm_camellia256_decrypt_ctr
+core_camellia256_bridge.obj : error LNK2001: unresolved external symbol asm_camellia256_self_test
+core_camellia256_bridge.obj : error LNK2001: unresolved external symbol asm_camellia256_init
+core_camellia256_bridge.obj : error LNK2001: unresolved external symbol asm_camellia256_shutdown
+core_camellia256_bridge.obj : error LNK2001: unresolved external symbol asm_camellia256_get_hmac_key
+core_camellia256_bridge.obj : error LNK2001: unresolved external symbol asm_camellia256_decrypt_block
+core_camellia256_bridge.obj : error LNK2001: unresolved external symbol asm_camellia256_decrypt_file
+core_camellia256_bridge.obj : error LNK2001: unresolved external symbol asm_camellia256_get_status
+core_camellia256_bridge.obj : error LNK2001: unresolved external symbol asm_camellia256_set_key
+core_camellia256_bridge.obj : error LNK2001: unresolved external symbol asm_camellia256_encrypt_file
+core_camellia256_bridge.obj : error LNK2001: unresolved external symbol asm_camellia256_encrypt_ctr
+core_camellia256_bridge.obj : error LNK2001: unresolved external symbol asm_camellia256_auth_decrypt_file
+core_camellia256_bridge.obj : error LNK2001: unresolved external symbol asm_camellia256_auth_encrypt_file
+core_convergence_stress_harness.obj : error LNK2001: unresolved external symbol KQuant_DequantizeQ2_K
+core_convergence_stress_harness.obj : error LNK2001: unresolved external symbol asm_perf_get_slot_count
+core_convergence_stress_harness.obj : error LNK2001: unresolved external symbol asm_watchdog_init
+core_convergence_stress_harness.obj : error LNK2001: unresolved external symbol asm_perf_init
+core_convergence_stress_harness.obj : error LNK2001: unresolved external symbol asm_watchdog_verify
+core_convergence_stress_harness.obj : error LNK2001: unresolved external symbol asm_perf_read_slot
+core_convergence_stress_harness.obj : error LNK2001: unresolved external symbol asm_kquant_cpuid_check
+core_convergence_stress_harness.obj : error LNK2001: unresolved external symbol KQuant_DequantizeQ3_K
+core_convergence_stress_harness.obj : error LNK2001: unresolved external symbol KQuant_Dispatch
+core_convergence_stress_harness.obj : error LNK2001: unresolved external symbol asm_perf_reset_slot
+core_convergence_stress_harness.obj : error LNK2001: unresolved external symbol asm_camellia256_auth_encrypt_buf
+core_convergence_stress_harness.obj : error LNK2001: unresolved external symbol KQuant_DequantizeF16
+core_convergence_stress_harness.obj : error LNK2001: unresolved external symbol asm_camellia256_auth_decrypt_buf
+core_convergence_stress_harness.obj : error LNK2001: unresolved external symbol asm_perf_get_table_base
+core_convergence_stress_harness.obj : error LNK2001: unresolved external symbol asm_watchdog_get_status
+core_convergence_stress_harness.obj : error LNK2001: unresolved external symbol asm_watchdog_get_baseline
+core_convergence_stress_harness.obj : error LNK2001: unresolved external symbol asm_perf_begin
+core_convergence_stress_harness.obj : error LNK2001: unresolved external symbol asm_watchdog_shutdown
+core_convergence_stress_harness.obj : error LNK2001: unresolved external symbol asm_perf_end
+core_directml_compute.obj : error LNK2001: unresolved external symbol asm_dml_rope_rotate_fp32
+core_dynamic_prompt_engine_glue.obj : error LNK2001: unresolved external symbol PromptGen_AnalyzeContext
+core_enterprise_license.obj : error LNK2001: unresolved external symbol g_EnterpriseFeatures
+core_enterprise_stress_tests.obj : error LNK2001: unresolved external symbol asm_lsp_bridge_init
+core_enterprise_stress_tests.obj : error LNK2001: unresolved external symbol asm_spengine_cpu_optimize
+core_final_gauntlet.obj : error LNK2001: unresolved external symbol MC_GapBuffer_LineCount
+core_final_gauntlet.obj : error LNK2001: unresolved external symbol MC_GapBuffer_Insert
+core_final_gauntlet.obj : error LNK2001: unresolved external symbol MC_GapBuffer_Delete
+core_final_gauntlet.obj : error LNK2001: unresolved external symbol MC_GapBuffer_Init
+core_final_gauntlet.obj : error LNK2001: unresolved external symbol MC_GapBuffer_Length
+core_final_gauntlet.obj : error LNK2001: unresolved external symbol MC_GapBuffer_Destroy
+core_final_gauntlet.obj : error LNK2001: unresolved external symbol MC_GapBuffer_GetLine
+core_flash_attention.obj : error LNK2001: unresolved external symbol FlashAttention_Init
+core_flash_attention.obj : error LNK2001: unresolved external symbol FlashAttention_GetTileConfig
+core_flash_attention.obj : error LNK2001: unresolved external symbol FlashAttention_Forward
+core_flash_attention.obj : error LNK2001: unresolved external symbol g_FlashAttnTiles
+core_flash_attention.obj : error LNK2001: unresolved external symbol g_FlashAttnCalls
+core_gguf_dml_bridge.obj : error LNK2001: unresolved external symbol asm_dml_dequant_q4_0_to_fp32
+core_gguf_dml_bridge.obj : error LNK2001: unresolved external symbol asm_dml_prefetch_tensor_block
+core_gguf_dml_bridge.obj : error LNK2001: unresolved external symbol asm_dml_dequant_q8_0_to_fp32
+core_masm_stress_harness.obj : error LNK2001: unresolved external symbol asm_lsp_bridge_set_weights
+core_masm_stress_harness.obj : error LNK2001: unresolved external symbol asm_orchestrator_register_hook
+core_masm_stress_harness.obj : error LNK2001: unresolved external symbol asm_gguf_loader_init
+core_masm_stress_harness.obj : error LNK2001: unresolved external symbol asm_quadbuf_push_token
+core_masm_stress_harness.obj : error LNK2001: unresolved external symbol asm_spengine_init
+core_masm_stress_harness.obj : error LNK2001: unresolved external symbol asm_spengine_quant_switch_adaptive
+core_masm_stress_harness.obj : error LNK2001: unresolved external symbol asm_quadbuf_render_frame
+core_masm_stress_harness.obj : error LNK2001: unresolved external symbol asm_quadbuf_shutdown
+core_masm_stress_harness.obj : error LNK2001: unresolved external symbol asm_gguf_loader_lookup
+core_masm_stress_harness.obj : error LNK2001: unresolved external symbol asm_spengine_rollback
+core_masm_stress_harness.obj : error LNK2001: unresolved external symbol asm_lsp_bridge_shutdown
+core_masm_stress_harness.obj : error LNK2001: unresolved external symbol asm_orchestrator_init
+core_masm_stress_harness.obj : error LNK2001: unresolved external symbol asm_spengine_register
+core_masm_stress_harness.obj : error LNK2001: unresolved external symbol asm_orchestrator_shutdown
+core_masm_stress_harness.obj : error LNK2001: unresolved external symbol asm_orchestrator_queue_async
+core_masm_stress_harness.obj : error LNK2001: unresolved external symbol asm_orchestrator_dispatch
+core_masm_stress_harness.obj : error LNK2001: unresolved external symbol asm_spengine_get_stats
+core_masm_stress_harness.obj : error LNK2001: unresolved external symbol asm_gguf_loader_get_info
+core_masm_stress_harness.obj : error LNK2001: unresolved external symbol asm_quadbuf_set_flags
+core_masm_stress_harness.obj : error LNK2001: unresolved external symbol asm_quadbuf_resize
+core_masm_stress_harness.obj : error LNK2001: unresolved external symbol asm_gguf_loader_configure_gpu
+core_masm_stress_harness.obj : error LNK2001: unresolved external symbol asm_gguf_loader_close
+core_masm_stress_harness.obj : error LNK2001: unresolved external symbol asm_spengine_shutdown
+core_masm_stress_harness.obj : error LNK2001: unresolved external symbol asm_orchestrator_set_vtable
+core_masm_stress_harness.obj : error LNK2001: unresolved external symbol asm_lsp_bridge_get_stats
+core_masm_stress_harness.obj : error LNK2001: unresolved external symbol asm_lsp_bridge_query
+core_masm_stress_harness.obj : error LNK2001: unresolved external symbol asm_lsp_bridge_invalidate
+core_masm_stress_harness.obj : error LNK2001: unresolved external symbol asm_orchestrator_get_metrics
+core_masm_stress_harness.obj : error LNK2001: unresolved external symbol asm_quadbuf_get_stats
+core_masm_stress_harness.obj : error LNK2001: unresolved external symbol asm_gguf_loader_parse
+core_masm_stress_harness.obj : error LNK2001: unresolved external symbol asm_spengine_apply
+core_masm_stress_harness.obj : error LNK2001: unresolved external symbol asm_lsp_bridge_sync
+core_masm_stress_harness.obj : error LNK2001: unresolved external symbol asm_spengine_quant_switch
+core_masm_stress_harness.obj : error LNK2001: unresolved external symbol asm_quadbuf_init
+core_masm_stress_harness.obj : error LNK2001: unresolved external symbol asm_gguf_loader_get_stats
+core_model_bruteforce_engine.obj : error LNK2001: unresolved external symbol "public: virtual bool __cdecl GGUFLoader::ParseMetadata(void)" (?ParseMetadata@GGUFLoader@@UEAA_NXZ)
+core_model_bruteforce_engine.obj : error LNK2001: unresolved external symbol "public: virtual bool __cdecl GGUFLoader::ParseHeader(void)" (?ParseHeader@GGUFLoader@@UEAA_NXZ)
+core_model_bruteforce_engine.obj : error LNK2001: unresolved external symbol "public: virtual bool __cdecl GGUFLoader::Close(void)" (?Close@GGUFLoader@@UEAA_NXZ)
+core_model_bruteforce_engine.obj : error LNK2001: unresolved external symbol "public: virtual bool __cdecl GGUFLoader::Open(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)" (?Open@GGUFLoader@@UEAA_NAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z)
+core_model_bruteforce_engine.obj : error LNK2001: unresolved external symbol "public: virtual __cdecl GGUFLoader::~GGUFLoader(void)" (??1GGUFLoader@@UEAA@XZ)
+core_model_bruteforce_engine.obj : error LNK2001: unresolved external symbol "public: __cdecl GGUFLoader::GGUFLoader(void)" (??0GGUFLoader@@QEAA@XZ)
+core_model_bruteforce_engine.obj : error LNK2001: unresolved external symbol "public: class std::vector<int,class std::allocator<int> > __cdecl RawrXD::CPUInferenceEngine::Tokenize(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)" (?Tokenize@CPUInferenceEngine@RawrXD@@QEAA?AV?$vector@HV?$allocator@H@std@@@std@@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@4@@Z)
+core_model_bruteforce_engine.obj : error LNK2001: unresolved external symbol "public: bool __cdecl RawrXD::CPUInferenceEngine::isModelLoaded(void)const " (?isModelLoaded@CPUInferenceEngine@RawrXD@@QEBA_NXZ)
+core_model_bruteforce_engine.obj : error LNK2001: unresolved external symbol "public: class RawrXD::Expected<void,enum RawrXD::InferenceError> __cdecl RawrXD::CPUInferenceEngine::loadModel(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)" (?loadModel@CPUInferenceEngine@RawrXD@@QEAA?AV?$Expected@XW4InferenceError@RawrXD@@@2@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z)
+core_model_bruteforce_engine.obj : error LNK2001: unresolved external symbol "public: __cdecl RawrXD::CPUInferenceEngine::~CPUInferenceEngine(void)" (??1CPUInferenceEngine@RawrXD@@QEAA@XZ)
+link_stubs_remaining_classes.obj : error LNK2001: unresolved external symbol "public: __cdecl RawrXD::CPUInferenceEngine::~CPUInferenceEngine(void)" (??1CPUInferenceEngine@RawrXD@@QEAA@XZ)
+core_model_bruteforce_engine.obj : error LNK2001: unresolved external symbol "public: __cdecl RawrXD::CPUInferenceEngine::CPUInferenceEngine(void)" (??0CPUInferenceEngine@RawrXD@@QEAA@XZ)
+core_model_training_pipeline.obj : error LNK2001: unresolved external symbol Quant_DequantQ8_0
+core_model_training_pipeline.obj : error LNK2001: unresolved external symbol Quant_DequantQ4_0
+core_model_training_pipeline.obj : error LNK2001: unresolved external symbol KQuant_DequantizeQ6_K
+core_model_training_pipeline.obj : error LNK2001: unresolved external symbol KQuant_DequantizeQ4_K
+core_MonacoCoreEngine.obj : error LNK2001: unresolved external symbol MC_TokenizeLine
+core_multiwindow_scheduler.obj : error LNK2001: unresolved external symbol __imp_SwarmBroadcast
+core_multiwindow_scheduler.obj : error LNK2001: unresolved external symbol __imp_GetMicroseconds
+core_multiwindow_scheduler.obj : error LNK2001: unresolved external symbol __imp_ChainOfThought
+core_multiwindow_scheduler.obj : error LNK2001: unresolved external symbol __imp_CancelTask
+core_multiwindow_scheduler.obj : error LNK2001: unresolved external symbol __imp_UnregisterWindow
+core_multiwindow_scheduler.obj : error LNK2001: unresolved external symbol __imp_KernelInit
+core_multiwindow_scheduler.obj : error LNK2001: unresolved external symbol __imp_RegisterWindow
+core_multiwindow_scheduler.obj : error LNK2001: unresolved external symbol __imp_IsTaskComplete
+core_multiwindow_scheduler.obj : error LNK2001: unresolved external symbol __imp_GetKernelStats
+core_multiwindow_scheduler.obj : error LNK2001: unresolved external symbol __imp_SendIPCMessage
+core_multiwindow_scheduler.obj : error LNK2001: unresolved external symbol __imp_KernelShutdown
+core_multiwindow_scheduler.obj : error LNK2001: unresolved external symbol __imp_SubmitTask
+core_native_speed_layer.obj : error LNK2001: unresolved external symbol dequant_q4_0_avx512
+core_native_speed_layer.obj : error LNK2001: unresolved external symbol native_nt_memcpy
+core_native_speed_layer.obj : error LNK2001: unresolved external symbol native_softmax_avx512
+core_native_speed_layer.obj : error LNK2001: unresolved external symbol dequant_q4_0_avx2
+core_native_speed_layer.obj : error LNK2001: unresolved external symbol qgemv_q4_0_avx2
+core_native_speed_layer.obj : error LNK2001: unresolved external symbol dequant_q8_0_avx512
+core_native_speed_layer.obj : error LNK2001: unresolved external symbol dequant_q8_0_avx2
+core_native_speed_layer.obj : error LNK2001: unresolved external symbol sgemm_avx2
+core_native_speed_layer.obj : error LNK2001: unresolved external symbol native_vdot_avx512
+core_native_speed_layer.obj : error LNK2001: unresolved external symbol qgemv_q8_0_avx2
+core_native_speed_layer.obj : error LNK2001: unresolved external symbol native_fused_mlp_avx2
+core_native_speed_layer.obj : error LNK2001: unresolved external symbol sgemm_avx512
+core_native_speed_layer.obj : error LNK2001: unresolved external symbol native_rope_avx2
+core_native_speed_layer.obj : error LNK2001: unresolved external symbol native_rmsnorm_avx2
+core_native_speed_layer.obj : error LNK2001: unresolved external symbol dequant_q2k_avx2
+core_native_speed_layer.obj : error LNK2001: unresolved external symbol sgemv_avx512
+core_native_speed_layer.obj : error LNK2001: unresolved external symbol sgemv_avx2
+core_native_speed_layer.obj : error LNK2001: unresolved external symbol native_softmax_avx2
+core_native_speed_layer.obj : error LNK2001: unresolved external symbol native_vdot_avx2
+core_native_speed_layer.obj : error LNK2001: unresolved external symbol native_rmsnorm_avx512
+core_rawrxd_subsystem_api.obj : error LNK2001: unresolved external symbol DiskRecovery_ExtractKey
+core_rawrxd_subsystem_api.obj : error LNK2001: unresolved external symbol DiskRecovery_Cleanup
+core_rawrxd_subsystem_api.obj : error LNK2001: unresolved external symbol DiskRecovery_FindDrive
+core_rawrxd_subsystem_api.obj : error LNK2001: unresolved external symbol DiskRecovery_GetStats
+core_rawrxd_subsystem_api.obj : error LNK2001: unresolved external symbol DiskRecovery_Init
+core_rawrxd_subsystem_api.obj : error LNK2001: unresolved external symbol DiskRecovery_Run
+core_shadow_page_detour.obj : error LNK2001: unresolved external symbol asm_hotpatch_restore_prologue
+core_shadow_page_detour.obj : error LNK2001: unresolved external symbol asm_hotpatch_backup_prologue
+core_shadow_page_detour.obj : error LNK2001: unresolved external symbol asm_hotpatch_alloc_shadow
+core_shadow_page_detour.obj : error LNK2001: unresolved external symbol asm_hotpatch_verify_prologue
+core_shadow_page_detour.obj : error LNK2001: unresolved external symbol asm_hotpatch_install_trampoline
+core_shadow_page_detour.obj : error LNK2001: unresolved external symbol asm_hotpatch_free_shadow
+core_shadow_page_detour.obj : error LNK2001: unresolved external symbol asm_snapshot_capture
+core_shadow_page_detour.obj : error LNK2001: unresolved external symbol asm_hotpatch_atomic_swap
+core_shadow_page_detour.obj : error LNK2001: unresolved external symbol asm_hotpatch_get_stats
+core_shadow_page_detour.obj : error LNK2001: unresolved external symbol asm_snapshot_get_stats
+core_ssot_handlers.obj : error LNK2001: unresolved external symbol "public: void __cdecl UnifiedHotpatchManager::resetStats(void)" (?resetStats@UnifiedHotpatchManager@@QEAAXXZ)
+core_ssot_handlers.obj : error LNK2001: unresolved external symbol "public: bool __cdecl UnifiedHotpatchManager::poll_event(struct HotpatchEvent *)" (?poll_event@UnifiedHotpatchManager@@QEAA_NPEAUHotpatchEvent@@@Z)
+core_ssot_handlers.obj : error LNK2001: unresolved external symbol "public: struct PatchResult __cdecl UnifiedHotpatchManager::load_preset(char const *,struct HotpatchPreset *)" (?load_preset@UnifiedHotpatchManager@@QEAA?AUPatchResult@@PEBDPEAUHotpatchPreset@@@Z)
+core_ssot_handlers.obj : error LNK2001: unresolved external symbol "public: struct PatchResult __cdecl UnifiedHotpatchManager::save_preset(char const *,struct HotpatchPreset const &)" (?save_preset@UnifiedHotpatchManager@@QEAA?AUPatchResult@@PEBDAEBUHotpatchPreset@@@Z)
+core_ssot_handlers.obj : error LNK2001: unresolved external symbol "public: void __cdecl UnifiedHotpatchManager::clearAllPatches(void)" (?clearAllPatches@UnifiedHotpatchManager@@QEAAXXZ)
+core_ssot_handlers.obj : error LNK2001: unresolved external symbol "public: struct UnifiedResult __cdecl UnifiedHotpatchManager::remove_server_patch(char const *)" (?remove_server_patch@UnifiedHotpatchManager@@QEAA?AUUnifiedResult@@PEBD@Z)
+win32app_IDEAutoHealerLauncher.obj : error LNK2001: unresolved external symbol "public: void __cdecl BeaconStorage::ClearHistory(void)" (?ClearHistory@BeaconStorage@@QEAAXXZ)
+win32app_Win32IDE_AgentCommands.obj : error LNK2001: unresolved external symbol "public: struct AgentResponse __cdecl AgenticBridge::ExecuteAgentCommand(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)" (?ExecuteAgentCommand@AgenticBridge@@QEAA?AUAgentResponse@@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z)
+win32app_Win32IDE_AgentCommands.obj : error LNK2001: unresolved external symbol "public: void __cdecl Win32IDE::onAutonomyViewMemory(void)" (?onAutonomyViewMemory@Win32IDE@@QEAAXXZ)
+win32app_Win32IDE_AgentCommands.obj : error LNK2001: unresolved external symbol "public: void __cdecl Win32IDE::onAutonomyViewStatus(void)" (?onAutonomyViewStatus@Win32IDE@@QEAAXXZ)
+win32app_Win32IDE_AgentCommands.obj : error LNK2001: unresolved external symbol "public: void __cdecl Win32IDE::onAutonomySetGoal(void)" (?onAutonomySetGoal@Win32IDE@@QEAAXXZ)
+win32app_Win32IDE_AgentCommands.obj : error LNK2001: unresolved external symbol "public: void __cdecl Win32IDE::onAutonomyToggle(void)" (?onAutonomyToggle@Win32IDE@@QEAAXXZ)
+win32app_Win32IDE_AgentCommands.obj : error LNK2001: unresolved external symbol "public: void __cdecl Win32IDE::onAutonomyStop(void)" (?onAutonomyStop@Win32IDE@@QEAAXXZ)
+win32app_Win32IDE_AgentCommands.obj : error LNK2001: unresolved external symbol "public: void __cdecl Win32IDE::onAutonomyStart(void)" (?onAutonomyStart@Win32IDE@@QEAAXXZ)
+win32app_Win32IDE_Autonomy.obj : error LNK2001: unresolved external symbol "public: bool __cdecl AgenticBridge::DispatchModelToolCalls(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > &)" (?DispatchModelToolCalls@AgenticBridge@@QEAA_NAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEAV23@@Z)
+win32app_Win32IDE_Commands.obj : error LNK2001: unresolved external symbol "public: void __cdecl Win32IDE::openModel(void)" (?openModel@Win32IDE@@QEAAXXZ)
+win32app_Win32IDE_LocalServer.obj : error LNK2001: unresolved external symbol "public: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl AgentEvent::typeString(void)const " (?typeString@AgentEvent@@QEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ)
+win32app_Win32IDE_VSCodeUI.obj : error LNK2001: unresolved external symbol "public: static class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl RawrXD::UI::ToolActionStatusFormatter::formatPlainTextBlock(class std::vector<struct RawrXD::UI::ToolActionStatus,class std::allocator<struct RawrXD::UI::ToolActionStatus> > const &,int)" (?formatPlainTextBlock@ToolActionStatusFormatter@UI@RawrXD@@SA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBV?$vector@UToolActionStatus@UI@RawrXD@@V?$allocator@UToolActionStatus@UI@RawrXD@@@std@@@5@H@Z)
+win32app_Win32IDE_VSCodeUI.obj : error LNK2001: unresolved external symbol "public: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl RawrXD::UI::ToolActionAccumulator::renderBubblesPlainText(void)const " (?renderBubblesPlainText@ToolActionAccumulator@UI@RawrXD@@QEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ)
+win32app_Win32IDE_VSCodeUI.obj : error LNK2001: unresolved external symbol "public: void __cdecl RawrXD::UI::ToolActionAccumulator::clear(void)" (?clear@ToolActionAccumulator@UI@RawrXD@@QEAAXXZ)
+link_stubs_remaining_classes.obj : error LNK2001: unresolved external symbol "public: __cdecl SubAgentManager::~SubAgentManager(void)" (??1SubAgentManager@@QEAA@XZ)
+.\bin\RawrXD-Win32IDE.exe : fatal error LNK1120: 186 unresolved externals

@@ -1,0 +1,5 @@
+   Creating library .\bin\RawrXD-Win32IDE.lib and object .\bin\RawrXD-Win32IDE.exp
+Generating code
+Finished generating code
+libvcruntime.lib(ehhelpers.obj) : error LNK2005: __std_terminate already defined in vcruntime.lib(VCRUNTIME140.dll)
+.\bin\RawrXD-Win32IDE.exe : fatal error LNK1169: one or more multiply defined symbols found

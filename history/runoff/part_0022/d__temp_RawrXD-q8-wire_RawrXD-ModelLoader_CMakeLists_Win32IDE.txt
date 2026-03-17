@@ -1,0 +1,85 @@
+# CMakeLists.txt for Win32 Sovereign IDE
+cmake_minimum_required(VERSION 3.15)
+project(RawrXD-SovereignIDE)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Windows-specific settings
+if(WIN32)
+    add_definitions(-DWIN32_LEAN_AND_MEAN)
+    add_definitions(-DUNICODE -D_UNICODE)
+    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+endif()
+
+# Include directories
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/agent
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/win32app
+)
+
+# Source files for Win32 IDE
+set(WIN32_IDE_SOURCES
+    src/Win32IDE.cpp
+    src/win32app/Win32Application.cpp
+    src/win32app/Win32Window.cpp
+    src/win32app/Win32Menu.cpp
+    src/win32app/Win32ContextMenu.cpp
+    src/win32app/Win32Settings.cpp
+    src/agent/RawrXD_AgentKernel.cpp
+)
+
+# Add executable
+add_executable(RawrXD-SovereignIDE ${WIN32_IDE_SOURCES})
+
+# Windows libraries
+if(WIN32)
+    target_link_libraries(RawrXD-SovereignIDE
+        kernel32.lib
+        user32.lib
+        gdi32.lib
+        comctl32.lib
+        comdlg32.lib
+        shell32.lib
+        ole32.lib
+        oleaut32.lib
+        uuid.lib
+        advapi32.lib
+        ws2_32.lib
+        winhttp.lib
+        rpcrt4.lib
+    )
+    
+    # Set Windows version
+    set_target_properties(RawrXD-SovereignIDE PROPERTIES
+        WIN32_EXECUTABLE TRUE
+    )
+endif()
+
+# Compiler-specific settings
+if(MSVC)
+    target_compile_options(RawrXD-SovereignIDE PRIVATE
+        /W4
+        /WX
+        /permissive-
+        /Zc:__cplusplus
+        /Zc:inline
+        /Zc:throwingNew
+    )
+    
+    # Set subsystem to Windows
+    set_target_properties(RawrXD-SovereignIDE PROPERTIES
+        LINK_FLAGS "/SUBSYSTEM:WINDOWS"
+    )
+endif()
+
+# Copy required DLLs for distribution
+if(WIN32)
+    add_custom_command(TARGET RawrXD-SovereignIDE POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${<TARGET_FILE:RawrXD-SovereignIDE>}"
+            "${CMAKE_BINARY_DIR}/RawrXD-SovereignIDE.exe"
+        COMMENT "Copying executable to build directory"
+    )
+endif()

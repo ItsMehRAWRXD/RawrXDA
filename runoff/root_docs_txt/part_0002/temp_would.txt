@@ -1,0 +1,117 @@
+
+LineNumber Line
+---------- ----
+       697     ; (H2D/D2H/D2D would use GPU in full implementation)
+       802     ; (Real implementation would use Vulkan/DirectStorage)
+      1855     ; DirectStorage path (stub - would implement real DS API)
+      1861     ; Vulkan path (stub - would implement real Vulkan DMA)
+      5250     ; Get buffer pointer (simplified - real code would index buffer array)
+      5500     ; Real implementation would call Safetensors_Init(), etc.
+      6767     ; In production, this would:
+      8529 ; COMPLETE TLB DETECTION (Simplified - production would parse descriptors)
+      8544     ; Full implementation would decode all descriptor bytes
+      8583     ; (Detailed parsing omitted for brevity - production code would iterate)
+     13416     ; Wait for resource (would block here in real impl)
+     13417     ; For now, return would-block status
+     13418     xor eax, eax                    ; Fail (would block)
+     13567     ; (Simplified - full implementation would check all waiting tasks)
+     13803     ; Simple UDP receive (async with IOCP would be more complex)
+     13814     ; Note: would need WSARecvFrom for async, using sync for now
+     15061     ; (Implementation would parse GetLogicalProcessorInformationEx)
+     15779     ; This would parse the tensor metadata and populate pModel->tensors[]
+     16769     ; (Implementation would copy entries to log)
+     17581     ; Real implementation would update Gaussian Process
+     21921     ; Weights (simplified - real impl would be larger)
+     22772     ; Store handler for cleanup (would need field)
+     23620     ; Xavier initialize weights (simplified - would use proper RNG)
+     23623     ; For now, small random values would be loaded from trained model file
+     23667     ; LSTM forward pass (simplified - real impl would use optimized GEMM)
+     23668     ; For production, this would call into MKL or custom AVX-512 kernel
+     23777     ; Call factory creation (would need COM initialization)
+     24285     ; (Simplified: would track which threads are waiting)
+     24989     ; (Would use SetThreadDescription on Win10+)
+     25082     ; Wait for dependencies (simplified - real impl would be event-driven)
+     25155     ; Look up task state (simplified - would use hash table)
+     25502     ; Look up task (simplified - would use hash map)
+     25510     ; (Would check task state in real impl)
+     25815     ; Would block here in real implementation
+     25816     ; For now, return would-block status
+     25818     xor eax, eax                    ; Fail (would block)
+     25990     ; Wake next waiter (would signal condition variable)
+     26011     ; (Full implementation would scan all waiting tasks)
+     26360     ; Find node by address (simplified - would use node_id)
+     26534     ; (Would call vkQueueSubmit here)
+     26556     ; Would check if fence value reached expected
+     27131     ; Copy embedding (simplified - would use AVX in production)
+     27237     ; Simplified matmul - production would use BLAS/cuBLAS
+     28469     ; ... (would use SHFileOperation or recursive delete)
+     29037     ; ... (would build VkInstanceCreateInfo and call)
+     34620     ; ... (would search backward for matching enter)
+     35885     ; ... (parsing logic would go here)
+     36001     ; ... (would load from config or learned weights)
+     36510     ; (Stub for now; real implementation would format message)
+     37516     ; Main loop would run here (simplified)
+     38438     ; Full implementation would use OpenProcessToken + LookupPrivilegeValue + AdjustTokenPrivileges
+     38440     ; For now, return success (real implementation would check)
+     38456     ; Placeholder - real implementation would:
+     38474     ; Placeholder - real implementation would:
+     38490     ; Placeholder - would open 11TB model file
+     40135     ; Note: Would need to track heap handle for proper HeapFree
+     40814     ; In production, would iterate kv_count entries
+     40826     ; Real implementation would read:
+     41079     xor r8, r8                  ; pipelineLayout (would need to pass)
+     41086     ; Skip for now - would need proper layout
+     45823     ; Simple pattern search (optimized version would implement full Boyer-Moore)
+     45978     ; This is a simplified implementation - real version would depend on tensor format
+     45992     ; Potential transformation operations would go here
+     46403     ; Real implementation would parse and execute correction instructions
+     46479     ; Apply simple transformation (real version would parse flags)
+     51929     push r10                        ; size (would calculate from type*dims)
+     51988     mov r15, 4096                   ; Production: would compute actual size
+     52053     ; Check tensor name patterns (would need actual name string)
+     52129     ; Would call wsprintfA or custom formatter
+     58851     ; (Full SIMD dequant+dot fusion would be ~3x more code)
+     58927     ; Production: full Q8_0 GEMV implementation would follow same pattern
+     67192     ; (full API matching would require symbol resolution)
+     67209     ; Check src2 for non-zero (would indicate scaled index)
+     70225 ; In production, the tier would be derived from RSA-4096 signed license key.
+     80211     ; (Same as create for simplicity — production would backup first)
+     85051 ; Returns: RAX = remaining quota after append (or -1 if would exceed)
+    104209     ; (A production version would use k-bucket routing table)
+    111834     movzx   r9d, byte ptr [r15 + r8*1]              ; This would be wrong
+    112987 ; Note: This is a simplified radix-2 DFT for demonstration. Production would
+    113598     ; This would normally involve multiple trials, but we store current state
+    114380     ; (This would interface with your model loader)
+    131328     ; Simple scroll: reset to top (real impl would shift buffer)
+    132829     ; For larger data, a full multi-block loop would be needed.
+    138933     ; Memory/Storage: accept; full apply would use SetProcessWorkingSetSize / powercfg
+    144723     ; In real implementation, would call zlib/inflate
+    150801 ; Returns: RAX = compressed size in bytes, 0 if compression would expand data
+    153480     ; TODO: Would log error code here if wsprintfA was reliable
+    161976     ; Real implementation would use AVX-512 exp or a Taylor series
+    163216     ; BUT if we were doing a real GEMM, we would block.
+    163219     ; Real production code would use a blocking kernel (e.g. 6x16 or similar).
+    163389     ; Real code would use exp/log or lookup tables
+    163966     ; This would include:
+    163989     ; This would include:
+    164016     ; This would include:
+    164071     ; This would use direct GPU memory access
+    164077     ; This would use NVIDIA GPU memory
+    164083     ; This would use AMD GPU memory
+    164229     ; This would use direct GPU memory access
+    164240     ; This would use NVIDIA GPU memory
+    164251     ; This would use AMD GPU memory
+    164262     ; This would use standard memory allocation
+    164726     ; Map device ID to compute capability (simplified, real mapping would use a lookup table)
+    166666     ; For now: Return failure (network code would go here)
+    166692     ; For now: Return failure (network code would go here)
+    166711     ; For now: Return failure (would decompress and load)
+    166758     ; Implementation would compute SHA-256 of loaded data
+    168941     ; This would integrate with RawrXD's error reporting system
+    168955     ; OutputDebugString or write to log file would go here
+    171552     ; Full implementation would use curl/WinINet to proxy the request
+    172581     ; Mark bitmap as free (simplified - would need slab ptr stored)
+    174943     ; Note: Actual GPU DMA would be initiated here by Phase 4
+    175748     ; Would output: "Passed X/Y tests"
+
+

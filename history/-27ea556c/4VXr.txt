@@ -1,0 +1,52 @@
+cmake_minimum_required(VERSION 3.20)
+
+# Try Qt6 first, then Qt5 as a fallback to support broader environments.
+set(QT_FOUND FALSE)
+find_package(Qt6 COMPONENTS Widgets QUIET)
+if (Qt6_FOUND)
+    set(QT_FOUND TRUE)
+    set(QT_PACKAGE Qt6)
+    set(QT_WIDGETS_TARGET Qt6::Widgets)
+else()
+    find_package(Qt5 COMPONENTS Widgets QUIET)
+    if (Qt5_FOUND)
+        set(QT_FOUND TRUE)
+        set(QT_PACKAGE Qt5)
+        set(QT_WIDGETS_TARGET Qt5::Widgets)
+    endif()
+endif()
+
+if (NOT QT_FOUND)
+    message(FATAL_ERROR "Neither Qt6 nor Qt5 Widgets found. Please install Qt and ensure CMake can locate it.")
+endif()
+
+set(QTAPP_SOURCES
+        ${CMAKE_CURRENT_SOURCE_DIR}/MainWindow.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/MainWindow.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/AppMain.cpp
+)
+
+# WIN32 to avoid console window on Windows; remove WIN32 if you want a console.
+add_executable(QuantumIDEApp WIN32 ${QTAPP_SOURCES})
+target_link_libraries(QuantumIDEApp PRIVATE ${QT_WIDGETS_TARGET})
+target_compile_features(QuantumIDEApp PRIVATE cxx_std_20)
+
+# Friendly compiler and output settings for MSVC and MinGW
+if (MSVC)
+    target_compile_options(QuantumIDEApp PRIVATE /permissive- /W4)
+    set_target_properties(QuantumIDEApp PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin-msvc"
+    )
+elseif(MINGW)
+    # Prefer static stdlib to reduce runtime DLL requirements
+    target_link_options(QuantumIDEApp PRIVATE -static -static-libgcc -static-libstdc++)
+    set_target_properties(QuantumIDEApp PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin-mingw"
+    )
+else()
+    set_target_properties(QuantumIDEApp PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+    )
+endif()
+
+

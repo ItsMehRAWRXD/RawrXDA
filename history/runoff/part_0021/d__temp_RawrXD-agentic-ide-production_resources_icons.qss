@@ -1,0 +1,139 @@
+/* Icon CSS Definitions */
+
+/* Tab Icons */
+[icon="paint"] {
+    qproperty-icon: url(:/icons/paint.png);
+}
+
+[icon="chat"] {
+    qproperty-icon: url(:/icons/chat.png);
+}
+
+[icon="code"] {
+    qproperty-icon: url(:/icons/code.png);
+}
+
+/* Toolbar Icons */
+[icon="new-canvas"] {
+    qproperty-icon: url(:/icons/new_canvas.png);
+}
+
+[icon="new-chat"] {
+    qproperty-icon: url(:/icons/new_chat.png);
+}
+
+[icon="save"] {
+    qproperty-icon: url(:/icons/save.png);
+}
+
+[icon="open"] {
+    qproperty-icon: url(:/icons/open.png);
+}
+
+[icon="help"] {
+    qproperty-icon: url(:/icons/help.png);
+}
+
+/* Drawing Tool Icons */
+[icon="pencil"] {
+    qproperty-icon: url(:/icons/tool_pencil.png);
+}
+
+[icon="brush"] {
+    qproperty-icon: url(:/icons/tool_brush.png);
+}
+
+[icon="eraser"] {
+    qproperty-icon: url(:/icons/tool_eraser.png);
+}
+
+[icon="line"] {
+    qproperty-icon: url(:/icons/tool_line.png);
+}
+
+[icon="rectangle"] {
+    qproperty-icon: url(:/icons/tool_rect.png);
+}
+
+[icon="circle"] {
+    qproperty-icon: url(:/icons/tool_circle.png);
+}
+
+[icon="polygon"] {
+    qproperty-icon: url(:/icons/tool_polygon.png);
+}
+
+[icon="fill"] {
+    qproperty-icon: url(:/icons/tool_fill.png);
+}
+
+[icon="picker"] {
+    qproperty-icon: url(:/icons/tool_picker.png);
+}
+
+/* Menu Icons */
+[icon="file-new"] {
+    qproperty-icon: url(:/icons/file_new.png);
+}
+
+[icon="file-open"] {
+    qproperty-icon: url(:/icons/file_open.png);
+}
+
+[icon="file-save"] {
+    qproperty-icon: url(:/icons/file_save.png);
+}
+
+[icon="file-exit"] {
+    qproperty-icon: url(:/icons/file_exit.png);
+}
+
+[icon="edit-undo"] {
+    qproperty-icon: url(:/icons/edit_undo.png);
+}
+
+[icon="edit-redo"] {
+    qproperty-icon: url(:/icons/edit_redo.png);
+}
+
+/* View Icons */
+[icon="zoom-in"] {
+    qproperty-icon: url(:/icons/view_zoom_in.png);
+}
+
+[icon="zoom-out"] {
+    qproperty-icon: url(:/icons/view_zoom_out.png);
+}
+
+[icon="zoom-reset"] {
+    qproperty-icon: url(:/icons/view_zoom_reset.png);
+}
+
+/* Feature Icons */
+[icon="feature-drawing"] {
+    qproperty-icon: url(:/icons/feature_drawing.png);
+}
+
+[icon="feature-export"] {
+    qproperty-icon: url(:/icons/feature_export.png);
+}
+
+[icon="feature-chat"] {
+    qproperty-icon: url(:/icons/feature_chat.png);
+}
+
+[icon="feature-code"] {
+    qproperty-icon: url(:/icons/feature_code.png);
+}
+
+[icon="feature-ui"] {
+    qproperty-icon: url(:/icons/feature_ui.png);
+}
+
+[icon="feature-plugins"] {
+    qproperty-icon: url(:/icons/feature_plugins.png);
+}
+
+[icon="feature-performance"] {
+    qproperty-icon: url(:/icons/feature_performance.png);
+}

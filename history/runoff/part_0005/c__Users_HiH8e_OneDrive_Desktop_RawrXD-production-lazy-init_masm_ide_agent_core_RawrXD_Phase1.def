@@ -1,0 +1,37 @@
+LIBRARY RawrXD_AgentPhase1
+
+EXPORTS
+    ; IDE_01_MASTER.asm - Core autonomous loop
+    IDEMaster_Initialize              @1
+    IDEMaster_LoadModel                @2
+    IDEMaster_HotSwapModel            @3
+    IDEMaster_ExecuteAgenticTask      @4
+    AgentPlan_Create                  @200
+    AgentPlan_Resolve                 @201
+    AgentLoop_SingleStep              @202
+    AgentLoop_RunUntilDone            @203
+
+    ; IDE_03_DEBUG.asm - Debugging Infrastructure
+    DAP_Initialize                    @300
+    DAP_Launch                        @301
+    DAP_SetBreakpoints                @302
+    DAP_Continue                      @303
+    DAP_Pause                         @304
+    DAP_StepIn                        @305
+    DAP_StepOver                      @306
+    DAP_StackTrace                    @307
+    DAP_Scopes                        @308
+    DAP_Variables                     @309
+    DAP_ExceptionInfo                 @310
+    DAP_ReadMemory                    @311
+    DAP_Disassemble                   @312
+
+    ; IDE_04_EXT.asm - Extension System
+    ExtensionManager_Init             @400
+    DiscoverExtensions                @401
+    LoadExtensionFromDirectory        @402
+    ExecuteExtensionCommand           @403
+    InstallExtension                  @404
+    SearchExtensions                  @405
+    ActivateExtension                 @406
+    DeactivateExtension               @407

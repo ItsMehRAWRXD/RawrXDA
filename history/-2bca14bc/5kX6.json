@@ -1,0 +1,769 @@
+{
+  "$schema": "RawrXD-IDE Agentic Tool Schema v1.0",
+  "description": "OpenAI function-calling compatible tool definitions for the RawrXD IDE. Used to train the model on autonomous tool invocation.",
+
+  "core_tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "read_file",
+        "description": "Read the contents of a file in the workspace. Returns text content with line numbers.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": { "type": "string", "description": "Absolute or workspace-relative file path to read" },
+            "start_line": { "type": "integer", "description": "1-based start line (optional, default 1)" },
+            "end_line": { "type": "integer", "description": "1-based end line (optional, default EOF)" }
+          },
+          "required": ["path"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "write_file",
+        "description": "Create a new file or overwrite an existing file with the given content.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": { "type": "string", "description": "Absolute or workspace-relative file path" },
+            "content": { "type": "string", "description": "Full file content to write" }
+          },
+          "required": ["path", "content"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "edit_file",
+        "description": "Replace a specific text range in an existing file. Provide exact old text and its replacement.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": { "type": "string", "description": "File path to edit" },
+            "old_text": { "type": "string", "description": "Exact text to find and replace (must match uniquely)" },
+            "new_text": { "type": "string", "description": "Replacement text" }
+          },
+          "required": ["path", "old_text", "new_text"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "delete_file",
+        "description": "Delete a file from the workspace.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": { "type": "string", "description": "File path to delete" }
+          },
+          "required": ["path"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "list_directory",
+        "description": "List all files and subdirectories in a directory.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": { "type": "string", "description": "Directory path to list" },
+            "recursive": { "type": "boolean", "description": "Include subdirectories recursively", "default": false },
+            "pattern": { "type": "string", "description": "Glob pattern filter (e.g. '*.cpp')" }
+          },
+          "required": ["path"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "search_files",
+        "description": "Search for text or regex patterns across workspace files.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "query": { "type": "string", "description": "Search pattern (text or regex)" },
+            "is_regex": { "type": "boolean", "description": "Treat query as regex", "default": false },
+            "include_pattern": { "type": "string", "description": "Glob pattern to filter which files to search" },
+            "max_results": { "type": "integer", "description": "Maximum number of results", "default": 50 }
+          },
+          "required": ["query"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "semantic_search",
+        "description": "Search the codebase using natural language semantic similarity. Good for finding code by concept rather than exact text.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "query": { "type": "string", "description": "Natural language description of what to find" }
+          },
+          "required": ["query"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "run_terminal",
+        "description": "Execute a shell command in the integrated terminal. Returns stdout, stderr, and exit code.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "command": { "type": "string", "description": "Shell command to execute" },
+            "cwd": { "type": "string", "description": "Working directory for the command" },
+            "timeout_ms": { "type": "integer", "description": "Timeout in milliseconds (0 = no timeout)", "default": 60000 },
+            "background": { "type": "boolean", "description": "Run as background process", "default": false }
+          },
+          "required": ["command"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "run_build",
+        "description": "Build the project using CMake or the configured build system.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "target": { "type": "string", "description": "Build target (e.g. 'RawrXD-Shell', 'self_test_gate')" },
+            "config": { "type": "string", "enum": ["Debug", "Release", "RelWithDebInfo"], "default": "Release" },
+            "clean": { "type": "boolean", "description": "Clean before building", "default": false }
+          },
+          "required": []
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "get_errors",
+        "description": "Get compile errors, lint warnings, and diagnostics for files in the workspace.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "file_paths": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Specific files to check. Omit for all errors."
+            }
+          },
+          "required": []
+        }
+      }
+    }
+  ],
+
+  "lsp_tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "goto_definition",
+        "description": "Navigate to the definition of a symbol at a given location.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "file": { "type": "string", "description": "File containing the symbol reference" },
+            "line": { "type": "integer", "description": "1-based line number" },
+            "column": { "type": "integer", "description": "1-based column number" },
+            "symbol": { "type": "string", "description": "Symbol name to find definition of" }
+          },
+          "required": ["file", "symbol"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "find_references",
+        "description": "Find all references/usages of a symbol across the workspace.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "symbol": { "type": "string", "description": "Symbol name to find references of" },
+            "file": { "type": "string", "description": "File likely containing the symbol definition (speeds up search)" }
+          },
+          "required": ["symbol"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "get_symbols",
+        "description": "Get all symbols (classes, functions, variables) defined in a file or workspace.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "file": { "type": "string", "description": "File to get symbols from. Omit for workspace-wide." },
+            "kind": { "type": "string", "enum": ["class", "function", "method", "variable", "enum", "struct", "namespace", "all"], "default": "all" }
+          },
+          "required": []
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "get_hover_info",
+        "description": "Get type information and documentation for a symbol at a location.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "file": { "type": "string", "description": "File path" },
+            "line": { "type": "integer", "description": "1-based line" },
+            "column": { "type": "integer", "description": "1-based column" }
+          },
+          "required": ["file", "line", "column"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "get_completions",
+        "description": "Get code completion suggestions at a location.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "file": { "type": "string", "description": "File path" },
+            "line": { "type": "integer", "description": "1-based line" },
+            "column": { "type": "integer", "description": "1-based column" },
+            "trigger_character": { "type": "string", "description": "Character that triggered completion (e.g. '.', '::', '(')" }
+          },
+          "required": ["file", "line", "column"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "get_call_hierarchy",
+        "description": "Get incoming and outgoing call hierarchy for a function.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "symbol": { "type": "string", "description": "Function/method name" },
+            "file": { "type": "string", "description": "File containing the function" },
+            "direction": { "type": "string", "enum": ["incoming", "outgoing", "both"], "default": "both" }
+          },
+          "required": ["symbol"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "get_diagnostics",
+        "description": "Get LSP diagnostics (errors, warnings, hints) for a file.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "file": { "type": "string", "description": "File to get diagnostics for. Omit for all." }
+          },
+          "required": []
+        }
+      }
+    }
+  ],
+
+  "refactoring_tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "refactor",
+        "description": "Apply a refactoring operation to the code. Supports 20 built-in refactorings including extract method/variable, rename, convert to modern C++, organize includes, add safety checks, and more.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "operation": {
+              "type": "string",
+              "enum": [
+                "extract_method", "extract_variable", "rename_symbol",
+                "convert_for_to_range_for", "convert_raw_to_smart_ptr",
+                "organize_includes", "add_null_checks", "convert_sync_to_async",
+                "convert_to_auto", "convert_to_structured_bindings",
+                "flip_conditional", "merge_nested_if",
+                "convert_string_to_string_view", "inline_variable",
+                "extract_interface", "convert_to_constexpr",
+                "remove_dead_code", "simplify_boolean",
+                "convert_callback_to_coroutine", "split_declaration"
+              ],
+              "description": "The refactoring operation to apply"
+            },
+            "file": { "type": "string", "description": "Target file" },
+            "start_line": { "type": "integer", "description": "Start line of the selection" },
+            "end_line": { "type": "integer", "description": "End line of the selection" },
+            "new_name": { "type": "string", "description": "New name (for rename operations)" },
+            "preview": { "type": "boolean", "description": "Preview changes without applying", "default": false }
+          },
+          "required": ["operation", "file"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "bulk_refactor",
+        "description": "Apply refactoring operations across multiple files simultaneously.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "strategy": {
+              "type": "string",
+              "enum": ["compile_error_fix", "format_enforcement", "refactor_rename", "stub_implementation", "header_include_fix", "lint_fix", "test_generation", "doc_comment", "security_audit_fix"],
+              "description": "Bulk fix strategy to apply"
+            },
+            "file_paths": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Files to process"
+            }
+          },
+          "required": ["strategy", "file_paths"]
+        }
+      }
+    }
+  ],
+
+  "debug_tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "debug_analyze_crash",
+        "description": "Analyze a crash report and determine root cause. Uses 13-category bug classification and 6 debug strategies.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "crash_file": { "type": "string", "description": "Path to crash dump or core dump" },
+            "registers": { "type": "object", "description": "Register state at crash point" },
+            "stack_trace": { "type": "string", "description": "Stack trace text" }
+          },
+          "required": []
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "debug_set_watchpoint",
+        "description": "Set an automatic watchpoint on a variable to track value changes.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "variable": { "type": "string", "description": "Variable name to watch" },
+            "file": { "type": "string", "description": "Source file" },
+            "line": { "type": "integer", "description": "Line number" },
+            "action": { "type": "string", "enum": ["break", "log", "trace", "alert"], "default": "break" },
+            "condition": { "type": "string", "description": "Conditional expression (optional)" }
+          },
+          "required": ["variable", "file", "line"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "debug_bisect",
+        "description": "Perform git bisect to find the commit that introduced a bug.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "good_commit": { "type": "string", "description": "Known good commit hash" },
+            "bad_commit": { "type": "string", "description": "Known bad commit hash" },
+            "test_command": { "type": "string", "description": "Command that returns 0 for good, non-zero for bad" }
+          },
+          "required": ["good_commit", "bad_commit", "test_command"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "debug_trace_backwards",
+        "description": "Trace a variable's value backwards through the code to find where it was set incorrectly (taint analysis).",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "variable": { "type": "string", "description": "Variable to trace" },
+            "file": { "type": "string", "description": "File where the variable is observed" },
+            "line": { "type": "integer", "description": "Line where the variable is observed" }
+          },
+          "required": ["variable", "file", "line"]
+        }
+      }
+    }
+  ],
+
+  "hotpatch_tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "hotpatch_memory",
+        "description": "Apply a direct memory patch to a loaded model's tensor data in RAM. Uses VirtualProtect/mprotect.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "address": { "type": "string", "description": "Target address (hex string)" },
+            "size": { "type": "integer", "description": "Patch size in bytes" },
+            "data": { "type": "string", "description": "Patch data (hex encoded)" },
+            "layer": { "type": "string", "description": "Target layer name (optional)" }
+          },
+          "required": ["address", "size", "data"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "hotpatch_bytes",
+        "description": "Apply a precision byte-level patch to a GGUF file on disk without full reparse.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "filename": { "type": "string", "description": "GGUF file path" },
+            "offset": { "type": "integer", "description": "Byte offset in file" },
+            "data": { "type": "string", "description": "Replacement bytes (hex encoded)" },
+            "pattern": { "type": "string", "description": "Pattern to search for instead of using offset" },
+            "mutation": { "type": "string", "enum": ["xor", "rotate", "swap", "reverse", "replace"], "default": "replace" }
+          },
+          "required": ["filename"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "hotpatch_server",
+        "description": "Add a runtime transform to the inference server's request/response pipeline.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string", "description": "Patch name identifier" },
+            "injection_point": { "type": "string", "enum": ["PreRequest", "PostRequest", "PreResponse", "PostResponse", "StreamChunk"] },
+            "transform_code": { "type": "string", "description": "C++ lambda or function code for the transform" }
+          },
+          "required": ["name", "injection_point", "transform_code"]
+        }
+      }
+    }
+  ],
+
+  "git_tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "git_status",
+        "description": "Get current git status showing staged, unstaged, and untracked files.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "repo_path": { "type": "string", "description": "Repository path (default: workspace root)" }
+          },
+          "required": []
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "git_diff",
+        "description": "Get diff of current changes or between commits.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "state": { "type": "string", "enum": ["staged", "unstaged", "all"], "default": "all" },
+            "file": { "type": "string", "description": "Specific file to diff" }
+          },
+          "required": []
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "git_commit",
+        "description": "Stage and commit changes with an auto-generated or custom message.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "message": { "type": "string", "description": "Commit message (auto-generated if omitted)" },
+            "files": { "type": "array", "items": { "type": "string" }, "description": "Specific files to stage. Omit for all." }
+          },
+          "required": []
+        }
+      }
+    }
+  ],
+
+  "knowledge_tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "knowledge_search",
+        "description": "Search the project's knowledge graph for decisions, patterns, relationships, and history using 384-dim semantic embeddings.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "query": { "type": "string", "description": "Natural language search query" },
+            "type": { "type": "string", "enum": ["decisions", "relationships", "preferences", "history", "all"], "default": "all" },
+            "top_k": { "type": "integer", "description": "Number of results to return", "default": 5 }
+          },
+          "required": ["query"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "knowledge_record",
+        "description": "Record an architectural decision, code relationship, or observed pattern in the knowledge graph.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "type": { "type": "string", "enum": ["ArchitecturalDecision", "DesignPattern", "BugFix", "Optimization", "Refactoring", "SecurityFix", "APIChange", "ConfigChange", "DependencyUpdate", "Convention"] },
+            "description": { "type": "string", "description": "Description of the decision or pattern" },
+            "file": { "type": "string", "description": "Related file path" },
+            "rationale": { "type": "string", "description": "Why this decision was made" }
+          },
+          "required": ["type", "description"]
+        }
+      }
+    }
+  ],
+
+  "workflow_tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "run_workflow",
+        "description": "Execute a predefined autonomous workflow with snapshot/rollback capability.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "workflow": {
+              "type": "string",
+              "enum": ["compile_fix", "stub_implement", "lint_cleanup", "security_audit", "full_refactor"],
+              "description": "Predefined workflow to run"
+            },
+            "strategy": { "type": "string", "description": "Custom strategy description (for custom workflows)" },
+            "files": { "type": "array", "items": { "type": "string" }, "description": "Target files" },
+            "policy": {
+              "type": "object",
+              "properties": {
+                "max_retries": { "type": "integer", "default": 3 },
+                "timeout_ms": { "type": "integer", "default": 300000 },
+                "auto_rollback": { "type": "boolean", "default": true }
+              }
+            }
+          },
+          "required": ["workflow"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "verify_code",
+        "description": "Run the autonomous verification loop: generate → compile → test → lint → format → commit.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "task_description": { "type": "string", "description": "What the code should do" },
+            "target_file": { "type": "string", "description": "File to verify or generate into" },
+            "fix_strategy": { "type": "string", "enum": ["LLMRewrite", "PatternMatch", "Rollback", "Incremental", "Bisect"], "default": "LLMRewrite" }
+          },
+          "required": ["task_description", "target_file"]
+        }
+      }
+    }
+  ],
+
+  "swarm_tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "swarm_distribute_task",
+        "description": "Distribute a task across the agent swarm for parallel execution.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "task_type": { "type": "string", "enum": ["compile", "test", "lint", "refactor", "analyze", "generate", "debug", "review"] },
+            "files": { "type": "array", "items": { "type": "string" }, "description": "Files to process" },
+            "gpu_required": { "type": "boolean", "description": "Whether GPU acceleration is needed", "default": false }
+          },
+          "required": ["task_type", "files"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "swarm_build",
+        "description": "Execute a distributed build using the swarm coordinator with DAG-based task scheduling.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "source_dir": { "type": "string", "description": "Source directory to build" },
+            "mode": { "type": "string", "enum": ["Standalone", "Coordinated", "Replicated", "Pipeline"], "default": "Coordinated" }
+          },
+          "required": ["source_dir"]
+        }
+      }
+    }
+  ],
+
+  "agentic_meta_tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "think",
+        "description": "Internal reasoning step. Use this to plan multi-step tasks, analyze problems, and decide which tools to use next. Not visible to the user.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "reasoning": { "type": "string", "description": "Internal reasoning and planning" }
+          },
+          "required": ["reasoning"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "delegate_subagent",
+        "description": "Spawn a sub-agent to handle a complex subtask autonomously.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "task": { "type": "string", "description": "Detailed task description for the sub-agent" },
+            "context": { "type": "string", "description": "Relevant context and file paths" }
+          },
+          "required": ["task"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "manage_plan",
+        "description": "Create or update a structured task plan for tracking multi-step work.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "tasks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "integer" },
+                  "title": { "type": "string" },
+                  "status": { "type": "string", "enum": ["not-started", "in-progress", "completed"] }
+                }
+              }
+            }
+          },
+          "required": ["tasks"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "request_user_input",
+        "description": "Ask the user a question when a decision cannot be made autonomously.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "question": { "type": "string", "description": "Question to ask the user" },
+            "options": { "type": "array", "items": { "type": "string" }, "description": "Available options (optional)" }
+          },
+          "required": ["question"]
+        }
+      }
+    }
+  ],
+
+  "recovery_tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "detect_failure",
+        "description": "Analyze a response or output for failure modes: refusal, hallucination, format violation, infinite loop, token limit, resource exhaustion, timeout, safety violation.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "output": { "type": "string", "description": "The output to analyze for failures" },
+            "expected_format": { "type": "string", "description": "Expected output format (optional)" }
+          },
+          "required": ["output"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "correct_response",
+        "description": "Apply agentic correction to a failed response using puppeteer strategies: RefusalBypass, HallucinationCorrector, FormatEnforcer.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "failed_output": { "type": "string", "description": "The failed output to correct" },
+            "failure_type": { "type": "string", "enum": ["Refusal", "Hallucination", "FormatViolation", "InfiniteLoop", "TokenLimitExceeded", "ResourceExhausted", "Timeout", "SafetyViolation"] },
+            "correction_prompt": { "type": "string", "description": "Additional guidance for correction" }
+          },
+          "required": ["failed_output", "failure_type"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "recover",
+        "description": "Execute autonomous recovery from a detected divergence or failure. Strategies include hotpatch redirect, source edit, full rollback.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "strategy": {
+              "type": "string",
+              "enum": ["HotpatchRedirect", "SourceEdit", "Rollback", "Retry", "Degrade", "Escalate", "Quarantine", "FullRollbackAndHalt"]
+            },
+            "context": { "type": "string", "description": "Description of what failed and current state" }
+          },
+          "required": ["strategy", "context"]
+        }
+      }
+    }
+  ],
+
+  "inference_tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "llm_generate",
+        "description": "Generate text using the local LLM inference server. Used for code generation, explanation, review, etc.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "prompt": { "type": "string", "description": "The prompt to send to the model" },
+            "system_prompt": { "type": "string", "description": "System prompt for the model" },
+            "temperature": { "type": "number", "description": "Sampling temperature (0.0-2.0)", "default": 0.1 },
+            "max_tokens": { "type": "integer", "description": "Maximum tokens to generate", "default": 2048 },
+            "stop": { "type": "array", "items": { "type": "string" }, "description": "Stop sequences" }
+          },
+          "required": ["prompt"]
+        }
+      }
+    }
+  ]
+}

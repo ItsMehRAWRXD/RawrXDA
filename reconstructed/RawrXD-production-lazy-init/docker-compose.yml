@@ -1,0 +1,107 @@
+# Docker Compose: Production Deployment
+version: '3.8'
+
+services:
+  rawrxd-agentic-ide:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: rawrxd-agentic-ide:latest
+    container_name: rawrxd-production
+    restart: unless-stopped
+    
+    # Resource limits (production-ready)
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 8192M
+        reservations:
+          cpus: '2.0'
+          memory: 4096M
+    
+    # Environment variables
+    environment:
+      - RAWRXD_ENV=production
+      - LOG_LEVEL=INFO
+    
+    # Volumes for persistence
+    volumes:
+      - ./logs:/opt/rawrxd/logs
+      - ./models:/opt/rawrxd/models
+      - ./data:/opt/rawrxd/data
+      - ./config/production.json:/opt/rawrxd/config/production.json:ro
+    
+    # Network
+    ports:
+      - "9090:9090"  # Prometheus metrics
+    
+    networks:
+      - rawrxd-net
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/metrics"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+
+  # Prometheus for metrics collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    
+    ports:
+      - "9091:9090"
+    
+    networks:
+      - rawrxd-net
+    
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=7d'
+
+  # Grafana for visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./config/grafana-dashboards:/etc/grafana/provisioning/dashboards:ro
+    
+    ports:
+      - "3000:3000"
+    
+    networks:
+      - rawrxd-net
+    
+    depends_on:
+      - prometheus
+
+networks:
+  rawrxd-net:
+    driver: bridge
+
+volumes:
+  prometheus-data:
+  grafana-data:

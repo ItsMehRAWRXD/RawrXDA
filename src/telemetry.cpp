@@ -1,4 +1,5 @@
 #include "telemetry.h"
+#include "win32app/IDELogger.h"
 #if defined(_WIN32) && defined(__has_include)
 #  if __has_include(<windows.h>)
 #    include <windows.h>
@@ -79,8 +80,19 @@ void Telemetry::recordEvent(const std::string& event_name, const nlohmann::json&
     event["timestamp"] = CurrentISOTimestamp();
     event["metadata"] = metadata;
     events_.push_back(event);
-    // In a production system we would also stream this event to a logger.
-    std::cout << "Telemetry event recorded: " << event_name << std::endl;
+    LOG_INFO(std::string("Telemetry event recorded: ") + event_name);
+
+    // Forward to AgenticObservability
+    AgenticObservability::instance().logInfo("Telemetry", event_name, metadata);
+    // Use metadata to potentially hook inference metrics
+    if (event_name == "inference_stats") {
+        if (metadata.contains("tokens_per_second")) {
+            AgenticObservability::instance().updateTokensPerSecond(metadata["tokens_per_second"].get<float>());
+        }
+        if (metadata.contains("iteration_time_ms")) {
+            AgenticObservability::instance().updateAgentLoopIterationTime(metadata["iteration_time_ms"].get<float>());
+        }
+    }
 }
 
 bool Telemetry::saveTelemetry(const std::string& filepath) {
@@ -348,6 +360,8 @@ static double QueryGpuUsage() {
     return -1.0;
 }
 
+#include "agentic_observability.h"
+
 bool Poll(TelemetrySnapshot& out) {
     std::lock_guard<std::mutex> guard(g_lock);
     if (!g_initialized) return false;
@@ -364,6 +378,13 @@ bool Poll(TelemetrySnapshot& out) {
 
     out.gpuUsagePercent = QueryGpuUsage();
     out.gpuVendor = g_gpuVendor;
+
+    // Hook into global observability
+    AgenticObservability::instance().setGauge("hardware_cpu_usage_percent", out.cpuUsagePercent, {}, "%");
+    if (out.cpuTempValid) AgenticObservability::instance().setGauge("hardware_cpu_temp_c", out.cpuTempC, {}, "C");
+    AgenticObservability::instance().setGauge("hardware_gpu_usage_percent", out.gpuUsagePercent, {}, "%");
+    if (out.gpuTempValid) AgenticObservability::instance().setGauge("hardware_gpu_temp_c", out.gpuTempC, {}, "C");
+
     return true;
 }
 
@@ -378,3 +399,5 @@ void Shutdown() {
 }
 
 } // namespace telemetry
+#include <string>
+void logEvent(const char* name, double v1, double v2) {}

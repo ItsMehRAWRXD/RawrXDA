@@ -1,0 +1,79 @@
+# RawrXD Agentic Library
+# Self-manifesting capability system with hotpatching and observability
+
+cmake_minimum_required(VERSION 3.15)
+project(RawrXD-Agentic)
+
+# Set C++ standard
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Include directories
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../
+)
+
+# Source files
+set(AGENTIC_SOURCES
+    bridge/Win32IDEBridge.cpp
+    manifestor/SelfManifestor.cpp
+    wiring/CapabilityRouter.cpp
+    hotpatch/Engine.cpp
+    observability/Telemetry.cpp
+)
+
+# Create library
+add_library(RawrXD-Agentic STATIC ${AGENTIC_SOURCES})
+
+# Target properties
+set_target_properties(RawrXD-Agentic PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+)
+
+# Link dependencies
+target_link_libraries(RawrXD-Agentic
+    # Windows libraries
+    kernel32
+    user32
+    advapi32
+    
+    # External dependencies (if any)
+    # minhook # Uncomment if using minhook for detours
+)
+
+# Compiler definitions
+target_compile_definitions(RawrXD-Agentic PRIVATE
+    $<$<CONFIG:Debug>:AGENTIC_DEBUG=1>
+    $<$<CONFIG:Release>:AGENTIC_RELEASE=1>
+)
+
+# Feature flags
+target_compile_definitions(RawrXD-Agentic PRIVATE
+    $<$<BOOL:${ENABLE_VULKAN}>:AGENTIC_VULKAN=1>
+    $<$<BOOL:${ENABLE_HOTPATCH}>:AGENTIC_HOTPATCH=1>
+    $<$<BOOL:${ENABLE_OBSERVABILITY}>:AGENTIC_OBSERVABILITY=1>
+)
+
+# Include what you use
+target_include_directories(RawrXD-Agentic PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+# Installation
+install(TARGETS RawrXD-Agentic
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib
+    RUNTIME DESTINATION bin
+)
+
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/
+    DESTINATION include/agentic
+    FILES_MATCHING PATTERN "*.hpp"
+)
+
+# Tests (if enabled)
+if(BUILD_TESTING)
+    add_subdirectory(tests)
+endif()

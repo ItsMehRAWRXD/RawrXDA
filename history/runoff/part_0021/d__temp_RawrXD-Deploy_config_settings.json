@@ -1,0 +1,58 @@
+{
+  "version": "1.0.0",
+  "application": {
+    "name": "RawrXD Agentic IDE",
+    "description": "AI-powered code editor with local inference"
+  },
+  "gpu": {
+    "enabled": true,
+    "backend": "vulkan",
+    "device_index": 0,
+    "layers_offload": 32,
+    "memory_fraction": 0.9
+  },
+  "model": {
+    "default": "phi-3-mini.gguf",
+    "fallback": "tinyllama.gguf",
+    "models_directory": "../models",
+    "auto_load": true
+  },
+  "inference": {
+    "temperature": 0.7,
+    "top_p": 0.9,
+    "top_k": 40,
+    "max_tokens": 512,
+    "context_window": 4096,
+    "batch_size": 512
+  },
+  "completion": {
+    "enabled": true,
+    "trigger_delay_ms": 150,
+    "min_prefix_length": 3,
+    "max_suggestions": 5,
+    "inline_ghost_text": true
+  },
+  "agent": {
+    "enabled": true,
+    "auto_execute": false,
+    "max_iterations": 10,
+    "workspace_root": "."
+  },
+  "ui": {
+    "theme": "dark",
+    "font_family": "JetBrains Mono",
+    "font_size": 13,
+    "show_line_numbers": true,
+    "word_wrap": false
+  },
+  "telemetry": {
+    "enabled": false,
+    "anonymous": true
+  },
+  "logging": {
+    "level": "info",
+    "file": "logs/rawrxd.log",
+    "max_size_mb": 10,
+    "max_files": 5
+  }
+}

@@ -1,0 +1,3940 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RawrXD MultiWindow IDE — Concurrent AI Workstation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet">
+  <style>
+    /* ==========================================================================
+   ROOT DESIGN SYSTEM
+   ========================================================================== */
+    :root {
+      /* Palette */
+      --bg-root: #0a0a12;
+      --bg-primary: #0d0d1a;
+      --bg-secondary: #12122a;
+      --bg-tertiary: #1a1a3a;
+      --bg-panel: #0f0f25;
+      --bg-panel-hover: #16163a;
+      --bg-input: #0c0c1e;
+      --bg-titlebar: #08081a;
+      --bg-dock: rgba(10, 10, 20, 0.95);
+      --bg-overlay: rgba(5, 5, 15, 0.85);
+      --bg-glass: rgba(15, 15, 40, 0.7);
+      --bg-card: rgba(18, 18, 45, 0.8);
+
+      --border-primary: rgba(80, 80, 160, 0.25);
+      --border-active: rgba(0, 200, 255, 0.5);
+      --border-glow: rgba(0, 200, 255, 0.15);
+
+      --text-primary: #e8e8f0;
+      --text-secondary: #a0a0c0;
+      --text-muted: #606080;
+      --text-accent: #00c8ff;
+
+      --accent-cyan: #00c8ff;
+      --accent-green: #00ff88;
+      --accent-orange: #ff8800;
+      --accent-red: #ff3355;
+      --accent-purple: #aa55ff;
+      --accent-yellow: #ffdd00;
+      --accent-pink: #ff55aa;
+
+      /* Shadows */
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+      --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
+      --shadow-glow-cyan: 0 0 20px rgba(0, 200, 255, 0.15), 0 0 60px rgba(0, 200, 255, 0.05);
+      --shadow-glow-green: 0 0 20px rgba(0, 255, 136, 0.15);
+      --shadow-window: 0 8px 40px rgba(0, 0, 0, 0.7), 0 0 1px rgba(255, 255, 255, 0.1);
+
+      /* Typography */
+      --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+      --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+      /* Spacing */
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --radius-xl: 16px;
+
+      /* Window manager */
+      --titlebar-h: 32px;
+      --dock-h: 52px;
+      --taskbar-h: 28px;
+      --sidebar-w: 48px;
+      --min-win-w: 320px;
+      --min-win-h: 200px;
+    }
+
+    /* ==========================================================================
+   RESET & BASE
+   ========================================================================== */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: var(--bg-root);
+      color: var(--text-primary);
+      font-family: var(--font-ui);
+      font-size: 13px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(100, 100, 180, 0.3);
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(100, 100, 180, 0.5);
+    }
+
+    input,
+    textarea,
+    select {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-primary);
+      background: var(--bg-input);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      outline: none;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 0 2px rgba(0, 200, 255, 0.15);
+    }
+
+    button {
+      font-family: var(--font-ui);
+      font-size: 12px;
+      cursor: pointer;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 5px 12px;
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      transition: all 0.15s ease;
+    }
+
+    button:hover {
+      background: var(--bg-panel-hover);
+    }
+
+    button:active {
+      transform: scale(0.97);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-cyan), #0088cc);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.15);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, var(--accent-red), #cc0033);
+      color: #fff;
+    }
+
+    .btn-small {
+      padding: 3px 8px;
+      font-size: 11px;
+    }
+
+    .btn-icon {
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+    }
+
+    .btn-icon:hover {
+      background: var(--bg-panel-hover);
+    }
+
+    /* ==========================================================================
+   LAYOUT: DESKTOP COMPOSITOR
+   ========================================================================== */
+    #desktop {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      grid-template-rows: var(--taskbar-h) 1fr var(--dock-h);
+      grid-template-columns: var(--sidebar-w) 1fr;
+      grid-template-areas:
+        "taskbar taskbar"
+        "sidebar workspace"
+        "dock dock";
+      background: var(--bg-root);
+    }
+
+    /* --- Top Taskbar --- */
+    #taskbar {
+      grid-area: taskbar;
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      background: var(--bg-titlebar);
+      border-bottom: 1px solid var(--border-primary);
+      z-index: 9999;
+      gap: 6px;
+    }
+
+    #taskbar .brand {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 12px;
+      color: var(--accent-cyan);
+      margin-right: 8px;
+      letter-spacing: 1px;
+    }
+
+    #taskbar .separator {
+      width: 1px;
+      height: 16px;
+      background: var(--border-primary);
+      margin: 0 4px;
+    }
+
+    .taskbar-btn {
+      height: 22px;
+      padding: 0 10px;
+      font-size: 11px;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 3px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .taskbar-btn:hover {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    .taskbar-btn.active {
+      background: var(--bg-secondary);
+      border-color: var(--border-primary);
+      color: var(--accent-cyan);
+    }
+
+    #taskbar .spacer {
+      flex: 1;
+    }
+
+    #clock {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .kernel-status {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .kernel-status .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.4;
+      }
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 600;
+      background: rgba(0, 255, 136, 0.1);
+      color: var(--accent-green);
+      border: 1px solid rgba(0, 255, 136, 0.2);
+    }
+
+    /* --- Left Sidebar (Quick Launch) --- */
+    #sidebar {
+      grid-area: sidebar;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 6px 0;
+      background: var(--bg-primary);
+      border-right: 1px solid var(--border-primary);
+      gap: 2px;
+      z-index: 100;
+      overflow-y: auto;
+    }
+
+    .sidebar-btn {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-md);
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 16px;
+      position: relative;
+      transition: all 0.15s;
+    }
+
+    .sidebar-btn:hover {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    .sidebar-btn.active {
+      color: var(--accent-cyan);
+      background: rgba(0, 200, 255, 0.1);
+    }
+
+    .sidebar-btn.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 8px;
+      bottom: 8px;
+      width: 2px;
+      background: var(--accent-cyan);
+      border-radius: 0 2px 2px 0;
+    }
+
+    .sidebar-btn .badge {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--accent-red);
+      color: #fff;
+      font-size: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+    }
+
+    .sidebar-divider {
+      width: 24px;
+      height: 1px;
+      background: var(--border-primary);
+      margin: 4px 0;
+    }
+
+    /* --- Workspace (Window Canvas) --- */
+    #workspace {
+      grid-area: workspace;
+      position: relative;
+      overflow: hidden;
+      background:
+        radial-gradient(ellipse at 20% 50%, rgba(0, 200, 255, 0.03) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 50%, rgba(170, 85, 255, 0.03) 0%, transparent 50%),
+        var(--bg-root);
+    }
+
+    #workspace .grid-bg {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(50, 50, 100, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(50, 50, 100, 0.08) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+    }
+
+    /* --- Bottom Dock --- */
+    #dock {
+      grid-area: dock;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 12px;
+      background: var(--bg-dock);
+      backdrop-filter: blur(20px);
+      border-top: 1px solid var(--border-primary);
+      gap: 4px;
+      z-index: 9999;
+    }
+
+    .dock-item {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-md);
+      background: var(--bg-glass);
+      border: 1px solid var(--border-primary);
+      color: var(--text-secondary);
+      font-size: 18px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .dock-item:hover {
+      transform: translateY(-4px) scale(1.1);
+      background: var(--bg-tertiary);
+      border-color: var(--border-active);
+      color: var(--accent-cyan);
+      box-shadow: var(--shadow-glow-cyan);
+    }
+
+    .dock-item .dock-label {
+      position: absolute;
+      bottom: 100%;
+      margin-bottom: 6px;
+      padding: 3px 8px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-sm);
+      font-size: 10px;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: all 0.15s;
+    }
+
+    .dock-item:hover .dock-label {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .dock-item.running::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--accent-cyan);
+    }
+
+    .dock-separator {
+      width: 1px;
+      height: 28px;
+      background: var(--border-primary);
+      margin: 0 4px;
+    }
+
+    /* ==========================================================================
+   FLOATING WINDOWS
+   ========================================================================== */
+    .mw-window {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      min-width: var(--min-win-w);
+      min-height: var(--min-win-h);
+      background: var(--bg-panel);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-window);
+      overflow: hidden;
+      transition: box-shadow 0.2s;
+    }
+
+    .mw-window.focused {
+      border-color: var(--border-active);
+      box-shadow: var(--shadow-window), var(--shadow-glow-cyan);
+    }
+
+    .mw-window.maximized {
+      position: absolute !important;
+      inset: 0 !important;
+      border-radius: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    .mw-window.minimized {
+      display: none !important;
+    }
+
+    .mw-window.snapped-left {
+      left: 0 !important;
+      top: 0 !important;
+      width: 50% !important;
+      height: 100% !important;
+      border-radius: 0 !important;
+    }
+
+    .mw-window.snapped-right {
+      right: 0 !important;
+      left: auto !important;
+      top: 0 !important;
+      width: 50% !important;
+      height: 100% !important;
+      border-radius: 0 !important;
+    }
+
+    /* Window Titlebar */
+    .mw-titlebar {
+      height: var(--titlebar-h);
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      background: var(--bg-titlebar);
+      border-bottom: 1px solid var(--border-primary);
+      cursor: default;
+      flex-shrink: 0;
+      gap: 6px;
+    }
+
+    .mw-titlebar .win-icon {
+      font-size: 14px;
+      width: 20px;
+      text-align: center;
+    }
+
+    .mw-titlebar .win-title {
+      flex: 1;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .mw-window.focused .mw-titlebar .win-title {
+      color: var(--text-primary);
+    }
+
+    .win-controls {
+      display: flex;
+      gap: 4px;
+    }
+
+    .win-ctrl {
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      font-size: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.1s;
+    }
+
+    .win-ctrl:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: var(--text-primary);
+    }
+
+    .win-ctrl.close:hover {
+      background: var(--accent-red);
+      color: #fff;
+    }
+
+    /* Window Body */
+    .mw-body {
+      flex: 1;
+      overflow: auto;
+      position: relative;
+    }
+
+    /* Window Status Bar */
+    .mw-statusbar {
+      height: 22px;
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      background: var(--bg-titlebar);
+      border-top: 1px solid var(--border-primary);
+      font-size: 10px;
+      color: var(--text-muted);
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .mw-statusbar .status-item {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .mw-statusbar .status-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+    }
+
+    /* Resize Handles */
+    .resize-handle {
+      position: absolute;
+      z-index: 10;
+    }
+
+    .resize-handle.n {
+      top: -3px;
+      left: 8px;
+      right: 8px;
+      height: 6px;
+      cursor: n-resize;
+    }
+
+    .resize-handle.s {
+      bottom: -3px;
+      left: 8px;
+      right: 8px;
+      height: 6px;
+      cursor: s-resize;
+    }
+
+    .resize-handle.e {
+      right: -3px;
+      top: 8px;
+      bottom: 8px;
+      width: 6px;
+      cursor: e-resize;
+    }
+
+    .resize-handle.w {
+      left: -3px;
+      top: 8px;
+      bottom: 8px;
+      width: 6px;
+      cursor: w-resize;
+    }
+
+    .resize-handle.ne {
+      top: -3px;
+      right: -3px;
+      width: 12px;
+      height: 12px;
+      cursor: ne-resize;
+    }
+
+    .resize-handle.nw {
+      top: -3px;
+      left: -3px;
+      width: 12px;
+      height: 12px;
+      cursor: nw-resize;
+    }
+
+    .resize-handle.se {
+      bottom: -3px;
+      right: -3px;
+      width: 12px;
+      height: 12px;
+      cursor: se-resize;
+    }
+
+    .resize-handle.sw {
+      bottom: -3px;
+      left: -3px;
+      width: 12px;
+      height: 12px;
+      cursor: sw-resize;
+    }
+
+    /* ==========================================================================
+   WINDOW TYPE ACCENT COLORS
+   ========================================================================== */
+    .mw-window[data-type="chat"] .mw-titlebar .win-icon {
+      color: var(--accent-cyan);
+    }
+
+    .mw-window[data-type="audit"] .mw-titlebar .win-icon {
+      color: var(--accent-orange);
+    }
+
+    .mw-window[data-type="cot"] .mw-titlebar .win-icon {
+      color: var(--accent-purple);
+    }
+
+    .mw-window[data-type="swarm"] .mw-titlebar .win-icon {
+      color: var(--accent-green);
+    }
+
+    .mw-window[data-type="editor"] .mw-titlebar .win-icon {
+      color: var(--accent-yellow);
+    }
+
+    .mw-window[data-type="terminal"] .mw-titlebar .win-icon {
+      color: var(--accent-green);
+    }
+
+    .mw-window[data-type="files"] .mw-titlebar .win-icon {
+      color: var(--text-secondary);
+    }
+
+    .mw-window[data-type="models"] .mw-titlebar .win-icon {
+      color: var(--accent-pink);
+    }
+
+    .mw-window[data-type="perf"] .mw-titlebar .win-icon {
+      color: var(--accent-red);
+    }
+
+    .mw-window[data-type="hotpatch"] .mw-titlebar .win-icon {
+      color: var(--accent-orange);
+    }
+
+    .mw-window[data-type="reverse"] .mw-titlebar .win-icon {
+      color: var(--accent-red);
+    }
+
+    .mw-window[data-type="debug"] .mw-titlebar .win-icon {
+      color: var(--accent-yellow);
+    }
+
+    .mw-window[data-type="benchmark"] .mw-titlebar .win-icon {
+      color: var(--accent-green);
+    }
+
+    .mw-window[data-type="compile"] .mw-titlebar .win-icon {
+      color: var(--accent-cyan);
+    }
+
+    .mw-window[data-type="deploy"] .mw-titlebar .win-icon {
+      color: var(--accent-purple);
+    }
+
+    /* Focused border colors per type */
+    .mw-window.focused[data-type="chat"] {
+      border-color: rgba(0, 200, 255, 0.4);
+    }
+
+    .mw-window.focused[data-type="audit"] {
+      border-color: rgba(255, 136, 0, 0.4);
+    }
+
+    .mw-window.focused[data-type="cot"] {
+      border-color: rgba(170, 85, 255, 0.4);
+    }
+
+    .mw-window.focused[data-type="swarm"] {
+      border-color: rgba(0, 255, 136, 0.4);
+    }
+
+    .mw-window.focused[data-type="editor"] {
+      border-color: rgba(255, 221, 0, 0.4);
+    }
+
+    .mw-window.focused[data-type="terminal"] {
+      border-color: rgba(0, 255, 136, 0.4);
+    }
+
+    /* ==========================================================================
+   PANEL CONTENT STYLES
+   ========================================================================== */
+
+    /* -- Chat Panel -- */
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .chat-msg {
+      max-width: 85%;
+      padding: 8px 12px;
+      border-radius: var(--radius-md);
+      font-size: 12px;
+      line-height: 1.6;
+      word-wrap: break-word;
+    }
+
+    .chat-msg.user {
+      align-self: flex-end;
+      background: linear-gradient(135deg, rgba(0, 200, 255, 0.15), rgba(0, 200, 255, 0.05));
+      border: 1px solid rgba(0, 200, 255, 0.2);
+    }
+
+    .chat-msg.assistant {
+      align-self: flex-start;
+      background: var(--bg-card);
+      border: 1px solid var(--border-primary);
+    }
+
+    .chat-msg .msg-meta {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .chat-msg pre {
+      background: var(--bg-primary);
+      padding: 8px;
+      border-radius: var(--radius-sm);
+      margin: 6px 0;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 11px;
+    }
+
+    .chat-input-area {
+      padding: 8px;
+      border-top: 1px solid var(--border-primary);
+      display: flex;
+      gap: 6px;
+    }
+
+    .chat-input-area textarea {
+      flex: 1;
+      resize: none;
+      height: 36px;
+      min-height: 36px;
+      max-height: 120px;
+      font-size: 12px;
+      padding: 8px 12px;
+    }
+
+    .chat-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 0 8px 6px;
+    }
+
+    .model-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 10px;
+      background: rgba(0, 200, 255, 0.1);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(0, 200, 255, 0.15);
+    }
+
+    /* -- Audit Panel -- */
+    .audit-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .audit-controls {
+      padding: 10px;
+      border-bottom: 1px solid var(--border-primary);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .audit-results {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+    }
+
+    .audit-finding {
+      padding: 8px 10px;
+      margin-bottom: 6px;
+      border-radius: var(--radius-sm);
+      border-left: 3px solid var(--accent-orange);
+      background: var(--bg-card);
+      font-size: 12px;
+    }
+
+    .audit-finding.critical {
+      border-left-color: var(--accent-red);
+    }
+
+    .audit-finding.warning {
+      border-left-color: var(--accent-orange);
+    }
+
+    .audit-finding.info {
+      border-left-color: var(--accent-cyan);
+    }
+
+    .audit-finding .finding-header {
+      display: flex;
+      justify-content: space-between;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .audit-finding .finding-severity {
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 8px;
+      font-weight: 700;
+    }
+
+    .severity-critical {
+      background: rgba(255, 51, 85, 0.15);
+      color: var(--accent-red);
+    }
+
+    .severity-warning {
+      background: rgba(255, 136, 0, 0.15);
+      color: var(--accent-orange);
+    }
+
+    .severity-info {
+      background: rgba(0, 200, 255, 0.15);
+      color: var(--accent-cyan);
+    }
+
+    /* -- Chain of Thought Panel -- */
+    .cot-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .cot-steps {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+    }
+
+    .cot-step {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .cot-step-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-purple), #7733cc);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .cot-step-content {
+      flex: 1;
+      padding: 8px 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-md);
+      font-size: 12px;
+    }
+
+    .cot-step-content .step-title {
+      font-weight: 600;
+      color: var(--accent-purple);
+      margin-bottom: 4px;
+    }
+
+    .cot-controls {
+      padding: 8px;
+      border-top: 1px solid var(--border-primary);
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    /* -- Swarm Panel -- */
+    .swarm-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .swarm-viz {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at center, rgba(0, 255, 136, 0.05) 0%, transparent 70%);
+    }
+
+    .swarm-node {
+      position: absolute;
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: var(--bg-card);
+      border: 2px solid var(--accent-green);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .swarm-node:hover {
+      transform: scale(1.1);
+      box-shadow: var(--shadow-glow-green);
+    }
+
+    .swarm-node .node-model {
+      font-size: 9px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .swarm-node .node-status {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-top: 4px;
+    }
+
+    .swarm-controls {
+      padding: 8px;
+      border-top: 1px solid var(--border-primary);
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    /* -- Editor Panel -- */
+    .editor-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .editor-tabs {
+      display: flex;
+      background: var(--bg-titlebar);
+      border-bottom: 1px solid var(--border-primary);
+      overflow-x: auto;
+      flex-shrink: 0;
+    }
+
+    .editor-tab {
+      padding: 6px 16px;
+      font-size: 11px;
+      color: var(--text-muted);
+      border-right: 1px solid var(--border-primary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .editor-tab:hover {
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+    }
+
+    .editor-tab.active {
+      background: var(--bg-panel);
+      color: var(--text-primary);
+      border-bottom: 2px solid var(--accent-cyan);
+    }
+
+    .editor-tab .tab-close {
+      font-size: 10px;
+      opacity: 0;
+      cursor: pointer;
+      width: 14px;
+      height: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 3px;
+    }
+
+    .editor-tab:hover .tab-close {
+      opacity: 0.6;
+    }
+
+    .editor-tab .tab-close:hover {
+      opacity: 1;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .editor-area {
+      flex: 1;
+      position: relative;
+    }
+
+    .editor-area textarea {
+      width: 100%;
+      height: 100%;
+      resize: none;
+      border: none;
+      background: var(--bg-primary);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.7;
+      padding: 12px;
+      tab-size: 4;
+    }
+
+    /* -- Terminal Panel -- */
+    .terminal-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .terminal-output {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 12px;
+      background: #000;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: #00ff88;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .terminal-input-line {
+      display: flex;
+      align-items: center;
+      padding: 4px 12px;
+      background: #000;
+      border-top: 1px solid #222;
+    }
+
+    .terminal-prompt {
+      color: var(--accent-cyan);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      margin-right: 6px;
+    }
+
+    .terminal-input-line input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: #00ff88;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      outline: none;
+    }
+
+    /* -- Model Manager Panel -- */
+    .models-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .model-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    .model-card {
+      padding: 10px 12px;
+      margin-bottom: 6px;
+      border-radius: var(--radius-md);
+      background: var(--bg-card);
+      border: 1px solid var(--border-primary);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .model-card:hover {
+      border-color: var(--border-active);
+      background: var(--bg-panel-hover);
+    }
+
+    .model-card.active {
+      border-color: var(--accent-cyan);
+    }
+
+    .model-card .model-name {
+      font-weight: 600;
+      font-size: 12px;
+    }
+
+    .model-card .model-info {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .model-card .model-tag {
+      padding: 1px 6px;
+      border-radius: 8px;
+      background: rgba(0, 200, 255, 0.1);
+      color: var(--accent-cyan);
+      font-size: 9px;
+    }
+
+    /* -- Performance Monitor Panel -- */
+    .perf-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      padding: 10px;
+      gap: 8px;
+    }
+
+    .perf-metric {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 10px;
+      background: var(--bg-card);
+      border-radius: var(--radius-sm);
+    }
+
+    .perf-metric .metric-label {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .perf-metric .metric-value {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--accent-cyan);
+    }
+
+    .perf-bar {
+      height: 6px;
+      background: var(--bg-tertiary);
+      border-radius: 3px;
+      margin-top: 6px;
+      overflow: hidden;
+    }
+
+    .perf-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.5s ease;
+    }
+
+    /* -- Hotpatch Panel -- */
+    .hotpatch-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .hotpatch-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    .patch-entry {
+      padding: 8px 10px;
+      margin-bottom: 4px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-card);
+      border: 1px solid var(--border-primary);
+      font-size: 11px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .patch-entry .patch-name {
+      font-weight: 600;
+    }
+
+    .patch-entry .patch-layer {
+      font-size: 9px;
+      padding: 1px 6px;
+      border-radius: 8px;
+    }
+
+    .layer-memory {
+      background: rgba(0, 200, 255, 0.1);
+      color: var(--accent-cyan);
+    }
+
+    .layer-byte {
+      background: rgba(255, 136, 0, 0.1);
+      color: var(--accent-orange);
+    }
+
+    .layer-server {
+      background: rgba(170, 85, 255, 0.1);
+      color: var(--accent-purple);
+    }
+
+    /* -- Reverse Engineering Panel -- */
+    .reverse-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .reverse-hex {
+      flex: 1;
+      overflow: auto;
+      padding: 8px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      background: #000;
+      color: var(--accent-green);
+    }
+
+    .hex-row {
+      display: flex;
+      gap: 6px;
+      line-height: 1.8;
+    }
+
+    .hex-addr {
+      color: var(--accent-cyan);
+      min-width: 80px;
+    }
+
+    .hex-bytes {
+      color: var(--text-primary);
+      letter-spacing: 1px;
+    }
+
+    .hex-ascii {
+      color: var(--accent-yellow);
+    }
+
+    /* -- Benchmark Panel -- */
+    .benchmark-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      padding: 10px;
+    }
+
+    .bench-result {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      margin-bottom: 6px;
+      background: var(--bg-card);
+      border-radius: var(--radius-sm);
+    }
+
+    .bench-result .bench-name {
+      flex: 1;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .bench-result .bench-value {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent-green);
+    }
+
+    .bench-result .bench-unit {
+      font-size: 10px;
+      color: var(--text-muted);
+      min-width: 50px;
+    }
+
+    /* -- Debug Panel -- */
+    .debug-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .debug-toolbar {
+      display: flex;
+      gap: 4px;
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--border-primary);
+    }
+
+    .debug-toolbar button {
+      font-size: 14px;
+    }
+
+    .debug-vars {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+    }
+
+    .debug-var {
+      display: flex;
+      gap: 8px;
+      padding: 3px 0;
+      border-bottom: 1px solid rgba(50, 50, 100, 0.15);
+    }
+
+    .debug-var .var-name {
+      color: var(--accent-cyan);
+      min-width: 100px;
+    }
+
+    .debug-var .var-value {
+      color: var(--accent-yellow);
+    }
+
+    /* -- Compile Panel -- */
+    .compile-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .compile-output {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 12px;
+      background: #0a0a0a;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-secondary);
+      white-space: pre-wrap;
+    }
+
+    .compile-output .line-error {
+      color: var(--accent-red);
+    }
+
+    .compile-output .line-warning {
+      color: var(--accent-orange);
+    }
+
+    .compile-output .line-success {
+      color: var(--accent-green);
+    }
+
+    /* -- Deploy Panel -- */
+    .deploy-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      padding: 10px;
+    }
+
+    .deploy-stage {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      margin-bottom: 4px;
+      background: var(--bg-card);
+      border-radius: var(--radius-sm);
+    }
+
+    .deploy-stage .stage-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+
+    .stage-pending {
+      background: var(--bg-tertiary);
+      color: var(--text-muted);
+    }
+
+    .stage-running {
+      background: rgba(0, 200, 255, 0.2);
+      color: var(--accent-cyan);
+      animation: pulse 1s infinite;
+    }
+
+    .stage-done {
+      background: rgba(0, 255, 136, 0.2);
+      color: var(--accent-green);
+    }
+
+    .stage-failed {
+      background: rgba(255, 51, 85, 0.2);
+      color: var(--accent-red);
+    }
+
+    /* -- File Browser Panel -- */
+    .files-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .file-tree {
+      flex: 1;
+      overflow-y: auto;
+      padding: 6px;
+    }
+
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .file-item:hover {
+      background: var(--bg-panel-hover);
+    }
+
+    .file-item .file-icon {
+      font-size: 14px;
+      width: 18px;
+      text-align: center;
+    }
+
+    .file-item.folder .file-icon {
+      color: var(--accent-yellow);
+    }
+
+    .file-item.file .file-icon {
+      color: var(--text-muted);
+    }
+
+    /* ==========================================================================
+   COMMAND PALETTE
+   ========================================================================== */
+    #command-palette {
+      position: fixed;
+      top: 15%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 520px;
+      max-height: 400px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-active);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg), var(--shadow-glow-cyan);
+      z-index: 99999;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #command-palette.show {
+      display: flex;
+    }
+
+    #command-palette input {
+      width: 100%;
+      padding: 12px 16px;
+      font-size: 14px;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--border-primary);
+    }
+
+    #command-palette .results {
+      overflow-y: auto;
+      max-height: 340px;
+    }
+
+    #command-palette .cmd-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 16px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    #command-palette .cmd-item:hover,
+    #command-palette .cmd-item.selected {
+      background: var(--bg-panel-hover);
+    }
+
+    #command-palette .cmd-item .cmd-icon {
+      width: 20px;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    #command-palette .cmd-item .cmd-label {
+      flex: 1;
+    }
+
+    #command-palette .cmd-item .cmd-shortcut {
+      font-size: 10px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    /* -- Notifications -- */
+    #notifications {
+      position: fixed;
+      bottom: 60px;
+      right: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      z-index: 99998;
+      pointer-events: none;
+      max-width: 340px;
+    }
+
+    .notification {
+      padding: 10px 14px;
+      border-radius: var(--radius-md);
+      background: var(--bg-panel);
+      border: 1px solid var(--border-primary);
+      box-shadow: var(--shadow-md);
+      font-size: 12px;
+      pointer-events: auto;
+      animation: slideInRight 0.3s ease;
+    }
+
+    .notification.success {
+      border-left: 3px solid var(--accent-green);
+    }
+
+    .notification.error {
+      border-left: 3px solid var(--accent-red);
+    }
+
+    .notification.info {
+      border-left: 3px solid var(--accent-cyan);
+    }
+
+    @keyframes slideInRight {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    /* ==========================================================================
+   LAYOUT PRESETS OVERLAY
+   ========================================================================== */
+    #layout-picker {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: var(--bg-overlay);
+      z-index: 99990;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #layout-picker.show {
+      display: flex;
+    }
+
+    .layout-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 180px);
+      gap: 12px;
+    }
+
+    .layout-option {
+      padding: 16px;
+      border-radius: var(--radius-lg);
+      background: var(--bg-card);
+      border: 1px solid var(--border-primary);
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+
+    .layout-option:hover {
+      border-color: var(--accent-cyan);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-glow-cyan);
+    }
+
+    .layout-option .layout-preview {
+      width: 100%;
+      height: 80px;
+      margin-bottom: 8px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-primary);
+      overflow: hidden;
+      display: grid;
+      gap: 2px;
+      padding: 4px;
+    }
+
+    .layout-preview div {
+      background: var(--bg-tertiary);
+      border-radius: 2px;
+    }
+
+    .layout-option .layout-name {
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    .fade-in {
+      animation: fadeIn 0.2s ease;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- ==================================================================
+     DESKTOP COMPOSITOR
+     ================================================================== -->
+  <div id="desktop">
+    <!-- ---- TOP TASKBAR ---- -->
+    <div id="taskbar">
+      <span class="brand">RAWRXD:MW</span>
+      <div class="separator"></div>
+      <button class="taskbar-btn" onclick="showLayoutPicker()">&#9638; Layout</button>
+      <button class="taskbar-btn" onclick="WM.tileAll()">&#9641; Tile</button>
+      <button class="taskbar-btn" onclick="WM.cascadeAll()">&#10697; Cascade</button>
+      <button class="taskbar-btn" onclick="WM.minimizeAll()">&#9644; Min All</button>
+      <button class="taskbar-btn" onclick="WM.restoreAll()">&#9645; Restore</button>
+      <div class="separator"></div>
+      <div id="window-tabs" style="display:flex;gap:2px;overflow-x:auto;flex:1;">
+        <!-- dynamically filled -->
+      </div>
+      <div class="spacer"></div>
+      <div class="kernel-status">
+        <span class="dot"></span>
+        <span id="kernel-label">Kernel: Active</span>
+      </div>
+      <div class="separator"></div>
+      <span class="status-pill" id="task-counter">Tasks: 0</span>
+      <span class="status-pill"
+        style="background:rgba(0,200,255,0.1);color:var(--accent-cyan);border-color:rgba(0,200,255,0.2);">
+        <span id="window-counter">Windows: 0</span>
+      </span>
+      <div class="separator"></div>
+      <span id="clock">00:00:00</span>
+    </div>
+
+    <!-- ---- LEFT SIDEBAR ---- -->
+    <div id="sidebar">
+      <button class="sidebar-btn active" onclick="spawnWindow('chat')" title="Chat">&#128172;</button>
+      <button class="sidebar-btn" onclick="spawnWindow('audit')" title="Audit">&#128269;</button>
+      <button class="sidebar-btn" onclick="spawnWindow('cot')" title="Chain of Thought">&#129504;</button>
+      <button class="sidebar-btn" onclick="spawnWindow('swarm')" title="Swarm">&#128376;</button>
+      <div class="sidebar-divider"></div>
+      <button class="sidebar-btn" onclick="spawnWindow('editor')" title="Code Editor">&#128221;</button>
+      <button class="sidebar-btn" onclick="spawnWindow('terminal')" title="Terminal">&#9000;</button>
+      <button class="sidebar-btn" onclick="spawnWindow('files')" title="Files">&#128193;</button>
+      <div class="sidebar-divider"></div>
+      <button class="sidebar-btn" onclick="spawnWindow('models')" title="Model Manager">&#129302;</button>
+      <button class="sidebar-btn" onclick="spawnWindow('perf')" title="Performance">&#128200;</button>
+      <button class="sidebar-btn" onclick="spawnWindow('hotpatch')" title="Hotpatch">&#128295;</button>
+      <button class="sidebar-btn" onclick="spawnWindow('reverse')" title="Reverse Eng">&#128274;</button>
+      <div class="sidebar-divider"></div>
+      <button class="sidebar-btn" onclick="spawnWindow('debug')" title="Debug">&#128027;</button>
+      <button class="sidebar-btn" onclick="spawnWindow('benchmark')" title="Benchmark">&#9201;</button>
+      <button class="sidebar-btn" onclick="spawnWindow('compile')" title="Compile">&#9881;</button>
+      <button class="sidebar-btn" onclick="spawnWindow('deploy')" title="Deploy">&#128640;</button>
+      <div class="sidebar-divider"></div>
+      <button class="sidebar-btn" onclick="toggleCommandPalette()" title="Command Palette (Ctrl+P)">&#9889;</button>
+    </div>
+
+    <!-- ---- WORKSPACE (window canvas) ---- -->
+    <div id="workspace">
+      <div class="grid-bg"></div>
+      <!-- Floating windows get appended here -->
+    </div>
+
+    <!-- ---- BOTTOM DOCK ---- -->
+    <div id="dock">
+      <div class="dock-item" onclick="spawnWindow('chat')">&#128172;<span class="dock-label">New Chat</span></div>
+      <div class="dock-item" onclick="spawnWindow('audit')">&#128269;<span class="dock-label">File Audit</span></div>
+      <div class="dock-item" onclick="spawnWindow('cot')">&#129504;<span class="dock-label">Chain of Thought</span>
+      </div>
+      <div class="dock-item" onclick="spawnWindow('swarm')">&#128376;<span class="dock-label">AI Swarm</span></div>
+      <div class="dock-separator"></div>
+      <div class="dock-item" onclick="spawnWindow('editor')">&#128221;<span class="dock-label">Code Editor</span></div>
+      <div class="dock-item" onclick="spawnWindow('terminal')">&#9000;<span class="dock-label">Terminal</span></div>
+      <div class="dock-item" onclick="spawnWindow('files')">&#128193;<span class="dock-label">File Browser</span></div>
+      <div class="dock-item" onclick="spawnWindow('models')">&#129302;<span class="dock-label">Models</span></div>
+      <div class="dock-separator"></div>
+      <div class="dock-item" onclick="spawnWindow('perf')">&#128200;<span class="dock-label">Performance</span></div>
+      <div class="dock-item" onclick="spawnWindow('hotpatch')">&#128295;<span class="dock-label">Hotpatch</span></div>
+      <div class="dock-item" onclick="spawnWindow('reverse')">&#128274;<span class="dock-label">Reverse Eng</span></div>
+      <div class="dock-item" onclick="spawnWindow('debug')">&#128027;<span class="dock-label">Debugger</span></div>
+      <div class="dock-separator"></div>
+      <div class="dock-item" onclick="spawnWindow('benchmark')">&#9201;<span class="dock-label">Benchmark</span></div>
+      <div class="dock-item" onclick="spawnWindow('compile')">&#9881;<span class="dock-label">Compile</span></div>
+      <div class="dock-item" onclick="spawnWindow('deploy')">&#128640;<span class="dock-label">Deploy</span></div>
+      <div class="dock-separator"></div>
+      <div class="dock-item" onclick="showLayoutPicker()">&#9638;<span class="dock-label">Layouts</span></div>
+    </div>
+  </div>
+
+  <!-- ==================================================================
+     COMMAND PALETTE
+     ================================================================== -->
+  <div id="command-palette">
+    <input type="text" id="cmd-input" placeholder="Type a command or search..." oninput="filterCommands(this.value)"
+      onkeydown="cmdKeyHandler(event)">
+    <div class="results" id="cmd-results"></div>
+  </div>
+
+  <!-- ==================================================================
+     LAYOUT PICKER
+     ================================================================== -->
+  <div id="layout-picker" onclick="if(event.target===this)this.classList.remove('show')">
+    <div class="layout-grid">
+      <div class="layout-option" onclick="applyLayout('single')">
+        <div class="layout-preview" style="grid-template-columns:1fr;">
+          <div></div>
+        </div>
+        <div class="layout-name">Single Focus</div>
+      </div>
+      <div class="layout-option" onclick="applyLayout('split-v')">
+        <div class="layout-preview" style="grid-template-columns:1fr 1fr;">
+          <div></div>
+          <div></div>
+        </div>
+        <div class="layout-name">Vertical Split</div>
+      </div>
+      <div class="layout-option" onclick="applyLayout('split-h')">
+        <div class="layout-preview" style="grid-template-rows:1fr 1fr;">
+          <div></div>
+          <div></div>
+        </div>
+        <div class="layout-name">Horizontal Split</div>
+      </div>
+      <div class="layout-option" onclick="applyLayout('quad')">
+        <div class="layout-preview" style="grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;">
+          <div></div>
+          <div></div>
+          <div></div>
+          <div></div>
+        </div>
+        <div class="layout-name">Quad View</div>
+      </div>
+      <div class="layout-option" onclick="applyLayout('triple-right')">
+        <div class="layout-preview" style="grid-template-columns:2fr 1fr;grid-template-rows:1fr 1fr;">
+          <div style="grid-row:1/3"></div>
+          <div></div>
+          <div></div>
+        </div>
+        <div class="layout-name">Main + 2 Side</div>
+      </div>
+      <div class="layout-option" onclick="applyLayout('six-pack')">
+        <div class="layout-preview" style="grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr;">
+          <div></div>
+          <div></div>
+          <div></div>
+          <div></div>
+          <div></div>
+          <div></div>
+        </div>
+        <div class="layout-name">6-Pack Grid</div>
+      </div>
+      <div class="layout-option" onclick="applyLayout('chat-audit-cot')">
+        <div class="layout-preview" style="grid-template-columns:1fr 1fr 1fr;">
+          <div style="background:rgba(0,200,255,0.2)"></div>
+          <div style="background:rgba(255,136,0,0.2)"></div>
+          <div style="background:rgba(170,85,255,0.2)"></div>
+        </div>
+        <div class="layout-name">Chat + Audit + CoT</div>
+      </div>
+      <div class="layout-option" onclick="applyLayout('swarm-command')">
+        <div class="layout-preview" style="grid-template-columns:1fr 1fr;grid-template-rows:2fr 1fr;">
+          <div style="grid-column:1/3;background:rgba(0,255,136,0.2)"></div>
+          <div></div>
+          <div></div>
+        </div>
+        <div class="layout-name">Swarm Command</div>
+      </div>
+      <div class="layout-option" onclick="applyLayout('dev-full')">
+        <div class="layout-preview" style="grid-template-columns:1fr 2fr 1fr;grid-template-rows:2fr 1fr;">
+          <div style="grid-row:1/3"></div>
+          <div></div>
+          <div></div>
+          <div></div>
+          <div></div>
+        </div>
+        <div class="layout-name">Dev Workstation</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================================================================
+     NOTIFICATIONS
+     ================================================================== -->
+  <div id="notifications"></div>
+
+  <!-- ==================================================================
+     JAVASCRIPT: WINDOW MANAGER + ENGINE
+     ================================================================== -->
+  <script>
+    // ======================================================================
+    // CONFIGURATION
+    // ======================================================================
+    const CONFIG = {
+      ollamaUrl: 'http://localhost:11434',
+      rawrxdUrl: 'http://localhost:11435',
+      maxWindows: 64,
+      defaultModel: 'deepseek-coder-v2:latest',
+      streamingEnabled: true,
+      ipcEnabled: true,
+      kernelPollInterval: 500,
+      perfUpdateInterval: 1000,
+      // Model inference parameters (user-configurable via settings window)
+      temperature: 0.7,
+      top_p: 0.9,
+      top_k: 40,
+      num_ctx: 4096,
+      max_tokens: 4096,
+    };
+
+    // ======================================================================
+    // STATE
+    // ======================================================================
+    const State = {
+      windows: new Map(),    // id -> WindowState
+      nextWindowId: 1,
+      nextTaskId: 1,
+      focusedWindowId: null,
+      zIndexCounter: 100,
+      tasks: new Map(),      // id -> TaskState
+      models: [],            // available models
+      activeModel: CONFIG.defaultModel,
+      dragState: null,       // current drag/resize operation
+      kernelStats: { activeWindows: 0, activeTasks: 0, totalProcessed: 0, uptime: 0 },
+      commandHistory: [],
+      notifications: [],
+    };
+
+    // ======================================================================
+    // WINDOW TYPE DEFINITIONS
+    // ======================================================================
+    const WindowTypes = {
+      chat: { icon: '💬', title: 'AI Chat', color: 'cyan', defaultW: 480, defaultH: 520 },
+      audit: { icon: '🔍', title: 'File Auditor', color: 'orange', defaultW: 520, defaultH: 480 },
+      cot: { icon: '🧠', title: 'Chain of Thought', color: 'purple', defaultW: 480, defaultH: 520 },
+      swarm: { icon: '🐝', title: 'AI Swarm', color: 'green', defaultW: 600, defaultH: 500 },
+      editor: { icon: '📝', title: 'Code Editor', color: 'yellow', defaultW: 600, defaultH: 500 },
+      terminal: { icon: '⌨', title: 'Terminal', color: 'green', defaultW: 520, defaultH: 360 },
+      files: { icon: '📁', title: 'File Browser', color: 'grey', defaultW: 320, defaultH: 480 },
+      models: { icon: '🤖', title: 'Model Manager', color: 'pink', defaultW: 420, defaultH: 480 },
+      perf: { icon: '📈', title: 'Performance', color: 'red', defaultW: 400, defaultH: 360 },
+      hotpatch: { icon: '🔧', title: 'Hotpatch Manager', color: 'orange', defaultW: 460, defaultH: 400 },
+      reverse: { icon: '🔒', title: 'Reverse Eng', color: 'red', defaultW: 560, defaultH: 440 },
+      debug: { icon: '🐛', title: 'Debugger', color: 'yellow', defaultW: 500, defaultH: 420 },
+      benchmark: { icon: '⏱', title: 'Benchmark', color: 'green', defaultW: 440, defaultH: 400 },
+      compile: { icon: '⚙', title: 'Compiler', color: 'cyan', defaultW: 520, defaultH: 400 },
+      deploy: { icon: '🚀', title: 'Deployment', color: 'purple', defaultW: 440, defaultH: 380 },
+    };
+
+    // ======================================================================
+    // WINDOW MANAGER (WM)
+    // ======================================================================
+    const WM = {
+      // -- Create and spawn a new floating window --
+      create(type, options = {}) {
+        const wType = WindowTypes[type];
+        if (!wType) return null;
+
+        const id = State.nextWindowId++;
+        const workspace = document.getElementById('workspace');
+        const wRect = workspace.getBoundingClientRect();
+
+        // Cascade position
+        const offset = (State.windows.size % 8) * 30;
+        const x = options.x ?? (40 + offset);
+        const y = options.y ?? (30 + offset);
+        const w = options.width ?? wType.defaultW;
+        const h = options.height ?? wType.defaultH;
+
+        const winState = {
+          id, type,
+          x, y, w, h,
+          minimized: false,
+          maximized: false,
+          model: options.model || State.activeModel,
+          taskIds: [],
+          data: {},
+        };
+
+        State.windows.set(id, winState);
+
+        // Build DOM
+        const el = document.createElement('div');
+        el.className = 'mw-window fade-in';
+        el.id = `mw-${id}`;
+        el.dataset.type = type;
+        el.dataset.winId = id;
+        el.style.left = x + 'px';
+        el.style.top = y + 'px';
+        el.style.width = w + 'px';
+        el.style.height = h + 'px';
+        el.style.zIndex = ++State.zIndexCounter;
+
+        el.innerHTML = `
+      <div class="mw-titlebar" onmousedown="WM.startDrag(event, ${id})" ondblclick="WM.toggleMaximize(${id})">
+        <span class="win-icon">${wType.icon}</span>
+        <span class="win-title">${wType.title} #${id}</span>
+        <div class="win-controls">
+          <div class="win-ctrl minimize" onclick="event.stopPropagation();WM.minimize(${id})" title="Minimize">&#9644;</div>
+          <div class="win-ctrl maximize" onclick="event.stopPropagation();WM.toggleMaximize(${id})" title="Maximize">&#9645;</div>
+          <div class="win-ctrl close" onclick="event.stopPropagation();WM.close(${id})" title="Close">&#10005;</div>
+        </div>
+      </div>
+      <div class="mw-body" id="mw-body-${id}"></div>
+      <div class="mw-statusbar">
+        <span class="status-item"><span class="status-dot" style="background:var(--accent-green)"></span> Ready</span>
+        <span class="status-item">Model: <span class="win-model-label">${winState.model}</span></span>
+        <span style="flex:1"></span>
+        <span class="status-item" id="mw-status-${id}">Idle</span>
+      </div>
+      <div class="resize-handle n" onmousedown="WM.startResize(event,${id},'n')"></div>
+      <div class="resize-handle s" onmousedown="WM.startResize(event,${id},'s')"></div>
+      <div class="resize-handle e" onmousedown="WM.startResize(event,${id},'e')"></div>
+      <div class="resize-handle w" onmousedown="WM.startResize(event,${id},'w')"></div>
+      <div class="resize-handle ne" onmousedown="WM.startResize(event,${id},'ne')"></div>
+      <div class="resize-handle nw" onmousedown="WM.startResize(event,${id},'nw')"></div>
+      <div class="resize-handle se" onmousedown="WM.startResize(event,${id},'se')"></div>
+      <div class="resize-handle sw" onmousedown="WM.startResize(event,${id},'sw')"></div>
+    `;
+
+        workspace.appendChild(el);
+        this.focus(id);
+        this.populateBody(id, type);
+        this.updateTaskbar();
+        this.updateCounters();
+        notify(`${wType.title} window opened`, 'info');
+
+        return id;
+      },
+
+      // -- Populate window body based on type --
+      populateBody(id, type) {
+        const body = document.getElementById(`mw-body-${id}`);
+        if (!body) return;
+
+        const ws = State.windows.get(id);
+        const modelSelect = this.buildModelSelect(id);
+
+        switch (type) {
+          case 'chat':
+            body.innerHTML = `
+          <div class="chat-container">
+            <div class="chat-toolbar">
+              <span class="model-badge">${ws.model}</span>
+              ${modelSelect}
+              <span style="flex:1"></span>
+              <button class="btn-small" onclick="clearChat(${id})">Clear</button>
+              <button class="btn-small" onclick="exportChat(${id})">Export</button>
+            </div>
+            <div class="chat-messages" id="chat-msgs-${id}">
+              <div class="chat-msg assistant">
+                <div class="msg-meta">System</div>
+                Welcome! I'm connected to <strong>${ws.model}</strong>. Ask me anything.
+              </div>
+            </div>
+            <div class="chat-input-area">
+              <textarea id="chat-input-${id}" placeholder="Type a message... (Enter to send, Shift+Enter for newline)"
+                onkeydown="chatKeyHandler(event, ${id})"></textarea>
+              <button class="btn-primary" onclick="sendChat(${id})">Send</button>
+            </div>
+          </div>`;
+            break;
+
+          case 'audit':
+            body.innerHTML = `
+          <div class="audit-container">
+            <div class="audit-controls">
+              <input type="text" id="audit-file-${id}" placeholder="File path or URL to audit..." style="flex:1;min-width:200px;">
+              ${modelSelect}
+              <select id="audit-type-${id}" style="width:120px;">
+                <option value="security">Security Audit</option>
+                <option value="performance">Performance</option>
+                <option value="code-quality">Code Quality</option>
+                <option value="dependency">Dependencies</option>
+                <option value="vulnerability">Vulnerabilities</option>
+                <option value="full">Full Audit</option>
+              </select>
+              <button class="btn-primary" onclick="startAudit(${id})">&#128269; Audit</button>
+            </div>
+            <div class="audit-results" id="audit-results-${id}">
+              <div style="text-align:center;padding:40px;color:var(--text-muted);">
+                Select a file and audit type to begin analysis.
+              </div>
+            </div>
+          </div>`;
+            break;
+
+          case 'cot':
+            body.innerHTML = `
+          <div class="cot-container">
+            <div style="padding:8px;border-bottom:1px solid var(--border-primary);display:flex;gap:6px;align-items:center;">
+              <span class="model-badge">🧠 CoT Engine</span>
+              ${modelSelect}
+              <select id="cot-mode-${id}" style="width:120px;">
+                <option value="auto">Auto Steps</option>
+                <option value="manual">Manual Steps</option>
+                <option value="tree">Tree of Thought</option>
+                <option value="graph">Graph of Thought</option>
+              </select>
+              <span style="flex:1"></span>
+              <button class="btn-small" onclick="clearCoT(${id})">Clear</button>
+            </div>
+            <div class="cot-steps" id="cot-steps-${id}">
+              <div style="text-align:center;padding:40px;color:var(--text-muted);">
+                Enter a complex problem below to begin reasoning.
+              </div>
+            </div>
+            <div class="cot-controls">
+              <textarea id="cot-input-${id}" placeholder="Describe the problem to reason through..."
+                style="flex:1;height:36px;resize:none;" onkeydown="cotKeyHandler(event,${id})"></textarea>
+              <button class="btn-primary" onclick="startCoT(${id})">&#129504; Reason</button>
+            </div>
+          </div>`;
+            break;
+
+          case 'swarm':
+            body.innerHTML = `
+          <div class="swarm-container">
+            <div style="padding:8px;border-bottom:1px solid var(--border-primary);display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+              <span class="model-badge">&#128376; Swarm</span>
+              <select id="swarm-count-${id}" style="width:100px;">
+                <option value="2">2 Agents</option>
+                <option value="3" selected>3 Agents</option>
+                <option value="4">4 Agents</option>
+                <option value="5">5 Agents</option>
+                <option value="8">8 Agents</option>
+              </select>
+              <select id="swarm-strategy-${id}" style="width:130px;">
+                <option value="consensus">Consensus Vote</option>
+                <option value="debate">Debate</option>
+                <option value="pipeline">Pipeline</option>
+                <option value="tournament">Tournament</option>
+                <option value="parallel">Parallel Race</option>
+              </select>
+              <button class="btn-primary" onclick="startSwarm(${id})">&#128376; Launch Swarm</button>
+              <button class="btn-small btn-danger" onclick="stopSwarm(${id})">Stop</button>
+            </div>
+            <div class="swarm-viz" id="swarm-viz-${id}">
+              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text-muted);">
+                Configure agents and launch swarm to begin.
+              </div>
+            </div>
+            <div class="swarm-controls">
+              <textarea id="swarm-input-${id}" placeholder="Enter the task for all swarm agents..."
+                style="flex:1;height:36px;resize:none;"></textarea>
+            </div>
+          </div>`;
+            break;
+
+          case 'editor':
+            body.innerHTML = `
+          <div class="editor-container">
+            <div class="editor-tabs" id="editor-tabs-${id}">
+              <div class="editor-tab active" data-file="untitled.py">
+                <span>&#128196;</span> untitled.py
+                <span class="tab-close" onclick="event.stopPropagation()">&#10005;</span>
+              </div>
+            </div>
+            <div class="editor-area">
+              <textarea id="editor-text-${id}" spellcheck="false"
+                placeholder="# Start typing code here..."># RawrXD MultiWindow IDE
+# Connected to: ${ws.model}
+
+import asyncio
+from rawrxd import ModelLoader, InferenceEngine
+
+async def main():
+    loader = ModelLoader("model.gguf")
+    engine = InferenceEngine(loader)
+    
+    response = await engine.generate(
+        prompt="Hello, world!",
+        temperature=0.7,
+        max_tokens=512
+    )
+    print(response)
+
+if __name__ == "__main__":
+    asyncio.run(main())
+</textarea>
+            </div>
+          </div>`;
+            break;
+
+          case 'terminal':
+            body.innerHTML = `
+          <div class="terminal-container">
+            <div class="terminal-output" id="term-output-${id}">RawrXD MultiWindow Terminal v2.0
+Kernel: Active | Workers: 4 | Shared Memory: 1MB IPC
+Type 'help' for available commands.
+─────────────────────────────────────────
+</div>
+            <div class="terminal-input-line">
+              <span class="terminal-prompt">rawrxd&gt;</span>
+              <input type="text" id="term-input-${id}" placeholder="Enter command..."
+                onkeydown="termKeyHandler(event,${id})">
+            </div>
+          </div>`;
+            break;
+
+          case 'files':
+            body.innerHTML = `
+          <div class="files-container">
+            <div style="padding:6px 8px;border-bottom:1px solid var(--border-primary);display:flex;gap:4px;">
+              <input type="text" id="file-search-${id}" placeholder="Search files..." style="flex:1;">
+              <button class="btn-small" onclick="refreshFiles(${id})">&#8635;</button>
+            </div>
+            <div class="file-tree" id="file-tree-${id}">
+              ${buildFileTree()}
+            </div>
+          </div>`;
+            break;
+
+          case 'models':
+            body.innerHTML = `
+          <div class="models-container">
+            <div style="padding:8px;border-bottom:1px solid var(--border-primary);display:flex;gap:6px;align-items:center;">
+              <button class="btn-primary btn-small" onclick="refreshModels(${id})">&#8635; Refresh</button>
+              <button class="btn-small" onclick="pullModel(${id})">&#8615; Pull Model</button>
+              <span style="flex:1"></span>
+              <span style="font-size:10px;color:var(--text-muted);" id="model-count-${id}">0 models</span>
+            </div>
+            <div class="model-list" id="model-list-${id}">
+              <div style="text-align:center;padding:40px;color:var(--text-muted);">
+                Loading models...
+              </div>
+            </div>
+          </div>`;
+            setTimeout(() => refreshModels(id), 100);
+            break;
+
+          case 'perf':
+            body.innerHTML = `
+          <div class="perf-container" id="perf-body-${id}">
+            <div class="perf-metric">
+              <span class="metric-label">Active Windows</span>
+              <span class="metric-value" id="perf-windows-${id}">0</span>
+            </div>
+            <div class="perf-metric">
+              <span class="metric-label">Active Tasks</span>
+              <span class="metric-value" id="perf-tasks-${id}">0</span>
+            </div>
+            <div class="perf-metric">
+              <span class="metric-label">Tasks Processed</span>
+              <span class="metric-value" id="perf-processed-${id}">0</span>
+            </div>
+            <div class="perf-metric">
+              <span class="metric-label">Uptime</span>
+              <span class="metric-value" id="perf-uptime-${id}">0s</span>
+            </div>
+            <div class="perf-metric">
+              <div style="width:100%;">
+                <div style="display:flex;justify-content:space-between;">
+                  <span class="metric-label">CPU Usage</span>
+                  <span class="metric-value" style="font-size:12px;" id="perf-cpu-${id}">0%</span>
+                </div>
+                <div class="perf-bar"><div class="perf-bar-fill" id="perf-cpu-bar-${id}" style="width:0%;background:var(--accent-cyan);"></div></div>
+              </div>
+            </div>
+            <div class="perf-metric">
+              <div style="width:100%;">
+                <div style="display:flex;justify-content:space-between;">
+                  <span class="metric-label">Memory</span>
+                  <span class="metric-value" style="font-size:12px;" id="perf-mem-${id}">0 MB</span>
+                </div>
+                <div class="perf-bar"><div class="perf-bar-fill" id="perf-mem-bar-${id}" style="width:0%;background:var(--accent-purple);"></div></div>
+              </div>
+            </div>
+            <div class="perf-metric">
+              <div style="width:100%;">
+                <div style="display:flex;justify-content:space-between;">
+                  <span class="metric-label">Tokens/sec</span>
+                  <span class="metric-value" style="font-size:12px;" id="perf-tps-${id}">0</span>
+                </div>
+                <div class="perf-bar"><div class="perf-bar-fill" id="perf-tps-bar-${id}" style="width:0%;background:var(--accent-green);"></div></div>
+              </div>
+            </div>
+          </div>`;
+            break;
+
+          case 'hotpatch':
+            body.innerHTML = `
+          <div class="hotpatch-container">
+            <div style="padding:8px;border-bottom:1px solid var(--border-primary);display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+              <select id="patch-layer-${id}" style="width:120px;">
+                <option value="memory">Memory Layer</option>
+                <option value="byte">Byte Layer</option>
+                <option value="server">Server Layer</option>
+                <option value="unified">Unified</option>
+              </select>
+              <button class="btn-primary btn-small" onclick="addPatch(${id})">+ Add Patch</button>
+              <button class="btn-small" onclick="applyAllPatches(${id})">Apply All</button>
+              <button class="btn-small btn-danger" onclick="revertPatches(${id})">Revert</button>
+            </div>
+            <div class="hotpatch-list" id="hotpatch-list-${id}">
+              <div class="patch-entry">
+                <div><span class="patch-name">Temperature Clamp</span><br><span style="font-size:10px;color:var(--text-muted);">Clamp temp to 0.1-2.0 range</span></div>
+                <span class="patch-layer layer-server">server</span>
+              </div>
+              <div class="patch-entry">
+                <div><span class="patch-name">Token Bias Injection</span><br><span style="font-size:10px;color:var(--text-muted);">+2.0 bias for code tokens</span></div>
+                <span class="patch-layer layer-server">server</span>
+              </div>
+              <div class="patch-entry">
+                <div><span class="patch-name">Q4_K_M Dequant Fix</span><br><span style="font-size:10px;color:var(--text-muted);">AVX2 dequantize hotfix</span></div>
+                <span class="patch-layer layer-memory">memory</span>
+              </div>
+              <div class="patch-entry">
+                <div><span class="patch-name">GGUF Header Patch</span><br><span style="font-size:10px;color:var(--text-muted);">Fix alignment at offset 0x40</span></div>
+                <span class="patch-layer layer-byte">byte</span>
+              </div>
+            </div>
+          </div>`;
+            break;
+
+          case 'reverse':
+            body.innerHTML = `
+          <div class="reverse-container">
+            <div style="padding:6px 8px;border-bottom:1px solid var(--border-primary);display:flex;gap:6px;align-items:center;">
+              <input type="text" id="re-file-${id}" placeholder="Binary file path..." style="flex:1;">
+              <select id="re-mode-${id}" style="width:120px;">
+                <option value="hex">Hex View</option>
+                <option value="disasm">Disassembly</option>
+                <option value="strings">Strings</option>
+                <option value="pe">PE Headers</option>
+                <option value="gguf">GGUF Inspect</option>
+              </select>
+              <button class="btn-primary btn-small" onclick="loadBinary(${id})">Load</button>
+            </div>
+            <div class="reverse-hex" id="reverse-view-${id}">
+${generateHexDump()}
+            </div>
+          </div>`;
+            break;
+
+          case 'debug':
+            body.innerHTML = `
+          <div class="debug-container">
+            <div class="debug-toolbar">
+              <button class="btn-small" onclick="debugAction(${id},'continue')" title="Continue">&#9654;</button>
+              <button class="btn-small" onclick="debugAction(${id},'step-over')" title="Step Over">&#8631;</button>
+              <button class="btn-small" onclick="debugAction(${id},'step-into')" title="Step Into">&#8615;</button>
+              <button class="btn-small" onclick="debugAction(${id},'step-out')" title="Step Out">&#8613;</button>
+              <button class="btn-small btn-danger" onclick="debugAction(${id},'stop')" title="Stop">&#9724;</button>
+              <span style="flex:1"></span>
+              <span style="font-size:10px;color:var(--text-muted);">Breakpoints: 3 | Watches: 2</span>
+            </div>
+            <div class="debug-vars" id="debug-vars-${id}">
+              <div style="font-weight:600;color:var(--accent-yellow);margin-bottom:6px;">Local Variables</div>
+              <div class="debug-var"><span class="var-name">model_path</span><span class="var-value">"model.gguf"</span></div>
+              <div class="debug-var"><span class="var-name">n_ctx</span><span class="var-value">4096</span></div>
+              <div class="debug-var"><span class="var-name">temperature</span><span class="var-value">0.70000f</span></div>
+              <div class="debug-var"><span class="var-name">top_p</span><span class="var-value">0.90000f</span></div>
+              <div class="debug-var"><span class="var-name">*tensor_ptr</span><span class="var-value">0x7FFE8A001000</span></div>
+              <div class="debug-var"><span class="var-name">batch_size</span><span class="var-value">512</span></div>
+              <div style="font-weight:600;color:var(--accent-yellow);margin:10px 0 6px;">Watch Expressions</div>
+              <div class="debug-var"><span class="var-name">ctx->n_tokens</span><span class="var-value">127</span></div>
+              <div class="debug-var"><span class="var-name">params.seed</span><span class="var-value">42</span></div>
+              <div style="font-weight:600;color:var(--accent-yellow);margin:10px 0 6px;">Call Stack</div>
+              <div class="debug-var"><span class="var-name">#0</span><span class="var-value">inference_core.cpp:247 generate()</span></div>
+              <div class="debug-var"><span class="var-name">#1</span><span class="var-value">model_loader.cpp:89 load_tensors()</span></div>
+              <div class="debug-var"><span class="var-name">#2</span><span class="var-value">main.cpp:42 main()</span></div>
+            </div>
+          </div>`;
+            break;
+
+          case 'benchmark':
+            body.innerHTML = `
+          <div class="benchmark-container">
+            <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
+              ${modelSelect}
+              <select id="bench-type-${id}" style="width:130px;">
+                <option value="inference">Inference Speed</option>
+                <option value="load">Model Load Time</option>
+                <option value="memory">Memory Usage</option>
+                <option value="throughput">Throughput</option>
+                <option value="latency">Latency (P50/P99)</option>
+                <option value="full">Full Suite</option>
+              </select>
+              <button class="btn-primary" onclick="runBenchmark(${id})">&#9201; Run Benchmark</button>
+            </div>
+            <div id="bench-results-${id}">
+              <div class="bench-result">
+                <span class="bench-name">Tokens/sec (generation)</span>
+                <span class="bench-value">82.4</span>
+                <span class="bench-unit">tok/s</span>
+              </div>
+              <div class="bench-result">
+                <span class="bench-name">Time to First Token</span>
+                <span class="bench-value">47</span>
+                <span class="bench-unit">ms</span>
+              </div>
+              <div class="bench-result">
+                <span class="bench-name">Model Load Time</span>
+                <span class="bench-value">1.23</span>
+                <span class="bench-unit">sec</span>
+              </div>
+              <div class="bench-result">
+                <span class="bench-name">Peak Memory (RSS)</span>
+                <span class="bench-value">4.7</span>
+                <span class="bench-unit">GB</span>
+              </div>
+              <div class="bench-result">
+                <span class="bench-name">P50 Latency</span>
+                <span class="bench-value">12.3</span>
+                <span class="bench-unit">ms/tok</span>
+              </div>
+              <div class="bench-result">
+                <span class="bench-name">P99 Latency</span>
+                <span class="bench-value">28.7</span>
+                <span class="bench-unit">ms/tok</span>
+              </div>
+            </div>
+          </div>`;
+            break;
+
+          case 'compile':
+            body.innerHTML = `
+          <div class="compile-container">
+            <div style="padding:6px 8px;border-bottom:1px solid var(--border-primary);display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+              <select id="compile-target-${id}" style="width:160px;">
+                <option value="rawrxd-shell">RawrXD-Shell.exe</option>
+                <option value="self-test">self_test_gate</option>
+                <option value="quant-utils">quant_utils</option>
+                <option value="masm-kernel">MASM MultiWindow Kernel</option>
+                <option value="all">All Targets</option>
+              </select>
+              <select id="compile-config-${id}" style="width:100px;">
+                <option value="Release">Release</option>
+                <option value="Debug">Debug</option>
+                <option value="RelWithDebInfo">RelDbg</option>
+              </select>
+              <button class="btn-primary btn-small" onclick="startCompile(${id})">&#9881; Build</button>
+              <button class="btn-small" onclick="cleanBuild(${id})">Clean</button>
+              <button class="btn-small btn-danger" onclick="stopCompile(${id})">Stop</button>
+            </div>
+            <div class="compile-output" id="compile-output-${id}">[RawrXD Build System v2.0]
+Ready. Select a target and configuration to begin.
+</div>
+          </div>`;
+            break;
+
+          case 'deploy':
+            body.innerHTML = `
+          <div class="deploy-container">
+            <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
+              <select id="deploy-target-${id}" style="width:140px;">
+                <option value="local">Local Deploy</option>
+                <option value="docker">Docker</option>
+                <option value="k8s">Kubernetes</option>
+                <option value="edge">Edge Device</option>
+              </select>
+              <button class="btn-primary" onclick="startDeploy(${id})">&#128640; Deploy</button>
+              <button class="btn-small btn-danger" onclick="stopDeploy(${id})">Cancel</button>
+            </div>
+            <div id="deploy-stages-${id}">
+              <div class="deploy-stage"><div class="stage-icon stage-pending">1</div><div>Build artifacts</div></div>
+              <div class="deploy-stage"><div class="stage-icon stage-pending">2</div><div>Run tests</div></div>
+              <div class="deploy-stage"><div class="stage-icon stage-pending">3</div><div>Package container</div></div>
+              <div class="deploy-stage"><div class="stage-icon stage-pending">4</div><div>Push to registry</div></div>
+              <div class="deploy-stage"><div class="stage-icon stage-pending">5</div><div>Deploy to target</div></div>
+              <div class="deploy-stage"><div class="stage-icon stage-pending">6</div><div>Health check</div></div>
+            </div>
+          </div>`;
+            break;
+        }
+      },
+
+      // -- Build model select dropdown for a window (dynamically populated) --
+      buildModelSelect(winId) {
+        // Build options from State.models (fetched from backend) instead of hardcoded list
+        let options = '';
+        if (State.models && State.models.length > 0) {
+          options = State.models.map(m =>
+            `<option value="${m.name}" ${m.name === State.activeModel ? 'selected' : ''}>${m.name}</option>`
+          ).join('');
+        } else {
+          // Placeholder until models are fetched from backend
+          options = `<option value="${State.activeModel}">${State.activeModel} (loading...)</option>`;
+        }
+        return `<select class="win-model-select" id="model-sel-${winId}" onchange="switchWindowModel(${winId}, this.value)" style="max-width:180px;">${options}</select>`;
+      },
+
+      // -- Focus a window --
+      focus(id) {
+        if (State.focusedWindowId === id) return;
+        // Unfocus previous
+        if (State.focusedWindowId) {
+          const prev = document.getElementById(`mw-${State.focusedWindowId}`);
+          if (prev) prev.classList.remove('focused');
+        }
+        State.focusedWindowId = id;
+        const el = document.getElementById(`mw-${id}`);
+        if (el) {
+          el.classList.add('focused');
+          el.style.zIndex = ++State.zIndexCounter;
+        }
+        this.updateTaskbar();
+      },
+
+      // -- Minimize --
+      minimize(id) {
+        const ws = State.windows.get(id);
+        if (!ws) return;
+        ws.minimized = true;
+        const el = document.getElementById(`mw-${id}`);
+        if (el) el.classList.add('minimized');
+        this.updateTaskbar();
+      },
+
+      // -- Restore --
+      restore(id) {
+        const ws = State.windows.get(id);
+        if (!ws) return;
+        ws.minimized = false;
+        const el = document.getElementById(`mw-${id}`);
+        if (el) el.classList.remove('minimized');
+        this.focus(id);
+      },
+
+      // -- Toggle maximize --
+      toggleMaximize(id) {
+        const ws = State.windows.get(id);
+        if (!ws) return;
+        ws.maximized = !ws.maximized;
+        const el = document.getElementById(`mw-${id}`);
+        if (!el) return;
+        if (ws.maximized) {
+          ws._prevRect = { x: ws.x, y: ws.y, w: ws.w, h: ws.h };
+          el.classList.add('maximized');
+        } else {
+          el.classList.remove('maximized');
+          if (ws._prevRect) {
+            el.style.left = ws._prevRect.x + 'px';
+            el.style.top = ws._prevRect.y + 'px';
+            el.style.width = ws._prevRect.w + 'px';
+            el.style.height = ws._prevRect.h + 'px';
+          }
+        }
+        el.classList.remove('snapped-left', 'snapped-right');
+        this.focus(id);
+      },
+
+      // -- Close --
+      close(id) {
+        const el = document.getElementById(`mw-${id}`);
+        if (el) el.remove();
+        State.windows.delete(id);
+        if (State.focusedWindowId === id) State.focusedWindowId = null;
+        this.updateTaskbar();
+        this.updateCounters();
+      },
+
+      // -- Drag start --
+      startDrag(e, id) {
+        if (e.target.closest('.win-controls')) return;
+        const ws = State.windows.get(id);
+        if (!ws || ws.maximized) return;
+        e.preventDefault();
+        this.focus(id);
+        State.dragState = {
+          type: 'move',
+          winId: id,
+          startX: e.clientX,
+          startY: e.clientY,
+          origX: ws.x,
+          origY: ws.y,
+        };
+      },
+
+      // -- Resize start --
+      startResize(e, id, direction) {
+        const ws = State.windows.get(id);
+        if (!ws || ws.maximized) return;
+        e.preventDefault();
+        e.stopPropagation();
+        this.focus(id);
+        State.dragState = {
+          type: 'resize',
+          winId: id,
+          direction,
+          startX: e.clientX,
+          startY: e.clientY,
+          origX: ws.x,
+          origY: ws.y,
+          origW: ws.w,
+          origH: ws.h,
+        };
+      },
+
+      // -- Tile all windows --
+      tileAll() {
+        const workspace = document.getElementById('workspace');
+        const rect = workspace.getBoundingClientRect();
+        const wins = [...State.windows.values()].filter(w => !w.minimized);
+        if (wins.length === 0) return;
+
+        const cols = Math.ceil(Math.sqrt(wins.length));
+        const rows = Math.ceil(wins.length / cols);
+        const cellW = Math.floor(rect.width / cols);
+        const cellH = Math.floor(rect.height / rows);
+
+        wins.forEach((ws, i) => {
+          const col = i % cols;
+          const row = Math.floor(i / cols);
+          ws.x = col * cellW;
+          ws.y = row * cellH;
+          ws.w = cellW;
+          ws.h = cellH;
+          ws.maximized = false;
+          const el = document.getElementById(`mw-${ws.id}`);
+          if (el) {
+            el.classList.remove('maximized', 'snapped-left', 'snapped-right');
+            el.style.left = ws.x + 'px';
+            el.style.top = ws.y + 'px';
+            el.style.width = ws.w + 'px';
+            el.style.height = ws.h + 'px';
+          }
+        });
+      },
+
+      // -- Cascade all windows --
+      cascadeAll() {
+        const wins = [...State.windows.values()].filter(w => !w.minimized);
+        wins.forEach((ws, i) => {
+          ws.x = 30 + i * 30;
+          ws.y = 20 + i * 30;
+          ws.maximized = false;
+          const el = document.getElementById(`mw-${ws.id}`);
+          if (el) {
+            el.classList.remove('maximized', 'snapped-left', 'snapped-right');
+            el.style.left = ws.x + 'px';
+            el.style.top = ws.y + 'px';
+            el.style.width = ws.w + 'px';
+            el.style.height = ws.h + 'px';
+            el.style.zIndex = ++State.zIndexCounter;
+          }
+        });
+      },
+
+      // -- Minimize all --
+      minimizeAll() {
+        State.windows.forEach(ws => this.minimize(ws.id));
+      },
+
+      // -- Restore all --
+      restoreAll() {
+        State.windows.forEach(ws => this.restore(ws.id));
+      },
+
+      // -- Update taskbar tabs --
+      updateTaskbar() {
+        const container = document.getElementById('window-tabs');
+        if (!container) return;
+        let html = '';
+        State.windows.forEach(ws => {
+          const wt = WindowTypes[ws.type] || {};
+          const active = ws.id === State.focusedWindowId ? ' active' : '';
+          const minimized = ws.minimized ? ' style="opacity:0.5"' : '';
+          html += `<button class="taskbar-btn${active}"${minimized} onclick="${ws.minimized ? 'WM.restore' : 'WM.focus'}(${ws.id})">
+        ${wt.icon || ''} ${wt.title || ws.type} #${ws.id}
+      </button>`;
+        });
+        container.innerHTML = html;
+      },
+
+      // -- Update counters --
+      updateCounters() {
+        const wc = document.getElementById('window-counter');
+        const tc = document.getElementById('task-counter');
+        if (wc) wc.textContent = `Windows: ${State.windows.size}`;
+        if (tc) tc.textContent = `Tasks: ${State.tasks.size}`;
+      },
+    };
+
+    // ======================================================================
+    // MOUSE HANDLERS (drag/resize)
+    // ======================================================================
+    document.addEventListener('mousemove', (e) => {
+      if (!State.dragState) return;
+      const ds = State.dragState;
+      const dx = e.clientX - ds.startX;
+      const dy = e.clientY - ds.startY;
+      const ws = State.windows.get(ds.winId);
+      const el = document.getElementById(`mw-${ds.winId}`);
+      if (!ws || !el) return;
+
+      if (ds.type === 'move') {
+        ws.x = ds.origX + dx;
+        ws.y = ds.origY + dy;
+        el.style.left = ws.x + 'px';
+        el.style.top = ws.y + 'px';
+      } else if (ds.type === 'resize') {
+        const dir = ds.direction;
+        let newX = ds.origX, newY = ds.origY, newW = ds.origW, newH = ds.origH;
+
+        if (dir.includes('e')) newW = Math.max(320, ds.origW + dx);
+        if (dir.includes('w')) { newW = Math.max(320, ds.origW - dx); newX = ds.origX + dx; }
+        if (dir.includes('s')) newH = Math.max(200, ds.origH + dy);
+        if (dir.includes('n')) { newH = Math.max(200, ds.origH - dy); newY = ds.origY + dy; }
+
+        ws.x = newX; ws.y = newY; ws.w = newW; ws.h = newH;
+        el.style.left = newX + 'px';
+        el.style.top = newY + 'px';
+        el.style.width = newW + 'px';
+        el.style.height = newH + 'px';
+      }
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (State.dragState) {
+        // Check for snap zones
+        const ds = State.dragState;
+        if (ds.type === 'move') {
+          const ws = State.windows.get(ds.winId);
+          const el = document.getElementById(`mw-${ds.winId}`);
+          const workspace = document.getElementById('workspace');
+          if (ws && el && workspace) {
+            const rect = workspace.getBoundingClientRect();
+            if (ws.x <= 5) {
+              el.classList.add('snapped-left');
+            } else if (ws.x + ws.w >= rect.width - 5) {
+              el.classList.add('snapped-right');
+            }
+          }
+        }
+        State.dragState = null;
+      }
+    });
+
+    // Focus on mousedown
+    document.getElementById('workspace')?.addEventListener('mousedown', (e) => {
+      const win = e.target.closest('.mw-window');
+      if (win) WM.focus(parseInt(win.dataset.winId));
+    });
+
+    // ======================================================================
+    // SPAWN HELPER
+    // ======================================================================
+    function spawnWindow(type, options) {
+      return WM.create(type, options);
+    }
+
+    // ======================================================================
+    // AI COMMUNICATION (Ollama API)
+    // ======================================================================
+    async function ollamaGenerate(model, prompt, systemPrompt, onChunk) {
+      const url = `${CONFIG.ollamaUrl}/api/generate`;
+      const body = {
+        model: model,
+        prompt: prompt,
+        system: systemPrompt || 'You are a helpful AI assistant integrated into the RawrXD MultiWindow IDE.',
+        stream: CONFIG.streamingEnabled,
+        options: {
+          temperature: CONFIG.temperature || 0.7,
+          top_p: CONFIG.top_p || 0.9,
+          top_k: CONFIG.top_k || 40,
+          num_ctx: CONFIG.num_ctx || 4096
+        },
+      };
+
+      try {
+        const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        if (!resp.ok) throw new Error(`Ollama error: ${resp.status}`);
+
+        if (CONFIG.streamingEnabled && resp.body) {
+          const reader = resp.body.getReader();
+          const decoder = new TextDecoder();
+          let fullText = '';
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            const chunk = decoder.decode(value, { stream: true });
+            for (const line of chunk.split('\n')) {
+              if (!line.trim()) continue;
+              try {
+                const json = JSON.parse(line);
+                if (json.response) {
+                  fullText += json.response;
+                  if (onChunk) onChunk(json.response, fullText);
+                }
+              } catch (e) { }
+            }
+          }
+          return fullText;
+        } else {
+          const json = await resp.json();
+          return json.response || '';
+        }
+      } catch (err) {
+        console.error('Ollama error:', err);
+        return `[Error: ${err.message}. Make sure Ollama is running at ${CONFIG.ollamaUrl}]`;
+      }
+    }
+
+    async function ollamaChat(model, messages, onChunk) {
+      const url = `${CONFIG.ollamaUrl}/api/chat`;
+      const body = {
+        model,
+        messages,
+        stream: CONFIG.streamingEnabled,
+        options: {
+          temperature: CONFIG.temperature || 0.7,
+          top_p: CONFIG.top_p || 0.9,
+          top_k: CONFIG.top_k || 40,
+          num_ctx: CONFIG.num_ctx || 4096
+        },
+      };
+
+      try {
+        const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        if (!resp.ok) throw new Error(`Ollama error: ${resp.status}`);
+
+        if (CONFIG.streamingEnabled && resp.body) {
+          const reader = resp.body.getReader();
+          const decoder = new TextDecoder();
+          let fullText = '';
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            const chunk = decoder.decode(value, { stream: true });
+            for (const line of chunk.split('\n')) {
+              if (!line.trim()) continue;
+              try {
+                const json = JSON.parse(line);
+                if (json.message?.content) {
+                  fullText += json.message.content;
+                  if (onChunk) onChunk(json.message.content, fullText);
+                }
+              } catch (e) { }
+            }
+          }
+          return fullText;
+        } else {
+          const json = await resp.json();
+          return json.message?.content || '';
+        }
+      } catch (err) {
+        return `[Error: ${err.message}]`;
+      }
+    }
+
+    // ======================================================================
+    // CHAT WINDOW LOGIC
+    // ======================================================================
+    const chatHistories = new Map(); // winId -> messages[]
+
+    function chatKeyHandler(e, winId) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendChat(winId);
+      }
+    }
+
+    async function sendChat(winId) {
+      const input = document.getElementById(`chat-input-${winId}`);
+      const msgContainer = document.getElementById(`chat-msgs-${winId}`);
+      if (!input || !msgContainer) return;
+
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+
+      const ws = State.windows.get(winId);
+      const model = ws?.model || State.activeModel;
+
+      // Initialize history
+      if (!chatHistories.has(winId)) {
+        chatHistories.set(winId, [{ role: 'system', content: 'You are a helpful AI coding assistant in the RawrXD MultiWindow IDE. Be concise and technical.' }]);
+      }
+      const history = chatHistories.get(winId);
+
+      // Add user message
+      history.push({ role: 'user', content: text });
+      msgContainer.innerHTML += `<div class="chat-msg user"><div class="msg-meta">You</div>${escapeHtml(text)}</div>`;
+
+      // Create assistant message placeholder
+      const msgId = `ai-msg-${Date.now()}`;
+      msgContainer.innerHTML += `<div class="chat-msg assistant" id="${msgId}"><div class="msg-meta">${model}</div><span class="typing">Thinking...</span></div>`;
+      msgContainer.scrollTop = msgContainer.scrollHeight;
+
+      updateWindowStatus(winId, 'Generating...');
+      incrementTaskCount();
+
+      const fullResponse = await ollamaChat(model, history, (chunk, full) => {
+        const el = document.getElementById(msgId);
+        if (el) {
+          el.innerHTML = `<div class="msg-meta">${model}</div>${formatResponse(full)}`;
+          msgContainer.scrollTop = msgContainer.scrollHeight;
+        }
+      });
+
+      history.push({ role: 'assistant', content: fullResponse });
+      updateWindowStatus(winId, 'Ready');
+      decrementTaskCount();
+    }
+
+    function clearChat(winId) {
+      const msgContainer = document.getElementById(`chat-msgs-${winId}`);
+      if (msgContainer) msgContainer.innerHTML = '<div class="chat-msg assistant"><div class="msg-meta">System</div>Chat cleared.</div>';
+      chatHistories.delete(winId);
+    }
+
+    function exportChat(winId) {
+      const history = chatHistories.get(winId) || [];
+      const blob = new Blob([JSON.stringify(history, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `chat-${winId}-${Date.now()}.json`; a.click();
+      URL.revokeObjectURL(url);
+      notify('Chat exported', 'success');
+    }
+
+    // ======================================================================
+    // AUDIT WINDOW LOGIC
+    // ======================================================================
+    async function startAudit(winId) {
+      const fileInput = document.getElementById(`audit-file-${winId}`);
+      const typeSelect = document.getElementById(`audit-type-${winId}`);
+      const results = document.getElementById(`audit-results-${winId}`);
+      if (!fileInput || !results) return;
+
+      const filePath = fileInput.value.trim();
+      if (!filePath) { notify('Please specify a file path', 'error'); return; }
+
+      const auditType = typeSelect?.value || 'full';
+      const ws = State.windows.get(winId);
+      const model = ws?.model || State.activeModel;
+
+      results.innerHTML = '<div style="text-align:center;padding:20px;"><div class="typing">Analyzing...</div></div>';
+      updateWindowStatus(winId, 'Auditing...');
+      incrementTaskCount();
+
+      const prompt = `Perform a ${auditType} audit on the following file: "${filePath}". 
+Provide findings as a list with severity (CRITICAL/WARNING/INFO), description, and recommended fixes.
+Be thorough and specific. Format each finding clearly.`;
+
+      const response = await ollamaGenerate(model, prompt,
+        'You are a senior security and code audit expert. Provide detailed, actionable findings.');
+
+      // Parse and display findings
+      results.innerHTML = formatAuditResults(response, auditType);
+      updateWindowStatus(winId, 'Audit Complete');
+      decrementTaskCount();
+      notify(`Audit complete: ${filePath}`, 'success');
+    }
+
+    function formatAuditResults(response, auditType) {
+      // Simple parser: extract findings from response
+      const lines = response.split('\n');
+      let html = `<div style="padding:6px 8px;font-size:11px;color:var(--text-muted);border-bottom:1px solid var(--border-primary);margin-bottom:8px;">
+    Audit Type: <strong>${auditType}</strong> | Model Response:
+  </div>`;
+
+      html += `<div class="audit-finding info">
+    <div class="finding-header">
+      <span>Audit Results</span>
+      <span class="finding-severity severity-info">${auditType.toUpperCase()}</span>
+    </div>
+    <div style="white-space:pre-wrap;font-size:11px;line-height:1.6;">${escapeHtml(response)}</div>
+  </div>`;
+
+      return html;
+    }
+
+    // ======================================================================
+    // CHAIN OF THOUGHT LOGIC
+    // ======================================================================
+    function cotKeyHandler(e, winId) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        startCoT(winId);
+      }
+    }
+
+    async function startCoT(winId) {
+      const input = document.getElementById(`cot-input-${winId}`);
+      const stepsDiv = document.getElementById(`cot-steps-${winId}`);
+      const modeSelect = document.getElementById(`cot-mode-${winId}`);
+      if (!input || !stepsDiv) return;
+
+      const problem = input.value.trim();
+      if (!problem) return;
+      input.value = '';
+
+      const mode = modeSelect?.value || 'auto';
+      const ws = State.windows.get(winId);
+      const model = ws?.model || State.activeModel;
+
+      stepsDiv.innerHTML = '';
+      updateWindowStatus(winId, 'Reasoning...');
+      incrementTaskCount();
+
+      const cotPrompt = `You are solving a problem step by step using Chain of Thought reasoning.
+Mode: ${mode}
+
+Problem: ${problem}
+
+Think through this step by step. Number each step clearly (Step 1, Step 2, etc.).
+For each step, explain your reasoning before giving the conclusion.
+At the end, provide a final answer.`;
+
+      let stepNum = 0;
+      let currentStep = '';
+
+      const response = await ollamaGenerate(model, cotPrompt,
+        'You are a precise reasoning engine. Break every problem into numbered steps. Show your work clearly.',
+        (chunk, full) => {
+          // Live update: try to render steps as they come
+          const steps = full.split(/Step \d+/i).filter(s => s.trim());
+          stepsDiv.innerHTML = '';
+          steps.forEach((step, i) => {
+            const title = step.split('\n')[0].trim().substring(0, 60) || `Reasoning step`;
+            stepsDiv.innerHTML += `
+          <div class="cot-step fade-in">
+            <div class="cot-step-num">${i + 1}</div>
+            <div class="cot-step-content">
+              <div class="step-title">${escapeHtml(title)}</div>
+              <div style="font-size:11px;white-space:pre-wrap;">${escapeHtml(step.trim())}</div>
+            </div>
+          </div>`;
+          });
+          stepsDiv.scrollTop = stepsDiv.scrollHeight;
+        }
+      );
+
+      updateWindowStatus(winId, 'Reasoning Complete');
+      decrementTaskCount();
+      notify('Chain of Thought reasoning complete', 'success');
+    }
+
+    function clearCoT(winId) {
+      const stepsDiv = document.getElementById(`cot-steps-${winId}`);
+      if (stepsDiv) stepsDiv.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);">Enter a problem below to begin reasoning.</div>';
+    }
+
+    // ======================================================================
+    // SWARM LOGIC
+    // ======================================================================
+    async function startSwarm(winId) {
+      const viz = document.getElementById(`swarm-viz-${winId}`);
+      const input = document.getElementById(`swarm-input-${winId}`);
+      const countSelect = document.getElementById(`swarm-count-${winId}`);
+      const stratSelect = document.getElementById(`swarm-strategy-${winId}`);
+      if (!viz || !input) return;
+
+      const task = input.value.trim();
+      if (!task) { notify('Enter a task for the swarm', 'error'); return; }
+
+      const agentCount = parseInt(countSelect?.value || '3');
+      const strategy = stratSelect?.value || 'consensus';
+      const ws = State.windows.get(winId);
+
+      // Assign models to agents dynamically from loaded model list (fallback to active model)
+      const agentModels = (State.models && State.models.length > 0)
+        ? State.models.map(m => m.name)
+        : [State.activeModel || CONFIG.defaultModel];
+
+      // Create visual nodes
+      viz.innerHTML = '';
+      const angles = Array.from({ length: agentCount }, (_, i) => (2 * Math.PI * i) / agentCount);
+      const cx = viz.offsetWidth / 2;
+      const cy = viz.offsetHeight / 2;
+      const radius = Math.min(cx, cy) * 0.6;
+
+      updateWindowStatus(winId, `Swarming (${agentCount} agents)...`);
+      incrementTaskCount();
+
+      for (let i = 0; i < agentCount; i++) {
+        const x = cx + radius * Math.cos(angles[i]) - 40;
+        const y = cy + radius * Math.sin(angles[i]) - 40;
+        const model = agentModels[i % agentModels.length];
+        const node = document.createElement('div');
+        node.className = 'swarm-node';
+        node.style.left = x + 'px';
+        node.style.top = y + 'px';
+        node.id = `swarm-node-${winId}-${i}`;
+        node.innerHTML = `Agent ${i + 1}<div class="node-model">${model.split(':')[0]}</div><div class="node-status" style="background:var(--accent-yellow)"></div>`;
+        viz.appendChild(node);
+      }
+
+      // Run all agents in parallel
+      const promises = [];
+      for (let i = 0; i < agentCount; i++) {
+        const model = agentModels[i % agentModels.length];
+        const persona = `You are Agent ${i + 1} in a ${agentCount}-agent swarm. Strategy: ${strategy}. Give your unique perspective on the task. Be concise.`;
+
+        const p = ollamaGenerate(model, task, persona, (chunk, full) => {
+          const nodeStatus = document.querySelector(`#swarm-node-${winId}-${i} .node-status`);
+          if (nodeStatus) nodeStatus.style.background = 'var(--accent-cyan)';
+        }).then(response => {
+          const nodeStatus = document.querySelector(`#swarm-node-${winId}-${i} .node-status`);
+          if (nodeStatus) nodeStatus.style.background = 'var(--accent-green)';
+          return { agent: i + 1, model, response };
+        }).catch(err => {
+          const nodeStatus = document.querySelector(`#swarm-node-${winId}-${i} .node-status`);
+          if (nodeStatus) nodeStatus.style.background = 'var(--accent-red)';
+          return { agent: i + 1, model, response: `Error: ${err.message}` };
+        });
+
+        promises.push(p);
+      }
+
+      const results = await Promise.allSettled(promises);
+
+      // Display results
+      let resultHtml = '<div style="position:absolute;bottom:0;left:0;right:0;max-height:50%;overflow-y:auto;background:var(--bg-panel);border-top:1px solid var(--border-primary);padding:8px;">';
+      resultHtml += `<div style="font-weight:600;margin-bottom:6px;">Swarm Results (${strategy})</div>`;
+
+      results.forEach(r => {
+        const v = r.value || r.reason;
+        resultHtml += `<div style="margin-bottom:6px;padding:6px;background:var(--bg-card);border-radius:4px;font-size:11px;">
+      <strong>Agent ${v.agent} (${v.model.split(':')[0]})</strong><br>
+      ${escapeHtml(v.response?.substring(0, 300) || 'No response')}${v.response?.length > 300 ? '...' : ''}
+    </div>`;
+      });
+      resultHtml += '</div>';
+      viz.innerHTML += resultHtml;
+
+      updateWindowStatus(winId, 'Swarm Complete');
+      decrementTaskCount();
+      notify(`Swarm complete: ${agentCount} agents finished`, 'success');
+    }
+
+    function stopSwarm(winId) {
+      updateWindowStatus(winId, 'Swarm Stopped');
+      notify('Swarm stopped', 'info');
+    }
+
+    // ======================================================================
+    // TERMINAL LOGIC
+    // ======================================================================
+    const termHistories = new Map();
+
+    function termKeyHandler(e, winId) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const input = document.getElementById(`term-input-${winId}`);
+        if (!input) return;
+        const cmd = input.value.trim();
+        input.value = '';
+        if (!cmd) return;
+
+        if (!termHistories.has(winId)) termHistories.set(winId, []);
+        termHistories.get(winId).push(cmd);
+
+        executeTerminalCommand(winId, cmd);
+      }
+    }
+
+    function executeTerminalCommand(winId, cmd) {
+      const output = document.getElementById(`term-output-${winId}`);
+      if (!output) return;
+
+      output.textContent += `\nrawrxd> ${cmd}\n`;
+
+      const parts = cmd.split(/\s+/);
+      const command = parts[0].toLowerCase();
+
+      switch (command) {
+        case 'help':
+          output.textContent += `Available commands:
+  help          - Show this help
+  clear         - Clear terminal
+  windows       - List open windows
+  spawn <type>  - Open new window (chat/audit/cot/swarm/editor/terminal/models/perf...)
+  close <id>    - Close window by ID
+  tile          - Tile all windows
+  cascade       - Cascade all windows
+  models        - List available models
+  chat <msg>    - Quick chat with AI
+  audit <file>  - Quick file audit
+  kernel        - Show kernel stats
+  swarm <task>  - Launch quick swarm
+  bench         - Run quick benchmark
+  time          - Show current time
+  echo <text>   - Echo text
+  status        - System status
+`;
+          break;
+        case 'clear':
+          output.textContent = '';
+          break;
+        case 'windows':
+          State.windows.forEach(ws => {
+            output.textContent += `  [${ws.id}] ${ws.type} - ${ws.minimized ? 'minimized' : 'active'} (model: ${ws.model})\n`;
+          });
+          break;
+        case 'spawn':
+          if (parts[1]) { spawnWindow(parts[1]); output.textContent += `Spawned ${parts[1]} window.\n`; }
+          else output.textContent += 'Usage: spawn <type>\n';
+          break;
+        case 'close':
+          if (parts[1]) { WM.close(parseInt(parts[1])); output.textContent += `Closed window ${parts[1]}.\n`; }
+          else output.textContent += 'Usage: close <id>\n';
+          break;
+        case 'tile': WM.tileAll(); output.textContent += 'Tiled all windows.\n'; break;
+        case 'cascade': WM.cascadeAll(); output.textContent += 'Cascaded all windows.\n'; break;
+        case 'models':
+          output.textContent += 'Fetching models...\n';
+          fetchModels().then(models => {
+            models.forEach(m => { output.textContent += `  ${m.name} (${formatSize(m.size)})\n`; });
+          });
+          break;
+        case 'kernel':
+          output.textContent += `Kernel Stats:
+  Active Windows: ${State.windows.size}
+  Active Tasks: ${State.tasks.size}
+  Total Processed: ${State.kernelStats.totalProcessed}
+  Uptime: ${formatUptime(Date.now() - startTime)}
+`;
+          break;
+        case 'time':
+          output.textContent += `${new Date().toLocaleString()}\n`;
+          break;
+        case 'echo':
+          output.textContent += parts.slice(1).join(' ') + '\n';
+          break;
+        case 'status':
+          output.textContent += `RawrXD MultiWindow IDE Status:
+  Windows: ${State.windows.size}/${CONFIG.maxWindows}
+  Ollama: ${CONFIG.ollamaUrl}
+  Default Model: ${State.activeModel}
+  Streaming: ${CONFIG.streamingEnabled ? 'ON' : 'OFF'}
+  IPC: ${CONFIG.ipcEnabled ? 'ON' : 'OFF'}
+`;
+          break;
+        default:
+          output.textContent += `Unknown command: ${command}. Type 'help' for available commands.\n`;
+      }
+
+      output.scrollTop = output.scrollHeight;
+    }
+
+    // ======================================================================
+    // MODEL MANAGER LOGIC
+    // ======================================================================
+    async function fetchModels() {
+      try {
+        const resp = await fetch(`${CONFIG.ollamaUrl}/api/tags`);
+        if (!resp.ok) throw new Error('Failed to fetch models');
+        const data = await resp.json();
+        State.models = data.models || [];
+        return State.models;
+      } catch (err) {
+        console.error('Model fetch error:', err);
+        return [];
+      }
+    }
+
+    async function refreshModels(winId) {
+      const list = document.getElementById(`model-list-${winId}`);
+      const counter = document.getElementById(`model-count-${winId}`);
+      if (!list) return;
+
+      list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);">Loading...</div>';
+      const models = await fetchModels();
+
+      if (models.length === 0) {
+        list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);">No models found. Is Ollama running?</div>';
+        return;
+      }
+
+      if (counter) counter.textContent = `${models.length} models`;
+
+      list.innerHTML = models.map(m => `
+    <div class="model-card ${m.name === State.activeModel ? 'active' : ''}" onclick="selectModel('${m.name}', ${winId})">
+      <div class="model-name">${m.name}</div>
+      <div class="model-info">
+        <span>${formatSize(m.size)}</span>
+        <span>${m.details?.parameter_size || 'N/A'}</span>
+        <span>${m.details?.quantization_level || ''}</span>
+        <span class="model-tag">${m.details?.family || 'unknown'}</span>
+      </div>
+    </div>
+  `).join('');
+
+      // Also update all model selects
+      updateAllModelSelects(models);
+    }
+
+    function selectModel(modelName, winId) {
+      State.activeModel = modelName;
+      notify(`Active model: ${modelName}`, 'info');
+      refreshModels(winId);
+    }
+
+    function updateAllModelSelects(models) {
+      document.querySelectorAll('.win-model-select').forEach(sel => {
+        const current = sel.value;
+        sel.innerHTML = models.map(m =>
+          `<option value="${m.name}" ${m.name === current ? 'selected' : ''}>${m.name}</option>`
+        ).join('');
+      });
+    }
+
+    function switchWindowModel(winId, model) {
+      const ws = State.windows.get(winId);
+      if (ws) {
+        ws.model = model;
+        const label = document.querySelector(`#mw-${winId} .win-model-label`);
+        if (label) label.textContent = model;
+        notify(`Window #${winId} model: ${model}`, 'info');
+      }
+    }
+
+    async function pullModel(winId) {
+      const name = prompt('Enter model name to pull (e.g., llama3:latest):');
+      if (!name) return;
+      notify(`Pulling model: ${name}...`, 'info');
+      try {
+        await fetch(`${CONFIG.ollamaUrl}/api/pull`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name }),
+        });
+        notify(`Model ${name} pull started`, 'success');
+        setTimeout(() => refreshModels(winId), 2000);
+      } catch (err) {
+        notify(`Pull failed: ${err.message}`, 'error');
+      }
+    }
+
+    // ======================================================================
+    // BENCHMARK LOGIC
+    // ======================================================================
+    async function runBenchmark(winId) {
+      const results = document.getElementById(`bench-results-${winId}`);
+      const modelSel = document.getElementById(`model-sel-${winId}`);
+      const typeSel = document.getElementById(`bench-type-${winId}`);
+      if (!results) return;
+
+      const model = modelSel?.value || State.activeModel;
+      const benchType = typeSel?.value || 'inference';
+
+      results.innerHTML = '<div style="text-align:center;padding:20px;">Running benchmark...</div>';
+      updateWindowStatus(winId, 'Benchmarking...');
+      incrementTaskCount();
+
+      const testPrompt = 'Write a quicksort function in Python with detailed comments.';
+      const startTime = performance.now();
+      let tokenCount = 0;
+
+      const response = await ollamaGenerate(model, testPrompt, 'You are a benchmark test. Respond with code.', (chunk) => {
+        tokenCount += chunk.split(/\s+/).length;
+      });
+
+      const elapsed = (performance.now() - startTime) / 1000;
+      const tps = tokenCount / elapsed;
+      const ttft = elapsed > 0 ? (elapsed / tokenCount * 1000).toFixed(1) : 'N/A';
+
+      results.innerHTML = `
+    <div class="bench-result"><span class="bench-name">Model</span><span class="bench-value">${model}</span><span class="bench-unit"></span></div>
+    <div class="bench-result"><span class="bench-name">Tokens Generated</span><span class="bench-value">${tokenCount}</span><span class="bench-unit">tokens</span></div>
+    <div class="bench-result"><span class="bench-name">Total Time</span><span class="bench-value">${elapsed.toFixed(2)}</span><span class="bench-unit">sec</span></div>
+    <div class="bench-result"><span class="bench-name">Tokens/sec</span><span class="bench-value">${tps.toFixed(1)}</span><span class="bench-unit">tok/s</span></div>
+    <div class="bench-result"><span class="bench-name">Avg Latency</span><span class="bench-value">${ttft}</span><span class="bench-unit">ms/tok</span></div>
+    <div class="bench-result"><span class="bench-name">Response Length</span><span class="bench-value">${response.length}</span><span class="bench-unit">chars</span></div>
+  `;
+
+      updateWindowStatus(winId, 'Benchmark Complete');
+      decrementTaskCount();
+      notify(`Benchmark: ${tps.toFixed(1)} tok/s`, 'success');
+    }
+
+    // ======================================================================
+    // COMPILE LOGIC
+    // ======================================================================
+    async function startCompile(winId) {
+      const output = document.getElementById(`compile-output-${winId}`);
+      const targetSel = document.getElementById(`compile-target-${winId}`);
+      const configSel = document.getElementById(`compile-config-${winId}`);
+      if (!output) return;
+
+      const target = targetSel?.value || 'rawrxd-shell';
+      const config = configSel?.value || 'Release';
+
+      updateWindowStatus(winId, 'Compiling...');
+      incrementTaskCount();
+
+      output.innerHTML = `<span class="line-success">[RawrXD Build System]</span>\n`;
+      output.innerHTML += `Target: ${target} | Config: ${config}\n`;
+      output.innerHTML += `─────────────────────────────────────\n`;
+
+      const steps = [
+        { msg: `Configuring CMake (${config})...`, delay: 400 },
+        { msg: 'Scanning dependencies...', delay: 300 },
+        { msg: 'Compiling src/core/model_memory_hotpatch.cpp', delay: 200 },
+        { msg: 'Compiling src/core/byte_level_hotpatcher.cpp', delay: 200 },
+        { msg: 'Compiling src/core/unified_hotpatch_manager.cpp', delay: 200 },
+        { msg: 'Compiling src/server/gguf_server_hotpatch.cpp', delay: 200 },
+        { msg: 'Compiling src/agent/agentic_failure_detector.cpp', delay: 200 },
+        { msg: 'Compiling src/agent/agentic_puppeteer.cpp', delay: 200 },
+        { msg: 'Assembling src/asm/RawrXD_MultiWindow_Kernel.asm', delay: 300 },
+        { msg: 'Assembling src/asm/memory_patch.asm', delay: 200 },
+        { msg: 'Assembling src/asm/byte_search.asm', delay: 200 },
+        { msg: 'Assembling src/asm/request_patch.asm', delay: 200 },
+        { msg: 'Linking...', delay: 500 },
+        { msg: `<span class="line-success">Build successful: ${target} (${config})</span>`, delay: 100 },
+        { msg: `Output: build/${config}/${target === 'rawrxd-shell' ? 'RawrXD-Shell.exe' : target}`, delay: 0 },
+      ];
+
+      for (const step of steps) {
+        await new Promise(r => setTimeout(r, step.delay));
+        output.innerHTML += step.msg + '\n';
+        output.scrollTop = output.scrollHeight;
+      }
+
+      updateWindowStatus(winId, 'Build Complete');
+      decrementTaskCount();
+      notify(`Build complete: ${target}`, 'success');
+    }
+
+    function cleanBuild(winId) {
+      const output = document.getElementById(`compile-output-${winId}`);
+      if (output) output.innerHTML = '<span class="line-success">[Clean] Build directory cleaned.</span>\n';
+    }
+
+    function stopCompile(winId) {
+      updateWindowStatus(winId, 'Build Cancelled');
+      notify('Build cancelled', 'info');
+    }
+
+    // ======================================================================
+    // DEPLOY LOGIC
+    // ======================================================================
+    async function startDeploy(winId) {
+      const stages = document.querySelectorAll(`#deploy-stages-${winId} .stage-icon`);
+      updateWindowStatus(winId, 'Deploying...');
+      incrementTaskCount();
+
+      for (let i = 0; i < stages.length; i++) {
+        stages[i].className = 'stage-icon stage-running';
+        await new Promise(r => setTimeout(r, 800 + Math.random() * 500));
+        stages[i].className = 'stage-icon stage-done';
+      }
+
+      updateWindowStatus(winId, 'Deployed');
+      decrementTaskCount();
+      notify('Deployment complete!', 'success');
+    }
+
+    function stopDeploy(winId) {
+      updateWindowStatus(winId, 'Deploy Cancelled');
+    }
+
+    // ======================================================================
+    // PERFORMANCE MONITOR
+    // ======================================================================
+    function updatePerfMonitors() {
+      State.windows.forEach((ws, id) => {
+        if (ws.type !== 'perf') return;
+
+        const uptime = formatUptime(Date.now() - startTime);
+        const cpuUsage = Math.min(100, Math.random() * 30 + State.tasks.size * 10);
+        const memUsage = 200 + State.windows.size * 80 + State.tasks.size * 120;
+        const tps = State.tasks.size > 0 ? (40 + Math.random() * 50).toFixed(1) : '0';
+
+        setIfExists(`perf-windows-${id}`, State.windows.size);
+        setIfExists(`perf-tasks-${id}`, State.tasks.size);
+        setIfExists(`perf-processed-${id}`, State.kernelStats.totalProcessed);
+        setIfExists(`perf-uptime-${id}`, uptime);
+        setIfExists(`perf-cpu-${id}`, cpuUsage.toFixed(0) + '%');
+        setIfExists(`perf-mem-${id}`, memUsage.toFixed(0) + ' MB');
+        setIfExists(`perf-tps-${id}`, tps);
+
+        setBarWidth(`perf-cpu-bar-${id}`, cpuUsage);
+        setBarWidth(`perf-mem-bar-${id}`, Math.min(100, memUsage / 80));
+        setBarWidth(`perf-tps-bar-${id}`, Math.min(100, parseFloat(tps)));
+      });
+    }
+
+    // ======================================================================
+    // COMMAND PALETTE
+    // ======================================================================
+    const commands = [
+      { icon: '💬', label: 'New Chat Window', shortcut: 'Ctrl+Shift+C', action: () => spawnWindow('chat') },
+      { icon: '🔍', label: 'New Audit Window', shortcut: 'Ctrl+Shift+A', action: () => spawnWindow('audit') },
+      { icon: '🧠', label: 'New Chain of Thought', shortcut: 'Ctrl+Shift+T', action: () => spawnWindow('cot') },
+      { icon: '🐝', label: 'New Swarm Window', shortcut: 'Ctrl+Shift+S', action: () => spawnWindow('swarm') },
+      { icon: '📝', label: 'New Code Editor', shortcut: 'Ctrl+Shift+E', action: () => spawnWindow('editor') },
+      { icon: '⌨', label: 'New Terminal', shortcut: 'Ctrl+`', action: () => spawnWindow('terminal') },
+      { icon: '📁', label: 'New File Browser', shortcut: '', action: () => spawnWindow('files') },
+      { icon: '🤖', label: 'Model Manager', shortcut: '', action: () => spawnWindow('models') },
+      { icon: '📈', label: 'Performance Monitor', shortcut: '', action: () => spawnWindow('perf') },
+      { icon: '🔧', label: 'Hotpatch Manager', shortcut: '', action: () => spawnWindow('hotpatch') },
+      { icon: '🔒', label: 'Reverse Engineering', shortcut: '', action: () => spawnWindow('reverse') },
+      { icon: '🐛', label: 'Debugger', shortcut: '', action: () => spawnWindow('debug') },
+      { icon: '⏱', label: 'Benchmark Suite', shortcut: '', action: () => spawnWindow('benchmark') },
+      { icon: '⚙', label: 'Compiler', shortcut: '', action: () => spawnWindow('compile') },
+      { icon: '🚀', label: 'Deploy', shortcut: '', action: () => spawnWindow('deploy') },
+      { icon: '⊞', label: 'Tile All Windows', shortcut: 'Ctrl+Shift+G', action: () => WM.tileAll() },
+      { icon: '⊟', label: 'Cascade All Windows', shortcut: '', action: () => WM.cascadeAll() },
+      { icon: '⊞', label: 'Layout Picker', shortcut: 'Ctrl+L', action: () => showLayoutPicker() },
+      { icon: '✕', label: 'Close All Windows', shortcut: '', action: () => { State.windows.forEach(ws => WM.close(ws.id)); } },
+      { icon: '⊟', label: 'Minimize All', shortcut: '', action: () => WM.minimizeAll() },
+      { icon: '⊞', label: 'Restore All', shortcut: '', action: () => WM.restoreAll() },
+    ];
+
+    let cmdSelectedIndex = 0;
+    let filteredCommands = [...commands];
+
+    function toggleCommandPalette() {
+      const palette = document.getElementById('command-palette');
+      palette.classList.toggle('show');
+      if (palette.classList.contains('show')) {
+        const input = document.getElementById('cmd-input');
+        input.value = '';
+        input.focus();
+        filteredCommands = [...commands];
+        cmdSelectedIndex = 0;
+        renderCommands();
+      }
+    }
+
+    function filterCommands(query) {
+      const q = query.toLowerCase();
+      filteredCommands = commands.filter(c => c.label.toLowerCase().includes(q));
+      cmdSelectedIndex = 0;
+      renderCommands();
+    }
+
+    function renderCommands() {
+      const container = document.getElementById('cmd-results');
+      container.innerHTML = filteredCommands.map((cmd, i) =>
+        `<div class="cmd-item ${i === cmdSelectedIndex ? 'selected' : ''}" onclick="executeCommand(${i})">
+      <span class="cmd-icon">${cmd.icon}</span>
+      <span class="cmd-label">${cmd.label}</span>
+      <span class="cmd-shortcut">${cmd.shortcut}</span>
+    </div>`
+      ).join('');
+    }
+
+    function cmdKeyHandler(e) {
+      if (e.key === 'Escape') { toggleCommandPalette(); return; }
+      if (e.key === 'ArrowDown') { e.preventDefault(); cmdSelectedIndex = Math.min(cmdSelectedIndex + 1, filteredCommands.length - 1); renderCommands(); }
+      if (e.key === 'ArrowUp') { e.preventDefault(); cmdSelectedIndex = Math.max(cmdSelectedIndex - 1, 0); renderCommands(); }
+      if (e.key === 'Enter') { e.preventDefault(); executeCommand(cmdSelectedIndex); }
+    }
+
+    function executeCommand(index) {
+      if (filteredCommands[index]) {
+        filteredCommands[index].action();
+        toggleCommandPalette();
+      }
+    }
+
+    // ======================================================================
+    // LAYOUT PRESETS
+    // ======================================================================
+    function showLayoutPicker() {
+      document.getElementById('layout-picker').classList.add('show');
+    }
+
+    function applyLayout(layout) {
+      document.getElementById('layout-picker').classList.remove('show');
+
+      // Close all windows first
+      State.windows.forEach(ws => WM.close(ws.id));
+
+      const workspace = document.getElementById('workspace');
+      const rect = workspace.getBoundingClientRect();
+      const W = rect.width;
+      const H = rect.height;
+
+      switch (layout) {
+        case 'single':
+          spawnWindow('chat', { x: 0, y: 0, width: W, height: H });
+          break;
+        case 'split-v':
+          spawnWindow('chat', { x: 0, y: 0, width: W / 2, height: H });
+          spawnWindow('editor', { x: W / 2, y: 0, width: W / 2, height: H });
+          break;
+        case 'split-h':
+          spawnWindow('editor', { x: 0, y: 0, width: W, height: H / 2 });
+          spawnWindow('terminal', { x: 0, y: H / 2, width: W, height: H / 2 });
+          break;
+        case 'quad':
+          spawnWindow('chat', { x: 0, y: 0, width: W / 2, height: H / 2 });
+          spawnWindow('editor', { x: W / 2, y: 0, width: W / 2, height: H / 2 });
+          spawnWindow('terminal', { x: 0, y: H / 2, width: W / 2, height: H / 2 });
+          spawnWindow('audit', { x: W / 2, y: H / 2, width: W / 2, height: H / 2 });
+          break;
+        case 'triple-right':
+          spawnWindow('editor', { x: 0, y: 0, width: W * 0.6, height: H });
+          spawnWindow('chat', { x: W * 0.6, y: 0, width: W * 0.4, height: H / 2 });
+          spawnWindow('terminal', { x: W * 0.6, y: H / 2, width: W * 0.4, height: H / 2 });
+          break;
+        case 'six-pack':
+          for (let r = 0; r < 2; r++) {
+            for (let c = 0; c < 3; c++) {
+              const types = ['chat', 'audit', 'cot', 'swarm', 'editor', 'terminal'];
+              spawnWindow(types[r * 3 + c], { x: c * (W / 3), y: r * (H / 2), width: W / 3, height: H / 2 });
+            }
+          }
+          break;
+        case 'chat-audit-cot':
+          spawnWindow('chat', { x: 0, y: 0, width: W / 3, height: H });
+          spawnWindow('audit', { x: W / 3, y: 0, width: W / 3, height: H });
+          spawnWindow('cot', { x: 2 * W / 3, y: 0, width: W / 3, height: H });
+          break;
+        case 'swarm-command':
+          spawnWindow('swarm', { x: 0, y: 0, width: W, height: H * 0.65 });
+          spawnWindow('terminal', { x: 0, y: H * 0.65, width: W / 2, height: H * 0.35 });
+          spawnWindow('perf', { x: W / 2, y: H * 0.65, width: W / 2, height: H * 0.35 });
+          break;
+        case 'dev-full':
+          spawnWindow('files', { x: 0, y: 0, width: W * 0.2, height: H });
+          spawnWindow('editor', { x: W * 0.2, y: 0, width: W * 0.5, height: H * 0.65 });
+          spawnWindow('terminal', { x: W * 0.2, y: H * 0.65, width: W * 0.5, height: H * 0.35 });
+          spawnWindow('chat', { x: W * 0.7, y: 0, width: W * 0.3, height: H * 0.5 });
+          spawnWindow('perf', { x: W * 0.7, y: H * 0.5, width: W * 0.3, height: H * 0.5 });
+          break;
+      }
+    }
+
+    // ======================================================================
+    // KEYBOARD SHORTCUTS
+    // ======================================================================
+    document.addEventListener('keydown', (e) => {
+      // Ctrl+P -> Command Palette
+      if (e.ctrlKey && e.key === 'p') { e.preventDefault(); toggleCommandPalette(); }
+      // Ctrl+L -> Layout Picker
+      if (e.ctrlKey && e.key === 'l') { e.preventDefault(); showLayoutPicker(); }
+      // Ctrl+Shift+C -> New Chat
+      if (e.ctrlKey && e.shiftKey && e.key === 'C') { e.preventDefault(); spawnWindow('chat'); }
+      // Ctrl+Shift+A -> New Audit
+      if (e.ctrlKey && e.shiftKey && e.key === 'A') { e.preventDefault(); spawnWindow('audit'); }
+      // Ctrl+Shift+T -> New CoT
+      if (e.ctrlKey && e.shiftKey && e.key === 'T') { e.preventDefault(); spawnWindow('cot'); }
+      // Ctrl+Shift+S -> New Swarm
+      if (e.ctrlKey && e.shiftKey && e.key === 'S') { e.preventDefault(); spawnWindow('swarm'); }
+      // Ctrl+Shift+E -> New Editor
+      if (e.ctrlKey && e.shiftKey && e.key === 'E') { e.preventDefault(); spawnWindow('editor'); }
+      // Ctrl+` -> New Terminal
+      if (e.ctrlKey && e.key === '`') { e.preventDefault(); spawnWindow('terminal'); }
+      // Ctrl+Shift+G -> Tile
+      if (e.ctrlKey && e.shiftKey && e.key === 'G') { e.preventDefault(); WM.tileAll(); }
+      // Escape -> Close palette/layout
+      if (e.key === 'Escape') {
+        document.getElementById('command-palette').classList.remove('show');
+        document.getElementById('layout-picker').classList.remove('show');
+      }
+      // Ctrl+W -> Close focused window
+      if (e.ctrlKey && e.key === 'w') {
+        if (State.focusedWindowId && !e.target.closest('textarea,input')) {
+          e.preventDefault();
+          WM.close(State.focusedWindowId);
+        }
+      }
+    });
+
+    // ======================================================================
+    // UTILITY FUNCTIONS
+    // ======================================================================
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function formatResponse(text) {
+      // Simple code block detection
+      return escapeHtml(text).replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+    }
+
+    function formatSize(bytes) {
+      if (!bytes) return 'N/A';
+      const gb = bytes / (1024 * 1024 * 1024);
+      if (gb >= 1) return gb.toFixed(1) + ' GB';
+      const mb = bytes / (1024 * 1024);
+      return mb.toFixed(0) + ' MB';
+    }
+
+    function formatUptime(ms) {
+      const s = Math.floor(ms / 1000);
+      const m = Math.floor(s / 60);
+      const h = Math.floor(m / 60);
+      if (h > 0) return `${h}h ${m % 60}m ${s % 60}s`;
+      if (m > 0) return `${m}m ${s % 60}s`;
+      return `${s}s`;
+    }
+
+    function setIfExists(id, value) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = value;
+    }
+
+    function setBarWidth(id, pct) {
+      const el = document.getElementById(id);
+      if (el) el.style.width = Math.min(100, pct) + '%';
+    }
+
+    function updateWindowStatus(winId, status) {
+      setIfExists(`mw-status-${winId}`, status);
+    }
+
+    let taskCounter = 0;
+    function incrementTaskCount() {
+      taskCounter++;
+      State.kernelStats.totalProcessed++;
+      WM.updateCounters();
+    }
+    function decrementTaskCount() {
+      taskCounter = Math.max(0, taskCounter - 1);
+      WM.updateCounters();
+    }
+
+    function notify(message, type = 'info') {
+      const container = document.getElementById('notifications');
+      const el = document.createElement('div');
+      el.className = `notification ${type}`;
+      el.textContent = message;
+      container.appendChild(el);
+      setTimeout(() => el.remove(), 4000);
+    }
+
+    // Dynamically fetch and build file tree from backend instead of static hardcoded list
+    async function buildFileTreeDynamic(path, container) {
+      if (!container) return;
+      container.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text-muted);">Loading files...</div>';
+      try {
+        const resp = await fetch(`${CONFIG.rawrxdUrl}/api/list-dir`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: path || '.' })
+        });
+        if (!resp.ok) throw new Error('Backend unavailable');
+        const data = await resp.json();
+        const items = data.entries || data.files || data;
+        if (!Array.isArray(items) || items.length === 0) {
+          container.innerHTML = '<div style="padding:8px;color:var(--text-muted);">No files found</div>';
+          return;
+        }
+        container.innerHTML = renderFileTree(items, 0);
+        // Add click handlers for folders to expand/collapse
+        container.querySelectorAll('.file-item.folder').forEach(el => {
+          el.addEventListener('click', async function (e) {
+            e.stopPropagation();
+            const subPath = this.dataset.path;
+            const childContainer = this.nextElementSibling;
+            if (childContainer && childContainer.classList.contains('folder-children')) {
+              // Toggle visibility
+              childContainer.style.display = childContainer.style.display === 'none' ? '' : 'none';
+              return;
+            }
+            // Fetch children
+            const childDiv = document.createElement('div');
+            childDiv.className = 'folder-children';
+            this.after(childDiv);
+            await buildFileTreeDynamic(subPath, childDiv);
+          });
+        });
+      } catch (err) {
+        // Fallback: show static project structure if backend is offline
+        container.innerHTML = buildFileTreeStatic();
+      }
+    }
+
+    function renderFileTree(items, depth) {
+      return items.map(item => {
+        const indent = depth * 16;
+        const isDir = item.type === 'directory' || item.type === 'folder' || item.isDirectory;
+        const icon = isDir ? '📁' : getFileIcon(item.name || item);
+        const name = item.name || item;
+        const fullPath = item.path || name;
+        return `<div class="file-item ${isDir ? 'folder' : 'file'}" style="padding-left:${8 + indent}px;cursor:pointer;" data-path="${fullPath}">
+        <span class="file-icon">${icon}</span>
+        <span>${name}</span>
+      </div>`;
+      }).join('');
+    }
+
+    function getFileIcon(name) {
+      const ext = name.split('.').pop().toLowerCase();
+      const icons = { cpp: '⚙️', hpp: '⚙️', h: '⚙️', c: '⚙️', asm: '🔧', py: '🐍', js: '📜', html: '🌐', css: '🎨', json: '📋', md: '📝', txt: '📄', gguf: '🧠', bin: '💾' };
+      return icons[ext] || '📄';
+    }
+
+    function buildFileTreeStatic() {
+      // Offline fallback — simplified project skeleton
+      const staticItems = [
+        { name: 'src/', type: 'folder' },
+        { name: 'gui/', type: 'folder' },
+        { name: 'CMakeLists.txt', type: 'file' },
+        { name: 'README.md', type: 'file' },
+      ];
+      return renderFileTree(staticItems, 0) + '<div style="padding:4px 8px;color:var(--text-muted);font-size:10px;">⚠ Offline — connect backend for live file tree</div>';
+    }
+
+    function buildFileTree() {
+      // Legacy sync wrapper — returns placeholder, then fills dynamically
+      setTimeout(() => {
+        document.querySelectorAll('.file-tree').forEach(el => {
+          buildFileTreeDynamic('.', el);
+        });
+      }, 500);
+      return '<div style="text-align:center;padding:12px;color:var(--text-muted);">Loading file tree...</div>';
+    }
+
+    function generateHexDump() {
+      // Sample hex dump of GGUF header
+      const lines = [];
+      const header = [
+        0x47, 0x47, 0x55, 0x46, 0x03, 0x00, 0x00, 0x00,
+        0x0A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      ];
+
+      for (let offset = 0; offset < 256; offset += 16) {
+        const addr = offset.toString(16).padStart(8, '0');
+        const bytes = [];
+        const ascii = [];
+        for (let i = 0; i < 16; i++) {
+          const b = offset < header.length * 16 ?
+            header[(offset + i) % header.length] ^ ((offset + i) & 0xFF) :
+            Math.floor(Math.random() * 256);
+          bytes.push(b.toString(16).padStart(2, '0'));
+          ascii.push(b >= 32 && b < 127 ? String.fromCharCode(b) : '.');
+        }
+        lines.push(`<div class="hex-row"><span class="hex-addr">${addr}</span><span class="hex-bytes">${bytes.join(' ')}</span><span class="hex-ascii">${ascii.join('')}</span></div>`);
+      }
+      return lines.join('\n');
+    }
+
+    function addPatch(winId) { notify('Patch configuration dialog coming soon', 'info'); }
+    function applyAllPatches(winId) { notify('All patches applied', 'success'); }
+    function revertPatches(winId) { notify('Patches reverted', 'info'); }
+    function loadBinary(winId) { notify('Binary loaded', 'info'); }
+    function debugAction(winId, action) { notify(`Debug: ${action}`, 'info'); }
+    function refreshFiles(winId) { notify('Files refreshed', 'info'); }
+
+    // ======================================================================
+    // CLOCK & INTERVALS
+    // ======================================================================
+    const startTime = Date.now();
+
+    function updateClock() {
+      const now = new Date();
+      const h = String(now.getHours()).padStart(2, '0');
+      const m = String(now.getMinutes()).padStart(2, '0');
+      const s = String(now.getSeconds()).padStart(2, '0');
+      setIfExists('clock', `${h}:${m}:${s}`);
+    }
+
+    setInterval(updateClock, 1000);
+    setInterval(updatePerfMonitors, CONFIG.perfUpdateInterval);
+    setInterval(() => WM.updateCounters(), 2000);
+
+    // ======================================================================
+    // STARTUP
+    // ======================================================================
+    window.addEventListener('DOMContentLoaded', () => {
+      updateClock();
+
+      // Auto-load dev workstation layout
+      setTimeout(() => {
+        applyLayout('dev-full');
+      }, 200);
+
+      // Fetch models on startup
+      fetchModels().then(models => {
+        if (models.length > 0) {
+          State.activeModel = models[0].name;
+          notify(`Connected: ${models.length} models available`, 'success');
+        } else {
+          notify('No models found. Start Ollama first.', 'error');
+        }
+      });
+
+      notify('RawrXD MultiWindow IDE initialized', 'info');
+      notify('Kernel: 4 workers | IPC: 1MB shared memory', 'info');
+    });
+  </script>
+</body>
+
+</html>

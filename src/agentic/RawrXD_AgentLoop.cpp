@@ -1,4 +1,5 @@
 #include "RawrXD_AgentLoop.h"
+#include "IDELogger.h"
 
 #include <chrono>
 
@@ -8,7 +9,7 @@ using RawrXD::Agentic::PerceptionEvent;
 AgentLoop::AgentLoop()
     : m_running(false)
     , m_bridge(nullptr)
-    , m_toolRegistry(&RawrXD::Agent::ToolRegistry::Instance()) {
+    , m_toolRegistry(&RawrXD::Agent::AgentToolRegistry::Instance()) {
 
 }
 
@@ -72,11 +73,17 @@ void AgentLoop::ProcessEvent(const PerceptionEvent& evt) {
     if (response.type == AgentResponseType::TOOL_CALL) {
         std::string output;
         std::string argsJson = response.toolArgs.empty() ? "{}" : response.toolArgs;
-        auto result = m_toolRegistry->Execute(response.toolName, argsJson, output);
+        nlohmann::json args;
+        try {
+            args = nlohmann::json::parse(argsJson);
+        } catch (...) {
+            args = nlohmann::json::object();
+        }
+        auto result = m_toolRegistry->Dispatch(response.toolName, args);
+        output = result.output;
 
         if (!output.empty()) {
 
         }
     }
 }
-

@@ -1,0 +1,72 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run CodeBuddy Extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/extension"
+      ],
+      "env": {
+        "CODEBUDDY_AI_ENABLED": "true"
+      },
+      "outFiles": [
+        "${workspaceFolder}/extension/out/**/*.js"
+      ]
+    },
+    {
+      "name": "Run CodeBuddy (AI disabled)",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/extension"
+      ],
+      "env": {
+        "CODEBUDDY_AI_ENABLED": "false"
+      },
+      "outFiles": [
+        "${workspaceFolder}/extension/out/**/*.js"
+      ]
+    },
+    {
+      "name": "Launch MyCopilot IDE",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/electron-main.js",
+      "console": "integratedTerminal",
+      "env": {
+        "NODE_ENV": "development"
+      }
+    },
+    {
+      "name": "Launch Server",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/server.js",
+      "console": "integratedTerminal",
+      "env": {
+        "PORT": "3000"
+      }
+    },
+    {
+      "name": "Launch Proxy",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/proxy.js",
+      "console": "integratedTerminal",
+      "env": {
+        "PORT": "8080"
+      }
+    },
+    {
+      "name": "Debug PowerShell Script",
+      "type": "PowerShell",
+      "request": "launch",
+      "script": "${file}",
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}

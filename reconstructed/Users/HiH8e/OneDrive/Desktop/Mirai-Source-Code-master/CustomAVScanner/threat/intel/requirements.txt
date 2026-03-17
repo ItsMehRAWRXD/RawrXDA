@@ -1,0 +1,67 @@
+# CyberForge Advanced Threat Intelligence Requirements
+# Professional-grade threat intelligence feed processing
+
+# Core async dependencies
+aiohttp>=3.8.0
+asyncio
+aiofiles>=0.8.0
+
+# Data processing
+pandas>=1.5.0
+numpy>=1.21.0
+
+# Database
+sqlite3
+
+# YARA for pattern matching  
+yara-python>=4.2.0
+
+# Network and URL processing
+urllib3>=1.26.0
+requests>=2.28.0
+dnspython>=2.2.0
+tldextract>=3.4.0
+
+# JSON and data validation
+jsonschema>=4.0.0
+marshmallow>=3.19.0
+
+# Logging and monitoring
+colorlog>=6.6.0
+structlog>=22.0.0
+
+# Date/time processing
+python-dateutil>=2.8.0
+
+# Cryptographic hashing
+hashlib
+hmac
+
+# Regular expressions
+regex>=2022.0.0
+
+# XML processing (for feeds)
+lxml>=4.9.0
+beautifulsoup4>=4.11.0
+
+# Threat intelligence enrichment
+ipaddress
+socket
+ssl
+
+# Configuration
+pyyaml>=6.0
+toml>=0.10.0
+
+# CLI interface
+click>=8.0.0
+rich>=12.0.0
+tabulate>=0.9.0
+
+# Performance monitoring
+psutil>=5.9.0
+memory-profiler>=0.60.0
+
+# Testing
+pytest>=7.1.0
+pytest-asyncio>=0.20.0

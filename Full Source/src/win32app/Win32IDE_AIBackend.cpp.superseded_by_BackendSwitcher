@@ -1,0 +1,683 @@
+// ============================================================================
+// Win32IDE_AIBackend.cpp — Phase 8B: AI Backend Switcher
+//
+// Orchestration-layer only. No inference math. No policy/history mutation.
+// Provides:
+//   - Backend registry (LocalGGUF, Ollama, OpenAI, Custom)
+//   - Runtime switching via command palette or API
+//   - Health probing (WinHTTP HEAD/GET with timeout)
+//   - Unified generate dispatch that routes to active backend
+//   - HTTP endpoints: GET /api/backends, POST /api/backends/switch
+// ============================================================================
+
+#include "Win32IDE.h"
+#include <winhttp.h>
+#include <chrono>
+#include <sstream>
+
+#pragma comment(lib, "winhttp.lib")
+
+// ============================================================================
+// INITIALIZATION — populate default backends from settings
+// ============================================================================
+
+void Win32IDE::initBackendManager()
+{
+    std::lock_guard<std::mutex> lock(m_backendMutex);
+    m_backends.clear();
+
+    // Backend 0: Local GGUF (always present)
+    {
+        AIBackendInfo b;
+        b.type    = AIBackendType::LocalGGUF;
+        b.name    = "Local GGUF";
+        b.baseUrl = "";  // no URL — in-process
+        b.enabled = true;
+        b.healthy = (m_nativeEngine != nullptr && m_nativeEngineLoaded);
+        m_backends.push_back(b);
+    }
+
+    // Backend 1: Ollama (from settings)
+    {
+        AIBackendInfo b;
+        b.type    = AIBackendType::Ollama;
+        b.name    = "Ollama";
+        b.baseUrl = m_settings.aiOllamaUrl.empty()
+                        ? "http://localhost:11434"
+                        : m_settings.aiOllamaUrl;
+        b.model   = m_ollamaModelOverride;
+        b.enabled = true;
+        b.healthy = false;
+        m_backends.push_back(b);
+    }
+
+    // Backend 2: OpenAI-compatible (disabled by default — needs API key)
+    {
+        AIBackendInfo b;
+        b.type    = AIBackendType::OpenAI;
+        b.name    = "OpenAI";
+        b.baseUrl = "https://api.openai.com";
+        b.model   = "gpt-3.5-turbo";
+        b.enabled = false;
+        b.healthy = false;
+        m_backends.push_back(b);
+    }
+
+    // Default active = LocalGGUF (index 0)
+    m_activeBackendIndex = 0;
+
+    appendToOutput("[Backend] Initialized " + std::to_string(m_backends.size())
+                   + " backends. Active: " + m_backends[0].name,
+                   "Output", OutputSeverity::Info);
+}
+
+// ============================================================================
+// ACCESSORS
+// ============================================================================
+
+int Win32IDE::getActiveBackendIndex() const
+{
+    return m_activeBackendIndex;
+}
+
+Win32IDE::AIBackendType Win32IDE::getActiveBackendType() const
+{
+    std::lock_guard<std::mutex> lock(const_cast<std::mutex&>(m_backendMutex));
+    if (m_activeBackendIndex >= 0 && m_activeBackendIndex < (int)m_backends.size())
+        return m_backends[m_activeBackendIndex].type;
+    return AIBackendType::LocalGGUF;
+}
+
+const Win32IDE::AIBackendInfo& Win32IDE::getActiveBackend() const
+{
+    std::lock_guard<std::mutex> lock(const_cast<std::mutex&>(m_backendMutex));
+    static AIBackendInfo fallback{AIBackendType::LocalGGUF, "Local GGUF", "", "", "", true, false, 0, 0, 0, 0};
+    if (m_activeBackendIndex >= 0 && m_activeBackendIndex < (int)m_backends.size())
+        return m_backends[m_activeBackendIndex];
+    return fallback;
+}
+
+std::string Win32IDE::getActiveBackendName() const
+{
+    return getActiveBackend().name;
+}
+
+// ============================================================================
+// TYPE CONVERSION
+// ============================================================================
+
+std::string Win32IDE::backendTypeToString(AIBackendType type) const
+{
+    switch (type) {
+        case AIBackendType::LocalGGUF: return "local_gguf";
+        case AIBackendType::Ollama:    return "ollama";
+        case AIBackendType::OpenAI:    return "openai";
+        case AIBackendType::Custom:    return "custom";
+    }
+    return "unknown";
+}
+
+Win32IDE::AIBackendType Win32IDE::stringToBackendType(const std::string& s) const
+{
+    if (s == "local_gguf" || s == "local" || s == "gguf")  return AIBackendType::LocalGGUF;
+    if (s == "ollama")                                      return AIBackendType::Ollama;
+    if (s == "openai" || s == "openai_compat")              return AIBackendType::OpenAI;
+    if (s == "custom")                                      return AIBackendType::Custom;
+    return AIBackendType::LocalGGUF;
+}
+
+// ============================================================================
+// SWITCHING
+// ============================================================================
+
+bool Win32IDE::switchBackend(AIBackendType type)
+{
+    std::lock_guard<std::mutex> lock(m_backendMutex);
+    for (int i = 0; i < (int)m_backends.size(); i++) {
+        if (m_backends[i].type == type && m_backends[i].enabled) {
+            m_activeBackendIndex = i;
+            appendToOutput("[Backend] Switched to: " + m_backends[i].name
+                           + " (" + backendTypeToString(type) + ")",
+                           "Output", OutputSeverity::Info);
+            if (m_hwndStatusBar) {
+                std::string status = "Backend: " + m_backends[i].name;
+                SendMessage(m_hwndStatusBar, SB_SETTEXT, 1, (LPARAM)status.c_str());
+            }
+            return true;
+        }
+    }
+    appendToOutput("[Backend] Switch failed — backend not found or disabled",
+                   "Errors", OutputSeverity::Error);
+    return false;
+}
+
+bool Win32IDE::switchBackendByIndex(int index)
+{
+    std::lock_guard<std::mutex> lock(m_backendMutex);
+    if (index < 0 || index >= (int)m_backends.size()) return false;
+    if (!m_backends[index].enabled) {
+        appendToOutput("[Backend] Cannot switch — " + m_backends[index].name + " is disabled",
+                       "Errors", OutputSeverity::Error);
+        return false;
+    }
+    m_activeBackendIndex = index;
+    appendToOutput("[Backend] Switched to: " + m_backends[index].name,
+                   "Output", OutputSeverity::Info);
+    if (m_hwndStatusBar) {
+        std::string status = "Backend: " + m_backends[index].name;
+        SendMessage(m_hwndStatusBar, SB_SETTEXT, 1, (LPARAM)status.c_str());
+    }
+    return true;
+}
+
+// ============================================================================
+// CONFIGURATION
+// ============================================================================
+
+void Win32IDE::configureBackend(int index, const std::string& url,
+                                 const std::string& apiKey, const std::string& model)
+{
+    std::lock_guard<std::mutex> lock(m_backendMutex);
+    if (index < 0 || index >= (int)m_backends.size()) return;
+
+    auto& b = m_backends[index];
+    if (!url.empty())    b.baseUrl = url;
+    if (!apiKey.empty()) b.apiKey  = apiKey;
+    if (!model.empty())  b.model   = model;
+    b.healthy = false;  // invalidate after config change
+
+    appendToOutput("[Backend] Configured " + b.name + " → " + b.baseUrl
+                   + " (model=" + b.model + ")",
+                   "Output", OutputSeverity::Info);
+}
+
+// ============================================================================
+// HEALTH PROBING — WinHTTP GET with 3-second timeout
+// ============================================================================
+
+void Win32IDE::probeBackendHealth(int index)
+{
+    std::lock_guard<std::mutex> lock(m_backendMutex);
+    if (index < 0 || index >= (int)m_backends.size()) return;
+
+    auto& b = m_backends[index];
+    auto now = std::chrono::steady_clock::now().time_since_epoch();
+    b.lastHealthCheckMs = std::chrono::duration_cast<std::chrono::milliseconds>(now).count();
+
+    if (b.type == AIBackendType::LocalGGUF) {
+        // In-process: check native engine state
+        b.healthy = (m_nativeEngine != nullptr && m_nativeEngine->IsModelLoaded());
+        b.lastLatencyMs = 0;
+        return;
+    }
+
+    if (b.baseUrl.empty()) {
+        b.healthy = false;
+        return;
+    }
+
+    // Parse URL
+    std::string url = b.baseUrl;
+    bool isHttps = (url.rfind("https://", 0) == 0);
+    std::string withoutProto = url.substr(url.find("://") + 3);
+    std::string host;
+    int port = isHttps ? 443 : 80;
+
+    size_t colonPos = withoutProto.find(':');
+    size_t slashPos = withoutProto.find('/');
+    if (colonPos != std::string::npos && (slashPos == std::string::npos || colonPos < slashPos)) {
+        host = withoutProto.substr(0, colonPos);
+        std::string portStr = withoutProto.substr(colonPos + 1,
+            (slashPos == std::string::npos ? withoutProto.size() : slashPos) - (colonPos + 1));
+        port = atoi(portStr.c_str());
+    } else {
+        host = (slashPos == std::string::npos) ? withoutProto : withoutProto.substr(0, slashPos);
+        if (b.type == AIBackendType::Ollama && !isHttps) port = 11434;
+    }
+
+    // Health endpoint path
+    std::wstring path;
+    if (b.type == AIBackendType::Ollama)  path = L"/api/tags";
+    else if (b.type == AIBackendType::OpenAI) path = L"/v1/models";
+    else path = L"/health";
+
+    std::wstring whost(host.begin(), host.end());
+
+    auto t0 = std::chrono::steady_clock::now();
+
+    HINTERNET hSession = WinHttpOpen(L"RawrXD-HealthProbe/1.0",
+        WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, NULL, NULL, 0);
+    if (!hSession) { b.healthy = false; return; }
+
+    // Set 3-second timeout
+    DWORD timeout = 3000;
+    WinHttpSetTimeouts(hSession, timeout, timeout, timeout, timeout);
+
+    HINTERNET hConnect = WinHttpConnect(hSession, whost.c_str(), (INTERNET_PORT)port, 0);
+    if (!hConnect) { WinHttpCloseHandle(hSession); b.healthy = false; return; }
+
+    HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"GET", path.c_str(),
+        NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES,
+        isHttps ? WINHTTP_FLAG_SECURE : 0);
+    if (!hRequest) {
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+        b.healthy = false;
+        return;
+    }
+
+    // Add auth header for OpenAI
+    if (b.type == AIBackendType::OpenAI && !b.apiKey.empty()) {
+        std::wstring authHeader = L"Authorization: Bearer ";
+        authHeader += std::wstring(b.apiKey.begin(), b.apiKey.end());
+        WinHttpAddRequestHeaders(hRequest, authHeader.c_str(), (DWORD)-1L,
+            WINHTTP_ADDREQ_FLAG_ADD);
+    }
+
+    BOOL sent = WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0,
+        WINHTTP_NO_REQUEST_DATA, 0, 0, 0);
+    BOOL received = sent ? WinHttpReceiveResponse(hRequest, NULL) : FALSE;
+
+    DWORD statusCode = 0;
+    DWORD statusSize = sizeof(statusCode);
+    if (received) {
+        WinHttpQueryHeaders(hRequest,
+            WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
+            WINHTTP_HEADER_NAME_BY_INDEX, &statusCode, &statusSize,
+            WINHTTP_NO_HEADER_INDEX);
+    }
+
+    auto t1 = std::chrono::steady_clock::now();
+    b.lastLatencyMs = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
+    b.healthy = (received && statusCode >= 200 && statusCode < 500);
+
+    WinHttpCloseHandle(hRequest);
+    WinHttpCloseHandle(hConnect);
+    WinHttpCloseHandle(hSession);
+}
+
+void Win32IDE::probeAllBackendHealth()
+{
+    for (int i = 0; i < (int)m_backends.size(); i++) {
+        probeBackendHealth(i);
+    }
+}
+
+// ============================================================================
+// UNIFIED GENERATE DISPATCH — routes prompt to active backend
+// ============================================================================
+
+std::string Win32IDE::generateViaBackend(const std::string& prompt, int maxTokens)
+{
+    SCOPED_METRIC("backend.generate");
+
+    int idx;
+    AIBackendInfo backendCopy;
+    {
+        std::lock_guard<std::mutex> lock(m_backendMutex);
+        idx = m_activeBackendIndex;
+        if (idx < 0 || idx >= (int)m_backends.size()) {
+            return "[Backend Error] No active backend configured.";
+        }
+        backendCopy = m_backends[idx];
+    }
+
+    auto t0 = std::chrono::steady_clock::now();
+    std::string result;
+
+    switch (backendCopy.type) {
+    // ------------------------------------------------------------------
+    case AIBackendType::LocalGGUF:
+    {
+        if (!m_nativeEngine || !m_nativeEngine->IsModelLoaded()) {
+            return "[Backend Error] Local GGUF: No model loaded in native engine.";
+        }
+        auto tokens = m_nativeEngine->Tokenize(prompt);
+        auto generated = m_nativeEngine->Generate(tokens, maxTokens);
+        result = m_nativeEngine->Detokenize(generated);
+        break;
+    }
+
+    // ------------------------------------------------------------------
+    case AIBackendType::Ollama:
+    {
+        if (backendCopy.baseUrl.empty()) {
+            return "[Backend Error] Ollama: No base URL configured.";
+        }
+
+        // Parse host/port from baseUrl
+        std::string url = backendCopy.baseUrl;
+        bool isHttps = (url.rfind("https://", 0) == 0);
+        std::string withoutProto = url.substr(url.find("://") + 3);
+        std::string host;
+        int port = isHttps ? 443 : 11434;
+        size_t colonPos = withoutProto.find(':');
+        size_t slashPos = withoutProto.find('/');
+        if (colonPos != std::string::npos && (slashPos == std::string::npos || colonPos < slashPos)) {
+            host = withoutProto.substr(0, colonPos);
+            port = atoi(withoutProto.substr(colonPos + 1,
+                (slashPos == std::string::npos ? withoutProto.size() : slashPos) - (colonPos + 1)).c_str());
+        } else {
+            host = (slashPos == std::string::npos) ? withoutProto : withoutProto.substr(0, slashPos);
+        }
+
+        std::wstring whost(host.begin(), host.end());
+        HINTERNET hSession = WinHttpOpen(L"RawrXD-Backend/1.0",
+            WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, NULL, NULL, 0);
+        if (!hSession) return "[Backend Error] Ollama: WinHTTP session failed.";
+
+        DWORD timeout = 60000; // 60s for inference
+        WinHttpSetTimeouts(hSession, timeout, timeout, timeout, timeout);
+
+        HINTERNET hConnect = WinHttpConnect(hSession, whost.c_str(), (INTERNET_PORT)port, 0);
+        if (!hConnect) { WinHttpCloseHandle(hSession); return "[Backend Error] Ollama: Connect failed."; }
+
+        HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"POST", L"/api/generate",
+            NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES,
+            isHttps ? WINHTTP_FLAG_SECURE : 0);
+        if (!hRequest) { WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession); return "[Backend Error] Ollama: Request failed."; }
+
+        // Derive model tag
+        std::string modelTag = backendCopy.model;
+        if (modelTag.empty() && !m_loadedModelPath.empty()) {
+            modelTag = m_loadedModelPath;
+            size_t pos = modelTag.find_last_of("\\/");
+            if (pos != std::string::npos) modelTag = modelTag.substr(pos + 1);
+        }
+        if (modelTag.empty()) modelTag = "rawrxd";
+
+        // Escape prompt
+        std::string escPrompt;
+        escPrompt.reserve(prompt.size() + 16);
+        for (char c : prompt) {
+            if (c == '"') escPrompt += "\\\"";
+            else if (c == '\n') escPrompt += "\\n";
+            else if (c == '\r') continue;
+            else if (c == '\t') escPrompt += "\\t";
+            else if (c == '\\') escPrompt += "\\\\";
+            else escPrompt += c;
+        }
+
+        std::string body = "{\"model\":\"" + modelTag + "\",\"prompt\":\"" + escPrompt
+                         + "\",\"stream\":false,\"options\":{\"num_predict\":"
+                         + std::to_string(maxTokens) + "}}";
+
+        std::wstring headers = L"Content-Type: application/json";
+        BOOL sent = WinHttpSendRequest(hRequest, headers.c_str(), (DWORD)-1L,
+            (LPVOID)body.c_str(), (DWORD)body.size(), (DWORD)body.size(), 0);
+        BOOL received = sent ? WinHttpReceiveResponse(hRequest, NULL) : FALSE;
+
+        std::string raw;
+        if (received) {
+            DWORD dwSize = 0;
+            do {
+                if (!WinHttpQueryDataAvailable(hRequest, &dwSize) || !dwSize) break;
+                std::string chunk(dwSize, '\0');
+                DWORD dwRead = 0;
+                if (!WinHttpReadData(hRequest, chunk.data(), dwSize, &dwRead)) break;
+                if (dwRead) raw.append(chunk.data(), dwRead);
+            } while (dwSize > 0);
+        }
+
+        WinHttpCloseHandle(hRequest);
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+
+        if (raw.empty()) return "[Backend Error] Ollama: Empty response.";
+
+        // Extract "response" field
+        size_t rpos = raw.rfind("\"response\":\"");
+        if (rpos != std::string::npos) {
+            rpos += 12;
+            std::string out;
+            while (rpos < raw.size()) {
+                char c = raw[rpos++];
+                if (c == '"') break;
+                if (c == '\\' && rpos < raw.size()) {
+                    char next = raw[rpos++];
+                    if (next == 'n') out += '\n';
+                    else if (next == 't') out += '\t';
+                    else out += next;
+                } else {
+                    out += c;
+                }
+            }
+            result = out;
+        } else {
+            result = raw; // return raw if parsing fails
+        }
+        break;
+    }
+
+    // ------------------------------------------------------------------
+    case AIBackendType::OpenAI:
+    case AIBackendType::Custom:
+    {
+        if (backendCopy.baseUrl.empty()) {
+            return "[Backend Error] OpenAI: No base URL configured.";
+        }
+        if (backendCopy.apiKey.empty() && backendCopy.type == AIBackendType::OpenAI) {
+            return "[Backend Error] OpenAI: No API key configured. Use the Settings dialog.";
+        }
+
+        // Parse host/port
+        std::string url = backendCopy.baseUrl;
+        bool isHttps = (url.rfind("https://", 0) == 0);
+        std::string withoutProto = url.substr(url.find("://") + 3);
+        std::string host;
+        int port = isHttps ? 443 : 80;
+        size_t colonPos = withoutProto.find(':');
+        size_t slashPos = withoutProto.find('/');
+        if (colonPos != std::string::npos && (slashPos == std::string::npos || colonPos < slashPos)) {
+            host = withoutProto.substr(0, colonPos);
+            port = atoi(withoutProto.substr(colonPos + 1,
+                (slashPos == std::string::npos ? withoutProto.size() : slashPos) - (colonPos + 1)).c_str());
+        } else {
+            host = (slashPos == std::string::npos) ? withoutProto : withoutProto.substr(0, slashPos);
+        }
+
+        std::wstring whost(host.begin(), host.end());
+        HINTERNET hSession = WinHttpOpen(L"RawrXD-Backend/1.0",
+            WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, NULL, NULL, 0);
+        if (!hSession) return "[Backend Error] OpenAI: WinHTTP session failed.";
+
+        DWORD timeout = 60000;
+        WinHttpSetTimeouts(hSession, timeout, timeout, timeout, timeout);
+
+        HINTERNET hConnect = WinHttpConnect(hSession, whost.c_str(), (INTERNET_PORT)port, 0);
+        if (!hConnect) { WinHttpCloseHandle(hSession); return "[Backend Error] OpenAI: Connect failed."; }
+
+        HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"POST", L"/v1/chat/completions",
+            NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES,
+            isHttps ? WINHTTP_FLAG_SECURE : 0);
+        if (!hRequest) { WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession); return "[Backend Error] OpenAI: Request failed."; }
+
+        // Build messages JSON
+        std::string escPrompt;
+        escPrompt.reserve(prompt.size() + 16);
+        for (char c : prompt) {
+            if (c == '"') escPrompt += "\\\"";
+            else if (c == '\n') escPrompt += "\\n";
+            else if (c == '\r') continue;
+            else if (c == '\t') escPrompt += "\\t";
+            else if (c == '\\') escPrompt += "\\\\";
+            else escPrompt += c;
+        }
+
+        std::string modelName = backendCopy.model.empty() ? "gpt-3.5-turbo" : backendCopy.model;
+        std::string body = "{\"model\":\"" + modelName + "\",\"messages\":[{\"role\":\"user\",\"content\":\""
+                         + escPrompt + "\"}],\"max_tokens\":" + std::to_string(maxTokens)
+                         + ",\"stream\":false}";
+
+        // Headers
+        std::wstring hdrs = L"Content-Type: application/json\r\n";
+        if (!backendCopy.apiKey.empty()) {
+            hdrs += L"Authorization: Bearer ";
+            hdrs += std::wstring(backendCopy.apiKey.begin(), backendCopy.apiKey.end());
+            hdrs += L"\r\n";
+        }
+
+        BOOL sent = WinHttpSendRequest(hRequest, hdrs.c_str(), (DWORD)-1L,
+            (LPVOID)body.c_str(), (DWORD)body.size(), (DWORD)body.size(), 0);
+        BOOL received = sent ? WinHttpReceiveResponse(hRequest, NULL) : FALSE;
+
+        std::string raw;
+        if (received) {
+            DWORD dwSize = 0;
+            do {
+                if (!WinHttpQueryDataAvailable(hRequest, &dwSize) || !dwSize) break;
+                std::string chunk(dwSize, '\0');
+                DWORD dwRead = 0;
+                if (!WinHttpReadData(hRequest, chunk.data(), dwSize, &dwRead)) break;
+                if (dwRead) raw.append(chunk.data(), dwRead);
+            } while (dwSize > 0);
+        }
+
+        WinHttpCloseHandle(hRequest);
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+
+        if (raw.empty()) return "[Backend Error] OpenAI: Empty response.";
+
+        // Extract content from OpenAI response: "content":"..."
+        size_t cpos = raw.find("\"content\":\"");
+        if (cpos != std::string::npos) {
+            cpos += 11;
+            std::string out;
+            while (cpos < raw.size()) {
+                char c = raw[cpos++];
+                if (c == '"') break;
+                if (c == '\\' && cpos < raw.size()) {
+                    char next = raw[cpos++];
+                    if (next == 'n') out += '\n';
+                    else if (next == 't') out += '\t';
+                    else out += next;
+                } else {
+                    out += c;
+                }
+            }
+            result = out;
+        } else {
+            // Check for error
+            size_t epos = raw.find("\"message\":\"");
+            if (epos != std::string::npos) {
+                epos += 11;
+                std::string errMsg;
+                while (epos < raw.size() && raw[epos] != '"') errMsg += raw[epos++];
+                return "[Backend Error] OpenAI: " + errMsg;
+            }
+            result = raw;
+        }
+        break;
+    }
+    } // switch
+
+    auto t1 = std::chrono::steady_clock::now();
+    int64_t latencyMs = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
+
+    // Update stats
+    {
+        std::lock_guard<std::mutex> lock(m_backendMutex);
+        if (idx >= 0 && idx < (int)m_backends.size()) {
+            m_backends[idx].requestCount++;
+            m_backends[idx].lastLatencyMs = latencyMs;
+            if (result.find("[Backend Error]") == 0) {
+                m_backends[idx].errorCount++;
+            }
+        }
+    }
+
+    METRICS.increment("backend.requests_total");
+    return result;
+}
+
+// ============================================================================
+// HTTP ENDPOINTS — GET /api/backends, POST /api/backends/switch
+// ============================================================================
+
+void Win32IDE::handleBackendStatusEndpoint(SOCKET client)
+{
+    std::lock_guard<std::mutex> lock(m_backendMutex);
+
+    std::ostringstream j;
+    j << "{\"activeIndex\":" << m_activeBackendIndex
+      << ",\"activeBackend\":\"" << (m_activeBackendIndex >= 0 && m_activeBackendIndex < (int)m_backends.size()
+                                       ? m_backends[m_activeBackendIndex].name : "none") << "\""
+      << ",\"backends\":[";
+
+    for (int i = 0; i < (int)m_backends.size(); i++) {
+        const auto& b = m_backends[i];
+        if (i > 0) j << ",";
+        j << "{\"index\":" << i
+          << ",\"type\":\"" << backendTypeToString(b.type) << "\""
+          << ",\"name\":\"" << b.name << "\""
+          << ",\"baseUrl\":\"" << b.baseUrl << "\""
+          << ",\"model\":\"" << b.model << "\""
+          << ",\"enabled\":" << (b.enabled ? "true" : "false")
+          << ",\"healthy\":" << (b.healthy ? "true" : "false")
+          << ",\"lastLatencyMs\":" << b.lastLatencyMs
+          << ",\"requestCount\":" << b.requestCount
+          << ",\"errorCount\":" << b.errorCount
+          << ",\"active\":" << (i == m_activeBackendIndex ? "true" : "false")
+          << "}";
+    }
+    j << "]}";
+
+    std::string resp = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n"
+                       "Access-Control-Allow-Origin: *\r\nConnection: close\r\n"
+                       "Content-Length: " + std::to_string(j.str().size()) + "\r\n\r\n" + j.str();
+    send(client, resp.c_str(), (int)resp.size(), 0);
+}
+
+void Win32IDE::handleBackendSwitchEndpoint(SOCKET client, const std::string& body)
+{
+    // Accept: {"backend":"ollama"} or {"index":1}
+    std::string backendName;
+    int index = -1;
+
+    // Try to extract "backend" string
+    size_t bpos = body.find("\"backend\"");
+    if (bpos != std::string::npos) {
+        size_t qstart = body.find('"', bpos + 9);
+        if (qstart != std::string::npos) {
+            qstart++;
+            size_t qend = body.find('"', qstart);
+            if (qend != std::string::npos) {
+                backendName = body.substr(qstart, qend - qstart);
+            }
+        }
+    }
+
+    // Try to extract "index" integer
+    size_t ipos = body.find("\"index\"");
+    if (ipos != std::string::npos) {
+        size_t colon = body.find(':', ipos + 7);
+        if (colon != std::string::npos) {
+            index = atoi(body.c_str() + colon + 1);
+        }
+    }
+
+    bool success = false;
+    if (!backendName.empty()) {
+        AIBackendType t = stringToBackendType(backendName);
+        success = switchBackend(t);
+    } else if (index >= 0) {
+        success = switchBackendByIndex(index);
+    }
+
+    std::string activeStr;
+    {
+        std::lock_guard<std::mutex> lock(m_backendMutex);
+        if (m_activeBackendIndex >= 0 && m_activeBackendIndex < (int)m_backends.size())
+            activeStr = m_backends[m_activeBackendIndex].name;
+    }
+
+    std::string json = "{\"success\":" + std::string(success ? "true" : "false")
+                     + ",\"activeBackend\":\"" + activeStr + "\""
+                     + ",\"activeIndex\":" + std::to_string(m_activeBackendIndex) + "}";
+
+    std::string resp = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n"
+                       "Access-Control-Allow-Origin: *\r\nConnection: close\r\n"
+                       "Content-Length: " + std::to_string(json.size()) + "\r\n\r\n" + json;
+    send(client, resp.c_str(), (int)resp.size(), 0);
+}

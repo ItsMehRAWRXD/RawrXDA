@@ -1,0 +1,385 @@
+---
+# Kubernetes Deployment Manifest for RawrXD
+# ==============================================================================
+# PHASE 4: PRODUCTION DEPLOYMENT
+# Complete deployment with resource limits, health checks, and configuration
+# ==============================================================================
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rawrxd-production
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rawrxd-config
+  namespace: rawrxd-production
+data:
+  config.json: |
+    {
+      "environment": "production",
+      "logging": {
+        "level": "WARNING",
+        "format": "json",
+        "targets": ["file", "syslog"]
+      },
+      "inference": {
+        "model_path": "/models",
+        "cache_size_mb": 2048,
+        "max_batch_size": 32,
+        "timeout_ms": 30000
+      },
+      "features": {
+        "gpu_acceleration": true,
+        "distributed_trace": true,
+        "advanced_metrics": true,
+        "hotpatch_dynamic": false,
+        "agentic_orchestration": true,
+        "experimental_models": false,
+        "debug_mode": false,
+        "auto_update": false
+      },
+      "monitoring": {
+        "metrics_port": 9090,
+        "health_check_interval_s": 30,
+        "error_rate_threshold": 10,
+        "alert_webhook": "http://alertmanager:9093"
+      },
+      "security": {
+        "api_key_required": true,
+        "tls_enabled": true,
+        "cert_path": "/etc/rawrxd/certs/server.crt",
+        "key_path": "/etc/rawrxd/certs/server.key",
+        "rate_limit_rps": 1000
+      }
+    }
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rawrxd-secrets
+  namespace: rawrxd-production
+type: Opaque
+stringData:
+  api_key: "SET_VIA_SEALED_SECRETS_OR_VAULT"
+  db_password: "SET_VIA_SEALED_SECRETS_OR_VAULT"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rawrxd-service
+  namespace: rawrxd-production
+  labels:
+    app: rawrxd
+spec:
+  type: LoadBalancer
+  selector:
+    app: rawrxd
+  ports:
+    - name: api
+      port: 443
+      targetPort: 443
+      protocol: TCP
+    - name: metrics
+      port: 9090
+      targetPort: 9090
+      protocol: TCP
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10800
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rawrxd-deployment
+  namespace: rawrxd-production
+spec:
+  replicas: 3
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: rawrxd
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: rawrxd
+        version: v1.0.0-phase4
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+    spec:
+      # Pod security context
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      
+      # Service account
+      serviceAccountName: rawrxd-sa
+      
+      # Node affinity (prefer Windows nodes for MASM)
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: kubernetes.io/os
+                    operator: In
+                    values:
+                      - windows
+      
+      # Pod disruption budget for high availability
+      terminationGracePeriodSeconds: 30
+      
+      containers:
+        - name: rawrxd
+          image: rawrxd:1.0.0-phase4-production
+          imagePullPolicy: IfNotPresent
+          
+          # Resource limits (critical for production stability)
+          resources:
+            requests:
+              cpu: "2"
+              memory: "4Gi"
+              ephemeral-storage: "2Gi"
+            limits:
+              cpu: "4"
+              memory: "8Gi"
+              ephemeral-storage: "5Gi"
+          
+          # Port definitions
+          ports:
+            - name: api
+              containerPort: 443
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          
+          # Environment variables
+          env:
+            - name: RAWRXD_ENVIRONMENT
+              value: "production"
+            - name: RAWRXD_LOG_LEVEL
+              value: "WARNING"
+            - name: RAWRXD_MODEL_PATH
+              value: "/models"
+            - name: RAWRXD_CACHE_PATH
+              value: "/tmp/cache"
+            - name: RAWRXD_LOG_PATH
+              value: "/var/log/rawrxd"
+            - name: RAWRXD_METRICS_PORT
+              value: "9090"
+            - name: RAWRXD_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rawrxd-secrets
+                  key: api_key
+          
+          # Configuration from ConfigMap
+          volumeMounts:
+            - name: config
+              mountPath: /etc/rawrxd/config
+            - name: models
+              mountPath: /models
+            - name: cache
+              mountPath: /tmp/cache
+            - name: logs
+              mountPath: /var/log/rawrxd
+          
+          # Health checks
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: api
+              scheme: HTTPS
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: api
+              scheme: HTTPS
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 2
+          
+          # Security context for container
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - ALL
+          
+          # Resource monitoring
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - /bin/sh
+                  - -c
+                  - sleep 15
+          
+          # Startup command
+          command:
+            - "powershell"
+            - "-NoProfile"
+            - "-Command"
+            - |
+              $ErrorActionPreference = 'Stop'
+              Write-Host 'RawrXD Phase 4 Production Container Starting'
+              Write-Host "Environment: $env:RAWRXD_ENVIRONMENT"
+              Write-Host "Log Level: $env:RAWRXD_LOG_LEVEL"
+              Write-Host "API Key Configured: $([bool]$env:RAWRXD_API_KEY)"
+              Write-Host "Features Configured via ConfigMap"
+              
+              # Start the RawrXD service
+              & 'C:\app\start-rawrxd.ps1'
+
+      # Volumes
+      volumes:
+        - name: config
+          configMap:
+            name: rawrxd-config
+        - name: models
+          persistentVolumeClaim:
+            claimName: rawrxd-models-pvc
+        - name: cache
+          emptyDir:
+            sizeLimit: 5Gi
+        - name: logs
+          emptyDir:
+            sizeLimit: 2Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rawrxd-models-pvc
+  namespace: rawrxd-production
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 100Gi
+  storageClassName: fast-ssd
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rawrxd-sa
+  namespace: rawrxd-production
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: rawrxd-role
+  namespace: rawrxd-production
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: rawrxd-rolebinding
+  namespace: rawrxd-production
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: rawrxd-role
+subjects:
+  - kind: ServiceAccount
+    name: rawrxd-sa
+    namespace: rawrxd-production
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rawrxd-hpa
+  namespace: rawrxd-production
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rawrxd-deployment
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 75
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 50
+          periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 15
+        - type: Pods
+          value: 2
+          periodSeconds: 15
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: rawrxd-monitor
+  namespace: rawrxd-production
+spec:
+  selector:
+    matchLabels:
+      app: rawrxd
+  endpoints:
+    - port: metrics
+      interval: 30s
+      path: /metrics

@@ -1,0 +1,13 @@
+LIBRARY RawrXD_Telemetry
+EXPORTS
+    WriteEmergencyLog
+    EmitTelemetryEvent
+    FlushTelemetryBuffer
+    Fallback_MessageBoxA
+    Fallback_MessageBoxW
+    InitializeParseRecovery
+    HandleParseError
+    TelemetryHeartbeat
+    VerifyTelemetryIntegrity
+    PatchPowerShellParseErrors
+    CreateCustomDialog

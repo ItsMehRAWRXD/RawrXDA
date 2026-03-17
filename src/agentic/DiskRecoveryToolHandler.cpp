@@ -9,6 +9,7 @@
 // =============================================================================
 
 #include "DiskRecoveryToolHandler.h"
+#include "../../include/PathResolver.h"
 #include <sstream>
 #include <iomanip>
 #include <chrono>
@@ -364,7 +365,8 @@ ToolExecResult DiskRecoveryToolHandler::HandleKeyExtract(const nlohmann::json& a
 // HandleBadMapExport — Export current bad sector list to file
 // ---------------------------------------------------------------------------
 ToolExecResult DiskRecoveryToolHandler::HandleBadMapExport(const nlohmann::json& args) {
-    std::string path = args.value("path", "D:\\Recovery\\bad_sectors_export.txt");
+    std::string defaultExport = PathResolver::getDocumentsPath() + "\\Recovery\\bad_sectors_export.txt";
+    std::string path = args.value("path", defaultExport);
 
     auto& agent = GetAgent();
     PatchResult result = agent.ExportBadSectorMap(path);
@@ -391,184 +393,209 @@ nlohmann::json DiskRecoveryToolHandler::GetToolSchemas() {
     nlohmann::json schemas = nlohmann::json::array();
 
     // disk_recovery_scan
-    schemas.push_back({
-        {"type", "function"},
-        {"function", {
-            {"name", "disk_recovery_scan"},
-            {"description", "Scan PhysicalDrive0-15 for dying WD My Book / USB bridge devices. "
-                            "Detects JMS567, NS1066, and other USB-SATA bridge controllers."},
-            {"parameters", {
-                {"type", "object"},
-                {"properties", nlohmann::json::object()},
-                {"required", nlohmann::json::array()}
-            }}
-        }}
-    });
+    {
+        nlohmann::json schema = nlohmann::json::object();
+        schema["type"] = "function";
+        nlohmann::json func = nlohmann::json::object();
+        func["name"] = "disk_recovery_scan";
+        func["description"] = "Scan PhysicalDrive0-15 for dying WD My Book / USB bridge devices. Detects JMS567, NS1066, and other USB-SATA bridge controllers.";
+        nlohmann::json params = nlohmann::json::object();
+        params["type"] = "object";
+        params["properties"] = nlohmann::json::object();
+        params["required"] = nlohmann::json::array();
+        func["parameters"] = params;
+        schema["function"] = func;
+        schemas.push_back(schema);
+    }
 
     // disk_recovery_probe
-    schemas.push_back({
-        {"type", "function"},
-        {"function", {
-            {"name", "disk_recovery_probe"},
-            {"description", "Probe a specific PhysicalDrive number for WD bridge signature, "
-                            "capacity, and encryption status."},
-            {"parameters", {
-                {"type", "object"},
-                {"properties", {
-                    {"drive_number", {
-                        {"type", "integer"},
-                        {"description", "Physical drive number (0-15)"},
-                        {"minimum", 0},
-                        {"maximum", 15}
-                    }}
-                }},
-                {"required", {"drive_number"}}
-            }}
-        }}
-    });
+    {
+        nlohmann::json schema = nlohmann::json::object();
+        schema["type"] = "function";
+        nlohmann::json func = nlohmann::json::object();
+        func["name"] = "disk_recovery_probe";
+        func["description"] = "Probe a specific PhysicalDrive number for WD bridge signature, capacity, and encryption status.";
+        nlohmann::json params = nlohmann::json::object();
+        params["type"] = "object";
+        nlohmann::json props = nlohmann::json::object();
+        nlohmann::json dnum = nlohmann::json::object();
+        dnum["type"] = "integer";
+        dnum["description"] = "Physical drive number (0-15)";
+        dnum["minimum"] = 0;
+        dnum["maximum"] = 15;
+        props["drive_number"] = dnum;
+        params["properties"] = props;
+        nlohmann::json req = nlohmann::json::array();
+        req.push_back("drive_number");
+        params["required"] = req;
+        func["parameters"] = params;
+        schema["function"] = func;
+        schemas.push_back(schema);
+    }
 
     // disk_recovery_start
-    schemas.push_back({
-        {"type", "function"},
-        {"function", {
-            {"name", "disk_recovery_start"},
-            {"description", "Start a full disk imaging session with SCSI hammer protocol. "
-                            "Creates a raw image file, bad sector map, and checkpoint file. "
-                            "Runs asynchronously — poll with disk_recovery_status."},
-            {"parameters", {
-                {"type", "object"},
-                {"properties", {
-                    {"drive_number", {
-                        {"type", "integer"},
-                        {"description", "Physical drive number to image (0-15)"},
-                        {"minimum", 0},
-                        {"maximum", 15}
-                    }},
-                    {"output_dir", {
-                        {"type", "string"},
-                        {"description", "Output directory for image, log, and map files"},
-                        {"default", "D:\\Recovery"}
-                    }},
-                    {"max_retries", {
-                        {"type", "integer"},
-                        {"description", "Maximum retry attempts per sector"},
-                        {"default", 100}
-                    }},
-                    {"timeout_ms", {
-                        {"type", "integer"},
-                        {"description", "SCSI command timeout in milliseconds"},
-                        {"default", 2000}
-                    }},
-                    {"sector_size", {
-                        {"type", "integer"},
-                        {"description", "Sector size in bytes (512 or 4096)"},
-                        {"default", 4096}
-                    }},
-                    {"extract_key", {
-                        {"type", "boolean"},
-                        {"description", "Attempt AES key extraction from bridge EEPROM before imaging"},
-                        {"default", true}
-                    }},
-                    {"sparse_image", {
-                        {"type", "boolean"},
-                        {"description", "Use sparse file for image (bad sectors become holes)"},
-                        {"default", true}
-                    }}
-                }},
-                {"required", {"drive_number"}}
-            }}
-        }}
-    });
+    {
+        nlohmann::json schema = nlohmann::json::object();
+        schema["type"] = "function";
+        nlohmann::json func = nlohmann::json::object();
+        func["name"] = "disk_recovery_start";
+        func["description"] = "Start a full disk imaging session with SCSI hammer protocol. Creates a raw image file, bad sector map, and checkpoint file. Runs asynchronously — poll with disk_recovery_status.";
+        nlohmann::json params = nlohmann::json::object();
+        params["type"] = "object";
+        nlohmann::json props = nlohmann::json::object();
+        
+        nlohmann::json dnum = nlohmann::json::object();
+        dnum["type"] = "integer";
+        dnum["description"] = "Physical drive number to image (0-15)";
+        dnum["minimum"] = 0;
+        dnum["maximum"] = 15;
+        props["drive_number"] = dnum;
+
+        nlohmann::json outdir = nlohmann::json::object();
+        outdir["type"] = "string";
+        outdir["description"] = "Output directory for image, log, and map files";
+        outdir["default"] = PathResolver::getDocumentsPath() + "\\Recovery";
+        props["output_dir"] = outdir;
+
+        nlohmann::json mret = nlohmann::json::object();
+        mret["type"] = "integer";
+        mret["description"] = "Maximum retry attempts per sector";
+        mret["default"] = 100;
+        props["max_retries"] = mret;
+
+        nlohmann::json tmo = nlohmann::json::object();
+        tmo["type"] = "integer";
+        tmo["description"] = "SCSI command timeout in milliseconds";
+        tmo["default"] = 2000;
+        props["timeout_ms"] = tmo;
+
+        nlohmann::json sec = nlohmann::json::object();
+        sec["type"] = "integer";
+        sec["description"] = "Sector size in bytes (512 or 4096)";
+        sec["default"] = 4096;
+        props["sector_size"] = sec;
+
+        nlohmann::json eky = nlohmann::json::object();
+        eky["type"] = "boolean";
+        eky["description"] = "Attempt AES key extraction from bridge EEPROM before imaging";
+        eky["default"] = true;
+        props["extract_key"] = eky;
+
+        nlohmann::json spr = nlohmann::json::object();
+        spr["type"] = "boolean";
+        spr["description"] = "Use sparse file for image (bad sectors become holes)";
+        spr["default"] = true;
+        props["sparse_image"] = spr;
+
+        params["properties"] = props;
+        nlohmann::json req = nlohmann::json::array();
+        req.push_back("drive_number");
+        params["required"] = req;
+        func["parameters"] = params;
+        schema["function"] = func;
+        schemas.push_back(schema);
+    }
 
     // disk_recovery_status
-    schemas.push_back({
-        {"type", "function"},
-        {"function", {
-            {"name", "disk_recovery_status"},
-            {"description", "Get live recovery progress: state, sector counts, speed, percentage."},
-            {"parameters", {
-                {"type", "object"},
-                {"properties", nlohmann::json::object()},
-                {"required", nlohmann::json::array()}
-            }}
-        }}
-    });
+    {
+        nlohmann::json schema = nlohmann::json::object();
+        schema["type"] = "function";
+        nlohmann::json func = nlohmann::json::object();
+        func["name"] = "disk_recovery_status";
+        func["description"] = "Get live recovery progress: state, sector counts, speed, percentage.";
+        nlohmann::json params = nlohmann::json::object();
+        params["type"] = "object";
+        params["properties"] = nlohmann::json::object();
+        params["required"] = nlohmann::json::array();
+        func["parameters"] = params;
+        schema["function"] = func;
+        schemas.push_back(schema);
+    }
 
     // disk_recovery_pause
-    schemas.push_back({
-        {"type", "function"},
-        {"function", {
-            {"name", "disk_recovery_pause"},
-            {"description", "Pause or resume an active disk recovery session."},
-            {"parameters", {
-                {"type", "object"},
-                {"properties", {
-                    {"resume", {
-                        {"type", "boolean"},
-                        {"description", "If true, resume a paused session. If false (default), pause."},
-                        {"default", false}
-                    }}
-                }},
-                {"required", nlohmann::json::array()}
-            }}
-        }}
-    });
+    {
+        nlohmann::json schema = nlohmann::json::object();
+        schema["type"] = "function";
+        nlohmann::json func = nlohmann::json::object();
+        func["name"] = "disk_recovery_pause";
+        func["description"] = "Pause or resume an active disk recovery session.";
+        nlohmann::json params = nlohmann::json::object();
+        params["type"] = "object";
+        nlohmann::json props = nlohmann::json::object();
+        nlohmann::json res = nlohmann::json::object();
+        res["type"] = "boolean";
+        res["description"] = "If true, resume a paused session. If false (default), pause.";
+        res["default"] = false;
+        props["resume"] = res;
+        params["properties"] = props;
+        params["required"] = nlohmann::json::array();
+        func["parameters"] = params;
+        schema["function"] = func;
+        schemas.push_back(schema);
+    }
 
     // disk_recovery_abort
-    schemas.push_back({
-        {"type", "function"},
-        {"function", {
-            {"name", "disk_recovery_abort"},
-            {"description", "Abort an active disk recovery session. Checkpoint is saved for resume."},
-            {"parameters", {
-                {"type", "object"},
-                {"properties", nlohmann::json::object()},
-                {"required", nlohmann::json::array()}
-            }}
-        }}
-    });
+    {
+        nlohmann::json schema = nlohmann::json::object();
+        schema["type"] = "function";
+        nlohmann::json func = nlohmann::json::object();
+        func["name"] = "disk_recovery_abort";
+        func["description"] = "Abort an active disk recovery session. Checkpoint is saved for resume.";
+        nlohmann::json params = nlohmann::json::object();
+        params["type"] = "object";
+        params["properties"] = nlohmann::json::object();
+        params["required"] = nlohmann::json::array();
+        func["parameters"] = params;
+        schema["function"] = func;
+        schemas.push_back(schema);
+    }
 
     // disk_recovery_key
-    schemas.push_back({
-        {"type", "function"},
-        {"function", {
-            {"name", "disk_recovery_key"},
-            {"description", "Extract AES-256 encryption key from WD bridge EEPROM. "
-                            "Must be done while bridge controller is still responsive."},
-            {"parameters", {
-                {"type", "object"},
-                {"properties", {
-                    {"drive_number", {
-                        {"type", "integer"},
-                        {"description", "Physical drive number with WD bridge (0-15)"},
-                        {"minimum", 0},
-                        {"maximum", 15}
-                    }}
-                }},
-                {"required", {"drive_number"}}
-            }}
-        }}
-    });
+    {
+        nlohmann::json schema = nlohmann::json::object();
+        schema["type"] = "function";
+        nlohmann::json func = nlohmann::json::object();
+        func["name"] = "disk_recovery_key";
+        func["description"] = "Extract AES-256 encryption key from WD bridge EEPROM. Must be done while bridge controller is still responsive.";
+        nlohmann::json params = nlohmann::json::object();
+        params["type"] = "object";
+        nlohmann::json props = nlohmann::json::object();
+        nlohmann::json dnum = nlohmann::json::object();
+        dnum["type"] = "integer";
+        dnum["description"] = "Physical drive number with WD bridge (0-15)";
+        dnum["minimum"] = 0;
+        dnum["maximum"] = 15;
+        props["drive_number"] = dnum;
+        params["properties"] = props;
+        nlohmann::json req = nlohmann::json::array();
+        req.push_back("drive_number");
+        params["required"] = req;
+        func["parameters"] = params;
+        schema["function"] = func;
+        schemas.push_back(schema);
+    }
 
     // disk_recovery_badmap
-    schemas.push_back({
-        {"type", "function"},
-        {"function", {
-            {"name", "disk_recovery_badmap"},
-            {"description", "Export the current bad sector map to a text file for analysis."},
-            {"parameters", {
-                {"type", "object"},
-                {"properties", {
-                    {"path", {
-                        {"type", "string"},
-                        {"description", "Output file path for the bad sector map"},
-                        {"default", "D:\\Recovery\\bad_sectors_export.txt"}
-                    }}
-                }},
-                {"required", nlohmann::json::array()}
-            }}
-        }}
-    });
+    {
+        nlohmann::json schema = nlohmann::json::object();
+        schema["type"] = "function";
+        nlohmann::json func = nlohmann::json::object();
+        func["name"] = "disk_recovery_badmap";
+        func["description"] = "Export the current bad sector map to a text file for analysis.";
+        nlohmann::json params = nlohmann::json::object();
+        params["type"] = "object";
+        nlohmann::json props = nlohmann::json::object();
+        nlohmann::json path = nlohmann::json::object();
+        path["type"] = "string";
+        path["description"] = "Output file path for the bad sector map";
+        path["default"] = PathResolver::getDocumentsPath() + "\\Recovery\\bad_sectors_export.txt";
+        props["path"] = path;
+        params["properties"] = props;
+        params["required"] = nlohmann::json::array();
+        func["parameters"] = params;
+        schema["function"] = func;
+        schemas.push_back(schema);
+    }
 
     return schemas;
 }

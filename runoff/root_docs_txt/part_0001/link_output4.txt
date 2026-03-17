@@ -1,0 +1,40 @@
+link_stubs_ssot_handlers.obj : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+link_stubs_win32ide_methods.obj : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+link_stubs_remaining_classes.obj : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+link_stubs_final.obj : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(locale0.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(locale.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(iosptrs.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xwctomb.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(wlocale.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xlocale.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xstol.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xstoul.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xstoll.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xstoull.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xlock.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xstrcoll.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xdateord.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xmbtowc.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xwcscoll.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xwcsxfrm.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xgetwctype.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xtowlower.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xtowupper.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(xmtx.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(StlCompareStringA.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(StlCompareStringW.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+libcpmt.lib(StlLCMapStringW.obj) : error LNK2038: mismatch detected for 'RuntimeLibrary': value 'MT_StaticRelease' doesn't match value 'MD_DynamicRelease' in agentic_AgentOllamaClient.obj
+ucrt.lib(api-ms-win-crt-string-l1-1-0.dll) : error LNK2005: strncmp already defined in libucrt.lib(strncmp.obj)
+   Creating library .\bin\RawrXD-Win32IDE.lib and object .\bin\RawrXD-Win32IDE.exp
+core_enterprise_license.obj : error LNK2001: unresolved external symbol g_EnterpriseFeatures
+  Hint on symbols that are defined and could potentially match:
+    "bool g_EnterpriseFeatures" (?g_EnterpriseFeatures@@3_NA)
+core_flash_attention.obj : error LNK2001: unresolved external symbol g_FlashAttnTiles
+  Hint on symbols that are defined and could potentially match:
+    "int g_FlashAttnTiles" (?g_FlashAttnTiles@@3HA)
+core_flash_attention.obj : error LNK2001: unresolved external symbol g_FlashAttnCalls
+  Hint on symbols that are defined and could potentially match:
+    "int g_FlashAttnCalls" (?g_FlashAttnCalls@@3HA)
+link_stubs_final.obj : error LNK2001: unresolved external symbol "public: virtual bool __cdecl GGUFLoader::LoadTensorRange(unsigned __int64,unsigned __int64,class std::vector<unsigned char,class std::allocator<unsigned char> > &)" (?LoadTensorRange@GGUFLoader@@UEAA_N_K0AEAV?$vector@EV?$allocator@E@std@@@std@@@Z)
+.\bin\RawrXD-Win32IDE.exe : fatal error LNK1120: 4 unresolved externals

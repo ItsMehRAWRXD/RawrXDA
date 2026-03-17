@@ -1,0 +1,20 @@
+{
+    "Keys": ["thermal_dashboard"],
+    "Name": "RawrXD Thermal Dashboard",
+    "Version": "1.2.0-H",
+    "Description": "Hot-injectable thermal monitoring and burst governor UI",
+    "Author": "RawrXD Team",
+    "License": "Proprietary",
+    "Dependencies": ["Qt6::Core", "Qt6::Widgets"],
+    "Category": "System Monitoring",
+    "Features": [
+        "Real-time NVMe temperature polling",
+        "GPU/CPU thermal monitoring", 
+        "Burst mode toggling (Sovereign/Thermal/Hybrid)",
+        "Adaptive throttle visualization",
+        "Hot-injection without IDE restart"
+    ],
+    "Exports": [
+        "IThermalDashboardPlugin"
+    ]
+}

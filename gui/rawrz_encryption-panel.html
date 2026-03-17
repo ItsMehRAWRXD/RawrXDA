@@ -1,0 +1,1471 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RawrZ Encryption Panel - File Upload & Encryption</title>
+    <style>
+        body { 
+            background: #000; 
+            color: #0f0; 
+            font-family: 'Courier New', monospace; 
+            padding: 20px; 
+            margin: 0;
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+        }
+        h1 { 
+            text-align: center; 
+            color: #0f0; 
+            text-shadow: 0 0 10px #0f0; 
+            margin-bottom: 30px;
+        }
+        .panel { 
+            border: 2px solid #0f0; 
+            padding: 20px; 
+            margin: 20px 0; 
+            background: rgba(0,255,0,0.05); 
+            border-radius: 8px;
+        }
+        .file-drop { 
+            border: 2px dashed #0f0; 
+            padding: 40px; 
+            text-align: center; 
+            cursor: pointer; 
+            background: rgba(0,255,0,0.02);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        .file-drop:hover { 
+            background: rgba(0,255,0,0.1); 
+            border-color: #0ff;
+        }
+        .file-drop.dragover {
+            background: rgba(0,255,0,0.2);
+            border-color: #ff0;
+        }
+        .btn { 
+            background: #111; 
+            color: #0f0; 
+            border: 2px solid #0f0; 
+            padding: 12px 24px; 
+            cursor: pointer; 
+            margin: 8px; 
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        .btn:hover { 
+            background: #0f0; 
+            color: #000; 
+            transform: translateY(-2px);
+        }
+        .btn:disabled { 
+            background: #333; 
+            color: #666; 
+            border-color: #666; 
+            cursor: not-allowed;
+        }
+        .status { 
+            border: 1px solid #0f0; 
+            padding: 15px; 
+            background: #111; 
+            min-height: 200px; 
+            overflow-y: auto; 
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+        .status-item { 
+            margin: 8px 0; 
+            padding: 8px; 
+            border-left: 3px solid #0f0; 
+            background: rgba(0,255,0,0.05);
+        }
+        .success { border-left-color: #0f0; color: #0f0; }
+        .error { border-left-color: #f00; color: #f00; }
+        .info { border-left-color: #0ff; color: #0ff; }
+        .warning { border-left-color: #ff0; color: #ff0; }
+        .loading { border-left-color: #ff0; color: #ff0; animation: pulse 1s infinite; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .file-list { 
+            border: 1px solid #0f0; 
+            padding: 15px; 
+            max-height: 300px; 
+            overflow-y: auto; 
+            background: #111; 
+            border-radius: 4px;
+        }
+        .file-item { 
+            padding: 10px; 
+            margin: 5px 0; 
+            border: 1px solid #333; 
+            cursor: pointer; 
+            background: rgba(0,255,0,0.02);
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+        .file-item:hover { 
+            background: rgba(0,255,0,0.1); 
+            border-color: #0f0;
+        }
+        .file-item.selected { 
+            background: rgba(0,255,0,0.2); 
+            border-color: #0ff;
+        }
+        .download-link { 
+            color: #0ff; 
+            text-decoration: none; 
+            padding: 8px 16px; 
+            border: 1px solid #0ff; 
+            display: inline-block; 
+            margin: 5px; 
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+        .download-link:hover { 
+            background: #0ff; 
+            color: #000; 
+        }
+        .form-group {
+            margin: 15px 0;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #0f0;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            background: #111;
+            color: #0f0;
+            border: 1px solid #0f0;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #0ff;
+            box-shadow: 0 0 5px rgba(0,255,255,0.3);
+        }
+        .form-group input[type="checkbox"] {
+            width: auto;
+            margin-right: 10px;
+        }
+        .form-group input[type="number"] {
+            width: 100%;
+        }
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            background: #111;
+            color: #0f0;
+            border: 1px solid #0f0;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+        }
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #0ff;
+            box-shadow: 0 0 5px rgba(0,255,255,0.3);
+        }
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .btn-group .btn {
+            flex: 1;
+            min-width: 120px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .advanced-options {
+            border: 1px solid #0f0;
+            padding: 15px;
+            margin: 10px 0;
+            background: rgba(0,255,0,0.02);
+            border-radius: 4px;
+        }
+        .advanced-options h4 {
+            margin: 0 0 10px 0;
+            color: #0ff;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #333;
+            border: 1px solid #0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0f0, #0ff);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            .btn-group {
+                flex-direction: column;
+            }
+            .btn-group .btn {
+                flex: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 RawrZ Security Platform - File Encryption Panel</h1>
+        
+        <div class="grid">
+        <div class="panel">
+                <h3>📁 File Upload</h3>
+            <div class="file-drop" id="fileDrop">
+                📁 Drag & Drop Files Here or Click to Browse
+                <input type="file" id="fileInput" style="display: none;" multiple>
+            </div>
+            <div class="file-list" id="fileList">No files selected</div>
+            <button class="btn" onclick="clearFiles()">Clear Files</button>
+                <button class="btn" onclick="uploadFiles()">Upload Files</button>
+        </div>
+        
+        <div class="panel">
+                <h3>🔧 Advanced Encryption Settings</h3>
+                
+                <div class="form-group">
+                    <label for="algorithm">Encryption Algorithm:</label>
+                    <select id="algorithm">
+                        <!-- AES Variants -->
+                        <option value="AES-256-CBC">AES-256-CBC (Recommended)</option>
+                        <option value="AES-256-GCM">AES-256-GCM (Authenticated)</option>
+                        <option value="AES-256-CTR">AES-256-CTR (Counter Mode)</option>
+                        <option value="AES-256-CFB">AES-256-CFB (Cipher Feedback)</option>
+                        <option value="AES-256-OFB">AES-256-OFB (Output Feedback)</option>
+                        <option value="AES-256-ECB">AES-256-ECB (Electronic Codebook)</option>
+                        <option value="AES-192-CBC">AES-192-CBC</option>
+                        <option value="AES-192-GCM">AES-192-GCM</option>
+                        <option value="AES-192-CTR">AES-192-CTR</option>
+                        <option value="AES-128-CBC">AES-128-CBC</option>
+                        <option value="AES-128-GCM">AES-128-GCM</option>
+                        <option value="AES-128-CTR">AES-128-CTR</option>
+                        
+                        <!-- ChaCha20 Variants -->
+                        <option value="ChaCha20-Poly1305">ChaCha20-Poly1305</option>
+                        <option value="ChaCha20-IETF">ChaCha20-IETF</option>
+                        <option value="ChaCha20-Original">ChaCha20-Original</option>
+                        
+                        <!-- ARIA Variants -->
+                        <option value="ARIA-256-GCM">ARIA-256-GCM</option>
+                        <option value="ARIA-256-CBC">ARIA-256-CBC</option>
+                        <option value="ARIA-256-CTR">ARIA-256-CTR</option>
+                        <option value="ARIA-192-GCM">ARIA-192-GCM</option>
+                        <option value="ARIA-192-CBC">ARIA-192-CBC</option>
+                        <option value="ARIA-128-GCM">ARIA-128-GCM</option>
+                        <option value="ARIA-128-CBC">ARIA-128-CBC</option>
+                        
+                        <!-- Camellia Variants -->
+                        <option value="Camellia-256-CBC">Camellia-256-CBC</option>
+                        <option value="Camellia-256-GCM">Camellia-256-GCM</option>
+                        <option value="Camellia-256-CTR">Camellia-256-CTR</option>
+                        <option value="Camellia-192-CBC">Camellia-192-CBC</option>
+                        <option value="Camellia-192-GCM">Camellia-192-GCM</option>
+                        <option value="Camellia-128-CBC">Camellia-128-CBC</option>
+                        <option value="Camellia-128-GCM">Camellia-128-GCM</option>
+                        
+                        <!-- Twofish Variants -->
+                        <option value="Twofish-256-CBC">Twofish-256-CBC</option>
+                        <option value="Twofish-256-GCM">Twofish-256-GCM</option>
+                        <option value="Twofish-256-CTR">Twofish-256-CTR</option>
+                        <option value="Twofish-192-CBC">Twofish-192-CBC</option>
+                        <option value="Twofish-128-CBC">Twofish-128-CBC</option>
+                        
+                        <!-- Serpent Variants -->
+                        <option value="Serpent-256-CBC">Serpent-256-CBC</option>
+                        <option value="Serpent-256-GCM">Serpent-256-GCM</option>
+                        <option value="Serpent-256-CTR">Serpent-256-CTR</option>
+                        <option value="Serpent-192-CBC">Serpent-192-CBC</option>
+                        <option value="Serpent-128-CBC">Serpent-128-CBC</option>
+                        
+                        <!-- Blowfish Variants -->
+                        <option value="Blowfish-CBC">Blowfish-CBC</option>
+                        <option value="Blowfish-CTR">Blowfish-CTR</option>
+                        <option value="Blowfish-CFB">Blowfish-CFB</option>
+                        <option value="Blowfish-OFB">Blowfish-OFB</option>
+                        <option value="Blowfish-ECB">Blowfish-ECB</option>
+                        
+                        <!-- 3DES Variants -->
+                        <option value="3DES-CBC">3DES-CBC (Triple DES)</option>
+                        <option value="3DES-CTR">3DES-CTR</option>
+                        <option value="3DES-CFB">3DES-CFB</option>
+                        <option value="3DES-OFB">3DES-OFB</option>
+                        <option value="3DES-ECB">3DES-ECB</option>
+                        
+                        <!-- CAST5 Variants -->
+                        <option value="CAST5-CBC">CAST5-CBC</option>
+                        <option value="CAST5-CTR">CAST5-CTR</option>
+                        <option value="CAST5-CFB">CAST5-CFB</option>
+                        <option value="CAST5-OFB">CAST5-OFB</option>
+                        <option value="CAST5-ECB">CAST5-ECB</option>
+                        
+                        <!-- IDEA Variants -->
+                        <option value="IDEA-CBC">IDEA-CBC</option>
+                        <option value="IDEA-CTR">IDEA-CTR</option>
+                        <option value="IDEA-CFB">IDEA-CFB</option>
+                        <option value="IDEA-OFB">IDEA-OFB</option>
+                        <option value="IDEA-ECB">IDEA-ECB</option>
+                        
+                        <!-- RC4 Variants -->
+                        <option value="RC4">RC4 (Stream Cipher)</option>
+                        <option value="RC4-40">RC4-40 (40-bit)</option>
+                        <option value="RC4-128">RC4-128 (128-bit)</option>
+                        
+                        <!-- Advanced Combinations -->
+                        <option value="DUAL-AES-CAMELLIA">DUAL AES-256 + Camellia-256</option>
+                        <option value="TRIPLE-AES-SERPENT-TWOFISH">TRIPLE AES + Serpent + Twofish</option>
+                        <option value="CASCADE-ALL">CASCADE All Algorithms</option>
+                        <option value="CUSTOM-COMBINATION">Custom Algorithm Combination</option>
+                        
+                        <!-- Post-Quantum Cryptography -->
+                        <option value="KYBER-768">Kyber-768 (Post-Quantum)</option>
+                        <option value="DILITHIUM-2">Dilithium-2 (Post-Quantum)</option>
+                        <option value="FALCON-512">Falcon-512 (Post-Quantum)</option>
+                        
+                        <!-- Lightweight Cryptography -->
+                        <option value="PRESENT-80">PRESENT-80 (Lightweight)</option>
+                        <option value="PRESENT-128">PRESENT-128 (Lightweight)</option>
+                        <option value="SIMON-64-128">SIMON-64/128 (Lightweight)</option>
+                        <option value="SIMON-128-128">SIMON-128/128 (Lightweight)</option>
+                        <option value="SPECK-64-128">SPECK-64/128 (Lightweight)</option>
+                        <option value="SPECK-128-128">SPECK-128/128 (Lightweight)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="extension">File Extension:</label>
+                    <select id="extension">
+                        <option value=".enc">.enc (Generic Encrypted)</option>
+                        
+                        <!-- Windows Executables -->
+                        <option value=".exe">.exe (Windows Executable)</option>
+                        <option value=".dll">.dll (Dynamic Library)</option>
+                        <option value=".sys">.sys (System Driver)</option>
+                        <option value=".com">.com (Command File)</option>
+                        <option value=".scr">.scr (Screensaver)</option>
+                        <option value=".pif">.pif (Program Information File)</option>
+                        <option value=".cpl">.cpl (Control Panel)</option>
+                        <option value=".msi">.msi (Windows Installer)</option>
+                        <option value=".msc">.msc (Microsoft Management Console)</option>
+                        
+                        <!-- Office Extensions -->
+                        <option value=".xll">.xll (Excel Add-in)</option>
+                        <option value=".doc">.doc (Word Document)</option>
+                        <option value=".docx">.docx (Word Document)</option>
+                        <option value=".xls">.xls (Excel Spreadsheet)</option>
+                        <option value=".xlsx">.xlsx (Excel Spreadsheet)</option>
+                        <option value=".ppt">.ppt (PowerPoint Presentation)</option>
+                        <option value=".pptx">.pptx (PowerPoint Presentation)</option>
+                        <option value=".pdf">.pdf (PDF Document)</option>
+                        
+                        <!-- Windows Shortcuts & Links -->
+                        <option value=".lnk">.lnk (Windows Shortcut)</option>
+                        <option value=".url">.url (Internet Shortcut)</option>
+                        <option value=".website">.website (Website Shortcut)</option>
+                        
+                        <!-- Script Files -->
+                        <option value=".bat">.bat (Batch File)</option>
+                        <option value=".cmd">.cmd (Command Script)</option>
+                        <option value=".ps1">.ps1 (PowerShell)</option>
+                        <option value=".psm1">.psm1 (PowerShell Module)</option>
+                        <option value=".psd1">.psd1 (PowerShell Data)</option>
+                        <option value=".vbs">.vbs (VBScript)</option>
+                        <option value=".vbe">.vbe (VBScript Encoded)</option>
+                        <option value=".js">.js (JavaScript)</option>
+                        <option value=".jse">.jse (JavaScript Encoded)</option>
+                        <option value=".wsf">.wsf (Windows Script File)</option>
+                        <option value=".wsh">.wsh (Windows Script Host)</option>
+                        
+                        <!-- Archive Files -->
+                        <option value=".zip">.zip (ZIP Archive)</option>
+                        <option value=".rar">.rar (RAR Archive)</option>
+                        <option value=".7z">.7z (7-Zip Archive)</option>
+                        <option value=".tar">.tar (TAR Archive)</option>
+                        <option value=".gz">.gz (GZIP Archive)</option>
+                        <option value=".jar">.jar (Java Archive)</option>
+                        <option value=".war">.war (Web Archive)</option>
+                        <option value=".ear">.ear (Enterprise Archive)</option>
+                        
+                        <!-- Media Files -->
+                        <option value=".mp3">.mp3 (Audio File)</option>
+                        <option value=".mp4">.mp4 (Video File)</option>
+                        <option value=".avi">.avi (Video File)</option>
+                        <option value=".jpg">.jpg (Image File)</option>
+                        <option value=".png">.png (Image File)</option>
+                        <option value=".gif">.gif (Image File)</option>
+                        <option value=".bmp">.bmp (Bitmap Image)</option>
+                        <option value=".ico">.ico (Icon File)</option>
+                        
+                        <!-- System Files -->
+                        <option value=".reg">.reg (Registry File)</option>
+                        <option value=".inf">.inf (Setup Information)</option>
+                        <option value=".ini">.ini (Configuration File)</option>
+                        <option value=".cfg">.cfg (Configuration File)</option>
+                        <option value=".conf">.conf (Configuration File)</option>
+                        <option value=".log">.log (Log File)</option>
+                        <option value=".tmp">.tmp (Temporary File)</option>
+                        <option value=".temp">.temp (Temporary File)</option>
+                        
+                        <!-- Network Files -->
+                        <option value=".html">.html (HTML Document)</option>
+                        <option value=".htm">.htm (HTML Document)</option>
+                        <option value=".xml">.xml (XML Document)</option>
+                        <option value=".json">.json (JSON Document)</option>
+                        <option value=".css">.css (Stylesheet)</option>
+                        <option value=".php">.php (PHP Script)</option>
+                        <option value=".asp">.asp (ASP Script)</option>
+                        <option value=".aspx">.aspx (ASP.NET Page)</option>
+                        
+                        <!-- Custom Security Extensions -->
+                        <option value=".secure">.secure (Custom Secure)</option>
+                        <option value=".locked">.locked (Locked File)</option>
+                        <option value=".protected">.protected (Protected)</option>
+                        <option value=".encrypted">.encrypted (Encrypted)</option>
+                        <option value=".safe">.safe (Safe File)</option>
+                        <option value=".private">.private (Private)</option>
+                    </select>
+                    </div>
+                
+                <div class="form-group">
+                    <label for="keySize">Key Size:</label>
+                    <select id="keySize">
+                        <option value="256">256-bit (Recommended)</option>
+                        <option value="192">192-bit</option>
+                        <option value="128">128-bit</option>
+                        <option value="512">512-bit (Ultra Secure)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="mode">Encryption Mode:</label>
+                    <select id="mode">
+                        <option value="CBC">CBC (Cipher Block Chaining)</option>
+                        <option value="GCM">GCM (Galois/Counter Mode)</option>
+                        <option value="CTR">CTR (Counter Mode)</option>
+                        <option value="CFB">CFB (Cipher Feedback)</option>
+                        <option value="OFB">OFB (Output Feedback)</option>
+                        <option value="ECB">ECB (Electronic Codebook)</option>
+                    </select>
+                    </div>
+                
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="compress" checked> Compress before encryption
+                    </label>
+                </div>
+                
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="obfuscate" checked> Obfuscate file structure
+                    </label>
+                    </div>
+                
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="stealth" checked> Stealth mode (hide encryption)
+                    </label>
+                </div>
+                
+                <div class="form-group">
+                    <label for="iterations">Key Derivation Iterations:</label>
+                    <input type="number" id="iterations" value="100000" min="1000" max="1000000">
+                    </div>
+                
+                <div class="advanced-options">
+                    <h4>⚠️ Advanced/Dangerous Features</h4>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="evasion"> Anti-Virus Evasion (AV Killer)
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="adr"> Anti-Debug/Reverse Engineering
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="upx"> UPX Packing/Compression
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="mutex"> Mutex Creation (Process Locking)
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="persistence"> Persistence Mechanisms
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="injection"> Code Injection Capabilities
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="network"> Network Communication
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="privilege"> Privilege Escalation
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="sandbox"> Sandbox Evasion
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="obfuscation"> Advanced Code Obfuscation
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="polymorphic"> Polymorphic Engine
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="metamorphic"> Metamorphic Engine
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="hotPatching"> Hot Patching (Runtime Code Modification)
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="advanced-options">
+                    <h4>💻 PowerShell Features</h4>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="psBypass"> PowerShell Execution Policy Bypass
+                        </label>
+                </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="psObfuscation"> PowerShell Obfuscation
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="psAMSI"> AMSI Bypass
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="psETW"> ETW Bypass
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="psLogging"> Disable PowerShell Logging
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="psMemory"> In-Memory Execution
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="psReflection"> Reflection Loading
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="psDotNet"> .NET Assembly Loading
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="advanced-options">
+                    <h4>🎯 Payload Customization</h4>
+                    <div class="form-group">
+                        <label for="payloadType">Payload Type:</label>
+                        <select id="payloadType">
+                            <option value="generic">Generic Payload</option>
+                            <option value="reverse_shell">Reverse Shell</option>
+                            <option value="bind_shell">Bind Shell</option>
+                            <option value="meterpreter">Meterpreter</option>
+                            <option value="beacon">Cobalt Strike Beacon</option>
+                            <option value="keylogger">Keylogger</option>
+                            <option value="screenshot">Screenshot Capture</option>
+                            <option value="file_stealer">File Stealer</option>
+                            <option value="credential_harvester">Credential Harvester</option>
+                            <option value="lateral_movement">Lateral Movement</option>
+                            <option value="persistence">Persistence</option>
+                            <option value="custom">Custom Payload</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="targetOS">Target OS:</label>
+                        <select id="targetOS">
+                            <option value="windows">Windows</option>
+                            <option value="linux">Linux</option>
+                            <option value="macos">macOS</option>
+                            <option value="cross_platform">Cross Platform</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="targetArch">Target Architecture:</label>
+                        <select id="targetArch">
+                            <option value="x64">x64</option>
+                            <option value="x86">x86</option>
+                            <option value="arm64">ARM64</option>
+                            <option value="any">Any</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="listenerIP">Listener IP:</label>
+                        <input type="text" id="listenerIP" placeholder="192.168.1.100" value="198.199.70.153">
+                    </div>
+                    <div class="form-group">
+                        <label for="listenerPort">Listener Port:</label>
+                        <input type="number" id="listenerPort" placeholder="4444" value="4444">
+                    </div>
+                    <div class="form-group">
+                        <label for="customPayload">Custom Payload Code:</label>
+                        <textarea id="customPayload" rows="5" placeholder="Enter your custom payload code here..."></textarea>
+                    </div>
+                </div>
+                
+                <div class="advanced-options">
+                    <h4>🔧 Advanced Stub Generation</h4>
+                    <div class="form-group">
+                        <label for="stubType">Stub Type:</label>
+                        <select id="stubType">
+                            <!-- Standard Executables -->
+                            <option value="exe">Windows Executable (.exe)</option>
+                            <option value="dll">Dynamic Library (.dll)</option>
+                            <option value="sys">System Driver (.sys)</option>
+                            <option value="com">Command File (.com)</option>
+                            <option value="scr">Screensaver (.scr)</option>
+                            <option value="pif">Program Information File (.pif)</option>
+                            <option value="cpl">Control Panel (.cpl)</option>
+                            <option value="msi">Windows Installer (.msi)</option>
+                            <option value="msc">Management Console (.msc)</option>
+                            
+                            <!-- Office Exploits -->
+                            <option value="xll">Excel Add-in (.xll)</option>
+                            <option value="doc">Word Document (.doc)</option>
+                            <option value="docx">Word Document (.docx)</option>
+                            <option value="xls">Excel Spreadsheet (.xls)</option>
+                            <option value="xlsx">Excel Spreadsheet (.xlsx)</option>
+                            <option value="ppt">PowerPoint (.ppt)</option>
+                            <option value="pptx">PowerPoint (.pptx)</option>
+                            <option value="pdf">PDF Document (.pdf)</option>
+                            
+                            <!-- Windows Shortcuts & Links -->
+                            <option value="lnk">Windows Shortcut (.lnk)</option>
+                            <option value="url">Internet Shortcut (.url)</option>
+                            <option value="website">Website Shortcut (.website)</option>
+                            
+                            <!-- Script Files -->
+                            <option value="bat">Batch File (.bat)</option>
+                            <option value="cmd">Command Script (.cmd)</option>
+                            <option value="ps1">PowerShell (.ps1)</option>
+                            <option value="psm1">PowerShell Module (.psm1)</option>
+                            <option value="psd1">PowerShell Data (.psd1)</option>
+                            <option value="vbs">VBScript (.vbs)</option>
+                            <option value="vbe">VBScript Encoded (.vbe)</option>
+                            <option value="js">JavaScript (.js)</option>
+                            <option value="jse">JavaScript Encoded (.jse)</option>
+                            <option value="wsf">Windows Script File (.wsf)</option>
+                            <option value="wsh">Windows Script Host (.wsh)</option>
+                            
+                            <!-- Archive Files -->
+                            <option value="zip">ZIP Archive (.zip)</option>
+                            <option value="rar">RAR Archive (.rar)</option>
+                            <option value="7z">7-Zip Archive (.7z)</option>
+                            <option value="jar">Java Archive (.jar)</option>
+                            
+                            <!-- Media Files -->
+                            <option value="mp3">Audio File (.mp3)</option>
+                            <option value="mp4">Video File (.mp4)</option>
+                            <option value="jpg">Image File (.jpg)</option>
+                            <option value="png">Image File (.png)</option>
+                            <option value="ico">Icon File (.ico)</option>
+                            
+                            <!-- System Files -->
+                            <option value="reg">Registry File (.reg)</option>
+                            <option value="inf">Setup Information (.inf)</option>
+                            <option value="ini">Configuration File (.ini)</option>
+                            <option value="log">Log File (.log)</option>
+                            <option value="tmp">Temporary File (.tmp)</option>
+                            
+                            <!-- Network Files -->
+                            <option value="html">HTML Document (.html)</option>
+                            <option value="xml">XML Document (.xml)</option>
+                            <option value="json">JSON Document (.json)</option>
+                            <option value="php">PHP Script (.php)</option>
+                            <option value="asp">ASP Script (.asp)</option>
+                            <option value="aspx">ASP.NET Page (.aspx)</option>
+                            
+                            <!-- Cross Platform -->
+                            <option value="elf">Linux Executable (.elf)</option>
+                            <option value="macho">macOS Executable (.macho)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="stubArchitecture">Architecture:</label>
+                        <select id="stubArchitecture">
+                            <option value="x64">x64 (64-bit)</option>
+                            <option value="x86">x86 (32-bit)</option>
+                            <option value="arm64">ARM64</option>
+                            <option value="any">Any</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="stubSize">Stub Size (KB):</label>
+                        <input type="number" id="stubSize" value="50" min="1" max="1024">
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="stubObfuscation"> Stub Obfuscation
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="stubPacking"> Stub Packing
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="stubAntiDebug"> Anti-Debug Protection
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="stubAntiVM"> Anti-VM Protection
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label for="stubIcon">Custom Icon (Base64):</label>
+                        <textarea id="stubIcon" rows="3" placeholder="Paste base64 encoded icon data here..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="stubVersion">Version Info:</label>
+                        <input type="text" id="stubVersion" placeholder="1.0.0.0" value="1.0.0.0">
+                    </div>
+                    <div class="form-group">
+                        <label for="stubDescription">Description:</label>
+                        <input type="text" id="stubDescription" placeholder="Application Description" value="RawrZ Security Application">
+                    </div>
+                    <div class="form-group">
+                        <label for="stubCompany">Company:</label>
+                        <input type="text" id="stubCompany" placeholder="Company Name" value="RawrZ Security">
+                    </div>
+                </div>
+                
+                <div class="btn-group">
+                    <button class="btn" onclick="encryptFiles()">🔒 Encrypt Files</button>
+                    <button class="btn" onclick="decryptFiles()">🔓 Decrypt Files</button>
+                    <button class="btn" onclick="hashFiles()"># Hash Files</button>
+                    <button class="btn" onclick="analyzeFiles()">🔍 Analyze Files</button>
+                    <button class="btn" onclick="generateStub()">🔧 Generate Stub</button>
+                    <button class="btn" onclick="batchProcess()">⚡ Batch Process</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h3>🔧 Generated Stubs</h3>
+            <div class="stub-list" id="stubList">
+                <div class="status-item info">No stubs generated yet. Generate a stub to get started.</div>
+            </div>
+            <div class="btn-group">
+                <button class="btn" onclick="generateStub()">🔧 Generate New Stub</button>
+                <button class="btn" onclick="clearStubs()">🗑️ Clear All Stubs</button>
+                <button class="btn" onclick="applySelectedStub()">⚡ Apply Selected Stub</button>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h3>📊 Status & Results</h3>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="status" id="status">
+                <div class="status-item info">Ready for file operations...</div>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h3>🔧 Advanced Operations</h3>
+            <div class="advanced-options">
+                <h4>Key Management</h4>
+                <button class="btn" onclick="generateKeys()">🔑 Generate New Keys</button>
+                <button class="btn" onclick="exportKeys()">💾 Export Keys</button>
+                <button class="btn" onclick="importKeys()">📥 Import Keys</button>
+            </div>
+            <div class="advanced-options">
+                <h4>Security Analysis</h4>
+                <button class="btn" onclick="scanForMalware()">🛡️ Malware Scan</button>
+                <button class="btn" onclick="entropyAnalysis()">📊 Entropy Analysis</button>
+                <button class="btn" onclick="fileIntegrity()">✅ Integrity Check</button>
+            </div>
+            <div class="advanced-options">
+                <h4>Batch Operations</h4>
+                <button class="btn" onclick="encryptAll()">🔒 Encrypt All Files</button>
+                <button class="btn" onclick="decryptAll()">🔓 Decrypt All Files</button>
+                <button class="btn" onclick="hashAll()"># Hash All Files</button>
+        </div>
+        </div>
+    </div>
+
+    <script>
+        let uploadedFiles = [];
+        let encryptedFiles = [];
+        
+            const fileDrop = document.getElementById('fileDrop');
+            const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const status = document.getElementById('status');
+
+        // File drop functionality
+            fileDrop.addEventListener('click', () => fileInput.click());
+        fileDrop.addEventListener('dragover', handleDragOver);
+        fileDrop.addEventListener('dragleave', handleDragLeave);
+        fileDrop.addEventListener('drop', handleDrop);
+        
+        fileInput.addEventListener('change', handleFileSelect);
+        
+        function handleDragOver(e) {
+                e.preventDefault();
+            fileDrop.classList.add('dragover');
+        }
+        
+        function handleDragLeave(e) {
+            e.preventDefault();
+            fileDrop.classList.remove('dragover');
+        }
+        
+        function handleDrop(e) {
+                e.preventDefault();
+            fileDrop.classList.remove('dragover');
+            const files = Array.from(e.dataTransfer.files);
+            addFiles(files);
+        }
+        
+        function handleFileSelect(e) {
+            const files = Array.from(e.target.files);
+            addFiles(files);
+        }
+        
+        function addFiles(files) {
+            uploadedFiles = [...uploadedFiles, ...files];
+            updateFileList();
+            addStatus(`Added ${files.length} file(s)`, 'info');
+        }
+
+        function updateFileList() {
+            if (uploadedFiles.length === 0) {
+                fileList.innerHTML = 'No files selected';
+                return;
+            }
+            
+            fileList.innerHTML = uploadedFiles.map((file, index) => `
+                <div class="file-item" onclick="selectFile(${index})">
+                    <strong>${file.name}</strong><br>
+                    <small>${(file.size / 1024).toFixed(2)} KB</small>
+                </div>
+            `).join('');
+        }
+
+        function selectFile(index) {
+            // Remove selection from all items
+            document.querySelectorAll('.file-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            // Add selection to clicked item
+            document.querySelectorAll('.file-item')[index].classList.add('selected');
+        }
+
+        function clearFiles() {
+            uploadedFiles = [];
+            encryptedFiles = [];
+            updateFileList();
+            addStatus('Files cleared', 'info');
+        }
+        
+        async function uploadFiles() {
+            if (uploadedFiles.length === 0) {
+                addStatus('No files to upload', 'error');
+                return;
+            }
+            
+            addStatus(`Uploading ${uploadedFiles.length} file(s)...`, 'loading');
+            
+            for (const file of uploadedFiles) {
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    
+                    const response = await fetch('/api/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        addStatus(`✅ Uploaded: ${file.name}`, 'success');
+                    } else {
+                        addStatus(`❌ Upload failed: ${file.name} - ${result.error}`, 'error');
+                    }
+                } catch (error) {
+                    addStatus(`❌ Upload error: ${file.name} - ${error.message}`, 'error');
+                }
+            }
+        }
+        
+        async function encryptFiles() {
+            if (uploadedFiles.length === 0) {
+                addStatus('No files to encrypt', 'error');
+                return;
+            }
+            
+            const algorithm = document.getElementById('algorithm').value;
+            const extension = document.getElementById('extension').value;
+            const keySize = document.getElementById('keySize').value;
+            const mode = document.getElementById('mode').value;
+            const compress = document.getElementById('compress').checked;
+            const obfuscate = document.getElementById('obfuscate').checked;
+            const stealth = document.getElementById('stealth').checked;
+            const iterations = document.getElementById('iterations').value;
+            
+            // Advanced/Dangerous Features
+            const evasion = document.getElementById('evasion').checked;
+            const adr = document.getElementById('adr').checked;
+            const upx = document.getElementById('upx').checked;
+            const mutex = document.getElementById('mutex').checked;
+            const persistence = document.getElementById('persistence').checked;
+            const injection = document.getElementById('injection').checked;
+            const network = document.getElementById('network').checked;
+            const privilege = document.getElementById('privilege').checked;
+            const sandbox = document.getElementById('sandbox').checked;
+            const obfuscation = document.getElementById('obfuscation').checked;
+            const polymorphic = document.getElementById('polymorphic').checked;
+            const metamorphic = document.getElementById('metamorphic').checked;
+            const hotPatching = document.getElementById('hotPatching').checked;
+            
+            // PowerShell Features
+            const psBypass = document.getElementById('psBypass').checked;
+            const psObfuscation = document.getElementById('psObfuscation').checked;
+            const psAMSI = document.getElementById('psAMSI').checked;
+            const psETW = document.getElementById('psETW').checked;
+            const psLogging = document.getElementById('psLogging').checked;
+            const psMemory = document.getElementById('psMemory').checked;
+            const psReflection = document.getElementById('psReflection').checked;
+            const psDotNet = document.getElementById('psDotNet').checked;
+            
+            // Payload Customization
+            const payloadType = document.getElementById('payloadType').value;
+            const targetOS = document.getElementById('targetOS').value;
+            const targetArch = document.getElementById('targetArch').value;
+            const listenerIP = document.getElementById('listenerIP').value;
+            const listenerPort = document.getElementById('listenerPort').value;
+            const customPayload = document.getElementById('customPayload').value;
+            
+            addStatus(`🔒 Advanced Encryption: ${uploadedFiles.length} file(s) with ${algorithm}`, 'loading');
+            addStatus(`   Key Size: ${keySize}-bit | Mode: ${mode} | Iterations: ${iterations}`, 'info');
+            addStatus(`   Options: Compress=${compress}, Obfuscate=${obfuscate}, Stealth=${stealth}`, 'info');
+            
+            updateProgress(0);
+            
+            for (let i = 0; i < uploadedFiles.length; i++) {
+                const file = uploadedFiles[i];
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('algorithm', algorithm);
+                    formData.append('extension', extension);
+                    formData.append('keySize', keySize);
+                    formData.append('mode', mode);
+                    formData.append('compress', compress);
+                    formData.append('obfuscate', obfuscate);
+                    formData.append('stealth', stealth);
+                    formData.append('iterations', iterations);
+                    
+                    // Advanced/Dangerous Features
+                    formData.append('evasion', evasion);
+                    formData.append('adr', adr);
+                    formData.append('upx', upx);
+                    formData.append('mutex', mutex);
+                    formData.append('persistence', persistence);
+                    formData.append('injection', injection);
+                    formData.append('network', network);
+                    formData.append('privilege', privilege);
+                    formData.append('sandbox', sandbox);
+                    formData.append('obfuscation', obfuscation);
+                    formData.append('polymorphic', polymorphic);
+                    formData.append('metamorphic', metamorphic);
+                    formData.append('hotPatching', hotPatching);
+                    
+                    // PowerShell Features
+                    formData.append('psBypass', psBypass);
+                    formData.append('psObfuscation', psObfuscation);
+                    formData.append('psAMSI', psAMSI);
+                    formData.append('psETW', psETW);
+                    formData.append('psLogging', psLogging);
+                    formData.append('psMemory', psMemory);
+                    formData.append('psReflection', psReflection);
+                    formData.append('psDotNet', psDotNet);
+                    
+                    // Payload Customization
+                    formData.append('payloadType', payloadType);
+                    formData.append('targetOS', targetOS);
+                    formData.append('targetArch', targetArch);
+                    formData.append('listenerIP', listenerIP);
+                    formData.append('listenerPort', listenerPort);
+                    formData.append('customPayload', customPayload);
+                    
+                    const response = await fetch('/api/encrypt-file', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        encryptedFiles.push(result);
+                        addStatus(`✅ Encrypted: ${result.originalName} → ${result.encryptedName}`, 'success');
+                        addStatus(`   Size: ${result.originalSize} → ${result.encryptedSize} bytes`, 'info');
+                        addStatus(`   Algorithm: ${result.algorithm}`, 'info');
+                        addStatus(`   Download: <a href="${result.downloadUrl}" class="download-link" target="_blank">${result.encryptedName}</a>`, 'info');
+            } else {
+                        addStatus(`❌ Encryption failed: ${file.name} - ${result.error}`, 'error');
+                    }
+                } catch (error) {
+                    addStatus(`❌ Encryption error: ${file.name} - ${error.message}`, 'error');
+                }
+                
+                updateProgress(((i + 1) / uploadedFiles.length) * 100);
+            }
+            
+            addStatus(`🎉 Encryption completed! ${encryptedFiles.length} files processed.`, 'success');
+        }
+        
+        async function hashFiles() {
+            if (uploadedFiles.length === 0) {
+                addStatus('No files to hash', 'error');
+                return;
+            }
+
+            addStatus(`Calculating hashes for ${uploadedFiles.length} file(s)...`, 'loading');
+            
+            for (const file of uploadedFiles) {
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('algorithm', 'sha256');
+                    
+                    const response = await fetch('/api/hash-file', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        addStatus(`✅ Hash: ${file.name}`, 'success');
+                        addStatus(`   SHA256: ${result.hash}`, 'info');
+            } else {
+                        addStatus(`❌ Hash failed: ${file.name} - ${result.error}`, 'error');
+                    }
+                } catch (error) {
+                    addStatus(`❌ Hash error: ${file.name} - ${error.message}`, 'error');
+                }
+            }
+        }
+        
+        function addStatus(message, type) {
+            const statusItem = document.createElement('div');
+            statusItem.className = `status-item ${type}`;
+            statusItem.innerHTML = message;
+            status.appendChild(statusItem);
+            status.scrollTop = status.scrollHeight;
+        }
+        
+        function updateProgress(percent) {
+            const progressFill = document.getElementById('progressFill');
+            progressFill.style.width = percent + '%';
+        }
+        
+        // Advanced Functions
+        async function decryptFiles() {
+            if (uploadedFiles.length === 0) {
+                addStatus('No files to decrypt', 'error');
+                return;
+            }
+
+            addStatus(`🔓 Decrypting ${uploadedFiles.length} file(s)...`, 'loading');
+            updateProgress(0);
+            
+            for (let i = 0; i < uploadedFiles.length; i++) {
+                const file = uploadedFiles[i];
+                try {
+            const formData = new FormData();
+            formData.append('file', file);
+
+                    const response = await fetch('/api/real-encryption/decrypt', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        addStatus(`✅ Decrypted: ${file.name}`, 'success');
+                        addStatus(`   Size: ${result.decryptedSize} bytes`, 'info');
+                        addStatus(`   Download: <a href="${result.downloadUrl}" class="download-link" target="_blank">${result.originalName}</a>`, 'info');
+                    } else {
+                        addStatus(`❌ Decryption failed: ${file.name} - ${result.error}`, 'error');
+                    }
+                } catch (error) {
+                    addStatus(`❌ Decryption error: ${file.name} - ${error.message}`, 'error');
+                }
+                
+                updateProgress(((i + 1) / uploadedFiles.length) * 100);
+            }
+        }
+        
+        async function analyzeFiles() {
+            if (uploadedFiles.length === 0) {
+                addStatus('No files to analyze', 'error');
+                return;
+            }
+            
+            addStatus(`🔍 Analyzing ${uploadedFiles.length} file(s)...`, 'loading');
+            
+            for (const file of uploadedFiles) {
+                try {
+            const formData = new FormData();
+            formData.append('file', file);
+
+                    const response = await fetch('/api/analyze-file', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+                    
+                    if (result.success) {
+                        addStatus(`✅ Analysis: ${file.name}`, 'success');
+                        addStatus(`   Type: ${result.fileType}`, 'info');
+                        addStatus(`   Entropy: ${result.entropy}`, 'info');
+                        addStatus(`   Risk Level: ${result.riskLevel}`, result.riskLevel === 'Low' ? 'success' : 'warning');
+                    } else {
+                        addStatus(`❌ Analysis failed: ${file.name}`, 'error');
+                    }
+                } catch (error) {
+                    addStatus(`❌ Analysis error: ${file.name} - ${error.message}`, 'error');
+                }
+            }
+        }
+        
+        async function batchProcess() {
+            if (uploadedFiles.length === 0) {
+                addStatus('No files to process', 'error');
+                return;
+            }
+            
+            addStatus(`⚡ Batch processing ${uploadedFiles.length} file(s)...`, 'loading');
+            
+            // Process all operations in sequence
+            await encryptFiles();
+            await hashFiles();
+            await analyzeFiles();
+            
+            addStatus(`🎉 Batch processing completed!`, 'success');
+        }
+        
+        // Key Management Functions
+        async function generateKeys() {
+            addStatus('🔑 Generating new encryption keys...', 'loading');
+            
+            try {
+                const response = await fetch('/api/generate-keys', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        keySize: document.getElementById('keySize').value,
+                        algorithm: document.getElementById('algorithm').value
+                    })
+                });
+                
+                const result = await response.json();
+
+                if (result.success) {
+                    addStatus('✅ New keys generated successfully', 'success');
+                    addStatus(`   Key ID: ${result.keyId}`, 'info');
+                    addStatus(`   Algorithm: ${result.algorithm}`, 'info');
+                } else {
+                    addStatus(`❌ Key generation failed: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                addStatus(`❌ Key generation error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function exportKeys() {
+            addStatus('💾 Exporting encryption keys...', 'loading');
+            
+            try {
+                const response = await fetch('/api/export-keys');
+                const result = await response.json();
+                
+                if (result.success) {
+                    addStatus('✅ Keys exported successfully', 'success');
+                    addStatus(`   Download: <a href="${result.downloadUrl}" class="download-link" target="_blank">keys.json</a>`, 'info');
+                } else {
+                    addStatus(`❌ Key export failed: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                addStatus(`❌ Key export error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function importKeys() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                addStatus('📥 Importing encryption keys...', 'loading');
+                
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    
+                    const response = await fetch('/api/import-keys', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        addStatus('✅ Keys imported successfully', 'success');
+                        addStatus(`   Imported: ${result.keyCount} keys`, 'info');
+                    } else {
+                        addStatus(`❌ Key import failed: ${result.error}`, 'error');
+                    }
+                } catch (error) {
+                    addStatus(`❌ Key import error: ${error.message}`, 'error');
+                }
+            };
+            input.click();
+        }
+        
+        // Security Analysis Functions
+        async function scanForMalware() {
+            if (uploadedFiles.length === 0) {
+                addStatus('No files to scan', 'error');
+                return;
+            }
+            
+            addStatus(`🛡️ Scanning ${uploadedFiles.length} file(s) for malware...`, 'loading');
+            
+            for (const file of uploadedFiles) {
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    
+                    const response = await fetch('/api/malware-scan', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+                    
+                    if (result.success) {
+                        addStatus(`✅ Scan: ${file.name}`, 'success');
+                        addStatus(`   Status: ${result.status}`, result.status === 'Clean' ? 'success' : 'warning');
+                        if (result.threats && result.threats.length > 0) {
+                            addStatus(`   Threats: ${result.threats.join(', ')}`, 'error');
+                        }
+                    } else {
+                        addStatus(`❌ Scan failed: ${file.name}`, 'error');
+                    }
+                } catch (error) {
+                    addStatus(`❌ Scan error: ${file.name} - ${error.message}`, 'error');
+                }
+            }
+        }
+        
+        async function entropyAnalysis() {
+            if (uploadedFiles.length === 0) {
+                addStatus('No files to analyze', 'error');
+                return;
+            }
+            
+            addStatus(`📊 Entropy analysis for ${uploadedFiles.length} file(s)...`, 'loading');
+            
+            for (const file of uploadedFiles) {
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    
+                    const response = await fetch('/api/entropy-analysis', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                const result = await response.json();
+
+                    if (result.success) {
+                        addStatus(`✅ Entropy: ${file.name}`, 'success');
+                        addStatus(`   Score: ${result.entropy} (${result.interpretation})`, 'info');
+                        addStatus(`   Randomness: ${result.randomness}%`, 'info');
+                    } else {
+                        addStatus(`❌ Entropy analysis failed: ${file.name}`, 'error');
+                    }
+                } catch (error) {
+                    addStatus(`❌ Entropy analysis error: ${file.name} - ${error.message}`, 'error');
+                }
+            }
+        }
+        
+        async function fileIntegrity() {
+            if (uploadedFiles.length === 0) {
+                addStatus('No files to check', 'error');
+                return;
+            }
+            
+            addStatus(`✅ Integrity check for ${uploadedFiles.length} file(s)...`, 'loading');
+            
+            for (const file of uploadedFiles) {
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    
+                    const response = await fetch('/api/integrity-check', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        addStatus(`✅ Integrity: ${file.name}`, 'success');
+                        addStatus(`   Checksum: ${result.checksum}`, 'info');
+                        addStatus(`   Status: ${result.status}`, result.status === 'Valid' ? 'success' : 'error');
+                } else {
+                        addStatus(`❌ Integrity check failed: ${file.name}`, 'error');
+                }
+            } catch (error) {
+                    addStatus(`❌ Integrity check error: ${file.name} - ${error.message}`, 'error');
+                }
+            }
+        }
+        
+        // Batch Operations
+        async function encryptAll() {
+            await encryptFiles();
+        }
+        
+        async function decryptAll() {
+            await decryptFiles();
+        }
+        
+        async function hashAll() {
+            await hashFiles();
+        }
+        
+        // Stub Generation Function
+        async function generateStub() {
+            addStatus('🔧 Generating custom stub...', 'loading');
+            
+            try {
+                const stubType = document.getElementById('stubType').value;
+                const stubArchitecture = document.getElementById('stubArchitecture').value;
+                const stubSize = document.getElementById('stubSize').value;
+                const stubObfuscation = document.getElementById('stubObfuscation').checked;
+                const stubPacking = document.getElementById('stubPacking').checked;
+                const stubAntiDebug = document.getElementById('stubAntiDebug').checked;
+                const stubAntiVM = document.getElementById('stubAntiVM').checked;
+                const stubIcon = document.getElementById('stubIcon').value;
+                const stubVersion = document.getElementById('stubVersion').value;
+                const stubDescription = document.getElementById('stubDescription').value;
+                const stubCompany = document.getElementById('stubCompany').value;
+                
+                const stubData = {
+                    type: stubType,
+                    architecture: stubArchitecture,
+                    size: stubSize,
+                    obfuscation: stubObfuscation,
+                    packing: stubPacking,
+                    antiDebug: stubAntiDebug,
+                    antiVM: stubAntiVM,
+                    icon: stubIcon,
+                    version: stubVersion,
+                    description: stubDescription,
+                    company: stubCompany
+                };
+                
+                const response = await fetch('/api/stubs/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(stubData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    addStatus('✅ Stub generated successfully', 'success');
+                    addStatus(`   Type: ${result.stub.type}`, 'info');
+                    addStatus(`   Architecture: ${result.stub.architecture}`, 'info');
+                    addStatus(`   Size: ${result.stub.size}KB`, 'info');
+                    addStatus(`   Download: <a href="${result.downloadUrl}" class="download-link" target="_blank">${result.stub.filename}</a>`, 'info');
+                } else {
+                    addStatus(`❌ Stub generation failed: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                addStatus(`❌ Stub generation error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Initialize
+        addStatus('🔐 RawrZ Advanced Encryption Panel loaded successfully', 'success');
+        addStatus('✅ All advanced features enabled', 'success');
+        addStatus('✅ PowerShell features enabled', 'success');
+        addStatus('✅ Payload customization enabled', 'success');
+        addStatus('✅ Stub generation enabled', 'success');
+        addStatus('Ready for advanced file operations', 'info');
+    </script>
+</body>
+</html>

@@ -7,25 +7,27 @@
 #undef ERROR
 #endif
 
-#include <string>
-#include <vector>
+#include "../cpu_inference_engine.h"
+#include "../native_agent.hpp"
+#include "Win32IDE_SubAgent.h"
 #include <functional>
 #include <memory>
-#include "../native_agent.hpp"
-#include "../cpu_inference_engine.h"
-#include "Win32IDE_SubAgent.h"
+#include <string>
+#include <vector>
 
 // Forward declaration
 class Win32IDE;
 
 // Agent response types
-enum class AgentResponseType {
+enum class AgentResponseType
+{
     TOOL_CALL,
     ANSWER,
     AGENT_ERROR,
     THINKING
-};// Agent response structure
-struct AgentResponse {
+};  // Agent response structure
+struct AgentResponse
+{
     AgentResponseType type;
     std::string content;
     std::string toolName;
@@ -35,27 +37,28 @@ struct AgentResponse {
 
 // Agentic Framework Bridge for Win32IDE
 // Integrates PowerShell-based agentic framework with C++ IDE
-class AgenticBridge {
-public:
+class AgenticBridge
+{
+  public:
     AgenticBridge(Win32IDE* ide);
     ~AgenticBridge();
 
     // Core agent operations
     bool Initialize(const std::string& frameworkPath, const std::string& modelName = "");
     bool IsInitialized() const { return m_initialized; }
-    
+
     // Execute single agent command
     AgentResponse ExecuteAgentCommand(const std::string& prompt);
-    
+
     // Start multi-turn agent loop
     bool StartAgentLoop(const std::string& initialPrompt, int maxIterations = 10);
     void StopAgentLoop();
     bool IsAgentLoopRunning() const { return m_agentLoopRunning; }
-    
+
     // Get agent capabilities
     std::vector<std::string> GetAvailableTools();
     std::string GetAgentStatus();
-    
+
     // Configuration
     void SetModel(const std::string& modelName);
     void SetOllamaServer(const std::string& serverUrl);
@@ -77,7 +80,11 @@ public:
     void SetLanguageContext(const std::string& language, const std::string& filePath);
     std::string GetLanguageContext() const { return m_languageContext; }
     std::string GetFileContext() const { return m_fileContext; }
-    
+
+    // Workspace root for agent context (project folder / drive)
+    void SetWorkspaceRoot(const std::string& workspaceRoot);
+    std::string GetWorkspaceRoot() const { return m_workspaceRoot; }
+
     // Output callback
     using OutputCallback = std::function<void(const std::string&, const std::string&)>;
     void SetOutputCallback(OutputCallback callback);
@@ -105,9 +112,8 @@ public:
     std::string ExecuteChain(const std::vector<std::string>& steps, const std::string& initialInput = "");
 
     /// Execute a HexMag swarm (parallel fan-out with merge)
-    std::string ExecuteSwarm(const std::vector<std::string>& prompts,
-                              const std::string& mergeStrategy = "concatenate",
-                              int maxParallel = 4);
+    std::string ExecuteSwarm(const std::vector<std::string>& prompts, const std::string& mergeStrategy = "concatenate",
+                             int maxParallel = 4);
 
     /// Cancel all running sub-agents
     void CancelAllSubAgents();
@@ -130,8 +136,8 @@ public:
     void EnableMultiAgent(bool enabled) { m_multiAgentEnabled = enabled; }
     void WarmUpModel();
 
-private:
-   // Native Integration
+  private:
+    // Native Integration
     std::unique_ptr<RawrXD::CPUInferenceEngine> m_nativeEngine;
     std::unique_ptr<RawrXD::NativeAgent> m_nativeAgent;
 
@@ -142,31 +148,31 @@ private:
     bool SpawnPowerShellProcess(const std::string& scriptPath, const std::string& arguments);
     bool ReadProcessOutput(std::string& output, DWORD timeoutMs = 5000);
     void KillPowerShellProcess();
-    
+
     // Response parsing
     AgentResponse ParseAgentResponse(const std::string& rawOutput);
     bool IsToolCall(const std::string& line);
     bool IsAnswer(const std::string& line);
-    
+
     // Path resolution
     std::string ResolveFrameworkPath();
     std::string ResolveToolsModulePath();
-    
+
     Win32IDE* m_ide;
     bool m_initialized;
     bool m_agentLoopRunning;
-    
+
     std::string m_frameworkPath;
     std::string m_toolsModulePath;
     std::string m_modelName;
     std::string m_ollamaServer;
-    
+
     HANDLE m_hProcess;
     HANDLE m_hStdoutRead;
     HANDLE m_hStdoutWrite;
     HANDLE m_hStdinRead;
     HANDLE m_hStdinWrite;
-    
+
     // Config Cache
     bool m_maxMode = false;
     bool m_deepThinking = false;
@@ -175,6 +181,7 @@ private:
     bool m_autoCorrect = false;
     std::string m_languageContext;  // Current language (e.g. "C/C++")
     std::string m_fileContext;      // Current file path
+    std::string m_workspaceRoot;    // Project/workspace folder for agent context
 
     // Output callback for streaming results to UI
     OutputCallback m_outputCallback;

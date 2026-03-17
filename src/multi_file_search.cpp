@@ -39,6 +39,12 @@ MultiFileSearchWidget::~MultiFileSearchWidget() {
     if (m_searchFuture.valid()) m_searchFuture.wait();
 }
 
+void MultiFileSearchWidget::show() {
+    if (m_showCb) {
+        m_showCb(m_showCtx ? m_showCtx : this);
+    }
+}
+
 void MultiFileSearchWidget::setProjectRoot(const std::string& path) {
     m_projectRoot = path;
 }
@@ -108,7 +114,17 @@ void MultiFileSearchWidget::focusSearchInput() {
     }
 }
 
-void MultiFileSearchWidget::onResultItemDoubleClicked(void*, int) {}
+void MultiFileSearchWidget::onResultItemDoubleClicked(void*, int) {
+    if (!m_resultClickedCb) return;
+
+    MultiFileSearchResult selected;
+    {
+        std::lock_guard<std::mutex> lock(m_resultsMutex);
+        if (m_pendingResults.empty()) return;
+        selected = m_pendingResults.front();
+    }
+    m_resultClickedCb(m_resultClickedCtx, selected);
+}
 void MultiFileSearchWidget::onSearchResultsReady() {}
 
 void MultiFileSearchWidget::onSearchFinished() {

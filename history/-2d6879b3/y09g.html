@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevMarket IDE</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .ide-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            max-width: 1200px;
+            width: 90%;
+            min-height: 80vh;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .header h1 {
+            color: #333;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        .workspace {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr;
+            grid-gap: 1rem;
+            height: 500px;
+        }
+        
+        .panel {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 1rem;
+            overflow-y: auto;
+        }
+        
+        .panel h3 {
+            color: #333;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        .file-explorer {
+            background: #2c3e50;
+            color: #ecf0f1;
+        }
+        
+        .file-explorer h3 {
+            color: #ecf0f1;
+            border-bottom-color: #34495e;
+        }
+        
+        .file-item {
+            padding: 0.5rem;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-bottom: 0.3rem;
+            transition: background-color 0.2s;
+        }
+        
+        .file-item:hover {
+            background: #34495e;
+        }
+        
+        .file-item.active {
+            background: #3498db;
+        }
+        
+        .editor {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            border: none;
+            outline: none;
+            resize: none;
+            width: 100%;
+            height: calc(100% - 3rem);
+            padding: 1rem;
+            border-radius: 5px;
+        }
+        
+        .properties {
+            background: #f1f3f4;
+        }
+        
+        .property-item {
+            background: white;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 5px;
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .property-label {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 0.3rem;
+        }
+        
+        .property-value {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .toolbar {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            justify-content: center;
+        }
+        
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .status-bar {
+            background: #333;
+            color: #fff;
+            padding: 0.5rem 1rem;
+            border-radius: 0 0 20px 20px;
+            margin: -2rem -2rem -2rem -2rem;
+            margin-top: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .status-item {
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="ide-container">
+        <div class="header">
+            <h1>🚀 DevMarket IDE</h1>
+            <p>Professional Development Environment</p>
+        </div>
+        
+        <div class="toolbar">
+            <button class="btn" onclick="newFile()">📄 New File</button>
+            <button class="btn" onclick="openFile()">📁 Open</button>
+            <button class="btn" onclick="saveFile()">💾 Save</button>
+            <button class="btn" onclick="runCode()">▶️ Run</button>
+            <button class="btn" onclick="debugCode()">🐛 Debug</button>
+        </div>
+        
+        <div class="workspace">
+            <div class="panel file-explorer">
+                <h3>📂 Explorer</h3>
+                <div class="file-item active" onclick="selectFile(this, 'main.js')">
+                    📄 main.js
+                </div>
+                <div class="file-item" onclick="selectFile(this, 'style.css')">
+                    🎨 style.css
+                </div>
+                <div class="file-item" onclick="selectFile(this, 'index.html')">
+                    🌐 index.html
+                </div>
+                <div class="file-item" onclick="selectFile(this, 'package.json')">
+                    📦 package.json
+                </div>
+                <div class="file-item" onclick="selectFile(this, 'README.md')">
+                    📖 README.md
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h3 id="editorTitle">📝 Editor - main.js</h3>
+                <textarea id="codeEditor" class="editor" placeholder="// Welcome to DevMarket IDE
+// Start coding here...
+
+function welcome() {
+    console.log('Hello, DevMarket IDE!');
+    console.log('This is a professional development environment');
+    
+    // Your code here
+    return 'Ready to code!';
+}
+
+// Call the welcome function
+welcome();">// Welcome to DevMarket IDE
+// Start coding here...
+
+function welcome() {
+    console.log('Hello, DevMarket IDE!');
+    console.log('This is a professional development environment');
+    
+    // Your code here
+    return 'Ready to code!';
+}
+
+// Call the welcome function
+welcome();</textarea>
+            </div>
+            
+            <div class="panel properties">
+                <h3>⚙️ Properties</h3>
+                <div class="property-item">
+                    <div class="property-label">Language</div>
+                    <div class="property-value">JavaScript</div>
+                </div>
+                <div class="property-item">
+                    <div class="property-label">File Size</div>
+                    <div class="property-value">2.4 KB</div>
+                </div>
+                <div class="property-item">
+                    <div class="property-label">Line Endings</div>
+                    <div class="property-value">LF</div>
+                </div>
+                <div class="property-item">
+                    <div class="property-label">Encoding</div>
+                    <div class="property-value">UTF-8</div>
+                </div>
+                <div class="property-item">
+                    <div class="property-label">Indentation</div>
+                    <div class="property-value">4 Spaces</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="status-bar">
+            <div class="status-item">Ready • DevMarket IDE v2.0</div>
+            <div class="status-item">Line 1, Column 1</div>
+        </div>
+    </div>
+
+    <script>
+        // Prevent AMD conflicts
+        (function() {
+            'use strict';
+            
+            let currentFile = 'main.js';
+            let files = {};
+            const BACKEND_URL = 'http://localhost:3001';
+            
+            // Initialize with default files
+            async function initializeFiles() {
+                try {
+                    const response = await fetch(`${BACKEND_URL}/api/files`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.success && data.files.length > 0) {
+                            // Load existing files from backend
+                            for (const file of data.files.filter(f => f.type === 'file')) {
+                                await loadFileFromBackend(file.path);
+                            }
+                        } else {
+                            // Create default files
+                            await createDefaultFiles();
+                        }
+                    } else {
+                        // Fallback to local files if backend not available
+                        createLocalFiles();
+                    }
+                } catch (error) {
+                    console.warn('Backend not available, using local mode');
+                    createLocalFiles();
+                }
+            }
+            
+            function createLocalFiles() {
+                files['main.js'] = `// Welcome to DevMarket IDE
+// Start coding here...
+
+function welcome() {
+    console.log('Hello, DevMarket IDE!');
+    console.log('This is a professional development environment');
+    
+    // Your code here
+    return 'Ready to code!';
+}
+
+// Call the welcome function
+welcome();`;
+            }
+            
+            async function createDefaultFiles() {
+                const defaultFiles = {
+                    'main.js': `// Welcome to DevMarket IDE
+// Start coding here...
+
+function welcome() {
+    console.log('Hello, DevMarket IDE!');
+    console.log('This is a professional development environment');
+    
+    // Your code here
+    return 'Ready to code!';
+}
+
+// Call the welcome function
+welcome();`,
+                    'style.css': `/* DevMarket IDE Styles */
+body {
+    font-family: 'Arial', sans-serif;
+    background: #f0f0f0;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}`,
+                    'index.html': `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Project</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Hello World!</h1>
+    <script src="main.js"></script>
+</body>
+</html>`,
+                    'package.json': JSON.stringify({
+                        name: "my-project",
+                        version: "1.0.0",
+                        description: "A project created in DevMarket IDE",
+                        main: "main.js",
+                        scripts: {
+                            start: "node main.js",
+                            test: "echo No tests specified"
+                        },
+                        author: "DevMarket IDE User",
+                        license: "MIT"
+                    }, null, 2),
+                    'README.md': `# My Project
+
+This project was created using DevMarket IDE.
+
+## Features
+
+- Modern development environment
+- Syntax highlighting
+- File explorer
+- Live preview
+
+## Getting Started
+
+1. Open the project in DevMarket IDE
+2. Edit your files in the editor
+3. Use the run button to execute code
+4. Debug using the debug tools
+
+Happy coding!`
+                };
+                
+                // Save default files to backend
+                for (const [fileName, content] of Object.entries(defaultFiles)) {
+                    files[fileName] = content;
+                    await saveFileToBackend(fileName, content);
+                }
+            }
+            
+            async function loadFileFromBackend(filePath) {
+                try {
+                    const response = await fetch(`${BACKEND_URL}/api/files/${filePath}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.success) {
+                            files[filePath] = data.content;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error loading file:', error);
+                }
+            }
+            
+            async function saveFileToBackend(filePath, content) {
+                try {
+                    await fetch(`${BACKEND_URL}/api/files/${filePath}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ content })
+                    });
+                } catch (error) {
+                    console.error('Error saving file:', error);
+                }
+            }
+            
+            function newFile() {
+                const fileName = prompt('Enter file name:');
+                if (fileName && !files[fileName]) {
+                    files[fileName] = '';
+                    addFileToExplorer(fileName);
+                    selectFileByName(fileName);
+                }
+            }
+            
+            function openFile() {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.onchange = function(event) {
+                    const file = event.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            files[file.name] = e.target.result;
+                            addFileToExplorer(file.name);
+                            selectFileByName(file.name);
+                        };
+                        reader.readAsText(file);
+                    }
+                };
+                input.click();
+            }
+            
+            function saveFile() {
+                const content = document.getElementById('codeEditor').value;
+                files[currentFile] = content;
+                
+                const blob = new Blob([content], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = currentFile;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                updateStatus('File saved successfully');
+            }
+            
+            async function runCode() {
+                const code = document.getElementById('codeEditor').value;
+                updateStatus('Executing code...');
+                
+                // Save current file first
+                await saveFile();
+                
+                try {
+                    let language = 'javascript';
+                    if (currentFile.endsWith('.py')) language = 'python';
+                    else if (currentFile.endsWith('.js')) language = 'javascript';
+                    
+                    const response = await fetch(`${BACKEND_URL}/api/execute`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ code, language })
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.success) {
+                            const result = data.result;
+                            let output = [];
+                            
+                            if (result.output && result.output.length > 0) {
+                                output.push('Output:');
+                                output.push(...result.output);
+                            }
+                            
+                            if (result.errors && result.errors.length > 0) {
+                                output.push('Errors:');
+                                output.push(...result.errors);
+                            }
+                            
+                            if (output.length > 0) {
+                                alert(output.join('\\n'));
+                            } else {
+                                alert('Code executed successfully (no output)');
+                            }
+                            updateStatus('Code executed successfully');
+                        } else {
+                            alert('Execution failed: ' + data.error);
+                            updateStatus('Execution failed');
+                        }
+                    } else {
+                        throw new Error('Backend server not responding');
+                    }
+                } catch (error) {
+                    // Fallback to local execution for JS
+                    if (currentFile.endsWith('.js')) {
+                        try {
+                            const consoleOutput = [];
+                            const mockConsole = {
+                                log: (...args) => consoleOutput.push(args.join(' '))
+                            };
+                            
+                            const func = new Function('console', code);
+                            func(mockConsole);
+                            
+                            if (consoleOutput.length > 0) {
+                                alert('Output (local):\\n' + consoleOutput.join('\\n'));
+                            } else {
+                                alert('Code executed successfully (no output)');
+                            }
+                            updateStatus('Code executed locally');
+                        } catch (localError) {
+                            alert('Error: ' + localError.message);
+                            updateStatus('Execution error');
+                        }
+                    } else {
+                        alert('Backend server required for ' + currentFile.split('.').pop() + ' files');
+                        updateStatus('Backend required');
+                    }
+                }
+            }
+            
+            function debugCode() {
+                alert('Debug mode activated. Set breakpoints and step through your code.');
+                updateStatus('Debug mode active');
+            }
+            
+            function selectFile(element, fileName) {
+                // Save current file content
+                if (currentFile && files[currentFile] !== undefined) {
+                    files[currentFile] = document.getElementById('codeEditor').value;
+                }
+                
+                // Update active file
+                document.querySelectorAll('.file-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                element.classList.add('active');
+                
+                currentFile = fileName;
+                document.getElementById('codeEditor').value = files[fileName] || '';
+                document.getElementById('editorTitle').textContent = '📝 Editor - ' + fileName;
+                
+                updateProperties(fileName);
+                updateStatus('File "' + fileName + '" opened');
+            }
+            
+            function selectFileByName(fileName) {
+                const fileItems = document.querySelectorAll('.file-item');
+                for (let item of fileItems) {
+                    if (item.textContent.includes(fileName)) {
+                        selectFile(item, fileName);
+                        break;
+                    }
+                }
+            }
+            
+            function addFileToExplorer(fileName) {
+                const explorer = document.querySelector('.file-explorer');
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                fileItem.onclick = () => selectFile(fileItem, fileName);
+                
+                let icon = '📄';
+                if (fileName.endsWith('.css')) icon = '🎨';
+                else if (fileName.endsWith('.html')) icon = '🌐';
+                else if (fileName.endsWith('.json')) icon = '📦';
+                else if (fileName.endsWith('.md')) icon = '📖';
+                
+                fileItem.textContent = icon + ' ' + fileName;
+                explorer.appendChild(fileItem);
+            }
+            
+            function updateProperties(fileName) {
+                const content = files[fileName] || '';
+                const properties = document.querySelector('.properties');
+                
+                let language = 'Text';
+                if (fileName.endsWith('.js')) language = 'JavaScript';
+                else if (fileName.endsWith('.css')) language = 'CSS';
+                else if (fileName.endsWith('.html')) language = 'HTML';
+                else if (fileName.endsWith('.json')) language = 'JSON';
+                else if (fileName.endsWith('.md')) language = 'Markdown';
+                
+                properties.innerHTML = `
+                    <h3>⚙️ Properties</h3>
+                    <div class="property-item">
+                        <div class="property-label">Language</div>
+                        <div class="property-value">${language}</div>
+                    </div>
+                    <div class="property-item">
+                        <div class="property-label">File Size</div>
+                        <div class="property-value">${(content.length / 1024).toFixed(1)} KB</div>
+                    </div>
+                    <div class="property-item">
+                        <div class="property-label">Lines</div>
+                        <div class="property-value">${content.split('\\n').length}</div>
+                    </div>
+                    <div class="property-item">
+                        <div class="property-label">Encoding</div>
+                        <div class="property-value">UTF-8</div>
+                    </div>
+                    <div class="property-item">
+                        <div class="property-label">Line Endings</div>
+                        <div class="property-value">LF</div>
+                    </div>
+                `;
+            }
+            
+            function updateStatus(message) {
+                const statusBar = document.querySelector('.status-item');
+                const originalText = statusBar.textContent;
+                statusBar.textContent = message;
+                setTimeout(() => {
+                    statusBar.textContent = originalText;
+                }, 3000);
+            }
+            
+            // Expose functions globally
+            window.newFile = newFile;
+            window.openFile = openFile;
+            window.saveFile = saveFile;
+            window.runCode = runCode;
+            window.debugCode = debugCode;
+            window.selectFile = selectFile;
+            
+            // Initialize
+            document.addEventListener('DOMContentLoaded', function() {
+                updateProperties(currentFile);
+                updateStatus('DevMarket IDE ready');
+            });
+            
+        })();
+    </script>
+</body>
+</html>

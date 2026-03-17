@@ -1,0 +1,156 @@
+{
+  "$schema": "RawrXD IDE Model Bridge Configuration",
+  "description": "Configuration for connecting the locally-trained RawrXD-AI model to the IDE's inference system.",
+  "server": {
+    "binary": "D:\\OllamaModels\\llama.cpp\\llama-server.exe",
+    "host": "127.0.0.1",
+    "port": 8080,
+    "models": {
+      "daily_driver": {
+        "path": "D:\\OllamaModels\\RawrXD-AI\\RawrXD-IDE-33B-Q2_K.gguf",
+        "estimated_vram_gb": 12,
+        "fits_vram": true,
+        "n_gpu_layers": 99,
+        "description": "Fastest — fully in VRAM. Use for code completion, quick edits."
+      },
+      "balanced": {
+        "path": "D:\\OllamaModels\\RawrXD-AI\\RawrXD-IDE-33B-Q3_K_M.gguf",
+        "estimated_vram_gb": 15,
+        "fits_vram": true,
+        "n_gpu_layers": 99,
+        "description": "Better accuracy, still fits VRAM. Use for debugging, refactoring."
+      },
+      "high_quality": {
+        "path": "D:\\OllamaModels\\RawrXD-AI\\RawrXD-IDE-33B-Q4_K_M.gguf",
+        "estimated_vram_gb": 19,
+        "fits_vram": false,
+        "n_gpu_layers": 40,
+        "description": "Near-original quality. GPU+RAM split. Use for complex analysis."
+      },
+      "maximum": {
+        "path": "D:\\OllamaModels\\RawrXD-AI\\RawrXD-IDE-33B-Q5_K_M.gguf",
+        "estimated_vram_gb": 23,
+        "fits_vram": false,
+        "n_gpu_layers": 30,
+        "description": "Maximum quality. Use for architecture decisions, security audits."
+      }
+    },
+    "default_model": "daily_driver",
+    "parameters": {
+      "ctx_size": 8192,
+      "batch_size": 512,
+      "threads": 16,
+      "n_predict": 4096,
+      "temperature": 0.1,
+      "top_p": 0.95,
+      "top_k": 40,
+      "repeat_penalty": 1.1,
+      "flash_attn": true
+    }
+  },
+  "ide_integration": {
+    "endpoint": "http://127.0.0.1:8080",
+    "completion_path": "/completion",
+    "chat_path": "/v1/chat/completions",
+    "health_path": "/health",
+    "timeout_ms": 30000,
+    "retry_count": 3,
+    "retry_delay_ms": 1000,
+    "system_prompt": "You are RawrXD-AI, an expert autonomous coding agent integrated into the RawrXD IDE. You have access to file operations, LSP navigation, 20 refactoring tools, three-layer hotpatching, autonomous debugging, knowledge graph, distributed swarm, and failure recovery. Always think before acting. Use tools to read files before editing. Verify changes with builds. Follow project conventions: no exceptions, PatchResult returns, singleton pattern, std::mutex locking.",
+    "tool_use": {
+      "enabled": true,
+      "schema_path": "D:\\RawrXD-AI\\agentic_tool_schema.json",
+      "format": "xml_tags",
+      "tool_call_start": "<tool_call>",
+      "tool_call_end": "</tool_call>",
+      "tool_result_start": "<tool_result>",
+      "tool_result_end": "</tool_result>",
+      "max_tool_calls_per_turn": 5,
+      "max_iterations": 20
+    },
+    "capabilities": {
+      "code_completion": {
+        "enabled": true,
+        "trigger_characters": [
+          ".",
+          "::",
+          "(",
+          "<",
+          "\"",
+          "/"
+        ],
+        "max_tokens": 256,
+        "temperature": 0.0,
+        "model_preference": "daily_driver"
+      },
+      "chat": {
+        "enabled": true,
+        "max_tokens": 4096,
+        "temperature": 0.1,
+        "model_preference": "balanced"
+      },
+      "agentic": {
+        "enabled": true,
+        "max_tokens": 4096,
+        "temperature": 0.1,
+        "model_preference": "balanced",
+        "autonomy_level": "full",
+        "auto_verify": true,
+        "auto_commit": false
+      },
+      "refactoring": {
+        "enabled": true,
+        "max_tokens": 4096,
+        "temperature": 0.0,
+        "model_preference": "high_quality"
+      },
+      "debugging": {
+        "enabled": true,
+        "max_tokens": 4096,
+        "temperature": 0.1,
+        "model_preference": "high_quality"
+      },
+      "security_audit": {
+        "enabled": true,
+        "max_tokens": 4096,
+        "temperature": 0.0,
+        "model_preference": "maximum"
+      }
+    }
+  },
+  "auto_model_switching": {
+    "enabled": true,
+    "rules": [
+      {
+        "condition": "task_type == 'completion'",
+        "model": "daily_driver",
+        "reason": "Speed is critical for inline completion"
+      },
+      {
+        "condition": "task_type == 'chat' && complexity == 'simple'",
+        "model": "daily_driver",
+        "reason": "Simple questions don't need high quality"
+      },
+      {
+        "condition": "task_type == 'chat' && complexity == 'complex'",
+        "model": "balanced",
+        "reason": "Complex reasoning benefits from Q3_K_M"
+      },
+      {
+        "condition": "task_type == 'agentic'",
+        "model": "balanced",
+        "reason": "Agentic tasks need good tool-use understanding"
+      },
+      {
+        "condition": "task_type == 'refactor' || task_type == 'debug'",
+        "model": "high_quality",
+        "reason": "Precision matters for code changes"
+      },
+      {
+        "condition": "task_type == 'security' || task_type == 'architecture'",
+        "model": "maximum",
+        "reason": "Maximum quality for critical analysis"
+      }
+    ]
+  }
+}

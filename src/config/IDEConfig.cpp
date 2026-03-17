@@ -4,6 +4,7 @@
 // ============================================================================
 
 #include "IDEConfig.h"
+#include "win32app/IDELogger.h"
 #include <nlohmann/json.hpp>
 #include <fstream>
 #include <sstream>
@@ -135,7 +136,9 @@ bool IDEConfig::loadFromFile(const std::string& configPath)
         std::function<void(const std::string&, nlohmann::json)> flatten;
         flatten = [&](const std::string& prefix, nlohmann::json j) {
             if (j.is_object()) {
-                for (auto& [key, value] : j.items()) {
+                for (auto it = j.begin(); it != j.end(); ++it) {
+                    std::string key = it.key();
+                    nlohmann::json value = it.value();
                     std::string fullKey = prefix.empty() ? key : prefix + "." + key;
                     flatten(fullKey, value);
                 }
@@ -143,20 +146,21 @@ bool IDEConfig::loadFromFile(const std::string& configPath)
                 m_values[prefix] = j.get<std::string>();
             } else if (j.is_boolean()) {
                 m_values[prefix] = j.get<bool>() ? "true" : "false";
-            } else if (j.is_number_integer()) {
-                m_values[prefix] = std::to_string(j.get<int64_t>());
-            } else if (j.is_number_float()) {
-                m_values[prefix] = std::to_string(j.get<double>());
+            } else if (j.is_number()) {
+                if (j.is_number_integer()) {
+                    m_values[prefix] = std::to_string(j.get<int64_t>());
+                } else {
+                    m_values[prefix] = std::to_string(j.get<double>());
+                }
             }
         };
 
         flatten("", json);
-        std::cout << "[IDEConfig] Loaded " << m_values.size() << " config keys from: "
-                  << configPath << std::endl;
+        LOG_INFO(std::string("[IDEConfig] Loaded ") + std::to_string(m_values.size()) + " config keys from: " + configPath);
         return true;
 
     } catch (const std::exception& e) {
-        std::cerr << "[IDEConfig] Error parsing config: " << e.what() << std::endl;
+        LOG_ERROR(std::string("[IDEConfig] Error parsing config: ") + e.what());
         return false;
     }
 }
@@ -345,8 +349,7 @@ void IDEConfig::applyEnvironmentOverrides()
         DWORD len = GetEnvironmentVariableA(mapping.envVar, buf, sizeof(buf));
         if (len > 0 && len < sizeof(buf)) {
             m_values[mapping.configKey] = std::string(buf, len);
-            std::cout << "[IDEConfig] Env override: " << mapping.envVar
-                      << " -> " << mapping.configKey << " = " << buf << std::endl;
+            LOG_INFO(std::string("[IDEConfig] Env override: ") + mapping.envVar + " -> " + mapping.configKey + " = " + buf);
         }
     }
 }

@@ -7,7 +7,13 @@ const Toolbar = ({ onOpenProject, onToggleAgentPanel, title = 'BigDaddyG IDE' })
   useEffect(() => {
     if (window.electronAPI?.listAIProviders) {
       window.electronAPI.listAIProviders().then((list) => {
-        if (list && Array.isArray(list)) setProviders(list);
+        if (list && Array.isArray(list)) {
+          setProviders(list);
+          const active = list.find((p) => p.active && p.enabled) || list.find((p) => p.enabled);
+          if (active) {
+            setActiveProvider(active.id);
+          }
+        }
       });
     }
   }, []);
@@ -39,8 +45,8 @@ const Toolbar = ({ onOpenProject, onToggleAgentPanel, title = 'BigDaddyG IDE' })
             className="bg-ide-sidebar text-white border border-gray-600 rounded px-2 py-1"
           >
             {providers.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
+              <option key={p.id} value={p.id} disabled={!p.enabled}>
+                {p.name}{p.enabled ? '' : ' (disabled)'}
               </option>
             ))}
           </select>

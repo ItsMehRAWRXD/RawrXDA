@@ -1,0 +1,20 @@
+{
+  "tiinyAI": {
+    "command": "D:\\rawrxd\\bin\\tiinyai.exe",
+    "args": ["--server", "--port", "45100"],
+    "port": 45100,
+    "cwd": "D:\\rawrxd"
+  },
+  "gguf": {
+    "command": "D:\\rawrxd\\build_ide_output\\CodexAIReverseEngine.exe",
+    "args": ["--server", "--port", "45101"],
+    "port": 45101,
+    "cwd": "D:\\rawrxd"
+  },
+  "pyre": {
+    "command": "D:\\rawrxd\\build_ide_output\\CodexAIReverseEngine.exe",
+    "args": ["--server", "--port", "45102", "--engine", "pyre"],
+    "port": 45102,
+    "cwd": "D:\\rawrxd"
+  }
+}

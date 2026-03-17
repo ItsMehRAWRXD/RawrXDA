@@ -1,5 +1,0 @@
-repo=.
-serial=True
-current_group=repo
-group=just-pydevd, PyDev.Debugger
-group=repo, .

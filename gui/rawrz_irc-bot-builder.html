@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RawrZ IRC Bot Builder</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0b1020 0%, #1a1f3a 100%);
+            color: #e6e9ef;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: rgba(17, 22, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #222a45;
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header h1 {
+            color: #4a9eff;
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .panel-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .card {
+            background: rgba(18, 25, 47, 0.8);
+            border: 1px solid #20284a;
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            border-color: #4a9eff;
+            box-shadow: 0 8px 25px rgba(74, 158, 255, 0.1);
+        }
+        
+        .card h3 {
+            color: #4a9eff;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #a0a8b8;
+            font-weight: 500;
+        }
+        
+        .form-control {
+            width: 100%;
+            background: rgba(15, 21, 48, 0.8);
+            color: #e6e9ef;
+            border: 1px solid #263056;
+            border-radius: 8px;
+            padding: 0.75rem;
+            font-size: 0.9rem;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: #4a9eff;
+            box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.2);
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #4a9eff 0%, #357abd 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            margin: 0.25rem;
+        }
+        
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(74, 158, 255, 0.3);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        }
+        
+        .output-area {
+            background: #0a0f24;
+            border: 1px solid #1d2444;
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-top: 1rem;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            border-bottom: 1px solid #20284a;
+            margin-bottom: 1rem;
+        }
+        
+        .nav-tab {
+            padding: 0.75rem 1.5rem;
+            background: none;
+            border: none;
+            color: #a0a8b8;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-tab.active {
+            color: #4a9eff;
+            border-bottom-color: #4a9eff;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        
+        .alert-info {
+            background: rgba(23, 162, 184, 0.1);
+            border: 1px solid #17a2b8;
+            color: #17a2b8;
+        }
+        
+        .option-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .option-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .option-item input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+        }
+        
+        .option-item label {
+            margin: 0;
+            font-size: 0.9rem;
+        }
+        
+        .chat-area {
+            background: #0a0f24;
+            border: 1px solid #1d2444;
+            border-radius: 8px;
+            padding: 1rem;
+            height: 300px;
+            overflow-y: auto;
+            margin-bottom: 1rem;
+        }
+        
+        .chat-message {
+            margin-bottom: 0.5rem;
+            padding: 0.25rem 0;
+        }
+        
+        .chat-timestamp {
+            color: #6c757d;
+            font-size: 0.8rem;
+        }
+        
+        .chat-user {
+            color: #4a9eff;
+            font-weight: bold;
+        }
+        
+        .chat-text {
+            color: #e6e9ef;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .input-group input {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>RawrZ IRC Bot Builder</h1>
+    </div>
+    
+    <div class="container">
+        <div class="card">
+            <div class="nav-tabs">
+                <button class="nav-tab active" data-tab="create">Create Bot</button>
+                <button class="nav-tab" data-tab="configure">Configure</button>
+                <button class="nav-tab" data-tab="encrypt">Encrypt</button>
+                <button class="nav-tab" data-tab="chat">Live Chat</button>
+            </div>
+            
+            <!-- Create Bot Tab -->
+            <div id="create" class="tab-content active">
+                <h3>Create IRC Bot</h3>
+                
+                <div class="alert alert-info">
+                    <strong>IRC Bot Creation:</strong> Create encrypted IRC bots with advanced command capabilities and stealth features.
+                </div>
+                
+                <div class="form-group">
+                    <label>Bot Type</label>
+                    <select class="form-control" id="bot-type">
+                        <option value="command">Command Bot</option>
+                        <option value="keylogger">Keylogger Bot</option>
+                        <option value="file-transfer">File Transfer Bot</option>
+                        <option value="reverse-shell">Reverse Shell Bot</option>
+                        <option value="persistence">Persistence Bot</option>
+                        <option value="beacon">Beacon Bot</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>IRC Server</label>
+                    <input type="text" class="form-control" id="irc-server" placeholder="irc.example.com">
+                </div>
+                
+                <div class="form-group">
+                    <label>Port</label>
+                    <input type="number" class="form-control" id="irc-port" placeholder="6667" value="6667">
+                </div>
+                
+                <div class="form-group">
+                    <label>Channel</label>
+                    <input type="text" class="form-control" id="irc-channel" placeholder="#encryption">
+                </div>
+                
+                <div class="form-group">
+                    <label>Bot Nickname</label>
+                    <input type="text" class="form-control" id="bot-nick" placeholder="EncryptBot">
+                </div>
+                
+                <div class="form-group">
+                    <label>Bot Options</label>
+                    <div class="option-group">
+                        <div class="option-item">
+                            <input type="checkbox" id="bot-ssl" checked>
+                            <label for="bot-ssl">SSL/TLS</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="bot-stealth" checked>
+                            <label for="bot-stealth">Stealth Mode</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="bot-persistence" checked>
+                            <label for="bot-persistence">Persistence</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="bot-anti-debug" checked>
+                            <label for="bot-anti-debug">Anti-Debug</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="bot-encryption" checked>
+                            <label for="bot-encryption">Message Encryption</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="bot-obfuscate">
+                            <label for="bot-obfuscate">Traffic Obfuscation</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <button class="btn btn-success" onclick="createBot()">Create Bot</button>
+                    <button class="btn" onclick="testBot()">Test Bot</button>
+                </div>
+                
+                <div class="output-area" id="create-output">Generated bot will appear here...</div>
+            </div>
+            
+            <!-- Configure Tab -->
+            <div id="configure" class="tab-content">
+                <h3>Configure IRC Bot</h3>
+                
+                <div class="alert alert-info">
+                    <strong>Bot Configuration:</strong> Configure advanced settings for IRC bot behavior and commands.
+                </div>
+                
+                <div class="form-group">
+                    <label>Command Prefix</label>
+                    <input type="text" class="form-control" id="cmd-prefix" placeholder="!" value="!">
+                </div>
+                
+                <div class="form-group">
+                    <label>Admin Users</label>
+                    <input type="text" class="form-control" id="admin-users" placeholder="admin1,admin2,admin3">
+                </div>
+                
+                <div class="form-group">
+                    <label>Auto-join Channels</label>
+                    <input type="text" class="form-control" id="auto-channels" placeholder="#channel1,#channel2">
+                </div>
+                
+                <div class="form-group">
+                    <label>Bot Commands</label>
+                    <div class="option-group">
+                        <div class="option-item">
+                            <input type="checkbox" id="cmd-encrypt" checked>
+                            <label for="cmd-encrypt">Encrypt Command</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="cmd-decrypt" checked>
+                            <label for="cmd-decrypt">Decrypt Command</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="cmd-keylogger" checked>
+                            <label for="cmd-keylogger">Keylogger Command</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="cmd-screenshot" checked>
+                            <label for="cmd-screenshot">Screenshot Command</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="cmd-file-transfer" checked>
+                            <label for="cmd-file-transfer">File Transfer</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="cmd-system-info" checked>
+                            <label for="cmd-system-info">System Info</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Response Settings</label>
+                    <div class="option-group">
+                        <div class="option-item">
+                            <input type="checkbox" id="resp-private" checked>
+                            <label for="resp-private">Private Responses</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="resp-delay">
+                            <label for="resp-delay">Response Delay</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="resp-encrypt" checked>
+                            <label for="resp-encrypt">Encrypt Responses</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="resp-obfuscate">
+                            <label for="resp-obfuscate">Obfuscate Output</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <button class="btn btn-success" onclick="configureBot()">Apply Configuration</button>
+                    <button class="btn" onclick="resetConfig()">Reset Config</button>
+                </div>
+                
+                <div class="output-area" id="configure-output">Configuration results will appear here...</div>
+            </div>
+            
+            <!-- Encrypt Tab -->
+            <div id="encrypt" class="tab-content">
+                <h3>Encrypt IRC Communication</h3>
+                
+                <div class="alert alert-info">
+                    <strong>Communication Encryption:</strong> Configure end-to-end encryption for IRC bot communications.
+                </div>
+                
+                <div class="form-group">
+                    <label>Encryption Algorithm</label>
+                    <select class="form-control" id="encrypt-algorithm">
+                        <option value="aes-256-gcm">AES-256-GCM (Recommended)</option>
+                        <option value="aes-256-cbc">AES-256-CBC</option>
+                        <option value="chacha20-poly1305">ChaCha20-Poly1305</option>
+                        <option value="aria-256-ctr">ARIA-256-CTR</option>
+                        <option value="custom">Custom Algorithm</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Encryption Key</label>
+                    <input type="password" class="form-control" id="encrypt-key" placeholder="Enter encryption key or leave blank for auto-generation">
+                </div>
+                
+                <div class="form-group">
+                    <label>Key Exchange</label>
+                    <select class="form-control" id="key-exchange">
+                        <option value="dh">Diffie-Hellman</option>
+                        <option value="aria-256-gcm">ARIA-256-GCM</option>
+                        <option value="ecdh">ECDH</option>
+                        <option value="pre-shared">Pre-shared Key</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Encryption Options</label>
+                    <div class="option-group">
+                        <div class="option-item">
+                            <input type="checkbox" id="encrypt-messages" checked>
+                            <label for="encrypt-messages">Encrypt Messages</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="encrypt-commands" checked>
+                            <label for="encrypt-commands">Encrypt Commands</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="encrypt-responses" checked>
+                            <label for="encrypt-responses">Encrypt Responses</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="encrypt-files" checked>
+                            <label for="encrypt-files">Encrypt File Transfers</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="encrypt-metadata">
+                            <label for="encrypt-metadata">Encrypt Metadata</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="encrypt-obfuscate" checked>
+                            <label for="encrypt-obfuscate">Obfuscate Traffic</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Startup Persistence Options</label>
+                    <div class="option-group">
+                        <div class="option-item">
+                            <input type="checkbox" id="irc-persistence-registry-run" checked>
+                            <label for="irc-persistence-registry-run">Registry Run Key</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="irc-persistence-registry-runonce">
+                            <label for="irc-persistence-registry-runonce">Registry RunOnce Key</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="irc-persistence-startup-folder">
+                            <label for="irc-persistence-startup-folder">Startup Folder</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="irc-persistence-scheduled-task">
+                            <label for="irc-persistence-scheduled-task">Scheduled Task</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="irc-persistence-service">
+                            <label for="irc-persistence-service">Windows Service</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="irc-persistence-wmi-event">
+                            <label for="irc-persistence-wmi-event">WMI Event Subscription</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="irc-persistence-dll-hijack">
+                            <label for="irc-persistence-dll-hijack">DLL Hijacking</label>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" id="irc-persistence-com-hijack">
+                            <label for="irc-persistence-com-hijack">COM Hijacking</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <button class="btn btn-success" onclick="applyEncryption()">Apply Encryption</button>
+                    <button class="btn" onclick="testEncryption()">Test Encryption</button>
+                </div>
+                
+                <div class="output-area" id="encrypt-output">Encryption configuration will appear here...</div>
+            </div>
+            
+            <!-- Live Chat Tab -->
+            <div id="chat" class="tab-content">
+                <h3>Live IRC Chat</h3>
+                
+                <div class="alert alert-info">
+                    <strong>Live Chat:</strong> Monitor and interact with IRC bot in real-time.
+                </div>
+                
+                <div class="chat-area" id="chat-area">
+                    <div class="chat-message">
+                        <span class="chat-timestamp">[12:34:56]</span>
+                        <span class="chat-user">System:</span>
+                        <span class="chat-text">IRC bot connected successfully</span>
+                    </div>
+                    <div class="chat-message">
+                        <span class="chat-timestamp">[12:35:01]</span>
+                        <span class="chat-user">EncryptBot:</span>
+                        <span class="chat-text">Ready for encrypted commands</span>
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <input type="text" class="form-control" id="chat-input" placeholder="Type a command or message..." onkeypress="handleChatKeyPress(event)">
+                    <button class="btn" onclick="sendChatMessage()">Send</button>
+                </div>
+                
+                <div class="form-group">
+                    <label>Chat Controls</label>
+                    <div>
+                        <button class="btn" onclick="connectBot()">Connect Bot</button>
+                        <button class="btn" onclick="disconnectBot()">Disconnect Bot</button>
+                        <button class="btn" onclick="clearChat()">Clear Chat</button>
+                        <button class="btn" onclick="exportChat()">Export Chat</button>
+                    </div>
+                </div>
+                
+                <div class="output-area" id="chat-output">Chat status and commands will appear here...</div>
+            </div>
+        </div>
+        
+        <!-- Status Panel -->
+        <div class="card">
+            <h3>IRC Bot Engine Status</h3>
+            <div class="alert alert-info">
+                <strong>System Ready:</strong> IRC Bot engine is operational with encryption support.
+            </div>
+            
+            <div class="form-group">
+                <label>Quick Actions</label>
+                <div>
+                    <button class="btn" onclick="testBotEngine()">Test Engine</button>
+                    <button class="btn" onclick="viewTemplates()">View Templates</button>
+                    <button class="btn" onclick="updateTemplates()">Update Templates</button>
+                    <button class="btn btn-danger" onclick="clearAll()">Clear All</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let currentTab = 'create';
+        let chatInterval;
+        
+                function showTab(tabName, clickedElement = null) {
+            try {
+                // Wait for DOM to be ready
+                if (document.readyState === 'loading') {
+                    console.log('DOM not ready, retrying tab switch...');
+                    setTimeout(() => showTab(tabName, clickedElement), 100);
+                    return;
+                }
+                
+                // Hide all tab contents
+                const tabContents = document.querySelectorAll('.tab-content');
+                if (tabContents.length === 0) {
+                    console.error('No tab content elements found');
+                    return;
+                }
+                
+                tabContents.forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                
+                // Remove active class from all tabs
+                const navTabs = document.querySelectorAll('.nav-tab');
+                if (navTabs.length === 0) {
+                    console.error('No nav tab elements found');
+                    return;
+                }
+                
+                navTabs.forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                
+                // Show selected tab content
+                const targetContent = document.getElementById(tabName);
+                if (!targetContent) {
+                    console.error(`Tab content element '${tabName}' not found`);
+                    return;
+                }
+                targetContent.classList.add('active');
+                
+                // Add active class to clicked tab
+                if (clickedElement) {
+                    clickedElement.classList.add('active');
+                } else {
+                    // Find the tab button that corresponds to this tab
+                    const targetTab = document.querySelector(`[onclick*="showTab('${tabName}')"]`);
+                    if (targetTab) {
+                        targetTab.classList.add('active');
+                    }
+                }
+                
+                console.log(`Successfully switched to tab: ${tabName}`);
+            } catch (error) {
+                console.error('Error switching tab:', error);
+            }
+        }
+        
+        async function apiCall(endpoint, method = 'GET', body = null) {
+            try {
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                
+                const token = localStorage.getItem('authToken');
+                if (token) {
+                    headers.Authorization = `Bearer ${token}`;
+                }
+                
+                const response = await fetch(endpoint, {
+                    method: method,
+                    headers: headers,
+                    body: body ? JSON.stringify(body) : null
+                });
+                
+                const data = await response.text();
+                try {
+                    return { status: response.status, data: JSON.parse(data) };
+                } catch {
+                    return { status: response.status, data: data };
+                }
+            } catch (error) {
+                return { status: 500, data: { error: error.message } };
+            }
+        }
+        
+        async function createBot() {
+            const type = document.getElementById('bot-type').value;
+            const server = document.getElementById('irc-server').value;
+            const port = document.getElementById('irc-port').value;
+            const channel = document.getElementById('irc-channel').value;
+            const nick = document.getElementById('bot-nick').value;
+            const ssl = document.getElementById('bot-ssl').checked;
+            const stealth = document.getElementById('bot-stealth').checked;
+            const persistence = document.getElementById('bot-persistence').checked;
+            const antiDebug = document.getElementById('bot-anti-debug').checked;
+            const encryption = document.getElementById('bot-encryption').checked;
+            const obfuscate = document.getElementById('bot-obfuscate').checked;
+            
+            if (!server || !channel || !nick) {
+                alert('Please enter server, channel, and nickname.');
+                return;
+            }
+            
+            const output = document.getElementById('create-output');
+            output.textContent = 'Creating IRC bot...';
+            
+            try {
+                const result = await apiCall('/irc-bot-create', 'POST', {
+                    type: type,
+                    server: server,
+                    port: parseInt(port),
+                    channel: channel,
+                    nick: nick,
+                    options: {
+                        ssl: ssl,
+                        stealth: stealth,
+                        persistence: persistence,
+                        antiDebug: antiDebug,
+                        encryption: encryption,
+                        obfuscate: obfuscate
+                    }
+                });
+                
+                if (result.status === 200) {
+                    output.textContent = `IRC bot created successfully!\n\nType: ${type}\nServer: ${server}:${port}\nChannel: ${channel}\nNick: ${nick}\n\nOptions:\n- SSL/TLS: ${ssl}\n- Stealth: ${stealth}\n- Persistence: ${persistence}\n- Anti-Debug: ${antiDebug}\n- Encryption: ${encryption}\n- Obfuscation: ${obfuscate}\n\nBot ID: ${result.data.botId}`;
+                } else {
+                    output.textContent = `Bot creation failed: ${result.data.error || 'Unknown error'}`;
+                }
+            } catch (error) {
+                output.textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        async function configureBot() {
+            const prefix = document.getElementById('cmd-prefix').value;
+            const adminUsers = document.getElementById('admin-users').value;
+            const autoChannels = document.getElementById('auto-channels').value;
+            const encrypt = document.getElementById('cmd-encrypt').checked;
+            const decrypt = document.getElementById('cmd-decrypt').checked;
+            const keylogger = document.getElementById('cmd-keylogger').checked;
+            const screenshot = document.getElementById('cmd-screenshot').checked;
+            const fileTransfer = document.getElementById('cmd-file-transfer').checked;
+            const systemInfo = document.getElementById('cmd-system-info').checked;
+            const private = document.getElementById('resp-private').checked;
+            const delay = document.getElementById('resp-delay').checked;
+            const respEncrypt = document.getElementById('resp-encrypt').checked;
+            const obfuscate = document.getElementById('resp-obfuscate').checked;
+            
+            const output = document.getElementById('configure-output');
+            output.textContent = 'Applying configuration...';
+            
+            try {
+                const result = await apiCall('/irc-bot-configure', 'POST', {
+                    prefix: prefix,
+                    adminUsers: adminUsers.split(',').map(u => u.trim()),
+                    autoChannels: autoChannels.split(',').map(c => c.trim()),
+                    commands: {
+                        encrypt: encrypt,
+                        decrypt: decrypt,
+                        keylogger: keylogger,
+                        screenshot: screenshot,
+                        fileTransfer: fileTransfer,
+                        systemInfo: systemInfo
+                    },
+                    responses: {
+                        private: private,
+                        delay: delay,
+                        encrypt: respEncrypt,
+                        obfuscate: obfuscate
+                    }
+                });
+                
+                if (result.status === 200) {
+                    output.textContent = `Configuration applied successfully!\n\nPrefix: ${prefix}\nAdmin Users: ${adminUsers}\nAuto Channels: ${autoChannels}\n\nCommands Enabled:\n- Encrypt: ${encrypt}\n- Decrypt: ${decrypt}\n- Keylogger: ${keylogger}\n- Screenshot: ${screenshot}\n- File Transfer: ${fileTransfer}\n- System Info: ${systemInfo}\n\nResponse Settings:\n- Private: ${private}\n- Delay: ${delay}\n- Encrypt: ${respEncrypt}\n- Obfuscate: ${obfuscate}`;
+                } else {
+                    output.textContent = `Configuration failed: ${result.data.error || 'Unknown error'}`;
+                }
+            } catch (error) {
+                output.textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        async function applyEncryption() {
+            const algorithm = document.getElementById('encrypt-algorithm').value;
+            const key = document.getElementById('encrypt-key').value;
+            const keyExchange = document.getElementById('key-exchange').value;
+            const messages = document.getElementById('encrypt-messages').checked;
+            const commands = document.getElementById('encrypt-commands').checked;
+            const responses = document.getElementById('encrypt-responses').checked;
+            const files = document.getElementById('encrypt-files').checked;
+            const metadata = document.getElementById('encrypt-metadata').checked;
+            const obfuscate = document.getElementById('encrypt-obfuscate').checked;
+            
+            // Get persistence options
+            const persistenceOptions = {
+                registryRun: document.getElementById('irc-persistence-registry-run').checked,
+                registryRunOnce: document.getElementById('irc-persistence-registry-runonce').checked,
+                startupFolder: document.getElementById('irc-persistence-startup-folder').checked,
+                scheduledTask: document.getElementById('irc-persistence-scheduled-task').checked,
+                service: document.getElementById('irc-persistence-service').checked,
+                wmiEvent: document.getElementById('irc-persistence-wmi-event').checked,
+                dllHijack: document.getElementById('irc-persistence-dll-hijack').checked,
+                comHijack: document.getElementById('irc-persistence-com-hijack').checked
+            };
+            
+            const output = document.getElementById('encrypt-output');
+            output.textContent = 'Applying encryption configuration...';
+            
+            try {
+                const result = await apiCall('/irc-bot-encrypt', 'POST', {
+                    algorithm: algorithm,
+                    key: key,
+                    keyExchange: keyExchange,
+                    options: {
+                        messages: messages,
+                        commands: commands,
+                        responses: responses,
+                        files: files,
+                        metadata: metadata,
+                        obfuscate: obfuscate
+                    },
+                    persistence: persistenceOptions
+                });
+                
+                if (result.status === 200) {
+                    const persistenceInfo = Object.entries(persistenceOptions)
+                        .filter(([key, value]) => value)
+                        .map(([key, value]) => `- ${key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}: ${value}`)
+                        .join('\n');
+                    
+                    output.textContent = `Encryption applied successfully!\n\nAlgorithm: ${algorithm}\nKey Exchange: ${keyExchange}\nKey: ${key ? 'Custom' : 'Auto-generated'}\n\nEncryption Options:\n- Messages: ${messages}\n- Commands: ${commands}\n- Responses: ${responses}\n- Files: ${files}\n- Metadata: ${metadata}\n- Obfuscation: ${obfuscate}\n\nPersistence Options:\n${persistenceInfo}\n\nEncryption Status: ${result.data.status}`;
+                } else {
+                    output.textContent = `Encryption failed: ${result.data.error || 'Unknown error'}`;
+                }
+            } catch (error) {
+                output.textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        function handleChatKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendChatMessage();
+            }
+        }
+        
+        function sendChatMessage() {
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            const chatArea = document.getElementById('chat-area');
+            const timestamp = new Date().toLocaleTimeString();
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'chat-message';
+            messageDiv.innerHTML = `
+                <span class="chat-timestamp">[${timestamp}]</span>
+                <span class="chat-user">You:</span>
+                <span class="chat-text">${message}</span>
+            `;
+            
+            chatArea.appendChild(messageDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+            
+            input.value = '';
+            
+            // Simulate bot response
+            setTimeout(() => {
+                const responseDiv = document.createElement('div');
+                responseDiv.className = 'chat-message';
+                responseDiv.innerHTML = `
+                    <span class="chat-timestamp">[${new Date().toLocaleTimeString()}]</span>
+                    <span class="chat-user">EncryptBot:</span>
+                    <span class="chat-text">Command received: ${message}</span>
+                `;
+                
+                chatArea.appendChild(responseDiv);
+                chatArea.scrollTop = chatArea.scrollHeight;
+            }, 1000);
+        }
+        
+        function connectBot() {
+            const chatArea = document.getElementById('chat-area');
+            const timestamp = new Date().toLocaleTimeString();
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'chat-message';
+            messageDiv.innerHTML = `
+                <span class="chat-timestamp">[${timestamp}]</span>
+                <span class="chat-user">System:</span>
+                <span class="chat-text">Connecting to IRC server...</span>
+            `;
+            
+            chatArea.appendChild(messageDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+        
+        function disconnectBot() {
+            const chatArea = document.getElementById('chat-area');
+            const timestamp = new Date().toLocaleTimeString();
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'chat-message';
+            messageDiv.innerHTML = `
+                <span class="chat-timestamp">[${timestamp}]</span>
+                <span class="chat-user">System:</span>
+                <span class="chat-text">Disconnected from IRC server</span>
+            `;
+            
+            chatArea.appendChild(messageDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+        
+        function clearChat() {
+            if (confirm('Are you sure you want to clear the chat?')) {
+                document.getElementById('chat-area').innerHTML = '';
+            }
+        }
+        
+        function exportChat() {
+            const chatArea = document.getElementById('chat-area');
+            const chatText = chatArea.innerText;
+            
+            const blob = new Blob([chatText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `irc-chat-${new Date().toISOString().split('T')[0]}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        // Additional functions
+        async function testBot() {
+            alert('Testing IRC bot functionality...');
+        }
+        
+        async function resetConfig() {
+            if (confirm('Are you sure you want to reset the configuration?')) {
+                document.getElementById('cmd-prefix').value = '!';
+                document.getElementById('admin-users').value = '';
+                document.getElementById('auto-channels').value = '';
+                alert('Configuration reset.');
+            }
+        }
+        
+        async function testEncryption() {
+            alert('Testing encryption functionality...');
+        }
+        
+        async function testBotEngine() {
+            alert('Testing IRC bot engine...');
+        }
+        
+        function viewTemplates() {
+            alert('Bot template viewer would open here');
+        }
+        
+        function updateTemplates() {
+            alert('Updating bot templates...');
+        }
+        
+        function clearAll() {
+            if (confirm('Are you sure you want to clear all bot data?')) {
+                document.getElementById('create-output').textContent = 'Generated bot will appear here...';
+                document.getElementById('configure-output').textContent = 'Configuration results will appear here...';
+                document.getElementById('encrypt-output').textContent = 'Encryption configuration will appear here...';
+                document.getElementById('chat-output').textContent = 'Chat status and commands will appear here...';
+                document.getElementById('chat-area').innerHTML = '';
+            }
+        }
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add a small delay to ensure all elements are fully loaded
+            setTimeout(() => {
+                // Add event listeners to all tab buttons
+                const tabButtons = document.querySelectorAll('.nav-tab[data-tab]');
+                tabButtons.forEach(button => {
+                    button.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        const tabName = this.getAttribute('data-tab');
+                        console.log('Tab button clicked:', tabName);
+                        showTab(tabName, this);
+                    });
+                });
+            }, 100);
+        });
+
+    </script>
+</body>
+</html>

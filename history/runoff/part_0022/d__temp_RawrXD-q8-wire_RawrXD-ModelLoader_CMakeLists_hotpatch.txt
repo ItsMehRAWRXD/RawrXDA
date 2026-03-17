@@ -1,0 +1,39 @@
+cmake_minimum_required(VERSION 3.20)
+project(OllamaHotpatchProxy)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_AUTOMOC ON)
+
+# Find Qt
+find_package(Qt6 REQUIRED COMPONENTS Core Network)
+
+# Hotpatch proxy library
+add_library(hotpatch_proxy_lib STATIC
+    src/qtapp/ollama_hotpatch_proxy.cpp
+)
+
+target_link_libraries(hotpatch_proxy_lib
+    Qt6::Core
+    Qt6::Network
+)
+
+target_include_directories(hotpatch_proxy_lib PUBLIC
+    ${CMAKE_SOURCE_DIR}/src/qtapp
+)
+
+# Example executable
+add_executable(hotpatch_proxy
+    example_hotpatch_proxy.cpp
+)
+
+target_link_libraries(hotpatch_proxy
+    hotpatch_proxy_lib
+    Qt6::Core
+    Qt6::Network
+)
+
+# Output directory
+set_target_properties(hotpatch_proxy PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+)

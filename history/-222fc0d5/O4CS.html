@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-AV File Scanner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 10px;
+            padding: 50px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f8f9ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+
+        .upload-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        .upload-text {
+            font-size: 1.2em;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .upload-subtext {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin: 10px 5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .av-selector {
+            margin: 20px 0;
+        }
+
+        .av-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .av-checkbox {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            background: #f5f5f5;
+            border-radius: 5px;
+        }
+
+        .av-checkbox input {
+            margin-right: 8px;
+        }
+
+        .progress-container {
+            margin: 20px 0;
+            display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .results-container {
+            display: none;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .result-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .result-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .result-table th,
+        .result-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .result-table th {
+            background: #f5f5f5;
+            font-weight: 600;
+        }
+
+        .status-clean {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .status-detected {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .status-error {
+            color: #ffc107;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .token-display {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-family: monospace;
+            word-break: break-all;
+        }
+
+        .copy-btn {
+            background: #28a745;
+            font-size: 0.9em;
+            padding: 8px 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛡️ Multi-AV File Scanner</h1>
+            <p>Scan files with multiple antivirus engines</p>
+        </div>
+
+        <div class="card">
+            <h2>API Configuration</h2>
+            <div id="token-section">
+                <p>API Token: <span id="token-status" style="color: #dc3545;">Not configured</span></p>
+                <div style="margin-top: 15px;">
+                    <button class="btn" onclick="generateToken()">Generate New Token</button>
+                    <button class="btn" onclick="showTokenInput()">Use Existing Token</button>
+                </div>
+                <div id="token-input-area" style="display: none; margin-top: 15px;">
+                    <input type="text" id="token-input" placeholder="Enter API token" style="width: 70%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                    <button class="btn" onclick="saveToken()">Save Token</button>
+                </div>
+                <div id="token-display" class="token-display" style="display: none;">
+                    <strong>Your API Token:</strong>
+                    <div id="token-value" style="margin: 10px 0;"></div>
+                    <button class="copy-btn btn" onclick="copyToken()">Copy Token</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Upload File</h2>
+            <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">Click to select file or drag & drop</div>
+                <div class="upload-subtext">Maximum file size: 100MB</div>
+            </div>
+            <input type="file" id="fileInput" onchange="handleFileSelect(event)">
+            
+            <div id="selected-file" style="display: none; margin-top: 20px;">
+                <strong>Selected file:</strong> <span id="file-name"></span>
+                <button class="btn" onclick="clearFile()">Clear</button>
+            </div>
+
+            <div class="av-selector">
+                <h3>Select Antivirus Engines</h3>
+                <div style="margin: 10px 0;">
+                    <button class="btn" onclick="selectAllAV()">Select All</button>
+                    <button class="btn" onclick="deselectAllAV()">Deselect All</button>
+                </div>
+                <div class="av-grid" id="av-grid">
+                    <!-- AV checkboxes will be populated here -->
+                </div>
+            </div>
+
+            <button class="btn" id="scan-btn" onclick="startScan()" disabled>Start Scan</button>
+
+            <div class="progress-container" id="progress-container">
+                <h3>Scanning...</h3>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill">0%</div>
+                </div>
+                <p id="scan-status" style="margin-top: 10px; text-align: center;">Initializing scan...</p>
+            </div>
+        </div>
+
+        <div class="card results-container" id="results-container">
+            <div class="result-header">
+                <h2>Scan Results</h2>
+                <button class="btn" onclick="resetScanner()">New Scan</button>
+            </div>
+
+            <div id="alert-container"></div>
+
+            <div class="result-stats">
+                <div class="stat-box">
+                    <div class="stat-value" id="stat-engines">0</div>
+                    <div class="stat-label">Engines Used</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="stat-detections">0</div>
+                    <div class="stat-label">Detections</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="stat-clean">0</div>
+                    <div class="stat-label">Clean</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="stat-rate">0%</div>
+                    <div class="stat-label">Detection Rate</div>
+                </div>
+            </div>
+
+            <h3>Detailed Results</h3>
+            <table class="result-table">
+                <thead>
+                    <tr>
+                        <th>Antivirus Engine</th>
+                        <th>Status</th>
+                        <th>Detection Name</th>
+                    </tr>
+                </thead>
+                <tbody id="results-table-body">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000';
+        let apiToken = localStorage.getItem('av_scanner_token');
+        let selectedFile = null;
+        let scanToken = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            if (apiToken) {
+                document.getElementById('token-status').textContent = 'Configured ✓';
+                document.getElementById('token-status').style.color = '#28a745';
+            }
+            loadAvEngines();
+            setupDragDrop();
+        });
+
+        async function generateToken() {
+            try {
+                const response = await fetch(`${API_URL}/api/v1/token/generate`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({user_id: 'web_user'})
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    apiToken = data.token;
+                    localStorage.setItem('av_scanner_token', apiToken);
+                    document.getElementById('token-value').textContent = apiToken;
+                    document.getElementById('token-display').style.display = 'block';
+                    document.getElementById('token-status').textContent = 'Configured ✓';
+                    document.getElementById('token-status').style.color = '#28a745';
+                    alert('API token generated successfully!');
+                }
+            } catch (error) {
+                alert('Error generating token: ' + error.message);
+            }
+        }
+
+        function showTokenInput() {
+            document.getElementById('token-input-area').style.display = 'block';
+        }
+
+        function saveToken() {
+            const token = document.getElementById('token-input').value.trim();
+            if (token) {
+                apiToken = token;
+                localStorage.setItem('av_scanner_token', apiToken);
+                document.getElementById('token-status').textContent = 'Configured ✓';
+                document.getElementById('token-status').style.color = '#28a745';
+                document.getElementById('token-input-area').style.display = 'none';
+                alert('API token saved!');
+            }
+        }
+
+        function copyToken() {
+            const tokenText = document.getElementById('token-value').textContent;
+            navigator.clipboard.writeText(tokenText);
+            alert('Token copied to clipboard!');
+        }
+
+        async function loadAvEngines() {
+            try {
+                const response = await fetch(`${API_URL}/api/v1/get/avlist`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const grid = document.getElementById('av-grid');
+                    grid.innerHTML = '';
+                    
+                    data.data.file.forEach(engine => {
+                        const div = document.createElement('div');
+                        div.className = 'av-checkbox';
+                        div.innerHTML = `
+                            <input type="checkbox" id="av-${engine}" value="${engine}" checked>
+                            <label for="av-${engine}">${engine}</label>
+                        `;
+                        grid.appendChild(div);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading AV engines:', error);
+            }
+        }
+
+        function setupDragDrop() {
+            const uploadArea = document.getElementById('uploadArea');
+            
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+            
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    selectedFile = files[0];
+                    displaySelectedFile();
+                }
+            });
+        }
+
+        function handleFileSelect(event) {
+            selectedFile = event.target.files[0];
+            displaySelectedFile();
+        }
+
+        function displaySelectedFile() {
+            if (selectedFile) {
+                document.getElementById('file-name').textContent = selectedFile.name;
+                document.getElementById('selected-file').style.display = 'block';
+                document.getElementById('scan-btn').disabled = !apiToken;
+            }
+        }
+
+        function clearFile() {
+            selectedFile = null;
+            document.getElementById('selected-file').style.display = 'none';
+            document.getElementById('scan-btn').disabled = true;
+            document.getElementById('fileInput').value = '';
+        }
+
+        function selectAllAV() {
+            document.querySelectorAll('.av-grid input[type="checkbox"]').forEach(cb => cb.checked = true);
+        }
+
+        function deselectAllAV() {
+            document.querySelectorAll('.av-grid input[type="checkbox"]').forEach(cb => cb.checked = false);
+        }
+
+        async function startScan() {
+            if (!apiToken) {
+                alert('Please configure API token first!');
+                return;
+            }
+
+            if (!selectedFile) {
+                alert('Please select a file to scan!');
+                return;
+            }
+
+            // Get selected AV engines
+            const selectedEngines = Array.from(document.querySelectorAll('.av-grid input[type="checkbox"]:checked'))
+                .map(cb => cb.value);
+
+            if (selectedEngines.length === 0) {
+                alert('Please select at least one AV engine!');
+                return;
+            }
+
+            // Show progress
+            document.getElementById('progress-container').style.display = 'block';
+            document.getElementById('scan-btn').disabled = true;
+            document.getElementById('results-container').style.display = 'none';
+
+            // Upload file
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            formData.append('avList', selectedEngines.join(','));
+
+            try {
+                const response = await fetch(`${API_URL}/api/v1/file/scan`, {
+                    method: 'POST',
+                    headers: {'X-Auth-Token': apiToken},
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    scanToken = data.scan_token;
+                    pollResults();
+                } else {
+                    alert('Error: ' + data.error);
+                    resetProgress();
+                }
+            } catch (error) {
+                alert('Error uploading file: ' + error.message);
+                resetProgress();
+            }
+        }
+
+        async function pollResults() {
+            let progress = 0;
+            const interval = setInterval(async () => {
+                progress = Math.min(progress + 10, 90);
+                updateProgress(progress, 'Scanning with multiple AV engines...');
+
+                try {
+                    const response = await fetch(`${API_URL}/api/v1/file/result/${scanToken}`);
+                    const data = await response.json();
+                    
+                    if (data.success && data.status === 'completed') {
+                        clearInterval(interval);
+                        updateProgress(100, 'Scan completed!');
+                        setTimeout(() => displayResults(data), 500);
+                    }
+                } catch (error) {
+                    // Still scanning
+                }
+            }, 2000);
+        }
+
+        function updateProgress(percent, status) {
+            document.getElementById('progress-fill').style.width = percent + '%';
+            document.getElementById('progress-fill').textContent = percent + '%';
+            document.getElementById('scan-status').textContent = status;
+        }
+
+        function displayResults(data) {
+            document.getElementById('progress-container').style.display = 'none';
+            document.getElementById('results-container').style.display = 'block';
+
+            // Show alert based on detections
+            const alertContainer = document.getElementById('alert-container');
+            const detectionCount = data.data.filter(r => r.status === 'ok' && r.flagname !== 'Clean').length;
+            
+            if (detectionCount > 0) {
+                alertContainer.innerHTML = `<div class="alert alert-danger">⚠️ Threats detected! ${detectionCount} engine(s) flagged this file as malicious.</div>`;
+            } else {
+                alertContainer.innerHTML = `<div class="alert alert-success">✓ No threats detected. File appears to be clean.</div>`;
+            }
+
+            // Update stats
+            const totalEngines = data.data.length;
+            const cleanCount = data.data.filter(r => r.status === 'ok' && r.flagname === 'Clean').length;
+            const detectionRate = totalEngines > 0 ? ((detectionCount / totalEngines) * 100).toFixed(1) : 0;
+
+            document.getElementById('stat-engines').textContent = totalEngines;
+            document.getElementById('stat-detections').textContent = detectionCount;
+            document.getElementById('stat-clean').textContent = cleanCount;
+            document.getElementById('stat-rate').textContent = detectionRate + '%';
+
+            // Populate table
+            const tbody = document.getElementById('results-table-body');
+            tbody.innerHTML = '';
+            
+            data.data.forEach(result => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${result.avname}</td>
+                    <td class="${result.flagname === 'Clean' ? 'status-clean' : 'status-detected'}">
+                        ${result.status === 'ok' ? '✓' : '✗'} ${result.status.toUpperCase()}
+                    </td>
+                    <td>${result.flagname}</td>
+                `;
+            });
+        }
+
+        function resetProgress() {
+            document.getElementById('progress-container').style.display = 'none';
+            document.getElementById('scan-btn').disabled = false;
+        }
+
+        function resetScanner() {
+            clearFile();
+            document.getElementById('results-container').style.display = 'none';
+            document.getElementById('scan-btn').disabled = true;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,545 @@
+;=====================================================================
+; proxy_hotpatcher.asm - Agentic Proxy-Layer Manipulation (Pure MASM x64)
+; ZERO-DEPENDENCY TOKEN LOGIT BIAS & STREAM TERMINATION
+;=====================================================================
+; Implements proxy-layer byte manipulation:
+;  - Token logit bias support
+;  - RST injection for stream termination
+;  - Custom validation hooks (void* pointer pattern)
+;  - Response transformation
+;
+;=====================================================================
+
+; Public exports
+PUBLIC masm_proxy_hotpatch_init
+PUBLIC masm_proxy_hotpatch_add
+PUBLIC masm_proxy_apply_logit_bias
+PUBLIC masm_proxy_inject_rst
+PUBLIC masm_proxy_transform_response
+PUBLIC masm_proxy_hotpatch_get_stats
+PUBLIC masm_proxy_hotpatch_cleanup
+
+; External dependencies
+EXTERN asm_malloc:PROC
+EXTERN asm_free:PROC
+EXTERN asm_mutex_create:PROC
+EXTERN asm_mutex_destroy:PROC
+EXTERN asm_mutex_lock:PROC
+EXTERN asm_mutex_unlock:PROC
+EXTERN asm_memcpy_fast:PROC
+
+; Consolidated core functions
+EXTERN masm_core_direct_copy:PROC
+
+; ProxyHotpatch Structure (512 bytes):
+;   [+0]:  hotpatch_id (qword)
+;   [+8]:  target_token_id (qword)
+;   [+16]: logit_bias (double) - IEEE 754 float64
+;   [+24]: validator_ptr (qword) - void* custom validator (not std::function)
+;   [+32]: transform_fn_ptr (qword)
+;   [+40]: inject_rst (qword) - 1=inject RST, 0=normal
+;   [+48]: stream_termination_pattern_ptr (qword)
+;   [+56]: stream_termination_pattern_len (qword)
+;   [+64]: enabled (qword)
+;   [+72]: apply_count (qword)
+;   [+80]: reserved[54] (qword[54])
+;=====================================================================
+
+.code
+
+; Global proxy hotpatch registry
+g_proxy_hotpatch_registry   QWORD 0
+g_proxy_hotpatch_count      QWORD 0
+g_proxy_hotpatch_capacity   QWORD 0
+g_proxy_hotpatch_mutex      QWORD 0
+
+g_proxy_patches_applied     QWORD 0
+g_proxy_rst_injections      QWORD 0
+g_proxy_logit_bias_count    QWORD 0
+
+;=====================================================================
+; masm_proxy_hotpatch_init(capacity: rcx) -> rax (1=success, 0=fail)
+;
+; Initializes proxy hotpatch registry.
+;=====================================================================
+
+ALIGN 16
+masm_proxy_hotpatch_init PROC
+
+    push rbx
+    sub rsp, 32
+    
+    mov rbx, rcx            ; rbx = capacity
+    
+    ; Create mutex
+    call asm_mutex_create
+    test rax, rax
+    jz init_fail
+    
+    mov [g_proxy_hotpatch_mutex], rax
+    
+    ; Allocate registry
+    mov rcx, rbx
+    imul rcx, 512
+    mov rdx, 64
+    call asm_malloc
+    test rax, rax
+    jz init_fail
+    
+    mov [g_proxy_hotpatch_registry], rax
+    mov [g_proxy_hotpatch_capacity], rbx
+    mov qword ptr [g_proxy_hotpatch_count], 0
+    
+    mov rax, 1
+    jmp init_exit
+
+init_fail:
+    xor rax, rax
+
+init_exit:
+    add rsp, 32
+    pop rbx
+    ret
+
+masm_proxy_hotpatch_init ENDP
+
+;=====================================================================
+; masm_proxy_hotpatch_add(hotpatch_ptr: rcx) -> rax (hotpatch_id or -1)
+;
+; Adds a new proxy hotpatch to registry.
+;=====================================================================
+
+ALIGN 16
+masm_proxy_hotpatch_add PROC
+
+    push rbx
+    push r12
+    sub rsp, 32
+    
+    mov rbx, rcx            ; rbx = hotpatch_ptr
+    
+    ; Lock registry
+    mov rcx, [g_proxy_hotpatch_mutex]
+    call asm_mutex_lock
+    
+    ; Check capacity
+    mov rax, [g_proxy_hotpatch_count]
+    cmp rax, [g_proxy_hotpatch_capacity]
+    jge add_full
+    
+    ; Get slot
+    mov r12, [g_proxy_hotpatch_registry]
+    imul rax, 512
+    add r12, rax            ; r12 = &registry[count]
+    
+    ; Copy hotpatch structure
+    mov rcx, r12
+    mov rdx, rbx
+    mov r8, 512
+    call masm_core_direct_copy
+    
+    ; Assign ID
+    mov rax, [g_proxy_hotpatch_count]
+    mov [r12], rax          ; hotpatch_id = count
+    
+    ; Increment count
+    inc qword ptr [g_proxy_hotpatch_count]
+    
+    ; Unlock
+    mov rcx, [g_proxy_hotpatch_mutex]
+    call asm_mutex_unlock
+    
+    jmp add_exit
+
+add_full:
+    mov rcx, [g_proxy_hotpatch_mutex]
+    call asm_mutex_unlock
+    
+    mov rax, -1
+
+add_exit:
+    add rsp, 32
+    pop r12
+    pop rbx
+    ret
+
+masm_proxy_hotpatch_add ENDP
+
+;=====================================================================
+; masm_proxy_apply_logit_bias(token_id: rcx, logits_ptr: rdx, 
+;                            logits_count: r8) -> rax (1=modified, 0=unchanged)
+;
+; Applies logit bias to specified token.
+; logits_ptr = array of float64 values (IEEE 754)
+;=====================================================================
+
+ALIGN 16
+masm_proxy_apply_logit_bias PROC
+
+    push rbx
+    push r12
+    push r13
+    push r14
+    sub rsp, 32
+    
+    mov rbx, rcx            ; rbx = token_id
+    mov r12, rdx            ; r12 = logits_ptr
+    mov r13, r8             ; r13 = logits_count
+    
+    ; Lock registry
+    mov rcx, [g_proxy_hotpatch_mutex]
+    call asm_mutex_lock
+    
+    ; Search for hotpatch matching token_id
+    xor r14, r14            ; r14 = index
+    
+logit_search:
+    cmp r14, [g_proxy_hotpatch_count]
+    jge logit_not_found
+    
+    ; Get hotpatch
+    mov rax, [g_proxy_hotpatch_registry]
+    imul rcx, r14, 512
+    add rax, rcx            ; rax = &registry[index]
+    
+    ; Check if enabled
+    cmp qword ptr [rax + 64], 0
+    je logit_next
+    
+    ; Check token_id match
+    mov rcx, [rax + 8]      ; target_token_id
+    cmp rcx, rbx
+    jne logit_next
+    
+    ; Apply logit bias
+    ; Validate token_id is within range
+    cmp rbx, r13
+    jge logit_next
+    
+    ; Get bias value (double at offset 16)
+    movsd xmm0, qword ptr [rax + 16]
+    
+    ; Add bias to logits[token_id]
+    imul rcx, rbx, 8        ; rcx = token_id * sizeof(double)
+    addsd xmm0, qword ptr [r12 + rcx]
+    movsd qword ptr [r12 + rcx], xmm0
+    
+    ; Update statistics
+    inc qword ptr [rax + 72]    ; apply_count++
+    lock inc [g_proxy_logit_bias_count]
+    
+    ; Unlock
+    mov rcx, [g_proxy_hotpatch_mutex]
+    call asm_mutex_unlock
+    
+    mov rax, 1              ; Modified
+    jmp logit_exit
+
+logit_next:
+    inc r14
+    jmp logit_search
+
+logit_not_found:
+    mov rcx, [g_proxy_hotpatch_mutex]
+    call asm_mutex_unlock
+    
+    xor rax, rax            ; Unchanged
+
+logit_exit:
+    add rsp, 32
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+masm_proxy_apply_logit_bias ENDP
+
+;=====================================================================
+; masm_proxy_inject_rst(stream_ptr: rcx, stream_len: rdx, 
+;                      output_ptr: r8, output_len_ptr: r9) -> rax (1=injected, 0=unchanged)
+;
+; Injects RST (stream termination) pattern if conditions met.
+;=====================================================================
+
+ALIGN 16
+masm_proxy_inject_rst PROC
+
+    push rbx
+    push r12
+    push r13
+    push r14
+    sub rsp, 32
+    
+    mov rbx, rcx            ; rbx = stream_ptr
+    mov r12, rdx            ; r12 = stream_len
+    mov r13, r8             ; r13 = output_ptr
+    mov r14, r9             ; r14 = output_len_ptr
+    
+    ; Lock registry
+    mov rcx, [g_proxy_hotpatch_mutex]
+    call asm_mutex_lock
+    
+    ; Find enabled RST injection hotpatch
+    xor r10, r10            ; r10 = index
+    
+rst_search:
+    cmp r10, [g_proxy_hotpatch_count]
+    jge rst_not_found
+    
+    ; Get hotpatch
+    mov rax, [g_proxy_hotpatch_registry]
+    imul rcx, r10, 512
+    add rax, rcx
+    
+    ; Check enabled and inject_rst flag
+    cmp qword ptr [rax + 64], 0
+    je rst_next
+    
+    cmp qword ptr [rax + 40], 0
+    je rst_next
+    
+    ; Check if validator exists
+    mov rcx, [rax + 24]     ; validator_ptr (void*)
+    test rcx, rcx
+    jz rst_apply_injection  ; No validator, proceed
+    
+    ; Call validator: validator(stream_ptr: rcx, stream_len: rdx) -> rax (1=valid, 0=invalid)
+    push rax                ; Save hotpatch ptr
+    push r10
+    
+    mov rcx, rbx            ; stream_ptr
+    mov rdx, r12            ; stream_len
+    mov rax, [rax + 24]     ; validator_ptr
+    call rax                ; Call through function pointer
+    
+    pop r10
+    pop r11                 ; r11 = hotpatch ptr
+    
+    test rax, rax
+    jz rst_next             ; Validator returned false
+    
+    mov rax, r11            ; Restore hotpatch ptr
+
+rst_apply_injection:
+    ; Get termination pattern
+    mov r8, [rax + 48]      ; pattern_ptr
+    mov r9, [rax + 56]      ; pattern_len
+    
+    ; Copy original stream to output
+    mov rcx, r13            ; dest = output_ptr
+    mov rdx, rbx            ; src = stream_ptr
+    mov r8, r12             ; size = stream_len
+    push rax
+    call masm_core_direct_copy
+    pop rax
+    
+    ; Append termination pattern
+    mov rcx, r13
+    add rcx, r12            ; rcx = output_ptr + stream_len
+    mov rdx, [rax + 48]     ; src = pattern_ptr
+    mov r8, [rax + 56]      ; size = pattern_len
+    push rax
+    call masm_core_direct_copy
+    pop rax
+    
+    ; Update output length
+    mov rcx, r12
+    add rcx, [rax + 56]     ; stream_len + pattern_len
+    mov [r14], rcx          ; *output_len_ptr = new_len
+    
+    ; Update statistics
+    inc qword ptr [rax + 72]
+    lock inc [g_proxy_rst_injections]
+    lock inc [g_proxy_patches_applied]
+    
+    ; Unlock
+    mov rcx, [g_proxy_hotpatch_mutex]
+    call asm_mutex_unlock
+    
+    mov rax, 1
+    jmp rst_exit
+
+rst_next:
+    inc r10
+    jmp rst_search
+
+rst_not_found:
+    ; No RST injection needed, passthrough
+    mov rcx, r13
+    mov rdx, rbx
+    mov r8, r12
+    call asm_memcpy_fast
+    
+    mov [r14], r12          ; output_len = stream_len
+    
+    mov rcx, [g_proxy_hotpatch_mutex]
+    call asm_mutex_unlock
+    
+    xor rax, rax
+
+rst_exit:
+    add rsp, 32
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+masm_proxy_inject_rst ENDP
+
+;=====================================================================
+; masm_proxy_transform_response(response_ptr: rcx, response_len: rdx, 
+;                              output_ptr: r8, output_len_ptr: r9) -> rax (1=transformed, 0=unchanged)
+;
+; Applies all enabled transform functions to response.
+;=====================================================================
+
+ALIGN 16
+masm_proxy_transform_response PROC
+
+    push rbx
+    push r12
+    push r13
+    push r14
+    sub rsp, 32
+    
+    mov rbx, rcx            ; rbx = response_ptr
+    mov r12, rdx            ; r12 = response_len
+    mov r13, r8             ; r13 = output_ptr
+    mov r14, r9             ; r14 = output_len_ptr
+    
+    ; Lock registry
+    mov rcx, [g_proxy_hotpatch_mutex]
+    call asm_mutex_lock
+    
+    ; Iterate through enabled transform hotpatches
+    xor r10, r10
+    
+transform_loop:
+    cmp r10, [g_proxy_hotpatch_count]
+    jge transform_done
+    
+    ; Get hotpatch
+    mov rax, [g_proxy_hotpatch_registry]
+    imul rcx, r10, 512
+    add rax, rcx
+    
+    ; Check enabled
+    cmp qword ptr [rax + 64], 0
+    je transform_next
+    
+    ; Check transform_fn_ptr
+    mov rcx, [rax + 32]
+    test rcx, rcx
+    jz transform_next
+    
+    ; Call transform: transform_fn(input: rcx, input_len: rdx, output: r8, output_len: r9) -> rax
+    push r10
+    push rax
+    
+    mov rcx, rbx
+    mov rdx, r12
+    mov r8, r13
+    mov r9, r14
+    mov rax, [rax + 32]
+    call rax
+    
+    pop r11                 ; r11 = hotpatch ptr
+    pop r10
+    
+    ; Update statistics if transform succeeded
+    test rax, rax
+    jz transform_next
+    
+    inc qword ptr [r11 + 72]
+    lock inc [g_proxy_patches_applied]
+
+transform_next:
+    inc r10
+    jmp transform_loop
+
+transform_done:
+    mov rcx, [g_proxy_hotpatch_mutex]
+    call asm_mutex_unlock
+    
+    mov rax, 1
+
+    add rsp, 32
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+masm_proxy_transform_response ENDP
+
+;=====================================================================
+; masm_proxy_hotpatch_get_stats(stats_ptr: rcx) -> void
+;
+; Fills statistics structure:
+;   [0]: patches_applied (qword)
+;   [8]: rst_injections (qword)
+;   [16]: logit_bias_count (qword)
+;   [24]: registry_count (qword)
+;=====================================================================
+
+ALIGN 16
+masm_proxy_hotpatch_get_stats PROC
+
+    test rcx, rcx
+    jz stats_exit
+    
+    mov rax, [g_proxy_patches_applied]
+    mov [rcx], rax
+    
+    mov rax, [g_proxy_rst_injections]
+    mov [rcx + 8], rax
+    
+    mov rax, [g_proxy_logit_bias_count]
+    mov [rcx + 16], rax
+    
+    mov rax, [g_proxy_hotpatch_count]
+    mov [rcx + 24], rax
+
+stats_exit:
+    ret
+
+masm_proxy_hotpatch_get_stats ENDP
+
+;=====================================================================
+; masm_proxy_hotpatch_cleanup() -> void
+;
+; Destroys proxy hotpatch registry.
+;=====================================================================
+
+ALIGN 16
+masm_proxy_hotpatch_cleanup PROC
+
+    push rbx
+    sub rsp, 32
+    
+    mov rcx, [g_proxy_hotpatch_registry]
+    test rcx, rcx
+    jz cleanup_no_registry
+    
+    call asm_free
+    mov qword ptr [g_proxy_hotpatch_registry], 0
+
+cleanup_no_registry:
+    mov rcx, [g_proxy_hotpatch_mutex]
+    test rcx, rcx
+    jz cleanup_exit
+    
+    call asm_mutex_destroy
+    mov qword ptr [g_proxy_hotpatch_mutex], 0
+
+cleanup_exit:
+    add rsp, 32
+    pop rbx
+    ret
+
+masm_proxy_hotpatch_cleanup ENDP
+
+END
+

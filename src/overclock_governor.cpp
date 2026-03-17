@@ -1,13 +1,24 @@
+#include "AppState.h"
 #include "overclock_governor.h"
+#include "AppState.h"
 #include "gui.h"
+#include "AppState.h"
 #include "telemetry.h"
+#include "AppState.h"
 #include "overclock_vendor.h"
+#include "AppState.h"
 #include "baseline_profile.h"
+#include "AppState.h"
 #include <iostream>
+#include "AppState.h"
 #include <cmath>
+#include "AppState.h"
 #include <fstream>
+#include "AppState.h"
 #include <filesystem>
+#include "AppState.h"
 #include <iomanip>
+#include "AppState.h"
 #include <algorithm>
 
 OverclockGovernor::OverclockGovernor() {}

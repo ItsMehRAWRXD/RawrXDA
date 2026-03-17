@@ -113,31 +113,12 @@ struct SafePatchResult {
     uint32_t        slotId;           // Which function slot was patched
     bool            wasRolledBack;    // True if patch was reverted due to safety
 
-    static SafePatchResult ok(const char* msg = "Safe patch applied") {
-        SafePatchResult r{};
-        r.success = true;
-        r.detail = msg ? msg : "";
-        r.errorCode = 0;
-        r.verdict = SafetyVerdict::Safe;
-        r.wasRolledBack = false;
-        return r;
-    }
-    static SafePatchResult ok(const std::string& msg, int code = 0) {
-        (void)code;
+    static SafePatchResult ok(const std::string& msg = "Safe patch applied") {
         SafePatchResult r{};
         r.success = true;
         r.detail = msg;
         r.errorCode = 0;
         r.verdict = SafetyVerdict::Safe;
-        r.wasRolledBack = false;
-        return r;
-    }
-    static SafePatchResult error(const char* msg, int code = -1) {
-        SafePatchResult r{};
-        r.success = false;
-        r.detail = msg ? msg : "";
-        r.errorCode = code;
-        r.verdict = SafetyVerdict::Unsafe;
         r.wasRolledBack = false;
         return r;
     }

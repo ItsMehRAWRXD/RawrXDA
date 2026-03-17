@@ -13,6 +13,7 @@
 #include <cmath>
 #include <random>
 #include <numeric>
+#include <iostream>
 
 extern "C" {
 #include <windows.h>

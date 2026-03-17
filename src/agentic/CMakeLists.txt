@@ -75,7 +75,6 @@ set(PLANNING_SOURCES
 
 # Source files - Agentic Agent Loop (Phase: Analysis→Agent Pivot)
 set(AGENT_LOOP_SOURCES
-    RawrXD_ToolRegistry.cpp
     AgentToolHandlers.cpp
     BoundedAgentLoop.cpp
     OllamaProvider.cpp

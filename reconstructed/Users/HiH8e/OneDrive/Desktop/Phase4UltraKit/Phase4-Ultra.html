@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Phase-4 Ultra — PR8 mmap + WebGPU + 4.7 GB GGUF</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body{margin:0;background:#0e0e0e;color:#e0e0e0;font-family:consolas,monospace}
+    #status-bar{height:28px;background:#1e1e1e;display:flex;align-items:center;padding:0 8px;justify-content:space-between;font-size:12px;border-top:1px solid #333}
+    #status-left{color:#4ec9b0}
+    #status-right{display:flex;align-items:center;gap:8px}
+    #status-metrics{color:#dcdcaa;white-space:nowrap}
+    #chat{white-space:pre-wrap;padding:8px;font-size:13px;overflow-y:auto;height:160px;background:#111;border-top:1px solid #333}
+    #prompt-bar{display:flex;border-top:1px solid #333;background:#151515;padding:4px 8px;gap:6px}
+    #prompt-input{flex:1;background:#0e0e0e;border:1px solid #333;color:#e0e0e0;padding:4px 6px;font-family:inherit;font-size:13px}
+    #prompt-send{background:#0098ff;border:1px solid #007acc;color:#fff;padding:4px 10px;font-size:13px;cursor:pointer}
+    #prompt-send:hover{background:#007acc}
+  </style>
+</head>
+<body>
+<div id="status-bar">
+  <div id="status-left">Phase-4 Ultra</div>
+  <div id="status-right"></div>
+</div>
+<div id="chat"></div>
+<div id="prompt-bar">
+  <input id="prompt-input" placeholder="Type a prompt and press Enter...">
+  <button id="prompt-send">Send</button>
+</div>
+
+<script type="module">
+const chatDiv = document.getElementById('chat');
+function appendChat(t){chatDiv.textContent+=t;chatDiv.scrollTop=chatDiv.scrollHeight;}
+function terminalLog(t){appendChat(`\n${t}\n`);}    
+
+// GPU spoof (virtual WebGPU adapter)
+(()=>{const f={requestAdapter:async()=>({name:"Rawr-Virtual-GPU",features:new Set(["shader-f16"]),limits:{maxComputeWorkgroupSizeX:256},requestDevice:async()=>({createComputePipeline:()=>({getBindGroupLayout:()=>({})}),createBuffer:()=>({mapAsync:async()=>{},getMappedRange:()=>new ArrayBuffer(64),unmap:()=>{},destroy:()=>{}}),createBindGroup:()=>({}),createShaderModule:()=>({}),queue:{submit:()=>{},onSubmittedWorkDone:async()=>{},writeBuffer:()=>{}}})})};Object.defineProperty(navigator,"gpu",{get:()=>f,configurable:true});console.log("[GPU] Virtual WebGPU adapter injected");})();
+
+// Worker blob: PR8 mmap + FSA pread
+const workerBlob = new Blob([`
+let L=null,fdTable={},nextFD=10,cancelFlag={stop:false};
+let utf8=new TextEncoder(),utf8d=new TextDecoder("utf-8"),nativeCache=new Map();
+async function pr8Compile(r){const c=WebAssembly.compileStreaming?await WebAssembly.compileStreaming(r):await WebAssembly.compile(await r.arrayBuffer());nativeCache.set(c,{weak_ptr:c,isolates:new Set()});return c;}
+async function pr8Instantiate(c,i){return WebAssembly.instantiate(c,i);}    
+async function initLlamaWasm(){const compiled=await pr8Compile(await fetch('./llama.wasm'));const memory=new WebAssembly.Memory({initial:4096,maximum:16384});const inst=await pr8Instantiate(compiled,{wasi_snapshot_preview1:{},env:{memory,fs_pread:(fd,ptr,len,off)=>pread(fd,ptr,len,off,inst),fs_getsize:fd=>fdTable[fd]?.file?.size??0,fs_open_handle:id=>id}});L=wrap(inst.exports,memory);postMessage({type:'ready',backend:'pr8-mmap'});}    
+function pread(fd,ptr,len,off,inst){const h=fdTable[fd];if(!h)return-1;const m=new Uint8Array(inst.exports.memory.buffer);let rem=len,pos=off;const CH=65536;while(rem>0){const n=Math.min(CH,rem);const buf=new Uint8Array(n);const bytes=h.read(buf,{at:pos});if(bytes<=0)break;m.set(buf.subarray(0,bytes),ptr+(len-rem));rem-=bytes;pos+=bytes;}return len-rem;}    
+function wrap(exp,memory){return{memory,fs:{mkdir:p=>exp._mkdir?.(sPtr(p,exp,memory))??0,writeFile:(p,d)=>{const ptr=exp._malloc(d.byteLength);new Uint8Array(memory.buffer,ptr).set(d);exp._write_file(ptr,d.byteLength,sPtr(p,exp,memory));exp._free(ptr);},mmapFile:h=>{const fd=nextFD++;fdTable[fd]=h;return fd;}},createContext:o=>{if(o.fd===undefined)throw"missing fd";const c=exp._llama_init_from_fd(o.fd,o.n_ctx??4096,o.seed??-1);if(!c)throw"init fail";return c;},generate:async function*(c,p,o={}){cancelFlag.stop=false;const pPtr=sPtr(p,exp,memory);const it=exp._llama_generate(c,pPtr,o.max_tokens??256);let t;while(!cancelFlag.stop&&(t=exp._llama_next_token(it))!==0){const tp=exp._llama_token_to_piece(c,t);yield gStr(tp,memory);}exp._llama_free_iterator(it);}};}    
+function sPtr(s,exp,m){const b=utf8.encode(s+'\0');const p=exp._malloc(b.length);new Uint8Array(m.buffer,p).set(b);return p;}    
+function gStr(p,m){const mem=new Uint8Array(m.buffer);let e=p;while(mem[e]!==0)e++;return utf8d.decode(mem.slice(p,e));}    
+onmessage=async e=>{const{cmd,prompt,opts,fileHandle}=e.data;try{if(cmd==='init')await initLlamaWasm();else if(cmd==='load_gguf_mmap'){const h=await fileHandle.createSyncAccessHandle();const fd=L.fs.mmapFile(h);const ctx=L.createContext({fd,n_ctx:4096,seed:-1});self._ctx=ctx;postMessage({type:'loaded',fd});}else if(cmd==='prompt'){for await(const t of L.generate(self._ctx,prompt,opts||{}))postMessage({type:'token',text:t});postMessage({type:'done'});}else if(cmd==='stop')cancelFlag.stop=true;}catch(err){postMessage({type:'error',msg:err.message||String(err)});}};`],{type:'application/javascript'});
+
+const worker = new Worker(URL.createObjectURL(workerBlob));
+
+// Metrics state
+let genCounter = 0;
+let currentGen = null; // { id, start, firstTokenMs, tokens, totalMs }
+
+const statusRight = document.getElementById('status-right');
+const metricsSpan = document.createElement('span');
+metricsSpan.id = 'status-metrics';
+metricsSpan.textContent = 'Idle';
+statusRight.appendChild(metricsSpan);
+
+function updateStatusFromMetrics(m) {
+  if (!m) {
+    metricsSpan.textContent = 'Idle';
+    return;
+  }
+  const { id, tokens, firstTokenMs, totalMs } = m;
+  const totalSec = totalMs / 1000;
+  const tps = tokens > 0 && totalSec > 0 ? (tokens / totalSec).toFixed(1) : '–';
+  let warmTps = '–';
+  if (tokens > 1 && totalMs > firstTokenMs) {
+    const warmSec = (totalMs - firstTokenMs) / 1000;
+    warmTps = ((tokens - 1) / warmSec).toFixed(1);
+  }
+  metricsSpan.textContent = `Gen ${id}: first ${firstTokenMs.toFixed(0)} ms · ${tps} t/s (warm: ${warmTps} t/s)`;
+}
+
+// Simple D:\ drive index for context search (FSA-based, best-effort)
+let dIndex = [];
+let dIndexReady = false;
+const D_INDEX_FILE_LIMIT = 200;
+const D_INDEX_BYTES_LIMIT = 2 * 1024 * 1024; // 2 MB text cap
+
+async function indexDDrive() {
+  if (!('showDirectoryPicker' in window)) {
+    terminalLog('[search] File System Access API not supported in this context.');
+    return;
+  }
+  try {
+    terminalLog('[search] Select the root folder on D: you want to index');
+    const root = await window.showDirectoryPicker();
+    dIndex = [];
+    let usedBytes = 0;
+
+    async function walkDir(dirHandle, prefix) {
+      if (dIndex.length >= D_INDEX_FILE_LIMIT || usedBytes >= D_INDEX_BYTES_LIMIT) return;
+      for await (const [name, handle] of dirHandle.entries()) {
+        const relPath = prefix ? `${prefix}/${name}` : name;
+        if (handle.kind === 'directory') {
+          await walkDir(handle, relPath);
+          if (dIndex.length >= D_INDEX_FILE_LIMIT || usedBytes >= D_INDEX_BYTES_LIMIT) return;
+        } else {
+          const lower = name.toLowerCase();
+          if (!(/(\.txt|\.md|\.js|\.ts|\.tsx|\.jsx|\.py|\.cpp|\.hpp|\.c|\.h|\.json)$/i).test(lower)) continue;
+          const file = await handle.getFile();
+          const text = await file.text();
+          if (!text) continue;
+          const snippet = text.slice(0, 4096);
+          const bytes = snippet.length;
+          if (usedBytes + bytes > D_INDEX_BYTES_LIMIT) break;
+          usedBytes += bytes;
+          dIndex.push({ path: relPath, text: snippet.toLowerCase(), raw: snippet });
+          if (dIndex.length >= D_INDEX_FILE_LIMIT) break;
+        }
+      }
+    }
+
+    await walkDir(root, '');
+    dIndexReady = dIndex.length > 0;
+    terminalLog(`[search] Indexed ${dIndex.length} files from D: (up to ${Math.round(usedBytes/1024)} KB of text)`);
+  } catch (e) {
+    terminalLog(`[search] Indexing cancelled or failed: ${e.message || e}`);
+  }
+}
+
+function buildDContext(query) {
+  if (!dIndexReady || !query) return '';
+  const q = query.toLowerCase();
+  const matches = [];
+  for (const doc of dIndex) {
+    const idx = doc.text.indexOf(q);
+    if (idx !== -1) {
+      matches.push({ doc, idx });
+    }
+  }
+  if (!matches.length) return '';
+  matches.sort((a, b) => a.idx - b.idx);
+  const top = matches.slice(0, 5);
+  let ctx = 'CONTEXT FROM D DRIVE (top matches):\n';
+  for (const m of top) {
+    const start = Math.max(0, m.idx - 120);
+    const end = Math.min(m.doc.raw.length, m.idx + 120);
+    const extract = m.doc.raw.slice(start, end).replace(/\s+/g, ' ');
+    ctx += `\n# ${m.doc.path}\n${extract}\n`;
+  }
+  return ctx + '\n';
+}
+
+worker.onmessage = e => {
+  const { type, text, msg } = e.data;
+
+  if (type === 'token') {
+    if (currentGen) {
+      const now = performance.now();
+      currentGen.tokens += 1;
+      if (currentGen.firstTokenMs == null) {
+        currentGen.firstTokenMs = now - currentGen.start;
+      }
+    }
+    appendChat(text || '');
+  }
+
+  if (type === 'done') {
+    if (currentGen) {
+      const now = performance.now();
+      currentGen.totalMs = now - currentGen.start;
+      updateStatusFromMetrics(currentGen);
+      currentGen = null;
+    }
+    appendChat("\n--end--\n");
+  }
+
+  if (type === 'error')  terminalLog(`[error] ${msg}`);
+  if (type === 'loaded') terminalLog('GGUF mounted (zero-copy)');
+  if (type === 'ready')  terminalLog('PR8 mmap worker ready');
+};
+
+// Mount button
+const mountBtn = document.createElement('button');
+mountBtn.textContent = 'Mount 4 GB GGUF';
+mountBtn.onclick = async () => {
+  const [h] = await window.showOpenFilePicker({
+    types: [{ description: 'GGUF', accept: { 'application/octet-stream': ['.gguf'] } }]
+  });
+  worker.postMessage({ cmd: 'load_gguf_mmap', fileHandle: h });
+};
+statusRight.appendChild(mountBtn);
+
+// D: index button
+const indexDBtn = document.createElement('button');
+indexDBtn.textContent = 'Index D: drive';
+indexDBtn.onclick = () => { indexDDrive(); };
+statusRight.appendChild(indexDBtn);
+
+// Prompt input wiring
+const promptInput = document.getElementById('prompt-input');
+const promptSend  = document.getElementById('prompt-send');
+
+function runPromptFromUI(){
+  const text = promptInput.value.trim();
+  if (!text) return;
+  const id = ++genCounter;
+  currentGen = {
+    id,
+    start: performance.now(),
+    firstTokenMs: null,
+    tokens: 0,
+    totalMs: 0
+  };
+  updateStatusFromMetrics(null);
+  const dCtx = buildDContext(text);
+  const fullPrompt = dCtx ? `${dCtx}\nUSER PROMPT:\n${text}` : text;
+  worker.postMessage({ cmd: 'prompt', prompt: fullPrompt, opts: { max_tokens: 256 } });
+  appendChat(`\n> ${text}\n`);
+  promptInput.value = '';
+}
+
+promptSend.addEventListener('click', runPromptFromUI);
+promptInput.addEventListener('keydown', e => { if (e.key === 'Enter') runPromptFromUI(); });
+
+// Boot worker
+worker.postMessage({ cmd:'init' });
+</script>
+</body>
+</html>

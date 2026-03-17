@@ -1,0 +1,86 @@
+# Quick Reference: Ollama Model Display in Breadcrumb
+
+## What's New
+The breadcrumb now **automatically displays Ollama models by name** when initialized.
+
+## Quick Start
+
+```cpp
+// 1. Create breadcrumb
+AgentChatBreadcrumb* breadcrumb = new AgentChatBreadcrumb(this);
+
+// 2. Initialize (fetches Ollama models automatically)
+breadcrumb->initialize();
+
+// 3. Add to layout
+layout->insertWidget(0, breadcrumb);
+```
+
+## What Happens
+1. Queries `http://localhost:11434/api/tags`
+2. Extracts model names: `llama2`, `mistral`, `neural-chat`, etc.
+3. Displays in dropdown as: `🦙 model-name (Ollama)`
+4. Organizes by type with separators
+
+## Example Dropdown
+```
+⚡ Auto (Smart Selection)
+━━━━━━━━━━━━━━━━━━━━━
+🦙 llama2 (Ollama)
+🦙 mistral (Ollama)
+🦙 neural-chat (Ollama)
+```
+
+## Key Methods
+
+| Method | Purpose |
+|--------|---------|
+| `initialize()` | Load configs + fetch Ollama models + populate dropdown |
+| `fetchOllamaModels(endpoint)` | Query Ollama API and update models |
+| `getSelectedModel()` | Get currently selected model name |
+| `setSelectedModel(name)` | Set model by name |
+
+## Custom Endpoint
+```cpp
+// Use non-localhost Ollama
+breadcrumb->fetchOllamaModels("http://192.168.1.100:11434");
+```
+
+## Signals Available
+```cpp
+// Emitted when user selects model
+connect(breadcrumb, &AgentChatBreadcrumb::modelSelected,
+        this, [](const QString& name) {
+    qDebug() << "Model selected:" << name;
+});
+
+// Emitted when mode changes (Ask/Plan/Edit/Configure)
+connect(breadcrumb, &AgentChatBreadcrumb::agentModeChanged,
+        this, [](AgentChatBreadcrumb::AgentMode mode) {
+    qDebug() << "Mode changed to:" << mode;
+});
+```
+
+## Implementation Details
+- **Timeout**: 5 seconds for API query
+- **Tag Removal**: `llama2:latest` → `llama2`
+- **Deduplication**: Old Ollama models removed before adding new
+- **Error Handling**: Falls back to pre-configured models if Ollama unavailable
+
+## Files Changed
+- `agent_chat_breadcrumb.hpp` - Added network headers and fetchOllamaModels()
+- `agent_chat_breadcrumb.cpp` - Implemented Ollama API integration
+
+## Compilation Status
+✅ **Compiles without errors** (agent_chat_breadcrumb files)
+
+## Dependencies Added
+- `#include <QNetworkAccessManager>`
+- `#include <QNetworkRequest>`
+- `#include <QUrl>`
+- `#include <QEventLoop>`
+- `#include <QTimer>`
+
+---
+
+**TL;DR**: Call `breadcrumb->initialize()` and Ollama models automatically appear in the dropdown by name!

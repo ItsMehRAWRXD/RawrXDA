@@ -1,0 +1,15 @@
+{
+  "summary": {
+    "total": 13,
+    "passed": 0,
+    "skipped": 0,
+    "failed": 13,
+    "pass_rate": 0.0
+  },
+  "timestamp": "2026-02-19T08:57:59Z",
+  "duration_ms": 184,
+  "target": {
+    "platform": "native",
+    "arch": "native"
+  }
+}

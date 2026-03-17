@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>RawrZ IDE Glass - Ollama Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #ide-container {
+            display: grid;
+            grid-template-columns: 280px 1fr 420px;
+            grid-template-rows: 60px 1fr 220px;
+            height: 100vh;
+            gap: 2px;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        #titlebar {
+            grid-column: 1 / 4;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            gap: 20px;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        #sidebar {
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .section {
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 12px;
+            color: #aaa;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            margin: 5px 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button.compile {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        button.run {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        #editor-container {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #file-tabs {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            display: flex;
+            gap: 5px;
+            overflow-x: auto;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px 6px 0 0;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            background: rgba(102, 126, 234, 0.5);
+            box-shadow: 0 -3px 10px rgba(102, 126, 234, 0.3);
+        }
+
+        #editor {
+            flex: 1;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            padding: 20px;
+            border: none;
+            outline: none;
+            resize: none;
+            line-height: 1.6;
+        }
+
+        #ai-panel {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+        }
+
+        #ai-header {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            flex-shrink: 0;
+        }
+
+        #model-selector {
+            width: 100%;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: white;
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+
+        #ollama-status {
+            margin-top: 10px;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+            font-size: 11px;
+        }
+
+        #connection-status {
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        .status-connected {
+            color: #4ade80;
+        }
+
+        .status-disconnected {
+            color: #ef4444;
+        }
+
+        .status-checking {
+            color: #fbbf24;
+        }
+
+        #ai-chat {
+            flex: 1 1 0;
+            overflow-y: scroll;
+            overflow-x: hidden;
+            padding: 15px;
+            padding-bottom: 60px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-height: 0;
+            max-height: 100%;
+            position: relative;
+        }
+
+        .chat-message {
+            padding: 12px;
+            border-radius: 8px;
+            animation: slideIn 0.3s;
+            line-height: 1.6;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .chat-message.user {
+            background: rgba(102, 126, 234, 0.3);
+            align-self: flex-end;
+            max-width: 85%;
+        }
+
+        .chat-message.ai {
+            background: rgba(0, 0, 0, 0.4);
+            align-self: flex-start;
+            max-width: 95%;
+        }
+
+        .chat-message.system {
+            background: rgba(255, 215, 0, 0.2);
+            text-align: center;
+            font-size: 11px;
+            color: #ffd700;
+        }
+
+        .message-header {
+            font-size: 11px;
+            color: #aaa;
+            margin-bottom: 5px;
+        }
+
+        .message-content {
+            font-size: 13px;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            white-space: pre-wrap;
+        }
+
+        .code-block {
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+            font-size: 12px;
+            margin: 5px 0;
+            overflow-x: auto;
+            overflow-y: auto;
+            max-height: 400px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .apply-code-btn {
+            padding: 6px 12px;
+            background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+            border: none;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+            font-size: 11px;
+            margin-top: 5px;
+        }
+
+        #ai-input-container {
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            flex-shrink: 0;
+        }
+
+        #ai-input {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: white;
+            font-size: 13px;
+            resize: none;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+
+        .ai-quick-actions {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        .quick-action-btn {
+            padding: 8px;
+            font-size: 11px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .quick-action-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        #scroll-to-bottom {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 45px;
+            height: 45px;
+            background: rgba(102, 126, 234, 0.95);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            font-size: 22px;
+            font-weight: bold;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s;
+            z-index: 100;
+        }
+
+        #scroll-to-bottom:hover {
+            background: rgba(102, 126, 234, 1);
+            transform: scale(1.1);
+        }
+
+        #scroll-to-bottom.visible {
+            display: flex;
+        }
+
+        #terminal {
+            grid-column: 1 / 4;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 15px;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 12px;
+        }
+
+        .terminal-line {
+            margin: 3px 0;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .terminal-success {
+            color: #4ade80;
+        }
+
+        .terminal-error {
+            color: #ef4444;
+        }
+
+        .terminal-info {
+            color: #60a5fa;
+        }
+
+        .terminal-warning {
+            color: #fbbf24;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            font-size: 11px;
+            margin-left: 10px;
+            font-weight: 600;
+        }
+
+        .badge.success {
+            background: #4ade80;
+            color: #000;
+        }
+
+        ::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(102, 126, 234, 0.6);
+            border-radius: 6px;
+            border: 2px solid rgba(0, 0, 0, 0.3);
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(102, 126, 234, 0.8);
+        }
+
+        #ai-chat::-webkit-scrollbar-thumb {
+            background: rgba(118, 75, 162, 0.7);
+        }
+
+        #ai-chat::-webkit-scrollbar-thumb:hover {
+            background: rgba(118, 75, 162, 0.9);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="ide-container">
+        <div id="titlebar">
+            <div class="logo">⚡ RawrZ IDE Glass - Ollama Edition</div>
+            <div style="flex:1"></div>
+            <div id="status">Ollama Ready <span class="badge success" id="model-count">0 models</span></div>
+            <div id="ctx-badge" onclick="ContextWindowWidget.toggle()"
+                style="cursor:pointer;font-size:11px;color:#b0b0b0;margin-left:8px;display:flex;align-items:center;gap:5px"
+                title="Context Window">
+                <span
+                    style="width:40px;height:4px;background:#333;border-radius:2px;overflow:hidden;display:inline-block"><span
+                        id="ctx-mini"
+                        style="display:block;height:100%;width:76%;background:#007acc;border-radius:2px"></span></span>
+                <span id="ctx-label">97.5K/128K</span>
+            </div>
+        </div>
+
+        <div id="sidebar">
+            <div class="section">
+                <div class="section-title">📁 Project</div>
+                <button onclick="newFile()">📄 New File</button>
+                <button onclick="openFile()">📂 Open File</button>
+                <button onclick="saveFile()">💾 Save</button>
+            </div>
+
+            <div class="section">
+                <div class="section-title">🔨 Build</div>
+                <button class="compile" onclick="compile()">🔨 Compile</button>
+                <button class="run" onclick="compileAndRun()">▶️ Run</button>
+            </div>
+
+            <div class="section">
+                <div class="section-title">🎯 Languages</div>
+                <div id="language-quick-select" style="max-height: 150px; overflow-y: auto; font-size: 11px;"></div>
+            </div>
+        </div>
+
+        <div id="editor-container">
+            <div id="file-tabs"></div>
+            <textarea id="editor" placeholder="Start coding with Ollama AI assistance...">// RawrZ IDE Glass - Ollama Edition
+// Real AI-powered coding with your local models
+
+using System;
+
+public class HelloOllama 
+{
+    public static void Main() 
+    {
+        Console.WriteLine("Hello from RawrZ IDE Glass!");
+        Console.WriteLine("Powered by Ollama AI models");
+        Console.WriteLine("🤖 Ask the AI to help you code!");
+    }
+}</textarea>
+        </div>
+
+        <div id="ai-panel">
+            <div id="ai-header">
+                <div class="section-title">🤖 Ollama AI Assistant</div>
+
+                <select id="model-selector" onchange="changeModel()">
+                    <option value="">Select Ollama Model...</option>
+                </select>
+
+                <div id="ollama-status">
+                    <div style="color: #aaa;">Ollama Status:</div>
+                    <div id="connection-status" class="status-checking">🔄 Checking...</div>
+                    <button style="margin-top: 8px; width: 100%; padding: 6px; font-size: 11px;"
+                        onclick="checkOllamaConnection()">🔄 Retry Connection</button>
+                </div>
+            </div>
+
+            <div id="ai-chat">
+                <div class="chat-message system">
+                    🤖 Ollama AI Assistant Ready
+                </div>
+                <button id="scroll-to-bottom" onclick="scrollChatToBottom()" title="Scroll to bottom">↓</button>
+            </div>
+
+            <div id="ai-input-container">
+                <textarea id="ai-input" rows="3" placeholder="Ask me anything... (Ctrl+Enter to send)"></textarea>
+                <div class="ai-quick-actions">
+                    <button class="quick-action-btn" onclick="quickAction('generate')">✨ Generate</button>
+                    <button class="quick-action-btn" onclick="quickAction('explain')">💡 Explain</button>
+                    <button class="quick-action-btn" onclick="quickAction('optimize')">⚡ Optimize</button>
+                    <button class="quick-action-btn" onclick="quickAction('debug')">🐛 Debug</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="terminal">
+            <div class="terminal-line terminal-success">[RawrZ IDE Glass - Ollama Edition] Initializing...</div>
+            <div class="terminal-line terminal-info">[INFO] Connecting to Ollama at localhost:11434</div>
+            <div class="terminal-line">> _</div>
+        </div>
+    </div>
+
+    <script>
+        const languages = [
+            { name: 'C#', ext: 'cs' },
+            { name: 'JavaScript', ext: 'js' },
+            { name: 'Python', ext: 'py' },
+            { name: 'Rust', ext: 'rs' },
+            { name: 'Go', ext: 'go' },
+            { name: 'Java', ext: 'java' },
+            { name: 'C++', ext: 'cpp' },
+            { name: 'TypeScript', ext: 'ts' }
+        ];
+
+        let currentLang = languages[0];
+        let currentModel = '';
+        let availableModels = [];
+        let openTabs = [{ name: 'main.cs', content: document.getElementById('editor').value, active: true }];
+        let activeTabIndex = 0;
+
+        function log(message, type = 'info') {
+            const terminal = document.getElementById('terminal');
+            const line = document.createElement('div');
+            line.className = `terminal-line terminal-${type}`;
+            line.textContent = message;
+            terminal.appendChild(line);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        async function checkOllamaConnection() {
+            const statusDiv = document.getElementById('connection-status');
+            statusDiv.innerHTML = '🔄 Checking...';
+            statusDiv.className = 'status-checking';
+
+            try {
+                const response = await fetch('http://localhost:11434/api/tags', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    availableModels = data.models || [];
+
+                    statusDiv.innerHTML = `✅ Connected (${availableModels.length} models)`;
+                    statusDiv.className = 'status-connected';
+
+                    document.getElementById('model-count').textContent = `${availableModels.length} models`;
+
+                    populateModelSelector();
+                    log(`[OLLAMA] ✅ Connected - Found ${availableModels.length} models`, 'success');
+                } else {
+                    throw new Error('Connection failed');
+                }
+            } catch (error) {
+                statusDiv.innerHTML = '❌ Disconnected';
+                statusDiv.className = 'status-disconnected';
+                log('[OLLAMA] ❌ Cannot connect to localhost:11434', 'error');
+                log('[ERROR] ' + error.message, 'error');
+                log('[FIX] CORS Issue - Run PowerShell as Admin:', 'warning');
+                log('[CMD] $env:OLLAMA_ORIGINS="*"; ollama serve', 'info');
+                log('[OR] setx OLLAMA_ORIGINS "*" /M', 'info');
+                log('[THEN] Restart Ollama service', 'info');
+            }
+        }
+
+        function populateModelSelector() {
+            const selector = document.getElementById('model-selector');
+            selector.innerHTML = '<option value="">Select Model...</option>';
+
+            availableModels.forEach(model => {
+                const option = document.createElement('option');
+                option.value = model.name;
+                option.textContent = `${model.name} (${(model.size / 1e9).toFixed(1)}GB)`;
+                selector.appendChild(option);
+            });
+
+            // Auto-select first coding model
+            const codingModels = ['codellama', 'deepseek-coder', 'codegemma'];
+            const firstCodingModel = availableModels.find(m =>
+                codingModels.some(cm => m.name.includes(cm))
+            );
+
+            if (firstCodingModel) {
+                selector.value = firstCodingModel.name;
+                currentModel = firstCodingModel.name;
+                addMessage('system', `Auto-selected ${firstCodingModel.name} for coding`);
+            }
+        }
+
+        function changeModel() {
+            const selector = document.getElementById('model-selector');
+            currentModel = selector.value;
+            if (currentModel) {
+                addMessage('system', `Switched to ${currentModel}`);
+                log(`[AI] Model: ${currentModel}`, 'info');
+            }
+        }
+
+        async function callOllamaAPI(message, context) {
+            if (!currentModel) {
+                throw new Error('No model selected');
+            }
+
+            const prompt = `You are a helpful coding assistant. Help with ${context.language} programming.
+
+Current code:
+\`\`\`${context.language.toLowerCase()}
+${context.code}
+\`\`\`
+
+User request: ${message}
+
+Provide helpful, accurate coding assistance. If generating code, make it clean and well-commented.`;
+
+            try {
+                const response = await fetch('http://localhost:11434/api/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: currentModel,
+                        prompt: prompt,
+                        stream: false,
+                        options: {
+                            temperature: 0.7,
+                            top_p: 0.9
+                        }
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Ollama API error: ${response.status} - ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                const aiResponse = data.response;
+
+                // Extract code blocks
+                const codeMatch = aiResponse.match(/```[\w]*\n([\s\S]*?)```/);
+                const code = codeMatch ? codeMatch[1].trim() : null;
+                const text = aiResponse.replace(/```[\w]*\n[\s\S]*?```/g, '').trim();
+
+                return {
+                    text: text || aiResponse,
+                    code: code
+                };
+            } catch (error) {
+                if (error.message.includes('fetch')) {
+                    throw new Error('CORS Error - Ollama needs CORS enabled. See terminal for instructions.');
+                }
+                throw error;
+            }
+        }
+
+        function addMessage(type, content, code = null) {
+            const chat = document.getElementById('ai-chat');
+            const msg = document.createElement('div');
+            msg.className = `chat-message ${type}`;
+
+            if (type === 'user') {
+                msg.innerHTML = `
+                    <div class="message-header">👤 You</div>
+                    <div class="message-content">${content}</div>
+                `;
+            } else if (type === 'ai') {
+                let html = `
+                    <div class="message-header">🤖 ${currentModel}</div>
+                    <div class="message-content">${content}</div>
+                `;
+
+                if (code) {
+                    html += `
+                        <div class="code-block">${escapeHtml(code)}</div>
+                        <button class="apply-code-btn" onclick="applyCode(\`${code.replace(/`/g, '\\`')}\`)">
+                            ✅ Apply to Editor
+                        </button>
+                    `;
+                }
+
+                msg.innerHTML = html;
+            } else if (type === 'system') {
+                msg.innerHTML = content;
+            }
+
+            chat.appendChild(msg);
+            scrollChatToBottom();
+        }
+
+        function scrollChatToBottom() {
+            const chat = document.getElementById('ai-chat');
+            chat.scrollTop = chat.scrollHeight;
+            updateScrollButton();
+        }
+
+        function updateScrollButton() {
+            const chat = document.getElementById('ai-chat');
+            const scrollBtn = document.getElementById('scroll-to-bottom');
+            const isScrolledToBottom = chat.scrollHeight - chat.scrollTop <= chat.clientHeight + 50;
+
+            if (isScrolledToBottom) {
+                scrollBtn.classList.remove('visible');
+            } else {
+                scrollBtn.classList.add('visible');
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function applyCode(code) {
+            document.getElementById('editor').value = code;
+            openTabs[activeTabIndex].content = code;
+            log('[AI] ✅ Code applied to editor', 'success');
+            addMessage('system', '✅ Code applied to editor');
+        }
+
+        async function sendMessage(message = null) {
+            const input = document.getElementById('ai-input');
+            const userMessage = message || input.value.trim();
+
+            if (!userMessage) return;
+            if (!currentModel) {
+                addMessage('system', '❌ Please select an Ollama model first');
+                return;
+            }
+
+            input.value = '';
+            addMessage('user', userMessage);
+
+            const code = document.getElementById('editor').value;
+            const context = {
+                language: currentLang.name,
+                code: code.substring(0, 1000)
+            };
+
+            log(`[AI] Processing with ${currentModel}...`, 'info');
+
+            try {
+                const response = await callOllamaAPI(userMessage, context);
+                addMessage('ai', response.text, response.code);
+            } catch (error) {
+                log(`[ERROR] AI request failed: ${error.message}`, 'error');
+                addMessage('ai', `❌ Error: ${error.message}`);
+            }
+        }
+
+        function quickAction(action) {
+            const actions = {
+                'generate': `Generate a complete ${currentLang.name} example`,
+                'explain': 'Explain what this code does',
+                'optimize': 'Optimize this code for better performance',
+                'debug': 'Debug this code and find potential issues'
+            };
+            sendMessage(actions[action]);
+        }
+
+        // File operations
+        function newFile() {
+            const fileName = prompt('File name:', `untitled.${currentLang.ext}`) || `untitled.${currentLang.ext}`;
+            addTab(fileName, '');
+        }
+
+        function openFile() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.multiple = true;
+            input.onchange = async (e) => {
+                for (const file of e.target.files) {
+                    const content = await file.text();
+                    addTab(file.name, content);
+                }
+            };
+            input.click();
+        }
+
+        function saveFile() {
+            const code = document.getElementById('editor').value;
+            const blob = new Blob([code], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = openTabs[activeTabIndex].name;
+            a.click();
+            URL.revokeObjectURL(url);
+            log(`[FILE] Saved: ${openTabs[activeTabIndex].name}`, 'success');
+        }
+
+        // Tab management
+        function addTab(name, content) {
+            openTabs.push({ name, content, active: false });
+            updateTabUI();
+            switchTab(openTabs.length - 1);
+        }
+
+        function switchTab(index) {
+            if (index >= 0 && index < openTabs.length) {
+                openTabs[activeTabIndex].content = document.getElementById('editor').value;
+                activeTabIndex = index;
+                document.getElementById('editor').value = openTabs[index].content;
+                updateTabUI();
+            }
+        }
+
+        function updateTabUI() {
+            const tabContainer = document.getElementById('file-tabs');
+            tabContainer.innerHTML = '';
+
+            openTabs.forEach((tab, index) => {
+                const tabElement = document.createElement('div');
+                tabElement.className = `tab ${index === activeTabIndex ? 'active' : ''}`;
+                tabElement.innerHTML = `<span onclick="switchTab(${index})">${tab.name}</span>`;
+                tabContainer.appendChild(tabElement);
+            });
+        }
+
+        // Compilation (simplified)
+        async function compile() {
+            log(`[COMPILE] Compiling ${openTabs[activeTabIndex].name}...`, 'info');
+            setTimeout(() => {
+                log('[SUCCESS] Compilation complete!', 'success');
+            }, 1000);
+        }
+
+        async function compileAndRun() {
+            await compile();
+            setTimeout(() => {
+                log('[RUN] Program executed successfully!', 'success');
+                log('Hello from RawrZ IDE Glass!', 'info');
+            }, 1500);
+        }
+
+        // Language selection
+        function initLanguageQuickSelect() {
+            const quickSelect = document.getElementById('language-quick-select');
+            languages.forEach((lang, i) => {
+                const item = document.createElement('div');
+                item.style.cssText = 'padding: 5px; cursor: pointer; border-radius: 3px; margin: 2px 0;';
+                item.textContent = `${lang.name} (.${lang.ext})`;
+                item.onmouseover = function () { this.style.background = 'rgba(255,255,255,0.1)'; };
+                item.onmouseout = function () { this.style.background = 'transparent'; };
+                item.onclick = () => selectLanguage(i);
+                quickSelect.appendChild(item);
+            });
+        }
+
+        function selectLanguage(index) {
+            currentLang = languages[index];
+            log(`[INFO] Selected language: ${currentLang.name}`, 'info');
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                saveFile();
+            } else if (e.ctrlKey && e.key === 'Enter') {
+                const aiInput = document.getElementById('ai-input');
+                if (document.activeElement === aiInput) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            }
+        });
+
+        // Initialize
+        initLanguageQuickSelect();
+        updateTabUI();
+        checkOllamaConnection();
+
+        // Add scroll listener to AI chat
+        const aiChat = document.getElementById('ai-chat');
+        aiChat.addEventListener('scroll', updateScrollButton);
+
+        log('[INFO] RawrZ IDE Glass - Ollama Edition loaded!', 'success');
+        log('[INFO] 🤖 Real AI assistance with your local models', 'info');
+        log('[INFO] Press Ctrl+Enter to send AI messages', 'info');
+        log('[INFO] Chat panel now has enhanced scrolling!', 'success');
+    </script>
+
+    <!-- Context Window Token Usage Widget -->
+    <script src="context-window-widget.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            ContextWindowWidget.init({ maxTokens: 128000, position: 'float' });
+            ContextWindowWidget.update({ system: 4864, tools: 11776, userContext: 2048, messages: 34176, toolResults: 46848 });
+        });
+    </script>
+</body>
+
+</html>

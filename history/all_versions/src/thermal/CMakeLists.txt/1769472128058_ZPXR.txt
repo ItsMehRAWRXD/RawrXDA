@@ -1,0 +1,74 @@
+# CMakeLists.txt for Thermal Dashboard Plugin
+# Builds thermal_dashboard.dll for hot-injection into RawrXD IDE
+
+cmake_minimum_required(VERSION 3.16)
+
+# Find Qt6
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
+
+# Plugin sources
+set(THERMAL_PLUGIN_SOURCES
+    thermal_dashboard_plugin.cpp
+    RAWRXD_ThermalDashboard.cpp
+)
+
+set(THERMAL_PLUGIN_HEADERS
+    thermal_dashboard_plugin.hpp
+    RAWRXD_ThermalDashboard.hpp
+    predictive_throttling.hpp
+    dynamic_load_balancer.hpp
+)
+
+# Build as shared library (DLL on Windows)
+add_library(thermal_dashboard SHARED
+    ${THERMAL_PLUGIN_SOURCES}
+    ${THERMAL_PLUGIN_HEADERS}
+)
+
+# Qt6 setup
+set_target_properties(thermal_dashboard PROPERTIES
+    AUTOMOC ON
+    AUTOUIC ON
+    AUTORCC ON
+    CXX_STANDARD 20
+    CXX_STANDARD_REQUIRED ON
+    # Plugin output name
+    OUTPUT_NAME "thermal_dashboard"
+    # Versioning
+    VERSION 1.2.0
+    SOVERSION 1
+    # Windows DLL export
+    WINDOWS_EXPORT_ALL_SYMBOLS ON
+)
+
+target_link_libraries(thermal_dashboard PRIVATE
+    Qt6::Core
+    Qt6::Widgets
+)
+
+target_include_directories(thermal_dashboard PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/include
+)
+
+# Copy plugin metadata
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/thermal_dashboard.json
+    ${CMAKE_BINARY_DIR}/plugins/thermal_dashboard.json
+    COPYONLY
+)
+
+# Install to plugins directory
+install(TARGETS thermal_dashboard
+    LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/plugins
+    RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/plugins
+)
+
+install(FILES thermal_dashboard.json
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/plugins
+)
+
+# Output status
+message(STATUS "✓ thermal_dashboard.dll configured for hot-injection")
+message(STATUS "  Sources: ${THERMAL_PLUGIN_SOURCES}")
+message(STATUS "  Output: ${CMAKE_BINARY_DIR}/bin/thermal_dashboard.dll")

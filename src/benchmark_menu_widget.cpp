@@ -359,6 +359,10 @@ void BenchmarkSelector::deselectAll() {
 // BenchmarkLogOutput
 // ============================================================================
 
+void BenchmarkLogOutput::attach(HWND hwnd) {
+    m_hwnd = hwnd;
+}
+
 void BenchmarkLogOutput::logMessage(const std::string& message, LogLevel level) {
     formatLog(message, level);
 }
@@ -551,6 +555,10 @@ void BenchmarkMenu::openBenchmarkDialog() {
         ShowWindow(dialogHwnd_, SW_SHOW);
         SetForegroundWindow(dialogHwnd_);
     }
+}
+
+void BenchmarkMenu::show() {
+    openBenchmarkDialog();
 }
 
 void BenchmarkMenu::runSelectedBenchmarks() {

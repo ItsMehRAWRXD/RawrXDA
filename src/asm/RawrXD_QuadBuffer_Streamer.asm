@@ -183,6 +183,8 @@ QB_CONTEXT              ENDS
 ; -----------------------------------------------------------------------------
 ; External Imports (Windows API)
 ; -----------------------------------------------------------------------------
+INCLUDE rawr_globals.inc
+
 EXTERN CreateFileW:PROC
 EXTERN ReadFile:PROC
 EXTERN SetFilePointerEx:PROC
@@ -306,6 +308,13 @@ QB_CopyNonTemporal PROC FRAME
 
     mov     rdi, rcx
     mov     rsi, rdx
+
+    ; ── Runtime AVX-512 gate ────────────────────────────────────────────
+    ; If AVX-512 is not available, fall through to the rep movsb path.
+    ; This prevents #UD on Zen 2/3 or any CPU lacking AVX-512 XSTATE.
+    cmp     g_HasAVX512F, 1
+    jne     @nt_fallback_movsb
+
     mov     rax, r8
     shr     rax, 6                          ; /64 = number of ZMM iterations
 
@@ -336,6 +345,14 @@ QB_CopyNonTemporal PROC FRAME
 
 @nt_done:
     vzeroupper
+    pop     rsi
+    pop     rdi
+    ret
+
+@nt_fallback_movsb:
+    ; Fallback for non-AVX-512 CPUs: plain rep movsb (ERMS-optimized)
+    mov     rcx, r8
+    rep movsb
     pop     rsi
     pop     rdi
     ret

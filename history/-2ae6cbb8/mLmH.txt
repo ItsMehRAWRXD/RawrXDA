@@ -1,0 +1,2889 @@
+cmake_minimum_required(VERSION 3.20)
+
+# =============================================================================
+# Windows SDK & MSVC CRT Path Resolution (Phase 41 Build Fix)
+# =============================================================================
+# MUST run before project() because CMake's compiler test needs these paths.
+# The environment on this machine has partial SDK installs:
+#   10.0.22621.0 — has ucrt, shared, um includes BUT um/x64 libs are separate
+#   10.0.26100.0 — has um/shared includes and um/x64 libs BUT no ucrt
+# We combine them to form a complete toolchain.
+if(WIN32 AND NOT DEFINED ENV{VSCMD_ARG_TGT_ARCH})
+    # Not running inside a VS Developer Prompt — inject paths manually
+    # Auto-detect Windows SDK: try D: first, fall back to C:
+    if(EXISTS "D:/Program Files (x86)/Windows Kits/10")
+        set(_WIN10_SDK_ROOT "D:/Program Files (x86)/Windows Kits/10")
+    else()
+        set(_WIN10_SDK_ROOT "C:/Program Files (x86)/Windows Kits/10")
+    endif()
+    set(_SDK_UCRT_VER "10.0.22621.0")    # Has ucrt
+    
+    # Force use of 22621.0 since 26100.0 is not registered properly for MSBuild
+    set(_SDK_UM_VER "10.0.22621.0")
+    
+    # Fallback: if 10.0.26100.0 doesn't exist for um, try 10.0.22621.0 for everything
+    if(NOT EXISTS "${_WIN10_SDK_ROOT}/Include/${_SDK_UM_VER}/um/windows.h")
+        set(_SDK_UM_VER "${_SDK_UCRT_VER}")
+    endif()
+    if(NOT EXISTS "${_WIN10_SDK_ROOT}/Include/${_SDK_UCRT_VER}/ucrt")
+        set(_SDK_UCRT_VER "${_SDK_UM_VER}")
+    endif()
+
+    # Auto-detect MSVC toolchain: try D: first, fall back to C:
+    if(EXISTS "D:/VS2022Enterprise/VC/Tools/MSVC")
+        file(GLOB _MSVC_VERS "D:/VS2022Enterprise/VC/Tools/MSVC/*")
+    elseif(EXISTS "C:/VS2022Enterprise/VC/Tools/MSVC")
+        file(GLOB _MSVC_VERS "C:/VS2022Enterprise/VC/Tools/MSVC/*")
+    elseif(EXISTS "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC")
+        file(GLOB _MSVC_VERS "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/*")
+    else()
+        set(_MSVC_VERS "")
+    endif()
+    if(_MSVC_VERS)
+        list(SORT _MSVC_VERS)
+        list(GET _MSVC_VERS -1 _MSVC_ROOT)
+    else()
+        set(_MSVC_ROOT "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207")
+    endif()
+    
+    # SDK bin tools (rc.exe, mt.exe)
+    set(_SDK_BIN "${_WIN10_SDK_ROOT}/bin/${_SDK_UCRT_VER}/x64")
+    
+    # Build INCLUDE and LIB environment strings
+    set(ENV{INCLUDE} "${_MSVC_ROOT}/include;${_WIN10_SDK_ROOT}/Include/${_SDK_UCRT_VER}/ucrt;${_WIN10_SDK_ROOT}/Include/${_SDK_UM_VER}/shared;${_WIN10_SDK_ROOT}/Include/${_SDK_UM_VER}/um")
+    # MSVC 14.50+ ships CRT in lib/onecore/x64 instead of lib/x64, include both
+    set(ENV{LIB} "${_MSVC_ROOT}/lib/x64;${_MSVC_ROOT}/lib/onecore/x64;${_WIN10_SDK_ROOT}/Lib/${_SDK_UCRT_VER}/ucrt/x64;${_WIN10_SDK_ROOT}/Lib/${_SDK_UM_VER}/um/x64")
+    set(ENV{PATH} "$ENV{PATH};${_SDK_BIN};${_MSVC_ROOT}/bin/Hostx64/x64")
+    
+    # Tell CMake where the SDK tools are
+    set(CMAKE_MT "${_SDK_BIN}/mt.exe" CACHE FILEPATH "Manifest Tool" FORCE)
+    set(CMAKE_RC_COMPILER "${_SDK_BIN}/rc.exe" CACHE FILEPATH "Resource Compiler" FORCE)
+    set(CMAKE_C_COMPILER "${_MSVC_ROOT}/bin/Hostx64/x64/cl.exe" CACHE FILEPATH "C Compiler" FORCE)
+    set(CMAKE_CXX_COMPILER "${_MSVC_ROOT}/bin/Hostx64/x64/cl.exe" CACHE FILEPATH "C++ Compiler" FORCE)
+    set(CMAKE_LINKER "${_MSVC_ROOT}/bin/Hostx64/x64/link.exe" CACHE FILEPATH "Linker" FORCE)
+    set(CMAKE_ASM_MASM_COMPILER "${_MSVC_ROOT}/bin/Hostx64/x64/ml64.exe" CACHE FILEPATH "MASM64" FORCE)
+    
+    message(STATUS "[SDK Fix] INCLUDE = $ENV{INCLUDE}")
+    message(STATUS "[SDK Fix] LIB     = $ENV{LIB}")
+    message(STATUS "[SDK Fix] MT      = ${_SDK_BIN}/mt.exe")
+endif()
+
+# Force Windows SDK version for VS generator (avoid 10.0.26100.0 if not installed)
+if(WIN32)
+    set(CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION "10.0.22621.0" CACHE STRING "Windows SDK version for VS generator" FORCE)
+endif()
+
+project(RawrEngine VERSION 7.4.0 LANGUAGES C CXX)
+
+# Default to Release builds (prevents /RTC1 + /O2 clash on Ninja single-config)
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+    message(STATUS "[Build] Defaulting CMAKE_BUILD_TYPE to Release")
+endif()
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Static link MSVC runtime — no vcruntime140.dll dependency
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
+add_definitions(-D_CRT_SECURE_NO_WARNINGS -DNOMINMAX -DWIN32_LEAN_AND_MEAN)
+
+# =============================================================================
+# Persistent SDK Include/Lib Paths (Phase 41 Build Fix)
+# =============================================================================
+# set(ENV{...}) only works during configure. These persist into build commands.
+if(WIN32 AND MSVC)
+    # Auto-detect SDK root: try D: first, fall back to C:
+    if(EXISTS "D:/Program Files (x86)/Windows Kits/10")
+        set(_WIN10_SDK_ROOT "D:/Program Files (x86)/Windows Kits/10")
+    else()
+        set(_WIN10_SDK_ROOT "C:/Program Files (x86)/Windows Kits/10")
+    endif()
+    set(_SDK_VER "10.0.22621.0")
+    # Auto-detect MSVC Build Tools root
+    if(DEFINED _MSVC_ROOT AND EXISTS "${_MSVC_ROOT}")
+        set(_MSVC_BT_ROOT "${_MSVC_ROOT}")
+    elseif(EXISTS "D:/VS2022Enterprise/VC/Tools/MSVC")
+        file(GLOB _BT_VERS "D:/VS2022Enterprise/VC/Tools/MSVC/*")
+        list(SORT _BT_VERS)
+        list(GET _BT_VERS -1 _MSVC_BT_ROOT)
+    elseif(EXISTS "C:/VS2022Enterprise/VC/Tools/MSVC")
+        file(GLOB _BT_VERS "C:/VS2022Enterprise/VC/Tools/MSVC/*")
+        list(SORT _BT_VERS)
+        list(GET _BT_VERS -1 _MSVC_BT_ROOT)
+    else()
+        set(_MSVC_BT_ROOT "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207")
+    endif()
+
+    include_directories(SYSTEM
+        "${_MSVC_BT_ROOT}/include"
+        "${_WIN10_SDK_ROOT}/Include/${_SDK_VER}/ucrt"
+        "${_WIN10_SDK_ROOT}/Include/${_SDK_VER}/shared"
+        "${_WIN10_SDK_ROOT}/Include/${_SDK_VER}/um"
+        "${_WIN10_SDK_ROOT}/Include/${_SDK_VER}/winrt"
+    )
+    link_directories(
+        "${_MSVC_BT_ROOT}/lib/x64"
+        "${_MSVC_BT_ROOT}/lib/onecore/x64"
+        "${_WIN10_SDK_ROOT}/Lib/${_SDK_VER}/ucrt/x64"
+        "${_WIN10_SDK_ROOT}/Lib/${_SDK_VER}/um/x64"
+    )
+    message(STATUS "[Build Paths] MSVC CRT: ${_MSVC_BT_ROOT}")
+    message(STATUS "[Build Paths] SDK ${_SDK_VER}: ucrt + um + shared")
+endif()
+
+# =============================================================================
+# MASM64 Assembly Kernel Support
+# =============================================================================
+# Enable ASM_MASM only on MSVC (ml64.exe required).
+# MinGW builds skip ASM kernels and use C++ fallbacks.
+if(MSVC)
+    enable_language(ASM_MASM)
+    set(CMAKE_ASM_MASM_FLAGS "/c /Zi /Zd /I\"${CMAKE_CURRENT_SOURCE_DIR}/src/asm\"")
+    set(RAWR_HAS_MASM TRUE)
+    add_definitions(-DRAWR_HAS_MASM=1)
+    add_definitions(-DRAWRXD_LINK_QUADBUFFER_ASM=1)
+    add_definitions(-DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1)
+    add_definitions(-DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1)
+    add_definitions(-DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1)
+    message(STATUS "MASM64 enabled: ASM kernels will be compiled")
+else()
+    set(RAWR_HAS_MASM FALSE)
+    message(STATUS "MASM64 not available (non-MSVC): using C++ fallbacks")
+endif()
+
+# ASM kernel sources (shared between RawrEngine and Win32IDE)
+if(RAWR_HAS_MASM)
+    set(ASM_KERNEL_SOURCES
+        src/asm/inference_core.asm
+        src/asm/FlashAttention_AVX512.asm
+        src/asm/quant_avx2.asm
+        src/asm/RawrXD_KQuant_Dequant.asm
+        src/asm/memory_patch.asm
+        src/asm/byte_search.asm
+        src/asm/request_patch.asm
+        src/asm/inference_kernels.asm
+        src/asm/model_bridge_x64.asm
+        src/asm/RawrXD_DualAgent_Orchestrator.asm
+        src/asm/RawrXD_DiskRecoveryAgent.asm
+        src/asm/disk_recovery_scsi.asm
+        src/asm/RawrXD-AnalyzerDistiller.asm
+        src/asm/RawrXD-StreamingOrchestrator.asm
+        src/asm/RawrXD_Telemetry_Kernel.asm
+        src/asm/RawrXD_Prometheus_Exporter.asm
+        src/asm/RawrXD_SelfPatch_Agent.asm
+        src/asm/RawrXD_SourceEdit_Kernel.asm
+        src/asm/feature_dispatch_bridge.asm
+        src/asm/gui_dispatch_bridge.asm
+        src/asm/RawrXD_CopilotGapCloser.asm
+        src/asm/native_speed_kernels.asm
+        src/asm/DirectML_Bridge.asm
+        src/asm/RawrXD_Hotpatch_Kernel.asm
+        src/asm/RawrXD_Snapshot.asm
+        src/asm/RawrXD_Pyre_Compute.asm
+        src/asm/vision_projection_kernel.asm
+        # src/RawrXD_Complete_ReverseEngineered.asm  # excluded: fragment missing struct defs/includes
+    )
+    # Mark ASM files with MASM language property
+    set_source_files_properties(${ASM_KERNEL_SOURCES} PROPERTIES LANGUAGE ASM_MASM)
+    add_definitions(-DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1)
+    add_definitions(-DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1)
+    add_definitions(-DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1)
+    add_definitions(-DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1)
+    add_definitions(-DRAWRXD_LINK_VISION_PROJECTION_ASM=1)
+    add_definitions(-DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1)
+else()
+    set(ASM_KERNEL_SOURCES "")
+endif()
+
+find_package(Threads REQUIRED)
+
+set(SOURCES 
+    src/main.cpp
+    src/stubs.cpp
+    src/memory_core.cpp
+    src/hot_patcher.cpp
+    src/cpu_inference_engine.cpp
+    src/complete_server.cpp
+    src/agentic_engine.cpp
+    src/subagent_core.cpp
+    src/agent_history.cpp
+    src/agent_policy.cpp
+    src/agent_explainability.cpp
+    src/streaming_gguf_loader.cpp
+    src/utils/Diagnostics.cpp
+    src/gguf_loader.cpp
+    src/gguf_vocab_resolver.cpp
+    src/compression_interface.cpp
+    
+    src/engine/gguf_core.cpp
+    src/engine/inference_kernels.cpp
+    src/engine/transformer.cpp
+    src/engine/bpe_tokenizer.cpp
+    src/engine/sampler.cpp
+    src/engine/rawr_engine.cpp
+    src/engine/core_generator.cpp
+    src/engine/pyre_compute.cpp
+    src/engine/sovereign_engines.cpp
+    
+    src/codec/compression.cpp
+    src/codec/brutal_gzip.cpp
+
+    src/core/execution_scheduler.cpp
+    
+    # Agentic Decision Tree + CLI Autonomy (Phase 19)
+    src/cli/agentic_decision_tree.cpp
+    src/cli/cli_autonomy_loop.cpp
+    
+    # Headless CLI Systems (Phase 20: Safety, Confidence, Replay, Governor, Multi-Response, History, Policy, Explainability)
+    src/cli/cli_headless_systems.cpp
+    src/core/agent_safety_contract.cpp
+    src/core/confidence_gate.cpp
+    src/core/deterministic_replay.cpp
+    src/core/execution_governor.cpp
+    src/core/multi_response_engine.cpp
+    src/core/streaming_engine_registry.cpp
+    src/core/flash_attention.cpp
+    src/core/gpu_backend_bridge.cpp
+    
+    # Native speed layer + local AI core (zero-dependency inference)
+    src/core/native_speed_layer.cpp
+    src/core/local_ai_core.cpp
+    src/core/native_inference_pipeline.cpp
+    
+    # Layer Offload Manager — RAM streaming for 74B+ models on 16GB VRAM
+    src/core/layer_offload_manager.cpp
+    
+    # Three-layer hotpatch system (needed by decision tree)
+    src/core/model_memory_hotpatch.cpp
+    src/core/byte_level_hotpatcher.cpp
+    src/core/unified_hotpatch_manager.cpp
+    src/core/proxy_hotpatcher.cpp
+    src/core/model_bruteforce_engine.cpp
+    src/server/gguf_server_hotpatch.cpp
+    src/agent/agentic_hotpatch_orchestrator.cpp
+
+    # Singleton subsystems referenced by UnifiedHotpatchManager
+    src/core/agentic_task_graph.cpp
+    src/core/embedding_engine.cpp
+    src/core/vision_encoder.cpp
+
+    # Vision Pipeline Extensions (Token Gating, Embedding Cache, KV Isolation, Quantized Encoder, GPU Staging)
+    src/core/vision_token_gate.cpp
+    src/core/vision_embedding_cache.cpp
+    src/core/vision_kv_isolation.cpp
+    src/core/vision_quantized_encoder.cpp
+    src/core/vision_gpu_staging.cpp
+
+    src/marketplace/extension_marketplace.cpp
+    src/auth/rbac_engine.cpp
+
+    # Shadow-Page Detour + Sentinel Watchdog (Layer 6)
+    src/core/shadow_page_detour.cpp
+    src/core/sentinel_watchdog.cpp
+
+    # Agentic Loop State (iterative reasoning state machine)
+    src/agentic_loop_state.cpp
+
+    # Autonomous SubAgents — Bulk Fix Orchestration for models/swarms
+    src/agent/autonomous_subagent.cpp
+    src/agent/agentic_failure_detector.cpp
+    src/agent/agentic_puppeteer.cpp
+
+    # HTTP Client — WinHTTP/curl async with future retention
+    src/agent/llm_http_client.cpp
+    src/agent/model_invoker.cpp
+    src/agent/planner.cpp
+    src/agent/eval_framework.cpp
+
+    # LocalReasoningEngine — API-free static analysis + pattern detection (no Qt, no API key)
+    src/agent/local_reasoning_engine.cpp
+
+    # Agent Self-Repair (MASM64 self-patching kernel bridge)
+    src/agent/agent_self_repair.cpp
+    src/agent/agent_self_healing_orchestrator.cpp
+
+    # T3-D: Deterministic Replay Engine (DivergenceEvent + TelemetrySnapshot)
+    src/agentic/DeterministicReplayEngine.cpp
+    src/agentic/AgentToolHandlers.cpp
+
+    # T4: Autonomous Recovery Orchestrator (FailureClass → recovery → verify → commit)
+    src/agentic/autonomous_recovery_orchestrator.cpp
+
+    # T5: Agent Orchestrator + Bridge + Navigation (agentic brain wiring)
+    src/agentic/AgentOrchestrator.cpp
+    src/agentic/OrchestratorBridge.cpp
+    src/agentic/AgenticNavigator.cpp
+    src/agentic/RawrXD_ToolRegistry.cpp
+    src/agentic/ToolRegistry.cpp
+    src/agentic/RawrXD_AgentLoop.cpp
+    src/agentic/agentic_executor.cpp
+
+    # T6: Autonomous Repair Orchestrator + Agent Memory Indexer
+    src/core/auto_repair_orchestrator.cpp
+    src/core/agent_memory_indexer.cpp
+
+    # Disk Recovery Agent (C++ wrapper for ASM SCSI kernel)
+    src/agent/DiskRecoveryAgent.cpp
+    
+    # Phase 21: Distributed Swarm Bridge + Universal Model Hotpatcher
+    src/core/swarm_decision_bridge.cpp
+    src/core/universal_model_hotpatcher.cpp
+    
+    # Phase 22: Production Release Engineering
+    src/core/production_release.cpp
+    
+    # Phase 20: WebRTC P2P Signaling
+    src/core/webrtc_signaling.cpp
+    
+    # Phase 23: GPU Kernel Auto-Tuner
+    src/core/gpu_kernel_autotuner.cpp
+    
+    # Phase 24: Windows Sandbox Integration
+    src/core/sandbox_integration.cpp
+    
+    # Phase 25: AMD/ATI GPU Acceleration Toggle
+    src/core/amd_gpu_accelerator.cpp
+    
+    # Phase 29: Multi-Architecture GPU/Accelerator Backends
+    src/core/intel_gpu_accelerator.cpp
+    src/core/arm64_gpu_accelerator.cpp
+    src/core/cerebras_wse_accelerator.cpp
+    
+    # Phase 30: Unified Accelerator Router
+    src/core/accelerator_router.cpp
+    
+    # Phase 29.2: GSI Hash Table + TPI Type Parser
+    src/core/pdb_gsi_hash.cpp
+    
+    # Phase 29: Native PDB Parser (required by pdb_reference_provider)
+    src/core/pdb_native.cpp
+    
+    # Phase 29.2: Multi-Reference Provider + Tools/Instructions Hook
+    src/core/pdb_reference_provider.cpp
+    
+    # Missing link dependencies (enterprise license, swarm, flash attn stubs, tool registry)
+    src/core/enterprise_license.cpp
+    src/core/enterprise_license_stubs.cpp
+    src/core/camellia256_bridge.cpp
+    src/core/swarm_coordinator.cpp
+    src/core/swarm_worker.cpp
+    src/core/swarm_network_stubs.cpp
+    src/tool_registry.cpp
+
+    # Stubgen: AnalyzerDistiller + StreamingOrchestrator (C++ fallbacks, guarded by RAWR_HAS_MASM)
+    src/core/analyzer_distiller_stubs.cpp
+    src/core/streaming_orchestrator_stubs.cpp
+
+    # PT Driver Contract — Page Table substrate (VEH watchpoints, COW snapshots, ASLR, large pages)
+    src/core/pt_driver_contract.cpp
+
+    # Phase 21: Distributed Swarm Inference Orchestrator
+    src/cli/swarm_orchestrator.cpp
+
+    # Phase 33: Voice Chat Engine
+    src/core/voice_chat.cpp
+
+    # Phase 44: Voice Automation — Toggleable TTS Response Reader
+    src/core/voice_automation.cpp
+
+    # DirectML GPU Inference Engine — D3D12 + DML operators for transformer forward pass
+    src/core/directml_compute.cpp
+    src/core/gguf_dml_bridge.cpp
+    src/core/dml_streaming_integration.cpp
+    src/dml_inference_engine.cpp
+
+    # Agentic Watchdog — .text Section Integrity Verification Service
+    src/core/watchdog_service.cpp
+
+    # Phase 33: Quick-Win Ports
+    src/core/shortcut_manager.cpp
+    src/core/backup_manager.cpp
+    src/core/alert_system.cpp
+
+    # Shared Feature Dispatch System (CLI + GUI unified command routing)
+    # NOTE: shared_feature_dispatch.cpp REMOVED — its 4 extern "C" symbols are
+    # superseded by unified_command_dispatch.cpp (superset with AutoRegistrar)
+    src/core/feature_registration.cpp
+    src/core/feature_handlers.cpp
+    src/core/auto_feature_registry.cpp
+    src/core/intent_engine.cpp
+    src/core/missing_handler_stubs.cpp
+    src/core/model_training_pipeline.cpp
+    src/core/ssot_handlers.cpp
+    src/core/ssot_handlers_ext.cpp
+    src/core/ssot_validation.cpp
+
+    # Unified Command Dispatch — Zero-drift SSOT dispatch (replaces manual registration)
+    src/core/unified_command_dispatch.cpp
+
+    # Phase 32A: Chain-of-Thought Multi-Model Review Engine
+    src/core/chain_of_thought_engine.cpp
+
+    # Phase 32B: Tunable Reasoning Pipeline (P-Settings Orchestrator)
+    src/core/reasoning_profile.cpp
+    src/core/reasoning_pipeline_orchestrator.cpp
+    src/core/reasoning_cot_bridge.cpp
+
+    # Phase 36: Cross-Process MMF State Synchronization (shared with Win32IDE)
+    src/core/rawrxd_state_mmf.cpp
+
+    # Phase 46: VulkanKernel — Full GPU Compute Engine (SPIR-V, Flash Attn v2, Fused MLP)
+    src/vulkan_compute.cpp
+
+    # Phase 46: Live Binary Patcher — Layer 5 Hotpatch (trampolines, code-page swap, RVA reloc)
+    src/core/live_binary_patcher.cpp
+
+    # Phase 37: Iterative Partial Inference with Adaptive Tensor Traversal
+    src/core/traversal_strategy.cpp
+    src/core/layer_contribution_scorer.cpp
+    src/core/semantic_delta_tracker.cpp
+    src/core/cross_run_tensor_cache.cpp
+    src/core/convergence_controller.cpp
+    src/core/iterative_tensor_traversal.cpp
+
+    # ═══════════════════════════════════════════════════════════════════
+    # Cursor-Parity Gaps — META prerequisites + GAP 1-10
+    # ═══════════════════════════════════════════════════════════════════
+
+    # META 1: SQLite RAII Wrapper + Real Amalgamation
+    src/core/sqlite_wrapper.cpp
+    src/core/sqlite3.c           # Real sqlite3 amalgamation (sqlite.org 3.47.2)
+
+    # META 2: Work-Stealing Thread Pool
+    src/core/thread_pool.cpp
+
+    # META 3: Memory Pressure Handler
+    src/core/memory_pressure_handler.cpp
+
+    # META 4: JSON-RPC 2.0 Parser
+    src/core/jsonrpc_parser.cpp
+
+    # GAP 1: Multi-File Atomic Transactions + WAL Journal
+    src/agentic/multi_file_transaction.cpp
+    src/core/transaction_journal.cpp
+
+    # GAP 1.5: Agentic Transaction Layer (Cursor-Composer-class orchestration)
+    src/agentic/agentic_transaction.cpp
+
+    # GAP 2: HNSW Vector Index
+    src/core/vector_index.cpp
+
+    # GAP 3: Model Cascade Router (Thompson Sampling)
+    src/agentic/model_cascade.cpp
+
+    # GAP 4: Ghost-Text Context Assembler
+    src/agentic/context_assembler.cpp
+
+    # GAP 5: Chat Message Renderer (Markdown → HTML)
+    src/ui/chat_message_renderer.cpp
+    src/ui/tool_action_status.cpp
+    src/ui/chat_panel.cpp
+
+    # Cathedral Hardening (5.0 Readiness)
+    src/core/crash_containment.cpp
+    src/core/patch_rollback_ledger.cpp
+    src/core/quant_hysteresis.cpp
+    src/core/masm_stress_harness.cpp
+    src/core/perf_telemetry.cpp
+    src/core/convergence_stress_harness.cpp
+
+    # GAP 6: Git Context Provider (CLI subprocess)
+    src/git/git_context.cpp
+
+    # GAP 7: LSP Diagnostic Consumer + Quick-Fix
+    src/lsp/diagnostic_consumer.cpp
+
+    # GAP 8: Jinja2-Style Prompt Template Engine
+    src/core/prompt_template_engine.cpp
+
+    # GAP 9: Speculative Decoder v2 (Draft-Verify-Accept)
+    src/gpu/speculative_decoder_v2.cpp
+
+    # GAP 10: Completion Feedback (Online Logistic Regression)
+    src/telemetry/completion_feedback.cpp
+
+    # T3-D: Replay + Telemetry Fusion Engine
+    src/telemetry/replay_telemetry_fusion.cpp
+
+    # T3-D: Hotpatch Telemetry Safety Layer
+    src/telemetry/hotpatch_telemetry_safety.cpp
+
+    # Unified Telemetry Core — single entry point for all telemetry layers
+    src/telemetry/UnifiedTelemetryCore.cpp
+
+    # ═══════════════════════════════════════════════════════════════════
+    # GPU + Agentic + UI Integration (STL/Win32 native)
+    # ═══════════════════════════════════════════════════════════════════
+
+    # GPU Backend — Vulkan/CUDA/CPU fallback chain (fprintf logging)
+    src/gpu/gpu_backend.cpp
+
+    # KV-Cache Optimizer — sliding-window eviction, std::chrono timing
+    src/gpu/kv_cache_optimizer.cpp
+
+    # Speculative Decoder v1 — draft/verify with std::mt19937 RNG
+    src/gpu/speculative_decoder.cpp
+
+    # Agentic Controller — callback-based event loop (no QObject/signals)
+    src/agentic_controller.cpp
+
+    # Phase 2 UI Integration — Win32 MessageBox, std::filesystem, std::function callbacks
+    src/ui/phase2_integration_example.cpp
+
+    # Multi-Model Benchmark Tool — has its own main(), built as separate target
+    # src/tools/multi_model_benchmark.cpp  # EXCLUDED: duplicate main() symbol
+
+    # Agentic Agent Coordinator — multi-agent lifecycle (ctor, dtor, createAgent, synchronize)
+    src/agentic_agent_coordinator.cpp
+
+    # Production Config Manager — singleton config loader (instance, loadConfig, value)
+    src/production_config_manager.cpp
+
+    # ═══════════════════════════════════════════════════════════════════
+    # Valuation-Critical Platform Subsystems (>2× step-up from $40M baseline)
+    # ═══════════════════════════════════════════════════════════════════
+
+    # Autonomous End-to-End Workflow Engine (scan → bulk_fix → verify → build → test → diff)
+    src/core/autonomous_workflow_engine.cpp
+
+    # Workspace-Level Reasoning Profiles (fast/dev/critical per repo)
+    src/core/workspace_reasoning_profiles.cpp
+
+    # Deterministic Swarm Reproducibility (same input + seed = same result)
+    src/core/deterministic_swarm.cpp
+
+    # Safe-by-Default Bulk Refactor Engine + Diff-Aware Verification Gates
+    src/core/safe_refactor_engine.cpp
+
+    # Reasoning Schema Versioning (semver, migration, backwards-compatible)
+    src/core/reasoning_schema_versioning.cpp
+
+    # CoT Backend Disable/Fallback System (circuit breaker, graceful degradation)
+    src/core/cot_fallback_system.cpp
+
+    # Input Guard with Backend Slicing (OOM protection, chunk routing, budget)
+    src/core/input_guard_slicer.cpp
+
+    # ═══════════════════════════════════════════════════════════════════
+    # Autonomous-Fix Replay Harness (Deterministic Validation Layer)
+    # ═══════════════════════════════════════════════════════════════════
+    src/test_harness/replay_fixture.cpp
+    src/test_harness/replay_oracle.cpp
+    src/test_harness/replay_mock_inference.cpp
+    src/test_harness/replay_harness.cpp
+    src/test_harness/replay_reporter.cpp
+
+    # Phase 34: Instructions Context Provider — Read tools.instructions.md (All Lines)
+    src/core/instructions_provider.cpp
+
+    # Phase 13: Distributed Pipeline Orchestrator — DAG scheduling, work-stealing
+    src/core/distributed_pipeline_orchestrator.cpp
+
+    # Phase 14: Hotpatch Control Plane — Lifecycle, transactions, dependency graphs
+    src/core/hotpatch_control_plane.cpp
+
+    # Phase 15: Static Analysis Engine — CFG/SSA, dominators, optimizations
+    src/core/static_analysis_engine.cpp
+
+    # Phase 15b: Code Linter — Real-time syntax/semantic linting (C++, ASM, Python, JS)
+    src/core/code_linter.cpp
+
+    # Phase 16: Semantic Code Intelligence — Cross-refs, type inference, indexing
+    src/core/semantic_code_intelligence.cpp
+
+    # Phase 17: Enterprise Telemetry & Compliance — OTLP tracing, audit, GDPR
+    src/core/enterprise_telemetry_compliance.cpp
+
+    # Phase 50: Enterprise Hardening — Auto-Update, Swarm Reconciliation, Plugin Sandbox/Signature, Stress Tests
+    src/core/update_signature.cpp
+    src/core/cursor_github_parity_bridge.cpp
+    src/core/local_parity_bridge.cpp
+    src/core/swarm_reconciliation.cpp
+    src/core/quickjs_sandbox.cpp
+    src/core/plugin_signature.cpp
+    src/core/enterprise_stress_tests.cpp
+    src/core/auto_update_system.cpp
+
+    # ═══════════════════════════════════════════════════════════════════
+    # Autonomy Gap Closure — Phase A-D + Tier 1.4 + Tier 2.3
+    # ═══════════════════════════════════════════════════════════════════
+
+    # Phase A: Closed-Loop Verification (Write → Compile → Test → Fix)
+    src/agentic/autonomous_verification_loop.cpp
+
+    # Phase B: Continuous Background Daemon (proactive refactor, doc-sync, security)
+    src/agentic/autonomous_background_daemon.cpp
+
+    # Phase C: Long-Term Knowledge Graph (cross-session learning, decision memory)
+    src/core/knowledge_graph_core.cpp
+
+    # Phase D: Multi-Agent Conflict Resolution (merge negotiation, consensus)
+    src/core/swarm_conflict_resolver.cpp
+
+    # Tier 1.4: Autonomous Debugging & Root Cause Analysis (agent-driven breakpoints)
+    src/core/autonomous_debugger.cpp
+
+    # Tier 2.3: Autonomous Communication (standup reports, approval requests)
+    src/agentic/autonomous_communicator.cpp
+
+    # ═══════════════════════════════════════════════════════════════════
+    # Cursor/JB-Parity Feature Modules (telemetry, composer, @mention,
+    # vision, refactoring, language, semantic index, resource gen)
+    # ═══════════════════════════════════════════════════════════════════
+    src/telemetry/telemetry_export.cpp
+    src/agentic/agentic_composer_ux.cpp
+    src/context/context_mention_parser.cpp
+    src/multimodal_engine/vision_encoder.cpp
+    src/ide/refactoring_plugin.cpp
+    src/ide/language_plugin.cpp
+    src/context/semantic_index.cpp
+    src/ide/resource_generator.cpp
+
+    # ── Transcendence Architecture (Phases E → Ω) ─────────────────────
+    src/core/self_host_engine.cpp
+    src/core/hardware_synthesizer.cpp
+    src/core/mesh_brain.cpp
+    src/core/speciator_engine.cpp
+    src/core/neural_bridge.cpp
+    src/core/omega_orchestrator.cpp
+    src/core/transcendence_coordinator.cpp
+
+    # ── Transcendence IDE Panel ────────────────────────────────────────
+    src/win32app/Win32IDE_TranscendencePanel.cpp
+)
+
+# =============================================================================
+# Command Table Audit — Build-time coverage validation targets
+# =============================================================================
+include(cmake/AutoFeatureRegistry.cmake)
+
+# =============================================================================
+# Reverse Engineering Suite (sub-module)
+# =============================================================================
+add_subdirectory(src/reverse_engineering)
+
+set(SOURCES src/win32app/main_win32.cpp)
+add_executable(RawrEngine ${SOURCES} ${ASM_KERNEL_SOURCES})
+
+# Link RE library into RawrEngine
+target_link_libraries(RawrEngine PRIVATE RawrXD-RE-Library)
+
+target_include_directories(RawrEngine PRIVATE 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/engine
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/server
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/agent
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/agentic
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/cli
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/git
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/lsp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/gpu
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/tools
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/telemetry
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/test_harness
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/reverse_engineering
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/gpu
+)
+
+target_link_libraries(RawrEngine PRIVATE Threads::Threads)
+
+# Sources used by missing_handler_stubs: debugger engine + Ollama client
+target_sources(RawrEngine PRIVATE
+    src/core/native_debugger_engine.cpp
+    src/agentic/AgentOllamaClient.cpp
+)
+
+# Win32 system libraries (same as Gold)
+if(WIN32)
+    target_link_libraries(RawrEngine PRIVATE
+        shlwapi psapi dbghelp comctl32 comdlg32 shell32 ole32 oleaut32 uuid
+        winhttp ws2_32 ntdll advapi32 crypt32 opengl32 wininet gdi32 user32 bcrypt
+        d3d12 dxgi dxcore
+    )
+    if(NOT MSVC)
+        target_link_libraries(RawrEngine PRIVATE gomp)
+    endif()
+endif()
+
+# =============================================================================
+# Standalone Gold Deployment: RawrXD_Gold.exe
+# All MASM modules linked, zero unresolved externals, static CRT
+# =============================================================================
+add_executable(RawrXD_Gold ${SOURCES} ${ASM_KERNEL_SOURCES})
+
+target_link_libraries(RawrXD_Gold PRIVATE RawrXD-RE-Library)
+
+target_include_directories(RawrXD_Gold PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/engine
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/server
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/agent
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/agentic
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/cli
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/git
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/lsp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/gpu
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/tools
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/telemetry
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/test_harness
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/reverse_engineering
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/gpu
+)
+
+target_link_libraries(RawrXD_Gold PRIVATE Threads::Threads)
+
+target_compile_definitions(RawrXD_Gold PRIVATE
+    RAWRXD_GOLD_BUILD=1
+    RAWR_HAS_MASM=1
+    RAWRXD_LINK_QUADBUFFER_ASM=1
+    RAWRXD_LINK_INFERENCE_KERNELS_ASM=1
+    RAWRXD_LINK_ANALYZER_DISTILLER_ASM=1
+    RAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1
+    RAWRXD_LINK_TELEMETRY_KERNEL_ASM=1
+    RAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1
+    RAWRXD_LINK_SELFPATCH_AGENT_ASM=1
+    RAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1
+)
+
+if(MSVC)
+    target_compile_options(RawrXD_Gold PRIVATE
+        $<$<COMPILE_LANGUAGE:CXX>:/EHsc /O2 /W0 /arch:AVX2>
+    )
+    target_link_options(RawrXD_Gold PRIVATE /LARGEADDRESSAWARE:NO)
+else()
+    target_compile_options(RawrXD_Gold PRIVATE -march=native -O3 -w -mavx2 -mfma -fopenmp)
+endif()
+
+set_target_properties(RawrXD_Gold PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/gold"
+    OUTPUT_NAME RawrXD_Gold
+)
+
+# Win32 system libraries
+if(WIN32)
+    target_link_libraries(RawrXD_Gold PRIVATE
+        shlwapi psapi dbghelp comctl32 comdlg32 shell32 ole32 oleaut32 uuid
+        winhttp ws2_32 ntdll advapi32 crypt32 opengl32 wininet gdi32 user32 bcrypt
+        d3d12 dxgi dxcore
+    )
+    if(NOT MSVC)
+        target_link_libraries(RawrXD_Gold PRIVATE gomp)
+    endif()
+endif()
+
+# Gold-only sources: modules used by missing_handler_stubs but not in main SOURCES
+target_sources(RawrXD_Gold PRIVATE
+    src/core/native_debugger_engine.cpp
+    src/agentic/AgentOllamaClient.cpp
+)
+
+# Vulkan SDK for Gold build — linked later after find_package(Vulkan)
+
+message(STATUS "[Gold] Standalone deployment target: RawrXD_Gold.exe (all MASM linked)")
+
+# ═══════════════════════════════════════════════════════════════════
+# MASM x64 Assembly — Phase 20/21 AVX-512 Requantization + Swarm Streaming
+# ═══════════════════════════════════════════════════════════════════
+if(MSVC)
+    # Phase 20: AVX-512 Q4_K_M → Q2_K requantization kernel
+    set(ASM_REQUANTIZE_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/requantize_q4km_to_q2k_avx512.asm")
+    set(ASM_REQUANTIZE_OBJ "${CMAKE_CURRENT_BINARY_DIR}/requantize_q4km_to_q2k_avx512.obj")
+    add_custom_command(
+        OUTPUT ${ASM_REQUANTIZE_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_REQUANTIZE_OBJ} ${ASM_REQUANTIZE_SRC}
+        DEPENDS ${ASM_REQUANTIZE_SRC}
+        COMMENT "[MASM] Assembling requantize_q4km_to_q2k_avx512.asm (AVX-512 DQ/BW)"
+        VERBATIM
+    )
+
+    # Phase 20: ROCm GPU requantization dispatch stubs
+    set(ASM_GPU_REQUANT_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/gpu_requantize_rocm.asm")
+    set(ASM_GPU_REQUANT_OBJ "${CMAKE_CURRENT_BINARY_DIR}/gpu_requantize_rocm.obj")
+    add_custom_command(
+        OUTPUT ${ASM_GPU_REQUANT_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_GPU_REQUANT_OBJ} ${ASM_GPU_REQUANT_SRC}
+        DEPENDS ${ASM_GPU_REQUANT_SRC}
+        COMMENT "[MASM] Assembling gpu_requantize_rocm.asm (HIP dispatch)"
+        VERBATIM
+    )
+
+    # Phase 21: Zero-copy tensor network streaming
+    set(ASM_SWARM_TENSOR_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/swarm_tensor_stream.asm")
+    set(ASM_SWARM_TENSOR_OBJ "${CMAKE_CURRENT_BINARY_DIR}/swarm_tensor_stream.obj")
+    add_custom_command(
+        OUTPUT ${ASM_SWARM_TENSOR_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_SWARM_TENSOR_OBJ} ${ASM_SWARM_TENSOR_SRC}
+        DEPENDS ${ASM_SWARM_TENSOR_SRC}
+        COMMENT "[MASM] Assembling swarm_tensor_stream.asm (CRC32C, RLE, chunks)"
+        VERBATIM
+    )
+
+    # Phase 28: MonacoCore Native Editor Engine — Gap Buffer + Tokenizer
+    set(ASM_MONACOCORE_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_MonacoCore.asm")
+    set(ASM_MONACOCORE_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_MonacoCore.obj")
+    add_custom_command(
+        OUTPUT ${ASM_MONACOCORE_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_MONACOCORE_OBJ} ${ASM_MONACOCORE_SRC}
+        DEPENDS ${ASM_MONACOCORE_SRC}
+        COMMENT "[MASM] Assembling RawrXD_MonacoCore.asm (Gap Buffer, Tokenizer)"
+        VERBATIM
+    )
+
+    # Phase 29: PDB Symbol Server — Native MSF v7.00 Parser Kernel
+    set(ASM_PDBKERNEL_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_PDBKernel.asm")
+    set(ASM_PDBKERNEL_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_PDBKernel.obj")
+    add_custom_command(
+        OUTPUT ${ASM_PDBKERNEL_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_PDBKERNEL_OBJ} ${ASM_PDBKERNEL_SRC}
+        DEPENDS ${ASM_PDBKERNEL_SRC}
+        COMMENT "[MASM] Assembling RawrXD_PDBKernel.asm (MSF magic, PubSym scan, GUID hex)"
+        VERBATIM
+    )
+
+    # Phase 30: Accelerator Router — MASM Fast-Path Bridge
+    set(ASM_ROUTERBRIDGE_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_RouterBridge.asm")
+    set(ASM_ROUTERBRIDGE_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_RouterBridge.obj")
+    add_custom_command(
+        OUTPUT ${ASM_ROUTERBRIDGE_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_ROUTERBRIDGE_OBJ} ${ASM_ROUTERBRIDGE_SRC}
+        DEPENDS ${ASM_ROUTERBRIDGE_SRC}
+        COMMENT "[MASM] Assembling RawrXD_RouterBridge.asm (Fast-Path Router Dispatch)"
+        VERBATIM
+    )
+
+    # Phase 29.2: GSI Hash — MASM Accelerated Hash + Bucket Probe
+    set(ASM_GSIHASH_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_GSIHash.asm")
+    set(ASM_GSIHASH_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_GSIHash.obj")
+    add_custom_command(
+        OUTPUT ${ASM_GSIHASH_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_GSIHASH_OBJ} ${ASM_GSIHASH_SRC}
+        DEPENDS ${ASM_GSIHASH_SRC}
+        COMMENT "[MASM] Assembling RawrXD_GSIHash.asm (PDB hash, GSI bucket probe)"
+        VERBATIM
+    )
+
+    # Phase 29.2: Reference Provider — FNV-1a Hash + Pattern Match
+    set(ASM_REFPROVIDER_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_RefProvider.asm")
+    set(ASM_REFPROVIDER_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_RefProvider.obj")
+    add_custom_command(
+        OUTPUT ${ASM_REFPROVIDER_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_REFPROVIDER_OBJ} ${ASM_REFPROVIDER_SRC}
+        DEPENDS ${ASM_REFPROVIDER_SRC}
+        COMMENT "[MASM] Assembling RawrXD_RefProvider.asm (Reference hash, pattern match)"
+        VERBATIM
+    )
+
+    # Phase 31: IDE Self-Audit — Stub Detection Kernel
+    set(ASM_STUBDETECTOR_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_StubDetector.asm")
+    set(ASM_STUBDETECTOR_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_StubDetector.obj")
+    add_custom_command(
+        OUTPUT ${ASM_STUBDETECTOR_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_STUBDETECTOR_OBJ} ${ASM_STUBDETECTOR_SRC}
+        DEPENDS ${ASM_STUBDETECTOR_SRC}
+        COMMENT "[MASM] Assembling RawrXD_StubDetector.asm (Stub Pattern Scanner)"
+        VERBATIM
+    )
+
+    # Phase 37: Chain-of-Thought Engine — Pure MASM CoT DLL Core
+    set(ASM_COT_ENGINE_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/rawrxd_cot_engine.asm")
+    set(ASM_COT_ENGINE_OBJ "${CMAKE_CURRENT_BINARY_DIR}/rawrxd_cot_engine.obj")
+    add_custom_command(
+        OUTPUT ${ASM_COT_ENGINE_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_COT_ENGINE_OBJ} ${ASM_COT_ENGINE_SRC}
+        DEPENDS ${ASM_COT_ENGINE_SRC}
+        COMMENT "[MASM] Assembling rawrxd_cot_engine.asm (CoT Engine: 12 roles, 6 presets, 1GB arena, SEH)"
+        VERBATIM
+    )
+
+    # Phase 37: Chain-of-Thought Engine — DLL Entry + SRW Lock
+    set(ASM_COT_DLL_ENTRY_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/rawrxd_cot_dll_entry.asm")
+    set(ASM_COT_DLL_ENTRY_OBJ "${CMAKE_CURRENT_BINARY_DIR}/rawrxd_cot_dll_entry.obj")
+    add_custom_command(
+        OUTPUT ${ASM_COT_DLL_ENTRY_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_COT_DLL_ENTRY_OBJ} ${ASM_COT_DLL_ENTRY_SRC}
+        DEPENDS ${ASM_COT_DLL_ENTRY_SRC}
+        COMMENT "[MASM] Assembling rawrxd_cot_dll_entry.asm (DllMain, SRW Lock, Thread Tracking)"
+        VERBATIM
+    )
+
+    # Phase 39–42: CoT Enterprise Finishers — Snapshot, Telemetry, Copy Engine, Security
+    set(ASM_COT_PHASE39_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/rawrxd_cot_phase39.asm")
+    set(ASM_COT_PHASE39_OBJ "${CMAKE_CURRENT_BINARY_DIR}/rawrxd_cot_phase39.obj")
+    add_custom_command(
+        OUTPUT ${ASM_COT_PHASE39_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_COT_PHASE39_OBJ} ${ASM_COT_PHASE39_SRC}
+        DEPENDS ${ASM_COT_PHASE39_SRC}
+        COMMENT "[MASM] Assembling rawrxd_cot_phase39.asm (Snapshot, Telemetry, CopyEngine, Seal, Quotas)"
+        VERBATIM
+    )
+
+    # LSP Bridge: MASM64 Symbol Index Accelerator (binary search, batch FNV-1a, prefix scan)
+    set(ASM_LSP_SYMINDEX_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_LSP_SymbolIndex.asm")
+    set(ASM_LSP_SYMINDEX_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_LSP_SymbolIndex.obj")
+    add_custom_command(
+        OUTPUT ${ASM_LSP_SYMINDEX_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_LSP_SYMINDEX_OBJ} ${ASM_LSP_SYMINDEX_SRC}
+        DEPENDS ${ASM_LSP_SYMINDEX_SRC}
+        COMMENT "[MASM] Assembling RawrXD_LSP_SymbolIndex.asm (Hash Lookup, Batch FNV-1a, Prefix Scan)"
+        VERBATIM
+    )
+
+    # Phase 45: RawrCodex — Agentic Decision Tree Core (295KB, 21 procs)
+    set(ASM_RAWRCODEX_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrCodex.asm")
+    set(ASM_RAWRCODEX_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrCodex.obj")
+    add_custom_command(
+        OUTPUT ${ASM_RAWRCODEX_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_RAWRCODEX_OBJ} ${ASM_RAWRCODEX_SRC}
+        DEPENDS ${ASM_RAWRCODEX_SRC}
+        COMMENT "[MASM] Assembling RawrCodex.asm (Agentic Decision Tree, Pattern Engine)"
+        VERBATIM
+    )
+
+    # Phase 45: Debug Engine — Native Debugger Kernel (51KB, DynTrace symbolic resolution)
+    set(ASM_DEBUG_ENGINE_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_Debug_Engine.asm")
+    set(ASM_DEBUG_ENGINE_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_Debug_Engine.obj")
+    add_custom_command(
+        OUTPUT ${ASM_DEBUG_ENGINE_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_DEBUG_ENGINE_OBJ} ${ASM_DEBUG_ENGINE_SRC}
+        DEPENDS ${ASM_DEBUG_ENGINE_SRC}
+        COMMENT "[MASM] Assembling RawrXD_Debug_Engine.asm (Breakpoints, Watchpoints, Symbolic DynTrace)"
+        VERBATIM
+    )
+
+    # Phase 45: QuadBuffer Streamer — High-Performance Memory Streaming (52KB)
+    set(ASM_QUADBUFFER_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_QuadBuffer_Streamer.asm")
+    set(ASM_QUADBUFFER_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_QuadBuffer_Streamer.obj")
+    add_custom_command(
+        OUTPUT ${ASM_QUADBUFFER_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_QUADBUFFER_OBJ} ${ASM_QUADBUFFER_SRC}
+        DEPENDS ${ASM_QUADBUFFER_SRC}
+        COMMENT "[MASM] Assembling RawrXD_QuadBuffer_Streamer.asm (4-Buffer Ring, Zero-Copy Streaming)"
+        VERBATIM
+    )
+
+    # Phase 45: Swarm Network — Distributed Composition Protocol (36KB)
+    set(ASM_SWARM_NETWORK_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_Swarm_Network.asm")
+    set(ASM_SWARM_NETWORK_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_Swarm_Network.obj")
+    add_custom_command(
+        OUTPUT ${ASM_SWARM_NETWORK_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_SWARM_NETWORK_OBJ} ${ASM_SWARM_NETWORK_SRC}
+        DEPENDS ${ASM_SWARM_NETWORK_SRC}
+        COMMENT "[MASM] Assembling RawrXD_Swarm_Network.asm (P2P Discovery, Task Distribution)"
+        VERBATIM
+    )
+
+    # Phase 45: Enterprise License — Feature Gate + Hardware Fingerprint (31KB)
+    set(ASM_ENTERPRISE_LIC_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_EnterpriseLicense.asm")
+    set(ASM_ENTERPRISE_LIC_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_EnterpriseLicense.obj")
+    add_custom_command(
+        OUTPUT ${ASM_ENTERPRISE_LIC_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_ENTERPRISE_LIC_OBJ} ${ASM_ENTERPRISE_LIC_SRC}
+        DEPENDS ${ASM_ENTERPRISE_LIC_SRC}
+        COMMENT "[MASM] Assembling RawrXD_EnterpriseLicense.asm (License Validation, HWID, Feature Gates)"
+        VERBATIM
+    )
+
+    # Phase 45: License Shield — Anti-Tamper + Integrity Guard (34KB)
+    set(ASM_LICENSE_SHIELD_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_License_Shield.asm")
+    set(ASM_LICENSE_SHIELD_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_License_Shield.obj")
+    add_custom_command(
+        OUTPUT ${ASM_LICENSE_SHIELD_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_LICENSE_SHIELD_OBJ} ${ASM_LICENSE_SHIELD_SRC}
+        DEPENDS ${ASM_LICENSE_SHIELD_SRC}
+        COMMENT "[MASM] Assembling RawrXD_License_Shield.asm (CRC32 Integrity, Anti-Debug, Tamper Detection)"
+        VERBATIM
+    )
+
+    # Phase 46: VulkanBridge — MASM64 GPU Dispatch Shim (VkBridge_Init, MatMul, FlashAttn, Hotswap)
+    set(ASM_VULKANBRIDGE_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_VulkanBridge.asm")
+    set(ASM_VULKANBRIDGE_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_VulkanBridge.obj")
+    add_custom_command(
+        OUTPUT ${ASM_VULKANBRIDGE_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_VULKANBRIDGE_OBJ} ${ASM_VULKANBRIDGE_SRC}
+        DEPENDS ${ASM_VULKANBRIDGE_SRC}
+        COMMENT "[MASM] Assembling RawrXD_VulkanBridge.asm (GPU Dispatch Shim: Init, MatMul, FlashAttn, Hotswap)"
+        VERBATIM
+    )
+
+    # Phase 49: SocketResponder — MASM64 IOCP Zero-Copy HTTP Server
+    set(ASM_SOCKETRESP_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_SocketResponder.asm")
+    set(ASM_SOCKETRESP_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_SocketResponder.obj")
+    add_custom_command(
+        OUTPUT ${ASM_SOCKETRESP_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /I "${CMAKE_CURRENT_SOURCE_DIR}/src/asm" /Fo${ASM_SOCKETRESP_OBJ} ${ASM_SOCKETRESP_SRC}
+        DEPENDS ${ASM_SOCKETRESP_SRC}
+        COMMENT "[MASM] Assembling RawrXD_SocketResponder.asm (IOCP HTTP: /health /status /models sub-0.5ms)"
+        VERBATIM
+    )
+
+    # Phase 49: TridentBeacon — MASM64 COM Trident Host + Beacon JS Bridge
+    set(ASM_TRIDENTBEACON_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_TridentBeacon.asm")
+    set(ASM_TRIDENTBEACON_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_TridentBeacon.obj")
+    add_custom_command(
+        OUTPUT ${ASM_TRIDENTBEACON_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /I "${CMAKE_CURRENT_SOURCE_DIR}/src/asm" /Fo${ASM_TRIDENTBEACON_OBJ} ${ASM_TRIDENTBEACON_SRC}
+        DEPENDS ${ASM_TRIDENTBEACON_SRC}
+        COMMENT "[MASM] Assembling RawrXD_TridentBeacon.asm (COM Trident Host, Beacon IDispatch, Ollama Bridge)"
+        VERBATIM
+    )
+
+    # Phase 49: TridentBeacon GPU — MASM64 GPU Acceleration + WebGL Bridge
+    set(ASM_TRIDENTGPU_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_TridentBeacon_GPU.asm")
+    set(ASM_TRIDENTGPU_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_TridentBeacon_GPU.obj")
+    add_custom_command(
+        OUTPUT ${ASM_TRIDENTGPU_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /I "${CMAKE_CURRENT_SOURCE_DIR}/src/asm" /Fo${ASM_TRIDENTGPU_OBJ} ${ASM_TRIDENTGPU_SRC}
+        DEPENDS ${ASM_TRIDENTGPU_SRC}
+        COMMENT "[MASM] Assembling RawrXD_TridentBeacon_GPU.asm (IE11 Feature Control, WebGL FBO, OpenGL Bridge)"
+        VERBATIM
+    )
+
+    # Phase 50: AgenticOrchestrator — VTable Dispatch + SPSC Task Queue
+    set(ASM_AGENTIC_ORCH_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_AgenticOrchestrator.asm")
+    set(ASM_AGENTIC_ORCH_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_AgenticOrchestrator.obj")
+    add_custom_command(
+        OUTPUT ${ASM_AGENTIC_ORCH_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /I "${CMAKE_CURRENT_SOURCE_DIR}/src/asm" /Fo${ASM_AGENTIC_ORCH_OBJ} ${ASM_AGENTIC_ORCH_SRC}
+        DEPENDS ${ASM_AGENTIC_ORCH_SRC}
+        COMMENT "[MASM] Assembling RawrXD_AgenticOrchestrator.asm (23-Handler VTable, SPSC Queue, Metrics)"
+        VERBATIM
+    )
+
+    # Phase 50: GGUF Vulkan Loader — Memory-Mapped Parser + Staging Buffer
+    set(ASM_GGUF_VKLOAD_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_GGUF_Vulkan_Loader.asm")
+    set(ASM_GGUF_VKLOAD_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_GGUF_Vulkan_Loader.obj")
+    add_custom_command(
+        OUTPUT ${ASM_GGUF_VKLOAD_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /I "${CMAKE_CURRENT_SOURCE_DIR}/src/asm" /Fo${ASM_GGUF_VKLOAD_OBJ} ${ASM_GGUF_VKLOAD_SRC}
+        DEPENDS ${ASM_GGUF_VKLOAD_SRC}
+        COMMENT "[MASM] Assembling RawrXD_GGUF_Vulkan_Loader.asm (GGUF v3, FNV-1a, Tensor Staging, GGML Types)"
+        VERBATIM
+    )
+
+    # Phase 50: LSP-AI Bridge — SymbolIndex ↔ ContextAnalyzer Fusion
+    set(ASM_LSP_BRIDGE_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_LSP_AI_Bridge.asm")
+    set(ASM_LSP_BRIDGE_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_LSP_AI_Bridge.obj")
+    add_custom_command(
+        OUTPUT ${ASM_LSP_BRIDGE_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /I "${CMAKE_CURRENT_SOURCE_DIR}/src/asm" /Fo${ASM_LSP_BRIDGE_OBJ} ${ASM_LSP_BRIDGE_SRC}
+        DEPENDS ${ASM_LSP_BRIDGE_SRC}
+        COMMENT "[MASM] Assembling RawrXD_LSP_AI_Bridge.asm (Symbol Ranking, Weight Fusion, Kind Boost)"
+        VERBATIM
+    )
+
+    # Phase 50: Streaming QuadBuffer — HWND Token Rendering + GDI Double-Buffer
+    set(ASM_STREAM_QBUF_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_Streaming_QuadBuffer.asm")
+    set(ASM_STREAM_QBUF_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_Streaming_QuadBuffer.obj")
+    add_custom_command(
+        OUTPUT ${ASM_STREAM_QBUF_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /I "${CMAKE_CURRENT_SOURCE_DIR}/src/asm" /Fo${ASM_STREAM_QBUF_OBJ} ${ASM_STREAM_QBUF_SRC}
+        DEPENDS ${ASM_STREAM_QBUF_SRC}
+        COMMENT "[MASM] Assembling RawrXD_Streaming_QuadBuffer.asm (SPSC Ring, GDI BitBlt, 60 FPS Render)"
+        VERBATIM
+    )
+
+    # Phase 50: SelfPatch Engine — Runtime Code Morphing + CPU Optimization
+    set(ASM_SPENGINE_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_SelfPatch_Engine.asm")
+    set(ASM_SPENGINE_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_SelfPatch_Engine.obj")
+    add_custom_command(
+        OUTPUT ${ASM_SPENGINE_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /I "${CMAKE_CURRENT_SOURCE_DIR}/src/asm" /Fo${ASM_SPENGINE_OBJ} ${ASM_SPENGINE_SRC}
+        DEPENDS ${ASM_SPENGINE_SRC}
+        COMMENT "[MASM] Assembling RawrXD_SelfPatch_Engine.asm (Hotpatch Table, Code Caves, CPUID Optimize, Quant Switch)"
+        VERBATIM
+    )
+
+    # Phase Camellia: Camellia-256 Encryption Engine — MASM x64 CTR-mode workspace encryption
+    set(ASM_CAMELLIA256_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_Camellia256.asm")
+    set(ASM_CAMELLIA256_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_Camellia256.obj")
+    add_custom_command(
+        OUTPUT ${ASM_CAMELLIA256_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /I "${CMAKE_CURRENT_SOURCE_DIR}/src/asm" /Fo${ASM_CAMELLIA256_OBJ} ${ASM_CAMELLIA256_SRC}
+        DEPENDS ${ASM_CAMELLIA256_SRC}
+        COMMENT "[MASM] Assembling RawrXD_Camellia256.asm (Camellia-256 CTR Encrypt, 24-Round Feistel, HWID Key)"
+        VERBATIM
+    )
+
+    # Phase Camellia-Auth: Authenticated Encrypt/Decrypt (Encrypt-then-MAC, HMAC-SHA256, RCM2 Format)
+    set(ASM_CAMELLIA256_AUTH_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_Camellia256_Auth.asm")
+    set(ASM_CAMELLIA256_AUTH_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_Camellia256_Auth.obj")
+    add_custom_command(
+        OUTPUT ${ASM_CAMELLIA256_AUTH_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /I "${CMAKE_CURRENT_SOURCE_DIR}/src/asm" /Fo${ASM_CAMELLIA256_AUTH_OBJ} ${ASM_CAMELLIA256_AUTH_SRC}
+        DEPENDS ${ASM_CAMELLIA256_AUTH_SRC}
+        COMMENT "[MASM] Assembling RawrXD_Camellia256_Auth.asm (Encrypt-then-MAC, HMAC-SHA256, RCM2 Format)"
+        VERBATIM
+    )
+
+    # Phase KQ: Q4_K Bare-Metal Dequantization Kernel (AVX2 + AVX-512, CPUID Dispatch)
+    set(ASM_KQUANT_KERNEL_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_KQuant_Kernel.asm")
+    set(ASM_KQUANT_KERNEL_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_KQuant_Kernel.obj")
+    add_custom_command(
+        OUTPUT ${ASM_KQUANT_KERNEL_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /I "${CMAKE_CURRENT_SOURCE_DIR}/src/asm" /Fo${ASM_KQUANT_KERNEL_OBJ} ${ASM_KQUANT_KERNEL_SRC}
+        DEPENDS ${ASM_KQUANT_KERNEL_SRC}
+        COMMENT "[MASM] Assembling RawrXD_KQuant_Kernel.asm (Q4_K AVX2+AVX-512 Dequant, CPUID Dispatch)"
+        VERBATIM
+    )
+
+    # Phase WD: Agentic Watchdog — .text Section Integrity Verification (HMAC-SHA256)
+    set(ASM_WATCHDOG_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_Watchdog.asm")
+    set(ASM_WATCHDOG_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_Watchdog.obj")
+    add_custom_command(
+        OUTPUT ${ASM_WATCHDOG_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /I "${CMAKE_CURRENT_SOURCE_DIR}/src/asm" /Fo${ASM_WATCHDOG_OBJ} ${ASM_WATCHDOG_SRC}
+        DEPENDS ${ASM_WATCHDOG_SRC}
+        COMMENT "[MASM] Assembling RawrXD_Watchdog.asm (.text HMAC-SHA256 Integrity, PE Parser, Tamper Detect)"
+        VERBATIM
+    )
+
+    # Phase E: SelfHost Engine — Recursive Self-Compilation
+    set(ASM_SELFHOST_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_SelfHost_Engine.asm")
+    set(ASM_SELFHOST_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_SelfHost_Engine.obj")
+    add_custom_command(
+        OUTPUT ${ASM_SELFHOST_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /I "${CMAKE_CURRENT_SOURCE_DIR}/src/asm" /Fo${ASM_SELFHOST_OBJ} ${ASM_SELFHOST_SRC}
+        DEPENDS ${ASM_SELFHOST_SRC}
+        COMMENT "[MASM] Assembling RawrXD_SelfHost_Engine.asm (Self-Compile, uASM, Atomic Swap)"
+        VERBATIM
+    )
+
+    # Phase F: Hardware Synthesizer — FPGA/ASIC Acceleration
+    set(ASM_HWSYNTH_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_HardwareSynthesizer.asm")
+    set(ASM_HWSYNTH_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_HardwareSynthesizer.obj")
+    add_custom_command(
+        OUTPUT ${ASM_HWSYNTH_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /I "${CMAKE_CURRENT_SOURCE_DIR}/src/asm" /Fo${ASM_HWSYNTH_OBJ} ${ASM_HWSYNTH_SRC}
+        DEPENDS ${ASM_HWSYNTH_SRC}
+        COMMENT "[MASM] Assembling RawrXD_HardwareSynthesizer.asm (Dataflow, GEMM Spec, Verilog Gen)"
+        VERBATIM
+    )
+
+    # Phase G: Mesh Brain — Distributed Consciousness P2P Mesh
+    set(ASM_MESHBRAIN_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_MeshBrain.asm")
+    set(ASM_MESHBRAIN_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_MeshBrain.obj")
+    add_custom_command(
+        OUTPUT ${ASM_MESHBRAIN_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /I "${CMAKE_CURRENT_SOURCE_DIR}/src/asm" /Fo${ASM_MESHBRAIN_OBJ} ${ASM_MESHBRAIN_SRC}
+        DEPENDS ${ASM_MESHBRAIN_SRC}
+        COMMENT "[MASM] Assembling RawrXD_MeshBrain.asm (CRDT, ZKP, DHT, FedAvg, Gossip)"
+        VERBATIM
+    )
+
+    # Phase H: Speciator Engine — Metamorphic Evolution
+    set(ASM_SPECIATOR_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_Speciator.asm")
+    set(ASM_SPECIATOR_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_Speciator.obj")
+    add_custom_command(
+        OUTPUT ${ASM_SPECIATOR_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /I "${CMAKE_CURRENT_SOURCE_DIR}/src/asm" /Fo${ASM_SPECIATOR_OBJ} ${ASM_SPECIATOR_SRC}
+        DEPENDS ${ASM_SPECIATOR_SRC}
+        COMMENT "[MASM] Assembling RawrXD_Speciator.asm (Genome, Crossover, Mutation, Speciation)"
+        VERBATIM
+    )
+
+    # Phase I: Neural Bridge — Direct Cortex Interface
+    set(ASM_NEURALBRIDGE_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_NeuralBridge.asm")
+    set(ASM_NEURALBRIDGE_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_NeuralBridge.obj")
+    add_custom_command(
+        OUTPUT ${ASM_NEURALBRIDGE_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /I "${CMAKE_CURRENT_SOURCE_DIR}/src/asm" /Fo${ASM_NEURALBRIDGE_OBJ} ${ASM_NEURALBRIDGE_SRC}
+        DEPENDS ${ASM_NEURALBRIDGE_SRC}
+        COMMENT "[MASM] Assembling RawrXD_NeuralBridge.asm (EEG FFT, Intent Classify, Phosphene HUD)"
+        VERBATIM
+    )
+
+    # Phase Ω: Omega Orchestrator — Autonomous Development Pipeline
+    set(ASM_OMEGA_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_OmegaOrchestrator.asm")
+    set(ASM_OMEGA_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_OmegaOrchestrator.obj")
+    add_custom_command(
+        OUTPUT ${ASM_OMEGA_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /I "${CMAKE_CURRENT_SOURCE_DIR}/src/asm" /Fo${ASM_OMEGA_OBJ} ${ASM_OMEGA_SRC}
+        DEPENDS ${ASM_OMEGA_SRC}
+        COMMENT "[MASM] Assembling RawrXD_OmegaOrchestrator.asm (Task DAG, Agents, Pipeline, Self-Improve)"
+        VERBATIM
+    )
+
+    # Phase ∞: PerfCounters — RDTSC Per-Kernel Cycle Histogram
+    set(ASM_PERFCOUNTERS_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_PerfCounters.asm")
+    set(ASM_PERFCOUNTERS_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_PerfCounters.obj")
+    add_custom_command(
+        OUTPUT ${ASM_PERFCOUNTERS_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /I "${CMAKE_CURRENT_SOURCE_DIR}/src/asm" /Fo${ASM_PERFCOUNTERS_OBJ} ${ASM_PERFCOUNTERS_SRC}
+        DEPENDS ${ASM_PERFCOUNTERS_SRC}
+        COMMENT "[MASM] Assembling RawrXD_PerfCounters.asm (RDTSC Cycle Histograms, 64 Slots)"
+        VERBATIM
+    )
+
+    # Brutal GZip deflate (stub returns nullptr for fallback)
+    set(ASM_DEFLATE_BRUTAL_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/gpu_masm/deflate_brutal_masm.asm")
+    set(ASM_DEFLATE_BRUTAL_OBJ "${CMAKE_CURRENT_BINARY_DIR}/deflate_brutal_masm.obj")
+    add_custom_command(
+        OUTPUT ${ASM_DEFLATE_BRUTAL_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /I "${CMAKE_CURRENT_SOURCE_DIR}/src/asm" /Fo${ASM_DEFLATE_BRUTAL_OBJ} ${ASM_DEFLATE_BRUTAL_SRC}
+        DEPENDS ${ASM_DEFLATE_BRUTAL_SRC}
+        COMMENT "[MASM] Assembling deflate_brutal_masm.asm"
+        VERBATIM
+    )
+
+    # Collect all MASM objects
+    set(MASM_OBJECTS
+        ${ASM_REQUANTIZE_OBJ}
+        ${ASM_GPU_REQUANT_OBJ}
+        ${ASM_SWARM_TENSOR_OBJ}
+        ${ASM_MONACOCORE_OBJ}
+        ${ASM_PDBKERNEL_OBJ}
+        ${ASM_ROUTERBRIDGE_OBJ}
+        ${ASM_GSIHASH_OBJ}
+        ${ASM_REFPROVIDER_OBJ}
+        ${ASM_STUBDETECTOR_OBJ}
+        ${ASM_COT_ENGINE_OBJ}
+        ${ASM_COT_DLL_ENTRY_OBJ}
+        ${ASM_COT_PHASE39_OBJ}
+        ${ASM_LSP_SYMINDEX_OBJ}
+        ${ASM_RAWRCODEX_OBJ}
+        ${ASM_DEBUG_ENGINE_OBJ}
+        ${ASM_QUADBUFFER_OBJ}
+        ${ASM_SWARM_NETWORK_OBJ}
+        ${ASM_ENTERPRISE_LIC_OBJ}
+        ${ASM_LICENSE_SHIELD_OBJ}
+        ${ASM_VULKANBRIDGE_OBJ}
+        ${ASM_SOCKETRESP_OBJ}
+        ${ASM_TRIDENTBEACON_OBJ}
+        ${ASM_TRIDENTGPU_OBJ}
+        ${ASM_AGENTIC_ORCH_OBJ}
+        ${ASM_GGUF_VKLOAD_OBJ}
+        ${ASM_LSP_BRIDGE_OBJ}
+        ${ASM_STREAM_QBUF_OBJ}
+        ${ASM_SPENGINE_OBJ}
+        ${ASM_CAMELLIA256_OBJ}
+        ${ASM_CAMELLIA256_AUTH_OBJ}
+        ${ASM_KQUANT_KERNEL_OBJ}
+        ${ASM_WATCHDOG_OBJ}
+        ${ASM_SELFHOST_OBJ}
+        ${ASM_HWSYNTH_OBJ}
+        ${ASM_MESHBRAIN_OBJ}
+        ${ASM_SPECIATOR_OBJ}
+        ${ASM_NEURALBRIDGE_OBJ}
+        ${ASM_OMEGA_OBJ}
+        ${ASM_PERFCOUNTERS_OBJ}
+        ${ASM_DEFLATE_BRUTAL_OBJ}
+    )
+
+    # Link MASM objects into RawrEngine
+    target_link_libraries(RawrEngine PRIVATE ${MASM_OBJECTS})
+
+    # Link MASM objects into RawrXD_Gold
+    target_link_libraries(RawrXD_Gold PRIVATE ${MASM_OBJECTS})
+
+    # Ensure MASM objects are built before linking
+    add_custom_target(masm_kernels DEPENDS ${MASM_OBJECTS})
+    add_dependencies(RawrEngine masm_kernels)
+    add_dependencies(RawrXD_Gold masm_kernels)
+
+    # =========================================================================
+    # NanoQuant Engine — Sub-1-Bit Quantization Static Library
+    # MASM64 kernel (ADMM, AVX2/AVX-512) + C++ bridge + GGML type registration
+    # Disabled by default — ASM kernel requires ml64 port fixes (A2008/A2083).
+    # Enable with: cmake -DRAWR_ENABLE_NANOQUANT=ON
+    # =========================================================================
+    option(RAWR_ENABLE_NANOQUANT "Enable NanoQuant sub-1-bit quantization engine (requires working NanoQuant ASM)" OFF)
+    if(RAWR_ENABLE_NANOQUANT)
+    set(ASM_NANOQUANT_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_NanoQuant_Engine.asm")
+    set(ASM_NANOQUANT_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_NanoQuant_Engine.obj")
+    add_custom_command(
+        OUTPUT ${ASM_NANOQUANT_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_NANOQUANT_OBJ} ${ASM_NANOQUANT_SRC}
+        DEPENDS ${ASM_NANOQUANT_SRC}
+        COMMENT "[MASM] Assembling RawrXD_NanoQuant_Engine.asm (ADMM, AVX2/512, NQ_1/NQ_R4)"
+        VERBATIM
+    )
+
+    add_library(RawrXD_NanoQuant STATIC
+        src/ggml/ggml_nanoquant.cpp
+        src/agentic/agent_tool_quantize.cpp
+    )
+    target_include_directories(RawrXD_NanoQuant PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+    )
+    target_link_libraries(RawrXD_NanoQuant PRIVATE ${ASM_NANOQUANT_OBJ})
+    add_custom_target(nanoquant_asm DEPENDS ${ASM_NANOQUANT_OBJ})
+    add_dependencies(RawrXD_NanoQuant nanoquant_asm)
+
+    # Link NanoQuant into main targets
+    target_link_libraries(RawrEngine PRIVATE RawrXD_NanoQuant)
+    target_compile_definitions(RawrEngine PRIVATE RAWR_HAS_NANOQUANT=1)
+    target_link_libraries(RawrXD_Gold PRIVATE RawrXD_NanoQuant)
+    target_compile_definitions(RawrXD_Gold PRIVATE RAWR_HAS_NANOQUANT=1)
+
+    message(STATUS "[NanoQuant] Sub-1-bit quantization engine enabled (NQ_1 + NQ_R4)")
+    else()
+    message(STATUS "[NanoQuant] DISABLED — enable with -DRAWR_ENABLE_NANOQUANT=ON")
+    endif()
+endif()
+
+# =============================================================================
+# Vulkan SDK (optional — GPU compute acceleration)
+# =============================================================================
+find_package(Vulkan QUIET)
+if(Vulkan_FOUND)
+    message(STATUS "[Vulkan] Found SDK: ${Vulkan_INCLUDE_DIRS}")
+    target_include_directories(RawrEngine PRIVATE ${Vulkan_INCLUDE_DIRS})
+    target_link_libraries(RawrEngine PRIVATE Vulkan::Vulkan)
+    target_compile_definitions(RawrEngine PRIVATE RAWR_HAS_VULKAN=1)
+    # Gold target
+    target_include_directories(RawrXD_Gold PRIVATE ${Vulkan_INCLUDE_DIRS})
+    target_link_libraries(RawrXD_Gold PRIVATE Vulkan::Vulkan)
+    target_compile_definitions(RawrXD_Gold PRIVATE RAWR_HAS_VULKAN=1)
+else()
+    # Try manual path — D: first, then C:
+    file(GLOB _VK_SDK_DIRS "D:/VulkanSDK/1.*")
+    if(NOT _VK_SDK_DIRS)
+        file(GLOB _VK_SDK_DIRS "C:/VulkanSDK/1.*")
+    endif()
+    if(_VK_SDK_DIRS)
+        list(SORT _VK_SDK_DIRS)
+        list(GET _VK_SDK_DIRS -1 _VK_SDK_DIR)
+        message(STATUS "[Vulkan] Manual SDK: ${_VK_SDK_DIR}")
+        target_include_directories(RawrEngine PRIVATE "${_VK_SDK_DIR}/Include")
+        target_link_directories(RawrEngine PRIVATE "${_VK_SDK_DIR}/Lib")
+        target_link_libraries(RawrEngine PRIVATE vulkan-1)
+        target_compile_definitions(RawrEngine PRIVATE RAWR_HAS_VULKAN=1)
+        # Gold target
+        target_include_directories(RawrXD_Gold PRIVATE "${_VK_SDK_DIR}/Include")
+        target_link_directories(RawrXD_Gold PRIVATE "${_VK_SDK_DIR}/Lib")
+        target_link_libraries(RawrXD_Gold PRIVATE vulkan-1)
+        target_compile_definitions(RawrXD_Gold PRIVATE RAWR_HAS_VULKAN=1)
+    else()
+        message(STATUS "[Vulkan] SDK not found — GPU compute uses CPU fallback")
+        target_compile_definitions(RawrEngine PRIVATE RAWR_HAS_VULKAN=0)
+        target_compile_definitions(RawrXD_Gold PRIVATE RAWR_HAS_VULKAN=0)
+    endif()
+endif()
+
+if(WIN32)
+    target_link_libraries(RawrEngine PRIVATE shlwapi psapi dbghelp comctl32 comdlg32 shell32 ole32 oleaut32 uuid winhttp ws2_32 ntdll advapi32 crypt32 opengl32 wininet gdi32 user32 bcrypt)
+    if(NOT MSVC)
+        target_link_libraries(RawrEngine PRIVATE gomp)
+    endif()
+endif()
+
+# RawrCodex.asm uses ADDR32 relocations — require /LARGEADDRESSAWARE:NO
+if(MSVC)
+    target_link_options(RawrEngine PRIVATE /LARGEADDRESSAWARE:NO)
+endif()
+
+if(NOT MSVC)
+    target_compile_options(RawrEngine PRIVATE -march=native -O3 -w -mavx2 -mfma -fopenmp)
+endif()
+
+# =============================================================================
+# Phase 6: Standalone Inference Engine Executable (T4)
+# =============================================================================
+# Produces RawrXD-InferenceEngine.exe — loads GGUF and emits tokens with no IDE.
+# This is the self-hosting blocker: inference must run independently.
+# T4 integration: the AutonomousRecoveryOrchestrator invokes this for reasoning.
+# =============================================================================
+set(INFERENCE_ENGINE_SOURCES
+    src/inference/inference_standalone_main.cpp
+    src/inference/ultra_fast_inference.cpp
+    src/inference/polymorphic_loader.cpp
+    src/inference/ollama_blob_parser.cpp
+    src/cpu_inference_engine.cpp
+    src/gguf_loader.cpp
+    src/gguf_vocab_resolver.cpp
+    src/streaming_gguf_loader.cpp
+    src/compression_interface.cpp
+    src/memory_core.cpp
+    src/stubs.cpp
+    src/engine/gguf_core.cpp
+    src/engine/inference_kernels.cpp
+    src/engine/transformer.cpp
+    src/engine/bpe_tokenizer.cpp
+    src/engine/sampler.cpp
+    src/engine/rawr_engine.cpp
+    src/engine/core_generator.cpp
+    src/engine/pyre_compute.cpp
+    src/engine/sovereign_engines.cpp
+    src/codec/compression.cpp
+    src/codec/brutal_gzip.cpp
+    src/utils/Diagnostics.cpp
+)
+
+add_executable(RawrXD-InferenceEngine ${INFERENCE_ENGINE_SOURCES})
+
+target_compile_definitions(RawrXD-InferenceEngine PRIVATE
+    RAWR_STANDALONE_INFERENCE=1
+)
+
+target_include_directories(RawrXD-InferenceEngine PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/inference
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/engine
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/codec
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+target_link_libraries(RawrXD-InferenceEngine PRIVATE Threads::Threads)
+
+if(WIN32)
+    target_link_libraries(RawrXD-InferenceEngine PRIVATE
+        shlwapi psapi dbghelp winhttp bcrypt advapi32 crypt32
+    )
+endif()
+
+if(RAWR_HAS_MASM)
+    # Link quantization + telemetry kernels into inference engine
+    set(INFERENCE_ASM_SOURCES
+        src/asm/inference_core.asm
+        src/asm/inference_kernels.asm
+        src/asm/quant_avx2.asm
+        src/asm/RawrXD_KQuant_Dequant.asm
+        src/asm/RawrXD_KQuant_Kernel.asm
+        src/asm/FlashAttention_AVX512.asm
+        src/asm/RawrXD_Telemetry_Kernel.asm
+        src/asm/RawrXD_Pyre_Compute.asm
+    )
+    set_source_files_properties(${INFERENCE_ASM_SOURCES} PROPERTIES LANGUAGE ASM_MASM)
+    target_sources(RawrXD-InferenceEngine PRIVATE ${INFERENCE_ASM_SOURCES})
+    target_compile_definitions(RawrXD-InferenceEngine PRIVATE
+        RAWR_HAS_MASM=1
+        RAWRXD_LINK_TELEMETRY_KERNEL_ASM=1
+        RAWRXD_LINK_INFERENCE_KERNELS_ASM=1
+    )
+
+    # NanoQuant integration (optional)
+    if(TARGET RawrXD_NanoQuant)
+        target_link_libraries(RawrXD-InferenceEngine PRIVATE RawrXD_NanoQuant)
+        target_compile_definitions(RawrXD-InferenceEngine PRIVATE RAWR_HAS_NANOQUANT=1)
+    endif()
+endif()
+
+if(MSVC)
+    target_compile_options(RawrXD-InferenceEngine PRIVATE
+        $<$<COMPILE_LANGUAGE:CXX>:/EHsc /O2 /W0 /arch:AVX2>
+    )
+else()
+    target_compile_options(RawrXD-InferenceEngine PRIVATE -O3 -w -mavx2 -mfma -march=native)
+endif()
+
+set_target_properties(RawrXD-InferenceEngine PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY bin
+    OUTPUT_NAME RawrXD-InferenceEngine
+)
+
+# Telemetry_Kernel.asm uses ADDR32 relocations — require /LARGEADDRESSAWARE:NO
+if(MSVC)
+    target_link_options(RawrXD-InferenceEngine PRIVATE /LARGEADDRESSAWARE:NO)
+endif()
+
+message(STATUS "[Phase 6] Standalone inference engine target: RawrXD-InferenceEngine")
+
+add_executable(rawrxd-monaco-gen
+    src/monaco_gen.cpp
+    src/engine/react_ide_generator.cpp
+)
+
+target_include_directories(rawrxd-monaco-gen PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/engine
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+set_target_properties(rawrxd-monaco-gen PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY bin
+    OUTPUT_NAME rawrxd-monaco-gen
+)
+
+# Win32 GUI IDE
+if(WIN32)
+    set(WIN32IDE_SOURCES
+        src/win32app/main_win32.cpp
+        src/win32app/Win32IDE.cpp
+        # src/win32app/Win32IDE.h
+        # src/win32app/HeadlessIDE.h
+        src/win32app/HeadlessIDE.cpp
+        # src/win32app/IOutputSink.h
+        src/win32app/Win32IDE_Core.cpp
+        src/win32app/Win32IDE_Sidebar.cpp
+        src/win32app/Win32IDE_VSCodeUI.cpp
+        src/win32app/Win32IDE_NativePipeline.cpp
+        src/win32app/Win32IDE_PowerShellPanel.cpp
+        src/win32app/Win32IDE_PowerShell.cpp
+        src/win32app/Win32IDE_Logger.cpp
+        src/win32app/IDELogger.h
+        src/win32app/Win32IDE_FileOps.cpp
+        src/win32app/Win32IDE_SourceFilePicker.cpp
+        src/win32app/Win32IDE_Commands.cpp
+        src/win32app/Win32IDE_Debugger.cpp
+        # src/win32app/Win32IDE_AgenticBridge.h
+        src/win32app/Win32IDE_AgenticBridge.cpp
+        src/win32app/Win32IDE_AgentCommands.cpp
+        src/win32app/Win32IDE_Autonomy.h
+        src/win32app/Win32IDE_Autonomy.cpp
+        src/win32app/Win32IDE_SyntaxHighlight.cpp
+        src/win32app/Win32IDE_Themes.cpp
+        src/win32app/Win32IDE_Annotations.cpp
+        src/win32app/Win32IDE_Session.cpp
+        src/win32app/Win32IDE_StreamingUX.cpp
+        src/win32app/Win32IDE_ReverseEngineering.cpp
+        src/win32app/Win32IDE_DecompilerView.cpp
+        src/win32app/Win32IDE_FeatureManifest.cpp
+        src/win32app/Win32IDE_GhostText.cpp
+        src/win32app/Win32IDE_OutlinePanel.cpp
+        src/win32app/Win32IDE_RenamePreview.cpp
+        src/win32app/Win32IDE_Tier2Cosmetics.cpp
+        src/win32app/Win32IDE_Tier1Cosmetics.cpp
+        src/win32app/Win32IDE_Breadcrumbs.cpp
+        src/win32app/Win32IDE_PlanExecutor.cpp
+        src/win32app/Win32IDE_FailureDetector.cpp
+        src/win32app/Win32IDE_FailureIntelligence.cpp
+        src/win32app/Win32IDE_Settings.cpp
+        src/win32app/Win32IDE_LocalServer.cpp
+        src/win32app/Win32IDE_BackendSwitcher.cpp
+        src/win32app/Win32IDE_LLMRouter.cpp
+        src/win32app/Win32IDE_LSPClient.cpp
+        src/win32app/Win32IDE_AsmSemantic.cpp
+        src/win32app/Win32IDE_LSP_AI_Bridge.cpp
+        src/win32app/Win32IDE_MultiResponse.cpp
+        src/win32app/Win32IDE_ExecutionGovernor.cpp
+        # src/win32app/Win32IDE_SubAgent.h
+        src/win32app/Win32IDE_SubAgent.cpp
+        src/win32app/Win32IDE_AgentHistory.cpp
+        src/win32app/Win32IDE_AgentPanel.cpp
+        src/win32app/Win32IDE_DiskRecovery.cpp
+        src/win32app/Win32TerminalManager.cpp
+        # src/win32app/Win32TerminalManager.h
+        src/win32app/TransparentRenderer.cpp
+        # src/win32app/TransparentRenderer.h
+        # src/win32app/ModelConnection.h
+        # src/win32app/ContextManager.h
+
+        # Plugin System — Phase 43: Native Win32 DLL loading (C ABI)
+        src/plugin_system/win32_plugin_loader.cpp
+        src/win32app/Win32IDE_Plugins.cpp
+        
+        # Configuration management
+        src/config/IDEConfig.cpp
+        
+        # Core engine files needed by IDE
+        src/stubs.cpp
+        src/agentic_engine.cpp
+        src/subagent_core.cpp
+
+        # Bounded Agent Loop + FIM Provider (Agent→IDE Pivot)
+        src/agentic/AgentToolHandlers.cpp
+        src/agentic/BoundedAgentLoop.cpp
+        src/agentic/OllamaProvider.cpp
+        src/agentic/DiffEngine.cpp
+
+        # T3-D: Deterministic Replay Engine (DivergenceEvent + TelemetrySnapshot)
+        src/agentic/DeterministicReplayEngine.cpp
+
+        # T4: Autonomous Recovery Orchestrator (FailureClass → recovery → verify → commit)
+        src/agentic/autonomous_recovery_orchestrator.cpp
+
+        # T5: Agent Orchestrator + Bridge + Navigation (agentic brain wiring)
+        src/agentic/AgentOrchestrator.cpp
+        src/agentic/OrchestratorBridge.cpp
+        src/agentic/AgenticNavigator.cpp
+        src/agentic/RawrXD_ToolRegistry.cpp
+        src/agentic/ToolRegistry.cpp
+        src/tool_registry.cpp
+        # src/agentic/RawrXD_AgentLoop.cpp
+        src/agentic/agentic_executor.cpp
+        src/agentic/FIMPromptBuilder.cpp
+        src/agentic_observability.cpp
+        src/core/rawrxd_subsystem_api.cpp
+        src/core/subsystem_mode_stubs.cpp
+        src/core/local_parity_bridge.cpp
+        src/core/layer_offload_manager.cpp
+        src/runtime_core.cpp
+        src/agent/telemetry_collector.cpp
+        src/win32app/reverse_engineered_stubs.cpp
+
+        # T6: Autonomous Repair Orchestrator + Agent Memory Indexer
+        src/core/auto_repair_orchestrator.cpp
+        src/core/agent_memory_indexer.cpp
+
+        # T5: Agentic Transaction Layer (multi-step command execute/rollback)
+        src/agentic/agentic_transaction.cpp
+
+        # AgenticObservability + SubsystemRegistry (required by AgentOrchestrator, ToolRegistry, feature_handlers)
+        src/agentic_observability.cpp
+        src/core/rawrxd_subsystem_api.cpp
+
+        # TelemetryCollector (required by model_bruteforce_engine)
+        src/agent/telemetry_collector.cpp
+
+        # EngineRegistry (required by sovereign_engines)
+        src/runtime_core.cpp
+
+        # ToolRegistry::inject_tools (required by runtime_core process_prompt)
+        src/tool_registry.cpp
+
+        # Mesh ASM stubs (asm_mesh_crdt_lookup etc. not in RawrXD_MeshBrain.asm)
+        src/core/mesh_brain_asm_stubs.cpp
+
+        # Disk Recovery Agent (C++ implementation) + Tool handler + ASM wrapper
+        src/agent/DiskRecoveryAgent.cpp
+        src/agentic/DiskRecoveryAgent.cpp
+        src/agentic/DiskRecoveryToolHandler.cpp
+        src/agent_history.cpp
+        src/agent_policy.cpp
+        src/agent_explainability.cpp
+        src/utils/ErrorReporter.cpp
+        src/modules/engine_manager.cpp
+        src/cpu_inference_engine.cpp
+        src/memory_core.cpp
+        src/hot_patcher.cpp
+        src/streaming_gguf_loader.cpp
+        src/utils/Diagnostics.cpp
+        src/gguf_loader.cpp
+        src/gguf_vocab_resolver.cpp
+        src/model_source_resolver.cpp
+        src/compression_interface.cpp
+        src/engine/gguf_core.cpp
+        src/engine/inference_kernels.cpp
+        src/engine/transformer.cpp
+        src/engine/bpe_tokenizer.cpp
+        src/engine/sampler.cpp
+        src/engine/rawr_engine.cpp
+        src/engine/core_generator.cpp
+        src/engine/pyre_compute.cpp
+        src/engine/sovereign_engines.cpp
+        src/codec/compression.cpp
+        src/codec/brutal_gzip.cpp
+        
+        # Streaming engine registry (Phase 9)
+        src/core/streaming_engine_registry.cpp
+        src/core/gpu_backend_bridge.cpp
+        src/core/enterprise_license.cpp
+        src/core/camellia256_bridge.cpp
+        src/core/watchdog_service.cpp
+        src/core/multi_response_engine.cpp
+        src/core/flash_attention.cpp
+        src/core/execution_scheduler.cpp
+        src/core/execution_governor.cpp
+        src/core/agent_safety_contract.cpp
+        src/core/deterministic_replay.cpp
+        src/core/confidence_gate.cpp
+        
+        # Layer Offload Manager (required by pyre_compute)
+        src/core/layer_offload_manager.cpp
+
+        # Native speed layer + local AI core (zero-dependency inference)
+        src/core/native_speed_layer.cpp
+        src/core/local_ai_core.cpp
+        src/core/native_inference_pipeline.cpp
+        
+        # Distributed Swarm Compilation (Phase 11)
+        src/core/swarm_coordinator.cpp
+        src/core/swarm_worker.cpp
+        src/win32app/Win32IDE_SwarmPanel.cpp
+        
+        # Dual-Agent Orchestrator (Phase 41)
+        src/win32app/Win32IDE_DualAgentPanel.cpp
+        
+        # Native Debugger Engine (Phase 12)
+        src/core/native_debugger_engine.cpp
+        src/win32app/Win32IDE_NativeDebugPanel.cpp
+        
+        # Three-Layer Hotpatch System (Phase 14.2)
+        src/core/model_memory_hotpatch.cpp
+        src/core/byte_level_hotpatcher.cpp
+        src/core/unified_hotpatch_manager.cpp
+        src/core/proxy_hotpatcher.cpp
+        src/core/model_bruteforce_engine.cpp
+        src/server/gguf_server_hotpatch.cpp
+        src/core/pt_driver_contract.cpp
+        src/core/shadow_page_detour.cpp
+        src/core/sentinel_watchdog.cpp
+        src/win32app/Win32IDE_HotpatchPanel.cpp
+        
+        # Agent-Driven Hotpatch Orchestration (Phase 18)
+        src/agent/agentic_hotpatch_orchestrator.cpp
+
+        # Shadow-Page Detour + Sentinel Watchdog (Layer 6)
+        src/core/shadow_page_detour.cpp
+        src/core/sentinel_watchdog.cpp
+
+        # HTTP Client — WinHTTP async with future retention (CLI+GUI)
+        src/agent/llm_http_client.cpp
+        src/agent/model_invoker.cpp
+        src/agent/planner.cpp
+        src/agent/eval_framework.cpp
+        src/agent/autonomous_subagent.cpp
+        src/agent/agentic_failure_detector.cpp
+        src/agent/agentic_puppeteer.cpp
+
+        # LocalReasoningEngine — API-free static analysis + pattern detection
+        src/agent/local_reasoning_engine.cpp
+
+        # Agent Self-Repair — MASM64 self-patching kernel bridge
+        src/agent/agent_self_repair.cpp
+        src/agent/agent_self_healing_orchestrator.cpp
+        
+        # Module implementations
+        src/modules/vsix_loader_win32.cpp
+        src/modules/codex_ultimate.cpp
+
+        # Phase 29: VS Code Extension API Compatibility Layer
+        src/modules/vscode_extension_api.cpp
+        src/win32app/Win32IDE_VSCodeExtAPI.cpp
+        
+        # Phase 21: Distributed Swarm Bridge + Universal Model Hotpatcher
+        src/core/swarm_decision_bridge.cpp
+        src/core/universal_model_hotpatcher.cpp
+        
+        # Phase 22: Production Release Engineering
+        src/core/production_release.cpp
+        
+        # Phase 22: Quantum-Safe Transport, Adaptive Pipeline, Universal Model Merger
+        src/core/quantum_safe_transport.cpp
+        src/core/adaptive_pipeline_parallel.cpp
+        src/core/universal_model_merger.cpp
+        
+        # Phase 20: WebRTC P2P Signaling
+        src/core/webrtc_signaling.cpp
+        
+        # Phase 23: GPU Kernel Auto-Tuner
+        src/core/gpu_kernel_autotuner.cpp
+        
+        # Phase 24: Windows Sandbox Integration
+        src/core/sandbox_integration.cpp
+        
+        # Phase 25: AMD/ATI GPU Acceleration Toggle
+        src/core/amd_gpu_accelerator.cpp
+        
+        # Phase 29: Multi-Architecture GPU/Accelerator Backends
+        src/core/intel_gpu_accelerator.cpp
+        src/core/arm64_gpu_accelerator.cpp
+        src/core/cerebras_wse_accelerator.cpp
+        
+        # Phase 30: Unified Accelerator Router
+        src/core/accelerator_router.cpp
+        
+        # Phase 29.2: GSI Hash Table + TPI Type Parser
+        src/core/pdb_gsi_hash.cpp
+        
+        # Phase 29.2: Multi-Reference Provider + Tools/Instructions Hook
+        src/core/pdb_reference_provider.cpp
+        
+        # Phase 26: WebView2 + Monaco Editor Integration
+        src/win32app/Win32IDE_WebView2.cpp
+        src/win32app/Win32IDE_MonacoThemes.cpp
+
+        # Phase 27: Embedded LSP Server (JSON-RPC 2.0)
+        src/lsp/RawrXD_LSPServer.cpp
+        src/win32app/Win32IDE_LSPServer.cpp
+
+        # Phase 27b: LSP ↔ Hotpatch Bridge (Symbol Export, Diagnostics, JSON-RPC Extension)
+        src/lsp/lsp_hotpatch_bridge.cpp
+        src/lsp/hotpatch_symbol_provider.cpp
+        src/lsp/gguf_diagnostic_provider.cpp
+
+        # Phase 28: MonacoCore Native Editor Engine — Toggleable Engine System
+        src/core/MonacoCoreEngine.cpp
+        src/core/monaco_core_stubs.cpp
+        src/core/WebView2EditorEngine.cpp
+        src/core/RichEditEditorEngine.cpp
+        src/core/EditorEngineFactory.cpp
+        src/win32app/Win32IDE_EditorEngine.cpp
+
+        # Phase 29: Native PDB Symbol Server — MSF v7.00 Parser + Symbol Cache
+        src/core/pdb_native.cpp
+        src/core/pdb_lsp_bridge.cpp
+        src/win32app/Win32IDE_PDBSymbols.cpp
+
+        # Phase 31: IDE Self-Audit & Verification System
+        src/core/feature_registry.cpp
+        src/core/menu_auditor.cpp
+        src/core/auto_discovery.cpp
+        src/win32app/Win32IDE_AuditDashboard.cpp
+
+        # Phase 32: The Final Gauntlet — Pre-Packaging Runtime Verification
+        src/core/final_gauntlet.cpp
+        src/win32app/Win32IDE_Gauntlet.cpp
+
+        # Phase 33: Voice Chat Engine
+        src/core/voice_chat.cpp
+        src/win32app/Win32IDE_VoiceChat.cpp
+
+        # Phase 44: Voice Automation — Toggleable TTS with Pluggable Voices
+        src/core/voice_automation.cpp
+        src/win32app/Win32IDE_VoiceAutomation.cpp
+
+        # Phase 33: Quick-Win Ports
+        src/core/shortcut_manager.cpp
+        src/core/backup_manager.cpp
+        src/core/alert_system.cpp
+        src/win32app/Win32IDE_QuickWins.cpp
+
+        # Shared Feature Dispatch System (CLI + GUI unified command routing)
+        # NOTE: shared_feature_dispatch.cpp REMOVED — duplicated by unified_command_dispatch.cpp
+        src/core/feature_registration.cpp
+        src/core/feature_handlers.cpp
+        # auto_feature_registry excluded for Win32 IDE — use ssot_handlers (lightweight stubs)
+        src/core/intent_engine.cpp
+        src/core/missing_handler_stubs.cpp
+        src/core/model_training_pipeline.cpp
+        src/agentic/AgentOllamaClient.cpp
+        src/core/ssot_handlers.cpp
+        src/core/ssot_handlers_ext.cpp
+        src/core/ssot_validation.cpp
+
+        # Unified Command Dispatch — Zero-drift SSOT dispatch (replaces manual registration)
+        src/core/unified_command_dispatch.cpp
+
+        # Phase 21: Distributed Swarm Inference Orchestrator
+        src/cli/swarm_orchestrator.cpp
+
+        # Phase 32A: Chain-of-Thought Multi-Model Review Engine
+        src/core/chain_of_thought_engine.cpp
+
+        # Phase 34: Telemetry Export
+        src/win32app/Win32IDE_Telemetry.cpp
+
+        # Phase 36: MCP Integration — Model Context Protocol Server + Client
+        src/mcp_integration.cpp
+        src/win32app/Win32IDE_MCP.cpp
+
+        # Phase 36: Flight Recorder — memory-mapped binary ring-buffer logger
+        src/win32app/Win32IDE_FlightRecorder.cpp
+
+        # Phase 36: QuickJS VSIX JavaScript Extension Host
+        src/modules/quickjs_extension_host.cpp
+        src/modules/quickjs_node_shims.cpp
+        src/modules/quickjs_vscode_bindings.cpp
+
+        # Phase 36: Cross-Process MMF State Synchronization
+        src/core/rawrxd_state_mmf.cpp
+
+        # Phase 37: JS Extension Host + Auto-Polyfill Engine
+        src/core/js_extension_host.cpp
+        src/core/extension_polyfill_engine.cpp
+
+        # Phase 46: VulkanKernel — Full GPU Compute Engine
+        src/vulkan_compute.cpp
+
+        # Phase 46: Live Binary Patcher — Layer 5 Hotpatch
+        src/core/live_binary_patcher.cpp
+
+        # ═══════════════════════════════════════════════════════════════
+        # Valuation-Critical Platform Subsystems (linker deps for UnifiedHotpatchManager)
+        # ═══════════════════════════════════════════════════════════════
+        src/core/autonomous_workflow_engine.cpp
+        src/core/workspace_reasoning_profiles.cpp
+        src/core/reasoning_profile.cpp
+        src/core/deterministic_swarm.cpp
+        src/core/reasoning_schema_versioning.cpp
+        src/core/cot_fallback_system.cpp
+        src/core/input_guard_slicer.cpp
+        src/core/safe_refactor_engine.cpp
+        src/agentic_agent_coordinator.cpp
+        src/production_config_manager.cpp
+
+        # Singleton subsystems referenced by UnifiedHotpatchManager
+        src/core/agentic_task_graph.cpp
+        src/core/embedding_engine.cpp
+        src/core/vector_index.cpp
+        src/core/vision_encoder.cpp
+
+        # Vision Pipeline Extensions (Token Gating, Embedding Cache, KV Isolation, Quantized Encoder, GPU Staging)
+        src/core/vision_token_gate.cpp
+        src/core/vision_embedding_cache.cpp
+        src/core/vision_kv_isolation.cpp
+        src/core/vision_quantized_encoder.cpp
+        src/core/vision_gpu_staging.cpp
+
+        src/marketplace/extension_marketplace.cpp
+        src/auth/rbac_engine.cpp
+
+        # Agentic Loop State (iterative reasoning state machine)
+        src/agentic_loop_state.cpp
+
+        # Transaction Journal (WAL journal for atomic file operations)
+        src/core/transaction_journal.cpp
+
+        # Instructions Provider — unified *.instructions.md loader (HTTP+CLI+GUI)
+        src/core/instructions_provider.cpp
+        src/win32app/Win32IDE_Instructions.cpp
+
+        # Phase 45: Game Engine Integration (Unity + Unreal)
+        src/modules/unity_engine_integration.cpp
+        src/modules/unreal_engine_integration.cpp
+        src/modules/game_engine_manager.cpp
+        src/win32app/Win32IDE_GameEnginePanel.cpp
+
+        # Phase 48: The Final Crucible (Unified Stress-Test Harness)
+        src/modules/crucible_engine.cpp
+        src/win32app/Win32IDE_CruciblePanel.cpp
+
+        # Phase 49: Copilot Gap Closer (HNSW + Composer + CRDT + Git Context)
+        src/modules/copilot_gap_closer.cpp
+        src/win32app/Win32IDE_CopilotGapPanel.cpp
+
+        # Phase 13: Distributed Pipeline Orchestrator
+        src/core/distributed_pipeline_orchestrator.cpp
+        src/win32app/Win32IDE_PipelinePanel.cpp
+
+        # Phase 14: Hotpatch Control Plane
+        src/core/hotpatch_control_plane.cpp
+        src/win32app/Win32IDE_HotpatchCtrlPanel.cpp
+
+        # Phase 15: Static Analysis Engine
+        src/core/static_analysis_engine.cpp
+        src/core/code_linter.cpp
+        src/lsp/diagnostic_consumer.cpp
+        src/win32app/Win32IDE_StaticAnalysisPanel.cpp
+
+        # Phase 16: Semantic Code Intelligence
+        src/core/semantic_code_intelligence.cpp
+        src/win32app/Win32IDE_SemanticPanel.cpp
+
+        # Phase 17: Enterprise Telemetry & Compliance
+        src/core/enterprise_telemetry_compliance.cpp
+        src/win32app/Win32IDE_TelemetryPanel.cpp
+        src/win32app/Win32IDE_Tier3Polish.cpp
+        src/win32app/Win32IDE_Tier3Cosmetics.cpp
+        src/win32app/Win32IDE_Tier5Cosmetics.cpp
+        src/win32app/Win32IDE_CrashReporter.cpp
+        src/win32app/Win32IDE_ColorPicker.cpp
+        src/win32app/Win32IDE_EmojiSupport.cpp
+        src/win32app/Win32IDE_ShortcutEditor.cpp
+        src/win32app/Win32IDE_TelemetryDashboard.cpp
+        src/win32app/Win32IDE_MarketplacePanel.cpp
+        src/win32app/Win32IDE_TestExplorerTree.cpp
+        src/win32app/Win32IDE_NetworkPanel.cpp
+        src/core/omega_orchestrator.cpp
+        src/core/mesh_brain.cpp
+        src/core/mesh_brain_asm_stubs.cpp
+        src/core/speciator_engine.cpp
+        src/core/neural_bridge.cpp
+        src/core/self_host_engine.cpp
+        src/core/hardware_synthesizer.cpp
+        src/core/transcendence_coordinator.cpp
+        src/win32app/Win32IDE_TranscendencePanel.cpp
+        src/win32app/VulkanRenderer.cpp
+        src/win32app/OSExplorerInterceptor.cpp
+        src/win32app/Win32IDE_MCPHooks.cpp
+        src/win32app/TodoManager.cpp
+        src/win32app/IocpFileWatcher.cpp
+        src/win32app/IDEDiagnosticAutoHealer.cpp
+        # IDEDiagnosticAutoHealer_Impl.cpp excluded (duplicate DiagnosticUtils)
+        # IDEAutoHealerLauncher.cpp excluded (defines main, conflicts with ASM)
+        # src/win32app/ConsentPrompt.cpp
+        # src/win32app/AutonomousAgent.cpp
+
+        # UI Rendering — Chat message renderer + tool action status + chat panel
+        src/ui/chat_message_renderer.cpp
+        src/ui/tool_action_status.cpp
+        src/ui/chat_panel.cpp
+
+        # Cathedral Hardening (5.0 Readiness)
+        src/core/crash_containment.cpp
+        src/core/patch_rollback_ledger.cpp
+        src/core/quant_hysteresis.cpp
+        src/core/masm_stress_harness.cpp
+        src/core/perf_telemetry.cpp
+        src/core/convergence_stress_harness.cpp
+
+        # Phase 50: Enterprise Hardening — Auto-Update, Swarm Reconciliation, Plugin Sandbox/Signature, Stress Tests
+        src/core/update_signature.cpp
+        src/core/cursor_github_parity_bridge.cpp
+        src/core/swarm_reconciliation.cpp
+        src/core/quickjs_sandbox.cpp
+        src/core/plugin_signature.cpp
+        src/core/enterprise_stress_tests.cpp
+        src/core/auto_update_system.cpp
+
+        # ═══════════════════════════════════════════════════════════════
+        # Autonomy Gap Closure — Phase A-D + Tier 1.4 + Tier 2.3
+        # ═══════════════════════════════════════════════════════════════
+
+        # Phase A: Closed-Loop Verification (Write → Compile → Test → Fix)
+        src/agentic/autonomous_verification_loop.cpp
+
+        # Phase B: Continuous Background Daemon (proactive refactor, doc-sync, security)
+        src/agentic/autonomous_background_daemon.cpp
+
+        # Phase C: Long-Term Knowledge Graph (cross-session learning, decision memory)
+        src/core/sqlite3.c
+        src/core/knowledge_graph_core.cpp
+
+        # Phase D: Multi-Agent Conflict Resolution (merge negotiation, consensus)
+        src/core/swarm_conflict_resolver.cpp
+
+        # Tier 1.4: Autonomous Debugging & Root Cause Analysis
+        src/core/autonomous_debugger.cpp
+
+        # Tier 2.3: Autonomous Communication (standup reports, approval requests)
+        src/agentic/autonomous_communicator.cpp
+
+        # Unified Telemetry Core
+        src/telemetry/UnifiedTelemetryCore.cpp
+
+        # ═══════════════════════════════════════════════════════════════
+        # Cursor/JB-Parity Feature Modules
+        # ═══════════════════════════════════════════════════════════════
+        src/telemetry/telemetry_export.cpp
+        src/agentic/agentic_composer_ux.cpp
+        src/context/context_mention_parser.cpp
+        src/multimodal_engine/vision_encoder.cpp
+        src/ide/refactoring_plugin.cpp
+        src/ide/language_plugin.cpp
+        src/context/semantic_index.cpp
+        src/ide/resource_generator.cpp
+        src/win32app/Win32IDE_CursorParity.cpp
+        src/win32app/Win32IDE_GUILayoutHotpatch.cpp
+
+        # ═══════════════════════════════════════════════════════════════
+        # Flagship Product Pillars (Provable Agent, AI RE, Airgapped)
+        # ═══════════════════════════════════════════════════════════════
+        src/win32app/Win32IDE_ProvableAgent.cpp
+        src/win32app/Win32IDE_AIReverseEngineering.cpp
+        src/win32app/Win32IDE_AirgappedEnterprise.cpp
+        src/win32app/Win32IDE_FlagshipFeatures.cpp
+    )
+    
+    # =========================================================================
+    # MultiWindow Task Scheduler Kernel (MASM64 DLL)
+    # =========================================================================
+    if(RAWR_HAS_MASM)
+        set(MW_KERNEL_ASM src/asm/RawrXD_MultiWindow_Kernel.asm)
+        set_source_files_properties(${MW_KERNEL_ASM} PROPERTIES LANGUAGE ASM_MASM)
+
+        add_library(RawrXD_MultiWindow_Kernel SHARED
+            ${MW_KERNEL_ASM}
+            src/core/multiwindow_scheduler.cpp
+        )
+        target_include_directories(RawrXD_MultiWindow_Kernel PUBLIC
+            ${CMAKE_CURRENT_SOURCE_DIR}/include
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/core
+        )
+        set_target_properties(RawrXD_MultiWindow_Kernel PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY bin
+            OUTPUT_NAME RawrXD_MultiWindow_Kernel
+            LINK_FLAGS "/DEF:\"${CMAKE_CURRENT_SOURCE_DIR}/src/asm/MultiWindowKernel.def\""
+        )
+        target_link_libraries(RawrXD_MultiWindow_Kernel PRIVATE
+            kernel32 user32 winhttp
+        )
+        target_compile_definitions(RawrXD_MultiWindow_Kernel PRIVATE
+            RAWRXD_MW_KERNEL_EXPORTS=1
+        )
+        add_definitions(-DRAWRXD_HAS_MW_KERNEL=1)
+        message(STATUS "MultiWindow Kernel DLL target enabled")
+    else()
+        add_definitions(-DRAWRXD_HAS_MW_KERNEL=0)
+        message(STATUS "MultiWindow Kernel DLL skipped (no MASM)")
+    endif()
+
+    # =========================================================================
+    # Dynamic Prompt Engine DLL (MASM64 kernel + C glue)
+    # Unity/Unreal compatible SHARED library
+    # =========================================================================
+    if(RAWR_HAS_MASM)
+        set(PROMPT_ENGINE_ASM src/asm/RawrXD_DynamicPromptEngine.asm)
+        set_source_files_properties(${PROMPT_ENGINE_ASM} PROPERTIES LANGUAGE ASM_MASM)
+
+        add_library(RawrXD_DynamicPromptEngine SHARED
+            ${PROMPT_ENGINE_ASM}
+            src/core/dynamic_prompt_engine_glue.cpp
+        )
+        target_include_directories(RawrXD_DynamicPromptEngine PUBLIC
+            ${CMAKE_CURRENT_SOURCE_DIR}/include
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/core
+        )
+        set_target_properties(RawrXD_DynamicPromptEngine PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY bin
+            OUTPUT_NAME RawrXD_DynamicPromptEngine
+            LINK_FLAGS "/DEF:\"${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_DynamicPromptEngine.def\""
+        )
+        target_link_libraries(RawrXD_DynamicPromptEngine PRIVATE
+            kernel32 user32
+        )
+        target_compile_definitions(RawrXD_DynamicPromptEngine PRIVATE
+            RAWRXD_PROMPT_ENGINE_EXPORTS=1
+        )
+        add_definitions(-DRAWRXD_HAS_PROMPT_ENGINE=1)
+        message(STATUS "DynamicPromptEngine DLL target enabled (Unity/Unreal compatible)")
+    else()
+        add_definitions(-DRAWRXD_HAS_PROMPT_ENGINE=0)
+        message(STATUS "DynamicPromptEngine DLL skipped (no MASM)")
+    endif()
+
+    add_executable(RawrXD-Win32IDE WIN32 ${WIN32IDE_SOURCES} ${ASM_KERNEL_SOURCES}
+        src/win32app/RawrXD-Win32IDE.rc)
+
+    # Win32 IDE links sovereign_engines.cpp — avoid duplicate register_sovereign_engines in stubs
+    target_compile_definitions(RawrXD-Win32IDE PRIVATE
+        RAWR_HAS_SOVEREIGN_ENGINES=1
+        RAWRXD_NO_QT=1
+    )
+
+    # =========================================================================
+    # Phase 36: QuickJS Static Library (embedded JS runtime)
+    # =========================================================================
+    # QuickJS sources should be placed in 3rdparty/quickjs/
+    # If not present, create stub target that allows compilation without QuickJS
+    set(QUICKJS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/quickjs)
+    if(EXISTS "${QUICKJS_DIR}/quickjs.c")
+        add_library(quickjs_static STATIC
+            ${QUICKJS_DIR}/quickjs.c
+            ${QUICKJS_DIR}/libregexp.c
+            ${QUICKJS_DIR}/libunicode.c
+            ${QUICKJS_DIR}/cutils.c
+            ${QUICKJS_DIR}/quickjs-libc.c
+            ${QUICKJS_DIR}/libbf.c
+        )
+        target_include_directories(quickjs_static PUBLIC ${QUICKJS_DIR})
+        if(MSVC)
+            target_compile_options(quickjs_static PRIVATE /W0 /O2)
+            target_compile_definitions(quickjs_static PRIVATE
+                _CRT_SECURE_NO_WARNINGS
+                CONFIG_BIGNUM
+                CONFIG_VERSION="2024.01.13"
+            )
+        else()
+            target_compile_options(quickjs_static PRIVATE -w -O2)
+            target_compile_definitions(quickjs_static PRIVATE
+                CONFIG_BIGNUM
+                CONFIG_VERSION="2024.01.13"
+                _GNU_SOURCE
+            )
+        endif()
+        target_link_libraries(RawrXD-Win32IDE PRIVATE quickjs_static)
+        target_include_directories(RawrXD-Win32IDE PRIVATE ${QUICKJS_DIR}/..)
+        message(STATUS "QuickJS found: JS extension host enabled")
+        add_definitions(-DRAWR_HAS_QUICKJS=1)
+    else()
+        message(STATUS "QuickJS not found at ${QUICKJS_DIR} — JS extension host uses stubs")
+        # Create stub include directory so headers compile
+        target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWR_QUICKJS_STUB=1)
+    endif()
+    
+    # Link RE library into Win32IDE
+    target_link_libraries(RawrXD-Win32IDE PRIVATE RawrXD-RE-Library)
+    
+    # Link MultiWindow Kernel into Win32IDE
+    if(TARGET RawrXD_MultiWindow_Kernel)
+        target_link_libraries(RawrXD-Win32IDE PRIVATE RawrXD_MultiWindow_Kernel)
+        target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWRXD_HAS_MW_KERNEL=1)
+    endif()
+    
+    # Link NanoQuant into Win32IDE
+    if(TARGET RawrXD_NanoQuant)
+        target_link_libraries(RawrXD-Win32IDE PRIVATE RawrXD_NanoQuant)
+        target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWR_HAS_NANOQUANT=1)
+    endif()
+    
+    # Vulkan SDK for Win32IDE
+    if(Vulkan_FOUND)
+        target_include_directories(RawrXD-Win32IDE PRIVATE ${Vulkan_INCLUDE_DIRS})
+        target_link_libraries(RawrXD-Win32IDE PRIVATE Vulkan::Vulkan)
+        target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWR_HAS_VULKAN=1)
+    elseif(_VK_SDK_DIRS)
+        target_include_directories(RawrXD-Win32IDE PRIVATE "${_VK_SDK_DIR}/Include")
+        target_link_directories(RawrXD-Win32IDE PRIVATE "${_VK_SDK_DIR}/Lib")
+        target_link_libraries(RawrXD-Win32IDE PRIVATE vulkan-1)
+        target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWR_HAS_VULKAN=1)
+    else()
+        target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWR_HAS_VULKAN=0)
+    endif()
+
+    target_link_libraries(RawrXD-Win32IDE PRIVATE
+        Threads::Threads
+        comctl32 comdlg32 shell32 ole32 oleaut32 uuid
+        shlwapi psapi dbghelp winhttp ws2_32 winmm gdi32 user32 ntdll
+        d2d1 dwrite d3d11 dcomp d3dcompiler dwmapi
+        advapi32 crypt32 bcrypt wintrust
+        opengl32 wininet
+        ${MASM_OBJECTS}
+    )
+
+    if(NOT MSVC)
+        target_link_libraries(RawrXD-Win32IDE PRIVATE gomp)
+    endif()
+
+    # Ensure MASM kernels build before Win32IDE
+    if(TARGET masm_kernels)
+        add_dependencies(RawrXD-Win32IDE masm_kernels)
+    endif()
+    
+    # Link RE deobfuscator MASM objects if available
+    if(TARGET re_deobfuscator)
+        add_dependencies(RawrXD-Win32IDE re_deobfuscator)
+        target_link_libraries(RawrXD-Win32IDE PRIVATE ${RE_DEOBF_OBJECTS})
+    endif()
+    # Skip RE_MODEL_OBJECTS (model_llm_harvester.asm) — it defines main() and conflicts with WinMain
+    # if(TARGET re_model_reverse)
+    #     add_dependencies(RawrXD-Win32IDE re_model_reverse)
+    #     target_link_libraries(RawrXD-Win32IDE PRIVATE ${RE_MODEL_OBJECTS})
+    # endif()
+    
+    target_include_directories(RawrXD-Win32IDE PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/engine
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/core
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/server
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/agent
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/agentic
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/cli
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/win32app
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/modules
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/utils
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/config
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/asm
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/lsp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/plugin_system
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/ide
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/context
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/multimodal_engine
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/telemetry
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/ui
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/git
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+    )
+
+    if(MSVC)
+        target_compile_options(RawrXD-Win32IDE PRIVATE
+            $<$<COMPILE_LANGUAGE:CXX>:/EHsc>
+            $<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CONFIG:Release>>:/O2>
+            $<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CONFIG:Release>>:/W0>
+            $<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CONFIG:Release>>:/arch:AVX2>
+            $<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CONFIG:RelWithDebInfo>>:/O2>
+            $<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CONFIG:RelWithDebInfo>>:/W0>
+            $<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CONFIG:RelWithDebInfo>>:/arch:AVX2>
+        )
+    else()
+        target_compile_options(RawrXD-Win32IDE PRIVATE -O3 -w -mavx2 -mfma -march=native -fopenmp)
+    endif()
+
+    set_target_properties(RawrXD-Win32IDE PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY bin
+        OUTPUT_NAME RawrXD-Win32IDE
+    )
+    # RawrCodex.asm uses ADDR32 relocations — require /LARGEADDRESSAWARE:NO
+    if(MSVC)
+        target_link_options(RawrXD-Win32IDE PRIVATE /LARGEADDRESSAWARE:NO)
+    endif()
+endif()
+
+# =============================================================================
+# ███████████████████████████████████████████████████████████████████ ████████████
+# RawrXD_Gold.exe — Standalone Monolithic Deployment (ALL modules, ALL MASM)
+# ███████████████████████████████████████████████████████████████████████████████
+# Produces a single self-contained binary with:
+#   • Full Win32 IDE shell (WinMain entry)
+#   • All CLI/agentic subsystems (decision tree, headless, server)
+#   • Every MASM64 kernel (ASM_KERNEL_SOURCES + custom MASM_OBJECTS)
+#   • GPU, Vulkan, Telemetry, LSP, MCP, Swarm, CoT, NanoQuant
+#   • Reverse Engineering library, QuickJS, MultiWindow Kernel
+#   • Zero unresolved externals — fully standalone
+# =============================================================================
+option(RAWRXD_BUILD_GOLD "Build RawrXD-Gold monolithic target" OFF)
+if(WIN32 AND RAWRXD_BUILD_GOLD)
+    set(GOLD_SOURCES
+        # ── Win32 IDE Shell (GUI entry point) ──────────────────────────
+        src/win32app/main_win32.cpp
+        src/win32app/Win32IDE.cpp
+        src/win32app/HeadlessIDE.cpp
+        src/win32app/Win32IDE_Core.cpp
+        src/win32app/Win32IDE_Sidebar.cpp
+        src/win32app/Win32IDE_VSCodeUI.cpp
+        src/win32app/Win32IDE_NativePipeline.cpp
+        src/win32app/Win32IDE_PowerShellPanel.cpp
+        src/win32app/Win32IDE_PowerShell.cpp
+        src/win32app/Win32IDE_Logger.cpp
+        src/win32app/Win32IDE_FileOps.cpp
+        src/win32app/Win32IDE_SourceFilePicker.cpp
+        src/win32app/Win32IDE_Commands.cpp
+        src/win32app/Win32IDE_Debugger.cpp
+        src/win32app/Win32IDE_AgenticBridge.cpp
+        src/win32app/Win32IDE_AgentCommands.cpp
+        src/win32app/Win32IDE_Autonomy.cpp
+        src/win32app/Win32IDE_SyntaxHighlight.cpp
+        src/win32app/Win32IDE_Themes.cpp
+        src/win32app/Win32IDE_Annotations.cpp
+        src/win32app/Win32IDE_Session.cpp
+        src/win32app/Win32IDE_StreamingUX.cpp
+        src/win32app/Win32IDE_ReverseEngineering.cpp
+        src/win32app/Win32IDE_DecompilerView.cpp
+        src/win32app/Win32IDE_FeatureManifest.cpp
+        src/win32app/Win32IDE_GhostText.cpp
+        src/win32app/Win32IDE_PlanExecutor.cpp
+        src/win32app/Win32IDE_FailureDetector.cpp
+        src/win32app/Win32IDE_FailureIntelligence.cpp
+        src/win32app/Win32IDE_Settings.cpp
+        src/win32app/Win32IDE_LocalServer.cpp
+        src/win32app/Win32IDE_BackendSwitcher.cpp
+        src/win32app/Win32IDE_LLMRouter.cpp
+        src/win32app/Win32IDE_LSPClient.cpp
+        src/win32app/Win32IDE_AsmSemantic.cpp
+        src/win32app/Win32IDE_LSP_AI_Bridge.cpp
+        src/win32app/Win32IDE_MultiResponse.cpp
+        src/win32app/Win32IDE_ExecutionGovernor.cpp
+        src/win32app/Win32IDE_SubAgent.cpp
+        src/win32app/Win32IDE_AgentHistory.cpp
+        src/win32app/Win32IDE_AgentPanel.cpp
+        src/win32app/Win32IDE_DiskRecovery.cpp
+        src/win32app/Win32TerminalManager.cpp
+        src/win32app/TransparentRenderer.cpp
+        src/win32app/Win32IDE_Plugins.cpp
+        src/win32app/Win32IDE_SwarmPanel.cpp
+        src/win32app/Win32IDE_DualAgentPanel.cpp
+        src/win32app/Win32IDE_NativeDebugPanel.cpp
+        src/win32app/Win32IDE_HotpatchPanel.cpp
+        src/win32app/Win32IDE_VSCodeExtAPI.cpp
+        src/win32app/Win32IDE_WebView2.cpp
+        src/win32app/Win32IDE_MonacoThemes.cpp
+        src/win32app/Win32IDE_LSPServer.cpp
+        src/win32app/Win32IDE_EditorEngine.cpp
+        src/win32app/Win32IDE_PDBSymbols.cpp
+        src/win32app/Win32IDE_AuditDashboard.cpp
+        src/win32app/Win32IDE_Gauntlet.cpp
+        src/win32app/Win32IDE_VoiceChat.cpp
+        src/win32app/Win32IDE_VoiceAutomation.cpp
+        src/win32app/Win32IDE_QuickWins.cpp
+        src/win32app/Win32IDE_Telemetry.cpp
+        src/win32app/Win32IDE_MCP.cpp
+        src/win32app/Win32IDE_FlightRecorder.cpp
+        src/win32app/Win32IDE_Instructions.cpp
+        src/win32app/Win32IDE_GameEnginePanel.cpp
+        src/win32app/Win32IDE_CruciblePanel.cpp
+        src/win32app/Win32IDE_CopilotGapPanel.cpp
+        src/win32app/Win32IDE_PipelinePanel.cpp
+        src/win32app/Win32IDE_HotpatchCtrlPanel.cpp
+        src/win32app/Win32IDE_StaticAnalysisPanel.cpp
+        src/win32app/Win32IDE_SemanticPanel.cpp
+        src/win32app/Win32IDE_TelemetryPanel.cpp
+        src/win32app/Win32IDE_Tier3Polish.cpp
+        src/win32app/Win32IDE_Tier3Cosmetics.cpp
+        src/win32app/Win32IDE_Tier5Cosmetics.cpp
+        src/win32app/Win32IDE_Tier2Cosmetics.cpp
+        src/win32app/Win32IDE_Tier1Cosmetics.cpp
+        src/win32app/Win32IDE_OutlinePanel.cpp
+        src/win32app/Win32IDE_RenamePreview.cpp
+
+        # ── Plugin System ──────────────────────────────────────────────
+        src/plugin_system/win32_plugin_loader.cpp
+        src/config/IDEConfig.cpp
+
+        # ── Core Engine (shared CLI + GUI) ─────────────────────────────
+        src/stubs.cpp
+        src/memory_core.cpp
+        src/hot_patcher.cpp
+        src/cpu_inference_engine.cpp
+        src/complete_server.cpp
+        src/agentic_engine.cpp
+        src/subagent_core.cpp
+        src/agent_history.cpp
+        src/agent_policy.cpp
+        src/agent_explainability.cpp
+        src/streaming_gguf_loader.cpp
+        src/utils/Diagnostics.cpp
+        src/utils/ErrorReporter.cpp
+        src/gguf_loader.cpp
+        src/gguf_vocab_resolver.cpp
+        src/compression_interface.cpp
+        src/model_source_resolver.cpp
+        src/agentic_controller.cpp
+        src/agentic_agent_coordinator.cpp
+        src/production_config_manager.cpp
+        src/agentic_loop_state.cpp
+        src/tool_registry.cpp
+        src/mcp_integration.cpp
+        src/vulkan_compute.cpp
+
+        # ── Engine ─────────────────────────────────────────────────────
+        src/engine/gguf_core.cpp
+        src/engine/inference_kernels.cpp
+        src/engine/transformer.cpp
+        src/engine/bpe_tokenizer.cpp
+        src/engine/sampler.cpp
+        src/engine/rawr_engine.cpp
+        src/engine/core_generator.cpp
+
+        # ── Codec ──────────────────────────────────────────────────────
+        src/codec/compression.cpp
+        src/codec/brutal_gzip.cpp
+
+        # ── CLI / Agentic Decision Systems ─────────────────────────────
+        src/cli/agentic_decision_tree.cpp
+        src/cli/cli_autonomy_loop.cpp
+        src/cli/cli_headless_systems.cpp
+        src/cli/swarm_orchestrator.cpp
+
+        # ── Agentic Framework ──────────────────────────────────────────
+        src/agentic/AgentToolHandlers.cpp
+        src/agentic/BoundedAgentLoop.cpp
+        src/agentic/OllamaProvider.cpp
+        src/agentic/DiffEngine.cpp
+        src/agentic/DeterministicReplayEngine.cpp
+        src/agentic/autonomous_recovery_orchestrator.cpp
+        src/agentic/agentic_transaction.cpp
+        src/agentic/multi_file_transaction.cpp
+        src/agentic/model_cascade.cpp
+        src/agentic/context_assembler.cpp
+        src/agentic/AgentOllamaClient.cpp
+
+        # ── Agent Orchestrator + Bridge + Navigation ───────────────────
+        src/agentic/AgentOrchestrator.cpp
+        src/agentic/OrchestratorBridge.cpp
+        src/agentic/AgenticNavigator.cpp
+        src/agentic/RawrXD_ToolRegistry.cpp
+        src/agentic/ToolRegistry.cpp
+        src/agentic/RawrXD_AgentLoop.cpp
+        src/agentic/agentic_executor.cpp
+
+        # ── Autonomous Repair Orchestrator + Agent Memory Indexer ──────
+        src/core/auto_repair_orchestrator.cpp
+        src/core/agent_memory_indexer.cpp
+
+        # ── Agent Subsystems ───────────────────────────────────────────
+        src/agent/autonomous_subagent.cpp
+        src/agent/agentic_failure_detector.cpp
+        src/agent/agentic_puppeteer.cpp
+        src/agent/llm_http_client.cpp
+        src/agent/model_invoker.cpp
+        src/agent/planner.cpp
+        src/agent/eval_framework.cpp
+        src/agent/local_reasoning_engine.cpp
+        src/agent/agent_self_repair.cpp
+        src/agent/agent_self_healing_orchestrator.cpp
+        src/agent/DiskRecoveryAgent.cpp
+        src/agent/agentic_hotpatch_orchestrator.cpp
+
+        # ── Core Subsystems ────────────────────────────────────────────
+        src/core/execution_scheduler.cpp
+        src/core/agent_safety_contract.cpp
+        src/core/confidence_gate.cpp
+        src/core/deterministic_replay.cpp
+        src/core/execution_governor.cpp
+        src/core/multi_response_engine.cpp
+        src/core/streaming_engine_registry.cpp
+        src/core/flash_attention.cpp
+        src/core/gpu_backend_bridge.cpp
+        src/core/native_speed_layer.cpp
+        src/core/local_ai_core.cpp
+        src/core/native_inference_pipeline.cpp
+        src/core/model_memory_hotpatch.cpp
+        src/core/byte_level_hotpatcher.cpp
+        src/core/unified_hotpatch_manager.cpp
+        src/core/proxy_hotpatcher.cpp
+        src/core/model_bruteforce_engine.cpp
+        src/core/pt_driver_contract.cpp
+        src/core/shadow_page_detour.cpp
+        src/core/sentinel_watchdog.cpp
+        src/core/agentic_task_graph.cpp
+        src/core/embedding_engine.cpp
+        src/core/vision_encoder.cpp
+
+        # Vision Pipeline Extensions (Token Gating, Embedding Cache, KV Isolation, Quantized Encoder, GPU Staging)
+        src/core/vision_token_gate.cpp
+        src/core/vision_embedding_cache.cpp
+        src/core/vision_kv_isolation.cpp
+        src/core/vision_quantized_encoder.cpp
+        src/core/vision_gpu_staging.cpp
+
+        src/core/swarm_coordinator.cpp
+        src/core/swarm_worker.cpp
+        src/core/swarm_network_stubs.cpp
+        src/core/swarm_decision_bridge.cpp
+        src/core/universal_model_hotpatcher.cpp
+        src/core/production_release.cpp
+        src/core/webrtc_signaling.cpp
+        src/core/gpu_kernel_autotuner.cpp
+        src/core/sandbox_integration.cpp
+        src/core/amd_gpu_accelerator.cpp
+        src/core/intel_gpu_accelerator.cpp
+        src/core/arm64_gpu_accelerator.cpp
+        src/core/cerebras_wse_accelerator.cpp
+        src/core/accelerator_router.cpp
+        src/core/pdb_gsi_hash.cpp
+        src/core/pdb_native.cpp
+        src/core/pdb_reference_provider.cpp
+        src/core/pdb_lsp_bridge.cpp
+        src/core/enterprise_license.cpp
+        src/core/enterprise_license_stubs.cpp
+        src/core/camellia256_bridge.cpp
+        src/core/watchdog_service.cpp
+        src/core/voice_chat.cpp
+        src/core/voice_automation.cpp
+        src/core/shortcut_manager.cpp
+        src/core/backup_manager.cpp
+        src/core/alert_system.cpp
+        src/core/feature_registration.cpp
+        src/core/feature_handlers.cpp
+        # auto_feature_registry excluded for Win32 IDE — use ssot_handlers (lightweight stubs)
+        # auto_feature_registry requires: TelemetryCollector, LayerOffloadManager, EngineRegistry,
+        # ReverseEngineering, AgenticDeepThinkingEngine, DiagnosticConsumer, etc.
+        src/core/intent_engine.cpp
+        src/core/missing_handler_stubs.cpp
+        src/core/model_training_pipeline.cpp
+        src/core/ssot_handlers.cpp
+        src/core/ssot_handlers_ext.cpp
+        src/core/ssot_validation.cpp
+        src/core/unified_command_dispatch.cpp
+        src/core/chain_of_thought_engine.cpp
+        src/core/reasoning_profile.cpp
+        src/core/reasoning_pipeline_orchestrator.cpp
+        src/core/reasoning_cot_bridge.cpp
+        src/core/rawrxd_state_mmf.cpp
+        src/core/live_binary_patcher.cpp
+        src/core/traversal_strategy.cpp
+        src/core/layer_contribution_scorer.cpp
+        src/core/semantic_delta_tracker.cpp
+        src/core/cross_run_tensor_cache.cpp
+        src/core/convergence_controller.cpp
+        src/core/iterative_tensor_traversal.cpp
+        src/core/sqlite_wrapper.cpp
+        src/core/sqlite3.c
+        src/core/thread_pool.cpp
+        src/core/memory_pressure_handler.cpp
+        src/core/jsonrpc_parser.cpp
+        src/core/transaction_journal.cpp
+        src/core/vector_index.cpp
+        src/core/prompt_template_engine.cpp
+        src/core/autonomous_workflow_engine.cpp
+        src/core/workspace_reasoning_profiles.cpp
+        src/core/deterministic_swarm.cpp
+        src/core/safe_refactor_engine.cpp
+        src/core/reasoning_schema_versioning.cpp
+        src/core/cot_fallback_system.cpp
+        src/core/input_guard_slicer.cpp
+        src/core/instructions_provider.cpp
+        src/core/distributed_pipeline_orchestrator.cpp
+        src/core/hotpatch_control_plane.cpp
+        src/core/static_analysis_engine.cpp
+        src/core/code_linter.cpp
+        src/core/semantic_code_intelligence.cpp
+        src/core/enterprise_telemetry_compliance.cpp
+        src/core/native_debugger_engine.cpp
+        src/core/quantum_safe_transport.cpp
+        src/core/adaptive_pipeline_parallel.cpp
+        src/core/universal_model_merger.cpp
+        src/core/MonacoCoreEngine.cpp
+        src/core/monaco_core_stubs.cpp
+        src/core/WebView2EditorEngine.cpp
+        src/core/RichEditEditorEngine.cpp
+        src/core/EditorEngineFactory.cpp
+        src/core/feature_registry.cpp
+        src/core/menu_auditor.cpp
+        src/core/auto_discovery.cpp
+        src/core/final_gauntlet.cpp
+        src/core/js_extension_host.cpp
+        src/core/extension_polyfill_engine.cpp
+        src/core/analyzer_distiller_stubs.cpp
+        src/core/streaming_orchestrator_stubs.cpp
+
+        # ── Autonomy Gap Closure (Phase A-D + Tier 1.4 + Tier 2.3) ──
+        src/core/knowledge_graph_core.cpp
+        src/core/swarm_conflict_resolver.cpp
+        src/core/autonomous_debugger.cpp
+        src/agentic/autonomous_verification_loop.cpp
+        src/agentic/autonomous_background_daemon.cpp
+        src/agentic/autonomous_communicator.cpp
+
+        # ── Server ─────────────────────────────────────────────────────
+        src/server/gguf_server_hotpatch.cpp
+
+        # ── Marketplace / Auth ─────────────────────────────────────────
+        src/marketplace/extension_marketplace.cpp
+        src/auth/rbac_engine.cpp
+
+        # ── LSP ────────────────────────────────────────────────────────
+        src/lsp/RawrXD_LSPServer.cpp
+        src/lsp/lsp_hotpatch_bridge.cpp
+        src/lsp/hotpatch_symbol_provider.cpp
+        src/lsp/gguf_diagnostic_provider.cpp
+        src/lsp/diagnostic_consumer.cpp
+
+        # ── GPU ────────────────────────────────────────────────────────
+        src/gpu/gpu_backend.cpp
+        src/gpu/kv_cache_optimizer.cpp
+        src/gpu/speculative_decoder.cpp
+        src/gpu/speculative_decoder_v2.cpp
+
+        # ── UI ─────────────────────────────────────────────────────────
+        src/ui/chat_message_renderer.cpp
+        src/ui/tool_action_status.cpp
+        src/ui/chat_panel.cpp
+        src/ui/phase2_integration_example.cpp
+
+        # Cathedral Hardening (5.0 Readiness)
+        src/core/crash_containment.cpp
+        src/core/patch_rollback_ledger.cpp
+        src/core/quant_hysteresis.cpp
+        src/core/masm_stress_harness.cpp
+        src/core/perf_telemetry.cpp
+        src/core/convergence_stress_harness.cpp
+
+        # ── Git / Telemetry ────────────────────────────────────────────
+        src/git/git_context.cpp
+        src/telemetry/completion_feedback.cpp
+        src/telemetry/replay_telemetry_fusion.cpp
+        src/telemetry/hotpatch_telemetry_safety.cpp
+        src/telemetry/UnifiedTelemetryCore.cpp
+
+        # ── Modules ────────────────────────────────────────────────────
+        src/modules/engine_manager.cpp
+        src/modules/vsix_loader_win32.cpp
+        src/modules/codex_ultimate.cpp
+        src/modules/vscode_extension_api.cpp
+        src/modules/quickjs_extension_host.cpp
+        src/modules/quickjs_node_shims.cpp
+        src/modules/quickjs_vscode_bindings.cpp
+        src/modules/unity_engine_integration.cpp
+        src/modules/unreal_engine_integration.cpp
+        src/modules/game_engine_manager.cpp
+        src/modules/crucible_engine.cpp
+        src/modules/copilot_gap_closer.cpp
+
+        # ── Test Harness (Replay Fixture) ──────────────────────────────
+        src/test_harness/replay_fixture.cpp
+        src/test_harness/replay_oracle.cpp
+        src/test_harness/replay_mock_inference.cpp
+        src/test_harness/replay_harness.cpp
+        src/test_harness/replay_reporter.cpp
+
+        # ── Cursor/JB-Parity Feature Modules ──────────────────────────
+        src/telemetry/telemetry_export.cpp
+        src/agentic/agentic_composer_ux.cpp
+        src/context/context_mention_parser.cpp
+        src/multimodal_engine/vision_encoder.cpp
+        src/ide/refactoring_plugin.cpp
+        src/ide/language_plugin.cpp
+        src/context/semantic_index.cpp
+        src/ide/resource_generator.cpp
+        src/win32app/Win32IDE_CursorParity.cpp
+        src/win32app/Win32IDE_GUILayoutHotpatch.cpp
+
+        # ═══════════════════════════════════════════════════════════════
+        # Flagship Product Pillars (Provable Agent, AI RE, Airgapped)
+        # ═══════════════════════════════════════════════════════════════
+        src/win32app/Win32IDE_ProvableAgent.cpp
+        src/win32app/Win32IDE_AIReverseEngineering.cpp
+        src/win32app/Win32IDE_AirgappedEnterprise.cpp
+        src/win32app/Win32IDE_FlagshipFeatures.cpp
+
+        # ── Transcendence Architecture (Phases E → Ω) ─────────────────
+        src/core/self_host_engine.cpp
+        src/core/hardware_synthesizer.cpp
+        src/core/mesh_brain.cpp
+        src/core/speciator_engine.cpp
+        src/core/neural_bridge.cpp
+        src/core/omega_orchestrator.cpp
+        src/core/transcendence_coordinator.cpp
+
+        # ── Transcendence IDE Panel ────────────────────────────────────
+        src/win32app/Win32IDE_TranscendencePanel.cpp
+    )
+
+    # add_executable(RawrXD-Gold WIN32 ${GOLD_SOURCES} ${ASM_KERNEL_SOURCES}
+    #     src/win32app/RawrXD-Win32IDE.rc)
+
+    # target_compile_definitions(RawrXD-Gold PRIVATE
+    #     RAWRXD_GOLD_BUILD=1
+    #     RAWR_HAS_MASM=1
+    #     RAWRXD_LINK_QUADBUFFER_ASM=1
+    #     RAWRXD_LINK_INFERENCE_KERNELS_ASM=1
+    #     RAWRXD_LINK_ANALYZER_DISTILLER_ASM=1
+    #     RAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1
+    #     RAWRXD_LINK_TELEMETRY_KERNEL_ASM=1
+    #     RAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1
+    #     RAWRXD_LINK_SELFPATCH_AGENT_ASM=1
+    #     RAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1
+    #     _CRT_SECURE_NO_WARNINGS
+    #     NOMINMAX
+    #     WIN32_LEAN_AND_MEAN
+    # )
+
+    # target_include_directories(RawrXD-Gold PRIVATE
+    #     ${CMAKE_CURRENT_SOURCE_DIR}/src
+    #     ${CMAKE_CURRENT_SOURCE_DIR}/src/engine
+    #     ${CMAKE_CURRENT_SOURCE_DIR}/src/core
+    #     ${CMAKE_CURRENT_SOURCE_DIR}/src/server
+    #     ${CMAKE_CURRENT_SOURCE_DIR}/src/agent
+    #     ${CMAKE_CURRENT_SOURCE_DIR}/src/agentic
+    #     ${CMAKE_CURRENT_SOURCE_DIR}/src/cli
+    #     ${CMAKE_CURRENT_SOURCE_DIR}/src/win32app
+    #     ${CMAKE_CURRENT_SOURCE_DIR}/src/modules
+    #     ${CMAKE_CURRENT_SOURCE_DIR}/src/utils
+    #     ${CMAKE_CURRENT_SOURCE_DIR}/src/config
+    #     ${CMAKE_CURRENT_SOURCE_DIR}/src/asm
+    #     ${CMAKE_CURRENT_SOURCE_DIR}/src/lsp
+    #     ${CMAKE_CURRENT_SOURCE_DIR}/src/gpu
+    #     ${CMAKE_CURRENT_SOURCE_DIR}/src/tools
+    #     ${CMAKE_CURRENT_SOURCE_DIR}/src/telemetry
+    #     ${CMAKE_CURRENT_SOURCE_DIR}/src/test_harness
+    #     ${CMAKE_CURRENT_SOURCE_DIR}/src/plugin_system
+    #     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui
+    #     ${CMAKE_CURRENT_SOURCE_DIR}/src/git
+    #     ${CMAKE_CURRENT_SOURCE_DIR}/src/reverse_engineering
+    #     ${CMAKE_CURRENT_SOURCE_DIR}/src/ide
+    #     ${CMAKE_CURRENT_SOURCE_DIR}/src/context
+    #     ${CMAKE_CURRENT_SOURCE_DIR}/src/multimodal_engine
+    #     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    #     ${CMAKE_CURRENT_SOURCE_DIR}/include/gpu
+    # )
+
+    # # ── Link ALL system libraries ──────────────────────────────────────
+    # target_link_libraries(RawrXD-Gold PRIVATE
+    #     Threads::Threads
+    #     RawrXD-RE-Library
+    #     comctl32 comdlg32 shell32 ole32 oleaut32 uuid
+    #     shlwapi psapi dbghelp winhttp ws2_32 winmm gdi32 user32 ntdll
+    #     d2d1 dwrite d3d11 dcomp d3dcompiler dwmapi
+    #     advapi32 crypt32 bcrypt wintrust
+    #     opengl32 wininet
+    #     ${MASM_OBJECTS}
+    # )
+
+    # # ── MASM kernel dependencies ───────────────────────────────────────
+    # if(TARGET masm_kernels)
+    #     add_dependencies(RawrXD-Gold masm_kernels)
+    # endif()
+
+    # # ── RE deobfuscator/model MASM objects ─────────────────────────────
+    if(TARGET RawrXD-Gold)
+        # if(TARGET re_deobfuscator)
+            add_dependencies(RawrXD-Gold re_deobfuscator)
+            target_link_libraries(RawrXD-Gold PRIVATE ${RE_DEOBF_OBJECTS})
+        # endif()
+        if(TARGET re_model_reverse)
+            add_dependencies(RawrXD-Gold re_model_reverse)
+            target_link_libraries(RawrXD-Gold PRIVATE ${RE_MODEL_OBJECTS})
+        endif()
+
+    # ── MultiWindow Kernel DLL ─────────────────────────────────────────
+    if(TARGET RawrXD_MultiWindow_Kernel)
+        target_link_libraries(RawrXD-Gold PRIVATE RawrXD_MultiWindow_Kernel)
+        target_compile_definitions(RawrXD-Gold PRIVATE RAWRXD_HAS_MW_KERNEL=1)
+    endif()
+
+    # ── NanoQuant sub-1-bit engine ─────────────────────────────────────
+    if(TARGET RawrXD_NanoQuant)
+        target_link_libraries(RawrXD-Gold PRIVATE RawrXD_NanoQuant)
+        target_compile_definitions(RawrXD-Gold PRIVATE RAWR_HAS_NANOQUANT=1)
+    endif()
+
+    # ── Vulkan SDK ─────────────────────────────────────────────────────
+    if(Vulkan_FOUND)
+        target_include_directories(RawrXD-Gold PRIVATE ${Vulkan_INCLUDE_DIRS})
+        target_link_libraries(RawrXD-Gold PRIVATE Vulkan::Vulkan)
+        target_compile_definitions(RawrXD-Gold PRIVATE RAWR_HAS_VULKAN=1)
+    elseif(_VK_SDK_DIRS)
+        target_include_directories(RawrXD-Gold PRIVATE "${_VK_SDK_DIR}/Include")
+        target_link_directories(RawrXD-Gold PRIVATE "${_VK_SDK_DIR}/Lib")
+        target_link_libraries(RawrXD-Gold PRIVATE vulkan-1)
+        target_compile_definitions(RawrXD-Gold PRIVATE RAWR_HAS_VULKAN=1)
+    else()
+        target_compile_definitions(RawrXD-Gold PRIVATE RAWR_HAS_VULKAN=0)
+    endif()
+
+    # ── QuickJS embedded JS runtime ────────────────────────────────────
+    if(TARGET quickjs_static)
+        target_link_libraries(RawrXD-Gold PRIVATE quickjs_static)
+        target_include_directories(RawrXD-Gold PRIVATE ${QUICKJS_DIR}/..)
+        target_compile_definitions(RawrXD-Gold PRIVATE RAWR_HAS_QUICKJS=1)
+    else()
+        target_compile_definitions(RawrXD-Gold PRIVATE RAWR_QUICKJS_STUB=1)
+    endif()
+
+    # ── Compiler / Linker options ──────────────────────────────────────
+    if(MSVC)
+        target_compile_options(RawrXD-Gold PRIVATE
+            $<$<COMPILE_LANGUAGE:CXX>:/EHsc /O2 /W0 /arch:AVX2>
+        )
+        target_link_options(RawrXD-Gold PRIVATE /LARGEADDRESSAWARE:NO)
+    else()
+        target_compile_options(RawrXD-Gold PRIVATE -O3 -w -mavx2 -mfma -march=native -fopenmp)
+        target_link_libraries(RawrXD-Gold PRIVATE gomp)
+    endif()
+
+    set_target_properties(RawrXD-Gold PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY bin
+        OUTPUT_NAME RawrXD_Gold
+    )
+
+        message(STATUS "═══════════════════════════════════════════════════════")
+        message(STATUS " RawrXD_Gold.exe — Standalone Monolithic Deployment")
+        message(STATUS " Build with: cmake --build . --target RawrXD-Gold")
+        message(STATUS "═══════════════════════════════════════════════════════")
+    endif()
+endif()
+
+# ============================================================================
+# Command Registry Validation (Build-Time Integrity Check)
+# ============================================================================
+# Validates that all IDM_* in Win32IDE.h are present in COMMAND_TABLE.
+# Run manually: python tools/validate_command_registry.py
+# Run strict:   python tools/validate_command_registry.py --strict
+# ============================================================================
+
+# ============================================================================
+# CI Gating Targets — Release / Debug / AddressSanitizer
+# ============================================================================
+# Usage:
+#   cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release           (production)
+#   cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug             (dev)
+#   cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DRAWR_ASAN=ON  (ASAN)
+#
+# ASAN (MSVC): /fsanitize=address — detects heap overflows, use-after-free
+option(RAWR_ASAN "Enable AddressSanitizer (MSVC /fsanitize=address)" OFF)
+
+if(RAWR_ASAN AND MSVC)
+    message(STATUS "[CI] AddressSanitizer ENABLED (/fsanitize=address)")
+    add_compile_options(/fsanitize=address)
+    # ASAN requires /Zi debug info and dynamic CRT
+    add_compile_options(/Zi)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+elseif(RAWR_ASAN AND NOT MSVC)
+    message(STATUS "[CI] AddressSanitizer ENABLED (-fsanitize=address)")
+    add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=address)
+endif()
+
+# CI gate: self_test_gate — quick compile + link check
+add_custom_target(self_test_gate
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config $<CONFIG> --target RawrXD-Win32IDE
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config $<CONFIG> --target RawrXD-Gold
+    COMMENT "[CI Gate] Building RawrXD-Win32IDE + RawrXD-Gold (compile + link check)"
+    VERBATIM
+)
+
+# CI gate: stress_test — build and note availability
+message(STATUS "[CI] self_test_gate target available (cmake --build . --target self_test_gate)")
+message(STATUS "[CI] RAWR_ASAN=${RAWR_ASAN}")
+
+
+find_package(Python3 COMPONENTS Interpreter QUIET)
+if(Python3_FOUND)
+    add_custom_target(validate_registry
+        COMMAND ${Python3_EXECUTABLE} 
+            ${CMAKE_SOURCE_DIR}/tools/validate_command_registry.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMENT "Validating command registry integrity (SSOT check)..."
+        VERBATIM
+    )
+    
+    add_custom_target(validate_registry_strict
+        COMMAND ${Python3_EXECUTABLE} 
+            ${CMAKE_SOURCE_DIR}/tools/validate_command_registry.py --strict
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMENT "Validating command registry (STRICT — all IDM_* must be in COMMAND_TABLE)..."
+        VERBATIM
+    )
+endif()

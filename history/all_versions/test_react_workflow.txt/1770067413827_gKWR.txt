@@ -1,0 +1,6 @@
+/plan Create a React Server
+/ask How do I run a React server?
+/agent Implement a simple React server
+/bugreport const express = require('express'); const app = express(); app.get('/', (req, res) => res.send('Hello'));
+/suggest const express = require('express'); const app = express(); app.get('/', (req, res) => res.send('Hello'));
+exit

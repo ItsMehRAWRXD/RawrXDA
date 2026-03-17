@@ -1,0 +1,61 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug: RawrXD-Win32IDE",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/bin/RawrXD-Win32IDE.exe",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "console": "integratedTerminal",
+      "preLaunchTask": "PowerBuild: Debug",
+      "symbolSearchPath": "${workspaceFolder}/bin",
+      "sourceFileMap": {
+        "D:\\RawrXD": "${workspaceFolder}"
+      }
+    },
+    {
+      "name": "Debug: TerraForm v11",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/bin/terraform_v11.exe",
+      "args": [
+        "${file}"
+      ],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "console": "integratedTerminal",
+      "preLaunchTask": "TerraForm: Build v11",
+      "symbolSearchPath": "${workspaceFolder}/bin"
+    },
+    {
+      "name": "Debug: TerraForm v11 (stop at entry)",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/bin/terraform_v11.exe",
+      "args": [
+        "${file}"
+      ],
+      "stopAtEntry": true,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "console": "integratedTerminal",
+      "preLaunchTask": "TerraForm: Build v11",
+      "symbolSearchPath": "${workspaceFolder}/bin"
+    },
+    {
+      "name": "Attach to Process",
+      "type": "cppvsdbg",
+      "request": "attach",
+      "processId": "${command:pickProcess}",
+      "symbolSearchPath": "${workspaceFolder}/bin",
+      "sourceFileMap": {
+        "D:\\RawrXD": "${workspaceFolder}"
+      }
+    }
+  ]
+}

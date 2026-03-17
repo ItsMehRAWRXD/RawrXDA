@@ -5,9 +5,10 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <queue>
 #include <windows.h>
 
-#include "RawrXD_ToolRegistry.h"
+#include "ToolRegistry.h"
 #include "win32app/Win32IDE_AgenticBridge.h"
 
 namespace RawrXD {
@@ -49,9 +50,8 @@ private:
     std::mutex m_queueMutex;
 
     AgenticBridge* m_bridge;
-    RawrXD::Agent::ToolRegistry* m_toolRegistry;
+    RawrXD::Agent::AgentToolRegistry* m_toolRegistry;
 };
 
 } // namespace Agentic
 } // namespace RawrXD
-

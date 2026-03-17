@@ -1,0 +1,38 @@
+{
+  "Philosophy": "Complete, self-contained, zero external dependencies",
+  "Version": "2.0.0-complete",
+  "Generated": "2025-10-11T14:02:50.0583242-04:00",
+  "Manager": "rawrz.ps1",
+  "Runtimes": {
+    "JavaScript": {
+      "PackageManager": "npm.ps1",
+      "Status": "Complete",
+      "Path": "JavaScript\\node.ps1"
+    },
+    "Perl": {
+      "PackageManager": "cpan.ps1",
+      "Status": "Complete",
+      "Path": "Perl\\perl.ps1"
+    },
+    "PHP": {
+      "PackageManager": "composer.ps1",
+      "Status": "Complete",
+      "Path": "PHP\\php.ps1"
+    },
+    "Lua": {
+      "PackageManager": "luarocks.ps1",
+      "Status": "Complete",
+      "Path": "Lua\\lua.ps1"
+    },
+    "Python": {
+      "PackageManager": "pip.ps1",
+      "Status": "Complete",
+      "Path": "Python\\python.ps1"
+    },
+    "Ruby": {
+      "PackageManager": "gem.ps1",
+      "Status": "Complete",
+      "Path": "Ruby\\ruby.ps1"
+    }
+  }
+}

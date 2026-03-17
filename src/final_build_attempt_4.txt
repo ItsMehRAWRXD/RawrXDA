@@ -1,0 +1,398 @@
+In file included from rawrxd_cli.cpp:2:
+agentic_engine.h:97:29: error: redeclaration of 'float AgenticEngine::GenerationConfig::temperature'
+   97 |         float temperature = 0.8f;
+      |                             ^~~~
+agentic_engine.h:96:37: note: previous declaration 'float AgenticEngine::GenerationConfig::temperature'
+   96 |     struct GenerationConfig { float temperature; float top_p; int max_tokens; bool maxMode; bool deepThinking; bool deepResearch; bool noRefusal; bool autoCorrect;
+      |                                     ^~~~~~~~~~~
+agentic_engine.h:100:24: error: redeclaration of 'bool AgenticEngine::GenerationConfig::maxMode'
+  100 |         bool maxMode = false;
+      |                        ^~~~~
+agentic_engine.h:96:84: note: previous declaration 'bool AgenticEngine::GenerationConfig::maxMode'
+   96 |     struct GenerationConfig { float temperature; float top_p; int max_tokens; bool maxMode; bool deepThinking; bool deepResearch; bool noRefusal; bool autoCorrect;
+      |                                                                                    ^~~~~~~
+agentic_engine.h:101:29: error: redeclaration of 'bool AgenticEngine::GenerationConfig::deepThinking'
+  101 |         bool deepThinking = false;
+      |                             ^~~~~
+agentic_engine.h:96:98: note: previous declaration 'bool AgenticEngine::GenerationConfig::deepThinking'
+   96 |     struct GenerationConfig { float temperature; float top_p; int max_tokens; bool maxMode; bool deepThinking; bool deepResearch; bool noRefusal; bool autoCorrect;
+      |                                                                                                  ^~~~~~~~~~~~
+agentic_engine.h:102:29: error: redeclaration of 'bool AgenticEngine::GenerationConfig::deepResearch'
+  102 |         bool deepResearch = false;
+      |                             ^~~~~
+agentic_engine.h:96:117: note: previous declaration 'bool AgenticEngine::GenerationConfig::deepResearch'
+   96 |     struct GenerationConfig { float temperature; float top_p; int max_tokens; bool maxMode; bool deepThinking; bool deepResearch; bool noRefusal; bool autoCorrect;
+      |                                                                                                                     ^~~~~~~~~~~~
+agentic_engine.h:103:26: error: redeclaration of 'bool AgenticEngine::GenerationConfig::noRefusal'
+  103 |         bool noRefusal = false;
+      |                          ^~~~~
+agentic_engine.h:96:136: note: previous declaration 'bool AgenticEngine::GenerationConfig::noRefusal'
+   96 |     struct GenerationConfig { float temperature; float top_p; int max_tokens; bool maxMode; bool deepThinking; bool deepResearch; bool noRefusal; bool autoCorrect;
+      |                                                                                                                                        ^~~~~~~~~
+rawrxd_cli.cpp: In function 'int main(int, char**)':
+rawrxd_cli.cpp:270:5: error: 'GenerationConfig' was not declared in this scope
+  270 |     GenerationConfig config;
+      |     ^~~~~~~~~~~~~~~~
+rawrxd_cli.cpp:271:5: error: 'config' was not declared in this scope
+  271 |     config.temperature = state.temperature;
+      |     ^~~~~~
+In file included from C:/msys64/mingw64/include/c++/15.2.0/vector:66,
+                 from cpu_inference_engine.h:3,
+                 from rawrxd_cli.cpp:1:
+C:/msys64/mingw64/include/c++/15.2.0/bits/stl_construct.h: In instantiation of 'void std::_Construct(_Tp*, _Args&& ...) [with _Tp = RawrXD::CPUInferenceEngine; _Args = {}]':
+C:/msys64/mingw64/include/c++/15.2.0/bits/alloc_traits.h:805:19:   required from 'static void std::allocator_traits<std::allocator<void> >::construct(allocator_type&, _Up*, _Args&& ...) [with _Up = RawrXD::CPUInferenceEngine; _Args = {}; allocator_type = std::allocator<void>]'
+  805 |         { std::_Construct(__p, std::forward<_Args>(__args)...); }
+      |           ~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/shared_ptr_base.h:606:39:   required from 'std::_Sp_counted_ptr_inplace<_Tp, _Alloc, _Lp>::_Sp_counted_ptr_inplace(_Alloc, _Args&& ...) [with _Args = {}; _Tp = RawrXD::CPUInferenceEngine; _Alloc = std::allocator<void>; __gnu_cxx::_Lock_policy _Lp = __gnu_cxx::_S_atomic]'
+  606 |           allocator_traits<_Alloc>::construct(__a, _M_ptr(),
+      |           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~
+  607 |               std::forward<_Args>(__args)...); // might throw
+      |               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+C:/msys64/mingw64/include/c++/15.2.0/bits/shared_ptr_base.h:969:16:   required from 'std::__shared_count<_Lp>::__shared_count(_Tp*&, std::_Sp_alloc_shared_tag<_Alloc>, _Args&& ...) [with _Tp = RawrXD::CPUInferenceEngine; _Alloc = std::allocator<void>; _Args = {}; __gnu_cxx::_Lock_policy _Lp = __gnu_cxx::_S_atomic]'
+  969 |           auto __pi = ::new (__mem)
+      |                       ^~~~~~~~~~~~~
+  970 |             _Sp_cp_type(__a._M_a, std::forward<_Args>(__args)...);
+      |             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/shared_ptr_base.h:1719:14:   required from 'std::__shared_ptr<_Tp, _Lp>::__shared_ptr(std::_Sp_alloc_shared_tag<_Tp>, _Args&& ...) [with _Alloc = std::allocator<void>; _Args = {}; _Tp = RawrXD::CPUInferenceEngine; __gnu_cxx::_Lock_policy _Lp = __gnu_cxx::_S_atomic]'
+ 1719 |         : _M_ptr(), _M_refcount(_M_ptr, __tag, std::forward<_Args>(__args)...)
+      |                     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:/msys64/mingw64/include/c++/15.2.0/bits/shared_ptr.h:463:59:   required from 'std::shared_ptr<_Tp>::shared_ptr(std::_Sp_alloc_shared_tag<_Tp>, _Args&& ...) [with _Alloc = std::allocator<void>; _Args = {}; _Tp = RawrXD::CPUInferenceEngine]'
+  463 |         : __shared_ptr<_Tp>(__tag, std::forward<_Args>(__args)...)
+      |                                                                  ^
+C:/msys64/mingw64/include/c++/15.2.0/bits/shared_ptr.h:1007:14:   required from 'std::shared_ptr<typename std::enable_if<(! std::is_array<_Tp>::value), _Tp>::type> std::make_shared(_Args&& ...) [with _Tp = RawrXD::CPUInferenceEngine; _Args = {}; typename enable_if<(! is_array<_Tp>::value), _Tp>::type = RawrXD::CPUInferenceEngine]'
+ 1007 |       return shared_ptr<_Tp>(_Sp_alloc_shared_tag<_Alloc>{__a},
+      |              ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 1008 |                              std::forward<_Args>(__args)...);
+      |                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+rawrxd_cli.cpp:239:74:   required from here
+  239 |     state.inference_engine = std::make_shared<RawrXD::CPUInferenceEngine>();
+      |                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~
+C:/msys64/mingw64/include/c++/15.2.0/bits/stl_construct.h:133:7: error: invalid new-expression of abstract class type 'RawrXD::CPUInferenceEngine'
+  133 |       ::new(static_cast<void*>(__p)) _Tp(std::forward<_Args>(__args)...);
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+cpu_inference_engine.h:71:7: note:   because the following virtual functions are pure within 'RawrXD::CPUInferenceEngine':
+   71 | class CPUInferenceEngine : public InferenceEngine {
+      |       ^~~~~~~~~~~~~~~~~~
+In file included from cpu_inference_engine.h:12:
+inference_engine.h:35:34: note:     'virtual std::vector<int> RawrXD::InferenceEngine::Generate(const std::vector<int>&, int)'
+   35 |     virtual std::vector<int32_t> Generate(const std::vector<int32_t>& input_tokens, int max_tokens = 100) = 0;
+      |                                  ^~~~~~~~
+cpu_inference_engine.cpp:6:10: fatal error: license_enforcement.h: No such file or directory
+    6 | #include "license_enforcement.h"
+      |          ^~~~~~~~~~~~~~~~~~~~~~~
+compilation terminated.
+In file included from agentic_engine.cpp:1:
+agentic_engine.h:97:29: error: redeclaration of 'float AgenticEngine::GenerationConfig::temperature'
+   97 |         float temperature = 0.8f;
+      |                             ^~~~
+agentic_engine.h:96:37: note: previous declaration 'float AgenticEngine::GenerationConfig::temperature'
+   96 |     struct GenerationConfig { float temperature; float top_p; int max_tokens; bool maxMode; bool deepThinking; bool deepResearch; bool noRefusal; bool autoCorrect;
+      |                                     ^~~~~~~~~~~
+agentic_engine.h:100:24: error: redeclaration of 'bool AgenticEngine::GenerationConfig::maxMode'
+  100 |         bool maxMode = false;
+      |                        ^~~~~
+agentic_engine.h:96:84: note: previous declaration 'bool AgenticEngine::GenerationConfig::maxMode'
+   96 |     struct GenerationConfig { float temperature; float top_p; int max_tokens; bool maxMode; bool deepThinking; bool deepResearch; bool noRefusal; bool autoCorrect;
+      |                                                                                    ^~~~~~~
+agentic_engine.h:101:29: error: redeclaration of 'bool AgenticEngine::GenerationConfig::deepThinking'
+  101 |         bool deepThinking = false;
+      |                             ^~~~~
+agentic_engine.h:96:98: note: previous declaration 'bool AgenticEngine::GenerationConfig::deepThinking'
+   96 |     struct GenerationConfig { float temperature; float top_p; int max_tokens; bool maxMode; bool deepThinking; bool deepResearch; bool noRefusal; bool autoCorrect;
+      |                                                                                                  ^~~~~~~~~~~~
+agentic_engine.h:102:29: error: redeclaration of 'bool AgenticEngine::GenerationConfig::deepResearch'
+  102 |         bool deepResearch = false;
+      |                             ^~~~~
+agentic_engine.h:96:117: note: previous declaration 'bool AgenticEngine::GenerationConfig::deepResearch'
+   96 |     struct GenerationConfig { float temperature; float top_p; int max_tokens; bool maxMode; bool deepThinking; bool deepResearch; bool noRefusal; bool autoCorrect;
+      |                                                                                                                     ^~~~~~~~~~~~
+agentic_engine.h:103:26: error: redeclaration of 'bool AgenticEngine::GenerationConfig::noRefusal'
+  103 |         bool noRefusal = false;
+      |                          ^~~~~
+agentic_engine.h:96:136: note: previous declaration 'bool AgenticEngine::GenerationConfig::noRefusal'
+   96 |     struct GenerationConfig { float temperature; float top_p; int max_tokens; bool maxMode; bool deepThinking; bool deepResearch; bool noRefusal; bool autoCorrect;
+      |                                                                                                                                        ^~~~~~~~~
+agentic_engine.cpp:250:13: error: no declaration matches 'std::string AgenticEngine::generateCode(const std::string&)'
+  250 | std::string AgenticEngine::generateCode(const std::string& prompt) {
+      |             ^~~~~~~~~~~~~
+agentic_engine.h:33:17: note: candidate is: 'std::string AgenticEngine::generateCode(const std::string&, std::function<void(const std::__cxx11::basic_string<char>&)>)'
+   33 |     std::string generateCode(const std::string& prompt, std::function<void(const std::string&)> callback = nullptr);
+      |                 ^~~~~~~~~~~~
+agentic_engine.h:18:7: note: 'class AgenticEngine' defined here
+   18 | class AgenticEngine {
+      |       ^~~~~~~~~~~~~
+telemetry.cpp: In member function 'void Telemetry::recordEvent(const std::string&, const nlohmann::json&)':
+telemetry.cpp:78:21: error: no match for 'operator=' (operand types are 'nlohmann::json' and 'const std::string' {aka 'const std::__cxx11::basic_string<char>'})
+   78 |     event["name"] = event_name;
+      |                     ^~~~~~~~~~
+telemetry.cpp:78:21: note: there are 2 candidates
+In file included from telemetry.h:7,
+                 from telemetry.cpp:1:
+./nlohmann/json.hpp:6:8: note: candidate 1: 'nlohmann::json& nlohmann::json::operator=(const nlohmann::json&)'
+    6 | struct json {
+      |        ^~~~
+./nlohmann/json.hpp:6:8: note: no known conversion for argument 1 from 'const std::string' {aka 'const std::__cxx11::basic_string<char>'} to 'const nlohmann::json&'
+./nlohmann/json.hpp:6:8: note: candidate 2: 'nlohmann::json& nlohmann::json::operator=(nlohmann::json&&)'
+./nlohmann/json.hpp:6:8: note: no known conversion for argument 1 from 'const std::string' {aka 'const std::__cxx11::basic_string<char>'} to 'nlohmann::json&&'
+telemetry.cpp:79:46: error: no match for 'operator=' (operand types are 'nlohmann::json' and 'std::string' {aka 'std::__cxx11::basic_string<char>'})
+   79 |     event["timestamp"] = CurrentISOTimestamp();
+      |                                              ^
+telemetry.cpp:79:46: note: there are 2 candidates
+./nlohmann/json.hpp:6:8: note: candidate 1: 'nlohmann::json& nlohmann::json::operator=(const nlohmann::json&)'
+    6 | struct json {
+      |        ^~~~
+./nlohmann/json.hpp:6:8: note: no known conversion for argument 1 from 'std::string' {aka 'std::__cxx11::basic_string<char>'} to 'const nlohmann::json&'
+./nlohmann/json.hpp:6:8: note: candidate 2: 'nlohmann::json& nlohmann::json::operator=(nlohmann::json&&)'
+./nlohmann/json.hpp:6:8: note: no known conversion for argument 1 from 'std::string' {aka 'std::__cxx11::basic_string<char>'} to 'nlohmann::json&&'
+telemetry.cpp: In member function 'bool Telemetry::saveTelemetry(const std::string&)':
+telemetry.cpp:92:22: error: no matching function for call to 'nlohmann::json::dump(int)'
+   92 |     file << root.dump(2);
+      |             ~~~~~~~~~^~~
+telemetry.cpp:92:22: note: there is 1 candidate
+./nlohmann/json.hpp:16:17: note: candidate 1: 'std::string nlohmann::json::dump() const'
+   16 |     std::string dump() const { return "{}"; }
+      |                 ^~~~
+./nlohmann/json.hpp:16:17: note: candidate expects 0 arguments, 1 provided
+telemetry.cpp: In function 'bool telemetry::InitializeHardware()':
+telemetry.cpp:256:75: warning: passing NULL to non-pointer argument 5 of 'virtual HRESULT IWbemLocator::ConnectServer(BSTR, BSTR, BSTR, BSTR, LONG, BSTR, IWbemContext*, IWbemServices**)' [-Wconversion-null]
+  256 |         hr = g_pLocator->ConnectServer(BSTR(L"ROOT\\WMI"), NULL, NULL, 0, NULL, 0, 0, &g_pServices);
+      |                                                                           ^~~~
+In file included from C:/msys64/mingw64/include/wbemidl.h:13,
+                 from telemetry.cpp:12:
+C:/msys64/mingw64/include/wbemcli.h:1538:14: note: declared here
+ 1538 |         LONG lSecurityFlags,
+      |         ~~~~~^~~~~~~~~~~~~~
+settings.cpp: In static member function 'static bool Settings::SaveCompute(const AppState&, const std::string&)':
+settings.cpp:191:36: error: 'const struct AppState' has no member named 'is_gpu_enabled'
+  191 |     ofs << "enable_gpu=" << (state.is_gpu_enabled ? "1" : "0") << "\n";
+      |                                    ^~~~~~~~~~~~~~
+settings.cpp:192:37: error: 'const struct AppState' has no member named 'thread_count'
+  192 |     ofs << "thread_count=" << state.thread_count << "\n";
+      |                                     ^~~~~~~~~~~~
+settings.cpp:193:38: error: 'const struct AppState' has no member named 'vram_limit_mb'
+  193 |     ofs << "vram_limit_mb=" << state.vram_limit_mb << "\n";
+      |                                      ^~~~~~~~~~~~~
+overclock_governor.cpp: In member function 'void OverclockGovernor::RunLoop(AppState*)':
+overclock_governor.cpp:55:5: error: 'baseline_profile' has not been declared
+   55 |     baseline_profile::Load(*state);
+      |     ^~~~~~~~~~~~~~~~
+overclock_governor.cpp:63:16: error: 'struct AppState' has no member named 'target_all_core_mhz'
+   63 |     if (state->target_all_core_mhz > 0) {
+      |                ^~~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:65:64: error: 'struct AppState' has no member named 'target_all_core_mhz'
+   65 |         baseDetectMhz = std::max(3000u, std::min(6500u, state->target_all_core_mhz));
+      |                                                                ^~~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:66:37: error: 'struct AppState' has no member named 'target_all_core_mhz'
+   66 |         if (baseDetectMhz != state->target_all_core_mhz) {
+      |                                     ^~~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:69:23: error: 'struct AppState' has no member named 'baseline_loaded'
+   69 |     } else if (state->baseline_loaded && state->baseline_detected_mhz > 0) {
+      |                       ^~~~~~~~~~~~~~~
+overclock_governor.cpp:69:49: error: 'struct AppState' has no member named 'baseline_detected_mhz'
+   69 |     } else if (state->baseline_loaded && state->baseline_detected_mhz > 0) {
+      |                                                 ^~~~~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:71:32: error: 'struct AppState' has no member named 'baseline_detected_mhz'
+   71 |         baseDetectMhz = state->baseline_detected_mhz;
+      |                                ^~~~~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:74:12: error: 'struct AppState' has no member named 'baseline_detected_mhz'
+   74 |     state->baseline_detected_mhz = baseDetectMhz;
+      |            ^~~~~~~~~~~~~~~~~~~~~
+overclock_governor.cpp: In lambda function:
+overclock_governor.cpp:96:39: error: 'struct AppState' has no member named 'current_cpu_temp_c'; did you mean 'current_cpu_temp'?
+   96 |             << " cpu_temp=" << state->current_cpu_temp_c << "°C"
+      |                                       ^~~~~~~~~~~~~~~~~~
+      |                                       current_cpu_temp
+overclock_governor.cpp:97:39: error: 'struct AppState' has no member named 'current_gpu_hotspot_c'; did you mean 'current_gpu_power'?
+   97 |             << " gpu_temp=" << state->current_gpu_hotspot_c << "°C"
+      |                                       ^~~~~~~~~~~~~~~~~~~~~
+      |                                       current_gpu_power
+overclock_governor.cpp: In member function 'void OverclockGovernor::RunLoop(AppState*)':
+overclock_governor.cpp:116:20: error: 'TelemetrySnapshot' is not a member of 'telemetry'; did you mean 'TelemetrySnapshot'?
+  116 |         telemetry::TelemetrySnapshot snap;
+      |                    ^~~~~~~~~~~~~~~~~
+In file included from overclock_governor.cpp:3:
+telemetry.h:10:8: note: 'TelemetrySnapshot' declared here
+   10 | struct TelemetrySnapshot {
+      |        ^~~~~~~~~~~~~~~~~
+overclock_governor.cpp:117:25: error: 'snap' was not declared in this scope
+  117 |         telemetry::Poll(snap);
+      |                         ^~~~
+overclock_governor.cpp:120:20: error: 'struct AppState' has no member named 'current_cpu_temp_c'; did you mean 'current_cpu_temp'?
+  120 |             state->current_cpu_temp_c = (uint32_t)std::lround(snap.cpuTempC);
+      |                    ^~~~~~~~~~~~~~~~~~
+      |                    current_cpu_temp
+overclock_governor.cpp:128:20: error: 'struct AppState' has no member named 'current_gpu_hotspot_c'; did you mean 'current_gpu_power'?
+  128 |             state->current_gpu_hotspot_c = (uint32_t)std::lround(snap.gpuTempC);
+      |                    ^~~~~~~~~~~~~~~~~~~~~
+      |                    current_gpu_power
+overclock_governor.cpp:132:16: error: 'struct AppState' has no member named 'current_cpu_freq_mhz'; did you mean 'current_cpu_temp'?
+  132 |         state->current_cpu_freq_mhz = baseDetectMhz + appliedOffset;
+      |                ^~~~~~~~~~~~~~~~~~~~
+      |                current_cpu_temp
+overclock_governor.cpp:133:16: error: 'struct AppState' has no member named 'current_gpu_freq_mhz'; did you mean 'current_gpu_temp'?
+  133 |         state->current_gpu_freq_mhz = 0; // GPU management initialized below
+      |                ^~~~~~~~~~~~~~~~~~~~
+      |                current_gpu_temp
+overclock_governor.cpp:137:48: error: 'struct AppState' has no member named 'max_cpu_temp_c'
+  137 |                       (snap.cpuTempC >= state->max_cpu_temp_c ||
+      |                                                ^~~~~~~~~~~~~~
+overclock_governor.cpp:138:70: error: 'struct AppState' has no member named 'max_cpu_temp_c'
+  138 |                        (lastWasThrottled && snap.cpuTempC >= (state->max_cpu_temp_c - thermalHysteresis)));
+      |                                                                      ^~~~~~~~~~~~~~
+overclock_governor.cpp:141:48: error: 'struct AppState' has no member named 'max_gpu_hotspot_c'
+  141 |                       (snap.gpuTempC >= state->max_gpu_hotspot_c ||
+      |                                                ^~~~~~~~~~~~~~~~~
+overclock_governor.cpp:142:70: error: 'struct AppState' has no member named 'max_gpu_hotspot_c'
+  142 |                        (lastWasThrottled && snap.gpuTempC >= (state->max_gpu_hotspot_c - thermalHysteresis)));
+      |                                                                      ^~~~~~~~~~~~~~~~~
+overclock_governor.cpp:153:43: error: 'struct AppState' has no member named 'max_cpu_temp_c'
+  153 |         float cpuHeadroom = (float)state->max_cpu_temp_c - (float)state->current_cpu_temp_c;
+      |                                           ^~~~~~~~~~~~~~
+overclock_governor.cpp:153:74: error: 'struct AppState' has no member named 'current_cpu_temp_c'; did you mean 'current_cpu_temp'?
+  153 |         float cpuHeadroom = (float)state->max_cpu_temp_c - (float)state->current_cpu_temp_c;
+      |                                                                          ^~~~~~~~~~~~~~~~~~
+      |                                                                          current_cpu_temp
+overclock_governor.cpp:157:16: error: 'struct AppState' has no member named 'pid_integral'
+  157 |         state->pid_integral += cpuError;
+      |                ^~~~~~~~~~~~
+overclock_governor.cpp:158:20: error: 'struct AppState' has no member named 'pid_integral'
+  158 |         if (state->pid_integral > state->pid_integral_clamp) {
+      |                    ^~~~~~~~~~~~
+overclock_governor.cpp:158:42: error: 'struct AppState' has no member named 'pid_integral_clamp'
+  158 |         if (state->pid_integral > state->pid_integral_clamp) {
+      |                                          ^~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:159:20: error: 'struct AppState' has no member named 'pid_integral'
+  159 |             state->pid_integral = state->pid_integral_clamp;
+      |                    ^~~~~~~~~~~~
+overclock_governor.cpp:159:42: error: 'struct AppState' has no member named 'pid_integral_clamp'
+  159 |             state->pid_integral = state->pid_integral_clamp;
+      |                                          ^~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:161:20: error: 'struct AppState' has no member named 'pid_integral'
+  161 |         if (state->pid_integral < -state->pid_integral_clamp) {
+      |                    ^~~~~~~~~~~~
+overclock_governor.cpp:161:43: error: 'struct AppState' has no member named 'pid_integral_clamp'
+  161 |         if (state->pid_integral < -state->pid_integral_clamp) {
+      |                                           ^~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:162:20: error: 'struct AppState' has no member named 'pid_integral'
+  162 |             state->pid_integral = -state->pid_integral_clamp;
+      |                    ^~~~~~~~~~~~
+overclock_governor.cpp:162:43: error: 'struct AppState' has no member named 'pid_integral_clamp'
+  162 |             state->pid_integral = -state->pid_integral_clamp;
+      |                                           ^~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:165:49: error: 'struct AppState' has no member named 'pid_last_error'
+  165 |         float cpuDerivative = cpuError - state->pid_last_error;
+      |                                                 ^~~~~~~~~~~~~~
+overclock_governor.cpp:166:37: error: 'struct AppState' has no member named 'pid_kp'
+  166 |         float cpuPidOutput = state->pid_kp * cpuError +
+      |                                     ^~~~~~
+overclock_governor.cpp:167:37: error: 'struct AppState' has no member named 'pid_ki'
+  167 |                              state->pid_ki * state->pid_integral +
+      |                                     ^~~~~~
+overclock_governor.cpp:167:53: error: 'struct AppState' has no member named 'pid_integral'
+  167 |                              state->pid_ki * state->pid_integral +
+      |                                                     ^~~~~~~~~~~~
+overclock_governor.cpp:168:37: error: 'struct AppState' has no member named 'pid_kd'
+  168 |                              state->pid_kd * cpuDerivative;
+      |                                     ^~~~~~
+overclock_governor.cpp:169:16: error: 'struct AppState' has no member named 'pid_last_error'
+  169 |         state->pid_last_error = cpuError;
+      |                ^~~~~~~~~~~~~~
+overclock_governor.cpp:172:16: error: 'struct AppState' has no member named 'pid_current_output'
+  172 |         state->pid_current_output = cpuPidOutput;
+      |                ^~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:173:16: error: 'struct AppState' has no member named 'thermal_headroom_c'
+  173 |         state->thermal_headroom_c = cpuHeadroom;
+      |                ^~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:176:43: error: 'struct AppState' has no member named 'max_gpu_hotspot_c'
+  176 |         float gpuHeadroom = (float)state->max_gpu_hotspot_c - (float)state->current_gpu_hotspot_c;
+      |                                           ^~~~~~~~~~~~~~~~~
+overclock_governor.cpp:176:77: error: 'struct AppState' has no member named 'current_gpu_hotspot_c'; did you mean 'current_gpu_power'?
+  176 |         float gpuHeadroom = (float)state->max_gpu_hotspot_c - (float)state->current_gpu_hotspot_c;
+      |                                                                             ^~~~~~~~~~~~~~~~~~~~~
+      |                                                                             current_gpu_power
+overclock_governor.cpp:180:16: error: 'struct AppState' has no member named 'gpu_pid_integral'
+  180 |         state->gpu_pid_integral += gpuError;
+      |                ^~~~~~~~~~~~~~~~
+overclock_governor.cpp:181:20: error: 'struct AppState' has no member named 'gpu_pid_integral'
+  181 |         if (state->gpu_pid_integral > state->gpu_pid_integral_clamp) {
+      |                    ^~~~~~~~~~~~~~~~
+overclock_governor.cpp:181:46: error: 'struct AppState' has no member named 'gpu_pid_integral_clamp'
+  181 |         if (state->gpu_pid_integral > state->gpu_pid_integral_clamp) {
+      |                                              ^~~~~~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:182:20: error: 'struct AppState' has no member named 'gpu_pid_integral'
+  182 |             state->gpu_pid_integral = state->gpu_pid_integral_clamp;
+      |                    ^~~~~~~~~~~~~~~~
+overclock_governor.cpp:182:46: error: 'struct AppState' has no member named 'gpu_pid_integral_clamp'
+  182 |             state->gpu_pid_integral = state->gpu_pid_integral_clamp;
+      |                                              ^~~~~~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:184:20: error: 'struct AppState' has no member named 'gpu_pid_integral'
+  184 |         if (state->gpu_pid_integral < -state->gpu_pid_integral_clamp) {
+      |                    ^~~~~~~~~~~~~~~~
+overclock_governor.cpp:184:47: error: 'struct AppState' has no member named 'gpu_pid_integral_clamp'
+  184 |         if (state->gpu_pid_integral < -state->gpu_pid_integral_clamp) {
+      |                                               ^~~~~~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:185:20: error: 'struct AppState' has no member named 'gpu_pid_integral'
+  185 |             state->gpu_pid_integral = -state->gpu_pid_integral_clamp;
+      |                    ^~~~~~~~~~~~~~~~
+overclock_governor.cpp:185:47: error: 'struct AppState' has no member named 'gpu_pid_integral_clamp'
+  185 |             state->gpu_pid_integral = -state->gpu_pid_integral_clamp;
+      |                                               ^~~~~~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:188:49: error: 'struct AppState' has no member named 'gpu_pid_last_error'
+  188 |         float gpuDerivative = gpuError - state->gpu_pid_last_error;
+      |                                                 ^~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:189:37: error: 'struct AppState' has no member named 'gpu_pid_kp'
+  189 |         float gpuPidOutput = state->gpu_pid_kp * gpuError +
+      |                                     ^~~~~~~~~~
+overclock_governor.cpp:190:37: error: 'struct AppState' has no member named 'gpu_pid_ki'
+  190 |                              state->gpu_pid_ki * state->gpu_pid_integral +
+      |                                     ^~~~~~~~~~
+overclock_governor.cpp:190:57: error: 'struct AppState' has no member named 'gpu_pid_integral'
+  190 |                              state->gpu_pid_ki * state->gpu_pid_integral +
+      |                                                         ^~~~~~~~~~~~~~~~
+overclock_governor.cpp:191:37: error: 'struct AppState' has no member named 'gpu_pid_kd'
+  191 |                              state->gpu_pid_kd * gpuDerivative;
+      |                                     ^~~~~~~~~~
+overclock_governor.cpp:192:16: error: 'struct AppState' has no member named 'gpu_pid_last_error'
+  192 |         state->gpu_pid_last_error = gpuError;
+      |                ^~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:201:20: error: 'struct AppState' has no member named 'applied_core_offset_mhz'
+  201 |             state->applied_core_offset_mhz = appliedOffset;
+      |                    ^~~~~~~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:204:20: error: 'struct AppState' has no member named 'governor_last_fault'; did you mean 'governor_status'?
+  204 |             state->governor_last_fault = cpuHot ? "cpu_thermal" : "gpu_thermal";
+      |                    ^~~~~~~~~~~~~~~~~~~
+      |                    governor_status
+overclock_governor.cpp:213:24: error: 'struct AppState' has no member named 'applied_core_offset_mhz'
+  213 |                 state->applied_core_offset_mhz = 0;
+      |                        ^~~~~~~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:217:24: error: 'struct AppState' has no member named 'governor_last_fault'; did you mean 'governor_status'?
+  217 |                 state->governor_last_fault = "rollback_after_faults";
+      |                        ^~~~~~~~~~~~~~~~~~~
+      |                        governor_status
+overclock_governor.cpp:235:28: error: 'struct AppState' has no member named 'target_all_core_mhz'
+  235 |                 if (state->target_all_core_mhz > 0) {
+      |                            ^~~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:236:49: error: 'struct AppState' has no member named 'target_all_core_mhz'
+  236 |                     int maxOffset = (int)state->target_all_core_mhz - (int)baseDetectMhz;
+      |                                                 ^~~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:243:28: error: 'struct AppState' has no member named 'applied_core_offset_mhz'
+  243 |                     state->applied_core_offset_mhz = appliedOffset;
+      |                            ^~~~~~~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:250:56: error: 'struct AppState' has no member named 'pid_integral'
+  250 |                     if ((cpuDesiredDelta > 0 && state->pid_integral < 0) ||
+      |                                                        ^~~~~~~~~~~~
+overclock_governor.cpp:251:56: error: 'struct AppState' has no member named 'pid_integral'
+  251 |                         (cpuDesiredDelta < 0 && state->pid_integral > 0)) {
+      |                                                        ^~~~~~~~~~~~
+overclock_governor.cpp:252:32: error: 'struct AppState' has no member named 'pid_integral'
+  252 |                         state->pid_integral *= 0.5f; // Soft reset
+      |                                ^~~~~~~~~~~~
+overclock_governor.cpp:271:32: error: 'struct AppState' has no member named 'baseline_stable_offset_mhz'
+  271 |     if (appliedOffset > state->baseline_stable_offset_mhz) {
+      |                                ^~~~~~~~~~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:272:16: error: 'struct AppState' has no member named 'baseline_stable_offset_mhz'
+  272 |         state->baseline_stable_offset_mhz = appliedOffset;
+      |                ^~~~~~~~~~~~~~~~~~~~~~~~~~
+overclock_governor.cpp:276:5: error: 'baseline_profile' has not been declared
+  276 |     baseline_profile::Save(*state);
+      |     ^~~~~~~~~~~~~~~~

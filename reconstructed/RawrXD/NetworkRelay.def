@@ -1,0 +1,9 @@
+LIBRARY NetworkRelay
+EXPORTS
+    RelayEngine_Init
+    RelayEngine_CreateContext
+    RelayEngine_RunBiDirectional
+    RelayEngine_GetStats
+    RelayEngine_GetVersion
+    NetworkInstallSnipe
+    AllocateLargePagesMemory

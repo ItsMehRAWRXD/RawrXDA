@@ -80,7 +80,30 @@ EXTERN InferenceEngineInit:PROC
 EXTERN RunInference:PROC
 EXTERN TokenGenerate:PROC
 EXTERN ClearKVCache:PROC
+EXTERN PruneKVCache:PROC
+EXTERN UpdateImportanceScores:PROC
+EXTERN GetTopKIndices:PROC
 EXTERN g_modelbase:QWORD
+EXTERN g_kv_len:QWORD
+
+; inference.asm — Phase 7: KV-Cache Paging via SlotRing
+EXTERN KVPage_Init:PROC
+EXTERN KVPage_Grow:PROC
+EXTERN KVPage_GetSegment:PROC
+EXTERN KVPage_Shrink:PROC
+EXTERN KVPage_PinWorkingSet:PROC
+
+; inference.asm — Phase 8B: Paged KV Block Table (PagedAttention)
+EXTERN KVBlock_Init:PROC
+EXTERN KVBlock_AllocBlock:PROC
+EXTERN KVBlock_FreeBlock:PROC
+EXTERN KVBlock_MapToken:PROC
+EXTERN KVBlock_GetTokenPtr:PROC
+EXTERN KVBlock_ReuseBlock:PROC
+
+; inference.asm — Phase 8C: Head-Major KV Layout
+EXTERN KVHM_WriteToken:PROC
+EXTERN KVHM_GetHeadPtr:PROC
 
 ; ui.asm
 EXTERN UIMainLoop:PROC
@@ -153,6 +176,49 @@ EXTERN SwarmCoord_Shutdown:PROC
 EXTERN g_coordReady:DWORD
 EXTERN g_workerCount:DWORD
 
+; swarm_network.asm (X+5 Sovereign Expansion → Phase 14 Cross-Node)
+EXTERN SwarmNet_Init:PROC
+EXTERN SwarmNet_Listen:PROC
+EXTERN SwarmNet_Connect:PROC
+EXTERN SwarmNet_BroadcastDiscovery:PROC
+EXTERN SwarmNet_SendShard:PROC
+EXTERN SwarmNet_RecvShard:PROC
+EXTERN SwarmNet_SyncKVCache:PROC
+EXTERN SwarmNet_ExchangeLoadInfo:PROC
+EXTERN SwarmNet_Shutdown:PROC
+EXTERN g_netReady:DWORD
+EXTERN g_remoteCount:DWORD
+
+; swarm_consensus.asm (X+5 Sovereign Expansion)
+EXTERN Consensus_Init:PROC
+EXTERN Consensus_Propose:PROC
+EXTERN Consensus_Vote:PROC
+EXTERN Consensus_GetState:PROC
+EXTERN g_consensusTerm:QWORD
+EXTERN g_consensusLeader:DWORD
+
+; batch_decoder.asm (X+5 Parallel Throughput)
+EXTERN Batch_Init:PROC
+EXTERN Batch_AddSlot:PROC
+EXTERN Batch_Step:PROC
+EXTERN Batch_GetOutput:PROC
+
+; work_steal.asm (Phase 14: Autonomous Shard Migration)
+EXTERN WorkSteal_Init:PROC
+EXTERN WorkSteal_IdleProbe:PROC
+EXTERN WorkSteal_AtomicClaim:PROC
+EXTERN WorkSteal_MigrateShard:PROC
+EXTERN WorkSteal_GetStats:PROC
+EXTERN WorkSteal_SelectVictim:PROC
+EXTERN WorkSteal_Shutdown:PROC
+EXTERN WorkSteal_CrossNodeProbe:PROC
+EXTERN WorkSteal_ExchangeAllLoads:PROC
+EXTERN g_stealReady:DWORD
+EXTERN g_totalSteals:QWORD
+EXTERN g_totalMigrations:QWORD
+EXTERN g_stealFailures:QWORD
+EXTERN g_crossNodeSteals:QWORD
+
 ; stream_loader.asm — Tier 1: demand-paged GGUF VMM
 EXTERN StreamLoaderInit:PROC
 EXTERN StreamMapModel:PROC
@@ -171,6 +237,14 @@ EXTERN SlotRing_Tick:PROC
 EXTERN SlotRing_SetBudget:PROC
 EXTERN SlotRing_GetSlotStats:PROC
 EXTERN SlotRing_EvictAll:PROC
+
+; slot_ring.asm — Phase 6: Prefetch + Pin + Tiered Eviction
+EXTERN SlotRing_Pin:PROC
+EXTERN SlotRing_Unpin:PROC
+EXTERN SlotRing_Prefetch:PROC
+EXTERN SlotRing_BatchEvict:PROC
+EXTERN SlotRing_PredictivePrefetch:PROC
+EXTERN SlotRing_ClockEvict:PROC
 
 ; webview2_shell.asm (P1 — WebView2 Monaco embedding)
 EXTERN WebView2Init:PROC
@@ -195,6 +269,58 @@ EXTERN ExtHostShutdown:PROC
 EXTERN g_benchMode:DWORD
 EXTERN g_pModelPath:QWORD
 EXTERN g_pPrompt:QWORD
+
+EXTERN SlotRing_GetSlotStats:PROC
+EXTERN SlotRing_EvictAll:PROC
+
+; stress_test.asm (X+5 Sovereign Expansion)
+EXTERN StressTest_Run:PROC
+EXTERN StressTest_LogStats:PROC
+
+; ── Phase 9A: SIMD/AVX-512 Attention Kernels (simd_kernels.asm) ──
+EXTERN SIMD_RMSNorm:PROC
+EXTERN SIMD_Softmax:PROC
+EXTERN SIMD_DotProduct:PROC
+EXTERN SIMD_ScaledDotBatch:PROC
+EXTERN SIMD_VAccumulate:PROC
+EXTERN SIMD_MatVecQ4:PROC
+EXTERN SIMD_RoPE:PROC
+EXTERN SIMD_SiLU:PROC
+
+; ── Phase 9B: Async Pager Thread (async_pager.asm) ──
+EXTERN AsyncPage_Init:PROC
+EXTERN AsyncPage_Shutdown:PROC
+EXTERN AsyncPage_Submit:PROC
+EXTERN AsyncPage_Poll:PROC
+EXTERN AsyncPage_Flush:PROC
+EXTERN AsyncPage_GetStats:PROC
+
+; ── Phase 9C: Ollama Inference Client (ollama_client.asm) ──
+EXTERN OllamaClient_Init:PROC
+EXTERN OllamaClient_Generate:PROC
+EXTERN OllamaClient_Chat:PROC
+EXTERN OllamaClient_Abort:PROC
+EXTERN OllamaClient_SetModel:PROC
+EXTERN OllamaClient_Shutdown:PROC
+EXTERN OllamaClient_IsConnected:PROC
+
+; ── Phase A: Inference Router (inference_router.asm) ──
+; Sovereign backend selection: LOCAL → OLLAMA → fallback
+EXTERN InferenceRouter_Init:PROC
+EXTERN InferenceRouter_Generate:PROC
+EXTERN InferenceRouter_Abort:PROC
+EXTERN InferenceRouter_SetBackend:PROC
+EXTERN InferenceRouter_GetStats:PROC
+EXTERN InferenceRouter_LoadVocab:PROC
+EXTERN g_routerBackend:DWORD
+EXTERN g_routerAbort:DWORD
+
+; bridge.asm — Ghost-text bridge
+EXTERN Bridge_SubmitCompletion:PROC
+EXTERN Bridge_GetSuggestionText:PROC
+EXTERN Bridge_ClearSuggestion:PROC
+EXTERN Bridge_RequestSuggestion:PROC
+EXTERN Bridge_AbortInference:PROC
 
 ; ── Win32 Constants ──────────────────────────────────────────────
 ; Window Styles

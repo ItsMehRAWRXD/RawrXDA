@@ -1,0 +1,1500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BigDaddyG IDE</title>
+    
+    <!-- Monaco Editor CSS will be loaded dynamically by renderer.js -->
+    
+    <!-- Beautiful Beige + Jade Theme -->
+    <link rel="stylesheet" href="cursor-theme.css">
+    
+    <!-- Collapsible Agent Sidebar Styles -->
+    <link rel="stylesheet" href="collapsible-agent-sidebar.css">
+    
+    <!-- Inline Styles Extracted to CSS -->
+    <link rel="stylesheet" href="inline-styles.css">
+    
+    <style>
+        :root {
+            --bg: #0a0a1e;
+            --void: #05050f;
+            --cyan: #00d4ff;
+            --green: #00ff88;
+            --purple: #a855f7;
+            --orange: #ff6b35;
+            --red: #ff4757;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--void);
+            color: #fff;
+            overflow: hidden;
+        }
+        
+        /* ====================================== */
+        /* MAIN LAYOUT - VS Code Style */
+        /* ====================================== */
+        
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+        }
+        
+        /* Title Bar (custom with window controls) */
+        #title-bar {
+            height: 35px;
+            background: var(--void);
+            border-bottom: 1px solid rgba(0, 212, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 15px;
+        }
+        
+        /* Electron-specific draggable title bar (ignored in browser) */
+        .electron-only #title-bar {
+            -webkit-app-region: drag;
+        }
+        
+        #title-bar .title {
+            font-size: 12px;
+            color: var(--cyan);
+            font-weight: bold;
+        }
+        
+        #window-controls {
+            display: flex;
+            gap: 10px;
+        }
+        
+        /* Electron-specific no-drag zone */
+        .electron-only #window-controls {
+            -webkit-app-region: no-drag;
+        }
+        
+        .window-btn {
+            background: none;
+            border: 1px solid var(--cyan);
+            color: var(--cyan);
+            width: 30px;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 14px;
+            border-radius: 3px;
+            transition: all 0.2s;
+        }
+        
+        .window-btn:hover {
+            background: rgba(0, 212, 255, 0.2);
+        }
+        
+        .window-btn.close:hover {
+            background: var(--red);
+            border-color: var(--red);
+        }
+        
+        /* Menu Bar */
+        #menu-bar {
+            height: 30px;
+            background: var(--void);
+            border-bottom: 1px solid rgba(0, 212, 255, 0.1);
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            font-size: 13px;
+            z-index: 1000;
+        }
+        
+        /* Electron-specific no-drag zone */
+        .electron-only #menu-bar {
+            -webkit-app-region: no-drag;
+        }
+        
+        .menu-item {
+            padding: 5px 12px;
+            cursor: pointer;
+            position: relative;
+            color: #ccc;
+            transition: all 0.2s;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        
+        .menu-item:hover {
+            background: rgba(0, 212, 255, 0.1);
+            color: var(--cyan);
+        }
+        
+        /* Panel hiding animations */
+        #conversation-history-sidebar.hidden {
+            transform: translateX(-100%);
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        #console-panel.hidden {
+            transform: translateY(100%);
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        /* Main Container */
+        #main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        /* Sidebar - File Explorer */
+        #sidebar {
+            width: 250px;
+            background: var(--void);
+            border-right: 1px solid rgba(0, 212, 255, 0.2);
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+        }
+        
+        #sidebar.collapsed {
+            width: 0;
+            min-width: 0;
+            overflow: hidden;
+            opacity: 0;
+            border: none;
+        }
+        
+        #sidebar-header {
+            padding: 15px;
+            border-bottom: 1px solid rgba(0, 212, 255, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        #sidebar-header h3 {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: var(--cyan);
+        }
+        
+        #file-tree {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        
+        .file-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s;
+        }
+        
+        .file-item:hover {
+            background: rgba(0, 212, 255, 0.1);
+        }
+        
+        .file-item.active {
+            background: rgba(0, 212, 255, 0.2);
+            color: var(--cyan);
+            font-weight: bold;
+        }
+        
+        .file-icon {
+            width: 16px;
+            height: 16px;
+        }
+        
+        /* Editor Container */
+        #editor-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg);
+        }
+        
+        /* Tab Bar - VS Code Style with Unlimited Scrolling */
+        #tab-bar {
+            display: flex;
+            background: var(--void);
+            border-bottom: 1px solid rgba(0, 212, 255, 0.2);
+            overflow-x: auto;
+            overflow-y: hidden;
+            height: 40px;
+            position: relative;
+            scroll-behavior: smooth;
+        }
+        
+        /* Show scroll indicators when tabs overflow */
+        #tab-bar::before,
+        #tab-bar::after {
+            content: '';
+            position: sticky;
+            display: none;
+            width: 30px;
+            height: 40px;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        #tab-bar::before {
+            left: 0;
+            background: linear-gradient(to right, var(--void), transparent);
+        }
+        
+        #tab-bar::after {
+            right: 0;
+            background: linear-gradient(to left, var(--void), transparent);
+        }
+        
+        #tab-bar::-webkit-scrollbar {
+            height: 4px;
+        }
+        
+        #tab-bar::-webkit-scrollbar-thumb {
+            background: rgba(0, 212, 255, 0.5);
+            border-radius: 2px;
+        }
+        
+        .editor-tab {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-right: 1px solid rgba(0, 212, 255, 0.1);
+            cursor: pointer;
+            font-size: 13px;
+            color: #888;
+            transition: all 0.2s;
+            min-width: 150px;
+            max-width: 250px;
+            flex-shrink: 0; /* Prevent tabs from shrinking */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        /* Tab counter badge */
+        .tab-count-badge {
+            position: fixed;
+            top: 40px;
+            right: 420px;
+            padding: 4px 10px;
+            background: rgba(0, 212, 255, 0.2);
+            border: 1px solid var(--cyan);
+            border-radius: 12px;
+            font-size: 11px;
+            color: var(--cyan);
+            z-index: 100;
+            font-weight: bold;
+        }
+        
+        .editor-tab:hover {
+            background: rgba(0, 212, 255, 0.1);
+            color: #fff;
+        }
+        
+        .editor-tab.active {
+            background: var(--bg);
+            color: var(--cyan);
+            font-weight: bold;
+            border-bottom: 2px solid var(--cyan);
+        }
+        
+        .editor-tab .close-btn {
+            opacity: 0;
+            color: var(--red);
+            font-weight: bold;
+            margin-left: auto;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+        
+        .editor-tab:hover .close-btn {
+            opacity: 1;
+        }
+        
+        .editor-tab .close-btn:hover {
+            background: rgba(255, 71, 87, 0.2);
+        }
+        
+        /* Monaco Editor Container */
+        #monaco-container {
+            flex: 1;
+            position: relative;
+        }
+        
+        /* Right Sidebar - AI Chat */
+        #right-sidebar {
+            width: 400px;
+            background: var(--void);
+            border-left: 1px solid rgba(0, 212, 255, 0.2);
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-top: 10px;
+            padding-bottom: 20px;
+        }
+        
+        #right-sidebar.collapsed {
+            width: 0 !important;
+            min-width: 0 !important;
+            border: none !important;
+            opacity: 0 !important;
+            overflow: hidden !important;
+            pointer-events: none !important;
+            transition: all 0.3s ease !important;
+        }
+        
+        #ai-chat-header {
+            padding: 15px;
+            border-bottom: 1px solid rgba(0, 212, 255, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        #ai-chat-header h3 {
+            font-size: 14px;
+            color: var(--cyan);
+        }
+        
+        #ai-chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            padding-bottom: 20px; /* Normal padding */
+        }
+        
+        .ai-message {
+            margin-bottom: 15px;
+            padding: 12px;
+            background: rgba(0, 212, 255, 0.1);
+            border-left: 3px solid var(--cyan);
+            border-radius: 5px;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+        
+        .user-message {
+            background: rgba(255, 107, 53, 0.1);
+            border-left: 3px solid var(--orange);
+        }
+        
+        /* Drag & Drop Zone */
+        #ai-chat-messages.drag-over {
+            border: 3px dashed var(--cyan);
+            background: rgba(0, 212, 255, 0.05);
+        }
+        
+        .drop-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 212, 255, 0.1);
+            -webkit-backdrop-filter: blur(4px);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 15px;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        
+        .drop-overlay-icon {
+            font-size: 64px;
+            animation: bounce 1s infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        /* File Attachments */
+        #file-attachments {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .file-attachment {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid var(--cyan);
+            border-radius: 6px;
+            font-size: 11px;
+            color: var(--cyan);
+            max-width: 100%;
+            cursor: default;
+        }
+        
+        .file-attachment-image {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px;
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid var(--cyan);
+            border-radius: 6px;
+            max-width: 150px;
+        }
+        
+        .file-attachment-image img {
+            max-width: 130px;
+            max-height: 130px;
+            border-radius: 4px;
+            margin-bottom: 6px;
+        }
+        
+        .file-attachment-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .file-attachment-size {
+            color: rgba(0, 212, 255, 0.7);
+            font-size: 10px;
+        }
+        
+        .file-attachment-remove {
+            background: rgba(255, 71, 87, 0.2);
+            color: var(--red);
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .file-attachment-remove:hover {
+            background: rgba(255, 71, 87, 0.4);
+        }
+        
+        .attachment-counter {
+            background: var(--cyan);
+            color: var(--void);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        
+        #ai-input-container {
+            padding: 15px;
+            border-top: 1px solid rgba(0, 212, 255, 0.2);
+        }
+        
+        #ai-input {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 5px;
+            color: #fff;
+            font-size: 13px;
+            resize: vertical;
+            min-height: 80px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        #ai-input:focus {
+            outline: none;
+            border-color: var(--cyan);
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+        }
+        
+        #ai-send-btn {
+            margin-top: 10px;
+            width: 100%;
+            padding: 10px;
+            background: var(--cyan);
+            color: var(--void);
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        #ai-send-btn:hover {
+            background: var(--green);
+            box-shadow: 0 5px 15px rgba(0, 255, 136, 0.4);
+        }
+        
+        /* Bottom Panel - Terminal/Output */
+        #bottom-panel {
+            height: 250px;
+            background: var(--void);
+            border-top: 1px solid rgba(0, 212, 255, 0.2);
+            display: flex;
+            flex-direction: column;
+            transition: height 0.3s;
+        }
+        
+        #bottom-panel.collapsed {
+            height: 0;
+            border: none;
+        }
+        
+        #bottom-panel-tabs {
+            display: flex;
+            background: rgba(0, 0, 0, 0.3);
+            border-bottom: 1px solid rgba(0, 212, 255, 0.2);
+        }
+        
+        .bottom-tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 12px;
+            color: #888;
+            transition: all 0.2s;
+        }
+        
+        .bottom-tab.active {
+            background: var(--void);
+            color: var(--cyan);
+            border-bottom: 2px solid var(--cyan);
+        }
+        
+        #bottom-panel-content {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        
+        /* Scrollbars */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--void);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 212, 255, 0.3);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 212, 255, 0.5);
+        }
+    </style>
+    <link rel="stylesheet" href="github-integration.css">
+    <script src="github-integration.js"></script>
+    <link rel="stylesheet" href="background-agent.css">
+    <script src="background-agent-manager.js"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <link rel="stylesheet" href="team-collaboration.css">
+    <script src="team-collaboration.js"></script>
+    <!-- FPS Display Toggle -->
+    <script src="toggle-fps-display.js"></script>
+    
+    <!-- Electron Detection - Adds electron-only class for Electron-specific styles -->
+    <script>
+        if (typeof process !== 'undefined' && process.versions && process.versions.electron) {
+            document.documentElement.classList.add('electron-only');
+        }
+    </script>
+</head>
+<body>
+    <div id="app">
+        <!-- Title Bar -->
+        <div id="title-bar">
+            <div class="title">🌌 BigDaddyG IDE - Professional Edition</div>
+            <div id="window-controls">
+                <button class="window-btn" onclick="minimizeWindow()" title="Minimize">─</button>
+                <button class="window-btn" onclick="maximizeWindow()" title="Maximize">□</button>
+                <button class="window-btn close" onclick="closeWindow()" title="Close">×</button>
+            </div>
+        </div>
+        
+        <!-- Main Container -->
+        <div id="main-container">
+            <!-- Left Sidebar - File Explorer -->
+            <div id="sidebar">
+                <div id="sidebar-header">
+                    <h3>📁 Explorer</h3>
+                    <button id="add-file-btn" onclick="createNewFile()" style="background: none; border: 1px solid var(--green); color: var(--green); padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold;" title="New File">+</button>
+                </div>
+                <div id="file-tree">
+                    <div class="file-item active" onclick="openFile('welcome', 'markdown')">
+                        <span class="file-icon">📄</span>
+                        <span>Welcome.md</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Editor Container -->
+            <div id="editor-container">
+                <!-- Tab Bar -->
+                <div id="tab-bar">
+                    <div class="editor-tab active" data-file="welcome">
+                        <span>📄</span>
+                        <span>Welcome.md</span>
+                        <span class="close-btn" onclick="closeTab(event, 'welcome')">×</span>
+                    </div>
+                </div>
+                
+                <!-- Monaco Editor -->
+                <div id="monaco-container"></div>
+            </div>
+            
+            <!-- Right Sidebar - Tabbed Interface -->
+            <div id="right-sidebar">
+                <div class="sidebar-layout">
+                    <!-- Sidebar - Quick Launch Buttons -->
+                    <div id="sidebar-buttons">
+                        <button class="sidebar-quick-button secondary" onclick="if(window.tabSystem) window.tabSystem.openChatTab()">
+                            💬 Open Chat Tab <span class="shortcut">Ctrl+Shift+C</span>
+                        </button>
+                        <button class="sidebar-quick-button" onclick="if(window.tabSystem) window.tabSystem.openExplorerTab()">
+                            📁 Open Explorer <span class="shortcut">Ctrl+Shift+E</span>
+                        </button>
+                        <button class="sidebar-quick-button" onclick="if(window.tabSystem) window.tabSystem.openGitHubTab()">
+                            🐙 Open GitHub <span class="shortcut">Ctrl+Shift+G</span>
+                        </button>
+                        <button class="sidebar-quick-button" onclick="if(window.tabSystem) window.tabSystem.openAgentsTab()">
+                            🤖 Open Agents <span class="shortcut">Ctrl+Shift+A</span>
+                        </button>
+                        <button class="sidebar-quick-button" onclick="if(window.tabSystem) window.tabSystem.openTeamTab()">
+                            👥 Open Team <span class="shortcut">Ctrl+Shift+T</span>
+                        </button>
+                        <button class="sidebar-quick-button" onclick="if(window.tabSystem) window.tabSystem.openSettingsTab()">
+                            ⚙️ Open Settings <span class="shortcut">Ctrl+,</span>
+                        </button>
+                        <button class="sidebar-quick-button browser" onclick="if(window.browserPanel) window.browserPanel.show()">
+                            🌐 Open Browser <span class="shortcut">Ctrl+Shift+B</span>
+                        </button>
+                    </div>
+                    
+                    <!-- Tab Content Areas -->
+                    <div id="sidebar-tab-content">
+                    
+                    <!-- CHAT TAB (Active by default) -->
+                    <div id="chat-tab-content" class="tab-content" style="flex: 1; display: flex; flex-direction: column;">
+                        <!-- Floating Chat Button -->
+                        <div style="padding: 12px 16px; background: linear-gradient(135deg, rgba(119, 221, 190, 0.1), rgba(77, 192, 181, 0.1)); border-bottom: 1px solid var(--cursor-border);">
+                            <button onclick="if(window.floatingChat) window.floatingChat.open();" style="width: 100%; background: linear-gradient(135deg, var(--cursor-jade-dark), var(--cursor-accent)); border: none; color: white; padding: 12px 16px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 4px 12px rgba(119, 221, 190, 0.3); transition: all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(119, 221, 190, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(119, 221, 190, 0.3)'">
+                                <span style="font-size: 18px;">💬</span>
+                                <span>Open AI Chat</span>
+                                <span style="font-size: 11px; background: rgba(255,255,255,0.2); padding: 3px 8px; border-radius: 12px;">Ctrl+L</span>
+                            </button>
+                            <div style="margin-top: 8px; text-align: center; font-size: 11px; color: var(--cursor-text-secondary);">
+                                Opens centered floating panel
+                            </div>
+                        </div>
+                        
+                        <!-- Past Chats Section -->
+                        <div id="past-chats-section" style="border-bottom: 2px solid var(--cursor-border); background: var(--cursor-bg-secondary);">
+                            <div style="padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="document.getElementById('past-chats-list').style.display = document.getElementById('past-chats-list').style.display === 'none' ? 'block' : 'none'">
+                                <div style="font-size: 12px; font-weight: 600; color: var(--cursor-jade-dark);">
+                                    📚 Past Chats
+                                </div>
+                                <div style="display: flex; gap: 6px; align-items: center;">
+                                    <button onclick="event.stopPropagation(); chatHistory && chatHistory.createNewChat()" style="background: var(--cursor-accent); color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 10px; font-weight: 600; cursor: pointer;">
+                                        ✨ New Chat
+                                    </button>
+                                    <button onclick="event.stopPropagation(); chatHistory && chatHistory.exportChats()" style="background: none; border: 1px solid var(--cursor-jade-light); color: var(--cursor-jade-dark); padding: 4px 10px; border-radius: 4px; font-size: 10px; cursor: pointer;">
+                                        📥 Export
+                                    </button>
+                                    <span style="font-size: 14px; color: var(--cursor-text-muted);">▼</span>
+                                </div>
+                            </div>
+                            <div id="past-chats-list" style="max-height: 250px; overflow-y: auto; display: block;">
+                                <div style="padding: 20px; text-align: center; color: var(--cursor-text-muted); font-size: 11px;">Loading chats...</div>
+                            </div>
+                        </div>
+                        
+                        <!-- AI Chat Header -->
+                    
+                    <!-- Advanced Settings Panel (Hidden by default) -->
+                    <div id="advanced-settings" style="display: none; flex-direction: column; gap: 8px; padding: 10px; background: rgba(0, 0, 0, 0.3); border-radius: 4px; max-height: 400px; overflow-y: auto;">
+                        <!-- Model Selector -->
+                        <div style="font-size: 11px; font-weight: bold; color: var(--cyan); margin-bottom: 4px;">🎯 Model Selection</div>
+                        <select id="model-selector" style="width: 100%; padding: 8px; background: rgba(0, 212, 255, 0.1); border: 1px solid var(--cyan); border-radius: 4px; color: var(--cyan); font-size: 12px; cursor: pointer;">
+                            <option value="bigdaddyg-latest">🧠 BigDaddyG Latest (Local)</option>
+                            <option value="bigdaddyg-code">💻 BigDaddyG Code (Optimized)</option>
+                            <option value="claude-sonnet-4">🤖 Claude Sonnet 4</option>
+                            <option value="gpt-4-turbo">🌟 GPT-4 Turbo</option>
+                            <option value="ollama-codellama">🦙 CodeLlama 70B</option>
+                        </select>
+                        
+                        <!-- Quick Toggles -->
+                        <div style="font-size: 11px; font-weight: bold; color: var(--cyan); margin-top: 8px; margin-bottom: 4px;">🎛️ Tune</div>
+                        <div id="quick-toggles" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; font-size: 11px;">
+                            <label style="display: flex; align-items: center; gap: 6px; padding: 6px; background: rgba(0, 255, 255, 0.05); border-radius: 4px; cursor: pointer;">
+                                <input type="checkbox" id="toggle-thinking" checked style="cursor: pointer;">
+                                <span>🤔 Thinking</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 6px; padding: 6px; background: rgba(0, 255, 255, 0.05); border-radius: 4px; cursor: pointer;">
+                                <input type="checkbox" id="toggle-web-search" style="cursor: pointer;">
+                                <span>🌐 Web Search</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 6px; padding: 6px; background: rgba(0, 255, 255, 0.05); border-radius: 4px; cursor: pointer;">
+                                <input type="checkbox" id="toggle-deep-research" style="cursor: pointer;">
+                                <span>📚 Deep Research</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 6px; padding: 6px; background: rgba(0, 255, 255, 0.05); border-radius: 4px; cursor: pointer;">
+                                <input type="checkbox" id="toggle-agentic" checked style="cursor: pointer;">
+                                <span>🤖 Agentic Mode</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 6px; padding: 6px; background: rgba(0, 255, 255, 0.05); border-radius: 4px; cursor: pointer;">
+                                <input type="checkbox" id="toggle-voice" style="cursor: pointer;">
+                                <span>🎤 Voice Input</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 6px; padding: 6px; background: rgba(0, 255, 255, 0.05); border-radius: 4px; cursor: pointer;">
+                                <input type="checkbox" id="toggle-emojis" style="cursor: pointer;">
+                                <span>😊 Emojis</span>
+                            </label>
+                        </div>
+                        
+                        <!-- Quality Selector -->
+                        <div style="display: flex; gap: 6px;">
+                            <button class="quality-btn active" data-quality="auto" style="flex: 1; padding: 6px; background: rgba(0, 255, 0, 0.2); border: 1px solid var(--green); color: var(--green); border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold;">Auto</button>
+                            <button class="quality-btn" data-quality="fast" style="flex: 1; padding: 6px; background: rgba(0, 255, 255, 0.1); border: 1px solid var(--cyan); color: var(--cyan); border-radius: 4px; cursor: pointer; font-size: 11px;">Fast</button>
+                            <button class="quality-btn" data-quality="max" style="flex: 1; padding: 6px; background: rgba(255, 107, 53, 0.1); border: 1px solid var(--orange); color: var(--orange); border-radius: 4px; cursor: pointer; font-size: 11px;">Max</button>
+                        </div>
+                        
+                        <!-- Advanced Tuning -->
+                        <div style="font-size: 11px; font-weight: bold; color: var(--cyan); margin-top: 8px; margin-bottom: 4px;">⚙️ Advanced</div>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <label style="font-size: 10px; opacity: 0.8;">Temperature: <span id="temp-value">0.7</span></label>
+                            <input type="range" id="temp-slider" min="0" max="1" step="0.1" value="0.7" style="width: 100%;">
+                        </div>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <label style="font-size: 10px; opacity: 0.8;">Max Tokens: <span id="tokens-value">2048</span></label>
+                            <input type="range" id="tokens-slider" min="256" max="8192" step="256" value="2048" style="width: 100%;">
+                        </div>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <label style="font-size: 10px; opacity: 0.8;">Context Window: <span id="context-value">128K</span></label>
+                            <select id="context-selector" style="width: 100%; padding: 4px; background: rgba(0, 0, 0, 0.5); border: 1px solid var(--cyan); border-radius: 3px; color: var(--cyan); font-size: 10px;">
+                                <option value="128000">128K tokens</option>
+                                <option value="200000">200K tokens</option>
+                                <option value="1000000">1M tokens (Full)</option>
+                            </select>
+                        </div>
+                        
+                        <button onclick="runAgenticTest()" style="width: 100%; padding: 8px; background: var(--purple); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; margin-top: 6px;">
+                            🏁 Run Cursor vs BigDaddyG Test
+                        </button>
+                        
+                        <button onclick="showSystemOptimizer()" style="width: 100%; padding: 8px; background: var(--orange); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold;">
+                            ⚡ System Optimizer (7800X3D)
+                        </button>
+                        
+                        <button onclick="showSwarmEngine()" style="width: 100%; padding: 8px; background: var(--green); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold;">
+                            🐝 Swarm Engine (200 Agents)
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="ai-chat-messages">
+                    <div class="ai-message welcome-message" id="welcome-message">
+                        <button class="welcome-dismiss" onclick="dismissWelcomeMessage()" title="Dismiss welcome message">✕</button>
+                        <strong style="color: var(--cyan);">BigDaddyG:</strong><br><br>
+                        Welcome to BigDaddyG IDE Professional Edition! 🌌<br><br>
+                        I'm your AI copilot, trained on 200K lines of assembly and security code.<br><br>
+                        <strong>Features:</strong><br>
+                        • ✅ Ultra-fast autocomplete<br>
+                        • 🤖 Full agentic capabilities<br>
+                        • 🎤 Voice coding (say "Hey BigDaddy")<br>
+                        • 📚 Deep research engine<br>
+                        • 1M context window<br>
+                        • 🐝 200 parallel mini-agents<br>
+                        • ⚡ Auto-optimized for your 7800X3D<br><br>
+                        Ask me anything! Or try:<br>
+                        • "Create a REST API"<br>
+                        • "Debug this code"<br>
+                        • "Optimize performance"
+                    </div>
+                </div>
+                <div id="ai-input-container" style="position: relative; z-index: 1000; background: var(--void); padding: 10px; margin-bottom: 20px;">
+                    <!-- File Attachments Display -->
+                    <div id="file-attachments" style="display: none;"></div>
+                    
+                    <textarea id="ai-input" placeholder="@ for context, / for commands, or drag files here 📎" class="chat-input-box" style="position: relative; z-index: 1001;"></textarea>
+                    <div style="display: flex; gap: 8px; margin-top: 10px; position: relative; z-index: 1001;">
+                        <button id="ai-send-btn" onclick="sendToAI()" style="flex: 1; padding: 10px; background: var(--cyan); color: var(--void); border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">💬 Send</button>
+                        <button id="voice-btn" onclick="startVoiceInput()" style="padding: 10px 15px; background: rgba(255, 107, 53, 0.2); color: var(--orange); border: 1px solid var(--orange); border-radius: 5px; font-weight: bold; cursor: pointer;">🎤</button>
+                        <button onclick="clearChat()" style="padding: 10px 15px; background: rgba(255, 71, 87, 0.2); color: var(--red); border: 1px solid var(--red); border-radius: 5px; font-weight: bold; cursor: pointer;">🗑️</button>
+                    </div>
+                </div>
+                    </div>
+                    <!-- END CHAT TAB -->
+                    
+                    <!-- EXPLORER TAB (Hidden by default) -->
+                    <div id="explorer-tab-content" class="tab-content" style="display: none; flex-direction: column; flex: 1; overflow: hidden;">
+                        <div style="padding: 12px; background: var(--cursor-bg-secondary); border-bottom: 1px solid var(--cursor-border); display: flex; justify-content: space-between; align-items: center;">
+                            <h3 style="margin: 0; font-size: 13px; font-weight: 600; color: var(--cursor-jade-dark);">📁 File Explorer</h3>
+                            <button onclick="fileExplorer && fileExplorer.loadDrives()" style="background: var(--cursor-accent); color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600;">🔄 Refresh</button>
+                        </div>
+                        
+                        <!-- Drives List -->
+                        <div id="drives-list" style="flex: 1; overflow-y: auto; padding: 8px;">
+                            <div style="padding: 20px; text-align: center; color: var(--cursor-text-muted);">Loading drives...</div>
+                        </div>
+                        
+                        <!-- File Browser (shown when browsing a drive) -->
+                        <div id="file-browser" style="display: none; flex: 1; flex-direction: column; overflow: hidden;">
+                            <!-- Populated dynamically by file-explorer.js -->
+                        </div>
+                    </div>
+                    <!-- END EXPLORER TAB -->
+                    
+                    <!-- GITHUB TAB (Placeholder - already exists) -->
+                    <div id="github-tab-content" class="tab-content" style="display: none; flex: 1; overflow-y: auto;">
+                        <!-- GitHub integration content will be injected here by github-integration.js -->
+                    </div>
+                    
+                    <!-- AGENTS TAB (Placeholder - already exists) -->
+                    <div id="agents-tab-content" class="tab-content" style="display: none; flex: 1; overflow-y: auto;">
+                        <!-- Background agents content will be injected here by background-agent-manager.js -->
+                    </div>
+                    
+                    <!-- TEAM TAB (Placeholder - already exists) -->
+                    <div id="team-tab-content" class="tab-content" style="display: none; flex: 1; overflow-y: auto;">
+                        <!-- Team collaboration content will be injected here by team-collaboration.js -->
+                    </div>
+                    
+                    <!-- SETTINGS TAB (Placeholder) -->
+                    <div id="settings-tab-content" class="tab-content" style="display: none; flex: 1; overflow-y: auto; padding: 20px;">
+                        <h3 style="color: var(--cursor-jade-dark); margin-bottom: 20px;">⚙️ Settings</h3>
+                        <p style="color: var(--cursor-text-secondary);">Settings panel - coming soon!</p>
+                    </div>
+                    
+                    <!-- TODO PANEL -->
+                    <div id="todo-panel-container" style="position: fixed; bottom: 20px; right: 20px; width: 350px; z-index: 1000;"></div>
+                    
+                </div>
+                <!-- END Tab Content Areas -->
+            </div>
+            <!-- END Right Sidebar -->
+        </div>
+        
+        <!-- Bottom Panel - Terminal/Output -->
+        <div id="bottom-panel" class="collapsed">
+            <div id="bottom-panel-tabs">
+                <div class="bottom-tab active">📟 Terminal</div>
+                <div class="bottom-tab">📊 Output</div>
+                <div class="bottom-tab">🐛 Debug Console</div>
+            </div>
+            <div id="bottom-panel-content">
+                <div style="color: var(--green);">BigDaddyG IDE v1.0.0</div>
+                <div style="color: #888;">Ready to code...</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Monaco Editor Fix - Resolves AMD loader issues -->
+    <!-- MONACO AMD LOADER - Must load BEFORE monaco-fix.js -->
+    <script>
+        // Prevent uncaught function errors
+        window.addEventListener('error', function(e) {
+            if (e.message && e.message.includes('define')) {
+                console.warn('[Monaco] Caught define error:', e.message);
+                e.preventDefault();
+            }
+        });
+    </script>
+    <script>
+        console.log('[Monaco] 🔧 Starting AMD loader script load...');
+        
+        // Create script element and monitor loading
+        const loaderScript = document.createElement('script');
+        loaderScript.src = './node_modules/monaco-editor/min/vs/loader.js';
+        loaderScript.onload = function() {
+            console.log('[Monaco] ✅ AMD loader script loaded successfully');
+            console.log('[Monaco] require exists:', typeof window.require);
+            console.log('[Monaco] define exists:', typeof window.define);
+            console.log('[Monaco] define.amd:', window.define && window.define.amd);
+            
+            // Now define AMD stubs
+            console.log('[Monaco] 🔧 Defining AMD module stubs...');
+            if (typeof window.define === 'function' && window.define.amd) {
+                window.define('fs', [], function() { return {}; });
+                window.define('os', [], function() { 
+                    return {
+                        platform: function() { return 'browser'; },
+                        tmpdir: function() { return '/tmp'; },
+                        homedir: function() { return '/'; }
+                    }; 
+                });
+                window.define('path', [], function() {
+                    return {
+                        join: function() { return Array.prototype.slice.call(arguments).join('/'); },
+                        resolve: function() { return Array.prototype.slice.call(arguments).join('/'); },
+                        dirname: function(p) { return p.split('/').slice(0, -1).join('/'); },
+                        basename: function(p) { return p.split('/').pop(); },
+                        sep: '/',
+                        delimiter: ':'
+                    };
+                });
+                window.define('child_process', [], function() { return {}; });
+                window.define('crypto', [], function() { return {}; });
+                window.define('net', [], function() { return {}; });
+                window.define('util', [], function() { return {}; });
+                window.define('stream', [], function() { return {}; });
+                
+                // Minimal VM shim for Monaco workers that may attempt to use vm.runInThisContext
+                window.define('vm', [], function() {
+                    return {
+                        runInThisContext: function(code) {
+                            try {
+                                // Evaluate in a safe isolated function
+                                return (new Function(code))();
+                            } catch (e) {
+                                return undefined;
+                            }
+                        },
+                        runInNewContext: function(code, context) {
+                            // No-op: do not provide full VM sandbox in browser
+                            try {
+                                return (new Function(code))();
+                            } catch (e) {
+                                return undefined;
+                            }
+                        }
+                    };
+                });
+
+                // Minimal process global for libs that expect process.nextTick / env / cwd
+                if (!window.process) {
+                    window.process = {
+                        env: {},
+                        platform: 'browser',
+                        versions: {},
+                        cwd: function() { return '/'; },
+                        nextTick: function(cb) { return setTimeout(cb, 0); }
+                    };
+                }
+                // Expose AMD 'process' module too
+                window.define('process', [], function() { return window.process; });
+
+                // Minimal Buffer shim for browser usage
+                if (!window.Buffer) {
+                    window.Buffer = (function() {
+                        function Buffer(arg) {
+                            if (typeof arg === 'number') return new Uint8Array(arg);
+                            if (typeof arg === 'string') return new TextEncoder().encode(arg);
+                            if (Array.isArray(arg) || arg instanceof Uint8Array) return new Uint8Array(arg);
+                            return new Uint8Array();
+                        }
+                        Buffer.isBuffer = function(b) { return b instanceof Uint8Array; };
+                        Buffer.from = function(input) {
+                            if (typeof input === 'string') return new TextEncoder().encode(input);
+                            if (Array.isArray(input) || input instanceof Uint8Array) return new Uint8Array(input);
+                            return new Uint8Array();
+                        };
+                        Buffer.alloc = function(size) { return new Uint8Array(size); };
+                        return Buffer;
+                    })();
+                }
+                // Expose AMD 'buffer' module
+                window.define('buffer', [], function() { return { Buffer: window.Buffer }; });
+
+                console.log('[Monaco] ✅ AMD module stubs defined');
+            } else {
+                console.error('[Monaco] ❌ AMD not available for stubs');
+            }
+        };
+        loaderScript.onerror = function() {
+            console.error('[Monaco] ❌ AMD loader script failed to load');
+        };
+        document.head.appendChild(loaderScript);
+    </script>
+    <script src="monaco-fix.js"></script>
+    
+    <!-- Core Scripts -->
+    <!-- MONACO CSS - Load first for proper styling -->
+    <link rel="stylesheet" href="./node_modules/monaco-editor/min/vs/editor/editor.main.css">
+    
+    <!-- WINDOW API BRIDGE - Must load FIRST to expose missing APIs -->
+    <script src="window-api-bridge.js"></script>
+    
+    <!-- TIMER MANAGER - Must load FIRST to prevent memory leaks -->
+    <script src="timer-manager.js"></script>
+    
+    <!-- EVENT LISTENER MANAGER - Track and cleanup event listeners -->
+    <script src="event-listener-manager.js"></script>
+    
+    <!-- DEBUG MODE CONTROLLER - Load early to control console output -->
+    <script src="debug-mode.js"></script>
+    
+    <!-- REQUEST POOL - Load early for fetch deduplication -->
+    <script src="request-pool.js"></script>
+    
+    <!-- FETCH TIMEOUT WRAPPER - Prevent hanging requests with automatic timeouts -->
+    <script src="fetch-timeout-wrapper.js"></script>
+    
+    <!-- INDEXEDDB STORAGE - Large data storage (unlimited capacity) -->
+    <script src="indexeddb-storage.js"></script>
+    
+    <!-- LAZY LOADER - On-demand module loading for faster startup -->
+    <script src="lazy-loader.js"></script>
+    
+    <!-- VIRTUAL SCROLLER - Render only visible items for performance -->
+    <script src="virtual-scroller.js"></script>
+    
+    <!-- PERFORMANCE DASHBOARD - Real-time metrics (Ctrl+Shift+D) -->
+    <script src="performance-dashboard.js"></script>
+    
+    <!-- DEBUG MODE CONTROLLER - Toggle console output (production/development) -->
+    <script src="debug-mode.js"></script>
+    
+    <!-- EVENT LISTENER MANAGER - Track and prevent listener memory leaks -->
+    <script src="event-listener-manager.js"></script>
+    
+    <!-- ERROR CLEANUP - Must load early to intercept console -->
+    <script src="error-cleanup.js"></script>
+    
+    <!-- NATIVE OLLAMA BRIDGE - Native HTTP client (20-30% faster!) -->
+    <script src="native-ollama-bridge.js"></script>
+    
+    <!-- GLOBAL FUNCTIONS - Define all onclick handlers FIRST -->
+    <script src="global-functions.js"></script>
+    
+    <!-- MEMORY BRIDGE - OpenMemory Integration for Persistent Context -->
+    <script src="memory-bridge.js"></script>
+    
+    <!-- MEMORY DASHBOARD - Visual interface for memory management -->
+    <script src="memory-dashboard.js"></script>
+    
+    <!-- UI ENHANCER - Professional animations and polish -->
+    <script src="ui-enhancer.js"></script>
+    
+    <script src="renderer.js"></script>
+    <script src="settings-applier.js"></script>
+    <script src="settings-panel.js"></script>
+    
+    <!-- AGENTIC GLOBAL API - Expose all operations for AI control -->
+    <script src="agentic-global-api.js"></script>
+    
+    <!-- AI CODE TO TABS - Auto-create tabs from AI code -->
+    <script src="ai-code-to-tabs.js"></script>
+    
+    <!-- UNIVERSAL DRAG SYSTEM - Make everything draggable -->
+    <script src="universal-drag-system.js"></script>
+    
+    <!-- ERROR PROTECTION - Bulletproof error handling -->
+    <script src="error-protection.js"></script>
+    
+    <!-- Feature Modules -->
+    <script src="performance-modes.js"></script>
+    <script src="visual-benchmark.js"></script>
+    <script src="model-hotswap.js"></script>
+    <script src="mouse-ripple.js"></script>
+    <script src="chameleon-theme.js"></script>
+    <script src="console-panel.js"></script>
+    <script src="terminal-panel.js"></script>
+    <script src="agentic-coder.js"></script>
+    <script src="agentic-safety.js"></script>
+    <script src="command-generator.js"></script>
+    <script src="agent-panel.js"></script>
+    <script src="autocomplete-engine.js"></script>
+    <script src="agentic-executor.js"></script>
+    <script src="offline-speech-engine.js"></script>
+    
+    <!-- NEW: Centralized Status & Model Management -->
+    <script src="status-manager.js"></script>
+    <script src="model-state-manager.js"></script>
+    
+    <!-- NEW: Flexible Drag-and-Drop Layout System -->
+    <script src="flexible-layout-system.js"></script>
+    
+    <!-- Hotkey Manager - MUST LOAD FIRST -->
+    <script src="hotkey-manager.js"></script>
+    
+    <!-- COMMAND PALETTE - Ctrl+Shift+P -->
+    <script src="command-palette.js"></script>
+    
+    <script src="file-explorer.js"></script>
+    
+    <!-- ENHANCED FILE EXPLORER - Professional file browser with open editors -->
+    <script src="enhanced-file-explorer.js"></script>
+    
+    <!-- EXPLORER INTEGRATION - Connects explorer to Monaco and tabs -->
+    <script src="explorer-integration.js"></script>
+    
+    <script src="chat-history.js"></script>
+    <script src="ai-response-handler.js"></script>
+    <script src="floating-chat.js"></script>
+    
+    <!-- NEW: Unified Chat & Context Menu Integration -->
+    <script src="unified-chat-handler.js"></script>
+    <script src="context-menu-executor.js"></script>
+    <script src="quick-actions-executor.js"></script>
+    
+    <!-- AUDIT FIXES VERIFICATION (Development/Testing) -->
+    <script src="audit-fixes-verifier.js"></script>
+    
+    <!-- SYSTEM DIAGNOSTIC (Development/Testing) -->
+    <script src="system-diagnostic.js"></script>
+    
+    <!-- CONNECTION FIXER - Auto-wires all systems -->
+    <script src="connection-fixer.js"></script>
+    
+    <!-- QUICK HEALTH CHECK - Fast diagnostic -->
+    <script src="quick-health-check.js"></script>
+    
+    <!-- MONACO DIAGNOSTIC - Debug Monaco editor -->
+    <script src="monaco-diagnostic.js"></script>
+    
+    <!-- MONACO BOOTSTRAP DIAGNOSTIC - Verify Monaco loading -->
+    <script src="diagnose-monaco.js"></script>
+    
+    <!-- ORCHESTRA LAYOUT - 3-Pane Ollama-style Interface with 100 Sessions -->
+    <script src="orchestra-layout.js"></script>
+    
+    <!-- ENHANCED AGENTIC UI - Smart suggestions, live analysis, visual enhancements -->
+    <script src="enhanced-agentic-ui.js"></script>
+    
+    <!-- PARALLEL EXECUTION VISUALIZER - See all AI sessions in real-time -->
+    <script src="parallel-execution-viz.js"></script>
+    
+    <script src="tab-system.js"></script>
+    
+    <!-- UNIVERSAL CHAT HANDLER - Make ALL chat inputs work! -->
+    <script src="universal-chat-handler.js"></script>
+    
+    <!-- AGENTIC AUTO-FIXER - Self-healing IDE that autonomously fixes issues! -->
+    <script src="agentic-auto-fixer.js"></script>
+    
+    <!-- AI PROVIDER MANAGER - Unified AI provider interface -->
+    <script src="ai-provider-manager.js"></script>
+    
+    <!-- AGENTIC AI BRIDGE - Connect AI providers to agentic features -->
+    <script src="agentic-ai-bridge.js"></script>
+    
+    <!-- AGENTIC CODER - AI Agent that writes code autonomously! -->
+    <script src="agentic-coder.js"></script>
+    
+    <script src="error-tracker.js"></script>
+    <script src="voice-coding.js"></script>
+    
+    <!-- PLUGIN SYSTEM - Run VS Code, Cursor, Visual Studio Extensions! -->
+    <script src="plugin-system.js"></script>
+    <script src="plugin-marketplace.js"></script>
+    <script src="plugins/code-stats.js"></script>
+    <script src="plugins/first-party-linter.js"></script>
+    
+    <!-- UNIFIED EXTENSION SYSTEM - RawrZ, Multi AI, Auto-compile -->
+    <script src="unified-extension-system.js"></script>
+    
+    <!-- AGENTIC FILE BROWSER - Like Cursor but FREE! -->
+    <script src="agentic-file-browser.js"></script>
+    
+    <!-- COMMAND SYSTEM - !pic, !code, !projectnew, !projectresume -->
+    <script src="command-system.js"></script>
+    
+    <!-- IMAGE GENERATOR - Generate images in IDE -->
+    <script src="image-generator.js"></script>
+    
+    <!-- CINEMATIC VISUALIZATION - Orchestration mesh (Ctrl+Shift+V) -->
+    <script src="cinematic-visualization.js"></script>
+    
+    <!-- REMOTE LOGGER - Debug from terminal (even remotely!) -->
+    <script src="remote-logger.js"></script>
+    
+    <!-- REVOLUTIONARY NEW FEATURES -->
+    <script src="ai-live-preview.js"></script>
+    <script src="visual-code-flow.js"></script>
+    <script src="predictive-debugger.js"></script>
+    <script src="multi-agent-swarm.js"></script>
+    <script src="ai-code-review-security.js"></script>
+    
+    <!-- New Feature Scripts -->
+    <script src="context-summarizer.js"></script>
+    <script src="deep-research-engine.js"></script>
+    <script src="project-importer.js"></script>
+    <script src="enhanced-agentic-executor.js"></script>
+    <script src="ui/live-coding-panel.js"></script>
+    <script src="ui/todo-panel.js"></script>
+    <script src="neural-code-synthesis.js"></script>
+    <script src="ui/chat-customizer.js"></script>
+    <script src="agentic-test-runner.js"></script>
+    <script src="swarm-engine.js"></script>
+    <script src="system-optimizer.js"></script>
+    <script src="ui/swarm-visualizer.js"></script>
+    <script src="ui/optimizer-panel.js"></script>
+    
+    <!-- COLLAPSIBLE AGENT SIDEBAR - Toggle panels with Ctrl+[ and Ctrl+] -->
+    <script src="collapsible-agent-sidebar.js"></script>
+    
+    <!-- RESIZABLE PANES - Drag dividers to resize any pane -->
+    <script src="resizable-panes.js"></script>
+    
+    <!-- TRANSPARENCY MANAGER - RGBA transparency for extreme multitasking -->
+    <script src="transparency-manager.js"></script>
+    
+    <!-- ENHANCED TERMINAL - Full PowerShell/CMD/Bash access with AI command generation -->
+    <script src="enhanced-terminal.js"></script>
+    
+    <!-- GITHUB AUTHENTICATION - Secure OAuth and PAT login -->
+    <script src="github-auth.js"></script>
+    
+    <!-- AI CODE RESPONSE SYSTEM - Beautiful code blocks with controls -->
+    <script src="ai-code-response-system.js"></script>
+    
+    <!-- ENHANCED USER MESSAGE SYSTEM - Expandable messages with all controls -->
+    <script src="enhanced-user-message-system.js"></script>
+    
+    <script>
+        console.log('[BigDaddyG] 🌌 All systems loaded!');
+        console.log('[BigDaddyG] 💎 Professional Edition Ready');
+        
+        // Global helpers
+        function createNewFile() {
+            // Use same mechanism as Ctrl+N - no prompt needed
+            if (window.electron) {
+                // Trigger menu event which will call createNewTab in renderer.js
+                window.electron.minimizeWindow(); // Dummy call to ensure electron is available
+            }
+            // Create new untitled file directly
+            const newFilename = `Untitled-${Date.now()}.txt`;
+            console.log('[BigDaddyG] 📄 Creating new file from + button:', newFilename);
+            // This will be handled by renderer.js createNewTab if it's loaded
+        }
+        
+        function toggleSettings() {
+            const settings = document.getElementById('advanced-settings');
+            settings.style.display = settings.style.display === 'none' ? 'flex' : 'none';
+        }
+        
+        function switchSidebarTab(tabName) {
+            console.log('[BigDaddyG] 🔄 Switching to tab:', tabName);
+            
+            // Update tab styling
+            document.querySelectorAll('.sidebar-tab').forEach(tab => {
+                const isActive = tab.dataset.tab === tabName;
+                tab.style.borderBottom = isActive ? '3px solid var(--cursor-accent)' : '3px solid transparent';
+                tab.style.color = isActive ? 'var(--cursor-accent)' : 'var(--cursor-text-secondary)';
+                tab.style.fontWeight = isActive ? '600' : 'normal';
+                tab.classList.toggle('active', isActive);
+            });
+            
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.style.display = 'none';
+            });
+            
+            // Show selected tab content
+            const activeContent = document.getElementById(`${tabName}-tab-content`);
+            if (activeContent) {
+                activeContent.style.display = 'flex';
+                console.log('[BigDaddyG] ✅ Tab switched to:', tabName);
+            } else {
+                console.error('[BigDaddyG] ❌ Tab content not found:', tabName);
+            }
+            
+            // Optimization: Start/stop drive polling based on explorer tab visibility
+            if (window.electron && window.electron.drivePolling) {
+                if (tabName === 'explorer') {
+                    window.electron.drivePolling.start().then(() => {
+                        console.log('[BigDaddyG] 🔄 Drive polling started (explorer opened)');
+                    }).catch(err => console.error('Failed to start drive polling:', err));
+                } else {
+                    window.electron.drivePolling.stop().then(() => {
+                        console.log('[BigDaddyG] ⏹️ Drive polling stopped (explorer closed)');
+                    }).catch(err => console.error('Failed to stop drive polling:', err));
+                }
+            }
+        }
+        
+        function clearChat() {
+            const messages = document.getElementById('ai-chat-messages');
+            if (confirm('Clear all chat messages?')) {
+                messages.innerHTML = '<div class="ai-message"><strong style="color: var(--cyan);">BigDaddyG:</strong><br><br>Chat cleared. Ready for new conversation!</div>';
+            }
+        }
+        
+        function startVoiceInput() {
+            if (!window.voiceCoding) {
+                alert('Voice coding not initialized yet. Loading...');
+                return;
+            }
+            window.voiceCoding.startListening();
+        }
+        
+        function runAgenticTest() {
+            if (!window.agenticTestRunner) {
+                window.agenticTestRunner = new AgenticTestRunner();
+            }
+            window.agenticTestRunner.runComparison();
+        }
+        
+        function showSystemOptimizer() {
+            // Create modal for system optimizer
+            const modal = document.createElement('div');
+            modal.id = 'optimizer-modal';
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.9); z-index: 10000; overflow: auto;';
+            modal.innerHTML = '<div id="optimizer-panel-container" style="height: 100%; width: 100%;"></div>';
+            document.body.appendChild(modal);
+            
+            const panel = new OptimizerPanel('optimizer-panel-container');
+            
+            // Add close button
+            const closeBtn = document.createElement('button');
+            closeBtn.textContent = '× Close';
+            closeBtn.style.cssText = 'position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: var(--red); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; z-index: 10001;';
+            closeBtn.onclick = () => modal.remove();
+            modal.appendChild(closeBtn);
+        }
+        
+        function showSwarmEngine() {
+            const modal = document.createElement('div');
+            modal.id = 'swarm-modal';
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.95); z-index: 10000;';
+            modal.innerHTML = '<div id="swarm-visualizer-container" style="height: 100%; width: 100%;"></div>';
+            document.body.appendChild(modal);
+            
+            const viz = new SwarmVisualizer('swarm-visualizer-container');
+            
+            const closeBtn = document.createElement('button');
+            closeBtn.textContent = '× Close';
+            closeBtn.style.cssText = 'position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: var(--red); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; z-index: 10001;';
+            closeBtn.onclick = () => modal.remove();
+            modal.appendChild(closeBtn);
+        }
+        
+        // Quality button handler
+        document.querySelectorAll('.quality-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.quality-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                console.log('[BigDaddyG] Quality set to:', e.target.dataset.quality);
+            });
+        });
+        
+        // Temperature slider
+        document.getElementById('temp-slider')?.addEventListener('input', (e) => {
+            document.getElementById('temp-value').textContent = e.target.value;
+        });
+        
+        // Tokens slider
+        document.getElementById('tokens-slider')?.addEventListener('input', (e) => {
+            document.getElementById('tokens-value').textContent = e.target.value;
+        });
+        
+        // Window control functions
+        function minimizeWindow() {
+            if (window.electron && window.electron.minimizeWindow) {
+                window.electron.minimizeWindow();
+            }
+        }
+        
+        function maximizeWindow() {
+            if (window.electron && window.electron.maximizeWindow) {
+                window.electron.maximizeWindow();
+            }
+        }
+        
+        function closeWindow() {
+            if (window.electron && window.electron.closeWindow) {
+                window.electron.closeWindow();
+            }
+        }
+        
+        console.log('[BigDaddyG] ✨ Everything ready! Start coding!');
+        
+        // Global error handlers
+        window.addEventListener('unhandledrejection', (event) => {
+            console.error('[BigDaddyG] ❌ Unhandled Promise Rejection:', event.reason);
+            event.preventDefault();
+        });
+        
+        window.addEventListener('error', (event) => {
+            console.error('[BigDaddyG] ❌ Global Error:', event.error);
+        });
+    </script>
+    
+    <!-- ERROR LOG WRITER - Comprehensive error logging to file -->
+    <script src="error-log-writer.js"></script>
+    
+    <!-- WEB BROWSER - Integrated browser -->
+    <script src="web-browser.js"></script>
+    
+    <!-- BROWSER PANEL - Enhanced tabbed browser -->
+    <script src="browser-panel.js"></script>
+    
+    <!-- PANEL MANAGER - Universal panel control -->
+    <script src="panel-manager.js"></script>
+    
+    <!-- MENU BAR - Professional IDE menu system -->
+    <script src="menu-bar.js"></script>
+    
+    <!-- VISUAL TEST RUNNER - SEE the tests! -->
+    <script src="visual-test-runner.js"></script>
+    
+    <!-- FULL AGENTIC DEMO - Shows chat, AI response, and agentic coding! -->
+    <script src="full-agentic-demo.js"></script>
+
+    <!-- AGENTIC BROWSER DEMO - AI drives the integrated browser -->
+    <script src="agentic-browser-demo.js"></script>
+    
+    <!-- TAB SYSTEM DEBUGGER - Find why tabs aren't working -->
+    <script src="tab-debug.js"></script>
+    
+    <!-- IMMEDIATE DIAGNOSTICS - Check state RIGHT NOW -->
+    <script src="immediate-diagnostics.js"></script>
+    
+    <!-- IDE INITIALIZER - Final validation and system check (MUST BE LAST) -->
+    <script src="ide-initializer.js"></script>
+    
+    <!-- INTEGRATION UPDATES - Seamless UI integration for layout and chat history -->
+    <script src="integration-updates.js"></script>
+    
+    <!-- DEMO LAUNCHER - Comprehensive visual showcase of all features -->
+    <script src="demo-launcher.js"></script>
+    
+    <!-- MASTER INITIALIZER - Ensures all systems are properly initialized and connected -->
+    <script src="master-initializer.js"></script>
+    
+    <!-- INTEGRATION TEST SUITE (Optional - for testing) -->
+    <!-- <script src="test-integration.js"></script> -->
+</body>
+</html>
+

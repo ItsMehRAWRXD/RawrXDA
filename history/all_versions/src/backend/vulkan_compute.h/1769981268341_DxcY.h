@@ -1,0 +1,117 @@
+#pragma once
+#include <vulkan/vulkan.h>
+#include <vector>
+#include <string>
+#include <expected>
+#include <mutex>
+#include <unordered_map>
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
+
+namespace RawrXD {
+
+enum class VulkanError {
+    Success = 0,
+    InstanceCreationFailed,
+    DeviceSelectionFailed,
+    PipelineCreationFailed,
+    MemoryAllocationFailed,
+    KernelExecutionFailed,
+    SynchronizationFailed
+};
+
+struct VulkanBuffer {
+    VkBuffer buffer = VK_NULL_HANDLE;
+    VkDeviceMemory memory = VK_NULL_HANDLE;
+    void* mappedMemory = nullptr;
+    size_t size = 0;
+};
+
+class VulkanCompute {
+public:
+    VulkanCompute();
+    ~VulkanCompute();
+    
+    // Non-copyable
+    VulkanCompute(const VulkanCompute&) = delete;
+    VulkanCompute& operator=(const VulkanCompute&) = delete;
+    
+    // Real Vulkan initialization
+    std::expected<void, VulkanError> initialize();
+    void shutdown();
+    
+    // Real memory management
+    std::expected<VulkanBuffer, VulkanError> createBuffer(
+        size_t size,
+        VkBufferUsageFlags usage,
+        VkMemoryPropertyFlags properties
+    );
+    
+    void destroyBuffer(VulkanBuffer& buffer);
+    
+    // Real kernel execution
+    std::expected<void, VulkanError> executeMatrixMultiplication(
+        const VulkanBuffer& a,
+        const VulkanBuffer& b,
+        VulkanBuffer& result,
+        size_t dim
+    );
+    
+    std::expected<void, VulkanError> executeSoftmax(
+        VulkanBuffer& logits,
+        float temperature,
+        size_t vocabSize
+    );
+    
+    std::expected<void, VulkanError> executeAttention(
+        const VulkanBuffer& q,
+        const VulkanBuffer& k,
+        const VulkanBuffer& v,
+        VulkanBuffer& output,
+        size_t seqLen,
+        size_t headDim
+    );
+    
+    // Real synchronization
+    std::expected<void, VulkanError> synchronize();
+    
+    // Status
+    VkDevice getDevice() const { return m_device; }
+    json getStatus() const;
+    
+private:
+    VkInstance m_instance = VK_NULL_HANDLE;
+    VkDevice m_device = VK_NULL_HANDLE;
+    VkPhysicalDevice m_physicalDevice = VK_NULL_HANDLE;
+    VkQueue m_computeQueue = VK_NULL_HANDLE;
+    VkCommandPool m_commandPool = VK_NULL_HANDLE;
+    VkDescriptorPool m_descriptorPool = VK_NULL_HANDLE;
+    
+    // Real pipeline cache
+    std::unordered_map<std::string, VkPipeline> m_pipelines;
+    std::unordered_map<std::string, VkPipelineLayout> m_pipelineLayouts;
+    mutable std::mutex m_mutex;
+    
+    // Real implementation methods
+    std::expected<VkShaderModule, VulkanError> createShaderModule(
+        const std::vector<uint32_t>& code
+    );
+    
+    std::expected<void, VulkanError> createComputePipeline(
+        const std::string& name,
+        const std::vector<uint32_t>& shaderCode,
+        const std::vector<VkDescriptorSetLayoutBinding>& bindings
+    );
+    
+    std::expected<VkCommandBuffer, VulkanError> beginCommandBuffer();
+    std::expected<void, VulkanError> endCommandBuffer(VkCommandBuffer cmdBuffer);
+    
+    // Real shader compilation
+    std::vector<uint32_t> compileGLSLToSPIRV(
+        const std::string& glslCode,
+        const std::string& entryPoint
+    );
+};
+
+} // namespace RawrXD

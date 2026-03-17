@@ -4,8 +4,11 @@
 #include <functional>
 #include <map>
 #include <atomic>
-#include "nlohmann/json.hpp"
+#include <nlohmann/json.hpp>
 #include "agentic_engine.h"
+
+/** Set the engine used by AgenticController::HandleIDEUserCommand when IDE invokes agentic from palette/menu. Call from bridge Initialize. */
+void SetIDEAgenticEngineForCommands(AgenticEngine* engine);
 
 // Action Types definition
 enum class ActionType {

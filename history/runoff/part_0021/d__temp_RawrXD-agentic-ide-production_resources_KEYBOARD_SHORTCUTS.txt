@@ -1,0 +1,423 @@
+================================================================================
+RawrXD AGENTIC IDE - KEYBOARD SHORTCUTS REFERENCE
+================================================================================
+
+VERSION: 1.0.0
+DATE: 2024
+STATUS: Complete
+
+================================================================================
+FILE OPERATIONS
+================================================================================
+
+Ctrl+N          New Paint Canvas
+                Create a new blank paint canvas in a new tab
+
+Ctrl+Shift+N    New Chat
+                Start a new chat conversation in a new tab
+
+Ctrl+O          Open File
+                Open an existing file (image or code)
+
+Ctrl+S          Save Current
+                Save/export the current paint canvas
+
+Ctrl+Shift+S    Save All
+                Save/export all paint canvases
+
+Ctrl+W          Close Current Tab
+                Close the active tab with unsaved change warning
+
+Alt+F4          Exit Application
+                Ctrl+Q also works
+
+================================================================================
+EDIT OPERATIONS
+================================================================================
+
+Ctrl+Z          Undo
+                Undo last action in paint editor
+
+Ctrl+Y          Redo
+                Redo last undone action in paint editor
+
+Ctrl+X          Cut
+                Cut selected content to clipboard
+
+Ctrl+C          Copy
+                Copy selected content to clipboard
+
+Ctrl+V          Paste
+                Paste content from clipboard
+
+================================================================================
+VIEW OPERATIONS
+================================================================================
+
+Ctrl+F          Toggle Features Panel
+                Show or hide the Features management panel
+
+Ctrl+Plus       Zoom In
+                Increase zoom level in paint editor
+
+Ctrl+Minus      Zoom Out
+                Decrease zoom level in paint editor
+
+Ctrl+0          Reset Zoom
+                Reset zoom to 100% in paint editor
+
+F11             Toggle Fullscreen (Future)
+                Maximize IDE to fullscreen
+
+================================================================================
+PAINT EDITOR TOOLS
+================================================================================
+
+P               Pencil Tool
+                Select pencil for precise pixel-perfect drawing
+
+B               Brush Tool
+                Select soft brush with anti-aliasing
+
+E               Eraser Tool
+                Select eraser to remove painted content
+
+L               Line Tool
+                Select line drawing tool
+
+R               Rectangle Tool
+                Select rectangle drawing tool
+
+C               Circle Tool
+                Select ellipse/circle drawing tool
+
+Y               Polygon Tool
+                Select polygon (multi-point) drawing tool
+
+F               Fill Bucket Tool
+                Select fill bucket for area fill with color
+
+K               Color Picker Tool
+                Select color picker to sample colors
+
+================================================================================
+PAINT EDITOR SHORTCUTS
+================================================================================
+
+Mouse Wheel     Zoom In/Out
+                Scroll to change zoom level
+
+Right Click     Color Selection
+                Quick access to color picker
+
+Space + Drag    Pan Canvas
+                Hold space and drag to pan view
+
+[ or ]          Adjust Brush Size
+                [ decreases size, ] increases size
+
+- or +          Adjust Opacity
+                - decreases opacity, + increases opacity
+
+Q               Toggle Quality
+                Switch between preview and quality mode
+
+D               Reset to Default
+                Reset brush/color to defaults
+
+================================================================================
+CODE EDITOR SHORTCUTS
+================================================================================
+
+Ctrl+O          Open File
+                Open a code file for editing
+
+Ctrl+S          Save File
+                Save current code file
+
+Ctrl+F          Find Text
+                Open find dialog
+
+Ctrl+H          Find and Replace
+                Open find and replace dialog
+
+Ctrl+G          Go to Line
+                Jump to specific line number
+
+Ctrl+/          Comment/Uncomment
+                Toggle comments for selected lines
+
+Ctrl+Shift+K    Delete Line
+                Delete entire current line
+
+Ctrl+Alt+Up     Move Line Up
+                Move current line up one position
+
+Ctrl+Alt+Down   Move Line Down
+                Move current line down one position
+
+Tab             Indent
+                Indent selected lines or insert tab
+
+Shift+Tab       Unindent
+                Unindent selected lines
+
+Home            Go to Line Start
+                Jump to beginning of current line
+
+End             Go to Line End
+                Jump to end of current line
+
+Ctrl+Home       Go to File Start
+                Jump to beginning of file
+
+Ctrl+End        Go to File End
+                Jump to end of file
+
+Ctrl+L          Select Line
+                Select entire current line
+
+Ctrl+D          Duplicate Line
+                Duplicate current line
+
+Ctrl+K+C        Comment
+                Add comment markers
+
+Ctrl+K+U        Uncomment
+                Remove comment markers
+
+================================================================================
+CHAT OPERATIONS
+================================================================================
+
+Ctrl+Shift+N    New Chat
+                Create new chat conversation tab
+
+Ctrl+W          Close Chat
+                Close current chat tab
+
+Ctrl+Tab        Next Chat
+                Switch to next chat tab
+
+Ctrl+Shift+Tab  Previous Chat
+                Switch to previous chat tab
+
+Enter           Send Message
+                Send typed message to chat
+
+Shift+Enter     New Line
+                Insert new line in message (future)
+
+Up Arrow        Previous Message
+                Scroll to previous message
+
+Down Arrow      Next Message
+                Scroll to next message
+
+================================================================================
+FEATURES PANEL SHORTCUTS
+================================================================================
+
+Ctrl+F          Toggle Panel
+                Show or hide features panel
+
+Ctrl+Shift+F    Focus Panel
+                Focus input on features search box
+
+F1              Help (Future)
+                Show features help and documentation
+
+Delete          Disable Feature
+                Disable currently selected feature
+
+Space           Toggle Feature
+                Enable/disable currently selected feature
+
+Escape          Clear Search
+                Clear search filter in features panel
+
+================================================================================
+TAB NAVIGATION
+================================================================================
+
+Ctrl+Tab        Next Tab
+                Switch to next tab
+
+Ctrl+Shift+Tab  Previous Tab
+                Switch to previous tab
+
+Ctrl+1          Paint Editor
+                Switch to Paint Editor tab
+
+Ctrl+2          Chat Interface
+                Switch to Chat Interface tab
+
+Ctrl+3          Code Editor
+                Switch to Code Editor tab
+
+Ctrl+Alt+Tab    Cycle All Open Apps
+                Switch between open applications (OS)
+
+================================================================================
+ADVANCED SHORTCUTS
+================================================================================
+
+F2              Rename Tab (Future)
+                Rename current tab
+
+Ctrl+Shift+O    Open Recent (Future)
+                Open recently used file
+
+Ctrl+Shift+L    Clear Recent (Future)
+                Clear recent files list
+
+Ctrl+, (comma)  Settings (Future)
+                Open application settings
+
+Ctrl+. (period) Command Palette (Future)
+                Open command palette for advanced operations
+
+Ctrl+R          Reload (Future)
+                Reload current file from disk
+
+Ctrl+Shift+R    Reload All (Future)
+                Reload all open files from disk
+
+Alt+F7          Move Window (OS)
+                Move window with keyboard
+
+Alt+F8          Resize Window (OS)
+                Resize window with keyboard
+
+Alt+F9          Minimize (OS)
+                Minimize window
+
+Alt+F10         Maximize (OS)
+                Maximize window
+
+================================================================================
+MOUSE SHORTCUTS
+================================================================================
+
+Double Click    Select Word
+                Select word in text editor
+
+Triple Click    Select Line
+                Select entire line in text editor
+
+Shift+Click     Extend Selection
+                Extend selection to clicked position
+
+Ctrl+Click      Multiple Selection
+                Add to selection (multiple items)
+
+Right Click     Context Menu
+                Show context-sensitive menu
+
+Middle Click    Paste Selection
+                Paste from selection buffer (Linux/Unix)
+
+Scroll Wheel    Scroll / Zoom
+                Scroll content or zoom with modifier keys
+
+================================================================================
+MODIFIER KEY COMBINATIONS
+================================================================================
+
+Ctrl             Control (Primary modifier)
+Shift            Shift (Secondary modifier)
+Alt              Alt (Alternative modifier)
+Ctrl+Shift       Combined primary + secondary
+Ctrl+Alt         Combined primary + alternative
+Alt+Shift        Combined secondary + alternative
+Ctrl+Alt+Shift   All three modifiers
+
+================================================================================
+PLATFORM-SPECIFIC NOTES
+================================================================================
+
+WINDOWS:
+- All shortcuts use Ctrl (not Cmd)
+- Alt key accesses menu bar
+- Alt+F4 closes application
+- Windows key opens OS menu
+
+LINUX:
+- All shortcuts use Ctrl
+- Alt key behavior depends on window manager
+- Middle mouse click pastes (many distributions)
+- Alt+Tab switches between applications
+
+macOS:
+- Use Cmd instead of Ctrl
+- Option key replaces Alt
+- Cmd+Q quits application
+- Cmd+Tab switches applications
+
+================================================================================
+CUSTOMIZATION (FUTURE FEATURE)
+================================================================================
+
+Currently, keyboard shortcuts are fixed as specified above.
+
+Future versions will support:
+- Custom keyboard shortcuts
+- Shortcut profiles
+- Export/import shortcut configurations
+- Per-application shortcut schemes
+
+================================================================================
+TROUBLESHOOTING SHORTCUTS
+================================================================================
+
+Shortcut Not Working?
+1. Verify correct key combination
+2. Check if feature is enabled
+3. Ensure focus is in correct widget
+4. Try closing/reopening tab
+5. Restart application
+
+Conflicting Shortcuts?
+- Some OS shortcuts may override IDE shortcuts
+- Check OS keyboard settings
+- Modify OS shortcuts if needed
+- Contact support if persistent
+
+Forgotten Shortcuts?
+- This reference document lists all shortcuts
+- Tooltips appear on hover in UI
+- Help menu contains keyboard reference
+- Check documentation files
+
+================================================================================
+QUICK REFERENCE CHEAT SHEET
+================================================================================
+
+MOST USED:
+Ctrl+N      New Canvas
+Ctrl+S      Save Current
+Ctrl+W      Close Tab
+Ctrl+Z      Undo
+Ctrl+F      Toggle Features
+P           Pencil Tool
+B           Brush Tool
+Ctrl+Tab    Next Tab
+
+WORKFLOW ESSENTIALS:
+Ctrl+O      Open File
+Ctrl+Shift+S Save All
+Ctrl+Plus   Zoom In
+Ctrl+Minus  Zoom Out
+Ctrl+0      Reset View
+Ctrl+Shift+N New Chat
+Ctrl+F      Find
+
+PAINT TOOLS QUICK ACCESS:
+P - Pencil   | R - Rectangle | F - Fill Bucket
+B - Brush    | C - Circle    | K - Color Picker
+E - Eraser   | Y - Polygon   | L - Line
+
+================================================================================
+Version: 1.0.0 | Status: Complete | Updated: 2024
+For more help, see QUICK_START.txt or online documentation
+================================================================================

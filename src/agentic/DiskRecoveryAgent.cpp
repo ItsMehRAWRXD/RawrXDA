@@ -84,9 +84,9 @@ int DiskRecoveryAsmAgent::FindDrive() {
     GetObs().endSpan(spanId, driveNum < 0, driveNum < 0 ? "No drive found" : "");
 
     if (driveNum >= 0) {
-        GetObs().logInfo(kComponent, "Found candidate drive", {
-            {"driveNumber", driveNum}
-        });
+        GetObs().logInfo(kComponent, "Found candidate drive", nlohmann::json::object({
+            {"driveNumber", (nlohmann::json)driveNum}
+        }));
         GetObs().incrementCounter("disk_recovery.drives_found");
     } else {
         GetObs().logWarn(kComponent, "No dying WD device found on any PhysicalDrive");
@@ -106,18 +106,18 @@ AsmRecoveryResult DiskRecoveryAsmAgent::Initialize(int driveNum) {
     }
 
     auto spanId = GetObs().startSpan("DiskRecovery_Init");
-    GetObs().logInfo(kComponent, "Initializing recovery context", {
-        {"driveNumber", driveNum}
-    });
+    GetObs().logInfo(kComponent, "Initializing recovery context", nlohmann::json::object({
+        {"driveNumber", (nlohmann::json)driveNum}
+    }));
     auto timing = GetObs().measureDuration("disk_recovery.init_ms");
 
     void* ctx = DiskRecovery_Init(driveNum);
 
     if (!ctx) {
         GetObs().endSpan(spanId, true, "Init failed: could not open device handles");
-        GetObs().logError(kComponent, "DiskRecovery_Init returned NULL", {
+        GetObs().logError(kComponent, "DiskRecovery_Init returned NULL", nlohmann::json::object({
             {"driveNumber", driveNum}
-        });
+        }));
         GetObs().incrementCounter("disk_recovery.init_failures");
         return AsmRecoveryResult::error("Failed to initialize recovery context for drive " +
                                       std::to_string(driveNum));
@@ -128,10 +128,10 @@ AsmRecoveryResult DiskRecoveryAsmAgent::Initialize(int driveNum) {
     // Read initial stats to determine bridge type
     AsmRecoveryStats stats = GetStats();
     GetObs().endSpan(spanId);
-    GetObs().logInfo(kComponent, "Recovery context created", {
+    GetObs().logInfo(kComponent, "Recovery context created", nlohmann::json::object({
         {"totalSectors", static_cast<long long>(stats.totalSectors)},
         {"resumeLBA", static_cast<long long>(stats.currentLBA)}
-    });
+    }));
     GetObs().setGauge("disk_recovery.total_sectors", static_cast<float>(stats.totalSectors));
     GetObs().incrementCounter("disk_recovery.init_successes");
 
@@ -192,14 +192,14 @@ AsmRecoveryResult DiskRecoveryAsmAgent::RunRecovery() {
     AsmRecoveryStats finalStats = GetStats();
 
     GetObs().endSpan(spanId, finalStats.badSectors > 0, "");
-    GetObs().logInfo(kComponent, "Recovery loop complete", {
+    GetObs().logInfo(kComponent, "Recovery loop complete", nlohmann::json::object({
         {"goodSectors", static_cast<long long>(finalStats.goodSectors)},
         {"badSectors", static_cast<long long>(finalStats.badSectors)},
         {"currentLBA", static_cast<long long>(finalStats.currentLBA)},
         {"totalSectors", static_cast<long long>(finalStats.totalSectors)},
         {"elapsedSeconds", elapsed},
         {"progressPercent", finalStats.ProgressPercent()}
-    });
+    }));
 
     GetObs().recordMetric("disk_recovery.elapsed_seconds", static_cast<float>(elapsed));
     GetObs().setGauge("disk_recovery.good_sectors", static_cast<float>(finalStats.goodSectors));

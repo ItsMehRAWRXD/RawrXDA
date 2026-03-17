@@ -1,0 +1,375 @@
+/*
+ * AI-First IDE Aesthetic Enhancement
+ * Implements sophisticated visual design principles for contextual AI integration
+ */
+
+:root {
+  /* Harmonious Color Palette - Muted & Professional */
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #252525;
+  --bg-tertiary: #2d2d2d;
+  --bg-ai-suggestion: rgba(64, 120, 242, 0.08);
+  --bg-ai-active: rgba(64, 120, 242, 0.15);
+  
+  /* AI Accent Colors - Subtle but Informative */
+  --ai-primary: #4078f2;
+  --ai-secondary: #6b73ff;
+  --ai-success: #00d084;
+  --ai-warning: #ffb86c;
+  --ai-error: #ff6b6b;
+  
+  /* Text Colors - Easy on Eyes */
+  --text-primary: #e1e1e1;
+  --text-secondary: #a8a8a8;
+  --text-ai-suggestion: #8bb4f7;
+  --text-muted: #666666;
+  
+  /* Subtle Borders & Shadows */
+  --border-subtle: rgba(255, 255, 255, 0.1);
+  --shadow-ai: 0 4px 20px rgba(64, 120, 242, 0.15);
+  --shadow-subtle: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+/* Base IDE Styling - Clean & Distraction-Free */
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Subtle AI Suggestions Overlay */
+.ai-suggestion-overlay {
+  position: absolute;
+  background: var(--bg-ai-suggestion);
+  border: 1px solid rgba(64, 120, 242, 0.2);
+  border-radius: 6px;
+  padding: 8px 12px;
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-ai);
+  z-index: 1000;
+  opacity: 0;
+  transform: translateY(5px);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  max-width: 400px;
+  font-size: 0.9em;
+}
+
+.ai-suggestion-overlay.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.ai-suggestion-text {
+  color: var(--text-ai-suggestion);
+  line-height: 1.4;
+}
+
+.ai-suggestion-meta {
+  color: var(--text-muted);
+  font-size: 0.8em;
+  margin-top: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Integrated Agent Communication - Minimalist Status */
+.ai-agent-status {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  padding: 8px 16px;
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 999;
+  transition: all 0.3s ease;
+}
+
+.ai-agent-status.active {
+  background: var(--bg-ai-active);
+  border-color: var(--ai-primary);
+  box-shadow: var(--shadow-ai);
+}
+
+.ai-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: background-color 0.3s ease;
+}
+
+.ai-status-dot.thinking { background: var(--ai-warning); animation: pulse 1.5s infinite; }
+.ai-status-dot.active { background: var(--ai-success); }
+.ai-status-dot.error { background: var(--ai-error); }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.ai-status-text {
+  font-size: 0.85em;
+  color: var(--text-secondary);
+}
+
+/* Context-Aware AI Actions - Only When Relevant */
+.context-ai-menu {
+  position: absolute;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 4px;
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-subtle);
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(0.95);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1001;
+}
+
+.context-ai-menu.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: scale(1);
+}
+
+.ai-action-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 0.9em;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.ai-action-item:hover {
+  background: var(--bg-ai-suggestion);
+  color: var(--text-ai-suggestion);
+}
+
+.ai-action-icon {
+  width: 16px;
+  height: 16px;
+  opacity: 0.7;
+}
+
+/* Intelligent Search Visualization */
+.search-highlight {
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(64, 120, 242, 0.2) 20%, 
+    rgba(64, 120, 242, 0.3) 50%, 
+    rgba(64, 120, 242, 0.2) 80%, 
+    transparent 100%
+  );
+  border-left: 3px solid var(--ai-primary);
+  padding-left: 8px;
+  margin-left: -11px;
+  border-radius: 0 4px 4px 0;
+  animation: searchPulse 2s ease-in-out infinite;
+}
+
+@keyframes searchPulse {
+  0%, 100% { background-opacity: 0.2; }
+  50% { background-opacity: 0.4; }
+}
+
+.search-match-count {
+  position: fixed;
+  top: 60px;
+  right: 20px;
+  background: var(--bg-ai-active);
+  color: var(--text-ai-suggestion);
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.8em;
+  border: 1px solid rgba(64, 120, 242, 0.3);
+}
+
+/* AI Code Diff View - Inline & Actionable */
+.ai-diff-container {
+  margin: 16px 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg-secondary);
+}
+
+.ai-diff-header {
+  background: var(--bg-tertiary);
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.ai-diff-title {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 0.9em;
+}
+
+.ai-diff-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.ai-diff-btn {
+  padding: 4px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.8em;
+  transition: all 0.2s ease;
+}
+
+.ai-diff-btn:hover {
+  background: var(--bg-ai-suggestion);
+  color: var(--text-ai-suggestion);
+  border-color: var(--ai-primary);
+}
+
+.ai-diff-btn.accept {
+  background: var(--ai-success);
+  color: white;
+  border-color: var(--ai-success);
+}
+
+.ai-diff-content {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85em;
+  line-height: 1.5;
+}
+
+.diff-line {
+  padding: 2px 16px;
+  margin: 0;
+  white-space: pre;
+}
+
+.diff-line.added {
+  background: rgba(0, 208, 132, 0.15);
+  color: var(--ai-success);
+}
+
+.diff-line.removed {
+  background: rgba(255, 107, 107, 0.15);
+  color: var(--ai-error);
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+/* AI Chat Panel - Collapsible & Integrated */
+.ai-chat-panel {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  width: 350px;
+  max-height: 500px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  backdrop-filter: blur(20px);
+  box-shadow: var(--shadow-subtle);
+  transform: translateX(380px);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 998;
+}
+
+.ai-chat-panel.visible {
+  transform: translateX(0);
+}
+
+.ai-chat-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ai-chat-title {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.ai-chat-toggle {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: color 0.2s ease;
+}
+
+.ai-chat-toggle:hover {
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
+}
+
+/* Responsive AI Elements */
+@media (max-width: 1200px) {
+  .ai-suggestion-overlay {
+    max-width: 300px;
+    font-size: 0.85em;
+  }
+  
+  .ai-chat-panel {
+    width: 300px;
+    transform: translateX(320px);
+  }
+}
+
+/* High DPI / 4K Optimizations */
+@media (min-resolution: 192dpi) {
+  .ai-suggestion-overlay,
+  .context-ai-menu,
+  .ai-agent-status {
+    backdrop-filter: blur(15px);
+  }
+  
+  .ai-status-dot {
+    width: 10px;
+    height: 10px;
+  }
+}
+
+/* Accessibility & Focus States */
+.ai-suggestion-overlay:focus,
+.ai-action-item:focus,
+.ai-diff-btn:focus {
+  outline: 2px solid var(--ai-primary);
+  outline-offset: 2px;
+}
+
+/* Smooth Transitions for All AI Elements */
+* {
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Dark Mode Enhancements */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-primary: #0d1117;
+    --bg-secondary: #161b22;
+    --bg-tertiary: #21262d;
+  }
+}

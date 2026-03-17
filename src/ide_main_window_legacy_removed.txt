@@ -1,0 +1,1 @@
+IDEMainWindow (Qt) and IDEWindow (partial) removed. Use Win32IDE (6034 lines, pure Win32) exclusively. All functionality merged into win32app/Win32IDE.h

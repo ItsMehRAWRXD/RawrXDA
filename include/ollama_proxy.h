@@ -6,7 +6,6 @@
 // Use WinHTTP or similar in .cpp; this header declares the API only.
 // ============================================================================
 
-#include <cstdint>
 #include <functional>
 #include <string>
 #include <vector>
@@ -28,18 +27,8 @@ public:
     void setModel(const std::string& modelName);
     std::string currentModel() const { return m_modelName; }
 
-    struct OllamaModelMeta {
-        std::string name;
-        std::string family;
-        std::string parameter_size;
-        std::string quantization_level;
-        uint64_t size = 0;
-        bool found = false;
-    };
-
     bool isOllamaAvailable();
     bool isModelAvailable(const std::string& modelName);
-    OllamaModelMeta getModelMetadata(const std::string& modelName);
 
     void generateResponse(const std::string& prompt,
                          float temperature = 0.8f,

@@ -1,0 +1,73 @@
+# MASM-Compressed GGUF Builder
+# Integrates deflate_brutal_masm.asm and deflate_godmode_masm.asm
+
+cmake_minimum_required(VERSION 3.20)
+project(MASM_GGUF_Compressor)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Enable MASM
+enable_language(ASM_MASM)
+
+# MASM compression kernels
+set(KERNEL_DIR "${CMAKE_SOURCE_DIR}/../kernels")
+
+add_library(masm_compression STATIC
+    ${KERNEL_DIR}/deflate_brutal_masm.asm
+    ${KERNEL_DIR}/deflate_godmode_masm.asm
+)
+
+# Set MASM options for x64
+set_source_files_properties(
+    ${KERNEL_DIR}/deflate_brutal_masm.asm
+    ${KERNEL_DIR}/deflate_godmode_masm.asm
+    PROPERTIES
+    COMPILE_FLAGS "/nologo /c /Cx"
+)
+
+# MASM GGUF compressor executable
+add_executable(masm_gguf_compress
+    ../src/masm_gguf_example.cpp
+)
+
+target_include_directories(masm_gguf_compress PRIVATE
+    ../src
+)
+
+target_link_libraries(masm_gguf_compress PRIVATE
+    masm_compression
+)
+
+# Install
+install(TARGETS masm_gguf_compress
+    RUNTIME DESTINATION bin
+)
+
+# Create helper script
+file(WRITE "${CMAKE_BINARY_DIR}/compress_model.bat" "@echo off
+echo MASM GGUF Compressor
+echo.
+if \"%1\"==\"\" (
+    echo Usage: compress_model.bat input.gguf [output.gguf] [brutal^|godmode]
+    exit /b 1
+)
+
+set INPUT=%1
+set OUTPUT=%2
+set MODE=%3
+
+if \"%OUTPUT%\"==\"\" set OUTPUT=%INPUT%.masm.gguf
+if \"%MODE%\"==\"\" set MODE=godmode
+
+echo Input:  %INPUT%
+echo Output: %OUTPUT%
+echo Mode:   %MODE%
+echo.
+
+masm_gguf_compress.exe -c \"%INPUT%\" \"%OUTPUT%\" %MODE%
+")
+
+message(STATUS "MASM GGUF Compressor configured")
+message(STATUS "  Kernels: deflate_brutal_masm.asm, deflate_godmode_masm.asm")
+message(STATUS "  Output:  masm_gguf_compress.exe")

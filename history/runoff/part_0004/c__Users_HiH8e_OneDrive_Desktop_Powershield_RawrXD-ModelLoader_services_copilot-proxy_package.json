@@ -1,0 +1,15 @@
+{
+  "name": "copilot-proxy",
+  "version": "0.1.0",
+  "description": "Streaming proxy that forwards LLM streaming responses as SSE. Uses local auth service for tokens.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.0.0",
+    "express": "^4.18.2",
+    "node-fetch": "^2.6.7",
+    "cors": "^2.8.5"
+  }
+}

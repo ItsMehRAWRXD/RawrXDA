@@ -1,0 +1,1408 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>RawrXD UI Test Harness — 4-Tier Validation</title>
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --surface2: #1a1a24;
+      --border: #2a2a3a;
+      --text: #d0d0e0;
+      --text-dim: #808090;
+      --green: #00ff88;
+      --red: #ff4466;
+      --yellow: #ffcc00;
+      --blue: #4488ff;
+      --cyan: #00ccdd;
+      --purple: #aa66ff;
+    }
+
+    body {
+      font-family: 'Consolas', 'Fira Code', monospace;
+      background: var(--bg);
+      color: var(--text);
+      padding: 20px;
+      line-height: 1.6;
+    }
+
+    h1 {
+      color: var(--cyan);
+      font-size: 1.4em;
+      margin-bottom: 4px;
+    }
+
+    h2 {
+      color: var(--purple);
+      font-size: 1.1em;
+      margin: 20px 0 8px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 4px;
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.85em;
+      margin-bottom: 16px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 12px 0;
+    }
+
+    .controls button {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.85em;
+    }
+
+    .controls button:hover {
+      border-color: var(--cyan);
+      color: var(--cyan);
+    }
+
+    .controls button.running {
+      border-color: var(--yellow);
+      color: var(--yellow);
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.6;
+      }
+    }
+
+    .config-bar {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      background: var(--surface);
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .config-bar label {
+      color: var(--text-dim);
+      font-size: 0.85em;
+    }
+
+    .config-bar input,
+    .config-bar select {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 4px 8px;
+      border-radius: 3px;
+      font-family: inherit;
+      font-size: 0.85em;
+    }
+
+    .summary-bar {
+      display: flex;
+      gap: 20px;
+      padding: 12px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      margin: 12px 0;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 1.5em;
+      font-weight: bold;
+    }
+
+    .stat-label {
+      font-size: 0.75em;
+      color: var(--text-dim);
+    }
+
+    .stat-value.pass {
+      color: var(--green);
+    }
+
+    .stat-value.fail {
+      color: var(--red);
+    }
+
+    .stat-value.skip {
+      color: var(--yellow);
+    }
+
+    .stat-value.total {
+      color: var(--blue);
+    }
+
+    .test-tier {
+      margin: 16px 0;
+    }
+
+    .test-tier-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--surface);
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 4px 4px 0 0;
+      cursor: pointer;
+    }
+
+    .test-tier-header:hover {
+      border-color: var(--cyan);
+    }
+
+    .test-tier-body {
+      border: 1px solid var(--border);
+      border-top: 0;
+      border-radius: 0 0 4px 4px;
+    }
+
+    .test-row {
+      display: grid;
+      grid-template-columns: 28px 1fr 140px 70px 100px;
+      align-items: center;
+      padding: 6px 12px;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.85em;
+    }
+
+    .test-row:last-child {
+      border-bottom: 0;
+    }
+
+    .test-row:hover {
+      background: var(--surface);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 3px;
+      font-size: 0.8em;
+      font-weight: bold;
+    }
+
+    .badge.pass {
+      background: #003322;
+      color: var(--green);
+      border: 1px solid #005533;
+    }
+
+    .badge.fail {
+      background: #330011;
+      color: var(--red);
+      border: 1px solid #550022;
+    }
+
+    .badge.skip {
+      background: #332200;
+      color: var(--yellow);
+      border: 1px solid #554400;
+    }
+
+    .badge.run {
+      background: #001133;
+      color: var(--blue);
+      border: 1px solid #002255;
+    }
+
+    .badge.wait {
+      background: var(--surface2);
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+    }
+
+    .icon {
+      font-size: 1.1em;
+      text-align: center;
+    }
+
+    .icon.pass {
+      color: var(--green);
+    }
+
+    .icon.fail {
+      color: var(--red);
+    }
+
+    .icon.skip {
+      color: var(--yellow);
+    }
+
+    .icon.wait {
+      color: var(--text-dim);
+    }
+
+    .log-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 10px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-size: 0.8em;
+      margin-top: 16px;
+    }
+
+    .log-line {
+      padding: 1px 0;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .log-line.info {
+      color: var(--text-dim);
+    }
+
+    .log-line.pass {
+      color: var(--green);
+    }
+
+    .log-line.fail {
+      color: var(--red);
+    }
+
+    .log-line.warn {
+      color: var(--yellow);
+    }
+
+    .detail-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 1000;
+      padding: 40px;
+      overflow-y: auto;
+    }
+
+    .detail-overlay.open {
+      display: block;
+    }
+
+    .detail-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .detail-box h3 {
+      color: var(--cyan);
+      margin-bottom: 12px;
+    }
+
+    .detail-box pre {
+      background: var(--bg);
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 0.85em;
+    }
+
+    .detail-close {
+      float: right;
+      cursor: pointer;
+      color: var(--text-dim);
+      font-size: 1.2em;
+    }
+
+    .detail-close:hover {
+      color: var(--red);
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>&#x1F9EA; RawrXD UI Test Harness</h1>
+  <div class="subtitle">4-Tier Validation Suite &mdash; 55 Feature Domains, 150+ Endpoints, 30+ Panels</div>
+
+  <div class="config-bar">
+    <label>Backend URL:
+      <input type="text" id="cfgUrl" value="" style="width:220px">
+    </label>
+    <label>Ollama URL:
+      <input type="text" id="cfgOllama" value="http://127.0.0.1:11434" style="width:220px">
+    </label>
+    <label>Timeout (ms):
+      <input type="number" id="cfgTimeout" value="5000" style="width:80px">
+    </label>
+    <label>
+      <input type="checkbox" id="cfgVerbose" checked> Verbose Log
+    </label>
+  </div>
+
+  <div class="controls">
+    <button onclick="runAllTiers()">&#x25B6; Run All Tiers</button>
+    <button onclick="runTier(1)">T1: Standalone</button>
+    <button onclick="runTier(2)">T2: Connectivity</button>
+    <button onclick="runTier(3)">T3: Panel Health</button>
+    <button onclick="runTier(4)">T4: API Contract</button>
+    <button onclick="exportResults()">&#x1F4CB; Export JSON</button>
+    <button onclick="clearResults()">&#x1F5D1; Clear</button>
+  </div>
+
+  <div class="summary-bar">
+    <div class="stat">
+      <div class="stat-value total" id="sumTotal">0</div>
+      <div class="stat-label">TOTAL</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value pass" id="sumPass">0</div>
+      <div class="stat-label">PASS</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value fail" id="sumFail">0</div>
+      <div class="stat-label">FAIL</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value skip" id="sumSkip">0</div>
+      <div class="stat-label">SKIP</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" id="sumDuration" style="color:var(--text)">0ms</div>
+      <div class="stat-label">DURATION</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" id="sumCoverage" style="color:var(--cyan)">--%</div>
+      <div class="stat-label">PASS RATE</div>
+    </div>
+  </div>
+
+  <div id="tiersContainer"></div>
+
+  <h2>&#x1F4DC; Test Log</h2>
+  <div class="log-panel" id="logPanel"></div>
+
+  <div class="detail-overlay" id="detailOverlay">
+    <div class="detail-box">
+      <span class="detail-close" onclick="closeDetail()">&times;</span>
+      <h3 id="detailTitle"></h3>
+      <pre id="detailContent"></pre>
+    </div>
+  </div>
+
+  <script>
+    // ============================================================================
+    // RawrXD Test Harness Engine (PostMessage Bridge + Direct Access Fallback)
+    // ============================================================================
+
+    var TestState = {
+      results: [],
+      running: false,
+      startTime: 0,
+      iframeRef: null,
+      bridge: null,
+    };
+
+    // ---------------------------------------------------------------------------
+    // PostMessage Bridge Client
+    // ---------------------------------------------------------------------------
+    function IDEBridge(iframe, origin) {
+      this.iframe = iframe;
+      this.origin = origin;
+      this.ready = false;
+      this.pending = {};
+      this.msgId = 0;
+      this.directAccess = false;
+      var self = this;
+      window.addEventListener('message', function (e) {
+        if (e.data && e.data.type === 'rawrxd-ide-ready') {
+          self.ready = true;
+          return;
+        }
+        if (e.data && e.data.id && self.pending[e.data.id]) {
+          var cb = self.pending[e.data.id];
+          delete self.pending[e.data.id];
+          if (e.data.error) cb.reject(new Error(e.data.error));
+          else cb.resolve(e.data.result);
+        }
+      });
+    }
+
+    IDEBridge.prototype.send = function (cmd, args, timeout) {
+      var self = this;
+      timeout = timeout || 5000;
+      return new Promise(function (resolve, reject) {
+        var id = ++self.msgId;
+        self.pending[id] = { resolve: resolve, reject: reject };
+        try {
+          self.iframe.contentWindow.postMessage(
+            { id: id, cmd: cmd, args: args || [] },
+            self.origin
+          );
+        } catch (e) {
+          delete self.pending[id];
+          reject(e);
+        }
+        setTimeout(function () {
+          if (self.pending[id]) {
+            delete self.pending[id];
+            reject(new Error('Timeout: ' + cmd));
+          }
+        }, timeout);
+      });
+    };
+
+    IDEBridge.prototype.waitForReady = function (maxWait) {
+      var self = this;
+      maxWait = maxWait || 8000;
+      return new Promise(function (resolve) {
+        if (self.ready) return resolve(true);
+        var elapsed = 0;
+        var interval = setInterval(function () {
+          elapsed += 100;
+          if (self.ready || elapsed >= maxWait) {
+            clearInterval(interval);
+            resolve(self.ready);
+          }
+        }, 100);
+      });
+    };
+
+    IDEBridge.prototype.tryDirect = function () {
+      try {
+        var win = this.iframe.contentWindow;
+        // Probe with document.title — lightweight and always exists.
+        // Throws DOMException/SecurityError if cross-origin.
+        var probe = win.document.title;
+        var test = win.document && win.document.body;
+        if (test) { this.directAccess = true; return true; }
+      } catch (e) {
+        this.directAccess = false;
+        // Not an error — bridge will handle all queries
+      }
+      return false;
+    };
+
+    IDEBridge.prototype.hasFn = function (name) {
+      if (this.directAccess) {
+        try { return Promise.resolve(typeof this.iframe.contentWindow[name] === 'function'); }
+        catch (e) { this.directAccess = false; /* revoke, fall through to bridge */ }
+      }
+      return this.send('hasFn', [name]);
+    };
+
+    IDEBridge.prototype.getElement = function (id) {
+      if (this.directAccess) {
+        try {
+          var el = this.iframe.contentWindow.document.getElementById(id);
+          return Promise.resolve(el ? { id: el.id, tag: el.tagName, visible: el.offsetParent !== null || el.style.display !== 'none' } : null);
+        } catch (e) { this.directAccess = false; /* revoke, fall through to bridge */ }
+      }
+      return this.send('getElement', [id]);
+    };
+
+    // ---------------------------------------------------------------------------
+    // Logging
+    // ---------------------------------------------------------------------------
+    function log(msg, level) {
+      level = level || 'info';
+      var panel = document.getElementById('logPanel');
+      var el = document.createElement('div');
+      el.className = 'log-line ' + level;
+      var ts = new Date().toISOString().slice(11, 23);
+      el.textContent = '[' + ts + '] ' + msg;
+      panel.appendChild(el);
+      panel.scrollTop = panel.scrollHeight;
+    }
+
+    // ---------------------------------------------------------------------------
+    // Test Registration
+    // ---------------------------------------------------------------------------
+    var TESTS = [];
+
+    function registerTest(tier, id, name, category, fn, opts) {
+      TESTS.push({
+        tier: tier, id: id, name: name, category: category, fn: fn,
+        requiresBackend: opts && opts.requiresBackend || false,
+        requiresIframe: opts && opts.requiresIframe || false,
+        status: 'wait', detail: '', duration: 0,
+      });
+    }
+
+    // ---------------------------------------------------------------------------
+    // Helpers
+    // ---------------------------------------------------------------------------
+    function getConfig() {
+      var urlEl = document.getElementById('cfgUrl');
+      var val = urlEl.value.replace(/\/+$/, '');
+      // Auto-detect from page origin to guarantee same-origin iframe access
+      if (!val) {
+        val = window.location.origin || 'http://127.0.0.1:11435';
+        urlEl.value = val;
+      }
+      return {
+        url: val,
+        ollama: document.getElementById('cfgOllama').value.replace(/\/+$/, ''),
+        timeout: parseInt(document.getElementById('cfgTimeout').value) || 5000,
+        verbose: document.getElementById('cfgVerbose').checked,
+      };
+    }
+
+    async function httpGet(url, timeoutMs) {
+      var ctrl = new AbortController();
+      var timer = setTimeout(function () { ctrl.abort(); }, timeoutMs || 5000);
+      try {
+        var res = await fetch(url, { signal: ctrl.signal });
+        clearTimeout(timer);
+        return { ok: res.ok, status: res.status, data: await res.json() };
+      } catch (e) {
+        clearTimeout(timer);
+        return { ok: false, status: 0, error: e.message };
+      }
+    }
+
+    async function httpPost(url, body, timeoutMs) {
+      var ctrl = new AbortController();
+      var timer = setTimeout(function () { ctrl.abort(); }, timeoutMs || 5000);
+      try {
+        var res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+          signal: ctrl.signal,
+        });
+        clearTimeout(timer);
+        var text = await res.text();
+        var data = null;
+        try { data = JSON.parse(text); } catch (_) { data = text; }
+        return { ok: res.ok, status: res.status, data: data };
+      } catch (e) {
+        clearTimeout(timer);
+        return { ok: false, status: 0, error: e.message };
+      }
+    }
+
+    function validateShape(data, shape) {
+      var errors = [];
+      for (var key in shape) {
+        var spec = shape[key];
+        if (spec.required && !(key in data)) { errors.push('Missing required field: ' + key); continue; }
+        if (key in data) {
+          var val = data[key];
+          if (spec.type === 'array' && !Array.isArray(val))
+            errors.push(key + ': expected array, got ' + typeof val);
+          else if (spec.type === 'object' && (typeof val !== 'object' || Array.isArray(val) || val === null))
+            errors.push(key + ': expected object, got ' + (val === null ? 'null' : typeof val));
+          else if (spec.type !== 'array' && spec.type !== 'object' && typeof val !== spec.type)
+            errors.push(key + ': expected ' + spec.type + ', got ' + typeof val);
+          if (spec.expect !== undefined && val !== spec.expect)
+            errors.push(key + ': expected value "' + spec.expect + '", got "' + val + '"');
+        }
+      }
+      return errors;
+    }
+
+    // ---------------------------------------------------------------------------
+    // Iframe loader (same-origin via server + postMessage bridge)
+    // ---------------------------------------------------------------------------
+    function loadIDE() {
+      return new Promise(function (resolve) {
+        var existing = document.getElementById('ideFrame');
+        if (existing) existing.remove();
+        var cfg = getConfig();
+        var iframe = document.createElement('iframe');
+        iframe.id = 'ideFrame';
+        iframe.style.cssText = 'width:1px;height:1px;position:absolute;left:-9999px;';
+        iframe.src = cfg.url + '/gui';
+
+        var bridge = new IDEBridge(iframe, cfg.url);
+        TestState.bridge = bridge;
+        TestState.iframeRef = iframe;
+
+        iframe.onload = function () {
+          log('IDE iframe loaded, probing access...', 'info');
+          setTimeout(function () {
+            var direct = bridge.tryDirect();
+            if (direct) {
+              log('Direct iframe access available (same-origin)', 'pass');
+              bridge.ready = true;
+            }
+            bridge.waitForReady(5000).then(function (ready) {
+              if (ready) log('IDE bridge ready (direct=' + bridge.directAccess + ')', 'pass');
+              else log('IDE bridge timeout \u2014 tests may fail', 'warn');
+              resolve(bridge);
+            });
+          }, 1500);
+        };
+        iframe.onerror = function () {
+          log('Failed to load IDE iframe', 'fail');
+          resolve(null);
+        };
+        document.body.appendChild(iframe);
+      });
+    }
+
+    // ============================================================================
+    // TIER 1: Standalone Integrity (PostMessage Bridge)
+    // ============================================================================
+
+    registerTest(1, 't1-dom-complete', 'HTML document loads without parse errors', 'Bootstrap', async function (cfg) {
+      var b = TestState.bridge;
+      if (!b || !b.ready) return { pass: false, detail: 'IDE bridge not ready' };
+      if (b.directAccess) {
+        var doc = b.iframe.contentWindow.document;
+        var scripts = doc.querySelectorAll('script');
+        return { pass: !!doc.body && !!doc.head && scripts.length > 0, detail: 'body=true head=true scripts=' + scripts.length };
+      }
+      var ping = await b.send('ping');
+      return { pass: !!ping && ping.ready, detail: ping ? 'Bridge responsive' : 'No ping response' };
+    }, { requiresIframe: true });
+
+    registerTest(1, 't1-critical-ids', 'Critical DOM IDs exist', 'Bootstrap', async function (cfg) {
+      var b = TestState.bridge;
+      if (!b || !b.ready) return { pass: false, detail: 'IDE bridge not ready' };
+      var ids = ['chatMessages', 'chatInput', 'sendBtn', 'modelSelect', 'backendStatus', 'statusText', 'terminalPanel', 'debugPanel'];
+      if (b.directAccess) {
+        var doc = b.iframe.contentWindow.document;
+        var missing = ids.filter(function (id) { return !doc.getElementById(id); });
+        return { pass: missing.length === 0, detail: missing.length === 0 ? 'All ' + ids.length + ' critical IDs present' : 'Missing: ' + missing.join(', ') };
+      }
+      var elMap = await b.send('elements');
+      var missing = ids.filter(function (id) { return !elMap[id]; });
+      return { pass: missing.length <= 2, detail: 'Found ' + (ids.length - missing.length) + '/' + ids.length + (missing.length > 0 ? '. Missing: ' + missing.join(', ') : '') };
+    }, { requiresIframe: true });
+
+    registerTest(1, 't1-panels-exist', 'All 30+ panel elements exist in DOM', 'Panels', async function (cfg) {
+      var b = TestState.bridge;
+      if (!b || !b.ready) return { pass: false, detail: 'IDE bridge not ready' };
+      var panels = [
+        'debugPanel', 'failurePanel', 'rePanel', 'extPanel', 'agentPanel',
+        'perfPanel', 'securityPanel', 'backendSwitcherPanel', 'routerPanel',
+        'swarmPanel', 'multiResponsePanel', 'asmDebugPanel', 'safetyPanel',
+        'policiesPanel', 'hotpatchDetailPanel', 'cotDetailPanel', 'toolsPanel',
+        'enginePanel', 'metricsPanel', 'subagentPanel', 'confidencePanel',
+        'governorPanel', 'lspPanel', 'hybridPanel', 'replayPanel',
+        'phaseStatusPanel', 'extensionsPanel', 'browserOverlay', 'fileEditorPanel',
+        'terminalPanel', 'ghostOverlay',
+      ];
+      var missing = [];
+      if (b.directAccess) {
+        var doc = b.iframe.contentWindow.document;
+        panels.forEach(function (id) { if (!doc.getElementById(id)) missing.push(id); });
+      } else {
+        for (var i = 0; i < panels.length; i++) {
+          var el = await b.send('getElement', [panels[i]]);
+          if (!el) missing.push(panels[i]);
+        }
+      }
+      return { pass: missing.length <= 2, detail: 'Found ' + (panels.length - missing.length) + '/' + panels.length + (missing.length > 0 ? '. Missing: ' + missing.join(', ') : '') };
+    }, { requiresIframe: true });
+
+    registerTest(1, 't1-critical-functions', 'Critical functions defined', 'Bootstrap', async function (cfg) {
+      var b = TestState.bridge;
+      if (!b || !b.ready) return { pass: false, detail: 'IDE bridge not ready' };
+      var fns = ['sendMessage', 'connectBackend', 'addMessage', 'getActiveUrl', 'formatMessage', 'sendToBackend'];
+      var missing = [];
+      if (b.directAccess) {
+        var win = b.iframe.contentWindow;
+        fns.forEach(function (fn) { if (typeof win[fn] !== 'function') missing.push(fn); });
+      } else {
+        for (var i = 0; i < fns.length; i++) {
+          var has = await b.send('hasFn', [fns[i]]);
+          if (!has) missing.push(fns[i]);
+        }
+      }
+      return { pass: missing.length === 0, detail: missing.length === 0 ? 'All ' + fns.length + ' critical functions found' : 'Missing: ' + missing.join(', ') };
+    }, { requiresIframe: true });
+
+    registerTest(1, 't1-state-object', 'Global State object initialized', 'Bootstrap', async function (cfg) {
+      var b = TestState.bridge;
+      if (!b || !b.ready) return { pass: false, detail: 'IDE bridge not ready' };
+      if (b.directAccess) {
+        var s = b.iframe.contentWindow.State;
+        if (!s) return { pass: false, detail: 'State is undefined' };
+        var keys = ['backend', 'model', 'chat', 'gen', 'security'];
+        var missing = keys.filter(function (k) { return !(k in s); });
+        return { pass: missing.length === 0, detail: missing.length === 0 ? 'State has all expected top-level keys' : 'Missing: ' + missing.join(', ') };
+      }
+      var state = await b.send('getState');
+      if (!state) return { pass: false, detail: 'State is null/undefined via bridge' };
+      var keys = ['backend', 'model', 'chat', 'gen', 'security'];
+      var missing = keys.filter(function (k) { return !(k in state); });
+      return { pass: missing.length === 0, detail: missing.length === 0 ? 'State has all expected top-level keys' : 'Missing: ' + missing.join(', ') };
+    }, { requiresIframe: true });
+
+    registerTest(1, 't1-localstorage', 'localStorage read/write works', 'Storage', async function (cfg) {
+      try {
+        var key = '__rawrxd_test_' + Date.now();
+        localStorage.setItem(key, 'ok');
+        var val = localStorage.getItem(key);
+        localStorage.removeItem(key);
+        return { pass: val === 'ok', detail: 'localStorage functional' };
+      } catch (e) { return { pass: false, detail: 'localStorage error: ' + e.message }; }
+    });
+
+    registerTest(1, 't1-dompurify-shim', 'DOMPurify or sanitizer shim present', 'Security', async function (cfg) {
+      var b = TestState.bridge;
+      if (!b || !b.ready) return { pass: false, detail: 'IDE bridge not ready' };
+      if (b.directAccess) {
+        var win = b.iframe.contentWindow;
+        var dp = typeof win.DOMPurify !== 'undefined';
+        var sn = typeof win.sanitizeHTML === 'function' || typeof win.validateInput === 'function';
+        return { pass: dp || sn, detail: 'DOMPurify=' + dp + ' sanitizer=' + sn };
+      }
+      var libs = await b.send('libs');
+      return { pass: libs && libs.DOMPurify, detail: 'DOMPurify=' + (libs && libs.DOMPurify) };
+    }, { requiresIframe: true });
+
+    registerTest(1, 't1-hljs-shim', 'highlight.js or code highlight shim present', 'Rendering', async function (cfg) {
+      var b = TestState.bridge;
+      if (!b || !b.ready) return { pass: false, detail: 'IDE bridge not ready' };
+      if (b.directAccess) {
+        var win = b.iframe.contentWindow;
+        var h = typeof win.hljs !== 'undefined';
+        var s = typeof win.highlightBlock === 'function' || typeof win.highlightCode === 'function';
+        return { pass: h || s, detail: 'hljs=' + h + ' shim=' + s };
+      }
+      var libs = await b.send('libs');
+      return { pass: libs && libs.hljs, detail: 'hljs=' + (libs && libs.hljs) };
+    }, { requiresIframe: true });
+
+    registerTest(1, 't1-offline-response', 'Offline response generator works', 'Chat', async function (cfg) {
+      var b = TestState.bridge;
+      if (!b || !b.ready) return { pass: false, detail: 'IDE bridge not ready' };
+      if (b.directAccess) {
+        var win = b.iframe.contentWindow;
+        if (typeof win.getOfflineResponse !== 'function') return { pass: false, detail: 'getOfflineResponse not found' };
+        var reply = win.getOfflineResponse('hello');
+        return { pass: typeof reply === 'string' && reply.length > 5, detail: 'Offline reply: ' + (reply || '(empty)').substring(0, 100) };
+      }
+      var hasFn = await b.send('hasFn', ['getOfflineResponse']);
+      if (!hasFn) return { pass: false, detail: 'getOfflineResponse not found via bridge' };
+      var reply = await b.send('callFn', ['getOfflineResponse', ['hello']]);
+      return { pass: typeof reply === 'string' && reply.length > 5, detail: 'Offline reply: ' + (reply || '(empty)').substring(0, 100) };
+    }, { requiresIframe: true });
+
+    registerTest(1, 't1-conversation-memory', 'Conversation memory object works', 'Chat', async function (cfg) {
+      var b = TestState.bridge;
+      if (!b || !b.ready) return { pass: false, detail: 'IDE bridge not ready' };
+      if (b.directAccess) {
+        var c = b.iframe.contentWindow.Conversation;
+        if (!c) return { pass: false, detail: 'Conversation object not found' };
+        return { pass: typeof c.addMessage === 'function' && typeof c.getContextForAPI === 'function', detail: 'addMessage=' + (typeof c.addMessage === 'function') + ' getContextForAPI=' + (typeof c.getContextForAPI === 'function') };
+      }
+      var conv = await b.send('getConversation');
+      return { pass: !!conv, detail: conv ? 'Conversation accessible via bridge' : 'Conversation is null' };
+    }, { requiresIframe: true });
+
+    registerTest(1, 't1-engine-registry', 'EngineRegistry populated', 'Engines', async function (cfg) {
+      var b = TestState.bridge;
+      if (!b || !b.ready) return { pass: false, detail: 'IDE bridge not ready' };
+      if (b.directAccess) {
+        var win = b.iframe.contentWindow;
+        var engines = win.EngineRegistry || win._engineRegistry;
+        if (!engines) return { pass: typeof win.showEnginePanel === 'function', detail: 'EngineRegistry=' + !!engines + ', showEnginePanel=' + (typeof win.showEnginePanel === 'function') };
+        var count = Array.isArray(engines) ? engines.length : Object.keys(engines).length;
+        return { pass: count >= 10, detail: count + ' engines registered' };
+      }
+      var hasPanel = await b.send('hasFn', ['showEnginePanel']);
+      var api = await b.send('getEngineAPI');
+      return { pass: hasPanel || api, detail: 'showEnginePanel=' + hasPanel + ' EngineAPI=' + api };
+    }, { requiresIframe: true });
+
+    registerTest(1, 't1-keyboard-shortcuts', 'Keyboard shortcut handlers bound', 'Input', async function (cfg) {
+      var b = TestState.bridge;
+      if (!b || !b.ready) return { pass: false, detail: 'IDE bridge not ready' };
+      var handlers = ['toggleTerminal', 'showDebug', 'toggleSystemPrompt'];
+      var found = [];
+      if (b.directAccess) {
+        var win = b.iframe.contentWindow;
+        handlers.forEach(function (h) { if (typeof win[h] === 'function') found.push(h); });
+      } else {
+        for (var i = 0; i < handlers.length; i++) {
+          var has = await b.send('hasFn', [handlers[i]]);
+          if (has) found.push(handlers[i]);
+        }
+      }
+      return { pass: found.length >= 2, detail: 'Found ' + found.length + '/' + handlers.length + ' shortcut handlers' };
+    }, { requiresIframe: true });
+
+    registerTest(1, 't1-titlebar', 'Custom titlebar renders', 'UI', async function (cfg) {
+      var b = TestState.bridge;
+      if (!b || !b.ready) return { pass: false, detail: 'IDE bridge not ready' };
+      if (b.directAccess) {
+        var doc = b.iframe.contentWindow.document;
+        var tb = doc.querySelector('.titlebar') || doc.querySelector('.custom-titlebar');
+        return { pass: !!tb, detail: tb ? 'Titlebar element found' : 'No titlebar element' };
+      }
+      try {
+        var result = await b.send('eval', ["document.querySelector('.titlebar') ? true : false"]);
+        return { pass: !!result, detail: result ? 'Titlebar found' : 'No titlebar' };
+      } catch (e) { return { pass: false, detail: 'Bridge eval error: ' + e.message }; }
+    }, { requiresIframe: true });
+
+
+    // ============================================================================
+    // TIER 2: Backend Connectivity Matrix
+    // ============================================================================
+
+    registerTest(2, 't2-health', 'GET /health returns 200', 'Health', async function (cfg) {
+      var r = await httpGet(cfg.url + '/health', cfg.timeout);
+      return { pass: r.ok && r.data && r.data.status === 'ok', detail: r.ok ? 'status=' + r.data.status + ' server=' + (r.data.server || 'unknown') : 'Error: ' + (r.error || 'HTTP ' + r.status) };
+    }, { requiresBackend: true });
+
+    registerTest(2, 't2-status', 'GET /status returns server info', 'Health', async function (cfg) {
+      var r = await httpGet(cfg.url + '/status', cfg.timeout);
+      if (!r.ok) return { pass: false, detail: 'Error: ' + (r.error || 'HTTP ' + r.status) };
+      var errs = validateShape(r.data, { ready: { type: 'boolean', required: true }, backend: { type: 'string', required: true } });
+      return { pass: errs.length === 0, detail: errs.length === 0 ? JSON.stringify(r.data).substring(0, 200) : errs.join('; ') };
+    }, { requiresBackend: true });
+
+    registerTest(2, 't2-models', 'GET /models returns model list', 'Models', async function (cfg) {
+      var r = await httpGet(cfg.url + '/models', cfg.timeout);
+      if (!r.ok) return { pass: false, detail: 'Error: ' + (r.error || 'HTTP ' + r.status) };
+      var models = r.data && r.data.models;
+      return { pass: Array.isArray(models), detail: Array.isArray(models) ? models.length + ' models found' : 'No models array' };
+    }, { requiresBackend: true });
+
+    registerTest(2, 't2-api-tags', 'GET /api/tags returns Ollama-format tags', 'Models', async function (cfg) {
+      var r = await httpGet(cfg.url + '/api/tags', cfg.timeout);
+      if (!r.ok) return { pass: false, detail: 'Error: ' + (r.error || 'HTTP ' + r.status) };
+      var models = r.data && r.data.models;
+      return { pass: Array.isArray(models), detail: Array.isArray(models) ? models.length + ' models from /api/tags' : 'Unexpected shape' };
+    }, { requiresBackend: true });
+
+    registerTest(2, 't2-ollama-direct', 'Ollama direct (:11434) reachable', 'Ollama', async function (cfg) {
+      var r = await httpGet(cfg.ollama + '/', cfg.timeout);
+      return { pass: r.ok, detail: r.ok ? 'Ollama is running' : 'Not reachable: ' + (r.error || 'HTTP ' + r.status) };
+    });
+
+    registerTest(2, 't2-chat-nonstream', '/v1/chat/completions non-streaming', 'Chat', async function (cfg) {
+      var r = await httpPost(cfg.url + '/v1/chat/completions', {
+        model: 'ministral-3:latest',
+        messages: [{ role: 'user', content: 'Say OK' }],
+        stream: false,
+      }, cfg.timeout * 6);
+      if (!r.ok) return { pass: false, detail: 'Error: ' + (r.error || 'HTTP ' + r.status) };
+      var choice = r.data && r.data.choices && r.data.choices[0];
+      var content = choice && choice.message && choice.message.content;
+      return { pass: typeof content === 'string' && content.length > 0, detail: content ? 'Response: ' + content.substring(0, 100) : 'No content' };
+    }, { requiresBackend: true });
+
+    registerTest(2, 't2-chat-stream', '/v1/chat/completions streaming (SSE)', 'Chat', async function (cfg) {
+      try {
+        var ctrl = new AbortController();
+        var timer = setTimeout(function () { ctrl.abort(); }, cfg.timeout * 6);
+        var res = await fetch(cfg.url + '/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: 'ministral-3:latest', messages: [{ role: 'user', content: 'Say hello' }], stream: true }),
+          signal: ctrl.signal,
+        });
+        clearTimeout(timer);
+        if (!res.ok) return { pass: false, detail: 'HTTP ' + res.status };
+        if (!res.body) return { pass: false, detail: 'No response body' };
+        var reader = res.body.getReader();
+        var decoder = new TextDecoder();
+        var tokens = 0, firstToken = '';
+        while (tokens < 5) {
+          var chunk = await reader.read();
+          if (chunk.done) break;
+          var text = decoder.decode(chunk.value, { stream: true });
+          var lines = text.split('\n');
+          for (var i = 0; i < lines.length; i++) {
+            var line = lines[i].trim();
+            if (line.startsWith('data: ')) line = line.slice(6);
+            if (!line || line === '[DONE]') continue;
+            try {
+              var obj = JSON.parse(line);
+              var delta = obj.choices && obj.choices[0] && obj.choices[0].delta;
+              if (delta && delta.content) { tokens++; if (!firstToken) firstToken = delta.content; }
+            } catch (_) { }
+          }
+        }
+        reader.cancel();
+        return { pass: tokens > 0, detail: tokens + ' SSE tokens received. First: "' + firstToken + '"' };
+      } catch (e) { return { pass: false, detail: 'Stream error: ' + e.message }; }
+    }, { requiresBackend: true });
+
+    registerTest(2, 't2-generate', '/api/generate NDJSON streaming', 'Chat', async function (cfg) {
+      try {
+        var ctrl = new AbortController();
+        var timer = setTimeout(function () { ctrl.abort(); }, cfg.timeout * 6);
+        var res = await fetch(cfg.url + '/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: 'ministral-3:latest', prompt: 'Say hi', stream: true }),
+          signal: ctrl.signal,
+        });
+        clearTimeout(timer);
+        if (!res.ok) return { pass: false, detail: 'HTTP ' + res.status };
+        var reader = res.body.getReader();
+        var decoder = new TextDecoder();
+        var tokens = 0;
+        while (tokens < 5) {
+          var chunk = await reader.read();
+          if (chunk.done) break;
+          var text = decoder.decode(chunk.value, { stream: true });
+          var lines = text.split('\n');
+          for (var i = 0; i < lines.length; i++) {
+            if (!lines[i].trim()) continue;
+            try { var obj = JSON.parse(lines[i]); if (obj.response) tokens++; if (obj.done) { reader.cancel(); break; } } catch (_) { }
+          }
+        }
+        reader.cancel();
+        return { pass: tokens > 0, detail: tokens + ' NDJSON tokens received' };
+      } catch (e) { return { pass: false, detail: 'Error: ' + e.message }; }
+    }, { requiresBackend: true });
+
+    registerTest(2, 't2-legacy-ask', 'POST /ask legacy endpoint', 'Chat', async function (cfg) {
+      var r = await httpPost(cfg.url + '/ask', { question: 'Say OK', model: 'ministral-3:latest' }, cfg.timeout * 3);
+      if (!r.ok) return { pass: false, detail: 'Error: ' + (r.error || 'HTTP ' + r.status) };
+      var answer = r.data && r.data.answer;
+      return { pass: typeof answer === 'string' && answer.length > 0, detail: answer ? 'Answer: ' + answer.substring(0, 100) : 'No answer field' };
+    }, { requiresBackend: true });
+
+    registerTest(2, 't2-failures', 'GET /api/failures returns failure log', 'Agents', async function (cfg) {
+      var r = await httpGet(cfg.url + '/api/failures', cfg.timeout);
+      if (!r.ok) return { pass: false, detail: 'Error: ' + (r.error || 'HTTP ' + r.status) };
+      return { pass: Array.isArray(r.data.failures) && r.data.stats, detail: 'Failures: ' + (r.data.failures || []).length + ', Stats: ' + Object.keys(r.data.stats || {}).join(',') };
+    }, { requiresBackend: true });
+
+    registerTest(2, 't2-agents-status', 'GET /api/agents/status returns agent info', 'Agents', async function (cfg) {
+      var r = await httpGet(cfg.url + '/api/agents/status', cfg.timeout);
+      if (!r.ok) return { pass: false, detail: 'Error: ' + (r.error || 'HTTP ' + r.status) };
+      return { pass: r.data && r.data.agents, detail: 'Agent subsystems: ' + Object.keys(r.data.agents || {}).join(', ') };
+    }, { requiresBackend: true });
+
+    registerTest(2, 't2-read-file', 'POST /api/read-file reads local file', 'FileIO', async function (cfg) {
+      var r = await httpPost(cfg.url + '/api/read-file', { path: 'D:/rawrxd/gui/serve.py' }, cfg.timeout);
+      if (!r.ok) return { pass: false, detail: 'Error: ' + (r.error || 'HTTP ' + r.status) };
+      var content = r.data && (r.data.content || r.data.data);
+      return { pass: typeof content === 'string' && content.length > 100, detail: content ? content.length + ' chars read' : 'No content returned' };
+    }, { requiresBackend: true });
+
+    registerTest(2, 't2-cors-headers', 'CORS headers present on responses', 'Security', async function (cfg) {
+      try {
+        var res = await fetch(cfg.url + '/health', { method: 'GET' });
+        var cors = res.headers.get('access-control-allow-origin');
+        var xfo = res.headers.get('x-frame-options');
+        return { pass: !!cors, detail: 'CORS: ' + cors + ' XFO: ' + (xfo || 'none') };
+      } catch (e) { return { pass: false, detail: 'Fetch error: ' + e.message }; }
+    }, { requiresBackend: true });
+
+    registerTest(2, 't2-xfo-sameorigin', 'X-Frame-Options is SAMEORIGIN (not DENY)', 'Security', async function (cfg) {
+      try {
+        var res = await fetch(cfg.url + '/health', { method: 'GET' });
+        var xfo = res.headers.get('x-frame-options');
+        var pass = xfo && xfo.toUpperCase() === 'SAMEORIGIN';
+        return { pass: pass, detail: 'XFO=' + (xfo || 'not set') + (pass ? '' : ' \u2014 must be SAMEORIGIN for iframe tests') };
+      } catch (e) { return { pass: false, detail: 'Fetch error: ' + e.message }; }
+    }, { requiresBackend: true });
+
+
+    // ============================================================================
+    // TIER 3: Panel Health Audit (PostMessage Bridge)
+    // ============================================================================
+
+    var PANEL_TESTS = [
+      { id: 'debugPanel', opener: 'showDebug', name: 'Debug Panel' },
+      { id: 'failurePanel', opener: 'showFailures', name: 'Failure Timeline' },
+      { id: 'perfPanel', opener: 'showPerfPanel', name: 'Performance Panel' },
+      { id: 'securityPanel', opener: 'showSecurityPanel', name: 'Security Panel' },
+      { id: 'agentPanel', opener: 'showAgentDashboard', name: 'Agent Dashboard' },
+      { id: 'rePanel', opener: 'showREPanel', name: 'Reverse Engineering Panel' },
+      { id: 'extPanel', opener: 'showExtPanel', name: 'Extension Panel' },
+      { id: 'backendSwitcherPanel', opener: 'showBackendSwitcher', name: 'Backend Switcher' },
+      { id: 'routerPanel', opener: 'showRouterPanel', name: 'Router Panel' },
+      { id: 'swarmPanel', opener: 'showSwarmPanel', name: 'Swarm Dashboard' },
+      { id: 'multiResponsePanel', opener: 'showMultiResponsePanel', name: 'Multi-Response Panel' },
+      { id: 'asmDebugPanel', opener: 'showAsmDebugPanel', name: 'ASM Debug Panel' },
+      { id: 'safetyPanel', opener: 'showSafetyPanel', name: 'Safety Monitor' },
+      { id: 'policiesPanel', opener: 'showPoliciesPanel', name: 'Policies Panel' },
+      { id: 'hotpatchDetailPanel', opener: 'showHotpatchDetailPanel', name: 'Hotpatch Detail' },
+      { id: 'cotDetailPanel', opener: 'showCotDetailPanel', name: 'CoT Detail Panel' },
+      { id: 'toolsPanel', opener: 'showToolsPanel', name: 'Tools Panel' },
+      { id: 'enginePanel', opener: 'showEnginePanel', name: 'Engine Explorer' },
+      { id: 'metricsPanel', opener: 'showMetricsPanel', name: 'Metrics Panel' },
+      { id: 'subagentPanel', opener: 'showSubagentPanel', name: 'Subagent Panel' },
+      { id: 'confidencePanel', opener: 'showConfidencePanel', name: 'Confidence Panel' },
+      { id: 'governorPanel', opener: 'showGovernorPanel', name: 'Governor Panel' },
+      { id: 'lspPanel', opener: 'showLspPanel', name: 'LSP Panel' },
+      { id: 'hybridPanel', opener: 'showHybridPanel', name: 'Hybrid Panel' },
+      { id: 'replayPanel', opener: 'showReplayPanel', name: 'Replay Viewer' },
+      { id: 'phaseStatusPanel', opener: 'showPhaseStatusPanel', name: 'Phase Status Panel' },
+      { id: 'extensionsPanel', opener: 'showExtensionsPanel', name: 'Extensions Manager' },
+      { id: 'fileEditorPanel', opener: 'showFileEditorPanel', name: 'File Editor' },
+    ];
+
+    PANEL_TESTS.forEach(function (p) {
+      registerTest(3, 't3-panel-' + p.id, p.name + ' opens cleanly', 'Panels', async function (cfg) {
+        var b = TestState.bridge;
+        if (!b || !b.ready) return { pass: false, detail: 'IDE bridge not ready' };
+        if (b.directAccess) {
+          var win = b.iframe.contentWindow;
+          var el = win.document.getElementById(p.id);
+          if (!el) return { pass: false, detail: 'DOM element #' + p.id + ' not found' };
+          var openerFn = win[p.opener];
+          if (typeof openerFn !== 'function') return { pass: false, detail: 'Opener ' + p.opener + '() not found' };
+          try {
+            openerFn();
+            await new Promise(function (r) { setTimeout(r, 200); });
+            var style = win.getComputedStyle(el);
+            var visible = style.display !== 'none' && style.visibility !== 'hidden';
+            el.style.display = 'none';
+            return { pass: visible, detail: visible ? 'Panel opened (display=' + style.display + ')' : 'Not visible (display=' + style.display + ')' };
+          } catch (e) { return { pass: false, detail: 'Error calling ' + p.opener + '(): ' + e.message }; }
+        } else {
+          var elInfo = await b.send('getElement', [p.id]);
+          if (!elInfo) return { pass: false, detail: '#' + p.id + ' not found via bridge' };
+          var hasFn = await b.send('hasFn', [p.opener]);
+          if (!hasFn) return { pass: false, detail: p.opener + '() not found via bridge' };
+          try {
+            await b.send('callFn', [p.opener, []]);
+            await new Promise(function (r) { setTimeout(r, 300); });
+            var elAfter = await b.send('getElement', [p.id]);
+            var visible = elAfter && elAfter.visible;
+            return { pass: visible, detail: visible ? 'Panel opened via bridge' : 'Panel not visible after open' };
+          } catch (e) { return { pass: false, detail: 'Bridge error: ' + e.message }; }
+        }
+      }, { requiresIframe: true });
+    });
+
+    registerTest(3, 't3-terminal', 'Terminal toggle works', 'Terminal', async function (cfg) {
+      var b = TestState.bridge;
+      if (!b || !b.ready) return { pass: false, detail: 'IDE bridge not ready' };
+      if (b.directAccess) {
+        var win = b.iframe.contentWindow;
+        if (typeof win.toggleTerminal !== 'function') return { pass: false, detail: 'toggleTerminal not found' };
+        try {
+          win.toggleTerminal();
+          await new Promise(function (r) { setTimeout(r, 200); });
+          var panel = win.document.getElementById('terminalPanel');
+          var visible = panel && win.getComputedStyle(panel).display !== 'none';
+          win.toggleTerminal();
+          return { pass: !!visible, detail: 'Terminal toggled successfully' };
+        } catch (e) { return { pass: false, detail: 'Error: ' + e.message }; }
+      }
+      var hasFn = await b.send('hasFn', ['toggleTerminal']);
+      if (!hasFn) return { pass: false, detail: 'toggleTerminal not found' };
+      await b.send('callFn', ['toggleTerminal', []]);
+      await new Promise(function (r) { setTimeout(r, 300); });
+      var el = await b.send('getElement', ['terminalPanel']);
+      await b.send('callFn', ['toggleTerminal', []]);
+      return { pass: el && el.visible, detail: el && el.visible ? 'Terminal toggled' : 'Terminal not visible' };
+    }, { requiresIframe: true });
+
+    registerTest(3, 't3-browser-overlay', 'Browser overlay opens', 'Browser', async function (cfg) {
+      var b = TestState.bridge;
+      if (!b || !b.ready) return { pass: false, detail: 'IDE bridge not ready' };
+      if (b.directAccess) {
+        var win = b.iframe.contentWindow;
+        if (typeof win.showBrowserPanel !== 'function') return { pass: false, detail: 'showBrowserPanel not found' };
+        try {
+          win.showBrowserPanel('about:blank');
+          await new Promise(function (r) { setTimeout(r, 300); });
+          var el = win.document.getElementById('browserOverlay');
+          var visible = el && win.getComputedStyle(el).display !== 'none';
+          if (el) el.style.display = 'none';
+          return { pass: !!visible, detail: 'Browser overlay toggled' };
+        } catch (e) { return { pass: false, detail: 'Error: ' + e.message }; }
+      }
+      var hasFn = await b.send('hasFn', ['showBrowserPanel']);
+      if (!hasFn) return { pass: false, detail: 'showBrowserPanel not found' };
+      await b.send('callFn', ['showBrowserPanel', ['about:blank']]);
+      await new Promise(function (r) { setTimeout(r, 400); });
+      var el = await b.send('getElement', ['browserOverlay']);
+      return { pass: el && el.visible, detail: el && el.visible ? 'Browser overlay opened' : 'Not visible' };
+    }, { requiresIframe: true });
+
+
+    // ============================================================================
+    // TIER 4: API Contract Validation
+    // ============================================================================
+
+    registerTest(4, 't4-health-shape', '/health response shape matches contract', 'Contract', async function (cfg) {
+      var r = await httpGet(cfg.url + '/health', cfg.timeout);
+      if (!r.ok) return { pass: false, detail: 'Endpoint unreachable' };
+      var errs = validateShape(r.data, { status: { type: 'string', required: true, expect: 'ok' } });
+      return { pass: errs.length === 0, detail: errs.length === 0 ? 'Shape OK' : errs.join('; ') };
+    }, { requiresBackend: true });
+
+    registerTest(4, 't4-status-shape', '/status response shape matches contract', 'Contract', async function (cfg) {
+      var r = await httpGet(cfg.url + '/status', cfg.timeout);
+      if (!r.ok) return { pass: false, detail: 'Endpoint unreachable' };
+      var errs = validateShape(r.data, {
+        ready: { type: 'boolean', required: true }, backend: { type: 'string', required: true },
+        available_models: { type: 'number', required: false }, total_requests: { type: 'number', required: false },
+        uptime_seconds: { type: 'number', required: false },
+      });
+      return { pass: errs.length === 0, detail: errs.length === 0 ? 'Shape OK: ' + JSON.stringify(r.data).substring(0, 150) : errs.join('; ') };
+    }, { requiresBackend: true });
+
+    registerTest(4, 't4-models-shape', '/models response has models array', 'Contract', async function (cfg) {
+      var r = await httpGet(cfg.url + '/models', cfg.timeout);
+      if (!r.ok) return { pass: false, detail: 'Endpoint unreachable' };
+      if (!r.data || !Array.isArray(r.data.models)) return { pass: false, detail: 'Expected { models: [...] }' };
+      if (r.data.models.length > 0 && typeof r.data.models[0].name !== 'string') return { pass: false, detail: 'First model missing "name"' };
+      return { pass: true, detail: r.data.models.length + ' models, shapes valid' };
+    }, { requiresBackend: true });
+
+    registerTest(4, 't4-failures-shape', '/api/failures response shape matches contract', 'Contract', async function (cfg) {
+      var r = await httpGet(cfg.url + '/api/failures', cfg.timeout);
+      if (!r.ok) return { pass: false, detail: 'Endpoint unreachable' };
+      var errs = validateShape(r.data, { failures: { type: 'array', required: true }, stats: { type: 'object', required: true } });
+      if (errs.length === 0 && r.data.stats) errs = errs.concat(validateShape(r.data.stats, { totalFailures: { type: 'number', required: true } }));
+      return { pass: errs.length === 0, detail: errs.length === 0 ? 'Shape OK' : errs.join('; ') };
+    }, { requiresBackend: true });
+
+    registerTest(4, 't4-agents-shape', '/api/agents/status response shape', 'Contract', async function (cfg) {
+      var r = await httpGet(cfg.url + '/api/agents/status', cfg.timeout);
+      if (!r.ok) return { pass: false, detail: 'Endpoint unreachable' };
+      var errs = validateShape(r.data, { agents: { type: 'object', required: true } });
+      return { pass: errs.length === 0, detail: errs.length === 0 ? 'Agent keys: ' + Object.keys(r.data.agents || {}).join(', ') : errs.join('; ') };
+    }, { requiresBackend: true });
+
+    registerTest(4, 't4-404-unknown', 'Unknown endpoint returns 404 JSON', 'Contract', async function (cfg) {
+      var r = await httpGet(cfg.url + '/this/does/not/exist', cfg.timeout);
+      return { pass: !r.ok && (r.status === 404 || r.status === 0), detail: 'Status: ' + r.status };
+    }, { requiresBackend: true });
+
+    registerTest(4, 't4-chat-shape', '/v1/chat/completions response matches OpenAI shape', 'Contract', async function (cfg) {
+      var r = await httpPost(cfg.url + '/v1/chat/completions', {
+        model: 'ministral-3:latest',
+        messages: [{ role: 'user', content: 'Respond with just "OK"' }],
+        stream: false,
+      }, cfg.timeout * 6);
+      if (!r.ok) return { pass: false, detail: 'Error: ' + (r.error || 'HTTP ' + r.status) };
+      var errs = validateShape(r.data, { choices: { type: 'array', required: true } });
+      if (errs.length === 0 && r.data.choices && r.data.choices[0]) {
+        errs = errs.concat(validateShape(r.data.choices[0], { message: { type: 'object', required: true } }));
+        if (r.data.choices[0].message) errs = errs.concat(validateShape(r.data.choices[0].message, { role: { type: 'string', required: true }, content: { type: 'string', required: true } }));
+      }
+      return { pass: errs.length === 0, detail: errs.length === 0 ? 'OpenAI-compatible shape valid' : errs.join('; ') };
+    }, { requiresBackend: true });
+
+
+    // ============================================================================
+    // UI Rendering
+    // ============================================================================
+
+    function renderTiers() {
+      var container = document.getElementById('tiersContainer');
+      container.innerHTML = '';
+      var tiers = {
+        1: { name: 'Tier 1 \u2014 Standalone Integrity (No Backend)', color: 'var(--green)' },
+        2: { name: 'Tier 2 \u2014 Backend Connectivity Matrix', color: 'var(--blue)' },
+        3: { name: 'Tier 3 \u2014 Panel Health Audit', color: 'var(--purple)' },
+        4: { name: 'Tier 4 \u2014 API Contract Validation', color: 'var(--cyan)' },
+      };
+      for (var t = 1; t <= 4; t++) {
+        var tierTests = TESTS.filter(function (test) { return test.tier === t; });
+        var passed = tierTests.filter(function (test) { return test.status === 'pass'; }).length;
+        var failed = tierTests.filter(function (test) { return test.status === 'fail'; }).length;
+        var div = document.createElement('div');
+        div.className = 'test-tier';
+        var header = document.createElement('div');
+        header.className = 'test-tier-header';
+        header.innerHTML = '<span style="color:' + tiers[t].color + '">' + tiers[t].name + '</span>' +
+          '<span>' + passed + '/' + tierTests.length + ' passed' +
+          (failed > 0 ? ' | <span style="color:var(--red)">' + failed + ' failed</span>' : '') + '</span>';
+        div.appendChild(header);
+        var body = document.createElement('div');
+        body.className = 'test-tier-body';
+        tierTests.forEach(function (test) {
+          var row = document.createElement('div');
+          row.className = 'test-row';
+          row.style.cursor = 'pointer';
+          row.onclick = function () { showDetail(test); };
+          var iconMap = { pass: '&#x2714;', fail: '&#x2718;', skip: '&#x25CB;', wait: '&#x25CB;', run: '&#x25CF;' };
+          row.innerHTML =
+            '<div class="icon ' + test.status + '">' + (iconMap[test.status] || '&#x25CB;') + '</div>' +
+            '<div>' + test.name + '</div>' +
+            '<div><span class="badge ' + test.status + '">' + test.status.toUpperCase() + '</span></div>' +
+            '<div style="color:var(--text-dim);font-size:0.8em">' + test.category + '</div>' +
+            '<div style="color:var(--text-dim);font-size:0.8em">' + (test.duration > 0 ? test.duration + 'ms' : '\u2014') + '</div>';
+          body.appendChild(row);
+        });
+        div.appendChild(body);
+        container.appendChild(div);
+      }
+    }
+
+    function updateSummary() {
+      var total = TESTS.length;
+      var pass = TESTS.filter(function (t) { return t.status === 'pass'; }).length;
+      var fail = TESTS.filter(function (t) { return t.status === 'fail'; }).length;
+      var skip = TESTS.filter(function (t) { return t.status === 'skip'; }).length;
+      var duration = TestState.startTime > 0 ? Math.round(performance.now() - TestState.startTime) : 0;
+      var rate = (pass + fail) > 0 ? Math.round(pass / (pass + fail) * 100) : 0;
+      document.getElementById('sumTotal').textContent = total;
+      document.getElementById('sumPass').textContent = pass;
+      document.getElementById('sumFail').textContent = fail;
+      document.getElementById('sumSkip').textContent = skip;
+      document.getElementById('sumDuration').textContent = duration + 'ms';
+      document.getElementById('sumCoverage').textContent = rate + '%';
+    }
+
+    function showDetail(test) {
+      document.getElementById('detailTitle').textContent = test.id + ' \u2014 ' + test.name;
+      document.getElementById('detailContent').textContent =
+        'Status:   ' + test.status.toUpperCase() + '\n' +
+        'Category: ' + test.category + '\n' +
+        'Tier:     ' + test.tier + '\n' +
+        'Duration: ' + test.duration + 'ms\n' +
+        'Backend:  ' + (test.requiresBackend ? 'Required' : 'Not required') + '\n\n' +
+        'Detail:\n' + test.detail;
+      document.getElementById('detailOverlay').classList.add('open');
+    }
+
+    function closeDetail() {
+      document.getElementById('detailOverlay').classList.remove('open');
+    }
+
+    // ============================================================================
+    // Test Runner
+    // ============================================================================
+
+    async function runTier(tier) {
+      if (TestState.running) { log('Tests already running', 'warn'); return; }
+      TestState.running = true;
+      TestState.startTime = performance.now();
+      var cfg = getConfig();
+      log('=== Starting Tier ' + tier + ' ===', 'info');
+
+      if ((tier === 1 || tier === 3) && (!TestState.bridge || !TestState.bridge.ready)) {
+        log('Loading IDE via ' + cfg.url + '/gui ...', 'info');
+        var bridge = await loadIDE();
+        if (!bridge) {
+          log('FATAL: Could not load IDE iframe', 'fail');
+          TestState.running = false;
+          return;
+        }
+        log('IDE loaded. Direct=' + bridge.directAccess + ', Ready=' + bridge.ready, 'pass');
+      }
+
+      var tierTests = TESTS.filter(function (t) { return t.tier === tier; });
+      for (var i = 0; i < tierTests.length; i++) {
+        var test = tierTests[i];
+        test.status = 'run';
+        renderTiers();
+        var t0 = performance.now();
+        try {
+          var result = await test.fn(cfg);
+          test.duration = Math.round(performance.now() - t0);
+          test.status = result.pass ? 'pass' : 'fail';
+          test.detail = result.detail || '';
+        } catch (e) {
+          test.duration = Math.round(performance.now() - t0);
+          test.status = 'fail';
+          test.detail = 'Exception: ' + e.message;
+        }
+        var prefix = test.status === 'pass' ? '\u2714' : '\u2718';
+        log(prefix + ' [' + test.id + '] ' + test.name + ' (' + test.duration + 'ms) \u2014 ' + test.detail, test.status);
+        renderTiers();
+        updateSummary();
+      }
+      log('=== Tier ' + tier + ' complete ===', 'info');
+      TestState.running = false;
+    }
+
+    async function runAllTiers() {
+      if (TestState.running) return;
+      TestState.startTime = performance.now();
+      TESTS.forEach(function (t) { t.status = 'wait'; t.detail = ''; t.duration = 0; });
+      renderTiers();
+
+      var cfg = getConfig();
+      log('Loading IDE via ' + cfg.url + '/gui ...', 'info');
+      var bridge = await loadIDE();
+      if (bridge) log('IDE loaded. Direct=' + bridge.directAccess + ', Ready=' + bridge.ready, 'pass');
+      else log('Failed to load IDE iframe \u2014 T1/T3 will fail', 'warn');
+
+      for (var tier = 1; tier <= 4; tier++) {
+        await runTier(tier);
+      }
+
+      log('=== ALL TIERS COMPLETE ===', 'info');
+      var pass = TESTS.filter(function (t) { return t.status === 'pass'; }).length;
+      var fail = TESTS.filter(function (t) { return t.status === 'fail'; }).length;
+      var total = pass + fail;
+      var rate = total > 0 ? Math.round(pass / total * 100) : 0;
+      log('Results: ' + pass + '/' + total + ' passed (' + rate + '%)', rate === 100 ? 'pass' : (rate >= 70 ? 'warn' : 'fail'));
+    }
+
+    function clearResults() {
+      TESTS.forEach(function (t) { t.status = 'wait'; t.detail = ''; t.duration = 0; });
+      document.getElementById('logPanel').innerHTML = '';
+      renderTiers();
+      updateSummary();
+    }
+
+    function exportResults() {
+      var results = TESTS.map(function (t) {
+        return {
+          id: t.id, tier: t.tier, name: t.name, category: t.category,
+          status: t.status, detail: t.detail, duration: t.duration, requiresBackend: t.requiresBackend
+        };
+      });
+      var summary = {
+        timestamp: new Date().toISOString(),
+        total: results.length,
+        pass: results.filter(function (r) { return r.status === 'pass'; }).length,
+        fail: results.filter(function (r) { return r.status === 'fail'; }).length,
+        config: getConfig(),
+        tests: results,
+      };
+      var blob = new Blob([JSON.stringify(summary, null, 2)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'rawrxd-test-results-' + new Date().toISOString().slice(0, 10) + '.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // ---- Init ----
+    renderTiers();
+    updateSummary();
+    log('Test harness ready. ' + TESTS.length + ' tests registered across 4 tiers.', 'info');
+    log('Tier 1: Standalone | Tier 2: Backend | Tier 3: Panel health | Tier 4: API contracts', 'info');
+    log('Serve via: http://127.0.0.1:11435/test-harness for same-origin iframe access', 'info');
+    log('Backend URL auto-detects from page origin (' + (window.location.origin || 'unknown') + ')', 'info');
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,340 @@
+{
+  "version": "1.0.0",
+  "environment": "production",
+  "server": {
+    "port": 8443,
+    "logRequests": true,
+    "metricsEnabled": true,
+    "maxConnections": 1000
+  },
+  "tls": {
+    "enabled": true,
+    "certificatePath": "/etc/rawrxd/certs/server.crt",
+    "privateKeyPath": "/etc/rawrxd/certs/server.key",
+    "caChainPath": "/etc/rawrxd/certs/ca-chain.crt",
+    "minTLSVersion": 12,
+    "cipherSuites": [
+      "ECDHE-RSA-AES256-GCM-SHA384",
+      "ECDHE-RSA-AES128-GCM-SHA256",
+      "DHE-RSA-AES256-GCM-SHA384",
+      "DHE-RSA-AES128-GCM-SHA256",
+      "ECDHE-ECDSA-AES256-GCM-SHA384",
+      "ECDHE-ECDSA-AES128-GCM-SHA256"
+    ]
+  },
+  "oidc": {
+    "enabled": true,
+    "issuerUrl": "https://auth.example.com",
+    "clientId": "rawrxd-app",
+    "clientSecret": "${OIDC_CLIENT_SECRET}",
+    "jwksUrl": "https://auth.example.com/.well-known/jwks.json",
+    "audience": "https://api.example.com",
+    "tokenExpirationSeconds": 3600,
+    "validateIssuer": true,
+    "validateAudience": true,
+    "scopes": [
+      "openid",
+      "profile",
+      "email"
+    ]
+  },
+  "authentication": {
+    "tokenCacheSizeMax": 1000,
+    "tokenCacheCleanupIntervalSeconds": 300,
+    "allowRefreshTokens": true,
+    "refreshTokenExpirationSeconds": 2592000,
+    "requireStrictSSL": true
+  },
+  "rateLimit": {
+    "enabled": true,
+    "requestsPerMinute": 1000,
+    "requestsPerSecond": 100,
+    "burstSize": 150,
+    "enforcePerIP": true,
+    "enforcePerUser": true
+  },
+  "secrets": {
+    "api_keys": {
+      "openai": "${OPENAI_API_KEY}",
+      "anthropic": "${ANTHROPIC_API_KEY}",
+      "ollama": "${OLLAMA_API_KEY}",
+      "huggingface": "${HF_API_KEY}"
+    },
+    "database": {
+      "connection_string": "${DB_CONNECTION_STRING}",
+      "username": "${DB_USERNAME}",
+      "password": "${DB_PASSWORD}"
+    },
+    "cloud": {
+      "aws_access_key": "${AWS_ACCESS_KEY_ID}",
+      "aws_secret": "${AWS_SECRET_ACCESS_KEY}",
+      "azure_key": "${AZURE_KEY}"
+    }
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "logs/rawrxd-production.log",
+    "max_size_mb": 100,
+    "retention_days": 30,
+    "structured": true,
+    "metrics": {
+      "enabled": true,
+      "endpoint": "${METRICS_ENDPOINT}",
+      "interval_seconds": 60
+    }
+  },
+  "observability": {
+    "tracing": {
+      "enabled": true,
+      "endpoint": "${TRACING_ENDPOINT}",
+      "sampling_rate": 0.1
+    },
+    "metrics": {
+      "enabled": true,
+      "prometheus_port": 9090
+    }
+  },
+  "model_cache": {
+    "enabled": true,
+    "max_size_gb": 50,
+    "ttl_hours": 24,
+    "compression": "gzip",
+    "validation": {
+      "checksum": true,
+      "integrity": true
+    }
+  },
+  "agent_cancellation": {
+    "timeout_seconds": 300,
+    "graceful_shutdown": true,
+    "cleanup_resources": true
+  },
+  "session_persistence": {
+    "enabled": true,
+    "format": "json",
+    "encryption": true,
+    "backup_count": 5,
+    "rag": {
+      "enabled": true,
+      "vector_store": "${VECTOR_STORE_PATH}",
+      "embedding_model": "all-MiniLM-L6-v2"
+    }
+  },
+  "model_invoker": {
+    "retry": {
+      "max_attempts": 3,
+      "backoff_multiplier": 2,
+      "initial_delay_ms": 1000
+    },
+    "circuit_breaker": {
+      "failure_threshold": 5,
+      "timeout_seconds": 60,
+      "half_open_timeout": 30
+    },
+    "fallback": {
+      "enabled": true,
+      "model": "llama3.2:1b"
+    }
+  },
+  "gguf_server": {
+    "metrics": {
+      "enabled": true,
+      "port": 8080,
+      "path": "/metrics"
+    },
+    "backoff": {
+      "enabled": true,
+      "max_delay_ms": 30000,
+      "jitter": true
+    }
+  },
+  "hotpatch": {
+    "rollback": {
+      "enabled": true,
+      "max_versions": 10,
+      "auto_rollback_on_failure": true
+    },
+    "health_checks": {
+      "enabled": true,
+      "interval_seconds": 30,
+      "timeout_seconds": 10
+    }
+  },
+  "masm": {
+    "templates": {
+      "enabled": true,
+      "path": "templates/masm"
+    },
+    "diagnostics": {
+      "enabled": true,
+      "real_time": true,
+      "error_highlighting": true
+    },
+    "toolchain": {
+      "compiler": "ml64.exe",
+      "linker": "link.exe",
+      "debugger": "windbg.exe"
+    }
+  },
+  "ui": {
+    "state_persistence": {
+      "enabled": true,
+      "file": "ui_state.json"
+    },
+    "directory_population": {
+      "lazy_loading": true,
+      "batch_size": 100,
+      "throttle_ms": 100
+    },
+    "recent_files": {
+      "max_count": 20,
+      "persist": true
+    },
+    "gitignore": {
+      "enabled": true,
+      "auto_refresh": true
+    }
+  },
+  "headless": {
+    "enabled": true,
+    "timeout_minutes": 60,
+    "resource_limits": {
+      "max_memory_mb": 4096,
+      "max_cpu_percent": 80
+    }
+  }
+}
+    "enablePerIPLimiting": true
+},
+"restEndpoints": [
+{
+  "method": "GET",
+  "path": "/health",
+  "requiresAuth": false,
+  "description": "Health check endpoint"
+},
+{
+  "method": "GET",
+  "path": "/status",
+  "requiresAuth": true,
+  "description": "Server status endpoint"
+},
+{
+  "method": "GET",
+  "path": "/metrics",
+  "requiresAuth": true,
+  "description": "Prometheus metrics endpoint"
+},
+{
+  "method": "POST",
+  "path": "/api/users",
+  "requiresAuth": true,
+  "description": "Create new user"
+},
+{
+  "method": "GET",
+  "path": "/api/users/*",
+  "requiresAuth": true,
+  "description": "Get user by ID"
+},
+{
+  "method": "PUT",
+  "path": "/api/users/*",
+  "requiresAuth": true,
+  "description": "Update user"
+},
+{
+  "method": "DELETE",
+  "path": "/api/users/*",
+  "requiresAuth": true,
+  "description": "Delete user"
+}
+],
+"graphql": {
+"enabled": true,
+"endpoint": "/graphql",
+"requiresAuth": true,
+"introspectionEnabled": true,
+"maxQueryDepth": 10,
+"maxQueryComplexity": 100,
+"queryTimeoutMs": 5000
+},
+"securityHeaders": {
+"content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'",
+"x-content-type-options": "nosniff",
+"x-frame-options": "DENY",
+"x-xss-protection": "1; mode=block",
+"strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+"referrer-policy": "strict-origin-when-cross-origin",
+"permissions-policy": "geolocation=(), microphone=(), camera=()"
+},
+"cors": {
+"enabled": true,
+"allowedOrigins": [
+  "https://app.example.com",
+  "https://dashboard.example.com"
+],
+"allowedMethods": [
+  "GET",
+  "POST",
+  "PUT",
+  "DELETE",
+  "OPTIONS"
+],
+"allowedHeaders": [
+  "Content-Type",
+  "Authorization"
+],
+"exposedHeaders": [
+  "X-Request-ID",
+  "X-RateLimit-Remaining"
+],
+"allowCredentials": true,
+"maxAge": 3600
+},
+"logging": {
+"level": "INFO",
+"format": "json",
+"outputFile": "/var/log/rawrxd/api-server.log",
+"maxFileSizeBytes": 10485760,
+"maxBackupFiles": 5,
+"includeSensitiveData": false
+},
+"monitoring": {
+"metricsEnabled": true,
+"metricsPort": 9090,
+"metricsPath": "/metrics",
+"tracingEnabled": true,
+"tracingServiceName": "rawrxd-api",
+"samplingRate": 0.1
+},
+"database": {
+"enabled": true,
+"type": "postgresql",
+"host": "db.example.com",
+"port": 5432,
+"database": "rawrxd",
+"username": "${DB_USERNAME}",
+"password": "${DB_PASSWORD}",
+"maxConnections": 20,
+"connectionTimeoutSeconds": 5,
+"sslMode": "require"
+},
+"cache": {
+"enabled": true,
+"type": "redis",
+"host": "cache.example.com",
+"port": 6379,
+"password": "${REDIS_PASSWORD}",
+"ttlSeconds": 3600,
+"maxEntries": 10000
+},
+"features": {
+"enableApiDocumentation": true,
+"enableGraphiQL": true,
+"enableReflection": true,
+"enableBatchRequests": true,
+"enableWebSockets": true,
+"enableSubscriptions": true
+}
+}

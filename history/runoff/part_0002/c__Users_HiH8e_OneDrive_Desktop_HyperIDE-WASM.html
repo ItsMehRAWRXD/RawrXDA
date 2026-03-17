@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beaconism Hyper-IDE (WASM Edition)</title>
+
+    <!-- Monaco Editor CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.46.0/min/vs/loader.min.js"></script>
+
+    <!-- CORE STYLES -->
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
+        :root {
+            --bg-primary: #1e1e1e;
+            --bg-secondary: #252526;
+            --bg-tertiary: #2d2d30;
+            --border: #3e3e42;
+            --text: #cccccc;
+            --accent: #0098ff;
+            --accent-green: #4ec9b0;
+            --accent-yellow: #dcdcaa;
+            --overlay-width: 380px;
+        }
+
+        html, body { height: 100%; overflow: hidden; background: var(--bg-primary); }
+
+        #app {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: calc(100% - var(--overlay-width));
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Rawr Introspection Overlay */
+        #overlay {
+            position: fixed;
+            right: 0;
+            top: 0;
+            width: var(--overlay-width);
+            height: 100%;
+            background: #0d0d0d;
+            color: #9f9;
+            padding: 10px;
+            overflow-y: auto;
+            font: 12px/1.4 monospace;
+            border-left: 1px solid #333;
+        }
+
+        /* IDE Layout */
+        .ide-container { display: flex; flex-grow: 1; min-height: 0; }
+        #file-explorer-pane {
+            flex: 0 0 250px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            overflow-y: auto;
+            color: var(--text);
+            padding-top: 10px;
+        }
+        #editor-area-pane { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
+        #code-editor { flex-grow: 1; min-height: 0; }
+
+        /* Terminal/Chat */
+        #terminal-panel {
+            flex: 0 0 260px;
+            background: var(--bg-tertiary);
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+        }
+        #chat-messages { flex-grow: 1; overflow-y: auto; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        #chat-input-area { display: flex; padding-top: 10px; }
+        #chat-input {
+            flex-grow: 1;
+            padding: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg-primary);
+            color: var(--text);
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        #chat-send-btn {
+            padding: 8px 15px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        #chat-send-btn:hover { background: #007acc; }
+
+        /* Status Bar */
+        #status-bar {
+            height: 24px;
+            background: var(--bg-secondary);
+            color: var(--text);
+            font-size: 11px;
+            padding: 0 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+        }
+        #status-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--accent-green);
+        }
+        #status-file {
+            color: var(--text);
+            opacity: 0.8;
+        }
+        #status-right button {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text);
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            margin-left: 4px;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        #status-right button:hover {
+            background: var(--bg-tertiary);
+            border-color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- Status Bar -->
+        <div id="status-bar">
+            <span id="status-left">
+                <span id="status-state">WASM Ready</span>
+                <span id="status-file">/home/main.js (javascript)</span>
+            </span>
+            <span id="status-right">
+                <button onclick="openLocalFile()">Open</button>
+                <button onclick="saveLocalFile()">Save</button>
+                <button onclick="chooseWorkspace()">Workspace</button>
+                <button id="toggle-terminal-btn">Show AI Terminal</button>
+            </span>
+        </div>
+
+        <!-- IDE Container -->
+        <div class="ide-container">
+            <!-- File Explorer -->
+            <div id="file-explorer-pane">
+                <h4 style="padding: 0 10px 10px; color: var(--accent-green);">WASMFS Tree</h4>
+                <ul id="file-list" style="list-style: none; padding: 0 10px;">
+                    <li style="padding: 5px 0;"><span style="color: var(--accent-yellow);">/home/main.js</span></li>
+                    <li style="padding: 5px 0;">/models/llama.gguf</li>
+                    <li style="padding: 5px 0;">/workspace/README.md</li>
+                </ul>
+            </div>
+
+            <!-- Editor/Terminal Area -->
+            <div id="editor-area-pane">
+                <div id="code-editor" style="flex-grow: 1;"></div>
+                <div id="terminal-panel" style="display: none;">
+                    <div id="chat-messages">
+                        <div style="color: var(--accent);">[AI/LLAMA] Initializing WASM environment...</div>
+                        <div style="color: var(--accent-green); margin-top: 5px;">Type <strong>!exec ls /home</strong> or <strong>!ollama summarize</strong> to see traces.</div>
+                    </div>
+                    <div id="chat-input-area">
+                        <input type="text" id="chat-input" placeholder="WASM command or AI query...">
+                        <button id="chat-send-btn">Send</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Rawr Introspection Overlay -->
+    <div id="overlay">
+        <div style="font-weight: bold; color: #fff; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 5px;">
+            RAWR INTROSPECTION (WASM/Browser Console)
+        </div>
+    </div>
+
+            <!-- CORE JAVASCRIPT & WASM SHIMS -->
+            <script>
+                    /* ======= GPU Spoofer (WebGPU virtual adapter) ======= */
+                    (()=>{const f={requestAdapter:async()=>({name:"Rawr-Virtual-GPU",features:new Set(["shader-f16"]),limits:{maxComputeWorkgroupSizeX:256},requestDevice:async()=>({createComputePipeline:()=>({getBindGroupLayout:()=>({})}),createBuffer:()=>({mapAsync:async()=>{},getMappedRange:()=>new ArrayBuffer(64),unmap:()=>{},destroy:()=>{}}),createBindGroup:()=>({}),createShaderModule:()=>({}),queue:{submit:()=>{},onSubmittedWorkDone:async()=>{},writeBuffer:()=>{}}})})};Object.defineProperty(navigator,"gpu",{get:()=>f,configurable:true});if(typeof log==="function")log("[GPU] Virtual WebGPU adapter injected","#ff0");else console.log("[GPU] Virtual WebGPU adapter injected")})();
+            </script>
+
+            <script type="module" src="./hyper-ide-main.js"></script>
+</body>
+</html>

@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RawrXD — Launcher</title>
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --border-hover: #484f58;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --text-dim: #6e7681;
+      --accent: #58a6ff;
+      --accent-dim: #1f6feb;
+      --accent-green: #3fb950;
+      --accent-red: #f85149;
+      --accent-yellow: #d29922;
+      --accent-purple: #bc8cff;
+      --accent-orange: #f0883e;
+      --accent-pink: #f778ba;
+      --font-mono: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+      --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      --radius: 10px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none
+    }
+
+    /* Header */
+    .header {
+      width: 100%;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 24px 0;
+      text-align: center
+    }
+
+    .header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      color: var(--accent);
+      letter-spacing: 2px
+    }
+
+    .header p {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-top: 6px
+    }
+
+    /* Status bar */
+    .status-bar {
+      width: 100%;
+      max-width: 1100px;
+      margin: 20px auto 0;
+      display: flex;
+      gap: 12px;
+      padding: 0 24px;
+      flex-wrap: wrap
+    }
+
+    .status-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .status-card .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0
+    }
+
+    .status-card .dot.online {
+      background: var(--accent-green);
+      box-shadow: 0 0 6px var(--accent-green)
+    }
+
+    .status-card .dot.offline {
+      background: var(--accent-red)
+    }
+
+    .status-card .dot.connecting {
+      background: var(--accent-yellow);
+      animation: pulse 1s infinite
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: .4
+      }
+    }
+
+    .status-card .label {
+      color: var(--text-muted)
+    }
+
+    .status-card .val {
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-weight: 600
+    }
+
+    /* Grid */
+    .grid {
+      width: 100%;
+      max-width: 1100px;
+      margin: 28px auto;
+      padding: 0 24px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px
+    }
+
+    /* Card */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      cursor: pointer;
+      transition: all .15s;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      position: relative;
+      overflow: hidden
+    }
+
+    .card:hover {
+      border-color: var(--accent-dim);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, .3)
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px
+    }
+
+    .card.c-blue::before {
+      background: var(--accent)
+    }
+
+    .card.c-green::before {
+      background: var(--accent-green)
+    }
+
+    .card.c-purple::before {
+      background: var(--accent-purple)
+    }
+
+    .card.c-orange::before {
+      background: var(--accent-orange)
+    }
+
+    .card.c-yellow::before {
+      background: var(--accent-yellow)
+    }
+
+    .card.c-red::before {
+      background: var(--accent-red)
+    }
+
+    .card.c-pink::before {
+      background: var(--accent-pink)
+    }
+
+    .card.c-cyan::before {
+      background: #56d4dd
+    }
+
+    .card .icon {
+      font-size: 28px;
+      line-height: 1
+    }
+
+    .card h3 {
+      font-size: 15px;
+      font-weight: 600
+    }
+
+    .card .desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.5
+    }
+
+    .card .tags {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 2px
+    }
+
+    .card .tag {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2px 8px;
+      font-size: 10px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: .3px
+    }
+
+    .card .route {
+      font-size: 11px;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      margin-top: auto;
+      padding-top: 8px;
+      border-top: 1px solid var(--border)
+    }
+
+    /* Footer */
+    .footer {
+      margin-top: auto;
+      padding: 20px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-dim);
+      border-top: 1px solid var(--border);
+      width: 100%
+    }
+
+    .footer span {
+      font-family: var(--font-mono);
+      color: var(--accent)
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="header">
+    <h1>RawrXD</h1>
+    <p>Unified IDE Launcher &mdash; Select a component to open</p>
+  </div>
+
+  <!-- ─── Live status bar ─── -->
+  <div class="status-bar" id="statusBar">
+    <div class="status-card">
+      <div class="dot connecting" id="dotServer"></div>
+      <span class="label">Server</span>
+      <span class="val" id="valServer">probing...</span>
+    </div>
+    <div class="status-card">
+      <div class="dot connecting" id="dotOllama"></div>
+      <span class="label">Ollama</span>
+      <span class="val" id="valOllama">probing...</span>
+    </div>
+    <div class="status-card">
+      <div class="dot connecting" id="dotModelSrv"></div>
+      <span class="label">Model Server</span>
+      <span class="val" id="valModelSrv">probing...</span>
+    </div>
+    <div class="status-card">
+      <span class="label">Requests</span>
+      <span class="val" id="valRequests">—</span>
+    </div>
+    <div class="status-card">
+      <span class="label">Generates</span>
+      <span class="val" id="valGenerates">—</span>
+    </div>
+    <div class="status-card">
+      <span class="label">Tokens/s</span>
+      <span class="val" id="valTps">—</span>
+    </div>
+    <div class="status-card">
+      <span class="label">Memory</span>
+      <span class="val" id="valMemory">—</span>
+    </div>
+    <div class="status-card">
+      <span class="label">Models</span>
+      <span class="val" id="valModels">—</span>
+    </div>
+    <div class="status-card">
+      <span class="label">Uptime</span>
+      <span class="val" id="valUptime">—</span>
+    </div>
+  </div>
+
+  <!-- ─── App cards ─── -->
+  <div class="grid" id="appGrid">
+    <!-- Populated by JS -->
+  </div>
+
+  <div class="footer">
+    Powered by <span>RawrXD-Shell</span> &mdash; Three-layer hotpatching engine &bull; C++20 / MASM64
+  </div>
+
+  <script>
+    // ══════════════════════════════════════════════════════════════
+    // RawrXD Unified Launcher — real backend probing, live metrics
+    // ══════════════════════════════════════════════════════════════
+
+    const APPS = [
+      {
+        name: 'IDE Chatbot',
+        icon: '\uD83D\uDCAC',
+        desc: 'Full-featured AI chatbot with multi-model support, streaming, tool actions, reasoning pipeline, ghost IDE overlay, and performance tracking.',
+        tags: ['Chat', 'Streaming', 'Multi-Model', 'Tools'],
+        route: '/chatbot',
+        file: 'ide_chatbot.html',
+        color: 'c-blue',
+      },
+      {
+        name: 'Agentic Tasks',
+        icon: '\uD83E\uDD16',
+        desc: 'Run autonomous AI agent tasks: build features, fix bugs, security audits, codebase exploration. Real backend cascade (DLL \u2192 Ollama \u2192 model-server).',
+        tags: ['Agents', 'Autonomous', 'Security'],
+        route: '/agents',
+        file: 'agents.html',
+        color: 'c-purple',
+      },
+      {
+        name: 'Multi-Window IDE',
+        icon: '\uD83D\uDDA5\uFE0F',
+        desc: 'Multi-pane IDE with editor, terminal, file tree, and integrated AI assistant. Desktop-class experience in the browser.',
+        tags: ['IDE', 'Editor', 'Terminal'],
+        route: '/multiwindow',
+        file: 'multiwindow_ide.html',
+        color: 'c-green',
+      },
+      {
+        name: 'Feature Tester',
+        icon: '\uD83E\uDDEA',
+        desc: 'Interactive test harness for all IDE features: model loading, generation, hotpatching, metrics, and endpoint validation.',
+        tags: ['Testing', 'Validation', 'QA'],
+        route: '/feature-tester',
+        file: 'feature_tester.html',
+        color: 'c-orange',
+      },
+      {
+        name: 'Model Bruteforce',
+        icon: '\u2699\uFE0F',
+        desc: 'Brute-force model parameter exploration: test temperature, top_p, top_k, and context sizes across all available models.',
+        tags: ['Benchmarking', 'Parameters', 'Grid Search'],
+        route: '/bruteforce',
+        file: 'model_bruteforce.html',
+        color: 'c-yellow',
+      },
+      {
+        name: 'Test Jumper',
+        icon: '\uD83D\uDD0D',
+        desc: 'Jump between test cases, inspect results, and navigate test suites across the project.',
+        tags: ['Testing', 'Navigation'],
+        route: '/test-jumper',
+        file: 'test_jumper.html',
+        color: 'c-cyan',
+      },
+      {
+        name: 'Test Swarm',
+        icon: '\uD83D\uDC1D',
+        desc: 'Parallel test execution swarm: run multiple test batches concurrently and aggregate results in real time.',
+        tags: ['Parallel', 'Swarm', 'Testing'],
+        route: '/test-swarm',
+        file: 'test_swarm.html',
+        color: 'c-pink',
+      },
+      {
+        name: 'Standalone Chatbot',
+        icon: '\uD83D\uDCE6',
+        desc: 'Lightweight standalone chatbot that works from file:// protocol. Minimal dependencies, direct Ollama connection.',
+        tags: ['Standalone', 'Lightweight', 'Offline'],
+        route: '/chatbot-standalone',
+        file: 'ide_chatbot_standalone.html',
+        color: 'c-red',
+      },
+    ];
+
+    // Render cards
+    const grid = document.getElementById('appGrid');
+    for (const app of APPS) {
+      const card = document.createElement('div');
+      card.className = 'card ' + app.color;
+      card.onclick = () => navigateTo(app.route);
+      card.innerHTML = `
+    <div class="icon">${app.icon}</div>
+    <h3>${app.name}</h3>
+    <div class="desc">${app.desc}</div>
+    <div class="tags">${app.tags.map(t => '<span class="tag">' + t + '</span>').join('')}</div>
+    <div class="route">${app.route} \u2192 gui/${app.file}</div>
+  `;
+      grid.appendChild(card);
+    }
+
+    function navigateTo(route) {
+      // If served from server, use route; if file://, use relative path
+      if (window.location.protocol === 'file:') {
+        window.location.href = route.replace(/^\//, '') === 'chatbot' ? 'ide_chatbot.html' :
+          APPS.find(a => a.route === route)?.file || route;
+      } else {
+        window.location.href = route;
+      }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // REAL BACKEND PROBING
+    // ══════════════════════════════════════════════════════════════
+
+    const BASE = (window.location.protocol !== 'file:' && window.location.port)
+      ? window.location.origin
+      : 'http://localhost:8080';
+
+    async function probeAll() {
+      // Probe server.js (:8080)
+      probeEndpoint(BASE + '/status', 'dotServer', 'valServer', d => d.backend || d.server || 'RawrXD');
+      // Probe Ollama (:11434)
+      probeEndpoint('http://localhost:11434/api/tags', 'dotOllama', 'valOllama', d => {
+        const n = (d.models || []).length;
+        return n + ' model' + (n !== 1 ? 's' : '');
+      });
+      // Probe model-server (:3000)
+      probeEndpoint('http://localhost:3000/health', 'dotModelSrv', 'valModelSrv', d => d.status || 'ok');
+
+      // Fetch real metrics from server.js — all fields computed from runtime state
+      try {
+        const res = await fetch(BASE + '/api/metrics', { signal: AbortSignal.timeout(3000) });
+        if (res.ok) {
+          const m = await res.json();
+          document.getElementById('valRequests').textContent = m.requests || 0;
+          document.getElementById('valGenerates').textContent = m.generates || 0;
+          const tps = m.tokensPerSec || 0;
+          document.getElementById('valTps').textContent = tps > 0 ? tps.toFixed(1) : (m.generates > 0 ? '0' : '—');
+          document.getElementById('valMemory').textContent = (m.memUsedMB || 0) + ' MB';
+          document.getElementById('valModels').textContent = m.modelCount || 0;
+          document.getElementById('valUptime').textContent = formatDur(m.uptimeMs || 0);
+        }
+      } catch (_) { }
+    }
+
+    async function probeEndpoint(url, dotId, valId, extractLabel) {
+      const dot = document.getElementById(dotId);
+      const val = document.getElementById(valId);
+      try {
+        const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
+        if (res.ok) {
+          let data;
+          const ct = res.headers.get('content-type') || '';
+          if (ct.includes('json')) {
+            data = await res.json();
+          } else {
+            const text = await res.text();
+            if (text.toLowerCase().includes('ollama')) {
+              data = { status: 'running' };
+            } else {
+              data = { status: text.substring(0, 30) };
+            }
+          }
+          dot.className = 'dot online';
+          val.textContent = extractLabel(data);
+          return;
+        }
+      } catch (_) { }
+      dot.className = 'dot offline';
+      val.textContent = 'offline';
+    }
+
+    function formatDur(ms) {
+      if (ms < 60000) return Math.round(ms / 1000) + 's';
+      if (ms < 3600000) return Math.round(ms / 60000) + 'm';
+      return Math.round(ms / 3600000) + 'h ' + Math.round((ms % 3600000) / 60000) + 'm';
+    }
+
+    // Probe on load and every 10s
+    probeAll();
+    setInterval(probeAll, 10000);
+  </script>
+  <script src="/gui/rawrxd-nav.js"></script>
+</body>
+
+</html>

@@ -27,6 +27,9 @@
 #include "agentic_observability.h"
 #include "DiskRecoveryAgent.h"
 
+namespace RawrXD {
+namespace Agent {
+
 static AgenticObservability& GetObs() {
     static AgenticObservability instance;
     return instance;
@@ -732,18 +735,18 @@ json AgentToolRegistry::GetToolSchemas() const {
             }
         }
 
-        tools.push_back({
+        tools.push_back(nlohmann::json::object({
             {"type", "function"},
-            {"function", {
+            {"function", nlohmann::json::object({
                 {"name", td.name},
                 {"description", td.description},
-                {"parameters", {
+                {"parameters", nlohmann::json::object({
                     {"type", "object"},
                     {"properties", td.params_schema},
                     {"required", required_params}
-                }}
-            }}
-        });
+                })}
+            })}
+        }));
     }
     return tools;
 }
@@ -787,14 +790,14 @@ ToolExecResult AgentToolRegistry::Dispatch(const std::string& tool_name, const j
 
     auto it = m_nameIndex.find(tool_name);
     if (it == m_nameIndex.end()) {
-        GetObs().logWarn(kRegistryComponent, "Dispatch: unknown tool", {{"tool", tool_name}});
+        GetObs().logWarn(kRegistryComponent, "Dispatch: unknown tool", nlohmann::json::object({{"tool", tool_name}}));
         GetObs().incrementCounter("tool_registry.unknown_tool");
         return ToolExecResult::error("Unknown tool: " + tool_name);
     }
 
     auto& td = m_tools[it->second];
     if (!td.handler) {
-        GetObs().logError(kRegistryComponent, "Dispatch: no handler", {{"tool", tool_name}});
+        GetObs().logError(kRegistryComponent, "Dispatch: no handler", nlohmann::json::object({{"tool", tool_name}}));
         return ToolExecResult::error("No handler registered for tool: " + tool_name);
     }
 
@@ -802,16 +805,16 @@ ToolExecResult AgentToolRegistry::Dispatch(const std::string& tool_name, const j
     std::string validationError;
     if (!ValidateArgs(tool_name, args, validationError)) {
         ++td.error_count;
-        GetObs().logWarn(kRegistryComponent, "Dispatch: validation failed", {
+        GetObs().logWarn(kRegistryComponent, "Dispatch: validation failed", nlohmann::json::object({
             {"tool", tool_name}, {"error", validationError}
-        });
+        }));
         GetObs().incrementCounter("tool_registry.validation_failures");
         return ToolExecResult::error("Validation failed: " + validationError);
     }
 
     // Traced execution with timing
     auto spanId = GetObs().startSpan("tool_dispatch:" + tool_name);
-    GetObs().logDebug(kRegistryComponent, "Dispatching tool call", {{"tool", tool_name}});
+    GetObs().logDebug(kRegistryComponent, "Dispatching tool call", nlohmann::json::object({{"tool", tool_name}}));
 
     auto start = std::chrono::high_resolution_clock::now();
     ToolExecResult result = td.handler(args);
@@ -822,18 +825,18 @@ ToolExecResult AgentToolRegistry::Dispatch(const std::string& tool_name, const j
     if (!result.success) {
         ++td.error_count;
         GetObs().endSpan(spanId, true, result.output);
-        GetObs().logWarn(kRegistryComponent, "Tool call failed", {
+        GetObs().logWarn(kRegistryComponent, "Tool call failed", nlohmann::json::object({
             {"tool", tool_name},
             {"elapsed_ms", result.elapsed_ms},
             {"exit_code", result.exit_code}
-        });
+        }));
         GetObs().incrementCounter("tool_registry.tool_errors");
     } else {
         GetObs().endSpan(spanId);
-        GetObs().logDebug(kRegistryComponent, "Tool call succeeded", {
+        GetObs().logDebug(kRegistryComponent, "Tool call succeeded", nlohmann::json::object({
             {"tool", tool_name},
             {"elapsed_ms", result.elapsed_ms}
-        });
+        }));
     }
 
     GetObs().recordHistogram("tool_registry.dispatch_ms", static_cast<float>(result.elapsed_ms));
@@ -917,3 +920,6 @@ bool AgentToolRegistry::ValidateArgs(
     }
     return true;
 }
+
+} // namespace Agent
+} // namespace RawrXD

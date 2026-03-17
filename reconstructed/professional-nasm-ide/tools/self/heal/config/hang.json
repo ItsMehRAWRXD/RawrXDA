@@ -1,0 +1,12 @@
+[
+  {
+    "name": "self_heal_hang_agent",
+    "command": ["python", "tests/self_heal_hang_agent.py"],
+    "restart_on_crash": true,
+    "max_restarts": 5,
+    "restart_backoff_secs": 1,
+    "logfile": "build/self_heal_hang_agent.log",
+    "heartbeat_keyword": "heartbeat",
+    "heartbeat_interval_secs": 3
+  }
+]

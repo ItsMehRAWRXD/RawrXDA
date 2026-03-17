@@ -728,6 +728,7 @@ struct CmdDescriptor {
     const char*     cliAlias;
     CmdExposure     exposure;
     const char*     category;
+    const char*     handlerName;
     CommandResult   (*handler)(const CommandContext&);
     uint32_t        flags;
 };
@@ -737,7 +738,7 @@ struct CmdDescriptor {
 // ============================================================================
 
 #define EXPAND_CMD_DESC(id, sym, name, cli, exp, cat, handler, flags) \
-    { id, #sym, name, cli, CmdExposure::exp, cat, handler, flags },
+    { id, #sym, name, cli, CmdExposure::exp, cat, #handler, handler, flags },
 
 // Forward-declare all handlers (they must exist or link fails)
 #define EXPAND_CMD_DECL(id, sym, name, cli, exp, cat, handler, flags) \

@@ -7,6 +7,8 @@
 
 ; ─── Cross-module symbol resolution ───
 INCLUDE rawrxd_master.inc
+INCLUDE rawr_cpu_features.inc
+INCLUDE rawr_globals.inc
 
 .code
 
@@ -63,7 +65,7 @@ inner_k:
     mov rax, r15
     mul r11
     add rax, r14
-    vmovups ymm2, [r8 + rax*4]
+    vmovups ymm2, YMMWORD PTR [r8 + rax*4]
     
     ; FMA: sum += A[i][k] * B[k][j]
     vfmadd231ps ymm0, ymm1, ymm2
@@ -76,7 +78,7 @@ store_result:
     mov rax, r13
     mul r11
     add rax, r14
-    vmovups [rcx + rax*4], ymm0
+    vmovups YMMWORD PTR [rcx + rax*4], ymm0
     
     add r14, 8          ; 8 floats per ymm
     jmp tile_j
@@ -106,6 +108,16 @@ Inference_MatMul_AVX512 PROC FRAME
     .setframe rbp, 0
     .endprolog
 
+    ; ── Runtime AVX-512 gate ──────────────────────────────────────────
+    ; If g_HasAVX512F was never set (InferenceCore_Init not called yet),
+    ; or CPU lacks AVX-512, fall back to the AVX2 MatMul_AVX kernel.
+    cmp     g_HasAVX512F, 1
+    je      @@avx512_ok
+    ; Fallback: tail-call into AVX2 path (same ABI signature)
+    pop     rbp
+    jmp     MatMul_AVX
+@@avx512_ok:
+
     ; rcx = Weights (A), rdx = Input (B), r8 = HiddenDim (K)
     ; Assume M=1 for inference (single token), N=HiddenDim
     
@@ -118,7 +130,7 @@ loop_k:
     jae done_k
     
     ; Load 16 floats from Weights
-    vmovups zmm1, [rcx + r10*4]
+    vmovups zmm1, ZMMWORD PTR [rcx + r10*4]
     
     ; Broadcast single float from Input
     vbroadcastss zmm2, dword ptr [rdx + r10*4]
@@ -131,7 +143,7 @@ loop_k:
     
 done_k:
     ; Store result back to rcx (in-place?)
-    vmovups [rcx], zmm0
+    vmovups ZMMWORD PTR [rcx], zmm0
     
     mov rsp, rbp
     pop rbp
@@ -150,6 +162,19 @@ InferenceCore_GenerateToken PROC FRAME
     sub rsp, 32
     .allocstack 32
     .endprolog
+
+    ; ── Runtime AVX-512 guard ─────────────────────────────────────────
+    ; The sub-routines (RMSNorm, RoPE, MHA, FFN, Sampling) may dispatch
+    ; into ZMM code paths.  If AVX-512 is not available, bail with
+    ; EAX = 0 ("token not generated") so the C++ caller can use its
+    ; scalar fallback.
+    cmp     g_HasAVX512F, 1
+    je      @@gen_avx512_ok
+    xor     eax, eax            ; 0 = generation failed (no AVX-512)
+    add     rsp, 32
+    pop     rbp
+    ret
+@@gen_avx512_ok:
 
     ; 1. RMSNorm (Root Mean Square Layer Normalization)
     call Apply_RMSNorm

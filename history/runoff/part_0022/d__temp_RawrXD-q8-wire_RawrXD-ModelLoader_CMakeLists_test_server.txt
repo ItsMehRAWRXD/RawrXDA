@@ -1,0 +1,40 @@
+# Standalone GGUF Server Test
+# Build with: cmake -B build-test -S . -DCMAKE_PREFIX_PATH=C:/Qt/6.7.3/msvc2022_64
+#             cmake --build build-test --config Release --target test_gguf_server
+
+cmake_minimum_required(VERSION 3.20)
+project(test_gguf_server)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Find Qt
+find_package(Qt6 REQUIRED COMPONENTS Core Network)
+
+# Include directories
+include_directories(
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/src/qtapp
+)
+
+# Test executable
+add_executable(test_gguf_server
+    test_gguf_server.cpp
+    src/qtapp/gguf_server.cpp
+    src/inference_engine.cpp
+)
+
+target_link_libraries(test_gguf_server
+    Qt6::Core
+    Qt6::Network
+)
+
+# Enable Qt MOC
+set_target_properties(test_gguf_server PROPERTIES
+    AUTOMOC ON
+)
+
+# Output directory
+set_target_properties(test_gguf_server PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+)

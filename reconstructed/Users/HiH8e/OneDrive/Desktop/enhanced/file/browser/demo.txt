@@ -1,0 +1,53 @@
+# Enhanced File Browser Demo
+
+This file demonstrates the enhanced file browser in RawrXD.ps1!
+
+## New Features:
+
+### 📁 Visual File Tree
+- Folders show with 📁 icon
+- Files show with appropriate emojis:
+  - 📄 Text files (.txt, .md, .log)
+  - ⚡ Scripts (.ps1, .bat, .cmd, .sh) 
+  - ⚙️ Config files (.json, .xml, .yml, .yaml)
+  - 🌐 Web files (.js, .html, .css)
+  - 💻 Code files (.py, .cs, .cpp, .c, .h, .java)
+  - 🖼️ Images (.jpg, .png, .gif, .bmp)
+  - 🎵 Media (.mp3, .wav, .mp4, .avi)
+  - 📦 Archives (.zip, .rar, .7z, .gz)
+  - 📋 Documents (.pdf, .doc, .docx, .xls, .xlsx)
+
+### 🎨 Color-Coded Files
+- PowerShell scripts: Blue
+- Text files: Green  
+- Config files: Purple
+- Code files: Dark Orange
+
+### 🔄 Enhanced Navigation
+- Refresh button (🔄) to reload the tree
+- Up button (⬆️) to go to parent directory
+- Context menu with right-click options
+
+### 📝 Better File Operations
+- Double-click files to open in editor
+- Double-click folders to navigate
+- Right-click context menu:
+  - Open File
+  - Open Folder in Explorer
+  - Copy Path to Clipboard
+  - Refresh
+
+### 🔍 Improved Performance
+- Lazy loading of folder contents
+- Limited initial load (20 items per folder)
+- Dummy nodes to show expand arrows
+- Debug logging for troubleshooting
+
+Test this file by:
+1. Running your enhanced RawrXD.ps1
+2. Browsing to this file in the file explorer
+3. Double-clicking to open it
+4. Testing the right-click context menu
+5. Using the toolbar buttons
+
+Enjoy your enhanced file browsing experience!

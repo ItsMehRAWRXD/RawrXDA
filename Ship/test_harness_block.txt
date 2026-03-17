@@ -1,0 +1,342 @@
+// ============================================================================
+// Test Harness Backend — Named Pipe Beacon Server
+// Optional backend that listens on \\.\pipe\RawrXD_TestBeacon for commands.
+// A test client connects, sends a command string, and receives text results.
+// The pipe server runs on its own thread; commands dispatch to the UI thread
+// via WM_APP messages and return results through a synchronized response buffer.
+// ============================================================================
+
+#define RAWRXD_PIPE_NAME L"\\\\.\\pipe\\RawrXD_TestBeacon"
+#define WM_TEST_BEACON   (WM_APP + 100)
+#define WM_TEST_RESULT   (WM_APP + 101)
+
+static HANDLE g_hTestPipeThread = nullptr;
+static bool   g_bTestHarnessRunning = false;
+static std::mutex g_testResultMutex;
+static std::string g_testResultBuffer;
+static HANDLE g_hTestResultReady = nullptr;  // Manual-reset event
+
+// Beacon command IDs (sent as wParam in WM_TEST_BEACON)
+enum TestBeaconCmd : UINT {
+    TBC_PING            = 1,
+    TBC_GET_HWND_MAP    = 2,
+    TBC_GET_TREE_COUNT  = 3,
+    TBC_SEND_COMMAND    = 4,   // lParam = menu command ID
+    TBC_GET_TITLE       = 5,
+    TBC_GET_EDITOR_TEXT = 6,
+    TBC_GET_OUTPUT_TEXT = 7,
+    TBC_OPEN_FOLDER     = 8,   // lParam = pointer to path string (cross-thread)
+    TBC_GET_TREE_ITEMS  = 9,
+    TBC_GET_VISIBILITY  = 10,
+    TBC_LOAD_FILE       = 11,  // lParam = pointer to path string
+    TBC_GET_WORKSPACE   = 12,
+};
+
+// Collect tree items recursively into a string
+static void CollectTreeItems(HWND hTree, HTREEITEM hItem, std::string& out, int depth) {
+    if (!hItem) return;
+    while (hItem) {
+        WCHAR buf[MAX_PATH] = {0};
+        TVITEMW tvi = {};
+        tvi.mask = TVIF_TEXT | TVIF_CHILDREN;
+        tvi.hItem = hItem;
+        tvi.pszText = buf;
+        tvi.cchTextMax = MAX_PATH;
+        SendMessageW(hTree, TVM_GETITEMW, 0, (LPARAM)&tvi);
+
+        for (int i = 0; i < depth; i++) out += "  ";
+        std::wstring wname(buf);
+        // Convert to UTF-8
+        int len = WideCharToMultiByte(CP_UTF8, 0, wname.c_str(), -1, nullptr, 0, nullptr, nullptr);
+        std::string name(len - 1, 0);
+        WideCharToMultiByte(CP_UTF8, 0, wname.c_str(), -1, &name[0], len, nullptr, nullptr);
+        out += (tvi.cChildren ? "[D] " : "[F] ") + name + "\n";
+
+        // Recurse into children
+        HTREEITEM hChild = (HTREEITEM)SendMessageW(hTree, TVM_GETNEXTITEM, TVGN_CHILD, (LPARAM)hItem);
+        if (hChild) CollectTreeItems(hTree, hChild, out, depth + 1);
+
+        hItem = (HTREEITEM)SendMessageW(hTree, TVM_GETNEXTITEM, TVGN_NEXT, (LPARAM)hItem);
+    }
+}
+
+// Handle a beacon command on the UI thread (called from WndProc WM_TEST_BEACON)
+static void HandleTestBeacon(HWND hwnd, WPARAM wParam, LPARAM lParam) {
+    std::string result;
+
+    switch ((TestBeaconCmd)wParam) {
+    case TBC_PING:
+        result = "PONG\n";
+        break;
+
+    case TBC_GET_HWND_MAP: {
+        char buf[1024];
+        snprintf(buf, sizeof(buf),
+            "Main=%p\nEditor=%p\nOutput=%p\nFileTree=%p\nTerminal=%p\n"
+            "ChatPanel=%p\nChatInput=%p\nChatHistory=%p\nChatSend=%p\n"
+            "StatusBar=%p\nIssuesPanel=%p\nIssuesList=%p\n",
+            g_hwndMain, g_hwndEditor, g_hwndOutput, g_hwndFileTree,
+            g_hwndTerminal, g_hwndChatPanel, g_hwndChatInput,
+            g_hwndChatHistory, g_hwndChatSend, g_hwndStatusBar,
+            g_hwndIssuesPanel, g_hwndIssuesList);
+        result = buf;
+        break;
+    }
+
+    case TBC_GET_TREE_COUNT: {
+        int count = (int)SendMessageW(g_hwndFileTree, TVM_GETCOUNT, 0, 0);
+        result = "TREE_COUNT=" + std::to_string(count) + "\n";
+        break;
+    }
+
+    case TBC_SEND_COMMAND: {
+        UINT cmdId = (UINT)lParam;
+        SendMessageW(hwnd, WM_COMMAND, MAKEWPARAM(cmdId, 0), 0);
+        result = "CMD_SENT=" + std::to_string(cmdId) + "\n";
+        break;
+    }
+
+    case TBC_GET_TITLE: {
+        WCHAR title[512]; GetWindowTextW(hwnd, title, 512);
+        int len = WideCharToMultiByte(CP_UTF8, 0, title, -1, nullptr, 0, nullptr, nullptr);
+        std::string t(len - 1, 0);
+        WideCharToMultiByte(CP_UTF8, 0, title, -1, &t[0], len, nullptr, nullptr);
+        result = "TITLE=" + t + "\n";
+        break;
+    }
+
+    case TBC_GET_EDITOR_TEXT: {
+        int textLen = GetWindowTextLengthW(g_hwndEditor);
+        if (textLen > 0) {
+            std::vector<wchar_t> buf(textLen + 1);
+            GetWindowTextW(g_hwndEditor, buf.data(), textLen + 1);
+            std::wstring wt(buf.data());
+            int len = WideCharToMultiByte(CP_UTF8, 0, wt.c_str(), -1, nullptr, 0, nullptr, nullptr);
+            result.resize(len - 1);
+            WideCharToMultiByte(CP_UTF8, 0, wt.c_str(), -1, &result[0], len, nullptr, nullptr);
+        }
+        if (result.empty()) result = "(empty)";
+        result += "\n";
+        break;
+    }
+
+    case TBC_GET_OUTPUT_TEXT: {
+        int textLen = GetWindowTextLengthW(g_hwndOutput);
+        if (textLen > 0) {
+            std::vector<wchar_t> buf(textLen + 1);
+            GetWindowTextW(g_hwndOutput, buf.data(), textLen + 1);
+            std::wstring wt(buf.data());
+            int len = WideCharToMultiByte(CP_UTF8, 0, wt.c_str(), -1, nullptr, 0, nullptr, nullptr);
+            result.resize(len - 1);
+            WideCharToMultiByte(CP_UTF8, 0, wt.c_str(), -1, &result[0], len, nullptr, nullptr);
+        }
+        if (result.empty()) result = "(empty)";
+        result += "\n";
+        break;
+    }
+
+    case TBC_OPEN_FOLDER: {
+        wchar_t* path = (wchar_t*)lParam;
+        if (path) {
+            std::wstring folder(path);
+            g_workspaceRoot = folder;
+            PopulateFileTree(folder);
+            g_bFileTreeVisible = true;
+            CheckMenuItem(GetMenu(hwnd), IDM_VIEW_FILETREE, MF_CHECKED);
+            SendMessage(hwnd, WM_SIZE, 0, 0);
+            std::wstring title = L"RawrXD IDE - " + folder;
+            SetWindowTextW(hwnd, title.c_str());
+            int count = (int)SendMessageW(g_hwndFileTree, TVM_GETCOUNT, 0, 0);
+            result = "OPENED=" + std::to_string(count) + " items\n";
+        } else {
+            result = "ERROR=null path\n";
+        }
+        break;
+    }
+
+    case TBC_GET_TREE_ITEMS: {
+        HTREEITEM hRoot = (HTREEITEM)SendMessageW(g_hwndFileTree, TVM_GETNEXTITEM, TVGN_ROOT, 0);
+        if (hRoot) {
+            CollectTreeItems(g_hwndFileTree, hRoot, result, 0);
+        } else {
+            result = "(empty tree)\n";
+        }
+        break;
+    }
+
+    case TBC_GET_VISIBILITY: {
+        char buf[256];
+        snprintf(buf, sizeof(buf),
+            "FileTree=%d\nOutput=%d\nTerminal=%d\nChat=%d\nIssues=%d\n",
+            g_bFileTreeVisible ? 1 : 0, g_bOutputVisible ? 1 : 0,
+            g_bTerminalVisible ? 1 : 0, g_bChatVisible ? 1 : 0,
+            g_bIssuesVisible ? 1 : 0);
+        result = buf;
+        break;
+    }
+
+    case TBC_LOAD_FILE: {
+        wchar_t* path = (wchar_t*)lParam;
+        if (path) {
+            bool ok = LoadFile(std::wstring(path));
+            result = ok ? "LOADED=OK\n" : "LOADED=FAIL\n";
+        } else {
+            result = "ERROR=null path\n";
+        }
+        break;
+    }
+
+    case TBC_GET_WORKSPACE: {
+        if (!g_workspaceRoot.empty()) {
+            int len = WideCharToMultiByte(CP_UTF8, 0, g_workspaceRoot.c_str(), -1, nullptr, 0, nullptr, nullptr);
+            std::string ws(len - 1, 0);
+            WideCharToMultiByte(CP_UTF8, 0, g_workspaceRoot.c_str(), -1, &ws[0], len, nullptr, nullptr);
+            result = "WORKSPACE=" + ws + "\n";
+        } else {
+            result = "WORKSPACE=(none)\n";
+        }
+        break;
+    }
+
+    default:
+        result = "ERROR=unknown command " + std::to_string(wParam) + "\n";
+        break;
+    }
+
+    // Signal the result back to the pipe thread
+    {
+        std::lock_guard<std::mutex> lock(g_testResultMutex);
+        g_testResultBuffer = result;
+    }
+    SetEvent(g_hTestResultReady);
+}
+
+// Pipe server thread — listens for connections, reads commands, dispatches, returns results
+static DWORD WINAPI TestBeaconPipeThread(LPVOID) {
+    while (g_bTestHarnessRunning) {
+        HANDLE hPipe = CreateNamedPipeW(
+            RAWRXD_PIPE_NAME,
+            PIPE_ACCESS_DUPLEX,
+            PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
+            1,         // single instance
+            4096, 4096,
+            5000,      // 5s timeout
+            nullptr);
+
+        if (hPipe == INVALID_HANDLE_VALUE) {
+            Sleep(1000);
+            continue;
+        }
+
+        // Wait for a client to connect
+        BOOL connected = ConnectNamedPipe(hPipe, nullptr) ? TRUE : (GetLastError() == ERROR_PIPE_CONNECTED);
+        if (!connected) {
+            CloseHandle(hPipe);
+            continue;
+        }
+
+        // Client connected — read/write loop
+        while (g_bTestHarnessRunning) {
+            char cmdBuf[4096] = {0};
+            DWORD bytesRead = 0;
+            BOOL ok = ReadFile(hPipe, cmdBuf, sizeof(cmdBuf) - 1, &bytesRead, nullptr);
+            if (!ok || bytesRead == 0) break;
+            cmdBuf[bytesRead] = 0;
+
+            // Parse command: "CMD [args]"
+            std::string cmdStr(cmdBuf);
+            // Trim trailing whitespace
+            while (!cmdStr.empty() && (cmdStr.back() == '\n' || cmdStr.back() == '\r' || cmdStr.back() == ' '))
+                cmdStr.pop_back();
+
+            WPARAM wp = 0;
+            LPARAM lp = 0;
+            std::wstring argW;  // Keep alive until UI thread processes
+
+            if (cmdStr == "PING") {
+                wp = TBC_PING;
+            } else if (cmdStr == "HWND_MAP") {
+                wp = TBC_GET_HWND_MAP;
+            } else if (cmdStr == "TREE_COUNT") {
+                wp = TBC_GET_TREE_COUNT;
+            } else if (cmdStr.rfind("CMD ", 0) == 0) {
+                wp = TBC_SEND_COMMAND;
+                lp = (LPARAM)atoi(cmdStr.c_str() + 4);
+            } else if (cmdStr == "TITLE") {
+                wp = TBC_GET_TITLE;
+            } else if (cmdStr == "EDITOR_TEXT") {
+                wp = TBC_GET_EDITOR_TEXT;
+            } else if (cmdStr == "OUTPUT_TEXT") {
+                wp = TBC_GET_OUTPUT_TEXT;
+            } else if (cmdStr.rfind("OPEN_FOLDER ", 0) == 0) {
+                wp = TBC_OPEN_FOLDER;
+                std::string path8 = cmdStr.substr(12);
+                int wlen = MultiByteToWideChar(CP_UTF8, 0, path8.c_str(), -1, nullptr, 0);
+                argW.resize(wlen - 1);
+                MultiByteToWideChar(CP_UTF8, 0, path8.c_str(), -1, &argW[0], wlen);
+                lp = (LPARAM)argW.c_str();
+            } else if (cmdStr == "TREE_ITEMS") {
+                wp = TBC_GET_TREE_ITEMS;
+            } else if (cmdStr == "VISIBILITY") {
+                wp = TBC_GET_VISIBILITY;
+            } else if (cmdStr.rfind("LOAD_FILE ", 0) == 0) {
+                wp = TBC_LOAD_FILE;
+                std::string path8 = cmdStr.substr(10);
+                int wlen = MultiByteToWideChar(CP_UTF8, 0, path8.c_str(), -1, nullptr, 0);
+                argW.resize(wlen - 1);
+                MultiByteToWideChar(CP_UTF8, 0, path8.c_str(), -1, &argW[0], wlen);
+                lp = (LPARAM)argW.c_str();
+            } else if (cmdStr == "WORKSPACE") {
+                wp = TBC_GET_WORKSPACE;
+            } else if (cmdStr == "QUIT" || cmdStr == "EXIT") {
+                const char* bye = "BYE\n";
+                DWORD bw; WriteFile(hPipe, bye, 4, &bw, nullptr);
+                FlushFileBuffers(hPipe);
+                break;
+            } else {
+                std::string err = "ERROR=unknown: " + cmdStr + "\n";
+                DWORD bw; WriteFile(hPipe, err.c_str(), (DWORD)err.size(), &bw, nullptr);
+                FlushFileBuffers(hPipe);
+                continue;
+            }
+
+            // Reset the event, dispatch to UI thread, wait for result
+            ResetEvent(g_hTestResultReady);
+            SendMessageW(g_hwndMain, WM_TEST_BEACON, wp, lp);
+
+            // SendMessage is synchronous across threads — result is ready now
+            std::string response;
+            {
+                std::lock_guard<std::mutex> lock(g_testResultMutex);
+                response = g_testResultBuffer;
+            }
+
+            DWORD bytesWritten;
+            WriteFile(hPipe, response.c_str(), (DWORD)response.size(), &bytesWritten, nullptr);
+            FlushFileBuffers(hPipe);
+        }
+
+        DisconnectNamedPipe(hPipe);
+        CloseHandle(hPipe);
+    }
+    return 0;
+}
+
+void StartTestHarness() {
+    if (g_bTestHarnessRunning) return;
+    g_hTestResultReady = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+    g_bTestHarnessRunning = true;
+    g_hTestPipeThread = CreateThread(nullptr, 0, TestBeaconPipeThread, nullptr, 0, nullptr);
+    AppendWindowText(g_hwndOutput, L"[TestHarness] Beacon pipe server started on \\\\.\\pipe\\RawrXD_TestBeacon\r\n");
+}
+
+void StopTestHarness() {
+    if (!g_bTestHarnessRunning) return;
+    g_bTestHarnessRunning = false;
+    // Kick the pipe out of ConnectNamedPipe by briefly connecting
+    HANDLE h = CreateFileW(RAWRXD_PIPE_NAME, GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, 0, nullptr);
+    if (h != INVALID_HANDLE_VALUE) CloseHandle(h);
+    if (g_hTestPipeThread) { WaitForSingleObject(g_hTestPipeThread, 3000); CloseHandle(g_hTestPipeThread); g_hTestPipeThread = nullptr; }
+    if (g_hTestResultReady) { CloseHandle(g_hTestResultReady); g_hTestResultReady = nullptr; }
+}
+

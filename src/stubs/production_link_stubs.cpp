@@ -12,9 +12,11 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <array>
 #include <windows.h>
 #include "../win32app/Win32IDE.h"
 #include "../../include/agentic_autonomous_config.h"
+#include "../../include/feature_registry.h"
 
 // ModelRegistry, UniversalModelRouter, CheckpointManager, ProjectContext, UI stubs:
 // Provided by real sources (model_registry.cpp, universal_model_router, etc.) when built.
@@ -369,8 +371,36 @@ public:
     }
     
     bool repairCheckpoint(const std::string& checkpointId) { 
-        // Attempt to repair corrupted checkpoint
-        return false; // Not implemented
+        if (!m_initialized || checkpointId.empty()) return false;
+
+        CheckpointState state;
+        if (loadCheckpoint(checkpointId, state)) {
+            return true;
+        }
+
+        auto checkpoints = listCheckpoints();
+        std::sort(checkpoints.begin(), checkpoints.end(),
+            [](const CheckpointIndex& a, const CheckpointIndex& b) {
+                return a.timestamp > b.timestamp;
+            });
+
+        for (const auto& cp : checkpoints) {
+            if (cp.id == checkpointId) continue;
+            if (!loadCheckpoint(cp.id, state)) continue;
+
+            const std::filesystem::path src = std::filesystem::path(m_basePath) / (cp.id + ".checkpoint");
+            const std::filesystem::path dst = std::filesystem::path(m_basePath) / (checkpointId + ".checkpoint");
+            std::error_code ec;
+            std::filesystem::copy_file(src, dst, std::filesystem::copy_options::overwrite_existing, ec);
+            if (ec) continue;
+
+            CheckpointState verify;
+            if (loadCheckpoint(checkpointId, verify)) {
+                return true;
+            }
+        }
+
+        return false;
     }
     
     uint64_t getTotalCheckpointSize() const { 
@@ -657,6 +687,11 @@ public:
 // ================================================
 #include "../../include/checkpoint_manager.h"
 
+namespace {
+int g_checkpointDistributedRank = 0;
+int g_checkpointDistributedWorldSize = 1;
+}
+
 CheckpointManager::CheckpointManager(void*) {}
 CheckpointManager::~CheckpointManager() = default;
 bool CheckpointManager::initialize(const std::string& checkpointDir, int maxCheckpoints) {
@@ -791,8 +826,43 @@ std::vector<CheckpointManager::CheckpointIndex> CheckpointManager::getCheckpoint
     }
     return list;
 }
-bool CheckpointManager::deleteCheckpoint(const std::string&) { return false; }
-int CheckpointManager::pruneOldCheckpoints(int) { return 0; }
+bool CheckpointManager::deleteCheckpoint(const std::string& checkpointId) {
+    if (!isInitialized() || checkpointId.empty()) return false;
+
+    const auto path = std::filesystem::path(m_checkpointDir) / (checkpointId + ".ckpt");
+    std::error_code ec;
+    const bool removed = std::filesystem::remove(path, ec);
+    if (ec || !removed) return false;
+
+    m_checkpointIndex.erase(
+        std::remove_if(m_checkpointIndex.begin(), m_checkpointIndex.end(),
+            [&](const CheckpointIndex& idx) { return idx.checkpointId == checkpointId; }),
+        m_checkpointIndex.end());
+
+    if (m_bestCheckpointId == checkpointId) {
+        m_bestCheckpointId.clear();
+    }
+    return true;
+}
+int CheckpointManager::pruneOldCheckpoints(int keepCount) {
+    if (!isInitialized()) return 0;
+    if (keepCount < 0) keepCount = 0;
+
+    auto list = listCheckpoints();
+    std::sort(list.begin(), list.end(), [](const CheckpointIndex& a, const CheckpointIndex& b) {
+        return a.metadata.timestamp > b.metadata.timestamp;
+    });
+
+    if (static_cast<size_t>(keepCount) >= list.size()) return 0;
+
+    int deleted = 0;
+    for (size_t i = static_cast<size_t>(keepCount); i < list.size(); ++i) {
+        if (deleteCheckpoint(list[i].checkpointId)) {
+            ++deleted;
+        }
+    }
+    return deleted;
+}
 CheckpointManager::CheckpointMetadata CheckpointManager::getBestCheckpointInfo() const {
     if (!m_bestCheckpointId.empty()) return getCheckpointMetadata(m_bestCheckpointId);
     auto list = listCheckpoints();
@@ -802,11 +872,56 @@ CheckpointManager::CheckpointMetadata CheckpointManager::getBestCheckpointInfo()
     });
     return list.front().metadata;
 }
-bool CheckpointManager::updateCheckpointMetadata(const std::string&, const CheckpointMetadata&) { return false; }
-bool CheckpointManager::setCheckpointNote(const std::string&, const std::string&) { return false; }
-bool CheckpointManager::enableAutoCheckpointing(int, int) { return false; }
+bool CheckpointManager::updateCheckpointMetadata(const std::string& checkpointId, const CheckpointMetadata& metadata) {
+    if (!isInitialized() || checkpointId.empty() || !validateCheckpoint(checkpointId)) return false;
+
+    bool updated = false;
+    for (auto& idx : m_checkpointIndex) {
+        if (idx.checkpointId == checkpointId) {
+            idx.metadata = metadata;
+            idx.metadata.checkpointId = checkpointId;
+            updated = true;
+            break;
+        }
+    }
+
+    if (!updated) {
+        CheckpointIndex idx;
+        idx.checkpointId = checkpointId;
+        idx.filePath = (std::filesystem::path(m_checkpointDir) / (checkpointId + ".ckpt")).string();
+        idx.metadata = metadata;
+        idx.metadata.checkpointId = checkpointId;
+        m_checkpointIndex.push_back(std::move(idx));
+    }
+
+    if (metadata.isBestModel) {
+        m_bestCheckpointId = checkpointId;
+    }
+    return true;
+}
+bool CheckpointManager::setCheckpointNote(const std::string& checkpointId, const std::string& note) {
+    if (!isInitialized() || checkpointId.empty()) return false;
+    auto metadata = getCheckpointMetadata(checkpointId);
+    metadata.checkpointId = checkpointId;
+    metadata.notes = note;
+    return updateCheckpointMetadata(checkpointId, metadata);
+}
+bool CheckpointManager::enableAutoCheckpointing(int intervalEpochs, int maxCheckpoints) {
+    if (intervalEpochs <= 0) return false;
+    m_autoCheckpointEnabled = true;
+    m_autoCheckpointEpochInterval = intervalEpochs;
+    if (maxCheckpoints > 0) {
+        m_maxCheckpoints = maxCheckpoints;
+    }
+    return true;
+}
 void CheckpointManager::disableAutoCheckpointing() {}
-bool CheckpointManager::shouldCheckpoint(int, int) const { return false; }
+bool CheckpointManager::shouldCheckpoint(int currentEpoch, int totalEpochs) const {
+    if (!m_autoCheckpointEnabled || currentEpoch < 0) return false;
+    if (totalEpochs > 0 && currentEpoch >= (totalEpochs - 1)) return true;
+    const int interval = std::max(1, m_autoCheckpointEpochInterval);
+    return (currentEpoch == 0) || ((currentEpoch % interval) == 0);
+}
 bool CheckpointManager::validateCheckpoint(const std::string& checkpointId) const {
     std::error_code ec;
     const auto p = std::filesystem::path(m_checkpointDir) / (checkpointId + ".ckpt");
@@ -818,9 +933,47 @@ std::map<std::string, bool> CheckpointManager::validateAllCheckpoints() const {
     for (const auto& cp : listCheckpoints()) out[cp.checkpointId] = validateCheckpoint(cp.checkpointId);
     return out;
 }
-bool CheckpointManager::repairCheckpoint(const std::string&) { return false; }
-uint64_t CheckpointManager::getTotalCheckpointSize() const { return 0; }
-uint64_t CheckpointManager::getCheckpointSize(const std::string&) const { return 0; }
+bool CheckpointManager::repairCheckpoint(const std::string& checkpointId) {
+    if (checkpointId.empty()) return false;
+    if (validateCheckpoint(checkpointId)) return true;
+
+    const auto dst = std::filesystem::path(m_checkpointDir) / (checkpointId + ".ckpt");
+    auto list = listCheckpoints();
+    std::sort(list.begin(), list.end(), [](const CheckpointIndex& a, const CheckpointIndex& b) {
+        return a.metadata.timestamp > b.metadata.timestamp;
+    });
+
+    for (const auto& cp : list) {
+        if (cp.checkpointId == checkpointId) continue;
+        if (!validateCheckpoint(cp.checkpointId)) continue;
+
+        const auto src = std::filesystem::path(m_checkpointDir) / (cp.checkpointId + ".ckpt");
+        std::error_code ec;
+        std::filesystem::copy_file(src, dst, std::filesystem::copy_options::overwrite_existing, ec);
+        if (!ec && validateCheckpoint(checkpointId)) {
+            return true;
+        }
+    }
+    return false;
+}
+uint64_t CheckpointManager::getTotalCheckpointSize() const {
+    uint64_t totalBytes = 0;
+    for (const auto& checkpoint : listCheckpoints()) {
+        totalBytes += getCheckpointSize(checkpoint.checkpointId);
+    }
+    return totalBytes;
+}
+uint64_t CheckpointManager::getCheckpointSize(const std::string& checkpointId) const {
+    if (!isInitialized() || checkpointId.empty()) return 0;
+
+    const auto checkpointPath = std::filesystem::path(m_checkpointDir) / (checkpointId + ".ckpt");
+    std::error_code ec;
+    if (!std::filesystem::exists(checkpointPath, ec) || !std::filesystem::is_regular_file(checkpointPath, ec)) {
+        return 0;
+    }
+    const uint64_t fileSize = std::filesystem::file_size(checkpointPath, ec);
+    return ec ? 0 : fileSize;
+}
 std::string CheckpointManager::generateCheckpointReport() const {
     std::ostringstream oss;
     const auto cps = listCheckpoints();
@@ -843,8 +996,62 @@ std::string CheckpointManager::compareCheckpoints(const std::string& checkpointI
     oss << "val_loss: " << a.validationLoss << " vs " << b.validationLoss << "\n";
     return oss.str();
 }
-void CheckpointManager::setDistributedInfo(int, int) {}
-bool CheckpointManager::synchronizeDistributedCheckpoints() { return false; }
+void CheckpointManager::setDistributedInfo(int rank, int worldSize) {
+    g_checkpointDistributedRank = std::max(0, rank);
+    g_checkpointDistributedWorldSize = std::max(1, worldSize);
+}
+bool CheckpointManager::synchronizeDistributedCheckpoints() {
+    if (!isInitialized()) return false;
+
+    std::error_code ec;
+    const auto syncRoot = std::filesystem::path(m_checkpointDir) / "distributed_sync";
+    const auto localRankDir = syncRoot / ("rank_" + std::to_string(g_checkpointDistributedRank));
+    std::filesystem::create_directories(localRankDir, ec);
+    if (ec) return false;
+
+    bool wroteLocalReplica = false;
+    const auto checkpoints = listCheckpoints();
+    for (const auto& cp : checkpoints) {
+        const auto src = std::filesystem::path(m_checkpointDir) / (cp.checkpointId + ".ckpt");
+        const auto dst = localRankDir / (cp.checkpointId + ".ckpt");
+        std::error_code copyEc;
+        std::filesystem::copy_file(src, dst, std::filesystem::copy_options::overwrite_existing, copyEc);
+        if (!copyEc) {
+            wroteLocalReplica = true;
+        }
+    }
+
+    bool importedReplica = false;
+    for (const auto& rankDir : std::filesystem::directory_iterator(syncRoot, ec)) {
+        if (ec || !rankDir.is_directory()) continue;
+        if (rankDir.path() == localRankDir) continue;
+
+        for (const auto& file : std::filesystem::directory_iterator(rankDir.path(), ec)) {
+            if (ec || !file.is_regular_file()) continue;
+            if (file.path().extension() != ".ckpt") continue;
+
+            const auto dst = std::filesystem::path(m_checkpointDir) / file.path().filename();
+            if (std::filesystem::exists(dst, ec)) continue;
+            std::error_code importEc;
+            std::filesystem::copy_file(file.path(), dst, std::filesystem::copy_options::overwrite_existing, importEc);
+            if (!importEc) {
+                importedReplica = true;
+            }
+        }
+    }
+
+    const auto manifest = localRankDir / "manifest.txt";
+    std::ofstream manifestOut(manifest, std::ios::trunc);
+    if (!manifestOut) return false;
+    manifestOut << "rank=" << g_checkpointDistributedRank << "\n";
+    manifestOut << "world_size=" << g_checkpointDistributedWorldSize << "\n";
+    manifestOut << "checkpoint_count=" << checkpoints.size() << "\n";
+    manifestOut << "wrote_local_replica=" << (wroteLocalReplica ? "true" : "false") << "\n";
+    manifestOut << "imported_replica=" << (importedReplica ? "true" : "false") << "\n";
+
+    m_checkpointIndex = listCheckpoints();
+    return manifestOut.good();
+}
 std::string CheckpointManager::exportConfiguration() const {
     std::ostringstream oss;
     oss << "{";
@@ -856,9 +1063,108 @@ std::string CheckpointManager::exportConfiguration() const {
     oss << "}";
     return oss.str();
 }
-bool CheckpointManager::importConfiguration(const std::string&) { return false; }
-bool CheckpointManager::saveConfigurationToFile(const std::string&) const { return false; }
-bool CheckpointManager::loadConfigurationFromFile(const std::string&) { return false; }
+bool CheckpointManager::importConfiguration(const std::string& config) {
+    if (config.empty()) return false;
+
+    auto extractString = [&](const char* key, std::string& out) -> bool {
+        const std::string pattern = std::string("\"") + key + "\":\"";
+        const size_t start = config.find(pattern);
+        if (start == std::string::npos) return false;
+        const size_t valueStart = start + pattern.size();
+        const size_t valueEnd = config.find('"', valueStart);
+        if (valueEnd == std::string::npos) return false;
+        out = config.substr(valueStart, valueEnd - valueStart);
+        return true;
+    };
+
+    auto extractInt = [&](const char* key, int& out) -> bool {
+        const std::string pattern = std::string("\"") + key + "\":";
+        const size_t start = config.find(pattern);
+        if (start == std::string::npos) return false;
+        const size_t valueStart = start + pattern.size();
+        std::stringstream ss(config.substr(valueStart));
+        int v = 0;
+        ss >> v;
+        if (ss.fail()) return false;
+        out = v;
+        return true;
+    };
+
+    auto extractBool = [&](const char* key, bool& out) -> bool {
+        const std::string pattern = std::string("\"") + key + "\":";
+        const size_t start = config.find(pattern);
+        if (start == std::string::npos) return false;
+        const size_t valueStart = start + pattern.size();
+        if (config.compare(valueStart, 4, "true") == 0) {
+            out = true;
+            return true;
+        }
+        if (config.compare(valueStart, 5, "false") == 0) {
+            out = false;
+            return true;
+        }
+        return false;
+    };
+
+    bool parsedAny = false;
+
+    std::string checkpointDir;
+    if (extractString("checkpointDir", checkpointDir)) {
+        m_checkpointDir = checkpointDir;
+        std::error_code ec;
+        std::filesystem::create_directories(m_checkpointDir, ec);
+        parsedAny = true;
+    }
+
+    int maxCheckpoints = 0;
+    if (extractInt("maxCheckpoints", maxCheckpoints) && maxCheckpoints > 0) {
+        m_maxCheckpoints = maxCheckpoints;
+        parsedAny = true;
+    }
+
+    bool autoEnabled = false;
+    if (extractBool("autoEnabled", autoEnabled)) {
+        m_autoCheckpointEnabled = autoEnabled;
+        parsedAny = true;
+    }
+
+    int autoInterval = 0;
+    if (extractInt("autoInterval", autoInterval)) {
+        m_autoCheckpointInterval = autoInterval;
+        parsedAny = true;
+    }
+
+    int autoEpochInterval = 0;
+    if (extractInt("autoEpochInterval", autoEpochInterval) && autoEpochInterval > 0) {
+        m_autoCheckpointEpochInterval = autoEpochInterval;
+        parsedAny = true;
+    }
+
+    if (!m_checkpointDir.empty()) {
+        m_checkpointIndex = listCheckpoints();
+    }
+    return parsedAny;
+}
+bool CheckpointManager::saveConfigurationToFile(const std::string& filename) const {
+    if (filename.empty()) return false;
+    const std::filesystem::path path(filename);
+    std::error_code ec;
+    if (path.has_parent_path()) {
+        std::filesystem::create_directories(path.parent_path(), ec);
+    }
+    std::ofstream out(path, std::ios::trunc);
+    if (!out) return false;
+    out << exportConfiguration();
+    return out.good();
+}
+bool CheckpointManager::loadConfigurationFromFile(const std::string& filename) {
+    if (filename.empty()) return false;
+    std::ifstream in(filename, std::ios::binary);
+    if (!in) return false;
+    std::string config((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    if (config.empty()) return false;
+    return importConfiguration(config);
+}
 std::string CheckpointManager::generateCheckpointId() {
     const auto now = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::system_clock::now().time_since_epoch()).count();
@@ -927,15 +1233,15 @@ bool CheckpointManager::readCheckpointFromDisk(const std::string& checkpointId, 
 // ================================================
 // Agentic Config Stubs
 // ================================================
+// Superseded by src/core/agentic_autonomous_config.cpp. Keep this block disabled
+// to avoid conflicting/obsolete enums and behavior.
+#if 0
 namespace RawrXD {
-
 AgenticAutonomousConfig::AgenticAutonomousConfig() = default;
-
 AgenticAutonomousConfig& AgenticAutonomousConfig::instance() {
     static AgenticAutonomousConfig inst;
     return inst;
 }
-
 bool AgenticAutonomousConfig::setOperationModeFromString(const std::string& mode) { 
     if (mode == "agent") m_operationMode = AgenticOperationMode::Agent;
     else if (mode == "autonomous") m_operationMode = AgenticOperationMode::Autonomous;
@@ -943,7 +1249,6 @@ bool AgenticAutonomousConfig::setOperationModeFromString(const std::string& mode
     else return false;
     return true;
 }
-
 bool AgenticAutonomousConfig::setModelSelectionModeFromString(const std::string& mode) { 
     if (mode == "manual") m_modelSelectionMode = ModelSelectionMode::Manual;
     else if (mode == "automatic") m_modelSelectionMode = ModelSelectionMode::Automatic;
@@ -951,19 +1256,15 @@ bool AgenticAutonomousConfig::setModelSelectionModeFromString(const std::string&
     else return false;
     return true;
 }
-
 void AgenticAutonomousConfig::setPerModelInstanceCount(int count) { 
     m_perModelInstanceCount = count; 
 }
-
 void AgenticAutonomousConfig::setMaxModelsInParallel(int count) { 
     m_maxModelsInParallel = count; 
 }
-
 void AgenticAutonomousConfig::setCycleAgentCounter(int count) { 
     m_cycleAgentCounter = count; 
 }
-
 bool AgenticAutonomousConfig::setQualitySpeedBalanceFromString(const std::string& balance) { 
     if (balance == "quality") m_qualitySpeedBalance = QualitySpeedBalance::Quality;
     else if (balance == "balanced") m_qualitySpeedBalance = QualitySpeedBalance::Balanced;
@@ -971,16 +1272,12 @@ bool AgenticAutonomousConfig::setQualitySpeedBalanceFromString(const std::string
     else return false;
     return true;
 }
-
 bool AgenticAutonomousConfig::fromJson(const std::string& json) { 
-    // Simple JSON parsing - in real implementation would use a proper JSON library
     return true;
 }
-
 AgenticOperationMode AgenticAutonomousConfig::getOperationMode() const { 
     return m_operationMode; 
 }
-
 std::string AgenticAutonomousConfig::getRecommendedTerminalRequirementHint() const { 
     switch (m_operationMode) {
         case AgenticOperationMode::Agent: return "Basic terminal access";
@@ -989,31 +1286,23 @@ std::string AgenticAutonomousConfig::getRecommendedTerminalRequirementHint() con
         default: return "Standard";
     }
 }
-
 int AgenticAutonomousConfig::effectiveMaxParallel(int availableCores) const { 
     return std::min(m_maxModelsInParallel, availableCores / 2);
 }
-
 void AgenticAutonomousConfig::estimateProductionAuditIterations(const std::string& projectType, 
     int projectSize, int* minIterations, int* maxIterations) const {
     if (minIterations) *minIterations = projectSize / 10;
     if (maxIterations) *maxIterations = projectSize / 5;
 }
-
 bool AgenticAutonomousConfig::saveToFile(const std::string& filename) const {
-    // Save configuration to file
     return true;
 }
-
 bool AgenticAutonomousConfig::loadFromFile(const std::string& filename) {
-    // Load configuration from file
     return true;
 }
-
 std::string AgenticAutonomousConfig::toJson() const {
     return "{\"operationMode\":\"agent\",\"modelSelection\":\"automatic\"}";
 }
-
 void AgenticAutonomousConfig::resetToDefaults() {
     m_operationMode = AgenticOperationMode::Agent;
     m_modelSelectionMode = ModelSelectionMode::Automatic;
@@ -1022,8 +1311,8 @@ void AgenticAutonomousConfig::resetToDefaults() {
     m_cycleAgentCounter = 0;
     m_qualitySpeedBalance = QualitySpeedBalance::Balanced;
 }
-
 }
+#endif
 
 // ================================================
 // Context Deterioration Hotpatch Stubs
@@ -1215,7 +1504,62 @@ bool UninstallVsix(const std::string& publisher, const std::string& name) {
 }
 
 std::vector<MarketplaceEntry> GetInstalledExtensions() {
-    return {}; // Return empty for now
+    std::vector<MarketplaceEntry> installed;
+
+    auto appendIfMissing = [&](const MarketplaceEntry& entry) {
+        auto it = std::find_if(installed.begin(), installed.end(), [&](const MarketplaceEntry& existing) {
+            return existing.publisher == entry.publisher && existing.name == entry.name;
+        });
+        if (it == installed.end()) {
+            installed.push_back(entry);
+        }
+    };
+
+    std::error_code ec;
+    const std::filesystem::path cwd = std::filesystem::current_path(ec);
+    const std::array<std::filesystem::path, 2> roots = {
+        cwd / "extensions",
+        cwd / ".vscode" / "extensions"
+    };
+
+    for (const auto& root : roots) {
+        if (!std::filesystem::exists(root, ec) || !std::filesystem::is_directory(root, ec)) {
+            continue;
+        }
+
+        for (const auto& entry : std::filesystem::directory_iterator(root, ec)) {
+            if (ec) break;
+
+            if (entry.is_directory()) {
+                const std::string folder = entry.path().filename().string();
+                std::string publisher = "local";
+                std::string name = folder;
+                std::string version = "installed";
+
+                const size_t dash = folder.find_last_of('-');
+                if (dash != std::string::npos && dash + 1 < folder.size()) {
+                    version = folder.substr(dash + 1);
+                    name = folder.substr(0, dash);
+                }
+
+                const size_t dot = name.find('.');
+                if (dot != std::string::npos && dot > 0 && dot + 1 < name.size()) {
+                    publisher = name.substr(0, dot);
+                    name = name.substr(dot + 1);
+                }
+
+                appendIfMissing({name, publisher, version, "Installed extension", 0});
+                continue;
+            }
+
+            if (entry.is_regular_file() && entry.path().extension() == ".vsix") {
+                const std::string stem = entry.path().stem().string();
+                appendIfMissing({stem, "local", "vsix", "Installed VSIX package", 0});
+            }
+        }
+    }
+
+    return installed;
 }
 
 }
@@ -1223,39 +1567,163 @@ std::vector<MarketplaceEntry> GetInstalledExtensions() {
 // ================================================
 // Win32IDE Method Stubs
 // ================================================
+namespace {
+std::filesystem::path rawrxd_repo_root() {
+    std::error_code ec;
+    std::filesystem::path p = std::filesystem::current_path(ec);
+    if (ec || p.empty()) p = "D:/RawrXD";
+    for (int i = 0; i < 10 && !p.empty(); ++i) {
+        if (std::filesystem::exists(p / "CMakeLists.txt")) return p;
+        auto parent = p.parent_path();
+        if (parent == p) break;
+        p = parent;
+    }
+    return std::filesystem::path("D:/RawrXD");
+}
+
+std::filesystem::path rawrxd_runtime_dir() {
+    std::filesystem::path out = rawrxd_repo_root() / ".rawrxd";
+    std::error_code ec;
+    std::filesystem::create_directories(out, ec);
+    return out;
+}
+
+bool rawrxd_launch(HWND hwnd, const std::string& app, const std::string& args, const std::string& cwd) {
+    HINSTANCE h = ShellExecuteA(hwnd, "open", app.c_str(),
+                                args.empty() ? nullptr : args.c_str(),
+                                cwd.empty() ? nullptr : cwd.c_str(),
+                                SW_SHOWNORMAL);
+    return reinterpret_cast<intptr_t>(h) > 32;
+}
+
+void rawrxd_write_text_file(const std::filesystem::path& file, const std::string& text) {
+    std::error_code ec;
+    std::filesystem::create_directories(file.parent_path(), ec);
+    std::ofstream f(file, std::ios::binary | std::ios::trunc);
+    if (f) f << text;
+}
+
+void rawrxd_open_file(HWND hwnd, const std::filesystem::path& file) {
+    HINSTANCE h = ShellExecuteA(hwnd, "open", file.string().c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+    if (reinterpret_cast<intptr_t>(h) <= 32) {
+        std::string args = "\"" + file.string() + "\"";
+        (void)rawrxd_launch(hwnd, "notepad.exe", args, rawrxd_repo_root().string());
+    }
+}
+
+std::string rawrxd_feature_report_snapshot() {
+    auto& reg = FeatureRegistry::instance();
+    reg.detectStubs();
+    auto all = reg.getAllFeatures();
+    std::ostringstream oss;
+    oss << "RawrXD Feature Registry Snapshot\n";
+    oss << "Total features: " << all.size() << "\n";
+    oss << "Completion: " << (reg.getCompletionPercentage() * 100.0f) << "%\n";
+    oss << "Status counts:\n";
+    for (int i = 0; i < static_cast<int>(ImplStatus::COUNT); ++i) {
+        auto st = static_cast<ImplStatus>(i);
+        oss << "  [" << i << "] " << reg.getCountByStatus(st) << "\n";
+    }
+    oss << "\nDetailed report:\n\n" << reg.generateReport() << "\n";
+    return oss.str();
+}
+
+bool rawrxd_launch_license_tool(HWND hwnd) {
+    const std::filesystem::path root = rawrxd_repo_root();
+    const std::array<std::filesystem::path, 5> keygenCandidates = {
+        root / "build/tools/Release/RawrXD_KeyGen.exe",
+        root / "build/tools/RawrXD_KeyGen.exe",
+        root / "build_ide/bin/RawrXD_KeyGen.exe",
+        root / "build/Release/RawrXD_KeyGen.exe",
+        root / "RawrXD_KeyGen.exe"
+    };
+
+    for (const auto& exe : keygenCandidates) {
+        if (std::filesystem::exists(exe)) {
+            if (rawrxd_launch(hwnd, exe.string(), "--hwid", root.string())) {
+                return true;
+            }
+        }
+    }
+
+    const std::filesystem::path script = root / "scripts/Create-EnterpriseLicense.ps1";
+    if (std::filesystem::exists(script)) {
+        std::string args = "-NoExit -ExecutionPolicy Bypass -File \"" + script.string() + "\" -ShowStatus";
+        if (rawrxd_launch(hwnd, "powershell.exe", args, script.parent_path().string())) {
+            return true;
+        }
+    }
+    return false;
+}
+} // namespace
+
 void Win32IDE::showLicenseCreatorDialog() {
     if (m_hwnd) {
-        MessageBoxA(m_hwnd, "License Creator Dialog\nNot implemented yet", "RawrXD IDE", MB_OK);
+        if (rawrxd_launch_license_tool(m_hwnd)) {
+            return;
+        }
+        const std::filesystem::path guide = rawrxd_runtime_dir() / "license_creator_actions.txt";
+        std::ostringstream oss;
+        oss << "RawrXD License Creator Actions\n\n"
+            << "1) Build keygen:\n"
+            << "   cmake --build build --target RawrXD_KeyGen --config Release\n\n"
+            << "2) Run status flow:\n"
+            << "   powershell -ExecutionPolicy Bypass -File scripts/Create-EnterpriseLicense.ps1 -ShowStatus\n\n"
+            << "3) Issue license via Python tool:\n"
+            << "   python src/tools/license_generator.py issue --type enterprise --all-features\n";
+        rawrxd_write_text_file(guide, oss.str());
+        rawrxd_open_file(m_hwnd, guide);
     }
 }
 
 void Win32IDE::showFeatureRegistryDialog() {
     if (m_hwnd) {
-        MessageBoxA(m_hwnd, "Feature Registry Dialog\nNot implemented yet", "RawrXD IDE", MB_OK);
+        const std::filesystem::path report = rawrxd_runtime_dir() / "feature_registry_report.txt";
+        rawrxd_write_text_file(report, rawrxd_feature_report_snapshot());
+        rawrxd_open_file(m_hwnd, report);
     }
 }
 
 void Win32IDE::showModelManagerDialog() {
     if (m_hwnd) {
-        MessageBoxA(m_hwnd, "Model Manager Dialog\nNot implemented yet", "RawrXD IDE", MB_OK);
+#ifdef IDM_AI_MODEL_REGISTRY
+        SendMessage(m_hwnd, WM_COMMAND, MAKEWPARAM(IDM_AI_MODEL_REGISTRY, 0), 0);
+#else
+        SendMessage(m_hwnd, WM_COMMAND, MAKEWPARAM(5300, 0), 0);
+#endif
     }
 }
 
 void Win32IDE::showBenchmarkDialog() {
     if (m_hwnd) {
-        MessageBoxA(m_hwnd, "Benchmark Dialog\nNot implemented yet", "RawrXD IDE", MB_OK);
+#ifdef IDM_AI_BENCHMARK_MENU
+        SendMessage(m_hwnd, WM_COMMAND, MAKEWPARAM(IDM_AI_BENCHMARK_MENU, 0), 0);
+#else
+        SendMessage(m_hwnd, WM_COMMAND, MAKEWPARAM(5305, 0), 0);
+#endif
     }
 }
 
 void Win32IDE::showInterpretabilityDialog() {
     if (m_hwnd) {
-        MessageBoxA(m_hwnd, "Interpretability Dialog\nNot implemented yet", "RawrXD IDE", MB_OK);
+#ifdef IDM_AI_INTERPRET_PANEL
+        SendMessage(m_hwnd, WM_COMMAND, MAKEWPARAM(IDM_AI_INTERPRET_PANEL, 0), 0);
+#else
+        SendMessage(m_hwnd, WM_COMMAND, MAKEWPARAM(5302, 0), 0);
+#endif
     }
 }
 
 void Win32IDE::showAgenticConfigDialog() {
     if (m_hwnd) {
-        MessageBoxA(m_hwnd, "Agentic Configuration Dialog\nNot implemented yet", "RawrXD IDE", MB_OK);
+        auto& cfg = RawrXD::AgenticAutonomousConfig::instance();
+        std::string msg = "Agentic Configuration\n\n";
+        msg += cfg.toDisplayString();
+        msg += "\n\nTerminal hint: ";
+        msg += cfg.getRecommendedTerminalRequirementHint();
+        msg += "\n\nJSON:\n";
+        msg += cfg.toJson();
+        MessageBoxA(m_hwnd, msg.c_str(), "RawrXD IDE", MB_OK);
     }
 }
 
@@ -1300,11 +1768,11 @@ int asm_apply_memory_patch(void* target, const void* patch, size_t size) {
 }
 
 // ================================================
-// Cursor Parity Wiring Stub
+// Feature modules wiring stub (when bridge not linked)
 // ================================================
 namespace RawrXD { namespace Parity {
-int verifyCursorParityWiring(void*) { 
-    // Verify cursor parity wiring
+int verifyFeaturesWiring(void*) {
     return 0; // Success
 }
 }}
+

@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <sstream>
 #include <functional>
+#include <nlohmann/json.hpp>
 
 // ── LSP Symbol Kinds — now declared in Win32IDE.h (Tier 2) ─────────────────
 
@@ -68,9 +69,66 @@ void Win32IDE::refreshOutlineFromLSP() {
 
     if (m_currentFile.empty()) return;
 
-    // Try LSP textDocument/documentSymbol first
-    // Fallback: parse current file locally
-    if (!m_hwndEditor) return;
+    // ── Try LSP textDocument/documentSymbol first ──────────────────────
+    bool lspSucceeded = false;
+    {
+        LSPLanguage lang = detectLanguageForFile(m_currentFile);
+        if (lang < LSPLanguage::Count) {
+            nlohmann::json params;
+            params["textDocument"]["uri"] = "file:///" + m_currentFile;
+            // Normalize backslashes to forward slashes for URI
+            std::string uri = params["textDocument"]["uri"].get<std::string>();
+            for (auto& c : uri) { if (c == '\\') c = '/'; }
+            params["textDocument"]["uri"] = uri;
+
+            int reqId = sendLSPRequest(lang, "textDocument/documentSymbol", params);
+            if (reqId >= 0) {
+                auto resp = readLSPResponse(lang, reqId, 3000);
+                if (resp.contains("result") && resp["result"].is_array()) {
+                    const auto& symbols = resp["result"];
+                    for (const auto& sym : symbols) {
+                        OutlineSymbol os;
+                        os.name = sym.value("name", "");
+                        os.kind = sym.value("kind", 0);
+                        os.detail = sym.value("detail", "");
+                        if (sym.contains("range") && sym["range"].contains("start")) {
+                            os.line = sym["range"]["start"].value("line", 0) + 1; // LSP is 0-indexed
+                            os.column = sym["range"]["start"].value("character", 0);
+                        }
+                        if (sym.contains("range") && sym["range"].contains("end")) {
+                            os.endLine = sym["range"]["end"].value("line", 0) + 1;
+                        }
+                        os.expanded = true;
+
+                        // Parse children (DocumentSymbol response format)
+                        if (sym.contains("children") && sym["children"].is_array()) {
+                            for (const auto& child : sym["children"]) {
+                                OutlineSymbol cs;
+                                cs.name = child.value("name", "");
+                                cs.kind = child.value("kind", 0);
+                                cs.detail = child.value("detail", "");
+                                if (child.contains("range") && child["range"].contains("start")) {
+                                    cs.line = child["range"]["start"].value("line", 0) + 1;
+                                    cs.column = child["range"]["start"].value("character", 0);
+                                }
+                                os.children.push_back(cs);
+                            }
+                        }
+
+                        m_outlineSymbols.push_back(os);
+                    }
+                    if (!m_outlineSymbols.empty()) {
+                        lspSucceeded = true;
+                        LOG_INFO("[OutlinePanel] Populated from LSP: " +
+                                 std::to_string(m_outlineSymbols.size()) + " symbols");
+                    }
+                }
+            }
+        }
+    }
+
+    // ── Fallback: parse current file locally ───────────────────────────
+    if (!lspSucceeded && m_hwndEditor) {
 
     int totalLen = GetWindowTextLengthA(m_hwndEditor);
     if (totalLen <= 0) return;
@@ -216,6 +274,7 @@ void Win32IDE::refreshOutlineFromLSP() {
             m_outlineSymbols.push_back(sym);
         }
     }
+    } // end fallback parse
 
     // Update TreeView if exists
     if (m_hwndOutlineTree) {

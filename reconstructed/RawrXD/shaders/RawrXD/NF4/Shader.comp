@@ -1,0 +1,86 @@
+// =============================================================================
+// RawrXD_NF4_Shader.comp
+// Feature 15: GPU NF4 Decompression with Live Rotary Embedding Sync
+// SPIR-V Compute Shader for In-VRAM Weight Decompression
+// =============================================================================
+#version 460
+#extension GL_EXT_shader_16bit_storage : require
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int8 : require
+
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+// Feature 15: Live-editable parameters via push constants
+layout(push_constant) uniform LivePhysics {
+    float16_t rot_theta;        // 006.1 rotary embedding angle (live from GUI)
+    uint16_t scaling_mode;      // 0=NF4, 1=FP8, 2=INT8
+    float16_t quant_scale;      // Per-layer quantization scale
+} physics;
+
+// Input: Compressed NF4 weights (4 bits per weight, packed into uint32)
+layout(set=0, binding=0) readonly buffer NF4_Compressed {
+    uint packed_weights[];
+};
+
+// Output: Decompressed FP16 weights with rotary embeddings applied
+layout(set=0, binding=1) writeonly buffer FP16_Decompressed {
+    float16_t decompressed_weights[];
+};
+
+// Optional: Attention statistics for predictor (Feature 18)
+layout(set=0, binding=2) buffer AttentionStats {
+    float avg_attention;
+    float variance;
+    float max_attention;
+    float entropy;
+} attn_stats;
+
+// NF4 Dequantization Lookup Table (as per QLoRA paper)
+const float16_t nf4_lut[16] = float16_t[16](
+    float16_t(-1.0),    float16_t(-0.6962), float16_t(-0.5251), float16_t(-0.3949),
+    float16_t(-0.2844), float16_t(-0.1848), float16_t(-0.0911), float16_t(0.0),
+    float16_t(0.0796),  float16_t(0.1609),  float16_t(0.2461),  float16_t(0.3379),
+    float16_t(0.4407),  float16_t(0.5626),  float16_t(0.7230),  float16_t(1.0)
+);
+
+// Rotary Position Embedding (RoPE) helpers
+float16_t apply_rope(float16_t weight, float16_t theta, uint position) {
+    // Simplified RoPE: weight * cos(position * theta)
+    // Real RoPE uses complex number rotation on Q/K pairs
+    float angle = float(position) * float(theta);
+    return weight * float16_t(cos(angle));
+}
+
+void main() {
+    uint global_id = gl_GlobalInvocationID.x;
+    
+    // Each thread processes 8 weights (1 uint32 holds 8x 4-bit values)
+    uint packed_value = packed_weights[global_id];
+    
+    // Decompress 8 weights
+    for (uint i = 0; i < 8; i++) {
+        // Extract 4-bit nibble
+        uint nibble = (packed_value >> (i * 4)) & 0xFu;
+        
+        // Dequantize using lookup table
+        float16_t weight = nf4_lut[nibble];
+        
+        // Apply per-layer quantization scale
+        weight *= physics.quant_scale;
+        
+        // Feature 15: Apply live rotary embedding during decompression
+        // This fuses two operations (decompress + rotate) into single VRAM pass
+        uint output_idx = global_id * 8 + i;
+        weight = apply_rope(weight, physics.rot_theta, output_idx);
+        
+        // Write to output buffer
+        decompressed_weights[output_idx] = weight;
+    }
+    
+    // Feature 18: Accumulate attention statistics for predictor
+    // (This would normally be done in attention kernel, shown here for completeness)
+    if (global_id == 0) {
+        // Placeholder: Real implementation reads attention head outputs
+        atomicAdd(attn_stats.avg_attention, 0.01);
+    }
+}

@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "C:/"
+		},
+		{
+			"path": "D:/"
+		}
+	],
+	"settings": {
+		"git.ignoreLimitWarning": true,
+		"powershell.cwd": "C:"
+	}
+}

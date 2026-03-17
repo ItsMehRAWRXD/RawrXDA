@@ -12,6 +12,8 @@ namespace RawrXD {
         // extended fields...
     };
 
+    #ifndef RAWRXD_RENDERER_INTERFACE_DEFINED
+    #define RAWRXD_RENDERER_INTERFACE_DEFINED
     class IRenderer {
     public:
         virtual ~IRenderer() = default;
@@ -29,5 +31,6 @@ namespace RawrXD {
         virtual void BeginFrame() = 0;
         virtual void EndFrame() = 0;
     };
+    #endif
 
 }

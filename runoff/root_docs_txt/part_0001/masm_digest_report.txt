@@ -1,0 +1,810 @@
+========================================================================
+  RawrXD MASM/ASM Codebase Digest Report
+  Production Static Analysis
+========================================================================
+
+  Total PROCs:         2146
+  Total STRUCTs:        467
+  Total DATA labels:   2940
+  Total CONSTs:        2670
+  Total EXTERNs:       2153
+  Total PUBLICs:        962
+  Total CALLs:         2175
+
+  --- Issue Summary ---
+  Stub/Empty PROCs:       0
+  Missing ENDP:           0
+  Missing RET:            0
+  Undefined CALLs:      116
+  Unused PROCs:         297
+  FIXME/STUB markers:   363
+
+------------------------------------------------------------------------
+
+--- FIXMEs / STUBs / TODOs ---
+  .\CodexPro.asm: ; Must be after DOS stub
+  .\CodexPro.asm: ; (simplified: write generic struct placeholder
+  .\RawrXD_AVX512_PatternEngine.asm: ; Blazing-fast FIXME
+  .\RawrXD_AVX512_PatternEngine.asm: ; Enough bytes for "FIXME
+  .\RawrXD_AVX512_PatternEngine.asm: ; Check for "FIXME
+  .\RawrXD_AVX512_PatternEngine.asm: ; Found FIXME
+  .\RawrXD_AVX512_PatternEngine.asm: ; Check for "XXX
+  .\RawrXD_AVX512_PatternEngine.asm: ; Found XXX
+  .\RawrXD_AVX512_PatternEngine.asm: ; Check for "HACK
+  .\RawrXD_AVX512_PatternEngine.asm: ; Found HACK
+  .\RawrXD_AVX512_PatternEngine.asm: ; Set confidence: BUG=1.0, FIXME
+  .\RawrXD_AVX512_Production.asm: ; Check for 'F' (FIXME), 'B' (BUG), 'X' (XXX
+  .\RawrXD_AVX512_Production.asm: ; Check for 'F' (FIXME
+  .\RawrXD_AVX512_Production.asm: ; Check for 'X' (XXX
+  .\RawrXD_AVX512_Real.asm: ; Need at least 3 bytes for shortest pattern (XXX
+  .\RawrXD_AVX512_Real.asm: ; Found FIXME
+  .\RawrXD_AVX512_Real.asm: ; Found XXX
+  .\RawrXD_AVX512_Real.asm: ; Found HACK
+  .\RawrXD_AVX512_SIMD.asm: ; First character lookup (lowercase): b=BUG, f=FIXME, h=HACK, i=IDEA, n=NOTE, r=REVIEW, t=TODO, x=XXX
+  .\RawrXD_AVX512_SIMD.asm: ; Need at least 3 bytes for shortest pattern (XXX
+  .\RawrXD_CLI.asm: ; Simple read-eval-print loop placeholder
+  .\RawrXD_CLI_Main.asm: ; Simple read-eval-print loop placeholder
+  .\RawrXD_InferenceCore.asm: ; External definition placeholder
+  .\RawrXD_Inference_Engine.asm: ; External definition placeholder
+  .\RawrXD_NativeModelBridge_Complete.asm: ; RCX = output struct ptr: [vocab_size(4), hidden
+  .\RawrXD_NativeModelBridge_Complete.asm: ; Gate projection: gate[j] = dot(input, gate_w[j*hidden
+  .\RawrXD_NativeModelBridge_Complete.asm: ; placeholder
+  .\RawrXD_OmegaDeobfuscator.asm: ; Old stub
+  .\RawrXD_PatternBridge.asm: ; Layout: "bug:....", "fixme...", "xxx:....", "todo
+  .\RawrXD_PatternBridge.asm: ; fixme
+  .\RawrXD_PatternBridge.asm: ; xxx
+  .\RawrXD_PatternBridge.asm: ; todo
+  .\RawrXD_PatternBridge.asm: ; hack
+  .\RawrXD_PatternBridge.asm: ; Priority table (severity-based: BUG=10, FIXME/XXX
+  .\RawrXD_PatternBridge.asm: ; Index 0-8 (UNKNOWN, BUG, FIXME, XXX, TODO, HACK
+  .\RawrXD_PatternBridge.asm: ; "xxx
+  .\RawrXD_PatternBridge.asm: ; "todo
+  .\RawrXD_PatternBridge.asm: ; "hack
+  .\RawrXD_Standalone_Inference.asm: ; 11008 for 7B (Hidden
+  .\RawrXD_Standalone_Inference.asm: ; [Vocab, Hidden
+  .\RawrXD_Standalone_Inference.asm: ; Step 1: gate = Gate(hidden
+  .\RawrXD_Standalone_Inference.asm: ; Step 2: up = Up(hidden
+  .\RawrXD_Standalone_Inference.asm: ; Step 4: Down projection: hidden
+  .\RawrXD_Titan_CORE.asm: ; 4. Output projection: logits[v] = dot(hidden
+  .\RawrXD_Titan_CORE.asm: ; hidden
+  .\RawrXD_Titan_CORE.asm: ; TODO
+  .\RawrXD_Titan_CORE.asm: ; TODO
+  .\RawrXD_Titan_Kernel.asm: ; placeholder
+  .\RawrXD_Titan_MINIMAL.asm: ; RCX = hidden
+  .\RawrXD_Titan_MINIMAL.asm: ; hidden
+  .\RawrXD_Titan_MINIMAL.asm: ; MINIMAL: monotonic counter mod n_vocab as placeholder
+  .\RawrXD_Titan_STANDALONE.asm: ; We operate on a single token's hidden
+  .\RawrXD_Titan_STANDALONE.asm: ; ── Step 1: RMS pre-norm on hidden
+  .\RawrXD_Titan_STANDALONE.asm: ; hidden
+  .\RawrXD_Titan_STANDALONE.asm: ; Q, K, V are contiguous blocks after hidden: Q=hidden
+  .\RawrXD_Titan_STANDALONE.asm: ; hidden
+  .\RawrXD_Titan_STANDALONE.asm: ; Write to output (overwrite hidden
+  .\RawrXD_Titan_STANDALONE.asm: ; Input: RCX = hidden
+  .\RawrXD_Titan_STANDALONE.asm: ; RCX = hidden
+  .\RawrXD_Titan_STANDALONE.asm: ; hidden
+  .\RawrXD_Titan_STANDALONE.asm: ;   gate_val = dot(hidden
+  .\RawrXD_Titan_STANDALONE.asm: ;   up_val   = dot(hidden
+  .\RawrXD_Titan_STANDALONE.asm: ; Compute gate = dot(hidden, W_gate[j]) and up = dot(hidden
+  .\RawrXD_Titan_STANDALONE.asm: ; hidden
+  .\RawrXD_Titan_STANDALONE.asm: ; Residual connection: hidden
+  .\RawrXD_Titan_STANDALONE.asm: ; hidden
+  .\RawrXD_Titan_STANDALONE.asm: ; hidden
+  .\RawrXD_Titan_STANDALONE.asm: ; Compute logits from hidden
+  .\RawrXD_Titan_STANDALONE.asm: ; For standalone baseline, argmax over the hidden
+  .\RawrXD_Titan_STANDALONE.asm: ; logits/hidden
+  .\Titan_InferenceCore.asm: ; 3. Output projection: logits[v] = dot(hidden
+  .\Titan_InferenceCore.asm: ; hidden
+  .\Titan_InferenceCore.asm: ; hidden
+  .\Titan_InferenceCore.asm: ; For each vocab entry v: logits[v] = dot(hidden
+  .\Titan_InferenceCore.asm: ; hidden
+  .\Titan_InferenceCore.asm: ; dot += hidden
+  .\Titan_Streaming_Orchestrator_NoHTTP.asm: ; TODO
+  .\Titan_Streaming_Orchestrator_NoHTTP.asm: ; Placeholder
+  .\blocked_features_manifest.asm: ; BLOCKED
+  .\blocked_features_manifest.asm: ; Comprehensive documentation of gaps filled in blocked/hidden
+  .\blocked_features_manifest.asm: ; This script documents all the gaps identified and filled in the blocked/hidden
+  .\blocked_features_manifest.asm: ; PROBLEM: Only some blocked
+  .\blocked_features_manifest.asm: ; SOLUTION: Added descriptions for all blocked
+  .\blocked_features_manifest.asm: ; PROBLEM: Blocked
+  .\blocked_features_manifest.asm: ; PROBLEM: Missing constants for new blocked
+  .\blocked_features_manifest.asm: ; PROBLEM: No way to initialize blocked
+  .\blocked_features_manifest.asm: ; PROBLEM: No documentation on how to use blocked
+  .\blocked_features_manifest.asm: ; [X] Feature descriptions for all blocked
+  .\blocked_features_manifest.asm: ; 2. To enable all blocked
+  .\blocked_features_manifest.asm: ; BLOCKED
+  .\blocked_features_manifest.asm: ; POTENTIAL BLOCKED
+  .\dumpbin_final.asm: ; Rich header search between DOS stub
+  .\dumpbin_final.asm: ; Stub
+  .\dumpbin_final_backup.asm: ; Rich header search between DOS stub
+  .\omega_professional.asm: ; Old stub
+  .\os_interceptor_cli.asm: ; Placeholder
+  .\rawrxd_compiler_masm64.asm: ; HIDDEN
+  .\rawrxd_compiler_masm64.asm: ; HIDDEN
+  .\rawrxd_compiler_masm64.asm: ; Walk AST and resolve symbols (placeholder
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED & HIDDEN
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; HIDDEN: Blocked
+  .\rawrxd_compiler_masm64.asm: ; HIDDEN
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; (Implementation hidden
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED: Master switch for hidden
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; HIDDEN
+  .\rawrxd_compiler_masm64.asm: ; HIDDEN
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; (Implementation hidden
+  .\rawrxd_compiler_masm64.asm: ; (Implementation hidden
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; HIDDEN
+  .\rawrxd_compiler_masm64.asm: ; HIDDEN
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; Script to initialize all missing data for blocked/hidden
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; Blocked
+  .\rawrxd_compiler_masm64.asm: ; Blocked
+  .\rawrxd_compiler_masm64.asm: ; Global blocked
+  .\rawrxd_compiler_masm64.asm: ; Hidden
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; HIDDEN
+  .\rawrxd_compiler_masm64.asm: ; HIDDEN
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; (Implementation hidden
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; HIDDEN
+  .\rawrxd_compiler_masm64.asm: ; HIDDEN
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; Blocked
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED: Master control for all hidden and blocked
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; Enable all blocked
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; Disable all blocked
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; HIDDEN
+  .\rawrxd_compiler_masm64.asm: ; HIDDEN
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; (Implementation hidden
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; (Implementation hidden
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; Additional blocked
+  .\rawrxd_compiler_masm64.asm: ; HIDDEN: Initialize all blocked and hidden
+  .\rawrxd_compiler_masm64.asm: ; HIDDEN FEATURE: Global initialization of blocked
+  .\rawrxd_compiler_masm64.asm: ; (Advanced SIMD setup - implementation hidden
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; Enable basic blocked
+  .\rawrxd_compiler_masm64.asm: ; HIDDEN
+  .\rawrxd_compiler_masm64.asm: ; HIDDEN
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; ADDITIONAL BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; Hidden
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; MANIFEST: Complete initialization of all blocked/hidden
+  .\rawrxd_compiler_masm64.asm: ; MANIFEST: Complete blocked
+  .\rawrxd_compiler_masm64.asm: ; 7. Enable default blocked
+  .\rawrxd_compiler_masm64.asm: ; MANIFEST: Validate that all blocked
+  .\rawrxd_compiler_masm64.asm: ; MANIFEST: Validation of blocked
+  .\rawrxd_compiler_masm64.asm: ; Check blocked
+  .\rawrxd_compiler_masm64.asm: ; Warning: no blocked
+  .\rawrxd_compiler_masm64.asm: ; MANIFEST: Run diagnostics on blocked
+  .\rawrxd_compiler_masm64.asm: ; MANIFEST: Example code showing how to use blocked
+  .\rawrxd_compiler_masm64.asm: ; MANIFEST: Usage examples for blocked
+  .\rawrxd_compiler_masm64.asm: ; Example 1: Enable all blocked
+  .\rawrxd_compiler_masm64.asm: ; BLOCKED
+  .\rawrxd_compiler_masm64.asm: ; MANIFEST: Initialize blocked
+  .\rawrxd_compiler_masm64.asm: ; Initialize all blocked
+  .\rawrxd_neural_core.asm: ; Token IDs >= 256 need vocab lookup (TODO
+  .\rawrxd_neural_core.asm: ; logits[v] = dot(hidden
+  .\rawrxd_neural_core.asm: ; hidden
+  .\rawrxd_neural_core.asm: ; dot = sum(hidden
+  .\rawrxd_neural_core.asm: ; hidden
+  .\rawrxd_neural_core.asm: ; Q output starts after hidden
+  .\rawrxd_neural_core.asm: ; Write output back to beginning of temp buffer (hidden
+  .\rawrxd_neural_core.asm: ; Residual: hidden
+  .\rawrxd_neural_core.asm: ; hidden
+  .\rawrxd_neural_core.asm: ; gate[j] = dot(hidden
+  .\rawrxd_neural_core.asm: ; up[j] = dot(hidden
+  .\rawrxd_neural_core.asm: ; hidden
+  .\rawrxd_neural_core.asm: ; ── Down projection: hidden
+  .\terraform.asm: ; jz placeholder
+  .\vulkan_masm.asm: ; MASM x64 Stub
+  .\vulkan_masm.asm: ; Each routine is a placeholder
+  .\agentic\GPU_DMA_COMPLETE_IMPLEMENTATIONS.asm: ; For now, use memcpy (placeholder
+  .\agentic\GPU_DMA_COMPLETE_IMPLEMENTATIONS.asm: ; For now, use memcpy (placeholder
+  .\agentic\Phase3_Agent_Kernel_Complete.asm: ; Hidden
+  .\agentic\Phase3_Agent_Kernel_Complete.asm: ; +84: Hidden
+  .\agentic\Phase3_Agent_Kernel_Complete.asm: ; Call inference (placeholder
+  .\agentic\Phase3_Agent_Kernel_Complete.asm: ; Sample token (placeholder
+  .\agentic\RawrXD_Absolutely_Complete.asm: ; COMPLETE DATA SECTION WITH ALL HIDDEN
+  .\agentic\RawrXD_Complete_Hidden_Logic.asm: ; HIDDEN
+  .\agentic\RawrXD_Complete_Hidden_Logic.asm: ; HIDDEN
+  .\agentic\RawrXD_Complete_Hidden_Logic.asm: ; HIDDEN
+  .\agentic\RawrXD_Complete_Hidden_Logic.asm: ; HIDDEN
+  .\agentic\RawrXD_Complete_Hidden_Logic.asm: ; HIDDEN
+  .\agentic\RawrXD_Complete_Hidden_Logic.asm: ; HIDDEN
+  .\agentic\RawrXD_Complete_Hidden_Logic.asm: ; Hidden
+  .\agentic\RawrXD_Complete_Hidden_Logic.asm: ; Hidden
+  .\agentic\RawrXD_Complete_Hidden_Logic.asm: ; Hidden
+  .\agentic\RawrXD_Complete_Hidden_Logic.asm: ; Hidden
+  .\agentic\RawrXD_Complete_Hidden_Logic.asm: ; Hidden
+  .\agentic\RawrXD_Complete_Hidden_Logic.asm: ; Hidden
+  .\agentic\RawrXD_Complete_Hidden_Logic.asm: ; Hidden
+  .\agentic\RawrXD_Complete_Hidden_Logic.asm: ; Hidden
+  .\agentic\RawrXD_Complete_Hidden_Logic.asm: ; CODE SECTION - COMPLETE HIDDEN
+  .\agentic\RawrXD_Complete_Hidden_Logic.asm: ; HIDDEN
+  .\agentic\RawrXD_Complete_Hidden_Logic.asm: ; HIDDEN
+  .\agentic\RawrXD_Complete_Hidden_Logic.asm: ; HIDDEN
+  .\agentic\RawrXD_Complete_Hidden_Logic.asm: ; HIDDEN
+  .\agentic\RawrXD_Complete_Hidden_Logic.asm: ; HIDDEN
+  .\agentic\RawrXD_Complete_Hidden_Logic.asm: ; HIDDEN
+  .\agentic\RawrXD_Complete_Hidden_Logic.asm: ; HIDDEN
+  .\agentic\RawrXD_Complete_Hidden_Logic.asm: ; HIDDEN
+  .\agentic\RawrXD_Complete_Hidden_Logic.asm: ; HIDDEN
+  .\agentic\RawrXD_Complete_Hidden_Logic.asm: ; HIDDEN
+  .\agentic\RawrXD_Complete_Hidden_Logic.asm: ; HIDDEN
+  .\agentic\RawrXD_Complete_Hidden_Logic.asm: ; HIDDEN
+  .\agentic\RawrXD_Complete_Hidden_Logic.asm: ; HIDDEN
+  .\agentic\RawrXD_Complete_Hidden_Logic.asm: ; HIDDEN
+  .\agentic\RawrXD_Complete_Hidden_Logic.asm: ; HIDDEN
+  .\agentic\RawrXD_Complete_Hidden_Logic.asm: ; Complete hidden
+  .\agentic\RawrXD_Complete_Production_Fix.asm: ; hidden_states[seq_len, hidden
+  .\agentic\RawrXD_Complete_Production_Fix.asm: ; [hidden
+  .\agentic\RawrXD_Complete_Production_Fix.asm: ; Free hidden
+  .\agentic\RawrXD_Complete_Production_System.asm: ; Cell state (32 hidden
+  .\agentic\RawrXD_Complete_Production_System.asm: ; Hidden state (32 hidden
+  .\agentic\RawrXD_Complete_Production_System.asm: ; Initialize cell and hidden
+  .\agentic\RawrXD_Critical_Blockers_P0.asm: ; SECTION 1: REAL INFERENCE ENGINE (Replaces processChat() echo stub
+  .\agentic\RawrXD_Critical_Blockers_P0.asm: ; Allocate hidden
+  .\agentic\RawrXD_Production_ReverseEngineered.asm: ; --- Structure Definitions (No Hidden
+  .\agentic\RawrXD_Production_ReverseEngineered.asm: ; (Stub
+  .\agentic\RawrXD_Production_ReverseEngineered.asm: ; Allocate model buffer (placeholder
+  .\agentic\RawrXD_Production_ReverseEngineered.asm: ; Placeholder
+  .\agentic\RawrXD_Production_ReverseEngineered.asm: ; Placeholder
+  .\agentic\RawrXD_Production_ReverseEngineered.asm: ; Placeholder
+  .\agentic\RawrXD_Production_ReverseEngineered.asm: ; Placeholder
+  .\agentic\RawrXD_Production_ReverseEngineered.asm: ; Placeholder
+  .\agentic\Titan_Streaming_Orchestrator.asm: ; STUB
+  .\agentic\Titan_Streaming_Orchestrator_Complete.asm: ; Simulate inference work (memcpy input to output as placeholder
+  .\agentic\monaco\NEON_MONACO_HACK.ASM: ; ESP HACK
+  .\agentic\monaco\NEON_MONACO_HACK.ASM: ; Calculate health (code quality) - stub
+  .\agentic\vulkan\NEON_VULKAN_FABRIC.asm: ; This is a minimal stub
+  .\agentic\vulkan\NEON_VULKAN_FABRIC_STUB.asm: ; NEON_VULKAN_FABRIC.asm - Stub
+  .\agentic\vulkan\NEON_VULKAN_FABRIC_STUB.asm: ; This is a minimal placeholder
+  .\agentic\vulkan\NEON_VULKAN_FABRIC_STUB.asm: ; TODO
+  .\agentic\week4\WEEK4_DELIVERABLE.asm: ; RegisterTest - Add single test to suite (simplified stub
+  .\agentic\week4\WEEK4_DELIVERABLE.asm: ; Generate JUnit-style XML (stub
+  .\agentic\week4\WEEK4_DELIVERABLE.asm: ; Generate JSON report (stub
+  .\ai\digestion_scanner.asm: ; Scans memory for multiple stub
+  .\ai\digestion_scanner.asm: ; For example, check for "TODO
+  .\asm\gguf_dump.asm: ; For string/array, use 1 as placeholder
+  .\asm\solo_standalone_compiler.asm: ; STUB
+  .\asm\solo_standalone_compiler.asm: ; placeholder
+  .\asm\solo_standalone_compiler.asm: ; TODO
+  .\digestion\RawrXD_DigestionEngine.asm: ; Minimal MASM64 stub
+  .\digestion\RawrXD_DigestionEngine.asm: ; Minimal MASM64 stub
+  .\direct_io\adaptive_burst_router.asm: ; RAWRXD v1.2.0 — ADAPTIVE BURST ROUTER (Stub
+  .\direct_io\ghost_handshake.asm: ; 2. Stub
+  .\direct_io\nvme_oracle_service.asm: ; wear placeholder
+  .\direct_io\nvme_thermal_sidecar.asm: ; TODO
+  .\direct_io\nvme_thermal_sidecar_entry.asm: ; Minimal entry stub
+  .\extension_host\RawrXD_DAP.asm: ; TODO
+  .\extension_host\RawrXD_MarketplaceInstaller.asm: ; Generate activate function stub
+  .\extension_host\RawrXD_MarketplaceInstaller.asm: ; Generate deactivate function stub
+  .\extension_host\RawrXD_MarketplaceInstaller.asm: ; TODO
+  .\extension_host\RawrXD_MarketplaceInstaller.asm: ; TODO
+  .\gpu\rocm_impl.asm: ; RCX = kernel function pointer (host-side stub
+  .\gpu_masm\gpu_detection.asm: ; Placeholder
+  .\gpu_masm\vulkan\vk_instance.asm: ; Set limits (placeholder
+  .\gpu_masm\vulkan\vk_instance.asm: ; Set common limits (placeholder
+  .\gpu_masm\vulkan\vk_instance.asm: ; Set sparse properties (placeholder
+  .\masm\RawrXD_DirectionlessLoader.asm: ; Write JMP stub
+  .\masm\RawrXD_HttpChatServer.asm: ; RawrXD_HttpChatServer.asm - Complete Hidden
+  .\masm\RawrXD_HttpChatServer.asm: ; __log_error - Log error with context (hidden
+  .\masm\RawrXD_HttpChatServer.asm: ; Hidden
+  .\masm\RawrXD_InferenceCore.asm: ; For each output element q[j]: q[j] = sum(input[k] * Wq[k*hidden
+  .\masm\RawrXD_InferenceCore.asm: ; This is a matrix-vector multiply: [1, hidden] x [hidden, hidden] -> [1, hidden
+  .\masm\RawrXD_InferenceCore.asm: ; --- Element-wise: hidden
+  .\masm\RawrXD_InferenceCore.asm: ; --- Down projection: output[j] = dot(hidden
+  .\masm\RawrXD_InferenceCore.asm: ; hidden
+  .\masm\RawrXD_InferenceCore.asm: ; Compute logits = hidden
+  .\masm\RawrXD_InferenceCore.asm: ; rcx = hidden
+  .\masm\RawrXD_InferenceCore.asm: ; logits[j] = dot(hidden
+  .\masm\RawrXD_InferenceCore.asm: ; hidden
+  .\masm\RawrXD_InferenceCore.asm: ; For each vocab entry j, compute logits[j] = dot(hidden
+  .\masm\RawrXD_InferenceCore.asm: ; hidden
+  .\masm\RawrXD_InferenceCore.asm: ; acc += hidden
+  .\masm\RawrXD_NativeHttpServer.asm: ; For now, return success with placeholder
+  .\masm\masm_solo_compiler.asm: ; Generate a new polymorphic stub
+  .\masm\masm_solo_compiler.asm: ; Polymorphic Stub
+  .\masm\masm_solo_compiler.asm: ; Generates a unique loader stub
+  .\masm\masm_solo_compiler.asm: ; Generates a new polymorphic stub
+  .\masm\masm_solo_compiler.asm: ; 2. No use of system RNG or GNR; every stub
+  .\masm\masm_solo_compiler.asm: ; Runtime unpacking: decrypt payload in memory, wipe stub
+  .\masm\masm_solo_compiler.asm: ; phkResult placeholder
+  .\masm\masm_solo_compiler.asm: ; Randomizes register usage in the stub
+  .\masm\masm_solo_compiler.asm: ; JE rel32 (placeholder
+  .\masm\masm_solo_compiler.asm: ; placeholder
+  .\masm\masm_solo_compiler.asm: ; Saves the generated polymorph stub
+  .\masm\masm_solo_compiler.asm: ; Loads a saved polymorph stub
+  .\masm\masm_solo_compiler.asm: ; Stubgen mode: generate a polymorphic stub
+  .\masm\masm_solo_compiler.asm: ; Generate polymorphic stub
+  .\masm\masm_solo_compiler.asm: ; stub
+  .\masm\masm_solo_compiler.asm: ; Write stub
+  .\masm\masm_solo_compiler.asm: ; Write the generated stub
+  .\masm\masm_solo_compiler.asm: ; stub
+  .\masm\masm_solo_compiler.asm: ; stub
+  .\masm\interconnect\RawrXD_Agentic_Router.asm: ; Stub
+  .\masm\interconnect\RawrXD_DynamicTensorEngine.asm: ; Initialize each hotpatch slot with INT3 (debuggable) then JMP placeholder
+  .\masm\interconnect\RawrXD_HTTP_Router.asm: ; Stub
+  .\masm\interconnect\RawrXD_Inference_Engine.asm: ; External definition placeholder
+  .\masm\interconnect\RawrXD_JSON_Parser.asm: ; Stub
+  .\masm\interconnect\RawrXD_Model_StateMachine.asm: ; Stub
+  .\masm\interconnect\RawrXD_RingBuffer_Consumer.asm: ; Stub
+  .\masm\interconnect\RawrXD_Streaming_Formatter.asm: ; Stub
+  .\masm\interconnect\RawrXD_Swarm_Orchestrator.asm: ; Stub
+  .\thermal\masm\pocket_lab.asm: ; ---------------------------------------------------------- GHOST-LOAD-STUB
+  D:\rawrxd\include\rawrxd_internal_protos.inc: ; ─── Hidden
+
+--- Undefined CALL targets (not found in codebase) ---
+  (Excludes Win32 APIs, CRT, registers, keywords)
+  AI_Apply_Attention
+  AI_Apply_Temperature
+  AI_Apply_TopP
+  AI_Compute_Attention_Scores
+  AI_Embedding_Lookup
+  AI_FFN_SwiGLU
+  AI_KVCache_Update
+  AI_MatMul
+  AI_RMSNorm
+  AI_RoPE_Apply
+  AI_RoPE_Apply_Heads
+  AI_Softmax_Rows
+  AI_Vector_Add
+  AVX512Blur
+  AimbotSmoothMove
+  AlertSensitiveFileAccess
+  ApplyGlitchEffect
+  Camellia256_DecryptBlock_M64
+  Camellia256_EncryptBlock_M64
+  Camellia_Decrypt_Block
+  CaptureConnectionInfo
+  CaptureHostname
+  CaptureNetworkData
+  CaptureRegistryValue
+  ChamsRenderFlat
+  ChamsRenderHologram
+  ChamsRenderTextured
+  ChamsRenderWireframe
+  ClearFramebuffer
+  Config_CalculateChecksum
+  Config_DecryptBuffer
+  Config_EncryptBuffer
+  ESPCullEntities
+  ESPGrowEntityArray
+  ESPRenderBox
+  ESPRenderHealthBar
+  ESPRenderSnapLine
+  ESPSortEntities
+  File_ReadAllBytes
+  GPU_WritePCIConfigDword
+  GetStdHandleor
+  Gossip_BuildDigest
+  Gossip_CheckFailures
+  HTTP2_Connect
+  HTTP2_ReadResponse
+  HTTP2_SendData
+  HTTP2_SendHeaders
+  InitBuffers
+  IsSensitiveFile
+  IsSensitiveRegistryKey
+  LSP_HandleDiagnostics
+  LayerNorm_F32
+  LogDNSResolution
+  LogFileAccess
+  LogFileDelete
+  LogFileMove
+  LogFileRead
+  LogFileWrite
+  LogNetworkConnect
+  LogNetworkRecv
+  LogNetworkSend
+  LogRegistryAccess
+  LogRegistryCreate
+  LogRegistryDelete
+  LogRegistryQuery
+  LogRegistryWrite
+  MainWindow_EnableAIControls
+  MainWindow_EnableControls
+  MainWindow_SetStatus
+  ModelManager_LoadModel
+  ONNX_ParseProtobuf
+  PyTorch_ParsePickle
+  RS_GenerateMatrix
+  RS_InitGaloisTables
+  Raft_ResetElectionTimer
+  RawrXD_MemCopy
+  RawrXD_Phase_Init_Agent
+  RawrXD_Phase_Init_Foundation
+  RawrXD_Phase_Init_Hardware
+  RawrXD_Phase_Init_Inference
+  RawrXD_Phase_Init_Memory
+  RawrXD_Phase_Init_ModelLoading
+  RawrXD_Phase_Init_Orchestration
+  RawrXD_Phase_Init_Production
+  RawrXD_Phase_Init_SwarmIO
+  RawrXD_Phase_Init_UI
+  RawrXD_Phase_Init_Weeks23
+  RawrXD_Phase_MarkComplete
+  RawrXD_Phase_SetError
+  RawrXD_Phase_Shutdown_Agent
+  RawrXD_Phase_Shutdown_Foundation
+  RawrXD_Phase_Shutdown_Hardware
+  RawrXD_Phase_Shutdown_Inference
+  RawrXD_Phase_Shutdown_ModelLoading
+  RawrXD_Phase_Shutdown_Orchestration
+  RawrXD_Phase_Shutdown_Production
+  RawrXD_Phase_Shutdown_SwarmIO
+  RawrXD_Phase_Shutdown_UI
+  RawrXD_Phase_Shutdown_Weeks23
+  RawrXD_RunMessageLoop
+  RenderGlowQuadBlurred
+  RenderParticles
+  RenderScanlines
+  SSE4Blur
+  Str_Cat
+  Str_Strstr
+  StreamingGGUF_ParseTensorIndex
+  Titan_Vulkan_SetupSparseMemory
+  Token_Sample
+  Transformer_Forward
+  Transformer_GetLogits
+  Unzip_Close
+  Unzip_ExtractFile
+  Unzip_Open
+  Workspace_IndexFile
+  parser_parse_toplevelIVE
+
+--- Unused PROCs (defined but no callers found) ---
+  (Excludes PUBLIC exports and known entry points)
+  AELF
+  AI_RunInference
+  AI_TopKSampling
+  AMACH
+  APE
+  ASN1_PatchField
+  ASN1_PatchSubject
+  ASN1_PatchValidity
+  AllocateKVSlot
+  AnalyzeLoadConfig
+  AnalyzeMemoryLayout
+  AnalyzeRelocations
+  AnalyzeRichHeader
+  AtomicCompareExchange64
+  AtomicDecrement64
+  AtomicLoad64
+  AtomicStore64
+  BENCHMARK_QUADBUFFER
+  Beacon_AntiForensics
+  Beacon_InitC2
+  Beacon_MainLoop
+  Build_Thread
+  BurstExecute
+  CF
+  CLIThreadProc
+  CPUID_Execute
+  CRC32_Finalize
+  CRC32_Init
+  CRC32_Update
+  Check_IsDebuggerPresent
+  Check_RemoteDebuggerPresent
+  CompareFiles
+  CompareWideAscii
+  CompilerEngine_Compile
+  CompilerEngine_Create
+  Compiler_InitializeBlockedFeatures
+  ComputeFileHash
+  ConflictDetectorThread
+  ConflictThreadProc
+  CrashReportUploadThread
+  D
+  DAPContinue
+  DAPLaunch
+  DAPStackTrace
+  DAPStepOver
+  DAP_DebugEventThreadProc
+  DAP_ThreadIterator
+  DbgRec
+  DeadlockDetectionThread
+  DetectEncryption
+  DetectLang
+  DigestionFastScan
+  DigestionHashChunk
+  DirectStorage_EnqueueRequest
+  DisassembleInstruction
+  DisassemblerInit
+  DoCertificate
+  DoMemory
+  DoYARA
+  DsmRec
+  ES
+  EnterpriseEditorCreate
+  Error_GetMessage
+  Error_SetContext
+  Example_BlockedFeaturesUsage
+  ExpRec
+  ExportMetrics
+  ExtractExports
+  ExtractResourceToDisk
+  ExtractUrlPath
+  FormatToolResponse
+  FreeDMABuffer
+  GPU_QuantizedMatMul
+  GenerateCMake
+  GenerateFullReport
+  GenerateGhostKeyPair
+  GenerateHeaderFile
+  GenericHook
+  GetFileName
+  GetHookTypeName
+  Ghost_C2_Handshake
+  GitBlame
+  GitDiff
+  HD
+  HandleChatRequest
+  HeartbeatMonitorThread
+  HeartbeatRecvThread
+  HeartbeatSendThread
+  HeartbeatThreadProc
+  Heuristic_Scan
+  HttpServer_GetStatus
+  HttpServer_Initialize
+  HttpServer_IsRunning
+  HttpServer_LoadModel
+  HttpServer_Shutdown
+  INFINITY_IOThreadProc
+  INFINITY_ProcessIOCP
+  INFINITY_ResetMetrics
+  ImpRec
+  Inference_FreeSequence
+  Inference_GetKVContextSize
+  InitPE
+  IntelliSenseApplyCompletion
+  InterceptorThread
+  IsDeviceAddress
+  IsX64Process
+  JitLBA_BurstTensor
+  JitLBA_HashTensorName
+  JitLBA_Init
+  JitLBA_SetDriveMMIO
+  LIE
+  LSPTextDocumentDidChange
+  LSPTextDocumentDidOpen
+  LSP_Engine_Entry
+  LSP_Internal_Dispatch
+  LSP_MessageThread
+  LSP_Shim_ShowMessage
+  Lexer_Blocked_FeatureToggle
+  Lexer_Blocked_Initialize
+  Lexer_Blocked_SIMD_Tokenizer
+  Lexer_Demo
+  Lexer_Hidden_CompilerHook
+  Lexer_IsIdentifierChar
+  Lexer_IsIdentifierStart
+  Lexer_TestSuite
+  Lexer_ValidateTokenSequence
+  MM
+  MainWindow_OnAIComplete
+  MainWindow_OnAIComplete_Done
+  MemCpy_Optimized
+  Mode_Handler_Compile
+  Mode_Handler_Encrypt
+  Mode_Handler_Stubgen
+  MyCreateFileWHook
+  MyDeleteFileHook
+  MyGetAddrInfoHook
+  MyMoveFileHook
+  MyReadFileHook
+  MyRecvHook
+  MyRegCreateKeyExWHook
+  MyRegDeleteKeyHook
+  MyRegOpenKeyExWHook
+  MyRegQueryValueExWHook
+  MyRegSetValueExWHook
+  MySendHook
+  MyWSAConnectHook
+  MyWriteFileHook
+  NativeInferenceThread
+  O
+  P
+  PEDeep
+  PackPESection
+  ParseArray
+  ParseObject
+  PatternDB_Init
+  PatternDB_Scan
+  Phase3Initialize
+  Phase3Shutdown
+  Polymorph_CFFlatten
+  Polymorph_InsertJunk
+  Polymorph_LoadStub
+  Polymorph_RandomizeRegisters
+  Polymorph_SelfHeal
+  Polymorph_ShuffleSections
+  Polymorph_Virtualize
+  ProcessDirectory
+  ProxyToOllama
+  PublicProc
+  QPCToMs
+  QuadBuffer_CopyToGPU
+  QuadBuffer_IOCPWorker
+  QuadBuffer_InitializeStream
+  R
+  RH
+  RUN_VALIDATION_SUITE
+  RVA2Off
+  RawrXD_Check_DebugPort
+  RawrXD_Decrypt_Self_Camellia
+  RawrXD_Generate_Junk
+  RawrXD_Integrate_To_Stream
+  RawrXD_Main
+  RawrXD_Socket_Connect
+  RawrXD_Timing_Check
+  RecordTelemetryEvent
+  RegisterTool
+  RelRec
+  RemovePadding
+  ResRec
+  RingBufferThreadProc
+  Robust_AtomicCompareExchange
+  Robust_Crc64Init
+  Router_GetRoute
+  Router_GetStats
+  Router_Init
+  RunDigestionEngine
+  ScanEmbeddedFormats
+  SchedulerCoordinatorThread
+  SchedulerThreadProc
+  ShowCF
+  ShowDOS
+  ShowExports
+  ShowFileHdr
+  ShowImports
+  ShowOptHdr
+  ShowSections
+  ShutdownSystems
+  StartPerformanceCounter
+  StopPerformanceCounter
+  StrCmp_ASCII
+  StrRec
+  StreamThreadProc
+  Swarm_WorkerThread
+  TLSRec
+  TelemetryFlushThread
+  TemporalMerge
+  TerraFormer_EmitBinary
+  Thread_GetCurrentProcessor
+  Thread_SetAffinityValidated
+  Thread_SetIdealProcessor
+  Thread_SetQoS
+  Titan_AllocateSlot_Production
+  Titan_Bootstrap_Sieve_Real
+  Titan_DecompressNF4
+  Titan_DetectConflict_Production
+  Titan_DetectConflict_Simplified
+  Titan_DirectStorage_Init_Real
+  Titan_Dispatch_Nitro_Shader_Real
+  Titan_Evict_LRU_Slot_Real
+  Titan_GetHeartbeatStats
+  Titan_GhostCacheLookup
+  Titan_InitOrchestrator_Production
+  Titan_InitOrchestrator_Simplified
+  Titan_IsHeartbeatAlive
+  Titan_LRU_Register_Slot
+  Titan_LRU_Touch_Slot
+  Titan_PredictNextLayer
+  Titan_ReleaseSlot_Production
+  Titan_Shutdown_Real
+  Titan_TestMain
+  Titan_UpdateHeartbeat_Production
+  Titan_UpdateHeartbeat_Simplified
+  Titan_Vulkan_Init_Real
+  Titan_WorkerThreadProc
+  TrackAlloc
+  TrackFree
+  UnpackPESection
+  UpdateCheckerThread
+  ValidatePointer
+  Validate_PE_Header
+  WebView_OnEnvironmentCreated
+  Week1_ConflictDetectionThread
+  Week1_HeartbeatThread
+  Week1_SubmitTask
+  Week1_WorkerThread
+  WideToAscii
+  WorkerThread_Proc
+  WriteOut
+  __memcpy
+  __strcpy_w
+  __utf16_to_utf8
+  __utf8_to_utf16
+  __wcslen
+  applyPWMThrottle
+  avx512_scan_stubs
+  block
+  clearEmergencyStop
+  cuda_detect_device
+  cuda_execute_kernel
+  cuda_memory_alloc
+  dispatchLoop
+  dispatchOnce
+  emit_call_rel
+  emit_jcc_rel
+  emit_mov_rax_imm
+  emit_rexw_op
+  emit_word
+  fillRandomBuffer
+  generateAndInstallKey
+  generateRandom32
+  generateRandom64
+  generateSeed64
+  getThrottleLevel
+  hasRdrand
+  hasRdseed
+  ltoa
+  rocm_detect_device
+  rocm_execute_kernel
+  rocm_init
+  rocm_memory_alloc
+  setThrottleLevel
+  testEntropyQuality
+  triggerEmergencyStop
+  validateSessionKey
+  vkGetDeviceProcAddr
+  vk_init
+  vk_shutdown
+  wcstombs
+
+========================================================================
+  End of Report
+========================================================================

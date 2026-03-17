@@ -229,3 +229,14 @@ bool MultiFileSearchWidget::isIgnored(const std::string& path, const std::vector
 void MultiFileSearchWidget::addResultToTree(const MultiFileSearchResult&) {}
 
 void MultiFileSearchWidget::updateStatus(const std::string&) {}
+
+void MultiFileSearchWidget::show() {
+    if (m_showCb) m_showCb(m_showCtx);
+}
+
+std::vector<MultiFileSearchResult> MultiFileSearchWidget::takePendingResults() {
+    std::lock_guard<std::mutex> lock(m_resultsMutex);
+    std::vector<MultiFileSearchResult> results;
+    results.swap(m_pendingResults);
+    return results;
+}

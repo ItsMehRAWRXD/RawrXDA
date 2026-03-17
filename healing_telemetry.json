@@ -1,0 +1,1 @@
+{"attemptCount":1,"detail":"Deterministic prepass repaired intentional demo break","durationMs":2409,"filesModified":["D:\rawrxd\tests\test_autonomous_pipeline.cpp"],"finalStatus":"success","requestedMaxAttempts":3,"success":true,"totalDiagnosticsGenerated":1,"totalDiagnosticsHandled":1,"totalFixesStaged":1}

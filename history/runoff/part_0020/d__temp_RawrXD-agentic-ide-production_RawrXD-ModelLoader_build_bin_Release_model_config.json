@@ -1,0 +1,88 @@
+{
+  "default_model": "quantumide-q4km",
+  "fallback_enabled": true,
+  "models": [
+    {
+      "name": "quantumide-q4km",
+      "backend": "local_gguf",
+      "model_path": "./models/quantumide-q4km.gguf",
+      "enabled": true,
+      "parameters": {
+        "max_tokens": 4096,
+        "temperature": 0.7,
+        "top_p": 0.9
+      },
+      "cost_per_1k_tokens": 0.0
+    },
+    {
+      "name": "gpt-3.5-turbo",
+      "backend": "openai",
+      "model_id": "gpt-3.5-turbo",
+      "api_key": "${OPENAI_API_KEY}",
+      "endpoint": "https://api.openai.com/v1/chat/completions",
+      "enabled": true,
+      "parameters": {
+        "max_tokens": 4096,
+        "temperature": 0.7
+      },
+      "cost_per_1k_tokens_input": 0.0005,
+      "cost_per_1k_tokens_output": 0.0015
+    },
+    {
+      "name": "gpt-4",
+      "backend": "openai",
+      "model_id": "gpt-4",
+      "api_key": "${OPENAI_API_KEY}",
+      "endpoint": "https://api.openai.com/v1/chat/completions",
+      "enabled": true,
+      "parameters": {
+        "max_tokens": 8192,
+        "temperature": 0.7
+      },
+      "cost_per_1k_tokens_input": 0.03,
+      "cost_per_1k_tokens_output": 0.06
+    },
+    {
+      "name": "claude-3-sonnet",
+      "backend": "anthropic",
+      "model_id": "claude-3-sonnet-20240229",
+      "api_key": "${ANTHROPIC_API_KEY}",
+      "endpoint": "https://api.anthropic.com/v1/messages",
+      "enabled": true,
+      "parameters": {
+        "max_tokens": 4096,
+        "temperature": 0.7
+      },
+      "cost_per_1k_tokens_input": 0.003,
+      "cost_per_1k_tokens_output": 0.015
+    },
+    {
+      "name": "gemini-pro",
+      "backend": "google",
+      "model_id": "gemini-pro",
+      "api_key": "${GOOGLE_API_KEY}",
+      "endpoint": "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent",
+      "enabled": true,
+      "parameters": {
+        "max_tokens": 2048,
+        "temperature": 0.7
+      },
+      "cost_per_1k_tokens_input": 0.0005,
+      "cost_per_1k_tokens_output": 0.0015
+    }
+  ],
+  "routing": {
+    "prefer_local": true,
+    "cost_threshold_usd": 5.0,
+    "fallback_chain": [
+      "quantumide-q4km",
+      "gpt-3.5-turbo",
+      "gpt-4"
+    ]
+  },
+  "performance": {
+    "timeout_seconds": 30,
+    "max_retries": 3,
+    "connection_pool_size": 5
+  }
+}

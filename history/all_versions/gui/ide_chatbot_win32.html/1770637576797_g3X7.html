@@ -1,0 +1,4473 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self' file: blob:; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' http://localhost:* ws://localhost:* http://127.0.0.1:*; img-src 'self' data: blob:;">
+  <title>RawrXD IDE // WIN32 CLASSIC</title>
+  <!-- DOMPurify: XSS sanitization for all backend/assistant HTML output -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js" crossorigin="anonymous"></script>
+  <!-- highlight.js: Syntax highlighting for code blocks in chat responses -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs.min.css"
+    crossorigin="anonymous">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"
+    crossorigin="anonymous"></script>
+  <!-- hljs fallback CSS: inline VS theme colors for offline/file:// mode -->
+  <style id="hljs-fallback-css">
+    .hljs {
+      display: block;
+      overflow-x: auto;
+      padding: 1em;
+      color: #000000;
+      background: #ffffff
+    }
+
+    .hljs-comment,
+    .hljs-quote {
+      color: #008000;
+      font-style: italic
+    }
+
+    .hljs-doctag,
+    .hljs-keyword,
+    .hljs-formula {
+      color: #0000ff
+    }
+
+    .hljs-section,
+    .hljs-name,
+    .hljs-selector-tag,
+    .hljs-deletion,
+    .hljs-subst {
+      color: #a31515
+    }
+
+    .hljs-literal {
+      color: #0000ff
+    }
+
+    .hljs-string,
+    .hljs-regexp,
+    .hljs-addition,
+    .hljs-attribute,
+    .hljs-meta-string {
+      color: #a31515
+    }
+
+    .hljs-built_in,
+    .hljs-class .hljs-title {
+      color: #2b91af
+    }
+
+    .hljs-attr,
+    .hljs-variable,
+    .hljs-template-variable,
+    .hljs-type,
+    .hljs-selector-class,
+    .hljs-selector-attr,
+    .hljs-selector-pseudo,
+    .hljs-number {
+      color: #09885a
+    }
+
+    .hljs-symbol,
+    .hljs-bullet,
+    .hljs-link,
+    .hljs-meta,
+    .hljs-selector-id {
+      color: #0000ff
+    }
+
+    .hljs-title,
+    .hljs-title.function_ {
+      color: #795e26
+    }
+
+    .hljs-emphasis {
+      font-style: italic
+    }
+
+    .hljs-strong {
+      font-weight: bold
+    }
+
+    .hljs-link {
+      text-decoration: underline
+    }
+  </style>
+  <!-- CDN Fallback: stubs for offline / file:// usage -->
+  <script>
+    // DOMPurify fallback — passthrough if CDN failed (offline mode)
+    if (typeof DOMPurify === 'undefined') {
+      console.warn('[RawrXD] DOMPurify CDN unavailable — using passthrough (XSS sanitization disabled)');
+      window.DOMPurify = { sanitize: function (html) { return html; }, version: '0.0.0-stub' };
+    }
+    // highlight.js fallback — no-op if CDN failed
+    if (typeof hljs === 'undefined') {
+      console.warn('[RawrXD] highlight.js CDN unavailable — syntax highlighting disabled');
+      window.hljs = {
+        highlightElement: function () { },
+        highlightAll: function () { },
+        highlight: function (code) { return { value: code }; },
+        getLanguage: function () { return null; },
+        listLanguages: function () { return []; }
+      };
+    }
+    // WebView2 bridge detection — true if embedded in Win32 IDE's WebView2 panel
+    var _isInsideWin32IDE = !!(window.chrome && window.chrome.webview);
+    // file:// protocol detection
+    var _isFileProtocol = (window.location.protocol === 'file:');
+  </script>
+  <style>
+    /* ================================================================
+       RawrXD IDE — Windows Classic (Win32) Theme
+       Inspired by Windows 95/98/2000 classic UI chrome
+       ================================================================ */
+
+    :root {
+      /* Win32 Classic palette */
+      --win-bg: #c0c0c0;
+      --win-bg-dark: #808080;
+      --win-bg-light: #dfdfdf;
+      --win-bg-white: #ffffff;
+      --win-bg-window: #ffffff;
+      --win-titlebar: #000080;
+      --win-titlebar-inactive: #808080;
+      --win-titlebar-text: #ffffff;
+      --win-text: #000000;
+      --win-text-disabled: #808080;
+      --win-text-link: #0000ff;
+      --win-highlight: #000080;
+      --win-highlight-text: #ffffff;
+      --win-border-light: #ffffff;
+      --win-border-dark: #404040;
+      --win-border-mid: #808080;
+      --win-field-bg: #ffffff;
+      --win-field-border: inset 1px 1px 0 #808080, inset 2px 2px 0 #404040;
+      --win-btn-face: #c0c0c0;
+      --win-btn-highlight: #ffffff;
+      --win-btn-shadow: #808080;
+      --win-btn-dk-shadow: #404040;
+      --win-scrollbar: #c0c0c0;
+      --win-green: #008000;
+      --win-red: #ff0000;
+      --win-blue: #0000ff;
+      --win-cyan: #008080;
+      --win-orange: #ff8000;
+      --win-yellow: #ffff00;
+      --win-menu-bg: #c0c0c0;
+      --win-menu-border: #808080;
+      /* Typography */
+      --font-mono: 'Fixedsys', 'Courier New', 'Consolas', monospace;
+      --font-sans: 'Tahoma', 'MS Sans Serif', 'Arial', sans-serif;
+      --titlebar-height: 0px;
+    }
+
+    /* ================================================================
+       RESET & BASE
+       ================================================================ */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      height: 100%;
+      overflow: hidden;
+      background: var(--win-bg);
+      color: var(--win-text);
+      font-family: var(--font-sans);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    /* Win32 raised border mixin */
+    .win-raised {
+      border: 2px solid;
+      border-color: var(--win-btn-highlight) var(--win-btn-dk-shadow) var(--win-btn-dk-shadow) var(--win-btn-highlight);
+    }
+
+    /* Win32 sunken border mixin */
+    .win-sunken {
+      border: 2px solid;
+      border-color: var(--win-btn-shadow) var(--win-btn-highlight) var(--win-btn-highlight) var(--win-btn-shadow);
+    }
+
+    /* ================================================================
+       STANDALONE TITLEBAR (Win32 classic blue title bar)
+       ================================================================ */
+    .standalone-titlebar {
+      display: none;
+      height: 28px;
+      background: linear-gradient(90deg, #000080 0%, #1084d0 100%);
+      border-bottom: 1px solid var(--win-border-dark);
+      -webkit-app-region: drag;
+      user-select: none;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 4px;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 10001;
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: bold;
+      color: var(--win-titlebar-text);
+    }
+
+    .standalone-titlebar.active {
+      display: flex;
+    }
+
+    body.standalone-mode .ide-container {
+      padding-top: 28px;
+    }
+
+    body.standalone-mode {
+      --titlebar-height: 28px;
+    }
+
+    .titlebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--win-titlebar-text);
+    }
+
+    .titlebar-brand .tb-icon {
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    .titlebar-brand .tb-name {
+      font-weight: bold;
+      letter-spacing: 0;
+      font-size: 11px;
+    }
+
+    .titlebar-brand .tb-version {
+      font-weight: normal;
+      font-size: 10px;
+      opacity: 0.8;
+    }
+
+    .titlebar-center {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .tb-status {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      font-weight: normal;
+    }
+
+    .tb-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ff0000;
+      display: inline-block;
+    }
+
+    .tb-dot.online {
+      background: #00ff00;
+    }
+
+    .tb-mode {
+      font-size: 9px;
+      font-weight: bold;
+      padding: 1px 6px;
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 2px;
+    }
+
+    .titlebar-controls {
+      display: flex;
+      gap: 2px;
+      -webkit-app-region: no-drag;
+    }
+
+    .titlebar-controls button {
+      width: 20px;
+      height: 18px;
+      background: var(--win-btn-face);
+      border: 2px solid;
+      border-color: var(--win-btn-highlight) var(--win-btn-dk-shadow) var(--win-btn-dk-shadow) var(--win-btn-highlight);
+      color: var(--win-text);
+      font-size: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-sans);
+      padding: 0;
+    }
+
+    .titlebar-controls button:active {
+      border-color: var(--win-btn-dk-shadow) var(--win-btn-highlight) var(--win-btn-highlight) var(--win-btn-dk-shadow);
+    }
+
+    /* ================================================================
+       SIDEBAR MOBILE TOGGLES
+       ================================================================ */
+    .sidebar-toggle,
+    .rightbar-toggle {
+      display: none;
+      position: fixed;
+      z-index: 10000;
+      width: 30px;
+      height: 30px;
+      background: var(--win-btn-face);
+      border: 2px solid;
+      border-color: var(--win-btn-highlight) var(--win-btn-dk-shadow) var(--win-btn-dk-shadow) var(--win-btn-highlight);
+      color: var(--win-text);
+      font-size: 16px;
+      cursor: pointer;
+      font-family: var(--font-sans);
+    }
+
+    .sidebar-toggle {
+      top: 40px;
+      left: 4px;
+    }
+
+    .rightbar-toggle {
+      top: 40px;
+      right: 4px;
+    }
+
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.3);
+      z-index: 999;
+    }
+
+    .sidebar-overlay.active {
+      display: block;
+    }
+
+    /* ================================================================
+       IDE CONTAINER — 3-panel layout
+       ================================================================ */
+    .ide-container {
+      display: grid;
+      grid-template-columns: 260px 1fr 240px;
+      grid-template-rows: auto 1fr auto;
+      grid-template-areas:
+        "header header header"
+        "sidebar main rightbar"
+        "terminal terminal terminal";
+      height: 100vh;
+      background: var(--win-bg);
+    }
+
+    /* ================================================================
+       HEADER BAR (Win32 menu bar style)
+       ================================================================ */
+    .header-bar {
+      grid-area: header;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 2px 4px;
+      background: var(--win-bg);
+      border-bottom: 1px solid var(--win-border-dark);
+      height: 28px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .brand-icon {
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    .brand-text {
+      font-weight: bold;
+      font-size: 12px;
+      color: var(--win-text);
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Status pill — Win32 sunken field style */
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 1px 8px;
+      border: 2px solid;
+      border-color: var(--win-btn-shadow) var(--win-btn-highlight) var(--win-btn-highlight) var(--win-btn-shadow);
+      background: var(--win-field-bg);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: bold;
+      min-width: 100px;
+    }
+
+    .status-pill .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .status-pill.online .status-dot {
+      background: #00aa00;
+    }
+
+    .status-pill.offline .status-dot {
+      background: #cc0000;
+    }
+
+    .status-pill.connecting .status-dot {
+      background: #cc8800;
+      animation: blink-dot 0.8s infinite;
+    }
+
+    @keyframes blink-dot {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.3;
+      }
+    }
+
+    .status-pill.online {
+      color: var(--win-green);
+    }
+
+    .status-pill.offline {
+      color: var(--win-red);
+    }
+
+    .status-pill.connecting {
+      color: var(--win-orange);
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 2px;
+    }
+
+    /* Win32 toolbar button */
+    .icon-btn {
+      width: 24px;
+      height: 22px;
+      background: var(--win-btn-face);
+      border: 2px solid;
+      border-color: var(--win-btn-highlight) var(--win-btn-dk-shadow) var(--win-btn-dk-shadow) var(--win-btn-highlight);
+      cursor: pointer;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--win-text);
+    }
+
+    .icon-btn:hover {
+      background: var(--win-bg-light);
+    }
+
+    .icon-btn:active {
+      border-color: var(--win-btn-dk-shadow) var(--win-btn-highlight) var(--win-btn-highlight) var(--win-btn-dk-shadow);
+      padding-top: 1px;
+      padding-left: 1px;
+    }
+
+    /* ================================================================
+       LEFT SIDEBAR (Win32 panel)
+       ================================================================ */
+    .sidebar {
+      grid-area: sidebar;
+      background: var(--win-bg);
+      border-right: 2px solid;
+      border-right-color: var(--win-btn-shadow);
+      overflow-y: auto;
+      padding: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .sidebar-section {
+      background: var(--win-bg);
+      border: 2px solid;
+      border-color: var(--win-btn-highlight) var(--win-btn-dk-shadow) var(--win-btn-dk-shadow) var(--win-btn-highlight);
+      padding: 6px;
+    }
+
+    .sidebar-title {
+      font-size: 11px;
+      font-weight: bold;
+      color: var(--win-text);
+      margin-bottom: 6px;
+      padding-bottom: 2px;
+      border-bottom: 1px solid var(--win-border-mid);
+    }
+
+    /* Tool buttons grid */
+    .tool-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2px;
+    }
+
+    .tool-btn {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 6px;
+      background: var(--win-btn-face);
+      border: 2px solid;
+      border-color: var(--win-btn-highlight) var(--win-btn-dk-shadow) var(--win-btn-dk-shadow) var(--win-btn-highlight);
+      cursor: pointer;
+      font-family: var(--font-sans);
+      font-size: 11px;
+      color: var(--win-text);
+    }
+
+    .tool-btn:hover {
+      background: var(--win-bg-light);
+    }
+
+    .tool-btn:active {
+      border-color: var(--win-btn-dk-shadow) var(--win-btn-highlight) var(--win-btn-highlight) var(--win-btn-dk-shadow);
+      padding-top: 4px;
+      padding-left: 7px;
+    }
+
+    .tool-btn .icon {
+      font-size: 12px;
+    }
+
+    /* Model selector */
+    .model-selector {
+      margin-bottom: 6px;
+    }
+
+    .select-wrapper {
+      width: 100%;
+    }
+
+    .model-select {
+      width: 100%;
+      padding: 2px 4px;
+      background: var(--win-field-bg);
+      border: 2px solid;
+      border-color: var(--win-btn-shadow) var(--win-btn-highlight) var(--win-btn-highlight) var(--win-btn-shadow);
+      color: var(--win-text);
+      font-family: var(--font-sans);
+      font-size: 11px;
+    }
+
+    /* Generation settings */
+    .gen-settings {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .setting-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .setting-label {
+      font-size: 10px;
+      color: var(--win-text);
+      font-weight: bold;
+    }
+
+    .setting-value {
+      font-size: 10px;
+      color: var(--win-highlight);
+      font-family: var(--font-mono);
+    }
+
+    .setting-slider {
+      width: 100%;
+      height: 16px;
+      cursor: pointer;
+      accent-color: var(--win-highlight);
+    }
+
+    /* Debug checkboxes */
+    .debug-option {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+    }
+
+    .debug-option label {
+      cursor: pointer;
+    }
+
+    /* System prompt section */
+    .system-prompt-section {
+      margin-top: 4px;
+    }
+
+    .system-prompt-toggle {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .toggle-arrow {
+      font-size: 10px;
+      transition: transform 0.2s;
+      color: var(--win-text);
+    }
+
+    .toggle-arrow.open {
+      transform: rotate(180deg);
+    }
+
+    .system-prompt-body {
+      display: none;
+      padding-top: 6px;
+    }
+
+    .system-prompt-body.open {
+      display: block;
+    }
+
+    .system-prompt-textarea {
+      width: 100%;
+      min-height: 60px;
+      max-height: 120px;
+      resize: vertical;
+      background: var(--win-field-bg);
+      border: 2px solid;
+      border-color: var(--win-btn-shadow) var(--win-btn-highlight) var(--win-btn-highlight) var(--win-btn-shadow);
+      color: var(--win-text);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      padding: 4px;
+    }
+
+    .sys-prompt-actions {
+      display: flex;
+      gap: 4px;
+      margin-top: 4px;
+    }
+
+    .sys-prompt-btn {
+      padding: 2px 8px;
+      background: var(--win-btn-face);
+      border: 2px solid;
+      border-color: var(--win-btn-highlight) var(--win-btn-dk-shadow) var(--win-btn-dk-shadow) var(--win-btn-highlight);
+      cursor: pointer;
+      font-size: 10px;
+      font-family: var(--font-sans);
+      color: var(--win-text);
+    }
+
+    .sys-prompt-btn:active {
+      border-color: var(--win-btn-dk-shadow) var(--win-btn-highlight) var(--win-btn-highlight) var(--win-btn-dk-shadow);
+    }
+
+    .sys-prompt-btn.danger {
+      color: var(--win-red);
+    }
+
+    /* Backend info */
+    .backend-info {
+      font-size: 11px;
+      line-height: 1.6;
+      padding: 4px;
+      background: var(--win-field-bg);
+      border: 2px solid;
+      border-color: var(--win-btn-shadow) var(--win-btn-highlight) var(--win-btn-highlight) var(--win-btn-shadow);
+    }
+
+    .backend-info .label {
+      font-weight: bold;
+      color: var(--win-text);
+    }
+
+    .backend-info .val-online {
+      color: var(--win-green);
+      font-weight: bold;
+    }
+
+    .backend-info .val-offline {
+      color: var(--win-red);
+      font-weight: bold;
+    }
+
+    .backend-info .val-neutral {
+      color: var(--win-text-disabled);
+    }
+
+    /* ================================================================
+       MAIN CHAT AREA
+       ================================================================ */
+    .main-area {
+      grid-area: main;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--win-bg);
+      border-left: 1px solid var(--win-btn-highlight);
+      border-right: 1px solid var(--win-btn-shadow);
+    }
+
+    /* Chat header — Win32 status bar style */
+    .chat-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 2px 6px;
+      background: var(--win-bg);
+      border-bottom: 2px solid;
+      border-bottom-color: var(--win-btn-shadow);
+      min-height: 24px;
+    }
+
+    .chat-context {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .context-badge {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      padding: 1px 6px;
+      background: var(--win-field-bg);
+      border: 1px solid var(--win-border-mid);
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--win-text-disabled);
+    }
+
+    .context-badge.active {
+      color: var(--win-green);
+      border-color: var(--win-green);
+      font-weight: bold;
+    }
+
+    /* Messages container */
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 6px;
+      background: var(--win-field-bg);
+      border: 2px solid;
+      border-color: var(--win-btn-shadow) var(--win-btn-highlight) var(--win-btn-highlight) var(--win-btn-shadow);
+      margin: 4px;
+    }
+
+    /* Individual message */
+    .message {
+      display: flex;
+      gap: 8px;
+      padding: 6px;
+      margin-bottom: 4px;
+      border-bottom: 1px solid #e0e0e0;
+      animation: msg-in 0.15s ease-out;
+    }
+
+    @keyframes msg-in {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    .message-avatar {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+      background: var(--win-bg);
+      border: 1px solid var(--win-border-mid);
+    }
+
+    .message-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .message-header {
+      font-size: 11px;
+      font-weight: bold;
+      margin-bottom: 2px;
+      color: var(--win-text);
+    }
+
+    .message-time {
+      font-weight: normal;
+      color: var(--win-text-disabled);
+      font-size: 10px;
+      margin-left: 6px;
+    }
+
+    .message-text {
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--win-text);
+      word-break: break-word;
+    }
+
+    .message-meta {
+      display: flex;
+      gap: 10px;
+      margin-top: 4px;
+      font-size: 10px;
+      color: var(--win-text-disabled);
+      font-family: var(--font-mono);
+    }
+
+    .message.user {
+      background: #fffff0;
+    }
+
+    .message.system {
+      background: #f0f0ff;
+    }
+
+    .message.assistant {
+      background: var(--win-field-bg);
+    }
+
+    /* Streaming cursor */
+    .streaming-cursor::after {
+      content: '▌';
+      animation: blink-cursor 0.8s infinite;
+      color: var(--win-highlight);
+    }
+
+    @keyframes blink-cursor {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0;
+      }
+    }
+
+    /* Typing indicator */
+    .typing-indicator {
+      display: flex;
+      gap: 4px;
+      padding: 8px 0;
+    }
+
+    .typing-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--win-text-disabled);
+      border-radius: 50%;
+      animation: typing-bounce 1.2s infinite;
+    }
+
+    .typing-dot:nth-child(2) {
+      animation-delay: 0.15s;
+    }
+
+    .typing-dot:nth-child(3) {
+      animation-delay: 0.3s;
+    }
+
+    @keyframes typing-bounce {
+
+      0%,
+      80%,
+      100% {
+        transform: translateY(0);
+        opacity: 0.4;
+      }
+
+      40% {
+        transform: translateY(-6px);
+        opacity: 1;
+      }
+    }
+
+    /* Restored indicator */
+    .restored-indicator {
+      padding: 6px 10px;
+      margin-bottom: 6px;
+      background: #fffff0;
+      border: 1px solid #808080;
+      font-size: 11px;
+      color: var(--win-text);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .restored-indicator button {
+      background: var(--win-btn-face);
+      border: 2px solid;
+      border-color: var(--win-btn-highlight) var(--win-btn-dk-shadow) var(--win-btn-dk-shadow) var(--win-btn-highlight);
+      padding: 1px 8px;
+      font-size: 10px;
+      cursor: pointer;
+      font-family: var(--font-sans);
+    }
+
+    /* Code blocks */
+    .code-block {
+      margin: 6px 0;
+      border: 2px solid;
+      border-color: var(--win-btn-shadow) var(--win-btn-highlight) var(--win-btn-highlight) var(--win-btn-shadow);
+      background: var(--win-field-bg);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 2px 6px;
+      background: var(--win-bg);
+      border-bottom: 1px solid var(--win-border-mid);
+    }
+
+    .code-lang {
+      font-size: 10px;
+      font-weight: bold;
+      color: var(--win-highlight);
+      font-family: var(--font-mono);
+    }
+
+    .code-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    .code-btn {
+      padding: 1px 8px;
+      background: var(--win-btn-face);
+      border: 2px solid;
+      border-color: var(--win-btn-highlight) var(--win-btn-dk-shadow) var(--win-btn-dk-shadow) var(--win-btn-highlight);
+      cursor: pointer;
+      font-size: 10px;
+      font-family: var(--font-sans);
+      color: var(--win-text);
+    }
+
+    .code-btn:hover {
+      background: var(--win-bg-light);
+    }
+
+    .code-btn:active {
+      border-color: var(--win-btn-dk-shadow) var(--win-btn-highlight) var(--win-btn-highlight) var(--win-btn-dk-shadow);
+    }
+
+    .code-content {
+      padding: 6px;
+      overflow-x: auto;
+    }
+
+    .code-content pre {
+      margin: 0;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      line-height: 1.4;
+      white-space: pre-wrap;
+    }
+
+    .code-content code {
+      font-family: var(--font-mono);
+      font-size: 11px;
+    }
+
+    /* Failure badges */
+    .failure-badge {
+      font-size: 9px;
+      padding: 1px 6px;
+      border: 1px solid;
+      margin-left: 6px;
+      font-family: var(--font-mono);
+    }
+
+    .failure-badge.retried {
+      color: var(--win-green);
+      border-color: var(--win-green);
+    }
+
+    .failure-badge.detected {
+      color: var(--win-orange);
+      border-color: var(--win-orange);
+    }
+
+    .failure-badge.failed-retry {
+      color: var(--win-red);
+      border-color: var(--win-red);
+    }
+
+    /* Chat input container */
+    .chat-input-container {
+      padding: 4px;
+      background: var(--win-bg);
+      border-top: 2px solid var(--win-btn-highlight);
+    }
+
+    .input-wrapper {
+      display: flex;
+      gap: 4px;
+      align-items: flex-end;
+    }
+
+    .chat-input {
+      flex: 1;
+      padding: 4px 6px;
+      background: var(--win-field-bg);
+      border: 2px solid;
+      border-color: var(--win-btn-shadow) var(--win-btn-highlight) var(--win-btn-highlight) var(--win-btn-shadow);
+      color: var(--win-text);
+      font-family: var(--font-sans);
+      font-size: 12px;
+      resize: none;
+      min-height: 24px;
+      max-height: 120px;
+    }
+
+    .chat-input:focus {
+      outline: 1px dotted var(--win-highlight);
+    }
+
+    .input-actions {
+      display: flex;
+      gap: 2px;
+    }
+
+    .input-btn {
+      width: 28px;
+      height: 24px;
+      background: var(--win-btn-face);
+      border: 2px solid;
+      border-color: var(--win-btn-highlight) var(--win-btn-dk-shadow) var(--win-btn-dk-shadow) var(--win-btn-highlight);
+      cursor: pointer;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--win-text);
+    }
+
+    .input-btn:active {
+      border-color: var(--win-btn-dk-shadow) var(--win-btn-highlight) var(--win-btn-highlight) var(--win-btn-dk-shadow);
+    }
+
+    .input-btn.send {
+      color: var(--win-green);
+      font-weight: bold;
+    }
+
+    .input-btn.stop {
+      color: var(--win-red);
+    }
+
+    .input-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      padding: 2px 0;
+      margin-top: 2px;
+    }
+
+    .toolbar-item {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      padding: 1px 6px;
+      cursor: pointer;
+      font-size: 10px;
+      color: var(--win-text);
+      border: 1px solid transparent;
+    }
+
+    .toolbar-item:hover {
+      background: var(--win-bg-light);
+      border: 1px solid var(--win-border-mid);
+    }
+
+    /* Stream rate indicator */
+    .stream-rate-indicator {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      padding: 1px 8px;
+      background: #fffff0;
+      border: 1px solid var(--win-border-mid);
+      font-size: 10px;
+      font-family: var(--font-mono);
+      margin-left: auto;
+    }
+
+    .rate-value {
+      color: var(--win-green);
+      font-weight: bold;
+    }
+
+    .eta-value {
+      color: var(--win-text-disabled);
+    }
+
+    /* ================================================================
+       DEBUG PANEL (Win32 dialog style)
+       ================================================================ */
+    .debug-panel {
+      display: none;
+      position: absolute;
+      top: 34px;
+      left: 264px;
+      right: 244px;
+      bottom: 120px;
+      z-index: 500;
+      background: var(--win-bg);
+      border: 2px solid;
+      border-color: var(--win-btn-highlight) var(--win-btn-dk-shadow) var(--win-btn-dk-shadow) var(--win-btn-highlight);
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .debug-panel.active {
+      display: flex;
+    }
+
+    .debug-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 2px 4px;
+      background: linear-gradient(90deg, #000080 0%, #1084d0 100%);
+      color: white;
+      font-weight: bold;
+      font-size: 11px;
+    }
+
+    .debug-title {
+      font-weight: bold;
+    }
+
+    .debug-controls {
+      display: flex;
+      gap: 2px;
+    }
+
+    .debug-grid {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .debug-sidebar {
+      width: 200px;
+      padding: 6px;
+      border-right: 1px solid var(--win-border-mid);
+      overflow-y: auto;
+      background: var(--win-bg);
+    }
+
+    .debug-section {
+      margin-bottom: 8px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--win-border-mid);
+    }
+
+    .debug-section-title {
+      font-size: 10px;
+      font-weight: bold;
+      margin-bottom: 4px;
+      color: var(--win-text);
+    }
+
+    .debug-main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px;
+      background: var(--win-field-bg);
+      border: 2px solid;
+      border-color: var(--win-btn-shadow) var(--win-btn-highlight) var(--win-btn-highlight) var(--win-btn-shadow);
+      margin: 4px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+    }
+
+    .debug-log {
+      padding: 1px 0;
+      line-height: 1.4;
+    }
+
+    .timestamp {
+      color: var(--win-text-disabled);
+    }
+
+    .level-info {
+      color: var(--win-blue);
+      font-weight: bold;
+    }
+
+    .level-warn {
+      color: var(--win-orange);
+      font-weight: bold;
+    }
+
+    .level-error {
+      color: var(--win-red);
+      font-weight: bold;
+    }
+
+    /* ================================================================
+       FAILURE INTELLIGENCE PANEL
+       ================================================================ */
+    .failure-panel {
+      display: none;
+      position: absolute;
+      top: 34px;
+      left: 264px;
+      right: 244px;
+      bottom: 120px;
+      z-index: 500;
+      background: var(--win-bg);
+      border: 2px solid;
+      border-color: var(--win-btn-highlight) var(--win-btn-dk-shadow) var(--win-btn-dk-shadow) var(--win-btn-highlight);
+      flex-direction: column;
+    }
+
+    .failure-panel.active {
+      display: flex;
+    }
+
+    .failure-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 2px 4px;
+      background: linear-gradient(90deg, #000080 0%, #1084d0 100%);
+      color: white;
+      font-weight: bold;
+      font-size: 11px;
+    }
+
+    .failure-title {
+      font-weight: bold;
+    }
+
+    .failure-body {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .failure-timeline {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px;
+    }
+
+    .failure-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+
+    .failure-table th {
+      background: var(--win-bg);
+      border: 1px solid var(--win-border-mid);
+      padding: 2px 6px;
+      text-align: left;
+      font-weight: bold;
+      font-size: 10px;
+    }
+
+    .failure-table td {
+      border: 1px solid #e0e0e0;
+      padding: 2px 6px;
+      font-size: 10px;
+    }
+
+    .failure-table tr:hover {
+      background: #fffff0;
+    }
+
+    .failure-table tr.selected {
+      background: var(--win-highlight);
+      color: var(--win-highlight-text);
+    }
+
+    .outcome-badge {
+      font-size: 9px;
+      padding: 1px 4px;
+      border: 1px solid;
+      font-weight: bold;
+    }
+
+    .outcome-badge.corrected {
+      color: var(--win-green);
+      border-color: var(--win-green);
+    }
+
+    .outcome-badge.detected {
+      color: var(--win-orange);
+      border-color: var(--win-orange);
+    }
+
+    .outcome-badge.failed {
+      color: var(--win-red);
+      border-color: var(--win-red);
+    }
+
+    .outcome-badge.declined {
+      color: var(--win-text-disabled);
+      border-color: var(--win-border-mid);
+    }
+
+    .failure-actions {
+      display: flex;
+      gap: 2px;
+    }
+
+    .failure-action-btn {
+      padding: 1px 6px;
+      background: var(--win-btn-face);
+      border: 1px solid var(--win-border-mid);
+      cursor: pointer;
+      font-size: 9px;
+      font-family: var(--font-sans);
+    }
+
+    .failure-action-btn:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+
+    .failure-action-btn.retry {
+      color: var(--win-green);
+    }
+
+    .failure-action-btn.skip {
+      color: var(--win-text-disabled);
+    }
+
+    .failure-action-btn.escalate {
+      color: var(--win-orange);
+    }
+
+    .failure-detail-drawer {
+      display: none;
+      padding: 8px;
+      background: #fffff0;
+      border: 1px solid var(--win-border-mid);
+      margin-top: 4px;
+    }
+
+    .failure-detail-drawer.active {
+      display: block;
+    }
+
+    .failure-detail-row {
+      display: flex;
+      gap: 8px;
+      padding: 2px 0;
+      font-size: 11px;
+    }
+
+    .failure-detail-key {
+      font-weight: bold;
+      min-width: 80px;
+    }
+
+    .failure-detail-val {
+      color: var(--win-text);
+    }
+
+    .failure-stats-panel {
+      width: 220px;
+      padding: 6px;
+      border-left: 1px solid var(--win-border-mid);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    /* Stat cards (reused in multiple panels) */
+    .stat-card {
+      border: 2px solid;
+      border-color: var(--win-btn-highlight) var(--win-btn-dk-shadow) var(--win-btn-dk-shadow) var(--win-btn-highlight);
+      padding: 6px;
+      background: var(--win-bg);
+    }
+
+    .stat-card-title {
+      font-size: 10px;
+      font-weight: bold;
+      margin-bottom: 4px;
+      border-bottom: 1px solid var(--win-border-mid);
+      padding-bottom: 2px;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 2px 0;
+      font-size: 11px;
+    }
+
+    .stat-label {
+      color: var(--win-text);
+    }
+
+    .stat-value {
+      font-family: var(--font-mono);
+      font-weight: bold;
+    }
+
+    .stat-value.cyan {
+      color: var(--win-cyan);
+    }
+
+    .stat-value.orange {
+      color: var(--win-orange);
+    }
+
+    .stat-value.green {
+      color: var(--win-green);
+    }
+
+    .stat-value.red {
+      color: var(--win-red);
+    }
+
+    .stat-bar {
+      height: 6px;
+      background: #e0e0e0;
+      border: 1px solid var(--win-border-mid);
+    }
+
+    .stat-bar-fill {
+      height: 100%;
+      transition: width 0.3s;
+    }
+
+    /* ================================================================
+       AGENT DASHBOARD PANEL
+       ================================================================ */
+    .agent-panel {
+      display: none;
+      position: absolute;
+      top: 34px;
+      left: 264px;
+      right: 244px;
+      bottom: 120px;
+      z-index: 500;
+      background: var(--win-bg);
+      border: 2px solid;
+      border-color: var(--win-btn-highlight) var(--win-btn-dk-shadow) var(--win-btn-dk-shadow) var(--win-btn-highlight);
+      flex-direction: column;
+    }
+
+    .agent-panel.active {
+      display: flex;
+    }
+
+    .agent-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 2px 4px;
+      background: linear-gradient(90deg, #000080 0%, #1084d0 100%);
+      color: white;
+      font-weight: bold;
+      font-size: 11px;
+    }
+
+    .agent-title {
+      font-weight: bold;
+    }
+
+    .agent-poll-indicator {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      font-weight: normal;
+    }
+
+    .agent-poll-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #00ff00;
+      animation: blink-dot 1.5s infinite;
+    }
+
+    .agent-poll-dot.paused {
+      background: #808080;
+      animation: none;
+    }
+
+    .agent-body {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .agent-main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .agent-card-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+    }
+
+    .agent-card {
+      border: 2px solid;
+      border-color: var(--win-btn-highlight) var(--win-btn-dk-shadow) var(--win-btn-dk-shadow) var(--win-btn-highlight);
+      padding: 6px;
+      background: var(--win-bg);
+      text-align: center;
+    }
+
+    .agent-card-name {
+      font-size: 11px;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+
+    .agent-card-status {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .agent-status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #808080;
+    }
+
+    .agent-status-dot.active {
+      background: #00aa00;
+    }
+
+    .agent-status-dot.inactive {
+      background: #cc0000;
+    }
+
+    .agent-card-stat {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      padding: 1px 0;
+    }
+
+    .stat-key {
+      color: var(--win-text-disabled);
+    }
+
+    .stat-val {
+      font-weight: bold;
+      color: var(--win-highlight);
+      font-family: var(--font-mono);
+    }
+
+    /* Hotpatch section */
+    .hotpatch-section {
+      border: 2px solid;
+      border-color: var(--win-btn-highlight) var(--win-btn-dk-shadow) var(--win-btn-dk-shadow) var(--win-btn-highlight);
+      padding: 6px;
+    }
+
+    .hotpatch-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .hotpatch-title {
+      font-size: 11px;
+      font-weight: bold;
+    }
+
+    .hotpatch-layer-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+    }
+
+    .hotpatch-layer {
+      border: 1px solid var(--win-border-mid);
+      padding: 6px;
+      text-align: center;
+      background: var(--win-field-bg);
+    }
+
+    .hotpatch-layer.disabled {
+      opacity: 0.5;
+    }
+
+    .hotpatch-layer-name {
+      font-size: 10px;
+      font-weight: bold;
+    }
+
+    .hotpatch-layer-count {
+      font-size: 16px;
+      font-weight: bold;
+      color: var(--win-highlight);
+      font-family: var(--font-mono);
+    }
+
+    .hotpatch-layer-label {
+      font-size: 9px;
+      color: var(--win-text-disabled);
+    }
+
+    .hotpatch-toggle {
+      display: inline-block;
+      margin-top: 4px;
+    }
+
+    .hotpatch-toggle input {
+      cursor: pointer;
+    }
+
+    .hotpatch-toggle-slider {
+      display: none;
+    }
+
+    /* Agent timeline */
+    .agent-timeline {
+      border: 2px solid;
+      border-color: var(--win-btn-shadow) var(--win-btn-highlight) var(--win-btn-highlight) var(--win-btn-shadow);
+      flex: 1;
+    }
+
+    .agent-timeline-header {
+      display: flex;
+      justify-content: space-between;
+      padding: 2px 6px;
+      background: var(--win-bg);
+      border-bottom: 1px solid var(--win-border-mid);
+      font-size: 10px;
+      font-weight: bold;
+    }
+
+    .agent-timeline-body {
+      max-height: 200px;
+      overflow-y: auto;
+      padding: 4px;
+      background: var(--win-field-bg);
+    }
+
+    .agent-event {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      padding: 2px 4px;
+      font-size: 10px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .agent-event-time {
+      color: var(--win-text-disabled);
+      min-width: 60px;
+      font-family: var(--font-mono);
+    }
+
+    .agent-event-type {
+      font-weight: bold;
+      min-width: 70px;
+      font-size: 9px;
+      padding: 0 4px;
+      border: 1px solid;
+    }
+
+    .agent-event-type.info {
+      color: var(--win-blue);
+      border-color: var(--win-blue);
+    }
+
+    .agent-event-type.detection {
+      color: var(--win-red);
+      border-color: var(--win-red);
+    }
+
+    .agent-event-type.correction {
+      color: var(--win-green);
+      border-color: var(--win-green);
+    }
+
+    .agent-event-type.replay {
+      color: var(--win-orange);
+      border-color: var(--win-orange);
+    }
+
+    .agent-event-detail {
+      color: var(--win-text);
+    }
+
+    .agent-sidebar {
+      width: 200px;
+      padding: 6px;
+      border-left: 1px solid var(--win-border-mid);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    /* ================================================================
+       PERFORMANCE PANEL
+       ================================================================ */
+    .perf-panel {
+      display: none;
+      position: absolute;
+      top: 34px;
+      left: 264px;
+      right: 244px;
+      bottom: 120px;
+      z-index: 500;
+      background: var(--win-bg);
+      border: 2px solid;
+      border-color: var(--win-btn-highlight) var(--win-btn-dk-shadow) var(--win-btn-dk-shadow) var(--win-btn-highlight);
+      flex-direction: column;
+    }
+
+    .perf-panel.active {
+      display: flex;
+    }
+
+    .perf-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 2px 4px;
+      background: linear-gradient(90deg, #000080 0%, #1084d0 100%);
+      color: white;
+      font-weight: bold;
+      font-size: 11px;
+    }
+
+    .perf-title {
+      font-weight: bold;
+    }
+
+    .perf-body {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .perf-main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .perf-metric-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+    }
+
+    .perf-metric-card {
+      border: 2px solid;
+      border-color: var(--win-btn-highlight) var(--win-btn-dk-shadow) var(--win-btn-dk-shadow) var(--win-btn-highlight);
+      padding: 6px;
+      text-align: center;
+      background: var(--win-bg);
+    }
+
+    .perf-metric-label {
+      font-size: 9px;
+      color: var(--win-text-disabled);
+    }
+
+    .perf-metric-value {
+      font-size: 18px;
+      font-weight: bold;
+      color: var(--win-highlight);
+      font-family: var(--font-mono);
+    }
+
+    .perf-metric-value.orange {
+      color: var(--win-orange);
+    }
+
+    .perf-metric-value.green {
+      color: var(--win-green);
+    }
+
+    .perf-metric-value.purple {
+      color: #800080;
+    }
+
+    .perf-metric-unit {
+      font-size: 9px;
+      color: var(--win-text-disabled);
+    }
+
+    /* Sparkline sections */
+    .perf-sparkline-section {
+      border: 2px solid;
+      border-color: var(--win-btn-shadow) var(--win-btn-highlight) var(--win-btn-highlight) var(--win-btn-shadow);
+    }
+
+    .perf-sparkline-header {
+      display: flex;
+      justify-content: space-between;
+      padding: 2px 8px;
+      background: var(--win-bg);
+      border-bottom: 1px solid var(--win-border-mid);
+      font-size: 10px;
+      font-weight: bold;
+    }
+
+    .perf-sparkline-body {
+      padding: 6px;
+      background: var(--win-field-bg);
+    }
+
+    .sparkline-canvas {
+      width: 100%;
+      display: block;
+    }
+
+    .sparkline-legend {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      margin-top: 4px;
+      color: var(--win-text-disabled);
+    }
+
+    .sparkline-legend-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 4px;
+    }
+
+    /* Benchmark table */
+    .perf-benchmark-section {
+      border: 2px solid;
+      border-color: var(--win-btn-shadow) var(--win-btn-highlight) var(--win-btn-highlight) var(--win-btn-shadow);
+    }
+
+    .perf-benchmark-header {
+      padding: 2px 8px;
+      background: var(--win-bg);
+      border-bottom: 1px solid var(--win-border-mid);
+      font-size: 10px;
+      font-weight: bold;
+    }
+
+    .perf-benchmark-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10px;
+    }
+
+    .perf-benchmark-table th {
+      background: var(--win-bg);
+      border: 1px solid var(--win-border-mid);
+      padding: 2px 4px;
+      font-weight: bold;
+      text-align: left;
+    }
+
+    .perf-benchmark-table td {
+      border: 1px solid #e0e0e0;
+      padding: 2px 4px;
+    }
+
+    .tps-bar {
+      display: inline-block;
+      height: 6px;
+      background: var(--win-green);
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+
+    /* Request history */
+    .perf-history-section {
+      border: 2px solid;
+      border-color: var(--win-btn-shadow) var(--win-btn-highlight) var(--win-btn-highlight) var(--win-btn-shadow);
+    }
+
+    .perf-history-header {
+      display: flex;
+      justify-content: space-between;
+      padding: 2px 8px;
+      background: var(--win-bg);
+      border-bottom: 1px solid var(--win-border-mid);
+      font-size: 10px;
+      font-weight: bold;
+    }
+
+    .perf-history-body {
+      max-height: 200px;
+      overflow-y: auto;
+      background: var(--win-field-bg);
+      font-family: var(--font-mono);
+      font-size: 10px;
+    }
+
+    .perf-history-row {
+      display: flex;
+      gap: 6px;
+      padding: 1px 6px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .perf-history-row.error-row {
+      background: #fff0f0;
+    }
+
+    .perf-history-row .col-time {
+      min-width: 60px;
+      color: var(--win-text-disabled);
+    }
+
+    .perf-history-row .col-model {
+      min-width: 100px;
+      color: var(--win-text);
+    }
+
+    .perf-history-row .col-endpoint {
+      min-width: 140px;
+      color: var(--win-text-disabled);
+    }
+
+    .perf-history-row .col-latency {
+      min-width: 60px;
+      color: var(--win-orange);
+    }
+
+    .perf-history-row .col-tokens {
+      min-width: 40px;
+      color: var(--win-cyan);
+    }
+
+    .perf-history-row .col-tps {
+      min-width: 40px;
+      color: var(--win-green);
+    }
+
+    /* Perf sidebar */
+    .perf-sidebar {
+      width: 200px;
+      padding: 6px;
+      border-left: 1px solid var(--win-border-mid);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .perf-side-card {
+      border: 2px solid;
+      border-color: var(--win-btn-highlight) var(--win-btn-dk-shadow) var(--win-btn-dk-shadow) var(--win-btn-highlight);
+      padding: 6px;
+      background: var(--win-bg);
+    }
+
+    .perf-side-title {
+      font-size: 10px;
+      font-weight: bold;
+      border-bottom: 1px solid var(--win-border-mid);
+      padding-bottom: 2px;
+      margin-bottom: 4px;
+    }
+
+    .perf-side-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 2px 0;
+      font-size: 10px;
+    }
+
+    .perf-side-key {
+      color: var(--win-text-disabled);
+    }
+
+    .perf-side-val {
+      font-weight: bold;
+      color: var(--win-highlight);
+      font-family: var(--font-mono);
+    }
+
+    /* Structured log */
+    .perf-log-section {
+      border: 2px solid;
+      border-color: var(--win-btn-shadow) var(--win-btn-highlight) var(--win-btn-highlight) var(--win-btn-shadow);
+    }
+
+    .perf-log-header {
+      display: flex;
+      justify-content: space-between;
+      padding: 2px 6px;
+      background: var(--win-bg);
+      border-bottom: 1px solid var(--win-border-mid);
+      font-size: 10px;
+      font-weight: bold;
+    }
+
+    .perf-log-body {
+      max-height: 200px;
+      overflow-y: auto;
+      background: var(--win-field-bg);
+      padding: 2px 0;
+    }
+
+    .perf-log-entry {
+      display: flex;
+      gap: 6px;
+      padding: 1px 6px;
+      font-size: 10px;
+      font-family: var(--font-mono);
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .log-ts {
+      color: var(--win-text-disabled);
+      min-width: 60px;
+    }
+
+    .log-level {
+      font-weight: bold;
+      min-width: 40px;
+    }
+
+    .log-level.INFO {
+      color: var(--win-blue);
+    }
+
+    .log-level.WARN {
+      color: var(--win-orange);
+    }
+
+    .log-level.ERROR {
+      color: var(--win-red);
+    }
+
+    .log-level.PERF {
+      color: var(--win-green);
+    }
+
+    .log-event {
+      color: var(--win-text);
+    }
+
+    /* ================================================================
+       SECURITY PANEL
+       ================================================================ */
+    .security-panel {
+      display: none;
+      position: absolute;
+      top: 34px;
+      left: 264px;
+      right: 244px;
+      bottom: 120px;
+      z-index: 500;
+      background: var(--win-bg);
+      border: 2px solid;
+      border-color: var(--win-btn-highlight) var(--win-btn-dk-shadow) var(--win-btn-dk-shadow) var(--win-btn-highlight);
+      flex-direction: column;
+    }
+
+    .security-panel.open {
+      display: flex;
+    }
+
+    .security-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 2px 4px;
+      background: linear-gradient(90deg, #000080 0%, #1084d0 100%);
+      color: white;
+      font-weight: bold;
+      font-size: 11px;
+    }
+
+    .security-title {
+      font-weight: bold;
+    }
+
+    .security-body {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .security-main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .sec-card-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+    }
+
+    .sec-card {
+      border: 2px solid;
+      border-color: var(--win-btn-highlight) var(--win-btn-dk-shadow) var(--win-btn-dk-shadow) var(--win-btn-highlight);
+      padding: 6px;
+      text-align: center;
+      background: var(--win-bg);
+    }
+
+    .sec-card-label {
+      font-size: 9px;
+      color: var(--win-text-disabled);
+    }
+
+    .sec-card-value {
+      font-size: 18px;
+      font-weight: bold;
+      color: var(--win-highlight);
+      font-family: var(--font-mono);
+    }
+
+    .sec-card-value.secure {
+      color: var(--win-green);
+    }
+
+    .sec-card-value.warning {
+      color: var(--win-orange);
+    }
+
+    .sec-card-value.danger {
+      color: var(--win-red);
+    }
+
+    .sec-card-unit {
+      font-size: 9px;
+      color: var(--win-text-disabled);
+    }
+
+    .sec-audit-section {
+      border: 2px solid;
+      border-color: var(--win-btn-shadow) var(--win-btn-highlight) var(--win-btn-highlight) var(--win-btn-shadow);
+    }
+
+    .sec-audit-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 2px 8px;
+      background: var(--win-bg);
+      border-bottom: 1px solid var(--win-border-mid);
+      font-size: 10px;
+      font-weight: bold;
+    }
+
+    .sec-audit-body {
+      padding: 4px;
+      background: var(--win-field-bg);
+    }
+
+    .sec-directive {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 2px 6px;
+      border-bottom: 1px solid #e0e0e0;
+      font-size: 10px;
+    }
+
+    .sec-directive-name {
+      font-weight: bold;
+      min-width: 100px;
+      color: var(--win-text);
+    }
+
+    .sec-directive-value {
+      flex: 1;
+      color: var(--win-text-disabled);
+      font-family: var(--font-mono);
+      font-size: 9px;
+    }
+
+    .sec-directive-status {
+      font-size: 9px;
+      font-weight: bold;
+      padding: 1px 6px;
+      border: 1px solid;
+    }
+
+    .sec-directive-status.pass {
+      color: var(--win-green);
+      border-color: var(--win-green);
+    }
+
+    .sec-directive-status.warn {
+      color: var(--win-orange);
+      border-color: var(--win-orange);
+    }
+
+    .sec-directive-status.fail {
+      color: var(--win-red);
+      border-color: var(--win-red);
+    }
+
+    .sec-rate-meter {
+      border: 2px solid;
+      border-color: var(--win-btn-highlight) var(--win-btn-dk-shadow) var(--win-btn-dk-shadow) var(--win-btn-highlight);
+      padding: 8px;
+      background: var(--win-bg);
+    }
+
+    .sec-rate-bar-bg {
+      height: 8px;
+      background: #e0e0e0;
+      border: 1px solid var(--win-border-mid);
+      margin-top: 6px;
+    }
+
+    .sec-rate-bar-fill {
+      height: 100%;
+      background: var(--win-green);
+      transition: width 0.3s ease;
+    }
+
+    .sec-rate-bar-fill.warning {
+      background: var(--win-orange);
+    }
+
+    .sec-rate-bar-fill.danger {
+      background: var(--win-red);
+    }
+
+    .sec-rate-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      margin-top: 4px;
+      color: var(--win-text-disabled);
+      font-family: var(--font-mono);
+    }
+
+    .sec-log-section {
+      border: 2px solid;
+      border-color: var(--win-btn-shadow) var(--win-btn-highlight) var(--win-btn-highlight) var(--win-btn-shadow);
+      flex: 1;
+    }
+
+    .sec-log-header {
+      display: flex;
+      justify-content: space-between;
+      padding: 2px 8px;
+      background: var(--win-bg);
+      border-bottom: 1px solid var(--win-border-mid);
+      font-size: 10px;
+      font-weight: bold;
+    }
+
+    .sec-log-body {
+      max-height: 300px;
+      overflow-y: auto;
+      padding: 2px 0;
+      background: var(--win-field-bg);
+    }
+
+    .sec-log-entry {
+      display: flex;
+      gap: 6px;
+      padding: 1px 8px;
+      font-size: 10px;
+      font-family: var(--font-mono);
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .sec-log-ts {
+      color: var(--win-text-disabled);
+      min-width: 60px;
+    }
+
+    .sec-log-level {
+      font-weight: bold;
+      min-width: 40px;
+    }
+
+    .sec-log-level.BLOCK {
+      color: var(--win-red);
+    }
+
+    .sec-log-level.ALLOW {
+      color: var(--win-green);
+    }
+
+    .sec-log-level.WARN {
+      color: var(--win-orange);
+    }
+
+    .sec-log-level.AUDIT {
+      color: var(--win-cyan);
+    }
+
+    .sec-log-detail {
+      color: var(--win-text);
+      word-break: break-word;
+    }
+
+    .security-sidebar {
+      width: 200px;
+      padding: 6px;
+      border-left: 1px solid var(--win-border-mid);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .sec-side-card {
+      border: 2px solid;
+      border-color: var(--win-btn-highlight) var(--win-btn-dk-shadow) var(--win-btn-dk-shadow) var(--win-btn-highlight);
+      padding: 6px;
+      background: var(--win-bg);
+    }
+
+    .sec-side-title {
+      font-size: 10px;
+      font-weight: bold;
+      border-bottom: 1px solid var(--win-border-mid);
+      padding-bottom: 2px;
+      margin-bottom: 4px;
+    }
+
+    .sec-side-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 2px 0;
+      font-size: 10px;
+    }
+
+    .sec-side-key {
+      color: var(--win-text-disabled);
+    }
+
+    .sec-side-val {
+      font-weight: bold;
+      color: var(--win-cyan);
+      font-family: var(--font-mono);
+    }
+
+    .sec-side-val.secure {
+      color: var(--win-green);
+    }
+
+    .sec-side-val.warning {
+      color: var(--win-orange);
+    }
+
+    .sec-side-val.danger {
+      color: var(--win-red);
+    }
+
+    /* ================================================================
+       RIGHT SIDEBAR
+       ================================================================ */
+    .rightbar {
+      grid-area: rightbar;
+      background: var(--win-bg);
+      border-left: 2px solid var(--win-btn-highlight);
+      overflow-y: auto;
+      padding: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    /* File drop zone */
+    .file-drop-zone {
+      border: 2px dashed var(--win-border-mid);
+      padding: 10px;
+      text-align: center;
+      cursor: pointer;
+      font-size: 11px;
+      color: var(--win-text-disabled);
+      background: var(--win-field-bg);
+    }
+
+    .file-drop-zone.dragover {
+      border-color: var(--win-highlight);
+      background: #e0e0ff;
+    }
+
+    .file-list {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 0 4px;
+    }
+
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 6px;
+      background: var(--win-field-bg);
+      border: 1px solid var(--win-border-mid);
+      font-size: 11px;
+    }
+
+    .file-icon {
+      font-size: 12px;
+    }
+
+    .file-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .file-name {
+      font-weight: bold;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 10px;
+    }
+
+    .file-meta {
+      font-size: 9px;
+      color: var(--win-text-disabled);
+    }
+
+    .file-remove {
+      cursor: pointer;
+      color: var(--win-red);
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    /* Chain of Thought panel */
+    .cot-panel {
+      border: 2px solid;
+      border-color: var(--win-btn-highlight) var(--win-btn-dk-shadow) var(--win-btn-dk-shadow) var(--win-btn-highlight);
+      padding: 6px;
+    }
+
+    .cot-toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 4px 0;
+      font-size: 11px;
+    }
+
+    .cot-switch {
+      width: 24px;
+      height: 14px;
+      background: var(--win-bg-dark);
+      border: 1px solid var(--win-border-dark);
+      cursor: pointer;
+      position: relative;
+    }
+
+    .cot-switch::after {
+      content: '';
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background: var(--win-btn-face);
+      border: 1px solid var(--win-border-mid);
+      top: 1px;
+      left: 1px;
+      transition: left 0.15s;
+    }
+
+    .cot-switch.active {
+      background: var(--win-highlight);
+    }
+
+    .cot-switch.active::after {
+      left: 11px;
+    }
+
+    .cot-presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2px;
+      margin: 4px 0;
+    }
+
+    .cot-preset-btn {
+      padding: 2px 6px;
+      background: var(--win-btn-face);
+      border: 1px solid var(--win-border-mid);
+      cursor: pointer;
+      font-size: 10px;
+      font-family: var(--font-sans);
+    }
+
+    .cot-preset-btn.active {
+      background: var(--win-highlight);
+      color: var(--win-highlight-text);
+    }
+
+    .cot-step-count {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10px;
+      margin: 4px 0;
+    }
+
+    .cot-count-val {
+      font-weight: bold;
+      color: var(--win-highlight);
+      font-family: var(--font-mono);
+    }
+
+    .cot-chain-list {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .cot-connector {
+      text-align: center;
+      font-size: 10px;
+      color: var(--win-text-disabled);
+      line-height: 1;
+    }
+
+    .cot-step-card {
+      border: 1px solid var(--win-border-mid);
+      padding: 4px;
+      background: var(--win-field-bg);
+      font-size: 10px;
+    }
+
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 3px;
+    }
+
+    .step-num {
+      width: 16px;
+      height: 16px;
+      background: var(--win-highlight);
+      color: white;
+      font-size: 9px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .step-role {
+      font-weight: bold;
+      font-size: 10px;
+    }
+
+    .step-optional {
+      margin-left: auto;
+      font-size: 9px;
+      cursor: pointer;
+      color: var(--win-green);
+    }
+
+    .step-optional.skipped {
+      color: var(--win-red);
+    }
+
+    .cot-role-select {
+      width: 100%;
+      padding: 1px 2px;
+      background: var(--win-field-bg);
+      border: 1px solid var(--win-border-mid);
+      font-size: 10px;
+      font-family: var(--font-sans);
+    }
+
+    .cot-step-card textarea {
+      width: 100%;
+      min-height: 30px;
+      max-height: 60px;
+      resize: vertical;
+      border: 1px solid var(--win-border-mid);
+      background: var(--win-field-bg);
+      font-family: var(--font-mono);
+      font-size: 9px;
+      padding: 2px;
+    }
+
+    /* CoT chain result (in chat) */
+    .cot-chain-result {
+      border: 2px solid;
+      border-color: var(--win-btn-highlight) var(--win-btn-dk-shadow) var(--win-btn-dk-shadow) var(--win-btn-highlight);
+      background: var(--win-bg);
+    }
+
+    .cot-chain-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 2px 6px;
+      background: linear-gradient(90deg, #000080 0%, #1084d0 100%);
+      color: white;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: bold;
+    }
+
+    .chain-toggle {
+      margin-left: auto;
+      font-size: 10px;
+    }
+
+    .cot-chain-steps {
+      padding: 4px;
+    }
+
+    .cot-chain-steps.collapsed {
+      display: none;
+    }
+
+    .cot-chain-step {
+      border: 1px solid var(--win-border-mid);
+      margin-bottom: 4px;
+      background: var(--win-field-bg);
+    }
+
+    .cot-chain-step-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 2px 6px;
+      background: var(--win-bg);
+      border-bottom: 1px solid var(--win-border-mid);
+      font-size: 10px;
+    }
+
+    .step-badge {
+      width: 16px;
+      height: 16px;
+      background: var(--win-highlight);
+      color: white;
+      font-size: 9px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .step-role-label {
+      font-weight: bold;
+    }
+
+    .step-model-label {
+      color: var(--win-text-disabled);
+      font-family: var(--font-mono);
+      font-size: 9px;
+    }
+
+    .step-time {
+      margin-left: auto;
+      color: var(--win-orange);
+      font-family: var(--font-mono);
+    }
+
+    .cot-chain-step-body {
+      padding: 6px;
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    .cot-running-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px;
+      font-size: 11px;
+      color: var(--win-text-disabled);
+    }
+
+    .cot-spinner {
+      width: 12px;
+      height: 12px;
+      border: 2px solid var(--win-border-mid);
+      border-top-color: var(--win-highlight);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .cot-final-answer {
+      border-top: 2px solid var(--win-highlight);
+      margin-top: 4px;
+      padding: 6px;
+      background: #fffff0;
+    }
+
+    .cot-final-label {
+      font-weight: bold;
+      font-size: 11px;
+      margin-bottom: 4px;
+      color: var(--win-green);
+    }
+
+    /* ================================================================
+       TERMINAL (Win32 command prompt style)
+       ================================================================ */
+    .terminal {
+      grid-area: terminal;
+      background: var(--win-bg);
+      border-top: 2px solid var(--win-btn-highlight);
+      display: flex;
+      flex-direction: column;
+      max-height: 200px;
+    }
+
+    .terminal.minimized {
+      max-height: 26px;
+      overflow: hidden;
+    }
+
+    .terminal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1px 4px;
+      background: var(--win-bg);
+      border-bottom: 1px solid var(--win-border-mid);
+      min-height: 24px;
+    }
+
+    .terminal-tabs {
+      display: flex;
+      gap: 2px;
+    }
+
+    .terminal-tab {
+      padding: 1px 8px;
+      font-size: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      background: var(--win-btn-face);
+      border: 1px solid var(--win-border-mid);
+    }
+
+    .terminal-tab.active {
+      background: var(--win-field-bg);
+      border-bottom-color: var(--win-field-bg);
+    }
+
+    .terminal-actions {
+      display: flex;
+      gap: 2px;
+    }
+
+    .terminal-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px 6px;
+      background: #000000;
+      color: #c0c0c0;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      line-height: 1.4;
+    }
+
+    .terminal-line {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .terminal-line.command {
+      color: #ffffff;
+    }
+
+    .terminal-line.output {
+      color: #c0c0c0;
+    }
+
+    .terminal-line.system {
+      color: #00aaaa;
+    }
+
+    .terminal-line.error {
+      color: #ff5555;
+    }
+
+    .terminal-line.success {
+      color: #55ff55;
+    }
+
+    .terminal-input-line {
+      display: flex;
+      align-items: center;
+      padding: 2px 6px;
+      background: #000000;
+      border-top: 1px solid #333333;
+    }
+
+    .terminal-prompt {
+      color: #55ff55;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: bold;
+      margin-right: 6px;
+      white-space: nowrap;
+    }
+
+    .terminal-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #ffffff;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      caret-color: #55ff55;
+    }
+
+    /* ================================================================
+       SCROLLBAR (Win32 classic)
+       ================================================================ */
+    ::-webkit-scrollbar {
+      width: 16px;
+      height: 16px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--win-bg);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--win-btn-face);
+      border: 2px solid;
+      border-color: var(--win-btn-highlight) var(--win-btn-dk-shadow) var(--win-btn-dk-shadow) var(--win-btn-highlight);
+    }
+
+    ::-webkit-scrollbar-button {
+      background: var(--win-btn-face);
+      border: 1px solid var(--win-border-mid);
+      height: 16px;
+    }
+
+    /* ================================================================
+       RESPONSIVE (mobile / small screens)
+       ================================================================ */
+    @media (max-width: 1200px) {
+      .ide-container {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+          "header"
+          "main"
+          "terminal";
+      }
+
+      .sidebar,
+      .rightbar {
+        display: none;
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        z-index: 1000;
+        width: 280px;
+      }
+
+      .sidebar {
+        left: -280px;
+      }
+
+      .rightbar {
+        right: -240px;
+      }
+
+      .sidebar.slide-in {
+        display: flex;
+        left: 0;
+      }
+
+      .rightbar.slide-in {
+        display: flex;
+        right: 0;
+      }
+
+      .sidebar-toggle,
+      .rightbar-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .debug-panel,
+      .failure-panel,
+      .agent-panel,
+      .perf-panel,
+      .security-panel {
+        left: 0;
+        right: 0;
+      }
+    }
+
+    /* Standalone fullscreen: hide native scrollbar and fill screen */
+    body.standalone-fullscreen {
+      overflow: hidden;
+    }
+
+    body.standalone-fullscreen .ide-container {
+      height: 100vh;
+    }
+
+    /* ================================================================
+       CSS VARIABLES MAPPED FOR JS COMPATIBILITY
+       The original ide_chatbot.html uses var(--accent-*), var(--bg-*),
+       var(--text-*), var(--border-*), var(--font-*) in inline styles
+       throughout the JS. Map them to Win32 equivalents so all JS
+       inline styles work without modification.
+       ================================================================ */
+    :root {
+      --bg-primary: var(--win-field-bg);
+      --bg-secondary: var(--win-bg);
+      --bg-tertiary: var(--win-bg-light);
+      --bg-panel: var(--win-bg);
+      --accent-primary: var(--win-highlight);
+      --accent-secondary: var(--win-orange);
+      --accent-glow: rgba(0, 0, 128, 0.2);
+      --accent-cyan: var(--win-cyan);
+      --accent-purple: #800080;
+      --accent-green: var(--win-green);
+      --accent-red: var(--win-red);
+      --accent-orange: var(--win-orange);
+      --text-primary: var(--win-text);
+      --text-secondary: var(--win-text-disabled);
+      --text-muted: var(--win-text-disabled);
+      --border-subtle: var(--win-border-mid);
+      --border-active: var(--win-highlight);
+      --border-color: var(--win-border-mid);
+      --shadow-glow: none;
+    }
+
+    /* ================================================================
+       OVERLAY PANELS (Confidence, Governor, LSP, Hybrid, Replay, Phases)
+       Win32 Classic styled — matches agent-panel pattern
+       ================================================================ */
+    .overlay-panel {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 520px;
+      max-width: 92vw;
+      max-height: 80vh;
+      flex-direction: column;
+      z-index: 1040;
+      background: var(--win-bg);
+      border: 2px solid;
+      border-color: var(--win-btn-highlight) var(--win-btn-dk-shadow) var(--win-btn-dk-shadow) var(--win-btn-highlight);
+      box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
+      font-family: var(--font-sans);
+      font-size: 12px;
+    }
+
+    .overlay-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 3px 6px;
+      background: linear-gradient(90deg, #000080 0%, #1084d0 100%);
+      color: var(--win-titlebar-text);
+      font-weight: bold;
+      font-size: 11px;
+      user-select: none;
+    }
+
+    .overlay-close {
+      background: var(--win-btn-face);
+      border: 2px solid;
+      border-color: var(--win-btn-highlight) var(--win-btn-dk-shadow) var(--win-btn-dk-shadow) var(--win-btn-highlight);
+      color: var(--win-text);
+      font-size: 14px;
+      font-weight: bold;
+      width: 20px;
+      height: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      line-height: 1;
+    }
+
+    .overlay-close:active {
+      border-color: var(--win-btn-dk-shadow) var(--win-btn-highlight) var(--win-btn-highlight) var(--win-btn-dk-shadow);
+    }
+
+    .overlay-body {
+      padding: 8px;
+      overflow-y: auto;
+      max-height: calc(80vh - 30px);
+      background: var(--win-bg);
+    }
+
+    /* Missing perf-metric-value color: cyan */
+    .perf-metric-value.cyan {
+      color: var(--win-cyan);
+    }
+
+  </style>
+</head>
+
+<body>
+  <!-- ================================================================
+       STANDALONE TITLEBAR — Win32 Classic Blue Title Bar
+       Visible when opened via file:// or standalone
+       ================================================================ -->
+  <div class="standalone-titlebar" id="standaloneTitlebar">
+    <div class="titlebar-brand">
+      <span class="tb-icon">&#x1F996;</span>
+      <span class="tb-name">RAWRXD</span>
+      <span class="tb-version">v3.4 // WIN32 CLASSIC</span>
+    </div>
+    <div class="titlebar-center">
+      <div class="tb-status">
+        <span class="tb-dot" id="tbDot"></span>
+        <span id="tbStatusText">DISCONNECTED</span>
+      </div>
+      <span class="tb-mode" id="tbMode">STANDALONE</span>
+      <span id="tbIdeBridge" style="display:none;">
+        <button onclick="launchWin32IDE()" style="background:var(--win-btn-face);border:2px solid;
+                 border-color:var(--win-btn-highlight) var(--win-btn-dk-shadow) var(--win-btn-dk-shadow) var(--win-btn-highlight);
+                 color:var(--win-text);padding:1px 8px;cursor:pointer;font-size:10px;font-weight:bold;
+                 font-family:var(--font-sans);-webkit-app-region:no-drag;"
+          title="Win32 IDE detected — click to switch">&#x1F5A5; OPEN IDE</button>
+      </span>
+    </div>
+    <div class="titlebar-controls">
+      <button class="tb-fullscreen" onclick="toggleStandaloneFullscreen()" title="Fullscreen">&#x25A1;</button>
+      <button onclick="window.location.reload()" title="Reload">&#x21BB;</button>
+    </div>
+  </div>
+
+  <!-- Sidebar toggle buttons (visible at narrow viewports) -->
+  <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebarMobile('left')"
+    title="Toggle Tools Panel">&#x2630;</button>
+  <button class="rightbar-toggle" id="rightbarToggle" onclick="toggleSidebarMobile('right')"
+    title="Toggle Files Panel">&#x2261;</button>
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebars()"></div>
+
+  <div class="ide-container">
+    <!-- Header -->
+    <header class="header-bar">
+      <div class="brand">
+        <div class="brand-icon">&#x1F996;</div>
+        <span class="brand-text">RAWRXD IDE</span>
+        <span style="color: var(--win-text-disabled); font-size: 11px; font-weight: normal;">// WIN32 CLASSIC
+          v3.4</span>
+      </div>
+
+      <div class="header-controls">
+        <div class="status-pill offline" id="backendStatus">
+          <span class="status-dot"></span>
+          <span id="statusText">DISCONNECTED</span>
+        </div>
+
+        <div class="header-actions">
+          <button class="icon-btn" onclick="connectBackend()" title="Connect to Backend">&#x26A1;</button>
+          <button class="icon-btn" onclick="refreshModels()" title="Refresh Models">&#x21BB;</button>
+          <button class="icon-btn" onclick="showDebug()" title="Debug Panel">&#x1F527;</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Left Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-title">// Tools</div>
+        <div class="tool-grid">
+          <button class="tool-btn" onclick="checkServerStatus()">
+            <span class="icon">&#x1F4E1;</span>
+            <span>Status</span>
+          </button>
+          <button class="tool-btn" onclick="showDebug()">
+            <span class="icon">&#x1F527;</span>
+            <span>Debug</span>
+          </button>
+          <button class="tool-btn" onclick="showEndpoints()">
+            <span class="icon">&#x1F310;</span>
+            <span>API</span>
+          </button>
+          <button class="tool-btn" onclick="showFailures()">
+            <span class="icon">&#x26A0;</span>
+            <span>Failures</span>
+          </button>
+          <button class="tool-btn" onclick="showAgentDashboard()">
+            <span class="icon">&#x1F916;</span>
+            <span>Agents</span>
+          </button>
+          <button class="tool-btn" onclick="showPerfPanel()">
+            <span class="icon">&#x1F4CA;</span>
+            <span>Perf</span>
+          </button>
+          <button class="tool-btn" onclick="showSecurityPanel()">
+            <span class="icon">&#x1F6E1;</span>
+            <span>Security</span>
+          </button>
+          <button class="tool-btn" onclick="showBackendSwitcher()">
+            <span class="icon">&#x1F504;</span>
+            <span>Backends</span>
+          </button>
+          <button class="tool-btn" onclick="showRouterPanel()">
+            <span class="icon">&#x1F6A6;</span>
+            <span>Router</span>
+          </button>
+          <button class="tool-btn" onclick="showSwarmPanel()">
+            <span class="icon">&#x1F41D;</span>
+            <span>Swarm</span>
+          </button>
+          <button class="tool-btn" onclick="showMultiResponsePanel()">
+            <span class="icon">&#x1F4DD;</span>
+            <span>Multi-Resp</span>
+          </button>
+          <button class="tool-btn" onclick="showAsmDebugPanel()">
+            <span class="icon">&#x1F50D;</span>
+            <span>ASM Debug</span>
+          </button>
+          <button class="tool-btn" onclick="showSafetyPanel()">
+            <span class="icon">&#x1F6A8;</span>
+            <span>Safety</span>
+          </button>
+          <button class="tool-btn" onclick="showPoliciesPanel()">
+            <span class="icon">&#x1F4CB;</span>
+            <span>Policies</span>
+          </button>
+          <button class="tool-btn" onclick="showHotpatchDetailPanel()">
+            <span class="icon">&#x1F529;</span>
+            <span>Hotpatch+</span>
+          </button>
+          <button class="tool-btn" onclick="showCotDetailPanel()">
+            <span class="icon">&#x1F9E0;</span>
+            <span>CoT Inspect</span>
+          </button>
+          <button class="tool-btn" onclick="showToolsPanel()">
+            <span class="icon">&#x1F6E0;</span>
+            <span>Tools</span>
+          </button>
+          <button class="tool-btn" onclick="showEnginePanel()">
+            <span class="icon">&#x1F3ED;</span>
+            <span>Engine</span>
+          </button>
+          <button class="tool-btn" onclick="showMetricsPanel()">
+            <span class="icon">&#x1F4C8;</span>
+            <span>Metrics</span>
+          </button>
+          <button class="tool-btn" onclick="showSubagentPanel()">
+            <span class="icon">&#x1F916;</span>
+            <span>Subagent</span>
+          </button>
+          <button class="tool-btn" onclick="showConfidencePanel()">
+            <span class="icon">&#x1F3AF;</span>
+            <span>Confidence</span>
+          </button>
+          <button class="tool-btn" onclick="showGovernorPanel()">
+            <span class="icon">&#x1F3DB;</span>
+            <span>Governor</span>
+          </button>
+          <button class="tool-btn" onclick="showLspPanel()">
+            <span class="icon">&#x1F4D0;</span>
+            <span>LSP</span>
+          </button>
+          <button class="tool-btn" onclick="showHybridPanel()">
+            <span class="icon">&#x1F300;</span>
+            <span>Hybrid</span>
+          </button>
+          <button class="tool-btn" onclick="showReplayPanel()">
+            <span class="icon">&#x1F501;</span>
+            <span>Replay</span>
+          </button>
+          <button class="tool-btn" onclick="showPhaseStatusPanel()">
+            <span class="icon">&#x1F6A7;</span>
+            <span>Phases</span>
+          </button>
+          <button class="tool-btn" onclick="ghostIntoIDE()" title="Ghost into Win32 IDE via RDP-style beacon">
+            <span class="icon">&#x1F47B;</span>
+            <span>Ghost IDE</span>
+          </button>
+          <button class="tool-btn" onclick="refreshBackendBeacon()" title="Re-probe backend + CLI beacons">
+            <span class="icon">&#x26A1;</span>
+            <span>Re-Beacon</span>
+          </button>
+          <button class="tool-btn" onclick="clearChat()">
+            <span class="icon">&#x1F5D1;</span>
+            <span>Clear</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-title">// Model</div>
+        <div class="model-selector">
+          <div class="select-wrapper">
+            <select class="model-select" id="modelSelect" onchange="changeModel()">
+              <option value="">Connecting...</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="gen-settings">
+          <div>
+            <div class="setting-row">
+              <span class="setting-label">Context Window</span>
+              <span class="setting-value" id="ctxVal">8,192</span>
+            </div>
+            <input type="range" class="setting-slider" min="512" max="131072" value="8192" step="512" id="ctxSlider"
+              oninput="State.gen.context=parseInt(this.value); document.getElementById('ctxVal').textContent=parseInt(this.value).toLocaleString(); Conversation.persist();">
+          </div>
+          <div>
+            <div class="setting-row">
+              <span class="setting-label">Max Tokens</span>
+              <span class="setting-value" id="maxTokVal">512</span>
+            </div>
+            <input type="range" class="setting-slider" min="32" max="4096" value="512" step="32" id="maxTokSlider"
+              oninput="State.gen.maxTokens=parseInt(this.value); document.getElementById('maxTokVal').textContent=this.value; Conversation.persist();">
+          </div>
+          <div>
+            <div class="setting-row">
+              <span class="setting-label">Temperature</span>
+              <span class="setting-value" id="tempVal">0.7</span>
+            </div>
+            <input type="range" class="setting-slider" min="0" max="200" value="70" step="5" id="tempSlider"
+              oninput="State.gen.temperature=parseInt(this.value)/100; document.getElementById('tempVal').textContent=(parseInt(this.value)/100).toFixed(1); Conversation.persist();">
+          </div>
+          <div class="debug-option" style="padding: 4px 0;">
+            <input type="checkbox" id="streamToggle" checked
+              onchange="State.gen.stream=this.checked; Conversation.persist();">
+            <label for="streamToggle" style="font-size: 11px;">Stream responses</label>
+          </div>
+
+          <!-- Top-P -->
+          <div>
+            <div class="setting-row">
+              <span class="setting-label">Top-P</span>
+              <span class="setting-value" id="topPVal">0.9</span>
+            </div>
+            <input type="range" class="setting-slider" min="0" max="100" value="90" step="5" id="topPSlider"
+              oninput="State.gen.top_p=parseInt(this.value)/100; document.getElementById('topPVal').textContent=(parseInt(this.value)/100).toFixed(2); Conversation.persist();">
+          </div>
+
+          <!-- Top-K -->
+          <div>
+            <div class="setting-row">
+              <span class="setting-label">Top-K</span>
+              <span class="setting-value" id="topKVal">40</span>
+            </div>
+            <input type="range" class="setting-slider" min="1" max="200" value="40" step="1" id="topKSlider"
+              oninput="State.gen.top_k=parseInt(this.value); document.getElementById('topKVal').textContent=this.value; Conversation.persist();">
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ Tensor Bunny Hop ═══ -->
+      <div class="sidebar-section">
+        <div class="sidebar-title"
+          onclick="document.getElementById('tensorHopBody').style.display=document.getElementById('tensorHopBody').style.display==='none'?'block':'none'"
+          style="cursor:pointer;">
+          // 🐇 Tensor Bunny Hop
+          <span style="float:right;font-size:10px;color:var(--text-muted);">[click to toggle]</span>
+        </div>
+        <div id="tensorHopBody" style="display:none; padding: 8px 0;">
+          <div style="font-size:10px; color:var(--text-muted); margin-bottom:8px; line-height:1.4;">
+            Skip unneeded tensor layers during inference — lets bigger models run in smaller runtimes.
+            The model "hops" through layers, keeping only the ones it needs for the answer.
+          </div>
+
+          <div class="debug-option" style="padding: 4px 0;">
+            <input type="checkbox" id="tensorHopToggle"
+              onchange="State.gen.tensorHop.enabled=this.checked; updateTensorHopUI(); Conversation.persist();">
+            <label for="tensorHopToggle" style="font-size: 11px;">Enable Tensor Bunny Hop</label>
+          </div>
+
+          <div id="tensorHopSettings" style="display:none;">
+            <div style="margin-top:6px;">
+              <div class="setting-row">
+                <span class="setting-label">Strategy</span>
+                <span class="setting-value" id="hopStratVal">auto</span>
+              </div>
+              <select id="hopStrategySelect"
+                style="width:100%; background:var(--bg-secondary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; padding:2px; font-size:11px; font-family:var(--font-sans);"
+                onchange="State.gen.tensorHop.strategy=this.value; document.getElementById('hopStratVal').textContent=this.value; document.getElementById('customSkipGroup').style.display=this.value==='custom'?'block':'none'; Conversation.persist();">
+                <option value="auto">Auto (smart skip based on query)</option>
+                <option value="even">Even (skip every Nth layer)</option>
+                <option value="front">Front-heavy (skip early layers)</option>
+                <option value="back">Back-heavy (skip late layers)</option>
+                <option value="custom">Custom (manual layer selection)</option>
+              </select>
+            </div>
+
+            <div style="margin-top:6px;">
+              <div class="setting-row">
+                <span class="setting-label">Skip Ratio</span>
+                <span class="setting-value" id="skipRatioVal">25%</span>
+              </div>
+              <input type="range" class="setting-slider" min="0" max="50" value="25" step="5" id="skipRatioSlider"
+                oninput="State.gen.tensorHop.skipRatio=parseInt(this.value)/100; document.getElementById('skipRatioVal').textContent=this.value+'%'; Conversation.persist();">
+            </div>
+
+            <div style="margin-top:6px;">
+              <div class="setting-row">
+                <span class="setting-label">Keep First N Layers</span>
+                <span class="setting-value" id="keepFirstVal">2</span>
+              </div>
+              <input type="range" class="setting-slider" min="0" max="16" value="2" step="1" id="keepFirstSlider"
+                oninput="State.gen.tensorHop.keepFirst=parseInt(this.value); document.getElementById('keepFirstVal').textContent=this.value; Conversation.persist();">
+            </div>
+
+            <div style="margin-top:6px;">
+              <div class="setting-row">
+                <span class="setting-label">Keep Last N Layers</span>
+                <span class="setting-value" id="keepLastVal">2</span>
+              </div>
+              <input type="range" class="setting-slider" min="0" max="16" value="2" step="1" id="keepLastSlider"
+                oninput="State.gen.tensorHop.keepLast=parseInt(this.value); document.getElementById('keepLastVal').textContent=this.value; Conversation.persist();">
+            </div>
+
+            <div id="customSkipGroup" style="display:none; margin-top:6px;">
+              <div class="setting-row">
+                <span class="setting-label">Custom Skip Layers</span>
+              </div>
+              <input type="text" id="customSkipInput" placeholder="e.g. 3,7,11,15"
+                style="width:100%; background:var(--bg-secondary); color:var(--text-primary); border:1px solid var(--border-color); padding:2px; font-size:11px; font-family:var(--font-mono);"
+                oninput="State.gen.tensorHop.customSkip=this.value.split(',').map(Number).filter(function(n){return !isNaN(n);}); Conversation.persist();">
+            </div>
+
+            <div
+              style="margin-top:8px; padding:6px; background:var(--bg-tertiary); border:1px solid var(--border-subtle); font-size:10px; color:var(--text-muted); line-height:1.4;">
+              <strong style="color:var(--accent-cyan);">How it works:</strong><br>
+              When enabled, the inference request includes <code>tensor_hop</code> metadata.
+              Layers not needed for the specific query are skipped, reducing VRAM/RAM usage
+              and decode time. Auto mode analyzes the prompt to pick optimal skip patterns.
+              <br><br>
+              <strong>⚠️ Skip too many layers = quality drops.</strong> Start with 25% skip ratio.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ Safe Decode Profile ═══ -->
+      <div class="sidebar-section">
+        <div class="sidebar-title"
+          onclick="document.getElementById('safeDecodeBody').style.display=document.getElementById('safeDecodeBody').style.display==='none'?'block':'none'"
+          style="cursor:pointer;">
+          // 🔒 Safe Decode Profile
+          <span style="float:right;font-size:10px;color:var(--text-muted);">[click to toggle]</span>
+        </div>
+        <div id="safeDecodeBody" style="display:none; padding: 8px 0;">
+          <div style="font-size:10px; color:var(--text-muted); margin-bottom:8px; line-height:1.4;">
+            Auto-clamp settings for large models (≥27B) to prevent HTTP 500 decode failures
+            in Ollama Direct mode. Forces conservative token budgets and disables streaming.
+          </div>
+
+          <div class="debug-option" style="padding: 4px 0;">
+            <input type="checkbox" id="safeDecodeToggle" checked
+              onchange="State.gen.safeDecodeProfile.enabled=this.checked; Conversation.persist();">
+            <label for="safeDecodeToggle" style="font-size: 11px;">Enable Safe Decode</label>
+          </div>
+
+          <div class="debug-option" style="padding: 4px 0;">
+            <input type="checkbox" id="autoClampToggle" checked
+              onchange="State.gen.safeDecodeProfile.autoClamp=this.checked; Conversation.persist();">
+            <label for="autoClampToggle" style="font-size: 11px;">Auto-clamp for models ≥27B</label>
+          </div>
+
+          <div class="debug-option" style="padding: 4px 0;">
+            <input type="checkbox" id="probeFirstToggle" checked
+              onchange="State.gen.safeDecodeProfile.probeFirst=this.checked; Conversation.persist();">
+            <label for="probeFirstToggle" style="font-size: 11px;">First-token probe before real request</label>
+          </div>
+
+          <div style="margin-top:6px;">
+            <div class="setting-row">
+              <span class="setting-label">Model Size Threshold</span>
+              <span class="setting-value" id="thresholdBVal">27B</span>
+            </div>
+            <input type="range" class="setting-slider" min="7" max="120" value="27" step="1" id="thresholdBSlider"
+              oninput="State.gen.safeDecodeProfile.thresholdB=parseInt(this.value); document.getElementById('thresholdBVal').textContent=this.value+'B'; Conversation.persist();">
+          </div>
+
+          <div style="margin-top:6px;">
+            <div class="setting-row">
+              <span class="setting-label">Safe Context</span>
+              <span class="setting-value" id="safeCtxVal">3,072</span>
+            </div>
+            <input type="range" class="setting-slider" min="512" max="8192" value="3072" step="256" id="safeCtxSlider"
+              oninput="State.gen.safeDecodeProfile.safeContext=parseInt(this.value); document.getElementById('safeCtxVal').textContent=parseInt(this.value).toLocaleString(); Conversation.persist();">
+          </div>
+
+          <div style="margin-top:6px;">
+            <div class="setting-row">
+              <span class="setting-label">Safe Max Tokens</span>
+              <span class="setting-value" id="safeTokVal">128</span>
+            </div>
+            <input type="range" class="setting-slider" min="32" max="1024" value="128" step="32" id="safeTokSlider"
+              oninput="State.gen.safeDecodeProfile.safeMaxTokens=parseInt(this.value); document.getElementById('safeTokVal').textContent=this.value; Conversation.persist();">
+          </div>
+
+          <div
+            style="margin-top:8px; padding:6px; background:var(--bg-tertiary); border:1px solid var(--border-subtle); font-size:10px; color:var(--text-muted); line-height:1.4;"
+            id="safeDecodeStatus">
+            <strong style="color:var(--accent-green);">Status:</strong> Monitoring model selection...
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-section system-prompt-section">
+        <div class="system-prompt-toggle" onclick="toggleSystemPrompt()">
+          <div class="sidebar-title" style="margin-bottom: 0;">// System Prompt</div>
+          <span class="toggle-arrow" id="sysPromptArrow">&#x25BC;</span>
+        </div>
+        <div class="system-prompt-body" id="sysPromptBody">
+          <textarea class="system-prompt-textarea" id="systemPromptInput"
+            placeholder="You are RawrXD Assistant, an expert in low-level programming..."
+            oninput="Conversation.systemPrompt=this.value; Conversation.persist();"></textarea>
+          <div class="sys-prompt-actions">
+            <button class="sys-prompt-btn" onclick="resetSystemPrompt()" title="Reset to default">&#x21BA;
+              Reset</button>
+            <button class="sys-prompt-btn danger" onclick="clearConversation()" title="Clear all chat history">&#x1F5D1;
+              Clear Memory</button>
+          </div>
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 8px; font-family: var(--font-mono);">
+            Memory: <span id="memoryCount" style="color: var(--accent-cyan);">0</span> turns
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-section" style="flex: 1;">
+        <div class="sidebar-title">// Backend</div>
+        <div class="backend-info" id="backendInfo">
+          <p><span class="label">Server:</span> <span class="val-offline">not connected</span></p>
+          <p><span class="label">Model:</span> <span class="val-neutral">none</span></p>
+          <p><span class="label">Requests:</span> <span class="val-neutral">&mdash;</span></p>
+          <p><span class="label">Tokens:</span> <span class="val-neutral">&mdash;</span></p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Chat Area -->
+    <main class="main-area">
+      <div class="chat-header">
+        <div class="chat-context">
+          <div class="context-badge active" id="modeBadge">
+            <span>&#x1F4BB;</span>
+            <span id="modeText">Disconnected</span>
+          </div>
+          <div class="context-badge" id="fileBadge" style="display: none;">
+            <span>&#x1F4CE;</span>
+            <span id="fileCount">0 files</span>
+          </div>
+          <div class="context-badge" id="modelBadge" style="display: none;">
+            <span>&#x1F9E0;</span>
+            <span id="modelBadgeText">&mdash;</span>
+          </div>
+          <div class="context-badge" id="memoryBadge" style="display: none;">
+            <span>&#x1F4AC;</span>
+            <span id="memoryBadgeText">0 turns</span>
+          </div>
+        </div>
+        <div style="font-size: 11px; color: var(--text-muted); font-family: var(--font-mono);" id="chatStatus">
+          <span style="color: var(--accent-red);">&#x25CF;</span> Offline
+        </div>
+      </div>
+
+      <div class="chat-messages" id="chatMessages">
+        <!-- Welcome message inserted by JS on load -->
+      </div>
+
+      <div class="chat-input-container">
+        <div class="input-wrapper">
+          <textarea class="chat-input" id="chatInput" placeholder="Connect to backend first, or type to chat locally..."
+            rows="1" onkeydown="handleInput(event)"></textarea>
+          <div class="input-actions">
+            <button class="input-btn" onclick="attachFile()" title="Attach File">&#x1F4CE;</button>
+            <button class="input-btn stop" id="stopBtn" onclick="stopGeneration()" title="Stop Generation (Ctrl+C)"
+              style="display:none;">&#x23F9;</button>
+            <button class="input-btn send" id="sendBtn" onclick="sendMessage()" title="Send">&#x27A4;</button>
+          </div>
+        </div>
+        <div class="input-toolbar">
+          <div class="toolbar-item" onclick="insertSnippet('code')">
+            <span>{}</span> Code
+          </div>
+          <div class="toolbar-item" onclick="insertSnippet('bash')">
+            <span>$</span> Terminal
+          </div>
+          <div class="toolbar-item" onclick="clearChat()">
+            <span>&#x232B;</span> Clear
+          </div>
+          <div class="toolbar-item" id="cotToolbarBtn" onclick="CoT.toggle()"
+            title="Toggle Chain-of-Thought multi-model review" style="display:none;">
+            <span>&#x1F9E0;</span> <span id="cotToolbarLabel">CoT: OFF</span>
+          </div>
+          <div class="toolbar-item" style="margin-left: auto; opacity: 0.6;">
+            <span>&#x21B5;</span> Enter to send
+          </div>
+        </div>
+      </div>
+
+      <!-- Debug Overlay -->
+      <div class="debug-panel" id="debugPanel">
+        <div class="debug-header">
+          <span class="debug-title">&#x1F527; Debug Log</span>
+          <div class="debug-controls">
+            <button class="code-btn" onclick="runDiagnostics()">Diagnostics</button>
+            <button class="code-btn" onclick="testAllEndpoints()">Test API</button>
+            <button class="code-btn" onclick="exportDebug()">Export</button>
+            <button class="code-btn" onclick="closeDebug()">Close</button>
+          </div>
+        </div>
+        <div class="debug-grid">
+          <div class="debug-sidebar">
+            <div class="debug-section">
+              <div class="debug-section-title">Connection</div>
+              <div class="debug-option">
+                <input type="checkbox" id="dbgAutoReconnect" checked>
+                <label for="dbgAutoReconnect">Auto-reconnect</label>
+              </div>
+              <div class="debug-option">
+                <input type="checkbox" id="dbgShowTiming" checked>
+                <label for="dbgShowTiming">Show latency</label>
+              </div>
+            </div>
+            <div class="debug-section">
+              <div class="debug-section-title">Logging</div>
+              <div class="debug-option">
+                <input type="checkbox" id="dbgLogRequests" checked>
+                <label for="dbgLogRequests">Log requests</label>
+              </div>
+              <div class="debug-option">
+                <input type="checkbox" id="dbgLogResponses">
+                <label for="dbgLogResponses">Log full responses</label>
+              </div>
+            </div>
+            <div class="debug-section">
+              <div class="debug-section-title">Backend URL</div>
+              <input type="text" id="dbgBackendUrl" value="http://localhost:11435" style="width:100%; padding:2px 4px; background:var(--win-field-bg); border:2px solid; border-color:var(--win-btn-shadow) var(--win-btn-highlight) var(--win-btn-highlight) var(--win-btn-shadow);
+                color:var(--win-text); font-family:var(--font-mono); font-size:10px; outline:none;"
+                onchange="State.backend.url=this.value; logDebug('Backend URL changed to '+this.value,'info')">
+            </div>
+          </div>
+          <script>
+            // Wire debug checkboxes to localStorage persistence and live toggling
+            document.addEventListener('DOMContentLoaded', function () {
+              try {
+                var dbgSettings = JSON.parse(localStorage.getItem('rawrxd_debug_settings') || '{}');
+                if (dbgSettings.autoReconnect !== undefined) {
+                  var arEl = document.getElementById('dbgAutoReconnect');
+                  if (arEl) arEl.checked = dbgSettings.autoReconnect;
+                }
+                if (dbgSettings.showTiming !== undefined) {
+                  var stEl = document.getElementById('dbgShowTiming');
+                  if (stEl) stEl.checked = dbgSettings.showTiming;
+                }
+                if (dbgSettings.logRequests !== undefined) {
+                  var lrEl = document.getElementById('dbgLogRequests');
+                  if (lrEl) lrEl.checked = dbgSettings.logRequests;
+                }
+                if (dbgSettings.logResponses !== undefined) {
+                  var lpEl = document.getElementById('dbgLogResponses');
+                  if (lpEl) lpEl.checked = dbgSettings.logResponses;
+                }
+              } catch (e) { /* ignore */ }
+
+              function persistDebugSettings() {
+                try {
+                  localStorage.setItem('rawrxd_debug_settings', JSON.stringify({
+                    autoReconnect: document.getElementById('dbgAutoReconnect') ? document.getElementById('dbgAutoReconnect').checked : true,
+                    showTiming: document.getElementById('dbgShowTiming') ? document.getElementById('dbgShowTiming').checked : true,
+                    logRequests: document.getElementById('dbgLogRequests') ? document.getElementById('dbgLogRequests').checked : true,
+                    logResponses: document.getElementById('dbgLogResponses') ? document.getElementById('dbgLogResponses').checked : false
+                  }));
+                } catch (e) { /* localStorage full */ }
+              }
+
+              var showTimingEl = document.getElementById('dbgShowTiming');
+              if (showTimingEl) {
+                showTimingEl.addEventListener('change', function () {
+                  var display = this.checked ? '' : 'none';
+                  document.querySelectorAll('.message-meta').forEach(function (el) {
+                    el.style.display = display;
+                  });
+                  persistDebugSettings();
+                });
+                if (!showTimingEl.checked) {
+                  document.querySelectorAll('.message-meta').forEach(function (el) {
+                    el.style.display = 'none';
+                  });
+                }
+              }
+
+              ['dbgAutoReconnect', 'dbgLogRequests', 'dbgLogResponses'].forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) el.addEventListener('change', persistDebugSettings);
+              });
+            });
+          </script>
+          <div class="debug-main" id="debugLog">
+            <div class="debug-log">
+              <span class="timestamp">[--:--:--]</span> <span class="level-info">[INFO]</span> Debug panel ready. Click
+              Diagnostics or Test API to begin.<br>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Failure Intelligence Panel -->
+      <div class="failure-panel" id="failurePanel">
+        <div class="failure-header">
+          <span class="failure-title">&#x26A0; Failure Intelligence</span>
+          <div class="debug-controls">
+            <button class="code-btn" onclick="fetchFailures()">Refresh</button>
+            <button class="code-btn" onclick="exportFailures()">Export</button>
+            <button class="code-btn" onclick="closeFailures()">Close</button>
+          </div>
+        </div>
+        <div class="failure-body">
+          <div class="failure-timeline">
+            <table class="failure-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Type</th>
+                  <th>Evidence</th>
+                  <th>Strategy</th>
+                  <th>Outcome</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="failureTableBody">
+                <tr>
+                  <td colspan="6" style="text-align:center; color:var(--text-muted); padding:40px;">Click Refresh to
+                    load failure data</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="failure-detail-drawer" id="failureDetailDrawer"></div>
+          </div>
+          <div class="failure-stats-panel" id="failureStatsPanel">
+            <div class="stat-card">
+              <div class="stat-card-title">Summary</div>
+              <div id="failureSummaryStats">
+                <div class="stat-row"><span class="stat-label">Total Failures</span><span class="stat-value cyan"
+                    id="fsTotalFailures">&mdash;</span></div>
+                <div class="stat-row"><span class="stat-label">Total Retries</span><span class="stat-value orange"
+                    id="fsTotalRetries">&mdash;</span></div>
+                <div class="stat-row"><span class="stat-label">Retry Success</span><span class="stat-value green"
+                    id="fsRetrySuccess">&mdash;</span></div>
+                <div class="stat-row"><span class="stat-label">Declined</span><span class="stat-value" id="fsDeclined"
+                    style="color:var(--text-muted);">&mdash;</span></div>
+              </div>
+              <div class="stat-bar" style="margin-top:10px;">
+                <div class="stat-bar-fill" id="fsRetryBar" style="width:0%; background:var(--accent-green);"></div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-title">Top Failure Reasons</div>
+              <div id="failureReasonList">
+                <div class="stat-row"><span class="stat-label" style="color:var(--text-muted);">No data yet</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Agent Dashboard Panel -->
+      <div class="agent-panel" id="agentPanel">
+        <div class="agent-header">
+          <span class="agent-title">&#x1F916; Agent Dashboard</span>
+          <div class="debug-controls">
+            <div class="agent-poll-indicator" id="agentPollIndicator">
+              <span class="agent-poll-dot" id="agentPollDot"></span>
+              <span id="agentPollLabel">Polling</span>
+            </div>
+            <button class="code-btn" onclick="fetchAgentStatus()">Refresh</button>
+            <button class="code-btn" onclick="toggleAgentPoll()">Toggle Poll</button>
+            <button class="code-btn" onclick="closeAgentDashboard()">Close</button>
+          </div>
+        </div>
+        <div class="agent-body">
+          <div class="agent-main">
+            <div class="agent-card-grid" id="agentCardGrid">
+              <div class="agent-card">
+                <div class="agent-card-name">Failure Detector</div>
+                <div class="agent-card-status">
+                  <span class="agent-status-dot active" id="agentDetectorDot"></span>
+                  <span id="agentDetectorStatus" style="font-size:12px; color:var(--accent-green);">Active</span>
+                </div>
+                <div class="agent-card-stat"><span class="stat-key">Detections</span><span class="stat-val"
+                    id="agentDetectorCount">0</span></div>
+                <div class="agent-card-stat"><span class="stat-key">Last Check</span><span class="stat-val"
+                    id="agentDetectorLast">&mdash;</span></div>
+              </div>
+              <div class="agent-card">
+                <div class="agent-card-name">Puppeteer</div>
+                <div class="agent-card-status">
+                  <span class="agent-status-dot active" id="agentPuppeteerDot"></span>
+                  <span id="agentPuppeteerStatus" style="font-size:12px; color:var(--accent-green);">Active</span>
+                </div>
+                <div class="agent-card-stat"><span class="stat-key">Corrections</span><span class="stat-val"
+                    id="agentPuppeteerCount">0</span></div>
+                <div class="agent-card-stat"><span class="stat-key">Last Fix</span><span class="stat-val"
+                    id="agentPuppeteerLast">&mdash;</span></div>
+              </div>
+              <div class="agent-card">
+                <div class="agent-card-name">Proxy Hotpatcher</div>
+                <div class="agent-card-status">
+                  <span class="agent-status-dot active" id="agentProxyDot"></span>
+                  <span id="agentProxyStatus" style="font-size:12px; color:var(--accent-green);">Active</span>
+                </div>
+                <div class="agent-card-stat"><span class="stat-key">Patches</span><span class="stat-val"
+                    id="agentProxyCount">0</span></div>
+              </div>
+            </div>
+
+            <!-- Hotpatch Control Panel -->
+            <div class="hotpatch-section">
+              <div class="hotpatch-header">
+                <span class="hotpatch-title">&#x1F527; Three-Layer Hotpatch Control</span>
+                <div style="display:flex;gap:4px;">
+                  <button class="code-btn" onclick="toggleAllHotpatchLayers()" style="font-size:10px;"
+                    id="hpToggleAllBtn">Toggle All</button>
+                  <button class="code-btn" onclick="fetchAgentStatus()" style="font-size:10px;">Refresh</button>
+                </div>
+              </div>
+              <div class="hotpatch-layer-grid">
+                <div class="hotpatch-layer" id="hpMemoryLayer">
+                  <div class="hotpatch-layer-name">Memory</div>
+                  <div class="hotpatch-layer-count" id="hpMemoryCount">0</div>
+                  <div class="hotpatch-layer-label">patches</div>
+                  <label class="hotpatch-toggle" title="Enable/disable memory hotpatching">
+                    <input type="checkbox" id="hpMemoryToggle" checked
+                      onchange="toggleHotpatchLayer('memory', this.checked)">
+                    <span class="hotpatch-toggle-slider"></span>
+                  </label>
+                  <div style="margin-top:4px;display:flex;gap:2px;justify-content:center;">
+                    <button class="code-btn" onclick="applyHotpatch('memory')"
+                      style="font-size:9px;padding:1px 4px;">Apply</button>
+                    <button class="code-btn" onclick="revertHotpatch('memory')"
+                      style="font-size:9px;padding:1px 4px;">Revert</button>
+                  </div>
+                </div>
+                <div class="hotpatch-layer" id="hpByteLayer">
+                  <div class="hotpatch-layer-name">Byte-Level</div>
+                  <div class="hotpatch-layer-count" id="hpByteCount">0</div>
+                  <div class="hotpatch-layer-label">patches</div>
+                  <label class="hotpatch-toggle" title="Enable/disable byte-level hotpatching">
+                    <input type="checkbox" id="hpByteToggle" checked
+                      onchange="toggleHotpatchLayer('byte', this.checked)">
+                    <span class="hotpatch-toggle-slider"></span>
+                  </label>
+                  <div style="margin-top:4px;display:flex;gap:2px;justify-content:center;">
+                    <button class="code-btn" onclick="applyHotpatch('byte')"
+                      style="font-size:9px;padding:1px 4px;">Apply</button>
+                    <button class="code-btn" onclick="revertHotpatch('byte')"
+                      style="font-size:9px;padding:1px 4px;">Revert</button>
+                  </div>
+                </div>
+                <div class="hotpatch-layer" id="hpServerLayer">
+                  <div class="hotpatch-layer-name">Server</div>
+                  <div class="hotpatch-layer-count" id="hpServerCount">0</div>
+                  <div class="hotpatch-layer-label">patches</div>
+                  <label class="hotpatch-toggle" title="Enable/disable server hotpatching">
+                    <input type="checkbox" id="hpServerToggle" checked
+                      onchange="toggleHotpatchLayer('server', this.checked)">
+                    <span class="hotpatch-toggle-slider"></span>
+                  </label>
+                  <div style="margin-top:4px;display:flex;gap:2px;justify-content:center;">
+                    <button class="code-btn" onclick="applyHotpatch('server')"
+                      style="font-size:9px;padding:1px 4px;">Apply</button>
+                    <button class="code-btn" onclick="revertHotpatch('server')"
+                      style="font-size:9px;padding:1px 4px;">Revert</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Agent Event Timeline -->
+            <div class="agent-timeline">
+              <div class="agent-timeline-header">
+                <span>Event Timeline</span>
+                <span id="agentEventCount" style="color:var(--accent-cyan);">0 events</span>
+              </div>
+              <div class="agent-timeline-body" id="agentTimelineBody">
+                <div class="agent-event">
+                  <span class="agent-event-time">&mdash;</span>
+                  <span class="agent-event-type info">READY</span>
+                  <span class="agent-event-detail">Click Refresh to load agent events</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="agent-sidebar">
+            <div class="stat-card">
+              <div class="stat-card-title">Server</div>
+              <div class="stat-row"><span class="stat-label">Uptime</span><span class="stat-value cyan"
+                  id="agentUptime">&mdash;</span></div>
+              <div class="stat-row"><span class="stat-label">Requests</span><span class="stat-value cyan"
+                  id="agentTotalReqs">&mdash;</span></div>
+              <div class="stat-row"><span class="stat-label">Chat Compl.</span><span class="stat-value green"
+                  id="agentChatCompletions">&mdash;</span></div>
+              <div class="stat-row"><span class="stat-label">Events</span><span class="stat-value orange"
+                  id="agentTotalEvents">&mdash;</span></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-title">Quick Actions</div>
+              <div style="display:flex; flex-direction:column; gap:4px; margin-top:4px;">
+                <button class="code-btn" onclick="fetchFailures(); showFailures();"
+                  style="width:100%; text-align:left;">&#x26A0; View Failures</button>
+                <button class="code-btn" onclick="testAllEndpoints();" style="width:100%; text-align:left;">&#x1F310;
+                  Test Endpoints</button>
+                <button class="code-btn" onclick="runDiagnostics();" style="width:100%; text-align:left;">&#x1F527;
+                  Diagnostics</button>
+                <button class="code-btn" onclick="exportAgentData();" style="width:100%; text-align:left;">&#x1F4BE;
+                  Export Agent Data</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Performance & Observability Panel -->
+      <div class="perf-panel" id="perfPanel">
+        <div class="perf-header">
+          <span class="perf-title">&#x1F4CA; Performance &amp; Observability</span>
+          <div class="debug-controls">
+            <button class="code-btn" onclick="renderPerfPanel()">Refresh</button>
+            <button class="code-btn" onclick="exportPerfData()">Export</button>
+            <button class="code-btn" onclick="closePerfPanel()">Close</button>
+          </div>
+        </div>
+        <div class="perf-body">
+          <div class="perf-main">
+            <div class="perf-metric-row">
+              <div class="perf-metric-card">
+                <div class="perf-metric-label">Total Requests</div>
+                <div class="perf-metric-value" id="pmTotalReqs">0</div>
+                <div class="perf-metric-unit">requests</div>
+              </div>
+              <div class="perf-metric-card">
+                <div class="perf-metric-label">Avg Latency</div>
+                <div class="perf-metric-value orange" id="pmAvgLatency">—</div>
+                <div class="perf-metric-unit">milliseconds</div>
+              </div>
+              <div class="perf-metric-card">
+                <div class="perf-metric-label">Avg Tokens/s</div>
+                <div class="perf-metric-value green" id="pmAvgTps">—</div>
+                <div class="perf-metric-unit">t/s</div>
+              </div>
+              <div class="perf-metric-card">
+                <div class="perf-metric-label">Total Tokens</div>
+                <div class="perf-metric-value purple" id="pmTotalTokens">0</div>
+                <div class="perf-metric-unit">tokens generated</div>
+              </div>
+            </div>
+
+            <div class="perf-sparkline-section">
+              <div class="perf-sparkline-header">
+                <span>Latency Timeline</span>
+                <span id="pmLatencyRange" style="color:var(--accent-cyan); font-weight:normal;">—</span>
+              </div>
+              <div class="perf-sparkline-body">
+                <canvas class="sparkline-canvas" id="latencySparkline" height="80"></canvas>
+                <div class="sparkline-legend">
+                  <span><span class="sparkline-legend-dot" style="background:var(--accent-secondary);"></span>Latency
+                    (ms)</span>
+                  <span id="pmLatencyMinMax" style="color:var(--accent-cyan);">—</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="perf-sparkline-section">
+              <div class="perf-sparkline-header">
+                <span>Tokens/sec Timeline</span>
+                <span id="pmTpsRange" style="color:var(--accent-green); font-weight:normal;">—</span>
+              </div>
+              <div class="perf-sparkline-body">
+                <canvas class="sparkline-canvas" id="tpsSparkline" height="80"></canvas>
+                <div class="sparkline-legend">
+                  <span><span class="sparkline-legend-dot"
+                      style="background:var(--accent-green);"></span>Tokens/s</span>
+                  <span id="pmTpsMinMax" style="color:var(--accent-green);">—</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="perf-benchmark-section">
+              <div class="perf-benchmark-header">Model Benchmark Comparison</div>
+              <table class="perf-benchmark-table">
+                <thead>
+                  <tr>
+                    <th>Model</th>
+                    <th>Requests</th>
+                    <th>Avg Latency</th>
+                    <th>Avg t/s</th>
+                    <th>Best t/s</th>
+                    <th>Total Tokens</th>
+                  </tr>
+                </thead>
+                <tbody id="pmBenchmarkBody">
+                  <tr>
+                    <td colspan="6" style="text-align:center; color:var(--text-muted); padding:30px;">No benchmark data
+                      yet — send some messages first</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="perf-history-section">
+              <div class="perf-history-header">
+                <span>Recent Request History</span>
+                <span id="pmHistoryCount" style="color:var(--accent-cyan); font-weight:normal;">0 requests</span>
+              </div>
+              <div class="perf-history-body" id="pmHistoryBody">
+                <div style="text-align:center; color:var(--text-muted); padding:30px; font-size:12px;">No requests
+                  recorded yet</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="perf-sidebar">
+            <div class="perf-side-card">
+              <div class="perf-side-title">Session Summary</div>
+              <div class="perf-side-row"><span class="perf-side-key">Requests</span><span class="perf-side-val"
+                  id="perfTotalReqs">0</span></div>
+              <div class="perf-side-row"><span class="perf-side-key">Avg Latency</span><span class="perf-side-val"
+                  id="perfAvgLatency">—</span></div>
+              <div class="perf-side-row"><span class="perf-side-key">Avg t/s</span><span class="perf-side-val"
+                  id="perfAvgTps">—</span></div>
+              <div class="perf-side-row"><span class="perf-side-key">Total Tokens</span><span class="perf-side-val"
+                  id="perfTotalTokens">0</span></div>
+            </div>
+
+            <div class="perf-side-card">
+              <div class="perf-side-title">Latency Percentiles</div>
+              <div class="perf-side-row"><span class="perf-side-key">p50</span><span class="perf-side-val"
+                  id="perfP50">—</span></div>
+              <div class="perf-side-row"><span class="perf-side-key">p90</span><span class="perf-side-val"
+                  id="perfP90">—</span></div>
+              <div class="perf-side-row"><span class="perf-side-key">p99</span><span class="perf-side-val"
+                  id="perfP99">—</span></div>
+              <div class="perf-side-row"><span class="perf-side-key">Min</span><span class="perf-side-val"
+                  id="perfMin">—</span></div>
+              <div class="perf-side-row"><span class="perf-side-key">Max</span><span class="perf-side-val"
+                  id="perfMax">—</span></div>
+            </div>
+
+            <div class="perf-side-card">
+              <div class="perf-side-title">Endpoint Breakdown</div>
+              <div id="perfEndpointBreakdown">
+                <div class="perf-side-row"><span class="perf-side-key" style="color:var(--text-muted);">No data
+                    yet</span></div>
+              </div>
+            </div>
+
+            <div class="perf-log-section" style="flex:1;">
+              <div class="perf-log-header">
+                <span>Structured Log</span>
+                <span id="pmLogCount" style="color:var(--accent-cyan); font-weight:normal;">0</span>
+              </div>
+              <div class="perf-log-body" id="pmLogBody">
+                <div class="perf-log-entry"><span class="log-ts">—</span><span class="log-level INFO">INFO</span><span
+                    class="log-event">Structured logging ready</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Security & Hardening Panel -->
+      <div class="security-panel" id="securityPanel">
+        <div class="security-header">
+          <span class="security-title">&#x1F6E1;&#xFE0F; Security &amp; Hardening</span>
+          <div class="debug-controls">
+            <button class="code-btn" onclick="renderSecurityPanel()">Refresh</button>
+            <button class="code-btn" onclick="exportSecurityAudit()">Export</button>
+            <button class="code-btn" onclick="closeSecurityPanel()">Close</button>
+          </div>
+        </div>
+        <div class="security-body">
+          <div class="security-main">
+            <div class="sec-card-row">
+              <div class="sec-card">
+                <div class="sec-card-label">CSP Directives</div>
+                <div class="sec-card-value secure" id="secCspCount">0</div>
+                <div class="sec-card-unit">active policies</div>
+              </div>
+              <div class="sec-card">
+                <div class="sec-card-label">Blocked Inputs</div>
+                <div class="sec-card-value" id="secBlockedCount">0</div>
+                <div class="sec-card-unit">sanitized</div>
+              </div>
+              <div class="sec-card">
+                <div class="sec-card-label">Rate Limit</div>
+                <div class="sec-card-value secure" id="secRateStatus">OK</div>
+                <div class="sec-card-unit" id="secRateUnit">0 / 30 per min</div>
+              </div>
+              <div class="sec-card">
+                <div class="sec-card-label">URL Validation</div>
+                <div class="sec-card-value secure" id="secUrlStatus">&#x2713;</div>
+                <div class="sec-card-unit">backend verified</div>
+              </div>
+            </div>
+
+            <div class="sec-audit-section">
+              <div class="sec-audit-header">
+                <span>&#x1F512; Content Security Policy Audit</span>
+                <button class="code-btn" onclick="auditCSP()" style="font-size:10px;">Re-Audit</button>
+              </div>
+              <div class="sec-audit-body" id="secCspAuditBody">
+                <div style="text-align:center; color:var(--text-muted); padding:20px;">Click Refresh to audit CSP</div>
+              </div>
+            </div>
+
+            <div class="sec-rate-meter">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:11px; font-weight:bold;">&#x23F1; Client Rate Limiter</span>
+                <span style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono);"
+                  id="secRateLimitLabel">30 req/min</span>
+              </div>
+              <div class="sec-rate-bar-bg">
+                <div class="sec-rate-bar-fill" id="secRateBar" style="width: 0%;"></div>
+              </div>
+              <div class="sec-rate-info">
+                <span id="secRateUsed">0 used</span>
+                <span id="secRateRemaining">30 remaining</span>
+              </div>
+            </div>
+
+            <div class="sec-audit-section">
+              <div class="sec-audit-header">
+                <span>&#x1F9F9; Input Validation &amp; Sanitization</span>
+              </div>
+              <div class="sec-audit-body" id="secInputAuditBody">
+                <div class="sec-directive">
+                  <span class="sec-directive-name">DOMPurify</span>
+                  <span class="sec-directive-value" id="secDomPurifyStatus">Checking...</span>
+                  <span class="sec-directive-status pass" id="secDomPurifyBadge">—</span>
+                </div>
+                <div class="sec-directive">
+                  <span class="sec-directive-name">Max Input Length</span>
+                  <span class="sec-directive-value" id="secMaxInputVal">50,000 chars</span>
+                  <span class="sec-directive-status pass">ENFORCED</span>
+                </div>
+                <div class="sec-directive">
+                  <span class="sec-directive-name">Script Tag Filter</span>
+                  <span class="sec-directive-value">Blocks &lt;script&gt;, onerror=, onload=, javascript:</span>
+                  <span class="sec-directive-status pass">ACTIVE</span>
+                </div>
+                <div class="sec-directive">
+                  <span class="sec-directive-name">URL Allowlist</span>
+                  <span class="sec-directive-value" id="secUrlAllowlist">localhost, 127.0.0.1</span>
+                  <span class="sec-directive-status pass">ENFORCED</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="sec-log-section">
+              <div class="sec-log-header">
+                <span>Security Event Log</span>
+                <span id="secLogCount" style="color:var(--accent-cyan); font-weight:normal;">0</span>
+              </div>
+              <div class="sec-log-body" id="secLogBody">
+                <div class="sec-log-entry">
+                  <span class="sec-log-ts">&mdash;</span>
+                  <span class="sec-log-level AUDIT">AUDIT</span>
+                  <span class="sec-log-detail">Security panel initialized — Phase 4 active</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="security-sidebar">
+            <div class="sec-side-card">
+              <div class="sec-side-title">Security Summary</div>
+              <div class="sec-side-row"><span class="sec-side-key">CSP</span><span class="sec-side-val secure"
+                  id="secSumCsp">Active</span></div>
+              <div class="sec-side-row"><span class="sec-side-key">DOMPurify</span><span class="sec-side-val secure"
+                  id="secSumPurify">Loaded</span></div>
+              <div class="sec-side-row"><span class="sec-side-key">Rate Limit</span><span class="sec-side-val secure"
+                  id="secSumRate">OK</span></div>
+              <div class="sec-side-row"><span class="sec-side-key">URL Guard</span><span class="sec-side-val secure"
+                  id="secSumUrl">Enforced</span></div>
+              <div class="sec-side-row"><span class="sec-side-key">Input Filter</span><span class="sec-side-val secure"
+                  id="secSumInput">Active</span></div>
+            </div>
+
+            <div class="sec-side-card">
+              <div class="sec-side-title">Blocked Events</div>
+              <div class="sec-side-row"><span class="sec-side-key">XSS Attempts</span><span class="sec-side-val"
+                  id="secBlkXss">0</span></div>
+              <div class="sec-side-row"><span class="sec-side-key">Over-Length</span><span class="sec-side-val"
+                  id="secBlkLength">0</span></div>
+              <div class="sec-side-row"><span class="sec-side-key">Rate Limited</span><span class="sec-side-val"
+                  id="secBlkRate">0</span></div>
+              <div class="sec-side-row"><span class="sec-side-key">Bad URL</span><span class="sec-side-val"
+                  id="secBlkUrl">0</span></div>
+            </div>
+
+            <div class="sec-side-card">
+              <div class="sec-side-title">Backend Hardening</div>
+              <div class="sec-side-row"><span class="sec-side-key">Max Body</span><span class="sec-side-val"
+                  id="secBackendBody">10 MB</span></div>
+              <div class="sec-side-row"><span class="sec-side-key">Rate Limit</span><span class="sec-side-val"
+                  id="secBackendRate">60/min</span></div>
+              <div class="sec-side-row"><span class="sec-side-key">CORS</span><span class="sec-side-val"
+                  id="secBackendCors">Restricted</span></div>
+              <div class="sec-side-row"><span class="sec-side-key">Sec Headers</span><span class="sec-side-val secure"
+                  id="secBackendHeaders">Active</span></div>
+            </div>
+
+            <div class="sec-side-card" style="flex:1;">
+              <div class="sec-side-title">Quick Actions</div>
+              <div style="display:flex; flex-direction:column; gap:4px; margin-top:4px;">
+                <button class="code-btn" onclick="auditCSP();" style="width:100%; text-align:left;">&#x1F512; Re-Audit
+                  CSP</button>
+                <button class="code-btn" onclick="validateBackendUrl();" style="width:100%; text-align:left;">&#x1F310;
+                  Validate URL</button>
+                <button class="code-btn" onclick="resetRateLimit();" style="width:100%; text-align:left;">&#x23F1; Reset
+                  Rate Limit</button>
+                <button class="code-btn" onclick="exportSecurityAudit();" style="width:100%; text-align:left;">&#x1F4BE;
+                  Export Audit</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Right Sidebar -->
+    <aside class="rightbar">
+      <div class="sidebar-section">
+        <div class="sidebar-title">// Attached Files</div>
+        <div class="file-drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+          <div style="font-size: 24px; margin-bottom: 8px;">&#x1F4C1;</div>
+          <div>Drop files here or click to browse</div>
+          <div style="font-size: 10px; margin-top: 4px; color: var(--text-muted);">Sent as context with your messages
+          </div>
+          <input type="file" id="fileInput" multiple style="display: none;" onchange="handleFiles(this.files)">
+        </div>
+      </div>
+
+      <div class="file-list" id="fileList"></div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-title">// Session</div>
+        <div style="font-size: 11px; color: var(--text-muted); line-height: 1.8;">
+          <p>Messages: <span id="msgCount" style="color: var(--accent-cyan);">0</span></p>
+          <p>Files: <span id="attachCount" style="color: var(--accent-cyan);">0</span></p>
+          <p>Model: <span id="rightModel" style="color: var(--accent-green);">&mdash;</span></p>
+        </div>
+      </div>
+
+      <!-- Chain-of-Thought Multi-Model Review Panel -->
+      <div class="sidebar-section cot-panel">
+        <div class="sidebar-title" style="display:flex;align-items:center;gap:6px;">
+          &#x1F9E0; // Chain of Thought
+          <span style="margin-left:auto;font-size:10px;color:var(--text-muted);font-family:var(--font-mono);"
+            id="cotStatusBadge">OFF</span>
+        </div>
+
+        <div class="cot-toggle-row">
+          <div class="cot-switch" id="cotSwitch" onclick="CoT.toggle()"></div>
+          <label onclick="CoT.toggle()">Enable multi-model chain</label>
+        </div>
+
+        <div class="cot-presets" id="cotPresets">
+          <button class="cot-preset-btn" onclick="CoT.applyPreset('review')">&#x1F50D; Review</button>
+          <button class="cot-preset-btn" onclick="CoT.applyPreset('audit')">&#x1F6E1; Audit</button>
+          <button class="cot-preset-btn" onclick="CoT.applyPreset('think')">&#x1F4AD; Think</button>
+          <button class="cot-preset-btn" onclick="CoT.applyPreset('research')">&#x1F4DA; Research</button>
+          <button class="cot-preset-btn" onclick="CoT.applyPreset('debate')">&#x2694; Debate</button>
+          <button class="cot-preset-btn" onclick="CoT.applyPreset('custom')">&#x2699; Custom</button>
+        </div>
+
+        <div class="cot-step-count" id="cotStepCountRow">
+          <label>Steps:</label>
+          <input type="range" min="1" max="8" value="3" id="cotStepSlider"
+            oninput="CoT.setStepCount(parseInt(this.value))">
+          <span class="cot-count-val" id="cotStepVal">3</span>
+        </div>
+
+        <div class="cot-chain-list" id="cotChainList">
+        </div>
+      </div>
+    </aside>
+
+    <!-- Terminal -->
+    <div class="terminal" id="terminalPanel">
+      <div class="terminal-header">
+        <div class="terminal-tabs">
+          <div class="terminal-tab active" id="termTabLocal" onclick="switchTerminalMode('local')"
+            title="Local commands (help, status, models, curl...)">
+            <span>&#x26A1;</span> Terminal
+          </div>
+          <div class="terminal-tab" id="termTabCli" onclick="switchTerminalMode('cli')"
+            title="Remote CLI — sends /commands to backend /api/cli">
+            <span>&#x1F4BB;</span> CLI
+          </div>
+        </div>
+        <div class="terminal-actions">
+          <span id="termModeIndicator"
+            style="font-size:10px;color:var(--win-text-disabled);font-family:var(--font-mono);margin-right:8px;">LOCAL</span>
+          <button class="icon-btn" onclick="clearTerminal()" title="Clear">&#x1F5D1;</button>
+          <button class="icon-btn" onclick="toggleTerminal()" title="Toggle" id="termToggleBtn">&#x2B07;</button>
+        </div>
+      </div>
+      <div class="terminal-content" id="terminalOutput">
+        <div class="terminal-line system">RawrXD IDE Terminal v4.0 &mdash; Win32 Classic Edition &mdash; Type 'help' for
+          commands | Switch to CLI tab for remote /commands</div>
+      </div>
+      <div class="terminal-input-line">
+        <span class="terminal-prompt" id="termPrompt">rawrxd&gt;</span>
+        <input type="text" class="terminal-input" id="terminalInput" onkeydown="handleTerminal(event)"
+          autocomplete="off" spellcheck="false" placeholder="help | /help for CLI commands">
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================
+       JAVASCRIPT — Identical to ide_chatbot.html
+       All State, Conversation, RawrXDStream, panel logic, CoT, etc.
+       Loaded via external script tag to share the same codebase.
+       If the external script fails (file:// CORS), falls back to
+       inline copy below.
+       ================================================================ -->
+  <script>
+    // ======================================================================
+    // WEBVIEW2 BRIDGE LAYER
+    // Detects if running inside Win32 IDE's WebView2 panel and enables
+    // bidirectional communication via window.chrome.webview.postMessage()
+    // ======================================================================
+    var _webview2Bridge = {
+      available: _isInsideWin32IDE,
+      send: function (type, data) {
+        if (!this.available) return false;
+        try {
+          window.chrome.webview.postMessage(JSON.stringify({
+            type: type,
+            source: 'rawrxd-chatbot-win32',
+            timestamp: Date.now(),
+            data: data || {}
+          }));
+          return true;
+        } catch (e) {
+          console.warn('[WebView2Bridge] postMessage failed:', e);
+          return false;
+        }
+      },
+      init: function () {
+        if (!this.available) return;
+        // Listen for messages from the Win32 IDE host
+        window.chrome.webview.addEventListener('message', function (event) {
+          try {
+            var msg = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+            if (msg.type === 'content') {
+              // IDE sent file content — inject into file context
+              if (msg.data && msg.data.content && msg.data.name) {
+                State.fileContents[msg.data.name] = msg.data.content;
+                var pseudoFile = { name: msg.data.name, size: msg.data.content.length };
+                if (!State.files.find(function (f) { return f.name === msg.data.name; })) {
+                  State.files.push(pseudoFile);
+                  renderFile(pseudoFile);
+                  updateFileBadge();
+                }
+                logDebug('[WebView2] Received file from IDE: ' + msg.data.name, 'info');
+              }
+            } else if (msg.type === 'model') {
+              // IDE sent model selection
+              if (msg.data && msg.data.name) {
+                State.model.current = msg.data.name;
+                var sel = document.getElementById('modelSelect');
+                if (sel) sel.value = msg.data.name;
+                changeModel();
+                logDebug('[WebView2] Model set from IDE: ' + msg.data.name, 'info');
+              }
+            } else if (msg.type === 'status') {
+              // IDE sent status update
+              logDebug('[WebView2] IDE status: ' + JSON.stringify(msg.data), 'info');
+            }
+          } catch (e) {
+            console.warn('[WebView2Bridge] Failed to parse message:', e);
+          }
+        });
+        // Announce ready to host
+        this.send('ready', { version: '3.4-win32' });
+        console.log('[WebView2Bridge] Initialized — embedded in Win32 IDE');
+      }
+    };
+  </script>
+  <script>
+    // ======================================================================
+    // STATE — provided by ide_chatbot_engine.js
+    // The engine file declares State, Conversation, RawrXDStream, and all
+    // functions. This script block only contains the Win32-specific
+    // WebView2 bridge and init hooks.
+    // ======================================================================
+  </script>
+  <script src="ide_chatbot_engine.js"></script>
+  <script>
+    // ======================================================================
+    // FALLBACK: If ide_chatbot_engine.js failed to load (file:// CORS or
+    // missing file), we need to detect it and show an error.
+    // In standalone mode, the user should use ide_chatbot.html instead,
+    // or the tool_server serves this file with the engine embedded.
+    // ======================================================================
+    if (typeof recordMetric === 'undefined') {
+      // Engine not loaded — show inline fallback notice
+      document.addEventListener('DOMContentLoaded', function () {
+        var container = document.getElementById('chatMessages');
+        if (container) {
+          container.innerHTML =
+            '<div style="padding:20px;font-family:Tahoma,sans-serif;font-size:12px;color:#000;">' +
+            '<h2 style="color:#000080;margin-bottom:10px;">⚠ RawrXD Win32 Classic — Engine Not Loaded</h2>' +
+            '<p>The JavaScript engine file <code>ide_chatbot_engine.js</code> was not found.</p>' +
+            '<p style="margin-top:10px;"><strong>Options:</strong></p>' +
+            '<ul style="margin:8px 0 8px 20px;line-height:1.8;">' +
+            '<li>Use <code>ide_chatbot.html</code> instead (has engine embedded)</li>' +
+            '<li>Access via HTTP: <a href="http://localhost:11435/gui/win32">http://localhost:11435/gui/win32</a></li>' +
+            '<li>Extract the JS from ide_chatbot.html into <code>ide_chatbot_engine.js</code></li>' +
+            '</ul>' +
+            '<p style="margin-top:10px;color:#808080;">The tool_server will serve this page with the engine embedded at <code>/gui/win32</code>.</p>' +
+            '</div>';
+        }
+      });
+    }
+  </script>
+  <script>
+    // ======================================================================
+    // WIN32 CLASSIC INIT HOOK
+    // Runs after the engine loads to apply Win32-specific behaviors
+    // ======================================================================
+    if (typeof recordMetric !== 'undefined') {
+      // Engine is loaded — apply Win32 Classic enhancements
+      (function () {
+        var _origDomReady = null;
+
+        // Initialize WebView2 bridge if inside Win32 IDE
+        _webview2Bridge.init();
+
+        // Override welcome message for Win32 Classic theme
+        var _origAddWelcome = typeof addWelcomeMessage === 'function' ? addWelcomeMessage : null;
+        if (_origAddWelcome) {
+          addWelcomeMessage = function () {
+            var modeNote = _isFileProtocol
+              ? '\n\n📂 **Standalone Mode** — Opened directly from file system. ' +
+              'Connecting to `localhost:11435` (Win32 IDE) or `localhost:11434` (Ollama).' +
+              (_isInsideWin32IDE ? '\n🖥 **Running inside Win32 IDE WebView2** — bridge active.' : '')
+              : '';
+            addMessage('system',
+              '**RawrXD IDE // Win32 Classic Edition v3.4**\n\n' +
+              'Windows Classic theme active. Same backend, same features.\n' +
+              'Connects to `localhost:11435` (tool server) or falls back to Ollama on `localhost:11434`.' + modeNote + '\n\n' +
+              '**Features:**\n' +
+              '• Streaming chat with RawrXDStream bridge\n' +
+              '• Chain-of-Thought multi-model review\n' +
+              '• Agent Dashboard + Failure Intelligence\n' +
+              '• Performance & Observability panel\n' +
+              '• Security & Hardening dashboard\n' +
+              '• Three-Layer Hotpatch control\n' +
+              '• Tensor Bunny Hop + Safe Decode Profile\n' +
+              (_isInsideWin32IDE ? '• **WebView2 Bridge** — bidirectional IDE communication\n' : '') +
+              '\n**Quick start:** Click ⚡ to connect, select a model, type your message.');
+          };
+        }
+
+        // Notify WebView2 host when backend connects
+        var _origConnectBackend = typeof connectBackend === 'function' ? connectBackend : null;
+        if (_origConnectBackend && _isInsideWin32IDE) {
+          var _wrappedConnect = connectBackend;
+          connectBackend = async function () {
+            await _wrappedConnect();
+            if (State.backend.online) {
+              _webview2Bridge.send('backendConnected', {
+                url: State.backend.url,
+                serverType: State.backend.serverType,
+                directMode: State.backend.directMode,
+                model: State.model.current
+              });
+            }
+          };
+        }
+      })();
+    }
+  </script>
+</body>
+
+</html>

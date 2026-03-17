@@ -1,0 +1,498 @@
+#include "hardware_backend_selector.h"
+#include "license_enforcement.h"
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QGridLayout>
+#include <QComboBox>
+#include <QLabel>
+#include <QTextEdit>
+#include <QPushButton>
+#include <QGroupBox>
+#include <QRadioButton>
+#include <QButtonGroup>
+#include <QSpinBox>
+#include <QCheckBox>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QDebug>
+#include <QMessageBox>
+#include <windows.h>
+#include <dxgi.h>
+
+#pragma comment(lib, "dxgi.lib")
+#pragma comment(lib, "d3d12.lib")
+
+HardwareBackendSelector::HardwareBackendSelector(QWidget* parent)
+    : QDialog(parent)
+    , m_selectedBackend(Backend::CPU)
+    , m_fp16Enabled(false)
+    , m_int8Enabled(false)
+    , m_memoryPoolMB(1024)
+{
+    setWindowTitle("Hardware Backend Configuration");
+    setMinimumSize(700, 600);
+    setModal(true);
+
+    setupUI();
+    setupConnections();
+    detectAvailableBackends();
+    populateBackendList();
+}
+
+void HardwareBackendSelector::setupUI()
+{
+    QVBoxLayout* mainLayout = new QVBoxLayout(this);
+
+    // ===== Backend Selection Section =====
+    QGroupBox* backendGroup = new QGroupBox("Available Backends", this);
+    QVBoxLayout* backendLayout = new QVBoxLayout(backendGroup);
+
+    QHBoxLayout* selectorLayout = new QHBoxLayout();
+    QLabel* backendLabel = new QLabel("Select Backend:", this);
+    m_backendCombo = new QComboBox(this);
+    selectorLayout->addWidget(backendLabel);
+    selectorLayout->addWidget(m_backendCombo);
+    selectorLayout->addStretch();
+
+    backendLayout->addLayout(selectorLayout);
+    
+    m_detailsText = new QTextEdit(this);
+    m_detailsText->setReadOnly(true);
+    m_detailsText->setMinimumHeight(150);
+    backendLayout->addWidget(m_detailsText);
+
+    mainLayout->addWidget(backendGroup);
+
+    // ===== Device Selection =====
+    QGroupBox* deviceGroup = new QGroupBox("Device Configuration", this);
+    QVBoxLayout* deviceLayout = new QVBoxLayout(deviceGroup);
+
+    QHBoxLayout* deviceComboLayout = new QHBoxLayout();
+    QLabel* deviceLabel = new QLabel("Device:", this);
+    m_deviceCombo = new QComboBox(this);
+    m_deviceCombo->addItem("Default Device");
+    deviceComboLayout->addWidget(deviceLabel);
+    deviceComboLayout->addWidget(m_deviceCombo);
+    deviceComboLayout->addStretch();
+    deviceLayout->addLayout(deviceComboLayout);
+
+    m_deviceInfoLabel = new QLabel("", this);
+    m_deviceInfoLabel->setStyleSheet("color: gray; font-size: 10px;");
+    deviceLayout->addWidget(m_deviceInfoLabel);
+
+    mainLayout->addWidget(deviceGroup);
+
+    // ===== Precision Selection =====
+    m_precisionGroup = new QGroupBox("Precision/Quantization", this);
+    QVBoxLayout* precisionLayout = new QVBoxLayout(m_precisionGroup);
+    m_precisionGroup_impl = new QButtonGroup(this);
+
+    m_fp32Radio = new QRadioButton("FP32 (Full Precision - Default)", this);
+    m_fp32Radio->setChecked(true);
+    m_fp16Radio = new QRadioButton("FP16 (Half Precision - Faster, Lower Memory)", this);
+    m_int8Radio = new QRadioButton("INT8 (Quantized - Fastest, Lowest Memory)", this);
+
+    m_precisionGroup_impl->addButton(m_fp32Radio, 0);
+    m_precisionGroup_impl->addButton(m_fp16Radio, 1);
+    m_precisionGroup_impl->addButton(m_int8Radio, 2);
+
+    precisionLayout->addWidget(m_fp32Radio);
+    precisionLayout->addWidget(m_fp16Radio);
+    precisionLayout->addWidget(m_int8Radio);
+
+    mainLayout->addWidget(m_precisionGroup);
+
+    // ===== Memory Configuration =====
+    m_memoryGroup = new QGroupBox("Memory Configuration", this);
+    QGridLayout* memoryLayout = new QGridLayout(m_memoryGroup);
+
+    QLabel* vramLabel = new QLabel("Available VRAM:", this);
+    m_vramLabel = new QLabel("N/A", this);
+    m_vramLabel->setStyleSheet("font-weight: bold;");
+    memoryLayout->addWidget(vramLabel, 0, 0);
+    memoryLayout->addWidget(m_vramLabel, 0, 1);
+
+    QLabel* poolLabel = new QLabel("Memory Pool Type:", this);
+    m_memoryPoolCombo = new QComboBox(this);
+    m_memoryPoolCombo->addItem("Unified Memory (Default)", 0);
+    m_memoryPoolCombo->addItem("Device Memory Only", 1);
+    m_memoryPoolCombo->addItem("Host Pinned Memory", 2);
+    memoryLayout->addWidget(poolLabel, 1, 0);
+    memoryLayout->addWidget(m_memoryPoolCombo, 1, 1);
+
+    QLabel* usageLabel = new QLabel("Estimated VRAM Usage:", this);
+    m_vramUsageLabel = new QLabel("0 MB", this);
+    m_vramUsageLabel->setStyleSheet("color: blue;");
+    memoryLayout->addWidget(usageLabel, 2, 0);
+    memoryLayout->addWidget(m_vramUsageLabel, 2, 1);
+
+    mainLayout->addWidget(m_memoryGroup);
+
+    // ===== Optimization Options =====
+    m_optimizationGroup = new QGroupBox("Optimization Options", this);
+    QVBoxLayout* optimLayout = new QVBoxLayout(m_optimizationGroup);
+
+    m_enableTensorCoresLabel = new QLabel("Tensor Cores: Disabled", this);
+    m_enableGraphsLabel = new QLabel("Graph Optimization: Disabled", this);
+
+    optimLayout->addWidget(m_enableTensorCoresLabel);
+    optimLayout->addWidget(m_enableGraphsLabel);
+
+    mainLayout->addWidget(m_optimizationGroup);
+
+    // ===== Action Buttons =====
+    QHBoxLayout* buttonLayout = new QHBoxLayout();
+    
+    m_detectBtn = new QPushButton("Detect Hardware", this);
+    m_resetBtn = new QPushButton("Reset to Defaults", this);
+    m_applyBtn = new QPushButton("Apply Configuration", this);
+    m_applyBtn->setStyleSheet("background-color: green; color: white; font-weight: bold;");
+
+    buttonLayout->addWidget(m_detectBtn);
+    buttonLayout->addWidget(m_resetBtn);
+    buttonLayout->addStretch();
+    buttonLayout->addWidget(m_applyBtn);
+
+    mainLayout->addLayout(buttonLayout);
+
+    setLayout(mainLayout);
+}
+
+void HardwareBackendSelector::setupConnections()
+{
+    connect(m_backendCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &HardwareBackendSelector::onBackendSelected);
+    
+    connect(m_precisionGroup_impl, QOverload<QAbstractButton*>::of(&QButtonGroup::buttonClicked),
+            this, [this](QAbstractButton*) { onPrecisionChanged(); });
+    
+    connect(m_detectBtn, &QPushButton::clicked,
+            this, &HardwareBackendSelector::onDetectHardware);
+    
+    connect(m_resetBtn, &QPushButton::clicked,
+            this, &HardwareBackendSelector::onResetToDefaults);
+    
+    connect(m_applyBtn, &QPushButton::clicked,
+            this, &HardwareBackendSelector::onApplyConfiguration);
+}
+
+void HardwareBackendSelector::detectAvailableBackends()
+{
+    m_backends.clear();
+
+    // ===== CPU Backend (Always Available) =====
+    BackendInfo cpuInfo;
+    cpuInfo.backend = Backend::CPU;
+    cpuInfo.name = "CPU (Fallback)";
+    cpuInfo.version = "1.0";
+    cpuInfo.available = true;
+    cpuInfo.deviceName = "All CPU Cores";
+    cpuInfo.computeCapability = "Native";
+    cpuInfo.supportsFP16 = true;
+    cpuInfo.supportsInt8 = true;
+    cpuInfo.details = "CPU-only training. Slower but always available.\n"
+                      "Best for development and debugging.\n"
+                      "Supports all precision formats.";
+    m_backends.push_back(cpuInfo);
+
+    // ===== CUDA Backend Detection =====
+    if (detectCuda()) {
+        BackendInfo cudaInfo;
+        cudaInfo.backend = Backend::CUDA;
+        cudaInfo.name = "NVIDIA CUDA";
+        cudaInfo.version = "12.0+";
+        cudaInfo.available = true;
+        cudaInfo.deviceName = "NVIDIA GPU";
+        cudaInfo.computeCapability = "8.0+";
+        cudaInfo.supportsFP16 = true;
+        cudaInfo.supportsInt8 = true;
+        cudaInfo.details = "NVIDIA CUDA GPU acceleration.\n"
+                          "Requires NVIDIA GPU with CUDA Compute Capability 3.0+\n"
+                          "Supports FP32, FP16, and INT8 precision.\n"
+                          "Fastest for NVIDIA GPUs.";
+        m_backends.push_back(cudaInfo);
+    }
+
+    // ===== Vulkan Backend Detection =====
+    if (detectVulkan()) {
+        BackendInfo vulkanInfo;
+        vulkanInfo.backend = Backend::Vulkan;
+        vulkanInfo.name = "Vulkan Compute";
+        vulkanInfo.version = "1.3+";
+        vulkanInfo.available = true;
+        vulkanInfo.deviceName = "Compatible GPU";
+        vulkanInfo.computeCapability = "Universal";
+        vulkanInfo.supportsFP16 = true;
+        vulkanInfo.supportsInt8 = false;
+        vulkanInfo.details = "Cross-platform Vulkan compute.\n"
+                            "Works on NVIDIA, AMD, Intel GPUs.\n"
+                            "Good for compatibility and portability.\n"
+                            "Supports FP32 and FP16 precision.";
+        m_backends.push_back(vulkanInfo);
+    }
+
+    // ===== ROCm Backend Detection =====
+    if (detectRocm()) {
+        BackendInfo rocmInfo;
+        rocmInfo.backend = Backend::ROCm;
+        rocmInfo.name = "AMD ROCm";
+        rocmInfo.version = "5.0+";
+        rocmInfo.available = true;
+        rocmInfo.deviceName = "AMD GPU";
+        rocmInfo.computeCapability = "RDNA/CDNA";
+        rocmInfo.supportsFP16 = true;
+        rocmInfo.supportsInt8 = true;
+        rocmInfo.details = "AMD GPU acceleration via ROCm.\n"
+                          "Requires AMD GPU (RDNA or CDNA architecture).\n"
+                          "Comparable performance to CUDA on AMD hardware.\n"
+                          "Supports FP32, FP16, and INT8 precision.";
+        m_backends.push_back(rocmInfo);
+    }
+
+    // ===== oneAPI Backend Detection =====
+    if (detectOneAPI()) {
+        BackendInfo oneapiInfo;
+        oneapiInfo.backend = Backend::OneAPI;
+        oneapiInfo.name = "Intel oneAPI";
+        oneapiInfo.version = "2022.0+";
+        oneapiInfo.available = true;
+        oneapiInfo.deviceName = "Intel GPU/Accelerator";
+        oneapiInfo.computeCapability = "Gen9+";
+        oneapiInfo.supportsFP16 = true;
+        oneapiInfo.supportsInt8 = true;
+        oneapiInfo.details = "Intel GPU acceleration via oneAPI.\n"
+                            "Requires Intel Arc or Data Center GPU.\n"
+                            "Good for Intel-based systems.\n"
+                            "Supports FP32, FP16, and INT8 precision.";
+        m_backends.push_back(oneapiInfo);
+    }
+
+    // ===== Metal Backend Detection =====
+    if (detectMetal()) {
+        BackendInfo metalInfo;
+        metalInfo.backend = Backend::Metal;
+        metalInfo.name = "Apple Metal";
+        metalInfo.version = "2.3+";
+        metalInfo.available = true;
+        metalInfo.deviceName = "Apple Silicon/GPU";
+        metalInfo.computeCapability = "M1+";
+        metalInfo.supportsFP16 = true;
+        metalInfo.supportsInt8 = true;
+        metalInfo.details = "Apple Metal GPU acceleration.\n"
+                           "Works on Apple Silicon (M1/M2/M3) and discrete GPUs.\n"
+                           "Optimized for macOS and iOS.\n"
+                           "Supports FP32, FP16, and INT8 precision.";
+        m_backends.push_back(metalInfo);
+    }
+
+    loadBackendCapabilities();
+}
+
+bool HardwareBackendSelector::detectCuda()
+{
+    // Check if CUDA is available on the system
+    // This would normally use CUDA runtime API calls
+    // For now, we return false as CUDA detection requires CUDA toolkit
+    return false;
+}
+
+bool HardwareBackendSelector::detectVulkan()
+{
+    // Try to create Vulkan instance
+    // This is a simplified check
+    return true; // Assume available on Windows for now
+}
+
+bool HardwareBackendSelector::detectRocm()
+{
+    // Check for AMD HIP runtime
+    // Would use HIP API to detect
+    return false; // Not detected by default
+}
+
+bool HardwareBackendSelector::detectOneAPI()
+{
+    // Check for Intel oneAPI runtime
+    // Would use oneAPI API to detect
+    return false; // Not detected by default
+}
+
+bool HardwareBackendSelector::detectMetal()
+{
+    // Metal is only available on macOS
+    return false;
+}
+
+void HardwareBackendSelector::populateBackendList()
+{
+    m_backendCombo->clear();
+    
+    for (const auto& backend : m_backends) {
+        QString displayName = backend.name;
+        if (backend.available) {
+            displayName += " [Available]";
+        } else {
+            displayName += " [Unavailable]";
+        }
+        
+        m_backendCombo->addItem(displayName, static_cast<int>(backend.backend));
+    }
+
+    if (!m_backendCombo->count()) {
+        m_backendCombo->addItem("CPU (Fallback)", static_cast<int>(Backend::CPU));
+    }
+}
+
+void HardwareBackendSelector::onBackendSelected(int index)
+{
+    if (index < 0 || index >= static_cast<int>(m_backends.size())) {
+        return;
+    }
+
+    const auto& info = m_backends[index];
+    m_selectedBackend = info.backend;
+
+    m_detailsText->setText(info.details);
+    m_vramLabel->setText(info.vramBytes > 0 
+        ? QString::number(info.vramBytes / (1024 * 1024 * 1024)) + " GB"
+        : "Unknown");
+    
+    m_deviceInfoLabel->setText(QString("Device: %1 | Compute: %2")
+        .arg(info.deviceName)
+        .arg(info.computeCapability));
+
+    // Update supported precision options
+    m_fp16Radio->setEnabled(info.supportsFP16);
+    m_int8Radio->setEnabled(info.supportsInt8);
+
+    if (!info.supportsFP16 && m_fp16Radio->isChecked()) {
+        m_fp32Radio->setChecked(true);
+    }
+    if (!info.supportsInt8 && m_int8Radio->isChecked()) {
+        m_fp32Radio->setChecked(true);
+    }
+
+    emit backendSelected(static_cast<int>(m_selectedBackend));
+}
+
+void HardwareBackendSelector::onPrecisionChanged()
+{
+    if (m_fp16Radio->isChecked()) {
+        m_fp16Enabled = true;
+        m_int8Enabled = false;
+        m_vramUsageLabel->setText("~50% of FP32");
+    } else if (m_int8Radio->isChecked()) {
+        m_fp16Enabled = false;
+        m_int8Enabled = true;
+        m_vramUsageLabel->setText("~25% of FP32");
+    } else {
+        m_fp16Enabled = false;
+        m_int8Enabled = false;
+        m_vramUsageLabel->setText("100% baseline");
+    }
+}
+
+void HardwareBackendSelector::onDetectHardware()
+{
+    m_backends.clear();
+    detectAvailableBackends();
+    populateBackendList();
+    
+    QMessageBox::information(this, "Hardware Detection",
+        QString("Detected %1 available backend(s)").arg(m_backends.size()));
+}
+
+void HardwareBackendSelector::onResetToDefaults()
+{
+    m_backendCombo->setCurrentIndex(0);
+    m_fp32Radio->setChecked(true);
+    m_memoryPoolCombo->setCurrentIndex(0);
+    m_fp16Enabled = false;
+    m_int8Enabled = false;
+    m_memoryPoolMB = 1024;
+}
+
+void HardwareBackendSelector::onApplyConfiguration()
+{
+    QJsonObject config = getBackendConfig();
+    emit configurationChanged(config);
+    emit backendConfirmed(static_cast<int>(m_selectedBackend));
+    
+    accept();
+}
+
+void HardwareBackendSelector::loadBackendCapabilities()
+{
+    // This would load actual GPU capabilities from the system
+    // For now, we use placeholder values
+}
+
+HardwareBackendSelector::Backend HardwareBackendSelector::getSelectedBackend() const
+{
+    return m_selectedBackend;
+}
+
+QString HardwareBackendSelector::getSelectedBackendName() const
+{
+    for (const auto& backend : m_backends) {
+        if (backend.backend == m_selectedBackend) {
+            return backend.name;
+        }
+    }
+    return "Unknown";
+}
+
+QJsonObject HardwareBackendSelector::getBackendConfig() const
+{
+    QJsonObject config;
+    config["backend"] = static_cast<int>(m_selectedBackend);
+    config["backendName"] = getSelectedBackendName();
+    config["device"] = m_deviceCombo->currentText();
+    config["precision"] = m_fp16Enabled ? "fp16" : (m_int8Enabled ? "int8" : "fp32");
+    config["memoryPool"] = m_memoryPoolCombo->currentData().toInt();
+    config["memoryPoolMB"] = m_memoryPoolMB;
+    
+    return config;
+}
+
+void HardwareBackendSelector::setBackendConfig(const QJsonObject& config)
+{
+    int backend = config["backend"].toInt(0);
+    for (int i = 0; i < m_backendCombo->count(); ++i) {
+        if (m_backendCombo->itemData(i).toInt() == backend) {
+            m_backendCombo->setCurrentIndex(i);
+            break;
+        }
+    }
+
+    QString precision = config["precision"].toString("fp32");
+    if (precision == "fp16") {
+        m_fp16Radio->setChecked(true);
+    } else if (precision == "int8") {
+        m_int8Radio->setChecked(true);
+    } else {
+        m_fp32Radio->setChecked(true);
+    }
+}
+
+bool HardwareBackendSelector::isBackendAvailable(Backend backend) const
+{
+    for (const auto& b : m_backends) {
+        if (b.backend == backend && b.available) {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::vector<HardwareBackendSelector::BackendInfo> HardwareBackendSelector::getAvailableBackends() const
+{
+    return m_backends;
+}
+
+void HardwareBackendSelector::onMemoryPoolChanged()
+{
+    // Update memory pool selection and emit signal
+    emit configurationChanged(getBackendConfig());
+}
+

@@ -207,17 +207,178 @@ bool GPUDispatchGate::Softmax(float* data, uint32_t size, bool enableParityCheck
         return cpuEngine_.Softmax(data, size);
     }
 
-    // For now, implement CPU-only softmax as GPU softmax kernel may not be ready
-    // TODO: Implement GPU softmax dispatch when CSSoftmax kernel is fully integrated
+    std::vector<float> originalData;
+    if (enableParityCheck) {
+        originalData.assign(data, data + size);
+    }
 
-    bool result = cpuEngine_.Softmax(data, size);
+    // Upload data
+    RawrXD::TensorInfo ioInfo;
+    ioInfo.name = "softmax_inout";
+    ioInfo.shape = {size, 1, 1, 1};
+    ioInfo.type = RawrXD::GGMLType::F32;
+    ioInfo.size_bytes = size * sizeof(float);
+
+    std::vector<uint8_t> ioBytes(reinterpret_cast<const uint8_t*>(data),
+                                 reinterpret_cast<const uint8_t*>(data) + size * sizeof(float));
+
+    Microsoft::WRL::ComPtr<ID3D12Resource> gpuInout;
+    if (!gpuBridge_->UploadGGUFTensor(ioInfo, ioBytes, gpuInout)) {
+        std::cerr << "[GPUDispatchGate] Failed to upload Softmax inout buffer" << std::endl;
+        {
+            std::lock_guard<std::mutex> lock(statsMutex_);
+            stats_.cpuSoftmaxFallbacks++;
+        }
+        return cpuEngine_.Softmax(data, size);
+    }
+
+    // Dispatch
+    if (!gpuBridge_->DispatchSoftmax(gpuInout.Get(), size)) {
+        std::cerr << "[GPUDispatchGate] Softmax dispatch failed" << std::endl;
+        {
+            std::lock_guard<std::mutex> lock(statsMutex_);
+            stats_.cpuSoftmaxFallbacks++;
+        }
+        return cpuEngine_.Softmax(data, size);
+    }
+
+    // Readback
+    if (!gpuBridge_->ReadbackBuffer(gpuInout.Get(), data, size * sizeof(float))) {
+        std::cerr << "[GPUDispatchGate] Softmax readback failed" << std::endl;
+        {
+            std::lock_guard<std::mutex> lock(statsMutex_);
+            stats_.cpuSoftmaxFallbacks++;
+        }
+        return cpuEngine_.Softmax(data, size);
+    }
 
     {
         std::lock_guard<std::mutex> lock(statsMutex_);
-        stats_.cpuSoftmaxFallbacks++;  // Currently always CPU
+        stats_.gpuSoftmaxCalls++;
     }
 
-    return result;
+    if (enableParityCheck) {
+        auto start = std::chrono::high_resolution_clock::now();
+        bool cpuSuccess = cpuEngine_.Softmax(originalData.data(), size);
+        auto end = std::chrono::high_resolution_clock::now();
+        double cpuTimeMs = std::chrono::duration<double, std::milli>(end - start).count();
+
+        if (cpuSuccess && checkParity(data, originalData.data(), size, "Softmax")) {
+            std::lock_guard<std::mutex> lock(statsMutex_);
+            stats_.avgParityCheckTimeMs = (stats_.avgParityCheckTimeMs + cpuTimeMs) / 2.0;
+            return true;
+        } else {
+            std::cerr << "[GPUDispatchGate] Parity check failed for Softmax, using CPU result" << std::endl;
+            std::memcpy(data, originalData.data(), size * sizeof(float));
+            {
+                std::lock_guard<std::mutex> lock(statsMutex_);
+                stats_.parityFailures++;
+                stats_.cpuSoftmaxFallbacks++;
+            }
+        }
+    }
+
+    return true;
+}
+
+bool GPUDispatchGate::RMSNorm(float* data, const float* gamma, uint32_t size, float eps, bool enableParityCheck) {
+    if (!gpuBridge_ || size == 0) return false;
+
+    // CPU baseline for parity check
+    std::vector<float> originalData;
+    if (enableParityCheck) {
+        originalData.assign(data, data + size);
+    }
+
+    // 1. Upload inout buffer (data)
+    RawrXD::TensorInfo ioInfo;
+    ioInfo.type = RawrXD::GGMLType::F32;
+    ioInfo.size_bytes = size * sizeof(float);
+    std::vector<uint8_t> ioBytes(reinterpret_cast<const uint8_t*>(data), 
+                                 reinterpret_cast<const uint8_t*>(data) + ioInfo.size_bytes);
+    Microsoft::WRL::ComPtr<ID3D12Resource> gpuInout;
+    if (!gpuBridge_->UploadGGUFTensor(ioInfo, ioBytes, gpuInout)) {
+        std::cerr << "[GPUDispatchGate] Failed to upload RMSNorm inout buffer" << std::endl;
+        {
+            std::lock_guard<std::mutex> lock(statsMutex_);
+            stats_.cpuRMSNormFallbacks++;
+        }
+        return false;
+    }
+
+    // 2. Upload gamma buffer
+    RawrXD::TensorInfo gammaInfo;
+    gammaInfo.type = RawrXD::GGMLType::F32;
+    gammaInfo.size_bytes = size * sizeof(float);
+    std::vector<uint8_t> gammaBytes(reinterpret_cast<const uint8_t*>(gamma), 
+                                    reinterpret_cast<const uint8_t*>(gamma) + gammaInfo.size_bytes);
+    Microsoft::WRL::ComPtr<ID3D12Resource> gpuGamma;
+    if (!gpuBridge_->UploadGGUFTensor(gammaInfo, gammaBytes, gpuGamma)) {
+        std::cerr << "[GPUDispatchGate] Failed to upload RMSNorm gamma buffer" << std::endl;
+        {
+            std::lock_guard<std::mutex> lock(statsMutex_);
+            stats_.cpuRMSNormFallbacks++;
+        }
+        return false;
+    }
+
+    // 3. Dispatch
+    if (!gpuBridge_->DispatchRMSNorm(gpuInout.Get(), gpuGamma.Get(), size, eps)) {
+        std::cerr << "[GPUDispatchGate] RMSNorm dispatch failed" << std::endl;
+        {
+            std::lock_guard<std::mutex> lock(statsMutex_);
+            stats_.cpuRMSNormFallbacks++;
+        }
+        return false;
+    }
+
+    // 4. Readback
+    if (!gpuBridge_->ReadbackBuffer(gpuInout.Get(), data, size * sizeof(float))) {
+        std::cerr << "[GPUDispatchGate] RMSNorm readback failed" << std::endl;
+        {
+            std::lock_guard<std::mutex> lock(statsMutex_);
+            stats_.cpuRMSNormFallbacks++;
+        }
+        return false;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(statsMutex_);
+        stats_.gpuRMSNormCalls++;
+    }
+
+    // Parity Check
+    if (enableParityCheck) {
+        auto start = std::chrono::high_resolution_clock::now();
+        
+        // Compute CPU reference over original data
+        float ss = 0.0f;
+        for (uint32_t i = 0; i < size; ++i) ss += originalData[i] * originalData[i];
+        float rms = 1.0f / std::sqrt((ss / size) + eps);
+        // Use a temporary for the reference
+        std::vector<float> cpuRef(size);
+        for (uint32_t i = 0; i < size; ++i) cpuRef[i] = originalData[i] * rms * gamma[i];
+
+        auto end = std::chrono::high_resolution_clock::now();
+        double cpuTimeMs = std::chrono::duration<double, std::milli>(end - start).count();
+
+        {
+            std::lock_guard<std::mutex> lock(statsMutex_);
+            stats_.avgParityCheckTimeMs = (stats_.avgParityCheckTimeMs * stats_.parityFailures + cpuTimeMs) / (stats_.parityFailures + 1);
+        }
+
+        if (!checkParity(data, cpuRef.data(), size, "RMSNorm")) {
+            std::cerr << "[GPUDispatchGate] Parity check failed for RMSNorm, using CPU result" << std::endl;
+            std::memcpy(data, cpuRef.data(), size * sizeof(float));
+            {
+                std::lock_guard<std::mutex> lock(statsMutex_);
+                stats_.parityFailures++;
+                stats_.cpuRMSNormFallbacks++;
+            }
+        }
+    }
+
+    return true;
 }
 
 bool GPUDispatchGate::checkParity(const float* gpuResult, const float* cpuResult,

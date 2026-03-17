@@ -1,0 +1,66 @@
+{
+  "version": "1.0.0",
+  "environment": "development",
+  "features": {
+    "tier2_ml_error_detection": false,
+    "tier2_model_hotpatching": false,
+    "tier2_distributed_tracing": true,
+    "tier2_performance_monitoring": true,
+    "structured_logging": true,
+    "prometheus_metrics": false,
+    "external_config_reload": true
+  },
+  "logging": {
+    "level": "DEBUG",
+    "output": "console",
+    "file_path": "./logs/development.log",
+    "max_file_size_mb": 50,
+    "rotation_count": 3,
+    "structured_format": true,
+    "include_timestamps": true,
+    "include_thread_id": true
+  },
+  "metrics": {
+    "prometheus_enabled": false,
+    "prometheus_port": 9091,
+    "collection_interval_seconds": 60,
+    "retention_days": 1,
+    "high_cardinality_enabled": true
+  },
+  "tracing": {
+    "enabled": true,
+    "sampling_rate": 1.0,
+    "export_format": "json",
+    "endpoint": "http://localhost:4318",
+    "batch_size": 10,
+    "timeout_seconds": 5
+  },
+  "hotpatching": {
+    "enabled": false,
+    "validation_required": false,
+    "automatic_rollback": true,
+    "max_concurrent_loads": 1,
+    "validation_timeout_seconds": 30,
+    "canary_enabled": false,
+    "canary_traffic_percentage": 0.0
+  },
+  "error_detection": {
+    "enabled": false,
+    "anomaly_threshold": 2.0,
+    "model_path": "./models/error_detection_dev",
+    "auto_learn": false,
+    "prediction_confidence_threshold": 0.5
+  },
+  "resource_limits": {
+    "max_memory_mb": 4096,
+    "max_cpu_percent": 90,
+    "max_model_cache_size": 2,
+    "warning_threshold_percent": 85
+  },
+  "health_checks": {
+    "enabled": false,
+    "interval_seconds": 300,
+    "timeout_seconds": 10,
+    "failure_threshold": 5
+  }
+}

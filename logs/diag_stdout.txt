@@ -1,0 +1,34 @@
+[FAST] Starting single-layer validation...
+[FAST] Model: F:\OllamaModels\blobs\sha256-6f85a640a97cf2bf5b8e764087b1e83da0fdb51d7c9fab7d0fece9385611df83
+[FAST] Layers: 1 | Tokens: 1
+[FAST] Loading GGUF...
+GGUF Header: Magic=0x46554747, Version=3, Tensors=147, Metadata=35
+[FAST] GGUF OK tensors=147
+[FAST] Initializing engine...
+[Titan] RawrXD_Interconnect.dll not found. Using Pure C++ Fallback.
+[CPUInferenceEngine] Registered memory plugin: Standard (4k)
+[CPUInferenceEngine] Registered memory plugin: Large Context (32k)
+[CPUInferenceEngine] Registered memory plugin: NativeMemoryManager v2.0 (Tera-Scale)
+[CPUInferenceEngine] Context limit set to 256 tokens.
+[CPUInferenceEngine] Active Memory Manager: Standard (4k)
+[CPUInferenceEngine] SetContextSize: 256 -> 256
+[CPUInferenceEngine] Context limit set to 256 tokens.
+[CPUInferenceEngine] Active Memory Manager: Standard (4k)
+Loading model from: F:\OllamaModels\blobs\sha256-6f85a640a97cf2bf5b8e764087b1e83da0fdb51d7c9fab7d0fece9385611df83
+GGUF Header: Magic=0x46554747, Version=3, Tensors=147, Metadata=35
+GGUF Header: Magic=0x46554747, Version=3, Tensors=147, Metadata=35
+[GGUFLoader] Vocab detection: method=special_case, size=32000, confident=yes
+[GGUFLoader] Correcting vocab size: 128256 -> 32000
+Metadata parsed successfully. Layers: 16, Context: 131072, Embedding: 2048, Vocab: 32000
+[ENGINE] RAW metadata: vocab=32000 embed=2048 layers=16 heads=32
+[ENGINE] Post-clamp: layers=16 (0x10) embed=2048 (0x800) vocab=32000
+[CPUInferenceEngine] Limiting to 1 layers (from 16)
+[ENGINE] Vocab table size mismatch: table=128256 metadata=32000 (using metadata size)
+[ENGINE] Pre-validation check: layers=1 embed=2048 vocab=32000 heads=32
+[CPUInferenceEngine] Model config VALIDATED: vocab=32000 embed=2048 layers=1 heads=32
+[CPUInferenceEngine] Resident cache: 11 tensors pre-loaded for 1 layer(s).
+[FAST] Engine OK
+[FASTDBG] Engine state: layers=1 embed=2048 vocab=32000
+[FAST] Generating token...
+[CPUInferenceEngine] Allocating KV Cache for 256 tokens...
+[CPUInferenceEngine] KV Cache Allocation Complete.

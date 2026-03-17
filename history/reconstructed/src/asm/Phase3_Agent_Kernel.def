@@ -1,0 +1,23 @@
+; =============================================================================
+; Phase3_Agent_Kernel.def — Module definition for Phase3_Agent_Kernel.dll
+; =============================================================================
+; DLL exports for Phase3 Agent MASM kernel (KV cache + token generation)
+; Used by KernelDispatcher (LoadLibrary + GetProcAddress)
+;
+; Ordinal ranges:
+;   @1-@9    C++ bridge exports (engine-friendly)
+;   @10-@19  Raw ASM exports (advanced use)
+; =============================================================================
+
+LIBRARY Phase3_Agent_Kernel
+
+EXPORTS
+    ; === C++ Bridge Exports (primary API) ===
+    Phase3Initialize_Export         @1
+    GenerateTokens_Export           @2
+    Phase3Shutdown_Export           @3
+
+    ; === Raw ASM Exports (direct kernel access) ===
+    Phase3Initialize                @10
+    GenerateTokens                  @11
+    Phase3Shutdown                  @12

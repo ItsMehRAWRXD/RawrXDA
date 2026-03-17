@@ -1,0 +1,253 @@
+cmake_minimum_required(VERSION 3.20)
+project(TestAgenticToolsSuite LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+
+# Set Qt6 path
+set(Qt6_DIR "C:/Qt/6.7.3/msvc2022_64/lib/cmake/Qt6")
+set(CMAKE_PREFIX_PATH ${Qt6_DIR})
+
+# Derive Qt bin directory for windeployqt
+get_filename_component(_qt6_cmake_dir "${Qt6_DIR}" DIRECTORY)
+get_filename_component(_qt6_lib_dir   "${_qt6_cmake_dir}" DIRECTORY)
+get_filename_component(_qt6_base_dir  "${_qt6_lib_dir}" DIRECTORY)
+set(QT_BIN_DIR "${_qt6_base_dir}/bin")
+
+# Helper to deploy Qt runtime DLLs next to a target on Windows
+function(add_qt_deploy target)
+    if(WIN32)
+        add_custom_command(TARGET ${target} POST_BUILD
+            COMMAND "${QT_BIN_DIR}/windeployqt.exe"
+                --verbose 0
+                --compiler-runtime
+                $<$<CONFIG:Debug>:--debug>
+                $<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>,$<CONFIG:MinSizeRel>>:--release>
+                "$<TARGET_FILE:${target}>"
+            COMMENT "Deploying Qt runtime for ${target}"
+        )
+    endif()
+endfunction()
+
+# Find Qt6
+find_package(Qt6 REQUIRED COMPONENTS 
+    Core 
+    Test 
+    Gui
+    Widgets
+    Concurrent
+    Network
+)
+
+# Optional modules
+find_package(Qt6 COMPONENTS Charts QUIET)
+
+# RawrXD paths - using build structure
+set(RAWRXD_BUILD_DIR "D:/temp/RawrXD-Deploy/bin")
+set(RAWRXD_SOURCE_DIR "D:/temp/RawrXD-Deploy")
+
+# Include directories
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${RAWRXD_SOURCE_DIR}
+    ${CMAKE_CURRENT_BINARY_DIR}
+)
+
+# Test executable - AgenticToolExecutor tests
+add_executable(TestAgenticTools
+    test_agentic_tools.cpp
+    agentic_tools.cpp
+    agentic_tools.hpp
+)
+
+target_compile_features(TestAgenticTools PUBLIC cxx_std_20)
+
+if(MSVC)
+    target_compile_options(TestAgenticTools PRIVATE /W4 /permissive- /EHsc)
+    target_compile_definitions(TestAgenticTools PRIVATE _CRT_SECURE_NO_WARNINGS)
+else()
+    target_compile_options(TestAgenticTools PRIVATE -Wall -Wextra -pedantic)
+endif()
+
+target_link_libraries(TestAgenticTools 
+    PRIVATE
+    Qt6::Core
+    Qt6::Test
+    Qt6::Gui
+    Qt6::Widgets
+    Qt6::Concurrent
+)
+
+# Enable testing
+enable_testing()
+add_test(NAME TestAgenticTools COMMAND $<TARGET_FILE:TestAgenticTools>)
+set_tests_properties(TestAgenticTools PROPERTIES WORKING_DIRECTORY $<TARGET_FILE_DIR:TestAgenticTools>)
+
+# Deploy Qt runtime for TestAgenticTools
+add_qt_deploy(TestAgenticTools)
+
+# Validation executable - Direct testing without Qt Test framework
+add_executable(ValidateAgenticTools
+    validate_agentic_tools.cpp
+    agentic_tools.cpp
+)
+
+target_compile_features(ValidateAgenticTools PUBLIC cxx_std_20)
+
+if(MSVC)
+    target_compile_options(ValidateAgenticTools PRIVATE /W4 /permissive- /EHsc)
+    target_compile_definitions(ValidateAgenticTools PRIVATE _CRT_SECURE_NO_WARNINGS)
+else()
+    target_compile_options(ValidateAgenticTools PRIVATE -Wall -Wextra -pedantic)
+endif()
+
+target_link_libraries(ValidateAgenticTools 
+    PRIVATE
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Concurrent
+)
+
+add_test(NAME ValidateAgenticTools COMMAND $<TARGET_FILE:ValidateAgenticTools>)
+set_tests_properties(ValidateAgenticTools PROPERTIES WORKING_DIRECTORY $<TARGET_FILE_DIR:ValidateAgenticTools>)
+
+# Deploy Qt runtime for ValidateAgenticTools
+add_qt_deploy(ValidateAgenticTools)
+
+# Optional Enterprise build (kept isolated from tests)
+option(BUILD_ENTERPRISE "Build enterprise modules and dashboard" ON)
+
+if(BUILD_ENTERPRISE)
+    # Enterprise static library
+    add_library(EnterpriseCore STATIC
+        enterprise/EnterpriseAgentBridge.cpp
+        enterprise/EnterpriseAgentBridge.hpp
+        enterprise/EnterpriseAIReasoningEngine.cpp
+        enterprise/EnterpriseAIReasoningEngine.hpp
+        enterprise/QuantumSafeSecurity.cpp
+        enterprise/QuantumSafeSecurity.hpp
+        enterprise/EnterpriseTelemetry.cpp
+        enterprise/EnterpriseTelemetry.hpp
+        enterprise/EnterpriseMetrics.hpp
+        enterprise/AICodeIntelligence.hpp
+        enterprise/MLWorkflowOptimizer.hpp
+        enterprise/EnterpriseSecurity.hpp
+        enterprise/ToolScheduler.hpp
+        agentic_tools.cpp
+        agentic_tools.hpp
+        enterprise/AICodeIntelligence.cpp
+        enterprise/MLWorkflowOptimizer.cpp
+    )
+
+    target_compile_features(EnterpriseCore PUBLIC cxx_std_20)
+
+    if(MSVC)
+        target_compile_options(EnterpriseCore PRIVATE /W4 /permissive- /EHsc)
+        target_compile_definitions(EnterpriseCore PRIVATE _CRT_SECURE_NO_WARNINGS)
+    else()
+        target_compile_options(EnterpriseCore PRIVATE -Wall -Wextra -pedantic)
+    endif()
+
+    target_link_libraries(EnterpriseCore
+        PRIVATE
+        Qt6::Core
+        Qt6::Gui
+        Qt6::Widgets
+        Qt6::Concurrent
+        Qt6::Network
+    )
+    if(TARGET Qt6::Charts)
+        target_link_libraries(EnterpriseCore PRIVATE Qt6::Charts)
+    endif()
+
+    # Enterprise dashboard executable
+    add_executable(EnterpriseDashboard
+        main/main_enterprise.cpp
+    )
+
+    target_compile_features(EnterpriseDashboard PUBLIC cxx_std_20)
+
+    if(MSVC)
+        target_compile_options(EnterpriseDashboard PRIVATE /W4 /permissive- /EHsc)
+        target_compile_definitions(EnterpriseDashboard PRIVATE _CRT_SECURE_NO_WARNINGS)
+    else()
+        target_compile_options(EnterpriseDashboard PRIVATE -Wall -Wextra -pedantic)
+    endif()
+
+    target_link_libraries(EnterpriseDashboard
+        PRIVATE
+        EnterpriseCore
+        Qt6::Core
+        Qt6::Gui
+        Qt6::Widgets
+        Qt6::Concurrent
+    )
+    if(TARGET Qt6::Charts)
+        target_link_libraries(EnterpriseDashboard PRIVATE Qt6::Charts)
+        target_compile_definitions(EnterpriseDashboard PRIVATE HAVE_QT_CHARTS=1)
+    endif()
+
+    # Deploy Qt runtime for EnterpriseDashboard
+    add_qt_deploy(EnterpriseDashboard)
+endif()
+
+# Enterprise QtTest targets
+add_executable(TestEnterpriseAgentBridge
+    tests/TestEnterpriseAgentBridge.cpp
+)
+
+target_compile_features(TestEnterpriseAgentBridge PUBLIC cxx_std_20)
+
+if(MSVC)
+    target_compile_options(TestEnterpriseAgentBridge PRIVATE /W4 /permissive- /EHsc)
+    target_compile_definitions(TestEnterpriseAgentBridge PRIVATE _CRT_SECURE_NO_WARNINGS)
+else()
+    target_compile_options(TestEnterpriseAgentBridge PRIVATE -Wall -Wextra -pedantic)
+endif()
+
+target_link_libraries(TestEnterpriseAgentBridge
+    PRIVATE
+    EnterpriseCore
+    Qt6::Core
+    Qt6::Test
+    Qt6::Gui
+    Qt6::Widgets
+    Qt6::Concurrent
+)
+
+# Ensure test runs from its binary dir and deploy Qt DLLs
+add_test(NAME TestEnterpriseAgentBridge COMMAND $<TARGET_FILE:TestEnterpriseAgentBridge>)
+set_tests_properties(TestEnterpriseAgentBridge PROPERTIES WORKING_DIRECTORY $<TARGET_FILE_DIR:TestEnterpriseAgentBridge>)
+set_tests_properties(TestEnterpriseAgentBridge PROPERTIES TIMEOUT 30)
+add_qt_deploy(TestEnterpriseAgentBridge)
+
+add_executable(TestQuantumSafeSecurity
+    tests/TestQuantumSafeSecurity.cpp
+)
+
+target_compile_features(TestQuantumSafeSecurity PUBLIC cxx_std_20)
+
+if(MSVC)
+    target_compile_options(TestQuantumSafeSecurity PRIVATE /W4 /permissive- /EHsc)
+    target_compile_definitions(TestQuantumSafeSecurity PRIVATE _CRT_SECURE_NO_WARNINGS)
+else()
+    target_compile_options(TestQuantumSafeSecurity PRIVATE -Wall -Wextra -pedantic)
+endif()
+
+target_link_libraries(TestQuantumSafeSecurity
+    PRIVATE
+    EnterpriseCore
+    Qt6::Core
+    Qt6::Test
+    Qt6::Gui
+    Qt6::Widgets
+    Qt6::Concurrent
+)
+
+add_test(NAME TestQuantumSafeSecurity COMMAND $<TARGET_FILE:TestQuantumSafeSecurity>)
+set_tests_properties(TestQuantumSafeSecurity PROPERTIES WORKING_DIRECTORY $<TARGET_FILE_DIR:TestQuantumSafeSecurity>)
+set_tests_properties(TestQuantumSafeSecurity PROPERTIES TIMEOUT 30)
+add_qt_deploy(TestQuantumSafeSecurity)

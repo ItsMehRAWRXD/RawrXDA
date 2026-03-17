@@ -1,0 +1,116 @@
+# CMakeLists.txt for Thermal Dashboard Plugin v2.0.0
+# Builds thermal_dashboard.dll for hot-injection into RawrXD IDE
+# Enhanced with Predictive Throttling, Dynamic Load Balancing, and MASM64 Integration
+
+cmake_minimum_required(VERSION 3.16)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Dependencies
+# ═══════════════════════════════════════════════════════════════════════════════
+
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets Charts)
+
+# MASM64 assembler (ml64.exe)
+if(WIN32)
+    find_program(MASM_ASSEMBLER ml64.exe
+        PATHS
+        "$ENV{VCToolsInstallDir}/bin/Hostx64/x64"
+        "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/*/bin/Hostx64/x64"
+        "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/*/bin/Hostx64/x64"
+        "C:/Program Files/Microsoft Visual Studio/2022/Professional/VC/Tools/MSVC/*/bin/Hostx64/x64"
+        "C:/VS2022Enterprise/VC/Tools/MSVC/*/bin/Hostx64/x64"
+    )
+    if(MASM_ASSEMBLER)
+        message(STATUS "✓ MASM64 assembler found: ${MASM_ASSEMBLER}")
+    else()
+        message(WARNING "⚠ MASM64 assembler not found - assembly files will not be compiled")
+    endif()
+endif()
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Source Files
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Core plugin sources
+set(THERMAL_PLUGIN_SOURCES
+    thermal_dashboard_plugin.cpp
+    RAWRXD_ThermalDashboard.cpp
+)
+
+# Enhanced thermal management sources
+set(THERMAL_ENHANCED_SOURCES
+    RAWRXD_ThermalDashboard_Enhanced.cpp
+    PredictiveThrottling.cpp
+    DynamicLoadBalancer.cpp
+    SovereignControlBlock.cpp
+)
+
+# Header files
+set(THERMAL_PLUGIN_HEADERS
+    thermal_dashboard_plugin.hpp
+    RAWRXD_ThermalDashboard.hpp
+    RAWRXD_ThermalDashboard_Enhanced.hpp
+    PredictiveThrottling.h
+    DynamicLoadBalancer.h
+    SovereignControlBlock.h
+)
+
+# MASM64 assembly sources
+set(THERMAL_MASM_SOURCES
+    masm/quantum_auth.asm
+    masm/soft_throttle_dispatch.asm
+)
+
+# Build as shared library (DLL on Windows)
+add_library(thermal_dashboard SHARED
+    ${THERMAL_PLUGIN_SOURCES}
+    ${THERMAL_PLUGIN_HEADERS}
+)
+
+# Qt6 setup
+set_target_properties(thermal_dashboard PROPERTIES
+    AUTOMOC ON
+    AUTOUIC ON
+    AUTORCC ON
+    CXX_STANDARD 20
+    CXX_STANDARD_REQUIRED ON
+    # Plugin output name
+    OUTPUT_NAME "thermal_dashboard"
+    # Versioning
+    VERSION 1.2.0
+    SOVERSION 1
+    # Windows DLL export
+    WINDOWS_EXPORT_ALL_SYMBOLS ON
+)
+
+target_link_libraries(thermal_dashboard PRIVATE
+    Qt6::Core
+    Qt6::Widgets
+)
+
+target_include_directories(thermal_dashboard PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/include
+)
+
+# Copy plugin metadata
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/thermal_dashboard.json
+    ${CMAKE_BINARY_DIR}/plugins/thermal_dashboard.json
+    COPYONLY
+)
+
+# Install to plugins directory
+install(TARGETS thermal_dashboard
+    LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/plugins
+    RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/plugins
+)
+
+install(FILES thermal_dashboard.json
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/plugins
+)
+
+# Output status
+message(STATUS "✓ thermal_dashboard.dll configured for hot-injection")
+message(STATUS "  Sources: ${THERMAL_PLUGIN_SOURCES}")
+message(STATUS "  Output: ${CMAKE_BINARY_DIR}/bin/thermal_dashboard.dll")

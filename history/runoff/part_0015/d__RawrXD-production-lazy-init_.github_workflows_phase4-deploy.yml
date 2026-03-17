@@ -1,0 +1,297 @@
+name: RawrXD MASM Build & Deploy (Phase 4)
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'masm/**'
+      - 'config/**'
+      - 'k8s/**'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2 AM UTC
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/rawrxd-masm
+
+jobs:
+  # ============================================================================
+  # Job 1: Build and Compile MASM Modules
+  # ============================================================================
+  build-masm:
+    name: Build MASM Modules
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        configuration: [ Release, Debug ]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up MSVC Build Tools
+        uses: microsoft/setup-msbuild@v1
+      
+      - name: Setup MASM Include Paths
+        run: |
+          $WindowsSDKVersion = "10.0.22621.0"
+          $VSPath = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise"
+          $MSVC = "$VSPath\VC\Tools\MSVC\14.50.35717"
+          
+          echo "INCLUDE=$MSVC\include;C:\Program Files (x86)\Windows Kits\10\Include\$WindowsSDKVersion\um;C:\Program Files (x86)\Windows Kits\10\Include\$WindowsSDKVersion\shared" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "LIB=$MSVC\lib\x64;C:\Program Files (x86)\Windows Kits\10\Lib\$WindowsSDKVersion\um\x64;C:\Program Files (x86)\Windows Kits\10\Lib\$WindowsSDKVersion\ucrt\x64" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "PATH=$MSVC\bin\Hostx64\x64;$env:PATH" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      
+      - name: Compile Phase 3 Config Manager
+        run: |
+          cd masm
+          ml64.exe /c /Zi /Foconfig_manager.obj config_manager.asm
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      
+      - name: Compile Phase 4 Error Handler
+        run: |
+          cd masm
+          ml64.exe /c /Zi /Foerror_handler.obj error_handler.asm
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      
+      - name: Compile Phase 4 Resource Guards
+        run: |
+          cd masm
+          ml64.exe /c /Zi /Foresource_guards.obj resource_guards.asm
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      
+      - name: Compile Core MASM Modules
+        run: |
+          cd masm
+          $modules = @(
+            "zero_day_agentic_engine",
+            "zero_day_integration",
+            "main_masm",
+            "ml_masm"
+          )
+          
+          foreach ($module in $modules) {
+            Write-Host "Compiling $module.asm..."
+            ml64.exe /c /Zi /Fo$($module).obj "$($module).asm"
+            if ($LASTEXITCODE -ne 0) {
+              Write-Error "Failed to compile $module.asm"
+              exit $LASTEXITCODE
+            }
+          }
+      
+      - name: Verify Compilation Artifacts
+        run: |
+          cd masm
+          $objFiles = Get-ChildItem -Filter "*.obj" -ErrorAction SilentlyContinue
+          if ($objFiles.Count -eq 0) {
+            Write-Error "No .obj files generated!"
+            exit 1
+          }
+          
+          Write-Host "✅ Compiled $($objFiles.Count) object files:"
+          $objFiles | ForEach-Object {
+            $sizeKB = [math]::Round($_.Length / 1KB, 1)
+            Write-Host "  - $($_.Name): $sizeKB KB"
+          }
+      
+      - name: Upload Compilation Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: masm-objects-${{ matrix.configuration }}
+          path: masm/*.obj
+          retention-days: 30
+
+  # ============================================================================
+  # Job 2: Run Unit Tests
+  # ============================================================================
+  test-units:
+    name: Run Unit Tests
+    runs-on: windows-latest
+    needs: build-masm
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Download MASM Objects
+        uses: actions/download-artifact@v3
+        with:
+          name: masm-objects-Release
+          path: masm/
+      
+      - name: Set up MSVC Build Tools
+        uses: microsoft/setup-msbuild@v1
+      
+      - name: Setup Test Environment
+        run: |
+          $WindowsSDKVersion = "10.0.22621.0"
+          $VSPath = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise"
+          $MSVC = "$VSPath\VC\Tools\MSVC\14.50.35717"
+          
+          echo "INCLUDE=$MSVC\include;C:\Program Files (x86)\Windows Kits\10\Include\$WindowsSDKVersion\um" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "PATH=$MSVC\bin\Hostx64\x64;$env:PATH" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      
+      - name: Compile Test Suite
+        run: |
+          cd tests
+          ml64.exe /c /Zi /Fotest_config_integration.obj test_config_integration.asm
+          ml64.exe /c /Zi /Fotest_real_model_loading.obj test_real_model_loading.asm
+          ml64.exe /c /Zi /Fotest_environment_switching.obj test_environment_switching.asm
+      
+      - name: Upload Test Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-objects
+          path: tests/*.obj
+
+  # ============================================================================
+  # Job 3: Build and Push Container Image
+  # ============================================================================
+  build-container:
+    name: Build & Push Container
+    runs-on: windows-latest
+    needs: test-units
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      
+      - name: Log in to Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=phase4-production-latest
+      
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          file: ./Dockerfile
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
+
+  # ============================================================================
+  # Job 4: Security Scanning
+  # ============================================================================
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    needs: build-container
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:phase4-production-latest
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+      
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  # ============================================================================
+  # Job 5: Deploy to Kubernetes (Production)
+  # ============================================================================
+  deploy-k8s:
+    name: Deploy to Kubernetes
+    runs-on: ubuntu-latest
+    needs: security-scan
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Configure kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+      
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
+          kubectl cluster-info
+      
+      - name: Create Kubernetes namespace
+        run: |
+          kubectl create namespace rawrxd-production --dry-run=client -o yaml | kubectl apply -f -
+      
+      - name: Deploy ConfigMap
+        run: |
+          kubectl apply -f k8s/deployment.yaml -n rawrxd-production
+      
+      - name: Deploy to Kubernetes
+        run: |
+          # Update image in deployment
+          kubectl set image deployment/rawrxd-deployment \
+            rawrxd=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:phase4-production-latest \
+            -n rawrxd-production
+          
+          # Trigger rollout
+          kubectl rollout status deployment/rawrxd-deployment -n rawrxd-production --timeout=5m
+      
+      - name: Verify deployment
+        run: |
+          kubectl get pods -n rawrxd-production
+          kubectl get svc -n rawrxd-production
+          kubectl logs -n rawrxd-production -l app=rawrxd --tail=100
+
+  # ============================================================================
+  # Job 6: Generate Report
+  # ============================================================================
+  report:
+    name: Generate Build Report
+    runs-on: ubuntu-latest
+    needs: [ build-masm, test-units, build-container, security-scan ]
+    if: always()
+    
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v3
+      
+      - name: Generate Report
+        run: |
+          echo "# RawrXD Phase 4 Build Report" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build Date**: $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch**: ${{ github.ref }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Build Status" >> $GITHUB_STEP_SUMMARY
+          echo "- MASM Build: ${{ needs.build-masm.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Unit Tests: ${{ needs.test-units.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Container Build: ${{ needs.build-container.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Security Scan: ${{ needs.security-scan.result }}" >> $GITHUB_STEP_SUMMARY

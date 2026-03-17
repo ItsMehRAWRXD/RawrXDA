@@ -64,6 +64,14 @@ const AgentPanel = ({ onStartAgent, taskId, taskStatus, steps, onRefresh }) => {
                     {step.status && (
                       <span className="ml-2 text-xs text-gray-500">({step.status})</span>
                     )}
+                    {step.error && (
+                      <div className="mt-1 text-xs text-red-400 break-words">Error: {step.error}</div>
+                    )}
+                    {step.result && (
+                      <pre className="mt-1 text-xs text-gray-400 whitespace-pre-wrap break-words">
+                        {typeof step.result === 'string' ? step.result : JSON.stringify(step.result, null, 2)}
+                      </pre>
+                    )}
                   </li>
                 ))}
               </ul>

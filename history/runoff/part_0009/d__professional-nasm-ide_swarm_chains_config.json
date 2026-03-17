@@ -1,0 +1,130 @@
+{
+  "chains": [
+    {
+      "chain_id": "code_review_chain",
+      "name": "Code Review Chain",
+      "description": "Multi-stage code review: analyze → validate → optimize → review",
+      "models": [
+        {"id": "analyzer", "role": "analyzer"},
+        {"id": "validator", "role": "validator"},
+        {"id": "optimizer", "role": "optimizer"},
+        {"id": "reviewer", "role": "reviewer"}
+      ],
+      "chunk_size": 500,
+      "timeout_seconds": 300,
+      "feedback_loops": 1,
+      "enable_caching": true,
+      "enable_async": true,
+      "priority": 1,
+      "tags": ["review", "coding", "quality"]
+    },
+    {
+      "chain_id": "secure_coding_chain",
+      "name": "Secure Coding Chain",
+      "description": "Security-focused: analyze → security check → debug → optimize",
+      "models": [
+        {"id": "analyzer", "role": "analyzer"},
+        {"id": "security", "role": "security"},
+        {"id": "debugger", "role": "debugger"},
+        {"id": "optimizer", "role": "optimizer"}
+      ],
+      "chunk_size": 500,
+      "timeout_seconds": 600,
+      "feedback_loops": 2,
+      "enable_caching": true,
+      "enable_async": true,
+      "priority": 2,
+      "tags": ["security", "coding"]
+    },
+    {
+      "chain_id": "documentation_chain",
+      "name": "Documentation Chain",
+      "description": "Generate comprehensive docs: analyze → document → format",
+      "models": [
+        {"id": "analyzer", "role": "analyzer"},
+        {"id": "documenter", "role": "documenter"},
+        {"id": "formatter", "role": "formatter"}
+      ],
+      "chunk_size": 500,
+      "timeout_seconds": 300,
+      "feedback_loops": 1,
+      "enable_caching": true,
+      "enable_async": true,
+      "priority": 3,
+      "tags": ["documentation", "coding"]
+    },
+    {
+      "chain_id": "optimization_chain",
+      "name": "Performance Optimization Chain",
+      "description": "Optimize for performance: analyze → optimize → validate",
+      "models": [
+        {"id": "analyzer", "role": "analyzer"},
+        {"id": "optimizer", "role": "optimizer"},
+        {"id": "validator", "role": "validator"}
+      ],
+      "chunk_size": 500,
+      "timeout_seconds": 400,
+      "feedback_loops": 1,
+      "enable_caching": true,
+      "enable_async": true,
+      "priority": 2,
+      "tags": ["performance", "optimization"]
+    },
+    {
+      "chain_id": "complete_analysis_chain",
+      "name": "Complete Analysis Chain",
+      "description": "Full analysis: analyze → security → optimize → document → review",
+      "models": [
+        {"id": "analyzer", "role": "analyzer"},
+        {"id": "security", "role": "security"},
+        {"id": "optimizer", "role": "optimizer"},
+        {"id": "documenter", "role": "documenter"},
+        {"id": "reviewer", "role": "reviewer"}
+      ],
+      "chunk_size": 500,
+      "timeout_seconds": 900,
+      "feedback_loops": 1,
+      "enable_caching": true,
+      "enable_async": true,
+      "priority": 3,
+      "tags": ["comprehensive", "analysis", "quality"]
+    },
+    {
+      "chain_id": "debugging_chain",
+      "name": "Debugging Chain",
+      "description": "Debug and fix issues: analyze → debug → test → optimize",
+      "models": [
+        {"id": "analyzer", "role": "analyzer"},
+        {"id": "debugger", "role": "debugger"},
+        {"id": "validator", "role": "validator"},
+        {"id": "optimizer", "role": "optimizer"}
+      ],
+      "chunk_size": 500,
+      "timeout_seconds": 600,
+      "feedback_loops": 2,
+      "enable_caching": true,
+      "enable_async": true,
+      "priority": 1,
+      "tags": ["debugging", "testing", "quality"]
+    },
+    {
+      "chain_id": "refactoring_chain",
+      "name": "Code Refactoring Chain",
+      "description": "Refactor code: analyze → architect → generator → formatter → reviewer",
+      "models": [
+        {"id": "analyzer", "role": "analyzer"},
+        {"id": "architect", "role": "architect"},
+        {"id": "generator", "role": "generator"},
+        {"id": "formatter", "role": "formatter"},
+        {"id": "reviewer", "role": "reviewer"}
+      ],
+      "chunk_size": 500,
+      "timeout_seconds": 800,
+      "feedback_loops": 1,
+      "enable_caching": true,
+      "enable_async": true,
+      "priority": 2,
+      "tags": ["refactoring", "architecture", "quality"]
+    }
+  ]
+}

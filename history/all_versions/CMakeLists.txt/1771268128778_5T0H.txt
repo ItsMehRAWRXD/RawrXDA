@@ -1,0 +1,80 @@
+# CMakeLists_native.txt - Pure Native RawrXD Build
+cmake_minimum_required(VERSION 3.20)
+project(RawrXD-Native VERSION 14.2.0 LANGUAGES CXX ASM_MASM)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# No find_package calls - pure native only
+# No Qt, no Vulkan, no ggml, no external deps
+
+# Compiler flags for native performance
+if(MSVC)
+    add_compile_options(
+        /O2 /Ob2 /Oi /Ot /GL          # Max optimization
+        /arch:AVX2 /fp:fast            # AVX2, fast math
+        /W4 /WX-                       # High warnings, no error-on-warn
+        /Zc:__cplusplus                # Correct __cplusplus macro
+        /permissive-                   # Strict conformance
+        /Zc:inline                     # Remove unreferenced functions
+    )
+
+    add_link_options(
+        /LTCG                          # Link-time code generation
+        /OPT:REF /OPT:ICF              # Remove dead code, fold identical
+        /SUBSYSTEM:WINDOWS             # Windows app (change to CONSOLE for debug)
+        /ENTRY:WinMainCRTStartup       # Entry point
+    )
+endif()
+
+# Native source files only
+set(NATIVE_SOURCES
+    # Core native loader
+    native/gguf_native_loader.cpp
+
+    # Observability
+    telemetry/async_logger.cpp
+    telemetry/metrics_server.cpp
+
+    # Utils - no .cpp files, just headers
+    # config/production_config.hpp - header only
+)
+
+# MASM assembly - temporarily disabled due to syntax issues
+
+# set(ASM_SOURCES
+#     native/q4_0_matmul.asm
+#     native/q8_0_matmul.asm
+#     native/attention_native.asm
+#     exception/SEH_wrapper.asm
+# )
+
+# Create library for native components
+add_library(RawrXD_Native STATIC ${NATIVE_SOURCES})
+
+target_include_directories(RawrXD_Native PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/native
+    ${CMAKE_CURRENT_SOURCE_DIR}/telemetry
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils
+)
+
+# Windows native libs only (kernel32, user32, etc. - part of OS)
+target_link_libraries(RawrXD_Native PUBLIC
+    kernel32
+    user32
+    gdi32
+    advapi32
+    shell32
+    ole32
+    ws2_32          # Winsock for HTTP server
+)
+
+# Main executable
+add_executable(RawrXD-Native main_native.cpp)
+target_link_libraries(RawrXD-Native PRIVATE RawrXD_Native)
+
+# Tests - temporarily disabled
+# enable_testing()
+# add_subdirectory(tests/native)

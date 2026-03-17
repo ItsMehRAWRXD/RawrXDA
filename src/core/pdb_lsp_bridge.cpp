@@ -41,8 +41,11 @@
 #include <cstring>
 #include <string>
 #include <vector>
+#include <optional>
 
 #include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
 
 // ============================================================================
 // PDB LSP Bridge — Namespace
@@ -125,11 +128,11 @@ static nlohmann::json buildPDBLocation(const ResolvedSymbol& sym,
              static_cast<unsigned long long>(sym.rva));
 
     nlohmann::json location;
-    location["uri"] = uri;
-    location["range"] = {
-        {"start", {{"line", 0}, {"character", 0}}},
-        {"end",   {{"line", 0}, {"character", static_cast<int>(sym.nameLen)}}}
-    };
+    location[std::string("uri")] = uri;
+    location[std::string("range")] = nlohmann::json::object({
+        {"start", nlohmann::json::object({{"line", (json)0}, {"character", (json)0}})},
+        {"end",   nlohmann::json::object({{"line", (json)0}, {"character", (json)static_cast<int>(sym.nameLen)}})}
+    });
 
     return location;
 }
@@ -313,12 +316,12 @@ bool tryPDBHover(const std::string& symbolName, nlohmann::json& resultOut) {
 
     std::string markdown = buildSymbolHoverMarkdown(sym, moduleName);
 
-    resultOut = {
-        {"contents", {
-            {"kind", "markdown"},
-            {"value", markdown}
-        }}
-    };
+    resultOut = nlohmann::json::object({
+        {"contents", nlohmann::json::object({
+            {"kind", (json)"markdown"},
+            {"value", (json)markdown}
+        })}
+    });
 
     return true;
 }
@@ -416,7 +419,7 @@ static std::optional<nlohmann::json> handlePDBLoad(
     std::string pdbPath = params.value("pdbPath", "");
 
     if (moduleName.empty()) {
-        return nlohmann::json{{"success", false}, {"error", "moduleName required"}};
+        return nlohmann::json::object({{"success", (nlohmann::json)false}, {"error", (nlohmann::json)"moduleName required"}});
     }
 
     PDBManager& pdb = PDBManager::instance();
@@ -429,17 +432,17 @@ static std::optional<nlohmann::json> handlePDBLoad(
         r = pdb.loadPDB(moduleName.c_str(), pdbPathW);
     } else {
         // Can't auto-load without PE base — return instructions
-        return nlohmann::json{
-            {"success", false},
-            {"error", "pdbPath required (auto-load from PE not available via LSP)"}
-        };
+        return nlohmann::json::object({
+            {"success", (nlohmann::json)false},
+            {"error", (nlohmann::json)"pdbPath required (auto-load from PE not available via LSP)"}
+        });
     }
 
-    return nlohmann::json{
-        {"success", r.success},
-        {"detail", r.detail ? r.detail : ""},
-        {"errorCode", r.errorCode}
-    };
+    return nlohmann::json::object({
+        {"success", (nlohmann::json)r.success},
+        {"detail", (nlohmann::json)(r.detail ? r.detail : "")},
+        {"errorCode", (nlohmann::json)r.errorCode}
+    });
 }
 
 static std::optional<nlohmann::json> handlePDBStatus(
@@ -452,34 +455,34 @@ static std::optional<nlohmann::json> handlePDBStatus(
         const char* name = pdb.getLoadedModuleName(i);
         if (name) {
             const NativePDBParser* parser = pdb.getParser(name);
-            nlohmann::json modInfo;
-            modInfo["name"] = name;
-            modInfo["loaded"] = (parser != nullptr);
+            nlohmann::json modInfo = nlohmann::json::object();
+            modInfo[std::string("name")] = (nlohmann::json)name;
+            modInfo[std::string("loaded")] = (nlohmann::json)(parser != nullptr);
             if (parser) {
-                modInfo["streams"] = parser->getStreamCount();
-                modInfo["sections"] = parser->getSectionCount();
+                modInfo[std::string("streams")] = (nlohmann::json)parser->getStreamCount();
+                modInfo[std::string("sections")] = (nlohmann::json)parser->getSectionCount();
 
                 uint8_t guid[16];
                 if (parser->getGuid(guid).success) {
                     char guidHex[33];
                     PDB_GuidToHex(guid, guidHex, 33);
-                    modInfo["guid"] = guidHex;
+                    modInfo[std::string("guid")] = (nlohmann::json)guidHex;
                 }
-                modInfo["age"] = parser->getAge();
+                modInfo[std::string("age")] = (nlohmann::json)parser->getAge();
             }
             moduleList.push_back(modInfo);
         }
     }
 
-    return nlohmann::json{
-        {"modulesLoaded", stats.modulesLoaded},
-        {"symbolsIndexed", stats.symbolsIndexed},
-        {"lookupCount", stats.lookupCount},
-        {"cacheHits", stats.cacheHits},
-        {"cacheMisses", stats.cacheMisses},
-        {"downloadCount", stats.downloadCount},
+    return nlohmann::json::object({
+        {"modulesLoaded", (nlohmann::json)stats.modulesLoaded},
+        {"symbolsIndexed", (nlohmann::json)stats.symbolsIndexed},
+        {"lookupCount", (nlohmann::json)stats.lookupCount},
+        {"cacheHits", (nlohmann::json)stats.cacheHits},
+        {"cacheMisses", (nlohmann::json)stats.cacheMisses},
+        {"downloadCount", (nlohmann::json)stats.downloadCount},
         {"modules", moduleList}
-    };
+    });
 }
 
 static std::optional<nlohmann::json> handlePDBResolve(
@@ -487,7 +490,7 @@ static std::optional<nlohmann::json> handlePDBResolve(
     // params: { "name": "NtQuerySystemInformation" }
     std::string name = params.value("name", "");
     if (name.empty()) {
-        return nlohmann::json{{"success", false}, {"error", "name required"}};
+        return nlohmann::json::object({{"success", (nlohmann::json)false}, {"error", (nlohmann::json)"name required"}});
     }
 
     PDBManager& pdb = PDBManager::instance();
@@ -496,30 +499,30 @@ static std::optional<nlohmann::json> handlePDBResolve(
     PDBResult r = pdb.resolveSymbol(name.c_str(), &rva, &moduleName);
 
     if (!r.success) {
-        return nlohmann::json{
-            {"success", false},
-            {"error", r.detail ? r.detail : "Not found"}
-        };
+        return nlohmann::json::object({
+            {"success", (nlohmann::json)false},
+            {"error", (nlohmann::json)(r.detail ? r.detail : "Not found")}
+        });
     }
 
     ResolvedSymbol sym;
     PDBResult r2 = pdb.resolveRVA(moduleName, rva, &sym);
 
-    nlohmann::json result;
-    result["success"] = true;
-    result["name"] = name;
-    result["module"] = moduleName ? moduleName : "";
+    nlohmann::json result = nlohmann::json::object();
+    result[std::string("success")] = (nlohmann::json)true;
+    result[std::string("name")] = (nlohmann::json)name;
+    result[std::string("module")] = (nlohmann::json)(moduleName ? moduleName : "");
 
     char rvaBuf[32];
     snprintf(rvaBuf, sizeof(rvaBuf), "0x%llX", static_cast<unsigned long long>(rva));
-    result["rva"] = rvaBuf;
+    result[std::string("rva")] = (nlohmann::json)rvaBuf;
 
     if (r2.success) {
-        result["section"] = sym.section;
-        result["sectionOffset"] = sym.sectionOffset;
-        result["size"] = sym.size;
-        result["isFunction"] = sym.isFunction;
-        result["isPublic"] = sym.isPublic;
+        result[std::string("section")] = (nlohmann::json)sym.section;
+        result[std::string("sectionOffset")] = (nlohmann::json)sym.sectionOffset;
+        result[std::string("size")] = (nlohmann::json)sym.size;
+        result[std::string("isFunction")] = (nlohmann::json)sym.isFunction;
+        result[std::string("isPublic")] = (nlohmann::json)sym.isPublic;
     }
 
     return result;
@@ -602,20 +605,20 @@ bool tryPDBReferences(const std::string& symbolName, nlohmann::json& resultOut) 
                  loc.providerTag ? loc.providerTag : "?");
 
         nlohmann::json location;
-        location["uri"] = uri;
-        location["range"] = {
-            {"start", {{"line", 0}, {"character", 0}}},
-            {"end",   {{"line", 0}, {"character", static_cast<int>(strlen(loc.symbolName))}}}
-        };
+        location[std::string("uri")] = uri;
+        location[std::string("range")] = nlohmann::json::object({
+            {"start", nlohmann::json::object({{"line", (json)0}, {"character", (json)0}})},
+            {"end",   nlohmann::json::object({{"line", (json)0}, {"character", (json)static_cast<int>(strlen(loc.symbolName))}})}
+        });
 
         // Extended info (RawrXD-specific, beyond LSP spec)
-        location["rawrxd_detail"] = loc.detail;
-        location["rawrxd_confidence"] = loc.confidence;
-        location["rawrxd_provider"] = loc.providerTag ? loc.providerTag : "";
-        location["rawrxd_kind"] = static_cast<int>(loc.kind);
-        location["rawrxd_isFunction"] = loc.isFunction;
-        location["rawrxd_module"] = loc.moduleName;
-        location["rawrxd_size"] = loc.size;
+        location[std::string("rawrxd_detail")] = (json)loc.detail;
+        location[std::string("rawrxd_confidence")] = (json)loc.confidence;
+        location[std::string("rawrxd_provider")] = (json)(loc.providerTag ? loc.providerTag : "");
+        location[std::string("rawrxd_kind")] = (json)static_cast<int>(loc.kind);
+        location[std::string("rawrxd_isFunction")] = (json)loc.isFunction;
+        location[std::string("rawrxd_module")] = (json)loc.moduleName;
+        location[std::string("rawrxd_size")] = (json)loc.size;
 
         locations.push_back(location);
     }
@@ -634,25 +637,25 @@ static std::optional<nlohmann::json> handlePDBReferences(
         symbolName = params.value("symbolName", "");
     }
     if (symbolName.empty()) {
-        return nlohmann::json{{"success", false}, {"error", "name/symbolName required"}};
+        return nlohmann::json::object({{"success", (json)false}, {"error", (json)"name/symbolName required"}});
     }
 
     nlohmann::json locations;
     if (tryPDBReferences(symbolName, locations)) {
-        return nlohmann::json{
-            {"success", true},
-            {"count", locations.size()},
+        return nlohmann::json::object({
+            {"success", (json)true},
+            {"count", (json)locations.size()},
             {"references", locations},
-            {"message", "Pick 1, 2, 3, or all " + std::to_string(locations.size()) + " results"}
-        };
+            {"message", (json)("Pick 1, 2, 3, or all " + std::to_string(locations.size()) + " results")}
+        });
     }
 
-    return nlohmann::json{
-        {"success", false},
-        {"count", 0},
+    return nlohmann::json::object({
+        {"success", (json)false},
+        {"count", (json)0},
         {"references", nlohmann::json::array()},
-        {"error", "No references found"}
-    };
+        {"error", (json)"No references found"}
+    });
 }
 
 // ============================================================================
@@ -664,7 +667,7 @@ static std::optional<nlohmann::json> handlePDBLoadInstructions(
     std::string tag = params.value("tag", "user");
 
     if (pathStr.empty()) {
-        return nlohmann::json{{"success", false}, {"error", "path required"}};
+        return nlohmann::json::object({{"success", (json)false}, {"error", (json)"path required"}});
     }
 
     wchar_t pathW[MAX_PATH];
@@ -673,12 +676,12 @@ static std::optional<nlohmann::json> handlePDBLoadInstructions(
     ReferenceRouter& router = ReferenceRouter::instance();
     PDBResult r = router.loadInstructionFile(pathW, tag.c_str());
 
-    return nlohmann::json{
-        {"success", r.success},
-        {"detail", r.detail ? r.detail : ""},
-        {"ruleCount", router.getInstructionRuleCount()},
-        {"fileCount", router.getInstructionFileCount()}
-    };
+    return nlohmann::json::object({
+        {"success", (json)r.success},
+        {"detail", (json)(r.detail ? r.detail : "")},
+        {"ruleCount", (json)router.getInstructionRuleCount()},
+        {"fileCount", (json)router.getInstructionFileCount()}
+    });
 }
 
 // ============================================================================
@@ -693,24 +696,24 @@ static std::optional<nlohmann::json> handlePDBRefStats(
     for (uint32_t i = 0; i < router.getProviderCount(); ++i) {
         const IReferenceProvider* p = router.getProvider(i);
         if (p) {
-            nlohmann::json pi;
-            pi["tag"] = p->tag ? p->tag : "";
-            pi["description"] = p->description ? p->description : "";
-            pi["indexedCount"] = p->getIndexedCount ? p->getIndexedCount(p->state) : 0;
-            pi["available"] = p->isAvailable ? p->isAvailable(p->state) : false;
+            nlohmann::json pi = nlohmann::json::object();
+            pi[std::string("tag")] = (json)(p->tag ? p->tag : "");
+            pi[std::string("description")] = (json)(p->description ? p->description : "");
+            pi[std::string("indexedCount")] = (json)(p->getIndexedCount ? p->getIndexedCount(p->state) : 0);
+            pi[std::string("available")] = (json)(p->isAvailable ? p->isAvailable(p->state) : false);
             providerList.push_back(pi);
         }
     }
 
-    return nlohmann::json{
-        {"totalQueries", stats.totalQueries},
-        {"totalResults", stats.totalResults},
-        {"cacheHits", stats.cacheHits},
-        {"providerErrors", stats.providerErrors},
-        {"providersActive", stats.providersActive},
-        {"instructionRulesLoaded", stats.instructionRulesLoaded},
+    return nlohmann::json::object({
+        {"totalQueries", (json)stats.totalQueries},
+        {"totalResults", (json)stats.totalResults},
+        {"cacheHits", (json)stats.cacheHits},
+        {"providerErrors", (json)stats.providerErrors},
+        {"providersActive", (json)stats.providersActive},
+        {"instructionRulesLoaded", (json)stats.instructionRulesLoaded},
         {"providers", providerList}
-    };
+    });
 }
 
 } // namespace PDB

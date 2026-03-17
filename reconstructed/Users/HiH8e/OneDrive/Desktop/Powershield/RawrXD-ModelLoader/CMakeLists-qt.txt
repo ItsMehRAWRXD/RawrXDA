@@ -1,0 +1,35 @@
+cmake_minimum_required(VERSION 3.20)
+project(RawrXDQtShell LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Find Qt6 (or Qt5 fallback)
+find_package(Qt6 COMPONENTS Widgets QUIET)
+if(NOT Qt6Widgets_FOUND)
+    find_package(Qt5 COMPONENTS Widgets REQUIRED)
+    set(QT_VERSION "5")
+else()
+    set(QT_VERSION "6")
+endif()
+
+# Qt shell executable
+add_executable(RawrXD-QtShell
+    src/qtapp/main_qt.cpp
+    src/qtapp/MainWindow.cpp
+)
+
+target_include_directories(RawrXD-QtShell PRIVATE
+    src/qtapp
+)
+
+if(QT_VERSION STREQUAL "6")
+    target_link_libraries(RawrXD-QtShell PRIVATE Qt6::Widgets)
+else()
+    target_link_libraries(RawrXD-QtShell PRIVATE Qt5::Widgets)
+endif()
+
+set_target_properties(RawrXD-QtShell PROPERTIES
+    WIN32_EXECUTABLE TRUE
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+)

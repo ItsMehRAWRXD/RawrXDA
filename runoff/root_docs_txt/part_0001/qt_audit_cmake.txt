@@ -1,0 +1,140 @@
+D:\rawrxd\CMakeLists.txt|233|find_package(Threads REQUIRED)
+D:\rawrxd\CMakeLists.txt|239|find_package(ZSTD QUIET)
+D:\rawrxd\CMakeLists.txt|247|find_package(ZLIB QUIET)
+D:\rawrxd\CMakeLists.txt|255|find_package(LZ4 QUIET)
+D:\rawrxd\CMakeLists.txt|263|find_package(nlohmann_json QUIET)
+D:\rawrxd\CMakeLists.txt|271|find_package(CURL QUIET)
+D:\rawrxd\CMakeLists.txt|376|# LocalReasoningEngine — API-free static analysis + pattern detection (no Qt, no API key)
+D:\rawrxd\CMakeLists.txt|919|# Vulkan SDK for Gold build — linked later after find_package(Vulkan)
+D:\rawrxd\CMakeLists.txt|1542|find_package(Vulkan QUIET)
+D:\rawrxd\CMakeLists.txt|3152|find_package(Python3 COMPONENTS Interpreter QUIET)
+D:\rawrxd\3rdparty\ggml\CMakeLists.txt|276|find_package(Threads REQUIRED)
+D:\rawrxd\3rdparty\ggml\examples\test-cmake\CMakeLists.txt|6|find_package(ggml CONFIG REQUIRED)
+D:\rawrxd\3rdparty\ggml\src\ggml-blas\CMakeLists.txt|9|find_package(BLAS)
+D:\rawrxd\3rdparty\ggml\src\ggml-blas\CMakeLists.txt|25|find_package(PkgConfig REQUIRED)
+D:\rawrxd\3rdparty\ggml\src\ggml-cpu\CMakeLists.txt|71|find_package(OpenMP)
+D:\rawrxd\3rdparty\ggml\src\ggml-cuda\CMakeLists.txt|3|find_package(CUDAToolkit)
+D:\rawrxd\3rdparty\ggml\src\ggml-hip\CMakeLists.txt|42|find_package(hip     REQUIRED)
+D:\rawrxd\3rdparty\ggml\src\ggml-hip\CMakeLists.txt|43|find_package(hipblas REQUIRED)
+D:\rawrxd\3rdparty\ggml\src\ggml-hip\CMakeLists.txt|44|find_package(rocblas REQUIRED)
+D:\rawrxd\3rdparty\ggml\src\ggml-musa\CMakeLists.txt|18|find_package(MUSAToolkit)
+D:\rawrxd\3rdparty\ggml\src\ggml-opencl\CMakeLists.txt|1|find_package(OpenCL REQUIRED)
+D:\rawrxd\3rdparty\ggml\src\ggml-opencl\CMakeLists.txt|2|find_package(Python3 REQUIRED)
+D:\rawrxd\3rdparty\ggml\src\ggml-sycl\CMakeLists.txt|39|find_package(IntelSYCL)
+D:\rawrxd\3rdparty\ggml\src\ggml-sycl\CMakeLists.txt|54|find_package(DNNL)
+D:\rawrxd\3rdparty\ggml\src\ggml-sycl\CMakeLists.txt|117|find_package(MKL REQUIRED)
+D:\rawrxd\3rdparty\ggml\src\ggml-sycl\CMakeLists.txt|121|find_package(oneMath QUIET)
+D:\rawrxd\3rdparty\ggml\src\ggml-sycl\CMakeLists.txt|148|# Create alias to match with find_package targets name
+D:\rawrxd\3rdparty\ggml\src\ggml-vulkan\CMakeLists.txt|9|find_package(Vulkan COMPONENTS glslc REQUIRED)
+D:\rawrxd\3rdparty\ggml\src\ggml-vulkan\vulkan-shaders\CMakeLists.txt|9|find_package (Threads REQUIRED)
+D:\rawrxd\3rdparty\ggml\src\ggml-webgpu\CMakeLists.txt|3|find_package(Python3 REQUIRED)
+D:\rawrxd\3rdparty\ggml\src\ggml-webgpu\CMakeLists.txt|45|find_package(Dawn REQUIRED)
+D:\rawrxd\3rdparty\ggml\tests\CMakeLists.txt|57|find_package(Threads)
+D:\rawrxd\build_qt_free\_deps\googletest-src\googlemock\CMakeLists.txt|38|# Language "C" is required for find_package(Threads).
+D:\rawrxd\build_qt_free\_deps\googletest-src\googletest\CMakeLists.txt|45|# Language "C" is required for find_package(Threads).
+D:\rawrxd\build_qt_free\_deps\googletest-subbuild\CMakeLists.txt|23|SOURCE_DIR          "D:/rawrxd/build_qt_free/_deps/googletest-src"
+D:\rawrxd\build_qt_free\_deps\googletest-subbuild\CMakeLists.txt|24|BINARY_DIR          "D:/rawrxd/build_qt_free/_deps/googletest-build"
+D:\rawrxd\build_qt_free\_deps\zlib-subbuild\CMakeLists.txt|23|SOURCE_DIR          "D:/rawrxd/build_qt_free/_deps/zlib-src"
+D:\rawrxd\build_qt_free\_deps\zlib-subbuild\CMakeLists.txt|24|BINARY_DIR          "D:/rawrxd/build_qt_free/_deps/zlib-build"
+D:\rawrxd\examples\test-cmake\CMakeLists.txt|6|find_package(ggml CONFIG REQUIRED)
+D:\rawrxd\extension_registry\CMakeLists.txt|30|find_package(SQLite3 REQUIRED)
+D:\rawrxd\extension_registry\CMakeLists.txt|33|find_package(Boost REQUIRED COMPONENTS system filesystem)
+D:\rawrxd\itsmehrawrxd-master\CMakeLists.txt|48|find_package(Doxygen)
+D:\rawrxd\OrganizedPiProject\misc\Desktop\CMakeLists.txt|9|find_package(glm QUIET)
+D:\rawrxd\OrganizedPiProject\misc\Desktop\CMakeLists.txt|63|find_package(glfw3 QUIET)
+D:\rawrxd\OrganizedPiProject\misc\Desktop\CMakeLists.txt|77|find_package(OpenGL QUIET)
+D:\rawrxd\plugins\universal_generator\CMakeLists.txt|8|find_package(nlohmann_json CONFIG REQUIRED)
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|22|# Set Qt path
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|23|# Qt path: prefer environment-provided Qt6_DIR (e.g. C:/Qt/6.7.3/msvc2022_64/lib/cmake/Qt6)
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|24|# or CMAKE_PREFIX_PATH (e.g. C:/Qt/6.7.3/msvc2022_64)
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|25|if(DEFINED ENV{Qt6_DIR})
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|26|message(STATUS "Using Qt6 from ENV Qt6_DIR=$ENV{Qt6_DIR}")
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|27|# Qt6_DIR should point to .../lib/cmake/Qt6, so use parent for PREFIX_PATH
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|28|get_filename_component(QT_CMAKE_DIR "$ENV{Qt6_DIR}" DIRECTORY)
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|29|get_filename_component(QT_LIB_DIR "${QT_CMAKE_DIR}" DIRECTORY)
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|30|get_filename_component(QT_ROOT_DIR "${QT_LIB_DIR}" DIRECTORY)
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|31|set(CMAKE_PREFIX_PATH "${QT_ROOT_DIR}")
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|35|# Explicitly specify Qt6 paths
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|36|set(Qt6_DIR "C:/Qt/6.7.3/msvc2022_64/lib/cmake/Qt6")
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|37|list(APPEND CMAKE_PREFIX_PATH "C:/Qt/6.7.3/msvc2022_64")
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|40|if(Qt6_FOUND)
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|41|message(STATUS "Qt6 found: ${Qt6_VERSION}")
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|42|add_definitions(-DHAVE_QT_CORE)
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|43|include_directories(${Qt6_INCLUDE_DIRS})
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|45|message(WARNING "Qt6 not found. Qt-based benchmarks will be skipped.")
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|48|# Qt-based IDE shell (separate executable, no Vulkan)
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|50|if(FALSE AND Qt6_FOUND) # Disabled until headers exist
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|51|message(STATUS "Building Qt Shell with Qt version: ${Qt6_VERSION}")
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|53|# Enable Qt MOC for QObject classes
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|55|# Create a separate Qt target that doesn't depend on problematic files
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|56|add_executable(RawrXD-QtShell
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|57|src/qtapp/main_qt.cpp
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|58|src/qtapp/MainWindow.cpp
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|59|src/qtapp/MainWindow.h
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|62|# Ensure QtShell links all required QObject implementations
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|63|target_sources(RawrXD-QtShell PRIVATE
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|64|src/qtapp/ui/AISuggestionOverlay.cpp
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|65|src/qtapp/StreamerClient.cpp
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|66|src/qtapp/ui/TaskProposalWidget.cpp
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|69|src/qtapp/utils/ModelCompilerUtils.cpp
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|70|src/qtapp/utils/ModelCompilerUtils.h
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|77|target_link_libraries(RawrXD-QtShell PRIVATE brutal_gzip)
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|82|target_sources(RawrXD-QtShell PRIVATE
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|87|target_include_directories(RawrXD-QtShell PRIVATE include ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/src/qtapp)
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|89|set_target_properties(RawrXD-QtShell PROPERTIES
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|95|target_compile_options(RawrXD-QtShell PRIVATE /arch:AVX2)
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|97|target_compile_options(RawrXD-QtShell PRIVATE -mavx2)
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|100|message(STATUS "Qt6 not found, building Win32 IDE with terminal integration")
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|103|message(STATUS "MSVC not detected; skipping Qt6 targets to avoid MinGW/MSVC mismatch")
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|106|# Win32-based IDE (MSVC only to match Qt)
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|215|find_package(Vulkan REQUIRED)
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|217|find_package(Vulkan QUIET)
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|220|message(STATUS "Vulkan disabled via ENABLE_VULKAN=OFF; skipping find_package")
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|247|# Console-based IDE (non-Qt) interactive shell
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|267|if(Qt6Widgets_FOUND)
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|268|message(STATUS "Qt6Widgets already configured above")
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|356|# Native Win32 IDE executable (no Qt dependencies)
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|378|src/qtapp/main_simple.cpp
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|379|src/qtapp/MainWindowSimple.cpp
+D:\rawrxd\RawrXD-ModelLoader\CMakeLists.txt|380|src/qtapp/MainWindowSimple.h
+D:\rawrxd\Ship\CMakeLists.txt|2|# Pure C++20 / Win32 - Zero Qt Dependencies
+D:\rawrxd\Ship\CMakeLists.txt|21|QtReplacements.hpp
+D:\rawrxd\src\auth\CMakeLists.txt|20|# Qt-free: pure C++20
+D:\rawrxd\src\digestion\CMakeLists.txt|39|# GUI executable removed — Qt dependency eliminated
+D:\rawrxd\src\feedback\CMakeLists.txt|20|# Qt-free: pure C++20
+D:\rawrxd\src\ggml-blas\CMakeLists.txt|9|find_package(BLAS)
+D:\rawrxd\src\ggml-blas\CMakeLists.txt|25|find_package(PkgConfig REQUIRED)
+D:\rawrxd\src\ggml-cpu\CMakeLists.txt|71|find_package(OpenMP)
+D:\rawrxd\src\ggml-cuda\CMakeLists.txt|3|find_package(CUDAToolkit)
+D:\rawrxd\src\ggml-hip\CMakeLists.txt|42|find_package(hip     REQUIRED)
+D:\rawrxd\src\ggml-hip\CMakeLists.txt|43|find_package(hipblas REQUIRED)
+D:\rawrxd\src\ggml-hip\CMakeLists.txt|44|find_package(rocblas REQUIRED)
+D:\rawrxd\src\ggml-musa\CMakeLists.txt|18|find_package(MUSAToolkit)
+D:\rawrxd\src\ggml-opencl\CMakeLists.txt|1|find_package(OpenCL REQUIRED)
+D:\rawrxd\src\ggml-opencl\CMakeLists.txt|2|find_package(Python3 REQUIRED)
+D:\rawrxd\src\ggml-sycl\CMakeLists.txt|39|find_package(IntelSYCL)
+D:\rawrxd\src\ggml-sycl\CMakeLists.txt|54|find_package(DNNL)
+D:\rawrxd\src\ggml-sycl\CMakeLists.txt|117|find_package(MKL REQUIRED)
+D:\rawrxd\src\ggml-sycl\CMakeLists.txt|121|find_package(oneMath QUIET)
+D:\rawrxd\src\ggml-sycl\CMakeLists.txt|148|# Create alias to match with find_package targets name
+D:\rawrxd\src\ggml-vulkan\CMakeLists.txt|9|find_package(Vulkan COMPONENTS glslc REQUIRED)
+D:\rawrxd\src\ggml-vulkan\vulkan-shaders\CMakeLists.txt|4|find_package (Threads REQUIRED)
+D:\rawrxd\src\ggml-webgpu\CMakeLists.txt|3|find_package(Python3 REQUIRED)
+D:\rawrxd\src\ggml-webgpu\CMakeLists.txt|45|find_package(Dawn REQUIRED)
+D:\rawrxd\src\git\CMakeLists.txt|9|# Qt-free: uses nlohmann::json + STL + WinHTTP
+D:\rawrxd\src\inference\CMakeLists.txt|5|# Produces RawrXD-InferenceEngine.exe — the Qt-free, GUI-independent
+D:\rawrxd\src\inference\CMakeLists.txt|131|find_package(Threads REQUIRED)
+D:\rawrxd\src\inference\CMakeLists.txt|143|find_package(Vulkan QUIET)
+D:\rawrxd\src\masm\CMakeLists.txt|367|find_package(Doxygen)
+D:\rawrxd\src\orchestration\CMakeLists.txt|7|# Qt-free: uses STL + WinSock + Win32 audio APIs
+D:\rawrxd\src\paint\CMakeLists.txt|9|# Paint Application (Qt-based)
+D:\rawrxd\src\paint\CMakeLists.txt|29|# Qt-free: uses Win32 GDI/GDI+ / Direct2D
+D:\rawrxd\src\setup\CMakeLists.txt|20|# Qt-free: pure C++20
+D:\rawrxd\src\terminal\CMakeLists.txt|1|# Terminal sandboxing and zero-retention module (Qt-free, pure C++20/Win32)
+D:\rawrxd\src\thermal\CMakeLists.txt|110|# Qt-free: uses pure Win32 + MASM
+D:\rawrxd\src\tools\CMakeLists.txt|4|# Build: standalone Win32 CLI; no Qt/engine deps. Use for --genkey, --hwid, --issue, --sign.
+D:\rawrxd\src\tools\CMakeLists.txt|18|# Qt-free: pure C++ with STL
+D:\rawrxd\tests\CMakeLists.txt|73|# NEW TESTS - Qt-free, C++20 native test framework
+D:\rawrxd\tests\CMakeLists.txt|185|# Production Regression Test Suite (Qt-free, no external deps)
+D:\rawrxd\tests\CMakeLists.txt|193|# Link against the core library (no Qt)
+D:\rawrxd\tests\CMakeLists.txt|202|message(STATUS "  ✓ Added test_production_regression (Qt-free regression suite)")

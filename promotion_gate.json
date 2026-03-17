@@ -1,0 +1,11 @@
+{
+  "telemetry": {
+    "event": "inference_cycle",
+    "success": true,
+    "metrics": {
+      "tokens_generated": 284,
+      "duration_ms": 4358.52
+    },
+    "artifacts": ["D:\\\\rawrxd\\\\gpu_dma.obj", "RawrXD_Amphibious_FullKernel.exe"]
+  }
+}

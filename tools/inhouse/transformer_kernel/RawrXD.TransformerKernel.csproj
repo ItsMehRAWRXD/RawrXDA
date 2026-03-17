@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>RawrXD.TransformerKernel</RootNamespace>
+    <AssemblyName>RawrXD.TransformerKernel</AssemblyName>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>12.0</LangVersion>
+    <Optimize>true</Optimize>
+    <Description>Zero-dependency transformer inference: AVX-512 quantized matmul kernels, GGUF graph interpreter, KV-cache, BPE tokenizer — all emitted as raw x64 machine code for PE linking.</Description>
+  </PropertyGroup>
+</Project>

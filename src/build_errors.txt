@@ -1,0 +1,112 @@
+In file included from d:\rawrxd\src\rawrxd_cli.cpp:4:
+d:\rawrxd\src\telemetry.h:7:10: fatal error: nlohmann/json.hpp: No such file or directory
+    7 | #include <nlohmann/json.hpp>
+      |          ^~~~~~~~~~~~~~~~~~~
+compilation terminated.
+d:\rawrxd\src\cpu_inference_engine.cpp:3:10: fatal error: ../plugins/MemoryPlugin.hpp: No such file or directory
+    3 | #include "../plugins/MemoryPlugin.hpp"
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+compilation terminated.
+d:\rawrxd\src\agentic_engine.cpp:31:10: fatal error: rawrxd_telemetry_exports.h: No such file or directory
+   31 | #include "rawrxd_telemetry_exports.h"
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+compilation terminated.
+d:\rawrxd\src\api_server.cpp:7:10: fatal error: cot_response_schema.hpp: No such file or directory
+    7 | #include "cot_response_schema.hpp"
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~
+compilation terminated.
+In file included from d:\rawrxd\src\telemetry.cpp:1:
+d:\rawrxd\src\telemetry.h:7:10: fatal error: nlohmann/json.hpp: No such file or directory
+    7 | #include <nlohmann/json.hpp>
+      |          ^~~~~~~~~~~~~~~~~~~
+compilation terminated.
+d:\rawrxd\src\settings.cpp: In static member function 'static bool Settings::SaveCompute(const AppState&, const std::string&)':
+d:\rawrxd\src\settings.cpp:191:36: error: 'const struct AppState' has no member named 'is_gpu_enabled'
+  191 |     ofs << "enable_gpu=" << (state.is_gpu_enabled ? "1" : "0") << "\n";
+      |                                    ^~~~~~~~~~~~~~
+d:\rawrxd\src\settings.cpp:192:37: error: 'const struct AppState' has no member named 'thread_count'
+  192 |     ofs << "thread_count=" << state.thread_count << "\n";
+      |                                     ^~~~~~~~~~~~
+d:\rawrxd\src\settings.cpp:193:38: error: 'const struct AppState' has no member named 'vram_limit_mb'
+  193 |     ofs << "vram_limit_mb=" << state.vram_limit_mb << "\n";
+      |                                      ^~~~~~~~~~~~~
+In file included from d:\rawrxd\src\overclock_governor.cpp:3:
+d:\rawrxd\src\telemetry.h:7:10: fatal error: nlohmann/json.hpp: No such file or directory
+    7 | #include <nlohmann/json.hpp>
+      |          ^~~~~~~~~~~~~~~~~~~
+compilation terminated.
+d:\rawrxd\src\overclock_vendor.cpp: In function 'bool overclock_vendor::ApplyGpuClockOffsetMhz(int)':
+d:\rawrxd\src\overclock_vendor.cpp:148:30: error: 'clamp' is not a member of 'std'
+  148 |         int odPercent = std::clamp(offset / 10, -15, 15); // Map MHz to OD%
+      |                              ^~~~~
+In file included from d:\rawrxd\src\modules\vsix_loader.cpp:1:
+d:\rawrxd\src\modules\vsix_loader.h:6:10: fatal error: nlohmann/json.hpp: No such file or directory
+    6 | #include <nlohmann/json.hpp>
+      |          ^~~~~~~~~~~~~~~~~~~
+compilation terminated.
+d:\rawrxd\src\modules\memory_manager.cpp: In member function 'virtual std::string StandardMemoryModule::Process(const std::string&, size_t)':
+d:\rawrxd\src\modules\memory_manager.cpp:66:59: error: 'getInstance' is not a member of 'RawrXD::CPUInferenceEngine'
+   66 |     std::vector<int> tokens = RawrXD::CPUInferenceEngine::getInstance()->Tokenize(prompt);
+      |                                                           ^~~~~~~~~~~
+d:\rawrxd\src\modules\memory_manager.cpp:70:40: error: 'getInstance' is not a member of 'RawrXD::CPUInferenceEngine'
+   70 |     return RawrXD::CPUInferenceEngine::getInstance()->Detokenize(tokens);
+      |                                        ^~~~~~~~~~~
+d:\rawrxd\src\modules\memory_manager.cpp: In member function 'virtual std::string ExtendedMemoryModule::Process(const std::string&, size_t)':
+d:\rawrxd\src\modules\memory_manager.cpp:75:59: error: 'getInstance' is not a member of 'RawrXD::CPUInferenceEngine'
+   75 |     std::vector<int> tokens = RawrXD::CPUInferenceEngine::getInstance()->Tokenize(prompt);
+      |                                                           ^~~~~~~~~~~
+d:\rawrxd\src\modules\memory_manager.cpp:79:40: error: 'getInstance' is not a member of 'RawrXD::CPUInferenceEngine'
+   79 |     return RawrXD::CPUInferenceEngine::getInstance()->Detokenize(tokens);
+      |                                        ^~~~~~~~~~~
+d:\rawrxd\src\modules\memory_manager.cpp: In member function 'virtual std::string LargeMemoryModule::Process(const std::string&, size_t)':
+d:\rawrxd\src\modules\memory_manager.cpp:84:59: error: 'getInstance' is not a member of 'RawrXD::CPUInferenceEngine'
+   84 |     std::vector<int> tokens = RawrXD::CPUInferenceEngine::getInstance()->Tokenize(prompt);
+      |                                                           ^~~~~~~~~~~
+d:\rawrxd\src\modules\memory_manager.cpp:88:40: error: 'getInstance' is not a member of 'RawrXD::CPUInferenceEngine'
+   88 |     return RawrXD::CPUInferenceEngine::getInstance()->Detokenize(tokens);
+      |                                        ^~~~~~~~~~~
+d:\rawrxd\src\modules\memory_manager.cpp: In member function 'virtual std::string HugeMemoryModule::Process(const std::string&, size_t)':
+d:\rawrxd\src\modules\memory_manager.cpp:93:59: error: 'getInstance' is not a member of 'RawrXD::CPUInferenceEngine'
+   93 |     std::vector<int> tokens = RawrXD::CPUInferenceEngine::getInstance()->Tokenize(prompt);
+      |                                                           ^~~~~~~~~~~
+d:\rawrxd\src\modules\memory_manager.cpp:97:40: error: 'getInstance' is not a member of 'RawrXD::CPUInferenceEngine'
+   97 |     return RawrXD::CPUInferenceEngine::getInstance()->Detokenize(tokens);
+      |                                        ^~~~~~~~~~~
+d:\rawrxd\src\modules\memory_manager.cpp: In member function 'virtual std::string MassiveMemoryModule::Process(const std::string&, size_t)':
+d:\rawrxd\src\modules\memory_manager.cpp:102:59: error: 'getInstance' is not a member of 'RawrXD::CPUInferenceEngine'
+  102 |     std::vector<int> tokens = RawrXD::CPUInferenceEngine::getInstance()->Tokenize(prompt);
+      |                                                           ^~~~~~~~~~~
+d:\rawrxd\src\modules\memory_manager.cpp:106:40: error: 'getInstance' is not a member of 'RawrXD::CPUInferenceEngine'
+  106 |     return RawrXD::CPUInferenceEngine::getInstance()->Detokenize(tokens);
+      |                                        ^~~~~~~~~~~
+d:\rawrxd\src\modules\memory_manager.cpp: In member function 'virtual std::string GiganticMemoryModule::Process(const std::string&, size_t)':
+d:\rawrxd\src\modules\memory_manager.cpp:111:59: error: 'getInstance' is not a member of 'RawrXD::CPUInferenceEngine'
+  111 |     std::vector<int> tokens = RawrXD::CPUInferenceEngine::getInstance()->Tokenize(prompt);
+      |                                                           ^~~~~~~~~~~
+d:\rawrxd\src\modules\memory_manager.cpp:115:40: error: 'getInstance' is not a member of 'RawrXD::CPUInferenceEngine'
+  115 |     return RawrXD::CPUInferenceEngine::getInstance()->Detokenize(tokens);
+      |                                        ^~~~~~~~~~~
+d:\rawrxd\src\modules\memory_manager.cpp: In member function 'virtual std::string UltimateMemoryModule::Process(const std::string&, size_t)':
+d:\rawrxd\src\modules\memory_manager.cpp:120:59: error: 'getInstance' is not a member of 'RawrXD::CPUInferenceEngine'
+  120 |     std::vector<int> tokens = RawrXD::CPUInferenceEngine::getInstance()->Tokenize(prompt);
+      |                                                           ^~~~~~~~~~~
+d:\rawrxd\src\modules\memory_manager.cpp:124:40: error: 'getInstance' is not a member of 'RawrXD::CPUInferenceEngine'
+  124 |     return RawrXD::CPUInferenceEngine::getInstance()->Detokenize(tokens);
+      |                                        ^~~~~~~~~~~
+In file included from d:\rawrxd\src\modules\codex_ultimate.cpp:1:
+d:\rawrxd\src\modules\codex_ultimate.h:27:54: error: 'uint64_t' has not been declared
+   27 |                                                      uint64_t start_addr = 0,
+      |                                                      ^~~~~~~~
+d:\rawrxd\src\modules\codex_ultimate.h:5:1: note: 'uint64_t' is defined in header '<cstdint>'; this is probably fixable by adding '#include <cstdint>'
+    4 | #include <memory>
+  +++ |+#include <cstdint>
+    5 | 
+d:\rawrxd\src\modules\codex_ultimate.cpp:24:32: error: no declaration matches 'std::vector<DisassemblyResult> CodexUltimate::Disassemble(const std::string&, uint64_t, size_t)'
+   24 | std::vector<DisassemblyResult> CodexUltimate::Disassemble(const std::string& binary_path,
+      |                                ^~~~~~~~~~~~~
+d:\rawrxd\src\modules\codex_ultimate.h:26:43: note: candidate is: 'static std::vector<DisassemblyResult> CodexUltimate::Disassemble(const std::string&, int, size_t)'
+   26 |     static std::vector<DisassemblyResult> Disassemble(const std::string& binary_path,
+      |                                           ^~~~~~~~~~~
+d:\rawrxd\src\modules\codex_ultimate.h:23:7: note: 'class CodexUltimate' defined here
+   23 | class CodexUltimate {
+      |       ^~~~~~~~~~~~~

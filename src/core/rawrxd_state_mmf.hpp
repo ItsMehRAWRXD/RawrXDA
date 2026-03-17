@@ -48,9 +48,9 @@
 #include <cstring>
 #include <atomic>
 #include <mutex>
+#include "patch_result.hpp"
 
 // Forward declarations
-struct PatchResult;
 struct HotpatchEvent;
 
 // ============================================================================
@@ -298,4 +298,3 @@ private:
     // Statistics (process-local)
     mutable Stats m_stats;
 };
-

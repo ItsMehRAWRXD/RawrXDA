@@ -1,0 +1,174 @@
+# 🚀 BigDaddyG Launcher - Quick Reference Card
+
+## ONE-COMMAND START
+
+```batch
+START-BIGDADDYG.bat
+```
+
+Or from PowerShell:
+```powershell
+.\bigdaddyg-launcher-interactive.ps1
+```
+
+---
+
+## INTERACTIVE MENU (Every Time)
+
+### Step 1: Choose Model
+```
+[1] 36 GB model    ← Full power, best accuracy
+[2] 36 GB backup
+[3] 0.5 GB code    ← Fast, specialized
+[0] Exit
+```
+
+### Step 2: Configure Settings
+```
+Inference Mode:    CPU / GPU CUDA / GPU ROCm
+Service Port:      Default (8765) / Custom
+Memory Limit:      Auto / 4GB / 8GB / 16GB / 32GB
+CPU Threads:       Auto / Half / Custom
+Log Level:         Info / Debug / Trace
+API Auth:          None / Token-based
+```
+
+### Step 3: Review & Confirm
+```
+Shows all settings ↓
+Proceed? (yes/no)
+```
+
+### Step 4: Service Launches
+```
+✅ Ready at http://localhost:8765
+```
+
+---
+
+## QUICK SCENARIOS
+
+### 🏃 Fast Test (defaults)
+```
+Select: [1] [Enter] [Enter] [Enter] [Enter] [Enter] [Enter] [Enter] yes
+Result: Service in ~30 sec
+```
+
+### ⚡ GPU Mode (fast)
+```
+Select: [1]
+Inference: [2] GPU CUDA
+Port: [1]
+Memory: [5] Maximum
+Threads: [1]
+Log: [1]
+Auth: [1]
+Confirm: yes
+```
+
+### 🔒 Limited Resources
+```
+Select: [3] (small model)
+Inference: [1] CPU
+Port: [2] → 9000
+Memory: [2] 4GB
+Threads: [2] Half
+Log: [1]
+Auth: [1]
+Confirm: yes
+```
+
+---
+
+## ONCE RUNNING
+
+### Check Health
+```powershell
+curl http://localhost:8765/health
+```
+
+### Test API
+Open browser: `http://localhost:8765/docs`
+
+### View Logs
+```powershell
+Get-Content logs\bigdaddyg-launcher-*.log -Tail 20
+```
+
+### Stop Service
+```
+Press Ctrl+C in PowerShell window
+```
+
+---
+
+## INTEGRATE WITH CYBERFORGE
+
+After launcher shows integration prompt, add to `cyberforge-av-engine.js`:
+
+```javascript
+const response = await fetch("http://localhost:8765/api/classify", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ file_path: filePath })
+});
+
+const result = await response.json();
+console.log(`Classification: ${result.classification}`);
+```
+
+---
+
+## KEY POINTS
+
+✅ **Different settings every run** - Menu appears each time  
+✅ **Flexible configuration** - Choose CPU/GPU, memory, port, etc.  
+✅ **Auto-generated scripts** - Launcher creates startup script on-the-fly  
+✅ **Logged activity** - All runs tracked in `logs/` folder  
+✅ **Easy to test** - Quick to switch models and settings  
+
+---
+
+## FILES
+
+```
+START-BIGDADDYG.bat
+    ↓ Launches ↓
+bigdaddyg-launcher-interactive.ps1
+    ↓ Creates ↓
+llm_toolchain/start-bigdaddyg.py
+    ↓ Runs ↓
+FastAPI Service (http://localhost:8765)
+```
+
+---
+
+## TROUBLESHOOTING
+
+| Issue | Fix |
+|-------|-----|
+| Can't find models | Check `D:\BigDaddyG-Standalone-40GB\` exists |
+| Python not found | Install Python 3.8+, add to PATH |
+| Port in use | Select different port in menu [Step 2b] |
+| Out of memory | Select smaller model or lower memory limit |
+| Slow inference | Switch from CPU to GPU [Step 2a] |
+
+---
+
+## DOCS
+
+- **Setup Guide:** `BIGDADDYG-LAUNCHER-SETUP.md`
+- **Full Guide:** `BIGDADDYG-LAUNCHER-GUIDE.md`
+- **D: Drive Audit:** `D-DRIVE-AUDIT-COMPLETE.md`
+
+---
+
+## RUN NOW
+
+```batch
+START-BIGDADDYG.bat
+```
+
+**Then follow the interactive menu.**
+
+That's it! 🚀

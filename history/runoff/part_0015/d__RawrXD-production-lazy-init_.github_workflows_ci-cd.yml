@@ -1,0 +1,404 @@
+# ============================================================================
+# GitHub Actions CI/CD Pipeline for RawrXD IDE
+# Runs all test suites automatically on push and pull request
+# ============================================================================
+
+name: RawrXD CI/CD
+
+on:
+  push:
+    branches: [ main, master, develop, b1559 ]
+  pull_request:
+    branches: [ main, master, develop ]
+  workflow_dispatch:
+
+env:
+  BUILD_TYPE: Release
+  QT_VERSION: 6.7.0
+  CMAKE_VERSION: 3.27.0
+
+jobs:
+  # ==========================================================================
+  # Unit Tests Job
+  # ==========================================================================
+  unit-tests:
+    name: Unit Tests - ${{ matrix.os }} (Shard ${{ matrix.shard }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+        shard: [0, 1, 2, 3] # Sharding for faster execution
+        
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        
+    - name: Cache Qt
+      id: cache-qt
+      uses: actions/cache@v3
+      with:
+        path: ${{ runner.temp }}/Qt
+        key: ${{ runner.os }}-Qt-${{ env.QT_VERSION }}
+        
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: ${{ env.QT_VERSION }}
+        cache: true
+        
+    - name: Install Dependencies (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        choco install cmake ninja visualstudio2022-workload-vctools -y
+        
+    - name: Install Dependencies (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake ninja-build g++ libgl1-mesa-dev
+        
+    - name: Install Google Test
+      run: |
+        git clone https://github.com/google/googletest.git
+        cd googletest
+        cmake -B build -DCMAKE_BUILD_TYPE=Release
+        cmake --build build --config Release
+        cmake --install build --prefix ${{ runner.temp }}/gtest
+        
+    - name: Configure CMake
+      run: |
+        cmake -B build -G Ninja `
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} `
+          -DBUILD_TESTS=ON `
+          -DENABLE_TESTING=ON `
+          -DGTest_DIR=${{ runner.temp }}/gtest/lib/cmake/GTest
+        
+    - name: Build Tests
+      run: cmake --build build --config ${{ env.BUILD_TYPE }} --target unit-tests
+      
+    - name: Run Unit Tests
+      shell: pwsh
+      run: |
+        cd build/tests/unit
+        $start = ${{ matrix.shard }} + 1
+        Write-Host "Running CTest Shard $start of 4"
+        ctest --output-on-failure --verbose -C ${{ env.BUILD_TYPE }} -I "$start,,4"
+        
+    - name: Upload Test Results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: unit-test-results-${{ matrix.os }}
+        path: build/tests/unit/test-results.xml
+        
+  # ==========================================================================
+  # Integration Tests Job
+  # ==========================================================================
+  integration-tests:
+    name: Integration Tests - ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest]
+        
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: ${{ env.QT_VERSION }}
+        cache: true
+        
+    - name: Install MASM (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        # MASM comes with Visual Studio
+        choco install visualstudio2022-workload-vctools -y
+        
+    - name: Install Dependencies
+      run: |
+        choco install cmake ninja -y
+        
+    - name: Install Google Test
+      run: |
+        git clone https://github.com/google/googletest.git
+        cd googletest
+        cmake -B build -DCMAKE_BUILD_TYPE=Release
+        cmake --build build --config Release
+        cmake --install build --prefix ${{ runner.temp }}/gtest
+        
+    - name: Configure CMake
+      run: |
+        cmake -B build -G Ninja `
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} `
+          -DBUILD_TESTS=ON `
+          -DENABLE_INTEGRATION_TESTS=ON `
+          -DGTest_DIR=${{ runner.temp }}/gtest/lib/cmake/GTest
+        
+    - name: Build Integration Tests
+      run: cmake --build build --config ${{ env.BUILD_TYPE }} --target integration-tests
+      
+    - name: Run Integration Tests
+      run: |
+        cd build/tests/integration
+        ctest --output-on-failure --verbose -C ${{ env.BUILD_TYPE }}
+        
+    - name: Upload Test Results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: integration-test-results-${{ matrix.os }}
+        path: build/tests/integration/test-results.xml
+        
+  # ==========================================================================
+  # UI Tests Job
+  # ==========================================================================
+  ui-tests:
+    name: UI Tests - Windows
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: ${{ env.QT_VERSION }}
+        cache: true
+        
+    - name: Install Dependencies
+      run: |
+        choco install cmake ninja visualstudio2022-workload-vctools -y
+        
+    - name: Install Google Test
+      run: |
+        git clone https://github.com/google/googletest.git
+        cd googletest
+        cmake -B build -DCMAKE_BUILD_TYPE=Release
+        cmake --build build --config Release
+        cmake --install build --prefix ${{ runner.temp }}/gtest
+        
+    - name: Configure CMake
+      run: |
+        cmake -B build -G Ninja `
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} `
+          -DBUILD_TESTS=ON `
+          -DENABLE_UI_TESTS=ON `
+          -DGTest_DIR=${{ runner.temp }}/gtest/lib/cmake/GTest
+        
+    - name: Build UI Tests
+      run: cmake --build build --config ${{ env.BUILD_TYPE }} --target ui-tests
+      
+    - name: Run UI Tests (Headless)
+      run: |
+        cd build/tests/ui
+        $env:QT_QPA_PLATFORM = "offscreen"
+        ctest --output-on-failure --verbose -C ${{ env.BUILD_TYPE }}
+        
+    - name: Upload Test Results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: ui-test-results-windows
+        path: build/tests/ui/test-results.xml
+        
+  # ==========================================================================
+  # Readiness Checker Tests Job
+  # ==========================================================================
+  readiness-tests:
+    name: Readiness Checker Tests - ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+        
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: ${{ env.QT_VERSION }}
+        cache: true
+        
+    - name: Install Google Test
+      run: |
+        git clone https://github.com/google/googletest.git
+        cd googletest
+        cmake -B build -DCMAKE_BUILD_TYPE=Release
+        cmake --build build --config Release
+        cmake --install build --prefix ${{ runner.temp }}/gtest
+        
+    - name: Configure CMake
+      run: |
+        cmake -B build -G Ninja `
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} `
+          -DBUILD_TESTS=ON `
+          -DGTest_DIR=${{ runner.temp }}/gtest/lib/cmake/GTest
+        
+    - name: Build Readiness Tests
+      run: cmake --build build --config ${{ env.BUILD_TYPE }} --target readiness-tests
+      
+    - name: Run Readiness Tests
+      run: |
+        cd build/tests/unit
+        ./test_readiness_checker --gtest_output=xml:readiness-results.xml
+        
+    - name: Upload Test Results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: readiness-test-results-${{ matrix.os }}
+        path: build/tests/unit/readiness-results.xml
+        
+  # ==========================================================================
+  # Code Coverage Job
+  # ==========================================================================
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y lcov gcovr
+        
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: ${{ env.QT_VERSION }}
+        cache: true
+        
+    - name: Install Google Test
+      run: |
+        git clone https://github.com/google/googletest.git
+        cd googletest
+        cmake -B build -DCMAKE_BUILD_TYPE=Release
+        cmake --build build --config Release
+        sudo cmake --install build
+        
+    - name: Configure CMake with Coverage
+      run: |
+        cmake -B build -G Ninja \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DBUILD_TESTS=ON \
+          -DENABLE_COVERAGE=ON \
+          -DCMAKE_CXX_FLAGS="--coverage" \
+          -DCMAKE_C_FLAGS="--coverage"
+        
+    - name: Build with Coverage
+      run: cmake --build build --config Debug
+      
+    - name: Run All Tests
+      run: |
+        cd build
+        ctest --output-on-failure --verbose
+        
+    - name: Generate Coverage Report
+      run: |
+        lcov --capture --directory build --output-file coverage.info
+        lcov --remove coverage.info '/usr/*' '*/tests/*' '*/3rdparty/*' --output-file coverage_filtered.info
+        genhtml coverage_filtered.info --output-directory coverage_report
+        
+    - name: Upload Coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./coverage_filtered.info
+        flags: unittests
+        name: codecov-rawrxd
+        
+    - name: Upload Coverage Report
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-report
+        path: coverage_report/
+        
+  # ==========================================================================
+  # Test Summary Job
+  # ==========================================================================
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, ui-tests, readiness-tests]
+    if: always()
+    
+    steps:
+    - name: Download All Test Results
+      uses: actions/download-artifact@v3
+      with:
+        path: test-results
+        
+    - name: Generate Test Summary
+      run: |
+        echo "# Test Results Summary" > $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## Test Execution Status" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Test Suite | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|------------|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Unit Tests | ${{ needs.unit-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Integration Tests | ${{ needs.integration-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| UI Tests | ${{ needs.ui-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Readiness Tests | ${{ needs.readiness-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+        
+  # ==========================================================================
+  # Build Full Application (on test success)
+  # ==========================================================================
+  build-release:
+    name: Build Release
+    runs-on: windows-latest
+    needs: [unit-tests, integration-tests, ui-tests, readiness-tests]
+    if: success()
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: ${{ env.QT_VERSION }}
+        cache: true
+        
+    - name: Install Dependencies
+      run: |
+        choco install cmake ninja visualstudio2022-workload-vctools -y
+        
+    - name: Configure CMake
+      run: |
+        cmake -B build -G Ninja `
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} `
+          -DBUILD_TESTS=OFF
+        
+    - name: Build Application
+      run: cmake --build build --config ${{ env.BUILD_TYPE }}
+      
+    - name: Package Application
+      run: |
+        cd build
+        cpack -C ${{ env.BUILD_TYPE }}
+        
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: rawrxd-ide-windows
+        path: build/RawrXD-*.zip

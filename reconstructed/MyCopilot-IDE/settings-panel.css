@@ -1,0 +1,353 @@
+/* Settings Panel Styles for MyCopilot IDE */
+
+.settings-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 9998;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+.settings-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.settings-panel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 900px;
+    height: 80vh;
+    max-height: 700px;
+    background: var(--bg-primary, #1e1e1e);
+    border: 1px solid var(--border-color, #3c3c3c);
+    border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    opacity: 1;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.settings-panel.hidden {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.9);
+    pointer-events: none;
+}
+
+.settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-color, #3c3c3c);
+    background: var(--bg-secondary, #252525);
+}
+
+.settings-header h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-primary, #cccccc);
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary, #999);
+    font-size: 28px;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background 0.2s, color 0.2s;
+}
+
+.close-btn:hover {
+    background: var(--hover-bg, #3c3c3c);
+    color: var(--text-primary, #ffffff);
+}
+
+.settings-container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+.settings-tabs {
+    width: 200px;
+    border-right: 1px solid var(--border-color, #3c3c3c);
+    background: var(--bg-secondary, #252525);
+    overflow-y: auto;
+    padding: 12px 0;
+}
+
+.tab-btn {
+    width: 100%;
+    padding: 12px 20px;
+    background: none;
+    border: none;
+    color: var(--text-secondary, #999);
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    transition: background 0.2s, color 0.2s;
+    border-left: 3px solid transparent;
+}
+
+.tab-btn:hover {
+    background: var(--hover-bg, #2d2d2d);
+    color: var(--text-primary, #cccccc);
+}
+
+.tab-btn.active {
+    background: var(--bg-primary, #1e1e1e);
+    color: var(--accent-color, #007acc);
+    border-left-color: var(--accent-color, #007acc);
+}
+
+.tab-btn .icon {
+    font-size: 18px;
+    width: 24px;
+    text-align: center;
+}
+
+.settings-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+}
+
+.tab-content {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.tab-content h3 {
+    margin: 0 0 24px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary, #cccccc);
+    border-bottom: 1px solid var(--border-color, #3c3c3c);
+    padding-bottom: 12px;
+}
+
+.setting-group {
+    margin-bottom: 20px;
+}
+
+.setting-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--text-primary, #cccccc);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.setting-group label input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+.setting-group input[type="text"],
+.setting-group input[type="number"],
+.setting-group select {
+    width: 100%;
+    max-width: 400px;
+    padding: 8px 12px;
+    background: var(--input-bg, #2d2d2d);
+    border: 1px solid var(--border-color, #3c3c3c);
+    border-radius: 4px;
+    color: var(--text-primary, #cccccc);
+    font-size: 13px;
+    font-family: inherit;
+}
+
+.setting-group input[type="range"] {
+    width: 100%;
+    max-width: 400px;
+}
+
+.setting-group input[type="checkbox"] {
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+}
+
+.setting-group .unit {
+    margin-left: 8px;
+    color: var(--text-secondary, #999);
+    font-size: 12px;
+}
+
+.setting-group .value {
+    margin-left: 12px;
+    color: var(--accent-color, #007acc);
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.settings-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 24px;
+    border-top: 1px solid var(--border-color, #3c3c3c);
+    background: var(--bg-secondary, #252525);
+}
+
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background: var(--accent-color, #007acc);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--accent-hover, #005a9e);
+}
+
+.btn-secondary {
+    background: var(--bg-tertiary, #3c3c3c);
+    color: var(--text-primary, #cccccc);
+}
+
+.btn-secondary:hover {
+    background: var(--hover-bg, #4a4a4a);
+}
+
+/* Notification styles */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    background: var(--bg-secondary, #252525);
+    border: 1px solid var(--border-color, #3c3c3c);
+    border-radius: 4px;
+    color: var(--text-primary, #cccccc);
+    font-size: 13px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 10000;
+    opacity: 0;
+    transform: translateX(100%);
+    transition: all 0.3s ease;
+}
+
+.notification.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.notification-success {
+    border-left: 4px solid #4caf50;
+}
+
+.notification-error {
+    border-left: 4px solid #f44336;
+}
+
+.notification-info {
+    border-left: 4px solid #2196f3;
+}
+
+/* Dark theme overrides */
+[data-theme="dark"] {
+    --bg-primary: #1e1e1e;
+    --bg-secondary: #252525;
+    --bg-tertiary: #3c3c3c;
+    --border-color: #3c3c3c;
+    --text-primary: #cccccc;
+    --text-secondary: #999;
+    --accent-color: #007acc;
+    --accent-hover: #005a9e;
+    --hover-bg: #2d2d2d;
+    --input-bg: #2d2d2d;
+}
+
+/* Light theme */
+[data-theme="light"] {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f5f5;
+    --bg-tertiary: #e0e0e0;
+    --border-color: #d0d0d0;
+    --text-primary: #333333;
+    --text-secondary: #666666;
+    --accent-color: #007acc;
+    --accent-hover: #005a9e;
+    --hover-bg: #e8e8e8;
+    --input-bg: #ffffff;
+}
+
+/* High contrast theme */
+[data-theme="high-contrast"] {
+    --bg-primary: #000000;
+    --bg-secondary: #000000;
+    --bg-tertiary: #1a1a1a;
+    --border-color: #ffffff;
+    --text-primary: #ffffff;
+    --text-secondary: #ffffff;
+    --accent-color: #ffff00;
+    --accent-hover: #cccc00;
+    --hover-bg: #1a1a1a;
+    --input-bg: #000000;
+}
+
+/* Scrollbar styling */
+.settings-tabs::-webkit-scrollbar,
+.settings-content::-webkit-scrollbar {
+    width: 10px;
+}
+
+.settings-tabs::-webkit-scrollbar-track,
+.settings-content::-webkit-scrollbar-track {
+    background: var(--bg-secondary, #252525);
+}
+
+.settings-tabs::-webkit-scrollbar-thumb,
+.settings-content::-webkit-scrollbar-thumb {
+    background: var(--bg-tertiary, #3c3c3c);
+    border-radius: 5px;
+}
+
+.settings-tabs::-webkit-scrollbar-thumb:hover,
+.settings-content::-webkit-scrollbar-thumb:hover {
+    background: var(--hover-bg, #4a4a4a);
+}
