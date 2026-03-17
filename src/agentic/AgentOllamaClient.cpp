@@ -2,6 +2,7 @@
 // AgentOllamaClient.cpp — Streaming Ollama Client Implementation
 // =============================================================================
 #include "AgentOllamaClient.h"
+#include "RobustOllamaParser.h"
 #include <chrono>
 #include <iomanip>
 #include <iostream>
@@ -370,19 +371,12 @@ std::vector<std::string> AgentOllamaClient::ListModels() {
     if (resp.empty()) return models;
 
     try {
-        json_alias j = manual_parse_models(resp);
-        if (j.contains("models") && j["models"].is_array()) {
-            const json_alias& models_array = j["models"];
-            for (size_t i = 0; i < models_array.size(); ++i) {
-                const auto& model = models_array[i];
-                if (model.contains("name")) {
-                    std::string name = model["name"].get<std::string>();
-                    models.push_back(name);
-                    std::cerr << "[AgentOllamaClient] ListModels: Found model: " << name << "\n";
-                }
-            }
+        RawrXD::Agentic::RobustOllamaParser parser(resp);
+        auto model_entries = parser.parse_tags_response();
+        for (const auto& entry : model_entries) {
+            models.push_back(entry.name);
+            std::cerr << "[AgentOllamaClient] ListModels: Found model: " << entry.name << " (" << entry.family << ", " << entry.quantization << ")\n";
         }
-        std::cerr << "[AgentOllamaClient] ListModels: Successfully parsed " << models.size() << " models\n";
     } catch (const std::exception& e) {
         std::cerr << "[AgentOllamaClient] ListModels: Exception: " << e.what() << "\n";
     }

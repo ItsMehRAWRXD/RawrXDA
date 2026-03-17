@@ -73,6 +73,36 @@ if(WIN32 AND NOT DEFINED ENV{VSCMD_ARG_TGT_ARCH})
     message(STATUS "[SDK Fix] MT      = ${_SDK_BIN}/mt.exe")
 endif()
 
+# Provide explicit library search paths for all targets when not in a Dev Prompt.
+if(MSVC)
+    set(_RAWR_MSVC_LIBPATHS "")
+    if(DEFINED _MSVC_ROOT AND EXISTS "${_MSVC_ROOT}/lib/x64")
+        list(APPEND _RAWR_MSVC_LIBPATHS "${_MSVC_ROOT}/lib/x64")
+    endif()
+    if(DEFINED _MSVC_ROOT AND EXISTS "${_MSVC_ROOT}/lib/onecore/x64")
+        list(APPEND _RAWR_MSVC_LIBPATHS "${_MSVC_ROOT}/lib/onecore/x64")
+    endif()
+    if(DEFINED _WIN10_SDK_ROOT AND DEFINED _SDK_UCRT_VER AND EXISTS "${_WIN10_SDK_ROOT}/Lib/${_SDK_UCRT_VER}/ucrt/x64")
+        list(APPEND _RAWR_MSVC_LIBPATHS "${_WIN10_SDK_ROOT}/Lib/${_SDK_UCRT_VER}/ucrt/x64")
+    endif()
+    if(DEFINED _WIN10_SDK_ROOT AND DEFINED _SDK_UM_VER AND EXISTS "${_WIN10_SDK_ROOT}/Lib/${_SDK_UM_VER}/um/x64")
+        list(APPEND _RAWR_MSVC_LIBPATHS "${_WIN10_SDK_ROOT}/Lib/${_SDK_UM_VER}/um/x64")
+    endif()
+    if(_RAWR_MSVC_LIBPATHS)
+        link_directories(${_RAWR_MSVC_LIBPATHS})
+    endif()
+    foreach(_rawr_lib IN LISTS _RAWR_MSVC_LIBPATHS)
+        add_link_options("/LIBPATH:\"${_rawr_lib}\"")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /LIBPATH:\"${_rawr_lib}\"")
+        set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /LIBPATH:\"${_rawr_lib}\"")
+        set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /LIBPATH:\"${_rawr_lib}\"")
+        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /LIBPATH:\"${_rawr_lib}\"")
+        set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /LIBPATH:\"${_rawr_lib}\"")
+        set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} /LIBPATH:\"${_rawr_lib}\"")
+        set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} /LIBPATH:\"${_rawr_lib}\"")
+    endforeach()
+endif()
+
 # ============================================================================
 # Scaffold/Placeholder Enforcement Target
 # ============================================================================
@@ -119,26 +149,51 @@ add_link_options(/LTCG)
 # WebView2 and WIL are in d:/rawrxd/include/
 include_directories("d:/rawrxd/include")
 
-file(GLOB UI_SOURCES "src/ui/*.cpp")
-file(GLOB ASM_SOURCES "src/asm/RawrXD_IPC_Dispatcher.asm" "src/asm/RawrXD_Disasm_Kernel.asm")
+option(RAWRXD_BUILD_CLI "Build the rawrxd CLI console target" OFF)
+if(RAWRXD_BUILD_CLI)
+    file(GLOB UI_SOURCES "src/ui/*.cpp")
+    file(GLOB ASM_SOURCES "src/asm/RawrXD_IPC_Dispatcher.asm" "src/asm/RawrXD_Disasm_Kernel.asm")
 
-add_executable(rawrxd 
-    src/ui/entry_point.cpp
-    src/ui/RawrXD_MainLoop.cpp
-    src/asm/RawrXD_IPC_Dispatcher.asm
-    src/asm/RawrXD_Disasm_Kernel.asm
-    src/res/Resource.rc
-)
+    add_executable(rawrxd 
+        src/ui/entry_point.cpp
+        src/ui/RawrXD_MainLoop.cpp
+        src/asm/RawrXD_IPC_Dispatcher.asm
+        src/asm/RawrXD_Disasm_Kernel.asm
+        src/res/Resource.rc
+    )
+    set_target_properties(rawrxd PROPERTIES EXCLUDE_FROM_ALL TRUE EXCLUDE_FROM_DEFAULT_BUILD TRUE)
+    if(MSVC)
+        target_link_directories(rawrxd PRIVATE ${_RAWR_MSVC_LIBPATHS})
+        set(_rawr_link_flags "")
+        foreach(_rawr_lib IN LISTS _RAWR_MSVC_LIBPATHS)
+            target_link_options(rawrxd PRIVATE "/LIBPATH:\"${_rawr_lib}\"")
+            string(APPEND _rawr_link_flags " /LIBPATH:\\\"${_rawr_lib}\\\"")
+        endforeach()
+        if(_rawr_link_flags)
+            set_property(TARGET rawrxd PROPERTY LINK_FLAGS "${_rawr_link_flags}")
+        endif()
+    endif()
 
-target_link_libraries(rawrxd 
-    PRIVATE 
-    kernel32.lib 
-    user32.lib 
-    shell32.lib 
-    ole32.lib
-    advapi32.lib
-    version.lib
-)
+    if(MSVC)
+        set(_RAWR_UM_LIBDIR "${_WIN10_SDK_ROOT}/Lib/${_SDK_UM_VER}/um/x64")
+        target_link_libraries(rawrxd 
+            PRIVATE 
+            "${_RAWR_UM_LIBDIR}/kernel32.lib"
+            "${_RAWR_UM_LIBDIR}/user32.lib"
+            "${_RAWR_UM_LIBDIR}/gdi32.lib"
+            "${_RAWR_UM_LIBDIR}/winspool.lib"
+            "${_RAWR_UM_LIBDIR}/shell32.lib"
+            "${_RAWR_UM_LIBDIR}/ole32.lib"
+            "${_RAWR_UM_LIBDIR}/oleaut32.lib"
+            "${_RAWR_UM_LIBDIR}/uuid.lib"
+            "${_RAWR_UM_LIBDIR}/comdlg32.lib"
+            "${_RAWR_UM_LIBDIR}/advapi32.lib"
+            "${_RAWR_UM_LIBDIR}/version.lib"
+        )
+    else()
+        target_link_libraries(rawrxd PRIVATE kernel32 user32 shell32 ole32 advapi32 version)
+    endif()
+endif()
 
 # Resource compiler for icon/version
 enable_language(RC)
@@ -364,7 +419,6 @@ set(SOURCES
     # Three-layer hotpatch system (needed by decision tree)
     src/core/model_memory_hotpatch.cpp
     src/core/byte_level_hotpatcher.cpp
-    src/core/memory_patch_byte_search_stubs.cpp
     src/core/unified_hotpatch_manager.cpp
     src/core/proxy_hotpatcher.cpp
     src/core/model_bruteforce_engine.cpp
@@ -473,13 +527,10 @@ set(SOURCES
     
     # Missing link dependencies (enterprise license, swarm, flash attn stubs, tool registry)
     src/core/enterprise_license.cpp
-    src/core/enterprise_license_stubs.cpp
     src/core/enterprise_licensev2_impl.cpp
-    src/core/enterprise_devunlock_stub_masm.cpp
     src/core/camellia256_bridge.cpp
     src/core/swarm_coordinator.cpp
     src/core/swarm_worker.cpp
-    src/core/swarm_network_stubs.cpp
     src/tool_registry.cpp
 
     # License enforcement + feature manifest (LicenseEnforcer, g_FeatureManifest, featureName) — required by complete_server, hotpatch, perf_telemetry, enterprise_licensev2_impl
@@ -532,13 +583,13 @@ set(SOURCES
     src/core/license_anti_tampering.cpp
 
     # Reverse-engineered bridge stubs (Heartbeat_Shutdown, GPU_*, GetHighResTick, TicksTo*, CalculateCRC32, AllocateDMABuffer, Tensor_QuantizedMatMul)
-    src/win32app/reverse_engineered_stubs.cpp
+    # stub file removed
 
     # Support tier manager (SupportTierManager::Instance, GenerateStatusReport) — required by main, complete_server
     src/core/support_tier.cpp
 
     # Subsystem mode stubs (CompileMode, EncryptMode, InjectMode, etc.) — required by rawrxd_subsystem_api
-    src/core/subsystem_mode_stubs.cpp
+    # removed stub unit
 
     # Feature registry (FeatureRegistry::instance, registerFeature) — required by enterprise_feature_manager
     src/core/feature_registry.cpp
@@ -570,8 +621,6 @@ set(SOURCES
     # Win32IDE output/copilot/tree stubs (for RawrEngine / Gold when linking vscode_extension_api without full IDE)
 
     # Stubgen: AnalyzerDistiller + StreamingOrchestrator (C++ fallbacks, guarded by RAWR_HAS_MASM)
-    src/core/analyzer_distiller_stubs.cpp
-    src/core/streaming_orchestrator_stubs.cpp
 
     # PT Driver Contract — Page Table substrate (VEH watchpoints, COW snapshots, ASLR, large pages)
     src/core/pt_driver_contract.cpp
@@ -608,7 +657,6 @@ set(SOURCES
     src/core/feature_handlers.cpp
     src/core/auto_feature_registry.cpp
     src/core/intent_engine.cpp
-    src/core/missing_handler_stubs.cpp
     src/core/model_training_pipeline.cpp
     src/core/ssot_handlers.cpp
     src/core/ssot_beacon.cpp
@@ -890,7 +938,6 @@ set(SOURCES
     src/core/self_host_engine.cpp
     src/core/hardware_synthesizer.cpp
     src/core/mesh_brain.cpp
-    src/core/mesh_brain_asm_stubs.cpp
     src/core/speciator_engine.cpp
     src/core/neural_bridge.cpp
     src/core/omega_orchestrator.cpp
@@ -2091,7 +2138,6 @@ set(INFERENCE_ENGINE_SOURCES
     src/gguf_loader.cpp
     src/gguf_vocab_resolver.cpp
     src/streaming_gguf_loader.cpp
-    src/inference/vulkan_compute_min_stub.cpp
     src/compression_interface.cpp
     src/memory_core.cpp
     src/license_enforcement.cpp
@@ -2113,7 +2159,6 @@ set(INFERENCE_ENGINE_SOURCES
     src/core/engine_registry.cpp
     src/codec/compression.cpp
     src/codec/brutal_gzip.cpp
-    src/codec/deflate_brutal_stub.cpp
     src/utils/Diagnostics.cpp
 )
 
@@ -3018,11 +3063,8 @@ if(WIN32)
         src/agent/DiskRecoveryAgent.cpp
         src/core/local_parity_bridge.cpp
         src/core/subsystem_mode_fallbacks.cpp
-        src/core/subsystem_mode_stubs.cpp
         src/core/model_loader_fallbacks.cpp
         src/core/rawrxd_native_log_fallback.cpp
-        src/core/analyzer_distiller_stubs.cpp
-        src/core/streaming_orchestrator_stubs.cpp
         src/llm_adapter/ggufrunner_link_fallbacks.cpp
         src/agentic/masm_agent_failure_fallback.cpp
     )
@@ -3507,7 +3549,7 @@ endif()
 #   CMake cannot generate an ASM_MASM-only SHARED library for some generators
 #   (missing CMAKE_ASM_MASM_CREATE_SHARED_LIBRARY). Ensure C++ is the linker
 #   language by adding a tiny C++ TU and setting LINKER_LANGUAGE.
-if(WIN32 AND MSVC)
+if(WIN32 AND MSVC AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/security/uac_bypass_impl_stub.cpp")
     add_library(RawrXD-Crypto SHARED
         src/crypto_masm.asm
         src/security/uac_bypass_impl_stub.cpp
@@ -3532,7 +3574,7 @@ if(WIN32 AND MSVC)
         MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
     )
 else()
-    message(STATUS "RawrXD-Crypto skipped (requires WIN32 + MSVC + MASM)")
+    message(STATUS "RawrXD-Crypto skipped (requires WIN32 + MSVC + MASM + uac_bypass_impl_stub.cpp)")
 endif()
 
 # NOTE:
@@ -3570,28 +3612,32 @@ elseif(RAWR_ASAN AND NOT MSVC)
 endif()
 
 # Build only the SSOT objects needed by the ownership guard.
-add_library(ssot_stub_lane_objs OBJECT
-    ${CMAKE_SOURCE_DIR}/src/core/missing_handler_stubs.cpp
-    ${CMAKE_SOURCE_DIR}/src/core/ssot_missing_handlers_provider.cpp
-)
-target_compile_definitions(ssot_stub_lane_objs PRIVATE
-    RAWRXD_ENABLE_MISSING_HANDLER_STUBS=1
-)
-target_include_directories(ssot_stub_lane_objs PRIVATE
-    ${CMAKE_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/src/core
-)
+if(EXISTS "${CMAKE_SOURCE_DIR}/src/core/missing_handler_stubs.cpp")
+    add_library(ssot_stub_lane_objs OBJECT
+        ${CMAKE_SOURCE_DIR}/src/core/missing_handler_stubs.cpp
+        ${CMAKE_SOURCE_DIR}/src/core/ssot_missing_handlers_provider.cpp
+    )
+    target_compile_definitions(ssot_stub_lane_objs PRIVATE
+        RAWRXD_ENABLE_MISSING_HANDLER_STUBS=1
+    )
+    target_include_directories(ssot_stub_lane_objs PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/core
+    )
 
-add_custom_target(ssot_stub_lane_guard
-    COMMAND powershell -NoProfile -ExecutionPolicy Bypass
-        -File ${CMAKE_SOURCE_DIR}/tools/verify_stub_lane_handler_ownership.ps1
-        -RepoRoot ${CMAKE_SOURCE_DIR}
-        -BuildDir ${CMAKE_BINARY_DIR}
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    COMMENT "[CI Gate] Verifying SSOT stub-lane handler ownership"
-    VERBATIM
-)
-add_dependencies(ssot_stub_lane_guard ssot_stub_lane_objs)
+    add_custom_target(ssot_stub_lane_guard
+        COMMAND powershell -NoProfile -ExecutionPolicy Bypass
+            -File ${CMAKE_SOURCE_DIR}/tools/verify_stub_lane_handler_ownership.ps1
+            -RepoRoot ${CMAKE_SOURCE_DIR}
+            -BuildDir ${CMAKE_BINARY_DIR}
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMENT "[CI Gate] Verifying SSOT stub-lane handler ownership"
+        VERBATIM
+    )
+    add_dependencies(ssot_stub_lane_guard ssot_stub_lane_objs)
+else()
+    message(STATUS "[SSOT] missing_handler_stubs.cpp absent; stub lane guard disabled.")
+endif()
 
 option(RAWRXD_ENABLE_HEAVY_GATES "Run heavy ownership/compiled-symbol guards as part of self_test_gate" OFF)
 if(RAWRXD_ENABLE_HEAVY_GATES)
@@ -3648,29 +3694,33 @@ if(WIN32)
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
     )
 
-    add_executable(RawrXD-AutoFixCLI
-        src/app/cli_entrypoint.cpp
-        src/agent/quantum_agent_orchestrator.cpp
-        src/agentic/AgentOllamaClient.cpp
-        src/inference/gpu_dispatch_gate.cpp
-        src/cpu_inference_engine_autofix_stub.cpp
-        src/gguf_d3d12_bridge.cpp
-    )
-    target_include_directories(RawrXD-AutoFixCLI PRIVATE
-        ${CMAKE_SOURCE_DIR}/src
-        ${CMAKE_SOURCE_DIR}/include
-    )
-    target_link_libraries(RawrXD-AutoFixCLI PRIVATE
-        kernel32
-        user32
-        winhttp
-        d3d12
-        dxgi
-        d3dcompiler
-    )
-    set_target_properties(RawrXD-AutoFixCLI PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
-    )
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/cpu_inference_engine_autofix_stub.cpp")
+        add_executable(RawrXD-AutoFixCLI
+            src/app/cli_entrypoint.cpp
+            src/agent/quantum_agent_orchestrator.cpp
+            src/agentic/AgentOllamaClient.cpp
+            src/inference/gpu_dispatch_gate.cpp
+            src/cpu_inference_engine_autofix_stub.cpp
+            src/gguf_d3d12_bridge.cpp
+        )
+        target_include_directories(RawrXD-AutoFixCLI PRIVATE
+            ${CMAKE_SOURCE_DIR}/src
+            ${CMAKE_SOURCE_DIR}/include
+        )
+        target_link_libraries(RawrXD-AutoFixCLI PRIVATE
+            kernel32
+            user32
+            winhttp
+            d3d12
+            dxgi
+            d3dcompiler
+        )
+        set_target_properties(RawrXD-AutoFixCLI PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+        )
+    else()
+        message(STATUS "RawrXD-AutoFixCLI skipped (cpu_inference_engine_autofix_stub.cpp missing)")
+    endif()
 
     # ═══════════════════════════════════════════════════════════════════
     # GPU Inference Benchmark — v16.2-GPU-HYBRID Phase C

@@ -1,0 +1,53 @@
+Build dir: D:\rawrxd\build_prod
+[MAP] Found: D:\rawrxd\build_prod\bin\RawrXD-Win32IDE.map (20,319,965 bytes)
+Linker: C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\link.exe
+Response file: D:\rawrxd\build_prod\CMakeFiles\RawrXD-Win32IDE.dir\objects1.rsp
+Verbose log  : D:\rawrxd\build_prod\link_verbose_unresolved.txt
+
+Running linker pass with /VERBOSE ...
+Verbose output written to: D:\rawrxd\build_prod\link_verbose_unresolved.txt
+
+Unresolved symbols found: 0
+Stub files catalogued: 54
+
+Report written: d:\rawrxd\src\stub_audit_report.txt
+
+=== SUMMARY ===
+  LIVE  (implement) : 0
+  DEAD  (delete)    : 33
+  ORPHAN (inspect)  : 21
+
+Dead stub files eligible for git rm:
+  D:\rawrxd\src\agent\quantum_agent_orchestrator_stubs.cpp
+  D:\rawrxd\src\core\analyzer_distiller_stubs.cpp
+  D:\rawrxd\src\core\enterprise_license_stubs.cpp
+  D:\rawrxd\src\core\licensing_stubs.cpp
+  D:\rawrxd\src\core\memory_patch_byte_search_stubs.cpp
+  D:\rawrxd\src\core\mesh_brain_asm_stubs.cpp
+  D:\rawrxd\src\core\missing_handler_stubs.cpp
+  D:\rawrxd\src\core\monaco_core_stubs.cpp
+  D:\rawrxd\src\core\sqlite3_stubs.cpp
+  D:\rawrxd\src\core\streaming_orchestrator_stubs.cpp
+  D:\rawrxd\src\core\stubs.cpp
+  D:\rawrxd\src\core\subsystem_mode_stubs.cpp
+  D:\rawrxd\src\core\swarm_network_stubs.cpp
+  D:\rawrxd\src\core\test_masm_stubs.cpp
+  D:\rawrxd\src\core\universal_stub.cpp
+  D:\rawrxd\src\core\WebView2Container_stubs.cpp
+  D:\rawrxd\src\core\win32_ide_link_stubs.cpp
+  D:\rawrxd\src\engine\core_generator_stubs.cpp
+  D:\rawrxd\src\engine\inference_kernels_stubs.cpp
+  D:\rawrxd\src\inference\vulkan_compute_min_stub.cpp
+  D:\rawrxd\src\qtapp\compliance_logger_stub.hpp
+  D:\rawrxd\src\qtapp\gguf_loader_stub.hpp
+  D:\rawrxd\src\stubs\production_link_stubs.cpp
+  D:\rawrxd\src\telemetry\ai_metrics_stub.cpp
+  D:\rawrxd\src\win32app\digestion_engine_stub.cpp
+  D:\rawrxd\src\win32app\link_stubs_ssot_handlers.cpp
+  D:\rawrxd\src\win32app\link_stubs_win32ide_methods.cpp
+  D:\rawrxd\src\win32app\multi_file_search_stub.cpp
+  D:\rawrxd\src\win32app\reverse_engineered_stubs.cpp
+  D:\rawrxd\src\win32app\Win32IDE_CircularArchStub.cpp
+  D:\rawrxd\src\minimal_hub_stub.hpp
+  D:\rawrxd\src\rawrxd_cli_stub.cpp
+  D:\rawrxd\src\vulkan_compute_stub.cpp
