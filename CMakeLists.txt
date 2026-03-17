@@ -3843,4 +3843,5 @@ if(WIN32)
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
         OUTPUT_NAME RawrXD-KVBenchmark
     )
-    message(STATUS "[Phase E] KV Cache Benchmark target: RawrXD-KVBen
+    message(STATUS "[Phase E] KV Cache Benchmark target: RawrXD-KVBenchmark")
+endif()

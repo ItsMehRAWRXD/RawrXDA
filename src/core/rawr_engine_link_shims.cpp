@@ -240,8 +240,7 @@ int asm_omega_world_model_update(const void*, void*) { return 0; }
 int asm_perf_get_slot_count_v2() { return 0; }
 
 // Batch 28: deflate + masm agent failure
-int deflate_brutal_masm(const void* src, uint64_t src_len, void* dst, uint64_t dst_len) { return 0; }
-int masm_agent_failure_detect_simd(void) { return 0; }
+
 }
 
 // VS Code extension bridge stubs
