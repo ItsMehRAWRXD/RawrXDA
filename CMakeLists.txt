@@ -3845,3 +3845,22 @@ if(WIN32)
     )
     message(STATUS "[Phase E] KV Cache Benchmark target: RawrXD-KVBenchmark")
 endif()
+
+# Swarm smoke test (manual)
+add_executable(SwarmSmokeTest EXCLUDE_FROM_ALL
+    src/tests/SwarmSmokeTest.cpp
+    src/bridge/Win32SwarmBridge.cpp
+    src/bridge/SwarmIATRegistration.cpp
+    src/agentic/SubAgentManager.cpp
+    src/agentic/RobustOllamaParser.cpp
+    src/runtime_patcher.cpp
+    src/tests/swarm_smoke_stubs.cpp
+)
+target_include_directories(SwarmSmokeTest PRIVATE
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/include
+)
+if(WIN32)
+    target_link_libraries(SwarmSmokeTest PRIVATE user32 gdi32 shell32 ole32 oleaut32 uuid)
+endif()

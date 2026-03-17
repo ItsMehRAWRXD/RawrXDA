@@ -4,6 +4,7 @@
  * Architecture: C++20, no Qt, no exceptions
  */
 #include "release_agent.hpp"
+#include "gold_signer.hpp"
 #include "json_types.hpp"
 #include "self_test_gate.hpp"
 #include <cstdint>
@@ -225,7 +226,8 @@ bool ReleaseAgent::tagAndUpload() {
     if (devMode) { fprintf(stderr, "[INFO] Dev release mode: skipping signing and uploads.\n"); return true; }
     std::string binPath = (std::filesystem::current_path() / "build" / "bin" / "Release" / "RawrXD-Shell.exe").string();
     if (!std::filesystem::exists(binPath)) { notifyError(onError, "Binary not found: " + binPath); return false; }
-    if (!signBinary(binPath)) { notifyError(onError, "Binary signing failed"); return false; }
+    // GOLD_SIGN: prefer EV certificate for production releases
+    if (!goldSignBinary(binPath)) { notifyError(onError, "Binary signing failed"); return false; }
     auto raw = readBinaryFile(binPath);
     std::string sha256 = sha256Hex(raw);
     std::string blobName = "RawrXD-Shell-" + m_version + ".exe";
@@ -294,5 +296,154 @@ bool ReleaseAgent::tweetRelease(const std::string& text) {
     if (bearer.empty()) { m_lastError = "TWITTER_BEARER not set"; notifyError(onError, m_lastError); return false; }
     fprintf(stderr, "[INFO] Would tweet release: %s\n", text.c_str());
     if (onTweetSent) onTweetSent(text);
+    return true;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GOLD_SIGN: EV Certificate Signing for Production Release
+// ═══════════════════════════════════════════════════════════════════════════
+
+bool ReleaseAgent::goldSignBinary(const std::string& exePath) {
+    using namespace RawrXD;
+
+    // Build config from environment variables
+    GoldSignConfig cfg;
+
+    std::string thumbprint = getEnv("GOLD_SIGN_THUMBPRINT");
+    std::string subject    = getEnv("GOLD_SIGN_SUBJECT");
+    std::string csp        = getEnv("GOLD_SIGN_CSP");
+    std::string kc         = getEnv("GOLD_SIGN_KC");
+    std::string azEndpoint = getEnv("GOLD_SIGN_AZURE_ENDPOINT");
+
+    // Determine mode
+    if (!azEndpoint.empty()) {
+        cfg.mode = GoldSignMode::AzureTrustedSigning;
+        cfg.azureEndpoint = azEndpoint;
+        cfg.azureTenantId = getEnv("GOLD_SIGN_AZURE_TENANT");
+        cfg.azureProfile  = getEnv("GOLD_SIGN_AZURE_PROFILE");
+    } else if (!csp.empty() && !kc.empty()) {
+        cfg.mode = GoldSignMode::HardwareToken;
+        cfg.cspName      = csp;
+        cfg.keyContainer = kc;
+        cfg.tokenPin     = getEnv("GOLD_SIGN_TOKEN_PIN");
+        cfg.thumbprint   = thumbprint;
+    } else if (!thumbprint.empty()) {
+        cfg.mode = GoldSignMode::Thumbprint;
+        cfg.thumbprint = thumbprint;
+    } else if (!subject.empty()) {
+        cfg.mode = GoldSignMode::SubjectName;
+        cfg.subjectName = subject;
+    } else {
+        cfg.mode = GoldSignMode::AutoDetect;
+    }
+
+    // Optional overrides
+    std::string ts = getEnv("GOLD_SIGN_TIMESTAMP");
+    if (!ts.empty()) cfg.timestampUrl = ts;
+
+    std::string store = getEnv("GOLD_SIGN_STORE");
+    if (!store.empty()) cfg.certStore = store;
+
+    std::string digest = getEnv("GOLD_SIGN_DIGEST");
+    if (!digest.empty()) cfg.digestAlgorithm = digest;
+
+    std::string crossCert = getEnv("GOLD_SIGN_CROSS_CERT");
+    if (!crossCert.empty()) cfg.crossCertPath = crossCert;
+
+    std::string signtool = getEnv("SIGNTOOL");
+    if (!signtool.empty()) cfg.signtoolPath = signtool;
+
+    cfg.dualSign    = (getEnv("GOLD_SIGN_DUAL") == "1");
+    cfg.verifyAfter = true;
+    cfg.skipSigned  = true;
+
+    // Create signer
+    GoldSigner signer(cfg);
+
+    // Wire callbacks
+    signer.onFileSigned = [this](const std::string& file, bool ok) {
+        fprintf(stderr, "[ReleaseAgent] GOLD_SIGN %s: %s\n",
+                ok ? "OK" : "FAIL", file.c_str());
+        if (onGoldSigned) onGoldSigned(file, ok);
+    };
+    signer.onError = [this](const std::string& msg) {
+        notifyError(onError, "GOLD_SIGN: " + msg);
+    };
+
+    // Sign
+    GoldSignResult result = signer.signFile(exePath);
+
+    if (!result.signed_ok) {
+        m_lastError = "GOLD_SIGN failed: " + result.errorDetail;
+        notifyError(onError, m_lastError);
+
+        // Fall back to standard signing
+        fprintf(stderr, "[ReleaseAgent] Falling back to standard signBinary()...\n");
+        return signBinary(exePath);
+    }
+
+    fprintf(stderr, "[ReleaseAgent] GOLD_SIGN SUCCESS | SHA256: %s | File: %s\n",
+            result.sha256.c_str(), exePath.c_str());
+    return true;
+}
+
+bool ReleaseAgent::goldSignDirectory(const std::string& buildDir) {
+    using namespace RawrXD;
+
+    GoldSignConfig cfg;
+
+    // Same env-var resolution as goldSignBinary
+    std::string thumbprint = getEnv("GOLD_SIGN_THUMBPRINT");
+    std::string azEndpoint = getEnv("GOLD_SIGN_AZURE_ENDPOINT");
+
+    if (!azEndpoint.empty()) {
+        cfg.mode = GoldSignMode::AzureTrustedSigning;
+        cfg.azureEndpoint = azEndpoint;
+        cfg.azureTenantId = getEnv("GOLD_SIGN_AZURE_TENANT");
+        cfg.azureProfile  = getEnv("GOLD_SIGN_AZURE_PROFILE");
+    } else if (!thumbprint.empty()) {
+        cfg.mode = GoldSignMode::Thumbprint;
+        cfg.thumbprint = thumbprint;
+    } else {
+        cfg.mode = GoldSignMode::AutoDetect;
+    }
+
+    std::string ts = getEnv("GOLD_SIGN_TIMESTAMP");
+    if (!ts.empty()) cfg.timestampUrl = ts;
+    cfg.dualSign    = (getEnv("GOLD_SIGN_DUAL") == "1");
+    cfg.verifyAfter = true;
+    cfg.skipSigned  = true;
+
+    GoldSigner signer(cfg);
+
+    signer.onFileSigned = [this](const std::string& file, bool ok) {
+        if (onGoldSigned) onGoldSigned(file, ok);
+    };
+    signer.onError = [this](const std::string& msg) {
+        notifyError(onError, "GOLD_SIGN: " + msg);
+    };
+
+    auto results = signer.signDirectory(buildDir);
+
+    // Write attestation
+    signer.writeAttestation(buildDir, results);
+
+    // Check for any failures
+    int failed = 0;
+    for (const auto& r : results) {
+        if (!r.signed_ok) failed++;
+    }
+
+    if (failed > 0) {
+        char buf[128];
+        snprintf(buf, sizeof(buf), "GOLD_SIGN: %d of %zu files failed signing",
+                 failed, results.size());
+        m_lastError = buf;
+        notifyError(onError, m_lastError);
+        return false;
+    }
+
+    fprintf(stderr, "[ReleaseAgent] GOLD_SIGN directory complete: %zu files signed\n",
+            results.size());
     return true;
 }

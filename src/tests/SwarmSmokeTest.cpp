@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include "include/Win32SwarmBridge.h"
+#include "agentic/SubAgentManager.h"
 
 /**
  * @file SwarmSmokeTest.cpp

@@ -31,6 +31,7 @@
 #include <cctype>
 
 #include "../agentic/OllamaProvider.h"
+#include "../agentic/OrchestratorBridge.h"
 
 // ============================================================================
 // CONSTANTS
@@ -328,7 +329,30 @@ std::string Win32IDE::requestGhostTextCompletion(const std::string& context,
         if (isStale()) return "";
 
         if (provider == GhostProviderKind::Local) {
-            // ---- Local provider: prediction backend, then native model, then local Ollama prompt ----
+            // ---- Primary: OrchestratorBridge FIM (uses AgentOllamaClient + FIMPromptBuilder) ----
+            {
+                auto& orchBridge = RawrXD::Agent::OrchestratorBridge::Instance();
+                if (orchBridge.IsInitialized()) {
+                    RawrXD::Prediction::PredictionContext bCtx;
+                    bCtx.prefix       = context;
+                    bCtx.suffix       = suffix;
+                    bCtx.language     = language;
+                    bCtx.filePath     = filePath;
+                    bCtx.cursorLine   = cursorLine;
+                    bCtx.cursorColumn = cursorCol;
+
+                    auto bResult = orchBridge.RequestGhostText(bCtx);
+                    if (bResult.success && !bResult.completion.empty()) {
+                        std::lock_guard<std::mutex> lock(m_ghostTextCacheMutex);
+                        m_ghostTextMetrics.localWins++;
+                        return trimGhostText(bResult.completion);
+                    }
+                }
+            }
+
+            if (isStale()) return "";
+
+            // ---- Fallback: prediction backend, then native model, then local Ollama prompt ----
             if (!m_predictionProvider) {
                 std::string baseUrl = m_ollamaBaseUrl.empty() ? "http://localhost:11434" : m_ollamaBaseUrl;
                 m_predictionProvider = std::make_unique<OllamaProvider>(baseUrl);

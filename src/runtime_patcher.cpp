@@ -64,6 +64,7 @@ namespace IAT {
     constexpr uint64_t Win32IDE_initializeSwarmSystem = 20;
     constexpr uint64_t Win32IDE_createAcceleratorTable = 21;
     constexpr uint64_t Win32IDE_removeTab = 22;
+    constexpr uint64_t Win32IDE_addTab = 23;
     
     // AgenticBridge/SubAgent (48-63)
     constexpr uint64_t AgenticBridge_GetSubAgentManager = 48;

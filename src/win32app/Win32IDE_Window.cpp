@@ -1,5 +1,6 @@
 ﻿#include "Win32IDE.h"
 #include "../bridge/Win32SwarmBridge.h"
+#include "../agentic/OrchestratorBridge.h"
 #include <windowsx.h>
 #include <commctrl.h>
 #include <shellscalingapi.h>   // GetDpiForWindow
@@ -231,7 +232,27 @@ void Win32IDE::onCreate(HWND hwnd) {
     } else {
         LOG_INFO("Inference Engine initialized successfully");
     }
-    
+
+    // Initialize OrchestratorBridge (agentic + FIM inference via Ollama)
+    {
+        auto& bridge = RawrXD::Agent::OrchestratorBridge::Instance();
+        if (!bridge.IsInitialized()) {
+            std::string workDir = ".";
+            char cwd[MAX_PATH];
+            if (GetCurrentDirectoryA(MAX_PATH, cwd)) workDir = cwd;
+            bridge.Initialize(workDir, m_ollamaBaseUrl);
+            if (bridge.IsInitialized()) {
+                LOG_INFO("OrchestratorBridge initialized — Ollama connection active");
+            } else {
+                LOG_WARN("OrchestratorBridge init — Ollama not reachable (deferred)");
+            }
+        }
+    }
+
+    // Initialize Ghost Text (FIM completions)
+    initGhostText();
+    LOG_INFO("Ghost text subsystem initialized");
+
     // 3. Post-Creation Setup
     // Initialize default focus
     if (m_hwndEditor) {
@@ -244,6 +265,9 @@ void Win32IDE::onCreate(HWND hwnd) {
 
 void Win32IDE::onDestroy() {
     m_shuttingDown.store(true, std::memory_order_release);
+
+    // Shutdown Ghost Text before window teardown
+    shutdownGhostText();
 
     RawrXD::Bridge::ShutdownSwarmSystem();
 
