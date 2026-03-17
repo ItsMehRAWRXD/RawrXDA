@@ -6,11 +6,8 @@
 #include <cstdio>
 #include <chrono>
 
-// External reference to the masqueraded IAT slot (populated by RuntimePatcher)
-extern "C" {
-    // This symbol matches the name expected by runtime_masquerade.asm slot 20
-    __declspec(dllexport) int Win32IDE_initializeSwarmSystem(void* config);
-}
+// Forward-declare the IAT slot 20 export (defined below)
+// The definition at the bottom of this file provides the implementation.
 
 namespace RawrXD::Bridge {
 
