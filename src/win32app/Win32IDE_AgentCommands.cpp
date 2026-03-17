@@ -666,6 +666,28 @@ void Win32IDE::initializeAgenticBridge()
                     })
                     .detach();
 
+                // --- Surgical Slot 20 Activation ---
+                // 1. Register the bridge with the IAT (maps slot 20 to our C++ implementation)
+                if (RawrXD::Bridge::RegisterSwarmBridgeWithIAT()) {
+                    // 2. Perform actual initialization of the swarm system
+                    RawrXD::Bridge::SwarmInitConfig swarmConfig;
+                    memset(&swarmConfig, 0, sizeof(swarmConfig));
+                    swarmConfig.structSize = sizeof(RawrXD::Bridge::SwarmInitConfig);
+                    swarmConfig.maxSubAgents = 16;
+                    swarmConfig.taskTimeoutMs = 120000; // 2 minutes
+                    swarmConfig.enableGPUWorkStealing = 1;
+                    sprintf_s(swarmConfig.coordinatorModel, "gemma3:1b"); // Default coordinator
+
+                    if (RawrXD::Bridge::InitializeSwarmSystem(&swarmConfig) == S_OK) {
+                        LOG_INFO("Agentic Swarm System (Slot 20) initialized via bridge");
+                        appendToOutput("✅ Agentic Swarm System initialized\n", "Output", OutputSeverity::Info);
+                    } else {
+                        LOG_ERROR("Failed to initialize Agentic Swarm System via bridge");
+                    }
+                } else {
+                    LOG_ERROR("Failed to register Swarm Bridge with IAT (Slot 20 hole remains)");
+                }
+
                 LOG_INFO("Agentic Bridge fully initialized with enhancements");
             }
             else

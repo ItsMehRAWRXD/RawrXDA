@@ -1177,6 +1177,7 @@ target_sources(RawrEngine PRIVATE
     src/core/native_debugger_symbols.cpp
     src/agentic/AgentOllamaClient.cpp
     src/core/rawr_engine_link_shims.cpp
+    src/core/auto_feature_stub_impl.cpp
 )
 
 # Win32 system libraries (same as Gold)
@@ -1203,7 +1204,10 @@ list(REMOVE_ITEM GOLD_UNDERSCORE_SOURCES
     src/core/ssot_handlers_ext_runtime_minimal.cpp
     src/core/ssot_handlers_ext_isolated.cpp
 )
-list(APPEND GOLD_UNDERSCORE_SOURCES src/core/rawr_engine_link_shims.cpp)
+list(APPEND GOLD_UNDERSCORE_SOURCES
+    src/core/rawr_engine_link_shims.cpp
+    src/core/auto_feature_stub_impl.cpp
+)
 add_executable(RawrXD_Gold ${GOLD_UNDERSCORE_SOURCES} ${ASM_KERNEL_SOURCES})
 
 if(WIN32)

@@ -68,8 +68,8 @@ namespace IAT {
     // AgenticBridge/SubAgent (48-63)
     constexpr uint64_t AgenticBridge_GetSubAgentManager = 48;
     constexpr uint64_t SubAgentManager_getStatusSummary = 49;
-    constexpr uint64_t SubAgentManager_getTodoList = 50;
-    constexpr uint64_t SubAgentManager_getChainSteps = 51;
+    constexpr uint64_t SubAgentManager_getAgentCount = 50;
+    constexpr uint64_t SubAgentManager_isHealthy = 51;
     constexpr uint64_t SubAgentManager_getAllSubAgents = 52;
     constexpr uint64_t SubAgentManager_setTodoList = 53;
     constexpr uint64_t SubAgentManager_executeSwarm = 54;
@@ -125,11 +125,14 @@ static const SymbolMapping g_SymbolMappings[] = {
     {"Win32IDE_createSidebar", IAT::Win32IDE_createSidebar},
     {"Win32IDE_initializeSwarmSystem", IAT::Win32IDE_initializeSwarmSystem},
     {"Win32IDE_createAcceleratorTable", IAT::Win32IDE_createAcceleratorTable},
+    {"Win32IDE_removeTab", IAT::Win32IDE_removeTab},
+    {"Win32IDE_addTab", IAT::Win32IDE_addTab},
     
     // AgenticBridge methods
     {"AgenticBridge_GetSubAgentManager", IAT::AgenticBridge_GetSubAgentManager},
     {"SubAgentManager_getStatusSummary", IAT::SubAgentManager_getStatusSummary},
-    {"SubAgentManager_getTodoList", IAT::SubAgentManager_getTodoList},
+    {"SubAgentManager_getAgentCount", IAT::SubAgentManager_getAgentCount},
+    {"SubAgentManager_isHealthy", IAT::SubAgentManager_isHealthy},
     {"SubAgentManager_executeSwarm", IAT::SubAgentManager_executeSwarm},
     {"SubAgentManager_executeChain", IAT::SubAgentManager_executeChain},
     
