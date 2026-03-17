@@ -1,5 +1,8 @@
 #include "cpu_inference_engine.h"
 #include "streaming_gguf_loader.h"
+#include "inference/TitanLoaderDiagnostics.h"
+#include "inference/MemoryPressureGuard.h"
+#include "bridge/UnifiedModelMetadata.h"
 #include <algorithm>
 #include <cmath>
 #include <numeric>
@@ -30,6 +33,24 @@ bool CPUInferenceEngine::LoadModel(const std::string& model_path) {
 }
 
 bool CPUInferenceEngine::loadModel(const std::string& path) {
+    // Memory Pressure Guard Check
+    std::string msg;
+    // Check if the file exists and get size for memory check
+    try {
+        uint64_t fileSize = std::filesystem::file_size(path);
+        RawrXD::Inference::MemoryPressureGuard::LoadRequest req{fileSize, false, 1.25f};
+        if (RawrXD::Inference::MemoryPressureGuard::check_load(req, msg) == RawrXD::Inference::MemoryPressureGuard::Verdict::Block) {
+            std::cerr << "[CRITICAL] Model load blocked by Memory Manager: " << msg << std::endl;
+            return false;
+        }
+    } catch (...) {}
+
+    // Titan Diagnostic Probe
+    auto diag = RawrXD::Inference::TitanDiagnostics::probe();
+    if (!diag.dll_present || !diag.proc_table_valid) {
+        RawrXD::Inference::TitanDiagnostics::alert_user_on_fallback(diag);
+    }
+
     m_loader = std::make_unique<StreamingGGUFLoader>();
     if (!m_loader->Open(path)) {
         std::cerr << "Failed to open model: " << path << std::endl;
@@ -42,6 +63,15 @@ bool CPUInferenceEngine::loadModel(const std::string& path) {
     m_embeddingDim = metadata.embedding_dim;
     m_numLayers = metadata.layer_count;
     m_numHeads = metadata.head_count;
+
+    // Commit to Unified Metadata Bridge for GGUF
+    RawrXD::Bridge::UnifiedModelMetadata unifiedMeta;
+    unifiedMeta.source = "gguf";
+    unifiedMeta.family = metadata.architecture;
+    unifiedMeta.quantization = metadata.quant_name;
+    unifiedMeta.context_length = metadata.context_length;
+    unifiedMeta.parameter_count = 0; // Populate if possible from metadata
+    RawrXD::Bridge::MetadataRegistry::commit(unifiedMeta);
     
     // Initialize vocabulary from metadata
     if (!metadata.tokens.empty()) {

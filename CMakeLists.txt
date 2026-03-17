@@ -159,39 +159,55 @@ if(RAWRXD_BUILD_CLI)
         src/ui/RawrXD_MainLoop.cpp
         src/asm/RawrXD_IPC_Dispatcher.asm
         src/asm/RawrXD_Disasm_Kernel.asm
+        src/cli/rawrxd_cli_link_shims.cpp
         src/res/Resource.rc
     )
     set_target_properties(rawrxd PROPERTIES EXCLUDE_FROM_ALL TRUE EXCLUDE_FROM_DEFAULT_BUILD TRUE)
     if(MSVC)
         target_link_directories(rawrxd PRIVATE ${_RAWR_MSVC_LIBPATHS})
-        set(_rawr_link_flags "")
+        set(_RAWR_CLI_LIBPATHS "")
         foreach(_rawr_lib IN LISTS _RAWR_MSVC_LIBPATHS)
-            target_link_options(rawrxd PRIVATE "/LIBPATH:\"${_rawr_lib}\"")
-            string(APPEND _rawr_link_flags " /LIBPATH:\\\"${_rawr_lib}\\\"")
+            if(EXISTS "${_rawr_lib}")
+                target_link_options(rawrxd PRIVATE "/LIBPATH:\"${_rawr_lib}\"")
+                list(APPEND _RAWR_CLI_LIBPATHS "/LIBPATH:\"${_rawr_lib}\"")
+            endif()
         endforeach()
-        if(_rawr_link_flags)
-            set_property(TARGET rawrxd PROPERTY LINK_FLAGS "${_rawr_link_flags}")
+        if(_RAWR_CLI_LIBPATHS)
+            string(REPLACE ";" " " _RAWR_CLI_LIBPATHS_STR "${_RAWR_CLI_LIBPATHS}")
+            set_property(TARGET rawrxd APPEND_STRING PROPERTY LINK_FLAGS " ${_RAWR_CLI_LIBPATHS_STR}")
         endif()
     endif()
 
-    if(MSVC)
-        set(_RAWR_UM_LIBDIR "${_WIN10_SDK_ROOT}/Lib/${_SDK_UM_VER}/um/x64")
-        target_link_libraries(rawrxd 
-            PRIVATE 
-            "${_RAWR_UM_LIBDIR}/kernel32.lib"
-            "${_RAWR_UM_LIBDIR}/user32.lib"
-            "${_RAWR_UM_LIBDIR}/gdi32.lib"
-            "${_RAWR_UM_LIBDIR}/winspool.lib"
-            "${_RAWR_UM_LIBDIR}/shell32.lib"
-            "${_RAWR_UM_LIBDIR}/ole32.lib"
-            "${_RAWR_UM_LIBDIR}/oleaut32.lib"
-            "${_RAWR_UM_LIBDIR}/uuid.lib"
-            "${_RAWR_UM_LIBDIR}/comdlg32.lib"
-            "${_RAWR_UM_LIBDIR}/advapi32.lib"
-            "${_RAWR_UM_LIBDIR}/version.lib"
+    target_link_libraries(rawrxd PRIVATE
+        kernel32
+        user32
+        gdi32
+        winspool
+        shell32
+        ole32
+        oleaut32
+        uuid
+        comdlg32
+        advapi32
+        version
+        ws2_32
+    )
+    # Explicit absolute library paths ensure linking succeeds even if LIBPATH is dropped
+    if(DEFINED _WIN10_SDK_ROOT AND DEFINED _SDK_UM_VER)
+        target_link_libraries(rawrxd PRIVATE
+            "${_WIN10_SDK_ROOT}/Lib/${_SDK_UM_VER}/um/x64/kernel32.lib"
+            "${_WIN10_SDK_ROOT}/Lib/${_SDK_UM_VER}/um/x64/user32.lib"
+            "${_WIN10_SDK_ROOT}/Lib/${_SDK_UM_VER}/um/x64/gdi32.lib"
+            "${_WIN10_SDK_ROOT}/Lib/${_SDK_UM_VER}/um/x64/winspool.lib"
+            "${_WIN10_SDK_ROOT}/Lib/${_SDK_UM_VER}/um/x64/shell32.lib"
+            "${_WIN10_SDK_ROOT}/Lib/${_SDK_UM_VER}/um/x64/ole32.lib"
+            "${_WIN10_SDK_ROOT}/Lib/${_SDK_UM_VER}/um/x64/oleaut32.lib"
+            "${_WIN10_SDK_ROOT}/Lib/${_SDK_UM_VER}/um/x64/uuid.lib"
+            "${_WIN10_SDK_ROOT}/Lib/${_SDK_UM_VER}/um/x64/comdlg32.lib"
+            "${_WIN10_SDK_ROOT}/Lib/${_SDK_UM_VER}/um/x64/advapi32.lib"
+            "${_WIN10_SDK_ROOT}/Lib/${_SDK_UM_VER}/um/x64/version.lib"
+            "${_WIN10_SDK_ROOT}/Lib/${_SDK_UM_VER}/um/x64/ws2_32.lib"
         )
-    else()
-        target_link_libraries(rawrxd PRIVATE kernel32 user32 shell32 ole32 advapi32 version)
     endif()
 endif()
 
@@ -1160,6 +1176,7 @@ target_sources(RawrEngine PRIVATE
     src/core/native_debugger_engine.cpp
     src/core/native_debugger_symbols.cpp
     src/agentic/AgentOllamaClient.cpp
+    src/core/rawr_engine_link_shims.cpp
 )
 
 # Win32 system libraries (same as Gold)
@@ -1186,6 +1203,7 @@ list(REMOVE_ITEM GOLD_UNDERSCORE_SOURCES
     src/core/ssot_handlers_ext_runtime_minimal.cpp
     src/core/ssot_handlers_ext_isolated.cpp
 )
+list(APPEND GOLD_UNDERSCORE_SOURCES src/core/rawr_engine_link_shims.cpp)
 add_executable(RawrXD_Gold ${GOLD_UNDERSCORE_SOURCES} ${ASM_KERNEL_SOURCES})
 
 if(WIN32)
@@ -2268,6 +2286,8 @@ if(WIN32)
         src/ui/agentic_bridge.cpp
         src/win32app/v280_link_fallbacks.cpp
         src/win32app/RawrXD-Win32IDE.rc
+        src/bridge/Win32SwarmBridge.cpp
+        src/bridge/SwarmIATRegistration.cpp
     )
 
     # MASM64 UI Dispatcher

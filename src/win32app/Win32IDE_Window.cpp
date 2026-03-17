@@ -1,8 +1,10 @@
 ﻿#include "Win32IDE.h"
+#include "../bridge/Win32SwarmBridge.h"
 #include <windowsx.h>
 #include <commctrl.h>
 #include <shellscalingapi.h>   // GetDpiForWindow
 #include <cassert>
+#include <cstring>
 
 // Window Management Implementation for Win32IDE
 // Completes the GUI IDE loop by providing the missing Window Procedure and creation logic.
@@ -208,6 +210,21 @@ void Win32IDE::onCreate(HWND hwnd) {
     // Initialize Agentic Bridge for AI features
     initializeAgenticBridge();
     
+    // Register Swarm Bridge with IAT (Closes Slot 20 Gap) and start swarm
+    if (RawrXD::Bridge::RegisterSwarmBridgeWithIAT()) {
+        RawrXD::Bridge::SwarmInitConfig config{};
+        config.structSize = sizeof(config);
+        config.maxSubAgents = 8;
+        config.taskTimeoutMs = 30000;
+        config.enableGPUWorkStealing = TRUE;
+        strcpy_s(config.coordinatorModel, "phi3:mini");
+        if (FAILED(RawrXD::Bridge::InitializeSwarmSystem(&config))) {
+            OutputDebugStringA("Win32IDE: Swarm system init failed\n");
+        }
+    } else {
+        OutputDebugStringA("Win32IDE: Swarm bridge registration failed\n");
+    }
+
     // Kickstart Inference Engine (Native)
     if (!initializeInference()) {
         LOG_ERROR("Failed to initialize Inference Engine on startup");
@@ -227,6 +244,8 @@ void Win32IDE::onCreate(HWND hwnd) {
 
 void Win32IDE::onDestroy() {
     m_shuttingDown.store(true, std::memory_order_release);
+
+    RawrXD::Bridge::ShutdownSwarmSystem();
 
     // Parity-audit: stop watchdog before anything else so it can't race on
     // the HWND members we're about to tear down.

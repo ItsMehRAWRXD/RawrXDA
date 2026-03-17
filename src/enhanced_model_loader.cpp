@@ -1,5 +1,5 @@
 #include "enhanced_model_loader.h"
-
+#include "bridge/UnifiedModelMetadata.h"
 #include "cpu_inference_engine.h"
 #include "model_metadata_hotpatch.h"
 
@@ -218,6 +218,15 @@ bool EnhancedModelLoader::loadOllamaModel(const std::string& modelName) {
         );
 
     RawrXD::ModelMetadataHotpatch::forceAgentCapable(&metaBuf);
+
+    // Commit to Unified Metadata Bridge
+    RawrXD::Bridge::UnifiedModelMetadata unifiedMeta;
+    unifiedMeta.source = "ollama";
+    unifiedMeta.family = meta.found ? meta.family : "";
+    unifiedMeta.quantization = meta.found ? meta.quantization_level : "";
+    unifiedMeta.parameter_count = 0; // Populate if available
+    unifiedMeta.supports_tools = true; // Ollama models often support tools via their API
+    RawrXD::Bridge::MetadataRegistry::commit(unifiedMeta);
 
     const bool metaComplete = RawrXD::ModelMetadataHotpatch::isComplete(&metaBuf);
     std::cout << "[EnhancedModelLoader] metadata hotpatch for '" << modelName

@@ -9,6 +9,7 @@
 #include "RawrXD_AutonomousAgenticPipeline.h"
 #include "Win32IDE.h"
 #include "Win32IDE_AgenticBridge.h"
+#include "Win32SwarmBridge.h"
 #include <algorithm>
 #include <fstream>
 #include <sstream>
