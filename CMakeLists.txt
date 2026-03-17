@@ -1207,6 +1207,7 @@ list(REMOVE_ITEM GOLD_UNDERSCORE_SOURCES
 list(APPEND GOLD_UNDERSCORE_SOURCES
     src/core/rawr_engine_link_shims.cpp
     src/core/auto_feature_stub_impl.cpp
+    src/core/ignite_800b.cpp
 )
 add_executable(RawrXD_Gold ${GOLD_UNDERSCORE_SOURCES} ${ASM_KERNEL_SOURCES})
 
@@ -2167,6 +2168,7 @@ set(INFERENCE_ENGINE_SOURCES
     src/core/enterprise_licensev2_impl.cpp
     src/core/license_anti_tampering.cpp
     src/tools/license_validator_manifest.cpp
+    src/core/ignite_800b.cpp
     src/inference/inference_standalone_link_shims.cpp
     src/engine/gguf_core.cpp
     src/engine/inference_kernels.cpp
@@ -2182,6 +2184,7 @@ set(INFERENCE_ENGINE_SOURCES
     src/codec/compression.cpp
     src/codec/brutal_gzip.cpp
     src/utils/Diagnostics.cpp
+    src/core/ignite_800b.cpp
 )
 
 add_executable(RawrXD-InferenceEngine EXCLUDE_FROM_ALL ${INFERENCE_ENGINE_SOURCES})
@@ -3138,6 +3141,7 @@ if(WIN32)
         list(REMOVE_ITEM WIN32IDE_SOURCES
             src/win32app/agentic_bridge_headless.cpp
             src/win32app/Win32IDE_headless_stubs.cpp
+            src/core/ignite_800b.cpp
             src/stubs.cpp
             src/core/stubs.cpp
             src/core/universal_stub.cpp
@@ -3839,5 +3843,4 @@ if(WIN32)
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
         OUTPUT_NAME RawrXD-KVBenchmark
     )
-    message(STATUS "[Phase E] KV Cache Benchmark target: RawrXD-KVBenchmark")
-endif()
+    message(STATUS "[Phase E] KV Cache Benchmark target: RawrXD-KVBen
