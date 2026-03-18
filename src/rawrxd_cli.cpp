@@ -12,6 +12,7 @@
 #include "modules/react_generator.h"
 #include "modules/engine_manager.h"
 #include "modules/codex_ultimate.h"
+#include "diagnostics/self_diagnose.hpp"
 #include <iostream>
 #include <thread>
 #include <atomic>
@@ -246,9 +247,13 @@ void PrintBanner() {
 }
 
 int main(int argc, char** argv) {
+    RawrXD::Diagnostics::SelfDiagnoser::Install();
+    RAWRXD_PHASE_SET(RawrXD::Diagnostics::InitPhase::CoreInit, "CLI Entry");
+
     CLIState state;
     EnsureDirectories();
     PrintBanner();
+    RAWRXD_PHASE_SET(RawrXD::Diagnostics::InitPhase::Registry, "Parsed args begin");
     
     // Parse command line arguments
     bool chat_mode = false;
@@ -470,6 +475,7 @@ For more help: https://github.com/ItsMehRAWRXD/RawrXD/wiki
     shell_config.enable_autocomplete = true;
     
     state.shell = std::make_unique<InteractiveShell>(shell_config);
+    RAWRXD_PHASE_SET(RawrXD::Diagnostics::InitPhase::UI, "Shell initialized");
     
     // Handle one-shot chat if requested
     if (chat_mode) {
@@ -489,6 +495,8 @@ For more help: https://github.com/ItsMehRAWRXD/RawrXD/wiki
         }
         return 0;
     }
+
+    RAWRXD_PHASE_SET(RawrXD::Diagnostics::InitPhase::Ready, "Shell loop start");
 
     state.shell->Start(state.agent_engine.get(), state.memory_manager.get(), state.vsix_loader.get(),
                       nullptr, // React generator not needed in CLI

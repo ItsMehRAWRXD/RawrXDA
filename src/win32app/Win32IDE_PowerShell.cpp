@@ -885,10 +885,10 @@ void Win32IDE::initializePowerShellState() {
     m_nextPSJobId = 1;
     m_rawrXDModuleLoaded = false;
     
-    // Get initial state
-    getPowerShellVersion();
-    getPowerShellEdition();
-    getPowerShellExecutionPolicy();
+    // Keep startup non-blocking. Probe the shell lazily after the UI is live.
+    m_psState.version = "pending";
+    m_psState.edition = "pending";
+    m_psState.currentExecutionPolicy = "pending";
     
     m_psState.initialized = true;
 }

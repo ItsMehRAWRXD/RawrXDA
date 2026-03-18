@@ -9753,7 +9753,14 @@ void Win32IDE::handleGitCommand(int commandId)
 
 void Win32IDE::buildCommandRegistry()
 {
+    // Rebuild registry with stable storage to avoid pointer/index invalidation
+    constexpr size_t kRegistryReserve = 5000; // generous upper bound to avoid realloc during pushes
     m_commandRegistry.clear();
+    m_filteredCommands.clear();
+    m_fuzzyMatchPositions.clear();
+    m_commandRegistry.reserve(kRegistryReserve);
+    m_filteredCommands.reserve(kRegistryReserve);
+    m_fuzzyMatchPositions.reserve(kRegistryReserve);
 
     // File commands
     m_commandRegistry.push_back({1001, "File: New File", "Ctrl+N", "File"});

@@ -3,6 +3,7 @@
 #include "reverse_engineering/RawrDumpBin.hpp"
 #include "reverse_engineering/RawrCompiler.hpp"
 #include "core/rawrxd_state_mmf.hpp"
+#include "diagnostics/self_diagnose.hpp"
 #include "cpu_inference_engine.h"
 #include "cot_response_schema.hpp"
 #include "async_logger.hpp"
@@ -80,6 +81,7 @@ bool APIServer::Start(uint16_t port) {
     server_thread_ = std::make_unique<std::thread>([this]() {
         try {
             LogApiOperation("INFO", "START", "API Server initialization started on port " + std::to_string(port_));
+            RAWRXD_PHASE_SET(RawrXD::Diagnostics::InitPhase::Runtime, "API Server Start");
             
             // Log available endpoints
             LogApiOperation("INFO", "ENDPOINTS", "POST /api/generate");
@@ -101,6 +103,7 @@ bool APIServer::Start(uint16_t port) {
             int iteration = 0;
             while (is_running_.load()) {
                 try {
+                    RawrXD::Diagnostics::SelfDiagnoser::CheckHeap("ApiServerLoop");
                     ProcessPendingRequests();
                     HandleClientConnections();
                     

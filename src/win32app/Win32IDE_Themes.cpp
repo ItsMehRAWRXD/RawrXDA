@@ -1429,7 +1429,7 @@ void Win32IDE::showTransparencySlider() {
     dlgTemplate.dlg.cy = 100;
     dlgTemplate.menuArray = 0;
     dlgTemplate.classArray = 0;
-    wcscpy(dlgTemplate.titleArray, L"Window Transparency");
+    wcsncpy_s(dlgTemplate.titleArray, _countof(dlgTemplate.titleArray), L"Window Transparency", _TRUNCATE);
 
     s_sliderInstance = this;
     DialogBoxIndirectA(m_hInstance, &dlgTemplate.dlg, m_hwndMain, TransparencyDlgProc);
@@ -1699,7 +1699,7 @@ void Win32IDE::showThemePicker() {
     dlgTemplate.dlg.cy = 210;
     dlgTemplate.menuArray = 0;
     dlgTemplate.classArray = 0;
-    wcscpy(dlgTemplate.titleArray, L"RawrXD Theme Picker");
+    wcsncpy_s(dlgTemplate.titleArray, _countof(dlgTemplate.titleArray), L"RawrXD Theme Picker", _TRUNCATE);
 
     s_pickerInstance = this;
     DialogBoxIndirectA(m_hInstance, &dlgTemplate.dlg, m_hwndMain, ThemePickerDlgProc);

@@ -428,17 +428,20 @@ static LRESULT CALLBACK marketplaceWndProc(HWND hwnd, UINT msg, WPARAM wParam, L
                 MessageBoxW(hwnd, L"Select an extension from the list first.", L"Download & Install", MB_OK | MB_ICONINFORMATION);
                 return 0;
             }
-            MarketplaceExtension* ext = nullptr;
+            MarketplaceExtension selectedExt;
+            bool hasSelection = false;
             {
                 std::lock_guard<std::mutex> lock(s_extMutex);
-                if (sel >= 0 && sel < (int)s_extensions.size())
-                    ext = &s_extensions[sel];
+                if (sel >= 0 && sel < (int)s_extensions.size()) {
+                    selectedExt = s_extensions[sel];
+                    hasSelection = true;
+                }
             }
-            if (!ext || !ext->fromLiveMarketplace || ext->publisher.empty() || ext->extensionName.empty()) {
+            if (!hasSelection || !selectedExt.fromLiveMarketplace || selectedExt.publisher.empty() || selectedExt.extensionName.empty()) {
                 MessageBoxW(hwnd, L"Selected extension is not from VS Code Marketplace. Use \"Load from VS Code Marketplace\" first, or \"Install .vsix...\" for a local file.", L"Download & Install", MB_OK | MB_ICONINFORMATION);
                 return 0;
             }
-            if (ext->version.empty()) {
+            if (selectedExt.version.empty()) {
                 MessageBoxW(hwnd, L"No version available for this extension.", L"Download & Install", MB_OK | MB_ICONWARNING);
                 return 0;
             }
@@ -449,8 +452,8 @@ static LRESULT CALLBACK marketplaceWndProc(HWND hwnd, UINT msg, WPARAM wParam, L
             }
             char tempDirA[MAX_PATH * 2] = {};
             WideCharToMultiByte(CP_UTF8, 0, tempDir, -1, tempDirA, sizeof(tempDirA), nullptr, nullptr);
-            std::string vsixPathA = std::string(tempDirA) + ext->extensionName + "-" + ext->version + ".vsix";
-            if (!VSCodeMarketplace::DownloadVsix(ext->publisher, ext->extensionName, ext->version, vsixPathA)) {
+            std::string vsixPathA = std::string(tempDirA) + selectedExt.extensionName + "-" + selectedExt.version + ".vsix";
+            if (!VSCodeMarketplace::DownloadVsix(selectedExt.publisher, selectedExt.extensionName, selectedExt.version, vsixPathA)) {
                 MessageBoxW(hwnd, L"Download failed. Check network and try again.", L"Download & Install", MB_OK | MB_ICONWARNING);
                 return 0;
             }

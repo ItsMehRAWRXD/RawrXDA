@@ -413,7 +413,7 @@ void Win32IDE::paintAnnotations(HDC hdc, RECT& rc) {
         lf.lfItalic = TRUE;
         lf.lfWeight = FW_NORMAL;
         lf.lfCharSet = ANSI_CHARSET;
-        strcpy(lf.lfFaceName, "Consolas");
+        strncpy_s(lf.lfFaceName, _countof(lf.lfFaceName), "Consolas", _TRUNCATE);
         annFont = CreateFontIndirectA(&lf);
         // Store for reuse (const_cast since this is a cache-like operation)
         const_cast<Win32IDE*>(this)->m_annotationFont = annFont;

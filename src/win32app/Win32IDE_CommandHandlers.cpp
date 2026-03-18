@@ -27,89 +27,89 @@ void HandlePluginSignature(void* idePtr);
 
 // Helper to emit output consistently
 static void emitStatus(const CommandContext& ctx, const char* message) {
-    if (ctx.outputFn) ctx.outputLine(message);
+	if (ctx.outputFn) ctx.outputLine(message);
 }
 
 CommandResult HandleTranscendenceCoordinator(const CommandContext& ctx) {
-    HandleTranscendenceCoordinator(ctx.idePtr);
-    emitStatus(ctx, "Transcendence Coordinator executed");
-    return CommandResult::ok("Transcendence Coordinator executed");
+	HandleTranscendenceCoordinator(ctx.idePtr);
+	emitStatus(ctx, "Transcendence Coordinator executed");
+	return CommandResult::ok("Transcendence Coordinator executed");
 }
 
 CommandResult HandleVulkanRenderer(const CommandContext& ctx) {
-    HandleVulkanRenderer(ctx.idePtr);
-    emitStatus(ctx, "Vulkan Renderer invoked");
-    return CommandResult::ok("Vulkan Renderer invoked");
+	HandleVulkanRenderer(ctx.idePtr);
+	emitStatus(ctx, "Vulkan Renderer invoked");
+	return CommandResult::ok("Vulkan Renderer invoked");
 }
 
 CommandResult HandleOSExplorerInterceptor(const CommandContext& ctx) {
-    HandleOSExplorerInterceptor(ctx.idePtr);
-    emitStatus(ctx, "OS Explorer Interceptor invoked");
-    return CommandResult::ok("OS Explorer Interceptor invoked");
+	HandleOSExplorerInterceptor(ctx.idePtr);
+	emitStatus(ctx, "OS Explorer Interceptor invoked");
+	return CommandResult::ok("OS Explorer Interceptor invoked");
 }
 
 CommandResult HandleMCPHooks(const CommandContext& ctx) {
-    HandleMCPHooks(ctx.idePtr);
-    emitStatus(ctx, "MCP Hooks invoked");
-    return CommandResult::ok("MCP Hooks invoked");
+	HandleMCPHooks(ctx.idePtr);
+	emitStatus(ctx, "MCP Hooks invoked");
+	return CommandResult::ok("MCP Hooks invoked");
 }
 
 CommandResult HandleIOCPFileWatcher(const CommandContext& ctx) {
-    HandleIOCPFileWatcher(ctx.idePtr);
-    emitStatus(ctx, "IOCP File Watcher invoked");
-    return CommandResult::ok("IOCP File Watcher invoked");
+	HandleIOCPFileWatcher(ctx.idePtr);
+	emitStatus(ctx, "IOCP File Watcher invoked");
+	return CommandResult::ok("IOCP File Watcher invoked");
 }
 
 CommandResult HandleIDEDiagnosticAutoHealer(const CommandContext& ctx) {
-    HandleIDEDiagnosticAutoHealer(ctx.idePtr);
-    emitStatus(ctx, "IDE Diagnostic AutoHealer invoked");
-    return CommandResult::ok("IDE Diagnostic AutoHealer invoked");
+	HandleIDEDiagnosticAutoHealer(ctx.idePtr);
+	emitStatus(ctx, "IDE Diagnostic AutoHealer invoked");
+	return CommandResult::ok("IDE Diagnostic AutoHealer invoked");
 }
 
 CommandResult HandleConsentPrompt(const CommandContext& ctx) {
-    HandleConsentPrompt(ctx.idePtr);
-    emitStatus(ctx, "Consent Prompt shown");
-    return CommandResult::ok("Consent Prompt shown");
+	HandleConsentPrompt(ctx.idePtr);
+	emitStatus(ctx, "Consent Prompt shown");
+	return CommandResult::ok("Consent Prompt shown");
 }
 
 CommandResult HandleAutonomousAgent(const CommandContext& ctx) {
-    HandleAutonomousAgent(ctx.idePtr);
-    emitStatus(ctx, "Autonomous Agent invoked");
-    return CommandResult::ok("Autonomous Agent invoked");
+	HandleAutonomousAgent(ctx.idePtr);
+	emitStatus(ctx, "Autonomous Agent invoked");
+	return CommandResult::ok("Autonomous Agent invoked");
 }
 
 CommandResult HandleChatMessageRenderer(const CommandContext& ctx) {
-    HandleChatMessageRenderer(ctx.idePtr);
-    emitStatus(ctx, "Chat Message Renderer invoked");
-    return CommandResult::ok("Chat Message Renderer invoked");
+	HandleChatMessageRenderer(ctx.idePtr);
+	emitStatus(ctx, "Chat Message Renderer invoked");
+	return CommandResult::ok("Chat Message Renderer invoked");
 }
 
 CommandResult HandleToolActionStatus(const CommandContext& ctx) {
-    HandleToolActionStatus(ctx.idePtr);
-    emitStatus(ctx, "Tool Action Status invoked");
-    return CommandResult::ok("Tool Action Status invoked");
+	HandleToolActionStatus(ctx.idePtr);
+	emitStatus(ctx, "Tool Action Status invoked");
+	return CommandResult::ok("Tool Action Status invoked");
 }
 
 CommandResult HandleChatPanel(const CommandContext& ctx) {
-    HandleChatPanel(ctx.idePtr);
-    emitStatus(ctx, "Chat Panel invoked");
-    return CommandResult::ok("Chat Panel invoked");
+	HandleChatPanel(ctx.idePtr);
+	emitStatus(ctx, "Chat Panel invoked");
+	return CommandResult::ok("Chat Panel invoked");
 }
 
 CommandResult HandlePerfTelemetry(const CommandContext& ctx) {
-    HandlePerfTelemetry(ctx.idePtr);
-    emitStatus(ctx, "Performance Telemetry invoked");
-    return CommandResult::ok("Performance Telemetry invoked");
+	HandlePerfTelemetry(ctx.idePtr);
+	emitStatus(ctx, "Performance Telemetry invoked");
+	return CommandResult::ok("Performance Telemetry invoked");
 }
 
 CommandResult HandleUpdateSignature(const CommandContext& ctx) {
-    HandleUpdateSignature(ctx.idePtr);
-    emitStatus(ctx, "Update Signature executed");
-    return CommandResult::ok("Update Signature executed");
+	HandleUpdateSignature(ctx.idePtr);
+	emitStatus(ctx, "Update Signature executed");
+	return CommandResult::ok("Update Signature executed");
 }
 
 CommandResult HandlePluginSignature(const CommandContext& ctx) {
-    HandlePluginSignature(ctx.idePtr);
-    emitStatus(ctx, "Plugin Signature executed");
-    return CommandResult::ok("Plugin Signature executed");
+	HandlePluginSignature(ctx.idePtr);
+	emitStatus(ctx, "Plugin Signature executed");
+	return CommandResult::ok("Plugin Signature executed");
 }

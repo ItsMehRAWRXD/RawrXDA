@@ -130,7 +130,8 @@ void Win32IDE::createPowerShellPanel() {
     );
     SendMessage(m_hwndPowerShellStatusBar, WM_SETFONT, (WPARAM)hSmallFont, TRUE);
     
-    // Initialize PowerShell session
+    // Initialize PowerShell UI only. The shell session itself is started lazily
+    // on first use so the IDE can finish painting immediately.
     initializePowerShellPanel();
 
     // LOGGING AS REQUESTED
@@ -145,9 +146,8 @@ void Win32IDE::createPowerShellPanel() {
     appendPowerShellOutput("═══════════════════════════════════════════════════════════════\n", RGB(0, 255, 255));
     appendPowerShellOutput("\n", RGB(200, 200, 200));
     
-    std::string version = getPowerShellVersion();
-    appendPowerShellOutput("PowerShell Version: " + version + "\n", RGB(0, 255, 0));
-    appendPowerShellOutput("Edition: " + getPowerShellEdition() + "\n", RGB(0, 255, 0));
+    appendPowerShellOutput("PowerShell Version: pending (lazy start)\n", RGB(0, 255, 0));
+    appendPowerShellOutput("Edition: pending (lazy start)\n", RGB(0, 255, 0));
     appendPowerShellOutput("\nType commands below or click 'Load RawrXD' to access RawrXD.ps1 functions\n", RGB(200, 200, 200));
     appendPowerShellOutput("\nCommands:\n", RGB(255, 255, 0));
     appendPowerShellOutput("  - Enter: Execute command\n", RGB(150, 150, 150));
@@ -245,8 +245,13 @@ void Win32IDE::initializePowerShellPanel() {
         updatePowerShellStatus();
     };
     
-    // Start PowerShell
-    startPowerShellSession();
+    // Defer launching the shell process until the first command is executed.
+    // This avoids a multi-second launch stall during WM_CREATE / startup.
+    m_powerShellSessionActive = false;
+    m_psState.version = "pending";
+    m_psState.edition = "pending";
+    m_psState.currentExecutionPolicy = "pending";
+    updatePowerShellStatus();
 }
 
 // ============================================================================
@@ -393,6 +398,10 @@ void Win32IDE::executePowerShellInput() {
 }
 
 void Win32IDE::executePowerShellPanelCommand(const std::string& command) {
+    if (!m_powerShellSessionActive) {
+        startPowerShellSession();
+    }
+
     // Route to active terminal: tabbed terminals (Tier2) or dedicated PowerShell session
     if (!m_terminalTabs.empty() && m_activeTerminalTab >= 0 && m_activeTerminalTab < static_cast<int>(m_terminalTabs.size())) {
         auto& tab = m_terminalTabs[m_activeTerminalTab];
@@ -590,7 +599,8 @@ void Win32IDE::updatePowerShellStatus() {
         status += "Not Active";
     }
     
-    status += " | " + getPowerShellVersion();
+    status += " | ";
+    status += m_psState.version.empty() ? "pending" : m_psState.version;
     
     SetWindowTextA(m_hwndPowerShellStatusBar, status.c_str());
 }

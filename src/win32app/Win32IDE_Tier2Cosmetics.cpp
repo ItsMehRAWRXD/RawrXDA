@@ -28,6 +28,7 @@
 #include <set>
 #include <functional>
 #include <regex>
+#include <cstdint>
 
 // SCAFFOLD_166: Tier 2 cosmetics and fonts
 
@@ -1434,6 +1435,7 @@ void Win32IDE::showFindAllReferences(const std::string& symbol,
     }
 
     m_referenceResults = results;
+    m_referenceResultsVersion++;
     m_referenceSymbol = symbol;
     m_referencePanelVisible = true;
 
@@ -1508,7 +1510,10 @@ void Win32IDE::showFindAllReferences(const std::string& symbol,
             child.hInsertAfter = TVI_LAST;
             child.item.mask = TVIF_TEXT | TVIF_PARAM;
             child.item.pszText = lineLabel;
-            child.item.lParam = (LPARAM)(ref - &m_referenceResults[0]);
+            // Pack version + index to detect stale selections after a refresh
+            uint64_t idx = static_cast<uint64_t>(ref - &m_referenceResults[0]);
+            uint64_t packed = (static_cast<uint64_t>(m_referenceResultsVersion) << 32) | idx;
+            child.item.lParam = (LPARAM)packed;
             TreeView_InsertItem(m_hwndReferenceTree, &child);
         }
 
@@ -1602,8 +1607,13 @@ LRESULT CALLBACK Win32IDE::ReferencePanelProc(HWND hwnd, UINT msg, WPARAM wParam
                 item.mask = TVIF_PARAM;
                 item.hItem = hItem;
                 TreeView_GetItem(ide->m_hwndReferenceTree, &item);
-                if (item.lParam >= 0) {
-                    ide->navigateToReference((int)item.lParam);
+                uint64_t packed = static_cast<uint64_t>(item.lParam);
+                uint32_t ver = static_cast<uint32_t>(packed >> 32);
+                uint32_t idx = static_cast<uint32_t>(packed & 0xFFFFFFFFu);
+                if (ver == ide->m_referenceResultsVersion && idx < ide->m_referenceResults.size()) {
+                    ide->navigateToReference(static_cast<int>(idx));
+                } else {
+                    OutputDebugStringA("[ReferencePanel] stale selection ignored (version mismatch)\n");
                 }
             }
         }
@@ -1624,8 +1634,13 @@ LRESULT CALLBACK Win32IDE::ReferencePanelProc(HWND hwnd, UINT msg, WPARAM wParam
                 item.mask = TVIF_PARAM;
                 item.hItem = hItem;
                 TreeView_GetItem(ide->m_hwndReferenceTree, &item);
-                if (item.lParam >= 0) {
-                    ide->navigateToReference((int)item.lParam);
+                uint64_t packed = static_cast<uint64_t>(item.lParam);
+                uint32_t ver = static_cast<uint32_t>(packed >> 32);
+                uint32_t idx = static_cast<uint32_t>(packed & 0xFFFFFFFFu);
+                if (ver == ide->m_referenceResultsVersion && idx < ide->m_referenceResults.size()) {
+                    ide->navigateToReference(static_cast<int>(idx));
+                } else {
+                    OutputDebugStringA("[ReferencePanel] stale selection ignored (version mismatch)\n");
                 }
             }
             return 0;

@@ -1141,9 +1141,11 @@ private:
     HWND m_hwndCommandPaletteList;
     bool m_commandPaletteVisible;
     WNDPROC m_oldCommandPaletteInputProc;
-    std::vector<CommandPaletteItem> m_commandRegistry;
-    std::vector<CommandPaletteItem> m_filteredCommands;
-    std::vector<std::vector<int>> m_fuzzyMatchPositions; // per-item match highlight positions
+    std::vector<CommandPaletteItem> m_commandRegistry;      // reserved large upfront to avoid realloc invalidation
+    std::vector<CommandPaletteItem> m_filteredCommands;     // mirrors registry; also reserved
+    std::vector<std::vector<int>> m_fuzzyMatchPositions;    // per-item match highlight positions
+    uint64_t m_commandRegistryVersion = 0;                  // bump on rebuild to detect stale filtered indexes
+    uint64_t m_filteredVersion = 0;                         // version of current filtered list
     std::unordered_map<int, int> m_commandMRU; // commandId -> usage count (session-only, no disk)
 
     // Utility
@@ -5248,6 +5250,7 @@ private:
     bool m_referencePanelVisible = false;
     std::string m_referenceSymbol;
     std::vector<ReferenceResult> m_referenceResults;
+    uint32_t m_referenceResultsVersion = 0;  // bump whenever results refresh
     HFONT m_referenceFont     = nullptr;
 
     // ── CodeLensEntry ──

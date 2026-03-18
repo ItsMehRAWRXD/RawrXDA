@@ -140,6 +140,69 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
             SetForegroundWindow(hwnd);
             return 0;
 
+        // Deferred startup bootstrap: runs after the window is visible so
+        // expensive runtime wiring cannot block WM_CREATE / CreateWindowEx.
+        case WM_APP + 200:
+        {
+            LOG_INFO("Deferred startup bootstrap running");
+
+            // Initialize Agentic Bridge for AI features
+            initializeAgenticBridge();
+
+            // Register Swarm Bridge with IAT (Closes Slot 20 Gap) and start swarm
+            if (RawrXD::Bridge::RegisterSwarmBridgeWithIAT()) {
+                RawrXD::Bridge::SwarmInitConfig config{};
+                config.structSize = sizeof(config);
+                config.maxSubAgents = 8;
+                config.taskTimeoutMs = 30000;
+                config.enableGPUWorkStealing = TRUE;
+                strcpy_s(config.coordinatorModel, "phi3:mini");
+                if (FAILED(RawrXD::Bridge::InitializeSwarmSystem(&config))) {
+                    OutputDebugStringA("Win32IDE: Swarm system init failed\n");
+                }
+            } else {
+                OutputDebugStringA("Win32IDE: Swarm bridge registration failed\n");
+            }
+
+            // Kickstart Inference Engine (Native)
+            if (!initializeInference()) {
+                LOG_ERROR("Failed to initialize Inference Engine on startup");
+            } else {
+                LOG_INFO("Inference Engine initialized successfully");
+            }
+
+            // Initialize OrchestratorBridge (agentic + FIM inference via Ollama)
+            {
+                auto& bridge = RawrXD::Agent::OrchestratorBridge::Instance();
+                if (!bridge.IsInitialized()) {
+                    std::string workDir = ".";
+                    char cwd[MAX_PATH];
+                    if (GetCurrentDirectoryA(MAX_PATH, cwd)) workDir = cwd;
+                    bridge.Initialize(workDir, m_ollamaBaseUrl);
+                    if (bridge.IsInitialized()) {
+                        LOG_INFO("OrchestratorBridge initialized — Ollama connection active");
+                    } else {
+                        LOG_WARN("OrchestratorBridge init — Ollama not reachable (deferred)");
+                    }
+                }
+            }
+
+            // Initialize Ghost Text (FIM completions)
+            initGhostText();
+            LOG_INFO("Ghost text subsystem initialized");
+
+            // Refresh explorer contents after the app is already visible.
+            PostMessage(hwnd, WM_APP + 201, 0, 0);
+            return 0;
+        }
+
+        case WM_APP + 201:
+            if (m_hwndSidebar && IsWindow(m_hwndSidebar) && m_hwndExplorerTree)
+            {
+                refreshFileTree();
+            }
+            return 0;
+
         case WM_ACTIVATE: {
             WORD state = LOWORD(wParam);
             const char* stateStr = (state == WA_INACTIVE) ? "INACTIVE"
@@ -207,52 +270,6 @@ void Win32IDE::onCreate(HWND hwnd) {
     // Status Bar (Bottom strip)
     createStatusBar(hwnd);
     
-    // 2. Initialize Logic Components
-    // Initialize Agentic Bridge for AI features
-    initializeAgenticBridge();
-    
-    // Register Swarm Bridge with IAT (Closes Slot 20 Gap) and start swarm
-    if (RawrXD::Bridge::RegisterSwarmBridgeWithIAT()) {
-        RawrXD::Bridge::SwarmInitConfig config{};
-        config.structSize = sizeof(config);
-        config.maxSubAgents = 8;
-        config.taskTimeoutMs = 30000;
-        config.enableGPUWorkStealing = TRUE;
-        strcpy_s(config.coordinatorModel, "phi3:mini");
-        if (FAILED(RawrXD::Bridge::InitializeSwarmSystem(&config))) {
-            OutputDebugStringA("Win32IDE: Swarm system init failed\n");
-        }
-    } else {
-        OutputDebugStringA("Win32IDE: Swarm bridge registration failed\n");
-    }
-
-    // Kickstart Inference Engine (Native)
-    if (!initializeInference()) {
-        LOG_ERROR("Failed to initialize Inference Engine on startup");
-    } else {
-        LOG_INFO("Inference Engine initialized successfully");
-    }
-
-    // Initialize OrchestratorBridge (agentic + FIM inference via Ollama)
-    {
-        auto& bridge = RawrXD::Agent::OrchestratorBridge::Instance();
-        if (!bridge.IsInitialized()) {
-            std::string workDir = ".";
-            char cwd[MAX_PATH];
-            if (GetCurrentDirectoryA(MAX_PATH, cwd)) workDir = cwd;
-            bridge.Initialize(workDir, m_ollamaBaseUrl);
-            if (bridge.IsInitialized()) {
-                LOG_INFO("OrchestratorBridge initialized — Ollama connection active");
-            } else {
-                LOG_WARN("OrchestratorBridge init — Ollama not reachable (deferred)");
-            }
-        }
-    }
-
-    // Initialize Ghost Text (FIM completions)
-    initGhostText();
-    LOG_INFO("Ghost text subsystem initialized");
-
     // 3. Post-Creation Setup
     // Initialize default focus
     if (m_hwndEditor) {
@@ -261,6 +278,10 @@ void Win32IDE::onCreate(HWND hwnd) {
 
     // 4. Create keyboard accelerator table for Build shortcuts
     createAcceleratorTable();
+
+    // Defer heavy runtime initialization until after the window is shown and
+    // the message loop is running, so WM_CREATE does not block the launch path.
+    PostMessage(hwnd, WM_APP + 200, 0, 0);
 }
 
 void Win32IDE::onDestroy() {

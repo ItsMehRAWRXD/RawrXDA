@@ -21,6 +21,7 @@
 #include <iomanip>
 #include <vector>
 #include <string>
+#include <cstring>
 #include <commctrl.h>
 
 #pragma comment(lib, "dwrite.lib")
@@ -168,9 +169,13 @@ static LRESULT CALLBACK emojiPickerWndProc(HWND hwnd, UINT msg, WPARAM wParam, L
                 HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, (len + 1) * sizeof(wchar_t));
                 if (hMem) {
                     wchar_t* p = (wchar_t*)GlobalLock(hMem);
-                    wcscpy(p, entry.emoji);
-                    GlobalUnlock(hMem);
-                    SetClipboardData(CF_UNICODETEXT, hMem);
+                    if (p) {
+                        memcpy(p, entry.emoji, (len + 1) * sizeof(wchar_t));
+                        GlobalUnlock(hMem);
+                        SetClipboardData(CF_UNICODETEXT, hMem);
+                    } else {
+                        GlobalFree(hMem);
+                    }
                 }
                 CloseClipboard();
             }

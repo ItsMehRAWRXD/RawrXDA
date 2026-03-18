@@ -311,8 +311,15 @@ void Win32IDE::createPrimarySidebar(HWND hwndParent)
     createExtensionsView(m_hwndSidebarContent);
     createDiskRecoveryView(m_hwndSidebarContent);
 
-    // Default to Explorer view
-    setSidebarView(SidebarView::Explorer);
+    // Default to Explorer view, but keep startup responsive by deferring the
+    // initial directory population until after the window is visible.
+    m_currentSidebarView = SidebarView::Explorer;
+    if (m_hwndSidebarTitle)
+        SetWindowTextA(m_hwndSidebarTitle, "File Explorer");
+    if (m_hwndExplorerTree)
+        ShowWindow(m_hwndExplorerTree, SW_SHOW);
+    if (m_hwndExplorerToolbar)
+        ShowWindow(m_hwndExplorerToolbar, SW_SHOW);
 
     appendToOutput("Primary Sidebar initialized\n", "Output", OutputSeverity::Info);
     appendToOutput("[System] File Explorer: View > File Explorer (Ctrl+Shift+E) or Activity Bar > Files\n", "Output",

@@ -604,7 +604,7 @@ static void parseCmdLine(LPSTR lpCmdLine, int& argc, char**& argv)
             {
                 token = token.substr(1);
                 std::string rest;
-                while (token.back() != '"' && std::getline(iss, rest, '"'))
+                while (!token.empty() && token.back() != '"' && std::getline(iss, rest, '"'))
                 {
                     token += " " + rest;
                 }
@@ -617,8 +617,9 @@ static void parseCmdLine(LPSTR lpCmdLine, int& argc, char**& argv)
         }
     }
 
+    ptrs.reserve(args.size() + 1);
     for (auto& a : args)
-        ptrs.push_back(&a[0]);
+        ptrs.push_back(const_cast<char*>(a.c_str()));
     ptrs.push_back(nullptr);
 
     argc = static_cast<int>(args.size());

@@ -682,7 +682,6 @@ set(SOURCES
     src/core/ssot_handlers.cpp
     src/core/ssot_beacon.cpp
     src/core/ssot_handlers_ext_runtime_minimal.cpp
-    src/core/ssot_validation.cpp
 
     # Unified Command Dispatch — Zero-drift SSOT dispatch (replaces manual registration)
     src/core/unified_command_dispatch.cpp
@@ -2515,6 +2514,8 @@ if(WIN32)
         src/security/InputSanitizer.cpp
         src/core/ConfigurationValidator.cpp
         src/inference/PerformanceMonitor.cpp
+        src/diagnostics/self_diagnose.cpp
+        src/diagnostics/pattern_scan.cpp
         src/rawrxd_inference.cpp
         src/rawrxd_model_loader.cpp
         src/rawrxd_transformer.cpp
@@ -2741,7 +2742,6 @@ if(WIN32)
         src/agentic/AgentOllamaClient.cpp
         src/core/ssot_handlers.cpp
         src/core/ssot_handlers_ext_isolated.cpp
-        src/core/ssot_validation.cpp
         src/core/win32_ide_link_stubs.cpp
         src/core/win32ide_asm_fallback.cpp
 
