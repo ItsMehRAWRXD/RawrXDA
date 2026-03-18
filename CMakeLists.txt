@@ -161,6 +161,11 @@ if(RAWRXD_BUILD_CLI)
         src/asm/RawrXD_Disasm_Kernel.asm
         src/cli/rawrxd_cli_link_shims.cpp
         src/res/Resource.rc
+        # Agentic components for CLI Ollama testing
+        src/agentic/OrchestratorBridge.cpp
+        src/agentic/AgentOllamaClient.cpp
+        src/agentic/FIMPromptBuilder.cpp
+        src/agentic/RobustOllamaParser.cpp
     )
     set_target_properties(rawrxd PROPERTIES EXCLUDE_FROM_ALL TRUE EXCLUDE_FROM_DEFAULT_BUILD TRUE)
     if(MSVC)
@@ -1026,6 +1031,9 @@ endif()
 
 # Build target-scoped SSOT ownership partition for RawrEngine only.
 set(RAWR_ENGINE_SOURCES ${SOURCES})
+list(REMOVE_ITEM RAWR_ENGINE_SOURCES
+    src/core/ssot_validation.cpp
+)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/agent/quantum_missing_impl.cpp")
     # RawrEngine currently relies on quantum_missing_impl.cpp for additional
     # QuantumAutonomousTodoSystem/QuantumMultiModelAgentCycling definitions.
@@ -1096,6 +1104,20 @@ elseif(RAWR_SSOT_PROVIDER_UPPER STREQUAL "FEATURES")
         src/core/ssot_handlers_ext.cpp
     )
 endif()
+
+# RawrEngine requires the core observability/safety singletons and the shared
+# feature handlers used by SSOT/unified dispatch. Ensure they are linked even
+# in headless mode.
+list(APPEND RAWR_ENGINE_SOURCES
+    src/logging/Logger.cpp
+    src/security/InputSanitizer.cpp
+    src/core/ConfigurationValidator.cpp
+    src/inference/PerformanceMonitor.cpp
+    src/agentic/ErrorRecoveryManager.cpp
+
+    # Headless-safe production command handlers for SSOT/unified dispatch.
+    src/core/rawrengine_command_handlers.cpp
+)
 
 list(REMOVE_DUPLICATES RAWR_ENGINE_SOURCES)
 message(STATUS "[SSOT Ownership] RawrEngine provider=${RAWR_SSOT_PROVIDER_UPPER} (CORE=${_RAWR_SSOT_CORE} EXT=${_RAWR_SSOT_EXT} AUTO=${_RAWR_SSOT_AUTO} STUBS=${_RAWR_SSOT_STUBS} FEATURES=${_RAWR_SSOT_FEATURES})")
@@ -1199,15 +1221,17 @@ endif()
 set(GOLD_UNDERSCORE_SOURCES ${SOURCES})
 list(REMOVE_ITEM GOLD_UNDERSCORE_SOURCES
     src/core/auto_feature_registry.cpp
-    src/core/missing_handler_stubs.cpp
     src/core/ssot_handlers.cpp
     src/core/ssot_handlers_ext_runtime_minimal.cpp
     src/core/ssot_handlers_ext_isolated.cpp
+    src/core/rawrengine_command_handlers.cpp
+    src/core/ssot_validation.cpp
 )
 list(APPEND GOLD_UNDERSCORE_SOURCES
     src/core/rawr_engine_link_shims.cpp
     src/core/auto_feature_stub_impl.cpp
     src/core/ignite_800b.cpp
+    src/core/missing_handler_stubs.cpp
 )
 add_executable(RawrXD_Gold ${GOLD_UNDERSCORE_SOURCES} ${ASM_KERNEL_SOURCES})
 
@@ -1285,6 +1309,12 @@ target_sources(RawrXD_Gold PRIVATE
     src/core/native_debugger_engine.cpp
     src/core/native_debugger_symbols.cpp
     src/agentic/AgentOllamaClient.cpp
+    src/logging/Logger.cpp
+    src/security/InputSanitizer.cpp
+    src/core/ConfigurationValidator.cpp
+    src/inference/PerformanceMonitor.cpp
+    src/agentic/ErrorRecoveryManager.cpp
+    src/core/missing_handler_stubs.cpp
 )
 
 # Vulkan SDK for Gold build — linked later after find_package(Vulkan)
@@ -2169,6 +2199,7 @@ set(INFERENCE_ENGINE_SOURCES
     src/core/license_anti_tampering.cpp
     src/tools/license_validator_manifest.cpp
     src/core/ignite_800b.cpp
+    src/core/ConfigurationValidator.cpp
     src/inference/inference_standalone_link_shims.cpp
     src/engine/gguf_core.cpp
     src/engine/inference_kernels.cpp
@@ -2185,6 +2216,10 @@ set(INFERENCE_ENGINE_SOURCES
     src/codec/brutal_gzip.cpp
     src/utils/Diagnostics.cpp
     src/core/ignite_800b.cpp
+    src/inference/TitanLoaderDiagnostics.cpp
+    src/inference/MemoryPressureGuard.cpp
+    src/agentic/ErrorRecoveryManager.cpp
+    src/inference/PerformanceMonitor.cpp
 )
 
 add_executable(RawrXD-InferenceEngine EXCLUDE_FROM_ALL ${INFERENCE_ENGINE_SOURCES})
@@ -2284,6 +2319,9 @@ set_target_properties(rawrxd-monaco-gen PROPERTIES
 if(WIN32)
     set(WIN32IDE_SOURCES
         src/win32app/main_win32.cpp
+        src/win32app/HeadlessIDE.cpp
+        src/win32app/HeadlessIDE.h
+        src/win32app/HeadlessIDE.cpp
         src/agent/quantum_agent_orchestrator.cpp
         src/inference/gpu_dispatch_gate_win32ide_fallback.cpp
         src/inference/gguf_d3d12_bridge_link_fallback.cpp
@@ -2295,8 +2333,10 @@ if(WIN32)
         src/win32app/RawrXD-Win32IDE.rc
         src/bridge/Win32SwarmBridge.cpp
         src/bridge/SwarmIATRegistration.cpp
+        src/bridge/UnifiedModelMetadata.cpp
         src/agentic/SubAgentManager.cpp
         src/agentic/RobustOllamaParser.cpp
+        src/agentic/ErrorRecoveryManager.cpp
     )
 
     # MASM64 UI Dispatcher
@@ -2312,6 +2352,7 @@ if(WIN32)
         # Core Win32IDE implementation units (required for real GUI command/menu behavior)
         src/win32app/Win32IDE.cpp
         src/win32app/Win32IDE_Core.cpp
+        src/win32app/Win32IDE_CoreRuntimeSpine.cpp
         src/win32app/Win32IDE_Commands.cpp
         src/win32app/Win32IDE_VSCodeUI.cpp
             src/win32app/WindowManager.cpp
@@ -2319,16 +2360,22 @@ if(WIN32)
             src/win32app/RouterOperations.cpp
                     src/win32app/Win32IDE_Watchdog.cpp
         src/win32app/Win32IDE_SyntaxHighlight.cpp
+        src/win32app/Win32IDE_VisionEncoder.cpp
         src/win32app/Win32IDE_Themes.cpp
         src/win32app/Win32IDE_StreamingUX.cpp
         src/win32app/Win32IDE_Sidebar.cpp
         src/win32app/Win32IDE_Debugger.cpp
+        src/win32app/Win32IDE_AutonomousDebugger.cpp
         src/win32app/Win32IDE_Annotations.cpp
         src/win32app/Win32IDE_ReverseEngineering.cpp
         src/win32app/Win32IDE_Logger.cpp
         src/win32app/Win32IDE_AgenticBridge.cpp
         src/full_agentic_ide/FullAgenticIDE.cpp
         src/win32app/Win32IDE_AgentCommands.cpp
+        src/win32app/Win32IDE_AutonomousCommunicator.cpp
+        src/win32app/Win32IDE_AgenticComposerUX.cpp
+        src/win32app/Win32IDE_ContextMentionParser.cpp
+        src/win32app/Win32IDE_UnifiedTelemetry.cpp
         src/win32app/Win32IDE_Autonomy.cpp
         src/win32app/Win32IDE_PowerShell.cpp
         src/win32app/Win32IDE_PowerShellPanel.cpp
@@ -2354,10 +2401,16 @@ if(WIN32)
         src/win32app/Win32IDE_BackendSwitcher.cpp
         src/win32app/Win32IDE_LLMRouter.cpp
         src/win32app/Win32IDE_LSPClient.cpp
+        src/win32app/Win32IDE_PeekOverlay.cpp
+        src/win32app/Win32IDE_CaretAnimation.cpp
+        src/win32app/Win32IDE_AgentOllamaClient.cpp
+        src/win32app/Win32IDE_ModelDiscovery.cpp
         src/win32app/Win32IDE_AsmSemantic.cpp
         src/win32app/Win32IDE_LSP_AI_Bridge.cpp
         src/win32app/Win32IDE_MultiResponse.cpp
         src/win32app/Win32IDE_ExecutionGovernor.cpp
+        src/win32app/Win32IDE_LayerEviction.cpp
+        src/win32app/Win32IDE_SemanticIndexShim.cpp
         src/win32app/Win32IDE_SubAgent.h
         src/win32app/Win32IDE_SubAgent.cpp
         src/win32app/Win32IDE_AgentHistory.cpp
@@ -2457,6 +2510,11 @@ if(WIN32)
         src/agent_policy.cpp
         src/agent_explainability.cpp
         src/utils/ErrorReporter.cpp
+        # Observability + validation + perf telemetry (link-time required)
+        src/logging/Logger.cpp
+        src/security/InputSanitizer.cpp
+        src/core/ConfigurationValidator.cpp
+        src/inference/PerformanceMonitor.cpp
         src/rawrxd_inference.cpp
         src/rawrxd_model_loader.cpp
         src/rawrxd_transformer.cpp
@@ -2513,6 +2571,12 @@ if(WIN32)
         src/core/native_speed_layer.cpp
         src/core/local_ai_core.cpp
         src/core/native_inference_pipeline.cpp
+        
+        # 70B GGUF Hotpatch System
+        src/core/70b_gguf_hotpatch.cpp
+        
+        # Governor/Throttling System
+        src/core/governor_throttling.cpp
         
         # Distributed Swarm Compilation (Phase 11)
         src/core/swarm_coordinator.cpp
@@ -2796,6 +2860,7 @@ if(WIN32)
         src/security/secrets_scanner.cpp
         src/security/sast_rule_engine.cpp
         src/security/dependency_audit.cpp
+        src/security/InputSanitizer.cpp
         src/win32app/Win32IDE_AgentStreamingBridge.cpp
 
         # Phase 16: Semantic Code Intelligence
@@ -3298,6 +3363,46 @@ if(WIN32)
 
     list(REMOVE_DUPLICATES WIN32IDE_SOURCES)
 
+    # Add transcendence handler files for batch 36-42
+    list(APPEND WIN32IDE_SOURCES
+        src/win32app/Win32IDE_CursorParityBridge.cpp
+        src/win32app/Win32IDE_OmegaOrchestrator.cpp
+        src/win32app/Win32IDE_MeshBrain.cpp
+        src/win32app/Win32IDE_SpeciatorEngine.cpp
+        src/win32app/Win32IDE_NeuralBridge.cpp
+        src/win32app/Win32IDE_SelfHostEngine.cpp
+        src/win32app/Win32IDE_HardwareSynthesizer.cpp
+    )
+
+    # Add transcendence handler files for batch 43-49
+    list(APPEND WIN32IDE_SOURCES
+        src/win32app/Win32IDE_TranscendenceCoordinator.cpp
+        src/win32app/Win32IDE_VulkanRenderer.cpp
+        src/win32app/Win32IDE_OSExplorerInterceptor.cpp
+        src/win32app/Win32IDE_MCPHooks.cpp
+        src/win32app/Win32IDE_IOCPFileWatcher.cpp
+        src/win32app/Win32IDE_IDEDiagnosticAutoHealer.cpp
+        src/win32app/Win32IDE_ConsentPrompt.cpp
+    )
+
+    # Add UI & infrastructure handler files for batch 50-56
+    list(APPEND WIN32IDE_SOURCES
+        src/win32app/Win32IDE_CommandHandlers.cpp
+        src/win32app/Win32IDE_AutonomousAgent.cpp
+        src/win32app/Win32IDE_ChatMessageRenderer.cpp
+        src/win32app/Win32IDE_ToolActionStatus.cpp
+        src/win32app/Win32IDE_ChatPanel.cpp
+        src/win32app/Win32IDE_PerfTelemetry.cpp
+        src/win32app/Win32IDE_UpdateSignature.cpp
+        src/win32app/Win32IDE_PluginSignature.cpp
+        src/win32app/Win32IDE_EnterpriseStressTests.cpp
+        src/win32app/Win32IDE_SQLite3Core.cpp
+        src/win32app/Win32IDE_TelemetryExport.cpp
+        src/win32app/Win32IDE_RefactoringPlugin.cpp
+        src/win32app/Win32IDE_LanguagePlugin.cpp
+        src/win32app/Win32IDE_ResourceGenerator.cpp
+    )
+
     add_executable(RawrXD-Win32IDE WIN32 ${WIN32IDE_SOURCES} ${ASM_KERNEL_SOURCES}
         src/win32app/RawrXD-Win32IDE.rc)
 
@@ -3483,6 +3588,7 @@ if(WIN32)
         dxgi
         advapi32 crypt32 bcrypt wintrust
         opengl32 wininet
+        pdh
         ${MASM_OBJECTS}
         ${_WIN32IDE_LINKED_MONOLITHIC_OBJS}
     )

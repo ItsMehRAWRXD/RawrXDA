@@ -1,0 +1,87 @@
+﻿{
+    "generatedAtUtc":  "2026-03-17T09:47:05.8786450Z",
+    "guiExe":  "d:\\rawrxd\\build_prod\\bin\\RawrXD-Win32IDE.exe",
+    "cliExe":  "d:\\rawrxd\\build_prod\\bin\\RawrXD-AutoFixCLI.exe",
+    "total":  7,
+    "passed":  0,
+    "failed":  7,
+    "results":  [
+                    {
+                        "id":  22,
+                        "name":  "masm_stress_harness",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "stress harness exists; add scripted runner to validate",
+                        "startedAtUtc":  "2026-03-17T09:47:05.8558908Z",
+                        "finishedAtUtc":  "2026-03-17T09:47:05.8558908Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  23,
+                        "name":  "convergence_stress_harness",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "stress harness exists; add scripted runner to validate",
+                        "startedAtUtc":  "2026-03-17T09:47:05.8756141Z",
+                        "finishedAtUtc":  "2026-03-17T09:47:05.8756141Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  24,
+                        "name":  "auto_update_system",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "needs live updater simulation; not automated here",
+                        "startedAtUtc":  "2026-03-17T09:47:05.8771290Z",
+                        "finishedAtUtc":  "2026-03-17T09:47:05.8771290Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  25,
+                        "name":  "autonomous_verification_loop",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "requires background daemon wiring; not automated here",
+                        "startedAtUtc":  "2026-03-17T09:47:05.8771290Z",
+                        "finishedAtUtc":  "2026-03-17T09:47:05.8771290Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  26,
+                        "name":  "autonomous_background_daemon",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "requires service bootstrap; not automated here",
+                        "startedAtUtc":  "2026-03-17T09:47:05.8771290Z",
+                        "finishedAtUtc":  "2026-03-17T09:47:05.8771290Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  27,
+                        "name":  "knowledge_graph_core",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "needs population/index test; not automated here",
+                        "startedAtUtc":  "2026-03-17T09:47:05.8771290Z",
+                        "finishedAtUtc":  "2026-03-17T09:47:05.8771290Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  28,
+                        "name":  "swarm_conflict_resolver",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "needs swarm scenario simulation; not automated here",
+                        "startedAtUtc":  "2026-03-17T09:47:05.8771290Z",
+                        "finishedAtUtc":  "2026-03-17T09:47:05.8771290Z",
+                        "durationMs":  0
+                    }
+                ]
+}

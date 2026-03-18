@@ -591,25 +591,32 @@ void Win32IDE::setSidebarView(SidebarView view)
 
     // Update visible sidebar title so the pane is clearly named
     const char* titleText = "Explorer";
+    const char* viewName = "explorer";
     switch (view)
     {
         case SidebarView::Explorer:
             titleText = "File Explorer";
+            viewName = "explorer";
             break;
         case SidebarView::Search:
             titleText = "Search";
+            viewName = "search";
             break;
         case SidebarView::SourceControl:
             titleText = "Source Control";
+            viewName = "source";
             break;
         case SidebarView::RunDebug:
             titleText = "Run and Debug";
+            viewName = "debug";
             break;
         case SidebarView::Extensions:
             titleText = "Extensions";
+            viewName = "extensions";
             break;
         case SidebarView::DiskRecovery:
             titleText = "Disk Recovery";
+            viewName = "recovery";
             break;
         default:
             break;
@@ -618,6 +625,17 @@ void Win32IDE::setSidebarView(SidebarView view)
         SetWindowTextA(m_hwndSidebarTitle, titleText);
     if (m_hwndActivityBar)
         InvalidateRect(m_hwndActivityBar, nullptr, TRUE);
+
+    // Status + telemetry wiring (dashboard + backend)
+    std::string featureName = std::string("sidebar.view.") + viewName;
+    telemetryTrack(featureName.c_str(), 1.0);
+    std::string payload = std::string("{\"view\":\"") + viewName + "\"}";
+    telemetryDashboardTrack("sidebar.view", "ui", payload.c_str(), 0.0);
+    if (m_hwndStatusBar)
+    {
+        std::wstring status = utf8ToWide(std::string("Sidebar: ") + viewName);
+        SendMessageW(m_hwndStatusBar, SB_SETTEXTW, 1, (LPARAM)status.c_str());
+    }
 
     // Show selected view
     switch (view)

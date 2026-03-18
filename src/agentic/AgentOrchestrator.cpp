@@ -2,7 +2,7 @@
 // AgentOrchestrator.cpp — Agentic Loop Orchestrator Implementation
 // =============================================================================
 #include "AgentOrchestrator.h"
-#include "rawrxd_subsystem_api.hpp"
+#include "../core/rawrxd_subsystem_api.hpp"
 
 // Windows <wingdi.h> defines ERROR as 0 which clashes with LogLevel::ERROR
 #ifdef ERROR
@@ -34,6 +34,42 @@ namespace RawrXD
 {
 namespace Agent
 {
+
+namespace {
+std::string extractToolNameFromPayload(const nlohmann::json& payload)
+{
+    auto readKey = [&](const char* key) -> std::string {
+        return (payload.contains(key) && payload[key].is_string()) ? payload[key].get<std::string>() : std::string{};
+    };
+
+    std::string name = readKey("name");
+    if (name.empty()) name = readKey("tool_name");
+    if (name.empty()) name = readKey("toolName");
+
+    if (name.empty() && payload.contains("tool") && payload["tool"].is_object()) {
+        const auto& tool = payload["tool"];
+        if (tool.contains("name") && tool["name"].is_string()) {
+            name = tool["name"].get<std::string>();
+        }
+    }
+
+    return name;
+}
+
+nlohmann::json extractToolArgsFromPayload(const nlohmann::json& payload)
+{
+    if (payload.contains("args") && payload["args"].is_object()) return payload["args"];
+    if (payload.contains("arguments") && payload["arguments"].is_object()) return payload["arguments"];
+
+    if (payload.contains("tool") && payload["tool"].is_object()) {
+        const auto& tool = payload["tool"];
+        if (tool.contains("args") && tool["args"].is_object()) return tool["args"];
+        if (tool.contains("arguments") && tool["arguments"].is_object()) return tool["arguments"];
+    }
+
+    return nlohmann::json::object();
+}
+}  // namespace
 
 void AgentOrchestrator::DispatchTask(const std::string& task_id, const nlohmann::json& payload)
 {
@@ -67,11 +103,16 @@ void AgentOrchestrator::ProcessTaskQueue()
 void AgentOrchestrator::ExecuteTask(const std::string& id, const nlohmann::json& payload)
 {
     // run_tool: delegate to ToolRegistry for LLM-style tool execution
-    if (payload.contains("action") && payload["action"] == "run_tool" && payload.contains("name") &&
-        payload["name"].is_string())
+    if (payload.contains("action") && payload["action"] == "run_tool")
     {
-        std::string name = payload["name"].get<std::string>();
-        json args = payload.contains("args") && payload["args"].is_object() ? payload["args"] : json::object();
+        std::string name = extractToolNameFromPayload(payload);
+        if (name.empty()) {
+            GetObservability().logWarn(kComponent, "ExecuteTask run_tool missing tool name",
+                                       {{"task_id", id}, {"payload", payload}});
+            return;
+        }
+
+        json args = extractToolArgsFromPayload(payload);
         ToolExecResult res = m_registry.Dispatch(name, args);
         (void)res;
         GetObservability().logInfo(kComponent, "ExecuteTask run_tool completed",

@@ -1,0 +1,30 @@
+**********************************************************************
+** Visual Studio 2026 Developer Command Prompt v18.2.1
+** Copyright (c) 2025 Microsoft Corporation
+**********************************************************************
+[DEBUG:ext\vcvars.bat] Found potential v145 version file: 'Microsoft.VCToolsVersion.VC.14.50.18.0.txt'
+[DEBUG:ext\vcvars.bat] Testing v145 version file: 'Microsoft.VCToolsVersion.VC.14.50.18.0.txt'
+[vcvarsall.bat] Environment initialized for: 'x64'
+Warning: NMake does not support parallel builds. Ignoring parallel build command line option.
+[  0%] Built target quickjs_static
+[  0%] Built target RawrXD_MultiWindow_Kernel
+[  9%] Built target masm_kernels
+[  9%] Built target re_deobfuscator
+[  9%] Built target RawrXD-RE-Library
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/agentic/AgentOllamaClient.cpp.obj
+AgentOllamaClient.cpp
+D:\rawrxd\src\agentic\AgentOllamaClient.cpp(343): error C2143: syntax error: missing ';' before 'RawrXD::Agent::AgentOllamaClient::TestConnectionWithStats'
+D:\rawrxd\src\agentic\AgentOllamaClient.cpp(343): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\agentic\AgentOllamaClient.cpp(343): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\agentic\AgentOllamaClient.cpp(343): error C2556: 'int RawrXD::Agent::AgentOllamaClient::TestConnectionWithStats(void)': overloaded function differs only by return type from 'RawrXD::Agent::OllamaHealth RawrXD::Agent::AgentOllamaClient::TestConnectionWithStats(void)'
+D:\rawrxd\src\agentic\AgentOllamaClient.h(132): note: see declaration of 'RawrXD::Agent::AgentOllamaClient::TestConnectionWithStats'
+D:\rawrxd\src\agentic\AgentOllamaClient.cpp(343): error C2371: 'RawrXD::Agent::AgentOllamaClient::TestConnectionWithStats': redefinition; different basic types
+D:\rawrxd\src\agentic\AgentOllamaClient.h(132): note: see declaration of 'RawrXD::Agent::AgentOllamaClient::TestConnectionWithStats'
+NMAKE : fatal error U1077: '"C:\Program Files\CMake\bin\cmake.exe" -E cmake_cl_compile_depends --dep-file=CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\AgentOllamaClient.cpp.obj.d --working-dir=D:\rawrxd\build --filter-prefix="Note: including file: " -- C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe @C:\Users\HiH8e\AppData\Local\Temp\nm5500.tmp' : return code '0x2'
+Stop.
+NMAKE : fatal error U1077: 'C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\nmake.exe -s -f CMakeFiles\RawrXD-Win32IDE.dir\build.make /nologo -SL                 CMakeFiles\RawrXD-Win32IDE.dir\build' : return code '0x2'
+Stop.
+NMAKE : fatal error U1077: 'C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\nmake.exe -s -f CMakeFiles\Makefile2 /nologo -SL                 CMakeFiles\RawrXD-Win32IDE.dir\all' : return code '0x2'
+Stop.
+NMAKE : fatal error U1077: 'C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\nmake.exe -s -f CMakeFiles\Makefile2 /nologo -LS                 RawrXD-Win32IDE' : return code '0x2'
+Stop.

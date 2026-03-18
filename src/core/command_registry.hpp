@@ -701,6 +701,31 @@ enum CmdFlags : uint32_t {
     X(12084, T1_SPLIT_FOCUS_NEXT,  "tier1.splitFocusNext",  "!split_next",       BOTH, "Cosmetic",    handleTier1SplitFocusNext,      CMD_NONE) \
     X(12090, T1_AUTO_UPDATE,       "tier1.autoUpdate",      "!auto_update",      BOTH, "Cosmetic",    handleTier1AutoUpdateCheck,     CMD_ASYNC) \
     X(12091, T1_UPDATE_DISMISS,    "tier1.updateDismiss",   "!update_dismiss",   BOTH, "Cosmetic",    handleTier1UpdateDismiss,       CMD_NONE) \
+    \
+    /* ═══════════════════ TRANSCENDENCE SYSTEMS (43000-43099) ═══════════════════ */ \
+    X(43000, CURSOR_PARITY_BRIDGE, "transcendence.cursorParity", "!cursor_parity", BOTH, "Transcendence", HandleCursorParityBridge, CMD_NONE) \
+    X(43001, OMEGA_ORCHESTRATOR,   "transcendence.omegaOrch",     "!omega_orch",    BOTH, "Transcendence", HandleOmegaOrchestrator, CMD_NONE) \
+    X(43002, MESH_BRAIN,           "transcendence.meshBrain",     "!mesh_brain",    BOTH, "Transcendence", HandleMeshBrain, CMD_NONE) \
+    X(43003, SPECIATOR_ENGINE,     "transcendence.speciator",     "!speciator",     BOTH, "Transcendence", HandleSpeciatorEngine, CMD_NONE) \
+    X(43004, NEURAL_BRIDGE,        "transcendence.neuralBridge",  "!neural_bridge", BOTH, "Transcendence", HandleNeuralBridge, CMD_NONE) \
+    X(43005, SELF_HOST_ENGINE,     "transcendence.selfHost",      "!self_host",     BOTH, "Transcendence", HandleSelfHostEngine, CMD_NONE) \
+    X(43006, HARDWARE_SYNTHESIZER, "transcendence.hwSynth",       "!hw_synth",      BOTH, "Transcendence", HandleHardwareSynthesizer, CMD_NONE) \
+    X(43007, TRANSCENDENCE_COORD,  "transcendence.coordinator",   "!trans_coord",   BOTH, "Transcendence", HandleTranscendenceCoordinator, CMD_NONE) \
+    X(43008, VULKAN_RENDERER,      "transcendence.vulkanRenderer","!vulkan_rend",   BOTH, "Transcendence", HandleVulkanRenderer, CMD_NONE) \
+    X(43009, OS_EXPLORER_INTERCEPT,"transcendence.osExplorer",    "!os_explorer",   BOTH, "Transcendence", HandleOSExplorerInterceptor, CMD_NONE) \
+    X(43010, MCP_HOOKS,            "transcendence.mcpHooks",      "!mcp_hooks",     BOTH, "Transcendence", HandleMCPHooks, CMD_NONE) \
+    X(43011, IOCP_FILE_WATCHER,    "transcendence.iocpWatcher",   "!iocp_watcher",  BOTH, "Transcendence", HandleIOCPFileWatcher, CMD_NONE) \
+    X(43012, IDE_AUTO_HEALER,      "transcendence.autoHealer",    "!auto_healer",   BOTH, "Transcendence", HandleIDEDiagnosticAutoHealer, CMD_NONE) \
+    X(43013, CONSENT_PROMPT,       "transcendence.consentPrompt", "!consent",       BOTH, "Transcendence", HandleConsentPrompt, CMD_NONE) \
+    \
+    /* ═══════════════════ UI & INFRASTRUCTURE (44014-44020) ═══════════════════ */ \
+    X(44014, AUTONOMOUS_AGENT,     "agent.autonomous",            "!autonomous",    BOTH, "Agent",        HandleAutonomousAgent, CMD_NONE) \
+    X(44015, CHAT_MSG_RENDERER,    "ui.chatRenderer",             "!chat_render",   BOTH, "UI",           HandleChatMessageRenderer, CMD_NONE) \
+    X(44016, TOOL_ACTION_STATUS,   "ui.toolStatus",               "!tool_status",   BOTH, "Tools",        HandleToolActionStatus, CMD_NONE) \
+    X(44017, CHAT_PANEL,           "ui.chatPanel",                "!chat_panel",    BOTH, "UI",           HandleChatPanel, CMD_NONE) \
+    X(44018, PERF_TELEMETRY,       "telemetry.perf",              "!perf_tele",     BOTH, "Telemetry",    HandlePerfTelemetry, CMD_NONE) \
+    X(44019, UPDATE_SIGNATURE,     "security.updateSig",          "!update_sig",    BOTH, "Security",     HandleUpdateSignature, CMD_NONE) \
+    X(44020, PLUGIN_SIGNATURE,     "security.pluginSig",          "!plugin_sig",    BOTH, "Security",     HandlePluginSignature, CMD_NONE) \
     /* ═══════════════════ END OF TABLE ═══════════════════ */
 
 // ============================================================================

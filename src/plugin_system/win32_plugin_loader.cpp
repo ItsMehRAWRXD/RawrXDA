@@ -6,6 +6,7 @@
 // =============================================================================
 
 #include "../../include/plugin_system/win32_plugin_loader.h"
+#include "../../include/plugin_signature.h"
 #include <algorithm>
 #include <chrono>
 #include <sstream>
@@ -78,6 +79,32 @@ bool Win32PluginLoader::loadPlugin(const std::string& pluginPath) {
     }
 
     auto startTime = std::chrono::steady_clock::now();
+
+    // Enforce signature policy for native plugins before LoadLibrary.
+    // This is deliberately early to avoid initializing any plugin code at all.
+    {
+        auto& verifier = RawrXD::Plugin::PluginSignatureVerifier::instance();
+        if (!verifier.isInitialized()) {
+            verifier.initialize(RawrXD::Plugin::PluginSignatureVerifier::createStandardPolicy());
+        }
+
+        // Convert UTF-8/ANSI path to UTF-16 for verifier.
+        wchar_t wPath[MAX_PATH * 4] = {};
+        const int wLen = MultiByteToWideChar(CP_UTF8, 0, pluginPath.c_str(), -1, wPath, (int)(sizeof(wPath) / sizeof(wPath[0])));
+        if (wLen <= 0) {
+            const int wLenA = MultiByteToWideChar(CP_ACP, 0, pluginPath.c_str(), -1, wPath, (int)(sizeof(wPath) / sizeof(wPath[0])));
+            if (wLenA <= 0) {
+                log("loadPlugin: path conversion failed for '" + pluginPath + "'", 2);
+                return false;
+            }
+        }
+
+        const auto result = verifier.verify(wPath);
+        if (!verifier.shouldAllowInstall(result)) {
+            log("loadPlugin: blocked by signature policy: '" + pluginPath + "'", 2);
+            return false;
+        }
+    }
 
     // Load the DLL
     HMODULE hModule = LoadLibraryA(pluginPath.c_str());
@@ -181,21 +208,19 @@ bool Win32PluginLoader::unloadPlugin(const std::string& pluginName) {
 // unloadAll
 // =============================================================================
 void Win32PluginLoader::unloadAll() {
-    std::lock_guard<std::mutex> lock(m_mutex);
-
-    // Collect names first (can't iterate + erase simultaneously)
     std::vector<std::string> names;
-    names.reserve(m_plugins.size());
-    for (const auto& kv : m_plugins) {
-        names.push_back(kv.first);
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        names.reserve(m_plugins.size());
+        for (const auto& kv : m_plugins) {
+            names.push_back(kv.first);
+        }
     }
 
-    // Unlock, then unload individually (unloadPlugin re-locks)
-    m_mutex.unlock();
+    // Unload individually; unloadPlugin takes the lock itself.
     for (const auto& name : names) {
         unloadPlugin(name);
     }
-    m_mutex.lock();
 }
 
 // =============================================================================

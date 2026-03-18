@@ -1,0 +1,47 @@
+**********************************************************************
+** Visual Studio 2026 Developer Command Prompt v18.2.1
+** Copyright (c) 2025 Microsoft Corporation
+**********************************************************************
+[DEBUG:ext\vcvars.bat] Found potential v145 version file: 'Microsoft.VCToolsVersion.VC.14.50.18.0.txt'
+[DEBUG:ext\vcvars.bat] Testing v145 version file: 'Microsoft.VCToolsVersion.VC.14.50.18.0.txt'
+[vcvarsall.bat] Environment initialized for: 'x64'
+Warning: NMake does not support parallel builds. Ignoring parallel build command line option.
+[  0%] Built target quickjs_static
+[  0%] Built target RawrXD_MultiWindow_Kernel
+[  9%] Built target masm_kernels
+[  9%] Built target re_deobfuscator
+[  9%] Built target RawrXD-RE-Library
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/agentic/OrchestratorBridge.cpp.obj
+OrchestratorBridge.cpp
+D:\rawrxd\src\agentic\../logging/Logger.h(79): error C2589: 'constant': illegal token on right side of '::'
+D:\rawrxd\src\agentic\../logging/Logger.h(79): error C2144: syntax error: '<error>' should be preceded by ')'
+D:\rawrxd\src\agentic\../logging/Logger.h(79): error C2660: 'RawrXD::Logging::Logger::log': function does not take 0 arguments
+D:\rawrxd\src\agentic\../logging/Logger.h(65): note: see declaration of 'RawrXD::Logging::Logger::log'
+D:\rawrxd\src\agentic\../logging/Logger.h(79): note: while trying to match the argument list '()'
+D:\rawrxd\src\agentic\../logging/Logger.h(79): error C2144: syntax error: '<error>' should be preceded by ';'
+D:\rawrxd\src\agentic\../logging/Logger.h(79): error C2059: syntax error: ','
+D:\rawrxd\src\agentic\../logging/Logger.h(79): error C2059: syntax error: ')'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(143): error C2039: 'ValidationResult': is not a member of 'RawrXD::Core::ConfigurationValidator'
+D:\rawrxd\src\agentic\../core/ConfigurationValidator.h(23): note: see declaration of 'RawrXD::Core::ConfigurationValidator'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(143): error C2065: 'ValidationResult': undeclared identifier
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(143): error C2146: syntax error: missing ';' before identifier 'validation'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(143): error C2065: 'validation': undeclared identifier
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(151): error C2065: 'validation': undeclared identifier
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(151): error C2530: 'warn': references must be initialized
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(151): error C3531: 'warn': a symbol whose type contains 'auto' must have an initializer
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(151): error C2143: syntax error: missing ';' before ':'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(151): error C2143: syntax error: missing ';' before ')'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(154): error C2065: 'validation': undeclared identifier
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(155): error C2065: 'validation': undeclared identifier
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(155): error C2530: 'err': references must be initialized
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(155): error C3531: 'err': a symbol whose type contains 'auto' must have an initializer
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(155): error C2143: syntax error: missing ';' before ':'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(155): error C2143: syntax error: missing ';' before ')'
+NMAKE : fatal error U1077: '"C:\Program Files\CMake\bin\cmake.exe" -E cmake_cl_compile_depends --dep-file=CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\OrchestratorBridge.cpp.obj.d --working-dir=D:\rawrxd\build --filter-prefix="Note: including file: " -- C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe @C:\Users\HiH8e\AppData\Local\Temp\nm2B0E.tmp' : return code '0x2'
+Stop.
+NMAKE : fatal error U1077: 'C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\nmake.exe -s -f CMakeFiles\RawrXD-Win32IDE.dir\build.make /nologo -SL                 CMakeFiles\RawrXD-Win32IDE.dir\build' : return code '0x2'
+Stop.
+NMAKE : fatal error U1077: 'C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\nmake.exe -s -f CMakeFiles\Makefile2 /nologo -SL                 CMakeFiles\RawrXD-Win32IDE.dir\all' : return code '0x2'
+Stop.
+NMAKE : fatal error U1077: 'C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\nmake.exe -s -f CMakeFiles\Makefile2 /nologo -LS                 RawrXD-Win32IDE' : return code '0x2'
+Stop.

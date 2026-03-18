@@ -580,3 +580,27 @@ void __fastcall MCP_WebSocketFrameHook(const uint8_t* frame, size_t length, uint
 
 } // extern "C"
 
+// Handler for MCP Hooks feature
+void HandleMCPHooks(void* idePtr) {
+    if (!idePtr) return;
+
+    // Initialize MCP hooks if not already done
+    auto& hooks = MCPHookManager::GetInstance();
+    if (!hooks.IsInitialized()) {
+        if (!hooks.Initialize()) {
+            MessageBoxA(NULL, "Failed to initialize MCP Hooks", "MCP Hooks", MB_ICONERROR | MB_OK);
+            return;
+        }
+    }
+
+    // Show hooks status
+    std::string status = "MCP Hooks Active\n\n";
+    status += "Model Context Protocol Integration:\n";
+    status += "- Resource access hooks\n";
+    status += "- Tool execution interception\n";
+    status += "- Context sampling\n";
+    status += "- Prompt engineering\n";
+    status += "- Response filtering\n";
+
+    MessageBoxA(NULL, status.c_str(), "MCP Hooks", MB_ICONINFORMATION | MB_OK);
+}

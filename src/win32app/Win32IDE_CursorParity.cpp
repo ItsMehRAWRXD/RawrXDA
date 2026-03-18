@@ -1633,29 +1633,10 @@ void Win32IDE::createFeaturesMenu(HMENU parentMenu)
 // ============================================================================
 // UNIFIED COMMAND ROUTER — same command surface as CLI (ssot_handlers)
 // ============================================================================
-bool Win32IDE::handleFeaturesCommand(int commandId)
-{
-    if (commandId >= IDM_TELEXPORT_JSON && commandId <= IDM_TELEXPORT_AUTO_STOP)
-        return handleTelemetryExportCommand(commandId);
-    if (commandId >= IDM_COMPOSER_NEW_SESSION && commandId <= IDM_COMPOSER_SHOW_METRICS)
-        return handleComposerUXCommand(commandId);
-    if (commandId >= IDM_MENTION_PARSE && commandId <= IDM_MENTION_REGISTER_CUSTOM)
-        return handleMentionParserCommand(commandId);
-    if (commandId >= IDM_VISION_LOAD_FILE && commandId <= IDM_VISION_VIEW_GUI_HOTPATCH)
-        return handleVisionEncoderCommand(commandId);
-    if (commandId >= IDM_REFACTOR_EXTRACT_METHOD && commandId <= IDM_REFACTOR_LOAD_PLUGIN)
-        return handleRefactoringCommand(commandId);
-    if (commandId >= IDM_LANG_DETECT && commandId <= IDM_LANG_SET_FOR_FILE)
-        return handleLanguageCommand(commandId);
-    if (commandId >= IDM_SEMANTIC_BUILD_INDEX && commandId <= IDM_SEMANTIC_LOAD_PLUGIN)
-        return handleSemanticIndexCommand(commandId);
-    if (commandId >= IDM_RESOURCE_GENERATE && commandId <= IDM_RESOURCE_LOAD_PLUGIN)
-        return handleResourceGenCommand(commandId);
-    // Tier 5 cosmetic gaps (#40-#50): Emoji, Telemetry Dashboard, Shortcut Editor, etc.
-    if (commandId >= 11500 && commandId <= 11609)
-        return handleTier5Command(commandId);
-    return false;
-}
+#if 0
+// Duplicate legacy router kept disabled; canonical implementation lives in Win32IDE_Commands.cpp.
+bool Win32IDE::handleFeaturesCommand(int commandId) { return false; }
+#endif
 
 // ============================================================================
 // MASTER INIT — Called once during IDE startup (CLI shares same surface via ssot)

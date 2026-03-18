@@ -1,5 +1,5 @@
-#include "agentic/AgenticNavigator.h"
-#include "win32app/Win32IDE.h"
+#include "../../include/agentic/AgenticNavigator.h"
+#include "../win32app/Win32IDE.h"
 #include <windows.h>
 #include <chrono>
 #include <thread>

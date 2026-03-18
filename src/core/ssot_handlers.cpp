@@ -25,6 +25,7 @@
 #include "model_training_pipeline.hpp"
 #include "execution_governor.h"
 #include "agentic/AgentOllamaClient.h"
+#include "model_source_resolver.h"
 #include <windows.h>
 #include <cstdio>
 #include <sstream>
@@ -41,6 +42,8 @@
 #include <cmath>
 #include <cstdint>
 #include <cstring>
+
+static RawrXD::Agent::AgentOllamaClient& getAgentClient();
 
 // ============================================================================
 // HELPER: Route to IDE UI via WM_COMMAND when in GUI mode (CLI gets text output)
@@ -379,6 +382,9 @@ struct SSOBackendState {
     std::string activeBackend = "ollama";
     RawrXD::Agent::OllamaConfig ollamaConfig;
     std::map<std::string, std::string> apiKeys;
+    std::string localModelInput;
+    std::string localModelResolvedPath;
+    std::string localModelError;
 
     static SSOBackendState& instance() {
         static SSOBackendState s;
@@ -416,6 +422,33 @@ static RawrXD::Agent::AgentOllamaClient createSsoOllamaClient() {
     auto& bs = SSOBackendState::instance();
     std::lock_guard<std::mutex> lock(bs.mtx);
     return RawrXD::Agent::AgentOllamaClient(bs.ollamaConfig);
+}
+
+struct BackendLocalModelResolution {
+    bool attempted = false;
+    bool success = false;
+    std::string input;
+    std::string resolvedPath;
+    std::string error;
+};
+
+static BackendLocalModelResolution resolveBackendLocalModel(const std::string& input) {
+    BackendLocalModelResolution result;
+    result.input = trimAscii(input);
+    if (result.input.empty()) {
+        return result;
+    }
+
+    result.attempted = true;
+    RawrXD::ModelSourceResolver resolver;
+    RawrXD::ResolvedModelPath resolved = resolver.Resolve(result.input);
+    result.success = resolved.success;
+    result.resolvedPath = resolved.local_path;
+    result.error = resolved.error_message;
+    if (!result.success && result.error.empty()) {
+        result.error = "Unable to resolve model source";
+    }
+    return result;
 }
 
 static std::string ssoGetArg(const CommandContext& ctx, int index) {
@@ -1477,21 +1510,44 @@ static uint64_t fnv1a64(const std::vector<uint8_t>& bytes) {
 // ============================================================================
 CommandResult handleBackendSwitchLocal(const CommandContext& ctx) {
     auto& bs = SSOBackendState::instance();
+    std::string localInput;
+    std::string localResolvedPath;
+    std::string localError;
     {
         std::lock_guard<std::mutex> lock(bs.mtx);
         bs.activeBackend = "local";
+        localInput = bs.localModelInput;
+        localResolvedPath = bs.localModelResolvedPath;
+        localError = bs.localModelError;
     }
     if (ctx.isGui && ctx.idePtr) routeToIde(ctx, 5037, "backend.switchLocal");
     ctx.output("[BACKEND] Switched to: local (CPU inference engine)\n");
+    if (!localInput.empty()) {
+        std::string msg = "  Model Source: " + localInput + "\n";
+        ctx.output(msg.c_str());
+        if (!localResolvedPath.empty()) {
+            msg = "  Resolved Path: " + localResolvedPath + "\n";
+            ctx.output(msg.c_str());
+        } else if (!localError.empty()) {
+            msg = "  WARNING: Local model unresolved: " + localError + "\n";
+            ctx.output(msg.c_str());
+        }
+    } else {
+        ctx.output("  Model Source: not configured. Use !backend_config local_model <path|url|hf_repo|ollama_model>\n");
+    }
     return CommandResult::ok("backend.switchLocal");
 }
 
 CommandResult handleBackendSwitchOllama(const CommandContext& ctx) {
     auto& bs = SSOBackendState::instance();
+    RawrXD::Agent::OllamaConfig config;
     {
         std::lock_guard<std::mutex> lock(bs.mtx);
         bs.activeBackend = "ollama";
+        config = bs.ollamaConfig;
     }
+
+    getAgentClient().SetConfig(config);
 
     auto client = createSsoOllamaClient();
     bool ok = client.TestConnection();
@@ -1583,14 +1639,45 @@ CommandResult handleBackendSwitchGemini(const CommandContext& ctx) {
 
 CommandResult handleBackendShowStatus(const CommandContext& ctx) {
     auto& bs = SSOBackendState::instance();
-    std::lock_guard<std::mutex> lock(bs.mtx);
-    std::string status = "[BACKEND] Current: " + bs.activeBackend + "\n";
-    status += "  Host: " + bs.ollamaConfig.host + ":" + std::to_string(bs.ollamaConfig.port) + "\n";
-    status += "  Chat Model: " + bs.ollamaConfig.chat_model + "\n";
-    status += "  FIM Model: " + bs.ollamaConfig.fim_model + "\n";
-    status += "  Temperature: " + std::to_string(bs.ollamaConfig.temperature) + "\n";
-    status += "  Max Tokens: " + std::to_string(bs.ollamaConfig.max_tokens) + "\n";
-    status += "  Context: " + std::to_string(bs.ollamaConfig.num_ctx) + "\n";
+    std::string activeBackend;
+    RawrXD::Agent::OllamaConfig config;
+    std::string localModelInput;
+    std::string localModelResolvedPath;
+    std::string localModelError;
+    {
+        std::lock_guard<std::mutex> lock(bs.mtx);
+        activeBackend = bs.activeBackend;
+        config = bs.ollamaConfig;
+        localModelInput = bs.localModelInput;
+        localModelResolvedPath = bs.localModelResolvedPath;
+        localModelError = bs.localModelError;
+    }
+
+    auto metrics = getAgentClient().GetMetricsSnapshot();
+    std::string status = "[BACKEND] Current: " + activeBackend + "\n";
+    status += "  Host: " + config.host + ":" + std::to_string(config.port) + "\n";
+    status += "  Chat Model: " + config.chat_model + "\n";
+    status += "  FIM Model: " + config.fim_model + "\n";
+    status += "  Temperature: " + std::to_string(config.temperature) + "\n";
+    status += "  Max Tokens: " + std::to_string(config.max_tokens) + "\n";
+    status += "  Context: " + std::to_string(config.num_ctx) + "\n";
+    status += "  Ollama Requests: " + std::to_string(metrics.totalRequests) + "\n";
+    status += "  Ollama Tokens: " + std::to_string(metrics.totalTokens) + "\n";
+    {
+        std::ostringstream oss;
+        oss << std::fixed << std::setprecision(2) << metrics.avgTokensPerSec;
+        status += "  Ollama TPS: " + oss.str() + " tok/s\n";
+    }
+    status += "  Streaming: " + std::string(metrics.isStreaming ? "YES" : "NO") + "\n";
+    status += "  Consecutive Errors: " + std::to_string(metrics.consecutiveErrors) + "\n";
+    if (!localModelInput.empty()) {
+        status += "  Local Model Input: " + localModelInput + "\n";
+        if (!localModelResolvedPath.empty()) {
+            status += "  Local Model Path: " + localModelResolvedPath + "\n";
+        } else if (!localModelError.empty()) {
+            status += "  Local Model Error: " + localModelError + "\n";
+        }
+    }
     ctx.output(status.c_str());
     if (ctx.isGui && ctx.idePtr) routeToIde(ctx, 5042, "backend.showStatus");
     return CommandResult::ok("backend.showStatus");
@@ -1612,6 +1699,8 @@ CommandResult handleBackendShowSwitcher(const CommandContext& ctx) {
 CommandResult handleBackendConfigure(const CommandContext& ctx) {
     std::string key = ssoGetArg(ctx, 0);
     std::string value = ssoGetArg(ctx, 1);
+    key = trimAscii(key);
+    value = trimAscii(value);
 
     auto& bs = SSOBackendState::instance();
     if (key.empty()) {
@@ -1620,27 +1709,49 @@ CommandResult handleBackendConfigure(const CommandContext& ctx) {
         status += "  host=" + bs.ollamaConfig.host + "\n";
         status += "  port=" + std::to_string(bs.ollamaConfig.port) + "\n";
         status += "  model=" + bs.ollamaConfig.chat_model + "\n";
+        status += "  fim_model=" + bs.ollamaConfig.fim_model + "\n";
         status += "  temperature=" + std::to_string(bs.ollamaConfig.temperature) + "\n";
         status += "  max_tokens=" + std::to_string(bs.ollamaConfig.max_tokens) + "\n";
         status += "  num_ctx=" + std::to_string(bs.ollamaConfig.num_ctx) + "\n";
+        status += "  local_model=" + bs.localModelInput + "\n";
         status += "  Usage: !backend_config <key> <value>\n";
         ctx.output(status.c_str());
         return CommandResult::ok("backend.configure");
     }
     if (value.empty()) return CommandResult::error("Usage: !backend_config <key> <value>");
 
+    BackendLocalModelResolution localResolution;
+    if (key == "local_model" || key == "local_model_path" || key == "model_source") {
+        localResolution = resolveBackendLocalModel(value);
+    }
+
     {
         std::lock_guard<std::mutex> lock(bs.mtx);
         if (key == "host") bs.ollamaConfig.host = value;
         else if (key == "port") bs.ollamaConfig.port = static_cast<uint16_t>(std::atoi(value.c_str()));
-        else if (key == "model") bs.ollamaConfig.chat_model = value;
+        else if (key == "model" || key == "chat_model") bs.ollamaConfig.chat_model = value;
+        else if (key == "fim_model") bs.ollamaConfig.fim_model = value;
         else if (key == "temperature") bs.ollamaConfig.temperature = static_cast<float>(std::atof(value.c_str()));
         else if (key == "max_tokens") bs.ollamaConfig.max_tokens = std::atoi(value.c_str());
         else if (key == "num_ctx") bs.ollamaConfig.num_ctx = std::atoi(value.c_str());
+        else if (key == "local_model" || key == "local_model_path" || key == "model_source") {
+            bs.localModelInput = localResolution.input;
+            bs.localModelResolvedPath = localResolution.resolvedPath;
+            bs.localModelError = localResolution.error;
+        }
         else return CommandResult::error("Unknown config key");
+
+        getAgentClient().SetConfig(bs.ollamaConfig);
     }
 
     std::string msg = "[BACKEND] Set " + key + " = " + value + "\n";
+    if (key == "local_model" || key == "local_model_path" || key == "model_source") {
+        if (localResolution.success && !localResolution.resolvedPath.empty()) {
+            msg += "  Resolved local model path: " + localResolution.resolvedPath + "\n";
+        } else if (!localResolution.error.empty()) {
+            msg += "  WARNING: Resolution failed: " + localResolution.error + "\n";
+        }
+    }
     ctx.output(msg.c_str());
     if (ctx.isGui && ctx.idePtr) routeToIde(ctx, 5044, "backend.configure");
     return CommandResult::ok("backend.configure");
@@ -1692,7 +1803,12 @@ CommandResult handleBackendSaveConfigs(const CommandContext& ctx) {
         json += "  \"ollama\": {\n";
         json += "    \"host\": \"" + bs.ollamaConfig.host + "\",\n";
         json += "    \"port\": " + std::to_string(bs.ollamaConfig.port) + ",\n";
-        json += "    \"chat_model\": \"" + bs.ollamaConfig.chat_model + "\"\n";
+        json += "    \"chat_model\": \"" + bs.ollamaConfig.chat_model + "\",\n";
+        json += "    \"fim_model\": \"" + bs.ollamaConfig.fim_model + "\"\n";
+        json += "  },\n";
+        json += "  \"local\": {\n";
+        json += "    \"model_input\": \"" + bs.localModelInput + "\",\n";
+        json += "    \"resolved_path\": \"" + bs.localModelResolvedPath + "\"\n";
         json += "  },\n";
         json += "  \"router\": {\n";
         json += "    \"enabled\": " + std::string(rs.enabled.load() ? "true" : "false") + ",\n";

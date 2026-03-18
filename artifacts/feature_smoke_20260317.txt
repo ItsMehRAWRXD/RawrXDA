@@ -1,0 +1,21 @@
+
+═══════════════════════════════════════════════════════════════
+  Feature smoke tests (pwsh)
+  Root: D:\rawrxd
+═══════════════════════════════════════════════════════════════
+
+=== Wrapper ===
+  [PASS] Wrapper
+True
+  [PASS] Wrapper (Dockerfile)
+True
+
+=== Unified Problems ===
+  [FAIL] Unified Problems
+False
+
+=== Agent Panel ===
+  [PASS] Agent Panel
+True
+
+=== Tools Schema ===

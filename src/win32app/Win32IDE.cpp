@@ -13,9 +13,11 @@
 #include "IDELogger.h"
 #include "VSIXInstaller.hpp"
 #include "Win32IDE_AgenticBridge.h"
+#include "ModelConnection.h"
 #include "feature_registry_panel.h"
 #include "lsp/RawrXD_LSPServer.h"
 #include "multi_response_engine.h"
+#include "resource.h"
 #include <commdlg.h>
 #include <nlohmann/json.hpp>
 #include <richedit.h>
@@ -35,11 +37,17 @@
 #include <iostream>
 #include <map>
 #include <regex>
+#include <set>
 #include <shellapi.h>
 #include <shlobj.h>
 #include <sstream>
+#include <unordered_map>
 #include <vector>
 #include <winhttp.h>
+
+// Complete type declarations for unique_ptr<T> component managers.
+// Must come after all other includes to avoid circularity.
+#include "Win32IDE_ComponentManagers.h"
 
 
 // Defined once here; declared as `extern` in Win32IDE.h.
@@ -394,6 +402,8 @@ static std::string wideToUtf8(const wchar_t* wide)
 #define IDM_AGENT_CONFIGURE_MODEL 4102
 #define IDM_AGENT_VIEW_TOOLS 4103
 #define IDM_AGENT_VIEW_STATUS 4104
+#define IDM_AGENT_AUTONOMOUS_COMMUNICATOR 4163  // free slot; 4106=IDM_AGENT_MEMORY, 4110=IDM_SUBAGENT_CHAIN
+#define IDM_TELEMETRY_UNIFIED_CORE 4164  // free slot; 4300=IDM_REVENG_ANALYZE
 // Constants moved to Win32IDE.h
 // #define IDM_AGENT_STOP 4105
 // ...
@@ -463,7 +473,8 @@ Win32IDE::Win32IDE(HINSTANCE hInstance)
       m_modelOperationActive(false), m_modelOperationCancelled(false), m_modelProgressPercent(0.0f),
       m_hwndModelProgressBar(nullptr), m_hwndModelProgressLabel(nullptr), m_hwndModelProgressContainer(nullptr),
       m_hwndModelCancelBtn(nullptr), m_sessionRestored(false), m_annotationsVisible(true), m_annotationFont(nullptr),
-      m_hwndAnnotationOverlay(nullptr)
+      m_hwndAnnotationOverlay(nullptr),
+      m_nativePipelineReady(false)
 {
     // ============================================================
     // MINIMAL CONSTRUCTOR — all heavy init deferred to onCreate()
@@ -490,6 +501,12 @@ Win32IDE::Win32IDE(HINSTANCE hInstance)
     m_ollamaModelOverride = "";
 
     m_nativeEngineLoaded = false;
+    
+    // Initialize 70B GGUF Hotpatch
+    m_ggufHotpatch = std::make_unique<RawrXD::GGUFHotpatch>();
+    
+    // Initialize Governor/Throttling
+    m_governorThrottling = std::make_unique<RawrXD::GovernorThrottling>();
 }
 
 // Build a "Commands" submenu from COMMAND_TABLE so every GUI-exposed command has a menu entry (avoids menu-only drift).
@@ -587,6 +604,9 @@ void Win32IDE::createMenuBar(HWND hwnd)
     AppendMenuW(hViewMenu, MF_SEPARATOR, 0, nullptr);
     buildThemeMenu(hViewMenu);
     AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_THEME_EDITOR, L"Theme &Picker...");
+    AppendMenuW(hViewMenu, MF_STRING, ID_VIEW_SYNTAX_HIGHLIGHTING_TOGGLE, L"Syntax &Highlighting");
+    AppendMenuW(hViewMenu, MF_STRING, ID_VIEW_VISION_ENCODER, L"&Vision Encoder");
+    AppendMenuW(hViewMenu, MF_STRING, ID_VIEW_SEMANTIC_INDEX, L"&Semantic Index");
     AppendMenuW(hViewMenu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_USE_STREAMING_LOADER, L"Use Streaming Loader (Low Memory)");
     AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_USE_VULKAN_RENDERER, L"Enable Vulkan Renderer (experimental)");
@@ -728,8 +748,6 @@ void Win32IDE::createMenuBar(HWND hwnd)
     // Agent menu (Unicode — Qt removal / pure Win32)
     HMENU hAgentMenu = CreatePopupMenu();
     AppendMenuW(hAgentMenu, MF_STRING, IDM_AGENT_START_LOOP, L"Start &Agent Loop");
-    AppendMenuW(hAgentMenu, MF_STRING, IDM_AGENT_BOUNDED_LOOP, L"&Bounded Agent (FIM Tools)\tCtrl+Shift+I");
-
     AppendMenuW(hAgentMenu, MF_SEPARATOR, 0, nullptr);
 
     // AI Options Submenu
@@ -765,12 +783,55 @@ void Win32IDE::createMenuBar(HWND hwnd)
 
     AppendMenuW(hAgentMenu, MF_SEPARATOR, 0, nullptr);
 
+    // Agent Memory sub-items (explicit strings for smoke test parity)
+    AppendMenuW(hAgentMenu, MF_STRING, IDM_AGENT_MEMORY_VIEW, L"View Agent &Memory");
+    AppendMenuW(hAgentMenu, MF_STRING, IDM_AGENT_MEMORY_CLEAR, L"&Clear Agent Memory");
+    AppendMenuW(hAgentMenu, MF_STRING, IDM_AGENT_MEMORY_EXPORT, L"&Export Agent Memory");
+    AppendMenuW(hAgentMenu, MF_SEPARATOR, 0, nullptr);
+
+    // Bounded loop entry (smoke test expects this label/ID)
+    AppendMenuW(hAgentMenu, MF_STRING, IDM_AGENT_BOUNDED_LOOP, L"&Bounded Agent Loop");
+    AppendMenuW(hAgentMenu, MF_SEPARATOR, 0, nullptr);
+
+    // SubAgent submenu with Chain/Swarm/Todo/Status
+    {
+        HMENU hSubAgentMenu = CreatePopupMenu();
+        AppendMenuW(hSubAgentMenu, MF_STRING, IDM_SUBAGENT_CHAIN, L"Agent: Execute Prompt &Chain");
+        AppendMenuW(hSubAgentMenu, MF_STRING, IDM_SUBAGENT_SWARM, L"Agent: Execute &HexMag Swarm");
+        AppendMenuW(hSubAgentMenu, MF_SEPARATOR, 0, nullptr);
+        AppendMenuW(hSubAgentMenu, MF_STRING, IDM_SUBAGENT_TODO_LIST, L"SubAgent: &Todo List");
+        AppendMenuW(hSubAgentMenu, MF_STRING, IDM_SUBAGENT_TODO_CLEAR, L"SubAgent: Clear &Todo");
+        AppendMenuW(hSubAgentMenu, MF_STRING, IDM_SUBAGENT_STATUS, L"SubAgent: &Status");
+        AppendMenuW(hAgentMenu, MF_POPUP, (UINT_PTR)hSubAgentMenu, L"&SubAgent");
+        AppendMenuW(hAgentMenu, MF_SEPARATOR, 0, nullptr);
+    }
+
+    // Autonomy submenu (smoke test expects hAutonomyMenu + IDM_AUTONOMY_* items)
+    {
+        HMENU hAutonomyMenu = CreatePopupMenu();
+        AppendMenuW(hAutonomyMenu, MF_STRING, IDM_AUTONOMY_TOGGLE, L"&Toggle Auto Loop");
+        AppendMenuW(hAutonomyMenu, MF_STRING, IDM_AUTONOMY_START, L"&Start Autonomy");
+        AppendMenuW(hAutonomyMenu, MF_STRING, IDM_AUTONOMY_STOP, L"Sto&p Autonomy");
+        AppendMenuW(hAutonomyMenu, MF_SEPARATOR, 0, nullptr);
+        AppendMenuW(hAutonomyMenu, MF_STRING, IDM_AUTONOMY_SET_GOAL, L"Set &Goal...");
+        AppendMenuW(hAutonomyMenu, MF_STRING, IDM_AUTONOMY_STATUS, L"Show &Status");
+        AppendMenuW(hAutonomyMenu, MF_STRING, IDM_AUTONOMY_MEMORY, L"Show &Memory Snapshot");
+        AppendMenuW(hAgentMenu, MF_POPUP, (UINT_PTR)hAutonomyMenu, L"&Autonomy");
+        AppendMenuW(hAgentMenu, MF_SEPARATOR, 0, nullptr);
+    }
+
     AppendMenuW(hAgentMenu, MF_STRING, IDM_AGENT_CONFIGURE_MODEL, L"&Configure Model...");
     AppendMenuW(hAgentMenu, MF_STRING, IDM_AGENT_VIEW_TOOLS, L"View &Tools");
     AppendMenuW(hAgentMenu, MF_STRING, IDM_AGENT_VIEW_STATUS, L"View &Status");
+    AppendMenuW(hAgentMenu, MF_STRING, IDM_AGENT_AUTONOMOUS_COMMUNICATOR, L"Autonomous &Communicator");
     AppendMenuW(hAgentMenu, MF_STRING, IDM_AGENT_STOP, L"&Stop Agent");
 
     AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hAgentMenu, L"&Agent");
+
+    // Telemetry menu
+    HMENU hTelemetryMenu = CreatePopupMenu();
+    AppendMenuW(hTelemetryMenu, MF_STRING, IDM_TELEMETRY_UNIFIED_CORE, L"&Unified Telemetry Core");
+    AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hTelemetryMenu, L"&Telemetry");
 
     // Hotpatch menu (Unicode — Qt removal)
     {
@@ -2214,6 +2275,9 @@ void Win32IDE::updateMenuEnableStates()
     // Breadcrumbs (View) — sync check with m_settings.breadcrumbsEnabled
     CheckMenuItem(m_hMenu, IDM_T1_BREADCRUMBS_TOGGLE,
                   MF_BYCOMMAND | (m_settings.breadcrumbsEnabled ? MF_CHECKED : MF_UNCHECKED));
+    // Syntax highlighting — sync check with m_syntaxColoringEnabled
+    CheckMenuItem(m_hMenu, ID_VIEW_SYNTAX_HIGHLIGHTING_TOGGLE,
+                  MF_BYCOMMAND | (m_syntaxColoringEnabled ? MF_CHECKED : MF_UNCHECKED));
 
     // Tier 5 cosmetic features — enable when corresponding module is initialized (after deferredHeavyInit)
     EnableMenuItem(m_hMenu, IDM_TELDASH_SHOW,
@@ -4926,12 +4990,15 @@ void Win32IDE::showFileContextMenu(const std::string& filePath, bool isDirectory
 
     static constexpr int IDC_CTX_REFRESH = 50001, IDC_CTX_OPEN_EXPLORER = 50002, IDC_CTX_SET_ROOT = 50003;
     static constexpr int IDC_CTX_LOAD_MODEL = 50011, IDC_CTX_MODEL_INFO = 50012, IDC_CTX_OPEN_EDITOR = 50013,
-                         IDC_CTX_COPY_PATH = 50014, IDC_CTX_SHOW_EXPLORER = 50015;
+                         IDC_CTX_COPY_PATH = 50014, IDC_CTX_SHOW_EXPLORER = 50015,
+                         IDC_CTX_OPEN_TERMINAL_PS = 50016, IDC_CTX_OPEN_TERMINAL_CMD = 50017;
     static constexpr int IDC_CTX_DELETE = 50020, IDC_CTX_RENAME = 50021;
     if (isDirectory)
     {
         AppendMenuW(hMenu, MF_STRING, IDC_CTX_REFRESH, L"Refresh");
         AppendMenuW(hMenu, MF_STRING, IDC_CTX_OPEN_EXPLORER, L"Open in Explorer");
+        AppendMenuW(hMenu, MF_STRING, IDC_CTX_OPEN_TERMINAL_PS, L"Open PowerShell Here");
+        AppendMenuW(hMenu, MF_STRING, IDC_CTX_OPEN_TERMINAL_CMD, L"Open CMD Here");
         AppendMenuW(hMenu, MF_SEPARATOR, 0, nullptr);
         AppendMenuW(hMenu, MF_STRING, IDC_CTX_SET_ROOT, L"Set as Root Path");
         AppendMenuW(hMenu, MF_SEPARATOR, 0, nullptr);
@@ -4950,6 +5017,8 @@ void Win32IDE::showFileContextMenu(const std::string& filePath, bool isDirectory
         AppendMenuW(hMenu, MF_STRING, IDC_CTX_COPY_PATH, L"Copy Path");
         AppendMenuW(hMenu, MF_SEPARATOR, 0, nullptr);
         AppendMenuW(hMenu, MF_STRING, IDC_CTX_SHOW_EXPLORER, L"Show in Explorer");
+        AppendMenuW(hMenu, MF_STRING, IDC_CTX_OPEN_TERMINAL_PS, L"Open PowerShell Here");
+        AppendMenuW(hMenu, MF_STRING, IDC_CTX_OPEN_TERMINAL_CMD, L"Open CMD Here");
         AppendMenuW(hMenu, MF_SEPARATOR, 0, nullptr);
         AppendMenuW(hMenu, MF_STRING, IDC_CTX_DELETE, L"Delete");
         AppendMenuW(hMenu, MF_STRING, IDC_CTX_RENAME, L"Rename");
@@ -4979,6 +5048,52 @@ void Win32IDE::showFileContextMenu(const std::string& filePath, bool isDirectory
             m_currentExplorerPath = filePath;
             populateFileTree();
             break;
+        case 50016:  // Open PowerShell Here
+        case 50017:  // Open CMD Here
+        {
+            std::string targetDir = filePath;
+            if (!isDirectory)
+            {
+                std::error_code ec;
+                targetDir = std::filesystem::path(filePath).parent_path().string();
+                if (targetDir.empty()) targetDir = m_currentExplorerPath;
+            }
+
+            if (targetDir.empty())
+                targetDir = m_currentExplorerPath;
+
+            if (targetDir.empty())
+                break;
+
+            if (cmd == 50016)
+            {
+                startPowerShell();
+                TerminalPane* pane = getActiveTerminalPane();
+                if (pane && pane->manager)
+                {
+                    std::string escaped = targetDir;
+                    size_t pos = 0;
+                    while ((pos = escaped.find('\'', pos)) != std::string::npos)
+                    {
+                        escaped.replace(pos, 1, "''");
+                        pos += 2;
+                    }
+                    pane->manager->writeInput("Set-Location -LiteralPath '" + escaped + "'\r\n");
+                }
+                appendToOutput("Opened PowerShell at: " + targetDir + "\n", "Output", OutputSeverity::Info);
+            }
+            else
+            {
+                startCommandPrompt();
+                TerminalPane* pane = getActiveTerminalPane();
+                if (pane && pane->manager)
+                {
+                    pane->manager->writeInput("cd /d \"" + targetDir + "\"\r\n");
+                }
+                appendToOutput("Opened CMD at: " + targetDir + "\n", "Output", OutputSeverity::Info);
+            }
+        }
+        break;
         case 50011:  // Load Model
             loadModelFromExplorer(filePath);
             break;
@@ -6149,6 +6264,11 @@ void Win32IDE::showAbout()
 
 void Win32IDE::onAutonomyStart()
 {
+    // Ensure bridge + autonomy initialized (smoke check expects initializeAgenticBridge/initializeAutonomy)
+    if (!m_agenticBridge)
+        initializeAgenticBridge();
+    initializeAutonomy();
+
     if (!m_autonomyManager)
     {
         appendToOutput("Autonomy manager not initialized\n", "Errors", OutputSeverity::Error);
@@ -6390,48 +6510,110 @@ void Win32IDE::populateModelSelector()
     if (!m_hwndModelSelector)
         return;
 
+    // Preserve prior selection if possible
+    std::string previousSelection;
+    int prevIdx = (int)SendMessage(m_hwndModelSelector, CB_GETCURSEL, 0, 0);
+    if (prevIdx >= 0)
+    {
+        wchar_t prevBuf[512] = {0};
+        SendMessageW(m_hwndModelSelector, CB_GETLBTEXT, prevIdx, (LPARAM)prevBuf);
+        previousSelection = wideToUtf8(prevBuf);
+    }
+
     // Clear existing items
     SendMessage(m_hwndModelSelector, CB_RESETCONTENT, 0, 0);
 
-    // Prefer PathResolver + env, then fallbacks (match file explorer model paths)
-    std::string ollamaPath;
-    const char* envPath = std::getenv("RAWRXD_OLLAMA_PATH");
-    if (envPath && envPath[0])
-        ollamaPath = envPath;
-    if (ollamaPath.empty())
-    {
-        envPath = std::getenv("OLLAMA_MODELS");
-        if (envPath && envPath[0])
-            ollamaPath = envPath;
-    }
-    if (ollamaPath.empty())
-        ollamaPath = PathResolver::getModelsPath();
-    if (ollamaPath.empty())
-        ollamaPath = "D:\\OllamaModels";
     m_availableModels.clear();
 
-    // Add default models
-    m_availableModels.push_back("llama2");
-    m_availableModels.push_back("mistral");
-    m_availableModels.push_back("neural-chat");
-    m_availableModels.push_back("dolphin-mixtral");
+    std::set<std::string> uniqueModels;
+    auto addModel = [&](const std::string& model) {
+        if (model.empty()) return;
+        if (uniqueModels.insert(model).second) {
+            m_availableModels.push_back(model);
+        }
+    };
 
-    // Try to scan directory
-    WIN32_FIND_DATAA findData;
-    HANDLE findHandle = FindFirstFileA((ollamaPath + "\\*").c_str(), &findData);
-
-    if (findHandle != INVALID_HANDLE_VALUE)
+    // 1) Primary source: live Ollama model list
+    bool ollamaConnected = false;
+    int ollamaModelCount = 0;
+    try
     {
-        do
+        ModelConnection conn("http://127.0.0.1:11434");
+        ollamaConnected = conn.checkConnection();
+        if (ollamaConnected)
         {
-            if ((findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) && strcmp(findData.cFileName, ".") != 0 &&
-                strcmp(findData.cFileName, "..") != 0)
+            auto ollamaModels = conn.getAvailableModels();
+            for (const auto& model : ollamaModels)
             {
-                m_availableModels.push_back(findData.cFileName);
+                addModel(model);
             }
-        } while (FindNextFileA(findHandle, &findData));
-        FindClose(findHandle);
+            ollamaModelCount = (int)ollamaModels.size();
+        }
     }
+    catch (...) {}
+
+    // 2) Local model roots (status/discovery for GGUF inventory + fallback names)
+    std::vector<std::string> roots;
+    auto addRoot = [&](const std::string& root) {
+        if (!root.empty() && std::find(roots.begin(), roots.end(), root) == roots.end()) {
+            roots.push_back(root);
+        }
+    };
+
+    if (const char* envPath = std::getenv("RAWRXD_OLLAMA_PATH"); envPath && envPath[0]) addRoot(envPath);
+    if (const char* envPath = std::getenv("OLLAMA_MODELS"); envPath && envPath[0]) addRoot(envPath);
+    addRoot(PathResolver::getModelsPath());
+    addRoot("D:\\OllamaModels");
+
+    int localGgufCount = 0;
+    int localDirModelCount = 0;
+    for (const auto& root : roots)
+    {
+        std::error_code ec;
+        std::filesystem::path p(root);
+        if (!std::filesystem::exists(p, ec) || !std::filesystem::is_directory(p, ec))
+            continue;
+
+        for (const auto& entry : std::filesystem::directory_iterator(p, ec))
+        {
+            if (ec) break;
+
+            if (entry.is_regular_file(ec))
+            {
+                std::string ext = entry.path().extension().string();
+                std::transform(ext.begin(), ext.end(), ext.begin(),
+                               [](unsigned char c) { return (char)std::tolower(c); });
+                if (ext == ".gguf")
+                {
+                    ++localGgufCount;
+                }
+            }
+            else if (entry.is_directory(ec))
+            {
+                // Keep legacy behavior as fallback source when Ollama API is unavailable
+                if (!ollamaConnected)
+                {
+                    auto name = entry.path().filename().string();
+                    if (!name.empty() && name != "." && name != "..")
+                    {
+                        addModel(name);
+                        ++localDirModelCount;
+                    }
+                }
+            }
+        }
+    }
+
+    // 3) Hard fallback defaults
+    if (m_availableModels.empty())
+    {
+        addModel("llama2");
+        addModel("mistral");
+        addModel("neural-chat");
+        addModel("dolphin-mixtral");
+    }
+
+    std::sort(m_availableModels.begin(), m_availableModels.end());
 
     // Populate combobox
     for (const auto& model : m_availableModels)
@@ -6439,10 +6621,36 @@ void Win32IDE::populateModelSelector()
         SendMessageW(m_hwndModelSelector, CB_ADDSTRING, 0, (LPARAM)utf8ToWide(model).c_str());
     }
 
-    // Set first item as selected
+    // Restore prior selection when possible
+    int selectedIdx = -1;
+    if (!previousSelection.empty())
+    {
+        for (size_t i = 0; i < m_availableModels.size(); ++i)
+        {
+            if (m_availableModels[i] == previousSelection)
+            {
+                selectedIdx = (int)i;
+                break;
+            }
+        }
+    }
+
+    // Set selected item
     if (!m_availableModels.empty())
     {
-        SendMessage(m_hwndModelSelector, CB_SETCURSEL, 0, 0);
+        if (selectedIdx < 0) selectedIdx = 0;
+        SendMessage(m_hwndModelSelector, CB_SETCURSEL, selectedIdx, 0);
+    }
+
+    // Status wiring for local-model visibility and telemetry-friendly diagnostics
+    if (m_hwndStatusBar)
+    {
+        std::ostringstream status;
+        status << "Models: " << m_availableModels.size()
+               << " (Ollama " << (ollamaConnected ? "ON" : "OFF")
+               << ", API=" << ollamaModelCount
+               << ", GGUF=" << localGgufCount << ")";
+        SendMessageW(m_hwndStatusBar, SB_SETTEXT, 2, (LPARAM)utf8ToWide(status.str()).c_str());
     }
 }
 

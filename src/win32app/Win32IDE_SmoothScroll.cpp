@@ -159,10 +159,10 @@ void Win32IDE::onCaretAnimTimer()
     // Get current caret position from editor
     DWORD selStart = 0;
     SendMessage(m_hwndEditor, EM_GETSEL, (WPARAM)&selStart, 0);
-    LRESULT pos = SendMessage(m_hwndEditor, EM_POSFROMCHAR, selStart, 0);
-    if (pos != -1) {
-        m_caretPos.x = LOWORD(pos);
-        m_caretPos.y = HIWORD(pos);
+    POINTL caretPt{};
+    if (SendMessage(m_hwndEditor, EM_POSFROMCHAR, (WPARAM)&caretPt, selStart) != -1) {
+        m_caretPos.x = caretPt.x;
+        m_caretPos.y = caretPt.y;
     }
 
     // Invalidate only the caret area for efficient repaint

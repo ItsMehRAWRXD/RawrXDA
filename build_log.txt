@@ -1,81 +1,117 @@
-Microsoft (R) Macro Assembler (x64) Version 14.44.35223.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
+**********************************************************************
+** Visual Studio 2026 Developer Command Prompt v18.2.1
+** Copyright (c) 2025 Microsoft Corporation
+**********************************************************************
+[DEBUG:ext\vcvars.bat] Found potential v145 version file: 'Microsoft.VCToolsVersion.VC.14.50.18.0.txt'
+[DEBUG:ext\vcvars.bat] Testing v145 version file: 'Microsoft.VCToolsVersion.VC.14.50.18.0.txt'
+[vcvarsall.bat] Environment initialized for: 'x64'
+Warning: NMake does not support parallel builds. Ignoring parallel build command line option.
+[  0%] Built target quickjs_static
+[  0%] Built target RawrXD_MultiWindow_Kernel
+[  9%] Built target masm_kernels
+[  9%] Built target re_deobfuscator
+[  9%] Built target RawrXD-RE-Library
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/agentic/OrchestratorBridge.cpp.obj
+OrchestratorBridge.cpp
+D:\rawrxd\src\agentic\../logging/Logger.h(15): error C2143: syntax error: missing '}' before 'constant'
+D:\rawrxd\src\agentic\../logging/Logger.h(15): error C2059: syntax error: 'constant'
+D:\rawrxd\src\agentic\../logging/Logger.h(17): error C2143: syntax error: missing ';' before '}'
+D:\rawrxd\src\agentic\../logging/Logger.h(20): error C3646: 'level': unknown override specifier
+D:\rawrxd\src\agentic\../logging/Logger.h(20): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\agentic\../logging/Logger.h(47): error C2061: syntax error: identifier 'LogLevel'
+D:\rawrxd\src\agentic\../logging/Logger.h(52): error C2061: syntax error: identifier 'LogLevel'
+D:\rawrxd\src\agentic\../logging/Logger.h(75): error C3646: 'minLevel_': unknown override specifier
+D:\rawrxd\src\agentic\../logging/Logger.h(75): error C2059: syntax error: '{'
+D:\rawrxd\src\agentic\../logging/Logger.h(75): error C2334: unexpected token(s) preceding '{'; skipping apparent function body
+D:\rawrxd\src\agentic\../logging/Logger.h(47): error C2065: 'minLevel_': undeclared identifier
+D:\rawrxd\src\agentic\../logging/Logger.h(47): error C2065: 'level': undeclared identifier
+D:\rawrxd\src\agentic\../logging/Logger.h(57): error C2653: 'LogLevel': is not a class or namespace name
+D:\rawrxd\src\agentic\../logging/Logger.h(57): error C2065: 'DEBUG': undeclared identifier
+D:\rawrxd\src\agentic\../logging/Logger.h(60): error C2653: 'LogLevel': is not a class or namespace name
+D:\rawrxd\src\agentic\../logging/Logger.h(60): error C2065: 'INFO': undeclared identifier
+D:\rawrxd\src\agentic\../logging/Logger.h(63): error C2653: 'LogLevel': is not a class or namespace name
+D:\rawrxd\src\agentic\../logging/Logger.h(63): error C2065: 'WARNING': undeclared identifier
+D:\rawrxd\src\agentic\../logging/Logger.h(66): error C2589: 'constant': illegal token on right side of '::'
+D:\rawrxd\src\agentic\../logging/Logger.h(66): error C2144: syntax error: '<error>' should be preceded by ')'
+D:\rawrxd\src\agentic\../logging/Logger.h(66): error C2144: syntax error: '<error>' should be preceded by ';'
+D:\rawrxd\src\agentic\../logging/Logger.h(66): error C2059: syntax error: ','
+D:\rawrxd\src\agentic\../logging/Logger.h(66): error C2059: syntax error: ')'
+D:\rawrxd\src\agentic\../logging/Logger.h(69): error C2653: 'LogLevel': is not a class or namespace name
+D:\rawrxd\src\agentic\../logging/Logger.h(69): error C2065: 'CRITICAL': undeclared identifier
+D:\rawrxd\src\agentic\../logging/Logger.h(82): error C2061: syntax error: identifier 'LogLevel'
+D:\rawrxd\src\agentic\../logging/Logger.h(92): error C3646: 'level_': unknown override specifier
+D:\rawrxd\src\agentic\../logging/Logger.h(92): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\agentic\../logging/Logger.h(98): error C2059: syntax error: '}'
+D:\rawrxd\src\agentic\../logging/Logger.h(98): error C2143: syntax error: missing ';' before '}'
+D:\rawrxd\src\agentic\../security/InputSanitizer.h(7): error C2039: 'Security': is not a member of 'RawrXD'
+D:\rawrxd\src\agentic\../logging/Logger.h(9): note: see declaration of 'RawrXD'
+D:\rawrxd\src\agentic\../security/InputSanitizer.h(7): error C2143: syntax error: missing ';' before '{'
+D:\rawrxd\src\agentic\../security/InputSanitizer.h(7): error C2447: '{': missing function header (old-style formal list?)
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(62): error C2039: 'Logger': is not a member of 'RawrXD::Logging'
+D:\rawrxd\src\agentic\../logging/Logger.h(9): note: see declaration of 'RawrXD::Logging'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(63): error C3083: 'Logger': the symbol to the left of a '::' must be a type
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(63): error C2039: 'instance': is not a member of 'RawrXD::Logging'
+D:\rawrxd\src\agentic\../logging/Logger.h(9): note: see declaration of 'RawrXD::Logging'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(63): error C3861: 'instance': identifier not found
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(110): error C3083: 'Security': the symbol to the left of a '::' must be a type
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(110): error C3083: 'InputSanitizer': the symbol to the left of a '::' must be a type
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(110): error C2039: 'instance': is not a member of 'RawrXD'
+D:\rawrxd\src\agentic\ErrorRecoveryManager.h(60): note: see declaration of 'RawrXD'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(110): error C3861: 'instance': identifier not found
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(111): error C3083: 'Security': the symbol to the left of a '::' must be a type
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(111): error C2039: 'SanitizationResult': is not a member of 'RawrXD'
+D:\rawrxd\src\agentic\ErrorRecoveryManager.h(60): note: see declaration of 'RawrXD'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(111): error C2065: 'SanitizationResult': undeclared identifier
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(111): error C2146: syntax error: missing ';' before identifier 'pathSan'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(111): error C2065: 'pathSan': undeclared identifier
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(112): error C2065: 'pathSan': undeclared identifier
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(113): error C2065: 'pathSan': undeclared identifier
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(143): error C2039: 'ValidationResult': is not a member of 'RawrXD::Core::ConfigurationValidator'
+D:\rawrxd\src\agentic\../core/ConfigurationValidator.h(23): note: see declaration of 'RawrXD::Core::ConfigurationValidator'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(143): error C2065: 'ValidationResult': undeclared identifier
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(143): error C2146: syntax error: missing ';' before identifier 'validation'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(143): error C2065: 'validation': undeclared identifier
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(151): error C2065: 'validation': undeclared identifier
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(151): error C2530: 'warn': references must be initialized
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(151): error C3531: 'warn': a symbol whose type contains 'auto' must have an initializer
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(151): error C2143: syntax error: missing ';' before ':'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(151): error C2143: syntax error: missing ';' before ')'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(154): error C2065: 'validation': undeclared identifier
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(155): error C2065: 'validation': undeclared identifier
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(155): error C2530: 'err': references must be initialized
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(155): error C3531: 'err': a symbol whose type contains 'auto' must have an initializer
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(155): error C2143: syntax error: missing ';' before ':'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(155): error C2143: syntax error: missing ';' before ')'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(182): error C3083: 'Security': the symbol to the left of a '::' must be a type
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(182): error C3083: 'InputSanitizer': the symbol to the left of a '::' must be a type
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(182): error C2039: 'instance': is not a member of 'RawrXD'
+D:\rawrxd\src\agentic\ErrorRecoveryManager.h(60): note: see declaration of 'RawrXD'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(182): error C3861: 'instance': identifier not found
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(184): error C3536: 'sanitizedPrompt': cannot be used before it is initialized
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(440): error C3083: 'Security': the symbol to the left of a '::' must be a type
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(440): error C3083: 'InputSanitizer': the symbol to the left of a '::' must be a type
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(440): error C2039: 'instance': is not a member of 'RawrXD'
+D:\rawrxd\src\agentic\ErrorRecoveryManager.h(60): note: see declaration of 'RawrXD'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(440): error C3861: 'instance': identifier not found
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(441): error C3536: 'sanitized': cannot be used before it is initialized
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(453): error C3083: 'Security': the symbol to the left of a '::' must be a type
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(453): error C3083: 'InputSanitizer': the symbol to the left of a '::' must be a type
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(453): error C2039: 'instance': is not a member of 'RawrXD'
+D:\rawrxd\src\agentic\ErrorRecoveryManager.h(60): note: see declaration of 'RawrXD'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(453): error C3861: 'instance': identifier not found
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(454): error C3536: 'sanitized': cannot be used before it is initialized
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(472): error C3083: 'Security': the symbol to the left of a '::' must be a type
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(472): error C3083: 'InputSanitizer': the symbol to the left of a '::' must be a type
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(472): error C2039: 'instance': is not a member of 'RawrXD'
+D:\rawrxd\src\agentic\ErrorRecoveryManager.h(60): note: see declaration of 'RawrXD'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(472): error C3861: 'instance': identifier not found
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(473): error C3536: 'sanitized': cannot be used before it is initialized
+NMAKE : fatal error U1077: '"C:\Program Files\CMake\bin\cmake.exe" -E cmake_cl_compile_depends --dep-file=CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\OrchestratorBridge.cpp.obj.d --working-dir=D:\rawrxd\build --filter-prefix="Note: including file: " -- C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe @C:\Users\HiH8e\AppData\Local\Temp\nm45D8.tmp' : return code '0x2'
+Stop.
+NMAKE : fatal error U1077: 'C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\nmake.exe -s -f CMakeFiles\RawrXD-Win32IDE.dir\build.make /nologo -SL                 CMakeFiles\RawrXD-Win32IDE.dir\build' : return code '0x2'
+Stop.
+NMAKE : fatal error U1077: 'C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\nmake.exe -s -f CMakeFiles\Makefile2 /nologo -SL                 CMakeFiles\RawrXD-Win32IDE.dir\all' : return code '0x2'
+Stop.
+NMAKE : fatal error U1077: 'C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\nmake.exe -s -f CMakeFiles\Makefile2 /nologo -LS                 RawrXD-Win32IDE' : return code '0x2'
+Stop.
 
- Assembling: D:\rawrxd\gpu_dma_production_v12.asm
-D:\rawrxd\gpu_dma_production_v12.asm(263) : error A2070:invalid instruction operands
-D:\rawrxd\gpu_dma_production_v12.asm(267) : error A2070:invalid instruction operands
-D:\rawrxd\gpu_dma_production_v12.asm(303) : error A2070:invalid instruction operands
-D:\rawrxd\gpu_dma_production_v12.asm(304) : error A2070:invalid instruction operands
-D:\rawrxd\gpu_dma_production_v12.asm(309) : error A2070:invalid instruction operands
-D:\rawrxd\gpu_dma_production_v12.asm(310) : error A2070:invalid instruction operands
-D:\rawrxd\gpu_dma_production_v12.asm(408) : error A2023:instruction operand must have size
-D:\rawrxd\gpu_dma_production_v12.asm(409) : error A2023:instruction operand must have size
-D:\rawrxd\gpu_dma_production_v12.asm(410) : error A2023:instruction operand must have size
-D:\rawrxd\gpu_dma_production_v12.asm(411) : error A2023:instruction operand must have size
-D:\rawrxd\gpu_dma_production_v12.asm(488) : error A2070:invalid instruction operands
-D:\rawrxd\gpu_dma_production_v12.asm(489) : error A2070:invalid instruction operands
-D:\rawrxd\gpu_dma_production_v12.asm(494) : error A2070:invalid instruction operands
-D:\rawrxd\gpu_dma_production_v12.asm(495) : error A2070:invalid instruction operands
-D:\rawrxd\gpu_dma_production_v12.asm(561) : error A2084:constant value too large
-D:\rawrxd\gpu_dma_production_v12.asm(566) : error A2084:constant value too large
-D:\rawrxd\gpu_dma_production_v12.asm(665) : error A2023:instruction operand must have size
-D:\rawrxd\gpu_dma_production_v12.asm(666) : error A2023:instruction operand must have size
-D:\rawrxd\gpu_dma_production_v12.asm(667) : error A2023:instruction operand must have size
-D:\rawrxd\gpu_dma_production_v12.asm(668) : error A2023:instruction operand must have size
-D:\rawrxd\gpu_dma_production_v12.asm(1199) : error A2084:constant value too large
-D:\rawrxd\gpu_dma_production_v12.asm(211) : error A2006:undefined symbol : MEMORY_PATCH
-D:\rawrxd\gpu_dma_production_v12.asm(363) : error A2006:undefined symbol : MEMORY_PATCH
-D:\rawrxd\gpu_dma_production_v12.asm(436) : error A2006:undefined symbol : MEMORY_PATCH
-D:\rawrxd\gpu_dma_production_v12.asm(546) : error A2006:undefined symbol : pSource
-D:\rawrxd\gpu_dma_production_v12.asm(547) : error A2006:undefined symbol : pDest
-D:\rawrxd\gpu_dma_production_v12.asm(549) : error A2006:undefined symbol : copyType
-D:\rawrxd\gpu_dma_production_v12.asm(552) : error A2006:undefined symbol : pSource
-D:\rawrxd\gpu_dma_production_v12.asm(554) : error A2006:undefined symbol : pDest
-D:\rawrxd\gpu_dma_production_v12.asm(560) : error A2006:undefined symbol : pSource
-D:\rawrxd\gpu_dma_production_v12.asm(563) : error A2006:undefined symbol : srcIsDevice
-D:\rawrxd\gpu_dma_production_v12.asm(565) : error A2006:undefined symbol : pDest
-D:\rawrxd\gpu_dma_production_v12.asm(568) : error A2006:undefined symbol : dstIsDevice
-D:\rawrxd\gpu_dma_production_v12.asm(571) : error A2006:undefined symbol : srcIsDevice
-D:\rawrxd\gpu_dma_production_v12.asm(573) : error A2006:undefined symbol : dstIsDevice
-D:\rawrxd\gpu_dma_production_v12.asm(578) : error A2006:undefined symbol : dstIsDevice
-D:\rawrxd\gpu_dma_production_v12.asm(583) : error A2006:undefined symbol : copyType
-D:\rawrxd\gpu_dma_production_v12.asm(587) : error A2006:undefined symbol : copyType
-D:\rawrxd\gpu_dma_production_v12.asm(591) : error A2006:undefined symbol : copyType
-D:\rawrxd\gpu_dma_production_v12.asm(595) : error A2006:undefined symbol : copyType
-D:\rawrxd\gpu_dma_production_v12.asm(598) : error A2006:undefined symbol : pSource
-D:\rawrxd\gpu_dma_production_v12.asm(599) : error A2006:undefined symbol : pDest
-D:\rawrxd\gpu_dma_production_v12.asm(795) : error A2006:undefined symbol : pSource
-D:\rawrxd\gpu_dma_production_v12.asm(796) : error A2006:undefined symbol : pDest
-D:\rawrxd\gpu_dma_production_v12.asm(801) : error A2006:undefined symbol : pSource
-D:\rawrxd\gpu_dma_production_v12.asm(803) : error A2006:undefined symbol : pDest
-D:\rawrxd\gpu_dma_production_v12.asm(809) : error A2006:undefined symbol : pOrchestrator
-D:\rawrxd\gpu_dma_production_v12.asm(810) : error A2006:undefined symbol : pOrchestrator
-D:\rawrxd\gpu_dma_production_v12.asm(813) : error A2006:undefined symbol : pOrchestrator
-D:\rawrxd\gpu_dma_production_v12.asm(820) : error A2006:undefined symbol : pSource
-D:\rawrxd\gpu_dma_production_v12.asm(821) : error A2006:undefined symbol : pDest
-D:\rawrxd\gpu_dma_production_v12.asm(834) : error A2006:undefined symbol : pSource
-D:\rawrxd\gpu_dma_production_v12.asm(835) : error A2006:undefined symbol : pDest
-D:\rawrxd\gpu_dma_production_v12.asm(844) : error A2006:undefined symbol : pSource
-D:\rawrxd\gpu_dma_production_v12.asm(845) : error A2006:undefined symbol : pDest
-D:\rawrxd\gpu_dma_production_v12.asm(910) : error A2006:undefined symbol : pSource
-D:\rawrxd\gpu_dma_production_v12.asm(911) : error A2006:undefined symbol : pDest
-D:\rawrxd\gpu_dma_production_v12.asm(913) : error A2006:undefined symbol : pOrchestrator
-D:\rawrxd\gpu_dma_production_v12.asm(915) : error A2006:undefined symbol : pOrchestrator
-D:\rawrxd\gpu_dma_production_v12.asm(980) : error A2006:undefined symbol : pSource
-D:\rawrxd\gpu_dma_production_v12.asm(981) : error A2006:undefined symbol : pDest
-D:\rawrxd\gpu_dma_production_v12.asm(983) : error A2006:undefined symbol : pOrchestrator
-D:\rawrxd\gpu_dma_production_v12.asm(985) : error A2006:undefined symbol : pOrchestrator
-D:\rawrxd\gpu_dma_production_v12.asm(989) : error A2006:undefined symbol : hDevice
-D:\rawrxd\gpu_dma_production_v12.asm(990) : error A2006:undefined symbol : hQueue
-D:\rawrxd\gpu_dma_production_v12.asm(992) : error A2006:undefined symbol : hDevice
-D:\rawrxd\gpu_dma_production_v12.asm(1045) : error A2006:undefined symbol : pCtx
-D:\rawrxd\gpu_dma_production_v12.asm(1046) : error A2006:undefined symbol : pCtx
-D:\rawrxd\gpu_dma_production_v12.asm(1062) : error A2006:undefined symbol : hFreq
-D:\rawrxd\gpu_dma_production_v12.asm(1067) : error A2006:undefined symbol : pCtx
-D:\rawrxd\gpu_dma_production_v12.asm(1105) : error A2006:undefined symbol : pOrchestrator
-D:\rawrxd\gpu_dma_production_v12.asm(1106) : error A2006:undefined symbol : pOrchestrator
-D:\rawrxd\gpu_dma_production_v12.asm(1112) : error A2206:missing operator in expression
-D:\rawrxd\gpu_dma_production_v12.asm(1133) : error A2006:undefined symbol : pOrchestrator
-D:\rawrxd\gpu_dma_production_v12.asm(1155) : error A2006:undefined symbol : pOrchestrator
-D:\rawrxd\gpu_dma_production_v12.asm(1156) : error A2006:undefined symbol : pOrchestrator
-D:\rawrxd\gpu_dma_production_v12.asm(1171) : error A2006:undefined symbol : pOrchestrator

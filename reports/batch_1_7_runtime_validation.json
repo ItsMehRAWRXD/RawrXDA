@@ -1,0 +1,79 @@
+﻿{
+    "generatedAtUtc":  "2026-03-17T09:13:03.4880534Z",
+    "exePath":  "d:\\rawrxd\\build_smoke_auto\\bin\\RawrXD-Win32IDE.exe",
+    "total":  7,
+    "passed":  4,
+    "failed":  3,
+    "results":  [
+                    {
+                        "id":  1,
+                        "name":  "ghost_text_rendering",
+                        "flag":  "--test-ghost-text",
+                        "exitCode":  0,
+                        "passed":  true,
+                        "startedAtUtc":  "2026-03-17T09:12:08.9357502Z",
+                        "finishedAtUtc":  "2026-03-17T09:12:09.9772988Z",
+                        "durationMs":  1042
+                    },
+                    {
+                        "id":  2,
+                        "name":  "multi_cursor_visuals",
+                        "flag":  "--test-multicursor",
+                        "exitCode":  3,
+                        "passed":  false,
+                        "startedAtUtc":  "2026-03-17T09:12:09.9944870Z",
+                        "finishedAtUtc":  "2026-03-17T09:12:49.5924887Z",
+                        "durationMs":  39598
+                    },
+                    {
+                        "id":  3,
+                        "name":  "peek_overlay",
+                        "flag":  "--test-peek-view",
+                        "exitCode":  0,
+                        "passed":  true,
+                        "startedAtUtc":  "2026-03-17T09:12:50.1557407Z",
+                        "finishedAtUtc":  "2026-03-17T09:12:54.2550175Z",
+                        "durationMs":  4099
+                    },
+                    {
+                        "id":  4,
+                        "name":  "caret_animation",
+                        "flag":  "--test-caret-animation",
+                        "exitCode":  21,
+                        "passed":  false,
+                        "startedAtUtc":  "2026-03-17T09:12:54.2595755Z",
+                        "finishedAtUtc":  "2026-03-17T09:12:56.2909509Z",
+                        "durationMs":  2031
+                    },
+                    {
+                        "id":  5,
+                        "name":  "tier2_tier3_cosmetics",
+                        "flag":  "--test-tier-cosmetics",
+                        "exitCode":  -1073740940,
+                        "passed":  false,
+                        "startedAtUtc":  "2026-03-17T09:12:56.4047995Z",
+                        "finishedAtUtc":  "2026-03-17T09:13:01.4644001Z",
+                        "durationMs":  5060
+                    },
+                    {
+                        "id":  6,
+                        "name":  "agent_ollama_client",
+                        "flag":  "--test-ollama-client",
+                        "exitCode":  0,
+                        "passed":  true,
+                        "startedAtUtc":  "2026-03-17T09:13:01.4660020Z",
+                        "finishedAtUtc":  "2026-03-17T09:13:02.4754949Z",
+                        "durationMs":  1009
+                    },
+                    {
+                        "id":  7,
+                        "name":  "model_discovery",
+                        "flag":  "--test-model-discovery",
+                        "exitCode":  0,
+                        "passed":  true,
+                        "startedAtUtc":  "2026-03-17T09:13:02.4767116Z",
+                        "finishedAtUtc":  "2026-03-17T09:13:03.4880534Z",
+                        "durationMs":  1011
+                    }
+                ]
+}

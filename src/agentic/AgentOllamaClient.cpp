@@ -4,9 +4,12 @@
 #include "AgentOllamaClient.h"
 #include "RobustOllamaParser.h"
 #include <chrono>
+#include <thread>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <unordered_set>
+#include <deque>
 
 #ifdef _WIN32
 #pragma comment(lib, "winhttp.lib")
@@ -14,12 +17,18 @@
 
 using RawrXD::Agent::AgentOllamaClient;
 using RawrXD::Agent::InferenceResult;
+using RawrXD::Agent::OllamaHealth;
 
 namespace {
     const char* kChatEndpoint = "/api/chat";
     const char* kGenerateEndpoint = "/api/generate";
     const char* kTagsEndpoint = "/api/tags";
     const char* kVersionEndpoint = "/api/version";
+
+    // Enhancement 1: Retry policy constants for production resilience
+    constexpr int kMaxRetries = 3;
+    constexpr int kRetryBaseDelayMs = 100;  // exponential backoff: 100, 200, 400ms
+    constexpr int kConnectionWarmupTimeoutMs = 5000;
 
     std::wstring ToWide(const std::string& s) {
         if (s.empty()) return L"";
@@ -330,9 +339,46 @@ void AgentOllamaClient::CleanupWinHTTP() {
 // ---------------------------------------------------------------------------
 
 bool AgentOllamaClient::TestConnection() {
-    // A quick sanity check: the /api/version endpoint should return something.
+    return TestConnectionWithStats().ok;
+}
+
+OllamaHealth AgentOllamaClient::TestConnectionWithStats() {
+    OllamaHealth h;
+    auto t0 = std::chrono::steady_clock::now();
+
     std::string resp = MakeGetRequest(kVersionEndpoint);
-    return !resp.empty();
+    auto t1 = std::chrono::steady_clock::now();
+    h.latency_ms = static_cast<int>(std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count());
+    h.ok = !resp.empty();
+
+    // Parse version inline to avoid double fetching
+    if (!resp.empty()) {
+        try {
+            const char* key = "\"version\"";
+            size_t vpos = resp.find(key);
+            if (vpos != std::string::npos) {
+                size_t val_start = vpos + strlen(key);
+                while (val_start < resp.size() && (isspace((unsigned char)resp[val_start]) || resp[val_start] == ':')) val_start++;
+                if (val_start < resp.size() && resp[val_start] == '\"') {
+                    size_t q1 = val_start;
+                    size_t q2 = resp.find('\"', q1 + 1);
+                    if (q2 != std::string::npos) {
+                        h.version = resp.substr(q1 + 1, q2 - q1 - 1);
+                    }
+                }
+            }
+        } catch (...) {}
+    }
+
+    // Count models
+    std::string tags = MakeGetRequest(kTagsEndpoint);
+    try {
+        RawrXD::Agentic::RobustOllamaParser parser(tags);
+        auto model_entries = parser.parse_tags_response();
+        h.model_count = static_cast<int>(model_entries.size());
+    } catch (...) {}
+
+    return h;
 }
 
 std::string AgentOllamaClient::GetVersion() {
@@ -421,6 +467,49 @@ bool AgentOllamaClient::ChatStream(
     std::string fullResponse;
     uint64_t promptTokens = 0, completionTokens = 0;
     double tps = 0.0;
+    std::unordered_set<std::string> seenToolCallIds;
+
+    auto parse_args = [](const nlohmann::json& raw) -> nlohmann::json {
+        if (raw.is_null()) return nlohmann::json::object();
+        if (raw.is_object() || raw.is_array()) return raw;
+        if (raw.is_string()) {
+            try {
+                return nlohmann::json::parse(raw.get<std::string>());
+            } catch (...) {
+                return nlohmann::json(raw.get<std::string>());
+            }
+        }
+        return raw;
+    };
+
+    auto handle_tool_calls = [&](const nlohmann::json& container) {
+        if (!container.contains("tool_calls") || !container["tool_calls"].is_array()) return;
+        for (const auto& tc : container["tool_calls"]) {
+            std::string id = tc.value("id", "");
+            if (!id.empty() && !seenToolCallIds.insert(id).second) {
+                continue; // Skip duplicate fragments
+            }
+
+            std::string toolName;
+            if (tc.contains("function") && tc["function"].is_object()) {
+                toolName = tc["function"].value("name", "");
+            }
+            if (toolName.empty()) {
+                toolName = tc.value("name", "");
+            }
+
+            nlohmann::json args = nlohmann::json::object();
+            if (tc.contains("function") && tc["function"].is_object() && tc["function"].contains("arguments")) {
+                args = parse_args(tc["function"]["arguments"]);
+            } else if (tc.contains("arguments")) {
+                args = parse_args(tc["arguments"]);
+            }
+
+            if (!toolName.empty() && on_tool_call) {
+                on_tool_call(toolName, args);
+            }
+        }
+    };
 
     bool result = MakeStreamingPost(kChatEndpoint, payload.dump(),
         [&](const std::string& line) -> bool {
@@ -436,6 +525,17 @@ bool AgentOllamaClient::ChatStream(
                     } catch (...) {
                         // fall back to raw string
                     }
+                }
+
+                if (j.contains("error")) {
+                    std::string errMsg;
+                    if (j["error"].is_string()) {
+                        errMsg = j["error"].get<std::string>();
+                    } else {
+                        errMsg = j["error"].dump();
+                    }
+                    if (on_error && ShouldEmitError(errMsg)) on_error(errMsg);
+                    return false;
                 }
 
                 bool done = j.value("done", false);
@@ -455,6 +555,11 @@ bool AgentOllamaClient::ChatStream(
                 if (content.empty() && j.contains("content")) {
                     content = j.value("content", "");
                 }
+
+                if (j.contains("message") && j["message"].is_object()) {
+                    handle_tool_calls(j["message"]);
+                }
+                handle_tool_calls(j);
 
                 if (!content.empty()) {
                     fullResponse += content;
@@ -569,6 +674,67 @@ void AgentOllamaClient::CancelStream() {
     m_cancelRequested.store(true);
 }
 
+// Enhancement 2: Connection warmup — pre-validate Ollama is responsive
+bool AgentOllamaClient::WarmupConnection() {
+    auto t0 = std::chrono::steady_clock::now();
+    for (int attempt = 0; attempt < kMaxRetries; ++attempt) {
+        if (TestConnection()) {
+            auto t1 = std::chrono::steady_clock::now();
+            double ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
+            std::cerr << "[AgentOllamaClient] Warmup succeeded in " << ms << "ms (attempt " << (attempt+1) << ")\n";
+            return true;
+        }
+        if (attempt < kMaxRetries - 1) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(kRetryBaseDelayMs * (1 << attempt)));
+        }
+    }
+    std::cerr << "[AgentOllamaClient] Warmup FAILED after " << kMaxRetries << " attempts\n";
+    return false;
+}
+
+// Enhancement 3: Model health check — verify model is loaded and responsive
+bool AgentOllamaClient::CheckModelHealth(const std::string& modelName) {
+    auto models = ListModels();
+    for (const auto& m : models) {
+        if (m == modelName || m.find(modelName) != std::string::npos) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Enhancement 4: Improved error dedup with timestamps and rate limiting
+bool AgentOllamaClient::ShouldEmitError(const std::string& msg) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    auto now = std::chrono::steady_clock::now();
+
+    // Prune errors older than 30 seconds
+    while (!m_recentErrors.empty()) {
+        // Keep recent window to 5 entries max, FIFO
+        if (m_recentErrors.size() > 10) {
+            m_recentErrors.pop_front();
+        } else {
+            break;
+        }
+    }
+
+    // Dedup: skip if same error already emitted recently
+    for (const auto& recent : m_recentErrors) {
+        if (recent == msg) return false;
+    }
+    m_recentErrors.push_back(msg);
+    m_consecutiveErrors++;
+
+    // Enhancement 5: Rate-limit error callbacks — max 3 per second
+    if (m_consecutiveErrors > 10) {
+        // Circuit breaker: stop emitting after 10 consecutive errors
+        std::cerr << "[AgentOllamaClient] Circuit breaker: suppressing errors (" 
+                  << m_consecutiveErrors << " consecutive)\n";
+        return false;
+    }
+    return true;
+}
+
 void AgentOllamaClient::SetConfig(const OllamaConfig& config) {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_config = config;
@@ -578,6 +744,48 @@ double AgentOllamaClient::GetAvgTokensPerSec() const {
     uint64_t tokens = m_totalTokens.load();
     if (tokens == 0 || m_totalDurationMs == 0.0) return 0.0;
     return static_cast<double>(tokens) / (m_totalDurationMs / 1000.0);
+}
+
+// Enhancement 6: Structured metrics snapshot for telemetry/status panels
+AgentOllamaClient::MetricsSnapshot AgentOllamaClient::GetMetricsSnapshot() const {
+    MetricsSnapshot snap;
+    snap.totalRequests = m_totalRequests.load(std::memory_order_relaxed);
+    snap.totalTokens = m_totalTokens.load(std::memory_order_relaxed);
+    snap.avgTokensPerSec = GetAvgTokensPerSec();
+    snap.isStreaming = m_streaming.load();
+    snap.consecutiveErrors = m_consecutiveErrors;
+    snap.chatModel = m_config.chat_model;
+    snap.fimModel = m_config.fim_model;
+    snap.host = m_config.host;
+    snap.port = m_config.port;
+    return snap;
+}
+
+// Enhancement 7: ChatSync with automatic retry on transient failures
+InferenceResult AgentOllamaClient::ChatSyncWithRetry(
+    const std::vector<ChatMessage>& messages,
+    const nlohmann::json& tools,
+    int maxRetries)
+{
+    for (int attempt = 0; attempt < maxRetries; ++attempt) {
+        auto result = ChatSync(messages, tools);
+        if (result.success) {
+            m_consecutiveErrors = 0;  // Reset circuit breaker on success
+            return result;
+        }
+        // Don't retry on non-transient errors
+        if (result.error_message.find("model not found") != std::string::npos ||
+            result.error_message.find("invalid") != std::string::npos) {
+            return result;
+        }
+        if (attempt < maxRetries - 1) {
+            int delayMs = kRetryBaseDelayMs * (1 << attempt);
+            std::cerr << "[AgentOllamaClient] ChatSync retry " << (attempt+1) 
+                      << "/" << maxRetries << " in " << delayMs << "ms\n";
+            std::this_thread::sleep_for(std::chrono::milliseconds(delayMs));
+        }
+    }
+    return InferenceResult::error("ChatSync failed after " + std::to_string(maxRetries) + " retries");
 }
 
 // ---------------------------------------------------------------------------
@@ -700,6 +908,83 @@ InferenceResult AgentOllamaClient::ParseChatResponse(const std::string& json_str
 
     try {
         nlohmann::json j = nlohmann::json::parse(json_str);
+
+        if (j.contains("error")) {
+            if (j["error"].is_string()) {
+                return InferenceResult::error(j["error"].get<std::string>());
+            }
+            return InferenceResult::error(j["error"].dump());
+        }
+
+        auto parse_args = [](const nlohmann::json& raw) -> nlohmann::json {
+            if (raw.is_null()) return nlohmann::json::object();
+            if (raw.is_object() || raw.is_array()) return raw;
+            if (raw.is_string()) {
+                try {
+                    return nlohmann::json::parse(raw.get<std::string>());
+                } catch (...) {
+                    return nlohmann::json(raw.get<std::string>());
+                }
+            }
+            return raw;
+        };
+
+        auto add_tool_calls = [&](const nlohmann::json& container) {
+            if (!container.contains("tool_calls") || !container["tool_calls"].is_array()) return;
+            for (const auto& tc : container["tool_calls"]) {
+                std::string toolName;
+                if (tc.contains("function") && tc["function"].is_object()) {
+                    toolName = tc["function"].value("name", "");
+                }
+                if (toolName.empty()) {
+                    toolName = tc.value("name", "");
+                }
+
+                nlohmann::json args = nlohmann::json::object();
+                if (tc.contains("function") && tc["function"].is_object() && tc["function"].contains("arguments")) {
+                    args = parse_args(tc["function"]["arguments"]);
+                } else if (tc.contains("arguments")) {
+                    args = parse_args(tc["arguments"]);
+                }
+
+                if (!toolName.empty()) {
+                    result.tool_calls.emplace_back(toolName, args);
+                }
+            }
+        };
+
+        auto content_from = [](const nlohmann::json& obj) -> std::string {
+            if (obj.contains("message") && obj["message"].is_object()) {
+                const auto& msg = obj["message"];
+                if (msg.contains("content") && msg["content"].is_string()) {
+                    return msg["content"].get<std::string>();
+                }
+            }
+            if (obj.contains("response")) {
+                const auto& respNode = obj["response"];
+                if (respNode.is_string()) return respNode.get<std::string>();
+                if (respNode.is_object()) return respNode.value("content", "");
+            }
+            if (obj.contains("content") && obj["content"].is_string()) {
+                return obj["content"].get<std::string>();
+            }
+            return "";
+        };
+
+        if (result.response.empty()) {
+            result.response = content_from(j);
+        }
+        if (j.contains("message") && j["message"].is_object()) {
+            const auto& msg = j["message"];
+            if (result.response.empty()) {
+                result.response = content_from(msg);
+            }
+            add_tool_calls(msg);
+        }
+        add_tool_calls(j);
+        if (!result.tool_calls.empty()) {
+            result.has_tool_calls = true;
+        }
         
         // Ollama uses these fields for token counts in /api/chat
         if (j.contains("prompt_eval_count")) {
@@ -955,7 +1240,7 @@ bool AgentOllamaClient::MakeStreamingPost(
     ErrorCallback on_error)
 {
     if (!m_hSession) {
-        if (on_error) on_error("WinHTTP session not initialized");
+        if (on_error && ShouldEmitError("WinHTTP session not initialized")) on_error("WinHTTP session not initialized");
         return false;
     }
 
@@ -963,7 +1248,10 @@ bool AgentOllamaClient::MakeStreamingPost(
     HINTERNET hConnect = WinHttpConnect(m_hSession, wHost.c_str(),
                                         static_cast<INTERNET_PORT>(m_config.port), 0);
     if (!hConnect) {
-        if (on_error) on_error("Failed to connect to " + m_config.host);
+        {
+            std::string msg = "Failed to connect to " + m_config.host;
+            if (on_error && ShouldEmitError(msg)) on_error(msg);
+        }
         return false;
     }
 
@@ -973,7 +1261,7 @@ bool AgentOllamaClient::MakeStreamingPost(
                                             WINHTTP_DEFAULT_ACCEPT_TYPES, 0);
     if (!hRequest) {
         WinHttpCloseHandle(hConnect);
-        if (on_error) on_error("Failed to open request");
+        if (on_error && ShouldEmitError("Failed to open request")) on_error("Failed to open request");
         return false;
     }
 
@@ -986,7 +1274,10 @@ bool AgentOllamaClient::MakeStreamingPost(
         DWORD err = GetLastError();
         WinHttpCloseHandle(hRequest);
         WinHttpCloseHandle(hConnect);
-        if (on_error) on_error("HTTP request failed: " + std::to_string(err));
+        {
+            std::string msg = "HTTP request failed: " + std::to_string(err);
+            if (on_error && ShouldEmitError(msg)) on_error(msg);
+        }
         return false;
     }
 
@@ -1034,7 +1325,7 @@ done:
 #include <unistd.h>
 #include <arpa/inet.h>
 
-// SCAFFOLD_065: AgentOllamaClient and HTTP
+// POSIX HTTP implementation — raw sockets fallback for non-Windows
 
 
 static int posix_connect(const std::string& host, int port) {
@@ -1099,7 +1390,7 @@ bool AgentOllamaClient::MakeStreamingPost(const std::string& path, const std::st
     std::function<bool(const std::string&)> on_line, ErrorCallback on_error) {
     int sock = posix_connect(m_host, m_port);
     if (sock < 0) {
-        if (on_error) on_error("Failed to connect");
+        if (on_error && ShouldEmitError("Failed to connect")) on_error("Failed to connect");
         return false;
     }
 

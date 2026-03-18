@@ -185,9 +185,11 @@ void Win32IDE::showGitDiffSideBySide(const std::string& filePath) {
 
         char buf[4096];
         DWORD bytesRead;
-        while (ReadFile(hReadPipe, buf, sizeof(buf) - 1, &bytesRead, NULL) && bytesRead > 0) {
-            buf[bytesRead] = '\0';
-            diffOutput += buf;
+        constexpr DWORD kMaxChunk = static_cast<DWORD>(sizeof(buf) - 1);
+        while (ReadFile(hReadPipe, buf, kMaxChunk, &bytesRead, NULL) && bytesRead > 0) {
+            const size_t safeBytes = (bytesRead <= kMaxChunk) ? static_cast<size_t>(bytesRead) : static_cast<size_t>(kMaxChunk);
+            buf[safeBytes] = '\0';
+            diffOutput.append(buf, safeBytes);
         }
 
         WaitForSingleObject(pi.hProcess, 5000);
@@ -227,9 +229,11 @@ void Win32IDE::showGitDiffSideBySide(const std::string& filePath) {
                 std::string origContent;
                 char buf[4096];
                 DWORD bytesRead;
-                while (ReadFile(hR, buf, sizeof(buf)-1, &bytesRead, NULL) && bytesRead > 0) {
-                    buf[bytesRead] = '\0';
-                    origContent += buf;
+                constexpr DWORD kMaxChunk = static_cast<DWORD>(sizeof(buf) - 1);
+                while (ReadFile(hR, buf, kMaxChunk, &bytesRead, NULL) && bytesRead > 0) {
+                    const size_t safeBytes = (bytesRead <= kMaxChunk) ? static_cast<size_t>(bytesRead) : static_cast<size_t>(kMaxChunk);
+                    buf[safeBytes] = '\0';
+                    origContent.append(buf, safeBytes);
                 }
                 WaitForSingleObject(pi2.hProcess, 5000);
                 CloseHandle(pi2.hProcess);
@@ -1012,7 +1016,7 @@ void Win32IDE::onEditorMouseHover(int charPos) {
     }
 
     POINTL pt;
-    SendMessageA(m_hwndEditor, EM_POSFROMCHAR, (WPARAM)&pt, charPos);
+    SendMessageA(m_hwndEditor, EM_POSFROMCHAR, (WPARAM)charPos, (LPARAM)&pt);
     POINT screenPt = {pt.x, pt.y};
     ClientToScreen(m_hwndEditor, &screenPt);
 
@@ -1246,7 +1250,7 @@ void Win32IDE::triggerSignatureHelp() {
 
     // Position popup above the cursor
     POINTL pt;
-    SendMessageA(m_hwndEditor, EM_POSFROMCHAR, (WPARAM)&pt, sel.cpMin);
+    SendMessageA(m_hwndEditor, EM_POSFROMCHAR, (WPARAM)sel.cpMin, (LPARAM)&pt);
     POINT screenPt = {pt.x, pt.y};
     ClientToScreen(m_hwndEditor, &screenPt);
 

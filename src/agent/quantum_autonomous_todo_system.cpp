@@ -25,11 +25,11 @@ namespace RawrXD::Agent {
 namespace {
     // MASM bridge function prototypes
     extern "C" {
-        void quantum_todo_analyzer_impl(const char* codebase_path, char* result_buffer, size_t buffer_size);
-        void quantum_difficulty_calculator_impl(const char* task_desc, float* difficulty_score);
-        void quantum_priority_matrix_impl(const void* tasks, size_t task_count, void* priority_matrix);
-        void quantum_time_predictor_impl(const char* task_type, float complexity, int* time_estimate_ms);
-        void quantum_resource_optimizer_impl(int current_load, int* optimal_thread_count, int* optimal_memory_mb);
+        void __stdcall quantum_todo_analyzer(const char* codebase_path, char* result_buffer, size_t buffer_size);
+        void __stdcall quantum_difficulty_calculator(const char* task_desc, float* difficulty_score);
+        void __stdcall quantum_priority_matrix(const void* tasks, size_t task_count, void* priority_matrix);
+        void __stdcall quantum_time_predictor(const char* task_type, float complexity, int* time_estimate_ms);
+        void __stdcall quantum_resource_optimizer(int current_load, int* optimal_thread_count, int* optimal_memory_mb);
     }
 
     // Quantum priority calculation constants
@@ -218,7 +218,7 @@ QuantumAutonomousTodoSystem::auditProductionReadiness() {
     // Run MASM-accelerated analysis if available
     if (m_masm_initialized) {
         char result_buffer[8192];
-        quantum_todo_analyzer_impl("d:\\rawrxd", result_buffer, sizeof(result_buffer));
+        quantum_todo_analyzer("d:\\rawrxd", result_buffer, sizeof(result_buffer));
         std::string masm_results(result_buffer);
         
         // Parse MASM analysis results and convert to tasks
@@ -581,7 +581,7 @@ float QuantumAutonomousTodoSystem::calculateQuantumPriority(const TaskDefinition
     // Use MASM-accelerated calculation if available
     if (m_masm_initialized) {
         float quantum_priority = 0.0f;
-        quantum_priority_matrix_impl(&task, 1, &quantum_priority);
+        quantum_priority_matrix(&task, 1, &quantum_priority);
         return quantum_priority;
     }
     

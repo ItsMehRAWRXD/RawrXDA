@@ -106,7 +106,10 @@ void CPUInferenceEngine::InitKVCache() {
     m_currentPos = 0;
     // Iterate over m_transformerLayers (pointers)
     for(auto& layer : m_transformerLayers) {
-        if(layer) layer->cache_pos = 0;
+        if(layer) {
+            layer->cache_pos = 0;
+            layer->total_tokens_seen = 0;
+        }
     }
 }
 

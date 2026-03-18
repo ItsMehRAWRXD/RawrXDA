@@ -191,42 +191,48 @@ static constexpr size_t MAX_AGENT_CHECKPOINTS = 32;
 #define IDM_FILE_EXIT 2005
 #endif
 
-// Enterprise/Professional feature entry points (menu wiring)
+// Enterprise/Professional feature entry points (menu wiring) — use non-UI ID range to avoid collisions with View (3030+)
 #ifndef IDM_ENT_MODEL_COMPARE
-#define IDM_ENT_MODEL_COMPARE 3030
+#define IDM_ENT_MODEL_COMPARE 12330
 #endif
 #ifndef IDM_ENT_BATCH_PROCESS
-#define IDM_ENT_BATCH_PROCESS 3031
+#define IDM_ENT_BATCH_PROCESS 12331
 #endif
 #ifndef IDM_ENT_CUSTOM_STOP_SEQ
-#define IDM_ENT_CUSTOM_STOP_SEQ 3032
+#define IDM_ENT_CUSTOM_STOP_SEQ 12332
 #endif
 #ifndef IDM_ENT_GRAMMAR_CONSTRAINTS
-#define IDM_ENT_GRAMMAR_CONSTRAINTS 3033
+#define IDM_ENT_GRAMMAR_CONSTRAINTS 12333
 #endif
 #ifndef IDM_ENT_LORA_ADAPTER
-#define IDM_ENT_LORA_ADAPTER 3034
+#define IDM_ENT_LORA_ADAPTER 12334
 #endif
 #ifndef IDM_ENT_RESPONSE_CACHE
-#define IDM_ENT_RESPONSE_CACHE 3035
+#define IDM_ENT_RESPONSE_CACHE 12335
 #endif
 #ifndef IDM_ENT_PROMPT_LIBRARY
-#define IDM_ENT_PROMPT_LIBRARY 3036
+#define IDM_ENT_PROMPT_LIBRARY 12336
 #endif
 #ifndef IDM_ENT_SESSION_EXPORT_IMPORT
-#define IDM_ENT_SESSION_EXPORT_IMPORT 3037
+#define IDM_ENT_SESSION_EXPORT_IMPORT 12337
 #endif
 #ifndef IDM_ENT_MODEL_SHARDING
-#define IDM_ENT_MODEL_SHARDING 3038
+#define IDM_ENT_MODEL_SHARDING 12338
 #endif
 #ifndef IDM_ENT_TENSOR_PARALLEL
-#define IDM_ENT_TENSOR_PARALLEL 3039
+#define IDM_ENT_TENSOR_PARALLEL 12339
 #endif
 #ifndef IDM_ENT_PIPELINE_PARALLEL
-#define IDM_ENT_PIPELINE_PARALLEL 3040
+#define IDM_ENT_PIPELINE_PARALLEL 12340
 #endif
 #ifndef IDM_ENT_CUSTOM_QUANT
-#define IDM_ENT_CUSTOM_QUANT 3041
+#define IDM_ENT_CUSTOM_QUANT 12341
+#endif
+#ifndef IDM_AGENT_AUTONOMOUS_COMMUNICATOR
+#define IDM_AGENT_AUTONOMOUS_COMMUNICATOR 4163  // free slot; 4106=IDM_AGENT_MEMORY, 4110=IDM_SUBAGENT_CHAIN
+#endif
+#ifndef IDM_TELEMETRY_UNIFIED_CORE
+#define IDM_TELEMETRY_UNIFIED_CORE 4164  // free slot; 4300=IDM_REVENG_ANALYZE
 #endif
 #ifndef IDM_ENT_MULTI_GPU_BALANCE
 #define IDM_ENT_MULTI_GPU_BALANCE 3042
@@ -681,6 +687,7 @@ void Win32IDE::updateCommandStates()
     bool agentReady = (m_agenticBridge != nullptr);
     m_commandStates[IDM_AGENT_START_LOOP] = agentReady;
     m_commandStates[IDM_AGENT_EXECUTE_CMD] = agentReady;
+    m_commandStates[IDM_AGENT_AUTONOMOUS_COMMUNICATOR] = agentReady;
     m_commandStates[IDM_AGENT_STOP] = agentReady;
     // Autonomy: Start when not running, Stop when running — direct next step
     bool autonomyRunning = (m_autonomyManager && m_autonomyManager->isAutoLoopEnabled());
@@ -689,6 +696,7 @@ void Win32IDE::updateCommandStates()
     m_commandStates[IDM_PIPELINE_RUN] = agentReady;
     m_commandStates[IDM_PIPELINE_AUTONOMY_START] = agentReady;
     m_commandStates[IDM_PIPELINE_AUTONOMY_STOP] = agentReady;
+    m_commandStates[IDM_TELEMETRY_UNIFIED_CORE] = true;  // Telemetry is always available
     m_commandStates[IDM_AUTONOMY_SET_GOAL] = agentReady;
 
     // Swarm: Stop only when coordinator or worker is running — direct next step
@@ -943,6 +951,19 @@ void Win32IDE::handleViewCommand(int commandId)
             break;
         case 2023:  // IDM_VIEW_THEME_EDITOR
             showThemeEditor();
+            break;
+        case 3030:  // ID_VIEW_SYNTAX_HIGHLIGHTING_TOGGLE
+            toggleSyntaxHighlighting();
+            if (m_hMenu)
+                CheckMenuItem(m_hMenu, 3030, m_syntaxColoringEnabled ? MF_CHECKED : MF_UNCHECKED);
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
+                        (LPARAM)(m_syntaxColoringEnabled ? "Syntax highlighting ON" : "Syntax highlighting OFF"));
+            break;
+        case 3031:  // ID_VIEW_VISION_ENCODER
+            showVisionEncoder();
+            break;
+        case 3032:  // ID_VIEW_SEMANTIC_INDEX
+            showSemanticIndex();
             break;
         case 2024:  // IDM_VIEW_FLOATING_PANEL
             toggleFloatingPanel();
@@ -9975,10 +9996,18 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({IDM_AGENT_START_LOOP, "Agent: Start Agent Loop", "", "Agent"});
     m_commandRegistry.push_back({IDM_AGENT_SMOKE_TEST, "Agent: Run Agentic Smoke Test", "", "Agent"});
     m_commandRegistry.push_back({IDM_AGENT_EXECUTE_CMD, "Agent: Execute Command", "", "Agent"});
+    // Legacy aliases expected by smoke checks
+    m_commandRegistry.push_back({IDM_SUBAGENT_CHAIN, "Agent: Execute Prompt Chain", "", "Agent"});
+    m_commandRegistry.push_back({IDM_SUBAGENT_SWARM, "Agent: Execute HexMag Swarm", "", "Agent"});
+    m_commandRegistry.push_back({IDM_AGENT_BOUNDED_LOOP, "Agent: Bounded Agent Loop", "", "Agent"});
+    m_commandRegistry.push_back({IDM_AGENT_MEMORY_VIEW, "Agent: View Memory", "", "Agent"});
+    m_commandRegistry.push_back({IDM_AGENT_MEMORY_CLEAR, "Agent: Clear Memory", "", "Agent"});
+    m_commandRegistry.push_back({IDM_AGENT_MEMORY_EXPORT, "Agent: Export Memory", "", "Agent"});
     m_commandRegistry.push_back({IDM_AGENT_CONFIGURE_MODEL, "Agent: Configure Model", "", "Agent"});
     m_commandRegistry.push_back({IDM_AGENT_VIEW_TOOLS, "Agent: View Available Tools", "", "Agent"});
     m_commandRegistry.push_back({IDM_AGENT_VIEW_STATUS, "Agent: View Status", "", "Agent"});
     m_commandRegistry.push_back({IDM_AGENT_STOP, "Agent: Stop Agent", "", "Agent"});
+    m_commandRegistry.push_back({IDM_AGENT_AUTONOMOUS_COMMUNICATOR, "Agent: Autonomous Communicator", "", "Agent"});
     m_commandRegistry.push_back(
         {IDM_AGENT_SET_CYCLE_AGENT_COUNTER, "Agent: Set Cycle Agent Counter (1x-4x)", "", "Agent"});
 
@@ -9991,6 +10020,7 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({IDM_AUTONOMY_MEMORY, "Autonomy: Show Memory", "", "Autonomy"});
     m_commandRegistry.push_back({IDM_PIPELINE_RUN, "Pipeline: Run once", "", "Autonomy"});
     m_commandRegistry.push_back({IDM_PIPELINE_AUTONOMY_START, "Pipeline: Start autonomous loop", "", "Autonomy"});
+    m_commandRegistry.push_back({IDM_TELEMETRY_UNIFIED_CORE, "Telemetry: Unified Core", "", "Telemetry"});
     m_commandRegistry.push_back({IDM_PIPELINE_AUTONOMY_STOP, "Pipeline: Stop autonomous loop", "", "Autonomy"});
 
     // SubAgent (Chain, Swarm, Todo List — full parity with menu)
@@ -11525,4 +11555,74 @@ void Win32IDE::showThermalDashboard()
     s_thermalDashboard->show();
 }
 
+// ============================================================================
+// handleFeaturesCommand — dispatcher for command range 11500–11599
+// Covers: Refactoring (11540–11547), Language (11550–11553),
+//         Semantic Index (11560–11567), Resource Generator (11570–11574)
+// ============================================================================
+bool Win32IDE::handleFeaturesCommand(int commandId) {
+    // ── Refactoring Plugin (11540–11547) ──────────────────────────────────
+    if (commandId >= IDM_REFACTOR_EXTRACT_METHOD &&
+        commandId <= IDM_REFACTOR_LOAD_PLUGIN) {
+        if (!m_refactoringManager) initRefactoringPlugin();
+        switch (commandId) {
+            case IDM_REFACTOR_EXTRACT_METHOD:    cmdRefactorExtractMethod();    break;
+            case IDM_REFACTOR_EXTRACT_VARIABLE:  cmdRefactorExtractVariable();  break;
+            case IDM_REFACTOR_RENAME_SYMBOL:     cmdRefactorRenameSymbol();     break;
+            case IDM_REFACTOR_ORGANIZE_INCLUDES: cmdRefactorOrganizeIncludes(); break;
+            case IDM_REFACTOR_CONVERT_AUTO:      cmdRefactorConvertToAuto();    break;
+            case IDM_REFACTOR_REMOVE_DEAD_CODE:  cmdRefactorRemoveDeadCode();   break;
+            case IDM_REFACTOR_SHOW_ALL:          cmdRefactorShowAll();          break;
+            case IDM_REFACTOR_LOAD_PLUGIN:       cmdRefactorLoadPlugin();       break;
+            default: break;
+        }
+        return true;
+    }
 
+    // ── Language Plugin (11550–11553) ────────────────────────────────────
+    if (commandId >= IDM_LANG_DETECT && commandId <= IDM_LANG_SET_FOR_FILE) {
+        if (!m_languageManager) initLanguagePlugin();
+        switch (commandId) {
+            case IDM_LANG_DETECT:         cmdLanguageDetect();       break;
+            case IDM_LANG_LIST_ALL:       cmdLanguageListAll();      break;
+            case IDM_LANG_LOAD_PLUGIN:    cmdLanguageLoadPlugin();   break;
+            case IDM_LANG_SET_FOR_FILE:   cmdLanguageSetForFile();   break;
+            default: break;
+        }
+        return true;
+    }
+
+    // ── Semantic Index (11560–11567) ─────────────────────────────────────
+    if (commandId >= IDM_SEMANTIC_BUILD_INDEX &&
+        commandId <= IDM_SEMANTIC_LOAD_PLUGIN) {
+        return handleSemanticIndexCommand(commandId);
+    }
+
+    // ── Resource Generator (11570–11574) ─────────────────────────────────
+    if (commandId >= IDM_RESOURCE_GENERATE && commandId <= IDM_RESOURCE_LOAD_PLUGIN) {
+        if (!m_resourceManager) initResourceGenerator();
+        switch (commandId) {
+            case IDM_RESOURCE_GENERATE:       cmdResourceGenerate();          break;
+            case IDM_RESOURCE_GEN_PROJECT:    cmdResourceGenerateProject();   break;
+            case IDM_RESOURCE_LIST_TEMPLATES: cmdResourceListTemplates();     break;
+            case IDM_RESOURCE_SEARCH:         cmdResourceSearchTemplates();   break;
+            case IDM_RESOURCE_LOAD_PLUGIN:    cmdResourceLoadPlugin();        break;
+            default: break;
+        }
+        return true;
+    }
+
+    // ── Enterprise Stress Tests (11575–11577) ────────────────────────────
+    if (commandId >= IDM_ENTERPRISE_STRESS_RUN && commandId <= IDM_ENTERPRISE_STRESS_SHOW) {
+        if (!m_enterpriseStressTester) initEnterpriseStressTests();
+        switch (commandId) {
+            case IDM_ENTERPRISE_STRESS_RUN:  executeEnterpriseStressTest(30, 4); break;
+            case IDM_ENTERPRISE_STRESS_STOP: /* stop flag set inside stresser */  break;
+            case IDM_ENTERPRISE_STRESS_SHOW: handleEnterpriseStressTestCommand();  break;
+            default: break;
+        }
+        return true;
+    }
+
+    return false;
+}

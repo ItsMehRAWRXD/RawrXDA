@@ -1,0 +1,37 @@
+[  9%] Built target masm_kernels
+[  9%] Built target quickjs_static
+[  9%] Built target RawrXD_MultiWindow_Kernel
+[  9%] Built target re_deobfuscator
+[  9%] Built target RawrXD-RE-Library
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_VSCodeUI.cpp.obj
+Win32IDE_VSCodeUI.cpp
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_Watchdog.cpp.obj
+Win32IDE_Watchdog.cpp
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_SyntaxHighlight.cpp.obj
+Win32IDE_SyntaxHighlight.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_Themes.cpp.obj
+Win32IDE_Themes.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_StreamingUX.cpp.obj
+Win32IDE_StreamingUX.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_Sidebar.cpp.obj
+Win32IDE_Sidebar.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_Debugger.cpp.obj
+Win32IDE_Debugger.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_Annotations.cpp.obj
+Win32IDE_Annotations.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_ReverseEngineering.cpp.obj
+Win32IDE_ReverseEngineering.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_Logger.cpp.obj
+Win32IDE_Logger.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_AgenticBridge.cpp.obj
+Win32IDE_AgenticBridge.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/full_agentic_ide/FullAgenticIDE.cpp.obj
+FullAgenticIDE.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_AgentCommands.cpp.obj
+Win32IDE_AgentCommands.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_PowerShell.cpp.obj
+Win32IDE_PowerShell.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_PowerShellPanel.cpp.obj
+Win32IDE_PowerShellPanel.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_Session.cpp.obj
+Win32IDE_Session.cpp

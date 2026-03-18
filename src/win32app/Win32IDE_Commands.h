@@ -236,7 +236,13 @@
 #define IDM_LSP_CONFIGURE           5069
 #define IDM_LSP_SAVE_CONFIG         5070
 
-// ---- UX / Research Track extras (5071–5081) --------------------------------
+// ---- Peek Overlay commands (5071–5074) -------------------------------------
+#define IDM_PEEK_DEFINITION         5071
+#define IDM_PEEK_REFERENCES         5072
+#define IDM_PEEK_CLOSE              5073
+#define IDM_PEEK_NAVIGATE           5074
+
+// ---- UX / Research Track extras (5075–5085) --------------------------------
 #define IDM_ROUTER_WHY_BACKEND      5071
 #define IDM_ROUTER_PIN_TASK         5072
 #define IDM_ROUTER_UNPIN_TASK       5073

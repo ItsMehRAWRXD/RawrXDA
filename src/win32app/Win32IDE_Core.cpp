@@ -27,6 +27,7 @@
 #include "RawrXD_AgentCoordinator.h"
 #include "RawrXD_AutonomousAgenticPipeline.h"
 #include "Win32IDE.h"
+#include "Win32IDE_ComponentManagers.h"  // Complete types for unique_ptr<T> dtor
 #include "Win32IDE_IELabels.h"
 #include "enterprise_feature_manager.hpp"
 #include "feature_registry_panel.h"
@@ -433,6 +434,29 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
                     hideCommandPalette();
                 else
                     showCommandPalette();
+                return 0;
+            }
+            
+            // Peek overlay keyboard shortcuts
+            if (isPeekOverlayActive()) {
+                bool ctrl = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
+                bool alt = (GetKeyState(VK_MENU) & 0x8000) != 0;
+                bool shift = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+                handlePeekOverlayKey((UINT)wParam, ctrl, alt, shift);
+                return 0;
+            }
+            
+            // Peek definition (Alt+F12)
+            if ((GetKeyState(VK_MENU) & 0x8000) && (wParam == VK_F12))
+            {
+                routeCommand(IDM_LSP_GOTO_DEFINITION);
+                return 0;
+            }
+            
+            // Peek references (Shift+F12)  
+            if ((GetKeyState(VK_SHIFT) & 0x8000) && (wParam == VK_F12))
+            {
+                routeCommand(IDM_LSP_FIND_REFERENCES);
                 return 0;
             }
             break;
@@ -2443,8 +2467,8 @@ void Win32IDE::onDestroy()
     // Shutdown Phase 29+36: VS Code Extension API + QuickJS VSIX Host
     shutdownVSCodeExtensionAPI();
 
-    // Shutdown Cursor/JB-Parity: Telemetry Export
-    shutdownTelemetryExport();
+    // Shutdown core runtime spine (signature verifier, sqlite, telemetry export).
+    shutdownCoreRuntimeSpine();
 
     // Shutdown Tier 3: Polish (smooth caret, ligatures, file watcher)
     shutdownTier3Polish();
@@ -3164,3 +3188,5 @@ void Win32IDE::onCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 #endif
     DefWindowProcA(hwnd, WM_COMMAND, MAKEWPARAM(id, codeNotify), (LPARAM)hwndCtl);
 }
+
+

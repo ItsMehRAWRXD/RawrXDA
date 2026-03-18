@@ -18,6 +18,7 @@
 #include <mutex>
 #include <atomic>
 #include <thread>
+#include <deque>
 #include <nlohmann/json.hpp>
 
 #ifdef _WIN32
@@ -111,6 +112,13 @@ struct InferenceResult {
     }
 };
 
+struct OllamaHealth {
+    bool ok = false;
+    int model_count = 0;
+    int latency_ms = 0;
+    std::string version;
+};
+
 // ---------------------------------------------------------------------------
 // AgentOllamaClient — streaming Ollama interface for agentic + FIM
 // ---------------------------------------------------------------------------
@@ -121,6 +129,7 @@ public:
 
     // -- Connection --
     bool TestConnection();
+    OllamaHealth TestConnectionWithStats();
     std::string GetVersion();
     std::vector<std::string> ListModels();
 
@@ -159,6 +168,30 @@ public:
     uint64_t GetTotalRequests() const { return m_totalRequests.load(); }
     double GetAvgTokensPerSec() const;
 
+    // -- Enhancement: Connection warmup + model health --
+    bool WarmupConnection();
+    bool CheckModelHealth(const std::string& modelName);
+
+    // -- Enhancement: ChatSync with automatic retry --
+    InferenceResult ChatSyncWithRetry(
+        const std::vector<ChatMessage>& messages,
+        const json& tools = json::array(),
+        int maxRetries = 3);
+
+    // -- Enhancement: Structured metrics snapshot --
+    struct MetricsSnapshot {
+        uint64_t totalRequests = 0;
+        uint64_t totalTokens = 0;
+        double avgTokensPerSec = 0.0;
+        bool isStreaming = false;
+        int consecutiveErrors = 0;
+        std::string chatModel;
+        std::string fimModel;
+        std::string host;
+        uint16_t port = 0;
+    };
+    MetricsSnapshot GetMetricsSnapshot() const;
+
 private:
     // HTTP helpers
     std::string MakeGetRequest(const std::string& endpoint);
@@ -186,6 +219,9 @@ private:
     std::atomic<uint64_t> m_totalRequests{0};
     std::atomic<uint64_t> m_totalTokens{0};
     double m_totalDurationMs{0.0};
+    int m_consecutiveErrors{0};
+    std::deque<std::string> m_recentErrors;
+    bool ShouldEmitError(const std::string& msg);
 
 #ifdef _WIN32
     HINTERNET m_hSession{nullptr};

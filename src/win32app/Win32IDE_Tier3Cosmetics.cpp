@@ -357,7 +357,7 @@ void Win32IDE::paintWhitespaceGlyphs(HDC hdc, const RECT& editorRect) {
             if (lineBuf[c] != ' ' && lineBuf[c] != '\t') continue;
 
             POINTL pt;
-            SendMessage(m_hwndEditor, EM_POSFROMCHAR, (WPARAM)&pt, charIdx + c);
+            SendMessage(m_hwndEditor, EM_POSFROMCHAR, (WPARAM)(charIdx + c), (LPARAM)&pt);
 
             if (pt.x < editorRect.left || pt.x >= editorRect.right) continue;
             if (pt.y < editorRect.top || pt.y >= editorRect.bottom) continue;

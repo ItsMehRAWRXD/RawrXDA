@@ -55,19 +55,25 @@ std::string Win32IDE::executePowerShellCommand(const std::string& command, bool 
     si.hStdError = hStdOutWrite;
     si.wShowWindow = SW_HIDE;
     
+    // CreateProcessA expects a writable command line buffer; std::string::c_str() may not be writable.
+    std::vector<char> cmdBuf(fullCmd.begin(), fullCmd.end());
+    cmdBuf.push_back('\0');
+
     PROCESS_INFORMATION pi = {};
-    if (CreateProcessA(NULL, const_cast<char*>(fullCmd.c_str()), NULL, NULL, TRUE, 
+    if (CreateProcessA(NULL, cmdBuf.data(), NULL, NULL, TRUE, 
                        CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
         CloseHandle(hStdOutWrite);
         
         std::string output;
         output.reserve(65536);  // ~64KB typical command output; reduces reallocations 10–20x
         char buffer[4096];
-        DWORD bytesRead;
+        DWORD bytesRead = 0;
+        constexpr DWORD kMaxChunk = static_cast<DWORD>(sizeof(buffer) - 1);
         
-        while (ReadFile(hStdOutRead, buffer, sizeof(buffer) - 1, &bytesRead, NULL) && bytesRead > 0) {
-            buffer[bytesRead] = '\0';
-            output += buffer;
+        while (ReadFile(hStdOutRead, buffer, kMaxChunk, &bytesRead, NULL) && bytesRead > 0) {
+            const size_t safeBytes = (bytesRead <= kMaxChunk) ? static_cast<size_t>(bytesRead) : static_cast<size_t>(kMaxChunk);
+            buffer[safeBytes] = '\0';
+            output.append(buffer, safeBytes);
         }
 
         // Configurable timeout: per-run override | fixed | random | auto; agentic/audit/quick hint from balance & mode

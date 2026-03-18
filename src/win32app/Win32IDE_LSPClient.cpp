@@ -28,6 +28,7 @@
 // ============================================================================
 
 #include "Win32IDE.h"
+#include "Win32IDE_Types.h"
 #include <richedit.h>
 #include <fstream>
 #include <sstream>
@@ -1434,31 +1435,28 @@ void Win32IDE::cmdLSPGotoDefinition() {
         return;
     }
 
-    // Navigate to the first result
-    const auto& loc = locations[0];
-    std::string path = uriToFilePath(loc.uri);
-    int targetLine = loc.range.start.line + 1; // Convert to 1-based
+    // Create PeekItem objects for the peek overlay
+    std::vector<PeekItem> items;
+    for (const auto& loc : locations) {
+        PeekItem item;
+        item.title = uriToFilePath(loc.uri) + ":" + std::to_string(loc.range.start.line + 1);
+        item.file = uriToFilePath(loc.uri);
+        item.line = loc.range.start.line + 1; // Convert to 1-based
+        item.column = loc.range.start.character;
+        item.type = PeekItemType::Definition;
+        
+        // Get the content around the definition (placeholder for now)
+        item.content = "// Definition at line " + std::to_string(item.line);
+        
+        items.push_back(item);
+    }
 
-    appendToOutput("[LSP] Definition: " + path + ":" + std::to_string(targetLine),
+    // Show peek definition overlay
+    showPeekDefinition(lineIndex + 1, column + 1); // Convert to 1-based
+
+    appendToOutput("[LSP] " + std::to_string(locations.size()) +
+                   " definitions found — showing peek overlay.",
                    "General", OutputSeverity::Info);
-
-    // Open the file and jump to line (if different from current)
-    if (path != m_currentFile) {
-        openFile(path);
-    }
-
-    // Navigate to line
-    int lineCharIndex = (int)SendMessageA(m_hwndEditor, EM_LINEINDEX, targetLine - 1, 0);
-    CHARRANGE target = { lineCharIndex + loc.range.start.character,
-                         lineCharIndex + loc.range.start.character };
-    SendMessageA(m_hwndEditor, EM_EXSETSEL, 0, (LPARAM)&target);
-    SendMessageA(m_hwndEditor, EM_SCROLLCARET, 0, 0);
-
-    if (locations.size() > 1) {
-        appendToOutput("[LSP] " + std::to_string(locations.size()) +
-                       " definitions found — navigated to first.",
-                       "General", OutputSeverity::Info);
-    }
 }
 
 void Win32IDE::cmdLSPFindReferences() {
@@ -1483,19 +1481,28 @@ void Win32IDE::cmdLSPFindReferences() {
         return;
     }
 
-    std::ostringstream ss;
-    ss << "[LSP] Found " << locations.size() << " reference(s):\n";
-    for (size_t i = 0; i < locations.size() && i < 50; ++i) {
-        std::string path = uriToFilePath(locations[i].uri);
-        int ln = locations[i].range.start.line + 1;
-        int col = locations[i].range.start.character + 1;
-        ss << "  " << path << ":" << ln << ":" << col << "\n";
-    }
-    if (locations.size() > 50) {
-        ss << "  ... and " << (locations.size() - 50) << " more\n";
+    // Create PeekItem objects for the peek overlay
+    std::vector<PeekItem> items;
+    for (const auto& loc : locations) {
+        PeekItem item;
+        item.title = uriToFilePath(loc.uri) + ":" + std::to_string(loc.range.start.line + 1);
+        item.file = uriToFilePath(loc.uri);
+        item.line = loc.range.start.line + 1; // Convert to 1-based
+        item.column = loc.range.start.character;
+        item.type = PeekItemType::Reference;
+        
+        // Get the content around the reference (placeholder for now)
+        item.content = "// Reference at line " + std::to_string(item.line);
+        
+        items.push_back(item);
     }
 
-    appendToOutput(ss.str(), "General", OutputSeverity::Info);
+    // Show peek references overlay
+    showPeekReferences(lineIndex + 1, column + 1); // Convert to 1-based
+
+    appendToOutput("[LSP] " + std::to_string(locations.size()) +
+                   " references found — showing peek overlay.",
+                   "General", OutputSeverity::Info);
 }
 
 void Win32IDE::cmdLSPRenameSymbol() {

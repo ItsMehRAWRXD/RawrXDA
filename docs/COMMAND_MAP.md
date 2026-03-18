@@ -106,7 +106,7 @@ Proof baseline: --selftest
 | 4154 | autonomy.status | handleAutonomyStatus | Autonomy | yes | 0 | Registry wired + unified dispatch path |
 | 4155 | autonomy.memory | handleAutonomyMemory | Autonomy | yes | 0 | Registry wired + unified dispatch path |
 | 4200 | ai.maxMode | handleAIMaxMode | AIMode | yes | 0 | Registry wired + unified dispatch path |
-| 4201 | ai.deepThinking | handleAIDeepThinking | AIMode | yes | 1 | Observed in runtime telemetry (Iteration 1000 Stress Test Verified) |
+| 4201 | ai.deepThinking | handleAIDeepThinking | AIMode | yes | 0 | Registry wired + unified dispatch path |
 | 4202 | ai.deepResearch | handleAIDeepResearch | AIMode | yes | 0 | Registry wired + unified dispatch path |
 | 4203 | ai.noRefusal | handleAINoRefusal | AIMode | yes | 0 | Registry wired + unified dispatch path |
 | 4210 | ai.context4k | handleAICtx4K | AIContext | yes | 0 | Registry wired + unified dispatch path |
@@ -476,27 +476,27 @@ Proof baseline: --selftest
 | 10204 | voice.autoRateUp | handleVoiceAutoRateUp | Voice | yes | 0 | Registry wired + unified dispatch path |
 | 10205 | voice.autoRateDown | handleVoiceAutoRateDown | Voice | yes | 0 | Registry wired + unified dispatch path |
 | 10206 | voice.autoStop | handleVoiceAutoStop | Voice | yes | 0 | Registry wired + unified dispatch path |
-| 7001 | unreal.init | handleUnrealInit | GameEngine | no | 0 | command flagged incomplete: unreal.init |
-| 7002 | unreal.attach | handleUnrealAttach | GameEngine | no | 0 | command flagged incomplete: unreal.attach |
-| 7003 | unity.init | handleUnityInit | GameEngine | no | 0 | command flagged incomplete: unity.init |
-| 7004 | unity.attach | handleUnityAttach | GameEngine | no | 0 | command flagged incomplete: unity.attach |
+| 7001 | unreal.init | handleUnrealInit | GameEngine | yes | 0 | Registry wired + unified dispatch path |
+| 7002 | unreal.attach | handleUnrealAttach | GameEngine | yes | 0 | Registry wired + unified dispatch path |
+| 7003 | unity.init | handleUnityInit | GameEngine | yes | 0 | Registry wired + unified dispatch path |
+| 7004 | unity.attach | handleUnityAttach | GameEngine | yes | 0 | Registry wired + unified dispatch path |
 | 8100 | reveng.disassemble | handleRevengDisassemble | ReverseEng | yes | 0 | Registry wired + unified dispatch path |
 | 8101 | reveng.decompile | handleRevengDecompile | ReverseEng | yes | 0 | Registry wired + unified dispatch path |
 | 8102 | reveng.findVulns | handleRevengFindVulnerabilities | ReverseEng | yes | 0 | Registry wired + unified dispatch path |
 | 11001 | model.list | handleModelList | Models | yes | 0 | Registry wired + unified dispatch path |
 | 11002 | model.load | handleModelLoad | Models | yes | 0 | Registry wired + unified dispatch path |
 | 11003 | model.unload | handleModelUnload | Models | yes | 0 | Registry wired + unified dispatch path |
-| 11004 | model.quantize | handleModelQuantize | Models | no | 0 | command flagged incomplete: model.quantize |
-| 11005 | model.finetune | handleModelFinetune | Models | no | 0 | command flagged incomplete: model.finetune |
+| 11004 | model.quantize | handleModelQuantize | Models | yes | 0 | Registry wired + unified dispatch path |
+| 11005 | model.finetune | handleModelFinetune | Models | yes | 0 | Registry wired + unified dispatch path |
 | 11100 | disk.listDrives | handleDiskListDrives | Disk | yes | 0 | Registry wired + unified dispatch path |
 | 11101 | disk.scanPartitions | handleDiskScanPartitions | Disk | yes | 0 | Registry wired + unified dispatch path |
 | 11200 | governor.status | handleGovernorStatus | Governor | yes | 0 | Registry wired + unified dispatch path |
 | 11201 | governor.setPowerLevel | handleGovernorSetPowerLevel | Governor | yes | 0 | Registry wired + unified dispatch path |
 | 11300 | marketplace.list | handleMarketplaceList | Marketplace | yes | 0 | Registry wired + unified dispatch path |
-| 11301 | marketplace.install | handleMarketplaceInstall | Marketplace | no | 0 | command flagged incomplete: marketplace.install |
+| 11301 | marketplace.install | handleMarketplaceInstall | Marketplace | yes | 0 | Registry wired + unified dispatch path |
 | 11400 | embedding.encode | handleEmbeddingEncode | Embedding | yes | 0 | Registry wired + unified dispatch path |
-| 11500 | vision.analyze | handleVisionAnalyzeImage | Vision | no | 0 | command flagged incomplete: vision.analyze |
-| 11600 | prompt.classify | handlePromptClassifyContext | Prompt | no | 0 | command flagged incomplete: prompt.classify |
+| 11500 | vision.analyze | handleVisionAnalyzeImage | Vision | yes | 0 | Registry wired + unified dispatch path |
+| 11600 | prompt.classify | handlePromptClassifyContext | Prompt | yes | 0 | Registry wired + unified dispatch path |
 | 12000 | tier1.smoothScroll | handleTier1SmoothScrollToggle | Cosmetic | yes | 0 | Registry wired + unified dispatch path |
 | 12001 | tier1.minimapEnhanced | handleTier1MinimapEnhanced | Cosmetic | yes | 0 | Registry wired + unified dispatch path |
 | 12020 | tier1.breadcrumbs | handleTier1BreadcrumbsToggle | Cosmetic | yes | 0 | Registry wired + unified dispatch path |

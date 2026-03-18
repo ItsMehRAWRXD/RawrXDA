@@ -1,0 +1,31 @@
+**********************************************************************
+** Visual Studio 2026 Developer Command Prompt v18.2.1
+** Copyright (c) 2025 Microsoft Corporation
+**********************************************************************
+[DEBUG:ext\vcvars.bat] Found potential v145 version file: 'Microsoft.VCToolsVersion.VC.14.50.18.0.txt'
+[DEBUG:ext\vcvars.bat] Testing v145 version file: 'Microsoft.VCToolsVersion.VC.14.50.18.0.txt'
+[vcvarsall.bat] Environment initialized for: 'x64'
+Warning: NMake does not support parallel builds. Ignoring parallel build command line option.
+[  0%] Built target quickjs_static
+[  0%] Built target RawrXD_MultiWindow_Kernel
+[  9%] Built target masm_kernels
+[  9%] Built target re_deobfuscator
+[  9%] Built target RawrXD-RE-Library
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/agentic/RobustOllamaParser.cpp.obj
+RobustOllamaParser.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/agentic/ErrorRecoveryManager.cpp.obj
+ErrorRecoveryManager.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_SubAgent.cpp.obj
+Win32IDE_SubAgent.cpp
+D:\rawrxd\src\win32app\Win32IDE_SubAgent.cpp(252): error C3493: 'mgr' cannot be implicitly captured because no default capture mode has been specified
+D:\rawrxd\src\win32app\Win32IDE_SubAgent.cpp(252): error C2326: 'void Win32IDE::onSubAgentChain::<lambda_1>::operator ()(void) const': function cannot access 'mgr'
+D:\rawrxd\src\win32app\Win32IDE_SubAgent.cpp(305): error C3493: 'mgr' cannot be implicitly captured because no default capture mode has been specified
+D:\rawrxd\src\win32app\Win32IDE_SubAgent.cpp(305): error C2326: 'void Win32IDE::onSubAgentSwarm::<lambda_1>::operator ()(void) const': function cannot access 'mgr'
+NMAKE : fatal error U1077: '"C:\Program Files\CMake\bin\cmake.exe" -E cmake_cl_compile_depends --dep-file=CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_SubAgent.cpp.obj.d --working-dir=D:\rawrxd\build --filter-prefix="Note: including file: " -- C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe @C:\Users\HiH8e\AppData\Local\Temp\nm855A.tmp' : return code '0x2'
+Stop.
+NMAKE : fatal error U1077: 'C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\nmake.exe -s -f CMakeFiles\RawrXD-Win32IDE.dir\build.make /nologo -SL                 CMakeFiles\RawrXD-Win32IDE.dir\build' : return code '0x2'
+Stop.
+NMAKE : fatal error U1077: 'C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\nmake.exe -s -f CMakeFiles\Makefile2 /nologo -SL                 CMakeFiles\RawrXD-Win32IDE.dir\all' : return code '0x2'
+Stop.
+NMAKE : fatal error U1077: 'C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\nmake.exe -s -f CMakeFiles\Makefile2 /nologo -LS                 RawrXD-Win32IDE' : return code '0x2'
+Stop.

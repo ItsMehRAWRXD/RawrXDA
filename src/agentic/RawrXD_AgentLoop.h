@@ -9,7 +9,7 @@
 #include <windows.h>
 
 #include "ToolRegistry.h"
-#include "win32app/Win32IDE_AgenticBridge.h"
+#include "../win32app/Win32IDE_AgenticBridge.h"
 
 namespace RawrXD {
 namespace Agentic {

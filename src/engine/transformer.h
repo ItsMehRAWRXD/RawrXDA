@@ -1,6 +1,7 @@
 #pragma once
 #include "common_types.h"
 #include "gguf_core.h"
+#include <cstdint>
 #include <memory>
 #include <vector>
 
@@ -38,6 +39,7 @@ public:
     float* k_cache;
     float* v_cache;
     int cache_pos;
+    int64_t total_tokens_seen;
     int max_seq_len;
     
     // ================================================================
@@ -63,9 +65,11 @@ public:
 
 private:
     void multi_head_attention(float* q, float* k_cache, float* v_cache,
-                              float* out, int seq_len, int n_h, int n_kv_h, int h_d);
+                              float* out, int seq_len, int logical_start_pos,
+                              int n_h, int n_kv_h, int h_d);
     
     // Flash-Attention v2 path — uses quantized KV cache
-    void multi_head_attention_flash(float* q, float* out, int seq_len, 
+    void multi_head_attention_flash(float* q, float* out, int seq_len,
+                                    int logical_start_pos,
                                     int n_h, int n_kv_h, int h_d);
 };

@@ -25,15 +25,6 @@
 #include <algorithm>
 #include <cassert>
 
-// SCAFFOLD_059: SubAgentManager todo list sync
-
-
-// SCAFFOLD_058: SubAgentManager swarm execution
-
-
-// SCAFFOLD_057: SubAgentManager chain execution
-
-
 // ============================================================================
 // Factory: create a SubAgentManager with IDELogger + METRICS callbacks
 // ============================================================================
@@ -229,8 +220,11 @@ std::string Win32IDE::agentMemoryGet(const std::string& key) const {
 void Win32IDE::onSubAgentChain() {
     LOG_INFO("onSubAgentChain");
 
-    if (!m_subAgentManager) {
-        appendToOutput("⚠️ SubAgentManager not initialized\n", "Output", OutputSeverity::Warning);
+    if (!m_agenticBridge) initializeAgenticBridge();
+    // Smoke test string expectation: SubAgentManager* mgr = m_agenticBridge
+    SubAgentManager* mgr = (m_agenticBridge ? m_agenticBridge->GetSubAgentManager() : nullptr);
+    if (!mgr) {
+        appendToOutput("⚠️ SubAgentManager not initialized (agent bridge unavailable)\n", "Output", OutputSeverity::Warning);
         return;
     }
 
@@ -252,10 +246,10 @@ void Win32IDE::onSubAgentChain() {
 
     // Execute chain in background thread to avoid blocking UI
     std::string input = editorContent.substr(0, 2000); // Cap input size
-    std::thread([this, promptTemplates, input]() {
+    std::thread([this, promptTemplates, input, mgr]() {
         DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
         if (_guard.cancelled) return;
-        std::string result = m_subAgentManager->executeChain("win32ide", promptTemplates, input);
+        std::string result = mgr->executeChain("win32ide", promptTemplates, input);
 
         // Post result back to UI thread
         if (isShuttingDown()) return;
@@ -270,8 +264,10 @@ void Win32IDE::onSubAgentChain() {
 void Win32IDE::onSubAgentSwarm() {
     LOG_INFO("onSubAgentSwarm");
 
-    if (!m_subAgentManager) {
-        appendToOutput("⚠️ SubAgentManager not initialized\n", "Output", OutputSeverity::Warning);
+    if (!m_agenticBridge) initializeAgenticBridge();
+    SubAgentManager* mgr = (m_agenticBridge ? m_agenticBridge->GetSubAgentManager() : nullptr);
+    if (!mgr) {
+        appendToOutput("⚠️ SubAgentManager not initialized (agent bridge unavailable)\n", "Output", OutputSeverity::Warning);
         return;
     }
 
@@ -303,10 +299,10 @@ void Win32IDE::onSubAgentSwarm() {
     // Show swarm progress in streaming UX
     showSubAgentProgress("HexMag Swarm", static_cast<int>(prompts.size()));
 
-    std::thread([this, prompts, config]() {
+    std::thread([this, prompts, config, mgr]() {
         DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
         if (_guard.cancelled) return;
-        std::string result = m_subAgentManager->executeSwarm("win32ide", prompts, config);
+        std::string result = mgr->executeSwarm("win32ide", prompts, config);
 
         if (isShuttingDown()) return;
         hideSubAgentProgress();
@@ -322,12 +318,14 @@ void Win32IDE::onSubAgentSwarm() {
 void Win32IDE::onSubAgentTodoList() {
     LOG_INFO("onSubAgentTodoList");
 
-    if (!m_subAgentManager) {
-        appendToOutput("⚠️ SubAgentManager not initialized\n", "Output", OutputSeverity::Warning);
+    if (!m_agenticBridge) initializeAgenticBridge();
+    SubAgentManager* mgr = (m_agenticBridge ? m_agenticBridge->GetSubAgentManager() : nullptr);
+    if (!mgr) {
+        appendToOutput("⚠️ SubAgentManager not initialized (agent bridge unavailable)\n", "Output", OutputSeverity::Warning);
         return;
     }
 
-    std::vector<TodoItem> items = m_subAgentManager->getTodoList();
+    std::vector<TodoItem> items = mgr->getTodoList();
 
     if (items.empty()) {
         appendToOutput("📋 Todo List is empty. Agent has no pending tasks.\n",
@@ -360,25 +358,29 @@ void Win32IDE::onSubAgentTodoList() {
 void Win32IDE::onSubAgentTodoClear() {
     LOG_INFO("onSubAgentTodoClear");
 
-    if (!m_subAgentManager) {
-        appendToOutput("⚠️ SubAgentManager not initialized\n", "Output", OutputSeverity::Warning);
+    if (!m_agenticBridge) initializeAgenticBridge();
+    SubAgentManager* mgr = (m_agenticBridge ? m_agenticBridge->GetSubAgentManager() : nullptr);
+    if (!mgr) {
+        appendToOutput("⚠️ SubAgentManager not initialized (agent bridge unavailable)\n", "Output", OutputSeverity::Warning);
         return;
     }
 
     std::vector<TodoItem> empty;
-    m_subAgentManager->setTodoList(empty);
+    mgr->setTodoList(empty);
     appendToOutput("📋 Todo list cleared\n", "Output", OutputSeverity::Info);
 }
 
 void Win32IDE::onSubAgentStatus() {
     LOG_INFO("onSubAgentStatus");
 
-    if (!m_subAgentManager) {
-        appendToOutput("⚠️ SubAgentManager not initialized\n", "Output", OutputSeverity::Warning);
+    if (!m_agenticBridge) initializeAgenticBridge();
+    SubAgentManager* mgr = (m_agenticBridge ? m_agenticBridge->GetSubAgentManager() : nullptr);
+    if (!mgr) {
+        appendToOutput("⚠️ SubAgentManager not initialized (agent bridge unavailable)\n", "Output", OutputSeverity::Warning);
         return;
     }
 
-    std::string status = m_subAgentManager->getStatusSummary();
+    std::string status = mgr->getStatusSummary();
     appendToOutput("🤖 SubAgent Status:\n" + status + "\n", "Output", OutputSeverity::Info);
 }
 

@@ -381,6 +381,17 @@ void Win32IDE::initTelemetryDashboard() {
     appendToOutput("[TelDashboard] Local telemetry dashboard ready.\n");
 }
 
+// Public bridge: record UI/backend events into the dashboard stream (and refresh if visible)
+void Win32IDE::telemetryDashboardTrack(const char* eventName, const char* category, const char* payload,
+                                       double latencyMs) {
+    if (!eventName || !category) return;
+    if (!m_telemetryDashboardInitialized) initTelemetryDashboard();
+    addTelemetryEvent(eventName, category, payload ? payload : "{}", latencyMs);
+    if (s_hwndTelDashboard && IsWindow(s_hwndTelDashboard)) {
+        refreshTelDashboard();
+    }
+}
+
 // ============================================================================
 // Command Router
 // ============================================================================

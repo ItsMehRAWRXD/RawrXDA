@@ -1,0 +1,87 @@
+﻿{
+    "generatedAtUtc":  "2026-03-17T16:23:58.4920227Z",
+    "guiExe":  "d:\\rawrxd\\build_prod\\bin\\RawrXD-Win32IDE.exe",
+    "cliExe":  "d:\\rawrxd\\build_prod\\bin\\RawrXD-AutoFixCLI.exe",
+    "total":  7,
+    "passed":  4,
+    "failed":  3,
+    "results":  [
+                    {
+                        "id":  8,
+                        "name":  "chat_completion_in_ide",
+                        "command":  "d:\\rawrxd\\build_prod\\bin\\RawrXD-AutoFixCLI.exe --test-inference \"ping from batch 8-14\"",
+                        "exitCode":  0,
+                        "passed":  true,
+                        "note":  "",
+                        "startedAtUtc":  "2026-03-17T16:23:24.6921292Z",
+                        "finishedAtUtc":  "2026-03-17T16:23:54.9061264Z",
+                        "durationMs":  30214
+                    },
+                    {
+                        "id":  9,
+                        "name":  "terminal_panel_split",
+                        "command":  "d:\\rawrxd\\build_prod\\bin\\RawrXD-Win32IDE.exe --test-terminal-split",
+                        "exitCode":  0,
+                        "passed":  true,
+                        "note":  "",
+                        "startedAtUtc":  "2026-03-17T16:23:54.9212369Z",
+                        "finishedAtUtc":  "2026-03-17T16:23:55.4753785Z",
+                        "durationMs":  554
+                    },
+                    {
+                        "id":  10,
+                        "name":  "auto_save_toggle",
+                        "command":  "d:\\rawrxd\\build_prod\\bin\\RawrXD-Win32IDE.exe --test-autosave",
+                        "exitCode":  0,
+                        "passed":  true,
+                        "note":  "",
+                        "startedAtUtc":  "2026-03-17T16:23:55.4768916Z",
+                        "finishedAtUtc":  "2026-03-17T16:23:56.0053426Z",
+                        "durationMs":  528
+                    },
+                    {
+                        "id":  11,
+                        "name":  "file_open_save_selftest",
+                        "command":  "d:\\rawrxd\\build_prod\\bin\\RawrXD-Win32IDE.exe --selftest",
+                        "exitCode":  2,
+                        "passed":  false,
+                        "note":  "",
+                        "startedAtUtc":  "2026-03-17T16:23:56.0068594Z",
+                        "finishedAtUtc":  "2026-03-17T16:23:56.0659362Z",
+                        "durationMs":  59
+                    },
+                    {
+                        "id":  12,
+                        "name":  "agentic_request_flow",
+                        "command":  "pwsh.exe -NoProfile -ExecutionPolicy Bypass -File d:\\rawrxd\\Test-Agentic-Headless.ps1 -SmokeOnly",
+                        "exitCode":  0,
+                        "passed":  true,
+                        "note":  "",
+                        "startedAtUtc":  "2026-03-17T16:23:56.0719809Z",
+                        "finishedAtUtc":  "2026-03-17T16:23:58.4905139Z",
+                        "durationMs":  2419
+                    },
+                    {
+                        "id":  13,
+                        "name":  "gguf_70b_hotpatch",
+                        "command":  "not-implemented",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "missing implementation",
+                        "startedAtUtc":  "2026-03-17T16:23:58.4920227Z",
+                        "finishedAtUtc":  "2026-03-17T16:23:58.4920227Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  14,
+                        "name":  "layer_eviction_system",
+                        "command":  "not-implemented",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "missing implementation",
+                        "startedAtUtc":  "2026-03-17T16:23:58.4920227Z",
+                        "finishedAtUtc":  "2026-03-17T16:23:58.4920227Z",
+                        "durationMs":  0
+                    }
+                ]
+}

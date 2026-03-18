@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <cstdint>
 #ifdef RAWR_ENABLE_VULKAN
 #include <vulkan/vulkan.h>
 #else
@@ -36,5 +37,6 @@ private:
     // KV Cache
     std::vector<float> kv_cache_k;
     std::vector<float> kv_cache_v;
+    std::vector<int64_t> kv_cache_pos;
 };
 

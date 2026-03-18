@@ -1,0 +1,6 @@
+NMAKE : NMAKE : NMAKE : NMAKE : NMAKE : fatal errorfatal errorfatal error U1058:  U1058:  U1058: terminated by userterminated by userterminated by user
+
+
+Stop.
+Stop.
+Stop.

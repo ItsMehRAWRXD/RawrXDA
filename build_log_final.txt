@@ -1,0 +1,137 @@
+**********************************************************************
+** Visual Studio 2026 Developer Command Prompt v18.2.1
+** Copyright (c) 2025 Microsoft Corporation
+**********************************************************************
+[DEBUG:ext\vcvars.bat] Found potential v145 version file: 'Microsoft.VCToolsVersion.VC.14.50.18.0.txt'
+[DEBUG:ext\vcvars.bat] Testing v145 version file: 'Microsoft.VCToolsVersion.VC.14.50.18.0.txt'
+[vcvarsall.bat] Environment initialized for: 'x64'
+Warning: NMake does not support parallel builds. Ignoring parallel build command line option.
+[  0%] Built target quickjs_static
+[  9%] Built target masm_kernels
+[  9%] Built target RawrXD_MultiWindow_Kernel
+[  9%] Built target RawrXD-RE-Library
+[  9%] Built target re_deobfuscator
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/main_win32.cpp.obj
+main_win32.cpp
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_AgenticBridge.cpp.obj
+Win32IDE_AgenticBridge.cpp
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/agentic_engine.cpp.obj
+agentic_engine.cpp
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/subagent_core.cpp.obj
+subagent_core.cpp
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/agentic/agentic_executor.cpp.obj
+agentic_executor.cpp
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/agent/autonomous_subagent.cpp.obj
+autonomous_subagent.cpp
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/ssot_handlers.cpp.obj
+ssot_handlers.cpp
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/modules/quickjs_extension_host.cpp.obj
+quickjs_extension_host.cpp
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/modules/quickjs_node_shims.cpp.obj
+quickjs_node_shims.cpp
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/modules/quickjs_vscode_bindings.cpp.obj
+quickjs_vscode_bindings.cpp
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/rawrxd_state_mmf.cpp.obj
+rawrxd_state_mmf.cpp
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/js_extension_host.cpp.obj
+js_extension_host.cpp
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/extension_polyfill_engine.cpp.obj
+extension_polyfill_engine.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/vulkan_compute.cpp.obj
+vulkan_compute.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/live_binary_patcher.cpp.obj
+live_binary_patcher.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/autonomous_workflow_engine.cpp.obj
+autonomous_workflow_engine.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/workspace_reasoning_profiles.cpp.obj
+workspace_reasoning_profiles.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/reasoning_profile.cpp.obj
+reasoning_profile.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/deterministic_swarm.cpp.obj
+deterministic_swarm.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/reasoning_schema_versioning.cpp.obj
+reasoning_schema_versioning.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/cot_fallback_system.cpp.obj
+cot_fallback_system.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/input_guard_slicer.cpp.obj
+input_guard_slicer.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/safe_refactor_engine.cpp.obj
+safe_refactor_engine.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/agentic_agent_coordinator.cpp.obj
+agentic_agent_coordinator.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/production_config_manager.cpp.obj
+production_config_manager.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/agentic_task_graph.cpp.obj
+agentic_task_graph.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/embedding_engine.cpp.obj
+embedding_engine.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/vector_index.cpp.obj
+vector_index.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/vision_encoder.cpp.obj
+vision_encoder.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/vision_token_gate.cpp.obj
+vision_token_gate.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/vision_embedding_cache.cpp.obj
+vision_embedding_cache.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/vision_kv_isolation.cpp.obj
+vision_kv_isolation.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/vision_quantized_encoder.cpp.obj
+vision_quantized_encoder.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/vision_gpu_staging.cpp.obj
+vision_gpu_staging.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/marketplace/extension_marketplace.cpp.obj
+extension_marketplace.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/auth/rbac_engine.cpp.obj
+rbac_engine.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/agentic_loop_state.cpp.obj
+agentic_loop_state.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/transaction_journal.cpp.obj
+transaction_journal.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/instructions_provider.cpp.obj
+instructions_provider.cpp
+[ 16%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_Instructions.cpp.obj
+Win32IDE_Instructions.cpp
+[ 16%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/modules/unity_engine_integration.cpp.obj
+unity_engine_integration.cpp
+[ 16%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/modules/unreal_engine_integration.cpp.obj
+unreal_engine_integration.cpp
+[ 16%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/modules/game_engine_manager.cpp.obj
+game_engine_manager.cpp
+[ 16%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_GameEnginePanel.cpp.obj
+Win32IDE_GameEnginePanel.cpp
+[ 16%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/modules/crucible_engine.cpp.obj
+crucible_engine.cpp
+[ 16%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_CruciblePanel.cpp.obj
+Win32IDE_CruciblePanel.cpp
+[ 16%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/modules/copilot_gap_closer.cpp.obj
+copilot_gap_closer.cpp
+[ 16%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_CopilotGapPanel.cpp.obj
+Win32IDE_CopilotGapPanel.cpp
+[ 16%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/distributed_pipeline_orchestrator.cpp.obj
+distributed_pipeline_orchestrator.cpp
+[ 16%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_PipelinePanel.cpp.obj
+Win32IDE_PipelinePanel.cpp
+[ 16%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/hotpatch_control_plane.cpp.obj
+hotpatch_control_plane.cpp
+[ 18%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_HotpatchCtrlPanel.cpp.obj
+Win32IDE_HotpatchCtrlPanel.cpp
+[ 18%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/static_analysis_engine.cpp.obj
+static_analysis_engine.cpp
+[ 18%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/code_linter.cpp.obj
+code_linter.cpp
+[ 18%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/lsp/diagnostic_consumer.cpp.obj
+diagnostic_consumer.cpp
+[ 18%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_StaticAnalysisPanel.cpp.obj
+Win32IDE_StaticAnalysisPanel.cpp
+[ 18%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_ProblemsPanel.cpp.obj
+Win32IDE_ProblemsPanel.cpp
+[ 18%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_BuildRunner.cpp.obj
+Win32IDE_BuildRunner.cpp
+NMAKE : NMAKE : NMAKE : fatal errorfatal errorfatal error U1058:  U1058: terminated by user
+NMAKE :  U1058: ^CStop.
+terminated by userterminated by user
+Stop.
+Terminate batch job (Y/N)? 
+Stop.
+fatal error U1077: '"C:\Program Files\CMake\bin\cmake.exe" -E cmake_cl_compile_depends --dep-file=CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_BuildRunner.cpp.obj.d --working-dir=D:\rawrxd\build --filter-prefix="Note: including file: " -- C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe @C:\Users\HiH8e\AppData\Local\Temp\nmA90A.tmp' : return code '0xc000013a'
+Stop.

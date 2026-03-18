@@ -42,20 +42,20 @@ bool containsToken(const std::string& haystack, const char* needle) {
 
 }  // namespace
 
-extern "C" void quantum_todo_analyzer_impl(const char* codebase_path, char* result_buffer, size_t buffer_size) {
+extern "C" void __stdcall quantum_todo_analyzer(const char* codebase_path, char* result_buffer, size_t buffer_size) {
     if (!result_buffer || buffer_size == 0) return;
     std::string path = codebase_path ? codebase_path : "";
     std::string msg = "audit:path=" + path;
     std::snprintf(result_buffer, buffer_size, "%s", msg.c_str());
 }
 
-extern "C" void quantum_priority_matrix_impl(const void*, size_t task_count, void* priority_matrix) {
+extern "C" void __stdcall quantum_priority_matrix(const void*, size_t task_count, void* priority_matrix) {
     if (!priority_matrix) return;
     float* out = static_cast<float*>(priority_matrix);
     *out = std::min(1.0f, 0.5f + static_cast<float>(task_count) * 0.01f);
 }
 
-extern "C" void quantum_difficulty_calculator_impl(const char* task_desc, float* difficulty_score) {
+extern "C" void __stdcall quantum_difficulty_calculator(const char* task_desc, float* difficulty_score) {
     if (!difficulty_score) {
         return;
     }
@@ -94,7 +94,7 @@ extern "C" void quantum_difficulty_calculator_impl(const char* task_desc, float*
     *difficulty_score = std::clamp(score, 0.0f, 1.0f);
 }
 
-extern "C" void quantum_time_predictor_impl(const char* task_type, float complexity, int* time_estimate_ms) {
+extern "C" void __stdcall quantum_time_predictor(const char* task_type, float complexity, int* time_estimate_ms) {
     if (!time_estimate_ms) {
         return;
     }
@@ -126,6 +126,19 @@ extern "C" void quantum_time_predictor_impl(const char* task_type, float complex
     addIf("rename", -9000);
 
     *time_estimate_ms = std::clamp(estimate, 5000, 900000);
+}
+
+extern "C" void __stdcall quantum_resource_optimizer(int current_load, int* optimal_thread_count, int* optimal_memory_mb) {
+    if (!optimal_thread_count || !optimal_memory_mb) {
+        return;
+    }
+
+    // Simple heuristic: scale threads and memory based on load
+    int threads = std::max(1, std::min(64, current_load / 10));
+    int memory = std::max(256, std::min(16384, current_load * 16));
+
+    *optimal_thread_count = threads;
+    *optimal_memory_mb = memory;
 }
 
 extern "C" void __stdcall masm_consensus_calculator(const void* results, int count, float* consensus_score) {

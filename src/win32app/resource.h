@@ -51,6 +51,9 @@
 #define ID_VIEW_ZOOM_IN         3020
 #define ID_VIEW_ZOOM_OUT        3021
 #define ID_VIEW_ZOOM_RESET      3022
+#define ID_VIEW_SYNTAX_HIGHLIGHTING_TOGGLE 3030
+#define ID_VIEW_VISION_ENCODER 3031
+#define ID_VIEW_SEMANTIC_INDEX 3032
 
 // --- Quick-open / dialogs (5001–6099) ----------------------------------------
 #define ID_QUICKOPEN_SEARCH     5001

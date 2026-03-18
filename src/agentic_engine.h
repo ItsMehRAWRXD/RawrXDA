@@ -89,6 +89,10 @@ public:
         return m_inferenceEngine && m_inferenceEngine->IsModelLoaded();
     }
     std::string currentModelPath() const { return m_currentModelPath; }
+    bool loadLocalModel(const std::string& modelPath);
+    std::string getModelStatus() const;
+    void setWorkspaceRoot(const std::string& rootPath);
+    std::string getWorkspaceRoot() const { return m_workspaceRoot; }
     
     // Configuration
     struct GenerationConfig {
@@ -117,6 +121,7 @@ public:
     
 private:
     std::string m_currentModelPath;
+    std::string m_workspaceRoot;
     RawrXD::InferenceEngine* m_inferenceEngine = nullptr;
 
 

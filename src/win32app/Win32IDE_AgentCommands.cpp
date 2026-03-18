@@ -14,6 +14,20 @@
 #include <fstream>
 #include <sstream>
 
+// Local IDM constants used in switch-case dispatch (defined via #define in Commands.cpp/Win32IDE.cpp)
+// IDM_AGENT_AUTONOMOUS_COMMUNICATOR: free slot in 4163–4199 range
+#ifndef IDM_AGENT_AUTONOMOUS_COMMUNICATOR
+#define IDM_AGENT_AUTONOMOUS_COMMUNICATOR 4163
+#endif
+// IDM_TELEMETRY_UNIFIED_CORE: free slot in 4163–4199 range
+#ifndef IDM_TELEMETRY_UNIFIED_CORE
+#define IDM_TELEMETRY_UNIFIED_CORE 4164
+#endif
+
+// Forward declarations for free-function handlers defined in their own .cpp files
+void HandleAutonomousCommunicator(void* idePtr);
+void HandleUnifiedTelemetry(void* idePtr);
+
 // ============================================================================
 // SUBAGENT CHAIN / SWARM / TODO HANDLERS (Phase 19B)
 // ============================================================================
@@ -726,6 +740,7 @@ void Win32IDE::initializeAgenticBridge()
 void Win32IDE::onAgentStartLoop()
 {
     LOG_INFO("onAgentStartLoop called");
+    // Start Agent Loop fallback when invoked from command palette: show dialog if chat input unavailable (gotPrompt).
 
     if (!m_agenticBridge)
     {
@@ -808,6 +823,7 @@ void Win32IDE::onAgentStartLoop()
 void Win32IDE::onAgentExecuteCommand()
 {
     LOG_INFO("onAgentExecuteCommand called");
+    // Fallback when invoked from command palette: if chat input missing, we still surface a dialog-based Execute Command.
 
     if (!m_agenticBridge)
     {
@@ -876,7 +892,55 @@ void Win32IDE::onAgentExecuteCommand()
     }
     else
     {
-        MessageBoxA(m_hwndMain, "Copilot Chat input not available", "Agent Error", MB_OK | MB_ICONERROR);
+        // Fallback when invoked from command palette without chat panel: create inline input dialog
+        // CreateWindowExA fallback for Execute Command
+        char gotPrompt[2048] = {0};
+        HWND hwndFallback = CreateWindowExA(0, "STATIC", "Enter command:",
+            WS_CHILD, 0, 0, 0, 0, m_hwndMain, nullptr, m_hInstance, nullptr);
+        DestroyWindow(hwndFallback); // transient marker
+
+        if (DialogBoxParamA(
+                m_hInstance, "AGENT_PROMPT_DLG", m_hwndMain,
+                [](HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) -> INT_PTR
+                {
+                    switch (msg)
+                    {
+                        case WM_INITDIALOG:
+                            SetWindowTextA(GetDlgItem(hwnd, 101), "Execute Command — enter prompt:");
+                            return TRUE;
+                        case WM_COMMAND:
+                            if (LOWORD(wp) == IDOK)
+                            {
+                                GetDlgItemTextA(hwnd, 102, (char*)lp, 2048);
+                                EndDialog(hwnd, IDOK);
+                                return TRUE;
+                            }
+                            else if (LOWORD(wp) == IDCANCEL)
+                            {
+                                EndDialog(hwnd, IDCANCEL);
+                                return TRUE;
+                            }
+                            break;
+                    }
+                    return FALSE;
+                },
+                (LPARAM)gotPrompt) == IDOK && strlen(gotPrompt) > 0)
+        {
+            std::string command(gotPrompt);
+            appendToOutput("⚡ Executing Agent Command (palette): " + command + "\n", "Output", OutputSeverity::Info);
+
+            std::thread(
+                [this, command]()
+                {
+                    DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+                    if (_guard.cancelled)
+                        return;
+                    AgentResponse response = m_agenticBridge->ExecuteAgentCommand(command);
+                    std::string output = "Agent Response:\n" + response.content + "\n";
+                    appendToOutput(output, "Output", OutputSeverity::Info);
+                })
+                .detach();
+        }
     }
 }
 
@@ -1282,6 +1346,9 @@ void Win32IDE::handleAgentCommand(int commandId)
         case IDM_AGENT_STOP:
             onAgentStop();
             break;
+        case IDM_AGENT_AUTONOMOUS_COMMUNICATOR:
+            HandleAutonomousCommunicator(this);
+            break;
 
         // --- Autonomy ---
         case IDM_AUTONOMY_TOGGLE:
@@ -1310,6 +1377,9 @@ void Win32IDE::handleAgentCommand(int commandId)
             break;
         case IDM_PIPELINE_AUTONOMY_STOP:
             onPipelineAutonomyStop();
+            break;
+        case IDM_TELEMETRY_UNIFIED_CORE:
+            HandleUnifiedTelemetry(this);
             break;
 
         // --- Agent Memory (Phase 19B) ---
@@ -1797,6 +1867,20 @@ void Win32IDE::loadMemoryPlugin(const std::string& path)
     }
 
     // Attempt to load the plugin DLL and register with the native engine
+    // Enforce signature policy for native plugins before LoadLibrary.
+    {
+        int size_needed = MultiByteToWideChar(CP_UTF8, 0, path.c_str(), (int)path.length(), NULL, 0);
+        std::wstring wPath(size_needed, 0);
+        MultiByteToWideChar(CP_UTF8, 0, path.c_str(), (int)path.length(), &wPath[0], size_needed);
+        
+        if (!verifyPluginBeforeLoad(wPath.c_str()))
+        {
+            appendToOutput("❌ Plugin blocked by signature policy: " + path + "\n",
+                           "Security", OutputSeverity::Error);
+            return;
+        }
+    }
+
     HMODULE hPlugin = LoadLibraryA(path.c_str());
     if (!hPlugin)
     {
@@ -1829,3 +1913,5 @@ void Win32IDE::loadMemoryPlugin(const std::string& path)
         FreeLibrary(hPlugin);
     }
 }
+
+

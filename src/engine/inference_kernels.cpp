@@ -285,6 +285,14 @@ void InferenceKernels::gelu_avx512(float* x, int n) {
 // 4. Softmax — AVX2 vectorized 3-pass with fast_exp
 // ============================================================================
 void InferenceKernels::softmax_avx512(float* x, int n) {
+    if (!x || n <= 0) {
+        return;
+    }
+    if (n == 1) {
+        x[0] = 1.0f;
+        return;
+    }
+
     // Pass 1: Find max (AVX2 horizontal max)
     __m256 vmax = _mm256_set1_ps(-1e30f);
     int i = 0;
@@ -311,14 +319,22 @@ void InferenceKernels::softmax_avx512(float* x, int n) {
         _mm256_storeu_ps(x + i, e);
         vsum = _mm256_add_ps(vsum, e);
     }
-    float sum = hsum_avx(vsum);
+    double sum = hsum_avx(vsum);
     for (; i < n; i++) {
         x[i] = std::exp(x[i] - max_val);
         sum += x[i];
     }
     
     // Pass 3: Normalize
-    float inv_sum = 1.0f / sum;
+    if (!(sum > 0.0) || !std::isfinite(sum)) {
+        const float uniform = 1.0f / static_cast<float>(n);
+        for (int j = 0; j < n; ++j) {
+            x[j] = uniform;
+        }
+        return;
+    }
+
+    float inv_sum = static_cast<float>(1.0 / sum);
     __m256 vinv = _mm256_set1_ps(inv_sum);
     i = 0;
     for (; i + 7 < n; i += 8) {
@@ -407,54 +423,74 @@ void InferenceKernels::rope_avx512(float* q, float* k, int head_dim, int pos,
 void InferenceKernels::flash_attention_v2(
     const float* Q, const float* K_cache, const float* V_cache,
     float* output,
-    int seq_len, int n_heads, int n_kv_heads, int head_dim,
+    int seq_len, int logical_start_pos, int n_heads, int n_kv_heads, int head_dim,
     int max_seq_len, int BLOCK_SIZE) {
-    
-    const int kv_dim = n_kv_heads * head_dim;
-    
-    memset(output, 0, n_heads * head_dim * sizeof(float));
-    
-    #pragma omp parallel for schedule(static)
+    if (!Q || !K_cache || !V_cache || !output || seq_len <= 0 || n_heads <= 0 ||
+        head_dim <= 0 || max_seq_len <= 0) {
+        if (output && n_heads > 0 && head_dim > 0) {
+            memset(output, 0, static_cast<size_t>(n_heads) * static_cast<size_t>(head_dim) * sizeof(float));
+        }
+        return;
+    }
+
+    seq_len = std::min(seq_len, max_seq_len);
+    logical_start_pos = ((logical_start_pos % max_seq_len) + max_seq_len) % max_seq_len;
+
+    const int kv_heads = std::max(1, n_kv_heads);
+    const int kv_dim = kv_heads * head_dim;
+    const int effective_block = std::max(16, std::min(BLOCK_SIZE, 256));
+
+    memset(output, 0, static_cast<size_t>(n_heads) * static_cast<size_t>(head_dim) * sizeof(float));
+
+    #pragma omp parallel for schedule(static) if(n_heads > 2)
     for (int h = 0; h < n_heads; h++) {
-        const float* q_h = Q + h * head_dim;
-        float* out_h = output + h * head_dim;
-        
-        int kv_h = h / (n_heads / std::max(n_kv_heads, 1));  // GQA head mapping
-        float scale = 1.0f / sqrtf((float)head_dim);
-        
+        const float* q_h = Q + static_cast<size_t>(h) * head_dim;
+        float* out_h = output + static_cast<size_t>(h) * head_dim;
+
+        const int head_group = std::max(1, n_heads / kv_heads);
+        const int kv_h = std::min(kv_heads - 1, h / head_group);  // GQA head mapping
+        const float scale = 1.0f / sqrtf((float)head_dim);
+
         // Online softmax state
         float running_max = -1e30f;
-        float running_sum = 0.0f;
-        
-        // Stack-allocated tile buffers (BLOCK_SIZE * sizeof(float) ≤ ~2KB)
-        // These fit in L1 — zero heap allocation
-        float scores_tile[256];  // max tile size we support
-        int effective_block = (BLOCK_SIZE > 256) ? 256 : BLOCK_SIZE;
-        
-        // Accumulator for weighted V (will be rescaled as we go)
-        // Use stack — head_dim is typically 64-128
-        float acc[256];  // supports up to head_dim=256
-        memset(acc, 0, head_dim * sizeof(float));
-        
+        double running_sum = 0.0;
+
+        // Keep stack fast-path for typical sizes; heap fallback for large head dims.
+        float scores_tile_stack[256];
+        float acc_stack[256];
+        std::vector<float> scores_tile_heap;
+        std::vector<float> acc_heap;
+        float* scores_tile = scores_tile_stack;
+        float* acc = acc_stack;
+        if (head_dim > 256) {
+            acc_heap.assign(head_dim, 0.0f);
+            acc = acc_heap.data();
+        } else {
+            memset(acc_stack, 0, sizeof(float) * head_dim);
+        }
+        scores_tile_heap.clear();
+
         // Process K/V in tiles
         for (int tile_start = 0; tile_start < seq_len; tile_start += effective_block) {
-            int tile_end = std::min(tile_start + effective_block, seq_len);
-            int tile_len = tile_end - tile_start;
-            
-            // Prefetch next tile's K data
-            if (tile_end < seq_len) {
-                int next_cache_t = tile_end % max_seq_len;
-                _mm_prefetch((const char*)(K_cache + next_cache_t * kv_dim + kv_h * head_dim), _MM_HINT_T0);
-            }
-            
-            // Step 1: Compute scores for this tile: S[t] = dot(Q_h, K_t) * scale
+            const int tile_end = std::min(tile_start + effective_block, seq_len);
+            const int tile_len = tile_end - tile_start;
             float tile_max = -1e30f;
+
+            // Prefetch next tile's K/V data using chronology-aware ring index.
+            if (tile_end < seq_len) {
+                const int next_logical = logical_start_pos + tile_end;
+                const int next_cache_t = ((next_logical % max_seq_len) + max_seq_len) % max_seq_len;
+                _mm_prefetch((const char*)(K_cache + next_cache_t * kv_dim + kv_h * head_dim), _MM_HINT_T0);
+                _mm_prefetch((const char*)(V_cache + next_cache_t * kv_dim + kv_h * head_dim), _MM_HINT_T0);
+            }
+
+            // Step 1: Compute scores for this tile: S[t] = dot(Q_h, K_t) * scale
             for (int ti = 0; ti < tile_len; ti++) {
-                int t = tile_start + ti;
-                int cache_t = t % max_seq_len;
+                const int t = tile_start + ti;
+                const int logical_t = logical_start_pos + t;
+                const int cache_t = ((logical_t % max_seq_len) + max_seq_len) % max_seq_len;
                 const float* k_t = K_cache + cache_t * kv_dim + kv_h * head_dim;
-                
-                // AVX2 dot product
+
                 __m256 dot_acc = _mm256_setzero_ps();
                 int d = 0;
                 for (; d + 7 < head_dim; d += 8) {
@@ -463,47 +499,53 @@ void InferenceKernels::flash_attention_v2(
                     dot_acc = _mm256_fmadd_ps(vq, vk, dot_acc);
                 }
                 float dot = hsum_avx(dot_acc);
-                for (; d < head_dim; d++) dot += q_h[d] * k_t[d];
-                
+                for (; d < head_dim; d++) {
+                    dot += q_h[d] * k_t[d];
+                }
+
                 scores_tile[ti] = dot * scale;
-                if (scores_tile[ti] > tile_max) tile_max = scores_tile[ti];
+                if (scores_tile[ti] > tile_max) {
+                    tile_max = scores_tile[ti];
+                }
             }
-            
-            // Step 2: Online softmax correction
-            // New max = max(running_max, tile_max)
-            // Correction factor for existing accumulator: exp(old_max - new_max)
-            float new_max = (tile_max > running_max) ? tile_max : running_max;
-            float correction = (running_sum > 0.0f) ? std::exp(running_max - new_max) : 0.0f;
-            
-            // Rescale existing accumulator and sum
-            if (correction != 1.0f && running_sum > 0.0f) {
+
+            // Step 2: Online softmax correction.
+            const float new_max = (tile_max > running_max) ? tile_max : running_max;
+            const float correction =
+                (running_sum > 0.0) ? std::exp(running_max - new_max) : 0.0f;
+
+            if (running_sum > 0.0 && correction != 1.0f) {
                 __m256 vcorr = _mm256_set1_ps(correction);
                 int d = 0;
                 for (; d + 7 < head_dim; d += 8) {
                     __m256 va = _mm256_loadu_ps(acc + d);
                     _mm256_storeu_ps(acc + d, _mm256_mul_ps(va, vcorr));
                 }
-                for (; d < head_dim; d++) acc[d] *= correction;
+                for (; d < head_dim; d++) {
+                    acc[d] *= correction;
+                }
                 running_sum *= correction;
             }
-            
-            // Step 3: exp(scores - new_max), accumulate sum, accumulate V
-            float tile_sum = 0.0f;
+
+            // Step 3: exp(scores - new_max), accumulate sum, accumulate V.
+            double tile_sum = 0.0;
             for (int ti = 0; ti < tile_len; ti++) {
-                float s = std::exp(scores_tile[ti] - new_max);
+                const float s = std::exp(scores_tile[ti] - new_max);
                 scores_tile[ti] = s;
                 tile_sum += s;
             }
-            
-            // Accumulate weighted V for this tile
+
             for (int ti = 0; ti < tile_len; ti++) {
-                float s = scores_tile[ti];
-                if (s < 1e-8f) continue;  // Skip negligible weights
-                
-                int t = tile_start + ti;
-                int cache_t = t % max_seq_len;
+                const float s = scores_tile[ti];
+                if (s < 1e-9f) {
+                    continue;
+                }
+
+                const int t = tile_start + ti;
+                const int logical_t = logical_start_pos + t;
+                const int cache_t = ((logical_t % max_seq_len) + max_seq_len) % max_seq_len;
                 const float* v_t = V_cache + cache_t * kv_dim + kv_h * head_dim;
-                
+
                 __m256 vs = _mm256_set1_ps(s);
                 int d = 0;
                 for (; d + 7 < head_dim; d += 8) {
@@ -511,23 +553,35 @@ void InferenceKernels::flash_attention_v2(
                     __m256 vv = _mm256_loadu_ps(v_t + d);
                     _mm256_storeu_ps(acc + d, _mm256_fmadd_ps(vs, vv, va));
                 }
-                for (; d < head_dim; d++) acc[d] += s * v_t[d];
+                for (; d < head_dim; d++) {
+                    acc[d] += s * v_t[d];
+                }
             }
-            
+
             running_sum += tile_sum;
             running_max = new_max;
         }
-        
+
         // Final normalization: output = acc / running_sum
-        if (running_sum > 0.0f) {
-            float inv_sum = 1.0f / running_sum;
+        if (running_sum > 0.0 && std::isfinite(running_sum)) {
+            const float inv_sum = static_cast<float>(1.0 / running_sum);
             __m256 vinv = _mm256_set1_ps(inv_sum);
             int d = 0;
             for (; d + 7 < head_dim; d += 8) {
                 __m256 va = _mm256_loadu_ps(acc + d);
                 _mm256_storeu_ps(out_h + d, _mm256_mul_ps(va, vinv));
             }
-            for (; d < head_dim; d++) out_h[d] = acc[d] * inv_sum;
+            for (; d < head_dim; d++) {
+                out_h[d] = acc[d] * inv_sum;
+            }
+            // Final finite guard to prevent NaN propagation into subsequent layers.
+            for (int j = 0; j < head_dim; ++j) {
+                if (!std::isfinite(out_h[j])) {
+                    out_h[j] = 0.0f;
+                }
+            }
+        } else {
+            memset(out_h, 0, static_cast<size_t>(head_dim) * sizeof(float));
         }
     }
 }
@@ -573,6 +627,13 @@ void InferenceKernels::fused_silu_mul_avx2(float* gate, const float* up, int n) 
 // Reduces KV cache memory by 4x (FP32 → int8)
 // ============================================================================
 void InferenceKernels::quantize_kv_fp32_to_int8(const float* src, int8_t* dst, float* scale_out, int n) {
+    if (!src || !dst || !scale_out || n <= 0) {
+        if (scale_out) {
+            *scale_out = 0.0f;
+        }
+        return;
+    }
+
     // Step 1: Find absmax via AVX2
     __m256 vmax_abs = _mm256_setzero_ps();
     const __m256 sign_mask = _mm256_castsi256_ps(_mm256_set1_epi32(0x7FFFFFFF));
@@ -589,15 +650,18 @@ void InferenceKernels::quantize_kv_fp32_to_int8(const float* src, int8_t* dst, f
         for (int j = 0; j < 8; j++) if (tmp[j] > absmax) absmax = tmp[j];
     }
     for (; i < n; i++) {
+        if (!std::isfinite(src[i])) {
+            continue;
+        }
         float a = src[i] > 0 ? src[i] : -src[i];
         if (a > absmax) absmax = a;
     }
     
     // Step 2: Compute scale and quantize
     float inv_scale;
-    if (absmax < 1e-10f) {
+    if (!std::isfinite(absmax) || absmax < 1e-10f) {
         *scale_out = 0.0f;
-        memset(dst, 0, n);
+        memset(dst, 0, static_cast<size_t>(n));
         return;
     }
     
@@ -612,6 +676,9 @@ void InferenceKernels::quantize_kv_fp32_to_int8(const float* src, int8_t* dst, f
     i = 0;
     for (; i + 7 < n; i += 8) {
         __m256 v = _mm256_loadu_ps(src + i);
+        // NaN/Inf can appear from unstable upstream activations; squash to zero.
+        __m256 finite_mask = _mm256_cmp_ps(v, v, _CMP_ORD_Q);
+        v = _mm256_blendv_ps(_mm256_setzero_ps(), v, finite_mask);
         __m256 scaled = _mm256_mul_ps(v, vinv_scale);
         scaled = _mm256_max_ps(scaled, vmin_clamp);
         scaled = _mm256_min_ps(scaled, vmax_clamp);
@@ -626,7 +693,8 @@ void InferenceKernels::quantize_kv_fp32_to_int8(const float* src, int8_t* dst, f
         }
     }
     for (; i < n; i++) {
-        float scaled = src[i] * inv_scale;
+        const float finite_src = std::isfinite(src[i]) ? src[i] : 0.0f;
+        float scaled = finite_src * inv_scale;
         if (scaled < -127.0f) scaled = -127.0f;
         if (scaled > 127.0f) scaled = 127.0f;
         dst[i] = (int8_t)(scaled + (scaled >= 0 ? 0.5f : -0.5f));
@@ -634,6 +702,14 @@ void InferenceKernels::quantize_kv_fp32_to_int8(const float* src, int8_t* dst, f
 }
 
 void InferenceKernels::dequantize_kv_int8_to_fp32(const int8_t* src, float* dst, float scale, int n) {
+    if (!src || !dst || n <= 0) {
+        return;
+    }
+    if (!std::isfinite(scale) || scale == 0.0f) {
+        memset(dst, 0, static_cast<size_t>(n) * sizeof(float));
+        return;
+    }
+
     __m256 vscale = _mm256_set1_ps(scale);
     
     int i = 0;
@@ -649,4 +725,3 @@ void InferenceKernels::dequantize_kv_int8_to_fp32(const int8_t* src, float* dst,
         dst[i] = (float)src[i] * scale;
     }
 }
-

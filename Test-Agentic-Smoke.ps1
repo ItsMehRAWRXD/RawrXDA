@@ -10,11 +10,20 @@
     .\Test-Agentic-Smoke.ps1
     .\Test-Agentic-Smoke.ps1 -SkipBuild
     .\Test-Agentic-Smoke.ps1 -LaunchIDE
+    .\Test-Agentic-Smoke.ps1 -BuildDir build_smoke_vs -Generator "Visual Studio 17 2022" -Arch x64 -Configuration Release -CleanBuild
 #>
 param(
     [switch]$SkipBuild,
     [switch]$LaunchIDE,
-    [string]$ProjectRoot = $PSScriptRoot
+    [string]$ProjectRoot = $PSScriptRoot,
+    [string]$BuildDir = "build_smoke_auto",
+    [string]$Generator = "Auto",
+    [string]$Arch = "x64",
+    [string]$Configuration = "Release",
+    [string]$Target = "RawrXD-Win32IDE",
+    [switch]$CleanBuild,
+    [int]$BuildRetryCount = 3,
+    [int]$MaxParallel = 1
 )
 
 $ErrorActionPreference = "Continue"
@@ -38,6 +47,164 @@ function Test-CodeContains {
     }
     if ($ok) { Write-Host "  [PASS] $Label" -ForegroundColor Green }
     return $ok
+}
+
+function Get-CMakeCacheValue {
+    param([string]$BuildDirectory, [string]$VarName)
+    $cachePath = Join-Path $BuildDirectory "CMakeCache.txt"
+    if (-not (Test-Path $cachePath)) { return $null }
+    foreach ($line in Get-Content -Path $cachePath -ErrorAction SilentlyContinue) {
+        if ($line -like "$VarName*") {
+            $parts = $line -split "=", 2
+            if ($parts.Count -eq 2) {
+                return $parts[1].Trim()
+            }
+            return ""
+        }
+    }
+    return $null
+}
+
+function Invoke-LoggedProcess {
+    param(
+        [string]$FilePath,
+        [string[]]$Arguments,
+        [string]$LogPath
+    )
+    $errPath = "$LogPath.err"
+    if (Test-Path $LogPath) { Remove-Item $LogPath -Force -ErrorAction SilentlyContinue }
+    if (Test-Path $errPath) { Remove-Item $errPath -Force -ErrorAction SilentlyContinue }
+
+    $p = Start-Process -FilePath $FilePath `
+        -ArgumentList $Arguments `
+        -NoNewWindow `
+        -Wait `
+        -PassThru `
+        -RedirectStandardOutput $LogPath `
+        -RedirectStandardError $errPath
+
+    if (Test-Path $errPath) {
+        Get-Content -Path $errPath -ErrorAction SilentlyContinue | Add-Content -Path $LogPath
+        Remove-Item $errPath -Force -ErrorAction SilentlyContinue
+    }
+    return $p.ExitCode
+}
+
+function Get-LogTail {
+    param([string]$Path, [int]$LineCount = 25)
+    if (-not (Test-Path $Path)) { return @() }
+    return Get-Content -Path $Path -Tail $LineCount -ErrorAction SilentlyContinue
+}
+
+function Remove-LockedObjFromLog {
+    param([string]$BuildDirectory, [string]$LogPath)
+    if (-not (Test-Path $LogPath)) { return $false }
+    $content = Get-Content -Path $LogPath -Raw -ErrorAction SilentlyContinue
+    if (-not $content) { return $false }
+    $m = [regex]::Match($content, "Cannot open compiler generated file: '([^']+\.obj)': Permission denied")
+    if (-not $m.Success) { return $false }
+    $objPath = $m.Groups[1].Value
+    if (-not [System.IO.Path]::IsPathRooted($objPath)) {
+        $objPath = Join-Path $BuildDirectory $objPath
+    }
+    if (Test-Path $objPath) {
+        Remove-Item -Path $objPath -Force -ErrorAction SilentlyContinue
+    }
+    return $true
+}
+
+function Get-ActiveBuildProcessesForPath {
+    param([string]$BuildDirectory)
+    if ([string]::IsNullOrWhiteSpace($BuildDirectory)) { return @() }
+    $normalized = [System.IO.Path]::GetFullPath($BuildDirectory).TrimEnd("\\/")
+    try {
+        return @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {
+            $_.Name -in @("cmake.exe", "nmake.exe", "cl.exe", "link.exe", "rc.exe", "mt.exe") -and
+            $_.CommandLine -and
+            $_.CommandLine.IndexOf($normalized, [System.StringComparison]::OrdinalIgnoreCase) -ge 0
+        })
+    } catch {
+        return @()
+    }
+}
+
+function Stop-ActiveBuildProcessesForPath {
+    param([string]$BuildDirectory, [int]$WaitSeconds = 5)
+    $procs = @(Get-ActiveBuildProcessesForPath -BuildDirectory $BuildDirectory)
+    if ($procs.Count -eq 0) { return $false }
+
+    foreach ($proc in $procs) {
+        try {
+            Stop-Process -Id $proc.ProcessId -Force -ErrorAction SilentlyContinue
+        } catch {
+        }
+    }
+
+    $deadline = (Get-Date).AddSeconds([Math]::Max(1, $WaitSeconds))
+    do {
+        Start-Sleep -Milliseconds 250
+        $remaining = @(Get-ActiveBuildProcessesForPath -BuildDirectory $BuildDirectory)
+    } while ($remaining.Count -gt 0 -and (Get-Date) -lt $deadline)
+
+    return $true
+}
+
+function Test-IsMultiConfigGenerator {
+    param([string]$GeneratorName)
+    $multi = @(
+        "Visual Studio 17 2022",
+        "Visual Studio 16 2019",
+        "Visual Studio 15 2017",
+        "Ninja Multi-Config",
+        "Xcode"
+    )
+    return $multi -contains $GeneratorName
+}
+
+function Get-GeneratorSafeBuildDir {
+    param([string]$Root, [string]$RequestedDir, [string]$RequestedGenerator)
+    $requestedFull = if ([System.IO.Path]::IsPathRooted($RequestedDir)) { $RequestedDir } else { Join-Path $Root $RequestedDir }
+    $cacheGen = Get-CMakeCacheValue -BuildDirectory $requestedFull -VarName "CMAKE_GENERATOR"
+    if ([string]::IsNullOrWhiteSpace($cacheGen) -or $cacheGen -eq $RequestedGenerator) {
+        return $requestedFull
+    }
+
+    $safeSuffix = ($RequestedGenerator -replace "[^A-Za-z0-9]+", "_").Trim("_").ToLowerInvariant()
+    if ([string]::IsNullOrWhiteSpace($safeSuffix)) { $safeSuffix = "cmake" }
+    $fallback = Join-Path $Root ("build_smoke_{0}" -f $safeSuffix)
+    return $fallback
+}
+
+function Get-AvailableCMakeGenerators {
+    $help = & cmake --help 2>&1
+    if ($LASTEXITCODE -ne 0) { return @() }
+    $generators = @()
+    foreach ($line in $help) {
+        if ($line -match "^\s*\*\s+(.+?)\s*=\s*Generate") {
+            $generators += $Matches[1].Trim()
+        }
+    }
+    return $generators
+}
+
+function Get-GeneratorCandidates {
+    param([string]$PreferredGenerator)
+    if ($PreferredGenerator -and $PreferredGenerator -ne "Auto") {
+        return @($PreferredGenerator)
+    }
+    $available = Get-AvailableCMakeGenerators
+    $ordered = @(
+        "Ninja",
+        "NMake Makefiles",
+        "Visual Studio 17 2022",
+        "Visual Studio 16 2019",
+        "Ninja Multi-Config"
+    )
+    $candidates = @()
+    foreach ($g in $ordered) {
+        if ($available -contains $g) { $candidates += $g }
+    }
+    return $candidates
 }
 
 # ---------------------------------------------------------------------------
@@ -146,38 +313,102 @@ Write-Host ""
 # ---------------------------------------------------------------------------
 if (-not $SkipBuild) {
     Write-Host "[Phase 2] Build RawrXD-Win32IDE" -ForegroundColor Yellow
-    $buildDir = Join-Path $ProjectRoot "build"
-    $slnPath = Join-Path $buildDir "RawrEngine.sln"
-    $vcxprojPath = Join-Path $buildDir "RawrXD-Win32IDE.vcxproj"
-    $needsConfigure = -not (Test-Path $buildDir) -or (-not (Test-Path $slnPath) -and -not (Test-Path $vcxprojPath))
-    if (-not (Test-Path $buildDir)) { New-Item -ItemType Directory -Path $buildDir -Force | Out-Null }
-    if ($needsConfigure) {
-        Write-Host "  Configuring CMake (Visual Studio 17 2022, x64)..." -ForegroundColor Gray
-        Push-Location $buildDir
-        try {
-            $cmakeOut = & cmake $ProjectRoot -G "Visual Studio 17 2022" -A x64 2>&1
-            if ($LASTEXITCODE -ne 0) {
-                Write-Host "  [FAIL] CMake configure failed" -ForegroundColor Red
-                $cmakeOut | Select-Object -Last 25 | ForEach-Object { Write-Host "    $_" }
-                $failed++
+    $generatorCandidates = Get-GeneratorCandidates -PreferredGenerator $Generator
+    if ($generatorCandidates.Count -eq 0) {
+        Write-Host "  [FAIL] No usable CMake generator found." -ForegroundColor Red
+        $failed++
+    } else {
+        $buildPass = $false
+        foreach ($candidateGenerator in $generatorCandidates) {
+            $buildDirResolved = Get-GeneratorSafeBuildDir -Root $ProjectRoot -RequestedDir $BuildDir -RequestedGenerator $candidateGenerator
+            if (-not (Test-Path $buildDirResolved)) { New-Item -ItemType Directory -Path $buildDirResolved -Force | Out-Null }
+
+            $staleBuildProcs = @(Get-ActiveBuildProcessesForPath -BuildDirectory $buildDirResolved)
+            if ($staleBuildProcs.Count -gt 0) {
+                Write-Host "  Found $($staleBuildProcs.Count) stale build process(es) for $buildDirResolved; stopping them before configure/build..." -ForegroundColor Yellow
+                [void](Stop-ActiveBuildProcessesForPath -BuildDirectory $buildDirResolved)
             }
-        } finally { Pop-Location }
-    }
-    if ((Test-Path $buildDir) -and ($LASTEXITCODE -eq 0 -or -not $needsConfigure)) {
-        Push-Location $buildDir
-        try {
-            Write-Host "  Building target RawrXD-Win32IDE..." -ForegroundColor Gray
-            $buildResult = & cmake --build . --config Release --target RawrXD-Win32IDE 2>&1
-            $buildOk = $LASTEXITCODE -eq 0
-            if ($buildOk) {
-                Write-Host "  [PASS] Build succeeded" -ForegroundColor Green
-                $passed++
-            } else {
-                Write-Host "  [FAIL] Build failed (exit code $LASTEXITCODE)" -ForegroundColor Red
-                $buildResult | Select-Object -Last 35 | ForEach-Object { Write-Host "    $_" }
-                $failed++
+
+            if ($CleanBuild -and (Test-Path (Join-Path $buildDirResolved "CMakeCache.txt"))) {
+                Write-Host "  Clean build requested: removing cached CMake files in $buildDirResolved..." -ForegroundColor Gray
+                Remove-Item -Path (Join-Path $buildDirResolved "CMakeCache.txt") -Force -ErrorAction SilentlyContinue
+                Remove-Item -Path (Join-Path $buildDirResolved "CMakeFiles") -Recurse -Force -ErrorAction SilentlyContinue
             }
-        } finally { Pop-Location }
+
+            $cacheGenBefore = Get-CMakeCacheValue -BuildDirectory $buildDirResolved -VarName "CMAKE_GENERATOR"
+            if ($cacheGenBefore -and $cacheGenBefore -ne $candidateGenerator) {
+                Write-Host "  Generator mismatch in $buildDirResolved (`"$cacheGenBefore`" vs `"$candidateGenerator`"), trying next..." -ForegroundColor Yellow
+                continue
+            }
+
+            $logDir = Join-Path $ProjectRoot "logs"
+            if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
+            $stamp = Get-Date -Format "yyyyMMdd_HHmmss"
+            $safeGen = ($candidateGenerator -replace "[^A-Za-z0-9]+", "_").Trim("_").ToLowerInvariant()
+            $cfgLog = Join-Path $logDir ("smoke_configure_{0}_{1}.log" -f $safeGen, $stamp)
+            $bldLog = Join-Path $logDir ("smoke_build_{0}_{1}.log" -f $safeGen, $stamp)
+
+            $needsConfigure = -not (Test-Path (Join-Path $buildDirResolved "CMakeCache.txt"))
+            $cmakeConfigureOk = $true
+            if ($needsConfigure) {
+                Write-Host "  Configuring CMake ($candidateGenerator) in $buildDirResolved..." -ForegroundColor Gray
+                $cfgArgs = @("-S", $ProjectRoot, "-B", $buildDirResolved, "-G", $candidateGenerator)
+                if (Test-IsMultiConfigGenerator -GeneratorName $candidateGenerator) {
+                    $cfgArgs += @("-A", $Arch)
+                }
+                $cfgExit = Invoke-LoggedProcess -FilePath "cmake" -Arguments $cfgArgs -LogPath $cfgLog
+                if ($cfgExit -ne 0) {
+                    Write-Host "  Configure failed for generator $candidateGenerator, trying next..." -ForegroundColor Yellow
+                    Get-LogTail -Path $cfgLog -LineCount 10 | ForEach-Object { Write-Host "    $_" }
+                    $cmakeConfigureOk = $false
+                }
+            }
+
+            if ((Test-Path $buildDirResolved) -and $cmakeConfigureOk) {
+                $cacheGenAfter = Get-CMakeCacheValue -BuildDirectory $buildDirResolved -VarName "CMAKE_GENERATOR"
+                if ([string]::IsNullOrWhiteSpace($cacheGenAfter)) { $cacheGenAfter = $candidateGenerator }
+                $isMultiConfig = Test-IsMultiConfigGenerator -GeneratorName $cacheGenAfter
+                Write-Host "  Building target $Target (generator: $cacheGenAfter)..." -ForegroundColor Gray
+                $buildArgs = @("--build", $buildDirResolved, "--target", $Target)
+                if ($isMultiConfig) { $buildArgs += @("--config", $Configuration) }
+                if ($MaxParallel -gt 0) { $buildArgs += @("--parallel", $MaxParallel) }
+                $bldExit = 1
+                for ($attempt = 1; $attempt -le [Math]::Max(1, $BuildRetryCount); $attempt++) {
+                    $bldExit = Invoke-LoggedProcess -FilePath "cmake" -Arguments $buildArgs -LogPath $bldLog
+                    if ($bldExit -eq 0) { break }
+                    $recovered = Remove-LockedObjFromLog -BuildDirectory $buildDirResolved -LogPath $bldLog
+                    if ($recovered -and $attempt -lt $BuildRetryCount) {
+                        Write-Host "  Build hit locked obj file; stopping stale build tools and retrying attempt $($attempt + 1)/$BuildRetryCount..." -ForegroundColor Yellow
+                        [void](Stop-ActiveBuildProcessesForPath -BuildDirectory $buildDirResolved)
+                        Start-Sleep -Seconds 2
+                        continue
+                    }
+                    break
+                }
+
+                if ($bldExit -eq 0) {
+                    Write-Host "  [PASS] Build succeeded ($buildDirResolved)" -ForegroundColor Green
+                    $passed++
+                    $buildPass = $true
+                    $Generator = $cacheGenAfter
+                    $BuildDir = $buildDirResolved
+                    break
+                } else {
+                    [void](Stop-ActiveBuildProcessesForPath -BuildDirectory $buildDirResolved)
+                    Write-Host "  Build failed for generator $cacheGenAfter, trying next..." -ForegroundColor Yellow
+                    Get-LogTail -Path $bldLog -LineCount 20 | ForEach-Object { Write-Host "    $_" }
+                    $knownError = Select-String -Path $bldLog -Pattern "error C|fatal error|U1077|LNK[0-9]+|Permission denied" -Quiet -ErrorAction SilentlyContinue
+                    if (-not $knownError) {
+                        Write-Host "    No explicit compiler/linker error text found; inspect full log: $bldLog" -ForegroundColor Yellow
+                    }
+                }
+            }
+        }
+
+        if (-not $buildPass) {
+            Write-Host "  [FAIL] Build failed for all candidate generators." -ForegroundColor Red
+            $failed++
+        }
     }
     Write-Host ""
 } else {
@@ -227,18 +458,19 @@ Write-Host "══════════════════════�
 Write-Host ""
 
 if ($LaunchIDE) {
-    $exe = Join-Path $ProjectRoot "build\bin\Release\RawrXD-Win32IDE.exe"
-    if (Test-Path $exe) {
+    $launchBuildDir = Get-GeneratorSafeBuildDir -Root $ProjectRoot -RequestedDir $BuildDir -RequestedGenerator $Generator
+    $launchCandidates = @(
+        (Join-Path $launchBuildDir ("bin\{0}\RawrXD-Win32IDE.exe" -f $Configuration)),
+        (Join-Path $launchBuildDir ("{0}\RawrXD-Win32IDE.exe" -f $Configuration)),
+        (Join-Path $launchBuildDir "bin\RawrXD-Win32IDE.exe"),
+        (Join-Path $launchBuildDir "RawrXD-Win32IDE.exe")
+    )
+    $exe = $launchCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+    if ($exe) {
         Write-Host "Launching IDE: $exe" -ForegroundColor Green
         Start-Process -FilePath $exe -WorkingDirectory $ProjectRoot
     } else {
-        $exe = Join-Path $ProjectRoot "build\Release\RawrXD-Win32IDE.exe"
-        if (Test-Path $exe) {
-            Write-Host "Launching IDE: $exe" -ForegroundColor Green
-            Start-Process -FilePath $exe -WorkingDirectory $ProjectRoot
-        } else {
-            Write-Host "IDE exe not found. Build first without -SkipBuild." -ForegroundColor Yellow
-        }
+        Write-Host "IDE exe not found in $launchBuildDir. Build first without -SkipBuild." -ForegroundColor Yellow
     }
 }
 

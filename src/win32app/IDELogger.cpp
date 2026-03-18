@@ -19,7 +19,7 @@ namespace {
         switch (level) {
             case IDELogLevel::DEBUG:    return "DEBUG";
             case IDELogLevel::INFO:     return "INFO";
-            case IDELogLevel::WARN:     return "WARN";
+            case IDELogLevel::WARNING:  return "WARN";
 #undef ERROR
             case IDELogLevel::ERROR:    return "ERROR";
             case IDELogLevel::CRITICAL: return "CRITICAL";
@@ -82,7 +82,7 @@ void IDELogger::log(IDELogLevel level, const std::string& message) {
         switch (level) {
             case IDELogLevel::DEBUG:    spdlog::debug(message); break;
             case IDELogLevel::INFO:     spdlog::info(message); break;
-            case IDELogLevel::WARN:     spdlog::warn(message); break;
+            case IDELogLevel::WARNING:  spdlog::warn(message); break;
             case IDELogLevel::ERROR:    spdlog::error(message); break;
             case IDELogLevel::CRITICAL: spdlog::critical(message); break;
             default:                    spdlog::info(message); break;

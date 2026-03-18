@@ -4,6 +4,8 @@
 #include <vector>
 #include <functional>
 #include <cstdint>
+#include <algorithm>
+#include <cmath>
 #ifdef RAWR_ENABLE_VULKAN
 #include <vulkan/vulkan.h>
 #else
@@ -45,6 +47,8 @@ class RawrXDInference {
     RawrXDTokenizer tokenizer;
     RawrXDSampler sampler;
     bool m_initialized = false;
+    uint32_t m_contextLimit = 0;
+    std::vector<float> m_lastLogits;
     
     // Helpers
     VkInstance CreateVulkanInstance() {
@@ -187,6 +191,8 @@ public:
                cfg.dim, cfg.n_layers, cfg.n_heads, cfg.n_kv_heads, cfg.vocab_size, cfg.hidden_dim, cfg.n_ctx);
         transformer.Initialize(device, physDevice, cfg, &loader);
         tokenizer.Load(vocabPath);
+        m_contextLimit = static_cast<uint32_t>(cfg.n_ctx);
+        m_lastLogits.clear();
         
         printf("[RawrXD] Inference engine READY\n");
         m_initialized = true;
@@ -201,45 +207,115 @@ public:
     int getLayers() const { return loader.getLayers(); }
     int getHeads() const { return loader.getHeads(); }
     int getKVHeads() const { return loader.getKVHeads(); }
+    uint32_t getContextLimit() const { return m_contextLimit; }
 
     std::vector<uint32_t> Tokenize(const std::string& text) {
+        if (!m_initialized) return {};
         return tokenizer.Encode(text);
     }
 
     std::string Detokenize(const std::vector<uint32_t>& tokens) {
+        if (!m_initialized) return {};
         return tokenizer.Decode(tokens);
+    }
+
+    std::vector<float> ForwardTokens(const std::vector<uint32_t>& tokens, uint32_t startPos = 0) {
+        if (!m_initialized || tokens.empty()) {
+            return {};
+        }
+        m_lastLogits = transformer.Forward(tokens, startPos);
+        return m_lastLogits;
+    }
+
+    const std::vector<float>& LastLogits() const { return m_lastLogits; }
+
+    std::vector<uint32_t> GenerateFromTokens(
+        const std::vector<uint32_t>& promptTokens,
+        uint32_t maxTokens = 512,
+        std::function<void(uint32_t, const std::string&)> callback = nullptr)
+    {
+        std::vector<uint32_t> generated;
+        if (!m_initialized || maxTokens == 0 || promptTokens.empty()) {
+            return generated;
+        }
+        maxTokens = std::min<uint32_t>(maxTokens, 8192);
+
+        std::vector<uint32_t> tokens = promptTokens;
+        const uint32_t vocabSize = std::max(1, loader.getVocabSize());
+
+        // Keep right-most context when prompt exceeds model context.
+        if (m_contextLimit > 0 && tokens.size() > m_contextLimit) {
+            tokens.erase(tokens.begin(), tokens.end() - m_contextLimit);
+        }
+        for (auto& t : tokens) {
+            if (t >= vocabSize) t %= vocabSize;
+        }
+
+        auto logits = transformer.Forward(tokens, 0);
+        m_lastLogits = logits;
+        uint32_t absolutePos = static_cast<uint32_t>(tokens.size());
+
+        for (uint32_t i = 0; i < maxTokens; i++) {
+            if (logits.empty()) break;
+
+            bool hasFinite = false;
+            for (float v : logits) {
+                if (std::isfinite(v)) {
+                    hasFinite = true;
+                    break;
+                }
+            }
+            if (!hasFinite) break;
+
+            uint32_t nextToken = sampler.Sample(logits.data(), logits.size(), tokens);
+            if (nextToken >= vocabSize) {
+                nextToken %= vocabSize;
+            }
+            tokens.push_back(nextToken);
+            if (m_contextLimit > 0 && tokens.size() > m_contextLimit) {
+                tokens.erase(tokens.begin(), tokens.end() - m_contextLimit);
+            }
+            generated.push_back(nextToken);
+
+            if (nextToken == 2) break;
+
+            std::vector<uint32_t> nextTokVec = {nextToken};
+            logits = transformer.Forward(nextTokVec, absolutePos);
+            absolutePos++;
+            m_lastLogits = logits;
+
+            if (callback) {
+                const std::string piece = tokenizer.Decode({nextToken});
+                try {
+                    callback(nextToken, piece);
+                } catch (...) {
+                    // Callback failures should not crash inference.
+                }
+            }
+        }
+
+        return generated;
     }
 
     std::string Generate(const std::string& prompt, uint32_t maxTokens = 512, 
                         std::function<void(const std::string&)> callback = nullptr) {
-        auto tokens = tokenizer.Encode(prompt);
-        // printf("[RawrXD] Prompt: %zu tokens\n", tokens.size());
-        
-        auto logits = transformer.Forward(tokens, 0);
-        
-        std::string fullResponse;
-
-        for (uint32_t i = 0; i < maxTokens; i++) {
-            uint32_t nextToken = sampler.Sample(logits.data(), 
-                                               logits.size(), tokens);
-            tokens.push_back(nextToken);
-            
-            if (nextToken == 2) break; 
-            
-            std::vector<uint32_t> nextTokVec = {nextToken};
-            logits = transformer.Forward(nextTokVec, tokens.size() - 1);
-            
-            std::string piece = tokenizer.Decode({nextToken});
-            if (callback) {
-                callback(piece);
-            } else {
-                // printf("%s", piece.c_str());
-                // fflush(stdout);
-            }
-            fullResponse += piece;
+        if (!m_initialized || maxTokens == 0) {
+            return {};
         }
-        
-        // printf("\n");
+        maxTokens = std::min<uint32_t>(maxTokens, 8192);
+
+        const auto tokens = tokenizer.Encode(prompt);
+        if (tokens.empty()) {
+            return {};
+        }
+
+        std::string fullResponse;
+        auto generated = GenerateFromTokens(tokens, maxTokens,
+            [&](uint32_t, const std::string& piece) {
+                if (callback) callback(piece);
+                fullResponse += piece;
+            });
+        (void)generated;
         return fullResponse;
     }
 };

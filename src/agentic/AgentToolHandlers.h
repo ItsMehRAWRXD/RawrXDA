@@ -40,10 +40,12 @@ namespace Agent {
 struct ToolGuardrails {
     std::vector<std::string> allowedRoots;       // Workspace roots (absolute paths)
     std::vector<std::string> denyPatterns;        // Glob patterns to block (e.g. "*.exe")
+    std::vector<std::string> allowedCommands;     // Whitelisted shell commands (execute/run_shell)
     size_t maxFileSizeBytes       = 10 * 1024 * 1024;  // 10 MB max file read/write
     size_t maxOutputCaptureBytes  = 4 * 1024 * 1024;   // 4 MB max command output
     uint32_t commandTimeoutMs     = 30000;              // 30 second default timeout
     int    maxSearchResults       = 200;                // Cap search hits
+    int    maxIndexFiles          = 200;                // Cap semantic index scan
     bool   requireBackupOnWrite   = true;               // Always backup before overwrite
 };
 
@@ -62,8 +64,15 @@ public:
     static ToolCallResult ReplaceInFile(const nlohmann::json& args);
     static ToolCallResult ListDir(const nlohmann::json& args);
     static ToolCallResult ExecuteCommand(const nlohmann::json& args);
+    static ToolCallResult RunShell(const nlohmann::json& args);
     static ToolCallResult SearchCode(const nlohmann::json& args);
     static ToolCallResult GetDiagnostics(const nlohmann::json& args);
+    static ToolCallResult SemanticSearch(const nlohmann::json& args);
+    static ToolCallResult MentionLookup(const nlohmann::json& args);
+    static ToolCallResult NextEditHint(const nlohmann::json& args);
+    static ToolCallResult ProposeMultiFileEdits(const nlohmann::json& args);
+    static ToolCallResult LoadRules(const nlohmann::json& args);
+    static ToolCallResult PlanTasks(const nlohmann::json& args);
 
     // ---- Schema generation (OpenAI function-calling format) ----
     static nlohmann::json GetAllSchemas();

@@ -362,25 +362,33 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `## 🚀 Production Deployment Complete
+            const body = [
+              '## 🚀 Production Deployment Complete',
+              '',
+              '**Release**: ${{ github.ref_name }}',
+              '',
+              '### Deployment Summary',
+              '- ✅ Windows x64, x86, ARM64 built successfully',
+              '- ✅ All tests passed',
+              '- ✅ Security scan complete',
+              '- ✅ Production servers updated',
+              '',
+              '### Verification',
+              '- Visit [Release Page](https://github.com/ItsMehRAWRXD/RawrXD/releases/tag/${{ github.ref_name }})',
+              '- Download binaries for your platform',
+              '- Run the application'
+            ].join('\n');
 
-**Release**: ${{ github.ref_name }}
-
-### Deployment Summary
-- ✅ Windows x64, x86, ARM64 built successfully
-- ✅ All tests passed
-- ✅ Security scan complete
-- ✅ Production servers updated
-
-### Verification
-- Visit [Release Page](https://github.com/ItsMehRAWRXD/RawrXD/releases/tag/${{ github.ref_name }})
-- Download binaries for your platform
-- Run the application`
-            });
+            if (context.issue && context.issue.number) {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body
+              });
+            } else {
+              core.info('No issue context available; skipping deployment comment.');
+            }
 
       - name: Create Deployment Record
         shell: bash

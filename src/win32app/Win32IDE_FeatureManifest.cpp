@@ -44,6 +44,8 @@ enum class FeatureCategory {
     Session,
     Git,
     Tools,
+    Telemetry,
+    Transcendence,
     Modules,
     SubAgent,
     Swarm,
@@ -59,7 +61,8 @@ enum class FeatureCategory {
     Server,
     Security,
     Performance,
-    Compiler
+    Compiler,
+    CodeIntelligence
 };
 
 static const char* categoryName(FeatureCategory cat) {
@@ -80,6 +83,8 @@ static const char* categoryName(FeatureCategory cat) {
         case FeatureCategory::Session: return "Session Management";
         case FeatureCategory::Git: return "Git Integration";
         case FeatureCategory::Tools: return "Tools & Analysis";
+        case FeatureCategory::Telemetry: return "Telemetry & Metrics";
+        case FeatureCategory::Transcendence: return "Transcendence Systems";
         case FeatureCategory::Modules: return "Module System";
         case FeatureCategory::SubAgent: return "Sub-Agent System";
         case FeatureCategory::Swarm: return "Swarm Compilation";
@@ -96,6 +101,7 @@ static const char* categoryName(FeatureCategory cat) {
         case FeatureCategory::Security: return "Security & Auth";
         case FeatureCategory::Performance: return "Performance Profiling";
         case FeatureCategory::Compiler: return "Compiler (MASM64/CLI)";
+        case FeatureCategory::CodeIntelligence: return "Code Intelligence";
     }
     return "Unknown";
 }
@@ -365,7 +371,7 @@ static FeatureEntry g_featureManifest[] = {
 
     // ========================== SYNTAX HIGHLIGHTING ==========================
     {"syntax.cpp", "C/C++ Highlighting", "Syntax coloring for C/C++ code",
-     FeatureCategory::SyntaxHighlight, 0, "", "Win32IDE_SyntaxHighlight.cpp",
+     FeatureCategory::SyntaxHighlight, 0, "", "Win32IDE_SyntaxHighlighting.cpp",
      FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Real, FeatureStatus::Real, testSyntaxEngine},
     
     {"syntax.asm", "Assembly Highlighting", "Syntax coloring for MASM/x86 assembly",
@@ -373,8 +379,50 @@ static FeatureEntry g_featureManifest[] = {
      FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Partial, nullptr},
     
     {"syntax.6languages", "6 Language Support", "C++, ASM, Python, JS, Rust, GLSL",
-     FeatureCategory::SyntaxHighlight, 0, "", "Win32IDE_SyntaxHighlight.cpp",
+     FeatureCategory::SyntaxHighlight, 0, "", "Win32IDE_SyntaxHighlighting.cpp",
      FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Partial, FeatureStatus::Partial, nullptr},
+
+    // ========================== VISION ENCODER ==========================
+    {"vision.load", "Load Vision Model", "Load CLIP/LLaVA vision model for image analysis",
+     FeatureCategory::AIMode, 0, "", "Win32IDE_VisionEncoder.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+    
+    {"vision.encode", "Encode Image", "Convert image to vision embeddings",
+     FeatureCategory::AIMode, 0, "", "Win32IDE_VisionEncoder.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+    
+    {"vision.describe", "Describe Image", "Generate text description of image",
+     FeatureCategory::AIMode, 0, "", "Win32IDE_VisionEncoder.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+    
+    {"vision.extractCode", "Extract Code from Screenshot", "OCR-like code extraction from images",
+     FeatureCategory::AIMode, 0, "", "Win32IDE_VisionEncoder.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+    
+    {"vision.analyzeDiagram", "Analyze Diagram", "Extract structure from flowcharts/UML",
+     FeatureCategory::AIMode, 0, "", "Win32IDE_VisionEncoder.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    // ========================== SEMANTIC INDEX ==========================
+    {"semantic.index", "Index File", "Build semantic index for current file",
+     FeatureCategory::CodeIntelligence, 0, "", "Win32IDE_SemanticIndex.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    {"semantic.search", "Search Symbols", "Search for symbols by name",
+     FeatureCategory::CodeIntelligence, 0, "", "Win32IDE_SemanticIndex.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    {"semantic.goto", "Go to Definition", "Navigate to symbol definition",
+     FeatureCategory::CodeIntelligence, 0, "F12", "Win32IDE_SemanticIndex.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    {"semantic.references", "Find References", "Find all references to symbol",
+     FeatureCategory::CodeIntelligence, 0, "Shift+F12", "Win32IDE_SemanticIndex.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    {"semantic.hierarchy", "Type Hierarchy", "Show inheritance hierarchy",
+     FeatureCategory::CodeIntelligence, 0, "", "Win32IDE_SemanticIndex.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
 
     // ========================== TERMINAL ==========================
     {"terminal.new", "New Terminal", "Create new terminal pane",
@@ -417,6 +465,18 @@ static FeatureEntry g_featureManifest[] = {
     {"agent.stop", "Agent Stop", "Stop the running agent loop",
      FeatureCategory::Agent, 4105, "", "Win32IDE_AgentCommands.cpp",
      FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Real, nullptr},
+    
+    {"agent.autonomousCommunicator", "Autonomous Communicator", "Start autonomous communication session",
+     FeatureCategory::Agent, 4106, "", "Win32IDE_AutonomousCommunicator.cpp",
+     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Real, nullptr},
+    
+    {"agent.composerUX", "Agentic Composer UX", "Advanced agentic composition interface",
+     FeatureCategory::Agent, 4107, "", "Win32IDE_AgenticComposerUX.cpp",
+     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Real, nullptr},
+    
+    {"agent.contextMentionParser", "Context Mention Parser", "Parse @mentions and context references",
+     FeatureCategory::Agent, 4108, "", "Win32IDE_ContextMentionParser.cpp",
+     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Real, nullptr},
 
     {"agent.memory", "Agent Memory", "Persistent agent observation store (key/value)",
      FeatureCategory::Agent, 4106, "", "Win32IDE_SubAgent.cpp",
@@ -464,6 +524,68 @@ static FeatureEntry g_featureManifest[] = {
      FeatureCategory::AIMode, 4210, "", "Win32IDE_AgentCommands.cpp",
      FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Real, nullptr},
 
+    // ========================== TELEMETRY ==========================
+    {"telemetry.unifiedCore", "Unified Telemetry Core", "Collect and export telemetry data",
+     FeatureCategory::Telemetry, 4300, "", "Win32IDE_UnifiedTelemetry.cpp",
+     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Real, nullptr},
+
+    // ========================== TRANSCENDENCE ==========================
+    {"transcendence.cursorParity", "Cursor/GitHub Parity Bridge", "Achieve feature parity with Cursor and GitHub Copilot",
+     FeatureCategory::Transcendence, 4400, "", "Win32IDE_CursorParity.cpp",
+     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Real, nullptr},
+
+    {"transcendence.omegaOrchestrator", "Omega Orchestrator", "Phase Ω autonomous pipeline orchestration",
+     FeatureCategory::Transcendence, 4401, "", "Win32IDE_OmegaOrchestrator.cpp",
+     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Real, nullptr},
+
+    {"transcendence.meshBrain", "Mesh Brain", "Distributed P2P neural coordination",
+     FeatureCategory::Transcendence, 4402, "", "Win32IDE_MeshBrain.cpp",
+     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Real, nullptr},
+
+    {"transcendence.speciatorEngine", "Speciator Engine", "Metamorphic evolution and speciation",
+     FeatureCategory::Transcendence, 4403, "", "Win32IDE_SpeciatorEngine.cpp",
+     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Real, nullptr},
+
+    {"transcendence.neuralBridge", "Neural Bridge", "Biological integration interface",
+     FeatureCategory::Transcendence, 4404, "", "Win32IDE_NeuralBridge.cpp",
+     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Real, nullptr},
+
+    {"transcendence.selfHostEngine", "Self-Host Engine", "Autonomous self-hosting capabilities",
+     FeatureCategory::Transcendence, 4405, "", "Win32IDE_SelfHostEngine.cpp",
+     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Real, nullptr},
+
+    {"transcendence.hardwareSynthesizer", "Hardware Synthesizer", "Real-time hardware synthesis",
+     FeatureCategory::Transcendence, 4406, "", "Win32IDE_HardwareSynthesizer.cpp",
+     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Real, nullptr},
+
+    {"transcendence.coordinator", "Transcendence Coordinator", "Central orchestration for transcendence systems",
+     FeatureCategory::Transcendence, 4407, "", "Win32IDE_TranscendenceCoordinator.cpp",
+     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Real, nullptr},
+
+    {"transcendence.vulkanRenderer", "Vulkan Renderer", "Advanced Vulkan-based rendering engine",
+     FeatureCategory::Transcendence, 4408, "", "Win32IDE_VulkanRenderer.cpp",
+     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Real, nullptr},
+
+    {"transcendence.osExplorer", "OS Explorer Interceptor", "Deep OS integration and exploration",
+     FeatureCategory::Transcendence, 4409, "", "Win32IDE_OSExplorerInterceptor.cpp",
+     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Real, nullptr},
+
+    {"transcendence.mcpHooks", "MCP Hooks", "Model Context Protocol integration hooks",
+     FeatureCategory::Transcendence, 4410, "", "Win32IDE_MCPHooks.cpp",
+     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Real, nullptr},
+
+    {"transcendence.iocpWatcher", "IOCP File Watcher", "High-performance file system monitoring",
+     FeatureCategory::Transcendence, 4411, "", "Win32IDE_IOCPFileWatcher.cpp",
+     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Real, nullptr},
+
+    {"transcendence.autoHealer", "IDE Diagnostic AutoHealer", "Self-healing diagnostic system",
+     FeatureCategory::Transcendence, 4412, "", "Win32IDE_IDEDiagnosticAutoHealer.cpp",
+     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Real, nullptr},
+
+    {"transcendence.consentPrompt", "Consent Prompt", "User consent and privacy management",
+     FeatureCategory::Transcendence, 4413, "", "Win32IDE_ConsentPrompt.cpp",
+     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Real, nullptr},
+
     // ========================== DEBUGGER ==========================
     {"debug.start", "Start Debugger", "Start debugging current file",
      FeatureCategory::Debug, 0, "F5", "Win32IDE_Debugger.cpp",
@@ -480,6 +602,10 @@ static FeatureEntry g_featureManifest[] = {
     {"debug.nativeEngine", "Native Debug Engine", "Windows debug API (DbgEng)",
      FeatureCategory::Debug, 0, "", "Win32IDE_NativeDebugPanel.cpp",
      FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+    
+    {"debug.autonomous", "Autonomous Debug", "AI-assisted debugging",
+     FeatureCategory::Debug, 0, "", "Win32IDE_AutonomousDebugger.cpp",
+     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Real, nullptr},
 
     // ========================== REVERSE ENGINEERING ==========================
     {"re.analyze", "PE Analysis", "Analyze PE file structure",
@@ -814,6 +940,37 @@ static FeatureEntry g_featureManifest[] = {
     {"lsp.server.stdio", "Stdio Subprocess", "Launch LSP server as child process for external editors (VS Code, Sublime, etc.)",
      FeatureCategory::LSP, IDM_LSP_SERVER_LAUNCH_STDIO, "", "Win32IDE_LSPServer.cpp",
      FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    // ========================================================================
+    // BATCH 50-56: UI & INFRASTRUCTURE COMPONENTS
+    // ========================================================================
+    {"agent.autonomous", "Autonomous Agent", "Core agentic functionality with autonomous decision making",
+     FeatureCategory::Agent, 44014, "", "Win32IDE_AutonomousAgent.cpp",
+     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    {"ui.chatRenderer", "Chat Message Renderer", "Advanced message display system with syntax highlighting",
+     FeatureCategory::AIMode, 44015, "", "Win32IDE_ChatMessageRenderer.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    {"ui.toolStatus", "Tool Action Status", "Real-time tool execution status and progress UI",
+     FeatureCategory::Tools, 44016, "", "Win32IDE_ToolActionStatus.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    {"ui.chatPanel", "Chat Panel", "Main chat interface with conversation management",
+     FeatureCategory::AIMode, 44017, "", "Win32IDE_ChatPanel.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    {"telemetry.perf", "Performance Telemetry", "Real-time performance monitoring and metrics collection",
+     FeatureCategory::Telemetry, 44018, "", "Win32IDE_PerfTelemetry.cpp",
+     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    {"security.updateSig", "Update Signature", "Cryptographic signing and verification for updates",
+     FeatureCategory::Security, 44019, "", "Win32IDE_UpdateSignature.cpp",
+     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    {"security.pluginSig", "Plugin Signature", "Plugin verification and integrity checking",
+     FeatureCategory::Security, 44020, "", "Win32IDE_PluginSignature.cpp",
+     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
 
     // Sentinel
     {nullptr, nullptr, nullptr, FeatureCategory::FileOps, 0, nullptr, nullptr,

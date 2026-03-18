@@ -7,6 +7,7 @@
 #include <windowsx.h>
 #include <algorithm>
 #include <string>
+#include <sstream>
 
 #pragma comment(lib, "comctl32.lib")
 
@@ -19,6 +20,7 @@ static Win32IDE* g_pProblemsIDE = nullptr;
 
 // Track last aggregator state hash to avoid redundant ListView rebuilds
 static size_t s_lastProblemsHash = 0;
+static size_t s_lastProblemsTelemetryHash = 0;
 
 static size_t computeProblemsHash(const std::vector<RawrXD::ProblemEntry>& entries) {
     size_t h = entries.size();
@@ -265,7 +267,7 @@ void Win32IDE::refreshProblemsView() {
 
     using namespace RawrXD;
     auto& agg = ProblemsAggregator::instance();
-    std::vector<ProblemEntry> all = agg.getProblems("", "");
+    std::vector<RawrXD::ProblemEntry> all = agg.getProblems("", "");
 
     m_problemsViewCache.clear();
     for (const auto& p : all) {
@@ -311,17 +313,33 @@ void Win32IDE::refreshProblemsView() {
         LV_SetItemTextW(m_hwndProblemsListView, (int)i, 5, lineBuf);
     }
 
+    int err = 0, warn = 0, other = 0;
+    for (const auto& e : all) {
+        if (e.severity == 1) err++;
+        else if (e.severity == 2) warn++;
+        else other++;
+    }
+
+    size_t summaryHash = computeProblemsHash(all);
+    if (summaryHash != s_lastProblemsTelemetryHash) {
+        s_lastProblemsTelemetryHash = summaryHash;
+        std::ostringstream payload;
+        payload << "{\"total\":" << all.size()
+                << ",\"errors\":" << err
+                << ",\"warnings\":" << warn
+                << ",\"other\":" << other << "}";
+        telemetryTrack("problems.refresh", static_cast<double>(all.size()));
+        telemetryDashboardTrack("problems.refresh", "ui", payload.str().c_str(), 0.0);
+        appendToOutput("[Problems] Refresh: " + std::to_string(all.size()) + " items (" +
+                           std::to_string(err) + " errors, " + std::to_string(warn) +
+                           " warnings, " + std::to_string(other) + " other)\n",
+                       "Output", OutputSeverity::Info);
+    }
+
     if (m_hwndStatusBar) {
-        int err = 0, warn = 0, other = 0;
-        auto raw = agg.getProblems("", "");
-        for (const auto& e : raw) {
-            if (e.severity == 1) err++;
-            else if (e.severity == 2) warn++;
-            else other++;
-        }
         wchar_t buf[128];
         swprintf_s(buf, L"Problems: %zu (%d errors, %d warnings, %d others)",
-                   raw.size(), err, warn, other);
+                   all.size(), err, warn, other);
         SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)buf);
     }
 }
@@ -330,6 +348,15 @@ void Win32IDE::onProblemsItemActivate(int index) {
     if (index < 0 || index >= (int)m_problemsViewCache.size()) return;
     const auto& p = m_problemsViewCache[index];
     if (p.path.empty()) return;
+    std::string pathSafe = p.path;
+    for (char& c : pathSafe) {
+        if (c == '"')
+            c = '\'';
+    }
+    std::ostringstream payload;
+    payload << "{\"path\":\"" << pathSafe << "\",\"line\":" << (p.line > 0 ? p.line : 1) << "}";
+    telemetryTrack("problems.navigate", 1.0);
+    telemetryDashboardTrack("problems.navigate", "ui", payload.str().c_str(), 0.0);
     navigateToFileLine(p.path, p.line > 0 ? (uint32_t)p.line : 1);
 }
 
@@ -337,17 +364,30 @@ void Win32IDE::handleProblemsCommand(int commandId) {
     switch (commandId) {
         case IDC_PROBLEMS_SHOW_ERRORS:
             m_problemsShowErrors = (SendMessageW(GetDlgItem(m_hwndProblemsPanel, IDC_PROBLEMS_SHOW_ERRORS), BM_GETCHECK, 0, 0) == BST_CHECKED);
+            telemetryTrack("problems.filter.errors", m_problemsShowErrors ? 1.0 : 0.0);
+            telemetryDashboardTrack("problems.filter", "ui",
+                                    m_problemsShowErrors ? "{\"filter\":\"errors\",\"state\":\"on\"}"
+                                                         : "{\"filter\":\"errors\",\"state\":\"off\"}",
+                                    0.0);
             refreshProblemsView();
             break;
         case IDC_PROBLEMS_SHOW_WARNINGS:
             m_problemsShowWarnings = (SendMessageW(GetDlgItem(m_hwndProblemsPanel, IDC_PROBLEMS_SHOW_WARNINGS), BM_GETCHECK, 0, 0) == BST_CHECKED);
+            telemetryTrack("problems.filter.warnings", m_problemsShowWarnings ? 1.0 : 0.0);
+            telemetryDashboardTrack("problems.filter", "ui",
+                                    m_problemsShowWarnings ? "{\"filter\":\"warnings\",\"state\":\"on\"}"
+                                                           : "{\"filter\":\"warnings\",\"state\":\"off\"}",
+                                    0.0);
             refreshProblemsView();
             break;
         case IDC_PROBLEMS_CLEAR:
             RawrXD::ProblemsAggregator::instance().clear("");
+            telemetryTrack("problems.clear", 1.0);
+            telemetryDashboardTrack("problems.clear", "ui", "{\"source\":\"button\"}", 0.0);
             refreshProblemsView();
             break;
         case IDC_PROBLEMS_FILTER:
+            telemetryDashboardTrack("problems.filter", "ui", "{\"filter\":\"text-change\"}", 0.0);
             refreshProblemsView();
             break;
         default:

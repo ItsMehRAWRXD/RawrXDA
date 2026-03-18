@@ -427,9 +427,11 @@ DWORD WINAPI TodoManager::PipeServerThreadProc(LPVOID param) {
         if (connected) {
             char buffer[4096];
             DWORD bytesRead;
+            constexpr DWORD kMaxChunk = static_cast<DWORD>(sizeof(buffer) - 1);
             
-            if (ReadFile(manager->pipeHandle_, buffer, sizeof(buffer) - 1, &bytesRead, NULL)) {
-                buffer[bytesRead] = '\0';
+            if (ReadFile(manager->pipeHandle_, buffer, kMaxChunk, &bytesRead, NULL) && bytesRead > 0) {
+                const size_t safeBytes = (bytesRead <= kMaxChunk) ? static_cast<size_t>(bytesRead) : static_cast<size_t>(kMaxChunk);
+                buffer[safeBytes] = '\0';
                 
                 // Process command from PowerShell
                 try {

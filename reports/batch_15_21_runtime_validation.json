@@ -1,0 +1,87 @@
+﻿{
+    "generatedAtUtc":  "2026-03-17T09:45:54.6239905Z",
+    "guiExe":  "d:\\rawrxd\\build_prod\\bin\\RawrXD-Win32IDE.exe",
+    "cliExe":  "d:\\rawrxd\\build_prod\\bin\\RawrXD-AutoFixCLI.exe",
+    "total":  7,
+    "passed":  3,
+    "failed":  4,
+    "results":  [
+                    {
+                        "id":  15,
+                        "name":  "terminal_panel",
+                        "command":  "d:\\rawrxd\\build_prod\\bin\\RawrXD-Win32IDE.exe --test-terminal-split",
+                        "exitCode":  0,
+                        "passed":  true,
+                        "note":  "",
+                        "startedAtUtc":  "2026-03-17T09:45:48.2101493Z",
+                        "finishedAtUtc":  "2026-03-17T09:45:50.9200993Z",
+                        "durationMs":  2710
+                    },
+                    {
+                        "id":  16,
+                        "name":  "file_open_save",
+                        "command":  "d:\\rawrxd\\build_prod\\bin\\RawrXD-Win32IDE.exe --selftest",
+                        "exitCode":  0,
+                        "passed":  true,
+                        "note":  "covered by selftest; manual UI verification recommended",
+                        "startedAtUtc":  "2026-03-17T09:45:50.9807846Z",
+                        "finishedAtUtc":  "2026-03-17T09:45:50.9807846Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  17,
+                        "name":  "agentic_request_flow_full",
+                        "command":  "pwsh.exe -NoProfile -ExecutionPolicy Bypass -File d:\\rawrxd\\Test-Agentic-Headless.ps1",
+                        "exitCode":  0,
+                        "passed":  true,
+                        "note":  "",
+                        "startedAtUtc":  "2026-03-17T09:45:50.9959361Z",
+                        "finishedAtUtc":  "2026-03-17T09:45:54.6103390Z",
+                        "durationMs":  3614
+                    },
+                    {
+                        "id":  18,
+                        "name":  "smooth_scroll",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "no automated flag; requires manual UI validation",
+                        "startedAtUtc":  "2026-03-17T09:45:54.6209391Z",
+                        "finishedAtUtc":  "2026-03-17T09:45:54.6209391Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  19,
+                        "name":  "crash_containment",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "requires stress harness; not automated here",
+                        "startedAtUtc":  "2026-03-17T09:45:54.6224785Z",
+                        "finishedAtUtc":  "2026-03-17T09:45:54.6224785Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  20,
+                        "name":  "patch_rollback_ledger",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "requires failure-path simulation; not automated here",
+                        "startedAtUtc":  "2026-03-17T09:45:54.6224785Z",
+                        "finishedAtUtc":  "2026-03-17T09:45:54.6224785Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  21,
+                        "name":  "quant_hysteresis",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "requires runtime tuning/telemetry; not automated here",
+                        "startedAtUtc":  "2026-03-17T09:45:54.6224785Z",
+                        "finishedAtUtc":  "2026-03-17T09:45:54.6224785Z",
+                        "durationMs":  0
+                    }
+                ]
+}

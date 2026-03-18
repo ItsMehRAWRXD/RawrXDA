@@ -1,38 +1,128 @@
-ninja: Entering directory `build'
-[1/65] Sync + regenerate SSOT beacon ownership artifacts
-Synced D:\rawrxd\src\core\ssot_beacon.symbols.txt from ssot_handlers_ext.cpp (566 symbols)
-Generated D:\rawrxd\src\core\ssot_beacon_table.inc (566 symbols)
-[2/65] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\ssot_beacon.cpp.obj
-[3/65] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\cursor_github_parity_bridge.cpp.obj
-[4/65] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\enterprise_stress_tests.cpp.obj
-[5/65] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\local_parity_bridge.cpp.obj
-[6/65] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\auto_update_system.cpp.obj
-[7/65] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\plugin_signature.cpp.obj
-[8/65] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\update_signature.cpp.obj
-[9/65] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\security\secrets_scanner.cpp.obj
-FAILED: CMakeFiles/RawrXD_Gold.dir/src/security/secrets_scanner.cpp.obj 
-C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_GOLD_BUILD=1 -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ADVANCED_DEOBFUSCATOR_ASM=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=0 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_CODEBASE_AUDIT_SYSTEM_ASM=0 -DRAWRXD_LINK_DUAL_ENGINE_QUANTUM_BEACON_ASM=0 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PATTERN_RECONSTRUCTOR_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=0 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_UNIFIED_OVERCLOCK_GOVERNOR_ASM=0 -DRAWRXD_LINK_VISION_PROJECTION_ASM=0 -DRAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS=1 -DRAWR_DISABLE_FILE_AUTOSAVE_SHIM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_QUICKJS=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /EHsc /O2 /W0 /arch:AVX2 /showIncludes /FoCMakeFiles\RawrXD_Gold.dir\src\security\secrets_scanner.cpp.obj /FdCMakeFiles\RawrXD_Gold.dir\ /FS -c D:\rawrxd\src\security\secrets_scanner.cpp
-D:\rawrxd\src\security\secrets_scanner.cpp(240): error C3861: 'scanFileIntoProblems': identifier not found
-D:\rawrxd\src\security\secrets_scanner.cpp(249): error C3861: 'scanDirectoryRecursive': identifier not found
-[10/65] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\swarm_reconciliation.cpp.obj
-[11/65] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\quickjs_sandbox.cpp.obj
-[12/65] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\security\sast_rule_engine.cpp.obj
-FAILED: CMakeFiles/RawrXD_Gold.dir/src/security/sast_rule_engine.cpp.obj 
-C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_GOLD_BUILD=1 -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ADVANCED_DEOBFUSCATOR_ASM=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=0 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_CODEBASE_AUDIT_SYSTEM_ASM=0 -DRAWRXD_LINK_DUAL_ENGINE_QUANTUM_BEACON_ASM=0 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PATTERN_RECONSTRUCTOR_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=0 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_UNIFIED_OVERCLOCK_GOVERNOR_ASM=0 -DRAWRXD_LINK_VISION_PROJECTION_ASM=0 -DRAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS=1 -DRAWR_DISABLE_FILE_AUTOSAVE_SHIM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_QUICKJS=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /EHsc /O2 /W0 /arch:AVX2 /showIncludes /FoCMakeFiles\RawrXD_Gold.dir\src\security\sast_rule_engine.cpp.obj /FdCMakeFiles\RawrXD_Gold.dir\ /FS -c D:\rawrxd\src\security\sast_rule_engine.cpp
-D:\rawrxd\src\security\sast_rule_engine.cpp(171): error C3861: 'isLikelySourceFile': identifier not found
-D:\rawrxd\src\security\sast_rule_engine.cpp(175): error C3861: 'shouldSkipPath': identifier not found
-[13/65] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\knowledge_graph_core.cpp.obj
-[14/65] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic\autonomous_verification_loop.cpp.obj
-[15/65] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\autonomous_debugger.cpp.obj
-[16/65] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic\autonomous_communicator.cpp.obj
-[17/65] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\swarm_conflict_resolver.cpp.obj
-[18/65] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic\autonomous_background_daemon.cpp.obj
-[19/65] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\enterprise_telemetry_compliance.cpp.obj
-[20/65] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\context\context_mention_parser.cpp.obj
-[21/65] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic\agentic_composer_ux.cpp.obj
-[22/65] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\multimodal_engine\vision_encoder.cpp.obj
-[23/65] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\telemetry\telemetry_export.cpp.obj
-[24/65] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\ide\refactoring_plugin.cpp.obj
-[25/65] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\ide\language_plugin.cpp.obj
-[26/65] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\context\semantic_index.cpp.obj
-ninja: build stopped: subcommand failed.
+**********************************************************************
+** Visual Studio 2026 Developer Command Prompt v18.2.1
+** Copyright (c) 2025 Microsoft Corporation
+**********************************************************************
+[DEBUG:ext\vcvars.bat] Found potential v145 version file: 'Microsoft.VCToolsVersion.VC.14.50.18.0.txt'
+[DEBUG:ext\vcvars.bat] Testing v145 version file: 'Microsoft.VCToolsVersion.VC.14.50.18.0.txt'
+[vcvarsall.bat] Environment initialized for: 'x64'
+Warning: NMake does not support parallel builds. Ignoring parallel build command line option.
+[  0%] Built target quickjs_static
+[  0%] Built target RawrXD_MultiWindow_Kernel
+[  9%] Built target masm_kernels
+[  9%] Built target re_deobfuscator
+[  9%] Built target RawrXD-RE-Library
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_DiskRecovery.cpp.obj
+Win32IDE_DiskRecovery.cpp
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_Plugins.cpp.obj
+Win32IDE_Plugins.cpp
+[  5%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/agentic/AgentToolHandlers.cpp.obj
+AgentToolHandlers.cpp
+[  5%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/agentic/BoundedAgentLoop.cpp.obj
+BoundedAgentLoop.cpp
+[  5%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/agentic/DeterministicReplayEngine.cpp.obj
+DeterministicReplayEngine.cpp
+[  5%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/agentic/AgentOrchestrator.cpp.obj
+AgentOrchestrator.cpp
+[  5%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/agentic/OrchestratorBridge.cpp.obj
+OrchestratorBridge.cpp
+D:\rawrxd\src\agentic\../logging/Logger.h(15): error C2143: syntax error: missing '}' before 'constant'
+D:\rawrxd\src\agentic\../logging/Logger.h(15): error C2059: syntax error: 'constant'
+D:\rawrxd\src\agentic\../logging/Logger.h(17): error C2143: syntax error: missing ';' before '}'
+D:\rawrxd\src\agentic\../logging/Logger.h(20): error C3646: 'level': unknown override specifier
+D:\rawrxd\src\agentic\../logging/Logger.h(20): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\agentic\../logging/Logger.h(47): error C2061: syntax error: identifier 'LogLevel'
+D:\rawrxd\src\agentic\../logging/Logger.h(52): error C2061: syntax error: identifier 'LogLevel'
+D:\rawrxd\src\agentic\../logging/Logger.h(75): error C3646: 'minLevel_': unknown override specifier
+D:\rawrxd\src\agentic\../logging/Logger.h(75): error C2059: syntax error: '{'
+D:\rawrxd\src\agentic\../logging/Logger.h(75): error C2334: unexpected token(s) preceding '{'; skipping apparent function body
+D:\rawrxd\src\agentic\../logging/Logger.h(47): error C2065: 'minLevel_': undeclared identifier
+D:\rawrxd\src\agentic\../logging/Logger.h(47): error C2065: 'level': undeclared identifier
+D:\rawrxd\src\agentic\../logging/Logger.h(57): error C2653: 'LogLevel': is not a class or namespace name
+D:\rawrxd\src\agentic\../logging/Logger.h(57): error C2065: 'DEBUG': undeclared identifier
+D:\rawrxd\src\agentic\../logging/Logger.h(60): error C2653: 'LogLevel': is not a class or namespace name
+D:\rawrxd\src\agentic\../logging/Logger.h(60): error C2065: 'INFO': undeclared identifier
+D:\rawrxd\src\agentic\../logging/Logger.h(63): error C2653: 'LogLevel': is not a class or namespace name
+D:\rawrxd\src\agentic\../logging/Logger.h(63): error C2065: 'WARNING': undeclared identifier
+D:\rawrxd\src\agentic\../logging/Logger.h(66): error C2589: 'constant': illegal token on right side of '::'
+D:\rawrxd\src\agentic\../logging/Logger.h(66): error C2144: syntax error: '<error>' should be preceded by ')'
+D:\rawrxd\src\agentic\../logging/Logger.h(66): error C2144: syntax error: '<error>' should be preceded by ';'
+D:\rawrxd\src\agentic\../logging/Logger.h(66): error C2059: syntax error: ','
+D:\rawrxd\src\agentic\../logging/Logger.h(66): error C2059: syntax error: ')'
+D:\rawrxd\src\agentic\../logging/Logger.h(69): error C2653: 'LogLevel': is not a class or namespace name
+D:\rawrxd\src\agentic\../logging/Logger.h(69): error C2065: 'CRITICAL': undeclared identifier
+D:\rawrxd\src\agentic\../logging/Logger.h(82): error C2061: syntax error: identifier 'LogLevel'
+D:\rawrxd\src\agentic\../logging/Logger.h(92): error C3646: 'level_': unknown override specifier
+D:\rawrxd\src\agentic\../logging/Logger.h(92): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\agentic\../logging/Logger.h(98): error C2059: syntax error: '}'
+D:\rawrxd\src\agentic\../logging/Logger.h(98): error C2143: syntax error: missing ';' before '}'
+D:\rawrxd\src\agentic\../security/InputSanitizer.h(7): error C2039: 'Security': is not a member of 'RawrXD'
+D:\rawrxd\src\agentic\../logging/Logger.h(9): note: see declaration of 'RawrXD'
+D:\rawrxd\src\agentic\../security/InputSanitizer.h(7): error C2143: syntax error: missing ';' before '{'
+D:\rawrxd\src\agentic\../security/InputSanitizer.h(7): error C2447: '{': missing function header (old-style formal list?)
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(62): error C2039: 'Logger': is not a member of 'RawrXD::Logging'
+D:\rawrxd\src\agentic\../logging/Logger.h(9): note: see declaration of 'RawrXD::Logging'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(63): error C3083: 'Logger': the symbol to the left of a '::' must be a type
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(63): error C2039: 'instance': is not a member of 'RawrXD::Logging'
+D:\rawrxd\src\agentic\../logging/Logger.h(9): note: see declaration of 'RawrXD::Logging'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(63): error C3861: 'instance': identifier not found
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(110): error C3083: 'Security': the symbol to the left of a '::' must be a type
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(110): error C3083: 'InputSanitizer': the symbol to the left of a '::' must be a type
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(110): error C2039: 'instance': is not a member of 'RawrXD'
+D:\rawrxd\src\agentic\ErrorRecoveryManager.h(60): note: see declaration of 'RawrXD'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(110): error C3861: 'instance': identifier not found
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(111): error C3083: 'Security': the symbol to the left of a '::' must be a type
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(111): error C2039: 'SanitizationResult': is not a member of 'RawrXD'
+D:\rawrxd\src\agentic\ErrorRecoveryManager.h(60): note: see declaration of 'RawrXD'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(111): error C2065: 'SanitizationResult': undeclared identifier
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(111): error C2146: syntax error: missing ';' before identifier 'pathSan'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(111): error C2065: 'pathSan': undeclared identifier
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(112): error C2065: 'pathSan': undeclared identifier
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(113): error C2065: 'pathSan': undeclared identifier
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(143): error C2039: 'ValidationResult': is not a member of 'RawrXD::Core::ConfigurationValidator'
+D:\rawrxd\src\agentic\../core/ConfigurationValidator.h(23): note: see declaration of 'RawrXD::Core::ConfigurationValidator'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(143): error C2065: 'ValidationResult': undeclared identifier
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(143): error C2146: syntax error: missing ';' before identifier 'validation'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(143): error C2065: 'validation': undeclared identifier
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(151): error C2065: 'validation': undeclared identifier
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(151): error C2530: 'warn': references must be initialized
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(151): error C3531: 'warn': a symbol whose type contains 'auto' must have an initializer
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(151): error C2143: syntax error: missing ';' before ':'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(151): error C2143: syntax error: missing ';' before ')'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(154): error C2065: 'validation': undeclared identifier
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(155): error C2065: 'validation': undeclared identifier
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(155): error C2530: 'err': references must be initialized
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(155): error C3531: 'err': a symbol whose type contains 'auto' must have an initializer
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(155): error C2143: syntax error: missing ';' before ':'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(155): error C2143: syntax error: missing ';' before ')'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(182): error C3083: 'Security': the symbol to the left of a '::' must be a type
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(182): error C3083: 'InputSanitizer': the symbol to the left of a '::' must be a type
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(182): error C2039: 'instance': is not a member of 'RawrXD'
+D:\rawrxd\src\agentic\ErrorRecoveryManager.h(60): note: see declaration of 'RawrXD'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(182): error C3861: 'instance': identifier not found
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(184): error C3536: 'sanitizedPrompt': cannot be used before it is initialized
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(440): error C3083: 'Security': the symbol to the left of a '::' must be a type
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(440): error C3083: 'InputSanitizer': the symbol to the left of a '::' must be a type
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(440): error C2039: 'instance': is not a member of 'RawrXD'
+D:\rawrxd\src\agentic\ErrorRecoveryManager.h(60): note: see declaration of 'RawrXD'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(440): error C3861: 'instance': identifier not found
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(441): error C3536: 'sanitized': cannot be used before it is initialized
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(453): error C3083: 'Security': the symbol to the left of a '::' must be a type
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(453): error C3083: 'InputSanitizer': the symbol to the left of a '::' must be a type
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(453): error C2039: 'instance': is not a member of 'RawrXD'
+D:\rawrxd\src\agentic\ErrorRecoveryManager.h(60): note: see declaration of 'RawrXD'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(453): error C3861: 'instance': identifier not found
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(454): error C3536: 'sanitized': cannot be used before it is initialized
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(472): error C3083: 'Security': the symbol to the left of a '::' must be a type
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(472): error C3083: 'InputSanitizer': the symbol to the left of a '::' must be a type
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(472): error C2039: 'instance': is not a member of 'RawrXD'
+D:\rawrxd\src\agentic\ErrorRecoveryManager.h(60): note: see declaration of 'RawrXD'
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(472): error C3861: 'instance': identifier not found
+D:\rawrxd\src\agentic\OrchestratorBridge.cpp(473): error C3536: 'sanitized': cannot be used before it is initialized
+NMAKE : fatal error U1077: '"C:\Program Files\CMake\bin\cmake.exe" -E cmake_cl_compile_depends --dep-file=CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\OrchestratorBridge.cpp.obj.d --working-dir=D:\rawrxd\build --filter-prefix="Note: including file: " -- C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe @C:\Users\HiH8e\AppData\Local\Temp\nm26C.tmp' : return code '0x2'
+Stop.
+NMAKE : fatal error U1077: 'C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\nmake.exe -s -f CMakeFiles\RawrXD-Win32IDE.dir\build.make /nologo -SL                 CMakeFiles\RawrXD-Win32IDE.dir\build' : return code '0x2'
+Stop.
+NMAKE : fatal error U1077: 'C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\nmake.exe -s -f CMakeFiles\Makefile2 /nologo -SL                 CMakeFiles\RawrXD-Win32IDE.dir\all' : return code '0x2'
+Stop.
+NMAKE : fatal error U1077: 'C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\nmake.exe -s -f CMakeFiles\Makefile2 /nologo -LS                 RawrXD-Win32IDE' : return code '0x2'
+Stop.

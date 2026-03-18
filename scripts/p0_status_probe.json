@@ -1,0 +1,29 @@
+{
+  "/api/hotpatch/status": {
+    "error": "No connection could be made because the target machine actively refused it. (127.0.0.1:11435)"
+  },
+  "/api/governor/status": {
+    "error": "No connection could be made because the target machine actively refused it. (127.0.0.1:11435)"
+  },
+  "/api/swarm/status": {
+    "error": "No connection could be made because the target machine actively refused it. (127.0.0.1:11435)"
+  },
+  "/api/status": {
+    "error": "No connection could be made because the target machine actively refused it. (127.0.0.1:11435)"
+  },
+  "/api/debug/status": {
+    "error": "No connection could be made because the target machine actively refused it. (127.0.0.1:11435)"
+  },
+  "/api/backend/status": {
+    "error": "No connection could be made because the target machine actively refused it. (127.0.0.1:11435)"
+  },
+  "/api/hybrid/status": {
+    "error": "No connection could be made because the target machine actively refused it. (127.0.0.1:11435)"
+  },
+  "/api/quantum/status": {
+    "error": "No connection could be made because the target machine actively refused it. (127.0.0.1:11435)"
+  },
+  "/api/router/status": {
+    "error": "No connection could be made because the target machine actively refused it. (127.0.0.1:11435)"
+  }
+}

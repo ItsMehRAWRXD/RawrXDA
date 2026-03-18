@@ -16,6 +16,7 @@ class RawrEngine {
     float* tok_embeddings;
     float* output_norm;
     void* output_weight;
+    ggml_type output_weight_type = GGML_TYPE_F32;
     
     int dim, n_layers, n_heads, n_kv_heads, vocab_size, hidden_dim;
     int head_dim;

@@ -132,3 +132,14 @@ RefactorSuggestions.json
 # Model/cache blobs
 **/blobs/
 **/*.safetensors
+
+# Additional build dirs and large files
+build_smoke_verify/
+build_ninja3/
+build_smoke_verify2/
+*.map
+
+
+# Large scan/report files (>100MB)
+**/todo-scan-*.json
+**/Powershield_Audit_Report.json

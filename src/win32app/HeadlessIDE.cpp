@@ -30,6 +30,7 @@
 #include "../agentic/AgentOllamaClient.h"
 #include "../core/enterprise_license.h"
 #include "../../include/lsp/RawrXD_LSPServer.h"
+#include "../agent_history.h"
 
 #include <iostream>
 #include <fstream>
@@ -38,8 +39,22 @@
 #include <csignal>
 #include <cstring>
 #include <algorithm>
+#include <cstdlib>
 
 // SCAFFOLD_130: Headless inference and model load
+
+// Helper: read boolean env var with default
+static bool readEnvFlag(const char* name, bool defaultValue) {
+    const char* v = std::getenv(name);
+    if (!v) return defaultValue;
+    if (_stricmp(v, "1") == 0 || _stricmp(v, "true") == 0 || _stricmp(v, "yes") == 0 || _stricmp(v, "on") == 0) {
+        return true;
+    }
+    if (_stricmp(v, "0") == 0 || _stricmp(v, "false") == 0 || _stricmp(v, "no") == 0 || _stricmp(v, "off") == 0) {
+        return false;
+    }
+    return defaultValue;
+}
 
 
 // ============================================================================
@@ -186,6 +201,11 @@ void ConsoleOutputSink::flush() noexcept {
     fflush(stderr);
 }
 
+// Deleter definition now that AgentHistoryRecorder is complete
+void AgentHistoryDeleter::operator()(AgentHistoryRecorder* ptr) const {
+    delete ptr;
+}
+
 // ============================================================================
 // HeadlessIDE — Constructor / Destructor
 // ============================================================================
@@ -219,6 +239,36 @@ HeadlessResult HeadlessIDE::initialize(int argc, char* argv[]) {
 
 HeadlessResult HeadlessIDE::initialize(const HeadlessConfig& config) {
     m_config = config;
+
+    // Breadcrumb file: trace headless init for hang diagnostics
+    {
+        FILE* f = fopen("headless_server.log", "a");
+        if (f) {
+            fprintf(f, "INIT_BEGIN mode=%d enableServer=%d port=%d bind=%s\n",
+                    (int)m_config.mode, m_config.enableServer ? 1 : 0, m_config.port,
+                    m_config.bindAddress.c_str());
+            fclose(f);
+        }
+    }
+
+    // Debug breadcrumb: write effective config for headless startup
+    {
+        FILE* f = fopen("headless_server.log", "a");
+        if (f) {
+            fprintf(f, "CONFIG mode=%d enableServer=%d port=%d bind=%s\n",
+                    (int)m_config.mode, m_config.enableServer ? 1 : 0, m_config.port,
+                    m_config.bindAddress.c_str());
+            fclose(f);
+        }
+    }
+
+    // Experimental toggles (env-driven)
+    m_expHotpatchEnabled        = readEnvFlag("RAWRXD_ENABLE_70B_HOTPATCH", true);
+    m_expLayerEvictionEnabled   = readEnvFlag("RAWRXD_ENABLE_LAYER_EVICTION", true);
+    m_expGovernorEnabled        = readEnvFlag("RAWRXD_ENABLE_GOVERNOR", true);
+    m_expQuantumTimeEnabled     = readEnvFlag("RAWRXD_ENABLE_QTIME_MANAGER", false);
+    m_expQuantumOrchEnabled     = readEnvFlag("RAWRXD_ENABLE_QAGENT_ORCH", false);
+    m_expQuantumMissingEnabled  = readEnvFlag("RAWRXD_ENABLE_QMISSING_IMPL", false);
 
     // Configure output sink based on config
     if (auto* console = dynamic_cast<ConsoleOutputSink*>(m_outputSink.get())) {
@@ -259,11 +309,47 @@ HeadlessResult HeadlessIDE::initialize(const HeadlessConfig& config) {
     tryInit(&HeadlessIDE::initLSPClient, "LSPClient");
     tryInit(&HeadlessIDE::initHybridBridge, "HybridBridge");
     tryInit(&HeadlessIDE::initMultiResponse, "MultiResponse");
-    tryInit(&HeadlessIDE::initPhase10, "Phase10-ExecGovernor");
+    if (m_expGovernorEnabled) {
+        tryInit(&HeadlessIDE::initPhase10, "Phase10-ExecGovernor");
+        m_expGovernorActivated = m_phase10Initialized;
+        if (m_expGovernorActivated) {
+            m_outputSink->appendOutput("[EXPERIMENTAL] governor_activated=true (RAWRXD_ENABLE_GOVERNOR=1)", OutputSeverity::Info);
+        }
+    } else {
+        m_outputSink->appendOutput("[EXPERIMENTAL] governor_activated=false (RAWRXD_ENABLE_GOVERNOR=0)", OutputSeverity::Debug);
+    }
     tryInit(&HeadlessIDE::initPhase11, "Phase11-Swarm");
     tryInit(&HeadlessIDE::initPhase12, "Phase12-NativeDebug");
-    tryInit(&HeadlessIDE::initHotpatch, "Hotpatch");
+    if (m_expHotpatchEnabled) {
+        tryInit(&HeadlessIDE::initHotpatch, "Hotpatch");
+        m_expHotpatchActivated = m_hotpatchInitialized;
+        if (m_expHotpatchActivated) {
+            m_outputSink->appendOutput("[EXPERIMENTAL] hotpatch70b_activated=true (RAWRXD_ENABLE_70B_HOTPATCH=1)", OutputSeverity::Info);
+        }
+    } else {
+        m_outputSink->appendOutput("[EXPERIMENTAL] hotpatch70b_activated=false (RAWRXD_ENABLE_70B_HOTPATCH=0)", OutputSeverity::Debug);
+    }
+    if (m_expLayerEvictionEnabled && m_hotpatchInitialized) {
+        m_expLayerEvictionActivated = true;
+        m_outputSink->appendOutput("[EXPERIMENTAL] layer_eviction_activated=true (RAWRXD_ENABLE_LAYER_EVICTION=1)", OutputSeverity::Info);
+    } else if (m_expLayerEvictionEnabled) {
+        m_outputSink->appendOutput("[EXPERIMENTAL] layer_eviction_activated=false (waiting on hotpatch init)", OutputSeverity::Debug);
+    }
     tryInit(&HeadlessIDE::initInstructions, "Instructions");
+
+    // Quantum feature markers (no-op wiring; status/log visibility)
+    if (m_expQuantumTimeEnabled) {
+        m_expQuantumTimeActivated = true;
+        m_outputSink->appendOutput("[EXPERIMENTAL] quantum_time_manager_activated=true (RAWRXD_ENABLE_QTIME_MANAGER=1)", OutputSeverity::Info);
+    }
+    if (m_expQuantumOrchEnabled) {
+        m_expQuantumOrchActivated = true;
+        m_outputSink->appendOutput("[EXPERIMENTAL] quantum_orchestrator_activated=true (RAWRXD_ENABLE_QAGENT_ORCH=1)", OutputSeverity::Info);
+    }
+    if (m_expQuantumMissingEnabled) {
+        m_expQuantumMissingActivated = true;
+        m_outputSink->appendOutput("[EXPERIMENTAL] quantum_missing_impl_activated=true (RAWRXD_ENABLE_QMISSING_IMPL=1)", OutputSeverity::Info);
+    }
 
     // Load model if specified
     if (!m_config.modelPath.empty()) {
@@ -278,6 +364,15 @@ HeadlessResult HeadlessIDE::initialize(const HeadlessConfig& config) {
     }
 
     m_outputSink->appendOutput("Headless IDE initialized successfully.", OutputSeverity::Info);
+
+    // Breadcrumb: init complete
+    {
+        FILE* f = fopen("headless_server.log", "a");
+        if (f) {
+            fprintf(f, "INIT_DONE\n");
+            fclose(f);
+        }
+    }
     return HeadlessResult::ok("Initialized");
 }
 
@@ -383,6 +478,21 @@ HeadlessResult HeadlessIDE::parseArgs(int argc, char* argv[]) {
         else if (arg == "--help" || arg == "-h") {
             printReplHelp();
             return HeadlessResult::error("Help requested", 0);
+        }
+    }
+
+    // Defensive default: if the parsed/initial port is invalid, clamp to 11435
+    int originalPort = m_config.port;
+    if (m_config.port <= 0 || m_config.port > 65535 || m_config.port == 9090) {
+        m_config.port = 11435;
+    }
+
+    // Always log the resolved port to aid port-binding diagnostics
+    {
+        FILE* f = fopen("headless_server.log", "a");
+        if (f) {
+            fprintf(f, "EFFECTIVE_PORT %d (was %d)\n", m_config.port, originalPort);
+            fclose(f);
         }
     }
 
@@ -517,7 +627,7 @@ HeadlessResult HeadlessIDE::initFailureDetection() {
 HeadlessResult HeadlessIDE::initAgentHistory() {
     auto startTime = std::chrono::steady_clock::now();
     if (!m_historyRecorder) {
-        m_historyRecorder = std::make_unique<AgentHistoryRecorder>("rawrxd_headless_history");
+        m_historyRecorder.reset(new AgentHistoryRecorder("rawrxd_headless_history"));
         m_historyRecorder->setLogCallback([this](int level, const std::string& msg) {
             if (level >= 2) {
                 m_outputSink->appendOutput(("[History] " + msg).c_str(), OutputSeverity::Debug);
@@ -1292,6 +1402,16 @@ std::string HeadlessIDE::getGovernorStatus() const {
     return ExecutionGovernor::instance().getStatusString();
 }
 
+std::string HeadlessIDE::getGovernorStatusJson() const {
+    std::ostringstream oss;
+    oss << "{";
+    oss << "\"status\":\"" << getGovernorStatus() << "\",";
+    oss << "\"governor_activated\":" << (m_expGovernorActivated ? "true" : "false") << ",";
+    oss << "\"layer_eviction_activated\":" << (m_expLayerEvictionActivated ? "true" : "false");
+    oss << "}";
+    return oss.str();
+}
+
 std::string HeadlessIDE::getSafetyStatus() const {
     if (!m_phase10Initialized) return "Safety contract: Not initialized";
     return AgentSafetyContract::instance().getStatusString();
@@ -1343,6 +1463,16 @@ std::string HeadlessIDE::getHotpatchStatus() const {
     return oss.str();
 }
 
+std::string HeadlessIDE::getHotpatchStatusJson() const {
+    std::ostringstream oss;
+    oss << "{";
+    oss << "\"status\":\"" << getHotpatchStatus() << "\",";
+    oss << "\"hotpatch70b_activated\":" << (m_expHotpatchActivated ? "true" : "false") << ",";
+    oss << "\"layer_eviction_activated\":" << (m_expLayerEvictionActivated ? "true" : "false");
+    oss << "}";
+    return oss.str();
+}
+
 // ============================================================================
 // Settings
 // ============================================================================
@@ -1366,9 +1496,21 @@ std::string HeadlessIDE::getSettingsFilePath() const {
 void HeadlessIDE::startServer() {
     if (m_serverRunning.load()) return;
 
+    auto logStatus = [this](const std::string& msg) {
+        m_outputSink->appendOutput(msg.c_str(), OutputSeverity::Error);
+        // Best-effort file breadcrumb to debug headless binding issues
+        FILE* f = fopen("headless_server.log", "a");
+        if (f) {
+            auto now = std::chrono::system_clock::now();
+            auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+            fprintf(f, "%lld %s\n", (long long)ms, msg.c_str());
+            fclose(f);
+        }
+    };
+
     m_serverSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (m_serverSocket == INVALID_SOCKET) {
-        m_outputSink->appendOutput("Failed to create server socket", OutputSeverity::Error);
+        logStatus("Failed to create server socket");
         return;
     }
 
@@ -1382,17 +1524,22 @@ void HeadlessIDE::startServer() {
     inet_pton(AF_INET, m_config.bindAddress.c_str(), &addr.sin_addr);
 
     if (bind(m_serverSocket, (sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR) {
-        std::string msg = "Failed to bind to " + m_config.bindAddress + ":" + std::to_string(m_config.port);
-        m_outputSink->appendOutput(msg.c_str(), OutputSeverity::Error);
+        std::string msg = "Failed to bind to " + m_config.bindAddress + ":" + std::to_string(m_config.port) +
+                          " (WSA=" + std::to_string(WSAGetLastError()) + ")";
+        logStatus(msg);
         closesocket(m_serverSocket);
         m_serverSocket = INVALID_SOCKET;
+        m_serverRunning.store(false);
         return;
     }
 
     if (listen(m_serverSocket, SOMAXCONN) == SOCKET_ERROR) {
-        m_outputSink->appendOutput("Failed to listen on server socket", OutputSeverity::Error);
+        std::string msg = "Failed to listen on " + m_config.bindAddress + ":" + std::to_string(m_config.port) +
+                          " (WSA=" + std::to_string(WSAGetLastError()) + ")";
+        logStatus(msg);
         closesocket(m_serverSocket);
         m_serverSocket = INVALID_SOCKET;
+        m_serverRunning.store(false);
         return;
     }
 
@@ -1525,7 +1672,7 @@ void HeadlessIDE::handleClient(SOCKET clientFd) {
         responseBody = "{\"status\":\"" + getRouterStatusString() + "\"}";
     }
     else if (path == "/api/governor/status") {
-        responseBody = "{\"status\":\"" + getGovernorStatus() + "\"}";
+        responseBody = getGovernorStatusJson();
     }
     else if (path == "/api/safety/status") {
         responseBody = "{\"status\":\"" + getSafetyStatus() + "\"}";
@@ -1537,7 +1684,10 @@ void HeadlessIDE::handleClient(SOCKET clientFd) {
         responseBody = "{\"status\":\"" + getNativeDebugStatus() + "\"}";
     }
     else if (path == "/api/hotpatch/status") {
-        responseBody = "{\"status\":\"" + getHotpatchStatus() + "\"}";
+        responseBody = getHotpatchStatusJson();
+    }
+    else if (path == "/api/quantum/status") {
+        responseBody = getQuantumStatusJson();
     }
     else if (path == "/api/asm/status") {
         responseBody = "{\"status\":\"" + getAsmSemanticStatsString() + "\"}";
@@ -1620,6 +1770,16 @@ std::string HeadlessIDE::getFeatureManifestJSON() const {
     return "{\"mode\":\"headless\",\"version\":\"" + std::string(VERSION) + "\",\"phase\":\"" + BUILD_PHASE + "\"}";
 }
 
+std::string HeadlessIDE::getQuantumStatusJson() const {
+    std::ostringstream oss;
+    oss << "{";
+    oss << "\"quantum_time_manager_activated\":" << (m_expQuantumTimeActivated ? "true" : "false") << ",";
+    oss << "\"quantum_orchestrator_activated\":" << (m_expQuantumOrchActivated ? "true" : "false") << ",";
+    oss << "\"quantum_missing_impl_activated\":" << (m_expQuantumMissingActivated ? "true" : "false");
+    oss << "}";
+    return oss.str();
+}
+
 // ============================================================================
 // Diagnostics
 // ============================================================================
@@ -1650,6 +1810,14 @@ std::string HeadlessIDE::getFullStatusDump() const {
     oss << "    \"hotpatch\": " << (m_hotpatchInitialized ? "true" : "false") << ",\n";
     oss << "    \"instructions\": " << (m_instructionsInitialized ? "true" : "false") << "\n";
     oss << "  }\n";
+    oss << "  ,\"experimental\": {\n";
+    oss << "    \"hotpatch70b_activated\": " << (m_expHotpatchActivated ? "true" : "false") << ",\n";
+    oss << "    \"layer_eviction_activated\": " << (m_expLayerEvictionActivated ? "true" : "false") << ",\n";
+    oss << "    \"governor_activated\": " << (m_expGovernorActivated ? "true" : "false") << ",\n";
+    oss << "    \"quantum_time_manager_activated\": " << (m_expQuantumTimeActivated ? "true" : "false") << ",\n";
+    oss << "    \"quantum_orchestrator_activated\": " << (m_expQuantumOrchActivated ? "true" : "false") << ",\n";
+    oss << "    \"quantum_missing_impl_activated\": " << (m_expQuantumMissingActivated ? "true" : "false") << "\n";
+    oss << "  }\n";
     oss << "}";
     return oss.str();
 }
@@ -1671,6 +1839,13 @@ uint64_t HeadlessIDE::getUptimeMs() const {
 int HeadlessIDE::runServerMode() {
     if (m_config.enableServer) {
         startServer();
+        if (!m_serverRunning.load()) {
+            m_outputSink->appendOutput("HTTP server failed to start; exiting headless server mode.", OutputSeverity::Error);
+            return 2;
+        }
+    } else {
+        m_outputSink->appendOutput("Server disabled (--no-server); nothing to serve, exiting.", OutputSeverity::Warning);
+        return 0;
     }
 
     m_outputSink->appendOutput("Headless IDE running in server mode. Press Ctrl+C to stop.", OutputSeverity::Info);

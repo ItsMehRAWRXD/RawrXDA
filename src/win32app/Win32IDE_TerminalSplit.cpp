@@ -344,15 +344,19 @@ static void paneReaderThread(SplitTermPane* pane)
 {
     char buffer[4096];
     DWORD bytesRead;
+    constexpr DWORD kMaxChunk = static_cast<DWORD>(sizeof(buffer) - 1);
 
     while (pane->running) {
-        if (!ReadFile(pane->hReadPipe, buffer, sizeof(buffer) - 1, &bytesRead, nullptr) || bytesRead == 0) {
+        // Safe ReadFile into buffer - leave space for null terminator
+        if (!ReadFile(pane->hReadPipe, buffer, kMaxChunk, &bytesRead, nullptr) || bytesRead == 0) {
             break;
         }
-        buffer[bytesRead] = '\0';
+
+        const size_t safeBytes = (bytesRead <= kMaxChunk) ? static_cast<size_t>(bytesRead) : static_cast<size_t>(kMaxChunk);
+        buffer[safeBytes] = '\0';
 
         // Post to UI thread
-        std::string* text = new std::string(buffer, bytesRead);
+        std::string* text = new std::string(buffer, safeBytes);
 
         if (pane->hwndOutput && IsWindow(pane->hwndOutput)) {
             // Use WM_APP message to marshal to UI thread

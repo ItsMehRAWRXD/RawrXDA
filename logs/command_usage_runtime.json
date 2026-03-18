@@ -2,11 +2,11 @@
   "telemetryEnabled": true,
   "disableIncomplete": true,
   "usage": [
-    {"id":1002,"canonical":"file.open","handler":"handleFileOpen","category":"File","attempts":1,"ok":0,"error":1,"lastTickMs":140102109,"lastStatus":1},
-    {"id":2028,"canonical":"view.sidebar","handler":"handleViewSidebar","category":"View","attempts":1,"ok":1,"error":0,"lastTickMs":140102109,"lastStatus":0},
-    {"id":3200,"canonical":"view.transparency100","handler":"handleTrans100","category":"Transparency","attempts":1,"ok":1,"error":0,"lastTickMs":140102109,"lastStatus":0},
-    {"id":4009,"canonical":"terminal.splitCode","handler":"handleTerminalSplitCode","category":"Terminal","attempts":1,"ok":1,"error":0,"lastTickMs":140102109,"lastStatus":0},
-    {"id":10000,"canonical":"vscext.status","handler":"handleVscExtStatus","category":"Plugin","attempts":2,"ok":2,"error":0,"lastTickMs":140102109,"lastStatus":0},
-    {"id":10002,"canonical":"vscext.listCommands","handler":"handleVscExtListCommands","category":"Plugin","attempts":1,"ok":1,"error":0,"lastTickMs":140102109,"lastStatus":0}
+    {"id":1002,"canonical":"file.open","handler":"handleFileOpen","category":"File","attempts":1,"ok":0,"error":1,"lastTickMs":9478234,"lastStatus":1},
+    {"id":2028,"canonical":"view.sidebar","handler":"handleViewSidebar","category":"View","attempts":1,"ok":1,"error":0,"lastTickMs":9478234,"lastStatus":0},
+    {"id":3200,"canonical":"view.transparency100","handler":"handleTrans100","category":"Transparency","attempts":1,"ok":1,"error":0,"lastTickMs":9478234,"lastStatus":0},
+    {"id":4009,"canonical":"terminal.splitCode","handler":"handleTerminalSplitCode","category":"Terminal","attempts":1,"ok":1,"error":0,"lastTickMs":9478234,"lastStatus":0},
+    {"id":10000,"canonical":"vscext.status","handler":"handleVscExtStatus","category":"Plugin","attempts":2,"ok":2,"error":0,"lastTickMs":9478234,"lastStatus":0},
+    {"id":10002,"canonical":"vscext.listCommands","handler":"handleVscExtListCommands","category":"Plugin","attempts":1,"ok":1,"error":0,"lastTickMs":9478234,"lastStatus":0}
   ]
 }

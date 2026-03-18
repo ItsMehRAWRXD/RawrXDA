@@ -1,0 +1,87 @@
+﻿{
+    "generatedAtUtc":  "2026-03-17T16:24:18.7807038Z",
+    "guiExe":  "d:\\rawrxd\\build_prod\\bin\\RawrXD-Win32IDE.exe",
+    "cliExe":  "d:\\rawrxd\\build_prod\\bin\\RawrXD-AutoFixCLI.exe",
+    "total":  7,
+    "passed":  0,
+    "failed":  7,
+    "results":  [
+                    {
+                        "id":  57,
+                        "name":  "enterprise_stress_tests",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "needs enterprise stress runner",
+                        "startedAtUtc":  "2026-03-17T16:24:18.7670254Z",
+                        "finishedAtUtc":  "2026-03-17T16:24:18.7670254Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  58,
+                        "name":  "sqlite3_core",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "needs query harness",
+                        "startedAtUtc":  "2026-03-17T16:24:18.7791610Z",
+                        "finishedAtUtc":  "2026-03-17T16:24:18.7791610Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  59,
+                        "name":  "telemetry_export",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "needs export endpoint test",
+                        "startedAtUtc":  "2026-03-17T16:24:18.7791610Z",
+                        "finishedAtUtc":  "2026-03-17T16:24:18.7791610Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  60,
+                        "name":  "refactoring_plugin",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "needs plugin refactor test",
+                        "startedAtUtc":  "2026-03-17T16:24:18.7791610Z",
+                        "finishedAtUtc":  "2026-03-17T16:24:18.7791610Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  61,
+                        "name":  "language_plugin",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "needs plugin readiness check",
+                        "startedAtUtc":  "2026-03-17T16:24:18.7791610Z",
+                        "finishedAtUtc":  "2026-03-17T16:24:18.7791610Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  62,
+                        "name":  "resource_generator",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "needs generation validation",
+                        "startedAtUtc":  "2026-03-17T16:24:18.7791610Z",
+                        "finishedAtUtc":  "2026-03-17T16:24:18.7791610Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  63,
+                        "name":  "cursor_parity",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "needs parity bridge test",
+                        "startedAtUtc":  "2026-03-17T16:24:18.7791610Z",
+                        "finishedAtUtc":  "2026-03-17T16:24:18.7791610Z",
+                        "durationMs":  0
+                    }
+                ]
+}

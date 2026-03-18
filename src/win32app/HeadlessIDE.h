@@ -63,6 +63,10 @@ class MultiResponseEngine;
 class SubAgentManager;
 class AgentHistoryRecorder;
 class AgenticEngine;
+struct AgentHistoryDeleter {
+    void operator()(AgentHistoryRecorder* ptr) const;
+};
+struct AgentHistoryDeleter;
 
 // ============================================================================
 // Headless initialization result
@@ -201,6 +205,7 @@ public:
 
     // ---- Execution Governor (Phase 10A) ----
     std::string getGovernorStatus() const;
+    std::string getGovernorStatusJson() const;
 
     // ---- Safety Contract (Phase 10B) ----
     std::string getSafetyStatus() const;
@@ -219,6 +224,7 @@ public:
 
     // ---- Hotpatch (Phase 14.2) ----
     std::string getHotpatchStatus() const;
+    std::string getHotpatchStatusJson() const;
 
     // ---- Settings ----
     void loadSettings(const std::string& path = "");
@@ -234,6 +240,7 @@ public:
     // ---- Feature Manifest ----
     std::string getFeatureManifestMarkdown() const;
     std::string getFeatureManifestJSON() const;
+    std::string getQuantumStatusJson() const;
 
     // ---- Diagnostics ----
     std::string getFullStatusDump() const;
@@ -329,9 +336,7 @@ private:
 
     // Real subsystem instances (owned by HeadlessIDE)
     std::unique_ptr<MultiResponseEngine> m_multiResponse;
-    std::unique_ptr<AgentHistoryRecorder, void(*)(AgentHistoryRecorder*)> m_historyRecorder{
-        nullptr, +[](AgentHistoryRecorder*) {}
-    };
+    std::unique_ptr<AgentHistoryRecorder, AgentHistoryDeleter> m_historyRecorder;
 
     // Agentic stack (101% parity with Win32 — chat, tool dispatch, subagent, chain, swarm)
     std::unique_ptr<AgenticEngine>     m_agenticEngine;
@@ -358,6 +363,22 @@ private:
     // Native debugger state
     bool                              m_debugSessionActive    = false;
     uint32_t                          m_debugBreakpointCount  = 0;
+
+    // Experimental toggles (enabled via environment/config)
+    bool                              m_expHotpatchEnabled        = true;
+    bool                              m_expLayerEvictionEnabled   = true;
+    bool                              m_expGovernorEnabled        = true;
+    bool                              m_expQuantumTimeEnabled     = false;
+    bool                              m_expQuantumOrchEnabled     = false;
+    bool                              m_expQuantumMissingEnabled  = false;
+
+    // Experimental activation markers
+    bool                              m_expHotpatchActivated      = false;
+    bool                              m_expLayerEvictionActivated = false;
+    bool                              m_expGovernorActivated      = false;
+    bool                              m_expQuantumTimeActivated   = false;
+    bool                              m_expQuantumOrchActivated   = false;
+    bool                              m_expQuantumMissingActivated = false;
 
     // Session
     std::string                       m_sessionId;

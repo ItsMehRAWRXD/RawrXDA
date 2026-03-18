@@ -1,3 +1,7 @@
+param(
+    [switch]$SmokeOnly = $true
+)
+
 # 🤖 RawrXD Headless Agentic Test Suite
 # Tests Ollama integration and Agent Tools WITHOUT launching GUI
 # Run this to verify agentic capabilities in real-time
@@ -8,6 +12,18 @@ Write-Host "  RawrXD Headless Agentic Test Suite v2.0" -ForegroundColor Cyan
 Write-Host "  Testing Ollama + Agent Tools + Auto-Enable Feature" -ForegroundColor Cyan  
 Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
 Write-Host ""
+
+if ($SmokeOnly) {
+    try {
+        $resp = Invoke-RestMethod -Uri "http://localhost:11434/api/version" -Method GET -TimeoutSec 3
+        Write-Host "✅ Smoke: Ollama version endpoint responded." -ForegroundColor Green
+        exit 0
+    }
+    catch {
+        Write-Host "❌ Smoke: Ollama version endpoint failed: $($_.Exception.Message)" -ForegroundColor Red
+        exit 2
+    }
+}
 
 # ============================================
 # INITIALIZE CORE SYSTEMS (No GUI)
@@ -212,7 +228,8 @@ else {
         Write-Host "  ✅ read_file: SUCCESS (read $($result.Result.size) bytes from ASM-CORE-README.md)" -ForegroundColor Green
     }
     else {
-        Write-Host "  ⚠️ read_file: $($result.Error ?? $result.Result.error)" -ForegroundColor Yellow
+        $msg = if ($result.Error) { $result.Error } else { $result.Result.error }
+        Write-Host ("  ⚠️ read_file: {0}" -f $msg) -ForegroundColor Yellow
     }
 }
 
@@ -226,7 +243,8 @@ if ($result.Success -and $result.Result.success) {
     Write-Host "     📁 Directories: $dirs | 📄 Files: $files" -ForegroundColor Gray
 }
 else {
-    Write-Host "  ❌ list_directory: $($result.Error ?? $result.Result.error)" -ForegroundColor Red
+    $msg = if ($result.Error) { $result.Error } else { $result.Result.error }
+    Write-Host ("  ❌ list_directory: {0}" -f $msg) -ForegroundColor Red
 }
 
 # Test execute_command
@@ -237,7 +255,8 @@ if ($result.Success -and $result.Result.success) {
     Write-Host "  ✅ execute_command: SUCCESS (found $asmCount .asm files in src/)" -ForegroundColor Green
 }
 else {
-    Write-Host "  ❌ execute_command: $($result.Error ?? $result.Result.error)" -ForegroundColor Red
+    $msg = if ($result.Error) { $result.Error } else { $result.Result.error }
+    Write-Host ("  ❌ execute_command: {0}" -f $msg) -ForegroundColor Red
 }
 
 # Test get_environment

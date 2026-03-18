@@ -179,7 +179,7 @@ void Win32IDE::showPeekOverlay(const std::string& symbol,
     CHARRANGE cr;
     SendMessage(m_hwndEditor, EM_EXGETSEL, 0, (LPARAM)&cr);
     POINTL pt;
-    SendMessage(m_hwndEditor, EM_POSFROMCHAR, (WPARAM)&pt, cr.cpMin);
+    SendMessage(m_hwndEditor, EM_POSFROMCHAR, (WPARAM)cr.cpMin, (LPARAM)&pt);
 
     // Get line number for anchor
     int lineIndex = (int)SendMessage(m_hwndEditor, EM_LINEFROMCHAR, cr.cpMin, 0);

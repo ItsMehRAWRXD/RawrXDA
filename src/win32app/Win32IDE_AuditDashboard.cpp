@@ -29,14 +29,20 @@
 // instead of relying on the ListView_* macros which resolve to ANSI.
 
 #include "Win32IDE.h"
+#include "HeadlessIDE.h"
 #include "../../include/feature_registry.h"
 #include "../../include/agentic_autonomous_config.h"
+#include "../agentic/AgentOllamaClient.h"
+#include "../core/problems_aggregator.hpp"
 
+#include <richedit.h>  // CHARRANGE / EM_EXGETSEL
 #include <cstdio>
 #include <cstring>
+#include <fstream>
 #include <string>
 #include <vector>
 #include <sstream>
+#include <filesystem>
 #include <commctrl.h>
 #include <commdlg.h>     // GetSaveFileNameW
 #include <shlobj.h>
@@ -99,6 +105,465 @@ static const int AUDIT_BTN_EXPORT_ID = 11003;
 static const int AUDIT_BTN_REFRESH_ID = 11004;
 static const int AUDIT_BTN_CLOSE_ID = 11005;
 static const int AUDIT_STATUS_ID = 11006;
+
+// ============================================================================
+// CRITICAL RUNTIME VALIDATION — Batch 1 (items 1..7 from production audit)
+// ============================================================================
+std::vector<Win32IDE::RuntimeValidationCheck> Win32IDE::runCriticalValidationBatch1() {
+    std::vector<RuntimeValidationCheck> checks;
+    auto push = [&checks](const std::string& name, bool passed, const std::string& detail) {
+        RuntimeValidationCheck c;
+        c.name = name;
+        c.passed = passed;
+        c.detail = detail;
+        checks.push_back(std::move(c));
+    };
+
+    // 1) Ghost Text Rendering
+    {
+        const uint64_t seqBefore = m_ghostTextRequestSeq.load();
+        triggerGhostTextCompletion();
+        const bool seqAdvanced = m_ghostTextRequestSeq.load() > seqBefore;
+        if (m_hwndMain) {
+            KillTimer(m_hwndMain, 8888); // GHOST_TEXT_TIMER_ID in Win32IDE_GhostText.cpp
+        }
+
+        const bool ok = m_ghostTextEnabled && m_hwndEditor && IsWindow(m_hwndEditor) &&
+                        m_ghostTextFont != nullptr && seqAdvanced;
+        std::ostringstream oss;
+        oss << "enabled=" << (m_ghostTextEnabled ? "yes" : "no")
+            << ", editor=" << ((m_hwndEditor && IsWindow(m_hwndEditor)) ? "ok" : "missing")
+            << ", font=" << (m_ghostTextFont ? "ok" : "missing")
+            << ", debounce_seq=" << (seqAdvanced ? "advanced" : "stalled");
+        push("Ghost Text Rendering", ok, oss.str());
+    }
+
+    // 2) Multi-Cursor Visuals
+    {
+        bool ok = false;
+        std::ostringstream oss;
+        if (!m_hwndEditor || !IsWindow(m_hwndEditor)) {
+            oss << "editor window unavailable";
+            push("Multi-Cursor Visuals", false, oss.str());
+        } else {
+            initMultiCursor();
+            CHARRANGE cr{};
+            SendMessage(m_hwndEditor, EM_EXGETSEL, 0, (LPARAM)&cr);
+            int textLen = GetWindowTextLengthA(m_hwndEditor);
+            int probe = cr.cpMax;
+            if (textLen > 0) {
+                probe = (cr.cpMax < textLen) ? (cr.cpMax + 1) : (cr.cpMax > 0 ? cr.cpMax - 1 : 0);
+            }
+            addCursorAtPosition(probe);
+            if (textLen > 2) {
+                addCursorAtPosition(0);
+            }
+
+            const int count = getMultiCursorCount();
+            ok = count >= 1;
+            oss << "cursor_count=" << count << ", probe_pos=" << probe;
+            clearSecondaryCursors();
+            push("Multi-Cursor Visuals", ok, oss.str());
+        }
+    }
+
+    // 3) Peek Overlay
+    {
+        bool ok = false;
+        std::ostringstream oss;
+        if (m_currentFile.empty() || !std::filesystem::exists(m_currentFile)) {
+            oss << "current file unavailable for peek: '" << m_currentFile << "'";
+        } else {
+            PeekLocation loc;
+            loc.filePath = m_currentFile;
+            loc.line = 1;
+            loc.col = 1;
+            loc.endCol = 1;
+            loc.preview = "runtime validation";
+            showPeekOverlay("__rawrxd_validation_symbol__", {loc}, true);
+            ok = (m_hwndPeekOverlay && IsWindow(m_hwndPeekOverlay));
+            oss << "overlay=" << (ok ? "visible" : "not-visible");
+            closePeekView();
+        }
+        push("Peek Overlay", ok, oss.str());
+    }
+
+    // 4) Caret Animation
+    {
+        if (!m_caretAnim.enabled) {
+            initSmoothCaret();
+        }
+        updateCaretTarget();
+        onCaretAnimationTick();
+        const bool ok = m_caretAnim.enabled;
+        std::ostringstream oss;
+        oss << "enabled=" << (m_caretAnim.enabled ? "yes" : "no")
+            << ", animating=" << (m_caretAnim.animating ? "yes" : "no")
+            << ", blink_phase=" << m_caretAnim.blinkPhase;
+        push("Caret Animation", ok, oss.str());
+    }
+
+    // 5) Tier2/Tier3 Cosmetics (post EM_POSFROMCHAR fixes)
+    {
+        if (!m_gitDiffFont) {
+            initGitDiffViewer();
+        }
+        if (!m_bracketPairEnabled) {
+            initBracketPairColorization();
+        }
+        if (!m_indentGuidesEnabled) {
+            initIndentationGuides();
+        }
+        const bool ok = (m_gitDiffFont != nullptr) && m_bracketPairEnabled && m_indentGuidesEnabled && m_caretAnim.enabled;
+        std::ostringstream oss;
+        oss << "gitdiff_font=" << (m_gitDiffFont ? "ok" : "missing")
+            << ", bracket_pair=" << (m_bracketPairEnabled ? "on" : "off")
+            << ", indent_guides=" << (m_indentGuidesEnabled ? "on" : "off")
+            << ", smooth_caret=" << (m_caretAnim.enabled ? "on" : "off");
+        push("Tier2/Tier3 Cosmetics", ok, oss.str());
+    }
+
+    // 6) AgentOllamaClient in IDE context
+    RawrXD::Agent::OllamaHealth health{};
+    std::vector<std::string> ollamaModels;
+    {
+        std::string base = m_ollamaBaseUrl.empty() ? "http://127.0.0.1:11434" : m_ollamaBaseUrl;
+        std::string withoutProto = base;
+        const size_t p = base.find("://");
+        if (p != std::string::npos) {
+            withoutProto = base.substr(p + 3);
+        }
+
+        std::string host;
+        uint16_t port = 11434;
+        const size_t slashPos = withoutProto.find('/');
+        const std::string hostPort = (slashPos == std::string::npos) ? withoutProto : withoutProto.substr(0, slashPos);
+        const size_t colonPos = hostPort.find(':');
+        if (colonPos == std::string::npos) {
+            host = hostPort.empty() ? "127.0.0.1" : hostPort;
+        } else {
+            host = hostPort.substr(0, colonPos);
+            const std::string portText = hostPort.substr(colonPos + 1);
+            const int parsed = std::atoi(portText.c_str());
+            if (parsed > 0 && parsed < 65536) {
+                port = static_cast<uint16_t>(parsed);
+            }
+        }
+
+        RawrXD::Agent::OllamaConfig cfg;
+        cfg.host = host.empty() ? "127.0.0.1" : host;
+        cfg.port = port;
+        cfg.timeout_ms = 4000;
+        cfg.chat_model = getResolvedOllamaModel();
+
+        RawrXD::Agent::AgentOllamaClient client(cfg);
+        health = client.TestConnectionWithStats();
+        if (health.ok) {
+            ollamaModels = client.ListModels();
+        }
+
+        std::ostringstream oss;
+        oss << "endpoint=" << cfg.host << ":" << cfg.port
+            << ", ok=" << (health.ok ? "yes" : "no")
+            << ", latency_ms=" << health.latency_ms
+            << ", model_count=" << health.model_count;
+        push("AgentOllamaClient", health.ok, oss.str());
+    }
+
+    // 7) IDE model discovery + explorer/terminal accessibility
+    {
+        const bool explorerOk = (m_hwndFileTree && IsWindow(m_hwndFileTree)) ||
+                                (m_hwndFileExplorer && IsWindow(m_hwndFileExplorer));
+
+        if (m_hwndModelSelector && IsWindow(m_hwndModelSelector)) {
+            populateModelSelector();
+        }
+
+        const int modelUiCount = (m_hwndModelSelector && IsWindow(m_hwndModelSelector))
+                                     ? (int)SendMessage(m_hwndModelSelector, CB_GETCOUNT, 0, 0)
+                                     : 0;
+        const bool modelDiscoveryOk = (modelUiCount > 0) || !m_availableModels.empty() || !ollamaModels.empty();
+
+        int paneId = createTerminalPane(Win32TerminalManager::ShellType::CommandPrompt, "P0 Validation Pane");
+        bool terminalOk = (paneId >= 0) && (getActiveTerminalPane() != nullptr);
+        if (terminalOk) {
+            sendToAllTerminals("echo RAWRXD_VALIDATION_BATCH1");
+            closeTerminalPane(paneId);
+        }
+
+        const bool ok = modelDiscoveryOk && explorerOk && terminalOk;
+        std::ostringstream oss;
+        oss << "model_ui_count=" << modelUiCount
+            << ", model_cache=" << m_availableModels.size()
+            << ", ollama_models=" << ollamaModels.size()
+            << ", explorer=" << (explorerOk ? "ok" : "missing")
+            << ", terminal=" << (terminalOk ? "ok" : "failed");
+        push("Model Discovery + Explorer + Terminal", ok, oss.str());
+    }
+
+    return checks;
+}
+
+// ============================================================================
+// CRITICAL RUNTIME VALIDATION — Batch 2 (items 8..14 from production audit)
+// ============================================================================
+std::vector<Win32IDE::RuntimeValidationCheck> Win32IDE::runCriticalValidationBatch2() {
+    std::vector<RuntimeValidationCheck> checks;
+    auto push = [&checks](const std::string& name, bool passed, const std::string& detail) {
+        RuntimeValidationCheck c;
+        c.name = name;
+        c.passed = passed;
+        c.detail = detail;
+        checks.push_back(std::move(c));
+    };
+
+    // 8) Copilot chat panel send/clear pipeline
+    {
+        if ((!m_hwndSecondarySidebar || !IsWindow(m_hwndSecondarySidebar)) && m_hwndMain) {
+            createChatPanel();
+        }
+
+        const bool uiOk = (m_hwndCopilotChatInput && IsWindow(m_hwndCopilotChatInput)) &&
+                          (m_hwndCopilotChatOutput && IsWindow(m_hwndCopilotChatOutput)) &&
+                          (m_hwndModelSelector && IsWindow(m_hwndModelSelector));
+
+        bool ok = false;
+        std::ostringstream oss;
+        if (!uiOk) {
+            oss << "chat ui missing";
+        } else {
+            HandleCopilotClear();
+            const std::string marker = "audit-batch2-chat";
+            SetWindowTextA(m_hwndCopilotChatInput, marker.c_str());
+            HandleCopilotSend();
+            Sleep(50);
+
+            const std::string output = getWindowText(m_hwndCopilotChatOutput);
+            const int modelCount = (int)SendMessage(m_hwndModelSelector, CB_GETCOUNT, 0, 0);
+            ok = output.find("> User: " + marker) != std::string::npos &&
+                 GetWindowTextLengthW(m_hwndCopilotChatInput) == 0 &&
+                 modelCount > 0;
+
+            oss << "model_count=" << modelCount
+                << ", echoed_user_msg=" << (output.find("> User: " + marker) != std::string::npos ? "yes" : "no")
+                << ", input_cleared=" << (GetWindowTextLengthW(m_hwndCopilotChatInput) == 0 ? "yes" : "no");
+        }
+        push("Copilot Chat Pipeline", ok, oss.str());
+    }
+
+    // 9) File open/save roundtrip
+    {
+        bool ok = false;
+        std::ostringstream oss;
+        if (!m_hwndEditor || !IsWindow(m_hwndEditor)) {
+            oss << "editor unavailable";
+        } else {
+            const std::string originalFile = m_currentFile;
+            const std::string originalContent = getWindowText(m_hwndEditor);
+            const bool originalModified = m_fileModified;
+
+            char tempDir[MAX_PATH] = {};
+            char tempFile[MAX_PATH] = {};
+            GetTempPathA(MAX_PATH, tempDir);
+            const UINT tempId = GetTempFileNameA(tempDir, "rxa", 0, tempFile);
+
+            if (tempId == 0) {
+                oss << "failed to allocate temp file";
+            } else {
+                const std::string initialContent = "batch2-open-save-initial\r\nline2\r\n";
+                const std::string modifiedContent = "batch2-open-save-modified\r\nline3\r\n";
+
+                {
+                    std::ofstream out(tempFile, std::ios::binary | std::ios::trunc);
+                    out << initialContent;
+                }
+
+                openFile(tempFile);
+                const std::string openedContent = getWindowText(m_hwndEditor);
+                setWindowText(m_hwndEditor, modifiedContent);
+                m_currentFile = tempFile;
+                m_fileModified = true;
+                const bool saved = saveFile();
+
+                std::ifstream in(tempFile, std::ios::binary);
+                std::string persisted((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+
+                ok = openedContent == initialContent && saved && persisted == modifiedContent;
+                oss << "opened_bytes=" << openedContent.size()
+                    << ", saved=" << (saved ? "yes" : "no")
+                    << ", persisted_match=" << (persisted == modifiedContent ? "yes" : "no");
+
+                if (!originalFile.empty() && std::filesystem::exists(originalFile)) {
+                    openFile(originalFile);
+                } else {
+                    setWindowText(m_hwndEditor, originalContent);
+                    m_currentFile = originalFile;
+                    m_fileModified = originalModified;
+                    updateTitleBarText();
+                    updateLineNumbers();
+                    syncEditorToGpuSurface();
+                }
+
+                DeleteFileA(tempFile);
+            }
+        }
+        push("File Open/Save Roundtrip", ok, oss.str());
+    }
+
+    // 10) File explorer population
+    {
+        if ((!m_hwndFileExplorer || !IsWindow(m_hwndFileExplorer)) && m_hwndSidebar && IsWindow(m_hwndSidebar)) {
+            createFileExplorer();
+        }
+
+        if (m_hwndFileExplorer && IsWindow(m_hwndFileExplorer)) {
+            refreshFileExplorer();
+        }
+
+        const int nodeCount = (m_hwndFileExplorer && IsWindow(m_hwndFileExplorer))
+                                  ? TreeView_GetCount(m_hwndFileExplorer)
+                                  : 0;
+        const bool ok = nodeCount > 0;
+        std::ostringstream oss;
+        oss << "tree_window=" << ((m_hwndFileExplorer && IsWindow(m_hwndFileExplorer)) ? "ok" : "missing")
+            << ", node_count=" << nodeCount;
+        push("File Explorer Population", ok, oss.str());
+    }
+
+    // 11) Dedicated PowerShell panel/session
+    {
+        if ((!m_hwndPowerShellPanel || !IsWindow(m_hwndPowerShellPanel)) && m_hwndMain) {
+            createPowerShellPanel();
+        }
+
+        const bool wasActive = isPowerShellSessionActive();
+        if (!wasActive) {
+            startPowerShellSession();
+            Sleep(250);
+        }
+
+        const bool ok = (m_hwndPowerShellPanel && IsWindow(m_hwndPowerShellPanel)) &&
+                        (m_hwndPowerShellOutput && IsWindow(m_hwndPowerShellOutput)) &&
+                        (m_hwndPowerShellInput && IsWindow(m_hwndPowerShellInput)) &&
+                        isPowerShellSessionActive();
+
+        std::ostringstream oss;
+        oss << "panel=" << ((m_hwndPowerShellPanel && IsWindow(m_hwndPowerShellPanel)) ? "ok" : "missing")
+            << ", output=" << ((m_hwndPowerShellOutput && IsWindow(m_hwndPowerShellOutput)) ? "ok" : "missing")
+            << ", input=" << ((m_hwndPowerShellInput && IsWindow(m_hwndPowerShellInput)) ? "ok" : "missing")
+            << ", session=" << (isPowerShellSessionActive() ? "active" : "inactive");
+
+        if (!wasActive && isPowerShellSessionActive()) {
+            stopPowerShellSession();
+        }
+
+        push("PowerShell Session Access", ok, oss.str());
+    }
+
+    // 12) Agentic todo pipeline
+    {
+        if (!m_agenticBridge) {
+            initializeAgenticBridge();
+        }
+
+        SubAgentManager* mgr = (m_agenticBridge ? m_agenticBridge->GetSubAgentManager() : nullptr);
+        bool ok = false;
+        std::ostringstream oss;
+        if (!mgr) {
+            oss << "subagent manager unavailable";
+        } else {
+            const auto baseline = mgr->getTodoList();
+            std::vector<TodoItem> probe = baseline;
+            TodoItem item;
+            item.id = 900001;
+            item.title = "Audit Batch 2";
+            item.description = "Runtime todo validation";
+            item.status = TodoItem::Status::NotStarted;
+            probe.push_back(item);
+
+            mgr->setTodoList(probe);
+            const auto after = mgr->getTodoList();
+            ok = std::any_of(after.begin(), after.end(), [](const TodoItem& todo) { return todo.id == 900001; });
+            oss << "baseline=" << baseline.size() << ", after_probe=" << after.size();
+            mgr->setTodoList(baseline);
+        }
+        push("Agentic Todo Pipeline", ok, oss.str());
+    }
+
+    // 13) Unified Problems panel runtime
+    {
+        using RawrXD::ProblemsAggregator;
+        auto& agg = ProblemsAggregator::instance();
+        initProblemsPanel();
+        agg.add("AuditBatch2", m_currentFile.empty() ? "audit-batch2" : m_currentFile, 1, 1, 2,
+                "AUDITB2", "Batch 2 unified problems validation");
+        refreshProblemsView();
+
+        const bool listOk = (m_hwndProblemsListView && IsWindow(m_hwndProblemsListView));
+        const int listCount = listOk ? ListView_GetItemCount(m_hwndProblemsListView) : 0;
+        const bool cacheOk = std::any_of(m_problemsViewCache.begin(), m_problemsViewCache.end(),
+                                         [](const RawrXD::ProblemEntry& entry) {
+                                             return entry.source == "AuditBatch2" && entry.code == "AUDITB2";
+                                         });
+        const bool ok = listOk && listCount > 0 && cacheOk;
+
+        std::ostringstream oss;
+        oss << "listview=" << (listOk ? "ok" : "missing")
+            << ", list_count=" << listCount
+            << ", cache_probe=" << (cacheOk ? "present" : "missing");
+
+        agg.clear("AuditBatch2");
+        refreshProblemsView();
+        push("Unified Problems Panel", ok, oss.str());
+    }
+
+    // 14) Headless CLI help + experimental status APIs
+    {
+        bool helpOk = false;
+        bool initOk = false;
+        std::string govJson;
+        std::string hotJson;
+
+        {
+            HeadlessIDE helpProbe;
+            char arg0[] = "RawrXD-Win32IDE.exe";
+            char arg1[] = "--help";
+            char* argv[] = { arg0, arg1, nullptr };
+            HeadlessResult res = helpProbe.initialize(2, argv);
+            helpOk = (!res.success && res.errorCode == 0);
+        }
+
+        {
+            HeadlessIDE runtimeProbe;
+            HeadlessConfig cfg;
+            cfg.mode = HeadlessRunMode::REPL;
+            cfg.enableRepl = true;
+            cfg.enableServer = false;
+            cfg.quiet = true;
+            cfg.verbose = false;
+            HeadlessResult res = runtimeProbe.initialize(cfg);
+            initOk = res.success;
+            if (initOk) {
+                govJson = runtimeProbe.getGovernorStatusJson();
+                hotJson = runtimeProbe.getHotpatchStatusJson();
+            }
+        }
+
+        const bool govOk = govJson.find("governor_activated") != std::string::npos;
+        const bool hotOk = hotJson.find("hotpatch70b_activated") != std::string::npos &&
+                           hotJson.find("layer_eviction_activated") != std::string::npos;
+        const bool ok = helpOk && initOk && govOk && hotOk;
+
+        std::ostringstream oss;
+        oss << "help_path=" << (helpOk ? "ok" : "failed")
+            << ", init=" << (initOk ? "ok" : "failed")
+            << ", governor_json=" << (govOk ? "ok" : "missing")
+            << ", hotpatch_json=" << (hotOk ? "ok" : "missing");
+        push("Headless CLI + Experimental Status", ok, oss.str());
+    }
+
+    return checks;
+}
 
 // ============================================================================
 // AUDIT DASHBOARD STATE (file-scope, owned by Win32IDE via HWND)
@@ -727,6 +1192,32 @@ void Win32IDE::cmdAuditCheckMenus() {
 void Win32IDE::cmdAuditRunTests() {
     FeatureRegistry::instance().runComponentTests();
 
+    const auto batch1 = runCriticalValidationBatch1();
+    const auto batch2 = runCriticalValidationBatch2();
+    int batch1Pass = 0;
+    int batch2Pass = 0;
+    for (const auto& c : batch1) {
+        if (c.passed) batch1Pass++;
+    }
+    for (const auto& c : batch2) {
+        if (c.passed) batch2Pass++;
+    }
+
+    {
+        std::ostringstream oss;
+        oss << "=== Critical Runtime Validation (Batch 1: 1..7) ===\n";
+        for (const auto& c : batch1) {
+            oss << (c.passed ? "[PASS] " : "[FAIL] ") << c.name << " :: " << c.detail << "\n";
+        }
+        oss << "Result: " << batch1Pass << "/" << batch1.size() << " checks passed\n\n";
+        oss << "=== Critical Runtime Validation (Batch 2: 8..14) ===\n";
+        for (const auto& c : batch2) {
+            oss << (c.passed ? "[PASS] " : "[FAIL] ") << c.name << " :: " << c.detail << "\n";
+        }
+        oss << "Result: " << batch2Pass << "/" << batch2.size() << " checks passed\n";
+        appendToOutput(oss.str(), "Audit", Win32IDE::OutputSeverity::Info);
+    }
+
     auto features = FeatureRegistry::instance().getAllFeatures();
     int passed = 0, failed = 0, noTest = 0;
     for (const auto& f : features) {
@@ -738,8 +1229,10 @@ void Win32IDE::cmdAuditRunTests() {
     _snwprintf_s(msg, 255,
                   L"Component Tests Complete\n\n"
                   L"Passed: %d\n"
-                  L"No Test: %d",
-                  passed, noTest);
+                  L"No Test: %d\n\n"
+                  L"Critical Batch 1: %d/%zu\n"
+                  L"Critical Batch 2: %d/%zu",
+                  passed, noTest, batch1Pass, batch1.size(), batch2Pass, batch2.size());
     MessageBoxW(m_hwndMain, msg, L"Component Tests", MB_OK | MB_ICONINFORMATION);
 }
 

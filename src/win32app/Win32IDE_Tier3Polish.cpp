@@ -79,7 +79,7 @@ void Win32IDE::updateCaretTarget() {
     SendMessage(m_hwndEditor, EM_EXGETSEL, 0, (LPARAM)&range);
 
     POINTL pt;
-    SendMessage(m_hwndEditor, EM_POSFROMCHAR, (WPARAM)&pt, range.cpMin);
+    SendMessage(m_hwndEditor, EM_POSFROMCHAR, (WPARAM)range.cpMin, (LPARAM)&pt);
 
     float newTargetX = static_cast<float>(pt.x);
     float newTargetY = static_cast<float>(pt.y);

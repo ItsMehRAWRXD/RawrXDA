@@ -203,6 +203,33 @@ void Win32IDE::shutdownPhase11() {
 void Win32IDE::cmdSwarmStatus() {
     auto& coord = SwarmCoordinator::instance();
     auto& worker = SwarmWorker::instance();
+    const auto stats = coord.getStats();
+    const double tasksPerSecond = (stats.totalBuildTimeMs > 0)
+        ? (static_cast<double>(stats.completedTasks) * 1000.0) / static_cast<double>(stats.totalBuildTimeMs)
+        : 0.0;
+    const uint64_t totalCacheLookups = static_cast<uint64_t>(stats.objectCacheHits) + static_cast<uint64_t>(stats.objectCacheMisses);
+    const double cacheHitRate = (totalCacheLookups > 0)
+        ? (static_cast<double>(stats.objectCacheHits) * 100.0) / static_cast<double>(totalCacheLookups)
+        : 0.0;
+    const double txMB = static_cast<double>(stats.totalBytesSent) / (1024.0 * 1024.0);
+    const double rxMB = static_cast<double>(stats.totalBytesRecv) / (1024.0 * 1024.0);
+    const double failureRate = (stats.totalTasks > 0)
+        ? (static_cast<double>(stats.failedTasks) * 100.0) / static_cast<double>(stats.totalTasks)
+        : 0.0;
+
+    // Production telemetry wiring: TPS + stability + cache efficiency
+    telemetryTrack("swarm.tps", tasksPerSecond);
+    telemetryTrack("swarm.failure_rate_pct", failureRate);
+    telemetryTrack("swarm.cache_hit_rate_pct", cacheHitRate);
+
+    std::ostringstream telPayload;
+    telPayload << "{"
+               << "\"onlineNodes\":" << coord.getOnlineNodeCount() << ","
+               << "\"runningTasks\":" << stats.runningTasks << ","
+               << "\"pendingTasks\":" << stats.pendingTasks << ","
+               << "\"completedTasks\":" << stats.completedTasks
+               << "}";
+    telemetryDashboardTrack("swarm.status", "swarm", telPayload.str().c_str(), tasksPerSecond);
 
     std::ostringstream oss;
     oss << "════════════════════════════════════════════\n"
@@ -218,18 +245,23 @@ void Win32IDE::cmdSwarmStatus() {
                                 << (coord.getBuildProgress() * 100.0) << "%\n"
         << "  Discovery:      " << (coord.isDiscoveryEnabled() ? "ON" : "OFF") << "\n";
 
-    auto stats = coord.getStats();
     oss << "  ── Statistics ──────────────────────────\n"
         << "  Total Tasks:    " << stats.totalTasks << "\n"
         << "  Completed:      " << stats.completedTasks << "\n"
         << "  Failed:         " << stats.failedTasks << "\n"
         << "  Running:        " << stats.runningTasks << "\n"
         << "  Pending:        " << stats.pendingTasks << "\n"
+        << "  Fail Rate:      " << std::fixed << std::setprecision(1) << failureRate << "%\n"
+        << "  Build Time:     " << stats.totalBuildTimeMs << " ms\n"
+        << "  Avg/Max Compile:" << stats.avgCompileTimeMs << "/" << stats.maxCompileTimeMs << " ms\n"
+        << "  Swarm TPS:      " << std::fixed << std::setprecision(2) << tasksPerSecond << " tasks/sec\n"
         << "  Parallel Speed: " << std::fixed << std::setprecision(2)
                                 << stats.parallelSpeedup << "x\n"
         << "  Packets TX/RX:  " << stats.totalPacketsSent << "/"
                                 << stats.totalPacketsRecv << "\n"
-        << "  Cache Hits:     " << stats.objectCacheHits << "\n";
+        << "  Network MB:     " << std::fixed << std::setprecision(2) << txMB << "/" << rxMB << "\n"
+        << "  Cache Hits:     " << stats.objectCacheHits << "\n"
+        << "  Cache Hit Rate: " << std::fixed << std::setprecision(1) << cacheHitRate << "%\n";
     if (!coord.isRunning() && !worker.isRunning()) {
         oss << "  ── Next step: use Swarm Start (Leader / Worker / Hybrid) to begin.\n";
     }
@@ -633,6 +665,14 @@ void Win32IDE::handleSwarmTaskGraphEndpoint(SOCKET client) {
 }
 
 void Win32IDE::handleSwarmStatsEndpoint(SOCKET client) {
+    const auto stats = SwarmCoordinator::instance().getStats();
+    const double tasksPerSecond = (stats.totalBuildTimeMs > 0)
+        ? (static_cast<double>(stats.completedTasks) * 1000.0) / static_cast<double>(stats.totalBuildTimeMs)
+        : 0.0;
+    telemetryTrack("swarm.stats.endpoint_calls", 1.0);
+    telemetryTrack("swarm.tps", tasksPerSecond);
+    telemetryDashboardTrack("swarm.stats.poll", "swarm", "{}", tasksPerSecond);
+
     std::string json = SwarmCoordinator::instance().statsToJson();
     std::string resp = LocalServerUtil::buildHttpResponse(200, json);
     send(client, resp.c_str(), (int)resp.size(), 0);

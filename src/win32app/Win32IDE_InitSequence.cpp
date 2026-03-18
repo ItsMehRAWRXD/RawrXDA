@@ -43,8 +43,11 @@
 // Headless mode detection — scans argv for --headless flag
 // ============================================================================
 static bool hasHeadlessFlag(LPSTR lpCmdLine) {
+    const char* env = std::getenv("RAWRXD_HEADLESS");
+    if (env && (_stricmp(env, "1") == 0 || _stricmp(env, "true") == 0 || _stricmp(env, "yes") == 0))
+        return true;
     if (!lpCmdLine) return false;
-    return strstr(lpCmdLine, "--headless") != nullptr;
+    return strstr(lpCmdLine, "--headless") != nullptr || strstr(lpCmdLine, "--server") != nullptr;
 }
 
 // ============================================================================
@@ -236,18 +239,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
         }
     }
 
-    // ========================================================================
-    // PLUGIN SIGNATURE ENFORCEMENT — Phase 50: Authenticode + RawrXD Authority
-    // Must init before VSIX loading so marketplace installs are gated.
-    // ========================================================================
-    {
-        auto& sigVerifier = RawrXD::Plugin::PluginSignatureVerifier::instance();
-        if (sigVerifier.initialize()) {
-            OutputDebugStringA("[main_win32] Plugin Signature Verifier initialized (standard policy)\n");
-        } else {
-            OutputDebugStringA("[main_win32] Plugin Signature Verifier: init failed (non-fatal)\n");
-        }
-    }
+    // Plugin signature verifier is initialized as part of the IDE runtime spine.
     
     // Create IDE window
     Win32IDE ide(hInstance);
@@ -271,6 +263,36 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
     
     ide.setEngineManager(engine_mgr);
     ide.setCodexUltimate(codex);
+
+    // ========================================================================
+    // COMPONENT INITIALIZATION — Phase 35: New IDE Components
+    // Initialize the newly implemented components: CaretAnimation, AgentOllamaClient, ModelDiscovery
+    // ========================================================================
+    {
+        ide.initCaretAnimation();
+        OutputDebugStringA("[main_win32] CaretAnimation initialized\n");
+
+        ide.initAgentOllamaClient();
+        OutputDebugStringA("[main_win32] AgentOllamaClient initialized\n");
+
+        ide.initModelDiscovery();
+        OutputDebugStringA("[main_win32] ModelDiscovery initialized\n");
+
+        ide.initEnterpriseStressTests();
+        OutputDebugStringA("[main_win32] EnterpriseStressTests initialized\n");
+
+        ide.initializeCoreRuntimeSpine();
+        OutputDebugStringA("[main_win32] Core runtime spine initialized\n");
+
+        ide.initRefactoringPlugin();
+        OutputDebugStringA("[main_win32] RefactoringPlugin initialized\n");
+
+        ide.initLanguagePlugin();
+        OutputDebugStringA("[main_win32] LanguagePlugin initialized\n");
+
+        ide.initResourceGenerator();
+        OutputDebugStringA("[main_win32] ResourceGenerator initialized\n");
+    }
 
     // ========================================================================
     // CROSS-PROCESS STATE SYNC — Phase 36: MMF Initialization

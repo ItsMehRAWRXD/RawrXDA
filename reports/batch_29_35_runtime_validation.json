@@ -1,0 +1,87 @@
+﻿{
+    "generatedAtUtc":  "2026-03-17T09:47:41.8986725Z",
+    "guiExe":  "d:\\rawrxd\\build_prod\\bin\\RawrXD-Win32IDE.exe",
+    "cliExe":  "d:\\rawrxd\\build_prod\\bin\\RawrXD-AutoFixCLI.exe",
+    "total":  7,
+    "passed":  0,
+    "failed":  7,
+    "results":  [
+                    {
+                        "id":  29,
+                        "name":  "autonomous_debugger",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "needs integration hook; not automated here",
+                        "startedAtUtc":  "2026-03-17T09:47:41.8835373Z",
+                        "finishedAtUtc":  "2026-03-17T09:47:41.8835373Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  30,
+                        "name":  "autonomous_communicator",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "needs validation hook; not automated here",
+                        "startedAtUtc":  "2026-03-17T09:47:41.8971616Z",
+                        "finishedAtUtc":  "2026-03-17T09:47:41.8971616Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  31,
+                        "name":  "unified_telemetry_core",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "needs telemetry endpoint check; not automated here",
+                        "startedAtUtc":  "2026-03-17T09:47:41.8986725Z",
+                        "finishedAtUtc":  "2026-03-17T09:47:41.8986725Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  32,
+                        "name":  "agentic_composer_ux",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "UI feature; requires manual probe",
+                        "startedAtUtc":  "2026-03-17T09:47:41.8986725Z",
+                        "finishedAtUtc":  "2026-03-17T09:47:41.8986725Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  33,
+                        "name":  "context_mention_parser",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "needs parser test harness",
+                        "startedAtUtc":  "2026-03-17T09:47:41.8986725Z",
+                        "finishedAtUtc":  "2026-03-17T09:47:41.8986725Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  34,
+                        "name":  "vision_encoder",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "needs image processing test",
+                        "startedAtUtc":  "2026-03-17T09:47:41.8986725Z",
+                        "finishedAtUtc":  "2026-03-17T09:47:41.8986725Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  35,
+                        "name":  "semantic_index",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "needs indexing/test corpus; not automated here",
+                        "startedAtUtc":  "2026-03-17T09:47:41.8986725Z",
+                        "finishedAtUtc":  "2026-03-17T09:47:41.8986725Z",
+                        "durationMs":  0
+                    }
+                ]
+}

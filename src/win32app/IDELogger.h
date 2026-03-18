@@ -11,7 +11,8 @@
 
 // Pull in canonical LogLevel from logging/logger.h and alias for IDELogger consumers
 #include "logging/logger.h"
-using IDELogLevel = LogLevel;
+namespace RawrXD { namespace Logging { enum class LogLevel; } }
+using IDELogLevel = RawrXD::Logging::LogLevel;
 
 // Comprehensive logging system for RawrXD IDE
 class IDELogger {

@@ -78,20 +78,33 @@ void Win32IDE::initPhase10() {
     ExecutionGovernor::instance().init();
     m_phase10Initialized = true;
 
-    // ── 10B: Safety Contracts ───────────────────────────────────────────
+    // ── 10B: Governor/Throttling ────────────────────────────────────────
+    if (m_governorThrottling && m_governorThrottling->initialize()) {
+        logMessage("Phase10", "Governor/Throttling initialized successfully");
+    } else {
+        appendToOutput("Governor/Throttling initialization failed", "System", OutputSeverity::Warning);
+    }
+
+    // ── 10C: Layer Eviction System ──────────────────────────────────────
+    initLayerEviction();
+
+    // ── 10D: Safety Contracts ───────────────────────────────────────────
     AgentSafetyContract::instance().init();
 
-    // ── 10C: Replay Journal ─────────────────────────────────────────────
+    // ── 10D: Replay Journal ─────────────────────────────────────────────
     std::string journalDir = ".\\replay_journal";
     CreateDirectoryA(journalDir.c_str(), nullptr);
     ReplayJournal::instance().init(journalDir);
     ReplayJournal::instance().startSession("IDE Session");
     ReplayJournal::instance().startRecording();
 
-    // ── 10D: Confidence Gate ────────────────────────────────────────────
+    // ── 10E: Confidence Gate ────────────────────────────────────────────
     ConfidenceGate::instance().init();
 
-    logMessage("Phase10", "All subsystems initialized (Governor, Safety, Replay, Confidence)");
+    // ── 10F: Peek Overlay System ────────────────────────────────────────
+    initPeekOverlay();
+
+    logMessage("Phase10", "All subsystems initialized (Governor, Throttling, Layer Eviction, Safety, Replay, Confidence, Peek Overlay)");
 }
 
 void Win32IDE::shutdownPhase10() {
@@ -99,6 +112,9 @@ void Win32IDE::shutdownPhase10() {
 
     // Reverse order shutdown
     ConfidenceGate::instance().shutdown();
+
+    // ── Shutdown Peek Overlay ───────────────────────────────────────────
+    shutdownPeekOverlay();
 
     ReplayJournal::instance().stopRecording();
     ReplayJournal::instance().endSession();

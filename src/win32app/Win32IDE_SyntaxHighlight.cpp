@@ -627,6 +627,35 @@ void Win32IDE::initSyntaxColorizer() {
 }
 
 // ============================================================================
+// TOGGLE SYNTAX HIGHLIGHTING — enables/disables syntax coloring
+//
+// Toggles the m_syntaxColoringEnabled flag and reapplies coloring to the
+// entire document. When disabled, all text formatting is reset to default.
+// ============================================================================
+void Win32IDE::toggleSyntaxHighlighting() {
+    m_syntaxColoringEnabled = !m_syntaxColoringEnabled;
+    
+    if (m_hwndEditor) {
+        if (m_syntaxColoringEnabled) {
+            // Re-enable syntax highlighting
+            m_syntaxDirty = true;
+            applySyntaxColoring();
+            LOG_INFO("Syntax highlighting enabled");
+        } else {
+            // Disable syntax highlighting - reset all formatting
+            CHARFORMAT2A cf = {};
+            cf.cbSize = sizeof(cf);
+            cf.dwMask = CFM_COLOR | CFM_BACKCOLOR;
+            cf.crTextColor = RGB(255, 255, 255);  // Default text color
+            cf.crBackColor = RGB(30, 30, 30);     // Default background color
+            
+            SendMessage(m_hwndEditor, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cf);
+            LOG_INFO("Syntax highlighting disabled");
+        }
+    }
+}
+
+// ============================================================================
 // GET VISIBLE EDITOR LINES — returns the range currently shown in the editor
 //
 // Computes the first and last visible line (0-based) using EM_GETFIRSTVISIBLELINE,

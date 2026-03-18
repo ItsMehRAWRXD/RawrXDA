@@ -289,9 +289,11 @@ static DWORD WINAPI TerminalReaderThread(LPVOID param) {
 
     char buffer[4096];
     DWORD bytesRead;
+    constexpr DWORD kMaxChunk = static_cast<DWORD>(sizeof(buffer) - 1);
 
-    while (ReadFile(hPipe, buffer, sizeof(buffer) - 1, &bytesRead, nullptr) && bytesRead > 0) {
-        buffer[bytesRead] = '\0';
+    while (ReadFile(hPipe, buffer, kMaxChunk, &bytesRead, nullptr) && bytesRead > 0) {
+        const size_t safeBytes = (bytesRead <= kMaxChunk) ? static_cast<size_t>(bytesRead) : static_cast<size_t>(kMaxChunk);
+        buffer[safeBytes] = '\0';
 
         // Post append to UI thread via SendMessage (thread-safe for RichEdit)
         if (IsWindow(hwndOut)) {
@@ -367,8 +369,10 @@ LRESULT CALLBACK Win32IDE::TerminalInputSubclassProc(HWND hwnd, UINT msg, WPARAM
 
                     char buf[4096];
                     DWORD bytesRead;
-                    while (ReadFile(hReadP, buf, sizeof(buf) - 1, &bytesRead, nullptr) && bytesRead > 0) {
-                        buf[bytesRead] = '\0';
+                    constexpr DWORD kMaxChunk = static_cast<DWORD>(sizeof(buf) - 1);
+                    while (ReadFile(hReadP, buf, kMaxChunk, &bytesRead, nullptr) && bytesRead > 0) {
+                        const size_t safeBytes = (bytesRead <= kMaxChunk) ? static_cast<size_t>(bytesRead) : static_cast<size_t>(kMaxChunk);
+                        buf[safeBytes] = '\0';
                         cr = {-1, -1};
                         SendMessageA(tab.hwndContent, EM_EXSETSEL, 0, (LPARAM)&cr);
                         SendMessageA(tab.hwndContent, EM_REPLACESEL, FALSE, (LPARAM)buf);

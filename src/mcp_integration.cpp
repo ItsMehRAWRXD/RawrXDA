@@ -143,6 +143,24 @@ static std::string jsonExtractObject(const std::string& json, const std::string&
     return "{}";
 }
 
+static std::string jsonExtractToolName(const std::string& paramsJson) {
+    std::string toolName = jsonExtractString(paramsJson, "name");
+    if (!toolName.empty()) return toolName;
+
+    toolName = jsonExtractString(paramsJson, "tool_name");
+    if (!toolName.empty()) return toolName;
+
+    toolName = jsonExtractString(paramsJson, "toolName");
+    if (!toolName.empty()) return toolName;
+
+    // MCP-style nested function object
+    std::string fnObj = jsonExtractObject(paramsJson, "function");
+    if (!fnObj.empty() && fnObj != "{}") {
+        toolName = jsonExtractString(fnObj, "name");
+    }
+    return toolName;
+}
+
 // ============================================================================
 // MCPServer Implementation
 // ============================================================================
@@ -329,8 +347,11 @@ MCPResponse MCPServer::handleToolsList(const MCPRequest& req) {
 }
 
 MCPResponse MCPServer::handleToolsCall(const MCPRequest& req) {
-    std::string toolName = jsonExtractString(req.params, "name");
+    std::string toolName = jsonExtractToolName(req.params);
     std::string arguments = jsonExtractObject(req.params, "arguments");
+    if (arguments == "{}") {
+        arguments = jsonExtractObject(req.params, "args");
+    }
 
     std::lock_guard<std::mutex> lock(m_mutex);
 

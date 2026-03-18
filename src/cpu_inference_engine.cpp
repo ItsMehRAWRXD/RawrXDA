@@ -124,13 +124,13 @@ bool CPUInferenceEngine::LoadWeights(const std::unordered_map<std::string, Tenso
 // Tokenization — delegates to RawrXDInference → RawrXDTokenizer
 // ============================================================================
 std::vector<int> CPUInferenceEngine::Tokenize(const std::string& text) {
-    if (!m_modelLoaded) return {};
+    if (!m_modelLoaded || text.empty()) return {};
     auto u32_toks = s_inferenceBackend.Tokenize(text);
     return std::vector<int>(u32_toks.begin(), u32_toks.end());
 }
 
 std::string CPUInferenceEngine::Detokenize(const std::vector<int>& tokens) {
-    if (!m_modelLoaded) return "";
+    if (!m_modelLoaded || tokens.empty()) return "";
     std::vector<uint32_t> u32_toks(tokens.begin(), tokens.end());
     return s_inferenceBackend.Detokenize(u32_toks);
 }
@@ -140,10 +140,14 @@ std::string CPUInferenceEngine::Detokenize(const std::vector<int>& tokens) {
 // ============================================================================
 std::vector<float> CPUInferenceEngine::Eval(const std::vector<int32_t>& input_tokens) {
     if (!m_modelLoaded) return {};
-    // Forward pass through the transformer, returning logits for last position
-    // The real compute is inside RawrXDTransformer::Forward
-    // For the facade, we go through Generate with max_tokens=0
-    return m_lastState;  // Return cached last hidden state
+    if (input_tokens.empty()) return {};
+
+    std::vector<uint32_t> toks(input_tokens.begin(), input_tokens.end());
+    auto logits = s_inferenceBackend.ForwardTokens(toks, static_cast<uint32_t>(m_currentPos));
+    if (!logits.empty()) {
+        m_lastState = logits;
+    }
+    return m_lastState;
 }
 
 void CPUInferenceEngine::GenerateStreaming(
@@ -157,27 +161,25 @@ void CPUInferenceEngine::GenerateStreaming(
         if (complete_callback) complete_callback();
         return;
     }
+    if (max_tokens <= 0 || input_tokens.empty()) {
+        if (complete_callback) complete_callback();
+        return;
+    }
+    max_tokens = std::min(max_tokens, 8192);
 
     auto start = std::chrono::high_resolution_clock::now();
+    m_currentPos = static_cast<int>(input_tokens.size());
 
-    // Convert token IDs → text prompt for the backend
+    // Stream directly from token IDs to avoid detokenize->retokenize drift.
     std::vector<uint32_t> u32_toks(input_tokens.begin(), input_tokens.end());
-    std::string prompt = s_inferenceBackend.Detokenize(u32_toks);
-
-    // Stream through the real inference chain
-    s_inferenceBackend.Generate(prompt, static_cast<uint32_t>(max_tokens),
-        [&](const std::string& piece) {
-            if (token_callback) token_callback(piece);
-
-            // If caller wants token IDs, re-tokenize the piece
-            if (token_id_callback) {
-                auto piece_toks = s_inferenceBackend.Tokenize(piece);
-                for (auto tid : piece_toks) {
-                    token_id_callback(static_cast<int32_t>(tid));
-                }
-            }
-        }
-    );
+    s_inferenceBackend.GenerateFromTokens(
+        u32_toks, static_cast<uint32_t>(max_tokens),
+        [&](uint32_t tok, const std::string& piece) {
+            if (token_callback && !piece.empty()) token_callback(piece);
+            if (token_id_callback) token_id_callback(static_cast<int32_t>(tok));
+            m_currentPos++;
+        });
+    m_lastState = s_inferenceBackend.LastLogits();
 
     if (complete_callback) complete_callback();
 
@@ -280,11 +282,17 @@ void CPUInferenceEngine::MatMul(const float* A, const float* B, float* C, int m,
 }
 
 void CPUInferenceEngine::Softmax(float* data, int size) {
+    if (!data || size <= 0) return;
     float maxVal = *std::max_element(data, data + size);
     float sum = 0.0f;
     for (int i = 0; i < size; i++) {
         data[i] = std::exp(data[i] - maxVal);
         sum += data[i];
+    }
+    if (!(sum > 0.0f) || !std::isfinite(sum)) {
+        const float uniform = 1.0f / static_cast<float>(size);
+        for (int i = 0; i < size; i++) data[i] = uniform;
+        return;
     }
     for (int i = 0; i < size; i++) data[i] /= sum;
 }
@@ -372,11 +380,18 @@ void CPUInferenceEngine::FeedForward(const float* input, float* output, int dim)
 void CPUInferenceEngine::TransformerLayer(
     const float* input, float* output, int layer_idx, int seq_len, uint32_t deviceId)
 {
-    // Full transformer layer — real path goes through RawrXDTransformer::Forward
+    // Fallback math path only; primary production path is RawrXDInference::ForwardTokens.
+    (void)layer_idx;
+    (void)deviceId;
+    if (!input || !output || seq_len <= 0) {
+        return;
+    }
     int dim = m_embeddingDim > 0 ? m_embeddingDim : 4096;
-    size_t sz = static_cast<size_t>(seq_len) * dim;
+    size_t sz = static_cast<size_t>(seq_len) * static_cast<size_t>(dim);
     std::memcpy(output, input, sz * sizeof(float));
-    RMSNorm(output, dim);
+    for (int t = 0; t < seq_len; ++t) {
+        RMSNorm(output + static_cast<size_t>(t) * dim, dim);
+    }
 }
 
 void CPUInferenceEngine::ApplyNorm(const std::string& name, float* data) {
@@ -434,9 +449,15 @@ void VectorScale(float* data, float scale, int size) {
 }
 
 void Softmax(float* data, int size) {
+    if (!data || size <= 0) return;
     float mx = *std::max_element(data, data + size);
     float sum = 0.0f;
     for (int i = 0; i < size; i++) { data[i] = std::exp(data[i] - mx); sum += data[i]; }
+    if (!(sum > 0.0f) || !std::isfinite(sum)) {
+        const float uniform = 1.0f / static_cast<float>(size);
+        for (int i = 0; i < size; i++) data[i] = uniform;
+        return;
+    }
     for (int i = 0; i < size; i++) data[i] /= sum;
 }
 

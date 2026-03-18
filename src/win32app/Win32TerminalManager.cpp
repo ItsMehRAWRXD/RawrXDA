@@ -148,13 +148,15 @@ void Win32TerminalManager::writeInput(const std::string& data)
 void Win32TerminalManager::readOutputThread()
 {
     char buffer[4096];
-    DWORD bytesRead;
+    DWORD bytesRead = 0;
+    constexpr DWORD kMaxChunk = static_cast<DWORD>(sizeof(buffer) - 1);
 
     while (m_running) {
-        if (ReadFile(m_hStdOutRead, buffer, sizeof(buffer) - 1, &bytesRead, nullptr) && bytesRead > 0) {
-            buffer[bytesRead] = '\0';
+        if (ReadFile(m_hStdOutRead, buffer, kMaxChunk, &bytesRead, nullptr) && bytesRead > 0) {
+            const size_t safeBytes = (bytesRead <= kMaxChunk) ? static_cast<size_t>(bytesRead) : static_cast<size_t>(kMaxChunk);
+            buffer[safeBytes] = '\0';
             if (onOutput) {
-                onOutput(std::string(buffer, bytesRead));
+                onOutput(std::string(buffer, safeBytes));
             }
         } else {
             break;
@@ -165,13 +167,15 @@ void Win32TerminalManager::readOutputThread()
 void Win32TerminalManager::readErrorThread()
 {
     char buffer[4096];
-    DWORD bytesRead;
+    DWORD bytesRead = 0;
+    constexpr DWORD kMaxChunk = static_cast<DWORD>(sizeof(buffer) - 1);
 
     while (m_running) {
-        if (ReadFile(m_hStdErrRead, buffer, sizeof(buffer) - 1, &bytesRead, nullptr) && bytesRead > 0) {
-            buffer[bytesRead] = '\0';
+        if (ReadFile(m_hStdErrRead, buffer, kMaxChunk, &bytesRead, nullptr) && bytesRead > 0) {
+            const size_t safeBytes = (bytesRead <= kMaxChunk) ? static_cast<size_t>(bytesRead) : static_cast<size_t>(kMaxChunk);
+            buffer[safeBytes] = '\0';
             if (onError) {
-                onError(std::string(buffer, bytesRead));
+                onError(std::string(buffer, safeBytes));
             }
         } else {
             break;

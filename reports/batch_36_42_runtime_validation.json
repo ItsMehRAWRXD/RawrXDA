@@ -1,0 +1,87 @@
+﻿{
+    "generatedAtUtc":  "2026-03-17T16:22:22.4591340Z",
+    "guiExe":  "d:\\rawrxd\\build_prod\\bin\\RawrXD-Win32IDE.exe",
+    "cliExe":  "d:\\rawrxd\\build_prod\\bin\\RawrXD-AutoFixCLI.exe",
+    "total":  7,
+    "passed":  0,
+    "failed":  7,
+    "results":  [
+                    {
+                        "id":  36,
+                        "name":  "cursor_github_parity_bridge",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "needs parity harness; not automated here",
+                        "startedAtUtc":  "2026-03-17T16:22:22.4439731Z",
+                        "finishedAtUtc":  "2026-03-17T16:22:22.4439731Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  37,
+                        "name":  "omega_orchestrator",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "orchestration validation hook missing",
+                        "startedAtUtc":  "2026-03-17T16:22:22.4576203Z",
+                        "finishedAtUtc":  "2026-03-17T16:22:22.4576203Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  38,
+                        "name":  "mesh_brain",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "no automated mesh activation test",
+                        "startedAtUtc":  "2026-03-17T16:22:22.4576203Z",
+                        "finishedAtUtc":  "2026-03-17T16:22:22.4576203Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  39,
+                        "name":  "speciator_engine",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "needs runtime probe; not automated here",
+                        "startedAtUtc":  "2026-03-17T16:22:22.4591340Z",
+                        "finishedAtUtc":  "2026-03-17T16:22:22.4591340Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  40,
+                        "name":  "neural_bridge",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "needs bridge activation test",
+                        "startedAtUtc":  "2026-03-17T16:22:22.4591340Z",
+                        "finishedAtUtc":  "2026-03-17T16:22:22.4591340Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  41,
+                        "name":  "self_host_engine",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "needs hosting flow validation",
+                        "startedAtUtc":  "2026-03-17T16:22:22.4591340Z",
+                        "finishedAtUtc":  "2026-03-17T16:22:22.4591340Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  42,
+                        "name":  "hardware_synthesizer",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "needs synth runtime check",
+                        "startedAtUtc":  "2026-03-17T16:22:22.4591340Z",
+                        "finishedAtUtc":  "2026-03-17T16:22:22.4591340Z",
+                        "durationMs":  0
+                    }
+                ]
+}

@@ -4,6 +4,164 @@
 #include "Win32IDE.h"
 #include "../agent/quantum_agent_orchestrator.hpp"
 #include "../cli/quantum_cli_commands.hpp"
+#include <chrono>
+#include <thread>
+#include <atomic>
+#include <mutex>
+#include <unordered_map>
+
+namespace RawrXD {
+namespace Quantum {
+
+// ============================================================================
+// QUANTUM DYNAMIC TIME MANAGER
+// ============================================================================
+
+class QuantumDynamicTimeManager {
+public:
+    QuantumDynamicTimeManager();
+    ~QuantumDynamicTimeManager();
+
+    bool initialize();
+    void shutdown();
+
+    // Time management
+    void setBaseTimeout(std::chrono::milliseconds timeout);
+    std::chrono::milliseconds getAdaptiveTimeout(const std::string& taskType);
+    void recordTaskCompletion(const std::string& taskType, std::chrono::milliseconds actualTime, bool success);
+
+    // Learning
+    void updateModel();
+    double predictOptimalTimeout(const std::string& taskType);
+
+private:
+    struct TaskStats {
+        std::chrono::milliseconds avgTime;
+        std::chrono::milliseconds minTime;
+        std::chrono::milliseconds maxTime;
+        double successRate;
+        int sampleCount;
+    };
+
+    std::unordered_map<std::string, TaskStats> m_taskStats;
+    std::chrono::milliseconds m_baseTimeout;
+    std::mutex m_mutex;
+    std::atomic<bool> m_running;
+    std::thread m_learningThread;
+
+    void learningLoop();
+    void adjustTimeout(const std::string& taskType);
+};
+
+QuantumDynamicTimeManager::QuantumDynamicTimeManager()
+    : m_baseTimeout(std::chrono::seconds(30)), m_running(false) {
+}
+
+QuantumDynamicTimeManager::~QuantumDynamicTimeManager() {
+    shutdown();
+}
+
+bool QuantumDynamicTimeManager::initialize() {
+    m_running = true;
+    m_learningThread = std::thread(&QuantumDynamicTimeManager::learningLoop, this);
+    return true;
+}
+
+void QuantumDynamicTimeManager::shutdown() {
+    m_running = false;
+    if (m_learningThread.joinable()) {
+        m_learningThread.join();
+    }
+}
+
+void QuantumDynamicTimeManager::setBaseTimeout(std::chrono::milliseconds timeout) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_baseTimeout = timeout;
+}
+
+std::chrono::milliseconds QuantumDynamicTimeManager::getAdaptiveTimeout(const std::string& taskType) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    
+    auto it = m_taskStats.find(taskType);
+    if (it == m_taskStats.end()) {
+        return m_baseTimeout;
+    }
+
+    const TaskStats& stats = it->second;
+    if (stats.sampleCount < 5) {
+        return m_baseTimeout;
+    }
+
+    // Adaptive timeout based on historical data
+    auto adaptive = stats.avgTime * 2; // 2x average time
+    adaptive = std::max(adaptive, m_baseTimeout / 2); // Minimum half base
+    adaptive = std::min(adaptive, m_baseTimeout * 4); // Maximum 4x base
+
+    return adaptive;
+}
+
+void QuantumDynamicTimeManager::recordTaskCompletion(const std::string& taskType, 
+                                                    std::chrono::milliseconds actualTime, 
+                                                    bool success) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    
+    TaskStats& stats = m_taskStats[taskType];
+    stats.sampleCount++;
+    
+    if (stats.sampleCount == 1) {
+        stats.avgTime = actualTime;
+        stats.minTime = actualTime;
+        stats.maxTime = actualTime;
+        stats.successRate = success ? 1.0 : 0.0;
+    } else {
+        // Update running average
+        stats.avgTime = (stats.avgTime * (stats.sampleCount - 1) + actualTime) / stats.sampleCount;
+        stats.minTime = std::min(stats.minTime, actualTime);
+        stats.maxTime = std::max(stats.maxTime, actualTime);
+        
+        // Update success rate
+        double newSuccessRate = ((stats.successRate * (stats.sampleCount - 1)) + (success ? 1.0 : 0.0)) / stats.sampleCount;
+        stats.successRate = newSuccessRate;
+    }
+}
+
+void QuantumDynamicTimeManager::updateModel() {
+    // Simple learning - could be enhanced with ML
+    std::lock_guard<std::mutex> lock(m_mutex);
+    
+    for (auto& pair : m_taskStats) {
+        adjustTimeout(pair.first);
+    }
+}
+
+double QuantumDynamicTimeManager::predictOptimalTimeout(const std::string& taskType) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    
+    auto it = m_taskStats.find(taskType);
+    if (it == m_taskStats.end() || it->second.sampleCount < 5) {
+        return m_baseTimeout.count();
+    }
+
+    return it->second.avgTime.count() * 1.5; // 1.5x average as optimal
+}
+
+void QuantumDynamicTimeManager::learningLoop() {
+    while (m_running) {
+        std::this_thread::sleep_for(std::chrono::minutes(5)); // Learn every 5 minutes
+        updateModel();
+    }
+}
+
+void QuantumDynamicTimeManager::adjustTimeout(const std::string& taskType) {
+    // Placeholder for more sophisticated adjustment
+    // Could use statistical models, ML, etc.
+}
+
+} // namespace Quantum
+} // namespace RawrXD
+
+// Global instance
+static std::unique_ptr<RawrXD::Quantum::QuantumDynamicTimeManager> g_timeManager;
 
 void Win32IDE::initQuantumOrchestrator() {
     if (m_quantumOrchestratorInitialized) return;
@@ -11,6 +169,12 @@ void Win32IDE::initQuantumOrchestrator() {
     LOG_INFO("Initializing Quantum Agent Orchestrator...");
     
     try {
+        // Initialize Dynamic Time Manager
+        g_timeManager = std::make_unique<RawrXD::Quantum::QuantumDynamicTimeManager>();
+        if (!g_timeManager->initialize()) {
+            LOG_ERROR("Failed to initialize Quantum Dynamic Time Manager");
+        }
+
         // Initialize the global orchestrator
         auto& orchestrator = RawrXD::Quantum::globalQuantumOrchestrator();
         
@@ -33,12 +197,15 @@ void Win32IDE::initQuantumOrchestrator() {
                       "Quantum", OutputSeverity::Success);
         appendToOutput(" Quantum Agent Orchestrator Online\n", 
                       "Quantum", OutputSeverity::Success);
+        appendToOutput(" Dynamic Time Manager Active\n",
+                      "Quantum", OutputSeverity::Success);
         appendToOutput("═══════════════════════════════════════════════════════\n", 
                       "Quantum", OutputSeverity::Success);
         appendToOutput(" Features:\n", "Quantum", OutputSeverity::Info);
         appendToOutput("  • Multi-Model Execution (1x-99x)\n", "Quantum", OutputSeverity::Info);
         appendToOutput("  • Multi-Agent Cycling (1x-99x)\n", "Quantum", OutputSeverity::Info);
         appendToOutput("  • Auto-Adjusting Terminal Timeouts (ML-based)\n", "Quantum", OutputSeverity::Info);
+        appendToOutput("  • Dynamic Time Management\n", "Quantum", OutputSeverity::Info);
         appendToOutput("  • Balance/Max/Auto Quality Modes\n", "Quantum", OutputSeverity::Info);
         appendToOutput("  • Production Audit + Auto-Fix\n", "Quantum", OutputSeverity::Info);
         appendToOutput("  • Bypass Controls (Token/Complexity/Time)\n", "Quantum", OutputSeverity::Info);

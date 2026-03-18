@@ -1,0 +1,10 @@
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/agentic/ToolRegistry.cpp.obj
+ToolRegistry.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/agentic/AgentOrchestrator.cpp.obj
+AgentOrchestrator.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/mcp_integration.cpp.obj
+mcp_integration.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_SwarmPanel.cpp.obj
+Win32IDE_SwarmPanel.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE.cpp.obj
+Win32IDE.cpp

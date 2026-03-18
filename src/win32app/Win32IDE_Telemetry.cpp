@@ -34,6 +34,7 @@
 
 // MASM Telemetry Kernel bridge — lock-free counters + ring buffer + Prometheus
 #include "rawrxd_telemetry_exports.h"
+#include "../inference/PerformanceMonitor.h"
 
 // SCAFFOLD_264: Win32IDE_Telemetry and events
 
@@ -531,6 +532,25 @@ void Win32IDE::cmdTelemetryShowDashboard()
                 static_cast<unsigned long long>(l.buckets[2]),
                 static_cast<unsigned long long>(l.buckets[3]),
                 static_cast<unsigned long long>(l.buckets[4]));
+            text += buf;
+        }
+    }
+
+    // Agent/inference performance metrics (hooked from backend monitor)
+    text += "\n--- Agent/Inference Performance ---\n";
+    auto perfSnapshot = RawrXD::Inference::PerformanceMonitor::instance().getAllMetrics();
+    if (perfSnapshot.empty()) {
+        text += "  (no performance samples)\n";
+    } else {
+        for (const auto& [name, m] : perfSnapshot) {
+            snprintf(buf, sizeof(buf),
+                "  %-28s avg: %7.2f ms  ops: %6llu  throughput: %7.2f/s  errors: %zu  peakMem: %zu bytes\n",
+                name.c_str(),
+                m.averageLatencyMs,
+                static_cast<unsigned long long>(m.operationCount),
+                m.throughputOpsPerSec,
+                m.errorCount,
+                m.memoryPeakUsage);
             text += buf;
         }
     }

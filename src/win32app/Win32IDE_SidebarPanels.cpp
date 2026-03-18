@@ -208,10 +208,12 @@ void Win32IDE::refreshGitStatus() {
         char buffer[4096];
         DWORD bytesRead;
         std::string output;
+        constexpr DWORD kMaxChunk = static_cast<DWORD>(sizeof(buffer) - 1);
         
-        while (ReadFile(hReadPipe, buffer, sizeof(buffer) - 1, &bytesRead, nullptr) && bytesRead > 0) {
-            buffer[bytesRead] = '\0';
-            output += buffer;
+        while (ReadFile(hReadPipe, buffer, kMaxChunk, &bytesRead, nullptr) && bytesRead > 0) {
+            const size_t safeBytes = (bytesRead <= kMaxChunk) ? static_cast<size_t>(bytesRead) : static_cast<size_t>(kMaxChunk);
+            buffer[safeBytes] = '\0';
+            output.append(buffer, safeBytes);
         }
         
         WaitForSingleObject(pi.hProcess, 2000);

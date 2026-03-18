@@ -6,8 +6,9 @@
 #include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <cctype>
 
-#include "rawrxd_subsystem_api.hpp"
+#include "../core/rawrxd_subsystem_api.hpp"
 #include "../core/unified_hotpatch_manager.hpp"
 
 #ifdef _WIN32
@@ -41,6 +42,48 @@ using RawrXD::Agent::ToolExecResult;
 using RawrXD::Agent::ToolDescriptor;
 
 namespace {
+
+std::string NormalizeToolName(const std::string& raw) {
+    if (raw.empty()) return {};
+
+    // Normalize separators + camelCase -> snake_case
+    std::string normalized;
+    normalized.reserve(raw.size() + 8);
+    bool lastWasUnderscore = false;
+    for (char c : raw) {
+        unsigned char uc = static_cast<unsigned char>(c);
+        if (std::isalnum(uc)) {
+            if (std::isupper(uc) && !normalized.empty() && normalized.back() != '_') {
+                normalized.push_back('_');
+            }
+            normalized.push_back(static_cast<char>(std::tolower(uc)));
+            lastWasUnderscore = false;
+        } else {
+            if (!normalized.empty() && !lastWasUnderscore) {
+                normalized.push_back('_');
+                lastWasUnderscore = true;
+            }
+        }
+    }
+
+    while (!normalized.empty() && normalized.front() == '_') normalized.erase(normalized.begin());
+    while (!normalized.empty() && normalized.back() == '_') normalized.pop_back();
+
+    // Legacy aliases and common model outputs
+    if (normalized == "readfile") return "read_file";
+    if (normalized == "writefile") return "write_file";
+    if (normalized == "replacefile" || normalized == "replaceinfile") return "replace_in_file";
+    if (normalized == "executecommand" || normalized == "runcommand") return "execute_command";
+    if (normalized == "search" || normalized == "grep" || normalized == "searchcode") return "search_code";
+    if (normalized == "diagnostics" || normalized == "getdiagnostics") return "get_diagnostics";
+    if (normalized == "listdir" || normalized == "listdirectory") return "list_directory";
+    if (normalized == "coverage" || normalized == "getcoverage") return "get_coverage";
+    if (normalized == "build" || normalized == "runbuild") return "run_build";
+    if (normalized == "hotpatch" || normalized == "applyhotpatch") return "apply_hotpatch";
+    if (normalized == "diskrecovery" || normalized == "recoverdisk") return "disk_recovery";
+
+    return normalized;
+}
 
 // -----------------------------------------------------------------------
 // Default tool handlers (stubs — real implementations wire into engine)
@@ -788,33 +831,47 @@ std::string AgentToolRegistry::GetSystemPrompt(
 ToolExecResult AgentToolRegistry::Dispatch(const std::string& tool_name, const json& args) {
     std::lock_guard<std::mutex> lock(m_mutex);
 
-    auto it = m_nameIndex.find(tool_name);
+    const std::string normalizedTool = NormalizeToolName(tool_name);
+    if (normalizedTool.empty()) {
+        return ToolExecResult::error("Unknown tool: " + tool_name);
+    }
+
+    auto it = m_nameIndex.find(normalizedTool);
     if (it == m_nameIndex.end()) {
-        GetObs().logWarn(kRegistryComponent, "Dispatch: unknown tool", nlohmann::json::object({{"tool", tool_name}}));
+        GetObs().logWarn(kRegistryComponent, "Dispatch: unknown tool", nlohmann::json::object({
+            {"tool", tool_name},
+            {"normalized", normalizedTool}
+        }));
         GetObs().incrementCounter("tool_registry.unknown_tool");
         return ToolExecResult::error("Unknown tool: " + tool_name);
     }
 
     auto& td = m_tools[it->second];
     if (!td.handler) {
-        GetObs().logError(kRegistryComponent, "Dispatch: no handler", nlohmann::json::object({{"tool", tool_name}}));
+        GetObs().logError(kRegistryComponent, "Dispatch: no handler", nlohmann::json::object({
+            {"tool", tool_name},
+            {"normalized", normalizedTool}
+        }));
         return ToolExecResult::error("No handler registered for tool: " + tool_name);
     }
 
     // Validate args
     std::string validationError;
-    if (!ValidateArgs(tool_name, args, validationError)) {
+    if (!ValidateArgs(normalizedTool, args, validationError)) {
         ++td.error_count;
         GetObs().logWarn(kRegistryComponent, "Dispatch: validation failed", nlohmann::json::object({
-            {"tool", tool_name}, {"error", validationError}
+            {"tool", tool_name}, {"normalized", normalizedTool}, {"error", validationError}
         }));
         GetObs().incrementCounter("tool_registry.validation_failures");
         return ToolExecResult::error("Validation failed: " + validationError);
     }
 
     // Traced execution with timing
-    auto spanId = GetObs().startSpan("tool_dispatch:" + tool_name);
-    GetObs().logDebug(kRegistryComponent, "Dispatching tool call", nlohmann::json::object({{"tool", tool_name}}));
+    auto spanId = GetObs().startSpan("tool_dispatch:" + normalizedTool);
+    GetObs().logDebug(kRegistryComponent, "Dispatching tool call", nlohmann::json::object({
+        {"tool", tool_name},
+        {"normalized", normalizedTool}
+    }));
 
     auto start = std::chrono::high_resolution_clock::now();
     ToolExecResult result = td.handler(args);
@@ -826,7 +883,7 @@ ToolExecResult AgentToolRegistry::Dispatch(const std::string& tool_name, const j
         ++td.error_count;
         GetObs().endSpan(spanId, true, result.output);
         GetObs().logWarn(kRegistryComponent, "Tool call failed", nlohmann::json::object({
-            {"tool", tool_name},
+            {"tool", normalizedTool},
             {"elapsed_ms", result.elapsed_ms},
             {"exit_code", result.exit_code}
         }));
@@ -834,7 +891,7 @@ ToolExecResult AgentToolRegistry::Dispatch(const std::string& tool_name, const j
     } else {
         GetObs().endSpan(spanId);
         GetObs().logDebug(kRegistryComponent, "Tool call succeeded", nlohmann::json::object({
-            {"tool", tool_name},
+            {"tool", normalizedTool},
             {"elapsed_ms", result.elapsed_ms}
         }));
     }
@@ -846,7 +903,8 @@ ToolExecResult AgentToolRegistry::Dispatch(const std::string& tool_name, const j
 }
 
 void AgentToolRegistry::RegisterHandler(const std::string& tool_name, ToolHandler handler) {
-    auto it = m_nameIndex.find(tool_name);
+    const std::string normalizedTool = NormalizeToolName(tool_name);
+    auto it = m_nameIndex.find(normalizedTool);
     if (it != m_nameIndex.end()) {
         m_tools[it->second].handler = handler;
     }
@@ -883,7 +941,8 @@ bool AgentToolRegistry::ValidateArgs(
     const json& args,
     std::string& error) const
 {
-    auto it = m_nameIndex.find(tool_name);
+    const std::string normalizedTool = NormalizeToolName(tool_name);
+    auto it = m_nameIndex.find(normalizedTool);
     if (it == m_nameIndex.end()) {
         error = "Unknown tool: " + tool_name;
         return false;

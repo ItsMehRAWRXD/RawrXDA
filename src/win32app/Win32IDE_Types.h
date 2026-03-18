@@ -96,6 +96,24 @@ struct FileExplorerItem {
 };
 
 // =============================================================================
+// Peek overlay types
+// =============================================================================
+
+enum class PeekItemType {
+    Definition,
+    Reference
+};
+
+struct PeekItem {
+    std::string title;
+    std::string content;
+    std::string file;
+    int line;
+    int column;
+    PeekItemType type;
+};
+
+// =============================================================================
 // Debugger types
 // =============================================================================
 

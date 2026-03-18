@@ -592,14 +592,16 @@ private:
             // Streaming read loop
             char readBuf[4096];
             DWORD bytesRead = 0;
-            while (ReadFile(hReadPipe, readBuf, sizeof(readBuf) - 1, &bytesRead, nullptr) && bytesRead > 0) {
-                readBuf[bytesRead] = '\0';
-                result.capturedOutput.append(readBuf, bytesRead);
+            constexpr DWORD kMaxChunk = static_cast<DWORD>(sizeof(readBuf) - 1);
+            while (ReadFile(hReadPipe, readBuf, kMaxChunk, &bytesRead, nullptr) && bytesRead > 0) {
+                const size_t safeBytes = (bytesRead <= kMaxChunk) ? static_cast<size_t>(bytesRead) : static_cast<size_t>(kMaxChunk);
+                readBuf[safeBytes] = '\0';
+                result.capturedOutput.append(readBuf, safeBytes);
 
                 // Stream to output panel callback
                 if (m_outputCallback) {
                     m_outputCallback(std::string("[") + task.label + "] " +
-                                     std::string(readBuf, bytesRead));
+                                     std::string(readBuf, safeBytes));
                 }
                 // Run problem matcher
                 parseProblemMatcherLine(task, readBuf);

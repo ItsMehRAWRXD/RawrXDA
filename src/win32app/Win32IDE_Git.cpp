@@ -358,10 +358,12 @@ private:
         std::string output;
         char buf[4096];
         DWORD bytesRead;
+        constexpr DWORD kMaxChunk = static_cast<DWORD>(sizeof(buf) - 1);
         
-        while (ReadFile(hReadPipe, buf, sizeof(buf) - 1, &bytesRead, NULL) && bytesRead > 0) {
-            buf[bytesRead] = '\0';
-            output += buf;
+        while (ReadFile(hReadPipe, buf, kMaxChunk, &bytesRead, NULL) && bytesRead > 0) {
+            const size_t safeBytes = (bytesRead <= kMaxChunk) ? static_cast<size_t>(bytesRead) : static_cast<size_t>(kMaxChunk);
+            buf[safeBytes] = '\0';
+            output.append(buf, safeBytes);
         }
         
         CloseHandle(hReadPipe);

@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <regex>
 #include <condition_variable>
+#include <cctype>
 
 // ============================================================================
 // UUID Generator
@@ -760,6 +761,114 @@ bool SubAgentManager::dispatchToolCall(
     const std::string& modelOutput,
     std::string& toolResult)
 {
+    auto extractFieldNear = [&](size_t fromPos, const std::string& fieldName) -> std::string {
+        std::string key = "\"" + fieldName + "\"";
+        size_t kpos = modelOutput.find(key, fromPos);
+        if (kpos == std::string::npos) return "";
+        size_t colon = modelOutput.find(':', kpos + key.size());
+        if (colon == std::string::npos) return "";
+        size_t valStart = modelOutput.find('"', colon + 1);
+        if (valStart == std::string::npos) return "";
+        valStart++;
+        std::string value;
+        for (size_t i = valStart; i < modelOutput.size(); i++) {
+            if (modelOutput[i] == '\\' && i + 1 < modelOutput.size()) value += modelOutput[++i];
+            else if (modelOutput[i] == '"') break;
+            else value += modelOutput[i];
+        }
+        return value;
+    };
+
+    auto toLower = [](std::string s) {
+        std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) {
+            return static_cast<char>(std::tolower(c));
+        });
+        return s;
+    };
+
+    const std::string lowerOutput = toLower(modelOutput);
+
+    // ---- Local model loading / status tool calls ----
+    {
+        size_t modelPos = lowerOutput.find("tool:load_model");
+        if (modelPos == std::string::npos) modelPos = lowerOutput.find("tool:load_local_model");
+        if (modelPos == std::string::npos) modelPos = lowerOutput.find("\"load_model\"");
+        if (modelPos != std::string::npos) {
+            std::string modelPath = extractFieldNear(modelPos, "path");
+            if (modelPath.empty()) modelPath = extractFieldNear(modelPos, "modelPath");
+            if (modelPath.empty()) modelPath = extractFieldNear(modelPos, "model_path");
+            if (modelPath.empty()) modelPath = extractFieldNear(modelPos, "filePath");
+
+            if (modelPath.empty()) {
+                toolResult = "[Tool Error] load_model requires a path/modelPath argument";
+                return true;
+            }
+
+            bool ok = m_engine && m_engine->loadLocalModel(modelPath);
+            toolResult = ok
+                ? ("Model loaded successfully: " + m_engine->currentModelPath())
+                : ("[Tool Error] Failed to load model: " + modelPath);
+            return true;
+        }
+
+        if (lowerOutput.find("tool:model_status") != std::string::npos ||
+            lowerOutput.find("tool:get_model_status") != std::string::npos ||
+            lowerOutput.find("\"model_status\"") != std::string::npos) {
+            toolResult = m_engine ? m_engine->getModelStatus() : "[Tool Error] Engine unavailable";
+            return true;
+        }
+    }
+
+    // ---- Search/navigation tool calls ----
+    {
+        size_t grepPos = lowerOutput.find("tool:grep_files");
+        if (grepPos == std::string::npos) grepPos = lowerOutput.find("tool:search_code");
+        if (grepPos == std::string::npos) grepPos = lowerOutput.find("\"grep_files\"");
+        if (grepPos == std::string::npos) grepPos = lowerOutput.find("\"search_code\"");
+        if (grepPos != std::string::npos) {
+            std::string pattern = extractFieldNear(grepPos, "pattern");
+            if (pattern.empty()) pattern = extractFieldNear(grepPos, "query");
+            std::string path = extractFieldNear(grepPos, "path");
+            if (path.empty()) path = extractFieldNear(grepPos, "root");
+            if (pattern.empty()) {
+                toolResult = "[Tool Error] grep_files/search_code requires pattern or query";
+            } else {
+                toolResult = m_engine ? m_engine->grepFiles(pattern, path.empty() ? "." : path)
+                                      : "[Tool Error] Engine unavailable";
+            }
+            return true;
+        }
+
+        size_t searchPos = lowerOutput.find("tool:search_files");
+        if (searchPos == std::string::npos) searchPos = lowerOutput.find("\"search_files\"");
+        if (searchPos != std::string::npos) {
+            std::string query = extractFieldNear(searchPos, "query");
+            std::string path = extractFieldNear(searchPos, "path");
+            if (path.empty()) path = extractFieldNear(searchPos, "root");
+            if (query.empty()) {
+                toolResult = "[Tool Error] search_files requires query";
+            } else {
+                toolResult = m_engine ? m_engine->searchFiles(query, path.empty() ? "." : path)
+                                      : "[Tool Error] Engine unavailable";
+            }
+            return true;
+        }
+
+        size_t refPos = lowerOutput.find("tool:reference_symbol");
+        if (refPos == std::string::npos) refPos = lowerOutput.find("\"reference_symbol\"");
+        if (refPos != std::string::npos) {
+            std::string symbol = extractFieldNear(refPos, "symbol");
+            if (symbol.empty()) symbol = extractFieldNear(refPos, "query");
+            if (symbol.empty()) {
+                toolResult = "[Tool Error] reference_symbol requires symbol";
+            } else {
+                toolResult = m_engine ? m_engine->referenceSymbol(symbol)
+                                      : "[Tool Error] Engine unavailable";
+            }
+            return true;
+        }
+    }
+
     std::string description, prompt;
     if (parseRunSubagent(modelOutput, description, prompt)) {
         logInfo("Detected runSubagent tool call: " + description);
@@ -1390,10 +1499,16 @@ bool SubAgentManager::parseBulkFixCall(
 
 bool SubAgentManager::parseShellCall(const std::string& text, std::string& cmd, bool& isPowerShell) const {
     size_t pos = text.find("TOOL:shell");
+    if (pos == std::string::npos) pos = text.find("tool:shell");
+    if (pos == std::string::npos) pos = text.find("TOOL:run_in_terminal");
+    if (pos == std::string::npos) pos = text.find("tool:run_in_terminal");
+    if (pos == std::string::npos) pos = text.find("TOOL:execute_command");
+    if (pos == std::string::npos) pos = text.find("tool:execute_command");
     if (pos != std::string::npos) {
         isPowerShell = false;
     } else {
         pos = text.find("TOOL:powershell");
+        if (pos == std::string::npos) pos = text.find("tool:powershell");
         if (pos == std::string::npos) return false;
         isPowerShell = true;
     }
@@ -1402,6 +1517,7 @@ bool SubAgentManager::parseShellCall(const std::string& text, std::string& cmd, 
     if (jsonStart == std::string::npos) return false;
 
     size_t cmdPos = text.find("\"cmd\"", jsonStart);
+    if (cmdPos == std::string::npos) cmdPos = text.find("\"command\"", jsonStart);
     if (cmdPos == std::string::npos) return false;
 
     size_t valStart = text.find('"', text.find(':', cmdPos) + 1);
@@ -1419,12 +1535,17 @@ bool SubAgentManager::parseShellCall(const std::string& text, std::string& cmd, 
 
 bool SubAgentManager::parseFileCall(const std::string& text, std::string& type, std::string& path, std::string& content) const {
     size_t pos = text.find("TOOL:read_file");
+    if (pos == std::string::npos) pos = text.find("tool:read_file");
     if (pos != std::string::npos) type = "read";
     else {
         pos = text.find("TOOL:write_file");
+        if (pos == std::string::npos) pos = text.find("tool:write_file");
         if (pos != std::string::npos) type = "write";
         else {
             pos = text.find("TOOL:list_dir");
+            if (pos == std::string::npos) pos = text.find("tool:list_dir");
+            if (pos == std::string::npos) pos = text.find("TOOL:list_directory");
+            if (pos == std::string::npos) pos = text.find("tool:list_directory");
             if (pos != std::string::npos) type = "list";
             else return false;
         }
@@ -1452,6 +1573,8 @@ bool SubAgentManager::parseFileCall(const std::string& text, std::string& type, 
     };
 
     path = extractField("path");
+    if (path.empty()) path = extractField("filePath");
+    if (path.empty()) path = extractField("dirPath");
     if (type == "write") content = extractField("content");
     
     return !path.empty() || type == "list";

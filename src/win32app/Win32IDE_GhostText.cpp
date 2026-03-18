@@ -109,6 +109,7 @@ std::string buildSnippetCompletion(const std::string& context, const std::string
 // ============================================================================
 
 void Win32IDE::initGhostText() {
+    // Ghost text enabled by default (heap corruption fixed in render path).
     m_ghostTextEnabled        = true;
     m_ghostTextVisible        = false;
     m_ghostTextAccepted       = false;
@@ -137,7 +138,7 @@ void Win32IDE::initGhostText() {
     m_ghostTextFont = CreateFontIndirectA(&lf);
 
     LOG_INFO("Ghost text renderer initialized (debounce=" +
-             std::to_string(GHOST_TEXT_DELAY_MS) + "ms)");
+             std::to_string(GHOST_TEXT_DELAY_MS) + "ms, default=enabled)");
 }
 
 void Win32IDE::shutdownGhostText() {
@@ -549,7 +550,7 @@ void Win32IDE::renderGhostText(HDC hdc) {
 
     // Get the pixel position of the cursor
     POINTL pt;
-    SendMessageA(m_hwndEditor, EM_POSFROMCHAR, (WPARAM)&pt, sel.cpMin);
+    SendMessageA(m_hwndEditor, EM_POSFROMCHAR, (WPARAM)sel.cpMin, (LPARAM)&pt);
 
     if (pt.x < 0 || pt.y < 0) return;  // Cursor not visible
 
@@ -563,7 +564,7 @@ void Win32IDE::renderGhostText(HDC hdc) {
     // (ghost text appears after existing text)
     POINTL endPt;
     if (lineEnd > sel.cpMin) {
-        SendMessageA(m_hwndEditor, EM_POSFROMCHAR, (WPARAM)&endPt, lineEnd);
+        SendMessageA(m_hwndEditor, EM_POSFROMCHAR, (WPARAM)lineEnd, (LPARAM)&endPt);
     } else {
         endPt = pt;
     }
@@ -618,7 +619,7 @@ void Win32IDE::renderGhostText(HDC hdc) {
             // Subsequent lines: render at left margin (indented to match cursor column)
             // Get x position of the start of the line (respect indentation)
             POINTL lineStartPt;
-            SendMessageA(m_hwndEditor, EM_POSFROMCHAR, (WPARAM)&lineStartPt, lineStart);
+        SendMessageA(m_hwndEditor, EM_POSFROMCHAR, (WPARAM)lineStart, (LPARAM)&lineStartPt);
             int indentX = lineStartPt.x;
 
             drawY += lineHeight;

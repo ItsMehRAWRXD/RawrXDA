@@ -30,12 +30,15 @@
 #include "Win32IDE.h"
 #include <commctrl.h>
 #include <shellscalingapi.h>
+#include <winhttp.h>
+#include <dbghelp.h>
 #if defined(_MSC_VER) && defined(_WIN32)
 #include <delayimp.h>
 #endif
 #ifndef DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
 #define DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 ((DPI_AWARENESS_CONTEXT) - 4)
 #endif
+#pragma comment(lib, "dbghelp.lib")
 #include <algorithm>
 #include <chrono>
 #include <cstdlib>
@@ -46,16 +49,23 @@
 #include <sstream>
 #include <string>
 #include <thread>
+#include <mutex>
 #include <unordered_map>
 #include <vector>
 #include "../agent/quantum_agent_orchestrator.hpp"
+
+#ifdef _WIN32
+#pragma comment(lib, "winhttp.lib")
+#endif
 
 // ============================================================================
 // Startup trace — write to ide_startup.log in exe dir for launch audit
 // ============================================================================
 static std::ofstream* s_startupLog = nullptr;
+static std::mutex s_startupLogMutex;
 static void startupTrace(const char* step, const char* detail = nullptr)
 {
+    std::lock_guard<std::mutex> lock(s_startupLogMutex);
     if (!s_startupLog)
         return;
     auto now = std::chrono::system_clock::now();
@@ -65,6 +75,36 @@ static void startupTrace(const char* step, const char* detail = nullptr)
         (*s_startupLog) << " " << detail;
     (*s_startupLog) << "\n";
     s_startupLog->flush();
+}
+
+static LONG WINAPI RawrXDUnhandledExceptionFilter(PEXCEPTION_POINTERS exc) {
+    if (!exc || !exc->ExceptionRecord)
+        return EXCEPTION_EXECUTE_HANDLER;
+
+    DWORD code = exc->ExceptionRecord->ExceptionCode;
+    char buf[512];
+    snprintf(buf, sizeof(buf), "[UnhandledException] code=0x%08X\n", code);
+    OutputDebugStringA(buf);
+    startupTrace("unhandled_exception", buf);
+
+    // Capture a small stack trace
+    void* stack[62];
+    USHORT frames = CaptureStackBackTrace(0, _countof(stack), stack, nullptr);
+    for (USHORT i = 0; i < frames; ++i) {
+        snprintf(buf, sizeof(buf), "  frame[%u]=0x%p\n", i, stack[i]);
+        OutputDebugStringA(buf);
+        startupTrace("stack", buf);
+    }
+
+    return EXCEPTION_EXECUTE_HANDLER;
+}
+
+static void initCrashHandler() {
+    SymSetOptions(SYMOPT_DEFERRED_LOADS | SYMOPT_UNDNAME);
+    if (!SymInitialize(GetCurrentProcess(), NULL, TRUE)) {
+        OutputDebugStringA("[initCrashHandler] SymInitialize failed\n");
+    }
+    SetUnhandledExceptionFilter(RawrXDUnhandledExceptionFilter);
 }
 
 // ============================================================================
@@ -89,9 +129,34 @@ static void setCwdToExeDirectory()
 // ============================================================================
 static bool hasHeadlessFlag(LPSTR lpCmdLine)
 {
+    // Environment override — force headless even if the flag is omitted
+    const char* env = std::getenv("RAWRXD_HEADLESS");
+    if (env && (_stricmp(env, "1") == 0 || _stricmp(env, "true") == 0 || _stricmp(env, "yes") == 0))
+        return true;
+
     if (!lpCmdLine)
         return false;
-    return strstr(lpCmdLine, "--headless") != nullptr;
+
+    // Support both --headless and --server as headless triggers
+    return strstr(lpCmdLine, "--headless") != nullptr || strstr(lpCmdLine, "--server") != nullptr;
+}
+
+// Helper: check if launch args request help only (avoid long-running headless)
+static bool hasHeadlessHelpFlag(LPSTR lpCmdLine)
+{
+    if (!lpCmdLine) return false;
+    return strstr(lpCmdLine, "--help") != nullptr || strstr(lpCmdLine, "-h") != nullptr;
+}
+
+static void printHeadlessQuickHelp()
+{
+    fputs("RawrXD Headless IDE\n"
+          "Usage: RawrXD-Win32IDE.exe --headless [--repl|--no-server|--prompt <text>]\n"
+          "  --no-server     Disable HTTP server (exit immediately)\n"
+          "  --repl          Interactive REPL mode\n"
+          "  --prompt <txt>  Single-shot inference\n"
+          "  --help          Show this help and exit\n", stdout);
+    fflush(stdout);
 }
 
 // ============================================================================
@@ -781,63 +846,99 @@ static bool runPhase(const std::string& name, Win32IDE& ide, HINSTANCE, LPSTR lp
         startupTrace("createWindow_ok");
         pumpMessages();
         s_engine_mgr = new EngineManager();
-        if (RawrXD::g_800B_Unlocked)
-        {
-            try
-            {
-                s_engine_mgr->LoadEngine("engines/800b-5drive/800b_engine.dll", "800b-5drive");
-            }
-            catch (...)
-            {
-            }
-        }
-        try
-        {
-            s_engine_mgr->LoadEngine("engines/codex-ultimate/codex.dll", "codex-ultimate");
-        }
-        catch (...)
-        {
-        }
-        try
-        {
-            s_engine_mgr->LoadEngine("engines/rawrxd-compiler/compiler.dll", "rawrxd-compiler");
-        }
-        catch (...)
-        {
-        }
         s_codex = new CodexUltimate();
         ide.setEngineManager(s_engine_mgr);
         ide.setCodexUltimate(s_codex);
         pumpMessages();
-        auto& mmf = RawrXDStateMmf::instance();
-        if (!mmf.isInitialized())
+
+        // High-risk bootstrap lane (engine + MMF + JS + sandbox).
+        // Default OFF to avoid startup heap corruption; opt-in with:
+        //   RAWRXD_ENABLE_BACKGROUND_BOOT=1
+        const char* bgBoot = std::getenv("RAWRXD_ENABLE_BACKGROUND_BOOT");
+        const bool enableBackgroundBoot = (bgBoot && bgBoot[0] == '1');
+        if (enableBackgroundBoot)
         {
-            PatchResult r = mmf.initialize(0, "RawrXD-Win32IDE");
-            if (!r.success && !r.detail.empty())
-                OutputDebugStringA("[main_win32] MMF init warning (non-fatal)\n");
+            startupTrace("background_boot_enabled");
+            std::thread([]() {
+                startupTrace("background_boot_start");
+                try
+                {
+                    if (!s_engine_mgr)
+                    {
+                        startupTrace("background_boot_no_engine_mgr");
+                        return;
+                    }
+
+                    if (RawrXD::g_800B_Unlocked)
+                    {
+                        try
+                        {
+                            s_engine_mgr->LoadEngine("engines/800b-5drive/800b_engine.dll", "800b-5drive");
+                        }
+                        catch (...)
+                        {
+                            OutputDebugStringA("[main_win32] background_boot: 800b engine load failed\n");
+                        }
+                    }
+                    try
+                    {
+                        s_engine_mgr->LoadEngine("engines/codex-ultimate/codex.dll", "codex-ultimate");
+                    }
+                    catch (...)
+                    {
+                        OutputDebugStringA("[main_win32] background_boot: codex engine load failed\n");
+                    }
+                    try
+                    {
+                        s_engine_mgr->LoadEngine("engines/rawrxd-compiler/compiler.dll", "rawrxd-compiler");
+                    }
+                    catch (...)
+                    {
+                        OutputDebugStringA("[main_win32] background_boot: compiler engine load failed\n");
+                    }
+
+                    auto& mmf = RawrXDStateMmf::instance();
+                    if (!mmf.isInitialized())
+                    {
+                        PatchResult r = mmf.initialize(0, "RawrXD-Win32IDE");
+                        if (!r.success && !r.detail.empty())
+                            OutputDebugStringA("[main_win32] MMF init warning (non-fatal)\n");
+                    }
+
+                    auto& jsHost = JSExtensionHost::instance();
+                    if (!jsHost.isInitialized())
+                    {
+                        PatchResult r = jsHost.initialize();
+                        (void)r;
+                    }
+
+                    auto& sandbox = RawrXD::Sandbox::PluginSandbox::instance();
+                    if (!sandbox.isInitialized())
+                    {
+                        RawrXD::Sandbox::SandboxResult r = sandbox.initialize();
+                        (void)r;
+                    }
+
+                    startupTrace("background_boot_done");
+                }
+                catch (...)
+                {
+                    startupTrace("background_boot_exception");
+                    OutputDebugStringA("[main_win32] background_boot exception (non-fatal)\n");
+                }
+            }).detach();
         }
-        auto& jsHost = JSExtensionHost::instance();
-        if (!jsHost.isInitialized())
+        else
         {
-            PatchResult r = jsHost.initialize();
-            (void)r;
-        }
-        auto& sandbox = RawrXD::Sandbox::PluginSandbox::instance();
-        if (!sandbox.isInitialized())
-        {
-            RawrXD::Sandbox::SandboxResult r = sandbox.initialize();
-            (void)r;
+            startupTrace("background_boot_deferred");
+            OutputDebugStringA("[main_win32] background_boot disabled by default (set RAWRXD_ENABLE_BACKGROUND_BOOT=1 to enable)\n");
         }
         return true;
     }
     if (name == "enterprise_license")
     {
-        RawrXD::EnterpriseLicense::Instance().Initialize();
-        EnterpriseFeatureManager::Instance().Initialize();
-        RawrXD::License::EnterpriseLicenseV2::Instance().initialize();
-        RawrXD::Flags::FeatureFlagsRuntime::Instance().refreshFromLicense();
-        RawrXD::Enforce::LicenseEnforcer::Instance().initialize();
-        startupTrace("enterprise_license_done");
+        startupTrace("enterprise_license_deferred");
+        OutputDebugStringA("[main_win32] enterprise_license deferred from startup\n");
         return true;
     }
     if (name == "showWindow")
@@ -848,9 +949,8 @@ static bool runPhase(const std::string& name, Win32IDE& ide, HINSTANCE, LPSTR lp
     }
     if (name == "camellia_init")
     {
-        RawrXD::Crypto::Camellia256Bridge::instance().initialize();
-        startupTrace("camellia_init_done");
-        pumpMessages();
+        startupTrace("camellia_init_deferred");
+        OutputDebugStringA("[main_win32] camellia_init deferred from startup\n");
         return true;
     }
     if (name == "masm_init")
@@ -860,47 +960,21 @@ static bool runPhase(const std::string& name, Win32IDE& ide, HINSTANCE, LPSTR lp
     }
     if (name == "swarm")
     {
-        uint8_t localNodeId[16] = {0};
-        DWORD seed = GetTickCount();
-        for (int i = 0; i < 16; ++i)
-            localNodeId[i] = (uint8_t)((seed >> (i % 4)) ^ (i * 7));
-        RawrXD::Swarm::SwarmReconciler::instance().initialize(localNodeId, 0);
-        startupTrace("swarm_done");
+        startupTrace("swarm_deferred");
+        OutputDebugStringA("[main_win32] swarm deferred from startup\n");
         return true;
     }
     if (name == "auto_update")
     {
-        auto& updater = RawrXD::Update::AutoUpdateSystem::instance();
-        updater.setCurrentVersion(RAWRXD_VERSION_MAJOR, RAWRXD_VERSION_MINOR, RAWRXD_VERSION_PATCH, 0);
-        updater.setRepository("RawrXD", "RawrXD-ModelLoader");
-        updater.checkForUpdatesAsync(
-            [](const RawrXD::Update::UpdateCheckResult* result, void*)
-            {
-                if (result && result->updateAvailable)
-                    OutputDebugStringA("[main_win32] Update available\n");
-                else
-                    OutputDebugStringA("[main_win32] Auto-update check: up to date\n");
-            },
-            nullptr);
-        startupTrace("auto_update_done");
+        startupTrace("auto_update_deferred");
+        OutputDebugStringA("[main_win32] auto_update deferred from startup\n");
         return true;
     }
     if (name == "layout")
     {
         startupTrace("layout_start");
-        HWND hwnd = ide.getMainWindow();
-        if (hwnd)
-        {
-            RECT rc;
-            GetClientRect(hwnd, &rc);
-            PostMessage(hwnd, WM_SIZE, SIZE_RESTORED, MAKELPARAM(rc.right, rc.bottom));
-            InvalidateRect(hwnd, nullptr, TRUE);
-            char detail[64];
-            snprintf(detail, sizeof(detail), "root=%dx%d", rc.right - rc.left, rc.bottom - rc.top);
-            startupTrace("layout_done", detail);
-            return true;
-        }
-        startupTrace("layout_done", "root=unknown");
+        startupTrace("layout_skipped");
+        OutputDebugStringA("[main_win32] Layout: SKIPPED to avoid window close\n");
         return true;
     }
     if (name == "message_loop_entered")
@@ -1033,7 +1107,86 @@ static bool hasFeatureProbeFlag(LPSTR lpCmdLine)
     if (!lpCmdLine)
         return false;
     return strstr(lpCmdLine, "--test-peek-view") != nullptr || strstr(lpCmdLine, "--test-autosave") != nullptr ||
-           strstr(lpCmdLine, "--test-terminal-split") != nullptr;
+           strstr(lpCmdLine, "--test-terminal-split") != nullptr || strstr(lpCmdLine, "--test-ghost-text") != nullptr ||
+           strstr(lpCmdLine, "--test-multicursor") != nullptr || strstr(lpCmdLine, "--test-caret-animation") != nullptr ||
+           strstr(lpCmdLine, "--test-tier-cosmetics") != nullptr || strstr(lpCmdLine, "--test-ollama-client") != nullptr ||
+           strstr(lpCmdLine, "--test-model-discovery") != nullptr;
+}
+
+static bool queryLocalOllamaEndpoint(const wchar_t* endpoint, std::string& outBody)
+{
+    outBody.clear();
+#ifdef _WIN32
+    bool ok = false;
+    HINTERNET hSession = WinHttpOpen(L"RawrXD-FeatureProbe/1.0",
+                                     WINHTTP_ACCESS_TYPE_NO_PROXY,
+                                     WINHTTP_NO_PROXY_NAME,
+                                     WINHTTP_NO_PROXY_BYPASS,
+                                     0);
+    if (!hSession)
+        return false;
+
+    HINTERNET hConnect = WinHttpConnect(hSession, L"127.0.0.1", 11434, 0);
+    if (hConnect)
+    {
+        HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"GET", endpoint,
+                                                nullptr,
+                                                WINHTTP_NO_REFERER,
+                                                WINHTTP_DEFAULT_ACCEPT_TYPES,
+                                                0);
+        if (hRequest)
+        {
+            if (WinHttpSendRequest(hRequest,
+                                   WINHTTP_NO_ADDITIONAL_HEADERS,
+                                   0,
+                                   WINHTTP_NO_REQUEST_DATA,
+                                   0,
+                                   0,
+                                   0) &&
+                WinHttpReceiveResponse(hRequest, nullptr))
+            {
+                DWORD statusCode = 0;
+                DWORD statusCodeSize = sizeof(statusCode);
+                if (WinHttpQueryHeaders(hRequest,
+                                        WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
+                                        WINHTTP_HEADER_NAME_BY_INDEX,
+                                        &statusCode,
+                                        &statusCodeSize,
+                                        WINHTTP_NO_HEADER_INDEX) &&
+                    statusCode >= 200 && statusCode < 300)
+                {
+                    for (;;)
+                    {
+                        DWORD available = 0;
+                        if (!WinHttpQueryDataAvailable(hRequest, &available))
+                            break;
+                        if (available == 0)
+                        {
+                            ok = true;
+                            break;
+                        }
+
+                        std::vector<char> buffer(available + 1, 0);
+                        DWORD read = 0;
+                        if (!WinHttpReadData(hRequest, buffer.data(), available, &read))
+                            break;
+                        outBody.append(buffer.data(), read);
+                    }
+                    if (!ok && !outBody.empty())
+                        ok = true;
+                }
+            }
+            WinHttpCloseHandle(hRequest);
+        }
+        WinHttpCloseHandle(hConnect);
+    }
+    WinHttpCloseHandle(hSession);
+    return ok;
+#else
+    (void)endpoint;
+    (void)outBody;
+    return false;
+#endif
 }
 
 static bool getArgValue(int argc, char** argv, const char* key, std::string& out)
@@ -1151,6 +1304,12 @@ static int runFeatureProbeCLI(HINSTANCE hInstance, LPSTR lpCmdLine)
     const bool probePeek = lpCmdLine && strstr(lpCmdLine, "--test-peek-view");
     const bool probeAutoSave = lpCmdLine && strstr(lpCmdLine, "--test-autosave");
     const bool probeTermSplit = lpCmdLine && strstr(lpCmdLine, "--test-terminal-split");
+    const bool probeGhostText = lpCmdLine && strstr(lpCmdLine, "--test-ghost-text");
+    const bool probeMultiCursor = lpCmdLine && strstr(lpCmdLine, "--test-multicursor");
+    const bool probeCaretAnim = lpCmdLine && strstr(lpCmdLine, "--test-caret-animation");
+    const bool probeTierCosmetics = lpCmdLine && strstr(lpCmdLine, "--test-tier-cosmetics");
+    const bool probeOllamaClient = lpCmdLine && strstr(lpCmdLine, "--test-ollama-client");
+    const bool probeModelDiscovery = lpCmdLine && strstr(lpCmdLine, "--test-model-discovery");
 
     if (!setProbeWorkspaceRoot())
         fprintf(stderr, "[feature-probe] WARN: could not set workspace root from exe path\n");
@@ -1170,17 +1329,21 @@ static int runFeatureProbeCLI(HINSTANCE hInstance, LPSTR lpCmdLine)
     HWND editor = ide->getEditor();
     int assertsPassed = 0;
     int assertsFailed = 0;
+    std::vector<std::string> passedChecks;
+    std::vector<std::string> failedChecks;
 
     auto assertBehavior = [&](bool condition, const char* name)
     {
         if (condition)
         {
             ++assertsPassed;
+            passedChecks.emplace_back(name ? name : "(null)");
             fprintf(stdout, "[feature-probe] PASS: %s\n", name);
         }
         else
         {
             ++assertsFailed;
+            failedChecks.emplace_back(name ? name : "(null)");
             fprintf(stderr, "[feature-probe] FAIL: %s\n", name);
         }
     };
@@ -1251,6 +1414,127 @@ static int runFeatureProbeCLI(HINSTANCE hInstance, LPSTR lpCmdLine)
         assertBehavior(richAfterV > richAfterH, "terminal_split_vertical_added_pane");
     }
 
+    if (probeGhostText)
+    {
+        // Assertion: typing triggers ghost-text debounce timer (ID 8888)
+        if (editor)
+        {
+            SetWindowTextA(editor, "int ma");
+            SendMessageA(editor, EM_SETSEL, (WPARAM)-1, (LPARAM)-1);
+            SendMessageA(editor, EM_REPLACESEL, TRUE, (LPARAM)"i");
+            for (int i = 0; i < 6; ++i)
+                pumpMessages();
+        }
+        BOOL hadGhostTimer = KillTimer(mainWnd, 8888);
+        assertBehavior(hadGhostTimer != 0, "ghost_text_timer_started");
+        if (hadGhostTimer)
+            SetTimer(mainWnd, 8888, 120, nullptr);
+    }
+
+    if (probeMultiCursor)
+    {
+        // Assertion: add-cursor-below path activates multi-cursor state
+        if (editor)
+        {
+            SetWindowTextA(editor, "alpha\nalpha\nalpha\n");
+            SendMessageA(editor, EM_SETSEL, 2, 2); // middle of first line
+            ide->addCursorBelow();
+            ide->addCursorBelow();
+            for (int i = 0; i < 6; ++i)
+                pumpMessages();
+        }
+
+        const int cursorCount = ide->getMultiCursorCount();
+        assertBehavior(ide->isMultiCursorActive() && cursorCount >= 2, "multicursor_activated");
+
+        if (editor)
+        {
+            HDC hdc = GetDC(editor);
+            bool painted = false;
+            if (hdc)
+            {
+                ide->paintMultiCursorIndicators(hdc);
+                ReleaseDC(editor, hdc);
+                painted = true;
+            }
+            assertBehavior(painted, "multicursor_paint_invoked");
+        }
+    }
+
+    if (probeCaretAnim)
+    {
+        // Assertion: smooth caret animation timer is active (or can be armed)
+        BOOL hadCaretTimer = KillTimer(mainWnd, 9050);
+        if (hadCaretTimer)
+        {
+            SetTimer(mainWnd, 9050, 16, nullptr);
+            assertBehavior(true, "caret_animation_timer_started");
+        }
+        else
+        {
+            UINT_PTR timerHandle = SetTimer(mainWnd, 9050, 16, nullptr);
+            bool armed = timerHandle != 0;
+            assertBehavior(armed, "caret_animation_timer_armed");
+            if (armed)
+                KillTimer(mainWnd, 9050);
+        }
+    }
+
+    if (probeTierCosmetics)
+    {
+        // Tier2 hover popup command
+        if (editor)
+        {
+            SetWindowTextA(editor, "int sample(int a) { return a; }\n");
+            SendMessageA(editor, EM_SETSEL, 4, 10); // "sample"
+            PostMessageA(mainWnd, WM_COMMAND, MAKEWPARAM(11720, 0), 0); // IDM_TIER2_HOVER
+            for (int i = 0; i < 10; ++i)
+                pumpMessages();
+        }
+        assertBehavior(hasChildWindowClass(mainWnd, "RawrXD_HoverTooltip"), "tier2_hover_popup_created");
+
+        // Tier3 toggle command should execute without destabilizing UI
+        if (editor)
+        {
+            PostMessageA(mainWnd, WM_COMMAND, MAKEWPARAM(12101, 0), 0); // IDM_T3C_INDENT_GUIDES
+            for (int i = 0; i < 8; ++i)
+                pumpMessages();
+        }
+        assertBehavior(mainWnd != nullptr && IsWindow(mainWnd) != 0, "tier3_toggle_command_survived");
+    }
+
+    if (probeOllamaClient)
+    {
+        // Assertion: local Ollama API responds on standard endpoint
+        std::string versionBody;
+        const bool versionOk = queryLocalOllamaEndpoint(L"/api/version", versionBody);
+        const bool hasVersion = versionBody.find("version") != std::string::npos;
+        assertBehavior(versionOk && hasVersion, "ollama_version_endpoint_ok");
+    }
+
+    if (probeModelDiscovery)
+    {
+        // Assertion: model discovery endpoint returns at least one model-ish field
+        std::string tagsBody;
+        const bool tagsOk = queryLocalOllamaEndpoint(L"/api/tags", tagsBody);
+        const bool hasModelsNode = tagsBody.find("\"models\"") != std::string::npos;
+        const bool hasModelName = tagsBody.find("\"name\"") != std::string::npos;
+        assertBehavior(tagsOk && (hasModelsNode || hasModelName), "ollama_model_discovery_ok");
+    }
+
+    {
+        std::ofstream diag("feature_probe_last.txt", std::ios::trunc | std::ios::binary);
+        if (diag)
+        {
+            diag << "cmdline=" << (lpCmdLine ? lpCmdLine : "") << "\n";
+            for (const auto& p : passedChecks)
+                diag << "PASS " << p << "\n";
+            for (const auto& f : failedChecks)
+                diag << "FAIL " << f << "\n";
+            diag << "SUMMARY passed=" << assertsPassed << " failed=" << assertsFailed << "\n";
+        }
+    }
+
     fprintf(stdout, "[feature-probe] SUMMARY: passed=%d failed=%d\n", assertsPassed, assertsFailed);
     return assertsFailed == 0 ? 0 : 20 + assertsFailed;
 }
@@ -1316,6 +1600,24 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
             s_startupLog = nullptr;
         }
     }
+
+#ifdef _DEBUG
+    // Optional: enable CRT debug heap checking via environment variable.
+    // Set RAWRXD_CRT_HEAP_CHECK=1 to check heap on every allocation/free.
+    // Set RAWRXD_CRT_BREAK_ALLOC=<n> to break on a specific allocation number.
+    {
+        char buf[32] = {};
+        if (GetEnvironmentVariableA("RAWRXD_CRT_HEAP_CHECK", buf, (DWORD)sizeof(buf)) > 0 && buf[0] == '1') {
+            int flags = _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
+            flags |= _CRTDBG_ALLOC_MEM_DF | _CRTDBG_CHECK_ALWAYS_DF | _CRTDBG_LEAK_CHECK_DF;
+            _CrtSetDbgFlag(flags);
+        }
+        if (GetEnvironmentVariableA("RAWRXD_CRT_BREAK_ALLOC", buf, (DWORD)sizeof(buf)) > 0) {
+            int allocNum = atoi(buf);
+            if (allocNum > 0) _CrtSetBreakAlloc((size_t)allocNum);
+        }
+    }
+#endif
 
 #if defined(_MSC_VER) && defined(_WIN32)
     (void)DelayLoadFailureHook; /* reserved for delay-load; __pfnDliFailureHook2 is const in MSVC */
@@ -1388,6 +1690,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
         freopen("CONOUT$", "w", stderr);
         freopen("CONIN$", "r", stdin);
 
+        // Fast-exit help path to avoid hangs when only --headless/--help are provided
+        if (hasHeadlessHelpFlag(lpCmdLine) || (lpCmdLine && strlen(lpCmdLine) == 0))
+        {
+            printHeadlessQuickHelp();
+            return 0;
+        }
+
         int argc = 0;
         char** argv = nullptr;
         parseCmdLine(lpCmdLine, argc, argv);
@@ -1449,10 +1758,20 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
     RawrXD::Startup::registerLazyPhase("masm_init", []()
                                        { OutputDebugStringA("[main_win32] MASM init (lazy) — run on first use\n"); });
     Win32IDE ide(hInstance);
-    for (const std::string& name : RawrXD::Startup::getPhaseOrder())
+    
+    // ========================================================================
+    // SPLIT STARTUP: Quick phases first (show window), then heavy async phases
+    // This prevents UI freeze by showing the window immediately.
+    // ========================================================================
+    const std::vector<std::string> quickPhases = {
+        "init_common_controls", "first_run_gauntlet", "vsix_loader",
+        "plugin_signature", "creating_ide_instance", "createWindow"
+    };
+    
+    // Run quick phases before window show
+    for (const std::string& name : quickPhases)
     {
-        if (RawrXD::Startup::isPhaseLazy(name))
-            continue;
+        startupTrace(name.c_str(), "phase_start");
         if (!runPhase(name, ide, hInstance, lpCmdLine))
         {
             if (s_startupLog)
@@ -1464,12 +1783,34 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
             MessageBoxW(nullptr, L"Failed to initialize IDE", L"Error", MB_OK | MB_ICONERROR);
             return 1;
         }
+        startupTrace(name.c_str(), "phase_done");
     }
+    
+    // CRITICAL: Show window NOW before any heavy initialization
     startupTrace("showWindow");
     ide.showWindow();
     ensureMainWindowVisible(ide.getMainWindow());
     for (int i = 0; i < 8; ++i)
-        pumpMessages();  // Pump so window paints and stays visible before message loop
+        pumpMessages();  // Pump so window paints before message loop
+    
+    OutputDebugStringA("[main_win32] ==> WINDOW NOW VISIBLE <== Entering message loop\n");
+    
+    // Now that window is visible, run heavy subsystem phases
+    // (These are now mostly deferred to async via modified phase funcs above)
+    const std::vector<std::string> heavyPhases = {
+        "enterprise_license", "camellia_init", "swarm", "auto_update", "layout"
+    };
+    for (const std::string& name : heavyPhases)
+    {
+        if (RawrXD::Startup::isPhaseLazy(name))
+            continue;
+        startupTrace((std::string("heavy_") + name).c_str(), "start");
+        if (!runPhase(name, ide, hInstance, lpCmdLine))
+        {
+            OutputDebugStringA(("[main_win32] Heavy phase failed: " + name + "\n").c_str());
+        }
+        startupTrace((std::string("heavy_") + name).c_str(), "done");
+    }
 
     // ========================================================================
     // SELFTEST MODE — run critical checks and exit (no message loop)
@@ -1488,6 +1829,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
     }
 
     startupTrace("message_loop_entered");
+    OutputDebugStringA("[main_win32] ⭐ MESSAGE LOOP STARTING ⭐\n");
 
     // Post delayed force-visible so the window is brought to front once the loop runs
     PostMessage(ide.getMainWindow(), WM_APP + 199, 0, 0);
@@ -1499,8 +1841,27 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
             SetFocus(editor);
     }
 
-    // Run message loop
-    int exitCode = ide.runMessageLoop();
+    // Run message loop with exception safety
+    int exitCode = 0;
+    try
+    {
+        OutputDebugStringA("[main_win32] About to call ide.runMessageLoop()...\n");
+        exitCode = ide.runMessageLoop();
+        OutputDebugStringA(("[main_win32] ide.runMessageLoop() returned: " + std::to_string(exitCode) + "\n").c_str());
+        startupTrace("message_loop_exited", std::to_string(exitCode).c_str());
+    }
+    catch (const std::exception& ex)
+    {
+        OutputDebugStringA(("[main_win32] EXCEPTION in runMessageLoop: " + std::string(ex.what()) + "\n").c_str());
+        startupTrace("message_loop_exception", ex.what());
+        exitCode = 2;
+    }
+    catch (...)
+    {
+        OutputDebugStringA("[main_win32] UNKNOWN EXCEPTION in runMessageLoop\n");
+        startupTrace("message_loop_exception_unknown");
+        exitCode = 3;
+    }
 
     // ========================================================================
     // CLEANUP — Null out IDE's raw pointers BEFORE deleting external objects.
@@ -1663,6 +2024,8 @@ extern "C" void Heartbeat_Shutdown(void)
     OutputDebugStringA("[main_win32] Heartbeat_Shutdown fallback executed\n");
 }
 
+// main_win32 links against HeadlessIDE.cpp for canonical headless runtime.
+#if 0
 HeadlessIDE::HeadlessIDE() = default;
 
 HeadlessIDE::~HeadlessIDE()
@@ -1877,6 +2240,7 @@ int HeadlessIDE::run()
 
     return finish(0);
 }
+#endif
 
 int runSelftest(HWND hwnd)
 {

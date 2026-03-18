@@ -1,0 +1,87 @@
+﻿{
+    "generatedAtUtc":  "2026-03-17T16:23:05.0286867Z",
+    "guiExe":  "d:\\rawrxd\\build_prod\\bin\\RawrXD-Win32IDE.exe",
+    "cliExe":  "d:\\rawrxd\\build_prod\\bin\\RawrXD-AutoFixCLI.exe",
+    "total":  7,
+    "passed":  0,
+    "failed":  7,
+    "results":  [
+                    {
+                        "id":  50,
+                        "name":  "autonomous_agent",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "needs agent activation test",
+                        "startedAtUtc":  "2026-03-17T16:23:05.0150280Z",
+                        "finishedAtUtc":  "2026-03-17T16:23:05.0150280Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  51,
+                        "name":  "chat_message_renderer",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "UI rendering; needs probe",
+                        "startedAtUtc":  "2026-03-17T16:23:05.0286867Z",
+                        "finishedAtUtc":  "2026-03-17T16:23:05.0286867Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  52,
+                        "name":  "tool_action_status",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "needs UI/status hook",
+                        "startedAtUtc":  "2026-03-17T16:23:05.0286867Z",
+                        "finishedAtUtc":  "2026-03-17T16:23:05.0286867Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  53,
+                        "name":  "chat_panel",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "UI; needs automation hook",
+                        "startedAtUtc":  "2026-03-17T16:23:05.0286867Z",
+                        "finishedAtUtc":  "2026-03-17T16:23:05.0286867Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  54,
+                        "name":  "perf_telemetry",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "telemetry endpoint check needed",
+                        "startedAtUtc":  "2026-03-17T16:23:05.0286867Z",
+                        "finishedAtUtc":  "2026-03-17T16:23:05.0286867Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  55,
+                        "name":  "update_signature",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "signing validation missing",
+                        "startedAtUtc":  "2026-03-17T16:23:05.0286867Z",
+                        "finishedAtUtc":  "2026-03-17T16:23:05.0286867Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  56,
+                        "name":  "plugin_signature",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "plugin signature verification hook needed",
+                        "startedAtUtc":  "2026-03-17T16:23:05.0286867Z",
+                        "finishedAtUtc":  "2026-03-17T16:23:05.0286867Z",
+                        "durationMs":  0
+                    }
+                ]
+}

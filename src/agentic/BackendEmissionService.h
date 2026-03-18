@@ -31,5 +31,9 @@ namespace RawrXD::Agentic {
         
         // Validate that BareMetal_PE_Writer.asm is available
         static bool is_emitter_available();
+
+        // Capability flag (default off) to allow PE emission in locked-down environments
+        static void set_emitter_enabled(bool enabled);
+        static bool is_emitter_enabled();
     };
 }

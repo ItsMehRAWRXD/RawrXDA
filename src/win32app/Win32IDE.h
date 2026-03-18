@@ -46,8 +46,9 @@
 #include "../modules/ExtensionLoader.hpp"
 #include "../modules/vscode_extension_api.h"
 #include "../../include/mcp_integration.h"
-#include "../core/instructions_provider.hpp"
 #include "../core/native_inference_pipeline.hpp"
+#include "../core/70b_gguf_hotpatch.h"
+#include "../core/governor_throttling.h"
 #include "../core/problems_aggregator.hpp"
 #include "../ui/tool_action_status.h"
 #include <nlohmann/json.hpp>
@@ -67,6 +68,108 @@ using json = nlohmann::json;
 #include "Win32IDE_Commands.h"
 #include "Win32IDE_Types.h"
 
+// Forward declarations for peek overlay (definition in Win32IDE_PeekOverlay.cpp)
+class PeekOverlayWindow;
+struct PeekOverlayWindowDeleter { void operator()(PeekOverlayWindow*) noexcept; };
+
+// Forward declarations for plugin managers defined in component translation units
+class EnterpriseStressTester;
+class SQLite3DatabaseManager;
+class TelemetryExportManager;
+class RefactoringPluginManager;
+class LanguagePluginManager;
+class ResourceGeneratorManager;
+
+namespace RawrXD {
+class LayerEvictionManager;
+}
+struct LayerEvictionManagerDeleter {
+    void operator()(RawrXD::LayerEvictionManager* ptr) noexcept;
+};
+
+// Lightweight types used by Language Plugin subsystem
+namespace IDEPlugin {
+enum class TokenType {
+    Keyword,
+    Identifier,
+    String,
+    Number,
+    Comment,
+    Operator,
+    Punctuation,
+    Type,
+    Function,
+    Variable,
+    Class,
+    Unknown
+};
+
+struct SyntaxToken {
+    TokenType type;
+    int start;
+    int length;
+    std::string text;
+};
+
+enum class CompletionItemKind {
+    Text,
+    Method,
+    Function,
+    Constructor,
+    Field,
+    Variable,
+    Class,
+    Interface,
+    Module,
+    Property,
+    Unit,
+    Value,
+    Enum,
+    Keyword,
+    Snippet,
+    Color,
+    File,
+    Reference,
+    Folder,
+    EnumMember,
+    Constant,
+    Struct,
+    Event,
+    Operator,
+    TypeParameter
+};
+
+struct CompletionItem {
+    std::string label;
+    std::string detail;
+    std::string documentation;
+    CompletionItemKind kind;
+    std::string insertText;
+};
+
+struct Diagnostic {
+    std::string source;
+    int line;
+    int column;
+    std::string message;
+    std::string severity;
+};
+} // namespace IDEPlugin
+
+struct StressTestResults {
+    uint64_t operationsCompleted = 0;
+    uint64_t errorsEncountered = 0;
+    double avgResponseTimeUs = 0.0;
+    double operationsPerSecond = 0.0;
+    bool passed = false;
+};
+
+using SQLiteQueryCallback = std::function<int(int, char**, char**)>;
+
+struct RefactoringOption {
+    std::string name;
+    std::string description;
+};
 
 class Win32IDE
 {
@@ -881,6 +984,7 @@ private:
     COLORREF getTokenColor(TokenType type) const;
     SyntaxLanguage detectLanguageFromExtension(const std::string& filePath) const;
     void onEditorContentChanged();  // Debounced EN_CHANGE handler for syntax coloring
+    void toggleSyntaxHighlighting();  // Toggle syntax highlighting on/off
     bool isKeyword(const std::string& word, SyntaxLanguage lang) const;
     bool isBuiltinType(const std::string& word, SyntaxLanguage lang) const;
     static void CALLBACK SyntaxColorTimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime);
@@ -1350,6 +1454,13 @@ private:
     std::unique_ptr<RawrXD::NativeInferencePipeline> m_nativePipeline;
     bool m_nativePipelineReady = false;
     
+    // 70B GGUF Hotpatch System
+    std::unique_ptr<RawrXD::GGUFHotpatch> m_ggufHotpatch;
+    
+    // Governor/Throttling System
+    std::unique_ptr<RawrXD::GovernorThrottling> m_governorThrottling;
+    std::unique_ptr<RawrXD::LayerEvictionManager, LayerEvictionManagerDeleter> m_layerEvictionManager;
+    
     // Window Procedures for Subclassing
     static LRESULT CALLBACK CommandInputProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
     static LRESULT CALLBACK SidebarProcImpl(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam); // Renamed to avoid overload conflict
@@ -1388,6 +1499,12 @@ private:
     void onPluginToggleHotLoad();
     void onPluginConfigure();
     bool handlePluginCommand(int id);
+
+    // Plugin Signature Verification (Plugin Signature #56)
+    void initPluginSignatureVerifier();
+    bool verifyPluginBeforeLoad(const wchar_t* pluginPath);
+    bool initializeCoreRuntimeSpine();
+    void shutdownCoreRuntimeSpine();
 
     // File Explorer Sidebar - tree view items
     HWND m_hwndFileTree;
@@ -2088,6 +2205,22 @@ private:
     std::mutex m_ghostTextCacheMutex;
     std::unordered_map<std::string, GhostTextCacheEntry> m_ghostTextCache;
     GhostTextMetrics m_ghostTextMetrics = {};
+
+    // ========================================================================
+    // Peek Overlay — Definition/References Overlay (Win32IDE_PeekOverlay.cpp)
+    // ========================================================================
+    void initPeekOverlay();
+    void shutdownPeekOverlay();
+    void showPeekDefinition(int line, int col);
+    void showPeekReferences(int line, int col);
+    std::vector<PeekItem> findDefinitionsAt(int line, int col);
+    std::vector<PeekItem> findReferencesAt(int line, int col);
+    void handlePeekOverlayKey(UINT vk, bool ctrl, bool alt, bool shift);
+    bool isPeekOverlayActive() const;
+    
+    // Peek overlay state
+    std::unique_ptr<PeekOverlayWindow, PeekOverlayWindowDeleter> m_peekOverlayWindow;
+    bool m_peekOverlayActive = false;
 
     // ========================================================================
     // Agent Panel — Multi-File Edit Session (Win32IDE_AgentPanel.cpp)
@@ -3566,6 +3699,13 @@ private:
     // Unified Phase 10 status endpoint
     void handlePhase10StatusEndpoint(SOCKET client);
 
+    // Layer eviction lifecycle + diagnostics (P0 #13)
+    void initLayerEviction();
+    void shutdownLayerEviction();
+    bool registerModelLayer(const std::string& layerId, size_t memoryUsage);
+    void accessModelLayer(const std::string& layerId);
+    void showLayerEvictionStats();
+
     // Phase 10 state
     bool m_phase10Initialized = false;
 
@@ -4061,6 +4201,12 @@ private:
     // ========================================================================
     // IDE SELF-AUDIT & VERIFICATION — Phase 31: CT Scanner / Compliance Auditor
     // ========================================================================
+    struct RuntimeValidationCheck {
+        std::string name;
+        bool passed = false;
+        std::string detail;
+    };
+
     // Lifecycle
     void initAuditSystem();
 
@@ -4072,6 +4218,8 @@ private:
     void cmdAuditRunTests();
     void cmdAuditExportReport();
     void cmdAuditQuickStats();
+    std::vector<RuntimeValidationCheck> runCriticalValidationBatch1();
+    std::vector<RuntimeValidationCheck> runCriticalValidationBatch2();
 
     // Command router
     bool handleAuditCommand(int commandId);
@@ -4184,6 +4332,8 @@ private:
     // Inline telemetry recording (call from anywhere in IDE)
     void telemetryTrack(const char* featureName, double value = 1.0);
     void telemetryTrackLatency(const char* operation, double ms);
+    void telemetryDashboardTrack(const char* eventName, const char* category, const char* payload,
+                                 double latencyMs = 0.0);
 
     // State
     bool m_telemetryInitialized = false;
@@ -4706,6 +4856,15 @@ private:
     void cmdVisionBuildPayload();
     void cmdVisionViewIDEGUIAndHotpatch();  // View IDE GUI + audit/hotpatch layout
     bool m_visionEncoderUIInitialized = false;
+    void showVisionEncoder();
+    void hideVisionEncoder();
+    void initVisionEncoder();
+    void shutdownVisionEncoder();
+
+    // ── Semantic Index (code intelligence, cross-referencing) ──
+    void showSemanticIndex();
+    void hideSemanticIndex();
+    void shutdownSemanticIndex();
 
     // GUI layout hotpatch (image viewer): audit overlaps/zero-size, auto-correct via onSize
     bool auditIDEGUILayout(std::string& reportOut);
@@ -4790,6 +4949,11 @@ private:
     static constexpr int IDM_RESOURCE_LIST_TEMPLATES  = 11572;
     static constexpr int IDM_RESOURCE_SEARCH          = 11573;
     static constexpr int IDM_RESOURCE_LOAD_PLUGIN     = 11574;
+
+    // ── Enterprise Stress Tests (load testing, stability, perf validation) ──
+    static constexpr int IDM_ENTERPRISE_STRESS_RUN  = 11575;
+    static constexpr int IDM_ENTERPRISE_STRESS_STOP = 11576;
+    static constexpr int IDM_ENTERPRISE_STRESS_SHOW = 11577;
 
     // ── Cursor/JB-Parity Menu Builder ──
     void createFeaturesMenu(HMENU parentMenu);
@@ -5754,6 +5918,85 @@ private:
     void cmdShortcutEditorSave();
     void cmdShortcutEditorList();
 
+    // Caret Animation
+    void initCaretAnimation();
+    void shutdownCaretAnimation();
+    void startCaretBlink();
+    void stopCaretBlink();
+    void setCaretBlinkRate(int milliseconds);
+    void animateCaretToPosition(int line, int column);
+    bool isCaretAnimationEnabled() const;
+    void toggleCaretAnimation();
+
+    // Agent Ollama Client
+    void initAgentOllamaClient();
+    void shutdownAgentOllamaClient();
+    bool testOllamaConnection();
+    bool isOllamaConnected() const;
+    std::string getOllamaStatus() const;
+    void setOllamaEndpoint(const std::string& endpoint);
+    std::string getOllamaEndpoint() const;
+
+    // Model Discovery
+    void initModelDiscovery();
+    void shutdownModelDiscovery();
+    void scanForModels();
+    std::vector<std::string> getAvailableModels() const;
+    std::vector<std::string> getModelPaths() const;
+    bool isModelDiscoveryEnabled() const;
+    void setModelDiscoveryPaths(const std::vector<std::string>& paths);
+    std::vector<std::string> getModelDiscoveryPaths() const;
+
+    // Enterprise Stress Tests
+    void initEnterpriseStressTests();
+    bool executeEnterpriseStressTest(int durationSeconds, int threadCount);
+    void handleEnterpriseStressTestCommand();
+    bool showStressTestDialog();
+    StressTestResults getStressTestResults() const { return m_stressTestResults; }
+
+    // SQLite3 Core
+    void initSQLite3Core();
+    void shutdownSQLite3Core();
+    bool saveSetting(const std::string& key, const std::string& value);
+    std::string loadSetting(const std::string& key, const std::string& defaultValue = "");
+    bool storeTelemetryEvent(const std::string& eventType, const std::string& eventData);
+    bool saveAgentState(const std::string& agentId, const std::string& stateData);
+    std::string loadAgentState(const std::string& agentId);
+    std::vector<std::vector<std::string>> executeDatabaseQuery(const std::string& sql);
+
+    // Telemetry Export
+    bool exportTelemetryData(const std::string& format, const std::string& timeRange, const std::string& filename = "");
+    std::vector<std::string> getTelemetryExportFormats();
+    std::string getTelemetryExportDirectory();
+    void handleTelemetryExportCommand();
+    bool showTelemetryExportDialog();
+
+    // Refactoring Plugin
+    void initRefactoringPlugin();
+    std::vector<std::string> getAvailableRefactorings(int startPos, int endPos);
+    bool executeRefactoring(const std::string& operation, int startPos, int endPos, const std::string& param = "");
+    bool applyRefactoring(const std::string& refactoredCode);
+    std::string getEditorText() const;
+    void handleRefactoringCommand();
+    void showRefactoringMenu(int startPos, int endPos);
+
+    // Language Plugin
+    void initLanguagePlugin();
+    void updateSyntaxHighlighting();
+    void applySyntaxHighlighting(const std::vector<IDEPlugin::SyntaxToken>& tokens);
+    void showCodeCompletions(int position);
+    void updateDiagnostics();
+    void clearDiagnostics();
+    void addDiagnostic(const IDEPlugin::Diagnostic& diagnostic);
+    bool initializeLanguageServer(const std::string& filename);
+    std::vector<std::string> getSupportedLanguages() const;
+
+    // Resource Generator
+    std::vector<std::string> getAvailableResourceGenerators() const;
+    bool generateResource(const std::string& type, const std::string& name, const std::string& outputPath,
+                          const std::unordered_map<std::string, std::string>& parameters);
+    void showResourceGeneratorDialog();
+
     // 48. Color Picker
     void initColorPicker();
     bool handleColorPickerCommand(int commandId);
@@ -5846,6 +6089,45 @@ public:
     bool m_marketplaceInitialized        = false;
     bool m_shortcutEditorInitialized     = false;
     bool m_emojiSupportInitialized       = false;
+
+    // Caret Animation
+    bool m_caretAnimationEnabled = false;
+    bool m_caretBlinking = false;
+    int m_caretBlinkRate = 500;
+    UINT_PTR m_caretBlinkTimer = 0;
+
+    // Agent Ollama Client
+    bool m_ollamaClientInitialized = false;
+    bool m_ollamaConnected = false;
+    std::string m_ollamaEndpoint = "http://localhost:11434";
+    std::string m_ollamaStatus = "Not connected";
+
+    // Model Discovery
+    bool m_modelDiscoveryEnabled = false;
+    std::vector<std::string> m_modelDiscoveryPaths;
+    std::vector<std::string> m_modelPaths;
+
+    // Enterprise Stress Tests
+    bool m_stressTestsInitialized = false;
+    bool m_stressTestRunning = false;
+    std::unique_ptr<EnterpriseStressTester> m_enterpriseStressTester;
+    StressTestResults m_stressTestResults;
+
+    // SQLite3 Core
+    std::unique_ptr<SQLite3DatabaseManager> m_sqliteManager;
+
+    // Refactoring Plugin
+    std::unique_ptr<RefactoringPluginManager> m_refactoringManager;
+
+    // Language Plugin
+    std::unique_ptr<LanguagePluginManager> m_languageManager;
+
+    // Resource Generator
+    std::unique_ptr<ResourceGeneratorManager> m_resourceManager;
+
+    // Telemetry Export
+    std::unique_ptr<TelemetryExportManager> m_telemetryExporter;
+    bool m_coreRuntimeSpineInitialized = false;
 
     // Feature Registry / License Creator
     HWND m_hwndFeatureRegistryHost = nullptr;

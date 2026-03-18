@@ -1,0 +1,156 @@
+**********************************************************************
+** Visual Studio 2026 Developer Command Prompt v18.2.1
+** Copyright (c) 2025 Microsoft Corporation
+**********************************************************************
+[DEBUG:ext\vcvars.bat] Found potential v145 version file: 'Microsoft.VCToolsVersion.VC.14.50.18.0.txt'
+[DEBUG:ext\vcvars.bat] Testing v145 version file: 'Microsoft.VCToolsVersion.VC.14.50.18.0.txt'
+[vcvarsall.bat] Environment initialized for: 'x64'
+Warning: NMake does not support parallel builds. Ignoring parallel build command line option.
+[  0%] Built target quickjs_static
+[  0%] Built target RawrXD_MultiWindow_Kernel
+[  9%] Built target masm_kernels
+[  9%] Built target re_deobfuscator
+[  9%] Built target RawrXD-RE-Library
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_AgenticBridge.cpp.obj
+Win32IDE_AgenticBridge.cpp
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/agentic/OrchestratorBridge.cpp.obj
+OrchestratorBridge.cpp
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/agentic/AgenticNavigator.cpp.obj
+AgenticNavigator.cpp
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/rawrxd_inference.cpp.obj
+rawrxd_inference.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/rawrxd_transformer.cpp.obj
+rawrxd_transformer.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/cpu_inference_engine.cpp.obj
+cpu_inference_engine.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/engine/inference_kernels.cpp.obj
+inference_kernels.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/engine/transformer.cpp.obj
+transformer.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_SwarmPanel.cpp.obj
+Win32IDE_SwarmPanel.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_DualAgentPanel.cpp.obj
+Win32IDE_DualAgentPanel.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/native_debugger_engine.cpp.obj
+native_debugger_engine.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_NativeDebugPanel.cpp.obj
+Win32IDE_NativeDebugPanel.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/model_bruteforce_engine.cpp.obj
+model_bruteforce_engine.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_HotpatchPanel.cpp.obj
+Win32IDE_HotpatchPanel.cpp
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/agent/agentic_deep_thinking_engine.cpp.obj
+agentic_deep_thinking_engine.cpp
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/modules/vscode_extension_api.cpp.obj
+vscode_extension_api.cpp
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_VSCodeExtAPI.cpp.obj
+Win32IDE_VSCodeExtAPI.cpp
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/quantum_safe_transport.cpp.obj
+quantum_safe_transport.cpp
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/adaptive_pipeline_parallel.cpp.obj
+adaptive_pipeline_parallel.cpp
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/universal_model_merger.cpp.obj
+universal_model_merger.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/webrtc_signaling.cpp.obj
+webrtc_signaling.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/gpu_kernel_autotuner.cpp.obj
+gpu_kernel_autotuner.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/sandbox_integration.cpp.obj
+sandbox_integration.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/amd_gpu_accelerator.cpp.obj
+amd_gpu_accelerator.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/intel_gpu_accelerator.cpp.obj
+intel_gpu_accelerator.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/arm64_gpu_accelerator.cpp.obj
+arm64_gpu_accelerator.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/cerebras_wse_accelerator.cpp.obj
+cerebras_wse_accelerator.cpp
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/accelerator_router.cpp.obj
+accelerator_router.cpp
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/pdb_gsi_hash.cpp.obj
+pdb_gsi_hash.cpp
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/pdb_reference_provider.cpp.obj
+pdb_reference_provider.cpp
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_WebView2.cpp.obj
+Win32IDE_WebView2.cpp
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_MonacoThemes.cpp.obj
+Win32IDE_MonacoThemes.cpp
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/lsp/RawrXD_LSPServer.cpp.obj
+RawrXD_LSPServer.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_LSPServer.cpp.obj
+Win32IDE_LSPServer.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/lsp/lsp_hotpatch_bridge.cpp.obj
+lsp_hotpatch_bridge.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/lsp/hotpatch_symbol_provider.cpp.obj
+hotpatch_symbol_provider.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/lsp/gguf_diagnostic_provider.cpp.obj
+gguf_diagnostic_provider.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/MonacoCoreEngine.cpp.obj
+MonacoCoreEngine.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/WebView2EditorEngine.cpp.obj
+WebView2EditorEngine.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/RichEditEditorEngine.cpp.obj
+RichEditEditorEngine.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/EditorEngineFactory.cpp.obj
+EditorEngineFactory.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_EditorEngine.cpp.obj
+Win32IDE_EditorEngine.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/pdb_native.cpp.obj
+pdb_native.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/pdb_lsp_bridge.cpp.obj
+pdb_lsp_bridge.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_PDBSymbols.cpp.obj
+Win32IDE_PDBSymbols.cpp
+[ 11%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/feature_registry.cpp.obj
+feature_registry.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/menu_auditor.cpp.obj
+menu_auditor.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/auto_discovery.cpp.obj
+auto_discovery.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_AuditDashboard.cpp.obj
+Win32IDE_AuditDashboard.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/final_gauntlet.cpp.obj
+final_gauntlet.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_Gauntlet.cpp.obj
+Win32IDE_Gauntlet.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/voice_chat.cpp.obj
+voice_chat.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/voice_automation.cpp.obj
+voice_automation.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_VoiceChat.cpp.obj
+Win32IDE_VoiceChat.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_VoiceAutomation.cpp.obj
+Win32IDE_VoiceAutomation.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/shortcut_manager.cpp.obj
+shortcut_manager.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/backup_manager.cpp.obj
+backup_manager.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/alert_system.cpp.obj
+alert_system.cpp
+[ 16%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_QuickWins.cpp.obj
+Win32IDE_QuickWins.cpp
+[ 16%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/feature_registration.cpp.obj
+feature_registration.cpp
+[ 16%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/feature_handlers.cpp.obj
+feature_handlers.cpp
+[ 16%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/intent_engine.cpp.obj
+intent_engine.cpp
+[ 16%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/model_training_pipeline.cpp.obj
+model_training_pipeline.cpp
+[  9%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/agentic/AgentOllamaClient.cpp.obj
+AgentOllamaClient.cpp
+D:\rawrxd\src\agentic\AgentOllamaClient.cpp(343): error C2143: syntax error: missing ';' before 'RawrXD::Agent::AgentOllamaClient::TestConnectionWithStats'
+D:\rawrxd\src\agentic\AgentOllamaClient.cpp(343): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\agentic\AgentOllamaClient.cpp(343): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\agentic\AgentOllamaClient.cpp(343): error C2556: 'int RawrXD::Agent::AgentOllamaClient::TestConnectionWithStats(void)': overloaded function differs only by return type from 'RawrXD::Agent::OllamaHealth RawrXD::Agent::AgentOllamaClient::TestConnectionWithStats(void)'
+D:\rawrxd\src\agentic\AgentOllamaClient.h(132): note: see declaration of 'RawrXD::Agent::AgentOllamaClient::TestConnectionWithStats'
+D:\rawrxd\src\agentic\AgentOllamaClient.cpp(343): error C2371: 'RawrXD::Agent::AgentOllamaClient::TestConnectionWithStats': redefinition; different basic types
+D:\rawrxd\src\agentic\AgentOllamaClient.h(132): note: see declaration of 'RawrXD::Agent::AgentOllamaClient::TestConnectionWithStats'
+NMAKE : fatal error U1077: '"C:\Program Files\CMake\bin\cmake.exe" -E cmake_cl_compile_depends --dep-file=CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\AgentOllamaClient.cpp.obj.d --working-dir=D:\rawrxd\build --filter-prefix="Note: including file: " -- C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe @C:\Users\HiH8e\AppData\Local\Temp\nm1E26.tmp' : return code '0x2'
+Stop.
+NMAKE : fatal error U1077: 'C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\nmake.exe -s -f CMakeFiles\RawrXD-Win32IDE.dir\build.make /nologo -SL                 CMakeFiles\RawrXD-Win32IDE.dir\build' : return code '0x2'
+Stop.
+NMAKE : fatal error U1077: 'C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\nmake.exe -s -f CMakeFiles\Makefile2 /nologo -SL                 CMakeFiles\RawrXD-Win32IDE.dir\all' : return code '0x2'
+Stop.
+NMAKE : fatal error U1077: 'C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\nmake.exe -s -f CMakeFiles\Makefile2 /nologo -LS                 RawrXD-Win32IDE' : return code '0x2'
+Stop.

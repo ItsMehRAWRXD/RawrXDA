@@ -73,6 +73,45 @@ static std::vector<std::string> g_avoidPatterns;
 static bool g_prefVerbose = false;
 static std::string g_prefLanguage = "en";
 
+namespace {
+
+std::string expandEnvironmentPath(const std::string& rawPath) {
+    if (rawPath.empty()) return rawPath;
+#ifdef _WIN32
+    char buffer[32768] = {0};
+    DWORD written = ExpandEnvironmentStringsA(rawPath.c_str(), buffer, static_cast<DWORD>(sizeof(buffer)));
+    if (written > 0 && written < sizeof(buffer)) {
+        return std::string(buffer);
+    }
+#endif
+    return rawPath;
+}
+
+std::string resolvePathForEngine(const std::string& inputPath, const std::string& workspaceRoot) {
+    if (inputPath.empty()) return inputPath;
+
+    std::filesystem::path p(expandEnvironmentPath(inputPath));
+    if (p.is_relative()) {
+        if (!workspaceRoot.empty()) {
+            p = std::filesystem::path(workspaceRoot) / p;
+        } else {
+            p = std::filesystem::current_path() / p;
+        }
+    }
+
+    try {
+        return std::filesystem::weakly_canonical(p).string();
+    } catch (...) {
+        try {
+            return p.lexically_normal().string();
+        } catch (...) {
+            return inputPath;
+        }
+    }
+}
+
+} // namespace
+
 AgenticEngine::AgenticEngine() : m_inferenceEngine(nullptr) {}
 
 AgenticEngine::~AgenticEngine() {}
@@ -464,22 +503,32 @@ bool AgenticEngine::isCommandSafe(const std::string& command) {
 }
 
 std::string AgenticEngine::writeFile(const std::string& filepath, const std::string& content) {
-    if (!isCommandSafe(filepath)) return "[Error] Invalid file path.";
+    std::string resolvedPath = resolvePathForEngine(filepath, m_workspaceRoot);
+    if (!isCommandSafe(resolvedPath)) return "[Error] Invalid file path.";
+
+    std::error_code ec;
+    std::filesystem::path outPath(resolvedPath);
+    if (outPath.has_parent_path()) {
+        std::filesystem::create_directories(outPath.parent_path(), ec);
+    }
     
-    std::ofstream file(filepath, std::ios::out | std::ios::trunc);
-    if (!file.is_open()) return "[Error] Could not open file for writing: " + filepath;
+    std::ofstream file(resolvedPath, std::ios::out | std::ios::trunc);
+    if (!file.is_open()) return "[Error] Could not open file for writing: " + resolvedPath;
     
     file << content;
     file.close();
     
-    return "Successfully wrote " + std::to_string(content.size()) + " bytes to " + filepath;
+    return "Successfully wrote " + std::to_string(content.size()) + " bytes to " + resolvedPath;
 }
 
 std::string AgenticEngine::listDir(const std::string& path) {
+    std::string effectivePath = path.empty() ? (m_workspaceRoot.empty() ? "." : m_workspaceRoot) : path;
+    effectivePath = resolvePathForEngine(effectivePath, m_workspaceRoot);
+
     std::ostringstream oss;
-    oss << "Contents of " << path << ":\n";
+    oss << "Contents of " << effectivePath << ":\n";
     try {
-        for (const auto& entry : std::filesystem::directory_iterator(path)) {
+        for (const auto& entry : std::filesystem::directory_iterator(effectivePath)) {
             oss << (entry.is_directory() ? "[DIR] " : "[FILE] ")
                 << entry.path().filename().string() << "\n";
         }
@@ -496,7 +545,8 @@ std::string AgenticEngine::grepFiles(const std::string& pattern, const std::stri
 
     try {
         std::regex searchRegex(pattern, std::regex::ECMAScript | std::regex::icase);
-        std::string searchPath = path.empty() ? "." : path;
+        std::string searchPath = path.empty() ? (m_workspaceRoot.empty() ? "." : m_workspaceRoot) : path;
+        searchPath = resolvePathForEngine(searchPath, m_workspaceRoot);
 
         for (const auto& entry : std::filesystem::recursive_directory_iterator(
                 searchPath, std::filesystem::directory_options::skip_permission_denied)) {
@@ -536,7 +586,8 @@ std::string AgenticEngine::grepFiles(const std::string& pattern, const std::stri
         }
     } catch (const std::regex_error& e) {
         // Fall back to literal string search
-        std::string searchPath = path.empty() ? "." : path;
+        std::string searchPath = path.empty() ? (m_workspaceRoot.empty() ? "." : m_workspaceRoot) : path;
+        searchPath = resolvePathForEngine(searchPath, m_workspaceRoot);
         for (const auto& entry : std::filesystem::recursive_directory_iterator(
                 searchPath, std::filesystem::directory_options::skip_permission_denied)) {
             if (!entry.is_regular_file()) continue;
@@ -565,9 +616,11 @@ std::string AgenticEngine::grepFiles(const std::string& pattern, const std::stri
 }
 
 std::string AgenticEngine::readFile(const std::string& filePath, int startLine, int endLine) {
-    std::ifstream file(filePath, std::ios::in);
+    std::string resolvedPath = resolvePathForEngine(filePath, m_workspaceRoot);
+
+    std::ifstream file(resolvedPath, std::ios::in);
     if (!file.is_open()) {
-        return "[Error: Cannot open file: " + filePath + "]";
+        return "[Error: Cannot open file: " + resolvedPath + "]";
     }
 
     std::ostringstream result;
@@ -607,7 +660,8 @@ std::string AgenticEngine::searchFiles(const std::string& query, const std::stri
     const int maxResults = 100;
 
     try {
-        std::string searchPath = path.empty() ? "." : path;
+        std::string searchPath = path.empty() ? (m_workspaceRoot.empty() ? "." : m_workspaceRoot) : path;
+        searchPath = resolvePathForEngine(searchPath, m_workspaceRoot);
 
         // Tokenize query into search terms
         std::vector<std::string> terms;
@@ -706,7 +760,8 @@ std::string AgenticEngine::referenceSymbol(const std::string& symbol) {
             std::regex::ECMAScript
         );
 
-        std::string searchPath = ".";
+        std::string searchPath = m_workspaceRoot.empty() ? "." : m_workspaceRoot;
+        searchPath = resolvePathForEngine(searchPath, m_workspaceRoot);
         for (const auto& entry : std::filesystem::recursive_directory_iterator(
                 searchPath, std::filesystem::directory_options::skip_permission_denied)) {
             if (!entry.is_regular_file()) continue;
@@ -837,9 +892,22 @@ std::string AgenticEngine::executeCommand(const std::string& command, bool isPow
     }
 
     std::string fullCmd = command;
-    if (isPowerShell) {
-        fullCmd = "powershell -NoProfile -NonInteractive -Command \"" + command + "\"";
+    if (!m_workspaceRoot.empty()) {
+        std::string cwd = resolvePathForEngine(m_workspaceRoot, "");
+#ifdef _WIN32
+        fullCmd = "cd /d \"" + cwd + "\" && " + fullCmd;
+#else
+        fullCmd = "cd \"" + cwd + "\" && " + fullCmd;
+#endif
     }
+
+    if (isPowerShell) {
+        fullCmd = "powershell -NoProfile -NonInteractive -Command \"" + fullCmd + "\"";
+    }
+
+#ifdef _WIN32
+    fullCmd += " 2>&1";
+#endif
 
 #ifdef _WIN32
     FILE* pipe = _popen(fullCmd.c_str(), "r");
@@ -856,12 +924,43 @@ std::string AgenticEngine::executeCommand(const std::string& command, bool isPow
     }
 
 #ifdef _WIN32
-    _pclose(pipe);
+    int rc = _pclose(pipe);
 #else
-    pclose(pipe);
+    int rc = pclose(pipe);
 #endif
 
-    return result.empty() ? "[Command executed with no output]" : result;
+    if (result.empty()) {
+        result = "[Command executed with no output]";
+    }
+    result += "\n[exit_code=" + std::to_string(rc) + "]";
+    return result;
+}
+
+bool AgenticEngine::loadLocalModel(const std::string& modelPath) {
+    if (!m_inferenceEngine) return false;
+
+    std::string resolvedPath = resolvePathForEngine(modelPath, m_workspaceRoot);
+    bool ok = m_inferenceEngine->LoadModel(resolvedPath);
+    if (ok) {
+        m_currentModelPath = resolvedPath;
+    }
+    return ok;
+}
+
+std::string AgenticEngine::getModelStatus() const {
+    std::ostringstream oss;
+    oss << "model_loaded=" << (isModelLoaded() ? "true" : "false") << "\n";
+    oss << "model_path=" << (m_currentModelPath.empty() ? "<none>" : m_currentModelPath) << "\n";
+    oss << "workspace_root=" << (m_workspaceRoot.empty() ? "<unset>" : m_workspaceRoot);
+    return oss.str();
+}
+
+void AgenticEngine::setWorkspaceRoot(const std::string& rootPath) {
+    if (rootPath.empty()) {
+        m_workspaceRoot.clear();
+        return;
+    }
+    m_workspaceRoot = resolvePathForEngine(rootPath, "");
 }
 
 std::string AgenticEngine::chat(const std::string& message) {

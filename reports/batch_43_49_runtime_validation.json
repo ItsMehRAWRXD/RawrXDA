@@ -1,0 +1,87 @@
+﻿{
+    "generatedAtUtc":  "2026-03-17T16:22:43.8993103Z",
+    "guiExe":  "d:\\rawrxd\\build_prod\\bin\\RawrXD-Win32IDE.exe",
+    "cliExe":  "d:\\rawrxd\\build_prod\\bin\\RawrXD-AutoFixCLI.exe",
+    "total":  7,
+    "passed":  0,
+    "failed":  7,
+    "results":  [
+                    {
+                        "id":  43,
+                        "name":  "transcendence_coordinator",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "no automation hook; needs runtime probe",
+                        "startedAtUtc":  "2026-03-17T16:22:43.8856513Z",
+                        "finishedAtUtc":  "2026-03-17T16:22:43.8856513Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  44,
+                        "name":  "vulkan_renderer",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "requires rendering test; not automated",
+                        "startedAtUtc":  "2026-03-17T16:22:43.8993103Z",
+                        "finishedAtUtc":  "2026-03-17T16:22:43.8993103Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  45,
+                        "name":  "os_explorer_interceptor",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "needs interception harness",
+                        "startedAtUtc":  "2026-03-17T16:22:43.8993103Z",
+                        "finishedAtUtc":  "2026-03-17T16:22:43.8993103Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  46,
+                        "name":  "mcp_hooks",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "needs MCP hook validation",
+                        "startedAtUtc":  "2026-03-17T16:22:43.8993103Z",
+                        "finishedAtUtc":  "2026-03-17T16:22:43.8993103Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  47,
+                        "name":  "iocp_file_watcher",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "needs IOCP watch test",
+                        "startedAtUtc":  "2026-03-17T16:22:43.8993103Z",
+                        "finishedAtUtc":  "2026-03-17T16:22:43.8993103Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  48,
+                        "name":  "ide_diagnostic_autohealer",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "needs auto-heal scenario test",
+                        "startedAtUtc":  "2026-03-17T16:22:43.8993103Z",
+                        "finishedAtUtc":  "2026-03-17T16:22:43.8993103Z",
+                        "durationMs":  0
+                    },
+                    {
+                        "id":  49,
+                        "name":  "consent_prompt",
+                        "command":  "not-automated",
+                        "exitCode":  -3,
+                        "passed":  false,
+                        "note":  "UI prompt; manual/automation hook needed",
+                        "startedAtUtc":  "2026-03-17T16:22:43.8993103Z",
+                        "finishedAtUtc":  "2026-03-17T16:22:43.8993103Z",
+                        "durationMs":  0
+                    }
+                ]
+}

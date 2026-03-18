@@ -478,9 +478,11 @@ void Win32IDE::cmdTestExplorerRun() {
                 CloseHandle(hWrite); hWrite = nullptr;
                 char buf[4096];
                 DWORD bytesRead;
-                while (ReadFile(hRead, buf, sizeof(buf) - 1, &bytesRead, nullptr) && bytesRead > 0) {
-                    buf[bytesRead] = '\0';
-                    combinedOutput << buf;
+                constexpr DWORD kMaxChunk = static_cast<DWORD>(sizeof(buf) - 1);
+                while (ReadFile(hRead, buf, kMaxChunk, &bytesRead, nullptr) && bytesRead > 0) {
+                    const size_t safeBytes = (bytesRead <= kMaxChunk) ? static_cast<size_t>(bytesRead) : static_cast<size_t>(kMaxChunk);
+                    buf[safeBytes] = '\0';
+                    combinedOutput.write(buf, static_cast<std::streamsize>(safeBytes));
                 }
                 WaitForSingleObject(pi.hProcess, 30000);
                 CloseHandle(pi.hProcess);
@@ -515,9 +517,11 @@ void Win32IDE::cmdTestExplorerRun() {
                 CloseHandle(hWrite); hWrite = nullptr;
                 char buf[4096];
                 DWORD bytesRead;
-                while (ReadFile(hRead, buf, sizeof(buf) - 1, &bytesRead, nullptr) && bytesRead > 0) {
-                    buf[bytesRead] = '\0';
-                    combinedOutput << buf;
+                constexpr DWORD kMaxChunk = static_cast<DWORD>(sizeof(buf) - 1);
+                while (ReadFile(hRead, buf, kMaxChunk, &bytesRead, nullptr) && bytesRead > 0) {
+                    const size_t safeBytes = (bytesRead <= kMaxChunk) ? static_cast<size_t>(bytesRead) : static_cast<size_t>(kMaxChunk);
+                    buf[safeBytes] = '\0';
+                    combinedOutput.write(buf, static_cast<std::streamsize>(safeBytes));
                 }
                 WaitForSingleObject(pi.hProcess, 60000);
                 CloseHandle(pi.hProcess);
@@ -554,9 +558,11 @@ void Win32IDE::cmdTestExplorerRun() {
                 CloseHandle(hWrite); hWrite = nullptr;
                 char buf[4096];
                 DWORD bytesRead;
-                while (ReadFile(hRead, buf, sizeof(buf) - 1, &bytesRead, nullptr) && bytesRead > 0) {
-                    buf[bytesRead] = '\0';
-                    combinedOutput << buf;
+                constexpr DWORD kMaxChunk = static_cast<DWORD>(sizeof(buf) - 1);
+                while (ReadFile(hRead, buf, kMaxChunk, &bytesRead, nullptr) && bytesRead > 0) {
+                    const size_t safeBytes = (bytesRead <= kMaxChunk) ? static_cast<size_t>(bytesRead) : static_cast<size_t>(kMaxChunk);
+                    buf[safeBytes] = '\0';
+                    combinedOutput.write(buf, static_cast<std::streamsize>(safeBytes));
                 }
                 DWORD waitResult = WaitForSingleObject(pi.hProcess, 60000);
                 DWORD exitCode = 0;

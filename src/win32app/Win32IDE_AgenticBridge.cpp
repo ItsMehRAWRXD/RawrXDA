@@ -12,6 +12,10 @@
 #include "../cpu_inference_engine.h"
 #include "../modules/native_memory.hpp"
 #include "../vsix_native_converter.hpp"
+#include "../agentic/OrchestratorBridge.h"
+#include "../security/InputSanitizer.h"
+#include "../inference/PerformanceMonitor.h"
+#include "../logging/Logger.h"
 #include "IDEConfig.h"
 #include "IDELogger.h"
 #include "Win32IDE.h"
@@ -88,6 +92,10 @@ bool AgenticBridge::Initialize(const std::string& frameworkPath, const std::stri
         g_agentEngine = std::make_shared<AgenticEngine>();
         g_agentEngine->setInferenceEngine(g_cpuEngine.get());
     }
+    if (!m_workspaceRoot.empty())
+    {
+        g_agentEngine->setWorkspaceRoot(m_workspaceRoot);
+    }
     SetIDEAgenticEngineForCommands(g_agentEngine.get());
 
     if (!modelName.empty())
@@ -108,6 +116,20 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt)
 {
     SCOPED_METRIC("agentic.execute_command");
     METRICS.increment("agentic.commands_total");
+    auto& perf = RawrXD::Inference::PerformanceMonitor::instance();
+    perf.startOperation("agentic.bridge.execute");
+    bool perfClosed = false;
+    auto closePerf = [&]() {
+        if (!perfClosed) {
+            perf.endOperation("agentic.bridge.execute");
+            perfClosed = true;
+        }
+    };
+    auto& sanitizer = RawrXD::Security::InputSanitizer::instance();
+    auto promptSan = sanitizer.sanitizePrompt(prompt);
+    if (promptSan.wasModified) {
+        LOG_WARNING("Prompt sanitized before agent dispatch");
+    }
     // Lazy-init: ensure engine exists so chat and agentic work with any loaded model (local definitions vary)
     if (!g_agentEngine)
     {
@@ -115,7 +137,10 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt)
         SetIDEAgenticEngineForCommands(g_agentEngine ? g_agentEngine.get() : nullptr);
     }
     if (!g_agentEngine)
+    {
+        closePerf();
         return {AgentResponseType::AGENT_ERROR, "Engine Not Initialized"};
+    }
 
     // Update engine config flags from bridge state
     AgenticEngine::GenerationConfig cfg;
@@ -131,6 +156,7 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt)
     {
         std::string name = (prompt.length() > 14) ? prompt.substr(14) : "react-app";
         std::string result = g_agentEngine->planTask("Create React Server named " + name);
+        closePerf();
         return {AgentResponseType::ANSWER, result};
     }
 
@@ -138,16 +164,22 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt)
     {
         std::string path = prompt.substr(14);
         bool res = RawrXD::VsixNativeConverter::ConvertVsixToNative(path, "extensions/");
+        closePerf();
         return {AgentResponseType::ANSWER, res ? "VSIX Installed" : "VSIX Installation Failed"};
     }
 
     // --- File-based commands (Bridge reads file, wraps into prompt) ---
 
-    std::string refinedPrompt = prompt;
+    std::string refinedPrompt = promptSan.sanitized;
 
     if (prompt.find("/bugreport ") == 0)
     {
         std::string path = prompt.substr(11);
+        auto pathSan = sanitizer.sanitizePath(path);
+        if (pathSan.wasModified) {
+            LOG_WARNING("Bugreport path sanitized");
+        }
+        path = pathSan.sanitized;
         std::ifstream f(path);
         if (f)
         {
@@ -159,12 +191,18 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt)
         }
         else
         {
+            closePerf();
             return {AgentResponseType::ANSWER, "Error: Could not read file " + path};
         }
     }
     else if (prompt.find("/suggest ") == 0)
     {
         std::string path = prompt.substr(9);
+        auto pathSan = sanitizer.sanitizePath(path);
+        if (pathSan.wasModified) {
+            LOG_WARNING("Suggest path sanitized");
+        }
+        path = pathSan.sanitized;
         std::ifstream f(path);
         if (f)
         {
@@ -176,12 +214,18 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt)
         }
         else
         {
+            closePerf();
             return {AgentResponseType::ANSWER, "Error: Could not read file " + path};
         }
     }
     else if (prompt.find("/patch ") == 0)
     {
         std::string path = prompt.substr(7);
+        auto pathSan = sanitizer.sanitizePath(path);
+        if (pathSan.wasModified) {
+            LOG_WARNING("Patch path sanitized");
+        }
+        path = pathSan.sanitized;
         std::ifstream f(path);
         if (f)
         {
@@ -194,6 +238,7 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt)
         }
         else
         {
+            closePerf();
             return {AgentResponseType::ANSWER, "Error: Could not read file " + path};
         }
     }
@@ -209,9 +254,29 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt)
     // work can use the same backend as chat (see docs/AGENTIC_AND_MODEL_LOADING_AUDIT.md).
     std::string response;
     bool localReady = g_cpuEngine && g_cpuEngine->IsModelLoaded();
-    if (!localReady && m_ide)
+    if (!localReady)
     {
-        response = m_ide->routeInferenceRequest(refinedPrompt);
+        // Prefer the orchestrator bridge (Ollama-backed, tool-aware). If it is not initialized,
+        // fall back to the legacy routing path so we still get a best-effort answer.
+        auto& orch = RawrXD::Agent::OrchestratorBridge::Instance();
+        if (orch.IsInitialized())
+        {
+            if (!m_modelName.empty())
+            {
+                orch.SetModel(m_modelName);
+                orch.SetFIMModel(m_modelName);
+            }
+            if (!m_workspaceRoot.empty())
+            {
+                orch.SetWorkingDirectory(m_workspaceRoot);
+            }
+            response = orch.RunAgent(refinedPrompt);
+        }
+
+        if (response.empty() && m_ide)
+        {
+            response = m_ide->routeInferenceRequest(refinedPrompt);
+        }
     }
     else
     {
@@ -257,6 +322,7 @@ AgentResponse AgenticBridge::ExecuteAgentCommand(const std::string& prompt)
     AgentResponse r;
     r.content = response;
     r.type = AgentResponseType::ANSWER;
+    closePerf();
     return r;
 }
 
@@ -414,8 +480,10 @@ void AgenticBridge::StopAgentLoop()
 
 std::vector<std::string> AgenticBridge::GetAvailableTools()
 {
-    return {"shell",      "powershell",        "read_file",   "write_file",       "web_search", "list_dir",
-            "git_status", "task_orchestrator", "runSubagent", "manage_todo_list", "chain",      "hexmag_swarm"};
+    return {"shell",           "powershell",       "run_in_terminal", "read_file",      "write_file",
+            "list_dir",        "list_directory",   "grep_files",      "search_files",   "reference_symbol",
+            "load_model",      "model_status",     "web_search",      "git_status",     "task_orchestrator",
+            "runSubagent",     "manage_todo_list", "chain",           "hexmag_swarm"};
 }
 
 std::string AgenticBridge::GetAgentStatus()
@@ -426,11 +494,16 @@ std::string AgenticBridge::GetAgentStatus()
     status << "  Model: " << m_modelName << "\n";
     status << "  Ollama Server: " << m_ollamaServer << "\n";
     status << "  Framework Path: " << m_frameworkPath << "\n";
+    status << "  Workspace Root: " << (m_workspaceRoot.empty() ? "<unset>" : m_workspaceRoot) << "\n";
     status << "  Loop Running: " << (m_agentLoopRunning ? "Yes" : "No") << "\n";
     status << "  Max Mode: " << (m_maxMode ? "Yes" : "No") << "\n";
     status << "  Deep Thinking: " << (m_deepThinking ? "Yes" : "No") << "\n";
     status << "  Deep Research: " << (m_deepResearch ? "Yes" : "No") << "\n";
     status << "  Engine Loaded: " << (g_cpuEngine && g_cpuEngine->IsModelLoaded() ? "Yes" : "No") << "\n";
+    if (g_agentEngine)
+    {
+        status << "  Model Status: " << g_agentEngine->getModelStatus() << "\n";
+    }
     if (m_subAgentManager)
     {
         status << "  SubAgents Active: " << m_subAgentManager->activeSubAgentCount() << "\n";
@@ -465,8 +538,8 @@ void AgenticBridge::SetModel(const std::string& modelName)
     if (isPath)
     {
         // GGUF file path — load via native engine
-        if (g_cpuEngine)
-            g_cpuEngine->LoadModel(modelName);
+        if (g_agentEngine)
+            g_agentEngine->loadLocalModel(modelName);
     }
     else if (!modelName.empty())
     {
@@ -476,6 +549,15 @@ void AgenticBridge::SetModel(const std::string& modelName)
         {
             m_ide->setBackendModel(Win32IDE::AIBackendType::Ollama, modelName);
             LOG_INFO("BackendSwitcher Ollama model updated to: " + modelName);
+        }
+
+        // Keep OrchestratorBridge (agentic/tool-calling path) in sync so IDE agent flows
+        // use the same selected model as chat/FIM.
+        auto& orch = RawrXD::Agent::OrchestratorBridge::Instance();
+        if (orch.IsInitialized())
+        {
+            orch.SetModel(modelName);
+            orch.SetFIMModel(modelName);
         }
     }
 }
@@ -571,6 +653,7 @@ bool AgenticBridge::ReadProcessOutput(std::string& output, DWORD timeoutMs)
     char buffer[4096];
     DWORD bytesRead;
     DWORD startTime = GetTickCount();
+    constexpr DWORD kMaxChunk = static_cast<DWORD>(sizeof(buffer) - 1);
 
     while (true)
     {
@@ -582,10 +665,11 @@ bool AgenticBridge::ReadProcessOutput(std::string& output, DWORD timeoutMs)
 
         if (available > 0)
         {
-            if (ReadFile(m_hStdoutRead, buffer, sizeof(buffer) - 1, &bytesRead, NULL) && bytesRead > 0)
+            if (ReadFile(m_hStdoutRead, buffer, kMaxChunk, &bytesRead, NULL) && bytesRead > 0)
             {
-                buffer[bytesRead] = '\0';
-                output += buffer;
+                const size_t safeBytes = (bytesRead <= kMaxChunk) ? static_cast<size_t>(bytesRead) : static_cast<size_t>(kMaxChunk);
+                buffer[safeBytes] = '\0';
+                output.append(buffer, safeBytes);
             }
             else
             {
@@ -604,10 +688,11 @@ bool AgenticBridge::ReadProcessOutput(std::string& output, DWORD timeoutMs)
         {
             while (PeekNamedPipe(m_hStdoutRead, NULL, 0, NULL, &available, NULL) && available > 0)
             {
-                if (ReadFile(m_hStdoutRead, buffer, sizeof(buffer) - 1, &bytesRead, NULL) && bytesRead > 0)
+                if (ReadFile(m_hStdoutRead, buffer, kMaxChunk, &bytesRead, NULL) && bytesRead > 0)
                 {
-                    buffer[bytesRead] = '\0';
-                    output += buffer;
+                    const size_t safeBytes = (bytesRead <= kMaxChunk) ? static_cast<size_t>(bytesRead) : static_cast<size_t>(kMaxChunk);
+                    buffer[safeBytes] = '\0';
+                    output.append(buffer, safeBytes);
                 }
             }
             break;
@@ -719,6 +804,10 @@ bool AgenticBridge::IsAnswer(const std::string& line)
 void AgenticBridge::SetWorkspaceRoot(const std::string& workspaceRoot)
 {
     m_workspaceRoot = workspaceRoot;
+    if (g_agentEngine)
+    {
+        g_agentEngine->setWorkspaceRoot(workspaceRoot);
+    }
     LOG_INFO("AgenticBridge workspace root updated: " + m_workspaceRoot);
 }
 
@@ -946,13 +1035,13 @@ bool AgenticBridge::LoadModel(const std::string& path)
         Initialize("", path);
     }
 
-    if (g_cpuEngine)
+    if (g_agentEngine)
     {
-        bool success = g_cpuEngine->LoadModel(path);
+        bool success = g_agentEngine->loadLocalModel(path);
         if (success)
         {
-            m_modelName = path;
-            LOG_INFO("Model loaded in bridge: " + path);
+            m_modelName = g_agentEngine->currentModelPath();
+            LOG_INFO("Model loaded in bridge: " + m_modelName);
             SetIDEAgenticEngineForCommands(g_agentEngine ? g_agentEngine.get() : nullptr);
         }
         return success;

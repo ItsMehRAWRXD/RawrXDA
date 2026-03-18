@@ -3,6 +3,7 @@
 #include "SymbolResolver.cpp"
 #include "debugger_core.hpp"
 #include "webview2_bridge.hpp"
+#include "../agentic/OrchestratorBridge.h"
 #include <cstdio>
 #include <cstring>
 #include <shellapi.h>
@@ -63,6 +64,40 @@ static bool handleCLI(LPWSTR cmdLine)
             printf("  --prompt=<text>     Prompt for local inference\n");
             printf("  --ollama-test       Test Ollama bridge on :11434\n");
             printf("  --verbose           Enable verbose logging\n");
+            if (fout)
+                fclose(fout);
+            LocalFree(argv);
+            return true;
+        }
+        if (wcscmp(argv[i], L"--ollama-test") == 0)
+        {
+            AttachConsole(ATTACH_PARENT_PROCESS);
+            FILE* fout = nullptr;
+            freopen_s(&fout, "CONOUT$", "w", stdout);
+            
+            printf("Testing Ollama bridge connection...\n");
+            
+            // Initialize OrchestratorBridge for Ollama testing
+            auto& orchBridge = RawrXD::Agent::OrchestratorBridge::Instance();
+            if (orchBridge.Initialize(".", "http://localhost:11434")) {
+                printf("✓ OrchestratorBridge initialized successfully\n");
+                
+                // Test basic chat
+                std::string testPrompt = "Hello, can you confirm you're working? Respond with just 'YES'.";
+                std::string response = orchBridge.RunAgent(testPrompt);
+                
+                if (!response.empty() && response.find("ERROR") == std::string::npos) {
+                    printf("✓ Chat test successful: %s\n", response.substr(0, 50).c_str());
+                    printf("✓ Ollama bridge test PASSED\n");
+                } else {
+                    printf("✗ Chat test failed: %s\n", response.c_str());
+                    printf("✗ Ollama bridge test FAILED\n");
+                }
+            } else {
+                printf("✗ OrchestratorBridge initialization failed\n");
+                printf("✗ Ollama bridge test FAILED\n");
+            }
+            
             if (fout)
                 fclose(fout);
             LocalFree(argv);

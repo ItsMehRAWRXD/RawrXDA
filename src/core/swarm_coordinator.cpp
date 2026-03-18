@@ -2109,6 +2109,15 @@ std::string SwarmCoordinator::taskGraphToJson() const {
 
 std::string SwarmCoordinator::statsToJson() const {
     auto s = getStats();
+    const double tasksPerSecond = (s.totalBuildTimeMs > 0)
+        ? (static_cast<double>(s.completedTasks) * 1000.0) / static_cast<double>(s.totalBuildTimeMs)
+        : 0.0;
+    const uint64_t totalCacheLookups = static_cast<uint64_t>(s.objectCacheHits) + static_cast<uint64_t>(s.objectCacheMisses);
+    const double cacheHitRate = (totalCacheLookups > 0)
+        ? (static_cast<double>(s.objectCacheHits) * 100.0) / static_cast<double>(totalCacheLookups)
+        : 0.0;
+    const double txMB = static_cast<double>(s.totalBytesSent) / (1024.0 * 1024.0);
+    const double rxMB = static_cast<double>(s.totalBytesRecv) / (1024.0 * 1024.0);
     std::ostringstream oss;
     oss << "{"
         << "\"totalNodes\":" << s.totalNodes << ","
@@ -2125,10 +2134,15 @@ std::string SwarmCoordinator::statsToJson() const {
         << "\"avgCompileTimeMs\":" << s.avgCompileTimeMs << ","
         << "\"maxCompileTimeMs\":" << s.maxCompileTimeMs << ","
         << "\"totalBuildTimeMs\":" << s.totalBuildTimeMs << ","
+        << "\"tasksPerSecond\":" << std::fixed << std::setprecision(2) << tasksPerSecond << ","
         << "\"parallelSpeedup\":" << std::fixed << std::setprecision(2) << s.parallelSpeedup << ","
         << "\"objectCacheHits\":" << s.objectCacheHits << ","
+        << "\"objectCacheMisses\":" << s.objectCacheMisses << ","
+        << "\"cacheHitRate\":" << std::fixed << std::setprecision(2) << cacheHitRate << ","
         << "\"totalBytesSent\":" << s.totalBytesSent << ","
         << "\"totalBytesRecv\":" << s.totalBytesRecv << ","
+        << "\"totalMegabytesSent\":" << std::fixed << std::setprecision(2) << txMB << ","
+        << "\"totalMegabytesRecv\":" << std::fixed << std::setprecision(2) << rxMB << ","
         << "\"totalPacketsSent\":" << s.totalPacketsSent << ","
         << "\"totalPacketsRecv\":" << s.totalPacketsRecv << ","
         << "\"checksumFailures\":" << s.checksumFailures << ","

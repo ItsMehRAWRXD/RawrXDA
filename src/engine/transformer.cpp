@@ -5,6 +5,22 @@
 #include <vector>
 #include <immintrin.h>
 
+namespace {
+inline int ring_index_from_logical(int logical_pos, int capacity) {
+    if (capacity <= 0) {
+        return 0;
+    }
+    const int mod = logical_pos % capacity;
+    return (mod < 0) ? (mod + capacity) : mod;
+}
+
+inline int map_kv_head(int head, int n_heads, int n_kv_heads) {
+    const int kv_heads = std::max(1, n_kv_heads);
+    const int head_group = std::max(1, n_heads / kv_heads);
+    return std::min(kv_heads - 1, head / head_group);
+}
+} // namespace
+
 // ============================================================================
 // TransformerLayer — Zero-Alloc Forward Pass (v2)
 // ============================================================================
@@ -17,13 +33,18 @@
 // ============================================================================
 
 TransformerLayer::TransformerLayer(int d, int nh, int nkv, int hidden) 
-    : dim(d), n_heads(nh), n_kv_heads(nkv), hidden_dim(hidden) {
-    head_dim = dim / n_heads;
+    : dim(std::max(1, d)),
+      n_heads(std::max(1, nh)),
+      n_kv_heads(std::max(1, nkv)),
+      hidden_dim(std::max(1, hidden)) {
+    n_kv_heads = std::min(n_kv_heads, n_heads);
+    head_dim = std::max(1, dim / n_heads);
     cache_pos = 0;
+    total_tokens_seen = 0;
     
     // Allocate KV cache
     max_seq_len = 4096;
-    int kv_dim = n_kv_heads * head_dim;
+    int kv_dim = std::max(1, n_kv_heads) * head_dim;
     
     // Legacy FP32 KV cache (kept for backward compat)
     k_cache = new float[max_seq_len * kv_dim]();
@@ -60,6 +81,21 @@ TransformerLayer::~TransformerLayer() {
 }
 
 void TransformerLayer::forward(float* x, int pos, int seq_len) {
+    if (!x || dim <= 0 || n_heads <= 0 || head_dim <= 0 || max_seq_len <= 0) {
+        return;
+    }
+    if (seq_len < 0) {
+        seq_len = 0;
+    } else if (seq_len > max_seq_len) {
+        seq_len = max_seq_len;
+    }
+    if (!attn_norm || !wq || !wk || !wv || !wo || !ffn_norm || !w1 || !w2 || !w3) {
+        return;
+    }
+    if (pos < 0) {
+        pos = 0;
+    }
+
     // Flush denormals to zero — prevents 100x FPU stalls on subnormal floats
     // Saved and restored if caller cares (they shouldn't in inference)
     unsigned int mxcsr_save = _mm_getcsr();
@@ -99,8 +135,8 @@ void TransformerLayer::forward(float* x, int pos, int seq_len) {
     }
     
     // Update KV cache (sliding window: wrap around at max_seq_len)
-    int kv_dim = n_kv_heads * head_dim;
-    int cache_idx = cache_pos % max_seq_len;  // Ring buffer indexing
+    int kv_dim = std::max(1, n_kv_heads) * head_dim;
+    int cache_idx = static_cast<int>(total_tokens_seen % max_seq_len);
     
     if (use_quantized_kv) {
         // Quantize K and V to int8 before storing — 4x bandwidth reduction
@@ -113,23 +149,26 @@ void TransformerLayer::forward(float* x, int pos, int seq_len) {
     // Also update FP32 cache for legacy path / Flash-Attention v2 dequant
     memcpy(k_cache + cache_idx * kv_dim, k, kv_dim * sizeof(float));
     memcpy(v_cache + cache_idx * kv_dim, v, kv_dim * sizeof(float));
-    cache_pos++;
+    total_tokens_seen++;
+    cache_pos = static_cast<int>(std::min<int64_t>(total_tokens_seen, max_seq_len));
     
     // Multi-head attention — use Flash-Attention v2 for long sequences
-    int effective_len = std::min(cache_pos, max_seq_len);
+    int effective_len = static_cast<int>(std::min<int64_t>(total_tokens_seen, max_seq_len));
+    int logical_start_pos = ring_index_from_logical(
+        static_cast<int>((total_tokens_seen - effective_len) % max_seq_len),
+        max_seq_len);
     
     if (use_quantized_kv && effective_len > 128) {
         // Flash-Attention v2 path with quantized KV cache
         // For Flash-Attention we dequant tiles on-the-fly, but for simplicity
         // we use the FP32 cache that was also written (it holds the ring buffer)
         // True int8 Flash-Attention would dequant per-tile — next optimization tier
-        InferenceKernels::flash_attention_v2(
-            q, k_cache, v_cache, attn_out,
-            effective_len, n_heads, n_kv_heads, head_dim, max_seq_len, 64);
+        multi_head_attention_flash(
+            q, attn_out, effective_len, logical_start_pos, n_heads, n_kv_heads, head_dim);
     } else {
         // Standard path for short sequences (< 128 tokens)
         multi_head_attention(q, k_cache, v_cache, attn_out,
-                            effective_len, n_heads, n_kv_heads, head_dim);
+                            effective_len, logical_start_pos, n_heads, n_kv_heads, head_dim);
     }
     
     // Output projection
@@ -157,11 +196,27 @@ void TransformerLayer::forward(float* x, int pos, int seq_len) {
     // w1 @ x (gate)
     if (ffn_type == GGML_TYPE_Q4_0) {
         InferenceKernels::matmul_q4_0_fused(tmp, (block_q4_0*)w1, gate, 1, hidden_dim, dim);
+    } else {
+        for (int i = 0; i < hidden_dim; i++) {
+            float acc = 0.0f;
+            for (int j = 0; j < dim; j++) {
+                acc += ((float*)w1)[i * dim + j] * tmp[j];
+            }
+            gate[i] = acc;
+        }
     }
     
     // w3 @ x (up)
     if (ffn_type == GGML_TYPE_Q4_0) {
         InferenceKernels::matmul_q4_0_fused(tmp, (block_q4_0*)w3, up, 1, hidden_dim, dim);
+    } else {
+        for (int i = 0; i < hidden_dim; i++) {
+            float acc = 0.0f;
+            for (int j = 0; j < dim; j++) {
+                acc += ((float*)w3)[i * dim + j] * tmp[j];
+            }
+            up[i] = acc;
+        }
     }
     
     // SwiGLU: fused SiLU(gate) * up — FULLY VECTORIZED via fast_exp_avx2
@@ -171,6 +226,14 @@ void TransformerLayer::forward(float* x, int pos, int seq_len) {
     // w2 @ result
     if (ffn_type == GGML_TYPE_Q4_0) {
         InferenceKernels::matmul_q4_0_fused(gate, (block_q4_0*)w2, ffn_out, 1, dim, hidden_dim);
+    } else {
+        for (int i = 0; i < dim; i++) {
+            float acc = 0.0f;
+            for (int j = 0; j < hidden_dim; j++) {
+                acc += ((float*)w2)[i * hidden_dim + j] * gate[j];
+            }
+            ffn_out[i] = acc;
+        }
     }
     
     // Residual
@@ -185,8 +248,18 @@ void TransformerLayer::forward(float* x, int pos, int seq_len) {
 // Used for short sequences (< 128 tokens); Flash-Attention v2 used otherwise
 // ============================================================================
 void TransformerLayer::multi_head_attention(float* q, float* k_cache, float* v_cache,
-                              float* out, int seq_len, int n_h, int n_kv_h, int h_d) {
-    int kv_h_d = n_kv_h * h_d;
+                              float* out, int seq_len, int logical_start_pos,
+                              int n_h, int n_kv_h, int h_d) {
+    if (!q || !k_cache || !v_cache || !out || n_h <= 0 || h_d <= 0 || max_seq_len <= 0) {
+        return;
+    }
+    seq_len = std::max(0, std::min(seq_len, max_seq_len));
+    if (seq_len == 0) {
+        memset(out, 0, n_h * h_d * sizeof(float));
+        return;
+    }
+
+    int kv_h_d = std::max(1, n_kv_h) * h_d;
     
     // Zero output (pre-allocated, just clear)
     memset(out, 0, n_h * h_d * sizeof(float));
@@ -196,26 +269,29 @@ void TransformerLayer::multi_head_attention(float* q, float* k_cache, float* v_c
         float* q_h = q + h * h_d;
         float* out_h = out + h * h_d;
         
-        // Use thread-local portion of scratch_scores
-        // Since OMP threads process different heads, we need per-thread scores
-        // For simplicity with the current design, allocate on stack if small
-        // Stack allocation is FREE (just pointer adjust, no heap)
+        // Thread-local scores buffer: stack for typical contexts, vector for long contexts.
+        // This avoids races on shared scratch_scores when seq_len > 4096.
         float scores_stack[4096];  // max_seq_len fits in stack (16KB)
-        float* scores = (seq_len <= 4096) ? scores_stack : scratch_scores.data();
+        std::vector<float> scores_heap;
+        float* scores = scores_stack;
+        if (seq_len > 4096) {
+            scores_heap.assign(seq_len, 0.0f);
+            scores = scores_heap.data();
+        }
         
-        int kv_h = h / (n_h / std::max(n_kv_h, 1)); // Map to KV head (GQA)
+        int kv_h = map_kv_head(h, n_h, n_kv_h); // Map to KV head (GQA)
         
         // Score computation: dot(q_h, k_t) / sqrt(h_d)
         float scale = 1.0f / sqrtf((float)h_d);
         
         for (int t = 0; t < seq_len; t++) {
             // Ring-buffer aware indexing
-            int cache_t = t % max_seq_len;
+            int cache_t = ring_index_from_logical(logical_start_pos + t, max_seq_len);
             float* k_t = k_cache + cache_t * kv_h_d + kv_h * h_d;
             
             // Prefetch next K entry
             if (t + 1 < seq_len) {
-                int next_t = (t + 1) % max_seq_len;
+                int next_t = ring_index_from_logical(logical_start_pos + t + 1, max_seq_len);
                 _mm_prefetch((const char*)(k_cache + next_t * kv_h_d + kv_h * h_d), _MM_HINT_T0);
             }
             
@@ -250,7 +326,7 @@ void TransformerLayer::multi_head_attention(float* q, float* k_cache, float* v_c
         // Weighted sum of values — AVX2 FMA with prefetch
         for (int i = 0; i < h_d; i++) out_h[i] = 0;
         for (int t = 0; t < seq_len; t++) {
-            int cache_t = t % max_seq_len;
+            int cache_t = ring_index_from_logical(logical_start_pos + t, max_seq_len);
             float* v_t = v_cache + cache_t * kv_h_d + kv_h * h_d;
             float s = scores[t];
             
@@ -258,7 +334,7 @@ void TransformerLayer::multi_head_attention(float* q, float* k_cache, float* v_c
             
             // Prefetch next V entry
             if (t + 1 < seq_len) {
-                int next_t = (t + 1) % max_seq_len;
+                int next_t = ring_index_from_logical(logical_start_pos + t + 1, max_seq_len);
                 _mm_prefetch((const char*)(v_cache + next_t * kv_h_d + kv_h * h_d), _MM_HINT_T0);
             }
             
@@ -282,12 +358,22 @@ void TransformerLayer::multi_head_attention(float* q, float* k_cache, float* v_c
 // but also supports reading from quantized KV when needed
 // ============================================================================
 void TransformerLayer::multi_head_attention_flash(float* q, float* out, int seq_len,
+                                                   int logical_start_pos,
                                                    int n_h, int n_kv_h, int h_d) {
+    if (!q || !out || n_h <= 0 || h_d <= 0 || max_seq_len <= 0) {
+        return;
+    }
+    seq_len = std::max(0, std::min(seq_len, max_seq_len));
+    if (seq_len == 0) {
+        memset(out, 0, n_h * h_d * sizeof(float));
+        return;
+    }
+
     // If quantized KV is active, dequant the active portion to FP32 scratch
     // then delegate to the Flash-Attention kernel
     // This is the "lazy dequant" path — future optimization: per-tile dequant inside flash_attn
     if (use_quantized_kv) {
-        int kv_dim = n_kv_h * h_d;
+        int kv_dim = std::max(1, n_kv_h) * h_d;
         // Dequant only needed positions into the FP32 k_cache/v_cache
         // The FP32 cache already has the latest values from forward(),
         // so this is a no-op for the current implementation.
@@ -309,5 +395,5 @@ void TransformerLayer::multi_head_attention_flash(float* q, float* out, int seq_
     
     InferenceKernels::flash_attention_v2(
         q, k_cache, v_cache, out,
-        seq_len, n_h, n_kv_h, h_d, max_seq_len, 64);
+        seq_len, logical_start_pos, n_h, n_kv_h, h_d, max_seq_len, 64);
 }

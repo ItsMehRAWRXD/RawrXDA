@@ -7875,7 +7875,8 @@
           <div style="margin-top:8px; display:flex; gap:8px; align-items:center;">
             <button class="pill-btn" style="flex:1;" onclick="browseLocalModels()">Browse Local Models</button>
             <span style="font-size:11px; color:var(--text-muted);">F:\\OllamaModels</span>
-            <input type="file" id="localModelDirInput" webkitdirectory directory multiple style="display:none" onchange="handleLocalModelFiles(this.files)">
+            <input type="file" id="localModelDirInput" webkitdirectory directory multiple style="display:none"
+              onchange="handleLocalModelFiles(this.files)">
           </div>
         </div>
 
@@ -13770,12 +13771,163 @@
 
     function populateModelsFallback() {
       var sel = document.getElementById('modelSelect');
-      sel.innerHTML = '<option value="">Backend offline</option>';
+      // If local models were already loaded via browseLocalModels(), preserve them
+      if (State.model.list && State.model.list.length > 0) {
+        populateModelSelect(State.model.list);
+      } else {
+        sel.innerHTML = '<option value="">Backend offline — Browse Local Models ↑</option>';
+      }
+    }
+
+    // ======================================================================
+    // LOCAL MODEL BROWSER — works with or without Ollama / backend
+    // Uses backend /api/list-directory when online, file picker as fallback
+    // ======================================================================
+
+    /** Triggered by "Browse Local Models" button.
+     *  Strategy:
+     *   1. If backend online → POST /api/list-directory for F:\OllamaModels,
+     *      add any .gguf/.bin/.ggml found to the model dropdown
+     *   2. Always trigger the hidden directory file-picker as a secondary source
+     *      (works 100% offline, user selects folder manually)
+     *   3. Merges with existing Ollama models if Ollama is also running
+     */
+    async function browseLocalModels() {
+      var LOCAL_DIR = 'F:\\OllamaModels';
+      var LOCAL_EXTS = ['.gguf', '.bin', '.ggml', '.q4', '.q8'];
+      var scannedModels = [];
+
+      // ---- Strategy 1: backend directory listing (no Ollama needed) ----
+      if (State.backend.online && !State.backend.directMode) {
+        try {
+          var activeUrl = getActiveUrl ? getActiveUrl() : State.backend.url;
+          var res = await fetch(activeUrl + '/api/list-directory', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path: LOCAL_DIR, recursive: false }),
+            signal: AbortSignal.timeout(5000)
+          });
+          if (res.ok) {
+            var data = await res.json();
+            var entries = data.entries || data.files || data.items || [];
+            entries.forEach(function (e) {
+              var fname = e.name || e.file || (typeof e === 'string' ? e : '');
+              var ext = fname.lastIndexOf('.') >= 0 ? fname.slice(fname.lastIndexOf('.')).toLowerCase() : '';
+              if (LOCAL_EXTS.indexOf(ext) !== -1) {
+                scannedModels.push({
+                  name: fname,
+                  type: 'gguf',
+                  size: e.size ? ((e.size / (1024 * 1024 * 1024)).toFixed(1) + ' GB') : '?',
+                  path: LOCAL_DIR + '\\' + fname
+                });
+              }
+            });
+            if (scannedModels.length > 0) {
+              logDebug('[LocalBrowse] Found ' + scannedModels.length + ' models via /api/list-directory', 'info');
+              _mergeLocalModels(scannedModels);
+              // Still open file picker so user can add models from other folders
+              document.getElementById('localModelDirInput').click();
+              return;
+            }
+            logDebug('[LocalBrowse] /api/list-directory returned 0 model files — falling back to file picker', 'warn');
+          }
+        } catch (e) {
+          logDebug('[LocalBrowse] /api/list-directory failed: ' + e.message + ' — using file picker', 'warn');
+        }
+      }
+
+      // ---- Strategy 2: Ollama direct /api/tags (even when main backend offline) ----
+      var ollamaUrl = (State.backend && State.backend.ollamaDirectUrl) || 'http://127.0.0.1:11434';
+      try {
+        var oRes = await fetch(ollamaUrl + '/api/tags', { signal: AbortSignal.timeout(3000) });
+        if (oRes.ok) {
+          var oData = await oRes.json();
+          if (oData.models && oData.models.length > 0) {
+            var ollamaMapped = oData.models.map(function (m) {
+              return { name: m.name || m.model, type: 'ollama', size: m.size ? ((m.size / (1024 * 1024 * 1024)).toFixed(1) + ' GB') : '?' };
+            });
+            _mergeLocalModels(ollamaMapped);
+            logDebug('[LocalBrowse] Found ' + ollamaMapped.length + ' models via Ollama /api/tags', 'info');
+          }
+        }
+      } catch (_) { /* Ollama not running — fine, continue */ }
+
+      // ---- Always: open directory file picker for F:\OllamaModels ----
+      document.getElementById('localModelDirInput').click();
+    }
+
+    /** Called by the hidden <input webkitdirectory> after the user picks a folder.
+     *  Filters for GGUF/model files, merges into the model dropdown.
+     *  Works 100% offline — no backend or Ollama required.
+     */
+    function handleLocalModelFiles(files) {
+      var LOCAL_EXTS = ['.gguf', '.bin', '.ggml', '.q4', '.q8'];
+      var picked = [];
+      for (var i = 0; i < files.length; i++) {
+        var f = files[i];
+        var ext = f.name.lastIndexOf('.') >= 0 ? f.name.slice(f.name.lastIndexOf('.')).toLowerCase() : '';
+        if (LOCAL_EXTS.indexOf(ext) !== -1) {
+          picked.push({
+            name: f.name,
+            type: 'gguf',
+            size: (f.size > 0) ? ((f.size / (1024 * 1024 * 1024)).toFixed(1) + ' GB') : '?',
+            _file: f   // keep File ref in case direct-load support is added later
+          });
+        }
+      }
+      if (picked.length === 0) {
+        logDebug('[LocalBrowse] No model files found in selected folder', 'warn');
+        addMessage('system', '\u26A0\uFE0F No .gguf / .bin model files found in the selected folder. Point it at F:\\OllamaModels or similar.');
+        return;
+      }
+      logDebug('[LocalBrowse] Picked ' + picked.length + ' local model(s) from file picker', 'info');
+      _mergeLocalModels(picked);
+      addMessage('system', '\uD83D\uDCE6 Loaded ' + picked.length + ' local model(s) into the selector.\nSelect one above, then connect to a llama-server / Win32IDE backend to run inference.');
+    }
+
+    /** Merge newModels array into State.model.list and refresh the select dropdown.
+     *  De-duplicates by name. Existing backend/Ollama models are preserved.
+     */
+    function _mergeLocalModels(newModels) {
+      var existing = State.model.list || [];
+      var existingNames = {};
+      existing.forEach(function (m) { existingNames[m.name] = true; });
+      var added = 0;
+      newModels.forEach(function (m) {
+        if (!existingNames[m.name]) {
+          existing.push(m);
+          existingNames[m.name] = true;
+          added++;
+        }
+      });
+      State.model.list = existing;
+      populateModelSelect(existing);
+      if (added > 0) logDebug('[LocalBrowse] Added ' + added + ' new model(s) to selector', 'info');
     }
 
     async function refreshModels() {
       if (!State.backend.online) {
-        addMessage('system', 'Cannot refresh: backend offline. Click \u26A1 to connect.');
+        // Still allow refreshing local/Ollama models even when proxy backend is offline
+        var ollamaUrl = (State.backend && State.backend.ollamaDirectUrl) || 'http://127.0.0.1:11434';
+        try {
+          var oRes = await fetch(ollamaUrl + '/api/tags', { signal: AbortSignal.timeout(3000) });
+          if (oRes.ok) {
+            var oData = await oRes.json();
+            if (oData.models && oData.models.length > 0) {
+              var mapped = oData.models.map(function (m) {
+                return { name: m.name || m.model, type: 'ollama', size: m.size ? ((m.size / (1024 * 1024 * 1024)).toFixed(1) + ' GB') : '?' };
+              });
+              _mergeLocalModels(mapped);
+              logDebug('[RefreshModels] Loaded ' + mapped.length + ' from Ollama direct (proxy offline)', 'info');
+              return;
+            }
+          }
+        } catch (_) { }
+        if (State.model.list && State.model.list.length > 0) {
+          logDebug('[RefreshModels] Proxy offline — kept ' + State.model.list.length + ' local model(s)', 'info');
+          return;
+        }
+        addMessage('system', 'Cannot refresh: backend offline. Click \u26A1 to connect or use Browse Local Models.');
         return;
       }
       logDebug('Refreshing models...', 'info');

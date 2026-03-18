@@ -9,6 +9,7 @@
 #include <map>
 #include <windows.h>
 #include <shlobj.h>
+#include "../../include/plugin_signature.h"
 
 // Extension Loader Logic (VSIX -> Native)
 // Uses %APPDATA%\RawrXD\extensions (same as VSIXInstaller) so installs work without runtime changes.
@@ -112,6 +113,25 @@ public:
                 } catch (...) {}
 
                 if (!dllPath.empty()) {
+                    // Enforce signature policy for native extension modules.
+                    auto& verifier = RawrXD::Plugin::PluginSignatureVerifier::instance();
+                    if (!verifier.isInitialized()) {
+                        verifier.initialize(RawrXD::Plugin::PluginSignatureVerifier::createStandardPolicy());
+                    }
+                    std::wstring wDllPath;
+                    try { wDllPath = std::filesystem::path(dllPath).wstring(); } catch (...) {}
+                    if (wDllPath.empty()) {
+                        // Fallback conversion for odd paths.
+                        wchar_t wbuf[MAX_PATH * 4] = {};
+                        const int wlen = MultiByteToWideChar(CP_UTF8, 0, dllPath.c_str(), -1, wbuf, (int)(sizeof(wbuf) / sizeof(wbuf[0])));
+                        if (wlen > 0) wDllPath.assign(wbuf);
+                    }
+                    if (wDllPath.empty() || !verifier.shouldAllowInstall(verifier.verify(wDllPath.c_str()))) {
+                        std::cout << "[ExtensionLoader] Blocked by signature policy: "
+                                  << dllPath << std::endl;
+                        continue;
+                    }
+
                     HMODULE hMod = LoadLibraryA(dllPath.c_str());
                     if (hMod) {
                         kv.second.nativeModule = hMod;

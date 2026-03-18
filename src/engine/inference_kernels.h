@@ -51,6 +51,7 @@ public:
         const float* Q, const float* K_cache, const float* V_cache,
         float* output,
         int seq_len,         // number of KV entries
+        int logical_start_pos, // absolute token index for seq element 0 (ring-buffer chronology)
         int n_heads,         // query heads
         int n_kv_heads,      // KV heads (GQA support)
         int head_dim,        // dimension per head
