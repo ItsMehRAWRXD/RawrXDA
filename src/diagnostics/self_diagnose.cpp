@@ -645,7 +645,7 @@ void SelfDiagnoser::CreateSelfDump(
         GetCurrentProcess(),
         GetCurrentProcessId(),
         file,
-        MiniDumpWithFullMemory | MiniDumpWithHandleData | MiniDumpWithThreadInfo | MiniDumpWithIndirectlyReferencedMemory,
+        static_cast<MINIDUMP_TYPE>(MiniDumpWithFullMemory | MiniDumpWithHandleData | MiniDumpWithThreadInfo | MiniDumpWithIndirectlyReferencedMemory),
         meiPtr,
         nullptr,
         nullptr);

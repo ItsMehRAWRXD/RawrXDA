@@ -147,7 +147,7 @@ static bool writeMiniDump(const char* path, EXCEPTION_POINTERS* ep, DWORD dumpTy
     mei.ClientPointers = FALSE;
 
     BOOL ok = pWriteDump(GetCurrentProcess(), GetCurrentProcessId(),
-                         hFile, dumpType, &mei, nullptr, nullptr);
+                         hFile, (DWORD)dumpType, &mei, nullptr, nullptr);
 
     CloseHandle(hFile);
     FreeLibrary(hDbgHelp);

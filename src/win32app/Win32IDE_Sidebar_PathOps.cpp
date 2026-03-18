@@ -1803,7 +1803,7 @@ __declspec(dllexport) void PathOps_EndOperation(DWORD operationId, DWORD errorCo
 
 typedef struct {
     DWORD errorCode;
-    WCHAR message[512];
+    WCHAR message[8192];  // Increased from 512 to handle long error messages
     WCHAR sourceFile[MAX_PATH];
     DWORD sourceLine;
     DWORD win32Error;
@@ -1819,7 +1819,7 @@ __declspec(dllexport) PATHOPS_ERROR_INFO* PathOps_GetLastErrorInfo() {
     // Get error message
     FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
                    NULL, info->win32Error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                   info->message, 512, NULL);
+                   info->message, 8192, NULL);
 
     return info;
 }
