@@ -3106,6 +3106,13 @@ if(WIN32)
             src/win32app/VulkanRenderer.cpp
             src/win32app/OSExplorerInterceptor.cpp
         )
+        # Non-MSVC link-closure fallbacks for debugger/minimap emitter symbols.
+        list(APPEND WIN32IDE_SOURCES
+            src/ui/debugger_emitter_nonmsvc.cpp
+            src/win32app/Win32IDE_NativeDebugPanel_nonmsvc.cpp
+            src/core/vision_encoder_nonmsvc.cpp
+            src/core/native_debugger_engine_nonmsvc.cpp
+        )
     endif()
      
     # =========================================================================
@@ -3513,7 +3520,7 @@ if(WIN32)
         RAWRXD_USE_DEDICATED_CODELENS=1
         RAWRXD_USE_DEDICATED_INLAY=1
         RAWRXD_USE_DEDICATED_HOVER=1
-        RAWRXD_USE_DEDICATED_MINIMAP=1
+        $<$<BOOL:${MSVC}>:RAWRXD_USE_DEDICATED_MINIMAP=1>
     )
 
     # =========================================================================

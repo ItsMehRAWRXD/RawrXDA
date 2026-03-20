@@ -2,12 +2,12 @@
   "repo_root": "/workspace",
   "log_path": "/workspace/source_audit/win32ide_production_link_latest.log",
   "build_make": "/workspace/build_completed_win/CMakeFiles/RawrXD-Win32IDE.dir/build.make",
-  "total_reference_lines": 559,
-  "unique_symbols": 246,
+  "total_reference_lines": 445,
+  "unique_symbols": 188,
   "classification_counts": {
-    "unlinked_despite_wired": 108,
-    "dissolved_or_external": 59,
-    "unwired_non_stub": 79
+    "unlinked_despite_wired": 99,
+    "dissolved_or_external": 40,
+    "unwired_non_stub": 49
   },
   "non_msvc_removed_sources_count": 23,
   "non_msvc_removed_sources": [
@@ -53,20 +53,6 @@
       ],
       "definition_candidates_wired": [
         {
-          "path": "/workspace/src/universal_model_router.cpp",
-          "line": 35,
-          "text": "int BeaconRouterInit();",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/universal_model_router.cpp",
-          "line": 257,
-          "text": "if (BeaconRouterInit() != 0) {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/core/feature_handlers.cpp",
           "line": 1747,
           "text": "g_deepThinkingFallbackState.lastTrace += \"[beacon] BeaconRouterInit fallback active\\n\";",
@@ -79,13 +65,27 @@
           "text": "#pragma comment(linker, \"/alternatename:BeaconRouterInit=BeaconRouterInit_fallback\")",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/universal_model_router.cpp",
+          "line": 35,
+          "text": "int BeaconRouterInit();",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/universal_model_router.cpp",
+          "line": 257,
+          "text": "if (BeaconRouterInit() != 0) {",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
         }
       ],
       "definition_candidates_unwired": [],
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 16,
       "reference_lines": [
-        588
+        476
       ]
     },
     {
@@ -108,7 +108,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 352,
       "reference_lines": [
-        564
+        452
       ]
     },
     {
@@ -139,7 +139,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 350,
       "reference_lines": [
-        566
+        454
       ]
     },
     {
@@ -170,7 +170,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 350,
       "reference_lines": [
-        570
+        458
       ]
     },
     {
@@ -193,7 +193,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 350,
       "reference_lines": [
-        555
+        443
       ]
     },
     {
@@ -223,8 +223,8 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 350,
       "reference_lines": [
-        556,
-        571
+        444,
+        459
       ]
     },
     {
@@ -247,7 +247,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 437,
       "reference_lines": [
-        576
+        464
       ]
     },
     {
@@ -277,11 +277,11 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 350,
       "reference_lines": [
-        557,
-        572,
-        574,
-        575,
-        577
+        445,
+        460,
+        462,
+        463,
+        465
       ]
     },
     {
@@ -304,7 +304,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 350,
       "reference_lines": [
-        558
+        446
       ]
     },
     {
@@ -335,7 +335,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 350,
       "reference_lines": [
-        567
+        455
       ]
     },
     {
@@ -358,7 +358,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 437,
       "reference_lines": [
-        573
+        461
       ]
     },
     {
@@ -404,7 +404,7 @@
       "all_definition_candidates_count": 3,
       "all_search_hits_count": 352,
       "reference_lines": [
-        57
+        59
       ]
     },
     {
@@ -464,8 +464,8 @@
       "all_definition_candidates_count": 5,
       "all_search_hits_count": 354,
       "reference_lines": [
-        58,
-        62
+        60,
+        64
       ]
     },
     {
@@ -525,8 +525,8 @@
       "all_definition_candidates_count": 5,
       "all_search_hits_count": 355,
       "reference_lines": [
-        59,
-        60
+        61,
+        62
       ]
     },
     {
@@ -565,7 +565,7 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 789,
       "reference_lines": [
-        242
+        143
       ]
     },
     {
@@ -618,9 +618,9 @@
       "all_definition_candidates_count": 3,
       "all_search_hits_count": 877,
       "reference_lines": [
-        213,
-        234,
-        235
+        114,
+        135,
+        136
       ]
     },
     {
@@ -680,8 +680,8 @@
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 791,
       "reference_lines": [
-        215,
-        236
+        116,
+        137
       ]
     },
     {
@@ -741,8 +741,8 @@
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 878,
       "reference_lines": [
-        214,
-        239
+        115,
+        140
       ]
     },
     {
@@ -795,10 +795,10 @@
       "all_definition_candidates_count": 3,
       "all_search_hits_count": 964,
       "reference_lines": [
-        212,
-        233,
-        238,
-        241
+        113,
+        134,
+        139,
+        142
       ]
     },
     {
@@ -858,8 +858,8 @@
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 879,
       "reference_lines": [
-        210,
-        240
+        111,
+        141
       ]
     },
     {
@@ -919,160 +919,8 @@
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 791,
       "reference_lines": [
-        211,
-        237
-      ]
-    },
-    {
-      "symbol": "Emit_Int3",
-      "token": "Emit_Int3",
-      "occurrences": 1,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "debugger_core.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/ui/debugger_core.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/ui/debugger_core.cpp",
-          "line": 49,
-          "text": "uint64_t Emit_Int3(RawrXD_Emit_Buffer* buf);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ui/debugger_core.cpp",
-          "line": 72,
-          "text": "success = (Emit_Int3(&emitBuf) != 0);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 2,
-      "all_search_hits_count": 4,
-      "reference_lines": [
-        68
-      ]
-    },
-    {
-      "symbol": "Emit_Mov_Rax_Imm64",
-      "token": "Emit_Mov_Rax_Imm64",
-      "occurrences": 1,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "debugger_core.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/ui/debugger_core.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/ui/debugger_core.cpp",
-          "line": 48,
-          "text": "uint64_t Emit_Mov_Rax_Imm64(RawrXD_Emit_Buffer* buf, uint64_t imm);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ui/debugger_core.cpp",
-          "line": 81,
-          "text": "success = (Emit_Mov_Rax_Imm64(&emitBuf, val) != 0);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 2,
-      "all_search_hits_count": 4,
-      "reference_lines": [
-        71
-      ]
-    },
-    {
-      "symbol": "Emit_Nop",
-      "token": "Emit_Nop",
-      "occurrences": 1,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "debugger_core.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/ui/debugger_core.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/ui/debugger_core.cpp",
-          "line": 51,
-          "text": "uint64_t Emit_Nop(RawrXD_Emit_Buffer* buf);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ui/debugger_core.cpp",
-          "line": 70,
-          "text": "success = (Emit_Nop(&emitBuf) != 0);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 2,
-      "all_search_hits_count": 4,
-      "reference_lines": [
-        70
-      ]
-    },
-    {
-      "symbol": "Emit_Ret",
-      "token": "Emit_Ret",
-      "occurrences": 1,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "debugger_core.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/ui/debugger_core.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/ui/debugger_core.cpp",
-          "line": 50,
-          "text": "uint64_t Emit_Ret(RawrXD_Emit_Buffer* buf);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ui/debugger_core.cpp",
-          "line": 74,
-          "text": "success = (Emit_Ret(&emitBuf) != 0);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 2,
-      "all_search_hits_count": 4,
-      "reference_lines": [
-        69
+        112,
+        138
       ]
     },
     {
@@ -1091,6 +939,20 @@
         }
       ],
       "definition_candidates_wired": [
+        {
+          "path": "/workspace/src/core/enterprise_license.cpp",
+          "line": 415,
+          "text": "return Enterprise_CheckFeature(static_cast<uint64_t>(feature)) != 0;",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/core/enterprise_license.cpp",
+          "line": 422,
+          "text": "return Enterprise_CheckFeature(featureMask) != 0;",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
         {
           "path": "/workspace/src/core/enterprise_feature_manager.cpp",
           "line": 130,
@@ -1139,20 +1001,6 @@
           "text": "ss << \"  [+] GPU kernel auto-tuner has Enterprise_CheckFeature(0x08) gate\\n\";",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/core/enterprise_license.cpp",
-          "line": 415,
-          "text": "return Enterprise_CheckFeature(static_cast<uint64_t>(feature)) != 0;",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/core/enterprise_license.cpp",
-          "line": 422,
-          "text": "return Enterprise_CheckFeature(featureMask) != 0;",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
         }
       ],
       "definition_candidates_unwired": [
@@ -1174,14 +1022,14 @@
       "all_definition_candidates_count": 11,
       "all_search_hits_count": 534,
       "reference_lines": [
-        244,
-        245,
-        252,
-        255,
-        264,
-        270,
-        271,
-        274
+        145,
+        146,
+        153,
+        156,
+        165,
+        171,
+        172,
+        175
       ]
     },
     {
@@ -1212,7 +1060,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 350,
       "reference_lines": [
-        279
+        180
       ]
     },
     {
@@ -1243,7 +1091,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 350,
       "reference_lines": [
-        248
+        149
       ]
     },
     {
@@ -1281,24 +1129,24 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 351,
       "reference_lines": [
-        247,
-        249,
-        250,
-        251,
-        253,
-        256,
-        258,
-        260,
-        262,
-        263,
-        265,
-        266,
-        269,
-        273,
-        275,
-        276,
-        277,
-        278
+        148,
+        150,
+        151,
+        152,
+        154,
+        157,
+        159,
+        161,
+        163,
+        164,
+        166,
+        167,
+        170,
+        174,
+        176,
+        177,
+        178,
+        179
       ]
     },
     {
@@ -1350,8 +1198,8 @@
       "all_definition_candidates_count": 3,
       "all_search_hits_count": 354,
       "reference_lines": [
-        268,
-        281
+        169,
+        182
       ]
     },
     {
@@ -1382,7 +1230,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 350,
       "reference_lines": [
-        261
+        162
       ]
     },
     {
@@ -1413,7 +1261,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 350,
       "reference_lines": [
-        259
+        160
       ]
     },
     {
@@ -1433,6 +1281,13 @@
       ],
       "definition_candidates_wired": [
         {
+          "path": "/workspace/src/core/enterprise_feature_manager.cpp",
+          "line": 408,
+          "text": "true,   // hasLicenseGate: g_800B_Unlocked + Enterprise_Unlock800BDualEngine()",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
           "path": "/workspace/src/core/enterprise_license.cpp",
           "line": 378,
           "text": "(void)Enterprise_Unlock800BDualEngine();",
@@ -1443,13 +1298,6 @@
           "path": "/workspace/src/core/enterprise_license.cpp",
           "line": 429,
           "text": "return Enterprise_Unlock800BDualEngine() != 0;",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/core/enterprise_feature_manager.cpp",
-          "line": 408,
-          "text": "true,   // hasLicenseGate: g_800B_Unlocked + Enterprise_Unlock800BDualEngine()",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         }
@@ -1466,8 +1314,8 @@
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 441,
       "reference_lines": [
-        246,
-        272
+        147,
+        173
       ]
     },
     {
@@ -1498,7 +1346,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 612,
       "reference_lines": [
-        257
+        158
       ]
     },
     {
@@ -1529,7 +1377,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 355,
       "reference_lines": [
-        325
+        226
       ]
     },
     {
@@ -1567,9 +1415,9 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 352,
       "reference_lines": [
-        322,
-        323,
-        324
+        223,
+        224,
+        225
       ]
     },
     {
@@ -1600,7 +1448,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 437,
       "reference_lines": [
-        321
+        222
       ]
     },
     {
@@ -1631,7 +1479,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 350,
       "reference_lines": [
-        553
+        441
       ]
     },
     {
@@ -1662,7 +1510,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 350,
       "reference_lines": [
-        554
+        442
       ]
     },
     {
@@ -1685,7 +1533,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 350,
       "reference_lines": [
-        568
+        456
       ]
     },
     {
@@ -1708,7 +1556,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 350,
       "reference_lines": [
-        569
+        457
       ]
     },
     {
@@ -1761,7 +1609,7 @@
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 352,
       "reference_lines": [
-        543
+        431
       ]
     },
     {
@@ -1797,26 +1645,26 @@
       ],
       "definition_candidates_unwired": [
         {
-          "path": "/workspace/src/core/kquant_dequantize_q4k.cpp",
-          "line": 286,
-          "text": "void KQuant_DequantizeQ4_K(const void* blocks, size_t n_blocks, float* out) {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/core/convergence_stress_harness.cpp",
           "line": 55,
           "text": "size_t KQuant_DequantizeQ4_K(const void* src, float* dst, size_t numElements);",
           "stublike_path": false,
           "removed_by_non_msvc_block": true
+        },
+        {
+          "path": "/workspace/src/core/kquant_dequantize_q4k.cpp",
+          "line": 286,
+          "text": "void KQuant_DequantizeQ4_K(const void* blocks, size_t n_blocks, float* out) {",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
         }
       ],
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 353,
       "reference_lines": [
-        534,
-        538,
-        546
+        422,
+        426,
+        434
       ]
     },
     {
@@ -1862,40 +1710,9 @@
       "all_definition_candidates_count": 3,
       "all_search_hits_count": 351,
       "reference_lines": [
-        535,
-        539,
-        547
-      ]
-    },
-    {
-      "symbol": "LanguagePluginManager::~LanguagePluginManager()",
-      "token": "LanguagePluginManager::~LanguagePluginManager",
-      "occurrences": 2,
-      "classification": "dissolved_or_external",
-      "reason": "No definition candidate found in src/include/Ship.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE.cpp"
-          ]
-        },
-        {
-          "obj": "Win32IDE_Core.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Core.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 0,
-      "all_search_hits_count": 0,
-      "reference_lines": [
-        74,
-        76
+        423,
+        427,
+        435
       ]
     },
     {
@@ -1951,14 +1768,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
+          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
           "line": 105384,
           "text": "; bool MC_GapBuffer_Delete(MC_GapBuffer* pGB, uint32_t pos, uint32_t len)",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
+          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
           "line": 105384,
           "text": "; bool MC_GapBuffer_Delete(MC_GapBuffer* pGB, uint32_t pos, uint32_t len)",
           "stublike_path": false,
@@ -1996,10 +1813,10 @@
       "all_definition_candidates_count": 88,
       "all_search_hits_count": 524,
       "reference_lines": [
-        443,
-        447,
-        453,
-        493
+        340,
+        344,
+        350,
+        390
       ]
     },
     {
@@ -2046,13 +1863,6 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
-          "line": 105060,
-          "text": "; void MC_GapBuffer_Destroy(MC_GapBuffer* pGB)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/ggml_masm/quantization.asm",
           "line": 105060,
           "text": "; void MC_GapBuffer_Destroy(MC_GapBuffer* pGB)",
@@ -2060,14 +1870,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
-          "line": 105060,
-          "text": "; void MC_GapBuffer_Destroy(MC_GapBuffer* pGB)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
+          "path": "/workspace/src/ggml_masm/compression.asm",
           "line": 105060,
           "text": "; void MC_GapBuffer_Destroy(MC_GapBuffer* pGB)",
           "stublike_path": false,
@@ -2081,14 +1884,28 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/net/net.asm",
+          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
           "line": 105060,
           "text": "; void MC_GapBuffer_Destroy(MC_GapBuffer* pGB)",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/compression.asm",
+          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
+          "line": 105060,
+          "text": "; void MC_GapBuffer_Destroy(MC_GapBuffer* pGB)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
+          "line": 105060,
+          "text": "; void MC_GapBuffer_Destroy(MC_GapBuffer* pGB)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/win32app/mcp_hooks.asm",
           "line": 105060,
           "text": "; void MC_GapBuffer_Destroy(MC_GapBuffer* pGB)",
           "stublike_path": false,
@@ -2105,26 +1922,26 @@
       "all_definition_candidates_count": 87,
       "all_search_hits_count": 524,
       "reference_lines": [
-        435,
-        460,
-        461,
-        465,
-        466,
-        469,
-        471,
-        472,
-        475,
-        477,
-        479,
-        481,
-        482,
-        483,
-        485,
-        487,
-        490,
-        492,
-        494,
-        497
+        332,
+        357,
+        358,
+        362,
+        363,
+        366,
+        368,
+        369,
+        372,
+        374,
+        376,
+        378,
+        379,
+        380,
+        382,
+        384,
+        387,
+        389,
+        391,
+        394
       ]
     },
     {
@@ -2208,14 +2025,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "path": "/workspace/src/net/net.asm",
           "line": 105439,
           "text": "; uint32_t MC_GapBuffer_GetLine(MC_GapBuffer* pGB, uint32_t lineIdx,",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/net/net.asm",
+          "path": "/workspace/src/win32app/mcp_hooks.asm",
           "line": 105439,
           "text": "; uint32_t MC_GapBuffer_GetLine(MC_GapBuffer* pGB, uint32_t lineIdx,",
           "stublike_path": false,
@@ -2225,18 +2042,18 @@
       "all_definition_candidates_count": 87,
       "all_search_hits_count": 524,
       "reference_lines": [
-        428,
-        430,
-        432,
-        450,
-        456,
-        457,
-        458,
-        459,
-        478,
-        480,
-        498,
-        507
+        325,
+        327,
+        329,
+        347,
+        353,
+        354,
+        355,
+        356,
+        375,
+        377,
+        395,
+        404
       ]
     },
     {
@@ -2285,14 +2102,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/quantization.asm",
+          "path": "/workspace/src/ggml_masm/compression.asm",
           "line": 105005,
           "text": "; bool MC_GapBuffer_Init(MC_GapBuffer* pGB, uint32_t initialCapacity)",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
+          "path": "/workspace/src/ggml_masm/quantization.asm",
           "line": 105005,
           "text": "; bool MC_GapBuffer_Init(MC_GapBuffer* pGB, uint32_t initialCapacity)",
           "stublike_path": false,
@@ -2306,21 +2123,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
-          "line": 105005,
-          "text": "; bool MC_GapBuffer_Init(MC_GapBuffer* pGB, uint32_t initialCapacity)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/compression.asm",
-          "line": 105005,
-          "text": "; bool MC_GapBuffer_Init(MC_GapBuffer* pGB, uint32_t initialCapacity)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
+          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
           "line": 105005,
           "text": "; bool MC_GapBuffer_Init(MC_GapBuffer* pGB, uint32_t initialCapacity)",
           "stublike_path": false,
@@ -2332,16 +2135,30 @@
           "text": "; bool MC_GapBuffer_Init(MC_GapBuffer* pGB, uint32_t initialCapacity)",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/net/net.asm",
+          "line": 105005,
+          "text": "; bool MC_GapBuffer_Init(MC_GapBuffer* pGB, uint32_t initialCapacity)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
+          "line": 105005,
+          "text": "; bool MC_GapBuffer_Init(MC_GapBuffer* pGB, uint32_t initialCapacity)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
         }
       ],
       "all_definition_candidates_count": 88,
       "all_search_hits_count": 524,
       "reference_lines": [
-        436,
-        462,
-        468,
-        484,
-        503
+        333,
+        359,
+        365,
+        381,
+        400
       ]
     },
     {
@@ -2390,28 +2207,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/quantization.asm",
-          "line": 105294,
-          "text": "; bool MC_GapBuffer_Insert(MC_GapBuffer* pGB, uint32_t pos,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
-          "line": 105294,
-          "text": "; bool MC_GapBuffer_Insert(MC_GapBuffer* pGB, uint32_t pos,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
-          "line": 105294,
-          "text": "; bool MC_GapBuffer_Insert(MC_GapBuffer* pGB, uint32_t pos,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/ggml_masm/compression.asm",
+          "line": 105294,
+          "text": "; bool MC_GapBuffer_Insert(MC_GapBuffer* pGB, uint32_t pos,",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/ggml_masm/quantization.asm",
           "line": 105294,
           "text": "; bool MC_GapBuffer_Insert(MC_GapBuffer* pGB, uint32_t pos,",
           "stublike_path": false,
@@ -2425,7 +2228,21 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
+          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
+          "line": 105294,
+          "text": "; bool MC_GapBuffer_Insert(MC_GapBuffer* pGB, uint32_t pos,",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
+          "line": 105294,
+          "text": "; bool MC_GapBuffer_Insert(MC_GapBuffer* pGB, uint32_t pos,",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/win32app/mcp_hooks.asm",
           "line": 105294,
           "text": "; bool MC_GapBuffer_Insert(MC_GapBuffer* pGB, uint32_t pos,",
           "stublike_path": false,
@@ -2442,14 +2259,14 @@
       "all_definition_candidates_count": 88,
       "all_search_hits_count": 524,
       "reference_lines": [
-        437,
-        439,
-        441,
-        442,
-        445,
-        470,
-        486,
-        505
+        334,
+        336,
+        338,
+        339,
+        342,
+        367,
+        383,
+        402
       ]
     },
     {
@@ -2491,6 +2308,13 @@
           "removed_by_non_msvc_block": false
         },
         {
+          "path": "/workspace/src/ggml_masm/compression.asm",
+          "line": 105570,
+          "text": "; uint32_t MC_GapBuffer_Length(const MC_GapBuffer* pGB)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
           "path": "/workspace/src/ggml_masm/quantization.asm",
           "line": 105570,
           "text": "; uint32_t MC_GapBuffer_Length(const MC_GapBuffer* pGB)",
@@ -2506,13 +2330,6 @@
         },
         {
           "path": "/workspace/src/ggml_masm/ggml_backend.asm",
-          "line": 105570,
-          "text": "; uint32_t MC_GapBuffer_Length(const MC_GapBuffer* pGB)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/compression.asm",
           "line": 105570,
           "text": "; uint32_t MC_GapBuffer_Length(const MC_GapBuffer* pGB)",
           "stublike_path": false,
@@ -2540,7 +2357,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/net/net.asm",
+          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
           "line": 105570,
           "text": "; uint32_t MC_GapBuffer_Length(const MC_GapBuffer* pGB)",
           "stublike_path": false,
@@ -2550,14 +2367,14 @@
       "all_definition_candidates_count": 87,
       "all_search_hits_count": 524,
       "reference_lines": [
-        426,
-        452,
-        473,
-        474,
-        488,
-        489,
-        495,
-        496
+        323,
+        349,
+        370,
+        371,
+        385,
+        386,
+        392,
+        393
       ]
     },
     {
@@ -2592,13 +2409,6 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/compression.asm",
-          "line": 105582,
-          "text": "; uint32_t MC_GapBuffer_LineCount(const MC_GapBuffer* pGB)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/ggml_masm/attention.asm",
           "line": 105582,
           "text": "; uint32_t MC_GapBuffer_LineCount(const MC_GapBuffer* pGB)",
@@ -2613,6 +2423,13 @@
           "removed_by_non_msvc_block": false
         },
         {
+          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
+          "line": 105582,
+          "text": "; uint32_t MC_GapBuffer_LineCount(const MC_GapBuffer* pGB)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
           "path": "/workspace/src/ggml_masm/ggml_backend.asm",
           "line": 105582,
           "text": "; uint32_t MC_GapBuffer_LineCount(const MC_GapBuffer* pGB)",
@@ -2620,7 +2437,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
+          "path": "/workspace/src/ggml_masm/compression.asm",
           "line": 105582,
           "text": "; uint32_t MC_GapBuffer_LineCount(const MC_GapBuffer* pGB)",
           "stublike_path": false,
@@ -2634,14 +2451,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
           "line": 105582,
           "text": "; uint32_t MC_GapBuffer_LineCount(const MC_GapBuffer* pGB)",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
+          "path": "/workspace/src/win32app/mcp_hooks.asm",
           "line": 105582,
           "text": "; uint32_t MC_GapBuffer_LineCount(const MC_GapBuffer* pGB)",
           "stublike_path": false,
@@ -2658,26 +2475,26 @@
       "all_definition_candidates_count": 87,
       "all_search_hits_count": 524,
       "reference_lines": [
-        424,
-        425,
-        427,
-        429,
-        433,
-        434,
-        438,
-        440,
-        444,
-        446,
-        448,
-        449,
-        451,
-        454,
-        455,
-        463,
-        464,
-        467,
-        476,
-        491
+        321,
+        322,
+        324,
+        326,
+        330,
+        331,
+        335,
+        337,
+        341,
+        343,
+        345,
+        346,
+        348,
+        351,
+        352,
+        360,
+        361,
+        364,
+        373,
+        388
       ]
     },
     {
@@ -2734,20 +2551,6 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
-          "line": 105595,
-          "text": "; uint32_t MC_TokenizeLine(const char* line, uint32_t len,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
-          "line": 105595,
-          "text": "; uint32_t MC_TokenizeLine(const char* line, uint32_t len,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/win32app/mcp_hooks.asm",
           "line": 105595,
           "text": "; uint32_t MC_TokenizeLine(const char* line, uint32_t len,",
@@ -2762,7 +2565,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/net/net.asm",
+          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
+          "line": 105595,
+          "text": "; uint32_t MC_TokenizeLine(const char* line, uint32_t len,",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
           "line": 105595,
           "text": "; uint32_t MC_TokenizeLine(const char* line, uint32_t len,",
           "stublike_path": false,
@@ -2774,12 +2584,19 @@
           "text": "; uint32_t MC_TokenizeLine(const char* line, uint32_t len,",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/masm/masm_solo_compiler.asm",
+          "line": 105595,
+          "text": "; uint32_t MC_TokenizeLine(const char* line, uint32_t len,",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
         }
       ],
       "all_definition_candidates_count": 88,
       "all_search_hits_count": 525,
       "reference_lines": [
-        431
+        328
       ]
     },
     {
@@ -2810,7 +2627,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        49
+        51
       ]
     },
     {
@@ -2841,7 +2658,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        51
+        53
       ]
     },
     {
@@ -2872,9 +2689,9 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        47,
-        48,
-        50
+        49,
+        50,
+        52
       ]
     },
     {
@@ -2905,7 +2722,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        598
+        486
       ]
     },
     {
@@ -2936,7 +2753,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        597
+        485
       ]
     },
     {
@@ -2967,7 +2784,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        599
+        487
       ]
     },
     {
@@ -2998,7 +2815,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        600
+        488
       ]
     },
     {
@@ -3036,9 +2853,9 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 350,
       "reference_lines": [
-        536,
-        540,
-        544
+        424,
+        428,
+        432
       ]
     },
     {
@@ -3076,9 +2893,9 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 350,
       "reference_lines": [
-        537,
-        541,
-        545
+        425,
+        429,
+        433
       ]
     },
     {
@@ -3109,78 +2926,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        411
-      ]
-    },
-    {
-      "symbol": "RawrXD::Debugger::NativeDebuggerEngine::Instance()",
-      "token": "RawrXD::Debugger::NativeDebuggerEngine::Instance",
-      "occurrences": 34,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Debugger.cpp.obj",
-          "count": 25,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Debugger.cpp"
-          ]
-        },
-        {
-          "obj": "feature_handlers.cpp.obj",
-          "count": 7,
-          "mapped_sources": [
-            "/workspace/src/core/feature_handlers.cpp"
-          ]
-        },
-        {
-          "obj": "Win32IDE_ReverseEngineering.cpp.obj",
-          "count": 2,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_ReverseEngineering.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_ReverseEngineering.cpp",
-          "line": 254,
-          "text": "auto& engine = RawrXD::Debugger::NativeDebuggerEngine::Instance();",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/win32app/Win32IDE_ReverseEngineering.cpp",
-          "line": 284,
-          "text": "auto& engine = RawrXD::Debugger::NativeDebuggerEngine::Instance();",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 2,
-      "all_search_hits_count": 2,
-      "reference_lines": [
-        122,
-        124,
-        126,
-        128,
-        134,
-        138,
-        140,
-        142,
-        144,
-        147,
-        149,
-        151,
-        153,
-        155,
-        157,
-        159,
-        161,
-        163,
-        168,
-        170
+        312
       ]
     },
     {
@@ -3210,9 +2956,9 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        141,
-        175,
-        531
+        70,
+        86,
+        420
       ]
     },
     {
@@ -3235,7 +2981,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        532
+        421
       ]
     },
     {
@@ -3258,7 +3004,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        145
+        72
       ]
     },
     {
@@ -3281,46 +3027,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        171
-      ]
-    },
-    {
-      "symbol": "RawrXD::Debugger::NativeDebuggerEngine::captureRegisters(RawrXD::Debugger::RegisterSnapshot&)",
-      "token": "RawrXD::Debugger::NativeDebuggerEngine::captureRegisters",
-      "occurrences": 3,
-      "classification": "dissolved_or_external",
-      "reason": "No definition candidate found in src/include/Ship.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Debugger.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Debugger.cpp"
-          ]
-        },
-        {
-          "obj": "Win32IDE_ReverseEngineering.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_ReverseEngineering.cpp"
-          ]
-        },
-        {
-          "obj": "feature_handlers.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/core/feature_handlers.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 0,
-      "all_search_hits_count": 0,
-      "reference_lines": [
-        129,
-        188,
-        529
+        84
       ]
     },
     {
@@ -3343,7 +3050,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        164
+        79
       ]
     },
     {
@@ -3366,7 +3073,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        189
+        94
       ]
     },
     {
@@ -3389,81 +3096,8 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        173,
-        177
-      ]
-    },
-    {
-      "symbol": "RawrXD::Debugger::NativeDebuggerEngine::evaluate(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, RawrXD::Debugger::EvalResult&)",
-      "token": "RawrXD::Debugger::NativeDebuggerEngine::evaluate",
-      "occurrences": 3,
-      "classification": "dissolved_or_external",
-      "reason": "No definition candidate found in src/include/Ship.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Debugger.cpp.obj",
-          "count": 3,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Debugger.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 0,
-      "all_search_hits_count": 0,
-      "reference_lines": [
-        139,
-        150,
-        154
-      ]
-    },
-    {
-      "symbol": "RawrXD::Debugger::NativeDebuggerEngine::formatFlags[abi:cxx11](unsigned long long) const",
-      "token": "RawrXD::Debugger::NativeDebuggerEngine::formatFlags[abi:cxx11]",
-      "occurrences": 1,
-      "classification": "dissolved_or_external",
-      "reason": "No definition candidate found in src/include/Ship.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Debugger.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Debugger.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 0,
-      "all_search_hits_count": 0,
-      "reference_lines": [
-        130
-      ]
-    },
-    {
-      "symbol": "RawrXD::Debugger::NativeDebuggerEngine::formatHexDump[abi:cxx11](unsigned long long, void const*, unsigned long long, unsigned int) const",
-      "token": "RawrXD::Debugger::NativeDebuggerEngine::formatHexDump[abi:cxx11]",
-      "occurrences": 3,
-      "classification": "dissolved_or_external",
-      "reason": "No definition candidate found in src/include/Ship.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Debugger.cpp.obj",
-          "count": 3,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Debugger.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 0,
-      "all_search_hits_count": 0,
-      "reference_lines": [
-        133,
-        136,
-        137
+        85,
+        87
       ]
     },
     {
@@ -3486,7 +3120,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        152
+        74
       ]
     },
     {
@@ -3509,7 +3143,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        526
+        418
       ]
     },
     {
@@ -3539,8 +3173,8 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        162,
-        515
+        78,
+        411
       ]
     },
     {
@@ -3570,8 +3204,8 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        183,
-        522
+        92,
+        415
       ]
     },
     {
@@ -3601,87 +3235,9 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        179,
-        185,
-        523
-      ]
-    },
-    {
-      "symbol": "RawrXD::Debugger::NativeDebuggerEngine::queryMemoryRegions(std::vector<RawrXD::Debugger::MemoryRegion, std::allocator<RawrXD::Debugger::MemoryRegion> >&)",
-      "token": "RawrXD::Debugger::NativeDebuggerEngine::queryMemoryRegions",
-      "occurrences": 1,
-      "classification": "dissolved_or_external",
-      "reason": "No definition candidate found in src/include/Ship.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Debugger.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Debugger.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 0,
-      "all_search_hits_count": 0,
-      "reference_lines": [
-        132
-      ]
-    },
-    {
-      "symbol": "RawrXD::Debugger::NativeDebuggerEngine::readMemory(unsigned long long, void*, unsigned long long, unsigned long long*)",
-      "token": "RawrXD::Debugger::NativeDebuggerEngine::readMemory",
-      "occurrences": 2,
-      "classification": "dissolved_or_external",
-      "reason": "No definition candidate found in src/include/Ship.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Debugger.cpp.obj",
-          "count": 2,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Debugger.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 0,
-      "all_search_hits_count": 0,
-      "reference_lines": [
-        131,
-        135
-      ]
-    },
-    {
-      "symbol": "RawrXD::Debugger::NativeDebuggerEngine::removeAllBreakpoints()",
-      "token": "RawrXD::Debugger::NativeDebuggerEngine::removeAllBreakpoints",
-      "occurrences": 2,
-      "classification": "dissolved_or_external",
-      "reason": "No definition candidate found in src/include/Ship.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Debugger.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Debugger.cpp"
-          ]
-        },
-        {
-          "obj": "feature_handlers.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/core/feature_handlers.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 0,
-      "all_search_hits_count": 0,
-      "reference_lines": [
-        127,
-        517
+        88,
+        93,
+        416
       ]
     },
     {
@@ -3711,31 +3267,8 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        143,
-        518
-      ]
-    },
-    {
-      "symbol": "RawrXD::Debugger::NativeDebuggerEngine::removeWatch(unsigned int)",
-      "token": "RawrXD::Debugger::NativeDebuggerEngine::removeWatch",
-      "occurrences": 1,
-      "classification": "dissolved_or_external",
-      "reason": "No definition candidate found in src/include/Ship.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Debugger.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Debugger.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 0,
-      "all_search_hits_count": 0,
-      "reference_lines": [
-        125
+        71,
+        412
       ]
     },
     {
@@ -3758,8 +3291,8 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        165,
-        180
+        80,
+        89
       ]
     },
     {
@@ -3782,8 +3315,8 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        166,
-        181
+        81,
+        90
       ]
     },
     {
@@ -3806,8 +3339,8 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        167,
-        182
+        82,
+        91
       ]
     },
     {
@@ -3830,7 +3363,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        158
+        76
       ]
     },
     {
@@ -3853,7 +3386,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        156
+        75
       ]
     },
     {
@@ -3883,8 +3416,8 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        160,
-        528
+        77,
+        419
       ]
     },
     {
@@ -3914,32 +3447,8 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        169,
-        525
-      ]
-    },
-    {
-      "symbol": "RawrXD::Debugger::NativeDebuggerEngine::updateWatches()",
-      "token": "RawrXD::Debugger::NativeDebuggerEngine::updateWatches",
-      "occurrences": 2,
-      "classification": "dissolved_or_external",
-      "reason": "No definition candidate found in src/include/Ship.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Debugger.cpp.obj",
-          "count": 2,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Debugger.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 0,
-      "all_search_hits_count": 0,
-      "reference_lines": [
-        123,
-        146
+        83,
+        417
       ]
     },
     {
@@ -3962,7 +3471,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        148
+        73
       ]
     },
     {
@@ -3985,7 +3494,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        417
+        318
       ]
     },
     {
@@ -4030,9 +3539,9 @@
       "all_definition_candidates_count": 3,
       "all_search_hits_count": 3,
       "reference_lines": [
-        412,
-        414,
-        416
+        313,
+        315,
+        317
       ]
     },
     {
@@ -4055,7 +3564,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        413
+        314
       ]
     },
     {
@@ -4078,258 +3587,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        415
-      ]
-    },
-    {
-      "symbol": "RawrXD::Vision::ImagePreprocessor::freeBuffer(RawrXD::Vision::ImageBuffer&)",
-      "token": "RawrXD::Vision::ImagePreprocessor::freeBuffer",
-      "occurrences": 2,
-      "classification": "dissolved_or_external",
-      "reason": "No definition candidate found in src/include/Ship.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_VisionEncoder.cpp.obj",
-          "count": 2,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_VisionEncoder.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 0,
-      "all_search_hits_count": 0,
-      "reference_lines": [
-        120,
-        121
-      ]
-    },
-    {
-      "symbol": "RawrXD::Vision::VisionEncoder::createMultiModalPrompt(RawrXD::Vision::ImageBuffer const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, RawrXD::Vision::VisionTextPair&)",
-      "token": "RawrXD::Vision::VisionEncoder::createMultiModalPrompt",
-      "occurrences": 1,
-      "classification": "dissolved_or_external",
-      "reason": "No definition candidate found in src/include/Ship.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_VisionEncoder.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_VisionEncoder.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 0,
-      "all_search_hits_count": 0,
-      "reference_lines": [
-        119
-      ]
-    },
-    {
-      "symbol": "RawrXD::Vision::VisionEncoder::describeImage(RawrXD::Vision::ImageBuffer const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&)",
-      "token": "RawrXD::Vision::VisionEncoder::describeImage",
-      "occurrences": 1,
-      "classification": "dissolved_or_external",
-      "reason": "No definition candidate found in src/include/Ship.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_VisionEncoder.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_VisionEncoder.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 0,
-      "all_search_hits_count": 0,
-      "reference_lines": [
-        116
-      ]
-    },
-    {
-      "symbol": "RawrXD::Vision::VisionEncoder::extractCodeFromScreenshot(RawrXD::Vision::ImageBuffer const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&)",
-      "token": "RawrXD::Vision::VisionEncoder::extractCodeFromScreenshot",
-      "occurrences": 1,
-      "classification": "dissolved_or_external",
-      "reason": "No definition candidate found in src/include/Ship.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_VisionEncoder.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_VisionEncoder.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 0,
-      "all_search_hits_count": 0,
-      "reference_lines": [
-        117
-      ]
-    },
-    {
-      "symbol": "RawrXD::Vision::VisionEncoder::extractDiagramStructure(RawrXD::Vision::ImageBuffer const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&)",
-      "token": "RawrXD::Vision::VisionEncoder::extractDiagramStructure",
-      "occurrences": 1,
-      "classification": "dissolved_or_external",
-      "reason": "No definition candidate found in src/include/Ship.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_VisionEncoder.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_VisionEncoder.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 0,
-      "all_search_hits_count": 0,
-      "reference_lines": [
-        118
-      ]
-    },
-    {
-      "symbol": "RawrXD::Vision::VisionEncoder::instance()",
-      "token": "RawrXD::Vision::VisionEncoder::instance",
-      "occurrences": 5,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_VisionEncoder.cpp.obj",
-          "count": 3,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_VisionEncoder.cpp"
-          ]
-        },
-        {
-          "obj": "unified_hotpatch_manager.cpp.obj",
-          "count": 2,
-          "mapped_sources": [
-            "/workspace/src/core/unified_hotpatch_manager.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/unified_hotpatch_manager.cpp",
-          "line": 1340,
-          "text": "auto& vis = RawrXD::Vision::VisionEncoder::instance();",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/core/unified_hotpatch_manager.cpp",
-          "line": 1360,
-          "text": "auto& vis = RawrXD::Vision::VisionEncoder::instance();",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 2,
-      "all_search_hits_count": 2,
-      "reference_lines": [
-        109,
-        110,
-        113,
-        418,
-        420
-      ]
-    },
-    {
-      "symbol": "RawrXD::Vision::VisionEncoder::isReady() const",
-      "token": "RawrXD::Vision::VisionEncoder::isReady",
-      "occurrences": 2,
-      "classification": "dissolved_or_external",
-      "reason": "No definition candidate found in src/include/Ship.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_VisionEncoder.cpp.obj",
-          "count": 2,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_VisionEncoder.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 0,
-      "all_search_hits_count": 0,
-      "reference_lines": [
-        111,
-        114
-      ]
-    },
-    {
-      "symbol": "RawrXD::Vision::VisionEncoder::loadModel(RawrXD::Vision::VisionModelConfig const&)",
-      "token": "RawrXD::Vision::VisionEncoder::loadModel",
-      "occurrences": 2,
-      "classification": "dissolved_or_external",
-      "reason": "No definition candidate found in src/include/Ship.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_VisionEncoder.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_VisionEncoder.cpp"
-          ]
-        },
-        {
-          "obj": "unified_hotpatch_manager.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/core/unified_hotpatch_manager.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 0,
-      "all_search_hits_count": 0,
-      "reference_lines": [
-        115,
-        419
-      ]
-    },
-    {
-      "symbol": "RawrXD::Vision::VisionEncoder::shutdown()",
-      "token": "RawrXD::Vision::VisionEncoder::shutdown",
-      "occurrences": 2,
-      "classification": "dissolved_or_external",
-      "reason": "No definition candidate found in src/include/Ship.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_VisionEncoder.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_VisionEncoder.cpp"
-          ]
-        },
-        {
-          "obj": "unified_hotpatch_manager.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/core/unified_hotpatch_manager.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 0,
-      "all_search_hits_count": 0,
-      "reference_lines": [
-        112,
-        421
+        316
       ]
     },
     {
@@ -4367,45 +3625,7 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 4,
       "reference_lines": [
-        52
-      ]
-    },
-    {
-      "symbol": "RawrXD_Emit_Reset",
-      "token": "RawrXD_Emit_Reset",
-      "occurrences": 1,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "debugger_core.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/ui/debugger_core.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/ui/debugger_core.cpp",
-          "line": 42,
-          "text": "void RawrXD_Emit_Reset(RawrXD_Emit_Buffer* buf);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ui/debugger_core.cpp",
-          "line": 58,
-          "text": "RawrXD_Emit_Reset(&emitBuf);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 2,
-      "all_search_hits_count": 5,
-      "reference_lines": [
-        67
+        54
       ]
     },
     {
@@ -4436,7 +3656,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 6,
       "reference_lines": [
-        596
+        484
       ]
     },
     {
@@ -4467,38 +3687,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 4,
       "reference_lines": [
-        595
-      ]
-    },
-    {
-      "symbol": "SQLite3DatabaseManager::~SQLite3DatabaseManager()",
-      "token": "SQLite3DatabaseManager::~SQLite3DatabaseManager",
-      "occurrences": 2,
-      "classification": "dissolved_or_external",
-      "reason": "No definition candidate found in src/include/Ship.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE.cpp"
-          ]
-        },
-        {
-          "obj": "Win32IDE_Core.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Core.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 0,
-      "all_search_hits_count": 0,
-      "reference_lines": [
-        75,
-        77
+        483
       ]
     },
     {
@@ -4529,7 +3718,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        410
+        311
       ]
     },
     {
@@ -4560,7 +3749,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        396
+        297
       ]
     },
     {
@@ -4605,9 +3794,9 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        225,
-        314,
-        422
+        126,
+        215,
+        319
       ]
     },
     {
@@ -4638,9 +3827,9 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        223,
-        230,
-        232
+        124,
+        131,
+        133
       ]
     },
     {
@@ -4678,8 +3867,8 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        312,
-        392
+        213,
+        293
       ]
     },
     {
@@ -4717,8 +3906,8 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        316,
-        394
+        217,
+        295
       ]
     },
     {
@@ -4756,8 +3945,8 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        297,
-        404
+        198,
+        305
       ]
     },
     {
@@ -4873,26 +4062,26 @@
       "all_definition_candidates_count": 26,
       "all_search_hits_count": 26,
       "reference_lines": [
+        117,
+        120,
+        122,
+        128,
+        132,
+        191,
+        197,
+        199,
+        202,
+        205,
+        208,
+        212,
+        214,
         216,
-        219,
-        221,
-        227,
-        231,
-        290,
+        291,
+        292,
+        294,
         296,
         298,
-        301,
-        304,
-        307,
-        311,
-        313,
-        315,
-        390,
-        391,
-        393,
-        395,
-        397,
-        399
+        300
       ]
     },
     {
@@ -4923,10 +4112,10 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        217,
-        220,
-        222,
-        228
+        118,
+        121,
+        123,
+        129
       ]
     },
     {
@@ -4964,11 +4153,11 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        300,
-        303,
-        306,
-        309,
-        406
+        201,
+        204,
+        207,
+        210,
+        307
       ]
     },
     {
@@ -5006,9 +4195,9 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        218,
-        226,
-        400
+        119,
+        127,
+        301
       ]
     },
     {
@@ -5046,8 +4235,8 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        224,
-        398
+        125,
+        299
       ]
     },
     {
@@ -5085,8 +4274,8 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        291,
-        408
+        192,
+        309
       ]
     },
     {
@@ -5124,8 +4313,8 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        229,
-        402
+        130,
+        303
       ]
     },
     {
@@ -5156,7 +4345,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 353,
       "reference_lines": [
-        267
+        168
       ]
     },
     {
@@ -5187,7 +4376,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 263,
       "reference_lines": [
-        254
+        155
       ]
     },
     {
@@ -5246,10 +4435,10 @@
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 354,
       "reference_lines": [
-        367,
-        369,
-        378,
-        385
+        268,
+        270,
+        279,
+        286
       ]
     },
     {
@@ -5336,11 +4525,11 @@
       "all_definition_candidates_count": 7,
       "all_search_hits_count": 357,
       "reference_lines": [
-        366,
-        375,
-        377,
-        383,
-        389
+        267,
+        276,
+        278,
+        284,
+        290
       ]
     },
     {
@@ -5378,7 +4567,7 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 351,
       "reference_lines": [
-        374
+        275
       ]
     },
     {
@@ -5437,9 +4626,9 @@
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 353,
       "reference_lines": [
-        368,
-        382,
-        388
+        269,
+        283,
+        289
       ]
     },
     {
@@ -5484,8 +4673,8 @@
       "all_definition_candidates_count": 3,
       "all_search_hits_count": 352,
       "reference_lines": [
-        370,
-        376
+        271,
+        277
       ]
     },
     {
@@ -5523,7 +4712,7 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 351,
       "reference_lines": [
-        373
+        274
       ]
     },
     {
@@ -5589,9 +4778,9 @@
       "all_definition_candidates_count": 5,
       "all_search_hits_count": 354,
       "reference_lines": [
-        371,
-        372,
-        384
+        272,
+        273,
+        285
       ]
     },
     {
@@ -5665,9 +4854,9 @@
       "all_definition_candidates_count": 6,
       "all_search_hits_count": 355,
       "reference_lines": [
-        379,
-        381,
-        387
+        280,
+        282,
+        288
       ]
     },
     {
@@ -5726,8 +4915,8 @@
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 353,
       "reference_lines": [
-        380,
-        386
+        281,
+        287
       ]
     },
     {
@@ -5758,7 +4947,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 350,
       "reference_lines": [
-        563
+        451
       ]
     },
     {
@@ -5788,10 +4977,10 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 350,
       "reference_lines": [
-        559,
-        578,
-        582,
-        584
+        447,
+        466,
+        470,
+        472
       ]
     },
     {
@@ -5829,8 +5018,8 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 350,
       "reference_lines": [
-        552,
-        565
+        440,
+        453
       ]
     },
     {
@@ -5853,8 +5042,8 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 350,
       "reference_lines": [
-        580,
-        583
+        468,
+        471
       ]
     },
     {
@@ -5885,876 +5074,8 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 350,
       "reference_lines": [
-        579,
-        581
-      ]
-    },
-    {
-      "symbol": "Win32IDE::cmdDbgAddBP()",
-      "token": "Win32IDE::cmdDbgAddBP",
-      "occurrences": 1,
-      "classification": "unwired_non_stub",
-      "reason": "Definition candidates exist but are not wired into current Win32IDE build.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Commands.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Commands.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_NativeDebugPanel.cpp",
-          "line": 223,
-          "text": "void Win32IDE::cmdDbgAddBP() {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        }
-      ],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 1,
-      "reference_lines": [
-        97
-      ]
-    },
-    {
-      "symbol": "Win32IDE::cmdDbgAddWatch()",
-      "token": "Win32IDE::cmdDbgAddWatch",
-      "occurrences": 1,
-      "classification": "unwired_non_stub",
-      "reason": "Definition candidates exist but are not wired into current Win32IDE build.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Commands.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Commands.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_NativeDebugPanel.cpp",
-          "line": 309,
-          "text": "void Win32IDE::cmdDbgAddWatch() {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        }
-      ],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 1,
-      "reference_lines": [
-        92
-      ]
-    },
-    {
-      "symbol": "Win32IDE::cmdDbgAttach()",
-      "token": "Win32IDE::cmdDbgAttach",
-      "occurrences": 1,
-      "classification": "unwired_non_stub",
-      "reason": "Definition candidates exist but are not wired into current Win32IDE build.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Commands.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Commands.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_NativeDebugPanel.cpp",
-          "line": 137,
-          "text": "void Win32IDE::cmdDbgAttach() {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        }
-      ],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 1,
-      "reference_lines": [
-        87
-      ]
-    },
-    {
-      "symbol": "Win32IDE::cmdDbgBreak()",
-      "token": "Win32IDE::cmdDbgBreak",
-      "occurrences": 1,
-      "classification": "unwired_non_stub",
-      "reason": "Definition candidates exist but are not wired into current Win32IDE build.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Commands.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Commands.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_NativeDebugPanel.cpp",
-          "line": 209,
-          "text": "void Win32IDE::cmdDbgBreak() {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        }
-      ],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 1,
-      "reference_lines": [
-        81
-      ]
-    },
-    {
-      "symbol": "Win32IDE::cmdDbgClearBPs()",
-      "token": "Win32IDE::cmdDbgClearBPs",
-      "occurrences": 1,
-      "classification": "unwired_non_stub",
-      "reason": "Definition candidates exist but are not wired into current Win32IDE build.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Commands.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Commands.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_NativeDebugPanel.cpp",
-          "line": 295,
-          "text": "void Win32IDE::cmdDbgClearBPs() {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        }
-      ],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 1,
-      "reference_lines": [
-        94
-      ]
-    },
-    {
-      "symbol": "Win32IDE::cmdDbgDetach()",
-      "token": "Win32IDE::cmdDbgDetach",
-      "occurrences": 1,
-      "classification": "unwired_non_stub",
-      "reason": "Definition candidates exist but are not wired into current Win32IDE build.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Commands.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Commands.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_NativeDebugPanel.cpp",
-          "line": 180,
-          "text": "void Win32IDE::cmdDbgDetach() {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        }
-      ],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 1,
-      "reference_lines": [
-        86
-      ]
-    },
-    {
-      "symbol": "Win32IDE::cmdDbgDisasm()",
-      "token": "Win32IDE::cmdDbgDisasm",
-      "occurrences": 1,
-      "classification": "unwired_non_stub",
-      "reason": "Definition candidates exist but are not wired into current Win32IDE build.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Commands.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Commands.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_NativeDebugPanel.cpp",
-          "line": 408,
-          "text": "void Win32IDE::cmdDbgDisasm() {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        }
-      ],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 1,
-      "reference_lines": [
-        103
-      ]
-    },
-    {
-      "symbol": "Win32IDE::cmdDbgEnableBP()",
-      "token": "Win32IDE::cmdDbgEnableBP",
-      "occurrences": 1,
-      "classification": "unwired_non_stub",
-      "reason": "Definition candidates exist but are not wired into current Win32IDE build.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Commands.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Commands.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_NativeDebugPanel.cpp",
-          "line": 279,
-          "text": "void Win32IDE::cmdDbgEnableBP() {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        }
-      ],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 1,
-      "reference_lines": [
-        95
-      ]
-    },
-    {
-      "symbol": "Win32IDE::cmdDbgEvaluate()",
-      "token": "Win32IDE::cmdDbgEvaluate",
-      "occurrences": 1,
-      "classification": "unwired_non_stub",
-      "reason": "Definition candidates exist but are not wired into current Win32IDE build.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Commands.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Commands.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_NativeDebugPanel.cpp",
-          "line": 520,
-          "text": "void Win32IDE::cmdDbgEvaluate() {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        }
-      ],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 1,
-      "reference_lines": [
-        89
-      ]
-    },
-    {
-      "symbol": "Win32IDE::cmdDbgGo()",
-      "token": "Win32IDE::cmdDbgGo",
-      "occurrences": 1,
-      "classification": "unwired_non_stub",
-      "reason": "Definition candidates exist but are not wired into current Win32IDE build.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Commands.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Commands.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_NativeDebugPanel.cpp",
-          "line": 189,
-          "text": "void Win32IDE::cmdDbgGo() {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        }
-      ],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 1,
-      "reference_lines": [
-        85
-      ]
-    },
-    {
-      "symbol": "Win32IDE::cmdDbgKill()",
-      "token": "Win32IDE::cmdDbgKill",
-      "occurrences": 1,
-      "classification": "unwired_non_stub",
-      "reason": "Definition candidates exist but are not wired into current Win32IDE build.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Commands.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Commands.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_NativeDebugPanel.cpp",
-          "line": 214,
-          "text": "void Win32IDE::cmdDbgKill() {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        }
-      ],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 1,
-      "reference_lines": [
-        98
-      ]
-    },
-    {
-      "symbol": "Win32IDE::cmdDbgLaunch()",
-      "token": "Win32IDE::cmdDbgLaunch",
-      "occurrences": 1,
-      "classification": "unwired_non_stub",
-      "reason": "Definition candidates exist but are not wired into current Win32IDE build.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Commands.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Commands.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_NativeDebugPanel.cpp",
-          "line": 114,
-          "text": "void Win32IDE::cmdDbgLaunch() {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        }
-      ],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 1,
-      "reference_lines": [
-        88
-      ]
-    },
-    {
-      "symbol": "Win32IDE::cmdDbgListBPs()",
-      "token": "Win32IDE::cmdDbgListBPs",
-      "occurrences": 1,
-      "classification": "unwired_non_stub",
-      "reason": "Definition candidates exist but are not wired into current Win32IDE build.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Commands.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Commands.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_NativeDebugPanel.cpp",
-          "line": 300,
-          "text": "void Win32IDE::cmdDbgListBPs() {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        }
-      ],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 1,
-      "reference_lines": [
-        93
-      ]
-    },
-    {
-      "symbol": "Win32IDE::cmdDbgMemory()",
-      "token": "Win32IDE::cmdDbgMemory",
-      "occurrences": 1,
-      "classification": "unwired_non_stub",
-      "reason": "Definition candidates exist but are not wired into current Win32IDE build.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Commands.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Commands.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_NativeDebugPanel.cpp",
-          "line": 373,
-          "text": "void Win32IDE::cmdDbgMemory() {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        }
-      ],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 1,
-      "reference_lines": [
-        104
-      ]
-    },
-    {
-      "symbol": "Win32IDE::cmdDbgModules()",
-      "token": "Win32IDE::cmdDbgModules",
-      "occurrences": 1,
-      "classification": "unwired_non_stub",
-      "reason": "Definition candidates exist but are not wired into current Win32IDE build.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Commands.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Commands.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_NativeDebugPanel.cpp",
-          "line": 460,
-          "text": "void Win32IDE::cmdDbgModules() {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        }
-      ],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 1,
-      "reference_lines": [
-        108
-      ]
-    },
-    {
-      "symbol": "Win32IDE::cmdDbgRegisters()",
-      "token": "Win32IDE::cmdDbgRegisters",
-      "occurrences": 1,
-      "classification": "unwired_non_stub",
-      "reason": "Definition candidates exist but are not wired into current Win32IDE build.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Commands.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Commands.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_NativeDebugPanel.cpp",
-          "line": 351,
-          "text": "void Win32IDE::cmdDbgRegisters() {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        }
-      ],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 1,
-      "reference_lines": [
-        106
-      ]
-    },
-    {
-      "symbol": "Win32IDE::cmdDbgRemoveBP()",
-      "token": "Win32IDE::cmdDbgRemoveBP",
-      "occurrences": 1,
-      "classification": "unwired_non_stub",
-      "reason": "Definition candidates exist but are not wired into current Win32IDE build.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Commands.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Commands.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_NativeDebugPanel.cpp",
-          "line": 262,
-          "text": "void Win32IDE::cmdDbgRemoveBP() {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        }
-      ],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 1,
-      "reference_lines": [
-        96
-      ]
-    },
-    {
-      "symbol": "Win32IDE::cmdDbgRemoveWatch()",
-      "token": "Win32IDE::cmdDbgRemoveWatch",
-      "occurrences": 1,
-      "classification": "unwired_non_stub",
-      "reason": "Definition candidates exist but are not wired into current Win32IDE build.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Commands.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Commands.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_NativeDebugPanel.cpp",
-          "line": 331,
-          "text": "void Win32IDE::cmdDbgRemoveWatch() {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        }
-      ],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 1,
-      "reference_lines": [
-        91
-      ]
-    },
-    {
-      "symbol": "Win32IDE::cmdDbgSearchMemory()",
-      "token": "Win32IDE::cmdDbgSearchMemory",
-      "occurrences": 1,
-      "classification": "unwired_non_stub",
-      "reason": "Definition candidates exist but are not wired into current Win32IDE build.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Commands.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Commands.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_NativeDebugPanel.cpp",
-          "line": 580,
-          "text": "void Win32IDE::cmdDbgSearchMemory() {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        }
-      ],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 1,
-      "reference_lines": [
-        101
-      ]
-    },
-    {
-      "symbol": "Win32IDE::cmdDbgSetRegister()",
-      "token": "Win32IDE::cmdDbgSetRegister",
-      "occurrences": 1,
-      "classification": "unwired_non_stub",
-      "reason": "Definition candidates exist but are not wired into current Win32IDE build.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Commands.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Commands.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_NativeDebugPanel.cpp",
-          "line": 546,
-          "text": "void Win32IDE::cmdDbgSetRegister() {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        }
-      ],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 1,
-      "reference_lines": [
-        102
-      ]
-    },
-    {
-      "symbol": "Win32IDE::cmdDbgStack()",
-      "token": "Win32IDE::cmdDbgStack",
-      "occurrences": 1,
-      "classification": "unwired_non_stub",
-      "reason": "Definition candidates exist but are not wired into current Win32IDE build.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Commands.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Commands.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_NativeDebugPanel.cpp",
-          "line": 362,
-          "text": "void Win32IDE::cmdDbgStack() {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        }
-      ],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 1,
-      "reference_lines": [
-        105
-      ]
-    },
-    {
-      "symbol": "Win32IDE::cmdDbgStatus()",
-      "token": "Win32IDE::cmdDbgStatus",
-      "occurrences": 1,
-      "classification": "unwired_non_stub",
-      "reason": "Definition candidates exist but are not wired into current Win32IDE build.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Commands.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Commands.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_NativeDebugPanel.cpp",
-          "line": 651,
-          "text": "void Win32IDE::cmdDbgStatus() {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        }
-      ],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 1,
-      "reference_lines": [
-        99
-      ]
-    },
-    {
-      "symbol": "Win32IDE::cmdDbgStepInto()",
-      "token": "Win32IDE::cmdDbgStepInto",
-      "occurrences": 1,
-      "classification": "unwired_non_stub",
-      "reason": "Definition candidates exist but are not wired into current Win32IDE build.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Commands.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Commands.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_NativeDebugPanel.cpp",
-          "line": 199,
-          "text": "void Win32IDE::cmdDbgStepInto() {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        }
-      ],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 1,
-      "reference_lines": [
-        83
-      ]
-    },
-    {
-      "symbol": "Win32IDE::cmdDbgStepOut()",
-      "token": "Win32IDE::cmdDbgStepOut",
-      "occurrences": 1,
-      "classification": "unwired_non_stub",
-      "reason": "Definition candidates exist but are not wired into current Win32IDE build.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Commands.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Commands.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_NativeDebugPanel.cpp",
-          "line": 204,
-          "text": "void Win32IDE::cmdDbgStepOut() {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        }
-      ],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 1,
-      "reference_lines": [
-        82
-      ]
-    },
-    {
-      "symbol": "Win32IDE::cmdDbgStepOver()",
-      "token": "Win32IDE::cmdDbgStepOver",
-      "occurrences": 1,
-      "classification": "unwired_non_stub",
-      "reason": "Definition candidates exist but are not wired into current Win32IDE build.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Commands.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Commands.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_NativeDebugPanel.cpp",
-          "line": 194,
-          "text": "void Win32IDE::cmdDbgStepOver() {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        }
-      ],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 1,
-      "reference_lines": [
-        84
-      ]
-    },
-    {
-      "symbol": "Win32IDE::cmdDbgSwitchThread()",
-      "token": "Win32IDE::cmdDbgSwitchThread",
-      "occurrences": 1,
-      "classification": "unwired_non_stub",
-      "reason": "Definition candidates exist but are not wired into current Win32IDE build.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Commands.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Commands.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_NativeDebugPanel.cpp",
-          "line": 499,
-          "text": "void Win32IDE::cmdDbgSwitchThread() {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        }
-      ],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 1,
-      "reference_lines": [
-        90
-      ]
-    },
-    {
-      "symbol": "Win32IDE::cmdDbgSymbolPath()",
-      "token": "Win32IDE::cmdDbgSymbolPath",
-      "occurrences": 1,
-      "classification": "unwired_non_stub",
-      "reason": "Definition candidates exist but are not wired into current Win32IDE build.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Commands.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Commands.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_NativeDebugPanel.cpp",
-          "line": 631,
-          "text": "void Win32IDE::cmdDbgSymbolPath() {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        }
-      ],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 1,
-      "reference_lines": [
-        100
-      ]
-    },
-    {
-      "symbol": "Win32IDE::cmdDbgThreads()",
-      "token": "Win32IDE::cmdDbgThreads",
-      "occurrences": 1,
-      "classification": "unwired_non_stub",
-      "reason": "Definition candidates exist but are not wired into current Win32IDE build.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Commands.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Commands.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_NativeDebugPanel.cpp",
-          "line": 479,
-          "text": "void Win32IDE::cmdDbgThreads() {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        }
-      ],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 1,
-      "reference_lines": [
-        107
+        467,
+        469
       ]
     },
     {
@@ -6785,7 +5106,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        196
+        97
       ]
     },
     {
@@ -6816,7 +5137,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        207
+        108
       ]
     },
     {
@@ -6847,7 +5168,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        198
+        99
       ]
     },
     {
@@ -6878,7 +5199,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        202
+        103
       ]
     },
     {
@@ -6909,7 +5230,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        195
+        96
       ]
     },
     {
@@ -6940,7 +5261,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        197
+        98
       ]
     },
     {
@@ -6971,7 +5292,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        199
+        100
       ]
     },
     {
@@ -7002,7 +5323,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        204
+        105
       ]
     },
     {
@@ -7033,7 +5354,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        206
+        107
       ]
     },
     {
@@ -7064,7 +5385,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        205
+        106
       ]
     },
     {
@@ -7095,7 +5416,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        208
+        109
       ]
     },
     {
@@ -7126,7 +5447,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        203
+        104
       ]
     },
     {
@@ -7157,7 +5478,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        201
+        102
       ]
     },
     {
@@ -7188,7 +5509,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        200
+        101
       ]
     },
     {
@@ -7219,165 +5540,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        194
-      ]
-    },
-    {
-      "symbol": "Win32IDE::initPhase12()",
-      "token": "Win32IDE::initPhase12",
-      "occurrences": 1,
-      "classification": "unwired_non_stub",
-      "reason": "Definition candidates exist but are not wired into current Win32IDE build.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Core.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Core.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_NativeDebugPanel.cpp",
-          "line": 77,
-          "text": "void Win32IDE::initPhase12() {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        }
-      ],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 1,
-      "reference_lines": [
-        78
-      ]
-    },
-    {
-      "symbol": "Win32IDE::shutdownPhase12()",
-      "token": "Win32IDE::shutdownPhase12",
-      "occurrences": 1,
-      "classification": "unwired_non_stub",
-      "reason": "Definition candidates exist but are not wired into current Win32IDE build.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Core.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Core.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_NativeDebugPanel.cpp",
-          "line": 101,
-          "text": "void Win32IDE::shutdownPhase12() {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        }
-      ],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 1,
-      "reference_lines": [
-        79
-      ]
-    },
-    {
-      "symbol": "Win32IDE::toggleMinimap()",
-      "token": "Win32IDE::toggleMinimap",
-      "occurrences": 2,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Commands.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Commands.cpp"
-          ]
-        },
-        {
-          "obj": "Win32IDE_Tier1Cosmetics.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Tier1Cosmetics.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE.cpp",
-          "line": 2875,
-          "text": "void Win32IDE::toggleMinimap()",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_Minimap.cpp",
-          "line": 167,
-          "text": "void Win32IDE::toggleMinimap()",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        }
-      ],
-      "all_definition_candidates_count": 2,
-      "all_search_hits_count": 2,
-      "reference_lines": [
-        80,
-        193
-      ]
-    },
-    {
-      "symbol": "Win32IDE::updateMinimap()",
-      "token": "Win32IDE::updateMinimap",
-      "occurrences": 4,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_Tier1Cosmetics.cpp.obj",
-          "count": 3,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_Tier1Cosmetics.cpp"
-          ]
-        },
-        {
-          "obj": "Win32IDE.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE.cpp",
-          "line": 2745,
-          "text": "void Win32IDE::updateMinimap()",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_Minimap.cpp",
-          "line": 82,
-          "text": "void Win32IDE::updateMinimap()",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        }
-      ],
-      "all_definition_candidates_count": 2,
-      "all_search_hits_count": 2,
-      "reference_lines": [
-        73,
-        190,
-        191,
-        192
+        95
       ]
     },
     {
@@ -7400,7 +5563,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        54
+        56
       ]
     },
     {
@@ -7423,7 +5586,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        55
+        57
       ]
     },
     {
@@ -7446,7 +5609,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        209
+        110
       ]
     },
     {
@@ -7492,9 +5655,9 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 520,
       "reference_lines": [
-        302,
-        319,
-        586
+        203,
+        220,
+        474
       ]
     },
     {
@@ -7533,9 +5696,9 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 780,
       "reference_lines": [
-        288,
-        308,
-        317
+        189,
+        209,
+        218
       ]
     },
     {
@@ -7566,7 +5729,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 432,
       "reference_lines": [
-        286
+        187
       ]
     },
     {
@@ -7619,9 +5782,9 @@
       "all_definition_candidates_count": 3,
       "all_search_hits_count": 608,
       "reference_lines": [
-        299,
-        320,
-        585
+        200,
+        221,
+        473
       ]
     },
     {
@@ -7660,9 +5823,9 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 952,
       "reference_lines": [
-        287,
-        305,
-        318
+        188,
+        206,
+        219
       ]
     },
     {
@@ -7693,7 +5856,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 432,
       "reference_lines": [
-        285
+        186
       ]
     },
     {
@@ -7743,6 +5906,20 @@
           "removed_by_non_msvc_block": false
         },
         {
+          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
+          "line": 140698,
+          "text": ";   - asm_camellia256_get_hmac_key (from RawrXD_Camellia256.asm)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
+          "line": 140698,
+          "text": ";   - asm_camellia256_get_hmac_key (from RawrXD_Camellia256.asm)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
           "path": "/workspace/src/test_harness/camellia256_test.cpp",
           "line": 144,
           "text": "int rc = asm_camellia256_get_hmac_key(hmacKey);",
@@ -7764,21 +5941,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
-          "line": 140698,
-          "text": ";   - asm_camellia256_get_hmac_key (from RawrXD_Camellia256.asm)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
-          "line": 140698,
-          "text": ";   - asm_camellia256_get_hmac_key (from RawrXD_Camellia256.asm)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
           "line": 140698,
           "text": ";   - asm_camellia256_get_hmac_key (from RawrXD_Camellia256.asm)",
           "stublike_path": false,
@@ -7795,9 +5958,9 @@
       "all_definition_candidates_count": 89,
       "all_search_hits_count": 1124,
       "reference_lines": [
-        283,
-        293,
-        295
+        184,
+        194,
+        196
       ]
     },
     {
@@ -7828,8 +5991,8 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 432,
       "reference_lines": [
-        289,
-        310
+        190,
+        211
       ]
     },
     {
@@ -7910,7 +6073,7 @@
       "all_definition_candidates_count": 8,
       "all_search_hits_count": 439,
       "reference_lines": [
-        294
+        195
       ]
     },
     {
@@ -7977,7 +6140,7 @@
       "all_definition_candidates_count": 6,
       "all_search_hits_count": 437,
       "reference_lines": [
-        284
+        185
       ]
     },
     {
@@ -8079,7 +6242,7 @@
       "all_definition_candidates_count": 12,
       "all_search_hits_count": 615,
       "reference_lines": [
-        282
+        183
       ]
     },
     {
@@ -8124,8 +6287,8 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 433,
       "reference_lines": [
-        292,
-        587
+        193,
+        475
       ]
     },
     {
@@ -8165,7 +6328,7 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 438,
       "reference_lines": [
-        593
+        481
       ]
     },
     {
@@ -8225,7 +6388,7 @@
       "all_definition_candidates_count": 5,
       "all_search_hits_count": 615,
       "reference_lines": [
-        542
+        430
       ]
     },
     {
@@ -8278,7 +6441,7 @@
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 438,
       "reference_lines": [
-        45
+        47
       ]
     },
     {
@@ -8318,7 +6481,7 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 438,
       "reference_lines": [
-        591
+        479
       ]
     },
     {
@@ -8358,7 +6521,7 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 438,
       "reference_lines": [
-        589
+        477
       ]
     },
     {
@@ -8398,9 +6561,9 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 438,
       "reference_lines": [
-        590,
-        592,
-        594
+        478,
+        480,
+        482
       ]
     },
     {
@@ -8443,6 +6606,13 @@
           "removed_by_non_msvc_block": false
         },
         {
+          "path": "/workspace/src/ggml_masm/compression.asm",
+          "line": 103194,
+          "text": ";   int64_t asm_symbol_hash_lookup(",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
           "path": "/workspace/src/ggml_masm/quantization.asm",
           "line": 103194,
           "text": ";   int64_t asm_symbol_hash_lookup(",
@@ -8450,7 +6620,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/compression.asm",
+          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
+          "line": 103194,
+          "text": ";   int64_t asm_symbol_hash_lookup(",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/win32app/mcp_hooks.asm",
           "line": 103194,
           "text": ";   int64_t asm_symbol_hash_lookup(",
           "stublike_path": false,
@@ -8471,13 +6648,6 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
-          "line": 103194,
-          "text": ";   int64_t asm_symbol_hash_lookup(",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/digestion/digestion_asm_x64.asm",
           "line": 103194,
           "text": ";   int64_t asm_symbol_hash_lookup(",
@@ -8485,14 +6655,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
-          "line": 103194,
-          "text": ";   int64_t asm_symbol_hash_lookup(",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/net/net.asm",
+          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
           "line": 103194,
           "text": ";   int64_t asm_symbol_hash_lookup(",
           "stublike_path": false,
@@ -8502,7 +6665,7 @@
       "all_definition_candidates_count": 88,
       "all_search_hits_count": 437,
       "reference_lines": [
-        423
+        320
       ]
     },
     {
@@ -8552,6 +6715,13 @@
           "removed_by_non_msvc_block": false
         },
         {
+          "path": "/workspace/include/codec/compression.h",
+          "line": 32,
+          "text": "std::vector<uint8_t> deflate_brutal_masm(const std::vector<uint8_t>& data, bool* success = nullptr);",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
           "path": "/workspace/include/deflate_brutal_qt.hpp",
           "line": 27,
           "text": "void* p = deflate_brutal_masm(in.data(), in.size(), &packedSz);",
@@ -8580,13 +6750,6 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/include/codec/compression.h",
-          "line": 32,
-          "text": "std::vector<uint8_t> deflate_brutal_masm(const std::vector<uint8_t>& data, bool* success = nullptr);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/orchestration/checkpoint_manager_impl.cpp",
           "line": 37,
           "text": "compressedData = codec::deflate_brutal_masm(stateData, &success);",
@@ -8611,7 +6774,7 @@
       "all_definition_candidates_count": 14,
       "all_search_hits_count": 301,
       "reference_lines": [
-        243
+        144
       ]
     },
     {
@@ -8642,8 +6805,8 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 263,
       "reference_lines": [
-        332,
-        361
+        233,
+        262
       ]
     },
     {
@@ -8707,14 +6870,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
+          "path": "/workspace/src/ggml_masm/compression.asm",
           "line": 58572,
           "text": "; dequant_q4_0_avx2(const void* src, float* dst, uint64_t nblocks)",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/compression.asm",
+          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
           "line": 58572,
           "text": "; dequant_q4_0_avx2(const void* src, float* dst, uint64_t nblocks)",
           "stublike_path": false,
@@ -8728,14 +6891,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
           "line": 58572,
           "text": "; dequant_q4_0_avx2(const void* src, float* dst, uint64_t nblocks)",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/net/net.asm",
+          "path": "/workspace/src/win32app/mcp_hooks.asm",
           "line": 58572,
           "text": "; dequant_q4_0_avx2(const void* src, float* dst, uint64_t nblocks)",
           "stublike_path": false,
@@ -8745,8 +6908,8 @@
       "all_definition_candidates_count": 88,
       "all_search_hits_count": 350,
       "reference_lines": [
-        331,
-        364
+        232,
+        265
       ]
     },
     {
@@ -8777,8 +6940,8 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 263,
       "reference_lines": [
-        330,
-        365
+        231,
+        266
       ]
     },
     {
@@ -8835,14 +6998,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
+          "path": "/workspace/src/ggml_masm/compression.asm",
           "line": 58683,
           "text": "; dequant_q8_0_avx2(const void* src, float* dst, uint64_t nblocks)",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/compression.asm",
+          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
           "line": 58683,
           "text": "; dequant_q8_0_avx2(const void* src, float* dst, uint64_t nblocks)",
           "stublike_path": false,
@@ -8863,7 +7026,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
           "line": 58683,
           "text": "; dequant_q8_0_avx2(const void* src, float* dst, uint64_t nblocks)",
           "stublike_path": false,
@@ -8880,8 +7043,8 @@
       "all_definition_candidates_count": 88,
       "all_search_hits_count": 350,
       "reference_lines": [
-        334,
-        362
+        235,
+        263
       ]
     },
     {
@@ -8912,8 +7075,8 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 263,
       "reference_lines": [
-        333,
-        363
+        234,
+        264
       ]
     },
     {
@@ -8966,7 +7129,7 @@
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 626,
       "reference_lines": [
-        46
+        48
       ]
     },
     {
@@ -9005,7 +7168,7 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 615,
       "reference_lines": [
-        280
+        181
       ]
     },
     {
@@ -9036,7 +7199,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 268,
       "reference_lines": [
-        327
+        228
       ]
     },
     {
@@ -9067,7 +7230,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 268,
       "reference_lines": [
-        326
+        227
       ]
     },
     {
@@ -9090,7 +7253,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 611,
       "reference_lines": [
-        561
+        449
       ]
     },
     {
@@ -9113,7 +7276,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 611,
       "reference_lines": [
-        560
+        448
       ]
     },
     {
@@ -9144,7 +7307,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1133,
       "reference_lines": [
-        562
+        450
       ]
     },
     {
@@ -9182,8 +7345,8 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 263,
       "reference_lines": [
-        347,
-        354
+        248,
+        255
       ]
     },
     {
@@ -9219,14 +7382,14 @@
       ],
       "definition_candidates_unwired": [
         {
-          "path": "/workspace/src/ggml_masm/attention.asm",
+          "path": "/workspace/src/ai/digestion_scanner.asm",
           "line": 58521,
           "text": "; native_nt_memcpy(void* dst, const void* src, size_t bytes)",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ai/digestion_scanner.asm",
+          "path": "/workspace/src/ggml_masm/attention.asm",
           "line": 58521,
           "text": "; native_nt_memcpy(void* dst, const void* src, size_t bytes)",
           "stublike_path": false,
@@ -9247,14 +7410,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/compression.asm",
+          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
           "line": 58521,
           "text": "; native_nt_memcpy(void* dst, const void* src, size_t bytes)",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
+          "path": "/workspace/src/ggml_masm/compression.asm",
           "line": 58521,
           "text": "; native_nt_memcpy(void* dst, const void* src, size_t bytes)",
           "stublike_path": false,
@@ -9275,14 +7438,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
+          "path": "/workspace/src/win32app/mcp_hooks.asm",
           "line": 58521,
           "text": "; native_nt_memcpy(void* dst, const void* src, size_t bytes)",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
           "line": 58521,
           "text": "; native_nt_memcpy(void* dst, const void* src, size_t bytes)",
           "stublike_path": false,
@@ -9292,8 +7455,8 @@
       "all_definition_candidates_count": 89,
       "all_search_hits_count": 263,
       "reference_lines": [
-        338,
-        355
+        239,
+        256
       ]
     },
     {
@@ -9385,14 +7548,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
           "line": 57869,
           "text": "; native_rmsnorm_avx2(const float* x, const float* weight, float* y,",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/net/net.asm",
+          "path": "/workspace/src/win32app/mcp_hooks.asm",
           "line": 57869,
           "text": "; native_rmsnorm_avx2(const float* x, const float* weight, float* y,",
           "stublike_path": false,
@@ -9402,8 +7565,8 @@
       "all_definition_candidates_count": 89,
       "all_search_hits_count": 263,
       "reference_lines": [
-        335,
-        358
+        236,
+        259
       ]
     },
     {
@@ -9460,27 +7623,6 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/compression.asm",
-          "line": 57989,
-          "text": "; native_rmsnorm_avx512(const float* x, const float* weight, float* y,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
-          "line": 57989,
-          "text": "; native_rmsnorm_avx512(const float* x, const float* weight, float* y,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
-          "line": 57989,
-          "text": "; native_rmsnorm_avx512(const float* x, const float* weight, float* y,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/ggml_masm/tensor_ops.asm",
           "line": 57989,
           "text": "; native_rmsnorm_avx512(const float* x, const float* weight, float* y,",
@@ -9495,7 +7637,28 @@
           "removed_by_non_msvc_block": false
         },
         {
+          "path": "/workspace/src/ggml_masm/compression.asm",
+          "line": 57989,
+          "text": "; native_rmsnorm_avx512(const float* x, const float* weight, float* y,",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
+          "line": 57989,
+          "text": "; native_rmsnorm_avx512(const float* x, const float* weight, float* y,",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
           "path": "/workspace/src/digestion/digestion_asm_x64.asm",
+          "line": 57989,
+          "text": "; native_rmsnorm_avx512(const float* x, const float* weight, float* y,",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/win32app/mcp_hooks.asm",
           "line": 57989,
           "text": "; native_rmsnorm_avx512(const float* x, const float* weight, float* y,",
           "stublike_path": false,
@@ -9512,9 +7675,9 @@
       "all_definition_candidates_count": 89,
       "all_search_hits_count": 263,
       "reference_lines": [
-        341,
-        343,
-        360
+        242,
+        244,
+        261
       ]
     },
     {
@@ -9564,14 +7727,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/quantization.asm",
+          "path": "/workspace/src/ggml_masm/compression.asm",
           "line": 58434,
           "text": "; native_rope_avx2(float* q, float* k, int headDim, int nHeads,",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
+          "path": "/workspace/src/ggml_masm/quantization.asm",
           "line": 58434,
           "text": "; native_rope_avx2(float* q, float* k, int headDim, int nHeads,",
           "stublike_path": false,
@@ -9585,6 +7748,13 @@
           "removed_by_non_msvc_block": false
         },
         {
+          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
+          "line": 58434,
+          "text": "; native_rope_avx2(float* q, float* k, int headDim, int nHeads,",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
           "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
           "line": 58434,
           "text": "; native_rope_avx2(float* q, float* k, int headDim, int nHeads,",
@@ -9592,7 +7762,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/compression.asm",
+          "path": "/workspace/src/win32app/mcp_hooks.asm",
           "line": 58434,
           "text": "; native_rope_avx2(float* q, float* k, int headDim, int nHeads,",
           "stublike_path": false,
@@ -9611,20 +7781,13 @@
           "text": "; native_rope_avx2(float* q, float* k, int headDim, int nHeads,",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
-          "line": 58434,
-          "text": "; native_rope_avx2(float* q, float* k, int headDim, int nHeads,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
         }
       ],
       "all_definition_candidates_count": 89,
       "all_search_hits_count": 263,
       "reference_lines": [
-        337,
-        356
+        238,
+        257
       ]
     },
     {
@@ -9688,6 +7851,13 @@
           "removed_by_non_msvc_block": false
         },
         {
+          "path": "/workspace/src/ggml_masm/compression.asm",
+          "line": 58107,
+          "text": "; native_softmax_avx2(float* x, int n)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
           "path": "/workspace/src/ggml_masm/ggml_backend.asm",
           "line": 58107,
           "text": "; native_softmax_avx2(float* x, int n)",
@@ -9702,14 +7872,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/compression.asm",
+          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
           "line": 58107,
           "text": "; native_softmax_avx2(float* x, int n)",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
+          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
           "line": 58107,
           "text": "; native_softmax_avx2(float* x, int n)",
           "stublike_path": false,
@@ -9721,20 +7891,13 @@
           "text": "; native_softmax_avx2(float* x, int n)",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/net/net.asm",
-          "line": 58107,
-          "text": "; native_softmax_avx2(float* x, int n)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
         }
       ],
       "all_definition_candidates_count": 89,
       "all_search_hits_count": 263,
       "reference_lines": [
-        336,
-        357
+        237,
+        258
       ]
     },
     {
@@ -9784,28 +7947,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/net/net.asm",
-          "line": 58222,
-          "text": "; native_softmax_avx512(float* x, int n)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/ggml_masm/quantization.asm",
-          "line": 58222,
-          "text": "; native_softmax_avx512(float* x, int n)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
-          "line": 58222,
-          "text": "; native_softmax_avx512(float* x, int n)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
           "line": 58222,
           "text": "; native_softmax_avx512(float* x, int n)",
           "stublike_path": false,
@@ -9819,7 +7961,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
+          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
           "line": 58222,
           "text": "; native_softmax_avx512(float* x, int n)",
           "stublike_path": false,
@@ -9833,7 +7975,28 @@
           "removed_by_non_msvc_block": false
         },
         {
+          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
+          "line": 58222,
+          "text": "; native_softmax_avx512(float* x, int n)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
           "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
+          "line": 58222,
+          "text": "; native_softmax_avx512(float* x, int n)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "line": 58222,
+          "text": "; native_softmax_avx512(float* x, int n)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/net/net.asm",
           "line": 58222,
           "text": "; native_softmax_avx512(float* x, int n)",
           "stublike_path": false,
@@ -9843,9 +8006,9 @@
       "all_definition_candidates_count": 89,
       "all_search_hits_count": 263,
       "reference_lines": [
-        342,
-        344,
-        359
+        243,
+        245,
+        260
       ]
     },
     {
@@ -9895,13 +8058,6 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/compression.asm",
-          "line": 58322,
-          "text": "; native_vdot_avx2(const float* a, const float* b, int n, float* result)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/ggml_masm/quantization.asm",
           "line": 58322,
           "text": "; native_vdot_avx2(const float* a, const float* b, int n, float* result)",
@@ -9909,7 +8065,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
+          "path": "/workspace/src/ggml_masm/compression.asm",
           "line": 58322,
           "text": "; native_vdot_avx2(const float* a, const float* b, int n, float* result)",
           "stublike_path": false,
@@ -9930,6 +8086,13 @@
           "removed_by_non_msvc_block": false
         },
         {
+          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
+          "line": 58322,
+          "text": "; native_vdot_avx2(const float* a, const float* b, int n, float* result)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
           "path": "/workspace/src/digestion/digestion_asm_x64.asm",
           "line": 58322,
           "text": "; native_vdot_avx2(const float* a, const float* b, int n, float* result)",
@@ -9944,7 +8107,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/net/net.asm",
+          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
           "line": 58322,
           "text": "; native_vdot_avx2(const float* a, const float* b, int n, float* result)",
           "stublike_path": false,
@@ -9954,7 +8117,7 @@
       "all_definition_candidates_count": 89,
       "all_search_hits_count": 263,
       "reference_lines": [
-        328
+        229
       ]
     },
     {
@@ -10004,13 +8167,6 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/compression.asm",
-          "line": 58377,
-          "text": "; native_vdot_avx512(const float* a, const float* b, int n, float* result)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/ggml_masm/quantization.asm",
           "line": 58377,
           "text": "; native_vdot_avx512(const float* a, const float* b, int n, float* result)",
@@ -10018,14 +8174,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
+          "path": "/workspace/src/win32app/mcp_hooks.asm",
           "line": 58377,
           "text": "; native_vdot_avx512(const float* a, const float* b, int n, float* result)",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
+          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
           "line": 58377,
           "text": "; native_vdot_avx512(const float* a, const float* b, int n, float* result)",
           "stublike_path": false,
@@ -10046,7 +8202,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "path": "/workspace/src/ggml_masm/compression.asm",
+          "line": 58377,
+          "text": "; native_vdot_avx512(const float* a, const float* b, int n, float* result)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/net/net.asm",
           "line": 58377,
           "text": "; native_vdot_avx512(const float* a, const float* b, int n, float* result)",
           "stublike_path": false,
@@ -10063,7 +8226,7 @@
       "all_definition_candidates_count": 89,
       "all_search_hits_count": 263,
       "reference_lines": [
-        329
+        230
       ]
     },
     {
@@ -10127,6 +8290,13 @@
           "removed_by_non_msvc_block": false
         },
         {
+          "path": "/workspace/src/ggml_masm/compression.asm",
+          "line": 58785,
+          "text": "; qgemv_q4_0_avx2(const void* A, const float* x, float* y, int M, int K)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
           "path": "/workspace/src/ggml_masm/ggml_backend.asm",
           "line": 58785,
           "text": "; qgemv_q4_0_avx2(const void* A, const float* x, float* y, int M, int K)",
@@ -10135,20 +8305,6 @@
         },
         {
           "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
-          "line": 58785,
-          "text": "; qgemv_q4_0_avx2(const void* A, const float* x, float* y, int M, int K)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/compression.asm",
-          "line": 58785,
-          "text": "; qgemv_q4_0_avx2(const void* A, const float* x, float* y, int M, int K)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
           "line": 58785,
           "text": "; qgemv_q4_0_avx2(const void* A, const float* x, float* y, int M, int K)",
           "stublike_path": false,
@@ -10167,12 +8323,19 @@
           "text": "; qgemv_q4_0_avx2(const void* A, const float* x, float* y, int M, int K)",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
+          "line": 58785,
+          "text": "; qgemv_q4_0_avx2(const void* A, const float* x, float* y, int M, int K)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
         }
       ],
       "all_definition_candidates_count": 89,
       "all_search_hits_count": 263,
       "reference_lines": [
-        349
+        250
       ]
     },
     {
@@ -10229,20 +8392,6 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
-          "line": 58914,
-          "text": "; qgemv_q8_0_avx2(const void* A, const float* x, float* y, int M, int K)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
-          "line": 58914,
-          "text": "; qgemv_q8_0_avx2(const void* A, const float* x, float* y, int M, int K)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/ggml_masm/tensor_ops.asm",
           "line": 58914,
           "text": "; qgemv_q8_0_avx2(const void* A, const float* x, float* y, int M, int K)",
@@ -10250,7 +8399,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
+          "path": "/workspace/src/win32app/mcp_hooks.asm",
           "line": 58914,
           "text": "; qgemv_q8_0_avx2(const void* A, const float* x, float* y, int M, int K)",
           "stublike_path": false,
@@ -10264,7 +8413,21 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/net/net.asm",
+          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
+          "line": 58914,
+          "text": "; qgemv_q8_0_avx2(const void* A, const float* x, float* y, int M, int K)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
+          "line": 58914,
+          "text": "; qgemv_q8_0_avx2(const void* A, const float* x, float* y, int M, int K)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
           "line": 58914,
           "text": "; qgemv_q8_0_avx2(const void* A, const float* x, float* y, int M, int K)",
           "stublike_path": false,
@@ -10281,7 +8444,7 @@
       "all_definition_candidates_count": 89,
       "all_search_hits_count": 263,
       "reference_lines": [
-        348
+        249
       ]
     },
     {
@@ -10308,13 +8471,6 @@
       ],
       "definition_candidates_wired": [
         {
-          "path": "/workspace/src/win32app/main_win32.cpp",
-          "line": 1089,
-          "text": "rawrxd_agentic_deep_think_loop(prompt);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/core/feature_handlers.cpp",
           "line": 1956,
           "text": "#pragma comment(linker, \"/alternatename:rawrxd_agentic_deep_think_loop=rawrxd_agentic_deep_think_loop_fallback\")",
@@ -10325,6 +8481,13 @@
           "path": "/workspace/src/core/feature_handlers.cpp",
           "line": 1995,
           "text": "rawrxd_agentic_deep_think_loop(initial_prompt);",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/win32app/main_win32.cpp",
+          "line": 1089,
+          "text": "rawrxd_agentic_deep_think_loop(prompt);",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         }
@@ -10341,9 +8504,9 @@
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 12,
       "reference_lines": [
-        43,
-        44,
-        520
+        45,
+        46,
+        414
       ]
     },
     {
@@ -10424,10 +8587,10 @@
       "all_definition_candidates_count": 7,
       "all_search_hits_count": 13,
       "reference_lines": [
-        53,
-        64,
-        65,
-        72
+        55,
+        66,
+        67,
+        69
       ]
     },
     {
@@ -10487,8 +8650,8 @@
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 12,
       "reference_lines": [
-        42,
-        519
+        44,
+        413
       ]
     },
     {
@@ -10526,10 +8689,10 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 6,
       "reference_lines": [
-        56,
-        61,
+        58,
         63,
-        66
+        65,
+        68
       ]
     },
     {
@@ -10567,8 +8730,8 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 350,
       "reference_lines": [
-        345,
-        350
+        246,
+        251
       ]
     },
     {
@@ -10606,8 +8769,8 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 350,
       "reference_lines": [
-        339,
-        352
+        240,
+        253
       ]
     },
     {
@@ -10645,8 +8808,8 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 350,
       "reference_lines": [
-        346,
-        351
+        247,
+        252
       ]
     },
     {
@@ -10684,8 +8847,8 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 350,
       "reference_lines": [
-        340,
-        353
+        241,
+        254
       ]
     },
     {
@@ -10749,7 +8912,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
+          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
           "line": 150895,
           "text": "; uint32_t swarm_build_discovery_packet(",
           "stublike_path": false,
@@ -10763,14 +8926,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
-          "line": 150895,
-          "text": "; uint32_t swarm_build_discovery_packet(",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
           "line": 150895,
           "text": "; uint32_t swarm_build_discovery_packet(",
           "stublike_path": false,
@@ -10784,7 +8940,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/net/net.asm",
+          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "line": 150895,
+          "text": "; uint32_t swarm_build_discovery_packet(",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
           "line": 150895,
           "text": "; uint32_t swarm_build_discovery_packet(",
           "stublike_path": false,
@@ -10794,8 +8957,8 @@
       "all_definition_candidates_count": 89,
       "all_search_hits_count": 525,
       "reference_lines": [
-        548,
-        551
+        436,
+        439
       ]
     },
     {
@@ -10838,7 +9001,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/compression.asm",
+          "path": "/workspace/src/ggml_masm/quantization.asm",
           "line": 150728,
           "text": "; uint32_t swarm_compute_layer_crc32(",
           "stublike_path": false,
@@ -10852,14 +9015,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/quantization.asm",
+          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
           "line": 150728,
           "text": "; uint32_t swarm_compute_layer_crc32(",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
+          "path": "/workspace/src/ggml_masm/compression.asm",
           "line": 150728,
           "text": "; uint32_t swarm_compute_layer_crc32(",
           "stublike_path": false,
@@ -10873,13 +9036,6 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
-          "line": 150728,
-          "text": "; uint32_t swarm_compute_layer_crc32(",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/digestion/digestion_asm_x64.asm",
           "line": 150728,
           "text": "; uint32_t swarm_compute_layer_crc32(",
@@ -10887,7 +9043,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/net/net.asm",
+          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "line": 150728,
+          "text": "; uint32_t swarm_compute_layer_crc32(",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
           "line": 150728,
           "text": "; uint32_t swarm_compute_layer_crc32(",
           "stublike_path": false,
@@ -10897,7 +9060,7 @@
       "all_definition_candidates_count": 88,
       "all_search_hits_count": 611,
       "reference_lines": [
-        550
+        438
       ]
     },
     {
@@ -10954,7 +9117,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
+          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
           "line": 150646,
           "text": "; int swarm_receive_header(",
           "stublike_path": false,
@@ -10968,7 +9131,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
+          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
           "line": 150646,
           "text": "; int swarm_receive_header(",
           "stublike_path": false,
@@ -10982,14 +9145,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
           "line": 150646,
           "text": "; int swarm_receive_header(",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
+          "path": "/workspace/src/win32app/mcp_hooks.asm",
           "line": 150646,
           "text": "; int swarm_receive_header(",
           "stublike_path": false,
@@ -10999,7 +9162,7 @@
       "all_definition_candidates_count": 88,
       "all_search_hits_count": 524,
       "reference_lines": [
-        549
+        437
       ]
     }
   ]
