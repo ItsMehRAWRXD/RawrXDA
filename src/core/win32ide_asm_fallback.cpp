@@ -13,6 +13,9 @@
 #include <cstdlib>
 #include <cstring>
 #include <atomic>
+#include <chrono>
+#include <cmath>
+#include <limits>
 #ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -96,6 +99,21 @@ struct CamelliaFallbackHeader {
     uint64_t plainSize;
 };
 
+constexpr uint32_t kPerfSlotCount = 64;
+struct PerfSlotData {
+    uint64_t invocations = 0;
+    uint64_t totalTicks = 0;
+    uint64_t lastTicks = 0;
+    uint64_t minTicks = std::numeric_limits<uint64_t>::max();
+    uint64_t maxTicks = 0;
+    uint64_t reserved0 = 0;
+    uint64_t reserved1 = 0;
+    uint64_t reserved2 = 0;
+};
+
+static PerfSlotData g_perfSlots[kPerfSlotCount]{};
+static std::atomic<bool> g_perfInitialized{false};
+
 static uint32_t clampWeightToQ1000(float value) {
     if (value < 0.0f) value = 0.0f;
     if (value > 1.0f) value = 1.0f;
@@ -132,6 +150,18 @@ static int flushInstructionCache(void* base, size_t size) {
     (void)base;
     (void)size;
     return 0;
+#endif
+}
+
+static uint64_t perfNowTicks() {
+#ifdef _WIN32
+    LARGE_INTEGER qpc{};
+    QueryPerformanceCounter(&qpc);
+    return static_cast<uint64_t>(qpc.QuadPart);
+#else
+    const auto now = std::chrono::steady_clock::now().time_since_epoch();
+    return static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::nanoseconds>(now).count());
 #endif
 }
 
@@ -657,32 +687,184 @@ int asm_pyre_gemm_fp32(const float* A, const float* B, float* C,
     (void)A; (void)B; if (C && M && N && K) std::memset(C, 0, (size_t)M * N * sizeof(float)); return 0;
 }
 int asm_pyre_gemv_fp32(const float* A, const float* x, float* y, uint32_t M, uint32_t K) {
-    (void)A; (void)x; (void)y; (void)M; (void)K; return 0;
+    if (!A || !x || !y || M == 0 || K == 0) {
+        return -1;
+    }
+    for (uint32_t row = 0; row < M; ++row) {
+        double sum = 0.0;
+        const float* aRow = A + static_cast<size_t>(row) * K;
+        for (uint32_t col = 0; col < K; ++col) {
+            sum += static_cast<double>(aRow[col]) * static_cast<double>(x[col]);
+        }
+        y[row] = static_cast<float>(sum);
+    }
+    return 0;
 }
 int asm_pyre_rmsnorm(const float* input, const float* weight, float* output, uint32_t dim, float eps) {
-    (void)input; (void)weight; (void)output; (void)dim; (void)eps; return 0;
+    if (!input || !output || dim == 0) {
+        return -1;
+    }
+    if (eps <= 0.0f) {
+        eps = 1e-5f;
+    }
+
+    double meanSq = 0.0;
+    for (uint32_t i = 0; i < dim; ++i) {
+        const double v = static_cast<double>(input[i]);
+        meanSq += v * v;
+    }
+    meanSq /= static_cast<double>(dim);
+    const float invRms = 1.0f / std::sqrt(static_cast<float>(meanSq) + eps);
+
+    for (uint32_t i = 0; i < dim; ++i) {
+        const float w = weight ? weight[i] : 1.0f;
+        output[i] = input[i] * invRms * w;
+    }
+    return 0;
 }
-int asm_pyre_silu(float* inout, uint32_t count) { (void)inout; (void)count; return 0; }
-int asm_pyre_softmax(float* inout, uint32_t count) { (void)inout; (void)count; return 0; }
+int asm_pyre_silu(float* inout, uint32_t count) {
+    if (!inout || count == 0) {
+        return -1;
+    }
+    for (uint32_t i = 0; i < count; ++i) {
+        const float x = inout[i];
+        inout[i] = x / (1.0f + std::exp(-x));
+    }
+    return 0;
+}
+int asm_pyre_softmax(float* inout, uint32_t count) {
+    if (!inout || count == 0) {
+        return -1;
+    }
+    float maxVal = inout[0];
+    for (uint32_t i = 1; i < count; ++i) {
+        if (inout[i] > maxVal) {
+            maxVal = inout[i];
+        }
+    }
+    double sumExp = 0.0;
+    for (uint32_t i = 0; i < count; ++i) {
+        inout[i] = std::exp(inout[i] - maxVal);
+        sumExp += static_cast<double>(inout[i]);
+    }
+    if (sumExp <= 0.0) {
+        return -1;
+    }
+    const float inv = static_cast<float>(1.0 / sumExp);
+    for (uint32_t i = 0; i < count; ++i) {
+        inout[i] *= inv;
+    }
+    return 0;
+}
 int asm_pyre_rope(float* data, uint32_t seqLen, uint32_t headDim, uint32_t seqOffset, float theta) {
-    (void)data; (void)seqLen; (void)headDim; (void)seqOffset; (void)theta; return 0;
+    if (!data || seqLen == 0 || headDim == 0) {
+        return -1;
+    }
+    if (theta <= 0.0f) {
+        theta = 10000.0f;
+    }
+    const uint32_t fullDim = headDim * 2u;
+    for (uint32_t s = 0; s < seqLen; ++s) {
+        float* row = data + static_cast<size_t>(s) * fullDim;
+        const float pos = static_cast<float>(seqOffset + s);
+        for (uint32_t i = 0; i < headDim; ++i) {
+            const float freq = std::pow(theta, -2.0f * static_cast<float>(i) / static_cast<float>(headDim));
+            const float angle = pos * freq;
+            const float c = std::cos(angle);
+            const float sn = std::sin(angle);
+            const float x0 = row[i];
+            const float x1 = row[i + headDim];
+            row[i] = x0 * c - x1 * sn;
+            row[i + headDim] = x0 * sn + x1 * c;
+        }
+    }
+    return 0;
 }
 int asm_pyre_embedding_lookup(const float* table, const uint32_t* ids, float* output, uint32_t count, uint32_t dim) {
-    (void)table; (void)ids; (void)output; (void)count; (void)dim; return 0;
+    if (!table || !ids || !output || count == 0 || dim == 0) {
+        return -1;
+    }
+    const size_t width = static_cast<size_t>(dim);
+    for (uint32_t t = 0; t < count; ++t) {
+        const float* src = table + static_cast<size_t>(ids[t]) * width;
+        float* dst = output + static_cast<size_t>(t) * width;
+        std::memcpy(dst, src, width * sizeof(float));
+    }
+    return 0;
 }
 int asm_pyre_add_fp32(const float* a, const float* b, float* out, uint32_t count) {
-    (void)a; (void)b; (void)out; (void)count; return 0;
+    if (!a || !b || !out || count == 0) {
+        return -1;
+    }
+    for (uint32_t i = 0; i < count; ++i) {
+        out[i] = a[i] + b[i];
+    }
+    return 0;
 }
 int asm_pyre_mul_fp32(const float* a, const float* b, float* out, uint32_t count) {
-    (void)a; (void)b; (void)out; (void)count; return 0;
+    if (!a || !b || !out || count == 0) {
+        return -1;
+    }
+    for (uint32_t i = 0; i < count; ++i) {
+        out[i] = a[i] * b[i];
+    }
+    return 0;
 }
 
-int asm_perf_init(void) { return 0; }
-uint64_t asm_perf_begin(uint32_t slot) { (void)slot; return 0; }
-void asm_perf_end(uint32_t slot, uint64_t startTSC) { (void)slot; (void)startTSC; }
-void asm_perf_read_slot(uint32_t slotIndex, void* data) { (void)slotIndex; (void)data; }
-void asm_perf_reset_slot(uint32_t slotIndex) { (void)slotIndex; }
-uint32_t asm_perf_get_slot_count(void) { return 64; }
-void* asm_perf_get_table_base(void) { return nullptr; }
+int asm_perf_init(void) {
+    for (uint32_t i = 0; i < kPerfSlotCount; ++i) {
+        g_perfSlots[i] = PerfSlotData{};
+    }
+    g_perfInitialized.store(true, std::memory_order_relaxed);
+    return 0;
+}
+uint64_t asm_perf_begin(uint32_t slot) {
+    if (slot >= kPerfSlotCount) {
+        return 0;
+    }
+    if (!g_perfInitialized.load(std::memory_order_relaxed)) {
+        asm_perf_init();
+    }
+    return perfNowTicks();
+}
+void asm_perf_end(uint32_t slot, uint64_t startTSC) {
+    if (slot >= kPerfSlotCount || startTSC == 0) {
+        return;
+    }
+    const uint64_t end = perfNowTicks();
+    const uint64_t delta = end >= startTSC ? (end - startTSC) : 0;
+    PerfSlotData& d = g_perfSlots[slot];
+    d.invocations++;
+    d.totalTicks += delta;
+    d.lastTicks = delta;
+    if (delta < d.minTicks) {
+        d.minTicks = delta;
+    }
+    if (delta > d.maxTicks) {
+        d.maxTicks = delta;
+    }
+}
+void asm_perf_read_slot(uint32_t slotIndex, void* data) {
+    if (!data) {
+        return;
+    }
+    if (slotIndex >= kPerfSlotCount) {
+        std::memset(data, 0, sizeof(PerfSlotData));
+        return;
+    }
+    PerfSlotData copy = g_perfSlots[slotIndex];
+    if (copy.minTicks == std::numeric_limits<uint64_t>::max()) {
+        copy.minTicks = 0;
+    }
+    std::memcpy(data, &copy, sizeof(copy));
+}
+void asm_perf_reset_slot(uint32_t slotIndex) {
+    if (slotIndex >= kPerfSlotCount) {
+        return;
+    }
+    g_perfSlots[slotIndex] = PerfSlotData{};
+}
+uint32_t asm_perf_get_slot_count(void) { return kPerfSlotCount; }
+void* asm_perf_get_table_base(void) { return g_perfSlots; }
 
 }
