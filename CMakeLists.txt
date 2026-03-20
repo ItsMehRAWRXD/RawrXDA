@@ -413,7 +413,6 @@ set(SOURCES
     src/codec/brutal_gzip.cpp
 
     src/core/execution_scheduler.cpp
-    src/asm/quantum_beaconism_backend.asm
     
     # Agentic Decision Tree + CLI Autonomy (Phase 19)
     src/cli/agentic_decision_tree.cpp
@@ -1229,6 +1228,10 @@ list(REMOVE_ITEM GOLD_UNDERSCORE_SOURCES
     src/core/rawrengine_command_handlers.cpp
     src/core/ssot_validation.cpp
 )
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/agent/quantum_missing_impl.cpp")
+    # Keep Gold and RawrEngine on the same non-duplicated quantum time manager lane.
+    list(REMOVE_ITEM GOLD_UNDERSCORE_SOURCES src/agent/quantum_dynamic_time_manager_impl.cpp)
+endif()
 list(APPEND GOLD_UNDERSCORE_SOURCES
     src/core/rawr_engine_link_shims.cpp
     src/core/auto_feature_stub_impl.cpp
@@ -2217,7 +2220,6 @@ set(INFERENCE_ENGINE_SOURCES
     src/codec/compression.cpp
     src/codec/brutal_gzip.cpp
     src/utils/Diagnostics.cpp
-    src/core/ignite_800b.cpp
     src/inference/TitanLoaderDiagnostics.cpp
     src/inference/MemoryPressureGuard.cpp
     src/agentic/ErrorRecoveryManager.cpp
@@ -3462,8 +3464,7 @@ if(WIN32)
         src/win32app/Win32IDE_ResourceGenerator.cpp
     )
 
-    add_executable(RawrXD-Win32IDE WIN32 ${WIN32IDE_SOURCES} ${ASM_KERNEL_SOURCES}
-        src/win32app/RawrXD-Win32IDE.rc)
+    add_executable(RawrXD-Win32IDE WIN32 ${WIN32IDE_SOURCES} ${ASM_KERNEL_SOURCES})
 
     # =========================================================================
     # PRODUCTION POLICY ENFORCEMENT
