@@ -991,6 +991,15 @@ if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
         src/win32app/agentic_bridge_headless.cpp
         src/win32app/Win32IDE_logMessage.cpp
     )
+    if(RAWRXD_ENABLE_MISSING_HANDLER_STUBS)
+        message(FATAL_ERROR "[ProductionLane] RAWRXD_ENABLE_MISSING_HANDLER_STUBS=ON is incompatible with RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=ON.")
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/core/missing_handler_stubs.cpp")
+        file(READ "${CMAKE_SOURCE_DIR}/src/core/missing_handler_stubs.cpp" _RAWR_MISSING_HANDLER_STUBS_SRC)
+        if(_RAWR_MISSING_HANDLER_STUBS_SRC MATCHES "history/reconstructed")
+            message(FATAL_ERROR "[ProductionLane] src/core/missing_handler_stubs.cpp is history-indirected. Promote canonical ownership under src/core before strict production strip builds.")
+        endif()
+    endif()
 endif()
 
 if(RAWR_REPLACE_SSOT_HANDLERS)
@@ -1005,9 +1014,6 @@ if(RAWR_REPLACE_SSOT_HANDLERS)
 endif()
 
 if(RAWR_REPLACE_MASM_FALLBACKS)
-    list(REMOVE_ITEM SOURCES
-        src/core/memory_patch_byte_search_stubs.cpp
-    )
     if(RAWR_HAS_MASM)
         list(APPEND ASM_KERNEL_SOURCES
             src/asm/memory_patch.asm
@@ -1040,6 +1046,9 @@ set(_RAWR_VALID_SSOT_PROVIDERS CORE EXT AUTO STUBS FEATURES)
 list(FIND _RAWR_VALID_SSOT_PROVIDERS "${RAWR_SSOT_PROVIDER_UPPER}" _rawwr_ssot_provider_idx)
 if(_rawwr_ssot_provider_idx EQUAL -1)
     message(FATAL_ERROR "Invalid RAWR_SSOT_PROVIDER='${RAWR_SSOT_PROVIDER}'. Valid values: CORE, EXT, AUTO, STUBS, FEATURES")
+endif()
+if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES AND (RAWR_SSOT_PROVIDER_UPPER STREQUAL "EXT" OR RAWR_SSOT_PROVIDER_UPPER STREQUAL "STUBS"))
+    message(FATAL_ERROR "[ProductionLane] RAWR_SSOT_PROVIDER=${RAWR_SSOT_PROVIDER_UPPER} requires stub ownership lanes and is incompatible with RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=ON.")
 endif()
 
 set(_RAWR_SSOT_CORE 0)
@@ -3085,6 +3094,16 @@ if(WIN32)
             src/core/vision_encoder.cpp
             src/core/model_loader_fallbacks.cpp
             src/core/multi_response_engine.cpp
+            src/core/subsystem_mode_fallbacks.cpp
+            src/core/rawrxd_native_log_fallback.cpp
+            src/llm_adapter/ggufrunner_link_fallbacks.cpp
+            src/inference/gpu_dispatch_gate_win32ide_fallback.cpp
+            src/inference/gguf_d3d12_bridge_link_fallback.cpp
+            src/core/win32ide_asm_fallback.cpp
+            src/win32app/v280_link_fallbacks.cpp
+            src/win32app/collab_cursor_fallbacks.cpp
+            src/win32app/rtp_protocol_fallback.cpp
+            src/core/cot_fallback_system.cpp
             src/core/masm_stress_harness.cpp
             src/core/convergence_stress_harness.cpp
             src/core/enterprise_stress_tests.cpp
@@ -3203,10 +3222,10 @@ if(WIN32)
 
     if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
         list(REMOVE_ITEM WIN32IDE_SOURCES
-            src/core/monaco_core_stubs.cpp
             src/core/ssot_missing_handlers_provider.cpp
             src/core/win32_ide_link_stubs.cpp
             src/core/win32ide_asm_fallback.cpp
+            src/core/cot_fallback_system.cpp
             src/core/subsystem_mode_fallbacks.cpp
             src/core/model_loader_fallbacks.cpp
             src/core/rawrxd_native_log_fallback.cpp
@@ -3216,7 +3235,6 @@ if(WIN32)
             src/win32app/v280_link_fallbacks.cpp
             src/win32app/collab_cursor_fallbacks.cpp
             src/win32app/rtp_protocol_fallback.cpp
-            src/win32app/win32ide_extension_command_fallback.cpp
         )
         message(STATUS "[ProductionLane] Win32IDE: stripped monaco/ssot/fallback shim units")
     endif()
@@ -3280,13 +3298,17 @@ if(WIN32)
         "Allow stub/link-fallback units in RawrXD-Win32IDE agentic path"
         OFF
     )
+    if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES AND RAWRXD_ALLOW_AGENTIC_STUB_FALLBACK)
+        message(FATAL_ERROR "[ProductionLane] RAWRXD_ALLOW_AGENTIC_STUB_FALLBACK=ON is incompatible with RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=ON.")
+    endif()
     if(RAWRXD_ALLOW_AGENTIC_STUB_FALLBACK)
         message(STATUS "[Win32IDE] Agentic stub fallback enabled by RAWRXD_ALLOW_AGENTIC_STUB_FALLBACK=ON")
     else()
         list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*_stubs\\.cpp$")
         list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/reverse_engineered_stubs\\.cpp$")
         list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/link_stubs_.*\\.cpp$")
-        list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/.*_fallback\\.cpp$")
+        list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/.*_link_shims?\\.cpp$")
+        list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/.*_fallback[^/]*\\.cpp$")
 
         list(REMOVE_ITEM WIN32IDE_SOURCES
             src/win32app/agentic_bridge_headless.cpp
@@ -3309,7 +3331,7 @@ if(WIN32)
         set(_RAWRXD_FORBIDDEN_WIN32IDE_SOURCES "")
         foreach(_rawrxd_src IN LISTS WIN32IDE_SOURCES)
             # ai_agent_masm_stubs.cpp is required (masm_agent_failure_detect_simd), not a fallback
-            if(NOT _rawrxd_src MATCHES "ai_agent_masm_stubs\\.cpp$" AND _rawrxd_src MATCHES "(_stubs\\.cpp$|/stubs\\.cpp$|/stub_.*\\.cpp$|/link_stubs_.*\\.cpp$|/.*_fallback\\.cpp$|/agentic_bridge_headless\\.cpp$|/Win32IDE_headless_stubs\\.cpp$)")
+            if(NOT _rawrxd_src MATCHES "ai_agent_masm_stubs\\.cpp$" AND _rawrxd_src MATCHES "(_stubs\\.cpp$|/stubs\\.cpp$|/stub_.*\\.cpp$|/link_stubs_.*\\.cpp$|/.*_link_shims?\\.cpp$|/.*_fallback[^/]*\\.cpp$|/agentic_bridge_headless\\.cpp$|/Win32IDE_headless_stubs\\.cpp$)")
                 list(APPEND _RAWRXD_FORBIDDEN_WIN32IDE_SOURCES "${_rawrxd_src}")
             endif()
         endforeach()
@@ -3337,8 +3359,8 @@ if(WIN32)
         
         foreach(src ${SOURCES})
             # Detect stub files
-            if(src MATCHES "(_stubs\\.cpp$|_stubs\\.asm$|/missing_handler)" OR
-               src MATCHES "(stub_|shim_|fallback_)" OR
+            if(src MATCHES "(_stubs\\.cpp$|_stubs\\.asm$|/missing_handler|_link_shims?\\.cpp$|_fallback[^/]*\\.cpp$)" OR
+               src MATCHES "(stub_|shim_|shims?\\.cpp$)" OR
                src MATCHES "(mock_|fake_)")
                                 # ai_agent_masm_stubs.cpp provides required MASM symbols — exempt
                                 if(src MATCHES "ai_agent_masm_stubs\\.cpp$")
@@ -3402,7 +3424,7 @@ if(WIN32)
     
     # Mandatory symbol providers for Win32IDE link closure (only link_stubs_gate allowed).
     # Remove any other stubs that may have been added
-    list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX "(_stubs\\.cpp$|_stubs\\.asm$|missing_handler|stub_|shim_|fallback_|mock_|fake_)")
+    list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX "(_stubs\\.cpp$|_stubs\\.asm$|missing_handler|_link_shims?\\.cpp$|_fallback[^/]*\\.cpp$|stub_|shim_|mock_|fake_)")
     # Keep required MASM bridge provider after broad stub filtering.
     list(APPEND WIN32IDE_SOURCES src/core/ai_agent_masm_stubs.cpp)
 
@@ -3411,8 +3433,8 @@ if(WIN32)
     if(RAWRXD_STRICT_AGENTIC_REALITY AND NOT RAWRXD_ALLOW_AGENTIC_STUB_FALLBACK)
         set(_RAWRXD_FORBIDDEN_WIN32IDE_SOURCES_POST "")
         foreach(_rawrxd_src IN LISTS WIN32IDE_SOURCES)
-            if(_rawrxd_src MATCHES "(_stubs\\.cpp$|/stubs\\.cpp$|/stub_.*\\.cpp$)" OR
-               _rawrxd_src MATCHES "(missing_handler|shim_|fallback_|mock_|fake_)")
+            if(_rawrxd_src MATCHES "(_stubs\\.cpp$|/stubs\\.cpp$|/stub_.*\\.cpp$|/.*_link_shims?\\.cpp$|/.*_fallback[^/]*\\.cpp$)" OR
+               _rawrxd_src MATCHES "(missing_handler|shim_|mock_|fake_)")
                 if(NOT _rawrxd_src MATCHES "ai_agent_masm_stubs\\.cpp$")
                     list(APPEND _RAWRXD_FORBIDDEN_WIN32IDE_SOURCES_POST "${_rawrxd_src}")
                 endif()
@@ -3478,6 +3500,11 @@ if(WIN32)
     # =========================================================================
     # PRODUCTION POLICY ENFORCEMENT
     # =========================================================================
+    if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
+        EnforceNoStubs(RawrEngine)
+        EnforceNoStubs(RawrXD_Gold)
+        EnforceNoStubs(RawrXD-InferenceEngine)
+    endif()
     # Enforce both: (1) No stubs linked, (2) link_stubs_gate.cpp shrinking
     EnforceNoStubs(RawrXD-Win32IDE)
     EnforceLinkStubsGateSizeLimit()
