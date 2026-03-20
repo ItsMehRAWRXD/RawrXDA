@@ -2742,7 +2742,6 @@ if(WIN32)
         src/core/feature_handlers.cpp
         # auto_feature_registry excluded for Win32 IDE — use ssot_handlers (lightweight stubs)
         src/core/intent_engine.cpp
-        src/core/missing_handler_stubs.cpp
         src/core/model_training_pipeline.cpp
         src/agentic/AgentOllamaClient.cpp
         src/core/ssot_handlers.cpp
@@ -3035,9 +3034,7 @@ if(WIN32)
         src/win32app/VSCodeMarketplaceAPI.cpp
         # Multi-file search (real implementation; replaces earlier IDE stub)
         src/multi_file_search.cpp
-        # Legacy support unit used by older feature-manifest wiring
-        src/win32app/digestion_engine_stub.cpp
-        src/win32app/Win32IDE_logMessage_stub.cpp
+        # Legacy support unit wiring removed from production lane.
         # Completed modules previously documented as shipped
         src/core/license_manager_panel.cpp
         src/telemetry/logger.cpp
@@ -3080,8 +3077,6 @@ if(WIN32)
         src/win32app/benchmark_menu_stub.cpp
         src/win32app/benchmark_runner_stub.cpp
         src/win32app/multi_file_search_stub.cpp
-        src/win32app/Win32IDE_logMessage_stub.cpp
-        src/win32app/digestion_engine_stub.cpp
     )
 
     # DbgEng COM interfaces used by the native debugger engine are MSVC/SDK-specific.
@@ -3195,7 +3190,6 @@ if(WIN32)
         # Real lane - keep isolated handlers and runtime menu/command handlers.
         # DO NOT remove ssot_handlers_ext_isolated.cpp - it has working VSCEXT handlers 10000-10009
         # DO NOT add ssot_handlers_ext.cpp - it has unresolved symbols we haven't fixed
-        # missing_handler_stubs.cpp provides runtime command/menu implementations.
         # win32_ide_link_stubs.cpp keeps only non-menu fallback symbols.
         message(STATUS "Win32IDE: Real lane - using isolated handlers + runtime handlers + link shims")
     endif()
@@ -3204,8 +3198,12 @@ if(WIN32)
         list(REMOVE_ITEM WIN32IDE_SOURCES
             src/core/monaco_core_stubs.cpp
             src/core/ssot_missing_handlers_provider.cpp
+            src/core/subsystem_mode_fallbacks.cpp
+            src/core/model_loader_fallbacks.cpp
+            src/core/rawrxd_native_log_fallback.cpp
+            src/llm_adapter/ggufrunner_link_fallbacks.cpp
         )
-        message(STATUS "[ProductionLane] Win32IDE: stripped monaco/ssot stub units; kept missing_handler_stubs.cpp runtime handlers")
+        message(STATUS "[ProductionLane] Win32IDE: stripped monaco/ssot/fallback shim units")
     endif()
 
     # Avoid mixing parallel GGUF engine stacks in this lane.
@@ -3787,8 +3785,9 @@ elseif(RAWR_ASAN AND NOT MSVC)
     add_link_options(-fsanitize=address)
 endif()
 
-# Build only the SSOT objects needed by the ownership guard.
-if(EXISTS "${CMAKE_SOURCE_DIR}/src/core/missing_handler_stubs.cpp")
+# Build SSOT stub-lane ownership guard only when explicitly enabled.
+set(RAWRXD_HAS_SSOT_STUB_LANE_GUARD OFF)
+if(RAWRXD_ENABLE_MISSING_HANDLER_STUBS AND EXISTS "${CMAKE_SOURCE_DIR}/src/core/missing_handler_stubs.cpp")
     add_library(ssot_stub_lane_objs OBJECT
         ${CMAKE_SOURCE_DIR}/src/core/missing_handler_stubs.cpp
         ${CMAKE_SOURCE_DIR}/src/core/ssot_missing_handlers_provider.cpp
@@ -3811,18 +3810,27 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/core/missing_handler_stubs.cpp")
         VERBATIM
     )
     add_dependencies(ssot_stub_lane_guard ssot_stub_lane_objs)
+    set(RAWRXD_HAS_SSOT_STUB_LANE_GUARD ON)
 else()
-    message(STATUS "[SSOT] missing_handler_stubs.cpp absent; stub lane guard disabled.")
+    message(STATUS "[SSOT] Stub lane guard disabled (set RAWRXD_ENABLE_MISSING_HANDLER_STUBS=ON to enable).")
 endif()
 
 option(RAWRXD_ENABLE_HEAVY_GATES "Run heavy ownership/compiled-symbol guards as part of self_test_gate" OFF)
 if(RAWRXD_ENABLE_HEAVY_GATES)
-    add_custom_target(self_test_gate
-        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config $<CONFIG> --target ssot_stub_lane_guard
-        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config $<CONFIG> --target RawrXD-Win32IDE
-        COMMENT "[CI Gate] Ownership guard + RawrXD-Win32IDE"
-        VERBATIM
-    )
+    if(RAWRXD_HAS_SSOT_STUB_LANE_GUARD)
+        add_custom_target(self_test_gate
+            COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config $<CONFIG> --target ssot_stub_lane_guard
+            COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config $<CONFIG> --target RawrXD-Win32IDE
+            COMMENT "[CI Gate] Ownership guard + RawrXD-Win32IDE"
+            VERBATIM
+        )
+    else()
+        add_custom_target(self_test_gate
+            COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config $<CONFIG> --target RawrXD-Win32IDE
+            COMMENT "[CI Gate] RawrXD-Win32IDE (stub ownership guard disabled)"
+            VERBATIM
+        )
+    endif()
 else()
     add_custom_target(self_test_gate
         COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config $<CONFIG> --target RawrXD-Win32IDE
