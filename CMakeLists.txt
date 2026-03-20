@@ -2345,7 +2345,7 @@ if(WIN32)
         src/ui/webview2_bridge.cpp
         src/ui/debugger_core.cpp
         src/ui/agentic_bridge.cpp
-        src/win32app/v280_link_fallbacks.cpp
+        src/win32app/v280_link_bridge.cpp
         src/win32app/RawrXD-Win32IDE.rc
         src/bridge/Win32SwarmBridge.cpp
         src/bridge/SwarmIATRegistration.cpp
@@ -2433,7 +2433,7 @@ if(WIN32)
         src/win32app/Win32IDE_SubAgent.cpp
         src/win32app/Win32IDE_AgentHistory.cpp
         src/win32app/Win32IDE_AgentPanel.cpp
-        src/win32app/rtp_protocol_fallback.cpp
+        src/win32app/rtp_protocol_bridge.cpp
         src/win32app/Win32IDE_ExtensionsPanel.cpp
         src/win32app/Win32IDE_DiskRecovery.cpp
         src/win32app/Win32TerminalManager.cpp
@@ -3111,7 +3111,7 @@ if(WIN32)
             src/core/vector_index.cpp
             src/core/agentic_task_graph.cpp
             src/core/vision_encoder.cpp
-            src/core/model_loader_fallbacks.cpp
+            src/core/model_loader_bridge.cpp
             src/core/masm_stress_harness.cpp
             src/core/convergence_stress_harness.cpp
             src/core/enterprise_stress_tests.cpp
@@ -3231,10 +3231,10 @@ if(WIN32)
         src/core/local_parity_bridge.cpp
         src/core/analyzer_distiller.cpp
         src/core/streaming_orchestrator.cpp
-        src/core/subsystem_mode_fallbacks.cpp
-        src/core/model_loader_fallbacks.cpp
-        src/core/rawrxd_native_log_fallback.cpp
-        src/llm_adapter/ggufrunner_link_fallbacks.cpp
+        src/core/subsystem_mode_runtime.cpp
+        src/core/model_loader_bridge.cpp
+        src/core/rawrxd_native_log_bridge.cpp
+        src/llm_adapter/ggufrunner_link_kernels.cpp
     )
 
     list(APPEND WIN32IDE_SOURCES
