@@ -563,13 +563,65 @@ EditorEngineResult RichEditEditorEngine::clearGhostText() {
 // ============================================================================
 // Input — RichEdit handles input internally
 // ============================================================================
-bool RichEditEditorEngine::onKeyDown(WPARAM, LPARAM) { return false; }
-bool RichEditEditorEngine::onChar(WCHAR) { return false; }
-bool RichEditEditorEngine::onMouseWheel(int, int, int) { return false; }
-bool RichEditEditorEngine::onLButtonDown(int, int, WPARAM) { return false; }
-bool RichEditEditorEngine::onLButtonUp(int, int) { return false; }
-bool RichEditEditorEngine::onMouseMove(int, int, WPARAM) { return false; }
-bool RichEditEditorEngine::onIMEComposition(HWND, WPARAM, LPARAM) { return false; }
+bool RichEditEditorEngine::onKeyDown(WPARAM wParam, LPARAM lParam) {
+    if (!m_hwndEdit) {
+        return false;
+    }
+    m_stats.keyEventsProcessed++;
+    SendMessageW(m_hwndEdit, WM_KEYDOWN, wParam, lParam);
+    if (m_cursorChangedFn) {
+        const auto pos = getCursorPosition();
+        m_cursorChangedFn(pos.line, pos.column, m_cursorChangedData);
+    }
+    return true;
+}
+bool RichEditEditorEngine::onChar(WCHAR ch) {
+    if (!m_hwndEdit) {
+        return false;
+    }
+    m_stats.keyEventsProcessed++;
+    SendMessageW(m_hwndEdit, WM_CHAR, static_cast<WPARAM>(ch), 1);
+    return true;
+}
+bool RichEditEditorEngine::onMouseWheel(int delta, int x, int y) {
+    if (!m_hwndEdit) {
+        return false;
+    }
+    const WPARAM wParam = MAKEWPARAM(0, static_cast<UINT>(static_cast<SHORT>(delta)));
+    const LPARAM lParam = MAKELPARAM(x, y);
+    SendMessageW(m_hwndEdit, WM_MOUSEWHEEL, wParam, lParam);
+    return true;
+}
+bool RichEditEditorEngine::onLButtonDown(int x, int y, WPARAM modifiers) {
+    if (!m_hwndEdit) {
+        return false;
+    }
+    SetFocus(m_hwndEdit);
+    SendMessageW(m_hwndEdit, WM_LBUTTONDOWN, modifiers, MAKELPARAM(x, y));
+    return true;
+}
+bool RichEditEditorEngine::onLButtonUp(int x, int y) {
+    if (!m_hwndEdit) {
+        return false;
+    }
+    SendMessageW(m_hwndEdit, WM_LBUTTONUP, 0, MAKELPARAM(x, y));
+    return true;
+}
+bool RichEditEditorEngine::onMouseMove(int x, int y, WPARAM modifiers) {
+    if (!m_hwndEdit) {
+        return false;
+    }
+    SendMessageW(m_hwndEdit, WM_MOUSEMOVE, modifiers, MAKELPARAM(x, y));
+    return true;
+}
+bool RichEditEditorEngine::onIMEComposition(HWND hwnd, WPARAM wParam, LPARAM lParam) {
+    HWND target = hwnd ? hwnd : m_hwndEdit;
+    if (!target) {
+        return false;
+    }
+    SendMessageW(target, WM_IME_COMPOSITION, wParam, lParam);
+    return true;
+}
 
 // ============================================================================
 // Callbacks
