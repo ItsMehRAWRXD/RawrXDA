@@ -978,7 +978,7 @@ option(RAWR_REPLACE_MASM_FALLBACKS "Remove MASM-related C++ fallback stubs (and 
 option(RAWR_REPLACE_SWARM_LICENSE_FALLBACKS "Remove swarm/license fallback stubs from SOURCES" OFF)
 option(RAWRXD_ENABLE_MISSING_HANDLER_STUBS "Allow missing_handler_stubs.cpp fallback lane for Win32IDE wiring" OFF)
 option(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES "Strip stub/shim/mock source units from production targets" OFF)
-set(RAWR_SSOT_PROVIDER "EXT" CACHE STRING "SSOT owner for RawrEngine: CORE, EXT, AUTO, STUBS, FEATURES")
+set(RAWR_SSOT_PROVIDER "AUTO" CACHE STRING "SSOT owner for RawrEngine: CORE, EXT, AUTO, STUBS, FEATURES")
 set_property(CACHE RAWR_SSOT_PROVIDER PROPERTY STRINGS CORE EXT AUTO STUBS FEATURES)
 
 if(RAWR_REPLACE_SSOT_HANDLERS)
@@ -1190,8 +1190,10 @@ target_sources(RawrEngine PRIVATE
     src/core/native_debugger_symbols.cpp
     src/agentic/AgentOllamaClient.cpp
     src/core/rawr_engine_link_shims.cpp
-    src/core/auto_feature_stub_impl.cpp
 )
+if(RAWR_SSOT_PROVIDER_UPPER STREQUAL "EXT" OR RAWR_SSOT_PROVIDER_UPPER STREQUAL "STUBS")
+    target_sources(RawrEngine PRIVATE src/core/auto_feature_stub_impl.cpp)
+endif()
 
 # Win32 system libraries (same as Gold)
 if(WIN32)
@@ -1211,10 +1213,6 @@ endif()
 # =============================================================================
 set(GOLD_UNDERSCORE_SOURCES ${SOURCES})
 list(REMOVE_ITEM GOLD_UNDERSCORE_SOURCES
-    src/core/auto_feature_registry.cpp
-    src/core/ssot_handlers.cpp
-    src/core/ssot_handlers_ext_runtime_minimal.cpp
-    src/core/ssot_handlers_ext_isolated.cpp
     src/core/rawrengine_command_handlers.cpp
     src/core/ssot_validation.cpp
 )
@@ -1224,10 +1222,31 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/agent/quantum_missing_impl.cpp")
 endif()
 list(APPEND GOLD_UNDERSCORE_SOURCES
     src/core/rawr_engine_link_shims.cpp
-    src/core/auto_feature_stub_impl.cpp
     src/core/ignite_800b.cpp
-    src/core/missing_handler_stubs.cpp
 )
+if(RAWR_SSOT_PROVIDER_UPPER STREQUAL "AUTO")
+    # Production lane: prefer full handlers over stub providers.
+    list(REMOVE_ITEM GOLD_UNDERSCORE_SOURCES
+        src/core/missing_handler_stubs.cpp
+        src/core/ssot_handlers_ext_runtime_minimal.cpp
+        src/core/ssot_handlers_ext_isolated.cpp
+    )
+    list(APPEND GOLD_UNDERSCORE_SOURCES src/core/ssot_handlers_ext.cpp)
+    set(_RAWR_GOLD_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS 1)
+else()
+    # Legacy lanes: retain fallback ownership to preserve link closure.
+    list(REMOVE_ITEM GOLD_UNDERSCORE_SOURCES
+        src/core/auto_feature_registry.cpp
+        src/core/ssot_handlers.cpp
+        src/core/ssot_handlers_ext_runtime_minimal.cpp
+        src/core/ssot_handlers_ext_isolated.cpp
+    )
+    list(APPEND GOLD_UNDERSCORE_SOURCES
+        src/core/auto_feature_stub_impl.cpp
+        src/core/missing_handler_stubs.cpp
+    )
+    set(_RAWR_GOLD_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS 0)
+endif()
 list(REMOVE_DUPLICATES GOLD_UNDERSCORE_SOURCES)
 add_executable(RawrXD_Gold ${GOLD_UNDERSCORE_SOURCES} ${ASM_KERNEL_SOURCES})
 
@@ -1261,7 +1280,7 @@ target_link_libraries(RawrXD_Gold PRIVATE Threads::Threads)
 
 target_compile_definitions(RawrXD_Gold PRIVATE
     RAWRXD_GOLD_BUILD=1
-    RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS=0
+    RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS=${_RAWR_GOLD_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS}
     RAWR_HAS_MASM=$<IF:$<BOOL:${RAWR_HAS_MASM}>,1,0>
     RAWRXD_LINK_QUADBUFFER_ASM=1
     RAWRXD_LINK_INFERENCE_KERNELS_ASM=1

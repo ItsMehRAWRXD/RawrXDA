@@ -56,7 +56,7 @@ int asm_snapshot_discard(uint32_t) { return 0; }
 int asm_snapshot_verify(uint32_t, uint32_t) { return 0; }
 int asm_camellia256_auth_decrypt_file(const char*, const char*) { return 0; }
 int asm_camellia256_auth_encrypt_file(const char*, const char*) { return 0; }
-void RawrXD_Native_Log(const char*, const char*) {}
+void RawrXD_Native_Log(const char*) {}
 int64_t Enterprise_DevUnlock() { return 0; }
 
 // Batch 7: subsystem modes + Vulkan init
