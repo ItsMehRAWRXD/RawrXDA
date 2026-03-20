@@ -3116,6 +3116,14 @@ if(WIN32)
             src/core/enterprise_camellia_nonmsvc.cpp
             src/core/self_repair_loop_nonmsvc.cpp
             src/core/native_speed_kernels_nonmsvc.cpp
+            src/core/swarm_network_nonmsvc.cpp
+            src/core/agentic_embedding_singletons_nonmsvc.cpp
+            src/core/monaco_core_nonmsvc.cpp
+            src/core/kquant_nonmsvc.cpp
+            src/modules/copilot_gap_nonmsvc.cpp
+            src/cli/swarm_tensor_nonmsvc.cpp
+            src/core/remaining_link_closures_nonmsvc.cpp
+            src/win32app/OSExplorerInterceptor_nonmsvc.cpp
             src/core/multi_response_engine.cpp
         )
     endif()

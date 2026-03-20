@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstring>
 #include <limits>
+#include <vector>
 
 namespace RawrXD::NativeSpeed {
 
@@ -170,6 +171,86 @@ extern "C" void sgemv_avx512(const float* A, const float* x, float* y, int M, in
         double sum = 0.0;
         for (int k = 0; k < K; ++k) {
             sum += static_cast<double>(A[m * K + k]) * static_cast<double>(x[k]);
+        }
+        y[m] = static_cast<float>(sum);
+    }
+}
+
+extern "C" void sgemv_avx2(const float* A, const float* x, float* y, int M, int K) {
+    sgemv_avx512(A, x, y, M, K);
+}
+
+extern "C" void native_fused_mlp_avx2(const float* x, const float* W1,
+                                      const float* b1, const float* W2,
+                                      const float* b2, float* out,
+                                      int seqLen, int hiddenDim, int ffnDim) {
+    if (!x || !W1 || !W2 || !out || seqLen <= 0 || hiddenDim <= 0 || ffnDim <= 0) {
+        return;
+    }
+
+    auto gelu = [](float v) -> float {
+        constexpr float kAlpha = 0.7978845608f;   // sqrt(2/pi)
+        constexpr float kBeta = 0.044715f;
+        const float t = kAlpha * (v + kBeta * v * v * v);
+        return 0.5f * v * (1.0f + std::tanh(t));
+    };
+
+    std::vector<float> hidden(static_cast<size_t>(ffnDim), 0.0f);
+    for (int s = 0; s < seqLen; ++s) {
+        const float* xs = x + static_cast<size_t>(s) * hiddenDim;
+
+        for (int j = 0; j < ffnDim; ++j) {
+            double sum = (b1 ? static_cast<double>(b1[j]) : 0.0);
+            for (int i = 0; i < hiddenDim; ++i) {
+                sum += static_cast<double>(xs[i]) *
+                       static_cast<double>(W1[static_cast<size_t>(i) * ffnDim + j]);
+            }
+            hidden[static_cast<size_t>(j)] = gelu(static_cast<float>(sum));
+        }
+
+        float* ys = out + static_cast<size_t>(s) * hiddenDim;
+        for (int i = 0; i < hiddenDim; ++i) {
+            double sum = (b2 ? static_cast<double>(b2[i]) : 0.0);
+            for (int j = 0; j < ffnDim; ++j) {
+                sum += static_cast<double>(hidden[static_cast<size_t>(j)]) *
+                       static_cast<double>(W2[static_cast<size_t>(j) * hiddenDim + i]);
+            }
+            ys[i] = static_cast<float>(sum);
+        }
+    }
+}
+
+extern "C" void qgemv_q4_0_avx2(const void* A, const float* x, float* y, int M, int K) {
+    if (!A || !x || !y || M <= 0 || K <= 0) {
+        return;
+    }
+
+    const auto* q = static_cast<const uint8_t*>(A);
+    const int rowBytes = (K + 1) / 2;
+    for (int m = 0; m < M; ++m) {
+        double sum = 0.0;
+        const uint8_t* row = q + static_cast<size_t>(m) * rowBytes;
+        for (int k = 0; k < K; ++k) {
+            const uint8_t packed = row[k / 2];
+            const int nibble = ((k & 1) == 0) ? (packed & 0x0F) : ((packed >> 4) & 0x0F);
+            const int qv = nibble - 8;
+            sum += static_cast<double>(qv) * 0.125 * static_cast<double>(x[k]);
+        }
+        y[m] = static_cast<float>(sum);
+    }
+}
+
+extern "C" void qgemv_q8_0_avx2(const void* A, const float* x, float* y, int M, int K) {
+    if (!A || !x || !y || M <= 0 || K <= 0) {
+        return;
+    }
+
+    const auto* q = static_cast<const int8_t*>(A);
+    for (int m = 0; m < M; ++m) {
+        double sum = 0.0;
+        const int8_t* row = q + static_cast<size_t>(m) * K;
+        for (int k = 0; k < K; ++k) {
+            sum += static_cast<double>(row[k]) * (1.0 / 127.0) * static_cast<double>(x[k]);
         }
         y[m] = static_cast<float>(sum);
     }

@@ -105,6 +105,25 @@ DebugResult NativeDebuggerEngine::addBreakpointBySourceLine(const std::string& f
     return DebugResult::ok("Source-line breakpoint registered");
 }
 
+DebugResult NativeDebuggerEngine::addBreakpointBySymbol(const std::string& symbol,
+                                                        BreakpointType type) {
+    if (symbol.empty()) {
+        return DebugResult::error("Symbol name is empty", -1);
+    }
+
+    NativeBreakpoint bp;
+    bp.id = m_nextBpId.fetch_add(1, std::memory_order_acq_rel);
+    bp.type = type;
+    bp.state = BreakpointState::Enabled;
+    bp.symbol = symbol;
+
+    {
+        std::lock_guard<std::mutex> lock(m_bpMutex);
+        m_breakpoints.push_back(std::move(bp));
+    }
+    return DebugResult::ok("Symbol breakpoint registered");
+}
+
 DebugResult NativeDebuggerEngine::removeBreakpoint(uint32_t bpId) {
     std::lock_guard<std::mutex> lock(m_bpMutex);
     const auto before = m_breakpoints.size();
@@ -329,6 +348,11 @@ DebugResult NativeDebuggerEngine::evaluate(const std::string& expression, EvalRe
     outResult.isPointer = false;
     outResult.isFloat = false;
     return DebugResult::error("Expression evaluation unavailable on non-MSVC toolchain", -2);
+}
+
+DebugSessionStats NativeDebuggerEngine::getStats() const {
+    std::lock_guard<std::mutex> lock(m_statsMutex);
+    return m_stats;
 }
 
 }  // namespace RawrXD::Debugger
