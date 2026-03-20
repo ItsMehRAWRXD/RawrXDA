@@ -3057,6 +3057,21 @@ if(WIN32)
         src/win32app/Win32IDE_SnippetEngine.cpp
         src/win32app/Win32IDE_MultiCursor.cpp
     )
+
+    # Production lane source normalization:
+    # Prefer real implementation units over legacy compatibility stubs/shims.
+    list(REMOVE_ITEM WIN32IDE_SOURCES
+        src/core/enterprise_devunlock_stub_masm.cpp
+        src/core/memory_patch_byte_search_stubs.cpp
+        src/core/mesh_brain_asm_stubs.cpp
+        src/core/monaco_core_stubs.cpp
+        src/core/win32_ide_link_stubs.cpp
+        src/win32app/benchmark_menu_stub.cpp
+        src/win32app/benchmark_runner_stub.cpp
+        src/win32app/multi_file_search_stub.cpp
+        src/win32app/Win32IDE_logMessage_stub.cpp
+        src/win32app/digestion_engine_stub.cpp
+    )
      
     # =========================================================================
     # MultiWindow Task Scheduler Kernel (MASM64 DLL)
