@@ -3259,7 +3259,17 @@ if(WIN32)
     # Replace fallback-only providers with real implementations.
     list(REMOVE_ITEM WIN32IDE_SOURCES
         src/win32app/collab_cursor_fallbacks.cpp
+        src/core/win32ide_asm_fallback.cpp
     )
+
+    option(RAWRXD_ENABLE_LEGACY_WIN32IDE_ASM_FALLBACK
+        "Enable legacy win32ide_asm_fallback.cpp symbol shim for emergency builds"
+        OFF
+    )
+    if(RAWRXD_ENABLE_LEGACY_WIN32IDE_ASM_FALLBACK)
+        list(APPEND WIN32IDE_SOURCES src/core/win32ide_asm_fallback.cpp)
+        message(WARNING "[Win32IDE] Legacy ASM fallback shim enabled (non-production)")
+    endif()
 
     if(RAWR_HAS_MASM)
         list(APPEND ASM_KERNEL_SOURCES
