@@ -978,8 +978,22 @@ option(RAWR_REPLACE_MASM_FALLBACKS "Remove MASM-related C++ fallback stubs (and 
 option(RAWR_REPLACE_SWARM_LICENSE_FALLBACKS "Remove swarm/license fallback stubs from SOURCES" OFF)
 option(RAWRXD_ENABLE_MISSING_HANDLER_STUBS "Allow missing_handler_stubs.cpp fallback lane for Win32IDE wiring" OFF)
 option(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES "Strip stub/shim/mock source units from production targets" OFF)
+option(RAWRXD_INCLUDE_STRESS_AND_REPLAY_SOURCES "Include stress/replay harness sources in production targets" OFF)
 set(RAWR_SSOT_PROVIDER "AUTO" CACHE STRING "SSOT owner for RawrEngine: CORE, EXT, AUTO, STUBS, FEATURES")
 set_property(CACHE RAWR_SSOT_PROVIDER PROPERTY STRINGS CORE EXT AUTO STUBS FEATURES)
+
+if(NOT RAWRXD_INCLUDE_STRESS_AND_REPLAY_SOURCES)
+    list(REMOVE_ITEM SOURCES
+        src/core/masm_stress_harness.cpp
+        src/core/convergence_stress_harness.cpp
+        src/core/enterprise_stress_tests.cpp
+        src/test_harness/replay_fixture.cpp
+        src/test_harness/replay_oracle.cpp
+        src/test_harness/replay_mock_inference.cpp
+        src/test_harness/replay_harness.cpp
+        src/test_harness/replay_reporter.cpp
+    )
+endif()
 
 if(RAWR_REPLACE_SSOT_HANDLERS)
     list(REMOVE_ITEM SOURCES
@@ -1165,7 +1179,6 @@ target_include_directories(RawrEngine PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/modules
     ${CMAKE_CURRENT_SOURCE_DIR}/src/tools
     ${CMAKE_CURRENT_SOURCE_DIR}/src/telemetry
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/test_harness
     ${CMAKE_CURRENT_SOURCE_DIR}/src/reverse_engineering
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/include/gpu
@@ -1270,11 +1283,15 @@ target_include_directories(RawrXD_Gold PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/gpu
     ${CMAKE_CURRENT_SOURCE_DIR}/src/tools
     ${CMAKE_CURRENT_SOURCE_DIR}/src/telemetry
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/test_harness
     ${CMAKE_CURRENT_SOURCE_DIR}/src/reverse_engineering
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/include/gpu
 )
+
+if(RAWRXD_INCLUDE_STRESS_AND_REPLAY_SOURCES)
+    target_include_directories(RawrEngine PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/test_harness)
+    target_include_directories(RawrXD_Gold PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/test_harness)
+endif()
 
 target_link_libraries(RawrXD_Gold PRIVATE Threads::Threads)
 
@@ -3043,6 +3060,14 @@ if(WIN32)
         src/win32app/Win32IDE_SnippetEngine.cpp
         src/win32app/Win32IDE_MultiCursor.cpp
     )
+
+    if(NOT RAWRXD_INCLUDE_STRESS_AND_REPLAY_SOURCES)
+        list(REMOVE_ITEM WIN32IDE_SOURCES
+            src/core/masm_stress_harness.cpp
+            src/core/convergence_stress_harness.cpp
+            src/core/enterprise_stress_tests.cpp
+        )
+    endif()
 
     # Production lane source normalization:
     # Prefer real implementation units over legacy compatibility stubs/shims.
