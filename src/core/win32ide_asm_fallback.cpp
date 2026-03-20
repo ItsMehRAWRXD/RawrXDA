@@ -35,6 +35,10 @@ std::unordered_map<void*, uint64_t> g_ggufLoaderGpuThresholdByCtx;
 std::unordered_map<void*, uint64_t> g_ggufLookupCountByCtx;
 std::unordered_map<uint32_t, void*> g_hotpatchBackupSlotMap;
 std::unordered_map<uint32_t, uint32_t> g_snapshotCrcById;
+uint64_t g_snapshotCaptureCount = 0;
+uint64_t g_snapshotRestoreCount = 0;
+uint64_t g_snapshotVerifyCount = 0;
+uint64_t g_snapshotDiscardCount = 0;
 uint64_t g_hotpatchAllocCount = 0;
 uint64_t g_hotpatchFreeCount = 0;
 uint64_t g_hotpatchFlushCount = 0;
@@ -282,11 +286,16 @@ int asm_snapshot_capture(void* addr, uint32_t snapId, int size) {
     }
     std::lock_guard<std::mutex> lock(g_fallbackMutex);
     g_snapshotCrcById[snapId] = crc;
+    g_snapshotCaptureCount += 1;
     return 0;
 }
 int asm_snapshot_restore(uint32_t snapId) {
     std::lock_guard<std::mutex> lock(g_fallbackMutex);
-    return g_snapshotCrcById.count(snapId) > 0 ? 0 : -1;
+    const int rc = g_snapshotCrcById.count(snapId) > 0 ? 0 : -1;
+    if (rc == 0) {
+        g_snapshotRestoreCount += 1;
+    }
+    return rc;
 }
 int asm_snapshot_verify(uint32_t snapId, uint32_t expectedCRC) {
     std::lock_guard<std::mutex> lock(g_fallbackMutex);
@@ -294,10 +303,29 @@ int asm_snapshot_verify(uint32_t snapId, uint32_t expectedCRC) {
     if (it == g_snapshotCrcById.end()) {
         return -1;
     }
-    return (expectedCRC == 0u || it->second == expectedCRC) ? 0 : -1;
+    const int rc = (expectedCRC == 0u || it->second == expectedCRC) ? 0 : -1;
+    if (rc == 0) {
+        g_snapshotVerifyCount += 1;
+    }
+    return rc;
 }
-void asm_snapshot_discard(uint32_t snapId) { (void)snapId; }
-void asm_snapshot_get_stats(void* statsOut) { (void)statsOut; }
+void asm_snapshot_discard(uint32_t snapId) {
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    g_snapshotCrcById.erase(snapId);
+    g_snapshotDiscardCount += 1;
+}
+void asm_snapshot_get_stats(void* statsOut) {
+    if (statsOut == nullptr) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    uint64_t* out = static_cast<uint64_t*>(statsOut);
+    out[0] = static_cast<uint64_t>(g_snapshotCrcById.size());
+    out[1] = g_snapshotCaptureCount;
+    out[2] = g_snapshotRestoreCount;
+    out[3] = g_snapshotVerifyCount;
+    out[4] = g_snapshotDiscardCount;
+}
 
 int asm_camellia256_auth_encrypt_file(const char* inputPath, const char* outputPath) {
     if (inputPath == nullptr || outputPath == nullptr) {
