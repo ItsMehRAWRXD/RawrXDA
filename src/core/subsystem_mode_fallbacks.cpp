@@ -1,28 +1,25 @@
+// Fallback provider for subsystem mode exports that are expected to exist
+// for Win32IDE link closure when the corresponding ASM modules are unavailable.
+//
+// NOTE:
+// - AD_* and SO_* symbols are intentionally NOT defined here anymore.
+//   Win32IDE now links real providers from analyzer_distiller.cpp and
+//   streaming_orchestrator.cpp with correct ABI signatures.
+
 extern "C" void InjectMode(void) {}
 extern "C" void DiffCovMode(void) {}
-extern "C" void SO_InitializeVulkan(void) {}
 extern "C" void IntelPTMode(void) {}
 extern "C" void AgentTraceMode(void) {}
 extern "C" void DynTraceMode(void) {}
 extern "C" void CovFusionMode(void) {}
-extern "C" void AD_ProcessGGUF(void) {}
-extern "C" void SO_InitializeStreaming(void) {}
 extern "C" void SideloadMode(void) {}
-extern "C" void SO_CreateComputePipelines(void) {}
 extern "C" void PersistenceMode(void) {}
-extern "C" void SO_PrintStatistics(void) {}
-extern "C" void SO_CreateMemoryArena(void) {}
-extern "C" void SO_LoadExecFile(void) {}
 extern "C" void BasicBlockCovMode(void) {}
-extern "C" void SO_PrintMetrics(void) {}
-extern "C" void SO_StartDEFLATEThreads(void) {}
 extern "C" void StubGenMode(void) {}
 extern "C" void TraceEngineMode(void) {}
 extern "C" void CompileMode(void) {}
 extern "C" void GapFuzzMode(void) {}
 extern "C" void EncryptMode(void) {}
-extern "C" void SO_InitializePrefetchQueue(void) {}
-extern "C" void SO_CreateThreadPool(void) {}
 extern "C" void EntropyMode(void) {}
 extern "C" void AgenticMode(void) {}
 extern "C" void UACBypassMode(void) {}
@@ -41,7 +38,6 @@ extern "C" void asm_omega_plan_decompose(void) {}
 extern "C" void asm_omega_evolve_improve(void) {}
 extern "C" void asm_omega_init(void) {}
 extern "C" void asm_omega_get_stats(void) {}
-
 extern "C" void asm_omega_verify_test(void) {}
 extern "C" void asm_omega_architect_select(void) {}
 extern "C" void asm_omega_agent_spawn(void) {}

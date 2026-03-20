@@ -2339,8 +2339,8 @@ if(WIN32)
         src/win32app/HeadlessIDE.h
         src/win32app/HeadlessIDE.cpp
         src/agent/quantum_agent_orchestrator.cpp
-        src/inference/gpu_dispatch_gate_win32ide_fallback.cpp
-        src/inference/gguf_d3d12_bridge_link_fallback.cpp
+        src/inference/gpu_dispatch_gate.cpp
+        src/gguf_d3d12_bridge.cpp
         src/ui/RawrXD_MainLoop.cpp
         src/ui/webview2_bridge.cpp
         src/ui/debugger_core.cpp
@@ -2434,7 +2434,7 @@ if(WIN32)
         src/win32app/Win32IDE_AgentHistory.cpp
         src/win32app/Win32IDE_AgentPanel.cpp
         src/win32app/rtp_protocol_fallback.cpp
-        src/win32app/win32ide_extension_command_fallback.cpp
+        src/win32app/Win32IDE_ExtensionsPanel.cpp
         src/win32app/Win32IDE_DiskRecovery.cpp
         src/win32app/Win32TerminalManager.cpp
         src/win32app/Win32TerminalManager.h
@@ -3229,6 +3229,8 @@ if(WIN32)
         src/agentic/RawrXD_ToolRegistry.cpp
         src/agent/DiskRecoveryAgent.cpp
         src/core/local_parity_bridge.cpp
+        src/core/analyzer_distiller.cpp
+        src/core/streaming_orchestrator.cpp
         src/core/subsystem_mode_fallbacks.cpp
         src/core/model_loader_fallbacks.cpp
         src/core/rawrxd_native_log_fallback.cpp
@@ -3249,6 +3251,13 @@ if(WIN32)
         src/ui/warp_hud.hpp
         src/ui/logic_bridge.hpp
         src/config/settings.hpp
+        src/collab/cursor_widget.cpp
+        src/collab/crdt_buffer.cpp
+        src/win32app/Win32IDE_ExtensionsPanel.cpp
+    )
+
+    # Replace fallback-only providers with real implementations.
+    list(REMOVE_ITEM WIN32IDE_SOURCES
         src/win32app/collab_cursor_fallbacks.cpp
     )
 
