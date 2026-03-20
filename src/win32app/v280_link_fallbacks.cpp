@@ -19,5 +19,11 @@ extern "C" int V280_UI_GetGhostText(char* buf, int buf_size) {
     return 0;
 }
 
-extern "C" void asm_quadbuf_shutdown(void) {}
+namespace {
+static int g_v280QuadbufShutdownCount = 0;
+}
+
+extern "C" void asm_quadbuf_shutdown(void) {
+    g_v280QuadbufShutdownCount += 1;
+}
 extern "C" void asm_spengine_shutdown(void) {}

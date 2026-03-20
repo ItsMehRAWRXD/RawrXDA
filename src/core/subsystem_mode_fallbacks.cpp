@@ -71,8 +71,12 @@ struct SubsystemFallbackState {
     uint64_t spengineAdaptiveSwitches = 0;
     uint64_t spengineRollbacks = 0;
     uint64_t spengineQuantLevel = 0;
+    uint64_t spengineApplyOps = 0;
+    uint64_t spengineStatsReads = 0;
     uint64_t quadbufTokens = 0;
     uint64_t quadbufFrames = 0;
+    uint64_t quadbufFlags = 0;
+    uint64_t quadbufCapacity = 1024;
     uint64_t modeFlags = 0;
     uint64_t modeTransitions = 0;
     uint64_t statsPrintCount = 0;
@@ -94,7 +98,12 @@ enum SubsystemModeBit : uint64_t {
     MODE_STUBGEN = 1ULL << 9,
     MODE_TRACEENGINE = 1ULL << 10,
     MODE_COMPILE = 1ULL << 11,
-    MODE_GAPFUZZ = 1ULL << 12
+    MODE_GAPFUZZ = 1ULL << 12,
+    MODE_ENCRYPT = 1ULL << 13,
+    MODE_ENTROPY = 1ULL << 14,
+    MODE_AGENTIC = 1ULL << 15,
+    MODE_UAC_BYPASS = 1ULL << 16,
+    MODE_AVSCAN = 1ULL << 17
 };
 
 static uint64_t nowMs() {
@@ -209,13 +218,28 @@ extern "C" void GapFuzzMode(void) {
     std::lock_guard<std::mutex> lock(g_subsystemMutex);
     enableMode(MODE_GAPFUZZ);
 }
-extern "C" void EncryptMode(void) {}
+extern "C" void EncryptMode(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    enableMode(MODE_ENCRYPT);
+}
 extern "C" int SO_InitializePrefetchQueue(void) { return 1; }
 extern "C" int SO_CreateThreadPool(void) { return 1; }
-extern "C" void EntropyMode(void) {}
-extern "C" void AgenticMode(void) {}
-extern "C" void UACBypassMode(void) {}
-extern "C" void AVScanMode(void) {}
+extern "C" void EntropyMode(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    enableMode(MODE_ENTROPY);
+}
+extern "C" void AgenticMode(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    enableMode(MODE_AGENTIC);
+}
+extern "C" void UACBypassMode(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    enableMode(MODE_UAC_BYPASS);
+}
+extern "C" void AVScanMode(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    enableMode(MODE_AVSCAN);
+}
 
 extern "C" void asm_watchdog_init(void) {
     std::lock_guard<std::mutex> lock(g_subsystemMutex);
@@ -803,12 +827,76 @@ extern "C" void asm_spengine_rollback(void) {
     g_subsystemState.spengineRollbacks += 1;
     g_subsystemState.spengineQuantLevel = 4;
 }
-extern "C" void asm_spengine_register(void) {}
-extern "C" void asm_spengine_get_stats(void) {}
-extern "C" void asm_quadbuf_set_flags(void) {}
-extern "C" void asm_quadbuf_resize(void) {}
-extern "C" void asm_quadbuf_get_stats(void) {}
-extern "C" void asm_spengine_apply(void) {}
-extern "C" void asm_spengine_quant_switch(void) {}
-extern "C" void asm_quadbuf_init(void) {}
-extern "C" void asm_spengine_cpu_optimize(void) {}
+extern "C" void asm_spengine_register(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.spengineInitialized = true;
+    g_subsystemState.spengineInitOps += 1;
+    if (g_subsystemState.spengineQuantLevel == 0) {
+        g_subsystemState.spengineQuantLevel = 4;
+    }
+}
+extern "C" void asm_spengine_get_stats(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.spengineStatsReads += 1;
+    g_subsystemState.omegaLastScore = (g_subsystemState.spengineInitOps + g_subsystemState.spengineAdaptiveSwitches +
+                                       g_subsystemState.spengineApplyOps + g_subsystemState.spengineRollbacks +
+                                       g_subsystemState.spengineStatsReads) %
+                                      100000u;
+}
+extern "C" void asm_quadbuf_set_flags(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    const uint64_t activeBits = g_subsystemState.modeFlags & 0xFFFFu;
+    g_subsystemState.quadbufFlags ^= (activeBits | 0x3u);
+}
+extern "C" void asm_quadbuf_resize(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    const uint64_t target = 256u + ((g_subsystemState.quadbufTokens + g_subsystemState.quadbufFrames) % 2048u);
+    g_subsystemState.quadbufCapacity = target;
+    if (g_subsystemState.quadbufTokens > target) {
+        g_subsystemState.quadbufTokens = target;
+    }
+}
+extern "C" void asm_quadbuf_get_stats(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.meshLastScore =
+        (g_subsystemState.quadbufTokens + g_subsystemState.quadbufFrames + g_subsystemState.quadbufCapacity +
+         (g_subsystemState.quadbufFlags & 0xFFFFu)) %
+        100000u;
+}
+extern "C" void asm_spengine_apply(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    if (!g_subsystemState.spengineInitialized) {
+        g_subsystemState.spengineInitialized = true;
+        g_subsystemState.spengineInitOps += 1;
+    }
+    g_subsystemState.spengineApplyOps += 1;
+    g_subsystemState.spengineQuantLevel =
+        (g_subsystemState.spengineQuantLevel + 2u + (g_subsystemState.spengineApplyOps % 5u)) % 16u;
+}
+extern "C" void asm_spengine_quant_switch(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    if (!g_subsystemState.spengineInitialized) {
+        g_subsystemState.spengineInitialized = true;
+        g_subsystemState.spengineInitOps += 1;
+    }
+    g_subsystemState.spengineAdaptiveSwitches += 1;
+    g_subsystemState.spengineQuantLevel =
+        (g_subsystemState.spengineQuantLevel + 1u + (g_subsystemState.spengineAdaptiveSwitches % 2u)) % 16u;
+}
+extern "C" void asm_quadbuf_init(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.quadbufTokens = 0;
+    g_subsystemState.quadbufFrames = 0;
+    g_subsystemState.quadbufFlags = 0;
+    g_subsystemState.quadbufCapacity = 1024;
+}
+extern "C" void asm_spengine_cpu_optimize(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    if (!g_subsystemState.spengineInitialized) {
+        g_subsystemState.spengineInitialized = true;
+        g_subsystemState.spengineInitOps += 1;
+    }
+    g_subsystemState.spengineAdaptiveSwitches += 1;
+    g_subsystemState.spengineQuantLevel =
+        (g_subsystemState.spengineQuantLevel + 3u + (g_subsystemState.spengineAdaptiveSwitches % 4u)) % 16u;
+}
