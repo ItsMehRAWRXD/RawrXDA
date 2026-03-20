@@ -3085,6 +3085,7 @@ if(WIN32)
             src/core/native_debugger_engine.cpp
             src/core/native_debugger_symbols.cpp
             src/win32app/Win32IDE_NativeDebugPanel.cpp
+            src/core/enterprise_devunlock_bridge.cpp
             src/core/shadow_page_detour.cpp
             src/agent/agentic_deep_thinking_engine.cpp
             src/agent/quantum_autonomous_todo_system.cpp
@@ -3098,6 +3099,7 @@ if(WIN32)
             src/core/agentic_task_graph.cpp
             src/core/vision_encoder.cpp
             src/core/model_loader_fallbacks.cpp
+            src/core/multi_response_engine.cpp
             src/core/masm_stress_harness.cpp
             src/core/convergence_stress_harness.cpp
             src/core/enterprise_stress_tests.cpp
@@ -3124,7 +3126,6 @@ if(WIN32)
             src/cli/swarm_tensor_nonmsvc.cpp
             src/core/remaining_link_closures_nonmsvc.cpp
             src/win32app/OSExplorerInterceptor_nonmsvc.cpp
-            src/core/multi_response_engine.cpp
         )
     endif()
      
