@@ -605,8 +605,8 @@ set(SOURCES
     # License anti-tampering (computeHMAC_SHA256, verifyLicenseKeyIntegrity) — required by enterprise_licensev2_impl
     src/core/license_anti_tampering.cpp
 
-    # Reverse-engineered bridge stubs (Heartbeat_Shutdown, GPU_*, GetHighResTick, TicksTo*, CalculateCRC32, AllocateDMABuffer, Tensor_QuantizedMatMul)
-    # stub file removed
+    # Reverse-engineered bridge runtime implementations (Heartbeat_*, GPU_*, GetHighResTick, TicksTo*, CRC32, DMA, scheduler/tensor C ABI)
+    src/core/subsystem_runtime_bridge.cpp
 
     # Support tier manager (SupportTierManager::Instance, GenerateStatusReport) — required by main, complete_server
     src/core/support_tier.cpp
@@ -2203,6 +2203,7 @@ set(INFERENCE_ENGINE_SOURCES
     src/core/ignite_800b.cpp
     src/core/ConfigurationValidator.cpp
     src/inference/inference_standalone_link_shims.cpp
+    src/core/subsystem_runtime_bridge.cpp
     src/engine/gguf_core.cpp
     src/engine/inference_kernels.cpp
     src/engine/transformer.cpp
@@ -2244,7 +2245,7 @@ target_link_libraries(RawrXD-InferenceEngine PRIVATE Threads::Threads)
 
 if(WIN32)
     target_link_libraries(RawrXD-InferenceEngine PRIVATE
-        shlwapi psapi dbghelp winhttp bcrypt advapi32 crypt32
+        shlwapi psapi dbghelp winhttp bcrypt advapi32 crypt32 ntdll
     )
 endif()
 
@@ -3214,6 +3215,7 @@ if(WIN32)
         src/tool_registry.cpp
         src/agentic/RawrXD_ToolRegistry.cpp
         src/agent/DiskRecoveryAgent.cpp
+        src/core/subsystem_runtime_bridge.cpp
         src/core/local_parity_bridge.cpp
         src/core/subsystem_mode_fallbacks.cpp
         src/core/model_loader_fallbacks.cpp
