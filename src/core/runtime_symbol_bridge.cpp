@@ -17,6 +17,8 @@
 #include <mutex>
 #include <cmath>
 #include <limits>
+#include <algorithm>
+#include <intrin.h>
 
 extern "C" {
 extern int32_t g_800B_Unlocked;
@@ -83,6 +85,34 @@ struct FlashAttentionTileConfigBridge {
     int32_t headDim;
     int32_t scratchBytes;
 };
+
+#pragma pack(push, 1)
+struct SwarmPacketHeaderBridge {
+    uint32_t magic;
+    uint8_t version;
+    uint8_t opcode;
+    uint16_t payloadLen;
+    uint32_t sequenceId;
+    uint64_t timestampNs;
+    uint64_t taskId;
+    uint8_t nodeId[16];
+    uint32_t reserved;
+    uint8_t checksum[16];
+};
+
+struct SwarmRingRuntime {
+    uint64_t head;
+    uint64_t tail;
+    uint64_t count;
+    uint64_t capacity;
+    uint64_t slotSize;
+    uint64_t bufferPtr;
+    uint64_t overflowCount;
+    uint64_t reserved0;
+    uint32_t flags;
+    uint32_t reserved1;
+};
+#pragma pack(pop)
 
 constexpr uint64_t RAWRXD_STATUS_ACCESS_DENIED = 0xC0000022ULL;
 constexpr uint64_t RAWRXD_STATUS_INVALID_PARAMETER = 0xC000000DULL;
@@ -442,6 +472,90 @@ void dequantQ2KImpl(const void* src, float* dst, uint64_t nblocks) {
         }
         p += 18;
     }
+}
+
+void sgemmImpl(const float* A, const float* B, float* C, int M, int N, int K) {
+    if (A == nullptr || B == nullptr || C == nullptr || M <= 0 || N <= 0 || K <= 0) {
+        return;
+    }
+    for (int m = 0; m < M; ++m) {
+        const float* aRow = A + static_cast<size_t>(m) * static_cast<size_t>(K);
+        float* cRow = C + static_cast<size_t>(m) * static_cast<size_t>(N);
+        for (int n = 0; n < N; ++n) {
+            double acc = static_cast<double>(cRow[n]);
+            for (int k = 0; k < K; ++k) {
+                acc += static_cast<double>(aRow[k]) *
+                       static_cast<double>(B[static_cast<size_t>(k) * static_cast<size_t>(N) + static_cast<size_t>(n)]);
+            }
+            cRow[n] = static_cast<float>(acc);
+        }
+    }
+}
+
+void sgemvImpl(const float* A, const float* x, float* y, int M, int K) {
+    if (A == nullptr || x == nullptr || y == nullptr || M <= 0 || K <= 0) {
+        return;
+    }
+    for (int m = 0; m < M; ++m) {
+        const float* aRow = A + static_cast<size_t>(m) * static_cast<size_t>(K);
+        double acc = static_cast<double>(y[m]);
+        for (int k = 0; k < K; ++k) {
+            acc += static_cast<double>(aRow[k]) * static_cast<double>(x[k]);
+        }
+        y[m] = static_cast<float>(acc);
+    }
+}
+
+inline float geluApprox(float x) {
+    // Tanh-based GeLU approximation used in many inference pipelines.
+    constexpr float k0 = 0.7978845608f;  // sqrt(2/pi)
+    constexpr float k1 = 0.044715f;
+    float x3 = x * x * x;
+    float t = std::tanh(k0 * (x + k1 * x3));
+    return 0.5f * x * (1.0f + t);
+}
+
+void qgemvQ4_0Impl(const void* A, const float* x, float* y, int M, int K) {
+    if (A == nullptr || x == nullptr || y == nullptr || M <= 0 || K <= 0) {
+        return;
+    }
+    const uint64_t blocksPerRow = static_cast<uint64_t>((K + 31) / 32);
+    const uint8_t* base = static_cast<const uint8_t*>(A);
+    std::vector<float> row(static_cast<size_t>(blocksPerRow * 32), 0.0f);
+    for (int m = 0; m < M; ++m) {
+        const uint8_t* rowSrc = base + static_cast<size_t>(m) * static_cast<size_t>(blocksPerRow) * 18U;
+        dequantQ4_0Impl(rowSrc, row.data(), blocksPerRow);
+        double acc = static_cast<double>(y[m]);
+        for (int k = 0; k < K; ++k) {
+            acc += static_cast<double>(row[static_cast<size_t>(k)]) * static_cast<double>(x[k]);
+        }
+        y[m] = static_cast<float>(acc);
+    }
+}
+
+void qgemvQ8_0Impl(const void* A, const float* x, float* y, int M, int K) {
+    if (A == nullptr || x == nullptr || y == nullptr || M <= 0 || K <= 0) {
+        return;
+    }
+    const uint64_t blocksPerRow = static_cast<uint64_t>((K + 31) / 32);
+    const uint8_t* base = static_cast<const uint8_t*>(A);
+    std::vector<float> row(static_cast<size_t>(blocksPerRow * 32), 0.0f);
+    for (int m = 0; m < M; ++m) {
+        const uint8_t* rowSrc = base + static_cast<size_t>(m) * static_cast<size_t>(blocksPerRow) * 34U;
+        dequantQ8_0Impl(rowSrc, row.data(), blocksPerRow);
+        double acc = static_cast<double>(y[m]);
+        for (int k = 0; k < K; ++k) {
+            acc += static_cast<double>(row[static_cast<size_t>(k)]) * static_cast<double>(x[k]);
+        }
+        y[m] = static_cast<float>(acc);
+    }
+}
+
+uint64_t checksumPayload16(const uint8_t* data, uint64_t len) {
+    uint64_t h0 = fnv1a64(data, static_cast<size_t>(len), 1469598103934665603ULL);
+    uint64_t h1 = splitmix64(h0 ^ 0x9E3779B97F4A7C15ULL);
+    uint64_t out = h0 ^ (h1 << 1U);
+    return out;
 }
 
 void seedEnterpriseStateIfNeeded() {
@@ -1285,6 +1399,159 @@ void native_rope_avx2(float* q, float* k, int headDim, int nHeads, int nKVHeads,
             kHead[i * 2 + 1] = k0 * s + k1 * c;
         }
     }
+}
+
+void native_nt_memcpy(void* dst, const void* src, size_t bytes) {
+    if (dst == nullptr || src == nullptr || bytes == 0) {
+        return;
+    }
+    std::memcpy(dst, src, bytes);
+}
+
+void sgemm_avx512(const float* A, const float* B, float* C, int M, int N, int K) {
+    sgemmImpl(A, B, C, M, N, K);
+}
+
+void sgemv_avx512(const float* A, const float* x, float* y, int M, int K) {
+    sgemvImpl(A, x, y, M, K);
+}
+
+void native_rmsnorm_avx512(const float* x, const float* weight, float* y, int dim, float eps) {
+    native_rmsnorm_avx2(x, weight, y, dim, eps);
+}
+
+void native_softmax_avx512(float* x, int n) {
+    native_softmax_avx2(x, n);
+}
+
+void sgemm_avx2(const float* A, const float* B, float* C, int M, int N, int K) {
+    sgemmImpl(A, B, C, M, N, K);
+}
+
+void sgemv_avx2(const float* A, const float* x, float* y, int M, int K) {
+    sgemvImpl(A, x, y, M, K);
+}
+
+void native_fused_mlp_avx2(const float* x, const float* W1, const float* b1,
+                           const float* W2, const float* b2, float* out,
+                           int seqLen, int hiddenDim, int ffnDim) {
+    if (x == nullptr || W1 == nullptr || W2 == nullptr || out == nullptr || seqLen <= 0 || hiddenDim <= 0 || ffnDim <= 0) {
+        return;
+    }
+
+    std::vector<float> hidden(static_cast<size_t>(seqLen) * static_cast<size_t>(ffnDim), 0.0f);
+    for (int s = 0; s < seqLen; ++s) {
+        const float* xRow = x + static_cast<size_t>(s) * static_cast<size_t>(hiddenDim);
+        float* hRow = hidden.data() + static_cast<size_t>(s) * static_cast<size_t>(ffnDim);
+        for (int j = 0; j < ffnDim; ++j) {
+            double acc = (b1 != nullptr) ? b1[j] : 0.0;
+            for (int i = 0; i < hiddenDim; ++i) {
+                acc += static_cast<double>(xRow[i]) *
+                       static_cast<double>(W1[static_cast<size_t>(i) * static_cast<size_t>(ffnDim) + static_cast<size_t>(j)]);
+            }
+            hRow[j] = geluApprox(static_cast<float>(acc));
+        }
+    }
+
+    for (int s = 0; s < seqLen; ++s) {
+        const float* hRow = hidden.data() + static_cast<size_t>(s) * static_cast<size_t>(ffnDim);
+        float* outRow = out + static_cast<size_t>(s) * static_cast<size_t>(hiddenDim);
+        for (int j = 0; j < hiddenDim; ++j) {
+            double acc = (b2 != nullptr) ? b2[j] : 0.0;
+            for (int i = 0; i < ffnDim; ++i) {
+                acc += static_cast<double>(hRow[i]) *
+                       static_cast<double>(W2[static_cast<size_t>(i) * static_cast<size_t>(hiddenDim) + static_cast<size_t>(j)]);
+            }
+            outRow[j] = static_cast<float>(acc);
+        }
+    }
+}
+
+void qgemv_q8_0_avx2(const void* A, const float* x, float* y, int M, int K) {
+    qgemvQ8_0Impl(A, x, y, M, K);
+}
+
+void qgemv_q4_0_avx2(const void* A, const float* x, float* y, int M, int K) {
+    qgemvQ4_0Impl(A, x, y, M, K);
+}
+
+int Swarm_RingBuffer_Init(void* ring, void* buffer) {
+    if (ring == nullptr || buffer == nullptr) {
+        return -1;
+    }
+    auto* r = static_cast<SwarmRingRuntime*>(ring);
+    std::memset(r, 0, sizeof(*r));
+    r->capacity = 4096;
+    r->slotSize = 65600;
+    r->bufferPtr = reinterpret_cast<uint64_t>(buffer);
+    r->flags = 1U;
+    return 0;
+}
+
+int Swarm_BuildPacketHeader(void* buffer, uint8_t opcode, uint16_t payloadLen, uint64_t taskId) {
+    if (buffer == nullptr) {
+        return -1;
+    }
+    auto* hdr = static_cast<SwarmPacketHeaderBridge*>(buffer);
+    hdr->magic = 0x52575244U;   // 'RWRD'
+    hdr->version = 0x01U;
+    hdr->opcode = opcode;
+    hdr->payloadLen = payloadLen;
+    hdr->sequenceId = 0;
+    hdr->timestampNs = static_cast<uint64_t>(GetTickCount64()) * 1'000'000ULL;
+    hdr->taskId = taskId;
+    std::memset(hdr->nodeId, 0, sizeof(hdr->nodeId));
+    hdr->reserved = 0;
+    std::memset(hdr->checksum, 0, sizeof(hdr->checksum));
+
+    const uint8_t* payload = static_cast<const uint8_t*>(buffer) + sizeof(SwarmPacketHeaderBridge);
+    const uint64_t chk0 = checksumPayload16(payload, payloadLen);
+    const uint64_t chk1 = splitmix64(chk0 ^ 0xD6E8FEB86659FD93ULL);
+    std::memcpy(hdr->checksum + 0, &chk0, 8);
+    std::memcpy(hdr->checksum + 8, &chk1, 8);
+    return 0;
+}
+
+uint64_t Swarm_HeartbeatRecord(uint32_t nodeSlot) {
+    static std::atomic<uint64_t> g_seq{1};
+    static std::atomic<uint64_t> g_last[64];
+    const uint64_t ts = static_cast<uint64_t>(GetTickCount64());
+    if (nodeSlot < 64U) {
+        g_last[nodeSlot].store(ts, std::memory_order_release);
+    }
+    return (g_seq.fetch_add(1, std::memory_order_acq_rel) << 32U) | (ts & 0xFFFFFFFFULL);
+}
+
+uint32_t Swarm_ComputeNodeFitness(void) {
+    SYSTEM_INFO si{};
+    GetNativeSystemInfo(&si);
+    uint32_t score = 100;
+    score += si.dwNumberOfProcessors * 25U;
+
+    int cpuInfo[4] = {};
+    __cpuid(cpuInfo, 1);
+    const bool hasAVX = (cpuInfo[2] & (1 << 28)) != 0;
+    const bool hasSSE42 = (cpuInfo[2] & (1 << 20)) != 0;
+    if (hasSSE42) score += 100;
+    if (hasAVX) score += 200;
+
+    __cpuidex(cpuInfo, 7, 0);
+    const bool hasAVX2 = (cpuInfo[1] & (1 << 5)) != 0;
+    const bool hasAVX512F = (cpuInfo[1] & (1 << 16)) != 0;
+    if (hasAVX2) score += 250;
+    if (hasAVX512F) score += 300;
+    return score;
+}
+
+void* Swarm_IOCP_Associate(void* socket, void* iocp, uint64_t key) {
+    if (socket == nullptr || iocp == nullptr) {
+        return nullptr;
+    }
+    HANDLE associated = CreateIoCompletionPort(reinterpret_cast<HANDLE>(socket),
+                                               reinterpret_cast<HANDLE>(iocp),
+                                               static_cast<ULONG_PTR>(key),
+                                               0);
+    return associated;
 }
 
 int asm_camellia256_set_key(const uint8_t* key32) {
