@@ -148,8 +148,11 @@ if(MSVC)
     add_link_options(/LTCG)
 endif()
 
-# WebView2 and WIL are in d:/rawrxd/include/
-include_directories("d:/rawrxd/include")
+# WebView2 and WIL are expected under this optional local SDK path.
+set(RAWRXD_LOCAL_WIN32_SDK_DIR "d:/rawrxd/include")
+if(EXISTS "${RAWRXD_LOCAL_WIN32_SDK_DIR}")
+    include_directories("${RAWRXD_LOCAL_WIN32_SDK_DIR}")
+endif()
 
 option(RAWRXD_BUILD_CLI "Build the rawrxd CLI console target" OFF)
 if(RAWRXD_BUILD_CLI)
@@ -1272,7 +1275,7 @@ target_link_libraries(RawrXD_Gold PRIVATE Threads::Threads)
 target_compile_definitions(RawrXD_Gold PRIVATE
     RAWRXD_GOLD_BUILD=1
     RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS=1
-    RAWR_HAS_MASM=1
+    RAWR_HAS_MASM=$<IF:$<BOOL:${RAWR_HAS_MASM}>,1,0>
     RAWRXD_LINK_QUADBUFFER_ASM=1
     RAWRXD_LINK_INFERENCE_KERNELS_ASM=1
     RAWRXD_LINK_ANALYZER_DISTILLER_ASM=0
@@ -2416,7 +2419,6 @@ if(WIN32)
         src/win32app/Win32IDE_ExecutionGovernor.cpp
         src/win32app/Win32IDE_LayerEviction.cpp
         src/win32app/Win32IDE_SemanticIndexShim.cpp
-        src/win32app/Win32IDE_SubAgent.h
         src/win32app/Win32IDE_SubAgent.cpp
         src/win32app/Win32IDE_AgentHistory.cpp
         src/win32app/Win32IDE_AgentPanel.cpp
@@ -2424,11 +2426,7 @@ if(WIN32)
         src/win32app/win32ide_extension_command_fallback.cpp
         src/win32app/Win32IDE_DiskRecovery.cpp
         src/win32app/Win32TerminalManager.cpp
-        src/win32app/Win32TerminalManager.h
         src/win32app/TransparentRenderer.cpp
-        src/win32app/TransparentRenderer.h
-        src/win32app/ModelConnection.h
-        src/win32app/ContextManager.h
 
         # Plugin System — Phase 43: Native Win32 DLL loading (C ABI)
         src/plugin_system/win32_plugin_loader.cpp
@@ -2955,8 +2953,6 @@ if(WIN32)
         src/win32app/Win32IDE_Refactor.cpp
         src/win32app/Win32IDE_SearchPanel.cpp
         src/win32app/Win32IDE_FuzzySearch.cpp
-        src/win32app/Win32IDE_CallStackSymbols.cpp
-        src/win32app/multi_file_search_stub.cpp
 
         # ═══════════════════════════════════════════════════════════════
         # Compile-Debt Resolved: IDE Cosmetics & Intelligence Layer
@@ -3190,15 +3186,11 @@ if(WIN32)
     list(REMOVE_ITEM WIN32IDE_SOURCES src/core/rawrxd_model_loader_link_stub.cpp)
     # Re-wire real providers needed by this target's link graph.
     list(APPEND WIN32IDE_SOURCES
-        src/tool_registry.cpp
-        src/agentic/RawrXD_ToolRegistry.cpp
-        src/agent/DiskRecoveryAgent.cpp
         src/core/local_parity_bridge.cpp
         src/core/subsystem_mode_fallbacks.cpp
         src/core/model_loader_fallbacks.cpp
         src/core/rawrxd_native_log_fallback.cpp
         src/llm_adapter/ggufrunner_link_fallbacks.cpp
-        src/agentic/masm_agent_failure_fallback.cpp
     )
 
     list(APPEND WIN32IDE_SOURCES
@@ -3210,8 +3202,9 @@ if(WIN32)
         src/win32app/collab_cursor_fallbacks.cpp
     )
 
+    set(WIN32IDE_EXTRA_ASM "")
     if(RAWR_HAS_MASM)
-        list(APPEND ASM_KERNEL_SOURCES
+        set(WIN32IDE_EXTRA_ASM
             src/asm/RawrXD_PE_Importer.asm
             src/asm/RawrXD_PE_Exporter.asm
             src/asm/memory_patch.asm
@@ -3219,6 +3212,7 @@ if(WIN32)
             src/asm/ghost_text_ranker.asm
             src/asm/diff_engine.asm
         )
+        set_source_files_properties(${WIN32IDE_EXTRA_ASM} PROPERTIES LANGUAGE ASM_MASM)
     endif()
 
     # Gold Lane: prefer real implementations for Win32IDE agentic/autonomy path.
@@ -3243,8 +3237,6 @@ if(WIN32)
             src/core/link_stubs_final.cpp
             src/core/link_stubs_remaining_classes.cpp
         )
-        # Re-add ai_agent_masm_stubs.cpp: provides masm_agent_failure_detect_simd (required by agentic_failure_detector.cpp)
-        list(APPEND WIN32IDE_SOURCES src/core/ai_agent_masm_stubs.cpp)
         message(STATUS "[Win32IDE] Agentic real lane enforced (stub/link-fallback units removed)")
     endif()
 
@@ -3350,6 +3342,8 @@ if(WIN32)
     # Mandatory symbol providers for Win32IDE link closure (only link_stubs_gate allowed).
     # Remove any other stubs that may have been added
     list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX "(_stubs\\.cpp$|_stubs\\.asm$|missing_handler|stub_|shim_|mock_|fake_)")
+    # Keep required MASM bridge provider after broad stub filtering.
+    list(APPEND WIN32IDE_SOURCES src/core/ai_agent_masm_stubs.cpp)
 
 
     # Pre-append strict guard: Verify no stubs were auto-added earlier
@@ -3372,13 +3366,6 @@ if(WIN32)
             )
         endif()
     endif()
-
-    # Final Duplicate Elimination (v14.7.4 Deep Clean)
-    list(REMOVE_ITEM WIN32IDE_SOURCES
-        src/tool_registry.cpp
-        src/agentic/RawrXD_ToolRegistry.cpp
-        src/agent/DiskRecoveryAgent.cpp
-    )
 
     # v14.7.5 LNK2005 Duplicate Symbol Elimination
     # These dedicated feature files duplicate definitions already consolidated in
@@ -3433,7 +3420,7 @@ if(WIN32)
         src/win32app/Win32IDE_ResourceGenerator.cpp
     )
 
-    add_executable(RawrXD-Win32IDE WIN32 ${WIN32IDE_SOURCES} ${ASM_KERNEL_SOURCES})
+    add_executable(RawrXD-Win32IDE WIN32 ${WIN32IDE_SOURCES} ${ASM_KERNEL_SOURCES} ${WIN32IDE_EXTRA_ASM})
 
     # =========================================================================
     # PRODUCTION POLICY ENFORCEMENT
