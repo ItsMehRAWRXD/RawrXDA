@@ -1429,6 +1429,18 @@ if(MSVC)
         $<$<AND:$<COMPILE_LANGUAGE:CXX>,$<NOT:$<CONFIG:Debug>>>:/O2>
     )
     target_link_options(RawrXD_Gold PRIVATE /LARGEADDRESSAWARE:NO)
+    if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
+        set(_GOLD_MAP_PATH "${CMAKE_BINARY_DIR}/gold/RawrXD_Gold.map")
+        set(_GOLD_MAP_AUDIT_PATH "${CMAKE_BINARY_DIR}/RawrXD_Gold.map")
+        target_link_options(RawrXD_Gold PRIVATE
+            "/MAP:${_GOLD_MAP_PATH}"
+            /MAPINFO:EXPORTS
+        )
+        add_custom_command(TARGET RawrXD_Gold POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_GOLD_MAP_PATH}" "${_GOLD_MAP_AUDIT_PATH}"
+            VERBATIM
+        )
+    endif()
 else()
     target_compile_options(RawrXD_Gold PRIVATE -march=native -O3 -w -mavx2 -mfma -mavx512f -mavx512bw -mavx512dq -mavx512vl -fopenmp)
 endif()
@@ -2310,6 +2322,18 @@ endif()
 # RawrCodex.asm uses ADDR32 relocations — require /LARGEADDRESSAWARE:NO
 if(MSVC)
     target_link_options(RawrEngine PRIVATE /LARGEADDRESSAWARE:NO)
+    if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
+        set(_RAWR_ENGINE_MAP_PATH "${CMAKE_BINARY_DIR}/bin/RawrEngine.map")
+        set(_RAWR_ENGINE_MAP_AUDIT_PATH "${CMAKE_BINARY_DIR}/RawrEngine.map")
+        target_link_options(RawrEngine PRIVATE
+            "/MAP:${_RAWR_ENGINE_MAP_PATH}"
+            /MAPINFO:EXPORTS
+        )
+        add_custom_command(TARGET RawrEngine POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_RAWR_ENGINE_MAP_PATH}" "${_RAWR_ENGINE_MAP_AUDIT_PATH}"
+            VERBATIM
+        )
+    endif()
 endif()
 
 if(NOT MSVC)
@@ -2467,6 +2491,18 @@ set_target_properties(RawrXD-InferenceEngine PROPERTIES
 # Telemetry_Kernel.asm uses ADDR32 relocations — require /LARGEADDRESSAWARE:NO
 if(MSVC)
     target_link_options(RawrXD-InferenceEngine PRIVATE /LARGEADDRESSAWARE:NO)
+    if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
+        set(_RAWR_INFERENCE_MAP_PATH "${CMAKE_BINARY_DIR}/bin/RawrXD-InferenceEngine.map")
+        set(_RAWR_INFERENCE_MAP_AUDIT_PATH "${CMAKE_BINARY_DIR}/RawrXD-InferenceEngine.map")
+        target_link_options(RawrXD-InferenceEngine PRIVATE
+            "/MAP:${_RAWR_INFERENCE_MAP_PATH}"
+            /MAPINFO:EXPORTS
+        )
+        add_custom_command(TARGET RawrXD-InferenceEngine POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_RAWR_INFERENCE_MAP_PATH}" "${_RAWR_INFERENCE_MAP_AUDIT_PATH}"
+            VERBATIM
+        )
+    endif()
 endif()
 
 message(STATUS "[Phase 6] Standalone inference engine target: RawrXD-InferenceEngine")
@@ -3668,9 +3704,14 @@ if(WIN32)
         EnforceNoStubs(RawrXD_Gold)
         EnforceNoStubs(RawrXD-InferenceEngine)
     endif()
-    # Enforce both: (1) No stubs linked, (2) link_stubs_gate.cpp shrinking
-    EnforceNoStubs(RawrXD-Win32IDE)
-    EnforceLinkStubsGateSizeLimit()
+    # Enforce both: (1) No stubs linked, (2) link_stubs_gate.cpp shrinking.
+    # Explicit fallback builds may retain compatibility units by design.
+    if(RAWRXD_ALLOW_AGENTIC_STUB_FALLBACK)
+        message(STATUS "[Win32IDE] Stub policy enforcement relaxed (RAWRXD_ALLOW_AGENTIC_STUB_FALLBACK=ON)")
+    else()
+        EnforceNoStubs(RawrXD-Win32IDE)
+        EnforceLinkStubsGateSizeLimit()
+    endif()
 
     # External infra pack is mirrored into the project tree under D: and wired
     # as include/lib providers for Win32IDE.
@@ -4026,7 +4067,7 @@ endif()
 
 # NOTE:
 # Duplicate/partial RawrXD_Gold source block removed here.
-# Canonical RawrXD_Gold target is defined earlier (see line ~1058).
+# Canonical RawrXD_Gold target is defined in the standalone Gold section above.
     # ============================================================================
     # CI Gating Targets — Release / Debug / AddressSanitizer
     # ============================================================================
@@ -4118,13 +4159,14 @@ else()
     )
 endif()
 if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
-    add_dependencies(self_test_gate RawrEngine RawrXD_Gold RawrXD-InferenceEngine)
-    if(TARGET RawrXD_MultiWindow_Kernel)
-        add_dependencies(self_test_gate RawrXD_MultiWindow_Kernel)
-    endif()
-    if(TARGET RawrXD_DynamicPromptEngine)
-        add_dependencies(self_test_gate RawrXD_DynamicPromptEngine)
-    endif()
+    add_dependencies(self_test_gate
+        RawrXD-Win32IDE
+        RawrEngine
+        RawrXD_Gold
+        RawrXD-InferenceEngine
+        RawrXD_MultiWindow_Kernel
+        RawrXD_DynamicPromptEngine
+    )
 endif()
 
 # CI gate: stress_test — build and note availability
