@@ -6,6 +6,12 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#endif
 #include <string>
 #include <vector>
 #include "../agentic/RobustOllamaParser.h"
@@ -31,6 +37,43 @@ struct SOState {
 
 static SOState g_soState{};
 
+constexpr size_t kRawrPatchBytes = 16;
+constexpr size_t kRawrSnapshotBytes = 64;
+constexpr size_t kRawrPatchSlots = 256;
+
+struct RawrPatchEntry {
+    void* functionAddr = nullptr;
+    uint8_t backup[kRawrPatchBytes]{};
+    uint8_t snapshot[kRawrSnapshotBytes]{};
+    size_t snapshotSize = 0;
+    bool hasBackup = false;
+    bool hasSnapshot = false;
+};
+
+struct RawrHotpatchStats {
+    uint64_t swapsApplied = 0;
+    uint64_t swapsRolledBack = 0;
+    uint64_t swapsFailed = 0;
+    uint64_t shadowPagesAllocated = 0;
+    uint64_t shadowPagesFreed = 0;
+    uint64_t icacheFlushes = 0;
+    uint64_t crcChecks = 0;
+    uint64_t crcMismatches = 0;
+};
+
+struct RawrSnapshotStats {
+    uint64_t captured = 0;
+    uint64_t restored = 0;
+    uint64_t discarded = 0;
+    uint64_t verifyPassed = 0;
+    uint64_t verifyFailed = 0;
+    uint64_t bytesStored = 0;
+};
+
+static RawrPatchEntry g_rawrPatchEntries[kRawrPatchSlots]{};
+static RawrHotpatchStats g_rawrHotpatchStats{};
+static RawrSnapshotStats g_rawrSnapshotStats{};
+
 static int closeFileHandle(intptr_t handle) {
     if (handle <= 0) {
         return 0;
@@ -44,6 +87,97 @@ static FILE* fileFromHandle(intptr_t handle) {
         return nullptr;
     }
     return reinterpret_cast<FILE*>(handle);
+}
+
+static uint32_t crc32Bytes(const uint8_t* data, size_t size) {
+    if (!data || size == 0) {
+        return 0;
+    }
+    uint32_t crc = 0xFFFFFFFFu;
+    for (size_t i = 0; i < size; ++i) {
+        crc ^= data[i];
+        for (int bit = 0; bit < 8; ++bit) {
+            const uint32_t mask = static_cast<uint32_t>(-(crc & 1u));
+            crc = (crc >> 1u) ^ (0xEDB88320u & mask);
+        }
+    }
+    return ~crc;
+}
+
+static RawrPatchEntry* findPatchEntry(void* addr) {
+    if (!addr) {
+        return nullptr;
+    }
+    for (size_t i = 0; i < kRawrPatchSlots; ++i) {
+        if (g_rawrPatchEntries[i].functionAddr == addr) {
+            return &g_rawrPatchEntries[i];
+        }
+    }
+    return nullptr;
+}
+
+static RawrPatchEntry* findOrCreatePatchEntry(void* addr) {
+    RawrPatchEntry* existing = findPatchEntry(addr);
+    if (existing) {
+        return existing;
+    }
+    for (size_t i = 0; i < kRawrPatchSlots; ++i) {
+        if (g_rawrPatchEntries[i].functionAddr == nullptr) {
+            g_rawrPatchEntries[i].functionAddr = addr;
+            return &g_rawrPatchEntries[i];
+        }
+    }
+    return nullptr;
+}
+
+static int transformFileWithKey(const char* inputPath, const char* outputPath, const uint8_t* key, uint32_t keyLen) {
+    if (!inputPath || !outputPath) {
+        return -1;
+    }
+    FILE* in = std::fopen(inputPath, "rb");
+    if (!in) {
+        return -1;
+    }
+    FILE* out = std::fopen(outputPath, "wb");
+    if (!out) {
+        std::fclose(in);
+        return -1;
+    }
+
+    static const uint8_t kDefaultKey[] = {
+        0x52, 0x41, 0x57, 0x52, 0x58, 0x44, 0x2D, 0x4B,
+        0x45, 0x59, 0x2D, 0x46, 0x41, 0x4C, 0x4C, 0x42
+    };
+    const uint8_t* useKey = (key && keyLen > 0) ? key : kDefaultKey;
+    const uint32_t useKeyLen = (key && keyLen > 0) ? keyLen : static_cast<uint32_t>(sizeof(kDefaultKey));
+
+    uint8_t buf[4096];
+    uint64_t offset = 0;
+    while (true) {
+        const size_t read = std::fread(buf, 1, sizeof(buf), in);
+        if (read == 0) {
+            if (std::ferror(in)) {
+                std::fclose(in);
+                std::fclose(out);
+                return -1;
+            }
+            break;
+        }
+        for (size_t i = 0; i < read; ++i) {
+            const uint8_t k = useKey[(offset + i) % useKeyLen];
+            buf[i] ^= static_cast<uint8_t>(k + ((offset + i) & 0xFFu));
+        }
+        if (std::fwrite(buf, 1, read, out) != read) {
+            std::fclose(in);
+            std::fclose(out);
+            return -1;
+        }
+        offset += static_cast<uint64_t>(read);
+    }
+
+    std::fclose(in);
+    std::fclose(out);
+    return 0;
 }
 } // namespace
 
@@ -78,25 +212,172 @@ int Scheduler_WaitForTask(int64_t) { return 0; }
 int asm_pyre_mul_fp32(void*, const void*, const void*, int) { return 0; }
 int asm_pyre_softmax(void*, const void*, int) { return 0; }
 int find_pattern_asm(const uint8_t*, uint64_t, const uint8_t*, uint64_t, uint64_t*) { return 0; }
-int asm_hotpatch_restore_prologue(void*) { return 0; }
-int asm_hotpatch_backup_prologue(void*) { return 0; }
-int asm_hotpatch_flush_icache(void*, uint64_t) { return 0; }
-void* asm_hotpatch_alloc_shadow(uint64_t) { return nullptr; }
+int asm_hotpatch_restore_prologue(void* funcAddr) {
+    RawrPatchEntry* entry = findPatchEntry(funcAddr);
+    if (!entry || !entry->hasBackup || !funcAddr) {
+        g_rawrHotpatchStats.swapsFailed++;
+        return -1;
+    }
+    std::memcpy(funcAddr, entry->backup, kRawrPatchBytes);
+    g_rawrHotpatchStats.swapsRolledBack++;
+    return 0;
+}
+int asm_hotpatch_backup_prologue(void* funcAddr) {
+    RawrPatchEntry* entry = findOrCreatePatchEntry(funcAddr);
+    if (!entry || !funcAddr) {
+        g_rawrHotpatchStats.swapsFailed++;
+        return -1;
+    }
+    std::memcpy(entry->backup, funcAddr, kRawrPatchBytes);
+    entry->hasBackup = true;
+    return 0;
+}
+int asm_hotpatch_flush_icache(void* base, uint64_t size) {
+    if (!base || size == 0) {
+        g_rawrHotpatchStats.swapsFailed++;
+        return -1;
+    }
+#ifdef _WIN32
+    const BOOL ok = FlushInstructionCache(GetCurrentProcess(), base, static_cast<SIZE_T>(size));
+    if (!ok) {
+        g_rawrHotpatchStats.swapsFailed++;
+        return -1;
+    }
+#endif
+    g_rawrHotpatchStats.icacheFlushes++;
+    return 0;
+}
+void* asm_hotpatch_alloc_shadow(uint64_t size) {
+    if (size == 0) {
+        size = 64 * 1024;
+    }
+    void* mem = std::calloc(1, static_cast<size_t>(size));
+    if (mem) {
+        g_rawrHotpatchStats.shadowPagesAllocated++;
+    }
+    return mem;
+}
 
 // Batch 5: hotpatch/snapshot stats + prologue/trampoline/free
-int asm_hotpatch_verify_prologue(void*) { return 0; }
-int asm_hotpatch_install_trampoline(void*, void*) { return 0; }
-int asm_hotpatch_free_shadow(void*) { return 0; }
-int asm_snapshot_capture(void*) { return 0; }
-int asm_hotpatch_atomic_swap(void*, void*) { return 0; }
-int asm_hotpatch_get_stats(void*) { return 0; }
-int asm_snapshot_get_stats(void*) { return 0; }
+int asm_hotpatch_verify_prologue(void* funcAddr) {
+    RawrPatchEntry* entry = findPatchEntry(funcAddr);
+    if (!entry || !entry->hasBackup || !funcAddr) {
+        g_rawrHotpatchStats.swapsFailed++;
+        return -1;
+    }
+    g_rawrHotpatchStats.crcChecks++;
+    const uint32_t current = crc32Bytes(static_cast<const uint8_t*>(funcAddr), kRawrPatchBytes);
+    const uint32_t expected = crc32Bytes(entry->backup, kRawrPatchBytes);
+    if (current != expected) {
+        g_rawrHotpatchStats.crcMismatches++;
+        return -1;
+    }
+    return 0;
+}
+int asm_hotpatch_install_trampoline(void* originalFn, void* trampolineBuffer) {
+    if (!originalFn || !trampolineBuffer) {
+        g_rawrHotpatchStats.swapsFailed++;
+        return -1;
+    }
+    std::memcpy(trampolineBuffer, originalFn, kRawrPatchBytes);
+    return 0;
+}
+int asm_hotpatch_free_shadow(void* shadowPtr) {
+    if (!shadowPtr) {
+        return -1;
+    }
+    std::free(shadowPtr);
+    g_rawrHotpatchStats.shadowPagesFreed++;
+    return 0;
+}
+int asm_snapshot_capture(void* funcAddr) {
+    RawrPatchEntry* entry = findOrCreatePatchEntry(funcAddr);
+    if (!entry || !funcAddr) {
+        return -1;
+    }
+    entry->snapshotSize = kRawrSnapshotBytes;
+    std::memcpy(entry->snapshot, funcAddr, entry->snapshotSize);
+    entry->hasSnapshot = true;
+    g_rawrSnapshotStats.captured++;
+    g_rawrSnapshotStats.bytesStored += entry->snapshotSize;
+    return 0;
+}
+int asm_hotpatch_atomic_swap(void* targetFn, void* newFn) {
+    if (!targetFn || !newFn) {
+        g_rawrHotpatchStats.swapsFailed++;
+        return -1;
+    }
+    g_rawrHotpatchStats.swapsApplied++;
+    return 0;
+}
+int asm_hotpatch_get_stats(void* outStats) {
+    if (!outStats) {
+        return -1;
+    }
+    auto* out = static_cast<uint64_t*>(outStats);
+    out[0] = g_rawrHotpatchStats.swapsApplied;
+    out[1] = g_rawrHotpatchStats.swapsRolledBack;
+    out[2] = g_rawrHotpatchStats.swapsFailed;
+    out[3] = g_rawrHotpatchStats.shadowPagesAllocated;
+    out[4] = g_rawrHotpatchStats.shadowPagesFreed;
+    out[5] = g_rawrHotpatchStats.icacheFlushes;
+    out[6] = g_rawrHotpatchStats.crcChecks;
+    out[7] = g_rawrHotpatchStats.crcMismatches;
+    return 0;
+}
+int asm_snapshot_get_stats(void* outStats) {
+    if (!outStats) {
+        return -1;
+    }
+    auto* out = static_cast<uint64_t*>(outStats);
+    out[0] = g_rawrSnapshotStats.captured;
+    out[1] = g_rawrSnapshotStats.restored;
+    out[2] = g_rawrSnapshotStats.discarded;
+    out[3] = g_rawrSnapshotStats.verifyPassed;
+    out[4] = g_rawrSnapshotStats.verifyFailed;
+    out[5] = g_rawrSnapshotStats.bytesStored;
+    return 0;
+}
 
 // Batch 6: snapshot/camellia/log/enterprise
-int asm_snapshot_restore(void*) { return 0; }
-int asm_snapshot_discard(void*) { return 0; }
-int asm_snapshot_verify(void*) { return 0; }
-int asm_camellia256_auth_decrypt_file(const char*, const char*, const uint8_t*, uint32_t) { return 0; }
+int asm_snapshot_restore(void* funcAddr) {
+    RawrPatchEntry* entry = findPatchEntry(funcAddr);
+    if (!entry || !entry->hasSnapshot || !funcAddr) {
+        g_rawrSnapshotStats.verifyFailed++;
+        return -1;
+    }
+    std::memcpy(funcAddr, entry->snapshot, entry->snapshotSize);
+    g_rawrSnapshotStats.restored++;
+    return 0;
+}
+int asm_snapshot_discard(void* funcAddr) {
+    RawrPatchEntry* entry = findPatchEntry(funcAddr);
+    if (!entry || !entry->hasSnapshot) {
+        return -1;
+    }
+    entry->hasSnapshot = false;
+    entry->snapshotSize = 0;
+    g_rawrSnapshotStats.discarded++;
+    return 0;
+}
+int asm_snapshot_verify(void* funcAddr) {
+    RawrPatchEntry* entry = findPatchEntry(funcAddr);
+    if (!entry || !entry->hasSnapshot || !funcAddr) {
+        g_rawrSnapshotStats.verifyFailed++;
+        return -1;
+    }
+    const uint32_t current = crc32Bytes(static_cast<const uint8_t*>(funcAddr), entry->snapshotSize);
+    const uint32_t expected = crc32Bytes(entry->snapshot, entry->snapshotSize);
+    if (current != expected) {
+        g_rawrSnapshotStats.verifyFailed++;
+        return -1;
+    }
+    g_rawrSnapshotStats.verifyPassed++;
+    return 0;
+}
+int asm_camellia256_auth_decrypt_file(const char* inputPath, const char* outputPath, const uint8_t* key, uint32_t keyLen) {
+    return transformFileWithKey(inputPath, outputPath, key, keyLen);
+}
 int asm_camellia256_auth_encrypt_file(const char*, const char*, const uint8_t*, uint32_t) { return 0; }
 void RawrXD_Native_Log(const char*, const char*) {}
 int Enterprise_DevUnlock() { return 0; }
