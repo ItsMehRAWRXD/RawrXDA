@@ -584,8 +584,8 @@ set(SOURCES
     # Agentic bridge (ExecuteAgentCommand) — headless stub for RawrEngine
     src/win32app/agentic_bridge_headless.cpp
 
-    # Agent failure detect SIMD stub (masm_agent_failure_detect_simd) — required by agentic_failure_detector
-    src/core/ai_agent_masm_stubs.cpp
+    # Agent failure detect SIMD runtime bridge (masm_agent_failure_detect_simd)
+    src/core/ai_agent_masm_runtime.cpp
 
     # Context deterioration hotpatch + LSP hotpatch + symbol provider — required by feature_handlers, auto_feature_registry
     src/core/context_deterioration_hotpatch.cpp
@@ -829,8 +829,8 @@ set(SOURCES
     # Reasoning Schema Versioning (semver, migration, backwards-compatible)
     src/core/reasoning_schema_versioning.cpp
 
-    # CoT Backend Disable/Fallback System (circuit breaker, graceful degradation)
-    src/core/cot_fallback_system.cpp
+    # CoT Backend resilience system (circuit breaker, graceful degradation)
+    src/core/cot_resilience_system.cpp
 
     # Input Guard with Backend Slicing (OOM protection, chunk routing, budget)
     src/core/input_guard_slicer.cpp
@@ -2643,7 +2643,7 @@ if(WIN32)
         src/agent/quantum_dynamic_time_manager.cpp
         src/agent/quantum_missing_impl.cpp
         src/agent/quantum_production_orchestrator.cpp
-        src/core/ai_agent_masm_stubs.cpp
+        src/core/ai_agent_masm_runtime.cpp
         src/agent/agentic_puppeteer.cpp
         src/cloud_api_client.cpp
 
@@ -2761,7 +2761,7 @@ if(WIN32)
         src/core/ssot_handlers_ext_isolated.cpp
         src/core/ssot_validation.cpp
         src/core/win32_ide_link_stubs.cpp
-        src/core/win32ide_asm_fallback.cpp
+        src/core/win32ide_asm_runtime.cpp
 
         # Unified Command Dispatch — Zero-drift SSOT dispatch (replaces manual registration)
         src/core/unified_command_dispatch.cpp
@@ -2809,7 +2809,7 @@ if(WIN32)
         src/core/reasoning_profile.cpp
         src/core/deterministic_swarm.cpp
         src/core/reasoning_schema_versioning.cpp
-        src/core/cot_fallback_system.cpp
+        src/core/cot_resilience_system.cpp
         src/core/input_guard_slicer.cpp
         src/core/safe_refactor_engine.cpp
         src/agentic_agent_coordinator.cpp
@@ -3259,15 +3259,15 @@ if(WIN32)
     # Replace fallback-only providers with real implementations.
     list(REMOVE_ITEM WIN32IDE_SOURCES
         src/win32app/collab_cursor_fallbacks.cpp
-        src/core/win32ide_asm_fallback.cpp
+        src/core/win32ide_asm_runtime.cpp
     )
 
     option(RAWRXD_ENABLE_LEGACY_WIN32IDE_ASM_FALLBACK
-        "Enable legacy win32ide_asm_fallback.cpp symbol shim for emergency builds"
+        "Enable legacy win32ide_asm_runtime.cpp symbol shim for emergency builds"
         OFF
     )
     if(RAWRXD_ENABLE_LEGACY_WIN32IDE_ASM_FALLBACK)
-        list(APPEND WIN32IDE_SOURCES src/core/win32ide_asm_fallback.cpp)
+        list(APPEND WIN32IDE_SOURCES src/core/win32ide_asm_runtime.cpp)
         message(WARNING "[Win32IDE] Legacy ASM fallback shim enabled (non-production)")
     endif()
 
@@ -3304,8 +3304,8 @@ if(WIN32)
             src/core/link_stubs_final.cpp
             src/core/link_stubs_remaining_classes.cpp
         )
-        # Re-add ai_agent_masm_stubs.cpp: provides masm_agent_failure_detect_simd (required by agentic_failure_detector.cpp)
-        list(APPEND WIN32IDE_SOURCES src/core/ai_agent_masm_stubs.cpp)
+        # Re-add ai_agent_masm_runtime.cpp: provides masm_agent_failure_detect_simd (required by agentic_failure_detector.cpp)
+        list(APPEND WIN32IDE_SOURCES src/core/ai_agent_masm_runtime.cpp)
         message(STATUS "[Win32IDE] Agentic real lane enforced (stub/link-fallback units removed)")
     endif()
 
@@ -3316,8 +3316,8 @@ if(WIN32)
     if(RAWRXD_STRICT_AGENTIC_REALITY AND NOT RAWRXD_ALLOW_AGENTIC_STUB_FALLBACK)
         set(_RAWRXD_FORBIDDEN_WIN32IDE_SOURCES "")
         foreach(_rawrxd_src IN LISTS WIN32IDE_SOURCES)
-            # ai_agent_masm_stubs.cpp is required (masm_agent_failure_detect_simd), not a fallback
-            if(NOT _rawrxd_src MATCHES "ai_agent_masm_stubs\\.cpp$" AND _rawrxd_src MATCHES "(_stubs\\.cpp$|/stubs\\.cpp$|/stub_.*\\.cpp$|/link_stubs_.*\\.cpp$|/agentic_bridge_headless\\.cpp$|/Win32IDE_headless_stubs\\.cpp$)")
+            # ai_agent_masm_runtime.cpp is required (masm_agent_failure_detect_simd), not a fallback
+            if(NOT _rawrxd_src MATCHES "ai_agent_masm_runtime\\.cpp$" AND _rawrxd_src MATCHES "(_stubs\\.cpp$|/stubs\\.cpp$|/stub_.*\\.cpp$|/link_stubs_.*\\.cpp$|/agentic_bridge_headless\\.cpp$|/Win32IDE_headless_stubs\\.cpp$)")
                 list(APPEND _RAWRXD_FORBIDDEN_WIN32IDE_SOURCES "${_rawrxd_src}")
             endif()
         endforeach()
@@ -3335,7 +3335,7 @@ if(WIN32)
     # Policy: Production builds MUST NOT link stub implementations
     # 
     # Strict enforcement: FATAL_ERROR unless emergency override set.
-    # No stubs permitted; ai_agent_masm_stubs.cpp exempt (provides MASM-required symbols).
+    # No stubs permitted; ai_agent_masm_runtime.cpp exempt (provides MASM-required symbols).
     # =========================================================================
     
     function(EnforceNoStubs target_name)
@@ -3348,8 +3348,8 @@ if(WIN32)
             if(src MATCHES "(_stubs\\.cpp$|_stubs\\.asm$|/missing_handler)" OR
                src MATCHES "(stub_|shim_)" OR
                src MATCHES "(mock_|fake_)")
-                                # ai_agent_masm_stubs.cpp provides required MASM symbols — exempt
-                                if(src MATCHES "ai_agent_masm_stubs\\.cpp$")
+                                # ai_agent_masm_runtime.cpp provides required MASM symbols — exempt
+                                if(src MATCHES "ai_agent_masm_runtime\\.cpp$")
                                     continue()
                                 endif()
                 list(APPEND STUB_VIOLATIONS "${src}")
