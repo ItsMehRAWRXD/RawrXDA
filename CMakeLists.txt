@@ -3069,6 +3069,7 @@ if(WIN32)
         src/core/memory_patch_byte_search_stubs.cpp
         src/core/mesh_brain_asm_stubs.cpp
         src/core/monaco_core_stubs.cpp
+        src/core/subsystem_runtime_bridge.cpp
         src/core/win32_ide_link_stubs.cpp
         src/win32app/benchmark_menu_stub.cpp
         src/win32app/benchmark_runner_stub.cpp
@@ -3102,6 +3103,9 @@ if(WIN32)
             src/core/convergence_stress_harness.cpp
             src/core/enterprise_stress_tests.cpp
             src/win32app/Win32IDE_Minimap.cpp
+            src/win32app/Win32IDE_VisionEncoder.cpp
+            src/win32app/Win32IDE_Debugger.cpp
+            src/win32app/Win32IDE_ReverseEngineering.cpp
             src/win32app/Win32IDE_SettingsGUI.cpp
             src/win32app/VulkanRenderer.cpp
             src/win32app/OSExplorerInterceptor.cpp
@@ -3214,7 +3218,12 @@ if(WIN32)
         src/tool_registry.cpp
         src/agentic/RawrXD_ToolRegistry.cpp
         src/agent/DiskRecoveryAgent.cpp
-        src/core/subsystem_runtime_bridge.cpp
+        src/core/runtime_symbol_bridge.cpp
+        src/core/multi_response_engine_runtime_ctor.cpp
+        src/ui/webview2_mingw_uuid.cpp
+        src/win32app/Win32IDE_ComponentManagers_Link.cpp
+        src/win32app/Win32IDE_NativeDebugPanel_fallback.cpp
+        src/win32app/Win32IDE_DebugAndVisionFallback.cpp
         src/core/local_parity_bridge.cpp
         src/core/subsystem_mode_fallbacks.cpp
         src/core/model_loader_fallbacks.cpp
@@ -3644,6 +3653,7 @@ if(WIN32)
         Threads::Threads
         comctl32 comdlg32 shell32 ole32 oleaut32 uuid
         shlwapi psapi dbghelp winhttp ws2_32 winmm gdi32 user32 ntdll
+        gdiplus
         d2d1 dwrite d3d11 dcomp d3dcompiler dwmapi
         dxgi
         advapi32 crypt32 bcrypt wintrust

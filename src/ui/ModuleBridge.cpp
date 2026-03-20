@@ -5,7 +5,8 @@
 #include <string>
 #include <windows.h>
 
-extern "C" void rawrxd_enumerate_modules_peb(void(*callback)(uint64_t, uint32_t, uint16_t, const wchar_t*));
+extern "C" void rawrxd_enumerate_modules_peb(
+    void(*callback)(uint64_t, uint32_t, uint16_t, const wchar_t*, void*), void* context);
 
 namespace rawrxd::ui {
 
@@ -57,10 +58,10 @@ public:
 
         // Note: In real production we use a proper context-passing ASM wrapper, 
         // but for Step 4 we'll use the direct PEB walker.
-        rawrxd_enumerate_modules_peb([](uint64_t base, uint32_t size, uint16_t nameLen, const wchar_t* name) {
+        rawrxd_enumerate_modules_peb([](uint64_t base, uint32_t size, uint16_t nameLen, const wchar_t* name, void* /*context*/) {
             // Re-routing to the collector
             // ... (Implementation detail: we'll use a singleton collector for simplicity)
-        });
+        }, nullptr);
 
         // Update header
         ipc::MsgModuleSnapshot* hdr = reinterpret_cast<ipc::MsgModuleSnapshot*>(buffer.data());
