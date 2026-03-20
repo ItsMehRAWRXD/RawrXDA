@@ -73,24 +73,66 @@ struct SubsystemFallbackState {
     uint64_t spengineQuantLevel = 0;
     uint64_t quadbufTokens = 0;
     uint64_t quadbufFrames = 0;
+    uint64_t modeFlags = 0;
+    uint64_t modeTransitions = 0;
+    uint64_t statsPrintCount = 0;
 };
 
 static SubsystemFallbackState g_subsystemState{};
 static std::mutex g_subsystemMutex;
 
+enum SubsystemModeBit : uint64_t {
+    MODE_INJECT = 1ULL << 0,
+    MODE_DIFFCOV = 1ULL << 1,
+    MODE_INTELPT = 1ULL << 2,
+    MODE_AGENTTRACE = 1ULL << 3,
+    MODE_DYNTRACE = 1ULL << 4,
+    MODE_COVFUSION = 1ULL << 5,
+    MODE_SIDELOAD = 1ULL << 6,
+    MODE_PERSISTENCE = 1ULL << 7,
+    MODE_BASICBLOCK = 1ULL << 8,
+    MODE_STUBGEN = 1ULL << 9,
+    MODE_TRACEENGINE = 1ULL << 10,
+    MODE_COMPILE = 1ULL << 11,
+    MODE_GAPFUZZ = 1ULL << 12
+};
+
 static uint64_t nowMs() {
     using namespace std::chrono;
     return static_cast<uint64_t>(duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count());
 }
+
+static void enableMode(uint64_t modeBit) {
+    g_subsystemState.modeFlags |= modeBit;
+    g_subsystemState.modeTransitions += 1;
+}
 } // namespace
 
-extern "C" void InjectMode(void) {}
-extern "C" void DiffCovMode(void) {}
+extern "C" void InjectMode(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    enableMode(MODE_INJECT);
+}
+extern "C" void DiffCovMode(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    enableMode(MODE_DIFFCOV);
+}
 extern "C" int SO_InitializeVulkan(void) { return 1; }
-extern "C" void IntelPTMode(void) {}
-extern "C" void AgentTraceMode(void) {}
-extern "C" void DynTraceMode(void) {}
-extern "C" void CovFusionMode(void) {}
+extern "C" void IntelPTMode(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    enableMode(MODE_INTELPT);
+}
+extern "C" void AgentTraceMode(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    enableMode(MODE_AGENTTRACE);
+}
+extern "C" void DynTraceMode(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    enableMode(MODE_DYNTRACE);
+}
+extern "C" void CovFusionMode(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    enableMode(MODE_COVFUSION);
+}
 extern "C" int AD_ProcessGGUF(const char* inputPath, const char* outputExecPath) {
     if (!inputPath || !outputExecPath) {
         return 0;
@@ -105,13 +147,24 @@ extern "C" int AD_ProcessGGUF(const char* inputPath, const char* outputExecPath)
     return wrote == sizeof(marker) ? 1 : 0;
 }
 extern "C" int SO_InitializeStreaming(void) { return 1; }
-extern "C" void SideloadMode(void) {}
+extern "C" void SideloadMode(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    enableMode(MODE_SIDELOAD);
+}
 extern "C" int SO_CreateComputePipelines(void* operatorTable, uint64_t operatorCount) {
     (void)operatorTable;
     return operatorCount > 0 ? 1 : 0;
 }
-extern "C" void PersistenceMode(void) {}
-extern "C" void SO_PrintStatistics(void) {}
+extern "C" void PersistenceMode(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    enableMode(MODE_PERSISTENCE);
+}
+extern "C" void SO_PrintStatistics(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.statsPrintCount += 1;
+    g_subsystemState.omegaLastScore =
+        (g_subsystemState.omegaLastScore + g_subsystemState.modeFlags + g_subsystemState.statsPrintCount) % 100000u;
+}
 extern "C" void* SO_CreateMemoryArena(uint64_t sizeBytes) {
     if (sizeBytes == 0) {
         return nullptr;
@@ -129,13 +182,33 @@ extern "C" int SO_LoadExecFile(const char* filePath) {
     std::fclose(in);
     return 1;
 }
-extern "C" void BasicBlockCovMode(void) {}
-extern "C" void SO_PrintMetrics(void) {}
+extern "C" void BasicBlockCovMode(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    enableMode(MODE_BASICBLOCK);
+}
+extern "C" void SO_PrintMetrics(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.statsPrintCount += 1;
+    g_subsystemState.meshLastScore =
+        (g_subsystemState.meshLastScore + g_subsystemState.modeTransitions + g_subsystemState.statsPrintCount) % 100000u;
+}
 extern "C" int SO_StartDEFLATEThreads(uint32_t threadCount) { return threadCount > 0 ? 1 : 0; }
-extern "C" void StubGenMode(void) {}
-extern "C" void TraceEngineMode(void) {}
-extern "C" void CompileMode(void) {}
-extern "C" void GapFuzzMode(void) {}
+extern "C" void StubGenMode(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    enableMode(MODE_STUBGEN);
+}
+extern "C" void TraceEngineMode(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    enableMode(MODE_TRACEENGINE);
+}
+extern "C" void CompileMode(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    enableMode(MODE_COMPILE);
+}
+extern "C" void GapFuzzMode(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    enableMode(MODE_GAPFUZZ);
+}
 extern "C" void EncryptMode(void) {}
 extern "C" int SO_InitializePrefetchQueue(void) { return 1; }
 extern "C" int SO_CreateThreadPool(void) { return 1; }
