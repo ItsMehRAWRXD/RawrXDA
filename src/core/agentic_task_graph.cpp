@@ -1641,7 +1641,7 @@ TaskResult AgenticTaskGraph::executor_symbolIndex(TaskNode* self, void* context)
     using namespace RawrXD::Embeddings;
 
     // Use thread_local to keep the index/cache alive across calls
-    thread_local HNSWIndex hnswIndex({});
+    thread_local HNSWIndex hnswIndex(HNSWIndex::Config{});
     thread_local EmbeddingCache embCache(1024);
 
     IncrementalIndexer indexer(hnswIndex, embCache);
