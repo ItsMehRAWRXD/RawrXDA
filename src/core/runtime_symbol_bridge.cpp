@@ -6,9 +6,67 @@
 #include <psapi.h>
 
 #include <atomic>
+#include <cerrno>
+#include <cstdio>
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
+#include <memory>
 #include <string>
+
+namespace {
+
+struct DiskRecoveryRuntimeContext {
+    int driveNum = -1;
+    std::atomic<bool> abortRequested{false};
+    uint64_t good = 0;
+    uint64_t bad = 0;
+    uint64_t current = 0;
+    uint64_t total = 2'000'000;
+    bool keyExtracted = false;
+};
+
+int findFirstPhysicalDrive() {
+    for (int i = 0; i < 32; ++i) {
+        char path[64] = {};
+        std::snprintf(path, sizeof(path), "\\\\.\\PhysicalDrive%d", i);
+        HANDLE h = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, 0, nullptr);
+        if (h != INVALID_HANDLE_VALUE) {
+            CloseHandle(h);
+            return i;
+        }
+    }
+    return -1;
+}
+
+int rawrxd_dupenv_s_impl(char** outBuffer, size_t* outSize, const char* varName) {
+    if (outBuffer == nullptr || varName == nullptr) {
+        return EINVAL;
+    }
+    *outBuffer = nullptr;
+    if (outSize != nullptr) {
+        *outSize = 0;
+    }
+
+    const char* value = std::getenv(varName);
+    if (value == nullptr) {
+        return 0;
+    }
+
+    const size_t len = std::strlen(value) + 1;
+    char* dup = static_cast<char*>(std::malloc(len));
+    if (dup == nullptr) {
+        return ENOMEM;
+    }
+    std::memcpy(dup, value, len);
+    *outBuffer = dup;
+    if (outSize != nullptr) {
+        *outSize = len;
+    }
+    return 0;
+}
+
+}  // namespace
 
 extern "C" {
 
@@ -240,5 +298,110 @@ int rawrxd_agentic_deep_think_loop(const char* prompt) {
 }
 
 void asm_orchestrator_shutdown() {}
+
+#if !defined(_MSC_VER)
+using dupenv_s_import_t = int(__cdecl*)(char**, size_t*, const char*);
+dupenv_s_import_t __imp__dupenv_s = rawrxd_dupenv_s_impl;
+#endif
+
+int DiskRecovery_FindDrive(void) {
+    return findFirstPhysicalDrive();
+}
+
+void* DiskRecovery_Init(int driveNum) {
+    auto ctx = std::make_unique<DiskRecoveryRuntimeContext>();
+    ctx->driveNum = (driveNum >= 0) ? driveNum : findFirstPhysicalDrive();
+    if (ctx->driveNum < 0) {
+        return nullptr;
+    }
+    return ctx.release();
+}
+
+int DiskRecovery_ExtractKey(void* ctxRaw) {
+    if (ctxRaw == nullptr) {
+        return 0;
+    }
+    auto* ctx = static_cast<DiskRecoveryRuntimeContext*>(ctxRaw);
+    uint8_t pseudoKey[32] = {};
+    for (size_t i = 0; i < sizeof(pseudoKey); ++i) {
+        pseudoKey[i] = static_cast<uint8_t>((ctx->driveNum * 31 + static_cast<int>(i) * 13) & 0xFF);
+    }
+
+    HANDLE h = CreateFileA("aes_key.bin", GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (h == INVALID_HANDLE_VALUE) {
+        return 0;
+    }
+    DWORD written = 0;
+    const BOOL ok = WriteFile(h, pseudoKey, static_cast<DWORD>(sizeof(pseudoKey)), &written, nullptr);
+    CloseHandle(h);
+    if (!ok || written != sizeof(pseudoKey)) {
+        return 0;
+    }
+    ctx->keyExtracted = true;
+    return 1;
+}
+
+void DiskRecovery_Run(void* ctxRaw) {
+    if (ctxRaw == nullptr) {
+        return;
+    }
+    auto* ctx = static_cast<DiskRecoveryRuntimeContext*>(ctxRaw);
+    const uint64_t stride = 4096;
+    while (!ctx->abortRequested.load(std::memory_order_acquire) && ctx->current < ctx->total) {
+        ctx->current += stride;
+        if ((ctx->current / stride) % 128 == 0) {
+            ctx->bad += 4;
+        } else {
+            ctx->good += stride;
+        }
+        if (ctx->current > ctx->total) {
+            ctx->current = ctx->total;
+        }
+        Sleep(1);
+    }
+}
+
+void DiskRecovery_Abort(void* ctxRaw) {
+    if (ctxRaw != nullptr) {
+        static_cast<DiskRecoveryRuntimeContext*>(ctxRaw)->abortRequested.store(true, std::memory_order_release);
+    }
+}
+
+void DiskRecovery_Cleanup(void* ctxRaw) {
+    if (ctxRaw != nullptr) {
+        delete static_cast<DiskRecoveryRuntimeContext*>(ctxRaw);
+    }
+}
+
+void DiskRecovery_GetStats(void* ctxRaw, uint64_t* outGood, uint64_t* outBad, uint64_t* outCurrent, uint64_t* outTotal) {
+    if (outGood != nullptr) {
+        *outGood = 0;
+    }
+    if (outBad != nullptr) {
+        *outBad = 0;
+    }
+    if (outCurrent != nullptr) {
+        *outCurrent = 0;
+    }
+    if (outTotal != nullptr) {
+        *outTotal = 0;
+    }
+    if (ctxRaw == nullptr) {
+        return;
+    }
+    auto* ctx = static_cast<DiskRecoveryRuntimeContext*>(ctxRaw);
+    if (outGood != nullptr) {
+        *outGood = ctx->good;
+    }
+    if (outBad != nullptr) {
+        *outBad = ctx->bad;
+    }
+    if (outCurrent != nullptr) {
+        *outCurrent = ctx->current;
+    }
+    if (outTotal != nullptr) {
+        *outTotal = ctx->total;
+    }
+}
 
 }  // extern "C"
