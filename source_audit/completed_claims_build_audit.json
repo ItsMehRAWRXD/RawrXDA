@@ -1,0 +1,1024 @@
+{
+  "generated_at": "2026-03-20 19:27:48",
+  "repo_root": "/workspace",
+  "docs_scanned": [
+    "docs/FULL_AUDIT_MASTER.md",
+    "UNFINISHED_FEATURES.md"
+  ],
+  "win32ide_source_count": 523,
+  "asm_kernel_source_count": 47,
+  "active_cmake_files_scanned": 103,
+  "claims_total": 37,
+  "claims_file_total": 36,
+  "claims_symbol_total": 1,
+  "mismatch_counts": {
+    "claimed_file_missing": 6,
+    "claimed_file_missing_but_referenced_by_win32ide_sources": 2,
+    "claimed_file_not_in_expected_build_graph": 3,
+    "claimed_symbol_missing": 0,
+    "claimed_completed_with_not_implemented_markers": 0
+  },
+  "mismatches": {
+    "claimed_file_missing": [
+      {
+        "source_doc": "docs/FULL_AUDIT_MASTER.md",
+        "line": 55,
+        "token": "multi_file_search_stub.cpp",
+        "resolved_count": 0,
+        "resolved_paths_sample": [],
+        "exists": false,
+        "expected_scope": "win32ide",
+        "in_win32ide_sources": true,
+        "in_any_cmake": true,
+        "cmake_line_hits": [
+          2976,
+          3358
+        ],
+        "cmake_file_hits": [
+          "CMakeLists.txt"
+        ],
+        "not_implemented_markers": {},
+        "context": "- Added to WIN32IDE_SOURCES: `model_registry.cpp`, `checkpoint_manager.cpp`, `universal_model_router.cpp`, `agent/project_context.cpp`, `ui/interpretability_panel.cpp`, `feature_registry_panel.cpp`, `multi_file_search_stub.cpp`, `benchmark_menu_stub.cpp`, `enterprise_licensev2_impl.cpp`, `license_enforcement.cpp`, `enterprise_feature_manager.cpp`, `feature_flags_runtime.cpp`, `context_deterioration_hotpatch.cpp`, `agentic_autonomous_config.cpp`, `multi_gpu.cpp`, `Win32IDE_LicenseCreator.cpp`, `monaco_settings_dialog.cpp`, `thermal/RAWRXD_ThermalDashboard.cpp`, `VSCodeMarketplaceAPI.cpp`."
+      },
+      {
+        "source_doc": "docs/FULL_AUDIT_MASTER.md",
+        "line": 55,
+        "token": "benchmark_menu_stub.cpp",
+        "resolved_count": 0,
+        "resolved_paths_sample": [],
+        "exists": false,
+        "expected_scope": "win32ide",
+        "in_win32ide_sources": false,
+        "in_any_cmake": false,
+        "cmake_line_hits": [],
+        "cmake_file_hits": [],
+        "not_implemented_markers": {},
+        "context": "- Added to WIN32IDE_SOURCES: `model_registry.cpp`, `checkpoint_manager.cpp`, `universal_model_router.cpp`, `agent/project_context.cpp`, `ui/interpretability_panel.cpp`, `feature_registry_panel.cpp`, `multi_file_search_stub.cpp`, `benchmark_menu_stub.cpp`, `enterprise_licensev2_impl.cpp`, `license_enforcement.cpp`, `enterprise_feature_manager.cpp`, `feature_flags_runtime.cpp`, `context_deterioration_hotpatch.cpp`, `agentic_autonomous_config.cpp`, `multi_gpu.cpp`, `Win32IDE_LicenseCreator.cpp`, `monaco_settings_dialog.cpp`, `thermal/RAWRXD_ThermalDashboard.cpp`, `VSCodeMarketplaceAPI.cpp`."
+      },
+      {
+        "source_doc": "UNFINISHED_FEATURES.md",
+        "line": 216,
+        "token": "src/win32app/benchmark_runner_stub.cpp",
+        "resolved_count": 0,
+        "resolved_paths_sample": [],
+        "exists": false,
+        "expected_scope": "any",
+        "in_win32ide_sources": false,
+        "in_any_cmake": false,
+        "cmake_line_hits": [],
+        "cmake_file_hits": [],
+        "not_implemented_markers": {},
+        "context": "| benchmark_runner_stub | src/win32app/benchmark_runner_stub.cpp | Yes | Yes | IDE build variant; minimal for unique_ptr; full impl in benchmark build. |"
+      },
+      {
+        "source_doc": "UNFINISHED_FEATURES.md",
+        "line": 217,
+        "token": "src/win32app/benchmark_menu_stub.cpp",
+        "resolved_count": 0,
+        "resolved_paths_sample": [],
+        "exists": false,
+        "expected_scope": "any",
+        "in_win32ide_sources": false,
+        "in_any_cmake": false,
+        "cmake_line_hits": [],
+        "cmake_file_hits": [],
+        "not_implemented_markers": {},
+        "context": "| benchmark_menu_stub | src/win32app/benchmark_menu_stub.cpp | Yes | Yes | IDE build variant; real dialog when menu invoked. |"
+      },
+      {
+        "source_doc": "UNFINISHED_FEATURES.md",
+        "line": 218,
+        "token": "src/win32app/multi_file_search_stub.cpp",
+        "resolved_count": 0,
+        "resolved_paths_sample": [],
+        "exists": false,
+        "expected_scope": "any",
+        "in_win32ide_sources": true,
+        "in_any_cmake": true,
+        "cmake_line_hits": [
+          2976,
+          3358
+        ],
+        "cmake_file_hits": [
+          "CMakeLists.txt"
+        ],
+        "not_implemented_markers": {},
+        "context": "| multi_file_search_stub | src/win32app/multi_file_search_stub.cpp | Yes | Yes | IDE build variant; real filesystem search, regex, glob. |"
+      },
+      {
+        "source_doc": "UNFINISHED_FEATURES.md",
+        "line": 221,
+        "token": "src/win32app/Win32IDE_logMessage_stub.cpp",
+        "resolved_count": 0,
+        "resolved_paths_sample": [],
+        "exists": false,
+        "expected_scope": "any",
+        "in_win32ide_sources": false,
+        "in_any_cmake": false,
+        "cmake_line_hits": [],
+        "cmake_file_hits": [],
+        "not_implemented_markers": {},
+        "context": "| Win32IDE_logMessage_stub | src/win32app/Win32IDE_logMessage_stub.cpp | Yes | Yes | Build variant: OutputDebugString + ide.log. |"
+      }
+    ],
+    "claimed_file_missing_but_referenced_by_win32ide_sources": [
+      {
+        "source_doc": "docs/FULL_AUDIT_MASTER.md",
+        "line": 55,
+        "token": "multi_file_search_stub.cpp",
+        "resolved_count": 0,
+        "resolved_paths_sample": [],
+        "exists": false,
+        "expected_scope": "win32ide",
+        "in_win32ide_sources": true,
+        "in_any_cmake": true,
+        "cmake_line_hits": [
+          2976,
+          3358
+        ],
+        "cmake_file_hits": [
+          "CMakeLists.txt"
+        ],
+        "not_implemented_markers": {},
+        "context": "- Added to WIN32IDE_SOURCES: `model_registry.cpp`, `checkpoint_manager.cpp`, `universal_model_router.cpp`, `agent/project_context.cpp`, `ui/interpretability_panel.cpp`, `feature_registry_panel.cpp`, `multi_file_search_stub.cpp`, `benchmark_menu_stub.cpp`, `enterprise_licensev2_impl.cpp`, `license_enforcement.cpp`, `enterprise_feature_manager.cpp`, `feature_flags_runtime.cpp`, `context_deterioration_hotpatch.cpp`, `agentic_autonomous_config.cpp`, `multi_gpu.cpp`, `Win32IDE_LicenseCreator.cpp`, `monaco_settings_dialog.cpp`, `thermal/RAWRXD_ThermalDashboard.cpp`, `VSCodeMarketplaceAPI.cpp`."
+      },
+      {
+        "source_doc": "UNFINISHED_FEATURES.md",
+        "line": 218,
+        "token": "src/win32app/multi_file_search_stub.cpp",
+        "resolved_count": 0,
+        "resolved_paths_sample": [],
+        "exists": false,
+        "expected_scope": "any",
+        "in_win32ide_sources": true,
+        "in_any_cmake": true,
+        "cmake_line_hits": [
+          2976,
+          3358
+        ],
+        "cmake_file_hits": [
+          "CMakeLists.txt"
+        ],
+        "not_implemented_markers": {},
+        "context": "| multi_file_search_stub | src/win32app/multi_file_search_stub.cpp | Yes | Yes | IDE build variant; real filesystem search, regex, glob. |"
+      }
+    ],
+    "claimed_file_not_in_expected_build_graph": [
+      {
+        "source_doc": "UNFINISHED_FEATURES.md",
+        "line": 219,
+        "token": "src/win32app/digestion_engine_stub.cpp",
+        "resolved_count": 3,
+        "resolved_paths_sample": [
+          ".archived_orphans/digestion_engine_stub.cpp",
+          "Full Source/src/win32app/digestion_engine_stub.cpp",
+          "history/reconstructed/src/win32app/digestion_engine_stub.cpp"
+        ],
+        "exists": true,
+        "expected_scope": "any",
+        "in_win32ide_sources": false,
+        "in_any_cmake": false,
+        "cmake_line_hits": [],
+        "cmake_file_hits": [],
+        "not_implemented_markers": {
+          "todo": 6
+        },
+        "context": "| digestion_engine_stub | src/win32app/digestion_engine_stub.cpp | Yes | Yes | Production impl (metrics, JSON); filename retained. |"
+      },
+      {
+        "source_doc": "UNFINISHED_FEATURES.md",
+        "line": 229,
+        "token": "src/core/license_manager_panel.cpp",
+        "resolved_count": 1,
+        "resolved_paths_sample": [
+          "src/core/license_manager_panel.cpp"
+        ],
+        "exists": true,
+        "expected_scope": "any",
+        "in_win32ide_sources": false,
+        "in_any_cmake": false,
+        "cmake_line_hits": [],
+        "cmake_file_hits": [],
+        "not_implemented_markers": {},
+        "context": "| license_manager_panel show() | src/core/license_manager_panel.cpp | Yes | Yes | Full impl: LicenseInfoDialog and LicenseActivationDialog show Win32 modal dialogs; display* fill list from EnterpriseLicenseV2; Activate calls loadKeyFromFile. |"
+      },
+      {
+        "source_doc": "UNFINISHED_FEATURES.md",
+        "line": 253,
+        "token": "src/telemetry/logger.cpp",
+        "resolved_count": 1,
+        "resolved_paths_sample": [
+          "src/telemetry/logger.cpp"
+        ],
+        "exists": true,
+        "expected_scope": "any",
+        "in_win32ide_sources": false,
+        "in_any_cmake": false,
+        "cmake_line_hits": [],
+        "cmake_file_hits": [],
+        "not_implemented_markers": {},
+        "context": "| logger (telemetry) | src/telemetry/logger.cpp | Yes | Yes | Structured JSON logging stub. |"
+      }
+    ],
+    "claimed_symbol_missing": [],
+    "claimed_completed_with_not_implemented_markers": []
+  },
+  "file_claims": [
+    {
+      "source_doc": "docs/FULL_AUDIT_MASTER.md",
+      "line": 55,
+      "token": "model_registry.cpp",
+      "resolved_count": 5,
+      "resolved_paths_sample": [
+        "src/core/model_registry.cpp",
+        "src/model_registry.cpp",
+        ".archived_orphans/model_registry.cpp",
+        "Full Source/src/model_registry.cpp",
+        "history/reconstructed/src/core/model_registry.cpp"
+      ],
+      "exists": true,
+      "expected_scope": "win32ide",
+      "in_win32ide_sources": true,
+      "in_any_cmake": true,
+      "cmake_line_hits": [
+        3000
+      ],
+      "cmake_file_hits": [
+        "CMakeLists.txt"
+      ],
+      "not_implemented_markers": {},
+      "context": "- Added to WIN32IDE_SOURCES: `model_registry.cpp`, `checkpoint_manager.cpp`, `universal_model_router.cpp`, `agent/project_context.cpp`, `ui/interpretability_panel.cpp`, `feature_registry_panel.cpp`, `multi_file_search_stub.cpp`, `benchmark_menu_stub.cpp`, `enterprise_licensev2_impl.cpp`, `license_enforcement.cpp`, `enterprise_feature_manager.cpp`, `feature_flags_runtime.cpp`, `context_deterioration_hotpatch.cpp`, `agentic_autonomous_config.cpp`, `multi_gpu.cpp`, `Win32IDE_LicenseCreator.cpp`, `monaco_settings_dialog.cpp`, `thermal/RAWRXD_ThermalDashboard.cpp`, `VSCodeMarketplaceAPI.cpp`."
+    },
+    {
+      "source_doc": "docs/FULL_AUDIT_MASTER.md",
+      "line": 55,
+      "token": "checkpoint_manager.cpp",
+      "resolved_count": 8,
+      "resolved_paths_sample": [
+        "src/checkpoint_manager.cpp",
+        "src/core/checkpoint_manager.cpp",
+        "src/orchestration/checkpoint_manager.cpp",
+        "src/qtapp/checkpoint_manager.cpp",
+        ".archived_orphans/checkpoint_manager.cpp",
+        ".archived_orphans_ultra/src/orchestration/checkpoint_manager.cpp",
+        "Full Source/src/orchestration/checkpoint_manager.cpp",
+        "history/reconstructed/src/qtapp/checkpoint_manager.cpp"
+      ],
+      "exists": true,
+      "expected_scope": "win32ide",
+      "in_win32ide_sources": true,
+      "in_any_cmake": true,
+      "cmake_line_hits": [
+        3002
+      ],
+      "cmake_file_hits": [
+        "CMakeLists.txt"
+      ],
+      "not_implemented_markers": {},
+      "context": "- Added to WIN32IDE_SOURCES: `model_registry.cpp`, `checkpoint_manager.cpp`, `universal_model_router.cpp`, `agent/project_context.cpp`, `ui/interpretability_panel.cpp`, `feature_registry_panel.cpp`, `multi_file_search_stub.cpp`, `benchmark_menu_stub.cpp`, `enterprise_licensev2_impl.cpp`, `license_enforcement.cpp`, `enterprise_feature_manager.cpp`, `feature_flags_runtime.cpp`, `context_deterioration_hotpatch.cpp`, `agentic_autonomous_config.cpp`, `multi_gpu.cpp`, `Win32IDE_LicenseCreator.cpp`, `monaco_settings_dialog.cpp`, `thermal/RAWRXD_ThermalDashboard.cpp`, `VSCodeMarketplaceAPI.cpp`."
+    },
+    {
+      "source_doc": "docs/FULL_AUDIT_MASTER.md",
+      "line": 55,
+      "token": "universal_model_router.cpp",
+      "resolved_count": 9,
+      "resolved_paths_sample": [
+        "src/ai/universal_model_router.cpp",
+        "src/core/universal_model_router.cpp",
+        "src/universal_model_router.cpp",
+        ".archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/universal_model_router.cpp",
+        ".archived_orphans/universal_model_router.cpp",
+        "Full Source/src/ai/universal_model_router.cpp",
+        "Full Source/src/universal_model_router.cpp",
+        "history/reconstructed/src/ai/universal_model_router.cpp",
+        "history/reconstructed/src/universal_model_router.cpp"
+      ],
+      "exists": true,
+      "expected_scope": "win32ide",
+      "in_win32ide_sources": true,
+      "in_any_cmake": true,
+      "cmake_line_hits": [
+        2999
+      ],
+      "cmake_file_hits": [
+        "CMakeLists.txt"
+      ],
+      "not_implemented_markers": {},
+      "context": "- Added to WIN32IDE_SOURCES: `model_registry.cpp`, `checkpoint_manager.cpp`, `universal_model_router.cpp`, `agent/project_context.cpp`, `ui/interpretability_panel.cpp`, `feature_registry_panel.cpp`, `multi_file_search_stub.cpp`, `benchmark_menu_stub.cpp`, `enterprise_licensev2_impl.cpp`, `license_enforcement.cpp`, `enterprise_feature_manager.cpp`, `feature_flags_runtime.cpp`, `context_deterioration_hotpatch.cpp`, `agentic_autonomous_config.cpp`, `multi_gpu.cpp`, `Win32IDE_LicenseCreator.cpp`, `monaco_settings_dialog.cpp`, `thermal/RAWRXD_ThermalDashboard.cpp`, `VSCodeMarketplaceAPI.cpp`."
+    },
+    {
+      "source_doc": "docs/FULL_AUDIT_MASTER.md",
+      "line": 55,
+      "token": "agent/project_context.cpp",
+      "resolved_count": 3,
+      "resolved_paths_sample": [
+        "src/agent/project_context.cpp",
+        "src/project_context.cpp",
+        "history/reconstructed/src/agent/project_context.cpp"
+      ],
+      "exists": true,
+      "expected_scope": "win32ide",
+      "in_win32ide_sources": true,
+      "in_any_cmake": true,
+      "cmake_line_hits": [
+        2998
+      ],
+      "cmake_file_hits": [
+        "CMakeLists.txt"
+      ],
+      "not_implemented_markers": {},
+      "context": "- Added to WIN32IDE_SOURCES: `model_registry.cpp`, `checkpoint_manager.cpp`, `universal_model_router.cpp`, `agent/project_context.cpp`, `ui/interpretability_panel.cpp`, `feature_registry_panel.cpp`, `multi_file_search_stub.cpp`, `benchmark_menu_stub.cpp`, `enterprise_licensev2_impl.cpp`, `license_enforcement.cpp`, `enterprise_feature_manager.cpp`, `feature_flags_runtime.cpp`, `context_deterioration_hotpatch.cpp`, `agentic_autonomous_config.cpp`, `multi_gpu.cpp`, `Win32IDE_LicenseCreator.cpp`, `monaco_settings_dialog.cpp`, `thermal/RAWRXD_ThermalDashboard.cpp`, `VSCodeMarketplaceAPI.cpp`."
+    },
+    {
+      "source_doc": "docs/FULL_AUDIT_MASTER.md",
+      "line": 55,
+      "token": "ui/interpretability_panel.cpp",
+      "resolved_count": 6,
+      "resolved_paths_sample": [
+        "src/qtapp/interpretability_panel.cpp",
+        "src/ui/interpretability_panel.cpp",
+        ".archived_orphans/interpretability_panel.cpp",
+        ".archived_orphans_ultra/src/qtapp/interpretability_panel.cpp",
+        "Full Source/src/ui/interpretability_panel.cpp",
+        "history/reconstructed/src/ui/interpretability_panel.cpp"
+      ],
+      "exists": true,
+      "expected_scope": "win32ide",
+      "in_win32ide_sources": true,
+      "in_any_cmake": true,
+      "cmake_line_hits": [
+        3008
+      ],
+      "cmake_file_hits": [
+        "CMakeLists.txt"
+      ],
+      "not_implemented_markers": {},
+      "context": "- Added to WIN32IDE_SOURCES: `model_registry.cpp`, `checkpoint_manager.cpp`, `universal_model_router.cpp`, `agent/project_context.cpp`, `ui/interpretability_panel.cpp`, `feature_registry_panel.cpp`, `multi_file_search_stub.cpp`, `benchmark_menu_stub.cpp`, `enterprise_licensev2_impl.cpp`, `license_enforcement.cpp`, `enterprise_feature_manager.cpp`, `feature_flags_runtime.cpp`, `context_deterioration_hotpatch.cpp`, `agentic_autonomous_config.cpp`, `multi_gpu.cpp`, `Win32IDE_LicenseCreator.cpp`, `monaco_settings_dialog.cpp`, `thermal/RAWRXD_ThermalDashboard.cpp`, `VSCodeMarketplaceAPI.cpp`."
+    },
+    {
+      "source_doc": "docs/FULL_AUDIT_MASTER.md",
+      "line": 55,
+      "token": "feature_registry_panel.cpp",
+      "resolved_count": 3,
+      "resolved_paths_sample": [
+        "src/feature_registry_panel.cpp",
+        "src/win32app/feature_registry_panel.cpp",
+        "history/reconstructed/src/win32app/feature_registry_panel.cpp"
+      ],
+      "exists": true,
+      "expected_scope": "win32ide",
+      "in_win32ide_sources": true,
+      "in_any_cmake": true,
+      "cmake_line_hits": [
+        3013,
+        3026
+      ],
+      "cmake_file_hits": [
+        "CMakeLists.txt"
+      ],
+      "not_implemented_markers": {},
+      "context": "- Added to WIN32IDE_SOURCES: `model_registry.cpp`, `checkpoint_manager.cpp`, `universal_model_router.cpp`, `agent/project_context.cpp`, `ui/interpretability_panel.cpp`, `feature_registry_panel.cpp`, `multi_file_search_stub.cpp`, `benchmark_menu_stub.cpp`, `enterprise_licensev2_impl.cpp`, `license_enforcement.cpp`, `enterprise_feature_manager.cpp`, `feature_flags_runtime.cpp`, `context_deterioration_hotpatch.cpp`, `agentic_autonomous_config.cpp`, `multi_gpu.cpp`, `Win32IDE_LicenseCreator.cpp`, `monaco_settings_dialog.cpp`, `thermal/RAWRXD_ThermalDashboard.cpp`, `VSCodeMarketplaceAPI.cpp`."
+    },
+    {
+      "source_doc": "docs/FULL_AUDIT_MASTER.md",
+      "line": 55,
+      "token": "multi_file_search_stub.cpp",
+      "resolved_count": 0,
+      "resolved_paths_sample": [],
+      "exists": false,
+      "expected_scope": "win32ide",
+      "in_win32ide_sources": true,
+      "in_any_cmake": true,
+      "cmake_line_hits": [
+        2976,
+        3358
+      ],
+      "cmake_file_hits": [
+        "CMakeLists.txt"
+      ],
+      "not_implemented_markers": {},
+      "context": "- Added to WIN32IDE_SOURCES: `model_registry.cpp`, `checkpoint_manager.cpp`, `universal_model_router.cpp`, `agent/project_context.cpp`, `ui/interpretability_panel.cpp`, `feature_registry_panel.cpp`, `multi_file_search_stub.cpp`, `benchmark_menu_stub.cpp`, `enterprise_licensev2_impl.cpp`, `license_enforcement.cpp`, `enterprise_feature_manager.cpp`, `feature_flags_runtime.cpp`, `context_deterioration_hotpatch.cpp`, `agentic_autonomous_config.cpp`, `multi_gpu.cpp`, `Win32IDE_LicenseCreator.cpp`, `monaco_settings_dialog.cpp`, `thermal/RAWRXD_ThermalDashboard.cpp`, `VSCodeMarketplaceAPI.cpp`."
+    },
+    {
+      "source_doc": "docs/FULL_AUDIT_MASTER.md",
+      "line": 55,
+      "token": "benchmark_menu_stub.cpp",
+      "resolved_count": 0,
+      "resolved_paths_sample": [],
+      "exists": false,
+      "expected_scope": "win32ide",
+      "in_win32ide_sources": false,
+      "in_any_cmake": false,
+      "cmake_line_hits": [],
+      "cmake_file_hits": [],
+      "not_implemented_markers": {},
+      "context": "- Added to WIN32IDE_SOURCES: `model_registry.cpp`, `checkpoint_manager.cpp`, `universal_model_router.cpp`, `agent/project_context.cpp`, `ui/interpretability_panel.cpp`, `feature_registry_panel.cpp`, `multi_file_search_stub.cpp`, `benchmark_menu_stub.cpp`, `enterprise_licensev2_impl.cpp`, `license_enforcement.cpp`, `enterprise_feature_manager.cpp`, `feature_flags_runtime.cpp`, `context_deterioration_hotpatch.cpp`, `agentic_autonomous_config.cpp`, `multi_gpu.cpp`, `Win32IDE_LicenseCreator.cpp`, `monaco_settings_dialog.cpp`, `thermal/RAWRXD_ThermalDashboard.cpp`, `VSCodeMarketplaceAPI.cpp`."
+    },
+    {
+      "source_doc": "docs/FULL_AUDIT_MASTER.md",
+      "line": 55,
+      "token": "enterprise_licensev2_impl.cpp",
+      "resolved_count": 2,
+      "resolved_paths_sample": [
+        "src/core/enterprise_licensev2_impl.cpp",
+        "history/reconstructed/src/core/enterprise_licensev2_impl.cpp"
+      ],
+      "exists": true,
+      "expected_scope": "win32ide",
+      "in_win32ide_sources": true,
+      "in_any_cmake": true,
+      "cmake_line_hits": [
+        551,
+        2198,
+        2549
+      ],
+      "cmake_file_hits": [
+        "CMakeLists.txt"
+      ],
+      "not_implemented_markers": {
+        "placeholder": 1
+      },
+      "context": "- Added to WIN32IDE_SOURCES: `model_registry.cpp`, `checkpoint_manager.cpp`, `universal_model_router.cpp`, `agent/project_context.cpp`, `ui/interpretability_panel.cpp`, `feature_registry_panel.cpp`, `multi_file_search_stub.cpp`, `benchmark_menu_stub.cpp`, `enterprise_licensev2_impl.cpp`, `license_enforcement.cpp`, `enterprise_feature_manager.cpp`, `feature_flags_runtime.cpp`, `context_deterioration_hotpatch.cpp`, `agentic_autonomous_config.cpp`, `multi_gpu.cpp`, `Win32IDE_LicenseCreator.cpp`, `monaco_settings_dialog.cpp`, `thermal/RAWRXD_ThermalDashboard.cpp`, `VSCodeMarketplaceAPI.cpp`."
+    },
+    {
+      "source_doc": "docs/FULL_AUDIT_MASTER.md",
+      "line": 55,
+      "token": "license_enforcement.cpp",
+      "resolved_count": 2,
+      "resolved_paths_sample": [
+        "src/license_enforcement.cpp",
+        "history/reconstructed/src/license_enforcement.cpp"
+      ],
+      "exists": true,
+      "expected_scope": "win32ide",
+      "in_win32ide_sources": true,
+      "in_any_cmake": true,
+      "cmake_line_hits": [
+        558,
+        2196,
+        3034,
+        3035
+      ],
+      "cmake_file_hits": [
+        "CMakeLists.txt"
+      ],
+      "not_implemented_markers": {},
+      "context": "- Added to WIN32IDE_SOURCES: `model_registry.cpp`, `checkpoint_manager.cpp`, `universal_model_router.cpp`, `agent/project_context.cpp`, `ui/interpretability_panel.cpp`, `feature_registry_panel.cpp`, `multi_file_search_stub.cpp`, `benchmark_menu_stub.cpp`, `enterprise_licensev2_impl.cpp`, `license_enforcement.cpp`, `enterprise_feature_manager.cpp`, `feature_flags_runtime.cpp`, `context_deterioration_hotpatch.cpp`, `agentic_autonomous_config.cpp`, `multi_gpu.cpp`, `Win32IDE_LicenseCreator.cpp`, `monaco_settings_dialog.cpp`, `thermal/RAWRXD_ThermalDashboard.cpp`, `VSCodeMarketplaceAPI.cpp`."
+    },
+    {
+      "source_doc": "docs/FULL_AUDIT_MASTER.md",
+      "line": 55,
+      "token": "enterprise_feature_manager.cpp",
+      "resolved_count": 1,
+      "resolved_paths_sample": [
+        "src/core/enterprise_feature_manager.cpp"
+      ],
+      "exists": true,
+      "expected_scope": "win32ide",
+      "in_win32ide_sources": true,
+      "in_any_cmake": true,
+      "cmake_line_hits": [
+        564,
+        3005
+      ],
+      "cmake_file_hits": [
+        "CMakeLists.txt"
+      ],
+      "not_implemented_markers": {
+        "todo": 1
+      },
+      "context": "- Added to WIN32IDE_SOURCES: `model_registry.cpp`, `checkpoint_manager.cpp`, `universal_model_router.cpp`, `agent/project_context.cpp`, `ui/interpretability_panel.cpp`, `feature_registry_panel.cpp`, `multi_file_search_stub.cpp`, `benchmark_menu_stub.cpp`, `enterprise_licensev2_impl.cpp`, `license_enforcement.cpp`, `enterprise_feature_manager.cpp`, `feature_flags_runtime.cpp`, `context_deterioration_hotpatch.cpp`, `agentic_autonomous_config.cpp`, `multi_gpu.cpp`, `Win32IDE_LicenseCreator.cpp`, `monaco_settings_dialog.cpp`, `thermal/RAWRXD_ThermalDashboard.cpp`, `VSCodeMarketplaceAPI.cpp`."
+    },
+    {
+      "source_doc": "docs/FULL_AUDIT_MASTER.md",
+      "line": 55,
+      "token": "feature_flags_runtime.cpp",
+      "resolved_count": 1,
+      "resolved_paths_sample": [
+        "src/feature_flags_runtime.cpp"
+      ],
+      "exists": true,
+      "expected_scope": "win32ide",
+      "in_win32ide_sources": true,
+      "in_any_cmake": true,
+      "cmake_line_hits": [
+        559,
+        2197,
+        3036
+      ],
+      "cmake_file_hits": [
+        "CMakeLists.txt"
+      ],
+      "not_implemented_markers": {},
+      "context": "- Added to WIN32IDE_SOURCES: `model_registry.cpp`, `checkpoint_manager.cpp`, `universal_model_router.cpp`, `agent/project_context.cpp`, `ui/interpretability_panel.cpp`, `feature_registry_panel.cpp`, `multi_file_search_stub.cpp`, `benchmark_menu_stub.cpp`, `enterprise_licensev2_impl.cpp`, `license_enforcement.cpp`, `enterprise_feature_manager.cpp`, `feature_flags_runtime.cpp`, `context_deterioration_hotpatch.cpp`, `agentic_autonomous_config.cpp`, `multi_gpu.cpp`, `Win32IDE_LicenseCreator.cpp`, `monaco_settings_dialog.cpp`, `thermal/RAWRXD_ThermalDashboard.cpp`, `VSCodeMarketplaceAPI.cpp`."
+    },
+    {
+      "source_doc": "docs/FULL_AUDIT_MASTER.md",
+      "line": 55,
+      "token": "context_deterioration_hotpatch.cpp",
+      "resolved_count": 1,
+      "resolved_paths_sample": [
+        "src/core/context_deterioration_hotpatch.cpp"
+      ],
+      "exists": true,
+      "expected_scope": "win32ide",
+      "in_win32ide_sources": true,
+      "in_any_cmake": true,
+      "cmake_line_hits": [
+        599,
+        3006
+      ],
+      "cmake_file_hits": [
+        "CMakeLists.txt"
+      ],
+      "not_implemented_markers": {
+        "placeholder": 5
+      },
+      "context": "- Added to WIN32IDE_SOURCES: `model_registry.cpp`, `checkpoint_manager.cpp`, `universal_model_router.cpp`, `agent/project_context.cpp`, `ui/interpretability_panel.cpp`, `feature_registry_panel.cpp`, `multi_file_search_stub.cpp`, `benchmark_menu_stub.cpp`, `enterprise_licensev2_impl.cpp`, `license_enforcement.cpp`, `enterprise_feature_manager.cpp`, `feature_flags_runtime.cpp`, `context_deterioration_hotpatch.cpp`, `agentic_autonomous_config.cpp`, `multi_gpu.cpp`, `Win32IDE_LicenseCreator.cpp`, `monaco_settings_dialog.cpp`, `thermal/RAWRXD_ThermalDashboard.cpp`, `VSCodeMarketplaceAPI.cpp`."
+    },
+    {
+      "source_doc": "docs/FULL_AUDIT_MASTER.md",
+      "line": 55,
+      "token": "agentic_autonomous_config.cpp",
+      "resolved_count": 1,
+      "resolved_paths_sample": [
+        "src/core/agentic_autonomous_config.cpp"
+      ],
+      "exists": true,
+      "expected_scope": "win32ide",
+      "in_win32ide_sources": true,
+      "in_any_cmake": true,
+      "cmake_line_hits": [
+        563,
+        3004
+      ],
+      "cmake_file_hits": [
+        "CMakeLists.txt"
+      ],
+      "not_implemented_markers": {},
+      "context": "- Added to WIN32IDE_SOURCES: `model_registry.cpp`, `checkpoint_manager.cpp`, `universal_model_router.cpp`, `agent/project_context.cpp`, `ui/interpretability_panel.cpp`, `feature_registry_panel.cpp`, `multi_file_search_stub.cpp`, `benchmark_menu_stub.cpp`, `enterprise_licensev2_impl.cpp`, `license_enforcement.cpp`, `enterprise_feature_manager.cpp`, `feature_flags_runtime.cpp`, `context_deterioration_hotpatch.cpp`, `agentic_autonomous_config.cpp`, `multi_gpu.cpp`, `Win32IDE_LicenseCreator.cpp`, `monaco_settings_dialog.cpp`, `thermal/RAWRXD_ThermalDashboard.cpp`, `VSCodeMarketplaceAPI.cpp`."
+    },
+    {
+      "source_doc": "docs/FULL_AUDIT_MASTER.md",
+      "line": 55,
+      "token": "multi_gpu.cpp",
+      "resolved_count": 1,
+      "resolved_paths_sample": [
+        "src/core/multi_gpu.cpp"
+      ],
+      "exists": true,
+      "expected_scope": "win32ide",
+      "in_win32ide_sources": true,
+      "in_any_cmake": true,
+      "cmake_line_hits": [
+        569,
+        2562
+      ],
+      "cmake_file_hits": [
+        "CMakeLists.txt"
+      ],
+      "not_implemented_markers": {},
+      "context": "- Added to WIN32IDE_SOURCES: `model_registry.cpp`, `checkpoint_manager.cpp`, `universal_model_router.cpp`, `agent/project_context.cpp`, `ui/interpretability_panel.cpp`, `feature_registry_panel.cpp`, `multi_file_search_stub.cpp`, `benchmark_menu_stub.cpp`, `enterprise_licensev2_impl.cpp`, `license_enforcement.cpp`, `enterprise_feature_manager.cpp`, `feature_flags_runtime.cpp`, `context_deterioration_hotpatch.cpp`, `agentic_autonomous_config.cpp`, `multi_gpu.cpp`, `Win32IDE_LicenseCreator.cpp`, `monaco_settings_dialog.cpp`, `thermal/RAWRXD_ThermalDashboard.cpp`, `VSCodeMarketplaceAPI.cpp`."
+    },
+    {
+      "source_doc": "docs/FULL_AUDIT_MASTER.md",
+      "line": 55,
+      "token": "Win32IDE_LicenseCreator.cpp",
+      "resolved_count": 2,
+      "resolved_paths_sample": [
+        "src/win32app/Win32IDE_LicenseCreator.cpp",
+        "history/reconstructed/src/win32app/Win32IDE_LicenseCreator.cpp"
+      ],
+      "exists": true,
+      "expected_scope": "win32ide",
+      "in_win32ide_sources": true,
+      "in_any_cmake": true,
+      "cmake_line_hits": [
+        3033
+      ],
+      "cmake_file_hits": [
+        "CMakeLists.txt"
+      ],
+      "not_implemented_markers": {},
+      "context": "- Added to WIN32IDE_SOURCES: `model_registry.cpp`, `checkpoint_manager.cpp`, `universal_model_router.cpp`, `agent/project_context.cpp`, `ui/interpretability_panel.cpp`, `feature_registry_panel.cpp`, `multi_file_search_stub.cpp`, `benchmark_menu_stub.cpp`, `enterprise_licensev2_impl.cpp`, `license_enforcement.cpp`, `enterprise_feature_manager.cpp`, `feature_flags_runtime.cpp`, `context_deterioration_hotpatch.cpp`, `agentic_autonomous_config.cpp`, `multi_gpu.cpp`, `Win32IDE_LicenseCreator.cpp`, `monaco_settings_dialog.cpp`, `thermal/RAWRXD_ThermalDashboard.cpp`, `VSCodeMarketplaceAPI.cpp`."
+    },
+    {
+      "source_doc": "docs/FULL_AUDIT_MASTER.md",
+      "line": 55,
+      "token": "monaco_settings_dialog.cpp",
+      "resolved_count": 4,
+      "resolved_paths_sample": [
+        "src/ui/monaco_settings_dialog.cpp",
+        ".archived_orphans/monaco_settings_dialog.cpp",
+        "Full Source/src/ui/monaco_settings_dialog.cpp",
+        "history/reconstructed/src/ui/monaco_settings_dialog.cpp"
+      ],
+      "exists": true,
+      "expected_scope": "win32ide",
+      "in_win32ide_sources": true,
+      "in_any_cmake": true,
+      "cmake_line_hits": [
+        3027
+      ],
+      "cmake_file_hits": [
+        "CMakeLists.txt"
+      ],
+      "not_implemented_markers": {},
+      "context": "- Added to WIN32IDE_SOURCES: `model_registry.cpp`, `checkpoint_manager.cpp`, `universal_model_router.cpp`, `agent/project_context.cpp`, `ui/interpretability_panel.cpp`, `feature_registry_panel.cpp`, `multi_file_search_stub.cpp`, `benchmark_menu_stub.cpp`, `enterprise_licensev2_impl.cpp`, `license_enforcement.cpp`, `enterprise_feature_manager.cpp`, `feature_flags_runtime.cpp`, `context_deterioration_hotpatch.cpp`, `agentic_autonomous_config.cpp`, `multi_gpu.cpp`, `Win32IDE_LicenseCreator.cpp`, `monaco_settings_dialog.cpp`, `thermal/RAWRXD_ThermalDashboard.cpp`, `VSCodeMarketplaceAPI.cpp`."
+    },
+    {
+      "source_doc": "docs/FULL_AUDIT_MASTER.md",
+      "line": 55,
+      "token": "thermal/RAWRXD_ThermalDashboard.cpp",
+      "resolved_count": 4,
+      "resolved_paths_sample": [
+        "src/thermal/RAWRXD_ThermalDashboard.cpp",
+        ".archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/.archived_orphans/RAWRXD_ThermalDashboard.cpp",
+        "Full Source/src/thermal/RAWRXD_ThermalDashboard.cpp",
+        "history/reconstructed/src/thermal/RAWRXD_ThermalDashboard.cpp"
+      ],
+      "exists": true,
+      "expected_scope": "win32ide",
+      "in_win32ide_sources": true,
+      "in_any_cmake": true,
+      "cmake_line_hits": [
+        3028
+      ],
+      "cmake_file_hits": [
+        "CMakeLists.txt",
+        "src/thermal/CMakeLists.txt"
+      ],
+      "not_implemented_markers": {},
+      "context": "- Added to WIN32IDE_SOURCES: `model_registry.cpp`, `checkpoint_manager.cpp`, `universal_model_router.cpp`, `agent/project_context.cpp`, `ui/interpretability_panel.cpp`, `feature_registry_panel.cpp`, `multi_file_search_stub.cpp`, `benchmark_menu_stub.cpp`, `enterprise_licensev2_impl.cpp`, `license_enforcement.cpp`, `enterprise_feature_manager.cpp`, `feature_flags_runtime.cpp`, `context_deterioration_hotpatch.cpp`, `agentic_autonomous_config.cpp`, `multi_gpu.cpp`, `Win32IDE_LicenseCreator.cpp`, `monaco_settings_dialog.cpp`, `thermal/RAWRXD_ThermalDashboard.cpp`, `VSCodeMarketplaceAPI.cpp`."
+    },
+    {
+      "source_doc": "docs/FULL_AUDIT_MASTER.md",
+      "line": 55,
+      "token": "VSCodeMarketplaceAPI.cpp",
+      "resolved_count": 3,
+      "resolved_paths_sample": [
+        "src/win32app/VSCodeMarketplaceAPI.cpp",
+        "history/reconstructed/src/win32app/VSCodeMarketplaceAPI.cpp",
+        "reconstructed/RawrXD/src/win32app/VSCodeMarketplaceAPI.cpp"
+      ],
+      "exists": true,
+      "expected_scope": "win32ide",
+      "in_win32ide_sources": true,
+      "in_any_cmake": true,
+      "cmake_line_hits": [
+        3029
+      ],
+      "cmake_file_hits": [
+        "CMakeLists.txt"
+      ],
+      "not_implemented_markers": {},
+      "context": "- Added to WIN32IDE_SOURCES: `model_registry.cpp`, `checkpoint_manager.cpp`, `universal_model_router.cpp`, `agent/project_context.cpp`, `ui/interpretability_panel.cpp`, `feature_registry_panel.cpp`, `multi_file_search_stub.cpp`, `benchmark_menu_stub.cpp`, `enterprise_licensev2_impl.cpp`, `license_enforcement.cpp`, `enterprise_feature_manager.cpp`, `feature_flags_runtime.cpp`, `context_deterioration_hotpatch.cpp`, `agentic_autonomous_config.cpp`, `multi_gpu.cpp`, `Win32IDE_LicenseCreator.cpp`, `monaco_settings_dialog.cpp`, `thermal/RAWRXD_ThermalDashboard.cpp`, `VSCodeMarketplaceAPI.cpp`."
+    },
+    {
+      "source_doc": "UNFINISHED_FEATURES.md",
+      "line": 107,
+      "token": "Win32IDE.h",
+      "resolved_count": 9,
+      "resolved_paths_sample": [
+        "src/win32app/Win32IDE.h",
+        "Full Source/RawrXD-ModelLoader/src/win32app/Win32IDE.h",
+        "Full Source/src/win32app/Win32IDE.h",
+        "RawrXD-ModelLoader/src/win32app/Win32IDE.h",
+        "history/reconstructed/src/win32app/Win32IDE.h",
+        "reconstructed/RawrXD-production-lazy-init/src/win32app/Win32IDE.h",
+        "reconstructed/RawrXD/src/win32app/Win32IDE.h",
+        "reconstructed/Stash House/RawrXD-Main/src/win32app/Win32IDE.h",
+        "reconstructed/lazy init ide/src/win32app/Win32IDE.h"
+      ],
+      "exists": true,
+      "expected_scope": "any",
+      "in_win32ide_sources": false,
+      "in_any_cmake": true,
+      "cmake_line_hits": [],
+      "cmake_file_hits": [
+        "RawrXD-ModelLoader/CMakeLists.txt"
+      ],
+      "not_implemented_markers": {
+        "todo": 4
+      },
+      "context": "| 7 | ~~Fix build: SettingsSummaryWndProc~~ | `Win32IDE.h` | **Done:** friend declaration present at line 1364. |"
+    },
+    {
+      "source_doc": "UNFINISHED_FEATURES.md",
+      "line": 122,
+      "token": "Win32IDE_BackendSwitcher.cpp",
+      "resolved_count": 3,
+      "resolved_paths_sample": [
+        "src/win32app/Win32IDE_BackendSwitcher.cpp",
+        "Full Source/src/win32app/Win32IDE_BackendSwitcher.cpp",
+        "history/reconstructed/src/win32app/Win32IDE_BackendSwitcher.cpp"
+      ],
+      "exists": true,
+      "expected_scope": "any",
+      "in_win32ide_sources": true,
+      "in_any_cmake": true,
+      "cmake_line_hits": [
+        2401
+      ],
+      "cmake_file_hits": [
+        "CMakeLists.txt"
+      ],
+      "not_implemented_markers": {},
+      "context": "| **Backend health** | GitHub Copilot / Amazon Q | Done: `Win32IDE_BackendSwitcher.cpp` probes VSIXLoader for plugins; chat_panel_integration returns clear \"Not configured\" when GITHUB_COPILOT_TOKEN / AWS_ACCESS_KEY_ID unset (user can switch to local-agent). |"
+    },
+    {
+      "source_doc": "UNFINISHED_FEATURES.md",
+      "line": 216,
+      "token": "src/win32app/benchmark_runner_stub.cpp",
+      "resolved_count": 0,
+      "resolved_paths_sample": [],
+      "exists": false,
+      "expected_scope": "any",
+      "in_win32ide_sources": false,
+      "in_any_cmake": false,
+      "cmake_line_hits": [],
+      "cmake_file_hits": [],
+      "not_implemented_markers": {},
+      "context": "| benchmark_runner_stub | src/win32app/benchmark_runner_stub.cpp | Yes | Yes | IDE build variant; minimal for unique_ptr; full impl in benchmark build. |"
+    },
+    {
+      "source_doc": "UNFINISHED_FEATURES.md",
+      "line": 217,
+      "token": "src/win32app/benchmark_menu_stub.cpp",
+      "resolved_count": 0,
+      "resolved_paths_sample": [],
+      "exists": false,
+      "expected_scope": "any",
+      "in_win32ide_sources": false,
+      "in_any_cmake": false,
+      "cmake_line_hits": [],
+      "cmake_file_hits": [],
+      "not_implemented_markers": {},
+      "context": "| benchmark_menu_stub | src/win32app/benchmark_menu_stub.cpp | Yes | Yes | IDE build variant; real dialog when menu invoked. |"
+    },
+    {
+      "source_doc": "UNFINISHED_FEATURES.md",
+      "line": 218,
+      "token": "src/win32app/multi_file_search_stub.cpp",
+      "resolved_count": 0,
+      "resolved_paths_sample": [],
+      "exists": false,
+      "expected_scope": "any",
+      "in_win32ide_sources": true,
+      "in_any_cmake": true,
+      "cmake_line_hits": [
+        2976,
+        3358
+      ],
+      "cmake_file_hits": [
+        "CMakeLists.txt"
+      ],
+      "not_implemented_markers": {},
+      "context": "| multi_file_search_stub | src/win32app/multi_file_search_stub.cpp | Yes | Yes | IDE build variant; real filesystem search, regex, glob. |"
+    },
+    {
+      "source_doc": "UNFINISHED_FEATURES.md",
+      "line": 219,
+      "token": "src/win32app/digestion_engine_stub.cpp",
+      "resolved_count": 3,
+      "resolved_paths_sample": [
+        ".archived_orphans/digestion_engine_stub.cpp",
+        "Full Source/src/win32app/digestion_engine_stub.cpp",
+        "history/reconstructed/src/win32app/digestion_engine_stub.cpp"
+      ],
+      "exists": true,
+      "expected_scope": "any",
+      "in_win32ide_sources": false,
+      "in_any_cmake": false,
+      "cmake_line_hits": [],
+      "cmake_file_hits": [],
+      "not_implemented_markers": {
+        "todo": 6
+      },
+      "context": "| digestion_engine_stub | src/win32app/digestion_engine_stub.cpp | Yes | Yes | Production impl (metrics, JSON); filename retained. |"
+    },
+    {
+      "source_doc": "UNFINISHED_FEATURES.md",
+      "line": 220,
+      "token": "include/inference_engine_stub.hpp",
+      "resolved_count": 1,
+      "resolved_paths_sample": [
+        "include/inference_engine_stub.hpp"
+      ],
+      "exists": true,
+      "expected_scope": "any",
+      "in_win32ide_sources": false,
+      "in_any_cmake": false,
+      "cmake_line_hits": [],
+      "cmake_file_hits": [],
+      "not_implemented_markers": {},
+      "context": "| inference_engine_stub | include/inference_engine_stub.hpp | Yes | Yes | IDE build variant; full impl in benchmark/inference build. |"
+    },
+    {
+      "source_doc": "UNFINISHED_FEATURES.md",
+      "line": 221,
+      "token": "src/win32app/Win32IDE_logMessage_stub.cpp",
+      "resolved_count": 0,
+      "resolved_paths_sample": [],
+      "exists": false,
+      "expected_scope": "any",
+      "in_win32ide_sources": false,
+      "in_any_cmake": false,
+      "cmake_line_hits": [],
+      "cmake_file_hits": [],
+      "not_implemented_markers": {},
+      "context": "| Win32IDE_logMessage_stub | src/win32app/Win32IDE_logMessage_stub.cpp | Yes | Yes | Build variant: OutputDebugString + ide.log. |"
+    },
+    {
+      "source_doc": "UNFINISHED_FEATURES.md",
+      "line": 222,
+      "token": "src/win32app/reverse_engineered_stubs.cpp",
+      "resolved_count": 1,
+      "resolved_paths_sample": [
+        "Full Source/src/win32app/reverse_engineered_stubs.cpp"
+      ],
+      "exists": true,
+      "expected_scope": "any",
+      "in_win32ide_sources": false,
+      "in_any_cmake": true,
+      "cmake_line_hits": [
+        354
+      ],
+      "cmake_file_hits": [
+        "CMakeLists.txt"
+      ],
+      "not_implemented_markers": {},
+      "context": "| reverse_engineered_stubs | src/win32app/reverse_engineered_stubs.cpp | Yes | Yes | Minimal when .asm not linked. |"
+    },
+    {
+      "source_doc": "UNFINISHED_FEATURES.md",
+      "line": 223,
+      "token": "Ship/NativeHttpServerStubs.cpp",
+      "resolved_count": 1,
+      "resolved_paths_sample": [
+        "Ship/NativeHttpServerStubs.cpp"
+      ],
+      "exists": true,
+      "expected_scope": "any",
+      "in_win32ide_sources": false,
+      "in_any_cmake": true,
+      "cmake_line_hits": [],
+      "cmake_file_hits": [
+        "Ship/CMakeLists.txt"
+      ],
+      "not_implemented_markers": {},
+      "context": "| NativeHttpServerStubs | Ship/NativeHttpServerStubs.cpp | Yes | Yes | ToolExecuteJson \u2192 AgenticToolExecutor; InferenceEngine_* link stubs. |"
+    },
+    {
+      "source_doc": "UNFINISHED_FEATURES.md",
+      "line": 225,
+      "token": "src/win32app/Win32IDE_SubAgent.cpp",
+      "resolved_count": 1,
+      "resolved_paths_sample": [
+        "src/win32app/Win32IDE_SubAgent.cpp"
+      ],
+      "exists": true,
+      "expected_scope": "any",
+      "in_win32ide_sources": true,
+      "in_any_cmake": true,
+      "cmake_line_hits": [
+        2415
+      ],
+      "cmake_file_hits": [
+        "CMakeLists.txt"
+      ],
+      "not_implemented_markers": {
+        "todo": 15
+      },
+      "context": "| RawrLicense_CheckFeature_stub | src/win32app/Win32IDE_SubAgent.cpp | Yes | Yes | /alternatename when no license DLL; returns 1. |"
+    },
+    {
+      "source_doc": "UNFINISHED_FEATURES.md",
+      "line": 226,
+      "token": "src/core/enterprise_license_stubs.cpp",
+      "resolved_count": 2,
+      "resolved_paths_sample": [
+        "Full Source/src/core/enterprise_license_stubs.cpp",
+        "history/reconstructed/src/core/enterprise_license_stubs.cpp"
+      ],
+      "exists": true,
+      "expected_scope": "any",
+      "in_win32ide_sources": false,
+      "in_any_cmake": true,
+      "cmake_line_hits": [
+        1027
+      ],
+      "cmake_file_hits": [
+        "CMakeLists.txt"
+      ],
+      "not_implemented_markers": {},
+      "context": "| enterprise_license_stubs | src/core/enterprise_license_stubs.cpp | Yes | Yes | C++ fallback for ASM symbols; FlashAttention AVX-512 stubs. |"
+    },
+    {
+      "source_doc": "UNFINISHED_FEATURES.md",
+      "line": 229,
+      "token": "src/core/license_manager_panel.cpp",
+      "resolved_count": 1,
+      "resolved_paths_sample": [
+        "src/core/license_manager_panel.cpp"
+      ],
+      "exists": true,
+      "expected_scope": "any",
+      "in_win32ide_sources": false,
+      "in_any_cmake": false,
+      "cmake_line_hits": [],
+      "cmake_file_hits": [],
+      "not_implemented_markers": {},
+      "context": "| license_manager_panel show() | src/core/license_manager_panel.cpp | Yes | Yes | Full impl: LicenseInfoDialog and LicenseActivationDialog show Win32 modal dialogs; display* fill list from EnterpriseLicenseV2; Activate calls loadKeyFromFile. |"
+    },
+    {
+      "source_doc": "UNFINISHED_FEATURES.md",
+      "line": 237,
+      "token": "src/modules/quickjs_extension_host.cpp",
+      "resolved_count": 1,
+      "resolved_paths_sample": [
+        "src/modules/quickjs_extension_host.cpp"
+      ],
+      "exists": true,
+      "expected_scope": "any",
+      "in_win32ide_sources": true,
+      "in_any_cmake": true,
+      "cmake_line_hits": [
+        2769
+      ],
+      "cmake_file_hits": [
+        "CMakeLists.txt"
+      ],
+      "not_implemented_markers": {
+        "stub mode": 2
+      },
+      "context": "| quickjs_extension_host (RAWR_QUICKJS_STUB) | src/modules/quickjs_extension_host.cpp | Yes | Yes | Build variant: native-only when QuickJS not linked; stub error strings (batch 6 header). |"
+    },
+    {
+      "source_doc": "UNFINISHED_FEATURES.md",
+      "line": 246,
+      "token": "src/ide_window.cpp",
+      "resolved_count": 1,
+      "resolved_paths_sample": [
+        "src/ide_window.cpp"
+      ],
+      "exists": true,
+      "expected_scope": "any",
+      "in_win32ide_sources": false,
+      "in_any_cmake": true,
+      "cmake_line_hits": [],
+      "cmake_file_hits": [
+        "RawrXD-ModelLoader/CMakeLists.txt"
+      ],
+      "not_implemented_markers": {},
+      "context": "| ide_window WebView2 | src/ide_window.cpp | Yes | Yes | Build variant comment when WebView2 not linked (batch 5). |"
+    },
+    {
+      "source_doc": "UNFINISHED_FEATURES.md",
+      "line": 253,
+      "token": "src/telemetry/logger.cpp",
+      "resolved_count": 1,
+      "resolved_paths_sample": [
+        "src/telemetry/logger.cpp"
+      ],
+      "exists": true,
+      "expected_scope": "any",
+      "in_win32ide_sources": false,
+      "in_any_cmake": false,
+      "cmake_line_hits": [],
+      "cmake_file_hits": [],
+      "not_implemented_markers": {},
+      "context": "| logger (telemetry) | src/telemetry/logger.cpp | Yes | Yes | Structured JSON logging stub. |"
+    },
+    {
+      "source_doc": "UNFINISHED_FEATURES.md",
+      "line": 255,
+      "token": "src/core/enterprise_devunlock_bridge.cpp",
+      "resolved_count": 1,
+      "resolved_paths_sample": [
+        "src/core/enterprise_devunlock_bridge.cpp"
+      ],
+      "exists": true,
+      "expected_scope": "any",
+      "in_win32ide_sources": true,
+      "in_any_cmake": true,
+      "cmake_line_hits": [
+        2550
+      ],
+      "cmake_file_hits": [
+        "CMakeLists.txt"
+      ],
+      "not_implemented_markers": {},
+      "context": "| enterprise_devunlock_bridge | src/core/enterprise_devunlock_bridge.cpp | Yes | Yes | Documents ASM vs stubs. |"
+    }
+  ],
+  "symbol_claims": [
+    {
+      "source_doc": "UNFINISHED_FEATURES.md",
+      "line": 119,
+      "token": "show()",
+      "exists_in_src": true,
+      "context": "| CheckpointManager | `show()` | Done: show() invokes listCheckpoints() callback; output panel displays indices. Initialized at IDE startup with %APPDATA%\\\\RawrXD\\\\Checkpoints (max 50) so list/save work out of the box. |"
+    }
+  ]
+}
