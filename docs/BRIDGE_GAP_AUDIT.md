@@ -11,7 +11,7 @@ Last updated: 2026-03-20.
 |----------------|------|------------|
 | **OrchestratorBridge** | Ollama chat/FIM, tool loop, discovery | `src/agentic/OrchestratorBridge.*` |
 | **AgenticBridge** | Full agentic IDE: model, tools, autonomy, streaming | `Win32IDE_AgenticBridge.*`, `Win32IDE.cpp` |
-| **Win32IDEBridge** (agentic) | Capabilities, hotpatch, router; also calls **OrchestratorBridge::Initialize** | `src/agentic/bridge/Win32IDEBridge.cpp` |
+| **Win32IDEBridge** (agentic) | Capabilities, hotpatch, router; **does not** own OrchestratorBridge (IDE does) | `src/agentic/bridge/Win32IDEBridge.cpp` |
 | **Backend switcher** | Active backend, HTTP routes, status | `Win32IDE_BackendSwitcher.cpp` |
 | **Unified command dispatch** | SSOT command table → handlers | `unified_command_dispatch.*`, `command_registry.hpp` |
 | **win32_feature_adapter** | `routeCommandUnified()` → dispatch | `win32_feature_adapter.h` |
@@ -31,10 +31,12 @@ Last updated: 2026-03-20.
 
 ### A. Dual init / dual truth for the same agent stack
 
-- **OrchestratorBridge** is initialized from **`Win32IDE_Window.cpp`** (when `m_ollamaBaseUrl` is set) and again from **`Win32IDEBridge::initialize()`** with a different working-dir / URL story.
-- **Risk:** two callers, different config timing, “initialized” in one place but not reflected in backend UI until sync runs.
-- **Mitigation in tree:** `syncOllamaBackendFromOrchestratorBridge` / `pushOllamaBackendToOrchestratorBridge` (backend switcher).
-- **Remaining gap:** ensure **every** code path that mutates Ollama URL/model goes through one policy (grep for stray `SetModel`, direct `OllamaConfig`, duplicate `Initialize`).
+- **Root cause (fixed):** `ensureOrchestratorBridgeInitialized()` had been wired only from **`Win32IDE_Window.cpp`**, which is **not** in the root `CMakeLists.txt` Win32IDE source list. The shipped binary uses **`Win32IDE_Core.cpp`** for `WindowProc` / `onCreate` / `handleMessage`, so orchestrator alignment did not run on the path you ship — only `initBackendManager()`’s push/sync could, which could miss **`m_ollamaBaseUrl`** from `rawrxd.config.json` when the Ollama backend row was still empty.
+- **Live path:** `Win32IDE_Core.cpp` **`onCreate`** → `initBackendManager()` → `initLLMRouter()` → **`ensureOrchestratorBridgeInitialized()`**; **`applySettings()`** (after `m_ollamaBaseUrl` is updated); **GGUF background** completion in **`Win32IDE.cpp`** (`handleGgufBackgroundLoadMessage`).
+- **Policy (`ensureOrchestratorBridgeInitialized` in `Win32IDE_BackendSwitcher.cpp`):** resolve URL from `m_ollamaBaseUrl` or Ollama backend row; working directory from **`m_currentDirectory`** when set, else CWD; **`pushOllamaBackendToOrchestratorBridge`** / **`syncOllamaBackendFromOrchestratorBridge`** only when **`m_backendManagerInitialized`**; if URL known and bridge already initialized, **`ApplyIdeOllamaSettings(url, "")`** (+ `SetWorkingDirectory`) instead of **`Initialize`** again (avoids wiping models).
+- **`Win32IDEBridge::initialize()`** does **not** cold-start **`OrchestratorBridge`** on `127.0.0.1:11434` — **IDE owns lifecycle**; previously that fought persisted backends/settings.
+- **`Win32IDE_Window.cpp`:** orphan TU (not linked) — do not treat its **`WM_APP+200`** path as production.
+- **Remaining gap:** ensure **every** mutator of Ollama URL/model goes through one policy (grep for stray `SetModel`, direct `OllamaConfig`, duplicate `Initialize` from tools/CLI).
 
 ### B. Command routing order vs SSOT narrative
 
@@ -81,22 +83,27 @@ Last updated: 2026-03-20.
 ## 5. Bridges in good shape (relative)
 
 - **Backend switcher ↔ OrchestratorBridge** (Ollama model/endpoint): bidirectional sync reduces drift when all mutators use it.
+- **Win32IDE ↔ Win32IDEBridge:** **`OrchestratorBridge` is not owned here** — IDE aligns via **`ensureOrchestratorBridgeInitialized()`** (above). **`Win32IDEBridge::initialize()`** is **not** currently invoked from **`Win32IDE_Core`** in this tree (no `#include` / call); capability router / hotpatch / observability inside that class only spin up after **`initialize()`**. If you need **`preprocessMessage`** or capability registration in production, wire an explicit init from the live startup path (and avoid duplicating Orchestrator init). **`CapabilityRouter::initializeAll()`** returns success when there are **zero** registered capabilities so empty manifest scans do not brick the bridge.
 - **LSP → peek overlay:** LSP commands can drive `showPeekOverlay` with real locations when wired.
 - **Unified dispatch machinery:** solid for anything **fully** registered in `COMMAND_TABLE`; Win32 **ordering** vs legacy is the main inconsistency.
 
 ---
 
-## 6. Suggested fix order
+## 6. Suggested fix order (status)
 
-1. **Single OrchestratorBridge init policy** — one function from Win32 startup: URL, workdir, then push/sync with backend manager; **Win32IDEBridge** should call that helper instead of raw `Initialize` with different args.
-2. **Command path** — migrate all `routeCommand` IDs into SSOT and **invert** order (unified first, legacy only for documented exceptions), **or** generate docs + static assert / list of legacy-only IDs.
-3. **Subagent todo SSOT** — central store + UI refresh on every `manage_todo_list` / menu action.
-4. **Swarm façade** — pick one orchestrator for product build; others behind `RAWR_*` or namespace `internal`.
-5. **Build-lane manifest** — mark features **Stub** when `LinkCompleters` / `*_stubs.cpp` satisfy symbols.
+1. **Done — OrchestratorBridge init (production path)** — `ensureOrchestratorBridgeInitialized()` from **Core `onCreate`**, **`applySettings`**, and **GGUF background** path; `push`/`sync` when backend manager is up; `Win32IDEBridge` does **not** init Ollama. Orphan `Win32IDE_Window.cpp` carries a duplicate bootstrap for reference only.
+2. **Done — Command path** — Documented **legacy-first** policy and re-entry risk: `docs/COMMAND_DISPATCH_BRIDGE.md` (unified-first remains unsafe until SSOT handlers stop self-`PostMessage` same ID).
+3. **Done — Todo SSOT** — `manage_todo_list` mutates `SubAgentManager` via `SubAgentManagerRegisterToolTodoTarget`; `setTodoList` / `updateTodoStatus` fire `setTodoListChangedCallback` → `Win32IDE::notifySubAgentTodoListChanged` → `WM_SUBAGENT_TODO_CHANGED`.
+4. **Done — Swarm façade** — `src/bridge/RawrXD_SwarmFacade.h` (`RawrXD::SwarmProduct::*`) for IAT lane; hexmag / `executeSwarm` remains in `subagent_core` (documented split).
+5. **Done — Build-lane manifest** — `Win32IDE_FeatureManifest.cpp` entries: `bridge.linkCompletersLane` (STUB), `bridge.orchestratorInit`, `bridge.unifiedDispatchDoc`, `bridge.swarmIatFacade`; `subagent.todoList` description updated.
+
+**Sixth item (from rollout):** inference/matrix doc — still optional follow-up (see §7).
 
 ---
 
 ## 7. Related docs / follow-ups
 
-- After (1)–(2), update this doc with the **actual** init call graph and a **legacy-only command ID** list (or link to a generated artifact).
-- Optional: add a short **inference path matrix** (user action → backend switcher vs agentic vs OrchestratorBridge).
+- **Init graph:** `ensureOrchestratorBridgeInitialized` → `OrchestratorBridge::Initialize` / `ApplyIdeOllamaSettings` → `pushOllamaBackendToOrchestratorBridge` / `syncOllamaBackendFromOrchestratorBridge`.
+- **Commands:** `docs/COMMAND_DISPATCH_BRIDGE.md`.
+- **Progress / re-audit table:** `docs/IDE_MASTER_PROGRESS.md` (sovereign batch counts + 63/200 reconciliation).
+- Optional: add **inference path matrix** (user action → backend switcher vs agentic vs OrchestratorBridge).
