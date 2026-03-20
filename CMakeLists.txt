@@ -91,16 +91,6 @@ if(MSVC)
     if(_RAWR_MSVC_LIBPATHS)
         link_directories(${_RAWR_MSVC_LIBPATHS})
     endif()
-    foreach(_rawr_lib IN LISTS _RAWR_MSVC_LIBPATHS)
-        add_link_options("/LIBPATH:\"${_rawr_lib}\"")
-        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /LIBPATH:\"${_rawr_lib}\"")
-        set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /LIBPATH:\"${_rawr_lib}\"")
-        set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /LIBPATH:\"${_rawr_lib}\"")
-        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /LIBPATH:\"${_rawr_lib}\"")
-        set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /LIBPATH:\"${_rawr_lib}\"")
-        set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} /LIBPATH:\"${_rawr_lib}\"")
-        set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} /LIBPATH:\"${_rawr_lib}\"")
-    endforeach()
 endif()
 
 # ============================================================================
@@ -225,11 +215,6 @@ endif()
 enable_language(RC)
 
 message(STATUS "RawrXD v14.7.3 Target Configured - Zero Bloat Mode")
-
-# Enable ASM_MASM only on MSVC (ml64.exe required).
-if(MSVC)
-    enable_language(ASM_MASM)
-endif()
 
 # Default to Release builds (prevents /RTC1 + /O2 clash on Ninja single-config)
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -2229,6 +2214,7 @@ set(INFERENCE_ENGINE_SOURCES
     src/agentic/ErrorRecoveryManager.cpp
     src/inference/PerformanceMonitor.cpp
 )
+list(REMOVE_DUPLICATES INFERENCE_ENGINE_SOURCES)
 
 add_executable(RawrXD-InferenceEngine EXCLUDE_FROM_ALL ${INFERENCE_ENGINE_SOURCES})
 
@@ -3366,14 +3352,6 @@ if(WIN32)
             )
         endif()
     endif()
-
-    # v14.7.5 LNK2005 Duplicate Symbol Elimination
-    # These dedicated feature files duplicate definitions already consolidated in
-    # Tier2/Tier5 cosmetics or in Win32IDE.cpp.  Keep the consolidation copies.
-    list(REMOVE_ITEM WIN32IDE_SOURCES
-        src/win32app/Win32IDE_CallStackSymbols.cpp       # dups initCallStackSymbols / handleCallStackCommand  (Tier5Cosmetics)
-        src/win32app/multi_file_search_stub.cpp          # dups MultiFileSearchWidget ctor/dtor  (multi_file_search.cpp)
-    )
 
     # v14.7.6 Batch 2 parity files — compilation fixes applied, re-enabled
     # (PeekView, AutoSave, TerminalSplit now compile cleanly)
