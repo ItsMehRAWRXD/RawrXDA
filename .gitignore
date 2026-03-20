@@ -34,6 +34,8 @@ obj/
 *.exp
 *.ilk
 NUL.obj
+# Windows reserved name at repo root — breaks `git checkout` / `reset` on Windows
+/nul
 
 # CMake
 CMakeFiles/
