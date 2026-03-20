@@ -2439,7 +2439,6 @@ if(WIN32)
         src/win32app/Win32IDE_AgentHistory.cpp
         src/win32app/Win32IDE_AgentPanel.cpp
         src/win32app/rtp_protocol_fallback.cpp
-        src/win32app/win32ide_extension_command_fallback.cpp
         src/win32app/Win32IDE_DiskRecovery.cpp
         src/win32app/Win32TerminalManager.cpp
         src/win32app/TransparentRenderer.cpp
@@ -2550,7 +2549,6 @@ if(WIN32)
         src/core/enterprise_license.cpp
         src/core/enterprise_licensev2_impl.cpp
         src/core/enterprise_devunlock_bridge.cpp
-        src/core/enterprise_devunlock_stub_masm.cpp
         src/core/monolithic_heap_globals.cpp
         src/tools/license_validator_manifest.cpp
         src/core/license_anti_tampering.cpp
@@ -2596,7 +2594,6 @@ if(WIN32)
         # Three-Layer Hotpatch System (Phase 14.2)
         src/core/model_memory_hotpatch.cpp
         src/core/byte_level_hotpatcher.cpp
-        src/core/memory_patch_byte_search_stubs.cpp
         src/core/unified_hotpatch_manager.cpp
         src/core/proxy_hotpatcher.cpp
         src/core/model_bruteforce_engine.cpp
@@ -2695,7 +2692,6 @@ if(WIN32)
 
         # Phase 28: MonacoCore Native Editor Engine — Toggleable Engine System
         src/core/MonacoCoreEngine.cpp
-        src/core/monaco_core_stubs.cpp
         src/core/WebView2EditorEngine.cpp
         src/core/RichEditEditorEngine.cpp
         src/core/EditorEngineFactory.cpp
@@ -2881,7 +2877,6 @@ if(WIN32)
         src/win32app/Win32IDE_NetworkPanel.cpp
         src/core/omega_orchestrator.cpp
         src/core/mesh_brain.cpp
-        src/core/mesh_brain_asm_stubs.cpp
         src/core/speciator_engine.cpp
         src/core/neural_bridge.cpp
         src/core/self_host_engine.cpp
@@ -3017,9 +3012,6 @@ if(WIN32)
         # Benchmarks (real implementation; replaces earlier IDE stubs)
         src/benchmark_menu_widget.cpp
         src/benchmark_runner.cpp
-        # Legacy benchmark stub compatibility units (kept for parity wiring/docs)
-        src/win32app/benchmark_menu_stub.cpp
-        src/win32app/benchmark_runner_stub.cpp
         src/win32app/feature_registry_panel.cpp
         src/ui/monaco_settings_dialog.cpp
         src/thermal/RAWRXD_ThermalDashboard.cpp
@@ -3067,8 +3059,6 @@ if(WIN32)
         src/core/monaco_core_stubs.cpp
         src/core/subsystem_runtime_bridge.cpp
         src/core/win32_ide_link_stubs.cpp
-        src/win32app/benchmark_menu_stub.cpp
-        src/win32app/benchmark_runner_stub.cpp
         src/win32app/multi_file_search_stub.cpp
     )
 
@@ -3213,6 +3203,8 @@ if(WIN32)
         list(REMOVE_ITEM WIN32IDE_SOURCES
             src/core/monaco_core_stubs.cpp
             src/core/ssot_missing_handlers_provider.cpp
+            src/core/win32_ide_link_stubs.cpp
+            src/core/win32ide_asm_fallback.cpp
             src/core/subsystem_mode_fallbacks.cpp
             src/core/model_loader_fallbacks.cpp
             src/core/rawrxd_native_log_fallback.cpp
@@ -3221,6 +3213,8 @@ if(WIN32)
             src/inference/gguf_d3d12_bridge_link_fallback.cpp
             src/win32app/v280_link_fallbacks.cpp
             src/win32app/collab_cursor_fallbacks.cpp
+            src/win32app/rtp_protocol_fallback.cpp
+            src/win32app/win32ide_extension_command_fallback.cpp
         )
         message(STATUS "[ProductionLane] Win32IDE: stripped monaco/ssot/fallback shim units")
     endif()
@@ -3289,6 +3283,7 @@ if(WIN32)
         list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*_stubs\\.cpp$")
         list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/reverse_engineered_stubs\\.cpp$")
         list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/link_stubs_.*\\.cpp$")
+        list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/.*_fallback\\.cpp$")
 
         list(REMOVE_ITEM WIN32IDE_SOURCES
             src/win32app/agentic_bridge_headless.cpp
@@ -3311,7 +3306,7 @@ if(WIN32)
         set(_RAWRXD_FORBIDDEN_WIN32IDE_SOURCES "")
         foreach(_rawrxd_src IN LISTS WIN32IDE_SOURCES)
             # ai_agent_masm_stubs.cpp is required (masm_agent_failure_detect_simd), not a fallback
-            if(NOT _rawrxd_src MATCHES "ai_agent_masm_stubs\\.cpp$" AND _rawrxd_src MATCHES "(_stubs\\.cpp$|/stubs\\.cpp$|/stub_.*\\.cpp$|/link_stubs_.*\\.cpp$|/agentic_bridge_headless\\.cpp$|/Win32IDE_headless_stubs\\.cpp$)")
+            if(NOT _rawrxd_src MATCHES "ai_agent_masm_stubs\\.cpp$" AND _rawrxd_src MATCHES "(_stubs\\.cpp$|/stubs\\.cpp$|/stub_.*\\.cpp$|/link_stubs_.*\\.cpp$|/.*_fallback\\.cpp$|/agentic_bridge_headless\\.cpp$|/Win32IDE_headless_stubs\\.cpp$)")
                 list(APPEND _RAWRXD_FORBIDDEN_WIN32IDE_SOURCES "${_rawrxd_src}")
             endif()
         endforeach()
@@ -3340,7 +3335,7 @@ if(WIN32)
         foreach(src ${SOURCES})
             # Detect stub files
             if(src MATCHES "(_stubs\\.cpp$|_stubs\\.asm$|/missing_handler)" OR
-               src MATCHES "(stub_|shim_)" OR
+               src MATCHES "(stub_|shim_|fallback_)" OR
                src MATCHES "(mock_|fake_)")
                                 # ai_agent_masm_stubs.cpp provides required MASM symbols — exempt
                                 if(src MATCHES "ai_agent_masm_stubs\\.cpp$")
@@ -3404,7 +3399,7 @@ if(WIN32)
     
     # Mandatory symbol providers for Win32IDE link closure (only link_stubs_gate allowed).
     # Remove any other stubs that may have been added
-    list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX "(_stubs\\.cpp$|_stubs\\.asm$|missing_handler|stub_|shim_|mock_|fake_)")
+    list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX "(_stubs\\.cpp$|_stubs\\.asm$|missing_handler|stub_|shim_|fallback_|mock_|fake_)")
     # Keep required MASM bridge provider after broad stub filtering.
     list(APPEND WIN32IDE_SOURCES src/core/ai_agent_masm_stubs.cpp)
 
@@ -3414,7 +3409,7 @@ if(WIN32)
         set(_RAWRXD_FORBIDDEN_WIN32IDE_SOURCES_POST "")
         foreach(_rawrxd_src IN LISTS WIN32IDE_SOURCES)
             if(_rawrxd_src MATCHES "(_stubs\\.cpp$|/stubs\\.cpp$|/stub_.*\\.cpp$)" OR
-               _rawrxd_src MATCHES "(missing_handler|shim_|mock_|fake_)")
+               _rawrxd_src MATCHES "(missing_handler|shim_|fallback_|mock_|fake_)")
                 if(NOT _rawrxd_src MATCHES "ai_agent_masm_stubs\\.cpp$")
                     list(APPEND _RAWRXD_FORBIDDEN_WIN32IDE_SOURCES_POST "${_rawrxd_src}")
                 endif()
