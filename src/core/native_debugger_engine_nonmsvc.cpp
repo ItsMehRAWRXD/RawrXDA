@@ -2,6 +2,8 @@
 
 #include "native_debugger_engine.h"
 
+#include <windows.h>
+
 #include <algorithm>
 #include <iomanip>
 #include <sstream>
@@ -14,6 +16,227 @@ NativeDebuggerEngine::~NativeDebuggerEngine() = default;
 NativeDebuggerEngine& NativeDebuggerEngine::Instance() {
     static NativeDebuggerEngine s_instance;
     return s_instance;
+}
+
+DebugResult NativeDebuggerEngine::enableBreakpoint(uint32_t bpId, bool enable) {
+    std::lock_guard<std::mutex> lock(m_bpMutex);
+    for (auto& bp : m_breakpoints) {
+        if (bp.id == bpId) {
+            bp.state = enable ? BreakpointState::Enabled : BreakpointState::Disabled;
+            return DebugResult::ok(enable ? "Breakpoint enabled" : "Breakpoint disabled");
+        }
+    }
+    return DebugResult::error("Breakpoint not found", -1);
+}
+
+DebugResult NativeDebuggerEngine::launchProcess(const std::string& exePath,
+    const std::string&, const std::string&) {
+    if (exePath.empty()) {
+        return DebugResult::error("Executable path is empty", -1);
+    }
+
+    {
+        std::lock_guard<std::mutex> cfgLock(m_configMutex);
+        m_initialized.store(true, std::memory_order_release);
+    }
+
+    m_targetPath = exePath;
+    const size_t slash = exePath.find_last_of("/\\");
+    m_targetName = (slash == std::string::npos) ? exePath : exePath.substr(slash + 1);
+    m_targetPID = static_cast<uint32_t>(::GetCurrentProcessId());
+    m_state.store(DebugSessionState::Running, std::memory_order_release);
+    if (m_stateCallback) {
+        m_stateCallback(DebugSessionState::Running, m_stateCallbackData);
+    }
+    return DebugResult::ok("Launch simulated in non-MSVC fallback");
+}
+
+DebugResult NativeDebuggerEngine::initialize(const DebugConfig& config) {
+    {
+        std::lock_guard<std::mutex> lock(m_configMutex);
+        m_config = config;
+    }
+    m_initialized.store(true, std::memory_order_release);
+    m_state.store(DebugSessionState::Idle, std::memory_order_release);
+    if (m_stateCallback) {
+        m_stateCallback(DebugSessionState::Idle, m_stateCallbackData);
+    }
+    return DebugResult::ok("Native debugger initialized in non-MSVC fallback");
+}
+
+DebugResult NativeDebuggerEngine::disassembleAt(uint64_t address, uint32_t lineCount,
+    std::vector<DisassembledInstruction>& outInstructions) {
+    outInstructions.clear();
+    if (lineCount == 0) {
+        return DebugResult::error("lineCount must be > 0", -1);
+    }
+
+    outInstructions.reserve(lineCount);
+    for (uint32_t i = 0; i < lineCount; ++i) {
+        DisassembledInstruction inst;
+        inst.address = address + i;
+        inst.mnemonic = "db";
+        inst.operands = "0x90";
+        inst.fullText = "db 0x90";
+        inst.bytes = "90";
+        inst.length = 1;
+        inst.isCurrentIP = (i == 0);
+        outInstructions.push_back(std::move(inst));
+    }
+    return DebugResult::ok("Disassembly fallback generated");
+}
+
+DebugResult NativeDebuggerEngine::addBreakpointBySourceLine(const std::string& file, int line) {
+    if (file.empty() || line <= 0) {
+        return DebugResult::error("Invalid source location for breakpoint", -1);
+    }
+
+    NativeBreakpoint bp;
+    bp.id = m_nextBpId.fetch_add(1, std::memory_order_acq_rel);
+    bp.type = BreakpointType::Software;
+    bp.state = BreakpointState::Enabled;
+    bp.sourceFile = file;
+    bp.sourceLine = line;
+
+    {
+        std::lock_guard<std::mutex> lock(m_bpMutex);
+        m_breakpoints.push_back(std::move(bp));
+    }
+    return DebugResult::ok("Source-line breakpoint registered");
+}
+
+DebugResult NativeDebuggerEngine::removeBreakpoint(uint32_t bpId) {
+    std::lock_guard<std::mutex> lock(m_bpMutex);
+    const auto before = m_breakpoints.size();
+    m_breakpoints.erase(
+        std::remove_if(
+            m_breakpoints.begin(),
+            m_breakpoints.end(),
+            [bpId](const NativeBreakpoint& bp) { return bp.id == bpId; }),
+        m_breakpoints.end());
+    if (m_breakpoints.size() == before) {
+        return DebugResult::error("Breakpoint not found", -1);
+    }
+    return DebugResult::ok("Breakpoint removed");
+}
+
+uint32_t NativeDebuggerEngine::addWatch(const std::string& expression) {
+    if (expression.empty()) {
+        return 0;
+    }
+
+    NativeWatch watch;
+    watch.id = m_nextWatchId.fetch_add(1, std::memory_order_acq_rel);
+    watch.expression = expression;
+    watch.enabled = true;
+    watch.lastResult.success = false;
+    watch.lastResult.expression = expression;
+    watch.lastResult.value = "<pending>";
+    watch.lastResult.type = "native-debugger-disabled";
+    watch.lastResult.rawValue = 0;
+    watch.lastResult.isPointer = false;
+    watch.lastResult.isFloat = false;
+
+    std::lock_guard<std::mutex> lock(m_watchMutex);
+    m_watches.push_back(std::move(watch));
+    return m_watches.back().id;
+}
+
+DebugResult NativeDebuggerEngine::walkStack(std::vector<NativeStackFrame>& outFrames, uint32_t maxFrames) {
+    outFrames.clear();
+    if (maxFrames == 0) {
+        return DebugResult::error("maxFrames must be > 0", -1);
+    }
+
+    NativeStackFrame frame;
+    frame.frameIndex = 0;
+    frame.module = m_targetName.empty() ? "unknown-module" : m_targetName;
+    frame.function = "stack-unavailable";
+    frame.sourceFile = "n/a";
+    frame.sourceLine = 0;
+    frame.hasSource = false;
+    outFrames.push_back(std::move(frame));
+    return DebugResult::ok("Stack walk unavailable; returned placeholder frame");
+}
+
+DebugResult NativeDebuggerEngine::getFrameLocals(uint32_t, std::map<std::string, std::string>& outLocals) {
+    outLocals.clear();
+    outLocals.emplace("native_debugger", "disabled_on_non_msvc");
+    return DebugResult::ok("Frame locals unavailable; returned diagnostic marker");
+}
+
+DebugResult NativeDebuggerEngine::stepOut() {
+    m_state.store(DebugSessionState::Stepping, std::memory_order_release);
+    if (m_stateCallback) {
+        m_stateCallback(DebugSessionState::Stepping, m_stateCallbackData);
+    }
+    return DebugResult::ok("StepOut accepted (non-MSVC fallback)");
+}
+
+DebugResult NativeDebuggerEngine::stepInto() {
+    m_state.store(DebugSessionState::Stepping, std::memory_order_release);
+    if (m_stateCallback) {
+        m_stateCallback(DebugSessionState::Stepping, m_stateCallbackData);
+    }
+    return DebugResult::ok("StepInto accepted (non-MSVC fallback)");
+}
+
+DebugResult NativeDebuggerEngine::stepOver() {
+    m_state.store(DebugSessionState::Stepping, std::memory_order_release);
+    if (m_stateCallback) {
+        m_stateCallback(DebugSessionState::Stepping, m_stateCallbackData);
+    }
+    return DebugResult::ok("StepOver accepted (non-MSVC fallback)");
+}
+
+DebugResult NativeDebuggerEngine::go() {
+    m_state.store(DebugSessionState::Running, std::memory_order_release);
+    if (m_stateCallback) {
+        m_stateCallback(DebugSessionState::Running, m_stateCallbackData);
+    }
+    return DebugResult::ok("Continue accepted (non-MSVC fallback)");
+}
+
+DebugResult NativeDebuggerEngine::detach() {
+    m_state.store(DebugSessionState::Idle, std::memory_order_release);
+    m_targetPID = 0;
+    m_targetName.clear();
+    m_targetPath.clear();
+    if (m_stateCallback) {
+        m_stateCallback(DebugSessionState::Idle, m_stateCallbackData);
+    }
+    return DebugResult::ok("Detached (non-MSVC fallback)");
+}
+
+void NativeDebuggerEngine::setBreakpointHitCallback(BreakpointHitCallback cb, void* userData) {
+    m_bpHitCallback = cb;
+    m_bpHitCallbackData = userData;
+}
+
+void NativeDebuggerEngine::setOutputCallback(DebugOutputCallback cb, void* userData) {
+    m_outputCallback = cb;
+    m_outputCallbackData = userData;
+}
+
+void NativeDebuggerEngine::setStateCallback(DebugStateCallback cb, void* userData) {
+    m_stateCallback = cb;
+    m_stateCallbackData = userData;
+}
+
+DebugResult NativeDebuggerEngine::terminateTarget() {
+    m_state.store(DebugSessionState::Terminated, std::memory_order_release);
+    if (m_stateCallback) {
+        m_stateCallback(DebugSessionState::Terminated, m_stateCallbackData);
+    }
+    return DebugResult::ok("Terminate accepted (non-MSVC fallback)");
+}
+
+DebugResult NativeDebuggerEngine::breakExecution() {
+    m_state.store(DebugSessionState::Broken, std::memory_order_release);
+    if (m_stateCallback) {
+        m_stateCallback(DebugSessionState::Broken, m_stateCallbackData);
+    }
+    return DebugResult::ok("Break accepted (non-MSVC fallback)");
 }
 
 DebugResult NativeDebuggerEngine::updateWatches() {

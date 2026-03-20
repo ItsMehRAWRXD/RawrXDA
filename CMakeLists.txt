@@ -3112,6 +3112,9 @@ if(WIN32)
             src/win32app/Win32IDE_NativeDebugPanel_nonmsvc.cpp
             src/core/vision_encoder_nonmsvc.cpp
             src/core/native_debugger_engine_nonmsvc.cpp
+            src/core/win32_kernel_bridge_nomasm.cpp
+            src/core/self_repair_loop_nonmsvc.cpp
+            src/core/multi_response_engine.cpp
         )
     endif()
      
