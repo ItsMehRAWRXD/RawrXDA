@@ -327,24 +327,14 @@ if(RAWR_HAS_MASM)
         src/asm/RawrXD_DualAgent_Orchestrator.asm
         src/asm/RawrXD_DiskRecoveryAgent.asm
         src/asm/disk_recovery_scsi.asm
-        # src/asm/RawrXD-AnalyzerDistiller.asm      # excluded: ml64 include errors (rawrxd_win64.inc segment nesting)
-        # src/asm/RawrXD-StreamingOrchestrator.asm  # excluded: ml64 include errors (rawrxd_win64.inc segment nesting)
+        # Legacy analyzer/streaming MASM lanes are superseded by production C++ providers.
         src/asm/RawrXD_Telemetry_Kernel.asm
         src/asm/RawrXD_Prometheus_Exporter.asm
         src/asm/RawrXD_SelfPatch_Agent.asm
         src/asm/RawrXD_SourceEdit_Kernel.asm
         src/asm/feature_dispatch_bridge.asm
         src/asm/gui_dispatch_bridge.asm
-        # src/asm/RawrXD_CopilotGapCloser.asm   # excluded: scaffold/invalid ml64 syntax (__real@*, missing .ENDPROLOG)
-        # src/asm/native_speed_kernels.asm      # excluded: scaffold/invalid ml64 syntax (__real@*, missing .ENDPROLOG)
-        # src/asm/DirectML_Bridge.asm           # excluded: scaffold/invalid ml64 syntax (__real@*, missing .ENDPROLOG)
-        # src/asm/RawrXD_Hotpatch_Kernel.asm    # excluded: scaffold/invalid ml64 syntax (__real@*, missing .ENDPROLOG)
-        # src/asm/RawrXD_Snapshot.asm           # excluded: scaffold/invalid ml64 syntax (__real@*, missing .ENDPROLOG)
-        # src/asm/RawrXD_Pyre_Compute.asm       # excluded: scaffold/invalid ml64 syntax (__real@*, missing .ENDPROLOG)
-        # src/asm/vision_projection_kernel.asm  # excluded: scaffold/invalid ml64 syntax (__real@*, missing .ENDPROLOG)
-        # src/asm/quantum_beaconism_backend.asm        # excluded: MASM build errors (undefined symbols / unwind prolog issues)
-        # src/asm/RawrXD_DualEngine_QuantumBeacon.asm  # excluded: MASM build errors (undefined symbols / unwind prolog issues)
-        # src/asm/RawrXD_DualEngine_Pure.asm    # excluded: ml64 errors (operand size mismatch)
+        # Legacy scaffold-only MASM lanes remain disabled in favor of real C++ units.
         src/asm/RawrXD_OverclockGov_Pure.asm
         src/asm/RawrXD_Emitter_v1.asm
         src/asm/RawrXD_PDBKernel_v3.asm
@@ -357,7 +347,7 @@ if(RAWR_HAS_MASM)
         # ASM unresolved stubs duplicate AllocateDMABuffer and cause LNK2005 in Win32IDE.
         # src/unresolved_asm_stubs.asm
         # User-provided production ASM (need ML64 syntax fixes: .endprolog, REAL4, scale): agentic_deep_thinking_kernels.asm, ai_completion_provider_masm.asm, agentic_puppeteer_byte_ops.asm
-        # src/RawrXD_Complete_ReverseEngineered.asm  # excluded: fragment missing struct defs/includes
+        # Legacy monolithic reverse-engineered fragment is superseded by modular C++ providers.
     )
     # Mark ASM files with MASM language property
     set_source_files_properties(${ASM_KERNEL_SOURCES} PROPERTIES LANGUAGE ASM_MASM)
@@ -663,6 +653,8 @@ set(SOURCES
     src/core/gguf_dml_bridge.cpp
     src/core/dml_streaming_integration.cpp
     src/core/dml_asm_fallback.cpp
+    src/core/analyzer_distiller.cpp
+    src/core/streaming_orchestrator.cpp
     src/dml_inference_engine.cpp
 
     # Agentic Watchdog — .text Section Integrity Verification Service
