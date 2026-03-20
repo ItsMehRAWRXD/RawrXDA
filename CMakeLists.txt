@@ -1013,6 +1013,7 @@ if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
     list(FILTER SOURCES EXCLUDE REGEX ".*/.*_fallback[^/]*\\.cpp$")
     list(FILTER SOURCES EXCLUDE REGEX ".*/.*_link_shims?\\.cpp$")
     list(FILTER SOURCES EXCLUDE REGEX ".*/.*_shims?\\.cpp$")
+    list(FILTER SOURCES EXCLUDE REGEX ".*/link_stubs_.*\\.cpp$")
     if(RAWRXD_ENABLE_MISSING_HANDLER_STUBS)
         message(FATAL_ERROR "[ProductionLane] RAWRXD_ENABLE_MISSING_HANDLER_STUBS=ON is incompatible with RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=ON.")
     endif()
@@ -1130,6 +1131,7 @@ if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
     list(FILTER RAWR_ENGINE_SOURCES EXCLUDE REGEX ".*/.*_link_shims?\\.cpp$")
     list(FILTER RAWR_ENGINE_SOURCES EXCLUDE REGEX ".*/.*_shims?\\.cpp$")
     list(FILTER RAWR_ENGINE_SOURCES EXCLUDE REGEX ".*/.*_fallback[^/]*\\.cpp$")
+    list(FILTER RAWR_ENGINE_SOURCES EXCLUDE REGEX ".*/link_stubs_.*\\.cpp$")
 endif()
 
 # RawrEngine requires the core observability/safety singletons and the shared
@@ -1289,6 +1291,7 @@ if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
     list(FILTER GOLD_UNDERSCORE_SOURCES EXCLUDE REGEX ".*/.*_link_shims?\\.cpp$")
     list(FILTER GOLD_UNDERSCORE_SOURCES EXCLUDE REGEX ".*/.*_shims?\\.cpp$")
     list(FILTER GOLD_UNDERSCORE_SOURCES EXCLUDE REGEX ".*/.*_fallback[^/]*\\.cpp$")
+    list(FILTER GOLD_UNDERSCORE_SOURCES EXCLUDE REGEX ".*/link_stubs_.*\\.cpp$")
 endif()
 list(REMOVE_DUPLICATES GOLD_UNDERSCORE_SOURCES)
 add_executable(RawrXD_Gold ${GOLD_UNDERSCORE_SOURCES} ${ASM_KERNEL_SOURCES})
@@ -2262,7 +2265,6 @@ set(INFERENCE_ENGINE_SOURCES
     src/tools/license_validator_manifest.cpp
     src/core/ignite_800b.cpp
     src/core/ConfigurationValidator.cpp
-    src/inference/inference_standalone_link_shims.cpp
     src/engine/gguf_core.cpp
     src/engine/inference_kernels.cpp
     src/engine/transformer.cpp
@@ -2283,10 +2285,14 @@ set(INFERENCE_ENGINE_SOURCES
     src/inference/PerformanceMonitor.cpp
 )
 list(REMOVE_DUPLICATES INFERENCE_ENGINE_SOURCES)
+if(NOT RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
+    list(APPEND INFERENCE_ENGINE_SOURCES src/inference/inference_standalone_link_shims.cpp)
+endif()
 if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
     list(FILTER INFERENCE_ENGINE_SOURCES EXCLUDE REGEX ".*/.*_link_shims?\\.cpp$")
     list(FILTER INFERENCE_ENGINE_SOURCES EXCLUDE REGEX ".*/.*_shims?\\.cpp$")
     list(FILTER INFERENCE_ENGINE_SOURCES EXCLUDE REGEX ".*/.*_fallback[^/]*\\.cpp$")
+    list(FILTER INFERENCE_ENGINE_SOURCES EXCLUDE REGEX ".*/link_stubs_.*\\.cpp$")
 endif()
 
 add_executable(RawrXD-InferenceEngine EXCLUDE_FROM_ALL ${INFERENCE_ENGINE_SOURCES})
@@ -2810,7 +2816,6 @@ if(WIN32)
 
         # Phase 36: QuickJS VSIX JavaScript Extension Host
         src/modules/quickjs_extension_host.cpp
-        src/modules/quickjs_node_shims.cpp
         src/modules/quickjs_vscode_bindings.cpp
 
         # Phase 36: Cross-Process MMF State Synchronization
@@ -3260,11 +3265,11 @@ if(WIN32)
             src/win32app/v280_link_fallbacks.cpp
             src/win32app/collab_cursor_fallbacks.cpp
             src/win32app/rtp_protocol_fallback.cpp
-            src/modules/quickjs_node_shims.cpp
         )
         list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/.*_fallback[^/]*\\.cpp$")
         list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/.*_link_shims?\\.cpp$")
         list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/.*_shims?\\.cpp$")
+        list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/link_stubs_.*\\.cpp$")
         message(STATUS "[ProductionLane] Win32IDE: stripped ssot/fallback/shim compatibility units")
     endif()
 
@@ -3283,6 +3288,7 @@ if(WIN32)
             src/core/rawrxd_native_log_fallback.cpp
             src/llm_adapter/ggufrunner_link_fallbacks.cpp
             src/win32app/collab_cursor_fallbacks.cpp
+            src/modules/quickjs_node_shims.cpp
         )
     else()
         message(STATUS "[ProductionLane] Win32IDE: fallback provider append skipped")
@@ -3379,7 +3385,7 @@ if(WIN32)
         
         foreach(src ${SOURCES})
             # Detect stub files
-            if(src MATCHES "(_stubs\\.cpp$|_stubs\\.asm$|/missing_handler|_link_shims?\\.cpp$|_fallback[^/]*\\.cpp$)" OR
+            if(src MATCHES "(_stubs\\.cpp$|_stubs\\.asm$|/missing_handler|/link_stubs_.*\\.cpp$|_link_shims?\\.cpp$|_fallback[^/]*\\.cpp$)" OR
                src MATCHES "(stub_|shim_|_shims?\\.cpp$|shims?\\.cpp$)" OR
                src MATCHES "(mock_|fake_)")
                                 # ai_agent_masm_stubs.cpp provides required MASM symbols — exempt
@@ -3444,7 +3450,7 @@ if(WIN32)
     
     # Mandatory symbol providers for Win32IDE link closure (only link_stubs_gate allowed).
     # Remove any other stubs that may have been added
-    list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX "(_stubs\\.cpp$|_stubs\\.asm$|missing_handler|_shims?\\.cpp$|_link_shims?\\.cpp$|_fallback[^/]*\\.cpp$|stub_|shim_|mock_|fake_)")
+    list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX "(_stubs\\.cpp$|_stubs\\.asm$|missing_handler|link_stubs_.*\\.cpp$|_shims?\\.cpp$|_link_shims?\\.cpp$|_fallback[^/]*\\.cpp$|stub_|shim_|mock_|fake_)")
     # Keep required MASM bridge provider after broad stub filtering.
     list(APPEND WIN32IDE_SOURCES src/core/ai_agent_masm_stubs.cpp)
 
@@ -3453,7 +3459,7 @@ if(WIN32)
     if(RAWRXD_STRICT_AGENTIC_REALITY AND NOT RAWRXD_ALLOW_AGENTIC_STUB_FALLBACK)
         set(_RAWRXD_FORBIDDEN_WIN32IDE_SOURCES_POST "")
         foreach(_rawrxd_src IN LISTS WIN32IDE_SOURCES)
-            if(_rawrxd_src MATCHES "(_stubs\\.cpp$|/stubs\\.cpp$|/stub_.*\\.cpp$|/.*_shims?\\.cpp$|/.*_link_shims?\\.cpp$|/.*_fallback[^/]*\\.cpp$)" OR
+            if(_rawrxd_src MATCHES "(_stubs\\.cpp$|/stubs\\.cpp$|/stub_.*\\.cpp$|/link_stubs_.*\\.cpp$|/.*_shims?\\.cpp$|/.*_link_shims?\\.cpp$|/.*_fallback[^/]*\\.cpp$)" OR
                _rawrxd_src MATCHES "(missing_handler|shim_|shims?\\.cpp$|mock_|fake_)")
                 if(NOT _rawrxd_src MATCHES "ai_agent_masm_stubs\\.cpp$")
                     list(APPEND _RAWRXD_FORBIDDEN_WIN32IDE_SOURCES_POST "${_rawrxd_src}")
@@ -3964,9 +3970,6 @@ else()
 endif()
 if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
     add_dependencies(self_test_gate RawrEngine RawrXD_Gold RawrXD-InferenceEngine)
-    if(TARGET validate_registry_strict)
-        add_dependencies(self_test_gate validate_registry_strict)
-    endif()
 endif()
 
 # CI gate: stress_test — build and note availability
@@ -3991,6 +3994,9 @@ if(Python3_FOUND)
         COMMENT "Validating command registry (STRICT — all IDM_* must be in COMMAND_TABLE)..."
         VERBATIM
     )
+    if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
+        add_dependencies(self_test_gate validate_registry_strict)
+    endif()
 endif()
 
 # Autonomous Agentic Pipeline unit test (Task 5 — buildable)
