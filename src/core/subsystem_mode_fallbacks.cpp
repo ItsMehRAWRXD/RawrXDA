@@ -57,6 +57,22 @@ struct SubsystemFallbackState {
     uint64_t neuralPhospheneOps = 0;
     uint64_t neuralCspOps = 0;
     uint64_t neuralScore = 0;
+    bool hwsynthInitialized = false;
+    uint64_t hwsynthEstimateOps = 0;
+    uint64_t hwsynthPredictOps = 0;
+    uint64_t hwsynthStatsOps = 0;
+    uint64_t hwsynthSpecOps = 0;
+    uint64_t hwsynthLastResource = 0;
+    uint64_t hwsynthLastLatency = 0;
+    uint64_t hwsynthLastThroughput = 0;
+    uint64_t hwsynthLastScore = 0;
+    bool spengineInitialized = false;
+    uint64_t spengineInitOps = 0;
+    uint64_t spengineAdaptiveSwitches = 0;
+    uint64_t spengineRollbacks = 0;
+    uint64_t spengineQuantLevel = 0;
+    uint64_t quadbufTokens = 0;
+    uint64_t quadbufFrames = 0;
 };
 
 static SubsystemFallbackState g_subsystemState{};
@@ -595,23 +611,125 @@ extern "C" void asm_neural_shutdown(void) {
     std::lock_guard<std::mutex> lock(g_subsystemMutex);
     g_subsystemState.neuralInitialized = false;
 }
-extern "C" void asm_neural_get_stats(void) {}
+extern "C" void asm_neural_get_stats(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.neuralScore =
+        (g_subsystemState.neuralClassifyOps * 3u + g_subsystemState.neuralEncodeOps * 5u +
+         g_subsystemState.neuralAdaptOps * 7u + g_subsystemState.neuralFftOps * 11u +
+         g_subsystemState.neuralDetectOps * 13u + g_subsystemState.neuralCalibrateOps * 17u) %
+        100000u;
+}
 
-extern "C" void asm_hwsynth_est_resources(void) {}
-extern "C" void asm_hwsynth_predict_perf(void) {}
-extern "C" void asm_hwsynth_get_stats(void) {}
-extern "C" void asm_hwsynth_gen_gemm_spec(void) {}
-extern "C" void asm_hwsynth_gen_jtag_header(void) {}
-extern "C" void asm_hwsynth_analyze_memhier(void) {}
-extern "C" void asm_hwsynth_profile_dataflow(void) {}
-extern "C" void asm_hwsynth_shutdown(void) {}
-extern "C" void asm_hwsynth_init(void) {}
+extern "C" void asm_hwsynth_est_resources(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.hwsynthInitialized = true;
+    g_subsystemState.hwsynthEstimateOps += 1;
+    g_subsystemState.hwsynthLastResource = 64u + (g_subsystemState.hwsynthEstimateOps % 2048u);
+    g_subsystemState.hwsynthLastScore =
+        (g_subsystemState.hwsynthLastScore + g_subsystemState.hwsynthLastResource) % 100000u;
+}
+extern "C" void asm_hwsynth_predict_perf(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    if (!g_subsystemState.hwsynthInitialized) {
+        g_subsystemState.hwsynthInitialized = true;
+    }
+    g_subsystemState.hwsynthPredictOps += 1;
+    g_subsystemState.hwsynthLastLatency = 100u + (g_subsystemState.hwsynthPredictOps % 500u);
+    g_subsystemState.hwsynthLastThroughput = 10u + (g_subsystemState.hwsynthPredictOps % 200u);
+    g_subsystemState.hwsynthLastScore =
+        (g_subsystemState.hwsynthLastScore + g_subsystemState.hwsynthLastLatency +
+         g_subsystemState.hwsynthLastThroughput) %
+        100000u;
+}
+extern "C" void asm_hwsynth_get_stats(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.hwsynthStatsOps += 1;
+    g_subsystemState.hwsynthLastScore =
+        (g_subsystemState.hwsynthEstimateOps * 7u + g_subsystemState.hwsynthPredictOps * 11u +
+         g_subsystemState.hwsynthSpecOps * 13u + g_subsystemState.hwsynthStatsOps * 3u) %
+        100000u;
+}
+extern "C" void asm_hwsynth_gen_gemm_spec(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.hwsynthInitialized = true;
+    g_subsystemState.hwsynthSpecOps += 1;
+    g_subsystemState.hwsynthLastScore =
+        (g_subsystemState.hwsynthLastScore + g_subsystemState.hwsynthSpecOps * 19u) % 100000u;
+}
+extern "C" void asm_hwsynth_gen_jtag_header(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.hwsynthInitialized = true;
+    g_subsystemState.hwsynthSpecOps += 1;
+    g_subsystemState.hwsynthLastScore =
+        (g_subsystemState.hwsynthLastScore + g_subsystemState.hwsynthSpecOps * 23u) % 100000u;
+}
+extern "C" void asm_hwsynth_analyze_memhier(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.hwsynthInitialized = true;
+    g_subsystemState.hwsynthSpecOps += 1;
+    g_subsystemState.hwsynthLastResource =
+        (g_subsystemState.hwsynthLastResource + g_subsystemState.hwsynthSpecOps * 5u) % 4096u;
+}
+extern "C" void asm_hwsynth_profile_dataflow(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.hwsynthInitialized = true;
+    g_subsystemState.hwsynthSpecOps += 1;
+    g_subsystemState.hwsynthLastThroughput =
+        (g_subsystemState.hwsynthLastThroughput + g_subsystemState.hwsynthSpecOps * 3u) % 10000u;
+}
+extern "C" void asm_hwsynth_shutdown(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.hwsynthInitialized = false;
+}
+extern "C" void asm_hwsynth_init(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.hwsynthInitialized = true;
+    g_subsystemState.hwsynthEstimateOps = 0;
+    g_subsystemState.hwsynthPredictOps = 0;
+    g_subsystemState.hwsynthStatsOps = 0;
+    g_subsystemState.hwsynthSpecOps = 0;
+    g_subsystemState.hwsynthLastResource = 128;
+    g_subsystemState.hwsynthLastLatency = 200;
+    g_subsystemState.hwsynthLastThroughput = 32;
+    g_subsystemState.hwsynthLastScore = 0;
+}
 
-extern "C" void asm_quadbuf_push_token(void) {}
-extern "C" void asm_spengine_init(void) {}
-extern "C" void asm_spengine_quant_switch_adaptive(void) {}
-extern "C" void asm_quadbuf_render_frame(void) {}
-extern "C" void asm_spengine_rollback(void) {}
+extern "C" void asm_quadbuf_push_token(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.quadbufTokens += 1;
+}
+extern "C" void asm_spengine_init(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.spengineInitialized = true;
+    g_subsystemState.spengineInitOps += 1;
+    g_subsystemState.spengineQuantLevel = 4;
+}
+extern "C" void asm_spengine_quant_switch_adaptive(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    if (!g_subsystemState.spengineInitialized) {
+        g_subsystemState.spengineInitialized = true;
+        g_subsystemState.spengineInitOps += 1;
+    }
+    g_subsystemState.spengineAdaptiveSwitches += 1;
+    g_subsystemState.spengineQuantLevel =
+        (g_subsystemState.spengineQuantLevel + 1u + (g_subsystemState.spengineAdaptiveSwitches % 3u)) %
+        9u;
+}
+extern "C" void asm_quadbuf_render_frame(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.quadbufFrames += 1;
+    if (g_subsystemState.quadbufTokens > 0) {
+        g_subsystemState.quadbufTokens -= 1;
+    }
+}
+extern "C" void asm_spengine_rollback(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    if (!g_subsystemState.spengineInitialized) {
+        return;
+    }
+    g_subsystemState.spengineRollbacks += 1;
+    g_subsystemState.spengineQuantLevel = 4;
+}
 extern "C" void asm_spengine_register(void) {}
 extern "C" void asm_spengine_get_stats(void) {}
 extern "C" void asm_quadbuf_set_flags(void) {}
