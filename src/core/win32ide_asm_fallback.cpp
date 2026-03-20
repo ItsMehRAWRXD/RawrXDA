@@ -11,10 +11,12 @@
 #include <cstdint>
 #include <cstring>
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <filesystem>
 #include <fstream>
+#include <new>
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -29,8 +31,25 @@ std::array<uint64_t, PERF_SLOT_COUNT> g_perfSamples = {};
 std::mutex g_fallbackMutex;
 std::unordered_map<void*, std::string> g_ggufLoaderPathByCtx;
 std::unordered_map<void*, bool> g_ggufLoaderParsedByCtx;
+std::unordered_map<void*, uint64_t> g_ggufLoaderGpuThresholdByCtx;
+std::unordered_map<void*, uint64_t> g_ggufLookupCountByCtx;
 std::unordered_map<uint32_t, void*> g_hotpatchBackupSlotMap;
 std::unordered_map<uint32_t, uint32_t> g_snapshotCrcById;
+uint64_t g_hotpatchAllocCount = 0;
+uint64_t g_hotpatchFreeCount = 0;
+uint64_t g_hotpatchFlushCount = 0;
+
+struct LspBridgeState {
+    void* symbolIndex = nullptr;
+    void* contextAnalyzer = nullptr;
+    bool initialized = false;
+    uint32_t lastMode = 0;
+    uint64_t syncCount = 0;
+    uint64_t queryCount = 0;
+    float syntaxWeight = 1.0f;
+    float semanticWeight = 1.0f;
+};
+LspBridgeState g_lspBridgeState = {};
 
 inline uint64_t nowNs() {
     return static_cast<uint64_t>(
@@ -42,20 +61,80 @@ inline uint64_t nowNs() {
 
 extern "C" {
 
-void asm_lsp_bridge_shutdown(void) {}
-void asm_gguf_loader_close(void* ctx) { (void)ctx; }
+void asm_lsp_bridge_shutdown(void) {
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    g_lspBridgeState = {};
+}
+void asm_gguf_loader_close(void* ctx) {
+    if (ctx == nullptr) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    g_ggufLoaderPathByCtx.erase(ctx);
+    g_ggufLoaderParsedByCtx.erase(ctx);
+    g_ggufLoaderGpuThresholdByCtx.erase(ctx);
+    g_ggufLookupCountByCtx.erase(ctx);
+}
 
 int asm_lsp_bridge_init(void* symbolIndex, void* contextAnalyzer) {
-    (void)symbolIndex; (void)contextAnalyzer; return 0;
+    if (symbolIndex == nullptr || contextAnalyzer == nullptr) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    g_lspBridgeState.symbolIndex = symbolIndex;
+    g_lspBridgeState.contextAnalyzer = contextAnalyzer;
+    g_lspBridgeState.initialized = true;
+    g_lspBridgeState.lastMode = 0;
+    g_lspBridgeState.syncCount = 0;
+    g_lspBridgeState.queryCount = 0;
+    return 0;
 }
-int asm_lsp_bridge_sync(uint32_t mode) { (void)mode; return 0; }
+int asm_lsp_bridge_sync(uint32_t mode) {
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    if (!g_lspBridgeState.initialized) {
+        return -1;
+    }
+    g_lspBridgeState.lastMode = mode;
+    g_lspBridgeState.syncCount += 1;
+    return 0;
+}
 int asm_lsp_bridge_query(void* resultBuf, uint32_t maxSymbols, uint32_t* outCount) {
-    (void)resultBuf; (void)maxSymbols; if (outCount) *outCount = 0; return 0;
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    if (!g_lspBridgeState.initialized) {
+        if (outCount != nullptr) {
+            *outCount = 0;
+        }
+        return -1;
+    }
+    if (outCount != nullptr) {
+        *outCount = (resultBuf != nullptr && maxSymbols > 0) ? 1u : 0u;
+    }
+    if (resultBuf != nullptr && maxSymbols > 0) {
+        uint32_t* out = static_cast<uint32_t*>(resultBuf);
+        out[0] = g_lspBridgeState.lastMode;
+    }
+    g_lspBridgeState.queryCount += 1;
+    return 0;
 }
-void asm_lsp_bridge_invalidate(void) {}
-void asm_lsp_bridge_get_stats(void* statsOut) { (void)statsOut; }
+void asm_lsp_bridge_invalidate(void) {
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    g_lspBridgeState.lastMode = 0;
+}
+void asm_lsp_bridge_get_stats(void* statsOut) {
+    if (statsOut == nullptr) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    uint64_t* out = static_cast<uint64_t*>(statsOut);
+    out[0] = g_lspBridgeState.initialized ? 1ull : 0ull;
+    out[1] = g_lspBridgeState.syncCount;
+    out[2] = g_lspBridgeState.queryCount;
+    out[3] = static_cast<uint64_t>(g_lspBridgeState.lastMode);
+}
 void asm_lsp_bridge_set_weights(float syntaxWeight, float semanticWeight) {
-    (void)syntaxWeight; (void)semanticWeight;
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    g_lspBridgeState.syntaxWeight = syntaxWeight;
+    g_lspBridgeState.semanticWeight = semanticWeight;
 }
 
 int asm_gguf_loader_init(void* ctx, void* path, int pathLen) {
@@ -93,17 +172,66 @@ int asm_gguf_loader_lookup(void* ctx, const char* name, uint32_t nameLen) {
         hash ^= static_cast<uint8_t>(name[i]);
         hash *= 16777619u;
     }
+    g_ggufLookupCountByCtx[ctx] += 1;
     return static_cast<int>((hash % 4096u) + 1u);
 }
-void asm_gguf_loader_get_info(void* ctx, void* infoOut) { (void)ctx; (void)infoOut; }
-void asm_gguf_loader_configure_gpu(void* ctx, uint64_t thresholdBytes) {
-    (void)ctx; (void)thresholdBytes;
+void asm_gguf_loader_get_info(void* ctx, void* infoOut) {
+    if (ctx == nullptr || infoOut == nullptr) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    uint64_t* out = static_cast<uint64_t*>(infoOut);
+    const auto it = g_ggufLoaderPathByCtx.find(ctx);
+    out[0] = (it == g_ggufLoaderPathByCtx.end()) ? 0ull : static_cast<uint64_t>(it->second.size());
+    out[1] = g_ggufLoaderParsedByCtx[ctx] ? 1ull : 0ull;
+    out[2] = g_ggufLoaderGpuThresholdByCtx[ctx];
 }
-void asm_gguf_loader_get_stats(void* ctx, void* statsOut) { (void)ctx; (void)statsOut; }
+void asm_gguf_loader_configure_gpu(void* ctx, uint64_t thresholdBytes) {
+    if (ctx == nullptr) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    g_ggufLoaderGpuThresholdByCtx[ctx] = thresholdBytes;
+}
+void asm_gguf_loader_get_stats(void* ctx, void* statsOut) {
+    if (ctx == nullptr || statsOut == nullptr) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    uint64_t* out = static_cast<uint64_t*>(statsOut);
+    out[0] = g_ggufLoaderParsedByCtx[ctx] ? 1ull : 0ull;
+    out[1] = g_ggufLookupCountByCtx[ctx];
+    out[2] = g_ggufLoaderGpuThresholdByCtx[ctx];
+}
 
-void* asm_hotpatch_alloc_shadow(size_t size) { (void)size; return nullptr; }
-void asm_hotpatch_free_shadow(void* base, size_t capacity) { (void)base; (void)capacity; }
-void asm_hotpatch_flush_icache(void* base, size_t size) { (void)base; (void)size; }
+void* asm_hotpatch_alloc_shadow(size_t size) {
+    if (size == 0) {
+        return nullptr;
+    }
+    void* mem = ::operator new(size, std::nothrow);
+    if (mem != nullptr) {
+        std::memset(mem, 0, size);
+        std::lock_guard<std::mutex> lock(g_fallbackMutex);
+        g_hotpatchAllocCount += 1;
+    }
+    return mem;
+}
+void asm_hotpatch_free_shadow(void* base, size_t capacity) {
+    (void)capacity;
+    if (base == nullptr) {
+        return;
+    }
+    ::operator delete(base);
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    g_hotpatchFreeCount += 1;
+}
+void asm_hotpatch_flush_icache(void* base, size_t size) {
+    (void)base;
+    (void)size;
+    std::atomic_signal_fence(std::memory_order_seq_cst);
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    g_hotpatchFlushCount += 1;
+}
 int asm_hotpatch_backup_prologue(void* originalFn, uint32_t backupSlot) {
     if (originalFn == nullptr) {
         return -1;
@@ -129,7 +257,17 @@ int asm_hotpatch_install_trampoline(void* originalFn, void* trampolineBuffer) {
 int asm_hotpatch_atomic_swap(void* originalFn, void* newCodeAddr) {
     return (originalFn != nullptr && newCodeAddr != nullptr) ? 0 : -1;
 }
-void asm_hotpatch_get_stats(void* statsOut) { (void)statsOut; }
+void asm_hotpatch_get_stats(void* statsOut) {
+    if (statsOut == nullptr) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    uint64_t* out = static_cast<uint64_t*>(statsOut);
+    out[0] = g_hotpatchAllocCount;
+    out[1] = g_hotpatchFreeCount;
+    out[2] = g_hotpatchFlushCount;
+    out[3] = static_cast<uint64_t>(g_hotpatchBackupSlotMap.size());
+}
 
 int asm_snapshot_capture(void* addr, uint32_t snapId, int size) {
     if (addr == nullptr || size <= 0) {
