@@ -12,6 +12,7 @@
 #include <cmath>
 #include <limits>
 #include <mutex>
+#include <thread>
 #include <unordered_map>
 #include <unordered_set>
 #ifdef _WIN32
@@ -270,6 +271,16 @@ struct OmegaShimState {
     uint64_t lastStateCrc = 0;
 };
 
+struct Win32BridgeState {
+    std::vector<std::string> outputTabs{};
+    std::vector<std::string> outputLines{};
+    std::vector<std::string> problems{};
+    std::string lastInference{};
+    std::string lastCopilotChunk{};
+    uint64_t copilotStreamBytes = 0;
+    uint64_t treeItemsCreated = 0;
+};
+
 constexpr int kPerfSlotCount = 64;
 static std::atomic<int> g_nextPerfSpanId{1};
 static std::unordered_map<int, PerfSpan> g_perfSpans;
@@ -285,6 +296,12 @@ static MeshShimState g_meshState{};
 static SpeciatorShimState g_speciatorState{};
 static NeuralShimState g_neuralState{};
 static OmegaShimState g_omegaState{};
+static std::unordered_map<uintptr_t, Win32BridgeState> g_win32BridgeStates;
+static std::vector<std::string> g_nativeLogLines;
+
+static Win32BridgeState& getWin32BridgeState(const void* self) {
+    return g_win32BridgeStates[reinterpret_cast<uintptr_t>(self)];
+}
 
 static int closeFileHandle(intptr_t handle) {
     if (handle <= 0) {
@@ -872,7 +889,18 @@ int asm_camellia256_auth_decrypt_file(const char* inputPath, const char* outputP
 int asm_camellia256_auth_encrypt_file(const char* inputPath, const char* outputPath, const uint8_t* key, uint32_t keyLen) {
     return transformFileWithKey(inputPath, outputPath, key, keyLen);
 }
-void RawrXD_Native_Log(const char*, const char*) {}
+void RawrXD_Native_Log(const char* category, const char* message) {
+    if (!category || !message) {
+        return;
+    }
+    char line[1024];
+    std::snprintf(line, sizeof(line), "[%s] %s", category, message);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_nativeLogLines.emplace_back(line);
+    if (g_nativeLogLines.size() > 4096) {
+        g_nativeLogLines.erase(g_nativeLogLines.begin(), g_nativeLogLines.begin() + 1024);
+    }
+}
 int Enterprise_DevUnlock() { return enableMode(MODE_ENTERPRISE_UNLOCK); }
 
 // Batch 7: subsystem modes + Vulkan init
@@ -1102,7 +1130,14 @@ int SO_CreateComputePipelines(void* operatorTable, uint64_t operatorCount) {
     return operatorCount > 0 ? 1 : 0;
 }
 int PersistenceMode() { return enableMode(MODE_PERSISTENCE); }
-void SO_PrintStatistics() {}
+void SO_PrintStatistics() {
+    char buf[256];
+    std::snprintf(buf, sizeof(buf), "layers=%llu evicted=%llu streamed=%llu",
+                  static_cast<unsigned long long>(g_soState.metrics.layers_loaded),
+                  static_cast<unsigned long long>(g_soState.metrics.layers_evicted),
+                  static_cast<unsigned long long>(g_soState.metrics.bytes_streamed));
+    RawrXD_Native_Log("SO_STATS", buf);
+}
 void* SO_CreateMemoryArena(uint64_t sizeBytes) {
     if (sizeBytes == 0) {
         return nullptr;
@@ -1130,7 +1165,14 @@ int SO_LoadExecFile(const char* filePath) {
     return g_soState.execLoaded ? 1 : 0;
 }
 int BasicBlockCovMode() { return enableMode(MODE_BASIC_BLOCK_COV); }
-void SO_PrintMetrics() {}
+void SO_PrintMetrics() {
+    char buf[256];
+    std::snprintf(buf, sizeof(buf), "prefetch_hits=%llu misses=%llu avg_load_ms=%llu",
+                  static_cast<unsigned long long>(g_soState.metrics.prefetch_hits),
+                  static_cast<unsigned long long>(g_soState.metrics.prefetch_misses),
+                  static_cast<unsigned long long>(g_soState.metrics.avg_load_time_ms));
+    RawrXD_Native_Log("SO_METRICS", buf);
+}
 int SO_StartDEFLATEThreads(uint32_t threadCount) {
     g_soState.deflateThreads = threadCount > 0 ? threadCount : SO_DEFAULT_THREADS;
     return 1;
@@ -1146,7 +1188,12 @@ int SO_InitializePrefetchQueue() {
     g_soState.prefetchReady = true;
     return 1;
 }
-int SO_CreateThreadPool() { return 1; }
+int SO_CreateThreadPool() {
+    const unsigned int hw = std::thread::hardware_concurrency();
+    const uint32_t threads = hw == 0 ? SO_DEFAULT_THREADS : static_cast<uint32_t>(hw);
+    g_soState.deflateThreads = threads;
+    return static_cast<int>(threads);
+}
 int EntropyMode() { return enableMode(MODE_ENTROPY); }
 int AgenticMode() { return enableMode(MODE_AGENTIC); }
 int UACBypassMode() { return enableMode(MODE_UAC_BYPASS); }
@@ -2663,9 +2710,39 @@ int asm_omega_execute_pipeline(const void* planBlob, void* outExecStats) {
     out[2] = 1u + (crc % 16u); // stage count
     return 0;
 }
-int asm_omega_ingest_requirement(const void*, void*) { return 0; }
-int asm_omega_world_model_update(const void*, void*) { return 0; }
-int asm_perf_get_slot_count_v2() { return 0; }
+int asm_omega_ingest_requirement(const void* requirementBlob, void* outSummary) {
+    if (!requirementBlob || !outSummary) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(requirementBlob), 128);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_omegaState.initialized) {
+        return -1;
+    }
+    g_omegaState.generatedArtifacts += 1;
+    g_omegaState.lastStateCrc = crc;
+    auto* out = static_cast<uint64_t*>(outSummary);
+    out[0] = g_omegaState.generatedArtifacts;
+    out[1] = crc;
+    return 0;
+}
+int asm_omega_world_model_update(const void* worldBlob, void* outState) {
+    if (!worldBlob || !outState) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(worldBlob), 128);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_omegaState.initialized) {
+        return -1;
+    }
+    g_omegaState.lastStateCrc = crc;
+    g_omegaState.steps += 1;
+    auto* out = static_cast<uint64_t*>(outState);
+    out[0] = g_omegaState.steps;
+    out[1] = crc;
+    return 0;
+}
+int asm_perf_get_slot_count_v2() { return asm_perf_get_slot_count(); }
 
 // Batch 28: deflate + masm agent failure
 
@@ -2685,17 +2762,146 @@ public:
     void addOutputTab(const std::string&);
 };
 
-void Win32IDE::HandleCopilotStreamUpdate(const char*, unsigned __int64) {}
-_TREEITEM* Win32IDE::addTreeItem(_TREEITEM* parent, const std::string&, const std::string&, bool) { return parent; }
-void Win32IDE::addProblem(const std::string&, int, int, const std::string&, int) {}
-void Win32IDE::appendToOutput(const std::string&, const std::string&, OutputSeverity) {}
-void Win32IDE::addOutputTab(const std::string&) {}
-void Win32IDE::onInferenceComplete(const std::string&) {}
+void Win32IDE::HandleCopilotStreamUpdate(const char* chunk, unsigned __int64 chunkBytes) {
+    if (!chunk || chunkBytes == 0) {
+        return;
+    }
+    auto& state = getWin32BridgeState(this);
+    const size_t n = static_cast<size_t>(chunkBytes);
+    state.lastCopilotChunk.assign(chunk, chunk + n);
+    state.copilotStreamBytes += n;
+    if (state.outputTabs.empty()) {
+        state.outputTabs.emplace_back("Copilot");
+    }
+}
+_TREEITEM* Win32IDE::addTreeItem(_TREEITEM* parent, const std::string& label, const std::string& metadata, bool expanded) {
+    auto& state = getWin32BridgeState(this);
+    state.treeItemsCreated += 1;
+    std::string line = "tree:";
+    line += label;
+    if (!metadata.empty()) {
+        line += " [";
+        line += metadata;
+        line += "]";
+    }
+    line += expanded ? " (expanded)" : " (collapsed)";
+    state.outputLines.emplace_back(std::move(line));
+    return parent;
+}
+void Win32IDE::addProblem(const std::string& filePath, int line, int column, const std::string& message, int severity) {
+    auto& state = getWin32BridgeState(this);
+    char prefix[64];
+    std::snprintf(prefix, sizeof(prefix), "sev=%d", severity);
+    std::string problem = prefix;
+    problem += " ";
+    problem += filePath;
+    problem += ":";
+    problem += std::to_string(line);
+    problem += ":";
+    problem += std::to_string(column);
+    problem += " ";
+    problem += message;
+    state.problems.emplace_back(std::move(problem));
+}
+void Win32IDE::appendToOutput(const std::string& tabName, const std::string& text, OutputSeverity severity) {
+    auto& state = getWin32BridgeState(this);
+    if (std::find(state.outputTabs.begin(), state.outputTabs.end(), tabName) == state.outputTabs.end()) {
+        state.outputTabs.push_back(tabName);
+    }
+    const char* level = severity == Error ? "ERR" : (severity == Warning ? "WRN" : "INF");
+    state.outputLines.emplace_back(std::string(level) + " " + tabName + ": " + text);
+}
+void Win32IDE::addOutputTab(const std::string& tabName) {
+    auto& state = getWin32BridgeState(this);
+    if (std::find(state.outputTabs.begin(), state.outputTabs.end(), tabName) == state.outputTabs.end()) {
+        state.outputTabs.push_back(tabName);
+    }
+}
+void Win32IDE::onInferenceComplete(const std::string& result) {
+    auto& state = getWin32BridgeState(this);
+    state.lastInference = result;
+    state.outputLines.emplace_back("Inference complete: " + result);
+}
 
 // Robust Ollama parser stub
 namespace RawrXD::Agentic {
-std::vector<RobustOllamaParser::ModelEntry> RobustOllamaParser::parse_tags_response() { return {}; }
+std::vector<RobustOllamaParser::ModelEntry> RobustOllamaParser::parse_tags_response() {
+    std::vector<ModelEntry> entries;
+    if (m_input.empty()) {
+        return entries;
+    }
+
+    auto parseStringField = [&](std::string_view fieldName, size_t startPos) -> std::pair<std::string, size_t> {
+        const std::string key = std::string("\"") + std::string(fieldName) + "\"";
+        const size_t keyPos = m_input.find(key, startPos);
+        if (keyPos == std::string_view::npos) {
+            return {"", std::string_view::npos};
+        }
+        const size_t colonPos = m_input.find(':', keyPos + key.size());
+        if (colonPos == std::string_view::npos) {
+            return {"", std::string_view::npos};
+        }
+        const size_t quoteStart = m_input.find('"', colonPos + 1);
+        if (quoteStart == std::string_view::npos) {
+            return {"", std::string_view::npos};
+        }
+        const size_t quoteEnd = m_input.find('"', quoteStart + 1);
+        if (quoteEnd == std::string_view::npos) {
+            return {"", std::string_view::npos};
+        }
+        return {std::string(m_input.substr(quoteStart + 1, quoteEnd - quoteStart - 1)), quoteEnd + 1};
+    };
+
+    size_t cursor = 0;
+    while (true) {
+        auto [name, nextPos] = parseStringField("name", cursor);
+        if (nextPos == std::string_view::npos) {
+            break;
+        }
+        ModelEntry entry{};
+        entry.name = name;
+        entry.model_id = name;
+        entry.parameter_size = 0;
+
+        auto [quant, quantPos] = parseStringField("quantization", cursor);
+        if (quantPos != std::string_view::npos) {
+            entry.quantization = quant;
+        }
+        auto [family, familyPos] = parseStringField("family", cursor);
+        if (familyPos != std::string_view::npos) {
+            entry.family = family;
+        }
+
+        const size_t paramKey = m_input.find("\"parameter_size\"", cursor);
+        if (paramKey != std::string_view::npos) {
+            const size_t colonPos = m_input.find(':', paramKey);
+            if (colonPos != std::string_view::npos) {
+                const char* begin = m_input.data() + colonPos + 1;
+                char* end = nullptr;
+                const unsigned long long parsed = std::strtoull(begin, &end, 10);
+                entry.parameter_size = static_cast<size_t>(parsed);
+            }
+        }
+
+        entries.push_back(std::move(entry));
+        cursor = nextPos;
+    }
+
+    if (entries.empty()) {
+        ModelEntry fallback{};
+        fallback.name = "unknown";
+        fallback.model_id = "unknown";
+        fallback.parameter_size = 0;
+        fallback.quantization = "unknown";
+        fallback.family = "unknown";
+        entries.push_back(std::move(fallback));
+    }
+    return entries;
+}
 }
 
 // Batch 27: entry point fallback
-int main() { return 0; }
+int main() {
+    const int slots = asm_perf_get_slot_count_v2();
+    return slots > 0 ? 0 : 1;
+}
