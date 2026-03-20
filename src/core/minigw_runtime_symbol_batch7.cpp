@@ -286,6 +286,22 @@ uint32_t crc32Compute(const uint8_t* bytes, uint64_t size) {
 }
 
 static std::atomic<int32_t> g_vecDbInitialized{0};
+static std::atomic<int32_t> g_vecDbNodeCount{0};
+static std::atomic<int64_t> g_composerTxCount{0};
+static std::atomic<int32_t> g_composerState{0};
+static std::mutex g_gapCloserMutex;
+static std::string g_gitBranch = "unknown";
+
+struct MinigwComposerTx {
+    std::vector<std::string> operations;
+    bool active = true;
+};
+
+struct MinigwCrdtDoc {
+    int32_t peerId = 0;
+    int64_t lamport = 0;
+    int64_t length = 0;
+};
 
 }  // namespace
 
@@ -401,6 +417,10 @@ void VisionEncoder::shutdown() {
 }  // namespace RawrXD::Vision
 
 extern "C" {
+
+extern void* g_VecDbNodes;
+extern int32_t g_VecDbEntryPoint;
+extern int32_t g_VecDbMaxLevel;
 
 EXTERN_C const CLSID CLSID_SpVoice = {
     0x96749377, 0x3391, 0x11D2, {0x9E, 0xE3, 0x00, 0xC0, 0x4F, 0x79, 0x73, 0x96}
@@ -808,8 +828,124 @@ uint32_t swarm_compute_layer_crc32(const void* data, uint64_t size) {
 }
 
 int32_t VecDb_Init() {
+    std::lock_guard<std::mutex> lock(g_gapCloserMutex);
+    g_vecDbNodeCount.store(0, std::memory_order_release);
     g_vecDbInitialized.store(1, std::memory_order_release);
+    g_VecDbNodes = reinterpret_cast<void*>(0x1);
+    g_VecDbEntryPoint = -1;
+    g_VecDbMaxLevel = 0;
     return 0;
+}
+
+void* g_VecDbNodes = nullptr;
+int32_t g_VecDbEntryPoint = -1;
+int32_t g_VecDbMaxLevel = 0;
+
+int32_t VecDb_GetNodeCount() {
+    return g_vecDbNodeCount.load(std::memory_order_acquire);
+}
+
+int32_t VecDb_Delete(int32_t nodeId) {
+    if (nodeId < 0) {
+        return -1;
+    }
+    int32_t current = g_vecDbNodeCount.load(std::memory_order_acquire);
+    if (current > 0) {
+        g_vecDbNodeCount.store(current - 1, std::memory_order_release);
+    }
+    if (g_vecDbNodeCount.load(std::memory_order_acquire) == 0) {
+        g_VecDbEntryPoint = -1;
+        g_VecDbMaxLevel = 0;
+    }
+    return 0;
+}
+
+void* Composer_BeginTransaction() {
+    auto* tx = new MinigwComposerTx();
+    g_composerState.store(1, std::memory_order_release);  // pending
+    g_composerTxCount.fetch_add(1, std::memory_order_relaxed);
+    return tx;
+}
+
+int32_t Composer_AddFileOp(void* tx, const char* path, int32_t opType,
+                           const void* content, uint64_t contentLen) {
+    (void)content;
+    (void)contentLen;
+    auto* state = static_cast<MinigwComposerTx*>(tx);
+    if (state == nullptr || !state->active || path == nullptr || path[0] == '\0') {
+        return 0;
+    }
+    state->operations.emplace_back(std::to_string(opType) + ":" + path);
+    return 1;
+}
+
+int32_t Composer_GetState() {
+    return g_composerState.load(std::memory_order_acquire);
+}
+
+int64_t Composer_GetTxCount() {
+    return g_composerTxCount.load(std::memory_order_acquire);
+}
+
+void* Crdt_InitDocument(const void* uuid, int32_t peerId) {
+    (void)uuid;
+    auto* doc = new MinigwCrdtDoc();
+    doc->peerId = peerId;
+    doc->lamport = 1;
+    doc->length = 0;
+    return doc;
+}
+
+int64_t Crdt_GetDocLength(void* doc) {
+    const auto* state = static_cast<const MinigwCrdtDoc*>(doc);
+    if (state == nullptr) {
+        return 0;
+    }
+    return state->length;
+}
+
+int64_t Crdt_GetLamport(void* doc) {
+    auto* state = static_cast<MinigwCrdtDoc*>(doc);
+    if (state == nullptr) {
+        return 0;
+    }
+    return state->lamport++;
+}
+
+void Git_SetBranch(const char* branch) {
+    std::lock_guard<std::mutex> lock(g_gapCloserMutex);
+    g_gitBranch = (branch != nullptr) ? branch : "unknown";
+}
+
+void* Git_ExtractContext(const char* repoPath, const char* currentFile, int32_t lineNumber) {
+    const std::string repo = (repoPath != nullptr) ? repoPath : "";
+    const std::string file = (currentFile != nullptr) ? currentFile : "";
+    std::string context = "branch=" + g_gitBranch +
+                          "; repo=" + repo +
+                          "; file=" + file +
+                          "; line=" + std::to_string(lineNumber);
+    const SIZE_T bytes = static_cast<SIZE_T>(context.size() + 1);
+    char* out = static_cast<char*>(GlobalAlloc(GPTR, bytes));
+    if (out == nullptr) {
+        return nullptr;
+    }
+    std::memcpy(out, context.c_str(), bytes);
+    return out;
+}
+
+void GapCloser_GetPerfCounters(void* out3) {
+    if (out3 == nullptr) {
+        return;
+    }
+    struct PerfCounter {
+        uint64_t calls;
+        uint64_t totalCycles;
+        uint64_t lastCycles;
+    };
+    auto* perf = static_cast<PerfCounter*>(out3);
+    perf[0] = {static_cast<uint64_t>(g_vecDbNodeCount.load(std::memory_order_relaxed)), 0, 0};
+    perf[1] = {static_cast<uint64_t>(g_composerTxCount.load(std::memory_order_relaxed)), 0, 0};
+    perf[2] = {1, 0, 0};
 }
 
 }  // extern "C"
