@@ -300,6 +300,26 @@ else()
     set(RAWR_HAS_MASM FALSE)
     message(STATUS "MASM64 not available (non-MSVC): using C++ fallbacks")
 endif()
+if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
+    if(NOT WIN32)
+        message(FATAL_ERROR "[ProductionLane] RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=ON requires WIN32 toolchain/targets.")
+    endif()
+    if(NOT MSVC)
+        message(FATAL_ERROR "[ProductionLane] RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=ON requires MSVC for strict production parity.")
+    endif()
+    if(NOT RAWR_HAS_MASM)
+        message(FATAL_ERROR "[ProductionLane] RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=ON requires RAWR_HAS_MASM=TRUE.")
+    endif()
+    if(NOT CMAKE_CONFIGURATION_TYPES)
+        if(NOT CMAKE_BUILD_TYPE)
+            message(FATAL_ERROR "[ProductionLane] CMAKE_BUILD_TYPE must be set to Release when RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=ON.")
+        endif()
+        string(TOUPPER "${CMAKE_BUILD_TYPE}" _RAWR_BUILD_TYPE_UPPER)
+        if(NOT _RAWR_BUILD_TYPE_UPPER STREQUAL "RELEASE")
+            message(FATAL_ERROR "[ProductionLane] CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} is incompatible with RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=ON. Use Release.")
+        endif()
+    endif()
+endif()
 
 # ASM kernel sources (shared between RawrEngine and Win32IDE)
 if(RAWR_HAS_MASM)
@@ -1237,6 +1257,7 @@ target_link_libraries(RawrEngine PRIVATE Threads::Threads)
 # Avoid duplicate register_sovereign_engines (real impl in sovereign_engines.cpp)
 target_compile_definitions(RawrEngine PRIVATE RAWR_HAS_SOVEREIGN_ENGINES=1)
 target_compile_definitions(RawrEngine PRIVATE
+    RAWRXD_STRICT_PRODUCTION_PROFILE=$<IF:$<BOOL:${RAWRXD_PRODUCTION_STRIP_STUB_SOURCES}>,1,0>
     RAWR_SSOT_CORE=${_RAWR_SSOT_CORE}
     RAWR_SSOT_EXT=${_RAWR_SSOT_EXT}
     RAWR_SSOT_AUTO=${_RAWR_SSOT_AUTO}
@@ -1365,6 +1386,7 @@ endif()
 target_link_libraries(RawrXD_Gold PRIVATE Threads::Threads)
 
 target_compile_definitions(RawrXD_Gold PRIVATE
+    RAWRXD_STRICT_PRODUCTION_PROFILE=$<IF:$<BOOL:${RAWRXD_PRODUCTION_STRIP_STUB_SOURCES}>,1,0>
     RAWRXD_GOLD_BUILD=1
     RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS=${_RAWR_GOLD_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS}
     RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=$<IF:$<BOOL:${RAWRXD_PRODUCTION_STRIP_STUB_SOURCES}>,1,0>
@@ -2352,6 +2374,7 @@ if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
 endif()
 
 target_compile_definitions(RawrXD-InferenceEngine PRIVATE
+    RAWRXD_STRICT_PRODUCTION_PROFILE=$<IF:$<BOOL:${RAWRXD_PRODUCTION_STRIP_STUB_SOURCES}>,1,0>
     RAWR_STANDALONE_INFERENCE=1
     RAWR_HAS_SOVEREIGN_ENGINES=1
     RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=$<IF:$<BOOL:${RAWRXD_PRODUCTION_STRIP_STUB_SOURCES}>,1,0>
@@ -3642,6 +3665,7 @@ if(WIN32)
 
     # Runtime feature gates for this target's source graph.
     target_compile_definitions(RawrXD-Win32IDE PRIVATE
+        RAWRXD_STRICT_PRODUCTION_PROFILE=$<IF:$<BOOL:${RAWRXD_PRODUCTION_STRIP_STUB_SOURCES}>,1,0>
         RAWR_HAS_SOVEREIGN_ENGINES=0
         RAWR_HAS_RAWR_INFERENCE=0
         RAWRXD_HAS_MW_KERNEL=${RAWRXD_HAS_MW_KERNEL_FLAG}
@@ -3989,6 +4013,9 @@ elseif(RAWR_ASAN AND NOT MSVC)
     add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
     add_link_options(-fsanitize=address)
 endif()
+if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES AND RAWR_ASAN)
+    message(FATAL_ERROR "[ProductionLane] RAWR_ASAN=ON is incompatible with RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=ON.")
+endif()
 
 # Build SSOT stub-lane ownership guard only when explicitly enabled.
 set(RAWRXD_HAS_SSOT_STUB_LANE_GUARD OFF)
@@ -4021,6 +4048,9 @@ else()
 endif()
 
 option(RAWRXD_ENABLE_HEAVY_GATES "Run heavy ownership/compiled-symbol guards as part of self_test_gate" OFF)
+if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES AND NOT RAWRXD_ENABLE_HEAVY_GATES)
+    message(FATAL_ERROR "[ProductionLane] RAWRXD_ENABLE_HEAVY_GATES=OFF is incompatible with RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=ON.")
+endif()
 if(RAWRXD_ENABLE_HEAVY_GATES)
     if(RAWRXD_HAS_SSOT_STUB_LANE_GUARD)
         add_custom_target(self_test_gate
@@ -4050,9 +4080,15 @@ endif()
 # CI gate: stress_test — build and note availability
 message(STATUS "[CI] self_test_gate target available (cmake --build . --target self_test_gate)")
 message(STATUS "[CI] RAWR_ASAN=${RAWR_ASAN}")
+if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
+    message(STATUS "[ProductionLane] Strict production profile enabled (stubs/shims/fallbacks stripped; heavy gates required)")
+endif()
 
 
 find_package(Python3 COMPONENTS Interpreter QUIET)
+if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES AND NOT Python3_FOUND)
+    message(FATAL_ERROR "[ProductionLane] Python3 interpreter is required when RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=ON (validate_registry_strict dependency).")
+endif()
 if(Python3_FOUND)
     add_custom_target(validate_registry
         COMMAND ${Python3_EXECUTABLE} 
@@ -4070,6 +4106,7 @@ if(Python3_FOUND)
         VERBATIM
     )
     if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
+        add_dependencies(self_test_gate validate_registry)
         add_dependencies(self_test_gate validate_registry_strict)
     endif()
 endif()
