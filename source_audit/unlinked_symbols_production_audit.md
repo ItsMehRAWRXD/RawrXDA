@@ -1,16 +1,16 @@
 # Win32IDE Unlinked + Dissolved Symbol Audit
 
 - Log: `/workspace/source_audit/win32ide_production_link_latest.log`
-- Total unresolved references: **606**
-- Unique unresolved symbols: **262**
+- Total unresolved references: **559**
+- Unique unresolved symbols: **246**
 
 ## Classification Summary
 
 | Classification | Count |
 |---|---:|
-| `unlinked_despite_wired` | 112 |
-| `unwired_non_stub` | 80 |
-| `dissolved_or_external` | 70 |
+| `unlinked_despite_wired` | 108 |
+| `unwired_non_stub` | 79 |
+| `dissolved_or_external` | 59 |
 
 ## Unwired Non-Stub Symbols
 
@@ -23,7 +23,7 @@
 | `MC_GapBuffer_Length` | 8 | `final_gauntlet.cpp.obj` | `/workspace/src/ai/digestion_scanner.asm` |
 | `MC_GapBuffer_Init` | 5 | `final_gauntlet.cpp.obj` | `/workspace/include/RawrXD_MonacoCore.h` |
 | `SelfRepairLoop::registerDetour(char const*, void*)` | 5 | `camellia256_bridge.cpp.obj` | `/workspace/src/core/shadow_page_detour.cpp` |
-| `MC_GapBuffer_Delete` | 4 | `MonacoCoreEngine.cpp.obj` | `/workspace/src/ai/digestion_scanner.asm` |
+| `MC_GapBuffer_Delete` | 4 | `MonacoCoreEngine.cpp.obj` | `/workspace/include/RawrXD_MonacoCore.h` |
 | `SelfRepairLoop::isInitialized() const` | 4 | `auto_repair_orchestrator.cpp.obj` | `/workspace/src/core/shadow_page_detour.cpp` |
 | `MultiResponseEngine::~MultiResponseEngine()` | 3 | `HeadlessIDE.cpp.obj` | `/workspace/src/core/multi_response_engine.cpp` |
 | `SelfRepairLoop::getActiveDetourCount() const` | 3 | `auto_repair_orchestrator.cpp.obj` | `/workspace/src/core/shadow_page_detour.cpp` |
@@ -40,7 +40,6 @@
 | `Composer_BeginTransaction` | 1 | `Win32IDE_CopilotGapPanel.cpp.obj` | `/workspace/src/modules/copilot_gap_closer.h` |
 | `Composer_Commit` | 1 | `Win32IDE_CopilotGapPanel.cpp.obj` | `/workspace/src/modules/copilot_gap_closer.h` |
 | `Crdt_InitDocument` | 1 | `Win32IDE_CopilotGapPanel.cpp.obj` | `/workspace/src/modules/copilot_gap_closer.h` |
-| `IID_ISpVoice` | 1 | `voice_automation.cpp.obj` | `/workspace/src/asm/RAWRXD_TITAN_ULTIMATE_GODSOURCE.asm` |
 | `MultiResponseEngine::MultiResponseEngine()` | 1 | `HeadlessIDE.cpp.obj` | `/workspace/src/core/multi_response_engine.cpp` |
 | `MultiResponseEngine::initialize()` | 1 | `HeadlessIDE.cpp.obj` | `/workspace/src/core/multi_response_engine.cpp` |
 | `OSExplorerInterceptor::Initialize(unsigned long, void (*)(void*))` | 1 | `Win32IDE_OSExplorerInterceptor.cpp.obj` | `/workspace/src/win32app/OSExplorerInterceptor.cpp` |
@@ -101,20 +100,14 @@
 
 | Symbol | Occurrences | Top ref object |
 |---|---:|---|
-| `GdipDisposeImage` | 13 | `Win32IDE_VisionEncoder.cpp.obj` |
-| `GdipFree` | 11 | `Win32IDE_VisionEncoder.cpp.obj` |
 | `Crdt_GetDocLength` | 5 | `Win32IDE_CopilotGapPanel.cpp.obj` |
-| `GdipAlloc` | 4 | `Win32IDE_VisionEncoder.cpp.obj` |
 | `VecDb_GetNodeCount` | 4 | `Win32IDE_CopilotGapPanel.cpp.obj` |
-| `GdipGetImageHeight` | 3 | `Win32IDE_VisionEncoder.cpp.obj` |
-| `GdipGetImageWidth` | 3 | `Win32IDE_VisionEncoder.cpp.obj` |
 | `RawrXD::Debugger::NativeDebuggerEngine::addBreakpointBySourceLine(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, int)` | 3 | `Win32IDE_Debugger.cpp.obj` |
 | `RawrXD::Debugger::NativeDebuggerEngine::captureRegisters(RawrXD::Debugger::RegisterSnapshot&)` | 3 | `Win32IDE_Debugger.cpp.obj` |
 | `RawrXD::Debugger::NativeDebuggerEngine::evaluate(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, RawrXD::Debugger::EvalResult&)` | 3 | `Win32IDE_Debugger.cpp.obj` |
 | `RawrXD::Debugger::NativeDebuggerEngine::formatHexDump[abi:cxx11](unsigned long long, void const*, unsigned long long, unsigned int) const` | 3 | `Win32IDE_Debugger.cpp.obj` |
 | `RawrXD::Debugger::NativeDebuggerEngine::launchProcess(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)` | 3 | `Win32IDE_Debugger.cpp.obj` |
 | `Composer_GetTxCount` | 2 | `copilot_gap_closer.cpp.obj` |
-| `GdipCloneImage` | 2 | `Win32IDE_VisionEncoder.cpp.obj` |
 | `LanguagePluginManager::~LanguagePluginManager()` | 2 | `Win32IDE.cpp.obj` |
 | `RawrXD::Debugger::NativeDebuggerEngine::enableBreakpoint(unsigned int, bool)` | 2 | `Win32IDE_Debugger.cpp.obj` |
 | `RawrXD::Debugger::NativeDebuggerEngine::go()` | 2 | `Win32IDE_Debugger.cpp.obj` |
@@ -139,11 +132,6 @@
 | `Crdt_DeleteText` | 1 | `Win32IDE_CopilotGapPanel.cpp.obj` |
 | `Crdt_GetLamport` | 1 | `copilot_gap_closer.cpp.obj` |
 | `Crdt_InsertText` | 1 | `Win32IDE_CopilotGapPanel.cpp.obj` |
-| `GdipBitmapLockBits` | 1 | `Win32IDE_VisionEncoder.cpp.obj` |
-| `GdipBitmapUnlockBits` | 1 | `Win32IDE_VisionEncoder.cpp.obj` |
-| `GdipCreateBitmapFromFile` | 1 | `Win32IDE_VisionEncoder.cpp.obj` |
-| `GdipCreateBitmapFromHBITMAP` | 1 | `Win32IDE_VisionEncoder.cpp.obj` |
-| `GdipCreateHBITMAPFromBitmap` | 1 | `Win32IDE_VisionEncoder.cpp.obj` |
 | `Git_SetBranch` | 1 | `Win32IDE_CopilotGapPanel.cpp.obj` |
 | `Git_SetCommitHash` | 1 | `Win32IDE_CopilotGapPanel.cpp.obj` |
 | `RawrXD::Debugger::NativeDebuggerEngine::addBreakpointBySymbol(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, RawrXD::Debugger::BreakpointType)` | 1 | `feature_handlers.cpp.obj` |
@@ -181,9 +169,7 @@
 | `SelfRepairLoop::instance()` | `unlinked_despite_wired` | 25 | `unified_hotpatch_manager.cpp.obj` |
 | `MC_GapBuffer_LineCount` | `unwired_non_stub` | 20 | `MonacoCoreEngine.cpp.obj` |
 | `Enterprise_GetLicenseStatus` | `unlinked_despite_wired` | 18 | `enterprise_license.cpp.obj` |
-| `GdipDisposeImage` | `dissolved_or_external` | 13 | `Win32IDE_VisionEncoder.cpp.obj` |
 | `MC_GapBuffer_GetLine` | `unwired_non_stub` | 12 | `MonacoCoreEngine.cpp.obj` |
-| `GdipFree` | `dissolved_or_external` | 11 | `Win32IDE_VisionEncoder.cpp.obj` |
 | `Enterprise_CheckFeature` | `unlinked_despite_wired` | 8 | `enterprise_license.cpp.obj` |
 | `MC_GapBuffer_Insert` | `unwired_non_stub` | 8 | `MonacoCoreEngine.cpp.obj` |
 | `MC_GapBuffer_Length` | `unwired_non_stub` | 8 | `final_gauntlet.cpp.obj` |
@@ -193,7 +179,6 @@
 | `SelfRepairLoop::registerDetour(char const*, void*)` | `unwired_non_stub` | 5 | `camellia256_bridge.cpp.obj` |
 | `Swarm_ComputeNodeFitness` | `unlinked_despite_wired` | 5 | `swarm_coordinator.cpp.obj` |
 | `DiskRecovery_GetStats` | `unlinked_despite_wired` | 4 | `DiskRecoveryAgent.cpp.obj` |
-| `GdipAlloc` | `dissolved_or_external` | 4 | `Win32IDE_VisionEncoder.cpp.obj` |
 | `MC_GapBuffer_Delete` | `unwired_non_stub` | 4 | `MonacoCoreEngine.cpp.obj` |
 | `SelfRepairLoop::isInitialized() const` | `unwired_non_stub` | 4 | `auto_repair_orchestrator.cpp.obj` |
 | `Swarm_BuildPacketHeader` | `unlinked_despite_wired` | 4 | `swarm_coordinator.cpp.obj` |
@@ -203,8 +188,6 @@
 | `rawrxd_walk_export_table` | `unlinked_despite_wired` | 4 | `debugger_core.cpp.obj` |
 | `DiskRecovery_Cleanup` | `unlinked_despite_wired` | 3 | `DiskRecoveryAgent.cpp.obj` |
 | `FlashAttention_GetTileConfig` | `unlinked_despite_wired` | 3 | `flash_attention.cpp.obj` |
-| `GdipGetImageHeight` | `dissolved_or_external` | 3 | `Win32IDE_VisionEncoder.cpp.obj` |
-| `GdipGetImageWidth` | `dissolved_or_external` | 3 | `Win32IDE_VisionEncoder.cpp.obj` |
 | `KQuant_DequantizeQ4_K` | `unlinked_despite_wired` | 3 | `model_training_pipeline.cpp.obj` |
 | `KQuant_DequantizeQ6_K` | `unlinked_despite_wired` | 3 | `model_training_pipeline.cpp.obj` |
 | `MultiResponseEngine::~MultiResponseEngine()` | `unwired_non_stub` | 3 | `HeadlessIDE.cpp.obj` |
@@ -216,4 +199,9 @@
 | `RawrXD::Debugger::NativeDebuggerEngine::formatHexDump[abi:cxx11](unsigned long long, void const*, unsigned long long, unsigned int) const` | `dissolved_or_external` | 3 | `Win32IDE_Debugger.cpp.obj` |
 | `RawrXD::Debugger::NativeDebuggerEngine::launchProcess(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)` | `dissolved_or_external` | 3 | `Win32IDE_Debugger.cpp.obj` |
 | `RawrXD::Embeddings::EmbeddingEngine::instance()` | `unlinked_despite_wired` | 3 | `unified_hotpatch_manager.cpp.obj` |
+| `SelfRepairLoop::getActiveDetourCount() const` | `unwired_non_stub` | 3 | `auto_repair_orchestrator.cpp.obj` |
+| `SelfRepairLoop::getDetours() const` | `unwired_non_stub` | 3 | `auto_repair_orchestrator.cpp.obj` |
+| `SelfRepairLoop::rollbackAll()` | `unwired_non_stub` | 3 | `auto_repair_orchestrator.cpp.obj` |
+| `Swarm_HeartbeatRecord` | `unlinked_despite_wired` | 3 | `swarm_coordinator.cpp.obj` |
+| `Swarm_RingBuffer_Init` | `unlinked_despite_wired` | 3 | `swarm_coordinator.cpp.obj` |
 

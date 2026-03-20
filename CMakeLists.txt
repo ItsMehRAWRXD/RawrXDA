@@ -3646,7 +3646,7 @@ if(WIN32)
         d2d1 dwrite d3d11 dcomp d3dcompiler dwmapi
         dxgi
         advapi32 crypt32 bcrypt wintrust
-        opengl32 wininet
+        opengl32 wininet gdiplus iphlpapi sapi
         pdh
         ${MASM_OBJECTS}
         ${_WIN32IDE_LINKED_MONOLITHIC_OBJS}

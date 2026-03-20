@@ -2,12 +2,12 @@
   "repo_root": "/workspace",
   "log_path": "/workspace/source_audit/win32ide_production_link_latest.log",
   "build_make": "/workspace/build_completed_win/CMakeFiles/RawrXD-Win32IDE.dir/build.make",
-  "total_reference_lines": 606,
-  "unique_symbols": 262,
+  "total_reference_lines": 559,
+  "unique_symbols": 246,
   "classification_counts": {
-    "unlinked_despite_wired": 112,
-    "dissolved_or_external": 70,
-    "unwired_non_stub": 80
+    "unlinked_despite_wired": 108,
+    "dissolved_or_external": 59,
+    "unwired_non_stub": 79
   },
   "non_msvc_removed_sources_count": 23,
   "non_msvc_removed_sources": [
@@ -53,20 +53,6 @@
       ],
       "definition_candidates_wired": [
         {
-          "path": "/workspace/src/core/feature_handlers.cpp",
-          "line": 1747,
-          "text": "g_deepThinkingFallbackState.lastTrace += \"[beacon] BeaconRouterInit fallback active\\n\";",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/core/feature_handlers.cpp",
-          "line": 1961,
-          "text": "#pragma comment(linker, \"/alternatename:BeaconRouterInit=BeaconRouterInit_fallback\")",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/universal_model_router.cpp",
           "line": 35,
           "text": "int BeaconRouterInit();",
@@ -79,52 +65,27 @@
           "text": "if (BeaconRouterInit() != 0) {",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/core/feature_handlers.cpp",
+          "line": 1747,
+          "text": "g_deepThinkingFallbackState.lastTrace += \"[beacon] BeaconRouterInit fallback active\\n\";",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/core/feature_handlers.cpp",
+          "line": 1961,
+          "text": "#pragma comment(linker, \"/alternatename:BeaconRouterInit=BeaconRouterInit_fallback\")",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
         }
       ],
       "definition_candidates_unwired": [],
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 16,
       "reference_lines": [
-        597
-      ]
-    },
-    {
-      "symbol": "CLSID_SpVoice",
-      "token": "CLSID_SpVoice",
-      "occurrences": 1,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "voice_automation.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/core/voice_automation.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/voice_automation.cpp",
-          "line": 848,
-          "text": "hr = CoCreateInstance(CLSID_SpVoice, nullptr, CLSCTX_ALL,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/asm/RAWRXD_TITAN_ULTIMATE_GODSOURCE.asm",
-          "line": 4322,
-          "text": "; CLSID_SpVoice = {96749377-3391-11D2-9EE3-00C04F797396}",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "all_definition_candidates_count": 2,
-      "all_search_hits_count": 7,
-      "reference_lines": [
-        519
+        588
       ]
     },
     {
@@ -147,7 +108,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 352,
       "reference_lines": [
-        571
+        564
       ]
     },
     {
@@ -178,7 +139,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 350,
       "reference_lines": [
-        573
+        566
       ]
     },
     {
@@ -209,7 +170,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 350,
       "reference_lines": [
-        577
+        570
       ]
     },
     {
@@ -232,7 +193,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 350,
       "reference_lines": [
-        562
+        555
       ]
     },
     {
@@ -262,8 +223,8 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 350,
       "reference_lines": [
-        563,
-        578
+        556,
+        571
       ]
     },
     {
@@ -286,7 +247,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 437,
       "reference_lines": [
-        583
+        576
       ]
     },
     {
@@ -316,11 +277,11 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 350,
       "reference_lines": [
-        564,
-        579,
-        581,
-        582,
-        584
+        557,
+        572,
+        574,
+        575,
+        577
       ]
     },
     {
@@ -343,7 +304,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 350,
       "reference_lines": [
-        565
+        558
       ]
     },
     {
@@ -374,7 +335,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 350,
       "reference_lines": [
-        574
+        567
       ]
     },
     {
@@ -397,7 +358,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 437,
       "reference_lines": [
-        580
+        573
       ]
     },
     {
@@ -443,7 +404,7 @@
       "all_definition_candidates_count": 3,
       "all_search_hits_count": 352,
       "reference_lines": [
-        19
+        57
       ]
     },
     {
@@ -503,8 +464,8 @@
       "all_definition_candidates_count": 5,
       "all_search_hits_count": 354,
       "reference_lines": [
-        20,
-        24
+        58,
+        62
       ]
     },
     {
@@ -564,8 +525,8 @@
       "all_definition_candidates_count": 5,
       "all_search_hits_count": 355,
       "reference_lines": [
-        21,
-        22
+        59,
+        60
       ]
     },
     {
@@ -604,7 +565,7 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 789,
       "reference_lines": [
-        247
+        242
       ]
     },
     {
@@ -657,9 +618,9 @@
       "all_definition_candidates_count": 3,
       "all_search_hits_count": 877,
       "reference_lines": [
-        218,
-        239,
-        240
+        213,
+        234,
+        235
       ]
     },
     {
@@ -719,8 +680,8 @@
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 791,
       "reference_lines": [
-        220,
-        241
+        215,
+        236
       ]
     },
     {
@@ -780,8 +741,8 @@
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 878,
       "reference_lines": [
-        219,
-        244
+        214,
+        239
       ]
     },
     {
@@ -834,10 +795,10 @@
       "all_definition_candidates_count": 3,
       "all_search_hits_count": 964,
       "reference_lines": [
-        217,
+        212,
+        233,
         238,
-        243,
-        246
+        241
       ]
     },
     {
@@ -897,8 +858,8 @@
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 879,
       "reference_lines": [
-        215,
-        245
+        210,
+        240
       ]
     },
     {
@@ -958,8 +919,8 @@
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 791,
       "reference_lines": [
-        216,
-        242
+        211,
+        237
       ]
     },
     {
@@ -997,7 +958,7 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 4,
       "reference_lines": [
-        30
+        68
       ]
     },
     {
@@ -1035,7 +996,7 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 4,
       "reference_lines": [
-        33
+        71
       ]
     },
     {
@@ -1073,7 +1034,7 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 4,
       "reference_lines": [
-        32
+        70
       ]
     },
     {
@@ -1111,7 +1072,7 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 4,
       "reference_lines": [
-        31
+        69
       ]
     },
     {
@@ -1213,14 +1174,14 @@
       "all_definition_candidates_count": 11,
       "all_search_hits_count": 534,
       "reference_lines": [
-        249,
-        250,
-        257,
-        260,
-        269,
-        275,
-        276,
-        279
+        244,
+        245,
+        252,
+        255,
+        264,
+        270,
+        271,
+        274
       ]
     },
     {
@@ -1251,7 +1212,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 350,
       "reference_lines": [
-        284
+        279
       ]
     },
     {
@@ -1282,7 +1243,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 350,
       "reference_lines": [
-        253
+        248
       ]
     },
     {
@@ -1302,16 +1263,16 @@
       ],
       "definition_candidates_wired": [
         {
-          "path": "/workspace/src/core/enterprise_license.cpp",
-          "line": 444,
-          "text": "return static_cast<LicenseState>(Enterprise_GetLicenseStatus());",
+          "path": "/workspace/src/core/enterprise_devunlock_bridge.cpp",
+          "line": 38,
+          "text": "int32_t Enterprise_GetLicenseStatus();",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/core/enterprise_devunlock_bridge.cpp",
-          "line": 38,
-          "text": "int32_t Enterprise_GetLicenseStatus();",
+          "path": "/workspace/src/core/enterprise_license.cpp",
+          "line": 444,
+          "text": "return static_cast<LicenseState>(Enterprise_GetLicenseStatus());",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         }
@@ -1320,24 +1281,24 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 351,
       "reference_lines": [
-        252,
-        254,
-        255,
+        247,
+        249,
+        250,
+        251,
+        253,
         256,
         258,
-        261,
+        260,
+        262,
         263,
         265,
-        267,
-        268,
-        270,
-        271,
-        274,
-        278,
-        280,
-        281,
-        282,
-        283
+        266,
+        269,
+        273,
+        275,
+        276,
+        277,
+        278
       ]
     },
     {
@@ -1389,8 +1350,8 @@
       "all_definition_candidates_count": 3,
       "all_search_hits_count": 354,
       "reference_lines": [
-        273,
-        286
+        268,
+        281
       ]
     },
     {
@@ -1421,7 +1382,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 350,
       "reference_lines": [
-        266
+        261
       ]
     },
     {
@@ -1452,7 +1413,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 350,
       "reference_lines": [
-        264
+        259
       ]
     },
     {
@@ -1472,13 +1433,6 @@
       ],
       "definition_candidates_wired": [
         {
-          "path": "/workspace/src/core/enterprise_feature_manager.cpp",
-          "line": 408,
-          "text": "true,   // hasLicenseGate: g_800B_Unlocked + Enterprise_Unlock800BDualEngine()",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/core/enterprise_license.cpp",
           "line": 378,
           "text": "(void)Enterprise_Unlock800BDualEngine();",
@@ -1489,6 +1443,13 @@
           "path": "/workspace/src/core/enterprise_license.cpp",
           "line": 429,
           "text": "return Enterprise_Unlock800BDualEngine() != 0;",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/core/enterprise_feature_manager.cpp",
+          "line": 408,
+          "text": "true,   // hasLicenseGate: g_800B_Unlocked + Enterprise_Unlock800BDualEngine()",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         }
@@ -1505,8 +1466,8 @@
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 441,
       "reference_lines": [
-        251,
-        277
+        246,
+        272
       ]
     },
     {
@@ -1537,7 +1498,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 612,
       "reference_lines": [
-        262
+        257
       ]
     },
     {
@@ -1568,7 +1529,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 355,
       "reference_lines": [
-        330
+        325
       ]
     },
     {
@@ -1606,9 +1567,9 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 352,
       "reference_lines": [
-        327,
-        328,
-        329
+        322,
+        323,
+        324
       ]
     },
     {
@@ -1639,7 +1600,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 437,
       "reference_lines": [
-        326
+        321
       ]
     },
     {
@@ -1670,391 +1631,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 350,
       "reference_lines": [
-        560
-      ]
-    },
-    {
-      "symbol": "GdipAlloc",
-      "token": "GdipAlloc",
-      "occurrences": 4,
-      "classification": "dissolved_or_external",
-      "reason": "No definition candidate found in src/include/Ship.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_VisionEncoder.cpp.obj",
-          "count": 4,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_VisionEncoder.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 0,
-      "all_search_hits_count": 0,
-      "reference_lines": [
-        80,
-        97,
-        99,
-        121
-      ]
-    },
-    {
-      "symbol": "GdipBitmapLockBits",
-      "token": "GdipBitmapLockBits",
-      "occurrences": 1,
-      "classification": "dissolved_or_external",
-      "reason": "No definition candidate found in src/include/Ship.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_VisionEncoder.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_VisionEncoder.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 0,
-      "all_search_hits_count": 0,
-      "reference_lines": [
-        106
-      ]
-    },
-    {
-      "symbol": "GdipBitmapUnlockBits",
-      "token": "GdipBitmapUnlockBits",
-      "occurrences": 1,
-      "classification": "dissolved_or_external",
-      "reason": "No definition candidate found in src/include/Ship.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_VisionEncoder.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_VisionEncoder.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 0,
-      "all_search_hits_count": 0,
-      "reference_lines": [
-        107
-      ]
-    },
-    {
-      "symbol": "GdipCloneImage",
-      "token": "GdipCloneImage",
-      "occurrences": 2,
-      "classification": "dissolved_or_external",
-      "reason": "No definition candidate found in src/include/Ship.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_VisionEncoder.cpp.obj",
-          "count": 2,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_VisionEncoder.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 0,
-      "all_search_hits_count": 0,
-      "reference_lines": [
-        96,
-        98
-      ]
-    },
-    {
-      "symbol": "GdipCreateBitmapFromFile",
-      "token": "GdipCreateBitmapFromFile",
-      "occurrences": 1,
-      "classification": "dissolved_or_external",
-      "reason": "No definition candidate found in src/include/Ship.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_VisionEncoder.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_VisionEncoder.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 0,
-      "all_search_hits_count": 0,
-      "reference_lines": [
-        81
-      ]
-    },
-    {
-      "symbol": "GdipCreateBitmapFromHBITMAP",
-      "token": "GdipCreateBitmapFromHBITMAP",
-      "occurrences": 1,
-      "classification": "dissolved_or_external",
-      "reason": "No definition candidate found in src/include/Ship.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_VisionEncoder.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_VisionEncoder.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 0,
-      "all_search_hits_count": 0,
-      "reference_lines": [
-        122
-      ]
-    },
-    {
-      "symbol": "GdipCreateHBITMAPFromBitmap",
-      "token": "GdipCreateHBITMAPFromBitmap",
-      "occurrences": 1,
-      "classification": "dissolved_or_external",
-      "reason": "No definition candidate found in src/include/Ship.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_VisionEncoder.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_VisionEncoder.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 0,
-      "all_search_hits_count": 0,
-      "reference_lines": [
-        120
-      ]
-    },
-    {
-      "symbol": "GdipDisposeImage",
-      "token": "GdipDisposeImage",
-      "occurrences": 13,
-      "classification": "dissolved_or_external",
-      "reason": "No definition candidate found in src/include/Ship.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_VisionEncoder.cpp.obj",
-          "count": 13,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_VisionEncoder.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 0,
-      "all_search_hits_count": 0,
-      "reference_lines": [
-        71,
-        73,
-        78,
-        82,
-        87,
-        88,
-        91,
-        94,
-        95,
-        100,
-        102,
-        117,
-        125
-      ]
-    },
-    {
-      "symbol": "GdipFree",
-      "token": "GdipFree",
-      "occurrences": 11,
-      "classification": "dissolved_or_external",
-      "reason": "No definition candidate found in src/include/Ship.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_VisionEncoder.cpp.obj",
-          "count": 11,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_VisionEncoder.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 0,
-      "all_search_hits_count": 0,
-      "reference_lines": [
-        72,
-        74,
-        79,
-        83,
-        86,
-        89,
-        92,
-        101,
-        103,
-        118,
-        126
-      ]
-    },
-    {
-      "symbol": "GdipGetImageHeight",
-      "token": "GdipGetImageHeight",
-      "occurrences": 3,
-      "classification": "dissolved_or_external",
-      "reason": "No definition candidate found in src/include/Ship.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_VisionEncoder.cpp.obj",
-          "count": 3,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_VisionEncoder.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 0,
-      "all_search_hits_count": 0,
-      "reference_lines": [
-        85,
-        105,
-        124
-      ]
-    },
-    {
-      "symbol": "GdipGetImageWidth",
-      "token": "GdipGetImageWidth",
-      "occurrences": 3,
-      "classification": "dissolved_or_external",
-      "reason": "No definition candidate found in src/include/Ship.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_VisionEncoder.cpp.obj",
-          "count": 3,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_VisionEncoder.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 0,
-      "all_search_hits_count": 0,
-      "reference_lines": [
-        84,
-        104,
-        123
-      ]
-    },
-    {
-      "symbol": "GdiplusShutdown",
-      "token": "GdiplusShutdown",
-      "occurrences": 1,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_VisionEncoder.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_VisionEncoder.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_VisionEncoder.cpp",
-          "line": 432,
-          "text": "Gdiplus::GdiplusShutdown(gdiplusToken_);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 1,
-      "reference_lines": [
-        119
-      ]
-    },
-    {
-      "symbol": "GdiplusStartup",
-      "token": "GdiplusStartup",
-      "occurrences": 1,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_VisionEncoder.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_VisionEncoder.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_VisionEncoder.cpp",
-          "line": 75,
-          "text": "GdiplusStartup(&gdiplusToken_, &gdiplusStartupInput, nullptr);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 3,
-      "reference_lines": [
-        90
-      ]
-    },
-    {
-      "symbol": "GetTcpTable2",
-      "token": "GetTcpTable2",
-      "occurrences": 2,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "Win32IDE_AirgappedEnterprise.cpp.obj",
-          "count": 2,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_AirgappedEnterprise.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_AirgappedEnterprise.cpp",
-          "line": 518,
-          "text": "GetTcpTable2(nullptr, &size, TRUE);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/win32app/Win32IDE_AirgappedEnterprise.cpp",
-          "line": 521,
-          "text": "if (pTcpTable && GetTcpTable2(pTcpTable, &size, TRUE) == NO_ERROR) {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 2,
-      "all_search_hits_count": 2,
-      "reference_lines": [
-        592,
-        593
+        553
       ]
     },
     {
@@ -2085,7 +1662,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 350,
       "reference_lines": [
-        561
+        554
       ]
     },
     {
@@ -2108,7 +1685,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 350,
       "reference_lines": [
-        575
+        568
       ]
     },
     {
@@ -2131,38 +1708,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 350,
       "reference_lines": [
-        576
-      ]
-    },
-    {
-      "symbol": "IID_ISpVoice",
-      "token": "IID_ISpVoice",
-      "occurrences": 1,
-      "classification": "unwired_non_stub",
-      "reason": "Definition candidates exist but are not wired into current Win32IDE build.",
-      "top_referencing_objects": [
-        {
-          "obj": "voice_automation.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/core/voice_automation.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/asm/RAWRXD_TITAN_ULTIMATE_GODSOURCE.asm",
-          "line": 4327,
-          "text": "; IID_ISpVoice = {6C44DF74-72B9-4992-A1EC-EF996E0422D4}",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 6,
-      "reference_lines": [
-        520
+        569
       ]
     },
     {
@@ -2215,7 +1761,7 @@
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 352,
       "reference_lines": [
-        550
+        543
       ]
     },
     {
@@ -2268,9 +1814,9 @@
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 353,
       "reference_lines": [
-        541,
-        545,
-        553
+        534,
+        538,
+        546
       ]
     },
     {
@@ -2316,9 +1862,9 @@
       "all_definition_candidates_count": 3,
       "all_search_hits_count": 351,
       "reference_lines": [
-        542,
-        546,
-        554
+        535,
+        539,
+        547
       ]
     },
     {
@@ -2348,8 +1894,8 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        36,
-        38
+        74,
+        76
       ]
     },
     {
@@ -2377,16 +1923,16 @@
       "definition_candidates_wired": [],
       "definition_candidates_unwired": [
         {
-          "path": "/workspace/src/ai/digestion_scanner.asm",
-          "line": 105384,
-          "text": "; bool MC_GapBuffer_Delete(MC_GapBuffer* pGB, uint32_t pos, uint32_t len)",
+          "path": "/workspace/include/RawrXD_MonacoCore.h",
+          "line": 253,
+          "text": "return MC_GapBuffer_Delete(&m_buffer, pos, len) != 0;",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/include/RawrXD_MonacoCore.h",
-          "line": 253,
-          "text": "return MC_GapBuffer_Delete(&m_buffer, pos, len) != 0;",
+          "path": "/workspace/src/ai/digestion_scanner.asm",
+          "line": 105384,
+          "text": "; bool MC_GapBuffer_Delete(MC_GapBuffer* pGB, uint32_t pos, uint32_t len)",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         },
@@ -2405,13 +1951,6 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
-          "line": 105384,
-          "text": "; bool MC_GapBuffer_Delete(MC_GapBuffer* pGB, uint32_t pos, uint32_t len)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/ggml_masm/ggml_backend.asm",
           "line": 105384,
           "text": "; bool MC_GapBuffer_Delete(MC_GapBuffer* pGB, uint32_t pos, uint32_t len)",
@@ -2419,7 +1958,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/compression.asm",
+          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
           "line": 105384,
           "text": "; bool MC_GapBuffer_Delete(MC_GapBuffer* pGB, uint32_t pos, uint32_t len)",
           "stublike_path": false,
@@ -2433,6 +1972,13 @@
           "removed_by_non_msvc_block": false
         },
         {
+          "path": "/workspace/src/ggml_masm/compression.asm",
+          "line": 105384,
+          "text": "; bool MC_GapBuffer_Delete(MC_GapBuffer* pGB, uint32_t pos, uint32_t len)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
           "path": "/workspace/src/digestion/digestion_asm_x64.asm",
           "line": 105384,
           "text": "; bool MC_GapBuffer_Delete(MC_GapBuffer* pGB, uint32_t pos, uint32_t len)",
@@ -2440,7 +1986,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
+          "path": "/workspace/src/win32app/mcp_hooks.asm",
           "line": 105384,
           "text": "; bool MC_GapBuffer_Delete(MC_GapBuffer* pGB, uint32_t pos, uint32_t len)",
           "stublike_path": false,
@@ -2450,10 +1996,10 @@
       "all_definition_candidates_count": 88,
       "all_search_hits_count": 524,
       "reference_lines": [
-        448,
-        452,
-        458,
-        498
+        443,
+        447,
+        453,
+        493
       ]
     },
     {
@@ -2500,14 +2046,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/compression.asm",
-          "line": 105060,
-          "text": "; void MC_GapBuffer_Destroy(MC_GapBuffer* pGB)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
+          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
           "line": 105060,
           "text": "; void MC_GapBuffer_Destroy(MC_GapBuffer* pGB)",
           "stublike_path": false,
@@ -2521,14 +2060,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
-          "line": 105060,
-          "text": "; void MC_GapBuffer_Destroy(MC_GapBuffer* pGB)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
+          "path": "/workspace/src/win32app/mcp_hooks.asm",
           "line": 105060,
           "text": "; void MC_GapBuffer_Destroy(MC_GapBuffer* pGB)",
           "stublike_path": false,
@@ -2542,14 +2074,28 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
+          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
           "line": 105060,
           "text": "; void MC_GapBuffer_Destroy(MC_GapBuffer* pGB)",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "path": "/workspace/src/net/net.asm",
+          "line": 105060,
+          "text": "; void MC_GapBuffer_Destroy(MC_GapBuffer* pGB)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/ggml_masm/compression.asm",
+          "line": 105060,
+          "text": "; void MC_GapBuffer_Destroy(MC_GapBuffer* pGB)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
           "line": 105060,
           "text": "; void MC_GapBuffer_Destroy(MC_GapBuffer* pGB)",
           "stublike_path": false,
@@ -2559,26 +2105,26 @@
       "all_definition_candidates_count": 87,
       "all_search_hits_count": 524,
       "reference_lines": [
-        440,
+        435,
+        460,
+        461,
         465,
         466,
-        470,
+        469,
         471,
-        474,
-        476,
+        472,
+        475,
         477,
-        480,
+        479,
+        481,
         482,
-        484,
-        486,
+        483,
+        485,
         487,
-        488,
         490,
         492,
-        495,
-        497,
-        499,
-        502
+        494,
+        497
       ]
     },
     {
@@ -2679,18 +2225,18 @@
       "all_definition_candidates_count": 87,
       "all_search_hits_count": 524,
       "reference_lines": [
-        433,
-        435,
-        437,
-        455,
-        461,
-        462,
-        463,
-        464,
-        483,
-        485,
-        503,
-        512
+        428,
+        430,
+        432,
+        450,
+        456,
+        457,
+        458,
+        459,
+        478,
+        480,
+        498,
+        507
       ]
     },
     {
@@ -2739,14 +2285,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/compression.asm",
+          "path": "/workspace/src/ggml_masm/quantization.asm",
           "line": 105005,
           "text": "; bool MC_GapBuffer_Init(MC_GapBuffer* pGB, uint32_t initialCapacity)",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/quantization.asm",
+          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
           "line": 105005,
           "text": "; bool MC_GapBuffer_Init(MC_GapBuffer* pGB, uint32_t initialCapacity)",
           "stublike_path": false,
@@ -2767,14 +2313,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
-          "line": 105005,
-          "text": "; bool MC_GapBuffer_Init(MC_GapBuffer* pGB, uint32_t initialCapacity)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "path": "/workspace/src/ggml_masm/compression.asm",
           "line": 105005,
           "text": "; bool MC_GapBuffer_Init(MC_GapBuffer* pGB, uint32_t initialCapacity)",
           "stublike_path": false,
@@ -2786,16 +2325,23 @@
           "text": "; bool MC_GapBuffer_Init(MC_GapBuffer* pGB, uint32_t initialCapacity)",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "line": 105005,
+          "text": "; bool MC_GapBuffer_Init(MC_GapBuffer* pGB, uint32_t initialCapacity)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
         }
       ],
       "all_definition_candidates_count": 88,
       "all_search_hits_count": 524,
       "reference_lines": [
-        441,
-        467,
-        473,
-        489,
-        508
+        436,
+        462,
+        468,
+        484,
+        503
       ]
     },
     {
@@ -2844,21 +2390,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/compression.asm",
-          "line": 105294,
-          "text": "; bool MC_GapBuffer_Insert(MC_GapBuffer* pGB, uint32_t pos,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/ggml_masm/quantization.asm",
-          "line": 105294,
-          "text": "; bool MC_GapBuffer_Insert(MC_GapBuffer* pGB, uint32_t pos,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
           "line": 105294,
           "text": "; bool MC_GapBuffer_Insert(MC_GapBuffer* pGB, uint32_t pos,",
           "stublike_path": false,
@@ -2872,6 +2404,20 @@
           "removed_by_non_msvc_block": false
         },
         {
+          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
+          "line": 105294,
+          "text": "; bool MC_GapBuffer_Insert(MC_GapBuffer* pGB, uint32_t pos,",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/ggml_masm/compression.asm",
+          "line": 105294,
+          "text": "; bool MC_GapBuffer_Insert(MC_GapBuffer* pGB, uint32_t pos,",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
           "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
           "line": 105294,
           "text": "; bool MC_GapBuffer_Insert(MC_GapBuffer* pGB, uint32_t pos,",
@@ -2879,7 +2425,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
           "line": 105294,
           "text": "; bool MC_GapBuffer_Insert(MC_GapBuffer* pGB, uint32_t pos,",
           "stublike_path": false,
@@ -2896,14 +2442,14 @@
       "all_definition_candidates_count": 88,
       "all_search_hits_count": 524,
       "reference_lines": [
+        437,
+        439,
+        441,
         442,
-        444,
-        446,
-        447,
-        450,
-        475,
-        491,
-        510
+        445,
+        470,
+        486,
+        505
       ]
     },
     {
@@ -2980,6 +2526,13 @@
           "removed_by_non_msvc_block": false
         },
         {
+          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "line": 105570,
+          "text": "; uint32_t MC_GapBuffer_Length(const MC_GapBuffer* pGB)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
           "path": "/workspace/src/digestion/digestion_asm_x64.asm",
           "line": 105570,
           "text": "; uint32_t MC_GapBuffer_Length(const MC_GapBuffer* pGB)",
@@ -2992,26 +2545,19 @@
           "text": "; uint32_t MC_GapBuffer_Length(const MC_GapBuffer* pGB)",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
-          "line": 105570,
-          "text": "; uint32_t MC_GapBuffer_Length(const MC_GapBuffer* pGB)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
         }
       ],
       "all_definition_candidates_count": 87,
       "all_search_hits_count": 524,
       "reference_lines": [
-        431,
-        457,
-        478,
-        479,
-        493,
-        494,
-        500,
-        501
+        426,
+        452,
+        473,
+        474,
+        488,
+        489,
+        495,
+        496
       ]
     },
     {
@@ -3046,14 +2592,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/attention.asm",
+          "path": "/workspace/src/ggml_masm/compression.asm",
           "line": 105582,
           "text": "; uint32_t MC_GapBuffer_LineCount(const MC_GapBuffer* pGB)",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/compression.asm",
+          "path": "/workspace/src/ggml_masm/attention.asm",
           "line": 105582,
           "text": "; uint32_t MC_GapBuffer_LineCount(const MC_GapBuffer* pGB)",
           "stublike_path": false,
@@ -3112,26 +2658,26 @@
       "all_definition_candidates_count": 87,
       "all_search_hits_count": 524,
       "reference_lines": [
+        424,
+        425,
+        427,
         429,
-        430,
-        432,
+        433,
         434,
         438,
-        439,
-        443,
-        445,
+        440,
+        444,
+        446,
+        448,
         449,
         451,
-        453,
         454,
-        456,
-        459,
-        460,
-        468,
-        469,
-        472,
-        481,
-        496
+        455,
+        463,
+        464,
+        467,
+        476,
+        491
       ]
     },
     {
@@ -3174,7 +2720,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
+          "path": "/workspace/src/ggml_masm/compression.asm",
           "line": 105595,
           "text": "; uint32_t MC_TokenizeLine(const char* line, uint32_t len,",
           "stublike_path": false,
@@ -3188,7 +2734,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
           "line": 105595,
           "text": "; uint32_t MC_TokenizeLine(const char* line, uint32_t len,",
           "stublike_path": false,
@@ -3202,28 +2748,28 @@
           "removed_by_non_msvc_block": false
         },
         {
+          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "line": 105595,
+          "text": "; uint32_t MC_TokenizeLine(const char* line, uint32_t len,",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
+          "line": 105595,
+          "text": "; uint32_t MC_TokenizeLine(const char* line, uint32_t len,",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/net/net.asm",
+          "line": 105595,
+          "text": "; uint32_t MC_TokenizeLine(const char* line, uint32_t len,",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
           "path": "/workspace/src/digestion/digestion_asm_x64.asm",
-          "line": 105595,
-          "text": "; uint32_t MC_TokenizeLine(const char* line, uint32_t len,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/compression.asm",
-          "line": 105595,
-          "text": "; uint32_t MC_TokenizeLine(const char* line, uint32_t len,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
-          "line": 105595,
-          "text": "; uint32_t MC_TokenizeLine(const char* line, uint32_t len,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
           "line": 105595,
           "text": "; uint32_t MC_TokenizeLine(const char* line, uint32_t len,",
           "stublike_path": false,
@@ -3233,7 +2779,7 @@
       "all_definition_candidates_count": 88,
       "all_search_hits_count": 525,
       "reference_lines": [
-        436
+        431
       ]
     },
     {
@@ -3264,7 +2810,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        11
+        49
       ]
     },
     {
@@ -3295,7 +2841,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        13
+        51
       ]
     },
     {
@@ -3326,9 +2872,9 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        9,
-        10,
-        12
+        47,
+        48,
+        50
       ]
     },
     {
@@ -3359,7 +2905,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        607
+        598
       ]
     },
     {
@@ -3390,7 +2936,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        606
+        597
       ]
     },
     {
@@ -3421,7 +2967,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        608
+        599
       ]
     },
     {
@@ -3452,7 +2998,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        609
+        600
       ]
     },
     {
@@ -3490,9 +3036,9 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 350,
       "reference_lines": [
-        543,
-        547,
-        551
+        536,
+        540,
+        544
       ]
     },
     {
@@ -3530,9 +3076,9 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 350,
       "reference_lines": [
-        544,
-        548,
-        552
+        537,
+        541,
+        545
       ]
     },
     {
@@ -3563,7 +3109,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        416
+        411
       ]
     },
     {
@@ -3615,26 +3161,26 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 2,
       "reference_lines": [
-        127,
-        129,
-        131,
-        133,
-        139,
-        143,
-        145,
+        122,
+        124,
+        126,
+        128,
+        134,
+        138,
+        140,
+        142,
+        144,
         147,
         149,
-        152,
-        154,
-        156,
-        158,
-        160,
-        162,
-        164,
-        166,
+        151,
+        153,
+        155,
+        157,
+        159,
+        161,
+        163,
         168,
-        173,
-        175
+        170
       ]
     },
     {
@@ -3664,9 +3210,9 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        146,
-        180,
-        538
+        141,
+        175,
+        531
       ]
     },
     {
@@ -3689,7 +3235,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        539
+        532
       ]
     },
     {
@@ -3712,7 +3258,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        150
+        145
       ]
     },
     {
@@ -3735,7 +3281,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        176
+        171
       ]
     },
     {
@@ -3772,9 +3318,9 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        134,
-        193,
-        536
+        129,
+        188,
+        529
       ]
     },
     {
@@ -3797,7 +3343,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        169
+        164
       ]
     },
     {
@@ -3820,7 +3366,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        194
+        189
       ]
     },
     {
@@ -3843,8 +3389,8 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        178,
-        182
+        173,
+        177
       ]
     },
     {
@@ -3867,9 +3413,9 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        144,
-        155,
-        159
+        139,
+        150,
+        154
       ]
     },
     {
@@ -3892,7 +3438,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        135
+        130
       ]
     },
     {
@@ -3915,9 +3461,9 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        138,
-        141,
-        142
+        133,
+        136,
+        137
       ]
     },
     {
@@ -3940,7 +3486,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        157
+        152
       ]
     },
     {
@@ -3963,7 +3509,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        533
+        526
       ]
     },
     {
@@ -3993,8 +3539,8 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        167,
-        522
+        162,
+        515
       ]
     },
     {
@@ -4024,8 +3570,8 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        188,
-        529
+        183,
+        522
       ]
     },
     {
@@ -4055,9 +3601,9 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        184,
-        190,
-        530
+        179,
+        185,
+        523
       ]
     },
     {
@@ -4080,7 +3626,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        137
+        132
       ]
     },
     {
@@ -4103,8 +3649,8 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        136,
-        140
+        131,
+        135
       ]
     },
     {
@@ -4134,8 +3680,8 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        132,
-        524
+        127,
+        517
       ]
     },
     {
@@ -4165,8 +3711,8 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        148,
-        525
+        143,
+        518
       ]
     },
     {
@@ -4189,7 +3735,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        130
+        125
       ]
     },
     {
@@ -4212,8 +3758,8 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        170,
-        185
+        165,
+        180
       ]
     },
     {
@@ -4236,8 +3782,8 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        171,
-        186
+        166,
+        181
       ]
     },
     {
@@ -4260,8 +3806,8 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        172,
-        187
+        167,
+        182
       ]
     },
     {
@@ -4284,7 +3830,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        163
+        158
       ]
     },
     {
@@ -4307,7 +3853,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        161
+        156
       ]
     },
     {
@@ -4337,8 +3883,8 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        165,
-        535
+        160,
+        528
       ]
     },
     {
@@ -4368,8 +3914,8 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        174,
-        532
+        169,
+        525
       ]
     },
     {
@@ -4392,8 +3938,8 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        128,
-        151
+        123,
+        146
       ]
     },
     {
@@ -4416,7 +3962,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        153
+        148
       ]
     },
     {
@@ -4439,7 +3985,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        422
+        417
       ]
     },
     {
@@ -4484,9 +4030,9 @@
       "all_definition_candidates_count": 3,
       "all_search_hits_count": 3,
       "reference_lines": [
-        417,
-        419,
-        421
+        412,
+        414,
+        416
       ]
     },
     {
@@ -4509,7 +4055,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        418
+        413
       ]
     },
     {
@@ -4532,7 +4078,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        420
+        415
       ]
     },
     {
@@ -4555,8 +4101,8 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        115,
-        116
+        120,
+        121
       ]
     },
     {
@@ -4579,7 +4125,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        114
+        119
       ]
     },
     {
@@ -4602,7 +4148,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        111
+        116
       ]
     },
     {
@@ -4625,7 +4171,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        112
+        117
       ]
     },
     {
@@ -4648,7 +4194,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        113
+        118
       ]
     },
     {
@@ -4693,11 +4239,11 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 2,
       "reference_lines": [
-        75,
-        76,
-        108,
-        423,
-        425
+        109,
+        110,
+        113,
+        418,
+        420
       ]
     },
     {
@@ -4720,8 +4266,8 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        77,
-        109
+        111,
+        114
       ]
     },
     {
@@ -4751,8 +4297,8 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        110,
-        424
+        115,
+        419
       ]
     },
     {
@@ -4782,8 +4328,8 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        93,
-        426
+        112,
+        421
       ]
     },
     {
@@ -4821,7 +4367,7 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 4,
       "reference_lines": [
-        14
+        52
       ]
     },
     {
@@ -4859,7 +4405,7 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 5,
       "reference_lines": [
-        29
+        67
       ]
     },
     {
@@ -4890,7 +4436,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 6,
       "reference_lines": [
-        605
+        596
       ]
     },
     {
@@ -4921,7 +4467,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 4,
       "reference_lines": [
-        604
+        595
       ]
     },
     {
@@ -4951,8 +4497,8 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        37,
-        39
+        75,
+        77
       ]
     },
     {
@@ -4983,7 +4529,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        415
+        410
       ]
     },
     {
@@ -5014,7 +4560,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        401
+        396
       ]
     },
     {
@@ -5059,9 +4605,9 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        230,
-        319,
-        427
+        225,
+        314,
+        422
       ]
     },
     {
@@ -5092,9 +4638,9 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        228,
-        235,
-        237
+        223,
+        230,
+        232
       ]
     },
     {
@@ -5132,8 +4678,8 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        317,
-        397
+        312,
+        392
       ]
     },
     {
@@ -5171,8 +4717,8 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        321,
-        399
+        316,
+        394
       ]
     },
     {
@@ -5210,8 +4756,8 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        302,
-        409
+        297,
+        404
       ]
     },
     {
@@ -5327,26 +4873,26 @@
       "all_definition_candidates_count": 26,
       "all_search_hits_count": 26,
       "reference_lines": [
+        216,
+        219,
         221,
-        224,
-        226,
-        232,
-        236,
-        295,
+        227,
+        231,
+        290,
+        296,
+        298,
         301,
-        303,
-        306,
-        309,
-        312,
-        316,
-        318,
-        320,
+        304,
+        307,
+        311,
+        313,
+        315,
+        390,
+        391,
+        393,
         395,
-        396,
-        398,
-        400,
-        402,
-        404
+        397,
+        399
       ]
     },
     {
@@ -5377,10 +4923,10 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
+        217,
+        220,
         222,
-        225,
-        227,
-        233
+        228
       ]
     },
     {
@@ -5418,11 +4964,11 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        305,
-        308,
-        311,
-        314,
-        411
+        300,
+        303,
+        306,
+        309,
+        406
       ]
     },
     {
@@ -5460,9 +5006,9 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        223,
-        231,
-        405
+        218,
+        226,
+        400
       ]
     },
     {
@@ -5500,8 +5046,8 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        229,
-        403
+        224,
+        398
       ]
     },
     {
@@ -5539,8 +5085,8 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        296,
-        413
+        291,
+        408
       ]
     },
     {
@@ -5578,8 +5124,8 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        234,
-        407
+        229,
+        402
       ]
     },
     {
@@ -5610,7 +5156,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 353,
       "reference_lines": [
-        272
+        267
       ]
     },
     {
@@ -5641,7 +5187,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 263,
       "reference_lines": [
-        259
+        254
       ]
     },
     {
@@ -5700,10 +5246,10 @@
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 354,
       "reference_lines": [
-        372,
-        374,
-        383,
-        390
+        367,
+        369,
+        378,
+        385
       ]
     },
     {
@@ -5790,11 +5336,11 @@
       "all_definition_candidates_count": 7,
       "all_search_hits_count": 357,
       "reference_lines": [
-        371,
-        380,
-        382,
-        388,
-        394
+        366,
+        375,
+        377,
+        383,
+        389
       ]
     },
     {
@@ -5832,7 +5378,7 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 351,
       "reference_lines": [
-        379
+        374
       ]
     },
     {
@@ -5891,9 +5437,9 @@
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 353,
       "reference_lines": [
-        373,
-        387,
-        393
+        368,
+        382,
+        388
       ]
     },
     {
@@ -5938,8 +5484,8 @@
       "all_definition_candidates_count": 3,
       "all_search_hits_count": 352,
       "reference_lines": [
-        375,
-        381
+        370,
+        376
       ]
     },
     {
@@ -5977,7 +5523,7 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 351,
       "reference_lines": [
-        378
+        373
       ]
     },
     {
@@ -6043,9 +5589,9 @@
       "all_definition_candidates_count": 5,
       "all_search_hits_count": 354,
       "reference_lines": [
-        376,
-        377,
-        389
+        371,
+        372,
+        384
       ]
     },
     {
@@ -6119,9 +5665,9 @@
       "all_definition_candidates_count": 6,
       "all_search_hits_count": 355,
       "reference_lines": [
-        384,
-        386,
-        392
+        379,
+        381,
+        387
       ]
     },
     {
@@ -6180,8 +5726,8 @@
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 353,
       "reference_lines": [
-        385,
-        391
+        380,
+        386
       ]
     },
     {
@@ -6212,7 +5758,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 350,
       "reference_lines": [
-        570
+        563
       ]
     },
     {
@@ -6242,10 +5788,10 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 350,
       "reference_lines": [
-        566,
-        585,
-        589,
-        591
+        559,
+        578,
+        582,
+        584
       ]
     },
     {
@@ -6283,8 +5829,8 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 350,
       "reference_lines": [
-        559,
-        572
+        552,
+        565
       ]
     },
     {
@@ -6307,8 +5853,8 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 350,
       "reference_lines": [
-        587,
-        590
+        580,
+        583
       ]
     },
     {
@@ -6339,8 +5885,8 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 350,
       "reference_lines": [
-        586,
-        588
+        579,
+        581
       ]
     },
     {
@@ -6371,7 +5917,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        59
+        97
       ]
     },
     {
@@ -6402,7 +5948,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        54
+        92
       ]
     },
     {
@@ -6433,7 +5979,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        49
+        87
       ]
     },
     {
@@ -6464,7 +6010,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        43
+        81
       ]
     },
     {
@@ -6495,7 +6041,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        56
+        94
       ]
     },
     {
@@ -6526,7 +6072,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        48
+        86
       ]
     },
     {
@@ -6557,7 +6103,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        65
+        103
       ]
     },
     {
@@ -6588,7 +6134,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        57
+        95
       ]
     },
     {
@@ -6619,7 +6165,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        51
+        89
       ]
     },
     {
@@ -6650,7 +6196,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        47
+        85
       ]
     },
     {
@@ -6681,7 +6227,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        60
+        98
       ]
     },
     {
@@ -6712,7 +6258,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        50
+        88
       ]
     },
     {
@@ -6743,7 +6289,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        55
+        93
       ]
     },
     {
@@ -6774,7 +6320,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        66
+        104
       ]
     },
     {
@@ -6805,7 +6351,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        70
+        108
       ]
     },
     {
@@ -6836,7 +6382,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        68
+        106
       ]
     },
     {
@@ -6867,7 +6413,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        58
+        96
       ]
     },
     {
@@ -6898,7 +6444,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        53
+        91
       ]
     },
     {
@@ -6929,7 +6475,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        63
+        101
       ]
     },
     {
@@ -6960,7 +6506,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        64
+        102
       ]
     },
     {
@@ -6991,7 +6537,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        67
+        105
       ]
     },
     {
@@ -7022,7 +6568,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        61
+        99
       ]
     },
     {
@@ -7053,7 +6599,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        45
+        83
       ]
     },
     {
@@ -7084,7 +6630,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        44
+        82
       ]
     },
     {
@@ -7115,7 +6661,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        46
+        84
       ]
     },
     {
@@ -7146,7 +6692,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        52
+        90
       ]
     },
     {
@@ -7177,7 +6723,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        62
+        100
       ]
     },
     {
@@ -7208,7 +6754,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        69
+        107
       ]
     },
     {
@@ -7239,7 +6785,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        201
+        196
       ]
     },
     {
@@ -7270,7 +6816,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        212
+        207
       ]
     },
     {
@@ -7301,7 +6847,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        203
+        198
       ]
     },
     {
@@ -7332,7 +6878,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        207
+        202
       ]
     },
     {
@@ -7363,7 +6909,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        200
+        195
       ]
     },
     {
@@ -7394,7 +6940,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        202
+        197
       ]
     },
     {
@@ -7425,7 +6971,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        204
+        199
       ]
     },
     {
@@ -7456,7 +7002,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        209
+        204
       ]
     },
     {
@@ -7487,7 +7033,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        211
+        206
       ]
     },
     {
@@ -7518,7 +7064,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        210
+        205
       ]
     },
     {
@@ -7549,7 +7095,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        213
+        208
       ]
     },
     {
@@ -7580,7 +7126,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        208
+        203
       ]
     },
     {
@@ -7611,7 +7157,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        206
+        201
       ]
     },
     {
@@ -7642,7 +7188,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        205
+        200
       ]
     },
     {
@@ -7673,7 +7219,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        199
+        194
       ]
     },
     {
@@ -7704,7 +7250,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        40
+        78
       ]
     },
     {
@@ -7735,7 +7281,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        41
+        79
       ]
     },
     {
@@ -7781,8 +7327,8 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 2,
       "reference_lines": [
-        42,
-        198
+        80,
+        193
       ]
     },
     {
@@ -7828,10 +7374,10 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 2,
       "reference_lines": [
-        35,
-        195,
-        196,
-        197
+        73,
+        190,
+        191,
+        192
       ]
     },
     {
@@ -7854,7 +7400,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        16
+        54
       ]
     },
     {
@@ -7877,7 +7423,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        17
+        55
       ]
     },
     {
@@ -7900,7 +7446,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        214
+        209
       ]
     },
     {
@@ -7946,9 +7492,9 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 520,
       "reference_lines": [
-        307,
-        324,
-        595
+        302,
+        319,
+        586
       ]
     },
     {
@@ -7987,9 +7533,9 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 780,
       "reference_lines": [
-        293,
-        313,
-        322
+        288,
+        308,
+        317
       ]
     },
     {
@@ -8020,7 +7566,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 432,
       "reference_lines": [
-        291
+        286
       ]
     },
     {
@@ -8073,9 +7619,9 @@
       "all_definition_candidates_count": 3,
       "all_search_hits_count": 608,
       "reference_lines": [
-        304,
-        325,
-        594
+        299,
+        320,
+        585
       ]
     },
     {
@@ -8114,9 +7660,9 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 952,
       "reference_lines": [
-        292,
-        310,
-        323
+        287,
+        305,
+        318
       ]
     },
     {
@@ -8147,7 +7693,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 432,
       "reference_lines": [
-        290
+        285
       ]
     },
     {
@@ -8197,13 +7743,6 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
-          "line": 140698,
-          "text": ";   - asm_camellia256_get_hmac_key (from RawrXD_Camellia256.asm)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/test_harness/camellia256_test.cpp",
           "line": 144,
           "text": "int rc = asm_camellia256_get_hmac_key(hmacKey);",
@@ -8218,13 +7757,6 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
-          "line": 140698,
-          "text": ";   - asm_camellia256_get_hmac_key (from RawrXD_Camellia256.asm)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/ggml_masm/compression.asm",
           "line": 140698,
           "text": ";   - asm_camellia256_get_hmac_key (from RawrXD_Camellia256.asm)",
@@ -8232,7 +7764,21 @@
           "removed_by_non_msvc_block": false
         },
         {
+          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
+          "line": 140698,
+          "text": ";   - asm_camellia256_get_hmac_key (from RawrXD_Camellia256.asm)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
           "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
+          "line": 140698,
+          "text": ";   - asm_camellia256_get_hmac_key (from RawrXD_Camellia256.asm)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
           "line": 140698,
           "text": ";   - asm_camellia256_get_hmac_key (from RawrXD_Camellia256.asm)",
           "stublike_path": false,
@@ -8249,9 +7795,9 @@
       "all_definition_candidates_count": 89,
       "all_search_hits_count": 1124,
       "reference_lines": [
-        288,
-        298,
-        300
+        283,
+        293,
+        295
       ]
     },
     {
@@ -8282,8 +7828,8 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 432,
       "reference_lines": [
-        294,
-        315
+        289,
+        310
       ]
     },
     {
@@ -8364,7 +7910,7 @@
       "all_definition_candidates_count": 8,
       "all_search_hits_count": 439,
       "reference_lines": [
-        299
+        294
       ]
     },
     {
@@ -8431,7 +7977,7 @@
       "all_definition_candidates_count": 6,
       "all_search_hits_count": 437,
       "reference_lines": [
-        289
+        284
       ]
     },
     {
@@ -8533,7 +8079,7 @@
       "all_definition_candidates_count": 12,
       "all_search_hits_count": 615,
       "reference_lines": [
-        287
+        282
       ]
     },
     {
@@ -8578,8 +8124,8 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 433,
       "reference_lines": [
-        297,
-        596
+        292,
+        587
       ]
     },
     {
@@ -8619,7 +8165,7 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 438,
       "reference_lines": [
-        602
+        593
       ]
     },
     {
@@ -8679,7 +8225,7 @@
       "all_definition_candidates_count": 5,
       "all_search_hits_count": 615,
       "reference_lines": [
-        549
+        542
       ]
     },
     {
@@ -8732,7 +8278,7 @@
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 438,
       "reference_lines": [
-        7
+        45
       ]
     },
     {
@@ -8772,7 +8318,7 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 438,
       "reference_lines": [
-        600
+        591
       ]
     },
     {
@@ -8812,7 +8358,7 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 438,
       "reference_lines": [
-        598
+        589
       ]
     },
     {
@@ -8852,9 +8398,9 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 438,
       "reference_lines": [
-        599,
-        601,
-        603
+        590,
+        592,
+        594
       ]
     },
     {
@@ -8897,14 +8443,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/compression.asm",
+          "path": "/workspace/src/ggml_masm/quantization.asm",
           "line": 103194,
           "text": ";   int64_t asm_symbol_hash_lookup(",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/quantization.asm",
+          "path": "/workspace/src/ggml_masm/compression.asm",
           "line": 103194,
           "text": ";   int64_t asm_symbol_hash_lookup(",
           "stublike_path": false,
@@ -8932,13 +8478,6 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
-          "line": 103194,
-          "text": ";   int64_t asm_symbol_hash_lookup(",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/digestion/digestion_asm_x64.asm",
           "line": 103194,
           "text": ";   int64_t asm_symbol_hash_lookup(",
@@ -8946,7 +8485,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
+          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "line": 103194,
+          "text": ";   int64_t asm_symbol_hash_lookup(",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/net/net.asm",
           "line": 103194,
           "text": ";   int64_t asm_symbol_hash_lookup(",
           "stublike_path": false,
@@ -8956,7 +8502,7 @@
       "all_definition_candidates_count": 88,
       "all_search_hits_count": 437,
       "reference_lines": [
-        428
+        423
       ]
     },
     {
@@ -9006,20 +8552,6 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/codec.cpp",
-          "line": 23,
-          "text": "void* deflate_brutal_masm(const void* src, size_t len, size_t* out_len) {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/codec.cpp",
-          "line": 29,
-          "text": "return deflate_brutal_masm(src, len, out_len);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/include/deflate_brutal_qt.hpp",
           "line": 27,
           "text": "void* p = deflate_brutal_masm(in.data(), in.size(), &packedSz);",
@@ -9030,6 +8562,20 @@
           "path": "/workspace/include/deflate_brutal_qt.hpp",
           "line": 44,
           "text": "void* p = deflate_brutal_masm(data, size, &packedSz);",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/codec.cpp",
+          "line": 23,
+          "text": "void* deflate_brutal_masm(const void* src, size_t len, size_t* out_len) {",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/codec.cpp",
+          "line": 29,
+          "text": "return deflate_brutal_masm(src, len, out_len);",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         },
@@ -9065,7 +8611,7 @@
       "all_definition_candidates_count": 14,
       "all_search_hits_count": 301,
       "reference_lines": [
-        248
+        243
       ]
     },
     {
@@ -9096,8 +8642,8 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 263,
       "reference_lines": [
-        337,
-        366
+        332,
+        361
       ]
     },
     {
@@ -9140,13 +8686,6 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/compression.asm",
-          "line": 58572,
-          "text": "; dequant_q4_0_avx2(const void* src, float* dst, uint64_t nblocks)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/ggml_masm/quantization.asm",
           "line": 58572,
           "text": "; dequant_q4_0_avx2(const void* src, float* dst, uint64_t nblocks)",
@@ -9175,14 +8714,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
+          "path": "/workspace/src/ggml_masm/compression.asm",
           "line": 58572,
           "text": "; dequant_q4_0_avx2(const void* src, float* dst, uint64_t nblocks)",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
+          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
           "line": 58572,
           "text": "; dequant_q4_0_avx2(const void* src, float* dst, uint64_t nblocks)",
           "stublike_path": false,
@@ -9194,13 +8733,20 @@
           "text": "; dequant_q4_0_avx2(const void* src, float* dst, uint64_t nblocks)",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/net/net.asm",
+          "line": 58572,
+          "text": "; dequant_q4_0_avx2(const void* src, float* dst, uint64_t nblocks)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
         }
       ],
       "all_definition_candidates_count": 88,
       "all_search_hits_count": 350,
       "reference_lines": [
-        336,
-        369
+        331,
+        364
       ]
     },
     {
@@ -9231,8 +8777,8 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 263,
       "reference_lines": [
-        335,
-        370
+        330,
+        365
       ]
     },
     {
@@ -9275,13 +8821,6 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/compression.asm",
-          "line": 58683,
-          "text": "; dequant_q8_0_avx2(const void* src, float* dst, uint64_t nblocks)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/ggml_masm/quantization.asm",
           "line": 58683,
           "text": "; dequant_q8_0_avx2(const void* src, float* dst, uint64_t nblocks)",
@@ -9297,6 +8836,13 @@
         },
         {
           "path": "/workspace/src/ggml_masm/ggml_backend.asm",
+          "line": 58683,
+          "text": "; dequant_q8_0_avx2(const void* src, float* dst, uint64_t nblocks)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/ggml_masm/compression.asm",
           "line": 58683,
           "text": "; dequant_q8_0_avx2(const void* src, float* dst, uint64_t nblocks)",
           "stublike_path": false,
@@ -9334,8 +8880,8 @@
       "all_definition_candidates_count": 88,
       "all_search_hits_count": 350,
       "reference_lines": [
-        339,
-        367
+        334,
+        362
       ]
     },
     {
@@ -9366,8 +8912,8 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 263,
       "reference_lines": [
-        338,
-        368
+        333,
+        363
       ]
     },
     {
@@ -9420,7 +8966,7 @@
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 626,
       "reference_lines": [
-        8
+        46
       ]
     },
     {
@@ -9459,7 +9005,7 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 615,
       "reference_lines": [
-        285
+        280
       ]
     },
     {
@@ -9490,7 +9036,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 268,
       "reference_lines": [
-        332
+        327
       ]
     },
     {
@@ -9521,7 +9067,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 268,
       "reference_lines": [
-        331
+        326
       ]
     },
     {
@@ -9544,7 +9090,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 611,
       "reference_lines": [
-        568
+        561
       ]
     },
     {
@@ -9567,7 +9113,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 611,
       "reference_lines": [
-        567
+        560
       ]
     },
     {
@@ -9598,7 +9144,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1133,
       "reference_lines": [
-        569
+        562
       ]
     },
     {
@@ -9636,8 +9182,8 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 263,
       "reference_lines": [
-        352,
-        359
+        347,
+        354
       ]
     },
     {
@@ -9673,14 +9219,14 @@
       ],
       "definition_candidates_unwired": [
         {
-          "path": "/workspace/src/ai/digestion_scanner.asm",
+          "path": "/workspace/src/ggml_masm/attention.asm",
           "line": 58521,
           "text": "; native_nt_memcpy(void* dst, const void* src, size_t bytes)",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/attention.asm",
+          "path": "/workspace/src/ai/digestion_scanner.asm",
           "line": 58521,
           "text": "; native_nt_memcpy(void* dst, const void* src, size_t bytes)",
           "stublike_path": false,
@@ -9708,13 +9254,6 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
-          "line": 58521,
-          "text": "; native_nt_memcpy(void* dst, const void* src, size_t bytes)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/ggml_masm/ggml_backend.asm",
           "line": 58521,
           "text": "; native_nt_memcpy(void* dst, const void* src, size_t bytes)",
@@ -9722,7 +9261,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/net/net.asm",
+          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
           "line": 58521,
           "text": "; native_nt_memcpy(void* dst, const void* src, size_t bytes)",
           "stublike_path": false,
@@ -9730,6 +9269,13 @@
         },
         {
           "path": "/workspace/src/digestion/digestion_asm_x64.asm",
+          "line": 58521,
+          "text": "; native_nt_memcpy(void* dst, const void* src, size_t bytes)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
           "line": 58521,
           "text": "; native_nt_memcpy(void* dst, const void* src, size_t bytes)",
           "stublike_path": false,
@@ -9746,8 +9292,8 @@
       "all_definition_candidates_count": 89,
       "all_search_hits_count": 263,
       "reference_lines": [
-        343,
-        360
+        338,
+        355
       ]
     },
     {
@@ -9797,21 +9343,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/compression.asm",
-          "line": 57869,
-          "text": "; native_rmsnorm_avx2(const float* x, const float* weight, float* y,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/ggml_masm/quantization.asm",
-          "line": 57869,
-          "text": "; native_rmsnorm_avx2(const float* x, const float* weight, float* y,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
           "line": 57869,
           "text": "; native_rmsnorm_avx2(const float* x, const float* weight, float* y,",
           "stublike_path": false,
@@ -9825,14 +9357,21 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
+          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
           "line": 57869,
           "text": "; native_rmsnorm_avx2(const float* x, const float* weight, float* y,",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "path": "/workspace/src/ggml_masm/compression.asm",
+          "line": 57869,
+          "text": "; native_rmsnorm_avx2(const float* x, const float* weight, float* y,",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
           "line": 57869,
           "text": "; native_rmsnorm_avx2(const float* x, const float* weight, float* y,",
           "stublike_path": false,
@@ -9846,7 +9385,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
+          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "line": 57869,
+          "text": "; native_rmsnorm_avx2(const float* x, const float* weight, float* y,",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/net/net.asm",
           "line": 57869,
           "text": "; native_rmsnorm_avx2(const float* x, const float* weight, float* y,",
           "stublike_path": false,
@@ -9856,8 +9402,8 @@
       "all_definition_candidates_count": 89,
       "all_search_hits_count": 263,
       "reference_lines": [
-        340,
-        363
+        335,
+        358
       ]
     },
     {
@@ -9914,6 +9460,27 @@
           "removed_by_non_msvc_block": false
         },
         {
+          "path": "/workspace/src/ggml_masm/compression.asm",
+          "line": 57989,
+          "text": "; native_rmsnorm_avx512(const float* x, const float* weight, float* y,",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "line": 57989,
+          "text": "; native_rmsnorm_avx512(const float* x, const float* weight, float* y,",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
+          "line": 57989,
+          "text": "; native_rmsnorm_avx512(const float* x, const float* weight, float* y,",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
           "path": "/workspace/src/ggml_masm/tensor_ops.asm",
           "line": 57989,
           "text": "; native_rmsnorm_avx512(const float* x, const float* weight, float* y,",
@@ -9928,28 +9495,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
-          "line": 57989,
-          "text": "; native_rmsnorm_avx512(const float* x, const float* weight, float* y,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/compression.asm",
-          "line": 57989,
-          "text": "; native_rmsnorm_avx512(const float* x, const float* weight, float* y,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/digestion/digestion_asm_x64.asm",
-          "line": 57989,
-          "text": "; native_rmsnorm_avx512(const float* x, const float* weight, float* y,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
           "line": 57989,
           "text": "; native_rmsnorm_avx512(const float* x, const float* weight, float* y,",
           "stublike_path": false,
@@ -9966,9 +9512,9 @@
       "all_definition_candidates_count": 89,
       "all_search_hits_count": 263,
       "reference_lines": [
-        346,
-        348,
-        365
+        341,
+        343,
+        360
       ]
     },
     {
@@ -10018,14 +9564,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/compression.asm",
+          "path": "/workspace/src/ggml_masm/quantization.asm",
           "line": 58434,
           "text": "; native_rope_avx2(float* q, float* k, int headDim, int nHeads,",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/quantization.asm",
+          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
           "line": 58434,
           "text": "; native_rope_avx2(float* q, float* k, int headDim, int nHeads,",
           "stublike_path": false,
@@ -10046,14 +9592,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
-          "line": 58434,
-          "text": "; native_rope_avx2(float* q, float* k, int headDim, int nHeads,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "path": "/workspace/src/ggml_masm/compression.asm",
           "line": 58434,
           "text": "; native_rope_avx2(float* q, float* k, int headDim, int nHeads,",
           "stublike_path": false,
@@ -10072,13 +9611,20 @@
           "text": "; native_rope_avx2(float* q, float* k, int headDim, int nHeads,",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "line": 58434,
+          "text": "; native_rope_avx2(float* q, float* k, int headDim, int nHeads,",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
         }
       ],
       "all_definition_candidates_count": 89,
       "all_search_hits_count": 263,
       "reference_lines": [
-        342,
-        361
+        337,
+        356
       ]
     },
     {
@@ -10128,35 +9674,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/compression.asm",
-          "line": 58107,
-          "text": "; native_softmax_avx2(float* x, int n)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/ggml_masm/quantization.asm",
-          "line": 58107,
-          "text": "; native_softmax_avx2(float* x, int n)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
-          "line": 58107,
-          "text": "; native_softmax_avx2(float* x, int n)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
-          "line": 58107,
-          "text": "; native_softmax_avx2(float* x, int n)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
           "line": 58107,
           "text": "; native_softmax_avx2(float* x, int n)",
           "stublike_path": false,
@@ -10170,6 +9688,27 @@
           "removed_by_non_msvc_block": false
         },
         {
+          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
+          "line": 58107,
+          "text": "; native_softmax_avx2(float* x, int n)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
+          "line": 58107,
+          "text": "; native_softmax_avx2(float* x, int n)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/ggml_masm/compression.asm",
+          "line": 58107,
+          "text": "; native_softmax_avx2(float* x, int n)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
           "path": "/workspace/src/digestion/digestion_asm_x64.asm",
           "line": 58107,
           "text": "; native_softmax_avx2(float* x, int n)",
@@ -10177,7 +9716,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
+          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "line": 58107,
+          "text": "; native_softmax_avx2(float* x, int n)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/net/net.asm",
           "line": 58107,
           "text": "; native_softmax_avx2(float* x, int n)",
           "stublike_path": false,
@@ -10187,8 +9733,8 @@
       "all_definition_candidates_count": 89,
       "all_search_hits_count": 263,
       "reference_lines": [
-        341,
-        362
+        336,
+        357
       ]
     },
     {
@@ -10238,42 +9784,14 @@
           "removed_by_non_msvc_block": false
         },
         {
+          "path": "/workspace/src/net/net.asm",
+          "line": 58222,
+          "text": "; native_softmax_avx512(float* x, int n)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
           "path": "/workspace/src/ggml_masm/quantization.asm",
-          "line": 58222,
-          "text": "; native_softmax_avx512(float* x, int n)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
-          "line": 58222,
-          "text": "; native_softmax_avx512(float* x, int n)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
-          "line": 58222,
-          "text": "; native_softmax_avx512(float* x, int n)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
-          "line": 58222,
-          "text": "; native_softmax_avx512(float* x, int n)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/compression.asm",
-          "line": 58222,
-          "text": "; native_softmax_avx512(float* x, int n)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
           "line": 58222,
           "text": "; native_softmax_avx512(float* x, int n)",
           "stublike_path": false,
@@ -10287,7 +9805,35 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/net/net.asm",
+          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
+          "line": 58222,
+          "text": "; native_softmax_avx512(float* x, int n)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
+          "line": 58222,
+          "text": "; native_softmax_avx512(float* x, int n)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
+          "line": 58222,
+          "text": "; native_softmax_avx512(float* x, int n)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/ggml_masm/compression.asm",
+          "line": 58222,
+          "text": "; native_softmax_avx512(float* x, int n)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
           "line": 58222,
           "text": "; native_softmax_avx512(float* x, int n)",
           "stublike_path": false,
@@ -10297,9 +9843,9 @@
       "all_definition_candidates_count": 89,
       "all_search_hits_count": 263,
       "reference_lines": [
-        347,
-        349,
-        364
+        342,
+        344,
+        359
       ]
     },
     {
@@ -10349,20 +9895,6 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/quantization.asm",
-          "line": 58322,
-          "text": "; native_vdot_avx2(const float* a, const float* b, int n, float* result)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
-          "line": 58322,
-          "text": "; native_vdot_avx2(const float* a, const float* b, int n, float* result)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/ggml_masm/compression.asm",
           "line": 58322,
           "text": "; native_vdot_avx2(const float* a, const float* b, int n, float* result)",
@@ -10370,7 +9902,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
+          "path": "/workspace/src/ggml_masm/quantization.asm",
           "line": 58322,
           "text": "; native_vdot_avx2(const float* a, const float* b, int n, float* result)",
           "stublike_path": false,
@@ -10384,7 +9916,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
+          "line": 58322,
+          "text": "; native_vdot_avx2(const float* a, const float* b, int n, float* result)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
           "line": 58322,
           "text": "; native_vdot_avx2(const float* a, const float* b, int n, float* result)",
           "stublike_path": false,
@@ -10398,7 +9937,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
+          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "line": 58322,
+          "text": "; native_vdot_avx2(const float* a, const float* b, int n, float* result)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/net/net.asm",
           "line": 58322,
           "text": "; native_vdot_avx2(const float* a, const float* b, int n, float* result)",
           "stublike_path": false,
@@ -10408,7 +9954,7 @@
       "all_definition_candidates_count": 89,
       "all_search_hits_count": 263,
       "reference_lines": [
-        333
+        328
       ]
     },
     {
@@ -10458,28 +10004,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/quantization.asm",
-          "line": 58377,
-          "text": "; native_vdot_avx512(const float* a, const float* b, int n, float* result)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
-          "line": 58377,
-          "text": "; native_vdot_avx512(const float* a, const float* b, int n, float* result)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
-          "line": 58377,
-          "text": "; native_vdot_avx512(const float* a, const float* b, int n, float* result)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/ggml_masm/compression.asm",
+          "line": 58377,
+          "text": "; native_vdot_avx512(const float* a, const float* b, int n, float* result)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/ggml_masm/quantization.asm",
           "line": 58377,
           "text": "; native_vdot_avx512(const float* a, const float* b, int n, float* result)",
           "stublike_path": false,
@@ -10493,7 +10025,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
+          "line": 58377,
+          "text": "; native_vdot_avx512(const float* a, const float* b, int n, float* result)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
           "line": 58377,
           "text": "; native_vdot_avx512(const float* a, const float* b, int n, float* result)",
           "stublike_path": false,
@@ -10501,6 +10040,13 @@
         },
         {
           "path": "/workspace/src/digestion/digestion_asm_x64.asm",
+          "line": 58377,
+          "text": "; native_vdot_avx512(const float* a, const float* b, int n, float* result)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/win32app/mcp_hooks.asm",
           "line": 58377,
           "text": "; native_vdot_avx512(const float* a, const float* b, int n, float* result)",
           "stublike_path": false,
@@ -10517,7 +10063,7 @@
       "all_definition_candidates_count": 89,
       "all_search_hits_count": 263,
       "reference_lines": [
-        334
+        329
       ]
     },
     {
@@ -10574,7 +10120,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
+          "line": 58785,
+          "text": "; qgemv_q4_0_avx2(const void* A, const float* x, float* y, int M, int K)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
           "line": 58785,
           "text": "; qgemv_q4_0_avx2(const void* A, const float* x, float* y, int M, int K)",
           "stublike_path": false,
@@ -10588,7 +10141,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
+          "path": "/workspace/src/ggml_masm/compression.asm",
           "line": 58785,
           "text": "; qgemv_q4_0_avx2(const void* A, const float* x, float* y, int M, int K)",
           "stublike_path": false,
@@ -10602,7 +10155,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/compression.asm",
+          "path": "/workspace/src/win32app/mcp_hooks.asm",
           "line": 58785,
           "text": "; qgemv_q4_0_avx2(const void* A, const float* x, float* y, int M, int K)",
           "stublike_path": false,
@@ -10614,19 +10167,12 @@
           "text": "; qgemv_q4_0_avx2(const void* A, const float* x, float* y, int M, int K)",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/net/net.asm",
-          "line": 58785,
-          "text": "; qgemv_q4_0_avx2(const void* A, const float* x, float* y, int M, int K)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
         }
       ],
       "all_definition_candidates_count": 89,
       "all_search_hits_count": 263,
       "reference_lines": [
-        354
+        349
       ]
     },
     {
@@ -10676,13 +10222,6 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/compression.asm",
-          "line": 58914,
-          "text": "; qgemv_q8_0_avx2(const void* A, const float* x, float* y, int M, int K)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/ggml_masm/quantization.asm",
           "line": 58914,
           "text": "; qgemv_q8_0_avx2(const void* A, const float* x, float* y, int M, int K)",
@@ -10690,7 +10229,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
+          "path": "/workspace/src/win32app/mcp_hooks.asm",
           "line": 58914,
           "text": "; qgemv_q8_0_avx2(const void* A, const float* x, float* y, int M, int K)",
           "stublike_path": false,
@@ -10711,14 +10250,21 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
           "line": 58914,
           "text": "; qgemv_q8_0_avx2(const void* A, const float* x, float* y, int M, int K)",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
+          "path": "/workspace/src/ggml_masm/compression.asm",
+          "line": 58914,
+          "text": "; qgemv_q8_0_avx2(const void* A, const float* x, float* y, int M, int K)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/net/net.asm",
           "line": 58914,
           "text": "; qgemv_q8_0_avx2(const void* A, const float* x, float* y, int M, int K)",
           "stublike_path": false,
@@ -10735,7 +10281,7 @@
       "all_definition_candidates_count": 89,
       "all_search_hits_count": 263,
       "reference_lines": [
-        353
+        348
       ]
     },
     {
@@ -10762,6 +10308,13 @@
       ],
       "definition_candidates_wired": [
         {
+          "path": "/workspace/src/win32app/main_win32.cpp",
+          "line": 1089,
+          "text": "rawrxd_agentic_deep_think_loop(prompt);",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
           "path": "/workspace/src/core/feature_handlers.cpp",
           "line": 1956,
           "text": "#pragma comment(linker, \"/alternatename:rawrxd_agentic_deep_think_loop=rawrxd_agentic_deep_think_loop_fallback\")",
@@ -10772,13 +10325,6 @@
           "path": "/workspace/src/core/feature_handlers.cpp",
           "line": 1995,
           "text": "rawrxd_agentic_deep_think_loop(initial_prompt);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/win32app/main_win32.cpp",
-          "line": 1089,
-          "text": "rawrxd_agentic_deep_think_loop(prompt);",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         }
@@ -10795,9 +10341,9 @@
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 12,
       "reference_lines": [
-        5,
-        6,
-        527
+        43,
+        44,
+        520
       ]
     },
     {
@@ -10878,10 +10424,10 @@
       "all_definition_candidates_count": 7,
       "all_search_hits_count": 13,
       "reference_lines": [
-        15,
-        26,
-        27,
-        34
+        53,
+        64,
+        65,
+        72
       ]
     },
     {
@@ -10941,8 +10487,8 @@
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 12,
       "reference_lines": [
-        4,
-        526
+        42,
+        519
       ]
     },
     {
@@ -10980,10 +10526,10 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 6,
       "reference_lines": [
-        18,
-        23,
-        25,
-        28
+        56,
+        61,
+        63,
+        66
       ]
     },
     {
@@ -11021,8 +10567,8 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 350,
       "reference_lines": [
-        350,
-        355
+        345,
+        350
       ]
     },
     {
@@ -11060,8 +10606,8 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 350,
       "reference_lines": [
-        344,
-        357
+        339,
+        352
       ]
     },
     {
@@ -11099,8 +10645,8 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 350,
       "reference_lines": [
-        351,
-        356
+        346,
+        351
       ]
     },
     {
@@ -11138,8 +10684,8 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 350,
       "reference_lines": [
-        345,
-        358
+        340,
+        353
       ]
     },
     {
@@ -11248,8 +10794,8 @@
       "all_definition_candidates_count": 89,
       "all_search_hits_count": 525,
       "reference_lines": [
-        555,
-        558
+        548,
+        551
       ]
     },
     {
@@ -11292,14 +10838,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/quantization.asm",
-          "line": 150728,
-          "text": "; uint32_t swarm_compute_layer_crc32(",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
+          "path": "/workspace/src/ggml_masm/compression.asm",
           "line": 150728,
           "text": "; uint32_t swarm_compute_layer_crc32(",
           "stublike_path": false,
@@ -11313,6 +10852,13 @@
           "removed_by_non_msvc_block": false
         },
         {
+          "path": "/workspace/src/ggml_masm/quantization.asm",
+          "line": 150728,
+          "text": "; uint32_t swarm_compute_layer_crc32(",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
           "path": "/workspace/src/ggml_masm/ggml_backend.asm",
           "line": 150728,
           "text": "; uint32_t swarm_compute_layer_crc32(",
@@ -11320,14 +10866,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
-          "line": 150728,
-          "text": "; uint32_t swarm_compute_layer_crc32(",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/compression.asm",
+          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
           "line": 150728,
           "text": "; uint32_t swarm_compute_layer_crc32(",
           "stublike_path": false,
@@ -11335,6 +10874,13 @@
         },
         {
           "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "line": 150728,
+          "text": "; uint32_t swarm_compute_layer_crc32(",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
           "line": 150728,
           "text": "; uint32_t swarm_compute_layer_crc32(",
           "stublike_path": false,
@@ -11351,7 +10897,7 @@
       "all_definition_candidates_count": 88,
       "all_search_hits_count": 611,
       "reference_lines": [
-        557
+        550
       ]
     },
     {
@@ -11408,7 +10954,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
+          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
           "line": 150646,
           "text": "; int swarm_receive_header(",
           "stublike_path": false,
@@ -11422,7 +10968,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
+          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
           "line": 150646,
           "text": "; int swarm_receive_header(",
           "stublike_path": false,
@@ -11443,7 +10989,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/net/net.asm",
+          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
           "line": 150646,
           "text": "; int swarm_receive_header(",
           "stublike_path": false,
@@ -11453,7 +10999,7 @@
       "all_definition_candidates_count": 88,
       "all_search_hits_count": 524,
       "reference_lines": [
-        556
+        549
       ]
     }
   ]
