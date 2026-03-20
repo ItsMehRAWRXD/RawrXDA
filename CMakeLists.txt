@@ -1233,7 +1233,7 @@ list(APPEND GOLD_UNDERSCORE_SOURCES
     src/core/rawr_engine_link_shims.cpp
     src/core/auto_feature_stub_impl.cpp
     src/core/ignite_800b.cpp
-    src/core/missing_handler_stubs.cpp
+    src/core/ssot_handlers.cpp
 )
 add_executable(RawrXD_Gold ${GOLD_UNDERSCORE_SOURCES} ${ASM_KERNEL_SOURCES})
 
@@ -1316,7 +1316,6 @@ target_sources(RawrXD_Gold PRIVATE
     src/core/ConfigurationValidator.cpp
     src/inference/PerformanceMonitor.cpp
     src/agentic/ErrorRecoveryManager.cpp
-    src/core/missing_handler_stubs.cpp
 )
 
 # Vulkan SDK for Gold build — linked later after find_package(Vulkan)
