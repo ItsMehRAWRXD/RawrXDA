@@ -117,22 +117,22 @@ extern "C" void asm_neural_extract_csp(void) { noteModeCall("asm_neural_extract_
 extern "C" void asm_neural_shutdown(void) { noteModeCall("asm_neural_shutdown"); }
 extern "C" void asm_neural_get_stats(void) { noteModeCall("asm_neural_get_stats"); }
 
-extern "C" void asm_hwsynth_est_resources(void) {}
-extern "C" void asm_hwsynth_predict_perf(void) {}
-extern "C" void asm_hwsynth_get_stats(void) {}
-extern "C" void asm_hwsynth_gen_gemm_spec(void) {}
-extern "C" void asm_hwsynth_gen_jtag_header(void) {}
-extern "C" void asm_hwsynth_analyze_memhier(void) {}
-extern "C" void asm_hwsynth_profile_dataflow(void) {}
-extern "C" void asm_hwsynth_shutdown(void) {}
-extern "C" void asm_hwsynth_init(void) {}
+extern "C" void asm_hwsynth_est_resources(void) { noteModeCall("asm_hwsynth_est_resources"); }
+extern "C" void asm_hwsynth_predict_perf(void) { noteModeCall("asm_hwsynth_predict_perf"); }
+extern "C" void asm_hwsynth_get_stats(void) { noteModeCall("asm_hwsynth_get_stats"); }
+extern "C" void asm_hwsynth_gen_gemm_spec(void) { noteModeCall("asm_hwsynth_gen_gemm_spec"); }
+extern "C" void asm_hwsynth_gen_jtag_header(void) { noteModeCall("asm_hwsynth_gen_jtag_header"); }
+extern "C" void asm_hwsynth_analyze_memhier(void) { noteModeCall("asm_hwsynth_analyze_memhier"); }
+extern "C" void asm_hwsynth_profile_dataflow(void) { noteModeCall("asm_hwsynth_profile_dataflow"); }
+extern "C" void asm_hwsynth_shutdown(void) { noteModeCall("asm_hwsynth_shutdown"); }
+extern "C" void asm_hwsynth_init(void) { noteModeCall("asm_hwsynth_init"); }
 
-extern "C" void asm_quadbuf_push_token(void) {}
-extern "C" void asm_spengine_init(void) {}
-extern "C" void asm_spengine_quant_switch_adaptive(void) {}
-extern "C" void asm_quadbuf_render_frame(void) {}
-extern "C" void asm_spengine_rollback(void) {}
-extern "C" void asm_spengine_register(void) {}
+extern "C" void asm_quadbuf_push_token(void) { noteModeCall("asm_quadbuf_push_token"); }
+extern "C" void asm_spengine_init(void) { noteModeCall("asm_spengine_init"); }
+extern "C" void asm_spengine_quant_switch_adaptive(void) { noteModeCall("asm_spengine_quant_switch_adaptive"); }
+extern "C" void asm_quadbuf_render_frame(void) { noteModeCall("asm_quadbuf_render_frame"); }
+extern "C" void asm_spengine_rollback(void) { noteModeCall("asm_spengine_rollback"); }
+extern "C" void asm_spengine_register(void) { noteModeCall("asm_spengine_register"); }
 extern "C" void asm_spengine_get_stats(void) {}
 extern "C" void asm_quadbuf_set_flags(void) {}
 extern "C" void asm_quadbuf_resize(void) {}
