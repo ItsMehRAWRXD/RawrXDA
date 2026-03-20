@@ -160,12 +160,24 @@ struct LspBridgeShimState {
 struct GgufLoaderShimState {
     bool initialized = false;
     uint32_t initCrc = 0;
+    int configuredGpu = -1;
+    uint32_t lastLookupCrc = 0;
+    uint64_t lookupCount = 0;
 };
 
 struct QuadbufShimState {
     uint32_t flags = 0;
     uint32_t maxTokens = 4096;
+    uint64_t renderedFrames = 0;
     std::vector<uint32_t> tokenStream{};
+};
+
+struct SpengineShimState {
+    bool initialized = false;
+    bool adaptiveMode = false;
+    int quantLevel = 0;
+    uint64_t rollbackCount = 0;
+    std::unordered_map<std::string, uint32_t> modules{};
 };
 
 constexpr int kPerfSlotCount = 64;
@@ -177,6 +189,7 @@ static std::atomic<int> g_watchdogStatus{0};
 static LspBridgeShimState g_lspBridgeState{};
 static GgufLoaderShimState g_ggufLoaderState{};
 static QuadbufShimState g_quadbufState{};
+static SpengineShimState g_spengineState{};
 
 static int closeFileHandle(intptr_t handle) {
     if (handle <= 0) {
@@ -1332,25 +1345,157 @@ int asm_quadbuf_push_token(const void* tokenData, uint32_t tokenType) {
     g_quadbufState.tokenStream.push_back(token);
     return static_cast<int>(g_quadbufState.tokenStream.size());
 }
-int asm_spengine_init(const void*) { return 0; }
-int asm_spengine_quant_switch_adaptive(int) { return 0; }
-int asm_lsp_bridge_init(const void*) { return 0; }
+int asm_spengine_init(const void* initConfig) {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_spengineState = {};
+    if (!initConfig) {
+        return -1;
+    }
+    g_spengineState.initialized = true;
+    g_spengineState.quantLevel = 4;
+    return 0;
+}
+int asm_spengine_quant_switch_adaptive(int targetLevel) {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_spengineState.initialized) {
+        return -1;
+    }
+    if (targetLevel < 0) {
+        targetLevel = 0;
+    }
+    if (targetLevel > 8) {
+        targetLevel = 8;
+    }
+    g_spengineState.adaptiveMode = true;
+    g_spengineState.quantLevel = targetLevel;
+    return g_spengineState.quantLevel;
+}
+int asm_lsp_bridge_init(const void* initConfig) {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_lspBridgeState.initialized = true;
+    g_lspBridgeState.weightBytes = 0;
+    g_lspBridgeState.weightCrc = initConfig ? crc32Bytes(static_cast<const uint8_t*>(initConfig), 64) : 0;
+    return 0;
+}
 
 // Batch 14: MASM bridges continued
-int asm_quadbuf_render_frame(const void*) { return 0; }
-int asm_quadbuf_shutdown() { return 0; }
-int asm_gguf_loader_lookup(const char*) { return 0; }
-int asm_spengine_rollback() { return 0; }
-int asm_lsp_bridge_shutdown() { return 0; }
-int asm_spengine_register(const char*, const void*) { return 0; }
-int asm_spengine_get_stats(void*) { return 0; }
+int asm_quadbuf_render_frame(const void* frameCtx) {
+    (void)frameCtx;
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (g_quadbufState.tokenStream.empty()) {
+        return 0;
+    }
+    g_quadbufState.renderedFrames += 1;
+    g_soState.metrics.bytes_streamed += static_cast<uint64_t>(g_quadbufState.tokenStream.size() * sizeof(uint32_t));
+    return static_cast<int>(g_quadbufState.tokenStream.size());
+}
+int asm_quadbuf_shutdown() {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_quadbufState = {};
+    return 0;
+}
+int asm_gguf_loader_lookup(const char* symbolName) {
+    if (!symbolName || symbolName[0] == '\0') {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_ggufLoaderState.initialized) {
+        return -1;
+    }
+    const size_t symbolLen = std::strlen(symbolName);
+    g_ggufLoaderState.lastLookupCrc = crc32Bytes(reinterpret_cast<const uint8_t*>(symbolName), symbolLen);
+    g_ggufLoaderState.lookupCount += 1;
+    return static_cast<int>(g_ggufLoaderState.lastLookupCrc & 0x7FFFFFFFu);
+}
+int asm_spengine_rollback() {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_spengineState.initialized) {
+        return -1;
+    }
+    g_spengineState.rollbackCount += 1;
+    g_spengineState.adaptiveMode = false;
+    g_spengineState.quantLevel = 4;
+    return static_cast<int>(g_spengineState.rollbackCount);
+}
+int asm_lsp_bridge_shutdown() {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_lspBridgeState = {};
+    return 0;
+}
+int asm_spengine_register(const char* moduleName, const void* moduleHandle) {
+    if (!moduleName || moduleName[0] == '\0' || !moduleHandle) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_spengineState.initialized) {
+        return -1;
+    }
+    const uint32_t moduleCrc = crc32Bytes(static_cast<const uint8_t*>(moduleHandle), 32);
+    g_spengineState.modules[moduleName] = moduleCrc;
+    return static_cast<int>(g_spengineState.modules.size());
+}
+int asm_spengine_get_stats(void* outStats) {
+    if (!outStats) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    auto* out = static_cast<uint64_t*>(outStats);
+    out[0] = g_spengineState.initialized ? 1 : 0;
+    out[1] = g_spengineState.adaptiveMode ? 1 : 0;
+    out[2] = static_cast<uint64_t>(g_spengineState.quantLevel);
+    out[3] = g_spengineState.rollbackCount;
+    out[4] = static_cast<uint64_t>(g_spengineState.modules.size());
+    return 0;
+}
 
 // Batch 15: loader/quadbuf stats
-int asm_gguf_loader_get_info(const void*, void*) { return 0; }
-int asm_quadbuf_set_flags(uint32_t) { return 0; }
-int asm_quadbuf_resize(uint32_t) { return 0; }
-int asm_gguf_loader_configure_gpu(int) { return 0; }
-int asm_gguf_loader_close() { return 0; }
+int asm_gguf_loader_get_info(const void* query, void* outInfo) {
+    (void)query;
+    if (!outInfo) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    auto* out = static_cast<uint64_t*>(outInfo);
+    out[0] = g_ggufLoaderState.initialized ? 1 : 0;
+    out[1] = static_cast<uint64_t>(g_ggufLoaderState.initCrc);
+    out[2] = static_cast<uint64_t>(g_ggufLoaderState.configuredGpu);
+    out[3] = g_ggufLoaderState.lookupCount;
+    out[4] = static_cast<uint64_t>(g_ggufLoaderState.lastLookupCrc);
+    return 0;
+}
+int asm_quadbuf_set_flags(uint32_t flags) {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_quadbufState.flags = flags;
+    return 0;
+}
+int asm_quadbuf_resize(uint32_t capacity) {
+    if (capacity == 0) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_quadbufState.maxTokens = capacity;
+    if (g_quadbufState.tokenStream.size() > capacity) {
+        const size_t excess = g_quadbufState.tokenStream.size() - capacity;
+        g_quadbufState.tokenStream.erase(g_quadbufState.tokenStream.begin(), g_quadbufState.tokenStream.begin() + excess);
+    }
+    return static_cast<int>(g_quadbufState.maxTokens);
+}
+int asm_gguf_loader_configure_gpu(int gpuOrdinal) {
+    if (gpuOrdinal < 0) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_ggufLoaderState.initialized) {
+        return -1;
+    }
+    g_ggufLoaderState.configuredGpu = gpuOrdinal;
+    return 0;
+}
+int asm_gguf_loader_close() {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_ggufLoaderState = {};
+    return 0;
+}
 int asm_spengine_shutdown() { return 0; }
 int asm_lsp_bridge_get_stats(void*) { return 0; }
 
