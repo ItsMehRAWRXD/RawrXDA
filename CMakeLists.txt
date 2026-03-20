@@ -1222,19 +1222,30 @@ endif()
 # =============================================================================
 set(GOLD_UNDERSCORE_SOURCES ${SOURCES})
 list(REMOVE_ITEM GOLD_UNDERSCORE_SOURCES
-    src/core/auto_feature_registry.cpp
     src/core/ssot_handlers.cpp
     src/core/ssot_handlers_ext_runtime_minimal.cpp
-    src/core/ssot_handlers_ext_isolated.cpp
     src/core/rawrengine_command_handlers.cpp
     src/core/ssot_validation.cpp
 )
 list(APPEND GOLD_UNDERSCORE_SOURCES
     src/core/rawr_engine_link_shims.cpp
-    src/core/auto_feature_stub_impl.cpp
     src/core/ignite_800b.cpp
+    # Keep production providers explicitly wired in Gold lane.
+    src/core/auto_feature_registry.cpp
+    src/core/ssot_handlers_ext_isolated.cpp
+    src/agent/agentic_deep_thinking_engine.cpp
+    src/agent/quantum_autonomous_todo_system.cpp
+    src/agent/quantum_multi_model_agent_cycling.cpp
+    src/agent/quantum_dynamic_time_manager.cpp
+    src/agent/quantum_dynamic_time_manager_impl.cpp
+    src/agent/quantum_missing_impl.cpp
+)
+# Enforce production lane: do not backslide to command-handler stub providers.
+list(REMOVE_ITEM GOLD_UNDERSCORE_SOURCES
+    src/core/auto_feature_stub_impl.cpp
     src/core/missing_handler_stubs.cpp
 )
+list(REMOVE_DUPLICATES GOLD_UNDERSCORE_SOURCES)
 add_executable(RawrXD_Gold ${GOLD_UNDERSCORE_SOURCES} ${ASM_KERNEL_SOURCES})
 
 if(WIN32)
@@ -1306,7 +1317,7 @@ if(WIN32)
     endif()
 endif()
 
-# Gold-only sources: modules used by missing_handler_stubs but not in main SOURCES
+# Gold-only sources: modules used by real handler registry in Gold lane
 target_sources(RawrXD_Gold PRIVATE
     src/core/native_debugger_engine.cpp
     src/core/native_debugger_symbols.cpp
@@ -1316,7 +1327,6 @@ target_sources(RawrXD_Gold PRIVATE
     src/core/ConfigurationValidator.cpp
     src/inference/PerformanceMonitor.cpp
     src/agentic/ErrorRecoveryManager.cpp
-    src/core/missing_handler_stubs.cpp
 )
 
 # Vulkan SDK for Gold build — linked later after find_package(Vulkan)
