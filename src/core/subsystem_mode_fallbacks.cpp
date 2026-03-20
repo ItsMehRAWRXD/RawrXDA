@@ -51,23 +51,23 @@ extern "C" void UACBypassMode(void) { noteModeCall("UACBypassMode"); }
 extern "C" void AVScanMode(void) { noteModeCall("AVScanMode"); }
 
 extern "C" void asm_watchdog_init(void) { noteModeCall("asm_watchdog_init"); }
-extern "C" void asm_watchdog_verify(void) {}
-extern "C" void asm_watchdog_get_status(void) {}
-extern "C" void asm_watchdog_get_baseline(void) {}
-extern "C" void asm_watchdog_shutdown(void) {}
+extern "C" void asm_watchdog_verify(void) { noteModeCall("asm_watchdog_verify"); }
+extern "C" void asm_watchdog_get_status(void) { noteModeCall("asm_watchdog_get_status"); }
+extern "C" void asm_watchdog_get_baseline(void) { noteModeCall("asm_watchdog_get_baseline"); }
+extern "C" void asm_watchdog_shutdown(void) { noteModeCall("asm_watchdog_shutdown"); }
 
-extern "C" void asm_omega_implement_generate(void) {}
-extern "C" void asm_omega_agent_step(void) {}
-extern "C" void asm_omega_shutdown(void) {}
-extern "C" void asm_omega_plan_decompose(void) {}
-extern "C" void asm_omega_evolve_improve(void) {}
-extern "C" void asm_omega_init(void) {}
-extern "C" void asm_omega_get_stats(void) {}
+extern "C" void asm_omega_implement_generate(void) { noteModeCall("asm_omega_implement_generate"); }
+extern "C" void asm_omega_agent_step(void) { noteModeCall("asm_omega_agent_step"); }
+extern "C" void asm_omega_shutdown(void) { noteModeCall("asm_omega_shutdown"); }
+extern "C" void asm_omega_plan_decompose(void) { noteModeCall("asm_omega_plan_decompose"); }
+extern "C" void asm_omega_evolve_improve(void) { noteModeCall("asm_omega_evolve_improve"); }
+extern "C" void asm_omega_init(void) { noteModeCall("asm_omega_init"); }
+extern "C" void asm_omega_get_stats(void) { noteModeCall("asm_omega_get_stats"); }
 
-extern "C" void asm_omega_verify_test(void) {}
-extern "C" void asm_omega_architect_select(void) {}
-extern "C" void asm_omega_agent_spawn(void) {}
-extern "C" void asm_omega_observe_monitor(void) {}
+extern "C" void asm_omega_verify_test(void) { noteModeCall("asm_omega_verify_test"); }
+extern "C" void asm_omega_architect_select(void) { noteModeCall("asm_omega_architect_select"); }
+extern "C" void asm_omega_agent_spawn(void) { noteModeCall("asm_omega_agent_spawn"); }
+extern "C" void asm_omega_observe_monitor(void) { noteModeCall("asm_omega_observe_monitor"); }
 extern "C" void asm_omega_deploy_distribute(void) {}
 extern "C" void asm_omega_execute_pipeline(void) {}
 extern "C" void asm_omega_ingest_requirement(void) {}
