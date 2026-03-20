@@ -231,7 +231,26 @@ struct SpeciatorShimState {
     uint64_t mutations = 0;
     uint64_t crossovers = 0;
     uint64_t evaluations = 0;
+    uint64_t selections = 0;
+    uint64_t migrations = 0;
+    uint64_t competitions = 0;
     uint64_t lastScore = 0;
+};
+
+struct NeuralShimState {
+    bool initialized = false;
+    uint64_t classifyCalls = 0;
+    uint64_t encodeCalls = 0;
+    uint64_t adaptCalls = 0;
+    uint64_t fftCalls = 0;
+    uint64_t calibrations = 0;
+    uint64_t eventsDetected = 0;
+    uint64_t hapticPulses = 0;
+    uint64_t eegSamplesCaptured = 0;
+    uint64_t lastIntent = 0;
+    uint64_t lastCommandCrc = 0;
+    uint64_t lastEventScore = 0;
+    uint64_t sampleRateHz = 256;
 };
 
 constexpr int kPerfSlotCount = 64;
@@ -247,6 +266,7 @@ static SpengineShimState g_spengineState{};
 static HwsynthShimState g_hwsynthState{};
 static MeshShimState g_meshState{};
 static SpeciatorShimState g_speciatorState{};
+static NeuralShimState g_neuralState{};
 
 static int closeFileHandle(intptr_t handle) {
     if (handle <= 0) {
@@ -2160,25 +2180,242 @@ int asm_speciator_evaluate(const void* candidateGenome, void* outScore) {
     *static_cast<uint64_t*>(outScore) = g_speciatorState.lastScore;
     return 0;
 }
-int asm_speciator_compete(const void*, void*) { return 0; }
-int asm_speciator_migrate(const void*, void*) { return 0; }
-int asm_speciator_init(const void*) { return 0; }
-int asm_speciator_select(const void*, void*) { return 0; }
-int asm_neural_classify_intent(const void*, uint32_t, void*) { return 0; }
-int asm_neural_haptic_pulse(uint32_t, uint32_t) { return 0; }
+int asm_speciator_compete(const void* candidateSet, void* outWinnerScore) {
+    if (!candidateSet || !outWinnerScore) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(candidateSet), 128);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_speciatorState.initialized) {
+        g_speciatorState.initialized = true;
+    }
+    g_speciatorState.competitions += 1;
+    g_speciatorState.lastScore = static_cast<uint64_t>(50000u + (crc % 50000u));
+    *static_cast<uint64_t*>(outWinnerScore) = g_speciatorState.lastScore;
+    return 0;
+}
+int asm_speciator_migrate(const void* migrationBlob, void* outMigrationResult) {
+    if (!migrationBlob || !outMigrationResult) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(migrationBlob), 64);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_speciatorState.initialized) {
+        g_speciatorState.initialized = true;
+    }
+    g_speciatorState.migrations += 1;
+    const uint64_t moved = 1u + (crc % 16u);
+    g_speciatorState.speciesCount += (moved % 3u);
+    auto* out = static_cast<uint64_t*>(outMigrationResult);
+    out[0] = moved;
+    out[1] = g_speciatorState.speciesCount;
+    return 0;
+}
+int asm_speciator_init(const void* initBlob) {
+    if (!initBlob) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(initBlob), 64);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_speciatorState = {};
+    g_speciatorState.initialized = true;
+    g_speciatorState.generation = 1;
+    g_speciatorState.speciesCount = 1u + (crc % 8u);
+    g_speciatorState.lastScore = crc % 100000u;
+    return 0;
+}
+int asm_speciator_select(const void* populationBlob, void* outSelection) {
+    if (!populationBlob || !outSelection) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(populationBlob), 128);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_speciatorState.initialized) {
+        return -1;
+    }
+    g_speciatorState.selections += 1;
+    const uint64_t selectedIndex = crc % 1024u;
+    auto* out = static_cast<uint64_t*>(outSelection);
+    out[0] = selectedIndex;
+    out[1] = g_speciatorState.selections;
+    return 0;
+}
+int asm_neural_classify_intent(const void* featureBlob, uint32_t featureCount, void* outIntent) {
+    if (!featureBlob || !outIntent || featureCount == 0) {
+        return -1;
+    }
+    const size_t bytes = static_cast<size_t>(std::min<uint64_t>(static_cast<uint64_t>(featureCount), 4096u));
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(featureBlob), bytes);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_neuralState.initialized) {
+        return -1;
+    }
+    g_neuralState.classifyCalls += 1;
+    g_neuralState.lastIntent = crc % 12u;
+    *static_cast<uint32_t*>(outIntent) = static_cast<uint32_t>(g_neuralState.lastIntent);
+    return 0;
+}
+int asm_neural_haptic_pulse(uint32_t durationMs, uint32_t intensity) {
+    if (durationMs == 0 || intensity == 0) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_neuralState.initialized) {
+        return -1;
+    }
+    g_neuralState.hapticPulses += 1;
+    const uint32_t clampedIntensity = std::min<uint32_t>(intensity, 100u);
+    return static_cast<int>(durationMs * clampedIntensity);
+}
 
 // Batch 23: neural bridge continued
-int asm_neural_encode_command(const void*, uint32_t, void*) { return 0; }
-int asm_neural_acquire_eeg(void*, uint32_t) { return 0; }
-int asm_neural_adapt(const void*, void*) { return 0; }
-int asm_neural_fft_decompose(const void*, uint32_t, void*) { return 0; }
-int asm_neural_init(const void*) { return 0; }
-int asm_neural_calibrate(const void*, uint32_t) { return 0; }
-int asm_neural_detect_event(const void*, uint32_t) { return 0; }
+int asm_neural_encode_command(const void* commandBlob, uint32_t commandBytes, void* outEncoded) {
+    if (!commandBlob || !outEncoded || commandBytes == 0) {
+        return -1;
+    }
+    const size_t bytes = static_cast<size_t>(std::min<uint64_t>(commandBytes, 4096u));
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(commandBlob), bytes);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_neuralState.initialized) {
+        return -1;
+    }
+    g_neuralState.encodeCalls += 1;
+    g_neuralState.lastCommandCrc = crc;
+    auto* out = static_cast<uint8_t*>(outEncoded);
+    out[0] = static_cast<uint8_t>((crc >> 0u) & 0xFFu);
+    out[1] = static_cast<uint8_t>((crc >> 8u) & 0xFFu);
+    out[2] = static_cast<uint8_t>((crc >> 16u) & 0xFFu);
+    out[3] = static_cast<uint8_t>((crc >> 24u) & 0xFFu);
+    return 0;
+}
+int asm_neural_acquire_eeg(void* outSamples, uint32_t sampleCount) {
+    if (!outSamples || sampleCount == 0) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_neuralState.initialized) {
+        return -1;
+    }
+    float* samples = static_cast<float*>(outSamples);
+    for (uint32_t i = 0; i < sampleCount; ++i) {
+        const float t = static_cast<float>(i) / static_cast<float>(g_neuralState.sampleRateHz);
+        samples[i] = std::sin(2.0f * 3.1415926f * 10.0f * t) * 0.5f;
+    }
+    g_neuralState.eegSamplesCaptured += sampleCount;
+    return 0;
+}
+int asm_neural_adapt(const void* feedbackBlob, void* outAdaptedState) {
+    if (!feedbackBlob || !outAdaptedState) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(feedbackBlob), 64);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_neuralState.initialized) {
+        return -1;
+    }
+    g_neuralState.adaptCalls += 1;
+    g_neuralState.lastEventScore = crc % 1000u;
+    auto* out = static_cast<uint64_t*>(outAdaptedState);
+    out[0] = g_neuralState.adaptCalls;
+    out[1] = g_neuralState.lastEventScore;
+    return 0;
+}
+int asm_neural_fft_decompose(const void* signalBlob, uint32_t sampleCount, void* outSpectrum) {
+    if (!signalBlob || !outSpectrum || sampleCount == 0) {
+        return -1;
+    }
+    const float* in = static_cast<const float*>(signalBlob);
+    float* out = static_cast<float*>(outSpectrum);
+    const uint32_t bins = std::min<uint32_t>(sampleCount, 16u);
+    for (uint32_t k = 0; k < bins; ++k) {
+        float accum = 0.0f;
+        for (uint32_t n = k; n < sampleCount; n += bins) {
+            accum += std::fabs(in[n]);
+        }
+        out[k] = accum / static_cast<float>((sampleCount + bins - 1u) / bins);
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_neuralState.initialized) {
+        return -1;
+    }
+    g_neuralState.fftCalls += 1;
+    return 0;
+}
+int asm_neural_init(const void* initBlob) {
+    if (!initBlob) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(initBlob), 64);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_neuralState = {};
+    g_neuralState.initialized = true;
+    g_neuralState.sampleRateHz = 128u + (crc % 384u);
+    return 0;
+}
+int asm_neural_calibrate(const void* calibrationBlob, uint32_t sampleCount) {
+    if (!calibrationBlob || sampleCount == 0) {
+        return -1;
+    }
+    const size_t bytes = static_cast<size_t>(std::min<uint64_t>(sampleCount, 4096u));
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(calibrationBlob), bytes);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_neuralState.initialized) {
+        return -1;
+    }
+    g_neuralState.calibrations += 1;
+    g_neuralState.lastEventScore = crc % 2048u;
+    return 0;
+}
+int asm_neural_detect_event(const void* signalBlob, uint32_t sampleCount) {
+    if (!signalBlob || sampleCount == 0) {
+        return -1;
+    }
+    const size_t bytes = static_cast<size_t>(std::min<uint64_t>(sampleCount, 4096u));
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(signalBlob), bytes);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_neuralState.initialized) {
+        return -1;
+    }
+    g_neuralState.lastEventScore = crc % 4096u;
+    const bool detected = g_neuralState.lastEventScore > 2048u;
+    if (detected) {
+        g_neuralState.eventsDetected += 1;
+    }
+    return detected ? 1 : 0;
+}
 
 // Batch 24: neural final + omega orchestrator
-int asm_neural_gen_phosphene(const void*, uint32_t, void*) { return 0; }
-int asm_neural_extract_csp(const void*, uint32_t, void*) { return 0; }
+int asm_neural_gen_phosphene(const void* intentBlob, uint32_t pixelCount, void* outPixels) {
+    if (!intentBlob || !outPixels || pixelCount == 0) {
+        return -1;
+    }
+    const uint32_t seed = crc32Bytes(static_cast<const uint8_t*>(intentBlob), 64);
+    uint8_t* out = static_cast<uint8_t*>(outPixels);
+    for (uint32_t i = 0; i < pixelCount; ++i) {
+        out[i] = static_cast<uint8_t>((seed + i * 17u) & 0xFFu);
+    }
+    return 0;
+}
+int asm_neural_extract_csp(const void* eegBlob, uint32_t sampleCount, void* outFeatures) {
+    if (!eegBlob || !outFeatures || sampleCount == 0) {
+        return -1;
+    }
+    const float* in = static_cast<const float*>(eegBlob);
+    float* out = static_cast<float*>(outFeatures);
+    double mean = 0.0;
+    double energy = 0.0;
+    for (uint32_t i = 0; i < sampleCount; ++i) {
+        mean += in[i];
+        energy += static_cast<double>(in[i]) * static_cast<double>(in[i]);
+    }
+    mean /= static_cast<double>(sampleCount);
+    const double varProxy = std::max(0.0, (energy / static_cast<double>(sampleCount)) - mean * mean);
+    out[0] = static_cast<float>(mean);
+    out[1] = static_cast<float>(energy / static_cast<double>(sampleCount));
+    out[2] = static_cast<float>(std::sqrt(varProxy));
+    out[3] = static_cast<float>(sampleCount);
+    return 0;
+}
 int asm_neural_shutdown() { return 0; }
 int asm_neural_get_stats(void*) { return 0; }
 int asm_omega_implement_generate(const void*, void*) { return 0; }
