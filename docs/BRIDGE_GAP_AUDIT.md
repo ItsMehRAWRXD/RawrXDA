@@ -106,4 +106,5 @@ Last updated: 2026-03-20.
 - **Init graph:** `ensureOrchestratorBridgeInitialized` → `OrchestratorBridge::Initialize` / `ApplyIdeOllamaSettings` → `pushOllamaBackendToOrchestratorBridge` / `syncOllamaBackendFromOrchestratorBridge`.
 - **Commands:** `docs/COMMAND_DISPATCH_BRIDGE.md`.
 - **Progress / re-audit table:** `docs/IDE_MASTER_PROGRESS.md` (sovereign batch counts + 63/200 reconciliation).
+- **Win32IDEBridge (agentic, not Ollama):** optional follow-up — call `Win32IDEBridge::initialize()` from the **live** Win32 startup path if capability router / hotpatch / `preprocessMessage` should be active in production. This is **independent** of Orchestrator wiring (§2 A); do not conflate the two.
 - Optional: add **inference path matrix** (user action → backend switcher vs agentic vs OrchestratorBridge).
