@@ -35,22 +35,22 @@ extern "C" void PersistenceMode(void) { noteModeCall("PersistenceMode"); }
 extern "C" void SO_PrintStatistics(void) { noteModeCall("SO_PrintStatistics"); }
 extern "C" void SO_CreateMemoryArena(void) { noteModeCall("SO_CreateMemoryArena"); }
 extern "C" void SO_LoadExecFile(void) { noteModeCall("SO_LoadExecFile"); }
-extern "C" void BasicBlockCovMode(void) {}
-extern "C" void SO_PrintMetrics(void) {}
-extern "C" void SO_StartDEFLATEThreads(void) {}
-extern "C" void StubGenMode(void) {}
-extern "C" void TraceEngineMode(void) {}
-extern "C" void CompileMode(void) {}
-extern "C" void GapFuzzMode(void) {}
-extern "C" void EncryptMode(void) {}
-extern "C" void SO_InitializePrefetchQueue(void) {}
-extern "C" void SO_CreateThreadPool(void) {}
-extern "C" void EntropyMode(void) {}
-extern "C" void AgenticMode(void) {}
-extern "C" void UACBypassMode(void) {}
-extern "C" void AVScanMode(void) {}
+extern "C" void BasicBlockCovMode(void) { noteModeCall("BasicBlockCovMode"); }
+extern "C" void SO_PrintMetrics(void) { noteModeCall("SO_PrintMetrics"); }
+extern "C" void SO_StartDEFLATEThreads(void) { noteModeCall("SO_StartDEFLATEThreads"); }
+extern "C" void StubGenMode(void) { noteModeCall("StubGenMode"); }
+extern "C" void TraceEngineMode(void) { noteModeCall("TraceEngineMode"); }
+extern "C" void CompileMode(void) { noteModeCall("CompileMode"); }
+extern "C" void GapFuzzMode(void) { noteModeCall("GapFuzzMode"); }
+extern "C" void EncryptMode(void) { noteModeCall("EncryptMode"); }
+extern "C" void SO_InitializePrefetchQueue(void) { noteModeCall("SO_InitializePrefetchQueue"); }
+extern "C" void SO_CreateThreadPool(void) { noteModeCall("SO_CreateThreadPool"); }
+extern "C" void EntropyMode(void) { noteModeCall("EntropyMode"); }
+extern "C" void AgenticMode(void) { noteModeCall("AgenticMode"); }
+extern "C" void UACBypassMode(void) { noteModeCall("UACBypassMode"); }
+extern "C" void AVScanMode(void) { noteModeCall("AVScanMode"); }
 
-extern "C" void asm_watchdog_init(void) {}
+extern "C" void asm_watchdog_init(void) { noteModeCall("asm_watchdog_init"); }
 extern "C" void asm_watchdog_verify(void) {}
 extern "C" void asm_watchdog_get_status(void) {}
 extern "C" void asm_watchdog_get_baseline(void) {}
