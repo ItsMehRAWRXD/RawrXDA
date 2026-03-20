@@ -15,6 +15,8 @@
 #include <string>
 #include <vector>
 #include <mutex>
+#include <cmath>
+#include <limits>
 
 extern "C" {
 extern int32_t g_800B_Unlocked;
@@ -58,6 +60,28 @@ struct CamelliaRuntimeState {
     uint64_t blocksEncrypted = 0;
     uint64_t blocksDecrypted = 0;
     uint64_t filesProcessed = 0;
+};
+
+struct FlashAttentionConfigBridge {
+    float* Q;
+    float* K;
+    float* V;
+    float* O;
+    int32_t seqLenM;
+    int32_t seqLenN;
+    int32_t headDim;
+    int32_t numHeads;
+    int32_t numKVHeads;
+    int32_t batchSize;
+    float scale;
+    int32_t causal;
+};
+
+struct FlashAttentionTileConfigBridge {
+    int32_t tileM;
+    int32_t tileN;
+    int32_t headDim;
+    int32_t scratchBytes;
 };
 
 constexpr uint64_t RAWRXD_STATUS_ACCESS_DENIED = 0xC0000022ULL;
@@ -309,6 +333,115 @@ void camelliaDecryptBlockInternal(const uint8_t* key32, const uint8_t* in16, uin
 
 bool keyMatchesRFC(const uint8_t* key32) {
     return std::memcmp(key32, kRFC3713Key256, sizeof(kRFC3713Key256)) == 0;
+}
+
+float fp16ToFloat(uint16_t h) {
+    const uint32_t sign = (h >> 15U) & 0x1U;
+    const uint32_t exp = (h >> 10U) & 0x1FU;
+    const uint32_t frac = h & 0x3FFU;
+
+    uint32_t outExp = 0;
+    uint32_t outFrac = 0;
+    if (exp == 0) {
+        if (frac == 0) {
+            outExp = 0;
+            outFrac = 0;
+        } else {
+            int e = -1;
+            uint32_t f = frac;
+            do {
+                ++e;
+                f <<= 1U;
+            } while ((f & 0x400U) == 0U);
+            f &= 0x3FFU;
+            outExp = static_cast<uint32_t>(127 - 15 - e);
+            outFrac = f << 13U;
+        }
+    } else if (exp == 0x1FU) {
+        outExp = 0xFFU;
+        outFrac = frac << 13U;
+    } else {
+        outExp = exp + (127U - 15U);
+        outFrac = frac << 13U;
+    }
+
+    const uint32_t bits = (sign << 31U) | (outExp << 23U) | outFrac;
+    float out = 0.0f;
+    std::memcpy(&out, &bits, sizeof(out));
+    return out;
+}
+
+void nativeVdotImpl(const float* a, const float* b, int n, float* result) {
+    if (result == nullptr) {
+        return;
+    }
+    if (a == nullptr || b == nullptr || n <= 0) {
+        *result = 0.0f;
+        return;
+    }
+    double acc = 0.0;
+    for (int i = 0; i < n; ++i) {
+        acc += static_cast<double>(a[i]) * static_cast<double>(b[i]);
+    }
+    *result = static_cast<float>(acc);
+}
+
+void dequantQ4_0Impl(const void* src, float* dst, uint64_t nblocks) {
+    if (src == nullptr || dst == nullptr) {
+        return;
+    }
+    const uint8_t* p = static_cast<const uint8_t*>(src);
+    for (uint64_t b = 0; b < nblocks; ++b) {
+        const uint16_t d16 = static_cast<uint16_t>(p[0] | (static_cast<uint16_t>(p[1]) << 8U));
+        const float d = fp16ToFloat(d16);
+        const uint8_t* qs = p + 2;
+        float* out = dst + b * 32U;
+        for (int i = 0; i < 16; ++i) {
+            const uint8_t q = qs[i];
+            const int lo = static_cast<int>(q & 0x0F) - 8;
+            const int hi = static_cast<int>((q >> 4U) & 0x0F) - 8;
+            out[i * 2] = static_cast<float>(lo) * d;
+            out[i * 2 + 1] = static_cast<float>(hi) * d;
+        }
+        p += 18;  // fp16 scale + 16 packed nibbles
+    }
+}
+
+void dequantQ8_0Impl(const void* src, float* dst, uint64_t nblocks) {
+    if (src == nullptr || dst == nullptr) {
+        return;
+    }
+    const uint8_t* p = static_cast<const uint8_t*>(src);
+    for (uint64_t b = 0; b < nblocks; ++b) {
+        const uint16_t d16 = static_cast<uint16_t>(p[0] | (static_cast<uint16_t>(p[1]) << 8U));
+        const float d = fp16ToFloat(d16);
+        const int8_t* qs = reinterpret_cast<const int8_t*>(p + 2);
+        float* out = dst + b * 32U;
+        for (int i = 0; i < 32; ++i) {
+            out[i] = static_cast<float>(qs[i]) * d;
+        }
+        p += 34;  // fp16 scale + 32 int8 quants
+    }
+}
+
+void dequantQ2KImpl(const void* src, float* dst, uint64_t nblocks) {
+    if (src == nullptr || dst == nullptr) {
+        return;
+    }
+    const uint8_t* p = static_cast<const uint8_t*>(src);
+    for (uint64_t b = 0; b < nblocks; ++b) {
+        const float d = static_cast<float>(static_cast<int16_t>(p[0] | (p[1] << 8U))) / 1024.0f;
+        const uint8_t* qs = p + 2;
+        float* out = dst + b * 64U;
+        for (int i = 0; i < 16; ++i) {
+            const uint8_t packed = qs[i];
+            out[i * 4 + 0] = static_cast<float>((packed >> 0U) & 0x03U) * d;
+            out[i * 4 + 1] = static_cast<float>((packed >> 2U) & 0x03U) * d;
+            out[i * 4 + 2] = static_cast<float>((packed >> 4U) & 0x03U) * d;
+            out[i * 4 + 3] = static_cast<float>((packed >> 6U) & 0x03U) * d;
+        }
+        p += 18;
+    }
 }
 
 void seedEnterpriseStateIfNeeded() {
@@ -933,6 +1066,225 @@ int32_t Streaming_CheckEnterpriseBudget(uint64_t requestedSize) {
         return requestedSize <= proCap ? 1 : 0;
     }
     return requestedSize <= communityCap ? 1 : 0;
+}
+
+uint64_t g_FlashAttnCalls = 0;
+uint64_t g_FlashAttnTiles = 0;
+
+int32_t FlashAttention_Init() {
+    return 1;
+}
+
+int32_t FlashAttention_GetTileConfig(FlashAttentionTileConfigBridge* out) {
+    if (out == nullptr) {
+        return 0;
+    }
+    out->tileM = 64;
+    out->tileN = 64;
+    out->headDim = 128;
+    out->scratchBytes = 64 * 64 * static_cast<int32_t>(sizeof(float));
+    return 1;
+}
+
+int32_t FlashAttention_Forward(FlashAttentionConfigBridge* cfg) {
+    if (cfg == nullptr || cfg->Q == nullptr || cfg->K == nullptr || cfg->V == nullptr || cfg->O == nullptr) {
+        return -2;
+    }
+    if (cfg->seqLenM <= 0 || cfg->seqLenN <= 0 || cfg->headDim <= 0 || cfg->numHeads <= 0 || cfg->numKVHeads <= 0 ||
+        cfg->batchSize <= 0) {
+        return -3;
+    }
+
+    const int seqM = cfg->seqLenM;
+    const int seqN = cfg->seqLenN;
+    const int d = cfg->headDim;
+    const int nHeads = cfg->numHeads;
+    const int kvHeads = cfg->numKVHeads;
+    const int batch = cfg->batchSize;
+    const float scale = (cfg->scale > 0.0f) ? cfg->scale : (1.0f / std::sqrt(static_cast<float>(d)));
+
+    std::vector<float> logits(static_cast<size_t>(seqN), 0.0f);
+    std::vector<float> probs(static_cast<size_t>(seqN), 0.0f);
+
+    for (int b = 0; b < batch; ++b) {
+        for (int h = 0; h < nHeads; ++h) {
+            const int kvh = h % kvHeads;
+            const size_t qBase = (static_cast<size_t>(b) * nHeads + static_cast<size_t>(h)) * static_cast<size_t>(seqM) *
+                                 static_cast<size_t>(d);
+            const size_t oBase = qBase;
+            const size_t kBase = (static_cast<size_t>(b) * kvHeads + static_cast<size_t>(kvh)) * static_cast<size_t>(seqN) *
+                                 static_cast<size_t>(d);
+            const size_t vBase = kBase;
+
+            for (int m = 0; m < seqM; ++m) {
+                const float* qVec = cfg->Q + qBase + static_cast<size_t>(m) * static_cast<size_t>(d);
+
+                float maxLogit = -std::numeric_limits<float>::infinity();
+                for (int n = 0; n < seqN; ++n) {
+                    if (cfg->causal != 0 && n > m) {
+                        logits[static_cast<size_t>(n)] = -std::numeric_limits<float>::infinity();
+                        continue;
+                    }
+                    const float* kVec = cfg->K + kBase + static_cast<size_t>(n) * static_cast<size_t>(d);
+                    float dot = 0.0f;
+                    for (int i = 0; i < d; ++i) {
+                        dot += qVec[i] * kVec[i];
+                    }
+                    dot *= scale;
+                    logits[static_cast<size_t>(n)] = dot;
+                    if (dot > maxLogit) {
+                        maxLogit = dot;
+                    }
+                }
+
+                float denom = 0.0f;
+                for (int n = 0; n < seqN; ++n) {
+                    const float x = logits[static_cast<size_t>(n)];
+                    if (!std::isfinite(x)) {
+                        probs[static_cast<size_t>(n)] = 0.0f;
+                        continue;
+                    }
+                    const float e = std::exp(x - maxLogit);
+                    probs[static_cast<size_t>(n)] = e;
+                    denom += e;
+                }
+                if (denom <= 0.0f) {
+                    return -4;
+                }
+                const float invDenom = 1.0f / denom;
+                for (int n = 0; n < seqN; ++n) {
+                    probs[static_cast<size_t>(n)] *= invDenom;
+                }
+
+                float* oVec = cfg->O + oBase + static_cast<size_t>(m) * static_cast<size_t>(d);
+                std::memset(oVec, 0, static_cast<size_t>(d) * sizeof(float));
+                for (int n = 0; n < seqN; ++n) {
+                    const float p = probs[static_cast<size_t>(n)];
+                    if (p == 0.0f) {
+                        continue;
+                    }
+                    const float* vVec = cfg->V + vBase + static_cast<size_t>(n) * static_cast<size_t>(d);
+                    for (int i = 0; i < d; ++i) {
+                        oVec[i] += p * vVec[i];
+                    }
+                }
+            }
+        }
+    }
+
+    InterlockedIncrement64(reinterpret_cast<volatile LONG64*>(&g_FlashAttnCalls));
+    const int64_t tilesM = (seqM + 63) / 64;
+    const int64_t tilesN = (seqN + 63) / 64;
+    const int64_t tileWork = static_cast<int64_t>(batch) * nHeads * tilesM * tilesN;
+    if (tileWork > 0) {
+        InterlockedExchangeAdd64(reinterpret_cast<volatile LONG64*>(&g_FlashAttnTiles), tileWork);
+    }
+    return 0;
+}
+
+void native_vdot_avx2(const float* a, const float* b, int n, float* result) {
+    nativeVdotImpl(a, b, n, result);
+}
+
+void native_vdot_avx512(const float* a, const float* b, int n, float* result) {
+    nativeVdotImpl(a, b, n, result);
+}
+
+void dequant_q4_0_avx512(const void* src, float* dst, uint64_t nblocks) {
+    dequantQ4_0Impl(src, dst, nblocks);
+}
+
+void dequant_q4_0_avx2(const void* src, float* dst, uint64_t nblocks) {
+    dequantQ4_0Impl(src, dst, nblocks);
+}
+
+void dequant_q2k_avx2(const void* src, float* dst, uint64_t nblocks) {
+    dequantQ2KImpl(src, dst, nblocks);
+}
+
+void dequant_q8_0_avx512(const void* src, float* dst, uint64_t nblocks) {
+    dequantQ8_0Impl(src, dst, nblocks);
+}
+
+void dequant_q8_0_avx2(const void* src, float* dst, uint64_t nblocks) {
+    dequantQ8_0Impl(src, dst, nblocks);
+}
+
+void native_rmsnorm_avx2(const float* x, const float* weight, float* y, int dim, float eps) {
+    if (x == nullptr || y == nullptr || dim <= 0) {
+        return;
+    }
+    double ss = 0.0;
+    for (int i = 0; i < dim; ++i) {
+        ss += static_cast<double>(x[i]) * static_cast<double>(x[i]);
+    }
+    const float inv = 1.0f / std::sqrt(static_cast<float>(ss / dim) + eps);
+    if (weight != nullptr) {
+        for (int i = 0; i < dim; ++i) {
+            y[i] = x[i] * inv * weight[i];
+        }
+    } else {
+        for (int i = 0; i < dim; ++i) {
+            y[i] = x[i] * inv;
+        }
+    }
+}
+
+void native_softmax_avx2(float* x, int n) {
+    if (x == nullptr || n <= 0) {
+        return;
+    }
+    float maxv = x[0];
+    for (int i = 1; i < n; ++i) {
+        if (x[i] > maxv) {
+            maxv = x[i];
+        }
+    }
+    float sum = 0.0f;
+    for (int i = 0; i < n; ++i) {
+        x[i] = std::exp(x[i] - maxv);
+        sum += x[i];
+    }
+    if (sum <= 0.0f) {
+        return;
+    }
+    const float inv = 1.0f / sum;
+    for (int i = 0; i < n; ++i) {
+        x[i] *= inv;
+    }
+}
+
+void native_rope_avx2(float* q, float* k, int headDim, int nHeads, int nKVHeads, int pos, float theta) {
+    if (q == nullptr || k == nullptr || headDim <= 1 || nHeads <= 0 || nKVHeads <= 0) {
+        return;
+    }
+    const int pairCount = headDim / 2;
+    for (int h = 0; h < nHeads; ++h) {
+        float* qHead = q + static_cast<size_t>(h) * static_cast<size_t>(headDim);
+        for (int i = 0; i < pairCount; ++i) {
+            const float freq = std::pow(theta, -2.0f * static_cast<float>(i) / static_cast<float>(headDim));
+            const float angle = static_cast<float>(pos) * freq;
+            const float c = std::cos(angle);
+            const float s = std::sin(angle);
+            const float q0 = qHead[i * 2];
+            const float q1 = qHead[i * 2 + 1];
+            qHead[i * 2] = q0 * c - q1 * s;
+            qHead[i * 2 + 1] = q0 * s + q1 * c;
+        }
+    }
+    for (int h = 0; h < nKVHeads; ++h) {
+        float* kHead = k + static_cast<size_t>(h) * static_cast<size_t>(headDim);
+        for (int i = 0; i < pairCount; ++i) {
+            const float freq = std::pow(theta, -2.0f * static_cast<float>(i) / static_cast<float>(headDim));
+            const float angle = static_cast<float>(pos) * freq;
+            const float c = std::cos(angle);
+            const float s = std::sin(angle);
+            const float k0 = kHead[i * 2];
+            const float k1 = kHead[i * 2 + 1];
+            kHead[i * 2] = k0 * c - k1 * s;
+            kHead[i * 2 + 1] = k0 * s + k1 * c;
+        }
+    }
 }
 
 int asm_camellia256_set_key(const uint8_t* key32) {
