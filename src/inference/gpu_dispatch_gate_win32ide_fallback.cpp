@@ -21,7 +21,20 @@ bool GPUDispatchGate::Initialize() {
 bool GPUDispatchGate::MatVecQ4(const float* matrix, const float* vector, float* output,
                                uint32_t rows, uint32_t cols, bool enableParityCheck) {
     (void)enableParityCheck;
-    const bool ok = cpuEngine_.MatVecQ4(matrix, vector, output, rows, cols);
+    if (matrix == nullptr || vector == nullptr || output == nullptr || rows == 0 || cols == 0) {
+        std::lock_guard<std::mutex> lock(statsMutex_);
+        stats_.parityFailures++;
+        return false;
+    }
+    for (uint32_t r = 0; r < rows; ++r) {
+        float acc = 0.0f;
+        const float* rowPtr = matrix + static_cast<size_t>(r) * cols;
+        for (uint32_t c = 0; c < cols; ++c) {
+            acc += rowPtr[c] * vector[c];
+        }
+        output[r] = acc;
+    }
+    const bool ok = true;
     std::lock_guard<std::mutex> lock(statsMutex_);
     if (ok) {
         stats_.cpuMatVecFallbacks++;
