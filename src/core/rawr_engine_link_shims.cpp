@@ -154,8 +154,11 @@ struct PerfSlotData {
 
 struct LspBridgeShimState {
     bool initialized = false;
+    bool synced = false;
     uint64_t weightBytes = 0;
     uint32_t weightCrc = 0;
+    uint32_t lastQueryCrc = 0;
+    uint64_t queryCount = 0;
 };
 
 struct GgufLoaderShimState {
@@ -164,6 +167,9 @@ struct GgufLoaderShimState {
     int configuredGpu = -1;
     uint32_t lastLookupCrc = 0;
     uint64_t lookupCount = 0;
+    uint32_t parseCrc = 0;
+    uint64_t parseCount = 0;
+    uint64_t parsedBytes = 0;
 };
 
 struct QuadbufShimState {
@@ -178,7 +184,74 @@ struct SpengineShimState {
     bool adaptiveMode = false;
     int quantLevel = 0;
     uint64_t rollbackCount = 0;
+    uint64_t appliedBytes = 0;
+    uint32_t optimizeProfileCrc = 0;
     std::unordered_map<std::string, uint32_t> modules{};
+};
+
+struct HwsynthShimState {
+    bool initialized = false;
+    uint64_t estimateCalls = 0;
+    uint64_t predictCalls = 0;
+    uint64_t lastResourceScore = 0;
+    uint64_t lastLatencyUs = 0;
+    uint64_t lastThroughput = 0;
+    uint64_t gemmSpecCrc = 0;
+    uint64_t jtagHeaderCrc = 0;
+    uint64_t memhierCrc = 0;
+    uint64_t dataflowCrc = 0;
+};
+
+struct MeshShimState {
+    bool initialized = false;
+    uint64_t initCrc = 0;
+    uint64_t deltaOps = 0;
+    uint64_t mergeOps = 0;
+    uint64_t aggregateOps = 0;
+    uint64_t xorOps = 0;
+    uint64_t closestLookups = 0;
+    uint64_t lastClosest = 0;
+    uint64_t verifyCalls = 0;
+    uint64_t verifyPass = 0;
+    uint64_t topologyVersion = 0;
+    uint64_t activeNodes = 0;
+    uint64_t gossipCount = 0;
+    uint64_t lastShardHash = 0;
+    uint64_t lastGeneratedProof = 0;
+    uint64_t lastBitfield = 0;
+    uint64_t lastQuorumRequired = 0;
+    uint64_t lastQuorumVotes = 0;
+};
+
+struct SpeciatorShimState {
+    bool initialized = false;
+    uint64_t generation = 0;
+    uint64_t speciesCount = 0;
+    uint64_t genomesCreated = 0;
+    uint64_t variantsCreated = 0;
+    uint64_t mutations = 0;
+    uint64_t crossovers = 0;
+    uint64_t evaluations = 0;
+    uint64_t selections = 0;
+    uint64_t migrations = 0;
+    uint64_t competitions = 0;
+    uint64_t lastScore = 0;
+};
+
+struct NeuralShimState {
+    bool initialized = false;
+    uint64_t classifyCalls = 0;
+    uint64_t encodeCalls = 0;
+    uint64_t adaptCalls = 0;
+    uint64_t fftCalls = 0;
+    uint64_t calibrations = 0;
+    uint64_t eventsDetected = 0;
+    uint64_t hapticPulses = 0;
+    uint64_t eegSamplesCaptured = 0;
+    uint64_t lastIntent = 0;
+    uint64_t lastCommandCrc = 0;
+    uint64_t lastEventScore = 0;
+    uint64_t sampleRateHz = 256;
 };
 
 constexpr int kPerfSlotCount = 64;
@@ -191,6 +264,10 @@ static LspBridgeShimState g_lspBridgeState{};
 static GgufLoaderShimState g_ggufLoaderState{};
 static QuadbufShimState g_quadbufState{};
 static SpengineShimState g_spengineState{};
+static HwsynthShimState g_hwsynthState{};
+static MeshShimState g_meshState{};
+static SpeciatorShimState g_speciatorState{};
+static NeuralShimState g_neuralState{};
 
 static int closeFileHandle(intptr_t handle) {
     if (handle <= 0) {
@@ -1511,86 +1588,851 @@ int asm_gguf_loader_close() {
     g_ggufLoaderState = {};
     return 0;
 }
-int asm_spengine_shutdown() { return 0; }
-int asm_lsp_bridge_get_stats(void*) { return 0; }
+int asm_spengine_shutdown() {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_spengineState = {};
+    return 0;
+}
+int asm_lsp_bridge_get_stats(void* outStats) {
+    if (!outStats) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    auto* out = static_cast<uint64_t*>(outStats);
+    out[0] = g_lspBridgeState.initialized ? 1 : 0;
+    out[1] = g_lspBridgeState.synced ? 1 : 0;
+    out[2] = g_lspBridgeState.weightBytes;
+    out[3] = static_cast<uint64_t>(g_lspBridgeState.weightCrc);
+    out[4] = g_lspBridgeState.queryCount;
+    out[5] = static_cast<uint64_t>(g_lspBridgeState.lastQueryCrc);
+    return 0;
+}
 
 #endif // !defined(_MSC_VER)
 
 // Batch 16: loader/apply/sync
-int asm_lsp_bridge_query(const char*) { return 0; }
-int asm_lsp_bridge_invalidate(const char*) { return 0; }
-int asm_quadbuf_get_stats(void*) { return 0; }
-int asm_gguf_loader_parse(const void*, uint64_t) { return 0; }
-int asm_spengine_apply(const void*, uint64_t) { return 0; }
-int asm_lsp_bridge_sync() { return 0; }
-int asm_spengine_quant_switch(int) { return 0; }
+int asm_lsp_bridge_query(const char* queryText) {
+    if (!queryText || queryText[0] == '\0') {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_lspBridgeState.initialized) {
+        return -1;
+    }
+    const size_t n = std::strlen(queryText);
+    g_lspBridgeState.lastQueryCrc = crc32Bytes(reinterpret_cast<const uint8_t*>(queryText), n);
+    g_lspBridgeState.queryCount += 1;
+    return static_cast<int>(g_lspBridgeState.lastQueryCrc & 0x7FFFFFFFu);
+}
+int asm_lsp_bridge_invalidate(const char* symbolName) {
+    if (!symbolName || symbolName[0] == '\0') {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_lspBridgeState.initialized) {
+        return -1;
+    }
+    const size_t n = std::strlen(symbolName);
+    const uint32_t crc = crc32Bytes(reinterpret_cast<const uint8_t*>(symbolName), n);
+    if (crc == g_lspBridgeState.lastQueryCrc) {
+        g_lspBridgeState.lastQueryCrc = 0;
+        return 1;
+    }
+    return 0;
+}
+int asm_quadbuf_get_stats(void* outStats) {
+    if (!outStats) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    auto* out = static_cast<uint64_t*>(outStats);
+    out[0] = static_cast<uint64_t>(g_quadbufState.flags);
+    out[1] = static_cast<uint64_t>(g_quadbufState.maxTokens);
+    out[2] = static_cast<uint64_t>(g_quadbufState.tokenStream.size());
+    out[3] = g_quadbufState.renderedFrames;
+    return 0;
+}
+int asm_gguf_loader_parse(const void* buffer, uint64_t payloadBytes) {
+    if (!buffer || payloadBytes == 0) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_ggufLoaderState.initialized) {
+        return -1;
+    }
+    const size_t crcWindow = static_cast<size_t>(std::min<uint64_t>(payloadBytes, 4096));
+    g_ggufLoaderState.parseCrc = crc32Bytes(static_cast<const uint8_t*>(buffer), crcWindow);
+    g_ggufLoaderState.parseCount += 1;
+    g_ggufLoaderState.parsedBytes += payloadBytes;
+    return 0;
+}
+int asm_spengine_apply(const void* patchBlob, uint64_t patchBytes) {
+    if (!patchBlob || patchBytes == 0) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_spengineState.initialized) {
+        return -1;
+    }
+    g_spengineState.appliedBytes += patchBytes;
+    return 0;
+}
+int asm_lsp_bridge_sync() {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_lspBridgeState.initialized) {
+        return -1;
+    }
+    g_lspBridgeState.synced = true;
+    return 0;
+}
+int asm_spengine_quant_switch(int targetLevel) {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_spengineState.initialized) {
+        return -1;
+    }
+    if (targetLevel < 0) {
+        targetLevel = 0;
+    }
+    if (targetLevel > 8) {
+        targetLevel = 8;
+    }
+    g_spengineState.adaptiveMode = false;
+    g_spengineState.quantLevel = targetLevel;
+    return g_spengineState.quantLevel;
+}
 
 // Batch 17: quadbuf/hwsynth utilities
-int asm_quadbuf_init(uint32_t) { return 0; }
-int asm_gguf_loader_get_stats(void*) { return 0; }
-int asm_spengine_cpu_optimize(const void*) { return 0; }
-int asm_hwsynth_est_resources(const void*, void*) { return 0; }
-int asm_hwsynth_predict_perf(const void*, void*) { return 0; }
-int asm_hwsynth_get_stats(void*) { return 0; }
-int asm_hwsynth_gen_gemm_spec(const void*, void*) { return 0; }
+int asm_quadbuf_init(uint32_t capacity) {
+    if (capacity == 0) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_quadbufState = {};
+    g_quadbufState.maxTokens = capacity;
+    return 0;
+}
+int asm_gguf_loader_get_stats(void* outStats) {
+    if (!outStats) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    auto* out = static_cast<uint64_t*>(outStats);
+    out[0] = g_ggufLoaderState.initialized ? 1 : 0;
+    out[1] = g_ggufLoaderState.lookupCount;
+    out[2] = g_ggufLoaderState.parseCount;
+    out[3] = g_ggufLoaderState.parsedBytes;
+    out[4] = static_cast<uint64_t>(g_ggufLoaderState.parseCrc);
+    out[5] = static_cast<uint64_t>(g_ggufLoaderState.configuredGpu);
+    return 0;
+}
+int asm_spengine_cpu_optimize(const void* optimizeProfile) {
+    if (!optimizeProfile) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_spengineState.initialized) {
+        return -1;
+    }
+    g_spengineState.optimizeProfileCrc = crc32Bytes(static_cast<const uint8_t*>(optimizeProfile), 64);
+    return 0;
+}
+int asm_hwsynth_est_resources(const void* workloadSpec, void* outEstimate) {
+    if (!workloadSpec || !outEstimate) {
+        return -1;
+    }
+    const uint32_t score = crc32Bytes(static_cast<const uint8_t*>(workloadSpec), 64);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_hwsynthState.estimateCalls += 1;
+    g_hwsynthState.lastResourceScore = static_cast<uint64_t>(score % 10000u);
+    auto* out = static_cast<uint64_t*>(outEstimate);
+    out[0] = g_hwsynthState.lastResourceScore;
+    out[1] = 1 + (g_hwsynthState.lastResourceScore / 64u);
+    out[2] = 1 + (g_hwsynthState.lastResourceScore / 128u);
+    return 0;
+}
+int asm_hwsynth_predict_perf(const void* modelSpec, void* outPrediction) {
+    if (!modelSpec || !outPrediction) {
+        return -1;
+    }
+    const uint32_t score = crc32Bytes(static_cast<const uint8_t*>(modelSpec), 64);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_hwsynthState.predictCalls += 1;
+    g_hwsynthState.lastLatencyUs = 100 + (score % 5000u);
+    g_hwsynthState.lastThroughput = 10 + ((score / 7u) % 2000u);
+    auto* out = static_cast<uint64_t*>(outPrediction);
+    out[0] = g_hwsynthState.lastLatencyUs;
+    out[1] = g_hwsynthState.lastThroughput;
+    return 0;
+}
+int asm_hwsynth_get_stats(void* outStats) {
+    if (!outStats) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    auto* out = static_cast<uint64_t*>(outStats);
+    out[0] = g_hwsynthState.estimateCalls;
+    out[1] = g_hwsynthState.predictCalls;
+    out[2] = g_hwsynthState.lastResourceScore;
+    out[3] = g_hwsynthState.lastLatencyUs;
+    out[4] = g_hwsynthState.lastThroughput;
+    return 0;
+}
+int asm_hwsynth_gen_gemm_spec(const void* workloadSpec, void* outSpec) {
+    if (!workloadSpec || !outSpec) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(workloadSpec), 64);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_hwsynthState.initialized) {
+        return -1;
+    }
+    g_hwsynthState.gemmSpecCrc = crc;
+    auto* out = static_cast<uint64_t*>(outSpec);
+    out[0] = static_cast<uint64_t>(crc);
+    out[1] = 64 + (crc % 256u);
+    out[2] = 64 + ((crc >> 8u) % 256u);
+    out[3] = 64 + ((crc >> 16u) % 256u);
+    return 0;
+}
 
 // Batch 18: hwsynth + mesh basics
-int asm_hwsynth_gen_jtag_header(const void*, void*) { return 0; }
-int asm_hwsynth_analyze_memhier(const void*, void*) { return 0; }
-int asm_hwsynth_profile_dataflow(const void*, void*) { return 0; }
-int asm_hwsynth_shutdown() { return 0; }
-int asm_hwsynth_init(const void*) { return 0; }
-int asm_mesh_crdt_delta(const void*, void*) { return 0; }
-int asm_mesh_get_stats(void*) { return 0; }
+int asm_hwsynth_gen_jtag_header(const void* inputSpec, void* outHeader) {
+    if (!inputSpec || !outHeader) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(inputSpec), 64);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_hwsynthState.initialized) {
+        return -1;
+    }
+    g_hwsynthState.jtagHeaderCrc = crc;
+    auto* out = static_cast<uint64_t*>(outHeader);
+    out[0] = 0x4A544147ULL; // "JTAG"
+    out[1] = static_cast<uint64_t>(crc);
+    out[2] = g_hwsynthState.lastResourceScore;
+    return 0;
+}
+int asm_hwsynth_analyze_memhier(const void* memSpec, void* outAnalysis) {
+    if (!memSpec || !outAnalysis) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(memSpec), 64);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_hwsynthState.initialized) {
+        return -1;
+    }
+    g_hwsynthState.memhierCrc = crc;
+    auto* out = static_cast<uint64_t*>(outAnalysis);
+    out[0] = 1 + (crc % 16u);        // cache levels estimate
+    out[1] = 64 + ((crc >> 8u) % 512u); // bandwidth score
+    out[2] = 1 + ((crc >> 16u) % 64u);  // channel count estimate
+    return 0;
+}
+int asm_hwsynth_profile_dataflow(const void* graphSpec, void* outProfile) {
+    if (!graphSpec || !outProfile) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(graphSpec), 64);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_hwsynthState.initialized) {
+        return -1;
+    }
+    g_hwsynthState.dataflowCrc = crc;
+    auto* out = static_cast<uint64_t*>(outProfile);
+    out[0] = 1 + (crc % 1024u);          // nodes
+    out[1] = 1 + ((crc >> 10u) % 4096u); // edges
+    out[2] = 1 + ((crc >> 22u) % 100u);  // pipeline stages
+    return 0;
+}
+int asm_hwsynth_shutdown() {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_hwsynthState = {};
+    return 0;
+}
+int asm_hwsynth_init(const void* initSpec) {
+    if (!initSpec) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_hwsynthState = {};
+    g_hwsynthState.initialized = true;
+    g_hwsynthState.lastResourceScore = static_cast<uint64_t>(crc32Bytes(static_cast<const uint8_t*>(initSpec), 64) % 10000u);
+    return 0;
+}
+int asm_mesh_crdt_delta(const void* baseState, void* outDelta) {
+    if (!baseState || !outDelta) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(baseState), 64);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_meshState.initialized) {
+        return -1;
+    }
+    g_meshState.deltaOps += 1;
+    auto* out = static_cast<uint64_t*>(outDelta);
+    out[0] = static_cast<uint64_t>(crc);
+    out[1] = g_meshState.deltaOps;
+    return 0;
+}
+int asm_mesh_get_stats(void* outStats) {
+    if (!outStats) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    auto* out = static_cast<uint64_t*>(outStats);
+    out[0] = g_meshState.initialized ? 1 : 0;
+    out[1] = g_meshState.deltaOps;
+    out[2] = g_meshState.mergeOps;
+    out[3] = g_meshState.aggregateOps;
+    out[4] = g_meshState.xorOps;
+    out[5] = g_meshState.closestLookups;
+    out[6] = g_meshState.verifyCalls;
+    out[7] = g_meshState.verifyPass;
+    return 0;
+}
 
 // Batch 19: mesh orchestration
-int asm_mesh_dht_find_closest(const void*, uint32_t) { return 0; }
-int asm_mesh_shutdown() { return 0; }
-int asm_mesh_fedavg_aggregate(const void*, const void*, void*) { return 0; }
-int asm_mesh_crdt_merge(const void*, const void*, void*) { return 0; }
-int asm_mesh_dht_xor_distance(const void*, const void*, void*) { return 0; }
-int asm_mesh_init(const void*) { return 0; }
-int asm_mesh_zkp_verify(const void*, const void*) { return 0; }
+int asm_mesh_dht_find_closest(const void* keyBlob, uint32_t bucketHint) {
+    if (!keyBlob) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_meshState.initialized) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(keyBlob), 32);
+    g_meshState.closestLookups += 1;
+    g_meshState.lastClosest = static_cast<uint64_t>((crc ^ bucketHint) % 1024u);
+    return static_cast<int>(g_meshState.lastClosest);
+}
+int asm_mesh_shutdown() {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_meshState = {};
+    return 0;
+}
+int asm_mesh_fedavg_aggregate(const void* lhs, const void* rhs, void* out) {
+    if (!lhs || !rhs || !out) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_meshState.initialized) {
+        return -1;
+    }
+    const float* a = static_cast<const float*>(lhs);
+    const float* b = static_cast<const float*>(rhs);
+    float* dst = static_cast<float*>(out);
+    for (int i = 0; i < 16; ++i) {
+        dst[i] = 0.5f * (a[i] + b[i]);
+    }
+    g_meshState.aggregateOps += 1;
+    return 0;
+}
+int asm_mesh_crdt_merge(const void* lhs, const void* rhs, void* out) {
+    if (!lhs || !rhs || !out) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_meshState.initialized) {
+        return -1;
+    }
+    const uint64_t* a = static_cast<const uint64_t*>(lhs);
+    const uint64_t* b = static_cast<const uint64_t*>(rhs);
+    uint64_t* dst = static_cast<uint64_t*>(out);
+    for (int i = 0; i < 8; ++i) {
+        dst[i] = (a[i] > b[i]) ? a[i] : b[i];
+    }
+    g_meshState.mergeOps += 1;
+    return 0;
+}
+int asm_mesh_dht_xor_distance(const void* lhs, const void* rhs, void* out) {
+    if (!lhs || !rhs || !out) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_meshState.initialized) {
+        return -1;
+    }
+    const uint64_t* a = static_cast<const uint64_t*>(lhs);
+    const uint64_t* b = static_cast<const uint64_t*>(rhs);
+    uint64_t* dst = static_cast<uint64_t*>(out);
+    for (int i = 0; i < 4; ++i) {
+        dst[i] = a[i] ^ b[i];
+    }
+    g_meshState.xorOps += 1;
+    return 0;
+}
+int asm_mesh_init(const void* configBlob) {
+    if (!configBlob) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_meshState = {};
+    g_meshState.initialized = true;
+    g_meshState.initCrc = crc32Bytes(static_cast<const uint8_t*>(configBlob), 64);
+    return 0;
+}
+int asm_mesh_zkp_verify(const void* proofBlob, const void* publicBlob) {
+    if (!proofBlob || !publicBlob) {
+        return -1;
+    }
+    const uint32_t proof = crc32Bytes(static_cast<const uint8_t*>(proofBlob), 64);
+    const uint32_t pub = crc32Bytes(static_cast<const uint8_t*>(publicBlob), 64);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_meshState.initialized) {
+        return -1;
+    }
+    g_meshState.verifyCalls += 1;
+    const bool ok = (proof & 0xFFFFu) == (pub & 0xFFFFu);
+    if (ok) {
+        g_meshState.verifyPass += 1;
+    }
+    return ok ? 1 : 0;
+}
 
 // Batch 20: mesh quorum/sharding
-int asm_mesh_shard_hash(const void*, uint32_t, void*) { return 0; }
-int asm_mesh_quorum_vote(const void*, uint32_t) { return 0; }
-int asm_mesh_topology_update(const void*) { return 0; }
-int asm_mesh_zkp_generate(const void*, void*) { return 0; }
-int asm_mesh_topology_active_count() { return 0; }
-int asm_mesh_shard_bitfield(uint32_t, void*) { return 0; }
-int asm_mesh_gossip_disseminate(const void*) { return 0; }
+int asm_mesh_shard_hash(const void* shardKey, uint32_t shardCount, void* outShardInfo) {
+    if (!shardKey || !outShardInfo || shardCount == 0) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_meshState.initialized) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(shardKey), 64);
+    const uint32_t shardIndex = crc % shardCount;
+    g_meshState.lastShardHash = crc;
+    auto* out = static_cast<uint64_t*>(outShardInfo);
+    out[0] = static_cast<uint64_t>(crc);
+    out[1] = static_cast<uint64_t>(shardIndex);
+    return static_cast<int>(shardIndex);
+}
+int asm_mesh_quorum_vote(const void* votePayload, uint32_t requiredVotes) {
+    if (!votePayload || requiredVotes == 0) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_meshState.initialized) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(votePayload), 64);
+    const uint32_t votes = 1u + (crc % 16u);
+    g_meshState.lastQuorumRequired = requiredVotes;
+    g_meshState.lastQuorumVotes = votes;
+    return votes >= requiredVotes ? 1 : 0;
+}
+int asm_mesh_topology_update(const void* topologyPayload) {
+    if (!topologyPayload) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_meshState.initialized) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(topologyPayload), 64);
+    g_meshState.topologyVersion += 1;
+    g_meshState.activeNodes = 1u + (crc % 512u);
+    return static_cast<int>(g_meshState.topologyVersion);
+}
+int asm_mesh_zkp_generate(const void* challengeBlob, void* outProofBlob) {
+    if (!challengeBlob || !outProofBlob) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_meshState.initialized) {
+        return -1;
+    }
+    const uint32_t challenge = crc32Bytes(static_cast<const uint8_t*>(challengeBlob), 64);
+    const uint64_t proof = (static_cast<uint64_t>(challenge) << 32u) ^ g_meshState.initCrc ^ g_meshState.verifyCalls;
+    g_meshState.lastGeneratedProof = proof;
+    auto* out = static_cast<uint64_t*>(outProofBlob);
+    out[0] = proof;
+    out[1] = g_meshState.initCrc;
+    return 0;
+}
+int asm_mesh_topology_active_count() {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_meshState.initialized) {
+        return -1;
+    }
+    return static_cast<int>(g_meshState.activeNodes);
+}
+int asm_mesh_shard_bitfield(uint32_t shardCount, void* outBitfield) {
+    if (!outBitfield || shardCount == 0) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_meshState.initialized) {
+        return -1;
+    }
+    const uint32_t bits = std::min<uint32_t>(shardCount, 64u);
+    uint64_t bitfield = 0;
+    for (uint32_t i = 0; i < bits; ++i) {
+        if (((g_meshState.initCrc >> (i % 32u)) & 1u) != 0u) {
+            bitfield |= (1ULL << i);
+        }
+    }
+    g_meshState.lastBitfield = bitfield;
+    *static_cast<uint64_t*>(outBitfield) = bitfield;
+    return 0;
+}
+int asm_mesh_gossip_disseminate(const void* gossipPayload) {
+    if (!gossipPayload) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_meshState.initialized) {
+        return -1;
+    }
+    g_meshState.gossipCount += 1;
+    return static_cast<int>(g_meshState.gossipCount);
+}
 
 // Batch 21: speciator engines
-int asm_speciator_mutate(const void*, void*) { return 0; }
-int asm_speciator_shutdown() { return 0; }
-int asm_speciator_gen_variant(const void*, void*) { return 0; }
-int asm_speciator_get_stats(void*) { return 0; }
-int asm_speciator_create_genome(const void*, void*) { return 0; }
-int asm_speciator_crossover(const void*, const void*, void*) { return 0; }
-int asm_speciator_speciate(const void*, void*) { return 0; }
+int asm_speciator_mutate(const void* sourceGenome, void* outGenome) {
+    if (!sourceGenome || !outGenome) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_speciatorState.initialized) {
+        g_speciatorState.initialized = true;
+    }
+    const uint8_t* src = static_cast<const uint8_t*>(sourceGenome);
+    uint8_t* dst = static_cast<uint8_t*>(outGenome);
+    for (int i = 0; i < 64; ++i) {
+        dst[i] = static_cast<uint8_t>(src[i] ^ static_cast<uint8_t>((i * 37u) & 0xFFu));
+    }
+    g_speciatorState.mutations += 1;
+    return 0;
+}
+int asm_speciator_shutdown() {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_speciatorState = {};
+    return 0;
+}
+int asm_speciator_gen_variant(const void* parentGenome, void* outVariant) {
+    if (!parentGenome || !outVariant) {
+        return -1;
+    }
+    const int mutateRc = asm_speciator_mutate(parentGenome, outVariant);
+    if (mutateRc != 0) {
+        return mutateRc;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_speciatorState.variantsCreated += 1;
+    return 0;
+}
+int asm_speciator_get_stats(void* outStats) {
+    if (!outStats) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    auto* out = static_cast<uint64_t*>(outStats);
+    out[0] = g_speciatorState.initialized ? 1 : 0;
+    out[1] = g_speciatorState.generation;
+    out[2] = g_speciatorState.speciesCount;
+    out[3] = g_speciatorState.genomesCreated;
+    out[4] = g_speciatorState.variantsCreated;
+    out[5] = g_speciatorState.mutations;
+    out[6] = g_speciatorState.crossovers;
+    out[7] = g_speciatorState.evaluations;
+    out[8] = g_speciatorState.lastScore;
+    return 0;
+}
+int asm_speciator_create_genome(const void* seedData, void* outGenome) {
+    if (!seedData || !outGenome) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_speciatorState.initialized = true;
+    const uint8_t* seed = static_cast<const uint8_t*>(seedData);
+    uint8_t* out = static_cast<uint8_t*>(outGenome);
+    for (int i = 0; i < 64; ++i) {
+        out[i] = static_cast<uint8_t>(seed[i] + static_cast<uint8_t>(i));
+    }
+    g_speciatorState.genomesCreated += 1;
+    return 0;
+}
+int asm_speciator_crossover(const void* genomeA, const void* genomeB, void* outGenome) {
+    if (!genomeA || !genomeB || !outGenome) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_speciatorState.initialized) {
+        g_speciatorState.initialized = true;
+    }
+    const uint8_t* a = static_cast<const uint8_t*>(genomeA);
+    const uint8_t* b = static_cast<const uint8_t*>(genomeB);
+    uint8_t* out = static_cast<uint8_t*>(outGenome);
+    for (int i = 0; i < 64; ++i) {
+        out[i] = (i % 2 == 0) ? a[i] : b[i];
+    }
+    g_speciatorState.crossovers += 1;
+    return 0;
+}
+int asm_speciator_speciate(const void* populationBlob, void* outSpecies) {
+    if (!populationBlob || !outSpecies) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(populationBlob), 128);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_speciatorState.initialized = true;
+    g_speciatorState.generation += 1;
+    g_speciatorState.speciesCount = 1u + (crc % 12u);
+    *static_cast<uint64_t*>(outSpecies) = g_speciatorState.speciesCount;
+    return 0;
+}
 
 // Batch 22: speciator/neural bridge
-int asm_speciator_evaluate(const void*, void*) { return 0; }
-int asm_speciator_compete(const void*, void*) { return 0; }
-int asm_speciator_migrate(const void*, void*) { return 0; }
-int asm_speciator_init(const void*) { return 0; }
-int asm_speciator_select(const void*, void*) { return 0; }
-int asm_neural_classify_intent(const void*, uint32_t, void*) { return 0; }
-int asm_neural_haptic_pulse(uint32_t, uint32_t) { return 0; }
+int asm_speciator_evaluate(const void* candidateGenome, void* outScore) {
+    if (!candidateGenome || !outScore) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(candidateGenome), 64);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_speciatorState.initialized) {
+        g_speciatorState.initialized = true;
+    }
+    g_speciatorState.evaluations += 1;
+    g_speciatorState.lastScore = static_cast<uint64_t>(crc % 100000u);
+    *static_cast<uint64_t*>(outScore) = g_speciatorState.lastScore;
+    return 0;
+}
+int asm_speciator_compete(const void* candidateSet, void* outWinnerScore) {
+    if (!candidateSet || !outWinnerScore) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(candidateSet), 128);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_speciatorState.initialized) {
+        g_speciatorState.initialized = true;
+    }
+    g_speciatorState.competitions += 1;
+    g_speciatorState.lastScore = static_cast<uint64_t>(50000u + (crc % 50000u));
+    *static_cast<uint64_t*>(outWinnerScore) = g_speciatorState.lastScore;
+    return 0;
+}
+int asm_speciator_migrate(const void* migrationBlob, void* outMigrationResult) {
+    if (!migrationBlob || !outMigrationResult) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(migrationBlob), 64);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_speciatorState.initialized) {
+        g_speciatorState.initialized = true;
+    }
+    g_speciatorState.migrations += 1;
+    const uint64_t moved = 1u + (crc % 16u);
+    g_speciatorState.speciesCount += (moved % 3u);
+    auto* out = static_cast<uint64_t*>(outMigrationResult);
+    out[0] = moved;
+    out[1] = g_speciatorState.speciesCount;
+    return 0;
+}
+int asm_speciator_init(const void* initBlob) {
+    if (!initBlob) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(initBlob), 64);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_speciatorState = {};
+    g_speciatorState.initialized = true;
+    g_speciatorState.generation = 1;
+    g_speciatorState.speciesCount = 1u + (crc % 8u);
+    g_speciatorState.lastScore = crc % 100000u;
+    return 0;
+}
+int asm_speciator_select(const void* populationBlob, void* outSelection) {
+    if (!populationBlob || !outSelection) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(populationBlob), 128);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_speciatorState.initialized) {
+        return -1;
+    }
+    g_speciatorState.selections += 1;
+    const uint64_t selectedIndex = crc % 1024u;
+    auto* out = static_cast<uint64_t*>(outSelection);
+    out[0] = selectedIndex;
+    out[1] = g_speciatorState.selections;
+    return 0;
+}
+int asm_neural_classify_intent(const void* featureBlob, uint32_t featureCount, void* outIntent) {
+    if (!featureBlob || !outIntent || featureCount == 0) {
+        return -1;
+    }
+    const size_t bytes = static_cast<size_t>(std::min<uint64_t>(static_cast<uint64_t>(featureCount), 4096u));
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(featureBlob), bytes);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_neuralState.initialized) {
+        return -1;
+    }
+    g_neuralState.classifyCalls += 1;
+    g_neuralState.lastIntent = crc % 12u;
+    *static_cast<uint32_t*>(outIntent) = static_cast<uint32_t>(g_neuralState.lastIntent);
+    return 0;
+}
+int asm_neural_haptic_pulse(uint32_t durationMs, uint32_t intensity) {
+    if (durationMs == 0 || intensity == 0) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_neuralState.initialized) {
+        return -1;
+    }
+    g_neuralState.hapticPulses += 1;
+    const uint32_t clampedIntensity = std::min<uint32_t>(intensity, 100u);
+    return static_cast<int>(durationMs * clampedIntensity);
+}
 
 // Batch 23: neural bridge continued
-int asm_neural_encode_command(const void*, uint32_t, void*) { return 0; }
-int asm_neural_acquire_eeg(void*, uint32_t) { return 0; }
-int asm_neural_adapt(const void*, void*) { return 0; }
-int asm_neural_fft_decompose(const void*, uint32_t, void*) { return 0; }
-int asm_neural_init(const void*) { return 0; }
-int asm_neural_calibrate(const void*, uint32_t) { return 0; }
-int asm_neural_detect_event(const void*, uint32_t) { return 0; }
+int asm_neural_encode_command(const void* commandBlob, uint32_t commandBytes, void* outEncoded) {
+    if (!commandBlob || !outEncoded || commandBytes == 0) {
+        return -1;
+    }
+    const size_t bytes = static_cast<size_t>(std::min<uint64_t>(commandBytes, 4096u));
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(commandBlob), bytes);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_neuralState.initialized) {
+        return -1;
+    }
+    g_neuralState.encodeCalls += 1;
+    g_neuralState.lastCommandCrc = crc;
+    auto* out = static_cast<uint8_t*>(outEncoded);
+    out[0] = static_cast<uint8_t>((crc >> 0u) & 0xFFu);
+    out[1] = static_cast<uint8_t>((crc >> 8u) & 0xFFu);
+    out[2] = static_cast<uint8_t>((crc >> 16u) & 0xFFu);
+    out[3] = static_cast<uint8_t>((crc >> 24u) & 0xFFu);
+    return 0;
+}
+int asm_neural_acquire_eeg(void* outSamples, uint32_t sampleCount) {
+    if (!outSamples || sampleCount == 0) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_neuralState.initialized) {
+        return -1;
+    }
+    float* samples = static_cast<float*>(outSamples);
+    for (uint32_t i = 0; i < sampleCount; ++i) {
+        const float t = static_cast<float>(i) / static_cast<float>(g_neuralState.sampleRateHz);
+        samples[i] = std::sin(2.0f * 3.1415926f * 10.0f * t) * 0.5f;
+    }
+    g_neuralState.eegSamplesCaptured += sampleCount;
+    return 0;
+}
+int asm_neural_adapt(const void* feedbackBlob, void* outAdaptedState) {
+    if (!feedbackBlob || !outAdaptedState) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(feedbackBlob), 64);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_neuralState.initialized) {
+        return -1;
+    }
+    g_neuralState.adaptCalls += 1;
+    g_neuralState.lastEventScore = crc % 1000u;
+    auto* out = static_cast<uint64_t*>(outAdaptedState);
+    out[0] = g_neuralState.adaptCalls;
+    out[1] = g_neuralState.lastEventScore;
+    return 0;
+}
+int asm_neural_fft_decompose(const void* signalBlob, uint32_t sampleCount, void* outSpectrum) {
+    if (!signalBlob || !outSpectrum || sampleCount == 0) {
+        return -1;
+    }
+    const float* in = static_cast<const float*>(signalBlob);
+    float* out = static_cast<float*>(outSpectrum);
+    const uint32_t bins = std::min<uint32_t>(sampleCount, 16u);
+    for (uint32_t k = 0; k < bins; ++k) {
+        float accum = 0.0f;
+        for (uint32_t n = k; n < sampleCount; n += bins) {
+            accum += std::fabs(in[n]);
+        }
+        out[k] = accum / static_cast<float>((sampleCount + bins - 1u) / bins);
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_neuralState.initialized) {
+        return -1;
+    }
+    g_neuralState.fftCalls += 1;
+    return 0;
+}
+int asm_neural_init(const void* initBlob) {
+    if (!initBlob) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(initBlob), 64);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_neuralState = {};
+    g_neuralState.initialized = true;
+    g_neuralState.sampleRateHz = 128u + (crc % 384u);
+    return 0;
+}
+int asm_neural_calibrate(const void* calibrationBlob, uint32_t sampleCount) {
+    if (!calibrationBlob || sampleCount == 0) {
+        return -1;
+    }
+    const size_t bytes = static_cast<size_t>(std::min<uint64_t>(sampleCount, 4096u));
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(calibrationBlob), bytes);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_neuralState.initialized) {
+        return -1;
+    }
+    g_neuralState.calibrations += 1;
+    g_neuralState.lastEventScore = crc % 2048u;
+    return 0;
+}
+int asm_neural_detect_event(const void* signalBlob, uint32_t sampleCount) {
+    if (!signalBlob || sampleCount == 0) {
+        return -1;
+    }
+    const size_t bytes = static_cast<size_t>(std::min<uint64_t>(sampleCount, 4096u));
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(signalBlob), bytes);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_neuralState.initialized) {
+        return -1;
+    }
+    g_neuralState.lastEventScore = crc % 4096u;
+    const bool detected = g_neuralState.lastEventScore > 2048u;
+    if (detected) {
+        g_neuralState.eventsDetected += 1;
+    }
+    return detected ? 1 : 0;
+}
 
 // Batch 24: neural final + omega orchestrator
-int asm_neural_gen_phosphene(const void*, uint32_t, void*) { return 0; }
-int asm_neural_extract_csp(const void*, uint32_t, void*) { return 0; }
+int asm_neural_gen_phosphene(const void* intentBlob, uint32_t pixelCount, void* outPixels) {
+    if (!intentBlob || !outPixels || pixelCount == 0) {
+        return -1;
+    }
+    const uint32_t seed = crc32Bytes(static_cast<const uint8_t*>(intentBlob), 64);
+    uint8_t* out = static_cast<uint8_t*>(outPixels);
+    for (uint32_t i = 0; i < pixelCount; ++i) {
+        out[i] = static_cast<uint8_t>((seed + i * 17u) & 0xFFu);
+    }
+    return 0;
+}
+int asm_neural_extract_csp(const void* eegBlob, uint32_t sampleCount, void* outFeatures) {
+    if (!eegBlob || !outFeatures || sampleCount == 0) {
+        return -1;
+    }
+    const float* in = static_cast<const float*>(eegBlob);
+    float* out = static_cast<float*>(outFeatures);
+    double mean = 0.0;
+    double energy = 0.0;
+    for (uint32_t i = 0; i < sampleCount; ++i) {
+        mean += in[i];
+        energy += static_cast<double>(in[i]) * static_cast<double>(in[i]);
+    }
+    mean /= static_cast<double>(sampleCount);
+    const double varProxy = std::max(0.0, (energy / static_cast<double>(sampleCount)) - mean * mean);
+    out[0] = static_cast<float>(mean);
+    out[1] = static_cast<float>(energy / static_cast<double>(sampleCount));
+    out[2] = static_cast<float>(std::sqrt(varProxy));
+    out[3] = static_cast<float>(sampleCount);
+    return 0;
+}
 int asm_neural_shutdown() { return 0; }
 int asm_neural_get_stats(void*) { return 0; }
 int asm_omega_implement_generate(const void*, void*) { return 0; }
