@@ -116,55 +116,55 @@ int asm_camellia256_auth_decrypt_buf(const uint8_t*, uint32_t, uint8_t*, uint32_
 
 // Batch 13: MASM bridges (gguf/lsp/quadbuf/spengine)
 int asm_apply_memory_patch(void*, size_t, const void*) { return 0; }
-int asm_lsp_bridge_set_weights(const void*, uint64_t) { return 0; }
-int asm_gguf_loader_init(const void*) { return 0; }
-int asm_quadbuf_push_token(const void*, uint32_t) { return 0; }
-int asm_spengine_init(const void*) { return 0; }
-int asm_spengine_quant_switch_adaptive(int) { return 0; }
-int asm_lsp_bridge_init(const void*) { return 0; }
+void asm_lsp_bridge_set_weights(float, float) {}
+int asm_gguf_loader_init(void*, const wchar_t*, uint32_t) { return 0; }
+void asm_quadbuf_push_token(const char*, uint32_t, uint32_t, uint64_t) {}
+int asm_spengine_init(void*, uint32_t) { return 0; }
+int asm_spengine_quant_switch_adaptive(uint32_t, uint32_t, void*) { return 0; }
+int asm_lsp_bridge_init(void*, void*) { return 0; }
 
 // Batch 14: MASM bridges continued
-int asm_quadbuf_render_frame(const void*) { return 0; }
-int asm_quadbuf_shutdown() { return 0; }
-int asm_gguf_loader_lookup(const char*) { return 0; }
-int asm_spengine_rollback() { return 0; }
-int asm_lsp_bridge_shutdown() { return 0; }
-int asm_spengine_register(const char*, const void*) { return 0; }
-int asm_spengine_get_stats(void*) { return 0; }
+int asm_quadbuf_render_frame(void) { return 0; }
+void asm_quadbuf_shutdown(void) {}
+int asm_gguf_loader_lookup(void*, const char*, uint32_t) { return 0; }
+int asm_spengine_rollback(uint32_t) { return 0; }
+void asm_lsp_bridge_shutdown(void) {}
+int asm_spengine_register(uint32_t, const char*, void*, void*, uint32_t) { return 0; }
+void asm_spengine_get_stats(void*) {}
 
 // Batch 15: loader/quadbuf stats
-int asm_gguf_loader_get_info(const void*, void*) { return 0; }
-int asm_quadbuf_set_flags(uint32_t) { return 0; }
-int asm_quadbuf_resize(uint32_t) { return 0; }
-int asm_gguf_loader_configure_gpu(int) { return 0; }
-int asm_gguf_loader_close() { return 0; }
-int asm_spengine_shutdown() { return 0; }
-int asm_lsp_bridge_get_stats(void*) { return 0; }
+void asm_gguf_loader_get_info(void*, void*) {}
+void asm_quadbuf_set_flags(uint32_t) {}
+void asm_quadbuf_resize(uint32_t, uint32_t) {}
+void asm_gguf_loader_configure_gpu(void*, uint64_t) {}
+void asm_gguf_loader_close(void*) {}
+void asm_spengine_shutdown(void) {}
+void asm_lsp_bridge_get_stats(void*) {}
 
 // Batch 16: loader/apply/sync
-int asm_lsp_bridge_query(const char*) { return 0; }
-int asm_lsp_bridge_invalidate(const char*) { return 0; }
-int asm_quadbuf_get_stats(void*) { return 0; }
-int asm_gguf_loader_parse(const void*, uint64_t) { return 0; }
-int asm_spengine_apply(const void*, uint64_t) { return 0; }
-int asm_lsp_bridge_sync() { return 0; }
-int asm_spengine_quant_switch(int) { return 0; }
+int asm_lsp_bridge_query(void*, uint32_t, uint32_t*) { return 0; }
+void asm_lsp_bridge_invalidate(void) {}
+void asm_quadbuf_get_stats(void*) {}
+int asm_gguf_loader_parse(void*) { return 0; }
+void* asm_spengine_apply(uint32_t, void*) { return nullptr; }
+int asm_lsp_bridge_sync(uint32_t) { return 0; }
+void* asm_spengine_quant_switch(uint32_t, void*) { return nullptr; }
 
 // Batch 17: quadbuf/hwsynth utilities
-int asm_quadbuf_init(uint32_t) { return 0; }
-int asm_gguf_loader_get_stats(void*) { return 0; }
-int asm_spengine_cpu_optimize(const void*) { return 0; }
-int asm_hwsynth_est_resources(const void*, void*) { return 0; }
-int asm_hwsynth_predict_perf(const void*, void*) { return 0; }
-int asm_hwsynth_get_stats(void*) { return 0; }
-int asm_hwsynth_gen_gemm_spec(const void*, void*) { return 0; }
+int asm_quadbuf_init(void*, uint32_t, uint32_t, uint32_t) { return 0; }
+void asm_gguf_loader_get_stats(void*, void*) {}
+void asm_spengine_cpu_optimize(void) {}
+int asm_hwsynth_est_resources(const void*, uint32_t, void*) { return 0; }
+uint64_t asm_hwsynth_predict_perf(const void*, const void*) { return 0; }
+void* asm_hwsynth_get_stats(void) { return nullptr; }
+int asm_hwsynth_gen_gemm_spec(const void*, uint32_t, void*) { return 0; }
 
 // Batch 18: hwsynth + mesh basics
-int asm_hwsynth_gen_jtag_header(const void*, void*) { return 0; }
+uint64_t asm_hwsynth_gen_jtag_header(void*, uint64_t, uint32_t, const void*) { return 0; }
 int asm_hwsynth_analyze_memhier(const void*, void*) { return 0; }
-int asm_hwsynth_profile_dataflow(const void*, void*) { return 0; }
+int asm_hwsynth_profile_dataflow(const void*, uint32_t, uint32_t, uint32_t, uint32_t, void*) { return 0; }
 int asm_hwsynth_shutdown() { return 0; }
-int asm_hwsynth_init(const void*) { return 0; }
+int asm_hwsynth_init() { return 0; }
 uint64_t asm_mesh_crdt_delta(uint64_t, void*, uint32_t) { return 0; }
 void* asm_mesh_get_stats() { return nullptr; }
 
@@ -187,56 +187,56 @@ int asm_mesh_shard_bitfield(uint32_t, uint32_t) { return 0; }
 uint32_t asm_mesh_gossip_disseminate(const void*, uint64_t, void*) { return 0; }
 
 // Batch 21: speciator engines
-int asm_speciator_mutate(const void*, void*) { return 0; }
+int asm_speciator_mutate(uint32_t, uint32_t) { return 0; }
 int asm_speciator_shutdown() { return 0; }
-int asm_speciator_gen_variant(const void*, void*) { return 0; }
-int asm_speciator_get_stats(void*) { return 0; }
-int asm_speciator_create_genome(const void*, void*) { return 0; }
-int asm_speciator_crossover(const void*, const void*, void*) { return 0; }
-int asm_speciator_speciate(const void*, void*) { return 0; }
+int asm_speciator_gen_variant(uint32_t, void*) { return 0; }
+void* asm_speciator_get_stats() { return nullptr; }
+int32_t asm_speciator_create_genome(uint32_t, const void*, uint32_t) { return 0; }
+int32_t asm_speciator_crossover(uint32_t, uint32_t) { return 0; }
+int asm_speciator_speciate(uint32_t) { return 0; }
 
 // Batch 22: speciator/neural bridge
-int asm_speciator_evaluate(const void*, void*) { return 0; }
-int asm_speciator_compete(const void*, void*) { return 0; }
-int asm_speciator_migrate(const void*, void*) { return 0; }
-int asm_speciator_init(const void*) { return 0; }
-int asm_speciator_select(const void*, void*) { return 0; }
-int asm_neural_classify_intent(const void*, uint32_t, void*) { return 0; }
-int asm_neural_haptic_pulse(uint32_t, uint32_t) { return 0; }
+uint64_t asm_speciator_evaluate(uint32_t, void*, uint64_t) { return 0; }
+int asm_speciator_compete(uint32_t*, uint32_t) { return 0; }
+int32_t asm_speciator_migrate(uint32_t, uint32_t) { return 0; }
+int asm_speciator_init() { return 0; }
+int32_t asm_speciator_select(uint32_t) { return 0; }
+int asm_neural_classify_intent(const float*) { return 0; }
+int asm_neural_haptic_pulse(int, int, float*) { return 0; }
 
 // Batch 23: neural bridge continued
-int asm_neural_encode_command(const void*, uint32_t, void*) { return 0; }
-int asm_neural_acquire_eeg(void*, uint32_t) { return 0; }
-int asm_neural_adapt(const void*, void*) { return 0; }
-int asm_neural_fft_decompose(const void*, uint32_t, void*) { return 0; }
-int asm_neural_init(const void*) { return 0; }
-int asm_neural_calibrate(const void*, uint32_t) { return 0; }
-int asm_neural_detect_event(const void*, uint32_t) { return 0; }
+int asm_neural_encode_command(int, uint32_t, void*) { return 0; }
+int asm_neural_acquire_eeg(const void*, int) { return 0; }
+int asm_neural_adapt(int, int) { return 0; }
+int asm_neural_fft_decompose(int) { return 0; }
+int asm_neural_init() { return 0; }
+int asm_neural_calibrate(int, int) { return 0; }
+int asm_neural_detect_event() { return 0; }
 
 // Batch 24: neural final + omega orchestrator
-int asm_neural_gen_phosphene(const void*, uint32_t, void*) { return 0; }
-int asm_neural_extract_csp(const void*, uint32_t, void*) { return 0; }
+int asm_neural_gen_phosphene(int, int, void*) { return 0; }
+int asm_neural_extract_csp(const float*, float*) { return 0; }
 int asm_neural_shutdown() { return 0; }
-int asm_neural_get_stats(void*) { return 0; }
-int asm_omega_implement_generate(const void*, void*) { return 0; }
-int asm_omega_agent_step(const void*, void*) { return 0; }
+void* asm_neural_get_stats() { return nullptr; }
+uint64_t asm_omega_implement_generate(int) { return 0; }
+int asm_omega_agent_step(int) { return 0; }
 int asm_omega_shutdown() { return 0; }
 
 // Batch 25: omega orchestrator continued
-int asm_omega_plan_decompose(const void*, void*) { return 0; }
-int asm_omega_evolve_improve(const void*, void*) { return 0; }
-int asm_omega_init(const void*) { return 0; }
-int asm_omega_get_stats(void*) { return 0; }
-int asm_omega_verify_test(const void*, void*) { return 0; }
-int asm_omega_architect_select(const void*, void*) { return 0; }
-int asm_omega_agent_spawn(const void*, void*) { return 0; }
+int asm_omega_plan_decompose(uint64_t, uint32_t*, int) { return 0; }
+int asm_omega_evolve_improve(int, int) { return 0; }
+int asm_omega_init() { return 0; }
+void* asm_omega_get_stats() { return nullptr; }
+int asm_omega_verify_test(int) { return 0; }
+int asm_omega_architect_select(int, int) { return 0; }
+int asm_omega_agent_spawn(int) { return 0; }
 
 // Batch 26: omega pipeline + entry stub
-int asm_omega_observe_monitor(const void*, void*) { return 0; }
-int asm_omega_deploy_distribute(const void*, void*) { return 0; }
-int asm_omega_execute_pipeline(const void*, void*) { return 0; }
-int asm_omega_ingest_requirement(const void*, void*) { return 0; }
-int asm_omega_world_model_update(const void*, void*) { return 0; }
+int asm_omega_observe_monitor(int) { return 0; }
+int asm_omega_deploy_distribute(int, int) { return 0; }
+int asm_omega_execute_pipeline() { return 0; }
+uint64_t asm_omega_ingest_requirement(const char*, int) { return 0; }
+int asm_omega_world_model_update(int, int) { return 0; }
 int asm_perf_get_slot_count_v2() { return 0; }
 
 // Batch 28: deflate + masm agent failure
