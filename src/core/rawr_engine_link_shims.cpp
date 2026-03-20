@@ -1,6 +1,7 @@
 // Minimal link shims for RawrEngine / Gold / InferenceEngine.
 // These are no-op fallbacks to satisfy references after stub purge.
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <cctype>
 #include <cstdint>
@@ -9,6 +10,7 @@
 #include <cstring>
 #include <chrono>
 #include <cmath>
+#include <limits>
 #include <mutex>
 #include <unordered_map>
 #include <unordered_set>
@@ -143,10 +145,38 @@ struct PerfSpan {
     uint64_t endNs = 0;
 };
 
+struct PerfSlotData {
+    uint64_t lastDurationNs = 0;
+    uint64_t invocationCount = 0;
+    uint64_t totalDurationNs = 0;
+};
+
+struct LspBridgeShimState {
+    bool initialized = false;
+    uint64_t weightBytes = 0;
+    uint32_t weightCrc = 0;
+};
+
+struct GgufLoaderShimState {
+    bool initialized = false;
+    uint32_t initCrc = 0;
+};
+
+struct QuadbufShimState {
+    uint32_t flags = 0;
+    uint32_t maxTokens = 4096;
+    std::vector<uint32_t> tokenStream{};
+};
+
+constexpr int kPerfSlotCount = 64;
 static std::atomic<int> g_nextPerfSpanId{1};
 static std::unordered_map<int, PerfSpan> g_perfSpans;
+static std::array<PerfSlotData, kPerfSlotCount> g_perfSlots{};
 static std::atomic<uint64_t> g_watchdogBaselineNs{0};
 static std::atomic<int> g_watchdogStatus{0};
+static LspBridgeShimState g_lspBridgeState{};
+static GgufLoaderShimState g_ggufLoaderState{};
+static QuadbufShimState g_quadbufState{};
 
 static int closeFileHandle(intptr_t handle) {
     if (handle <= 0) {
@@ -251,6 +281,22 @@ static int transformFileWithKey(const char* inputPath, const char* outputPath, c
 
     std::fclose(in);
     std::fclose(out);
+    return 0;
+}
+
+static int transformBufferWithKey(const uint8_t* src, uint64_t srcLen, uint8_t* dst, uint64_t dstLen) {
+    if (!src || !dst || srcLen == 0 || dstLen < srcLen) {
+        return -1;
+    }
+    static const uint8_t kDefaultKey[] = {
+        0x52, 0x41, 0x57, 0x52, 0x58, 0x44, 0x2D, 0x4B,
+        0x45, 0x59, 0x2D, 0x46, 0x41, 0x4C, 0x4C, 0x42
+    };
+    constexpr uint64_t kKeyLen = static_cast<uint64_t>(sizeof(kDefaultKey));
+    for (uint64_t i = 0; i < srcLen; ++i) {
+        const uint8_t k = kDefaultKey[i % kKeyLen];
+        dst[i] = static_cast<uint8_t>(src[i] ^ static_cast<uint8_t>(k + (i & 0xFFu)));
+    }
     return 0;
 }
 } // namespace
@@ -1168,6 +1214,10 @@ int asm_perf_end(int spanId) {
     it->second.endNs = monotonicTickNowNs();
     const uint64_t durationNs = (it->second.endNs > it->second.startNs) ? (it->second.endNs - it->second.startNs) : 0;
     g_soState.metrics.avg_load_time_ms = durationNs / 1000000ULL;
+    const int slot = (spanId >= 0) ? (spanId % kPerfSlotCount) : 0;
+    g_perfSlots[static_cast<size_t>(slot)].lastDurationNs = durationNs;
+    g_perfSlots[static_cast<size_t>(slot)].invocationCount += 1;
+    g_perfSlots[static_cast<size_t>(slot)].totalDurationNs += durationNs;
     return 0;
 }
 int asm_watchdog_init() {
@@ -1175,25 +1225,113 @@ int asm_watchdog_init() {
     g_watchdogStatus.store(1, std::memory_order_relaxed);
     return 0;
 }
-int asm_watchdog_verify() { return 0; }
-int asm_watchdog_get_status() { return 0; }
-int asm_watchdog_get_baseline() { return 0; }
-int asm_watchdog_shutdown() { return 0; }
+int asm_watchdog_verify() {
+    const int status = g_watchdogStatus.load(std::memory_order_relaxed);
+    if (status == 0) {
+        return -1;
+    }
+    const uint64_t baseline = g_watchdogBaselineNs.load(std::memory_order_relaxed);
+    const uint64_t now = monotonicTickNowNs();
+    if (baseline == 0 || now < baseline) {
+        g_watchdogStatus.store(2, std::memory_order_relaxed);
+        return 0;
+    }
+    const uint64_t elapsedMs = (now - baseline) / 1000000ULL;
+    g_watchdogStatus.store(elapsedMs > 60000ULL ? 2 : 1, std::memory_order_relaxed);
+    return g_watchdogStatus.load(std::memory_order_relaxed) == 1 ? 1 : 0;
+}
+int asm_watchdog_get_status() {
+    return g_watchdogStatus.load(std::memory_order_relaxed);
+}
+int asm_watchdog_get_baseline() {
+    const uint64_t baselineMs = g_watchdogBaselineNs.load(std::memory_order_relaxed) / 1000000ULL;
+    if (baselineMs > static_cast<uint64_t>(std::numeric_limits<int>::max())) {
+        return std::numeric_limits<int>::max();
+    }
+    return static_cast<int>(baselineMs);
+}
+int asm_watchdog_shutdown() {
+    g_watchdogStatus.store(0, std::memory_order_relaxed);
+    g_watchdogBaselineNs.store(0, std::memory_order_relaxed);
+    return 0;
+}
 
 // Batch 12: perf counters + camellia buffer ops
-int asm_perf_init() { return 0; }
-int asm_perf_read_slot(int, uint64_t*) { return 0; }
-int asm_perf_reset_slot(int) { return 0; }
-int asm_perf_get_slot_count() { return 0; }
-uintptr_t asm_perf_get_table_base() { return 0; }
-int asm_camellia256_auth_encrypt_buf(const uint8_t*, uint64_t, uint8_t*, uint64_t) { return 0; }
-int asm_camellia256_auth_decrypt_buf(const uint8_t*, uint64_t, uint8_t*, uint64_t) { return 0; }
+int asm_perf_init() {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_perfSpans.clear();
+    g_nextPerfSpanId.store(1, std::memory_order_relaxed);
+    for (auto& slot : g_perfSlots) {
+        slot = {};
+    }
+    return 0;
+}
+int asm_perf_read_slot(int slotIndex, uint64_t* outValue) {
+    if (!outValue || slotIndex < 0 || slotIndex >= kPerfSlotCount) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    *outValue = g_perfSlots[static_cast<size_t>(slotIndex)].lastDurationNs;
+    return 0;
+}
+int asm_perf_reset_slot(int slotIndex) {
+    if (slotIndex < 0 || slotIndex >= kPerfSlotCount) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_perfSlots[static_cast<size_t>(slotIndex)] = {};
+    return 0;
+}
+int asm_perf_get_slot_count() { return kPerfSlotCount; }
+uintptr_t asm_perf_get_table_base() {
+    return reinterpret_cast<uintptr_t>(g_perfSlots.data());
+}
+int asm_camellia256_auth_encrypt_buf(const uint8_t* src, uint64_t srcLen, uint8_t* dst, uint64_t dstLen) {
+    return transformBufferWithKey(src, srcLen, dst, dstLen);
+}
+int asm_camellia256_auth_decrypt_buf(const uint8_t* src, uint64_t srcLen, uint8_t* dst, uint64_t dstLen) {
+    return transformBufferWithKey(src, srcLen, dst, dstLen);
+}
 
 // Batch 13: MASM bridges (gguf/lsp/quadbuf/spengine)
-int asm_apply_memory_patch(void*, uint64_t, const void*) { return 0; }
-int asm_lsp_bridge_set_weights(const void*, uint64_t) { return 0; }
-int asm_gguf_loader_init(const void*) { return 0; }
-int asm_quadbuf_push_token(const void*, uint32_t) { return 0; }
+int asm_apply_memory_patch(void* target, uint64_t patchBytes, const void* patchData) {
+    if (!target || !patchData || patchBytes == 0) {
+        return -1;
+    }
+    std::memcpy(target, patchData, static_cast<size_t>(patchBytes));
+    return 0;
+}
+int asm_lsp_bridge_set_weights(const void* weights, uint64_t weightBytes) {
+    if (!weights || weightBytes == 0) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_lspBridgeState.initialized = true;
+    g_lspBridgeState.weightBytes = weightBytes;
+    g_lspBridgeState.weightCrc = crc32Bytes(static_cast<const uint8_t*>(weights), static_cast<size_t>(weightBytes));
+    return 0;
+}
+int asm_gguf_loader_init(const void* initConfig) {
+    if (!initConfig) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_ggufLoaderState.initialized = true;
+    g_ggufLoaderState.initCrc = crc32Bytes(static_cast<const uint8_t*>(initConfig), 64);
+    return 0;
+}
+int asm_quadbuf_push_token(const void* tokenData, uint32_t tokenType) {
+    uint32_t token = tokenType;
+    if (tokenData) {
+        token = *static_cast<const uint32_t*>(tokenData);
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (g_quadbufState.tokenStream.size() >= g_quadbufState.maxTokens) {
+        g_quadbufState.tokenStream.erase(g_quadbufState.tokenStream.begin());
+    }
+    g_quadbufState.tokenStream.push_back(token);
+    return static_cast<int>(g_quadbufState.tokenStream.size());
+}
 int asm_spengine_init(const void*) { return 0; }
 int asm_spengine_quant_switch_adaptive(int) { return 0; }
 int asm_lsp_bridge_init(const void*) { return 0; }
