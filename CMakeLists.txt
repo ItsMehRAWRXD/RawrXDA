@@ -1192,7 +1192,7 @@ target_compile_definitions(RawrEngine PRIVATE
     $<$<BOOL:${_RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS}>:RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS=1>
 )
 
-# Sources used by missing_handler_stubs: debugger engine + symbols + Ollama client
+# Sources used by command/handler ownership lanes.
 target_sources(RawrEngine PRIVATE
     src/core/native_debugger_engine.cpp
     src/core/native_debugger_symbols.cpp
@@ -1203,6 +1203,19 @@ if(NOT RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
 endif()
 if(RAWR_SSOT_PROVIDER_UPPER STREQUAL "EXT" OR RAWR_SSOT_PROVIDER_UPPER STREQUAL "STUBS")
     target_sources(RawrEngine PRIVATE src/core/auto_feature_stub_impl.cpp)
+endif()
+
+# Production default: keep real auto feature handlers linked for RawrEngine.
+# Allow explicit STUBS lane only when selected by RAWR_SSOT_PROVIDER.
+if(RAWR_SSOT_PROVIDER_UPPER STREQUAL "STUBS")
+    target_sources(RawrEngine PRIVATE
+        src/core/auto_feature_stub_impl.cpp
+    )
+    message(WARNING "[SSOT Ownership] RawrEngine STUBS lane selected: auto_feature_stub_impl.cpp enabled")
+else()
+    target_sources(RawrEngine PRIVATE
+        src/core/auto_feature_registry.cpp
+    )
 endif()
 
 # Win32 system libraries (same as Gold)
@@ -3358,16 +3371,19 @@ if(WIN32)
         set(STUB_COUNT 0)
         
         foreach(src ${SOURCES})
-            # Detect stub files
+            set(_RAWR_STUB_MATCH 0)
             if(src MATCHES "(_stubs\\.cpp$|_stubs\\.asm$|/missing_handler|_link_shims?\\.cpp$|_fallback[^/]*\\.cpp$)" OR
                src MATCHES "(stub_|shim_|shims?\\.cpp$)" OR
                src MATCHES "(mock_|fake_)")
-                                # ai_agent_masm_stubs.cpp provides required MASM symbols — exempt
-                                if(src MATCHES "ai_agent_masm_stubs\\.cpp$")
-                                    continue()
-                                endif()
-                list(APPEND STUB_VIOLATIONS "${src}")
-                math(EXPR STUB_COUNT "${STUB_COUNT} + 1")
+                set(_RAWR_STUB_MATCH 1)
+            endif()
+            if(_RAWR_STUB_MATCH)
+                if(src MATCHES "ai_agent_masm_stubs\\.cpp$" OR src MATCHES "quickjs_node_shims\\.cpp$")
+                    # Exempt: MASM bridge + QuickJS Node API compat layer.
+                else()
+                    list(APPEND STUB_VIOLATIONS "${src}")
+                    math(EXPR STUB_COUNT "${STUB_COUNT} + 1")
+                endif()
             endif()
         endforeach()
         
