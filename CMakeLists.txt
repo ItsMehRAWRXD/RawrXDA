@@ -3023,12 +3023,21 @@ if(WIN32)
         # Benchmarks (real implementation; replaces earlier IDE stubs)
         src/benchmark_menu_widget.cpp
         src/benchmark_runner.cpp
+        # Legacy benchmark stub compatibility units (kept for parity wiring/docs)
+        src/win32app/benchmark_menu_stub.cpp
+        src/win32app/benchmark_runner_stub.cpp
         src/win32app/feature_registry_panel.cpp
         src/ui/monaco_settings_dialog.cpp
         src/thermal/RAWRXD_ThermalDashboard.cpp
         src/win32app/VSCodeMarketplaceAPI.cpp
         # Multi-file search (real implementation; replaces earlier IDE stub)
         src/multi_file_search.cpp
+        # Legacy support unit used by older feature-manifest wiring
+        src/win32app/digestion_engine_stub.cpp
+        src/win32app/Win32IDE_logMessage_stub.cpp
+        # Completed modules previously documented as shipped
+        src/core/license_manager_panel.cpp
+        src/telemetry/logger.cpp
         # License Creator + Feature Registry dialogs (showLicenseCreatorDialog, showFeatureRegistryDialog)
         src/win32app/Win32IDE_LicenseCreator.cpp
         # License enforcement + manifest (g_FeatureManifest + featureName from license_validator_manifest.cpp; LicenseEnforcer from license_enforcement.cpp)

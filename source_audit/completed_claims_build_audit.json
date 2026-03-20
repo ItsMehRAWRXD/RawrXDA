@@ -1,225 +1,27 @@
 {
-  "generated_at": "2026-03-20 19:27:48",
+  "generated_at": "2026-03-20 19:37:46",
   "repo_root": "/workspace",
   "docs_scanned": [
     "docs/FULL_AUDIT_MASTER.md",
     "UNFINISHED_FEATURES.md"
   ],
-  "win32ide_source_count": 523,
+  "win32ide_source_count": 529,
   "asm_kernel_source_count": 47,
   "active_cmake_files_scanned": 103,
   "claims_total": 37,
   "claims_file_total": 36,
   "claims_symbol_total": 1,
   "mismatch_counts": {
-    "claimed_file_missing": 6,
-    "claimed_file_missing_but_referenced_by_win32ide_sources": 2,
-    "claimed_file_not_in_expected_build_graph": 3,
+    "claimed_file_missing": 0,
+    "claimed_file_missing_but_referenced_by_win32ide_sources": 0,
+    "claimed_file_not_in_expected_build_graph": 0,
     "claimed_symbol_missing": 0,
     "claimed_completed_with_not_implemented_markers": 0
   },
   "mismatches": {
-    "claimed_file_missing": [
-      {
-        "source_doc": "docs/FULL_AUDIT_MASTER.md",
-        "line": 55,
-        "token": "multi_file_search_stub.cpp",
-        "resolved_count": 0,
-        "resolved_paths_sample": [],
-        "exists": false,
-        "expected_scope": "win32ide",
-        "in_win32ide_sources": true,
-        "in_any_cmake": true,
-        "cmake_line_hits": [
-          2976,
-          3358
-        ],
-        "cmake_file_hits": [
-          "CMakeLists.txt"
-        ],
-        "not_implemented_markers": {},
-        "context": "- Added to WIN32IDE_SOURCES: `model_registry.cpp`, `checkpoint_manager.cpp`, `universal_model_router.cpp`, `agent/project_context.cpp`, `ui/interpretability_panel.cpp`, `feature_registry_panel.cpp`, `multi_file_search_stub.cpp`, `benchmark_menu_stub.cpp`, `enterprise_licensev2_impl.cpp`, `license_enforcement.cpp`, `enterprise_feature_manager.cpp`, `feature_flags_runtime.cpp`, `context_deterioration_hotpatch.cpp`, `agentic_autonomous_config.cpp`, `multi_gpu.cpp`, `Win32IDE_LicenseCreator.cpp`, `monaco_settings_dialog.cpp`, `thermal/RAWRXD_ThermalDashboard.cpp`, `VSCodeMarketplaceAPI.cpp`."
-      },
-      {
-        "source_doc": "docs/FULL_AUDIT_MASTER.md",
-        "line": 55,
-        "token": "benchmark_menu_stub.cpp",
-        "resolved_count": 0,
-        "resolved_paths_sample": [],
-        "exists": false,
-        "expected_scope": "win32ide",
-        "in_win32ide_sources": false,
-        "in_any_cmake": false,
-        "cmake_line_hits": [],
-        "cmake_file_hits": [],
-        "not_implemented_markers": {},
-        "context": "- Added to WIN32IDE_SOURCES: `model_registry.cpp`, `checkpoint_manager.cpp`, `universal_model_router.cpp`, `agent/project_context.cpp`, `ui/interpretability_panel.cpp`, `feature_registry_panel.cpp`, `multi_file_search_stub.cpp`, `benchmark_menu_stub.cpp`, `enterprise_licensev2_impl.cpp`, `license_enforcement.cpp`, `enterprise_feature_manager.cpp`, `feature_flags_runtime.cpp`, `context_deterioration_hotpatch.cpp`, `agentic_autonomous_config.cpp`, `multi_gpu.cpp`, `Win32IDE_LicenseCreator.cpp`, `monaco_settings_dialog.cpp`, `thermal/RAWRXD_ThermalDashboard.cpp`, `VSCodeMarketplaceAPI.cpp`."
-      },
-      {
-        "source_doc": "UNFINISHED_FEATURES.md",
-        "line": 216,
-        "token": "src/win32app/benchmark_runner_stub.cpp",
-        "resolved_count": 0,
-        "resolved_paths_sample": [],
-        "exists": false,
-        "expected_scope": "any",
-        "in_win32ide_sources": false,
-        "in_any_cmake": false,
-        "cmake_line_hits": [],
-        "cmake_file_hits": [],
-        "not_implemented_markers": {},
-        "context": "| benchmark_runner_stub | src/win32app/benchmark_runner_stub.cpp | Yes | Yes | IDE build variant; minimal for unique_ptr; full impl in benchmark build. |"
-      },
-      {
-        "source_doc": "UNFINISHED_FEATURES.md",
-        "line": 217,
-        "token": "src/win32app/benchmark_menu_stub.cpp",
-        "resolved_count": 0,
-        "resolved_paths_sample": [],
-        "exists": false,
-        "expected_scope": "any",
-        "in_win32ide_sources": false,
-        "in_any_cmake": false,
-        "cmake_line_hits": [],
-        "cmake_file_hits": [],
-        "not_implemented_markers": {},
-        "context": "| benchmark_menu_stub | src/win32app/benchmark_menu_stub.cpp | Yes | Yes | IDE build variant; real dialog when menu invoked. |"
-      },
-      {
-        "source_doc": "UNFINISHED_FEATURES.md",
-        "line": 218,
-        "token": "src/win32app/multi_file_search_stub.cpp",
-        "resolved_count": 0,
-        "resolved_paths_sample": [],
-        "exists": false,
-        "expected_scope": "any",
-        "in_win32ide_sources": true,
-        "in_any_cmake": true,
-        "cmake_line_hits": [
-          2976,
-          3358
-        ],
-        "cmake_file_hits": [
-          "CMakeLists.txt"
-        ],
-        "not_implemented_markers": {},
-        "context": "| multi_file_search_stub | src/win32app/multi_file_search_stub.cpp | Yes | Yes | IDE build variant; real filesystem search, regex, glob. |"
-      },
-      {
-        "source_doc": "UNFINISHED_FEATURES.md",
-        "line": 221,
-        "token": "src/win32app/Win32IDE_logMessage_stub.cpp",
-        "resolved_count": 0,
-        "resolved_paths_sample": [],
-        "exists": false,
-        "expected_scope": "any",
-        "in_win32ide_sources": false,
-        "in_any_cmake": false,
-        "cmake_line_hits": [],
-        "cmake_file_hits": [],
-        "not_implemented_markers": {},
-        "context": "| Win32IDE_logMessage_stub | src/win32app/Win32IDE_logMessage_stub.cpp | Yes | Yes | Build variant: OutputDebugString + ide.log. |"
-      }
-    ],
-    "claimed_file_missing_but_referenced_by_win32ide_sources": [
-      {
-        "source_doc": "docs/FULL_AUDIT_MASTER.md",
-        "line": 55,
-        "token": "multi_file_search_stub.cpp",
-        "resolved_count": 0,
-        "resolved_paths_sample": [],
-        "exists": false,
-        "expected_scope": "win32ide",
-        "in_win32ide_sources": true,
-        "in_any_cmake": true,
-        "cmake_line_hits": [
-          2976,
-          3358
-        ],
-        "cmake_file_hits": [
-          "CMakeLists.txt"
-        ],
-        "not_implemented_markers": {},
-        "context": "- Added to WIN32IDE_SOURCES: `model_registry.cpp`, `checkpoint_manager.cpp`, `universal_model_router.cpp`, `agent/project_context.cpp`, `ui/interpretability_panel.cpp`, `feature_registry_panel.cpp`, `multi_file_search_stub.cpp`, `benchmark_menu_stub.cpp`, `enterprise_licensev2_impl.cpp`, `license_enforcement.cpp`, `enterprise_feature_manager.cpp`, `feature_flags_runtime.cpp`, `context_deterioration_hotpatch.cpp`, `agentic_autonomous_config.cpp`, `multi_gpu.cpp`, `Win32IDE_LicenseCreator.cpp`, `monaco_settings_dialog.cpp`, `thermal/RAWRXD_ThermalDashboard.cpp`, `VSCodeMarketplaceAPI.cpp`."
-      },
-      {
-        "source_doc": "UNFINISHED_FEATURES.md",
-        "line": 218,
-        "token": "src/win32app/multi_file_search_stub.cpp",
-        "resolved_count": 0,
-        "resolved_paths_sample": [],
-        "exists": false,
-        "expected_scope": "any",
-        "in_win32ide_sources": true,
-        "in_any_cmake": true,
-        "cmake_line_hits": [
-          2976,
-          3358
-        ],
-        "cmake_file_hits": [
-          "CMakeLists.txt"
-        ],
-        "not_implemented_markers": {},
-        "context": "| multi_file_search_stub | src/win32app/multi_file_search_stub.cpp | Yes | Yes | IDE build variant; real filesystem search, regex, glob. |"
-      }
-    ],
-    "claimed_file_not_in_expected_build_graph": [
-      {
-        "source_doc": "UNFINISHED_FEATURES.md",
-        "line": 219,
-        "token": "src/win32app/digestion_engine_stub.cpp",
-        "resolved_count": 3,
-        "resolved_paths_sample": [
-          ".archived_orphans/digestion_engine_stub.cpp",
-          "Full Source/src/win32app/digestion_engine_stub.cpp",
-          "history/reconstructed/src/win32app/digestion_engine_stub.cpp"
-        ],
-        "exists": true,
-        "expected_scope": "any",
-        "in_win32ide_sources": false,
-        "in_any_cmake": false,
-        "cmake_line_hits": [],
-        "cmake_file_hits": [],
-        "not_implemented_markers": {
-          "todo": 6
-        },
-        "context": "| digestion_engine_stub | src/win32app/digestion_engine_stub.cpp | Yes | Yes | Production impl (metrics, JSON); filename retained. |"
-      },
-      {
-        "source_doc": "UNFINISHED_FEATURES.md",
-        "line": 229,
-        "token": "src/core/license_manager_panel.cpp",
-        "resolved_count": 1,
-        "resolved_paths_sample": [
-          "src/core/license_manager_panel.cpp"
-        ],
-        "exists": true,
-        "expected_scope": "any",
-        "in_win32ide_sources": false,
-        "in_any_cmake": false,
-        "cmake_line_hits": [],
-        "cmake_file_hits": [],
-        "not_implemented_markers": {},
-        "context": "| license_manager_panel show() | src/core/license_manager_panel.cpp | Yes | Yes | Full impl: LicenseInfoDialog and LicenseActivationDialog show Win32 modal dialogs; display* fill list from EnterpriseLicenseV2; Activate calls loadKeyFromFile. |"
-      },
-      {
-        "source_doc": "UNFINISHED_FEATURES.md",
-        "line": 253,
-        "token": "src/telemetry/logger.cpp",
-        "resolved_count": 1,
-        "resolved_paths_sample": [
-          "src/telemetry/logger.cpp"
-        ],
-        "exists": true,
-        "expected_scope": "any",
-        "in_win32ide_sources": false,
-        "in_any_cmake": false,
-        "cmake_line_hits": [],
-        "cmake_file_hits": [],
-        "not_implemented_markers": {},
-        "context": "| logger (telemetry) | src/telemetry/logger.cpp | Yes | Yes | Structured JSON logging stub. |"
-      }
-    ],
+    "claimed_file_missing": [],
+    "claimed_file_missing_but_referenced_by_win32ide_sources": [],
+    "claimed_file_not_in_expected_build_graph": [],
     "claimed_symbol_missing": [],
     "claimed_completed_with_not_implemented_markers": []
   },
@@ -371,7 +173,7 @@
       "in_any_cmake": true,
       "cmake_line_hits": [
         3013,
-        3026
+        3029
       ],
       "cmake_file_hits": [
         "CMakeLists.txt"
@@ -383,15 +185,17 @@
       "source_doc": "docs/FULL_AUDIT_MASTER.md",
       "line": 55,
       "token": "multi_file_search_stub.cpp",
-      "resolved_count": 0,
-      "resolved_paths_sample": [],
-      "exists": false,
+      "resolved_count": 1,
+      "resolved_paths_sample": [
+        "src/win32app/multi_file_search_stub.cpp"
+      ],
+      "exists": true,
       "expected_scope": "win32ide",
       "in_win32ide_sources": true,
       "in_any_cmake": true,
       "cmake_line_hits": [
         2976,
-        3358
+        3367
       ],
       "cmake_file_hits": [
         "CMakeLists.txt"
@@ -403,14 +207,20 @@
       "source_doc": "docs/FULL_AUDIT_MASTER.md",
       "line": 55,
       "token": "benchmark_menu_stub.cpp",
-      "resolved_count": 0,
-      "resolved_paths_sample": [],
-      "exists": false,
+      "resolved_count": 1,
+      "resolved_paths_sample": [
+        "src/win32app/benchmark_menu_stub.cpp"
+      ],
+      "exists": true,
       "expected_scope": "win32ide",
-      "in_win32ide_sources": false,
-      "in_any_cmake": false,
-      "cmake_line_hits": [],
-      "cmake_file_hits": [],
+      "in_win32ide_sources": true,
+      "in_any_cmake": true,
+      "cmake_line_hits": [
+        3027
+      ],
+      "cmake_file_hits": [
+        "CMakeLists.txt"
+      ],
       "not_implemented_markers": {},
       "context": "- Added to WIN32IDE_SOURCES: `model_registry.cpp`, `checkpoint_manager.cpp`, `universal_model_router.cpp`, `agent/project_context.cpp`, `ui/interpretability_panel.cpp`, `feature_registry_panel.cpp`, `multi_file_search_stub.cpp`, `benchmark_menu_stub.cpp`, `enterprise_licensev2_impl.cpp`, `license_enforcement.cpp`, `enterprise_feature_manager.cpp`, `feature_flags_runtime.cpp`, `context_deterioration_hotpatch.cpp`, `agentic_autonomous_config.cpp`, `multi_gpu.cpp`, `Win32IDE_LicenseCreator.cpp`, `monaco_settings_dialog.cpp`, `thermal/RAWRXD_ThermalDashboard.cpp`, `VSCodeMarketplaceAPI.cpp`."
     },
@@ -456,8 +266,8 @@
       "cmake_line_hits": [
         558,
         2196,
-        3034,
-        3035
+        3043,
+        3044
       ],
       "cmake_file_hits": [
         "CMakeLists.txt"
@@ -504,7 +314,7 @@
       "cmake_line_hits": [
         559,
         2197,
-        3036
+        3045
       ],
       "cmake_file_hits": [
         "CMakeLists.txt"
@@ -594,7 +404,7 @@
       "in_win32ide_sources": true,
       "in_any_cmake": true,
       "cmake_line_hits": [
-        3033
+        3042
       ],
       "cmake_file_hits": [
         "CMakeLists.txt"
@@ -618,7 +428,7 @@
       "in_win32ide_sources": true,
       "in_any_cmake": true,
       "cmake_line_hits": [
-        3027
+        3030
       ],
       "cmake_file_hits": [
         "CMakeLists.txt"
@@ -642,7 +452,7 @@
       "in_win32ide_sources": true,
       "in_any_cmake": true,
       "cmake_line_hits": [
-        3028
+        3031
       ],
       "cmake_file_hits": [
         "CMakeLists.txt",
@@ -666,7 +476,7 @@
       "in_win32ide_sources": true,
       "in_any_cmake": true,
       "cmake_line_hits": [
-        3029
+        3032
       ],
       "cmake_file_hits": [
         "CMakeLists.txt"
@@ -730,14 +540,20 @@
       "source_doc": "UNFINISHED_FEATURES.md",
       "line": 216,
       "token": "src/win32app/benchmark_runner_stub.cpp",
-      "resolved_count": 0,
-      "resolved_paths_sample": [],
-      "exists": false,
+      "resolved_count": 1,
+      "resolved_paths_sample": [
+        "src/win32app/benchmark_runner_stub.cpp"
+      ],
+      "exists": true,
       "expected_scope": "any",
-      "in_win32ide_sources": false,
-      "in_any_cmake": false,
-      "cmake_line_hits": [],
-      "cmake_file_hits": [],
+      "in_win32ide_sources": true,
+      "in_any_cmake": true,
+      "cmake_line_hits": [
+        3028
+      ],
+      "cmake_file_hits": [
+        "CMakeLists.txt"
+      ],
       "not_implemented_markers": {},
       "context": "| benchmark_runner_stub | src/win32app/benchmark_runner_stub.cpp | Yes | Yes | IDE build variant; minimal for unique_ptr; full impl in benchmark build. |"
     },
@@ -745,14 +561,20 @@
       "source_doc": "UNFINISHED_FEATURES.md",
       "line": 217,
       "token": "src/win32app/benchmark_menu_stub.cpp",
-      "resolved_count": 0,
-      "resolved_paths_sample": [],
-      "exists": false,
+      "resolved_count": 1,
+      "resolved_paths_sample": [
+        "src/win32app/benchmark_menu_stub.cpp"
+      ],
+      "exists": true,
       "expected_scope": "any",
-      "in_win32ide_sources": false,
-      "in_any_cmake": false,
-      "cmake_line_hits": [],
-      "cmake_file_hits": [],
+      "in_win32ide_sources": true,
+      "in_any_cmake": true,
+      "cmake_line_hits": [
+        3027
+      ],
+      "cmake_file_hits": [
+        "CMakeLists.txt"
+      ],
       "not_implemented_markers": {},
       "context": "| benchmark_menu_stub | src/win32app/benchmark_menu_stub.cpp | Yes | Yes | IDE build variant; real dialog when menu invoked. |"
     },
@@ -760,15 +582,17 @@
       "source_doc": "UNFINISHED_FEATURES.md",
       "line": 218,
       "token": "src/win32app/multi_file_search_stub.cpp",
-      "resolved_count": 0,
-      "resolved_paths_sample": [],
-      "exists": false,
+      "resolved_count": 1,
+      "resolved_paths_sample": [
+        "src/win32app/multi_file_search_stub.cpp"
+      ],
+      "exists": true,
       "expected_scope": "any",
       "in_win32ide_sources": true,
       "in_any_cmake": true,
       "cmake_line_hits": [
         2976,
-        3358
+        3367
       ],
       "cmake_file_hits": [
         "CMakeLists.txt"
@@ -780,21 +604,21 @@
       "source_doc": "UNFINISHED_FEATURES.md",
       "line": 219,
       "token": "src/win32app/digestion_engine_stub.cpp",
-      "resolved_count": 3,
+      "resolved_count": 1,
       "resolved_paths_sample": [
-        ".archived_orphans/digestion_engine_stub.cpp",
-        "Full Source/src/win32app/digestion_engine_stub.cpp",
-        "history/reconstructed/src/win32app/digestion_engine_stub.cpp"
+        "src/win32app/digestion_engine_stub.cpp"
       ],
       "exists": true,
       "expected_scope": "any",
-      "in_win32ide_sources": false,
-      "in_any_cmake": false,
-      "cmake_line_hits": [],
-      "cmake_file_hits": [],
-      "not_implemented_markers": {
-        "todo": 6
-      },
+      "in_win32ide_sources": true,
+      "in_any_cmake": true,
+      "cmake_line_hits": [
+        3036
+      ],
+      "cmake_file_hits": [
+        "CMakeLists.txt"
+      ],
+      "not_implemented_markers": {},
       "context": "| digestion_engine_stub | src/win32app/digestion_engine_stub.cpp | Yes | Yes | Production impl (metrics, JSON); filename retained. |"
     },
     {
@@ -818,14 +642,20 @@
       "source_doc": "UNFINISHED_FEATURES.md",
       "line": 221,
       "token": "src/win32app/Win32IDE_logMessage_stub.cpp",
-      "resolved_count": 0,
-      "resolved_paths_sample": [],
-      "exists": false,
+      "resolved_count": 1,
+      "resolved_paths_sample": [
+        "src/win32app/Win32IDE_logMessage_stub.cpp"
+      ],
+      "exists": true,
       "expected_scope": "any",
-      "in_win32ide_sources": false,
-      "in_any_cmake": false,
-      "cmake_line_hits": [],
-      "cmake_file_hits": [],
+      "in_win32ide_sources": true,
+      "in_any_cmake": true,
+      "cmake_line_hits": [
+        3037
+      ],
+      "cmake_file_hits": [
+        "CMakeLists.txt"
+      ],
       "not_implemented_markers": {},
       "context": "| Win32IDE_logMessage_stub | src/win32app/Win32IDE_logMessage_stub.cpp | Yes | Yes | Build variant: OutputDebugString + ide.log. |"
     },
@@ -924,10 +754,14 @@
       ],
       "exists": true,
       "expected_scope": "any",
-      "in_win32ide_sources": false,
-      "in_any_cmake": false,
-      "cmake_line_hits": [],
-      "cmake_file_hits": [],
+      "in_win32ide_sources": true,
+      "in_any_cmake": true,
+      "cmake_line_hits": [
+        3039
+      ],
+      "cmake_file_hits": [
+        "CMakeLists.txt"
+      ],
       "not_implemented_markers": {},
       "context": "| license_manager_panel show() | src/core/license_manager_panel.cpp | Yes | Yes | Full impl: LicenseInfoDialog and LicenseActivationDialog show Win32 modal dialogs; display* fill list from EnterpriseLicenseV2; Activate calls loadKeyFromFile. |"
     },
@@ -983,10 +817,14 @@
       ],
       "exists": true,
       "expected_scope": "any",
-      "in_win32ide_sources": false,
-      "in_any_cmake": false,
-      "cmake_line_hits": [],
-      "cmake_file_hits": [],
+      "in_win32ide_sources": true,
+      "in_any_cmake": true,
+      "cmake_line_hits": [
+        3040
+      ],
+      "cmake_file_hits": [
+        "CMakeLists.txt"
+      ],
       "not_implemented_markers": {},
       "context": "| logger (telemetry) | src/telemetry/logger.cpp | Yes | Yes | Structured JSON logging stub. |"
     },
