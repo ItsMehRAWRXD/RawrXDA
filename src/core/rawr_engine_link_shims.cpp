@@ -1,18 +1,18 @@
 // Minimal link shims for RawrEngine / Gold / InferenceEngine.
 // These are no-op fallbacks to satisfy references after stub purge.
 #include <cstdint>
+#include <cstddef>
 #include <string>
 #include <vector>
-#include "../agentic/RobustOllamaParser.h"
 
 extern "C" {
-int64_t Scheduler_SubmitTask(void*, void*, uint8_t, uint8_t, void*) { return 0; }
-void* AllocateDMABuffer(uint64_t, uint32_t) { return nullptr; }
-uint32_t CalculateCRC32(const void*, uint64_t) { return 0; }
-int Heartbeat_AddNode(const char*, uint32_t) { return 0; }
-int Tensor_QuantizedMatMul(const void*, const void*, void*, uint32_t) { return 0; }
-int ConflictDetector_LockResource(uint32_t) { return 0; }
-int GPU_WaitForDMA(uint32_t) { return 0; }
+uint64_t Scheduler_SubmitTask(void (*)(void*), void*, uint8_t) { return 0; }
+void* AllocateDMABuffer(uint64_t) { return nullptr; }
+uint32_t CalculateCRC32(const void*, uint64_t, uint32_t) { return 0; }
+int Heartbeat_AddNode(uint32_t, const char*) { return 0; }
+int Tensor_QuantizedMatMul(const float*, const float*, float*, uint32_t, uint32_t, uint32_t, uint8_t) { return 0; }
+int ConflictDetector_LockResource(uint64_t, uint32_t) { return 0; }
+int GPU_WaitForDMA(uint64_t, uint32_t) { return 0; }
 
 // Pyre compute kernels
 int asm_pyre_gemm_fp32(const void*, const void*, void*, int, int, int) { return 0; }
@@ -24,18 +24,18 @@ int asm_pyre_gemv_fp32(const void*, const void*, void*, int, int) { return 0; }
 int asm_pyre_add_fp32(void*, const void*, const void*, int) { return 0; }
 
 // Batch 3: scheduler/clock + conflict/dma
-int ConflictDetector_RegisterResource(uint32_t) { return 0; }
-int ConflictDetector_UnlockResource(uint32_t) { return 0; }
+uint64_t ConflictDetector_RegisterResource(uint64_t, uint64_t) { return 0; }
+int ConflictDetector_UnlockResource(uint64_t) { return 0; }
 uint64_t GetHighResTick() { return 0; }
 uint64_t TicksToMilliseconds(uint64_t ticks) { return ticks; }
 uint64_t TicksToMicroseconds(uint64_t ticks) { return ticks; }
-int GPU_SubmitDMATransfer(uint32_t, void*, uint64_t) { return 0; }
-int Scheduler_WaitForTask(int64_t) { return 0; }
+uint64_t GPU_SubmitDMATransfer(const void*, void*, uint64_t) { return 0; }
+int Scheduler_WaitForTask(uint64_t, uint32_t, void*, uint32_t) { return 0; }
 
 // Batch 4: hotpatch + pyre + pattern
 int asm_pyre_mul_fp32(void*, const void*, const void*, int) { return 0; }
 int asm_pyre_softmax(void*, const void*, int) { return 0; }
-int find_pattern_asm(const uint8_t*, uint64_t, const uint8_t*, uint64_t, uint64_t*) { return 0; }
+const void* find_pattern_asm(const void*, size_t, const void*, size_t) { return nullptr; }
 int asm_hotpatch_restore_prologue(void*) { return 0; }
 int asm_hotpatch_backup_prologue(void*) { return 0; }
 int asm_hotpatch_flush_icache(void*, uint64_t) { return 0; }
@@ -174,8 +174,8 @@ int asm_mesh_shutdown() { return 0; }
 int asm_mesh_fedavg_aggregate(const void*, const void*, void*) { return 0; }
 int asm_mesh_crdt_merge(const void*, const void*, void*) { return 0; }
 int asm_mesh_dht_xor_distance(const void*, const void*, void*) { return 0; }
-int asm_mesh_init(const void*) { return 0; }
-int asm_mesh_zkp_verify(const void*, const void*) { return 0; }
+int asm_mesh_init() { return 0; }
+int asm_mesh_zkp_verify(void*) { return 0; }
 
 // Batch 20: mesh quorum/sharding
 int asm_mesh_shard_hash(const void*, uint32_t, void*) { return 0; }
