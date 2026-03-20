@@ -6,6 +6,12 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#endif
 #include <string>
 #include <vector>
 #include "../agentic/RobustOllamaParser.h"
@@ -31,6 +37,43 @@ struct SOState {
 
 static SOState g_soState{};
 
+constexpr size_t kRawrPatchBytes = 16;
+constexpr size_t kRawrSnapshotBytes = 64;
+constexpr size_t kRawrPatchSlots = 256;
+
+struct RawrPatchEntry {
+    void* functionAddr = nullptr;
+    uint8_t backup[kRawrPatchBytes]{};
+    uint8_t snapshot[kRawrSnapshotBytes]{};
+    size_t snapshotSize = 0;
+    bool hasBackup = false;
+    bool hasSnapshot = false;
+};
+
+struct RawrHotpatchStats {
+    uint64_t swapsApplied = 0;
+    uint64_t swapsRolledBack = 0;
+    uint64_t swapsFailed = 0;
+    uint64_t shadowPagesAllocated = 0;
+    uint64_t shadowPagesFreed = 0;
+    uint64_t icacheFlushes = 0;
+    uint64_t crcChecks = 0;
+    uint64_t crcMismatches = 0;
+};
+
+struct RawrSnapshotStats {
+    uint64_t captured = 0;
+    uint64_t restored = 0;
+    uint64_t discarded = 0;
+    uint64_t verifyPassed = 0;
+    uint64_t verifyFailed = 0;
+    uint64_t bytesStored = 0;
+};
+
+static RawrPatchEntry g_rawrPatchEntries[kRawrPatchSlots]{};
+static RawrHotpatchStats g_rawrHotpatchStats{};
+static RawrSnapshotStats g_rawrSnapshotStats{};
+
 static int closeFileHandle(intptr_t handle) {
     if (handle <= 0) {
         return 0;
@@ -44,6 +87,97 @@ static FILE* fileFromHandle(intptr_t handle) {
         return nullptr;
     }
     return reinterpret_cast<FILE*>(handle);
+}
+
+static uint32_t crc32Bytes(const uint8_t* data, size_t size) {
+    if (!data || size == 0) {
+        return 0;
+    }
+    uint32_t crc = 0xFFFFFFFFu;
+    for (size_t i = 0; i < size; ++i) {
+        crc ^= data[i];
+        for (int bit = 0; bit < 8; ++bit) {
+            const uint32_t mask = static_cast<uint32_t>(-(crc & 1u));
+            crc = (crc >> 1u) ^ (0xEDB88320u & mask);
+        }
+    }
+    return ~crc;
+}
+
+static RawrPatchEntry* findPatchEntry(void* addr) {
+    if (!addr) {
+        return nullptr;
+    }
+    for (size_t i = 0; i < kRawrPatchSlots; ++i) {
+        if (g_rawrPatchEntries[i].functionAddr == addr) {
+            return &g_rawrPatchEntries[i];
+        }
+    }
+    return nullptr;
+}
+
+static RawrPatchEntry* findOrCreatePatchEntry(void* addr) {
+    RawrPatchEntry* existing = findPatchEntry(addr);
+    if (existing) {
+        return existing;
+    }
+    for (size_t i = 0; i < kRawrPatchSlots; ++i) {
+        if (g_rawrPatchEntries[i].functionAddr == nullptr) {
+            g_rawrPatchEntries[i].functionAddr = addr;
+            return &g_rawrPatchEntries[i];
+        }
+    }
+    return nullptr;
+}
+
+static int transformFileWithKey(const char* inputPath, const char* outputPath, const uint8_t* key, uint32_t keyLen) {
+    if (!inputPath || !outputPath) {
+        return -1;
+    }
+    FILE* in = std::fopen(inputPath, "rb");
+    if (!in) {
+        return -1;
+    }
+    FILE* out = std::fopen(outputPath, "wb");
+    if (!out) {
+        std::fclose(in);
+        return -1;
+    }
+
+    static const uint8_t kDefaultKey[] = {
+        0x52, 0x41, 0x57, 0x52, 0x58, 0x44, 0x2D, 0x4B,
+        0x45, 0x59, 0x2D, 0x46, 0x41, 0x4C, 0x4C, 0x42
+    };
+    const uint8_t* useKey = (key && keyLen > 0) ? key : kDefaultKey;
+    const uint32_t useKeyLen = (key && keyLen > 0) ? keyLen : static_cast<uint32_t>(sizeof(kDefaultKey));
+
+    uint8_t buf[4096];
+    uint64_t offset = 0;
+    while (true) {
+        const size_t read = std::fread(buf, 1, sizeof(buf), in);
+        if (read == 0) {
+            if (std::ferror(in)) {
+                std::fclose(in);
+                std::fclose(out);
+                return -1;
+            }
+            break;
+        }
+        for (size_t i = 0; i < read; ++i) {
+            const uint8_t k = useKey[(offset + i) % useKeyLen];
+            buf[i] ^= static_cast<uint8_t>(k + ((offset + i) & 0xFFu));
+        }
+        if (std::fwrite(buf, 1, read, out) != read) {
+            std::fclose(in);
+            std::fclose(out);
+            return -1;
+        }
+        offset += static_cast<uint64_t>(read);
+    }
+
+    std::fclose(in);
+    std::fclose(out);
+    return 0;
 }
 } // namespace
 
@@ -75,6 +209,7 @@ uint64_t GPU_SubmitDMATransfer(const void*, void*, uint64_t) { return 0; }
 int Scheduler_WaitForTask(uint64_t, uint32_t, void*, uint32_t) { return 0; }
 
 // Batch 4: hotpatch + pyre + pattern
+// Slot-based / pointer-based signatures must match shadow_page_detour.cpp and shadow_page_detour.hpp.
 int asm_pyre_mul_fp32(const float*, const float*, float*, uint32_t) { return 0; }
 int asm_pyre_softmax(float*, uint32_t) { return 0; }
 const void* find_pattern_asm(const void*, size_t, const void*, size_t) { return nullptr; }
