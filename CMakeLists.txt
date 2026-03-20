@@ -652,7 +652,7 @@ set(SOURCES
     src/core/directml_compute.cpp
     src/core/gguf_dml_bridge.cpp
     src/core/dml_streaming_integration.cpp
-    src/core/dml_asm_fallback.cpp
+    src/core/dml_asm_runtime.cpp
     src/core/analyzer_distiller.cpp
     src/core/streaming_orchestrator.cpp
     src/dml_inference_engine.cpp
@@ -1199,9 +1199,9 @@ target_sources(RawrEngine PRIVATE
 # Allow explicit STUBS lane only when selected by RAWR_SSOT_PROVIDER.
 if(RAWR_SSOT_PROVIDER_UPPER STREQUAL "STUBS")
     target_sources(RawrEngine PRIVATE
-        src/core/auto_feature_stub_impl.cpp
+        src/core/auto_feature_lane_provider.cpp
     )
-    message(WARNING "[SSOT Ownership] RawrEngine STUBS lane selected: auto_feature_stub_impl.cpp enabled")
+    message(WARNING "[SSOT Ownership] RawrEngine STUBS lane selected: auto_feature_lane_provider.cpp enabled")
 else()
     target_sources(RawrEngine PRIVATE
         src/core/auto_feature_registry.cpp
@@ -1246,7 +1246,7 @@ list(APPEND GOLD_UNDERSCORE_SOURCES
 )
 # Enforce production lane: do not backslide to command-handler stub providers.
 list(REMOVE_ITEM GOLD_UNDERSCORE_SOURCES
-    src/core/auto_feature_stub_impl.cpp
+    src/core/auto_feature_lane_provider.cpp
     src/core/missing_handler_stubs.cpp
 )
 list(REMOVE_DUPLICATES GOLD_UNDERSCORE_SOURCES)
@@ -3776,10 +3776,10 @@ endif()
 #   CMake cannot generate an ASM_MASM-only SHARED library for some generators
 #   (missing CMAKE_ASM_MASM_CREATE_SHARED_LIBRARY). Ensure C++ is the linker
 #   language by adding a tiny C++ TU and setting LINKER_LANGUAGE.
-if(WIN32 AND MSVC AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/security/uac_bypass_impl_stub.cpp")
+if(WIN32 AND MSVC AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/security/uac_bypass_impl_runtime.cpp")
     add_library(RawrXD-Crypto SHARED
         src/crypto_masm.asm
-        src/security/uac_bypass_impl_stub.cpp
+        src/security/uac_bypass_impl_runtime.cpp
     )
     set_source_files_properties(
         src/crypto_masm.asm
@@ -3801,7 +3801,7 @@ if(WIN32 AND MSVC AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/security/uac_bypas
         MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
     )
 else()
-    message(STATUS "RawrXD-Crypto skipped (requires WIN32 + MSVC + MASM + uac_bypass_impl_stub.cpp)")
+    message(STATUS "RawrXD-Crypto skipped (requires WIN32 + MSVC + MASM + uac_bypass_impl_runtime.cpp)")
 endif()
 
 # NOTE:
@@ -3921,13 +3921,13 @@ if(WIN32)
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
     )
 
-    if(EXISTS "${CMAKE_SOURCE_DIR}/src/cpu_inference_engine_autofix_stub.cpp")
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/cpu_inference_engine_autofix_runtime.cpp")
         add_executable(RawrXD-AutoFixCLI
             src/app/cli_entrypoint.cpp
             src/agent/quantum_agent_orchestrator.cpp
             src/agentic/AgentOllamaClient.cpp
             src/inference/gpu_dispatch_gate.cpp
-            src/cpu_inference_engine_autofix_stub.cpp
+            src/cpu_inference_engine_autofix_runtime.cpp
             src/gguf_d3d12_bridge.cpp
         )
         target_include_directories(RawrXD-AutoFixCLI PRIVATE
@@ -3946,7 +3946,7 @@ if(WIN32)
             RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
         )
     else()
-        message(STATUS "RawrXD-AutoFixCLI skipped (cpu_inference_engine_autofix_stub.cpp missing)")
+        message(STATUS "RawrXD-AutoFixCLI skipped (cpu_inference_engine_autofix_runtime.cpp missing)")
     endif()
 
     # ═══════════════════════════════════════════════════════════════════
@@ -4051,7 +4051,7 @@ add_executable(SwarmSmokeTest EXCLUDE_FROM_ALL
     src/agentic/SubAgentManager.cpp
     src/agentic/RobustOllamaParser.cpp
     src/runtime_patcher.cpp
-    src/tests/swarm_smoke_stubs.cpp
+    src/tests/swarm_smoke_runtime.cpp
 )
 target_include_directories(SwarmSmokeTest PRIVATE
     ${CMAKE_SOURCE_DIR}
