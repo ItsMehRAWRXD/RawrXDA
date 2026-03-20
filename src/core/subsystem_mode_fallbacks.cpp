@@ -68,22 +68,22 @@ extern "C" void asm_omega_verify_test(void) { noteModeCall("asm_omega_verify_tes
 extern "C" void asm_omega_architect_select(void) { noteModeCall("asm_omega_architect_select"); }
 extern "C" void asm_omega_agent_spawn(void) { noteModeCall("asm_omega_agent_spawn"); }
 extern "C" void asm_omega_observe_monitor(void) { noteModeCall("asm_omega_observe_monitor"); }
-extern "C" void asm_omega_deploy_distribute(void) {}
-extern "C" void asm_omega_execute_pipeline(void) {}
-extern "C" void asm_omega_ingest_requirement(void) {}
-extern "C" void asm_omega_world_model_update(void) {}
+extern "C" void asm_omega_deploy_distribute(void) { noteModeCall("asm_omega_deploy_distribute"); }
+extern "C" void asm_omega_execute_pipeline(void) { noteModeCall("asm_omega_execute_pipeline"); }
+extern "C" void asm_omega_ingest_requirement(void) { noteModeCall("asm_omega_ingest_requirement"); }
+extern "C" void asm_omega_world_model_update(void) { noteModeCall("asm_omega_world_model_update"); }
 
-extern "C" void asm_mesh_crdt_delta(void) {}
-extern "C" void asm_mesh_get_stats(void) {}
-extern "C" void asm_mesh_dht_find_closest(void) {}
-extern "C" void asm_mesh_shutdown(void) {}
-extern "C" void asm_mesh_fedavg_aggregate(void) {}
-extern "C" void asm_mesh_crdt_merge(void) {}
-extern "C" void asm_mesh_dht_xor_distance(void) {}
-extern "C" void asm_mesh_init(void) {}
-extern "C" void asm_mesh_zkp_verify(void) {}
-extern "C" void asm_mesh_shard_hash(void) {}
-extern "C" void asm_mesh_quorum_vote(void) {}
+extern "C" void asm_mesh_crdt_delta(void) { noteModeCall("asm_mesh_crdt_delta"); }
+extern "C" void asm_mesh_get_stats(void) { noteModeCall("asm_mesh_get_stats"); }
+extern "C" void asm_mesh_dht_find_closest(void) { noteModeCall("asm_mesh_dht_find_closest"); }
+extern "C" void asm_mesh_shutdown(void) { noteModeCall("asm_mesh_shutdown"); }
+extern "C" void asm_mesh_fedavg_aggregate(void) { noteModeCall("asm_mesh_fedavg_aggregate"); }
+extern "C" void asm_mesh_crdt_merge(void) { noteModeCall("asm_mesh_crdt_merge"); }
+extern "C" void asm_mesh_dht_xor_distance(void) { noteModeCall("asm_mesh_dht_xor_distance"); }
+extern "C" void asm_mesh_init(void) { noteModeCall("asm_mesh_init"); }
+extern "C" void asm_mesh_zkp_verify(void) { noteModeCall("asm_mesh_zkp_verify"); }
+extern "C" void asm_mesh_shard_hash(void) { noteModeCall("asm_mesh_shard_hash"); }
+extern "C" void asm_mesh_quorum_vote(void) { noteModeCall("asm_mesh_quorum_vote"); }
 extern "C" void asm_mesh_topology_update(void) {}
 extern "C" void asm_mesh_zkp_generate(void) {}
 extern "C" void asm_mesh_topology_active_count(void) {}
