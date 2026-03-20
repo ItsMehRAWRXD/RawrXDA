@@ -114,6 +114,44 @@ function Parse-UnresolvedSymbols {
     return $records
 }
 
+function Get-SymbolSearchPatterns {
+    param([string]$SymbolName)
+
+    if (-not $SymbolName) {
+        return @()
+    }
+
+    $candidates = [System.Collections.Generic.List[string]]::new()
+    $seen = [System.Collections.Generic.HashSet[string]]::new()
+
+    $addCandidate = {
+        param([string]$value)
+        if (-not $value) { return }
+        if ($seen.Add($value)) {
+            $candidates.Add($value)
+        }
+    }
+
+    & $addCandidate $SymbolName
+
+    if ($SymbolName -like '*::*') {
+        $parts = $SymbolName -split '::'
+        if ($parts.Count -ge 2) {
+            & $addCandidate (($parts[($parts.Count - 2)..($parts.Count - 1)] -join '::'))
+        }
+        & $addCandidate $parts[-1]
+    }
+
+    $patterns = [System.Collections.Generic.List[string]]::new()
+    foreach ($cand in $candidates) {
+        $escaped = [regex]::Escape($cand)
+        if ($escaped.Length -lt 2) { continue }
+        $patterns.Add("\b$escaped\s*\(")
+    }
+
+    return $patterns
+}
+
 function Convert-ToRepoRelativePath {
     param(
         [string]$PathValue,
@@ -216,11 +254,10 @@ try {
     foreach ($sym in $symbols) {
         $name = $sym.Name
         $sig = $sym.Signature
-        $escapedName = [regex]::Escape($name)
-
         $providerMatches = @()
-        if ($escapedName -and $escapedName.Length -gt 1) {
-            $providerMatches = Select-String -Path $sourceFiles -Pattern "\b$escapedName\s*\(" -CaseSensitive -ErrorAction SilentlyContinue
+        $searchPatterns = Get-SymbolSearchPatterns -SymbolName $name
+        foreach ($pat in $searchPatterns) {
+            $providerMatches += Select-String -Path $sourceFiles -Pattern $pat -CaseSensitive -ErrorAction SilentlyContinue
         }
         $providerFiles = @($providerMatches | Select-Object -ExpandProperty Path -Unique)
 
