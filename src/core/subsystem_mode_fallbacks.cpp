@@ -28,6 +28,21 @@ struct SubsystemFallbackState {
     uint64_t meshVerifyPass = 0;
     uint64_t meshShardHashOps = 0;
     uint64_t meshLastScore = 0;
+    uint64_t meshQuorumOps = 0;
+    uint64_t meshTopologyVersion = 0;
+    uint64_t meshActiveNodes = 0;
+    uint64_t meshGossipOps = 0;
+    uint64_t meshLastProof = 0;
+    uint64_t meshLastBitfield = 0;
+    bool speciatorInitialized = false;
+    uint64_t speciatorGeneration = 0;
+    uint64_t speciatorSpecies = 0;
+    uint64_t speciatorMutations = 0;
+    uint64_t speciatorVariants = 0;
+    uint64_t speciatorCrossovers = 0;
+    uint64_t speciatorEvaluations = 0;
+    uint64_t speciatorCompetitions = 0;
+    uint64_t speciatorScore = 0;
 };
 
 static SubsystemFallbackState g_subsystemState{};
@@ -305,6 +320,12 @@ extern "C" void asm_mesh_init(void) {
     g_subsystemState.meshVerifyOps = 0;
     g_subsystemState.meshVerifyPass = 0;
     g_subsystemState.meshShardHashOps = 0;
+    g_subsystemState.meshQuorumOps = 0;
+    g_subsystemState.meshTopologyVersion = 0;
+    g_subsystemState.meshActiveNodes = 8;
+    g_subsystemState.meshGossipOps = 0;
+    g_subsystemState.meshLastProof = 0;
+    g_subsystemState.meshLastBitfield = 0xFF;
     g_subsystemState.meshLastScore = 0;
 }
 extern "C" void asm_mesh_zkp_verify(void) {
@@ -326,22 +347,121 @@ extern "C" void asm_mesh_shard_hash(void) {
     g_subsystemState.meshLastScore =
         (g_subsystemState.meshLastScore + g_subsystemState.meshShardHashOps * 2u) % 100000u;
 }
-extern "C" void asm_mesh_quorum_vote(void) {}
-extern "C" void asm_mesh_topology_update(void) {}
-extern "C" void asm_mesh_zkp_generate(void) {}
-extern "C" void asm_mesh_topology_active_count(void) {}
-extern "C" void asm_mesh_shard_bitfield(void) {}
-extern "C" void asm_mesh_gossip_disseminate(void) {}
+extern "C" void asm_mesh_quorum_vote(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    if (!g_subsystemState.meshInitialized) {
+        return;
+    }
+    g_subsystemState.meshQuorumOps += 1;
+    if ((g_subsystemState.meshQuorumOps % 2u) == 0u) {
+        g_subsystemState.meshVerifyPass += 1;
+    }
+    g_subsystemState.meshLastScore =
+        (g_subsystemState.meshLastScore + g_subsystemState.meshQuorumOps * 3u) % 100000u;
+}
+extern "C" void asm_mesh_topology_update(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    if (!g_subsystemState.meshInitialized) {
+        return;
+    }
+    g_subsystemState.meshTopologyVersion += 1;
+    g_subsystemState.meshActiveNodes = 4u + ((g_subsystemState.meshTopologyVersion * 3u) % 512u);
+}
+extern "C" void asm_mesh_zkp_generate(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    if (!g_subsystemState.meshInitialized) {
+        return;
+    }
+    g_subsystemState.meshLastProof =
+        (g_subsystemState.meshTopologyVersion << 32u) ^ g_subsystemState.meshVerifyOps ^
+        (g_subsystemState.meshShardHashOps * 131u);
+}
+extern "C" void asm_mesh_topology_active_count(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.meshLastScore =
+        (g_subsystemState.meshLastScore + g_subsystemState.meshActiveNodes) % 100000u;
+}
+extern "C" void asm_mesh_shard_bitfield(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    if (!g_subsystemState.meshInitialized) {
+        return;
+    }
+    const uint64_t bitCount = (g_subsystemState.meshActiveNodes > 64u) ? 64u : g_subsystemState.meshActiveNodes;
+    uint64_t bits = 0;
+    for (uint64_t i = 0; i < bitCount; ++i) {
+        if (((g_subsystemState.meshTopologyVersion + i) % 3u) == 0u) {
+            bits |= (1ULL << i);
+        }
+    }
+    g_subsystemState.meshLastBitfield = bits;
+}
+extern "C" void asm_mesh_gossip_disseminate(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    if (!g_subsystemState.meshInitialized) {
+        return;
+    }
+    g_subsystemState.meshGossipOps += 1;
+    g_subsystemState.meshLastScore = (g_subsystemState.meshLastScore + 41u) % 100000u;
+}
 
-extern "C" void asm_speciator_mutate(void) {}
-extern "C" void asm_speciator_shutdown(void) {}
-extern "C" void asm_speciator_gen_variant(void) {}
-extern "C" void asm_speciator_get_stats(void) {}
-extern "C" void asm_speciator_create_genome(void) {}
-extern "C" void asm_speciator_crossover(void) {}
-extern "C" void asm_speciator_speciate(void) {}
-extern "C" void asm_speciator_evaluate(void) {}
-extern "C" void asm_speciator_compete(void) {}
+extern "C" void asm_speciator_mutate(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.speciatorInitialized = true;
+    g_subsystemState.speciatorMutations += 1;
+    g_subsystemState.speciatorScore = (g_subsystemState.speciatorScore + 17u) % 100000u;
+}
+extern "C" void asm_speciator_shutdown(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.speciatorInitialized = false;
+}
+extern "C" void asm_speciator_gen_variant(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.speciatorInitialized = true;
+    g_subsystemState.speciatorVariants += 1;
+    g_subsystemState.speciatorScore = (g_subsystemState.speciatorScore + 23u) % 100000u;
+}
+extern "C" void asm_speciator_get_stats(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.speciatorScore =
+        (g_subsystemState.speciatorMutations * 3u + g_subsystemState.speciatorVariants * 5u +
+         g_subsystemState.speciatorCrossovers * 7u + g_subsystemState.speciatorEvaluations * 11u +
+         g_subsystemState.speciatorCompetitions * 13u) %
+        100000u;
+}
+extern "C" void asm_speciator_create_genome(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.speciatorInitialized = true;
+    if (g_subsystemState.speciatorGeneration == 0) {
+        g_subsystemState.speciatorGeneration = 1;
+    }
+    g_subsystemState.speciatorSpecies = 1u + (g_subsystemState.speciatorGeneration % 12u);
+}
+extern "C" void asm_speciator_crossover(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.speciatorInitialized = true;
+    g_subsystemState.speciatorCrossovers += 1;
+    g_subsystemState.speciatorScore = (g_subsystemState.speciatorScore + 31u) % 100000u;
+}
+extern "C" void asm_speciator_speciate(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.speciatorInitialized = true;
+    g_subsystemState.speciatorGeneration += 1;
+    g_subsystemState.speciatorSpecies = 1u + (g_subsystemState.speciatorGeneration % 16u);
+}
+extern "C" void asm_speciator_evaluate(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.speciatorInitialized = true;
+    g_subsystemState.speciatorEvaluations += 1;
+    g_subsystemState.speciatorScore =
+        (g_subsystemState.speciatorScore + g_subsystemState.speciatorEvaluations * 9u) % 100000u;
+}
+extern "C" void asm_speciator_compete(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.speciatorInitialized = true;
+    g_subsystemState.speciatorCompetitions += 1;
+    g_subsystemState.speciatorScore =
+        (g_subsystemState.speciatorScore + g_subsystemState.speciatorCompetitions * 15u) % 100000u;
+}
 extern "C" void asm_speciator_migrate(void) {}
 extern "C" void asm_speciator_init(void) {}
 extern "C" void asm_speciator_select(void) {}
