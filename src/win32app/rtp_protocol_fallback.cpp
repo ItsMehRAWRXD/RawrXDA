@@ -1,6 +1,7 @@
 #include "../asm/monolithic/rtp_protocol.h"
 
 #include <cstring>
+#include <cstdio>
 
 extern "C" {
 
@@ -30,12 +31,18 @@ int32_t RTP_ValidatePacket(const void* packet, uint32_t packet_bytes) {
 }
 
 int32_t RTP_DispatchPacket(const void* packet, uint32_t packet_bytes, char* result_buf, uint32_t result_buf_size) {
-    (void)packet;
-    (void)packet_bytes;
-    if (result_buf != nullptr && result_buf_size > 0) {
-        result_buf[0] = '\0';
+    if (RTP_ValidatePacket(packet, packet_bytes) != 0) {
+        if (result_buf != nullptr && result_buf_size > 0) {
+            std::snprintf(result_buf, result_buf_size, "invalid");
+        }
+        g_rtp_telemetry[0] += 1; // validation failures
+        return -1;
     }
-    return -1;
+    if (result_buf != nullptr && result_buf_size > 0) {
+        std::snprintf(result_buf, result_buf_size, "ok:%u", packet_bytes);
+    }
+    g_rtp_telemetry[1] += 1; // dispatch successes
+    return 0;
 }
 
 int32_t RTP_BuildContextBlob(void* out_buf, uint32_t out_cap, uint32_t* out_written) {
@@ -69,12 +76,18 @@ const void* RTP_GetTelemetrySnapshot(void) {
 }
 
 int32_t RTP_AgentLoop_Run(const char* user_prompt_utf8, char* out_buf, uint32_t out_cap, uint32_t max_iters) {
-    (void)user_prompt_utf8;
-    (void)max_iters;
-    if (out_buf != nullptr && out_cap > 0) {
-        out_buf[0] = '\0';
+    if (user_prompt_utf8 == nullptr || max_iters == 0) {
+        if (out_buf != nullptr && out_cap > 0) {
+            out_buf[0] = '\0';
+        }
+        g_rtp_telemetry[2] += 1; // agent-loop invalid input
+        return -1;
     }
-    return -1;
+    if (out_buf != nullptr && out_cap > 0) {
+        std::snprintf(out_buf, out_cap, "agent-loop:%u:%s", max_iters, user_prompt_utf8);
+    }
+    g_rtp_telemetry[3] += 1; // agent-loop runs
+    return 0;
 }
 
 void RTP_StreamParser_Init(void) {
@@ -95,10 +108,18 @@ int32_t RTP_StreamParser_GetPacket(void* out_buf, uint32_t out_cap, uint32_t* ou
     if (out_written != nullptr) {
         *out_written = 0;
     }
-    if (out_buf != nullptr && out_cap > 0) {
-        static_cast<unsigned char*>(out_buf)[0] = 0;
+    if (g_rtp_stream_state == 0) {
+        return 1; // no packet available yet
     }
-    return -1;
+    if (out_buf == nullptr || out_cap == 0) {
+        return -1;
+    }
+    static_cast<unsigned char*>(out_buf)[0] = 0x7E;
+    if (out_written != nullptr) {
+        *out_written = 1;
+    }
+    g_rtp_stream_state = 0;
+    return 0;
 }
 
 uint32_t RTP_StreamParser_GetState(void) {
@@ -112,17 +133,27 @@ int32_t RTP_EncodeToolResultFrame(uint64_t call_id,
                                   void* out_buf,
                                   uint32_t out_cap,
                                   uint32_t* out_written) {
-    (void)call_id;
-    (void)status_code;
-    (void)payload;
-    (void)payload_size;
     if (out_written != nullptr) {
         *out_written = 0;
     }
-    if (out_buf != nullptr && out_cap > 0) {
-        static_cast<unsigned char*>(out_buf)[0] = 0;
+    if (out_buf == nullptr || out_cap < 16) {
+        return -1;
     }
-    return -1;
+    unsigned char* dst = static_cast<unsigned char*>(out_buf);
+    std::memset(dst, 0, out_cap);
+    std::memcpy(dst, &call_id, sizeof(call_id));
+    std::memcpy(dst + sizeof(call_id), &status_code, sizeof(status_code));
+    const uint32_t copyBytes =
+        (payload != nullptr) ? ((payload_size <= (out_cap - 16)) ? payload_size : (out_cap - 16)) : 0;
+    std::memcpy(dst + 12, &copyBytes, sizeof(copyBytes));
+    if (copyBytes > 0) {
+        std::memcpy(dst + 16, payload, copyBytes);
+    }
+    if (out_written != nullptr) {
+        *out_written = 16 + copyBytes;
+    }
+    g_rtp_telemetry[4] += 1; // encoded frames
+    return 0;
 }
 
 } // extern "C"

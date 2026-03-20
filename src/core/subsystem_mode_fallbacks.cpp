@@ -133,11 +133,11 @@ extern "C" void asm_spengine_quant_switch_adaptive(void) { noteModeCall("asm_spe
 extern "C" void asm_quadbuf_render_frame(void) { noteModeCall("asm_quadbuf_render_frame"); }
 extern "C" void asm_spengine_rollback(void) { noteModeCall("asm_spengine_rollback"); }
 extern "C" void asm_spengine_register(void) { noteModeCall("asm_spengine_register"); }
-extern "C" void asm_spengine_get_stats(void) {}
-extern "C" void asm_quadbuf_set_flags(void) {}
-extern "C" void asm_quadbuf_resize(void) {}
-extern "C" void asm_quadbuf_get_stats(void) {}
-extern "C" void asm_spengine_apply(void) {}
-extern "C" void asm_spengine_quant_switch(void) {}
-extern "C" void asm_quadbuf_init(void) {}
-extern "C" void asm_spengine_cpu_optimize(void) {}
+extern "C" void asm_spengine_get_stats(void) { noteModeCall("asm_spengine_get_stats"); }
+extern "C" void asm_quadbuf_set_flags(void) { noteModeCall("asm_quadbuf_set_flags"); }
+extern "C" void asm_quadbuf_resize(void) { noteModeCall("asm_quadbuf_resize"); }
+extern "C" void asm_quadbuf_get_stats(void) { noteModeCall("asm_quadbuf_get_stats"); }
+extern "C" void asm_spengine_apply(void) { noteModeCall("asm_spengine_apply"); }
+extern "C" void asm_spengine_quant_switch(void) { noteModeCall("asm_spengine_quant_switch"); }
+extern "C" void asm_quadbuf_init(void) { noteModeCall("asm_quadbuf_init"); }
+extern "C" void asm_spengine_cpu_optimize(void) { noteModeCall("asm_spengine_cpu_optimize"); }

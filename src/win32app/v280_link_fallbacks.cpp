@@ -1,10 +1,13 @@
 #include <cstdint>
 #include <cstring>
+#include <atomic>
 #include <windows.h>
 
 namespace {
 bool g_v280GhostActive = false;
 char g_v280GhostText[1024] = {};
+std::atomic<uint32_t> g_v280QuadbufShutdownCount{0};
+std::atomic<uint32_t> g_v280SpengineShutdownCount{0};
 } // namespace
 
 extern "C" int64_t V280_UI_WndProc_Hook(void* hwnd, uint32_t uMsg, uint64_t wParam, int64_t lParam) {
@@ -35,5 +38,12 @@ extern "C" int V280_UI_GetGhostText(char* buf, int buf_size) {
     return static_cast<int>(std::strlen(buf));
 }
 
-extern "C" void asm_quadbuf_shutdown(void) {}
-extern "C" void asm_spengine_shutdown(void) {}
+extern "C" void asm_quadbuf_shutdown(void) {
+    g_v280GhostText[0] = '\0';
+    g_v280GhostActive = false;
+    g_v280QuadbufShutdownCount.fetch_add(1, std::memory_order_relaxed);
+}
+
+extern "C" void asm_spengine_shutdown(void) {
+    g_v280SpengineShutdownCount.fetch_add(1, std::memory_order_relaxed);
+}
