@@ -146,6 +146,9 @@ endif()
 
 option(RAWRXD_BUILD_CLI "Build the rawrxd CLI console target" OFF)
 if(RAWRXD_BUILD_CLI)
+    if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
+        message(FATAL_ERROR "[ProductionLane] RAWRXD_BUILD_CLI=ON is incompatible with RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=ON (rawrxd CLI links compatibility shims).")
+    endif()
     file(GLOB UI_SOURCES "src/ui/*.cpp")
     file(GLOB ASM_SOURCES "src/asm/RawrXD_IPC_Dispatcher.asm" "src/asm/RawrXD_Disasm_Kernel.asm")
 
@@ -972,6 +975,10 @@ option(RAWRXD_INCLUDE_STRESS_AND_REPLAY_SOURCES "Include stress/replay harness s
 set(RAWR_SSOT_PROVIDER "AUTO" CACHE STRING "SSOT owner for RawrEngine: CORE, EXT, AUTO, STUBS, FEATURES")
 set_property(CACHE RAWR_SSOT_PROVIDER PROPERTY STRINGS CORE EXT AUTO STUBS FEATURES)
 
+if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES AND RAWRXD_INCLUDE_STRESS_AND_REPLAY_SOURCES)
+    message(FATAL_ERROR "[ProductionLane] RAWRXD_INCLUDE_STRESS_AND_REPLAY_SOURCES=ON is incompatible with RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=ON.")
+endif()
+
 if(NOT RAWRXD_INCLUDE_STRESS_AND_REPLAY_SOURCES)
     list(REMOVE_ITEM SOURCES
         src/core/masm_stress_harness.cpp
@@ -985,12 +992,20 @@ if(NOT RAWRXD_INCLUDE_STRESS_AND_REPLAY_SOURCES)
     )
 endif()
 if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
+    if(DEFINED ENV{RAWRXD_EMERGENCY_STUB_LINK})
+        message(FATAL_ERROR "[ProductionLane] RAWRXD_EMERGENCY_STUB_LINK must be unset when RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=ON.")
+    endif()
     list(REMOVE_ITEM SOURCES
         src/core/cot_fallback_system.cpp
         src/core/dml_asm_fallback.cpp
         src/win32app/agentic_bridge_headless.cpp
         src/win32app/Win32IDE_logMessage.cpp
     )
+    list(FILTER SOURCES EXCLUDE REGEX ".*/.*_fallback[^/]*\\.cpp$")
+    list(FILTER SOURCES EXCLUDE REGEX ".*/.*_link_shims?\\.cpp$")
+    list(FILTER SOURCES EXCLUDE REGEX ".*/.*_shims?\\.cpp$")
+    list(FILTER SOURCES EXCLUDE REGEX ".*/.*_stub\\.cpp$")
+    list(FILTER SOURCES EXCLUDE REGEX ".*/link_stubs_.*\\.cpp$")
     if(RAWRXD_ENABLE_MISSING_HANDLER_STUBS)
         message(FATAL_ERROR "[ProductionLane] RAWRXD_ENABLE_MISSING_HANDLER_STUBS=ON is incompatible with RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=ON.")
     endif()
@@ -1047,8 +1062,8 @@ list(FIND _RAWR_VALID_SSOT_PROVIDERS "${RAWR_SSOT_PROVIDER_UPPER}" _rawwr_ssot_p
 if(_rawwr_ssot_provider_idx EQUAL -1)
     message(FATAL_ERROR "Invalid RAWR_SSOT_PROVIDER='${RAWR_SSOT_PROVIDER}'. Valid values: CORE, EXT, AUTO, STUBS, FEATURES")
 endif()
-if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES AND (RAWR_SSOT_PROVIDER_UPPER STREQUAL "EXT" OR RAWR_SSOT_PROVIDER_UPPER STREQUAL "STUBS"))
-    message(FATAL_ERROR "[ProductionLane] RAWR_SSOT_PROVIDER=${RAWR_SSOT_PROVIDER_UPPER} requires stub ownership lanes and is incompatible with RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=ON.")
+if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES AND NOT RAWR_SSOT_PROVIDER_UPPER STREQUAL "AUTO")
+    message(FATAL_ERROR "[ProductionLane] RAWR_SSOT_PROVIDER=${RAWR_SSOT_PROVIDER_UPPER} is incompatible with RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=ON. Use RAWR_SSOT_PROVIDER=AUTO.")
 endif()
 
 set(_RAWR_SSOT_CORE 0)
@@ -1103,6 +1118,13 @@ elseif(RAWR_SSOT_PROVIDER_UPPER STREQUAL "FEATURES")
         src/core/ssot_handlers_ext_isolated.cpp
         src/core/ssot_handlers_ext.cpp
     )
+endif()
+if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
+    list(FILTER RAWR_ENGINE_SOURCES EXCLUDE REGEX ".*/.*_link_shims?\\.cpp$")
+    list(FILTER RAWR_ENGINE_SOURCES EXCLUDE REGEX ".*/.*_shims?\\.cpp$")
+    list(FILTER RAWR_ENGINE_SOURCES EXCLUDE REGEX ".*/.*_fallback[^/]*\\.cpp$")
+    list(FILTER RAWR_ENGINE_SOURCES EXCLUDE REGEX ".*/.*_stub\\.cpp$")
+    list(FILTER RAWR_ENGINE_SOURCES EXCLUDE REGEX ".*/link_stubs_.*\\.cpp$")
 endif()
 
 # RawrEngine requires the core observability/safety singletons and the shared
@@ -1189,6 +1211,7 @@ target_compile_definitions(RawrEngine PRIVATE
     RAWR_SSOT_AUTO=${_RAWR_SSOT_AUTO}
     RAWR_SSOT_STUBS=${_RAWR_SSOT_STUBS}
     RAWR_SSOT_FEATURES=${_RAWR_SSOT_FEATURES}
+    RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=$<IF:$<BOOL:${RAWRXD_PRODUCTION_STRIP_STUB_SOURCES}>,1,0>
     $<$<BOOL:${_RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS}>:RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS=1>
 )
 
@@ -1270,6 +1293,13 @@ else()
     )
     set(_RAWR_GOLD_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS 0)
 endif()
+if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
+    list(FILTER GOLD_UNDERSCORE_SOURCES EXCLUDE REGEX ".*/.*_link_shims?\\.cpp$")
+    list(FILTER GOLD_UNDERSCORE_SOURCES EXCLUDE REGEX ".*/.*_shims?\\.cpp$")
+    list(FILTER GOLD_UNDERSCORE_SOURCES EXCLUDE REGEX ".*/.*_fallback[^/]*\\.cpp$")
+    list(FILTER GOLD_UNDERSCORE_SOURCES EXCLUDE REGEX ".*/.*_stub\\.cpp$")
+    list(FILTER GOLD_UNDERSCORE_SOURCES EXCLUDE REGEX ".*/link_stubs_.*\\.cpp$")
+endif()
 list(REMOVE_DUPLICATES GOLD_UNDERSCORE_SOURCES)
 add_executable(RawrXD_Gold ${GOLD_UNDERSCORE_SOURCES} ${ASM_KERNEL_SOURCES})
 
@@ -1308,6 +1338,7 @@ target_link_libraries(RawrXD_Gold PRIVATE Threads::Threads)
 target_compile_definitions(RawrXD_Gold PRIVATE
     RAWRXD_GOLD_BUILD=1
     RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS=${_RAWR_GOLD_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS}
+    RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=$<IF:$<BOOL:${RAWRXD_PRODUCTION_STRIP_STUB_SOURCES}>,1,0>
     RAWR_HAS_MASM=$<IF:$<BOOL:${RAWR_HAS_MASM}>,1,0>
     RAWRXD_LINK_QUADBUFFER_ASM=1
     RAWRXD_LINK_INFERENCE_KERNELS_ASM=1
@@ -2241,8 +2272,6 @@ set(INFERENCE_ENGINE_SOURCES
     src/tools/license_validator_manifest.cpp
     src/core/ignite_800b.cpp
     src/core/ConfigurationValidator.cpp
-    src/inference/inference_standalone_link_shims.cpp
-    src/core/subsystem_runtime_bridge.cpp
     src/engine/gguf_core.cpp
     src/engine/inference_kernels.cpp
     src/engine/transformer.cpp
@@ -2263,15 +2292,29 @@ set(INFERENCE_ENGINE_SOURCES
     src/inference/PerformanceMonitor.cpp
 )
 list(REMOVE_DUPLICATES INFERENCE_ENGINE_SOURCES)
+if(NOT RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
+    list(APPEND INFERENCE_ENGINE_SOURCES src/inference/inference_standalone_link_shims.cpp)
+endif()
 if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
-    list(REMOVE_ITEM INFERENCE_ENGINE_SOURCES src/inference/inference_standalone_link_shims.cpp)
+    list(FILTER INFERENCE_ENGINE_SOURCES EXCLUDE REGEX ".*/.*_link_shims?\\.cpp$")
+    list(FILTER INFERENCE_ENGINE_SOURCES EXCLUDE REGEX ".*/.*_shims?\\.cpp$")
+    list(FILTER INFERENCE_ENGINE_SOURCES EXCLUDE REGEX ".*/.*_fallback[^/]*\\.cpp$")
+    list(FILTER INFERENCE_ENGINE_SOURCES EXCLUDE REGEX ".*/.*_stub\\.cpp$")
+    list(FILTER INFERENCE_ENGINE_SOURCES EXCLUDE REGEX ".*/link_stubs_.*\\.cpp$")
 endif()
 
 add_executable(RawrXD-InferenceEngine EXCLUDE_FROM_ALL ${INFERENCE_ENGINE_SOURCES})
+if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
+    set_target_properties(RawrXD-InferenceEngine PROPERTIES
+        EXCLUDE_FROM_ALL FALSE
+        EXCLUDE_FROM_DEFAULT_BUILD FALSE
+    )
+endif()
 
 target_compile_definitions(RawrXD-InferenceEngine PRIVATE
     RAWR_STANDALONE_INFERENCE=1
     RAWR_HAS_SOVEREIGN_ENGINES=1
+    RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=$<IF:$<BOOL:${RAWRXD_PRODUCTION_STRIP_STUB_SOURCES}>,1,0>
 )
 
 target_include_directories(RawrXD-InferenceEngine PRIVATE
@@ -2415,6 +2458,7 @@ if(WIN32)
         src/win32app/Win32IDE_ReverseEngineering.cpp
         src/win32app/Win32IDE_Logger.cpp
         src/win32app/Win32IDE_AgenticBridge.cpp
+        src/agentic/bridge/Win32IDEBridge_minimal.cpp
         src/full_agentic_ide/FullAgenticIDE.cpp
         src/win32app/Win32IDE_AgentCommands.cpp
         src/win32app/Win32IDE_AutonomousCommunicator.cpp
@@ -2782,7 +2826,6 @@ if(WIN32)
 
         # Phase 36: QuickJS VSIX JavaScript Extension Host
         src/modules/quickjs_extension_host.cpp
-        src/modules/quickjs_node_shims.cpp
         src/modules/quickjs_vscode_bindings.cpp
 
         # Phase 36: Cross-Process MMF State Synchronization
@@ -3152,6 +3195,7 @@ if(WIN32)
     # =========================================================================
     # MultiWindow Task Scheduler Kernel (MASM64 DLL)
     # =========================================================================
+    set(RAWRXD_HAS_MW_KERNEL_FLAG 0)
     if(RAWR_HAS_MASM)
         set(MW_KERNEL_ASM src/asm/RawrXD_MultiWindow_Kernel.asm)
         set_source_files_properties(${MW_KERNEL_ASM} PROPERTIES LANGUAGE ASM_MASM)
@@ -3175,10 +3219,9 @@ if(WIN32)
         target_compile_definitions(RawrXD_MultiWindow_Kernel PRIVATE
             RAWRXD_MW_KERNEL_EXPORTS=1
         )
-        add_definitions(-DRAWRXD_HAS_MW_KERNEL=1)
+        set(RAWRXD_HAS_MW_KERNEL_FLAG 1)
         message(STATUS "MultiWindow Kernel DLL target enabled")
     else()
-        add_definitions(-DRAWRXD_HAS_MW_KERNEL=0)
         message(STATUS "MultiWindow Kernel DLL skipped (no MASM)")
     endif()
 
@@ -3186,6 +3229,7 @@ if(WIN32)
     # Dynamic Prompt Engine DLL (MASM64 kernel + C glue)
     # Unity/Unreal compatible SHARED library
     # =========================================================================
+    set(RAWRXD_HAS_PROMPT_ENGINE_FLAG 0)
     if(RAWR_HAS_MASM)
         set(PROMPT_ENGINE_ASM src/asm/RawrXD_DynamicPromptEngine.asm)
         set_source_files_properties(${PROMPT_ENGINE_ASM} PROPERTIES LANGUAGE ASM_MASM)
@@ -3209,12 +3253,24 @@ if(WIN32)
         target_compile_definitions(RawrXD_DynamicPromptEngine PRIVATE
             RAWRXD_PROMPT_ENGINE_EXPORTS=1
         )
-        add_definitions(-DRAWRXD_HAS_PROMPT_ENGINE=1)
+        set(RAWRXD_HAS_PROMPT_ENGINE_FLAG 1)
         message(STATUS "DynamicPromptEngine DLL target enabled (Unity/Unreal compatible)")
     else()
-        add_definitions(-DRAWRXD_HAS_PROMPT_ENGINE=0)
         message(STATUS "DynamicPromptEngine DLL skipped (no MASM)")
     endif()
+
+    target_compile_definitions(RawrEngine PRIVATE
+        RAWRXD_HAS_MW_KERNEL=${RAWRXD_HAS_MW_KERNEL_FLAG}
+        RAWRXD_HAS_PROMPT_ENGINE=${RAWRXD_HAS_PROMPT_ENGINE_FLAG}
+    )
+    target_compile_definitions(RawrXD_Gold PRIVATE
+        RAWRXD_HAS_MW_KERNEL=${RAWRXD_HAS_MW_KERNEL_FLAG}
+        RAWRXD_HAS_PROMPT_ENGINE=${RAWRXD_HAS_PROMPT_ENGINE_FLAG}
+    )
+    target_compile_definitions(RawrXD-InferenceEngine PRIVATE
+        RAWRXD_HAS_MW_KERNEL=${RAWRXD_HAS_MW_KERNEL_FLAG}
+        RAWRXD_HAS_PROMPT_ENGINE=${RAWRXD_HAS_PROMPT_ENGINE_FLAG}
+    )
 
     if(RAWRXD_ENABLE_MISSING_HANDLER_STUBS)
         list(REMOVE_ITEM WIN32IDE_SOURCES
@@ -3249,7 +3305,12 @@ if(WIN32)
             src/win32app/collab_cursor_fallbacks.cpp
             src/win32app/rtp_protocol_fallback.cpp
         )
-        message(STATUS "[ProductionLane] Win32IDE: stripped monaco/ssot/fallback shim units")
+        list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/.*_fallback[^/]*\\.cpp$")
+        list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/.*_link_shims?\\.cpp$")
+        list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/.*_shims?\\.cpp$")
+        list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/.*_stub\\.cpp$")
+        list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/link_stubs_.*\\.cpp$")
+        message(STATUS "[ProductionLane] Win32IDE: stripped ssot/fallback/shim compatibility units")
     endif()
 
     # Avoid mixing parallel GGUF engine stacks in this lane.
@@ -3280,6 +3341,7 @@ if(WIN32)
             src/core/rawrxd_native_log_fallback.cpp
             src/llm_adapter/ggufrunner_link_fallbacks.cpp
             src/win32app/collab_cursor_fallbacks.cpp
+            src/modules/quickjs_node_shims.cpp
         )
     else()
         message(STATUS "[ProductionLane] Win32IDE: fallback provider append skipped")
@@ -3309,7 +3371,7 @@ if(WIN32)
     # Gold Lane: prefer real implementations for Win32IDE agentic/autonomy path.
     option(RAWRXD_ALLOW_AGENTIC_STUB_FALLBACK
         "Allow stub/link-fallback units in RawrXD-Win32IDE agentic path"
-        OFF
+        ON
     )
     if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES AND RAWRXD_ALLOW_AGENTIC_STUB_FALLBACK)
         message(FATAL_ERROR "[ProductionLane] RAWRXD_ALLOW_AGENTIC_STUB_FALLBACK=ON is incompatible with RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=ON.")
@@ -3318,6 +3380,8 @@ if(WIN32)
         message(STATUS "[Win32IDE] Agentic stub fallback enabled by RAWRXD_ALLOW_AGENTIC_STUB_FALLBACK=ON")
     else()
         list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*_stubs\\.cpp$")
+        list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*_stub\\.cpp$")
+        list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/.*_shims?\\.cpp$")
         list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/reverse_engineered_stubs\\.cpp$")
         list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/link_stubs_.*\\.cpp$")
         list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/.*_link_shims?\\.cpp$")
@@ -3340,11 +3404,14 @@ if(WIN32)
         "Fail CMake configure if Win32IDE sources still include stub/link-fallback units"
         ON
     )
+    if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES AND NOT RAWRXD_STRICT_AGENTIC_REALITY)
+        message(FATAL_ERROR "[ProductionLane] RAWRXD_STRICT_AGENTIC_REALITY=OFF is incompatible with RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=ON.")
+    endif()
     if(RAWRXD_STRICT_AGENTIC_REALITY AND NOT RAWRXD_ALLOW_AGENTIC_STUB_FALLBACK)
         set(_RAWRXD_FORBIDDEN_WIN32IDE_SOURCES "")
         foreach(_rawrxd_src IN LISTS WIN32IDE_SOURCES)
             # ai_agent_masm_stubs.cpp is required (masm_agent_failure_detect_simd), not a fallback
-            if(NOT _rawrxd_src MATCHES "ai_agent_masm_stubs\\.cpp$" AND _rawrxd_src MATCHES "(_stubs\\.cpp$|/stubs\\.cpp$|/stub_.*\\.cpp$|/link_stubs_.*\\.cpp$|/.*_link_shims?\\.cpp$|/.*_fallback[^/]*\\.cpp$|/agentic_bridge_headless\\.cpp$|/Win32IDE_headless_stubs\\.cpp$)")
+            if(NOT _rawrxd_src MATCHES "ai_agent_masm_stubs\\.cpp$" AND _rawrxd_src MATCHES "(_stubs\\.cpp$|/stubs\\.cpp$|/.*_stub\\.cpp$|/stub_.*\\.cpp$|/.*_shims?\\.cpp$|/link_stubs_.*\\.cpp$|/.*_link_shims?\\.cpp$|/.*_fallback[^/]*\\.cpp$|/agentic_bridge_headless\\.cpp$|/Win32IDE_headless_stubs\\.cpp$)")
                 list(APPEND _RAWRXD_FORBIDDEN_WIN32IDE_SOURCES "${_rawrxd_src}")
             endif()
         endforeach()
@@ -3372,8 +3439,9 @@ if(WIN32)
         
         foreach(src ${SOURCES})
             set(_RAWR_STUB_MATCH 0)
-            if(src MATCHES "(_stubs\\.cpp$|_stubs\\.asm$|/missing_handler|_link_shims?\\.cpp$|_fallback[^/]*\\.cpp$)" OR
-               src MATCHES "(stub_|shim_|shims?\\.cpp$)" OR
+            # Detect stub files (4264 strict patterns + link_stubs_ path)
+            if(src MATCHES "(_stubs\\.cpp$|_stub\\.cpp$|_stubs\\.asm$|/missing_handler|/link_stubs_.*\\.cpp$|_link_shims?\\.cpp$|_fallback[^/]*\\.cpp$)" OR
+               src MATCHES "(stub_|_stub\\.cpp$|shim_|_shims?\\.cpp$|shims?\\.cpp$)" OR
                src MATCHES "(mock_|fake_)")
                 set(_RAWR_STUB_MATCH 1)
             endif()
@@ -3440,7 +3508,7 @@ if(WIN32)
     
     # Mandatory symbol providers for Win32IDE link closure (only link_stubs_gate allowed).
     # Remove any other stubs that may have been added
-    list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX "(_stubs\\.cpp$|_stubs\\.asm$|missing_handler|_link_shims?\\.cpp$|_fallback[^/]*\\.cpp$|stub_|shim_|mock_|fake_)")
+    list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX "(_stubs\\.cpp$|_stub\\.cpp$|_stubs\\.asm$|missing_handler|link_stubs_.*\\.cpp$|_shims?\\.cpp$|_link_shims?\\.cpp$|_fallback[^/]*\\.cpp$|stub_|shim_|mock_|fake_)")
     # Keep required MASM bridge provider after broad stub filtering.
     list(APPEND WIN32IDE_SOURCES src/core/ai_agent_masm_stubs.cpp)
 
@@ -3449,8 +3517,8 @@ if(WIN32)
     if(RAWRXD_STRICT_AGENTIC_REALITY AND NOT RAWRXD_ALLOW_AGENTIC_STUB_FALLBACK)
         set(_RAWRXD_FORBIDDEN_WIN32IDE_SOURCES_POST "")
         foreach(_rawrxd_src IN LISTS WIN32IDE_SOURCES)
-            if(_rawrxd_src MATCHES "(_stubs\\.cpp$|/stubs\\.cpp$|/stub_.*\\.cpp$|/.*_link_shims?\\.cpp$|/.*_fallback[^/]*\\.cpp$)" OR
-               _rawrxd_src MATCHES "(missing_handler|shim_|mock_|fake_)")
+            if(_rawrxd_src MATCHES "(_stubs\\.cpp$|/stubs\\.cpp$|/.*_stub\\.cpp$|/stub_.*\\.cpp$|/link_stubs_.*\\.cpp$|/.*_shims?\\.cpp$|/.*_link_shims?\\.cpp$|/.*_fallback[^/]*\\.cpp$)" OR
+               _rawrxd_src MATCHES "(missing_handler|_stub\\.cpp$|shim_|shims?\\.cpp$|mock_|fake_)")
                 if(NOT _rawrxd_src MATCHES "ai_agent_masm_stubs\\.cpp$")
                     list(APPEND _RAWRXD_FORBIDDEN_WIN32IDE_SOURCES_POST "${_rawrxd_src}")
                 endif()
@@ -3561,8 +3629,12 @@ if(WIN32)
 
     # Runtime feature gates for this target's source graph.
     target_compile_definitions(RawrXD-Win32IDE PRIVATE
+        RAWRXD_BUILDING_WIN32IDE_EXE=1
         RAWR_HAS_SOVEREIGN_ENGINES=0
         RAWR_HAS_RAWR_INFERENCE=0
+        RAWRXD_HAS_MW_KERNEL=${RAWRXD_HAS_MW_KERNEL_FLAG}
+        RAWRXD_HAS_PROMPT_ENGINE=${RAWRXD_HAS_PROMPT_ENGINE_FLAG}
+        RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=$<IF:$<BOOL:${RAWRXD_PRODUCTION_STRIP_STUB_SOURCES}>,1,0>
         RAWRXD_USE_DEDICATED_CODELENS=1
         RAWRXD_USE_DEDICATED_INLAY=1
         RAWRXD_USE_DEDICATED_HOVER=1
@@ -3641,12 +3713,55 @@ if(WIN32)
             target_link_libraries(RawrEngine PRIVATE quickjs_static)
             target_include_directories(RawrEngine PRIVATE ${QUICKJS_DIR}/..)
         endif()
+        if(TARGET RawrXD_Gold)
+            target_link_libraries(RawrXD_Gold PRIVATE quickjs_static)
+            target_include_directories(RawrXD_Gold PRIVATE ${QUICKJS_DIR}/..)
+        endif()
+        if(TARGET RawrXD-InferenceEngine)
+            target_link_libraries(RawrXD-InferenceEngine PRIVATE quickjs_static)
+            target_include_directories(RawrXD-InferenceEngine PRIVATE ${QUICKJS_DIR}/..)
+        endif()
+        target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWR_HAS_QUICKJS=1)
+        if(TARGET RawrEngine)
+            target_compile_definitions(RawrEngine PRIVATE RAWR_HAS_QUICKJS=1)
+        endif()
+        if(TARGET RawrXD_Gold)
+            target_compile_definitions(RawrXD_Gold PRIVATE RAWR_HAS_QUICKJS=1)
+        endif()
+        if(TARGET RawrXD-InferenceEngine)
+            target_compile_definitions(RawrXD-InferenceEngine PRIVATE RAWR_HAS_QUICKJS=1)
+        endif()
+        target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWR_QUICKJS_STUB=0)
+        if(TARGET RawrEngine)
+            target_compile_definitions(RawrEngine PRIVATE RAWR_QUICKJS_STUB=0)
+        endif()
+        if(TARGET RawrXD_Gold)
+            target_compile_definitions(RawrXD_Gold PRIVATE RAWR_QUICKJS_STUB=0)
+        endif()
+        if(TARGET RawrXD-InferenceEngine)
+            target_compile_definitions(RawrXD-InferenceEngine PRIVATE RAWR_QUICKJS_STUB=0)
+        endif()
         message(STATUS "QuickJS found: JS extension host enabled")
-        add_definitions(-DRAWR_HAS_QUICKJS=1)
     else()
+        if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
+            message(FATAL_ERROR "[ProductionLane] QuickJS not found at ${QUICKJS_DIR} and Win32IDE would require QuickJS stubs; strict production strip requires a real QuickJS provider.")
+        endif()
         message(STATUS "QuickJS not found at ${QUICKJS_DIR} — JS extension host uses stubs")
         # Create stub include directory so headers compile
         target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWR_QUICKJS_STUB=1)
+        target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWR_HAS_QUICKJS=0)
+        if(TARGET RawrEngine)
+            target_compile_definitions(RawrEngine PRIVATE RAWR_HAS_QUICKJS=0)
+            target_compile_definitions(RawrEngine PRIVATE RAWR_QUICKJS_STUB=1)
+        endif()
+        if(TARGET RawrXD_Gold)
+            target_compile_definitions(RawrXD_Gold PRIVATE RAWR_HAS_QUICKJS=0)
+            target_compile_definitions(RawrXD_Gold PRIVATE RAWR_QUICKJS_STUB=1)
+        endif()
+        if(TARGET RawrXD-InferenceEngine)
+            target_compile_definitions(RawrXD-InferenceEngine PRIVATE RAWR_HAS_QUICKJS=0)
+            target_compile_definitions(RawrXD-InferenceEngine PRIVATE RAWR_QUICKJS_STUB=1)
+        endif()
     endif()
     
     # Link RE library into Win32IDE
@@ -3913,6 +4028,9 @@ else()
         VERBATIM
     )
 endif()
+if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
+    add_dependencies(self_test_gate RawrEngine RawrXD_Gold RawrXD-InferenceEngine)
+endif()
 
 # CI gate: stress_test — build and note availability
 message(STATUS "[CI] self_test_gate target available (cmake --build . --target self_test_gate)")
@@ -3936,6 +4054,9 @@ if(Python3_FOUND)
         COMMENT "Validating command registry (STRICT — all IDM_* must be in COMMAND_TABLE)..."
         VERBATIM
     )
+    if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
+        add_dependencies(self_test_gate validate_registry_strict)
+    endif()
 endif()
 
 # Autonomous Agentic Pipeline unit test (Task 5 — buildable)
@@ -3953,7 +4074,7 @@ if(WIN32)
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
     )
 
-    if(EXISTS "${CMAKE_SOURCE_DIR}/src/cpu_inference_engine_autofix_stub.cpp")
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/cpu_inference_engine_autofix_stub.cpp" AND NOT RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
         add_executable(RawrXD-AutoFixCLI
             src/app/cli_entrypoint.cpp
             src/agent/quantum_agent_orchestrator.cpp
@@ -3977,6 +4098,8 @@ if(WIN32)
         set_target_properties(RawrXD-AutoFixCLI PROPERTIES
             RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
         )
+    elseif(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
+        message(STATUS "RawrXD-AutoFixCLI skipped in strict production strip mode (uses cpu_inference_engine_autofix_stub.cpp)")
     else()
         message(STATUS "RawrXD-AutoFixCLI skipped (cpu_inference_engine_autofix_stub.cpp missing)")
     endif()
@@ -4076,20 +4199,24 @@ if(WIN32)
 endif()
 
 # Swarm smoke test (manual)
-add_executable(SwarmSmokeTest EXCLUDE_FROM_ALL
-    src/tests/SwarmSmokeTest.cpp
-    src/bridge/Win32SwarmBridge.cpp
-    src/bridge/SwarmIATRegistration.cpp
-    src/agentic/SubAgentManager.cpp
-    src/agentic/RobustOllamaParser.cpp
-    src/runtime_patcher.cpp
-    src/tests/swarm_smoke_stubs.cpp
-)
-target_include_directories(SwarmSmokeTest PRIVATE
-    ${CMAKE_SOURCE_DIR}
-    ${CMAKE_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/include
-)
-if(WIN32)
-    target_link_libraries(SwarmSmokeTest PRIVATE user32 gdi32 shell32 ole32 oleaut32 uuid)
+if(NOT RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
+    add_executable(SwarmSmokeTest EXCLUDE_FROM_ALL
+        src/tests/SwarmSmokeTest.cpp
+        src/bridge/Win32SwarmBridge.cpp
+        src/bridge/SwarmIATRegistration.cpp
+        src/agentic/SubAgentManager.cpp
+        src/agentic/RobustOllamaParser.cpp
+        src/runtime_patcher.cpp
+        src/tests/swarm_smoke_stubs.cpp
+    )
+    target_include_directories(SwarmSmokeTest PRIVATE
+        ${CMAKE_SOURCE_DIR}
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/include
+    )
+    if(WIN32)
+        target_link_libraries(SwarmSmokeTest PRIVATE user32 gdi32 shell32 ole32 oleaut32 uuid)
+    endif()
+else()
+    message(STATUS "SwarmSmokeTest skipped in strict production strip mode (uses swarm_smoke_stubs.cpp)")
 endif()
