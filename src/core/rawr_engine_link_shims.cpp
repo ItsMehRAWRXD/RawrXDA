@@ -15,13 +15,13 @@ int ConflictDetector_LockResource(uint64_t, uint32_t) { return 0; }
 int GPU_WaitForDMA(uint64_t, uint32_t) { return 0; }
 
 // Pyre compute kernels
-int asm_pyre_gemm_fp32(const void*, const void*, void*, int, int, int) { return 0; }
-int asm_pyre_rmsnorm(void*, const void*, int) { return 0; }
-int asm_pyre_silu(void*, const void*, int) { return 0; }
-int asm_pyre_rope(void*, const void*, int) { return 0; }
-int asm_pyre_embedding_lookup(const void*, const void*, void*, int, int) { return 0; }
-int asm_pyre_gemv_fp32(const void*, const void*, void*, int, int) { return 0; }
-int asm_pyre_add_fp32(void*, const void*, const void*, int) { return 0; }
+int asm_pyre_gemm_fp32(const float*, const float*, float*, uint32_t, uint32_t, uint32_t) { return 0; }
+int asm_pyre_rmsnorm(const float*, const float*, float*, uint32_t, float) { return 0; }
+int asm_pyre_silu(float*, uint32_t) { return 0; }
+int asm_pyre_rope(float*, uint32_t, uint32_t, uint32_t, float) { return 0; }
+int asm_pyre_embedding_lookup(const float*, const uint32_t*, float*, uint32_t, uint32_t) { return 0; }
+int asm_pyre_gemv_fp32(const float*, const float*, float*, uint32_t, uint32_t) { return 0; }
+int asm_pyre_add_fp32(const float*, const float*, float*, uint32_t) { return 0; }
 
 // Batch 3: scheduler/clock + conflict/dma
 uint64_t ConflictDetector_RegisterResource(uint64_t, uint64_t) { return 0; }
@@ -33,8 +33,8 @@ uint64_t GPU_SubmitDMATransfer(const void*, void*, uint64_t) { return 0; }
 int Scheduler_WaitForTask(uint64_t, uint32_t, void*, uint32_t) { return 0; }
 
 // Batch 4: hotpatch + pyre + pattern
-int asm_pyre_mul_fp32(void*, const void*, const void*, int) { return 0; }
-int asm_pyre_softmax(void*, const void*, int) { return 0; }
+int asm_pyre_mul_fp32(const float*, const float*, float*, uint32_t) { return 0; }
+int asm_pyre_softmax(float*, uint32_t) { return 0; }
 const void* find_pattern_asm(const void*, size_t, const void*, size_t) { return nullptr; }
 int asm_hotpatch_restore_prologue(uint32_t) { return 0; }
 int asm_hotpatch_backup_prologue(void*, uint32_t) { return 0; }
@@ -165,26 +165,26 @@ int asm_hwsynth_analyze_memhier(const void*, void*) { return 0; }
 int asm_hwsynth_profile_dataflow(const void*, void*) { return 0; }
 int asm_hwsynth_shutdown() { return 0; }
 int asm_hwsynth_init(const void*) { return 0; }
-int asm_mesh_crdt_delta(const void*, void*) { return 0; }
-int asm_mesh_get_stats(void*) { return 0; }
+uint64_t asm_mesh_crdt_delta(uint64_t, void*, uint32_t) { return 0; }
+void* asm_mesh_get_stats() { return nullptr; }
 
 // Batch 19: mesh orchestration
-int asm_mesh_dht_find_closest(const void*, uint32_t) { return 0; }
+uint32_t asm_mesh_dht_find_closest(const void*, void*, uint32_t) { return 0; }
 int asm_mesh_shutdown() { return 0; }
-int asm_mesh_fedavg_aggregate(const void*, const void*, void*) { return 0; }
-int asm_mesh_crdt_merge(const void*, const void*, void*) { return 0; }
-int asm_mesh_dht_xor_distance(const void*, const void*, void*) { return 0; }
+int asm_mesh_fedavg_aggregate(const void*, uint32_t, void*, uint32_t) { return 0; }
+uint64_t asm_mesh_crdt_merge(const void*, uint32_t) { return 0; }
+uint32_t asm_mesh_dht_xor_distance(const void*, const void*) { return 0; }
 int asm_mesh_init() { return 0; }
 int asm_mesh_zkp_verify(void*) { return 0; }
 
 // Batch 20: mesh quorum/sharding
-int asm_mesh_shard_hash(const void*, uint32_t, void*) { return 0; }
-int asm_mesh_quorum_vote(const void*, uint32_t) { return 0; }
+int asm_mesh_shard_hash(const void*, uint64_t, void*) { return 0; }
+int asm_mesh_quorum_vote(const uint8_t*, uint32_t, uint32_t) { return 0; }
 int asm_mesh_topology_update(const void*) { return 0; }
 int asm_mesh_zkp_generate(const void*, void*) { return 0; }
-int asm_mesh_topology_active_count() { return 0; }
-int asm_mesh_shard_bitfield(uint32_t, void*) { return 0; }
-int asm_mesh_gossip_disseminate(const void*) { return 0; }
+uint32_t asm_mesh_topology_active_count() { return 0; }
+int asm_mesh_shard_bitfield(uint32_t, uint32_t) { return 0; }
+uint32_t asm_mesh_gossip_disseminate(const void*, uint64_t, void*) { return 0; }
 
 // Batch 21: speciator engines
 int asm_speciator_mutate(const void*, void*) { return 0; }
