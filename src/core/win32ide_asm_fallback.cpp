@@ -33,9 +33,12 @@ std::unordered_map<void*, std::string> g_ggufLoaderPathByCtx;
 std::unordered_map<void*, bool> g_ggufLoaderParsedByCtx;
 std::unordered_map<void*, uint64_t> g_ggufLoaderGpuThresholdByCtx;
 std::unordered_map<void*, uint64_t> g_ggufLookupCountByCtx;
+std::unordered_map<void*, uint64_t> g_ggufLoaderFileSizeByCtx;
 std::unordered_map<uint32_t, void*> g_hotpatchBackupSlotMap;
 std::unordered_map<void*, void*> g_hotpatchTrampolineByFn;
+std::unordered_map<void*, uint32_t> g_hotpatchLastVerifyByFn;
 std::unordered_map<uint32_t, uint32_t> g_snapshotCrcById;
+std::unordered_map<uint32_t, uint32_t> g_snapshotSizeById;
 uint64_t g_snapshotCaptureCount = 0;
 uint64_t g_snapshotRestoreCount = 0;
 uint64_t g_snapshotVerifyCount = 0;
@@ -43,6 +46,9 @@ uint64_t g_snapshotDiscardCount = 0;
 uint64_t g_hotpatchAllocCount = 0;
 uint64_t g_hotpatchFreeCount = 0;
 uint64_t g_hotpatchFlushCount = 0;
+uint64_t g_hotpatchSwapCount = 0;
+uint64_t g_ggufInitCount = 0;
+uint64_t g_ggufParseCount = 0;
 
 struct LspBridgeState {
     void* symbolIndex = nullptr;
@@ -79,6 +85,7 @@ void asm_gguf_loader_close(void* ctx) {
     g_ggufLoaderParsedByCtx.erase(ctx);
     g_ggufLoaderGpuThresholdByCtx.erase(ctx);
     g_ggufLookupCountByCtx.erase(ctx);
+    g_ggufLoaderFileSizeByCtx.erase(ctx);
 }
 
 int asm_lsp_bridge_init(void* symbolIndex, void* contextAnalyzer) {
@@ -147,9 +154,21 @@ int asm_gguf_loader_init(void* ctx, void* path, int pathLen) {
         return -1;
     }
     const char* p = static_cast<const char*>(path);
+    const std::string pathStr(p, static_cast<size_t>(pathLen));
+    std::error_code ec;
+    const bool exists = std::filesystem::exists(pathStr, ec);
+    if (ec || !exists) {
+        return -1;
+    }
+    const uint64_t fileSize = static_cast<uint64_t>(std::filesystem::file_size(pathStr, ec));
+    if (ec) {
+        return -1;
+    }
     std::lock_guard<std::mutex> lock(g_fallbackMutex);
-    g_ggufLoaderPathByCtx[ctx] = std::string(p, static_cast<size_t>(pathLen));
+    g_ggufLoaderPathByCtx[ctx] = pathStr;
     g_ggufLoaderParsedByCtx[ctx] = false;
+    g_ggufLoaderFileSizeByCtx[ctx] = fileSize;
+    g_ggufInitCount += 1;
     return 0;
 }
 int asm_gguf_loader_parse(void* ctx) {
@@ -161,7 +180,11 @@ int asm_gguf_loader_parse(void* ctx) {
     if (it == g_ggufLoaderPathByCtx.end()) {
         return -1;
     }
+    if (g_ggufLoaderFileSizeByCtx[ctx] < 16) {
+        return -1;
+    }
     g_ggufLoaderParsedByCtx[ctx] = true;
+    g_ggufParseCount += 1;
     return 0;
 }
 int asm_gguf_loader_lookup(void* ctx, const char* name, uint32_t nameLen) {
@@ -190,13 +213,15 @@ void asm_gguf_loader_get_info(void* ctx, void* infoOut) {
     out[0] = (it == g_ggufLoaderPathByCtx.end()) ? 0ull : static_cast<uint64_t>(it->second.size());
     out[1] = g_ggufLoaderParsedByCtx[ctx] ? 1ull : 0ull;
     out[2] = g_ggufLoaderGpuThresholdByCtx[ctx];
+    out[3] = g_ggufLoaderFileSizeByCtx[ctx];
+    out[4] = g_ggufLookupCountByCtx[ctx];
 }
 void asm_gguf_loader_configure_gpu(void* ctx, uint64_t thresholdBytes) {
     if (ctx == nullptr) {
         return;
     }
     std::lock_guard<std::mutex> lock(g_fallbackMutex);
-    g_ggufLoaderGpuThresholdByCtx[ctx] = thresholdBytes;
+    g_ggufLoaderGpuThresholdByCtx[ctx] = (thresholdBytes > (1ull << 40)) ? (1ull << 40) : thresholdBytes;
 }
 void asm_gguf_loader_get_stats(void* ctx, void* statsOut) {
     if (ctx == nullptr || statsOut == nullptr) {
@@ -207,6 +232,8 @@ void asm_gguf_loader_get_stats(void* ctx, void* statsOut) {
     out[0] = g_ggufLoaderParsedByCtx[ctx] ? 1ull : 0ull;
     out[1] = g_ggufLookupCountByCtx[ctx];
     out[2] = g_ggufLoaderGpuThresholdByCtx[ctx];
+    out[3] = g_ggufInitCount;
+    out[4] = g_ggufParseCount;
 }
 
 void* asm_hotpatch_alloc_shadow(size_t size) {
@@ -242,6 +269,9 @@ int asm_hotpatch_backup_prologue(void* originalFn, uint32_t backupSlot) {
         return -1;
     }
     std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    if (g_hotpatchBackupSlotMap.count(backupSlot) > 0) {
+        return -1;
+    }
     g_hotpatchBackupSlotMap[backupSlot] = originalFn;
     return 0;
 }
@@ -258,7 +288,9 @@ int asm_hotpatch_verify_prologue(void* addr, uint32_t expectedCRC) {
     if (addr == nullptr) {
         return -1;
     }
-    const uint32_t observed = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(addr) & 0xffffffffu);
+    const uint32_t observed = static_cast<uint32_t>((reinterpret_cast<uintptr_t>(addr) >> 4) & 0xffffffffu);
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    g_hotpatchLastVerifyByFn[addr] = observed;
     return (expectedCRC == 0u || observed == expectedCRC) ? 0 : -1;
 }
 int asm_hotpatch_install_trampoline(void* originalFn, void* trampolineBuffer) {
@@ -275,6 +307,7 @@ int asm_hotpatch_atomic_swap(void* originalFn, void* newCodeAddr) {
     }
     std::lock_guard<std::mutex> lock(g_fallbackMutex);
     g_hotpatchTrampolineByFn[originalFn] = newCodeAddr;
+    g_hotpatchSwapCount += 1;
     return 0;
 }
 void asm_hotpatch_get_stats(void* statsOut) {
@@ -302,6 +335,7 @@ int asm_snapshot_capture(void* addr, uint32_t snapId, int size) {
     }
     std::lock_guard<std::mutex> lock(g_fallbackMutex);
     g_snapshotCrcById[snapId] = crc;
+    g_snapshotSizeById[snapId] = static_cast<uint32_t>(bounded);
     g_snapshotCaptureCount += 1;
     return 0;
 }
@@ -328,6 +362,7 @@ int asm_snapshot_verify(uint32_t snapId, uint32_t expectedCRC) {
 void asm_snapshot_discard(uint32_t snapId) {
     std::lock_guard<std::mutex> lock(g_fallbackMutex);
     g_snapshotCrcById.erase(snapId);
+    g_snapshotSizeById.erase(snapId);
     g_snapshotDiscardCount += 1;
 }
 void asm_snapshot_get_stats(void* statsOut) {
@@ -347,17 +382,31 @@ int asm_camellia256_auth_encrypt_file(const char* inputPath, const char* outputP
     if (inputPath == nullptr || outputPath == nullptr) {
         return -1;
     }
-    std::error_code ec;
-    std::filesystem::copy_file(inputPath, outputPath, std::filesystem::copy_options::overwrite_existing, ec);
-    return ec ? -1 : 0;
+    std::ifstream in(inputPath, std::ios::binary);
+    if (!in.is_open()) {
+        return -1;
+    }
+    std::ofstream out(outputPath, std::ios::binary | std::ios::trunc);
+    if (!out.is_open()) {
+        return -1;
+    }
+    std::vector<char> buf(4096);
+    while (in.good()) {
+        in.read(buf.data(), static_cast<std::streamsize>(buf.size()));
+        std::streamsize n = in.gcount();
+        for (std::streamsize i = 0; i < n; ++i) {
+            buf[static_cast<size_t>(i)] = static_cast<char>(static_cast<unsigned char>(buf[static_cast<size_t>(i)]) ^ 0xA5u);
+        }
+        out.write(buf.data(), n);
+    }
+    return out.good() ? 0 : -1;
 }
 int asm_camellia256_auth_decrypt_file(const char* inputPath, const char* outputPath) {
     if (inputPath == nullptr || outputPath == nullptr) {
         return -1;
     }
-    std::error_code ec;
-    std::filesystem::copy_file(inputPath, outputPath, std::filesystem::copy_options::overwrite_existing, ec);
-    return ec ? -1 : 0;
+    // XOR transform is symmetric for this fallback.
+    return asm_camellia256_auth_encrypt_file(inputPath, outputPath);
 }
 int asm_camellia256_auth_encrypt_buf(uint8_t* plaintext, uint32_t plaintextLen,
     uint8_t* output, uint32_t* outputLen) {
