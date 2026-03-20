@@ -1187,14 +1187,26 @@ target_compile_definitions(RawrEngine PRIVATE
     $<$<BOOL:${_RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS}>:RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS=1>
 )
 
-# Sources used by missing_handler_stubs: debugger engine + symbols + Ollama client
+# Sources used by command/handler ownership lanes.
 target_sources(RawrEngine PRIVATE
     src/core/native_debugger_engine.cpp
     src/core/native_debugger_symbols.cpp
     src/agentic/AgentOllamaClient.cpp
     src/core/rawr_engine_link_shims.cpp
-    src/core/auto_feature_stub_impl.cpp
 )
+
+# Production default: keep real auto feature handlers linked for RawrEngine.
+# Allow explicit STUBS lane only when selected by RAWR_SSOT_PROVIDER.
+if(RAWR_SSOT_PROVIDER_UPPER STREQUAL "STUBS")
+    target_sources(RawrEngine PRIVATE
+        src/core/auto_feature_stub_impl.cpp
+    )
+    message(WARNING "[SSOT Ownership] RawrEngine STUBS lane selected: auto_feature_stub_impl.cpp enabled")
+else()
+    target_sources(RawrEngine PRIVATE
+        src/core/auto_feature_registry.cpp
+    )
+endif()
 
 # Win32 system libraries (same as Gold)
 if(WIN32)
