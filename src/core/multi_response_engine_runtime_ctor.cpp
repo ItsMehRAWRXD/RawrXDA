@@ -15,3 +15,14 @@ MultiResponseResult MultiResponseEngine::initialize() {
     m_initialized = true;
     return MultiResponseResult::ok("Initialized");
 }
+
+void MultiResponseEngine::shutdown() {
+    if (!m_initialized) {
+        return;
+    }
+    std::lock_guard<std::mutex> sessionLock(m_sessionMutex);
+    std::lock_guard<std::mutex> prefLock(m_prefMutex);
+    m_sessions.clear();
+    m_preferenceHistory.clear();
+    m_initialized = false;
+}
