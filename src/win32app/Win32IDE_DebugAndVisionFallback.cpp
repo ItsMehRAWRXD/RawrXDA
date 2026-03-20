@@ -123,6 +123,10 @@ void Win32IDE::toggleBreakpoint(const std::string& /*file*/, int /*line*/) {
     appendToOutput("[Debug] Breakpoint toggling requires native debugger lane.\n");
 }
 
+void Win32IDE::updateDebuggerUI() {
+    appendToOutput("[Debug] Debugger UI refresh is unavailable in MinGW fallback lane.\n");
+}
+
 HMENU Win32IDE::createReverseEngineeringMenu() {
     HMENU menu = CreateMenu();
     AppendMenuA(menu, MF_STRING, IDM_REVENG_ANALYZE, "&Analyze Binary\tCtrl+R");

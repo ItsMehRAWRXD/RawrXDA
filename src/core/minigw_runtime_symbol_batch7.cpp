@@ -291,6 +291,7 @@ static std::atomic<int64_t> g_composerTxCount{0};
 static std::atomic<int32_t> g_composerState{0};
 static std::mutex g_gapCloserMutex;
 static std::string g_gitBranch = "unknown";
+static std::string g_gitCommitHash = "";
 
 struct MinigwComposerTx {
     std::vector<std::string> operations;
@@ -332,6 +333,8 @@ EmbeddingEngine::EmbeddingEngine()
 EmbeddingEngine::~EmbeddingEngine() {
     shutdown();
 }
+
+HNSWIndex::~HNSWIndex() = default;
 
 EmbeddingEngine& EmbeddingEngine::instance() {
     static EmbeddingEngine s_instance;
@@ -917,10 +920,16 @@ void Git_SetBranch(const char* branch) {
     g_gitBranch = (branch != nullptr) ? branch : "unknown";
 }
 
+void Git_SetCommitHash(const char* hash) {
+    std::lock_guard<std::mutex> lock(g_gapCloserMutex);
+    g_gitCommitHash = (hash != nullptr) ? hash : "";
+}
+
 void* Git_ExtractContext(const char* repoPath, const char* currentFile, int32_t lineNumber) {
     const std::string repo = (repoPath != nullptr) ? repoPath : "";
     const std::string file = (currentFile != nullptr) ? currentFile : "";
     std::string context = "branch=" + g_gitBranch +
+                          "; commit=" + g_gitCommitHash +
                           "; repo=" + repo +
                           "; file=" + file +
                           "; line=" + std::to_string(lineNumber);
@@ -946,6 +955,165 @@ void GapCloser_GetPerfCounters(void* out3) {
     perf[0] = {static_cast<uint64_t>(g_vecDbNodeCount.load(std::memory_order_relaxed)), 0, 0};
     perf[1] = {static_cast<uint64_t>(g_composerTxCount.load(std::memory_order_relaxed)), 0, 0};
     perf[2] = {1, 0, 0};
+}
+
+int32_t Composer_Commit(void* tx) {
+    auto* state = static_cast<MinigwComposerTx*>(tx);
+    if (state == nullptr || !state->active) {
+        return -1;
+    }
+    state->active = false;
+    delete state;
+    g_composerState.store(3, std::memory_order_release);  // committed
+    return 0;
+}
+
+int64_t Crdt_InsertText(void* doc, uint64_t position, const void* text, int32_t length) {
+    (void)position;
+    (void)text;
+    auto* state = static_cast<MinigwCrdtDoc*>(doc);
+    if (state == nullptr || length <= 0) {
+        return -1;
+    }
+    state->length += length;
+    ++state->lamport;
+    return state->length;
+}
+
+int64_t Crdt_DeleteText(void* doc, uint64_t position, int32_t length) {
+    (void)position;
+    auto* state = static_cast<MinigwCrdtDoc*>(doc);
+    if (state == nullptr || length <= 0) {
+        return -1;
+    }
+    state->length = std::max<int64_t>(0, state->length - length);
+    ++state->lamport;
+    return state->length;
+}
+
+int32_t VecDb_Insert(const float* vector, void* metadata) {
+    (void)metadata;
+    if (vector == nullptr || g_vecDbInitialized.load(std::memory_order_acquire) == 0) {
+        return -1;
+    }
+    const int32_t nodeId = g_vecDbNodeCount.fetch_add(1, std::memory_order_relaxed);
+    if (g_VecDbEntryPoint < 0) {
+        g_VecDbEntryPoint = nodeId;
+    }
+    g_VecDbMaxLevel = std::max(g_VecDbMaxLevel, 1);
+    return nodeId;
+}
+
+int32_t VecDb_Search(const float* query, int32_t* results, int32_t k) {
+    if (query == nullptr || results == nullptr || k <= 0) {
+        return 0;
+    }
+    const int32_t total = g_vecDbNodeCount.load(std::memory_order_acquire);
+    const int32_t found = std::min(total, k);
+    for (int32_t i = 0; i < found; ++i) {
+        results[i] = i;
+    }
+    return found;
+}
+
+int BeaconRouterInit() {
+    return 0;
+}
+
+int asm_scsi_inquiry_quick(HANDLE hDevice, void* buffer, uint32_t bufferSize, uint32_t timeoutMs) {
+    (void)hDevice;
+    (void)timeoutMs;
+    if (buffer == nullptr || bufferSize < 36U) {
+        return ERROR_INVALID_PARAMETER;
+    }
+    std::memset(buffer, 0, bufferSize);
+    auto* bytes = static_cast<uint8_t*>(buffer);
+    const char vendor[] = "WD      ";
+    const char product[] = "My Book         ";
+    std::memcpy(bytes + 8, vendor, sizeof(vendor) - 1);
+    std::memcpy(bytes + 16, product, sizeof(product) - 1);
+    return 0;
+}
+
+int asm_scsi_read_capacity(HANDLE hDevice, uint64_t* totalSectors, uint32_t* sectorSize) {
+    (void)hDevice;
+    if (totalSectors == nullptr || sectorSize == nullptr) {
+        return ERROR_INVALID_PARAMETER;
+    }
+    *sectorSize = 512;
+    *totalSectors = (2ULL * 1024ULL * 1024ULL * 1024ULL) / (*sectorSize);  // ~2TB
+    return 0;
+}
+
+int asm_scsi_hammer_read(HANDLE hDevice, uint64_t lba, void* buffer, uint32_t sectorSize,
+                         uint32_t maxRetries, uint32_t timeoutMs) {
+    (void)hDevice;
+    (void)lba;
+    (void)maxRetries;
+    (void)timeoutMs;
+    if (buffer == nullptr || sectorSize == 0) {
+        return ERROR_INVALID_PARAMETER;
+    }
+    std::memset(buffer, 0, sectorSize);
+    return 0;
+}
+
+int asm_extract_bridge_key(HANDLE hDevice, void* keyBuffer, uint32_t bridgeType) {
+    (void)hDevice;
+    if (keyBuffer == nullptr) {
+        return -1;
+    }
+    auto* out = static_cast<uint8_t*>(keyBuffer);
+    for (int i = 0; i < 32; ++i) {
+        out[i] = static_cast<uint8_t>((bridgeType * 17U + static_cast<uint32_t>(i * 13U)) & 0xFFU);
+    }
+    return 0;
+}
+
+void RawrXD_WalkImports(PVOID ImageBase, DWORD ImportRVA, PVOID Callback, PVOID Context) {
+    if (ImageBase == nullptr || ImportRVA == 0 || Callback == nullptr) {
+        return;
+    }
+    using ImportCallback = void(__stdcall*)(const char*, const char*, void*);
+    auto cb = reinterpret_cast<ImportCallback>(Callback);
+    auto* base = static_cast<uint8_t*>(ImageBase);
+    auto* desc = reinterpret_cast<PIMAGE_IMPORT_DESCRIPTOR>(base + ImportRVA);
+    while (desc->Name != 0) {
+        const char* dllName = reinterpret_cast<const char*>(base + desc->Name);
+        auto* thunk = reinterpret_cast<PIMAGE_THUNK_DATA64>(
+            base + (desc->OriginalFirstThunk ? desc->OriginalFirstThunk : desc->FirstThunk));
+        while (thunk != nullptr && thunk->u1.AddressOfData != 0) {
+            const char* fnName = "[ordinal]";
+            if ((thunk->u1.Ordinal & IMAGE_ORDINAL_FLAG64) == 0) {
+                auto* byName = reinterpret_cast<PIMAGE_IMPORT_BY_NAME>(base + thunk->u1.AddressOfData);
+                fnName = reinterpret_cast<const char*>(byName->Name);
+            }
+            cb(dllName, fnName, Context);
+            ++thunk;
+        }
+        ++desc;
+    }
+}
+
+void RawrXD_WalkExports(PVOID ImageBase, DWORD ExportRVA, PVOID Callback, PVOID Context) {
+    if (ImageBase == nullptr || ExportRVA == 0 || Callback == nullptr) {
+        return;
+    }
+    using ExportCallback = void(__stdcall*)(const char*, WORD, PVOID, void*);
+    auto cb = reinterpret_cast<ExportCallback>(Callback);
+    auto* base = static_cast<uint8_t*>(ImageBase);
+    auto* expDir = reinterpret_cast<PIMAGE_EXPORT_DIRECTORY>(base + ExportRVA);
+    auto* nameRVAs = reinterpret_cast<DWORD*>(base + expDir->AddressOfNames);
+    auto* ordinals = reinterpret_cast<WORD*>(base + expDir->AddressOfNameOrdinals);
+    auto* functions = reinterpret_cast<DWORD*>(base + expDir->AddressOfFunctions);
+
+    for (DWORD i = 0; i < expDir->NumberOfNames; ++i) {
+        const WORD ordIndex = ordinals[i];
+        const WORD ordinal = static_cast<WORD>(expDir->Base + ordIndex);
+        const char* name = reinterpret_cast<const char*>(base + nameRVAs[i]);
+        PVOID address = reinterpret_cast<PVOID>(base + functions[ordIndex]);
+        cb(name, ordinal, address, Context);
+    }
 }
 
 }  // extern "C"

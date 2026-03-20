@@ -3652,7 +3652,7 @@ if(WIN32)
     target_link_libraries(RawrXD-Win32IDE PRIVATE
         Threads::Threads
         comctl32 comdlg32 shell32 ole32 oleaut32 uuid
-        shlwapi psapi dbghelp winhttp ws2_32 winmm gdi32 user32 ntdll
+        shlwapi psapi dbghelp winhttp ws2_32 winmm gdi32 user32 ntdll iphlpapi
         gdiplus
         d2d1 dwrite d3d11 dcomp d3dcompiler dwmapi
         dxgi
