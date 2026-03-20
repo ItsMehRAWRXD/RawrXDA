@@ -3218,6 +3218,7 @@ if(WIN32)
         src/agentic/RawrXD_ToolRegistry.cpp
         src/agent/DiskRecoveryAgent.cpp
         src/core/runtime_symbol_bridge.cpp
+        src/core/minigw_runtime_symbol_batch7.cpp
         src/core/multi_response_engine_runtime_ctor.cpp
         src/ui/webview2_mingw_uuid.cpp
         src/win32app/Win32IDE_ComponentManagers_Link.cpp

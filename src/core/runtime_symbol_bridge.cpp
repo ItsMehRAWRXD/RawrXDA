@@ -142,6 +142,8 @@ constexpr int CAMELLIA_ERR_FILE_READ = -4;
 constexpr int CAMELLIA_ERR_FILE_WRITE = -5;
 constexpr int CAMELLIA_ERR_SELF_TEST = -8;
 
+std::atomic<uint64_t> g_swarmHeartbeatLast[64];
+
 int findFirstPhysicalDrive() {
     for (int i = 0; i < 32; ++i) {
         char path[64] = {};
@@ -1514,10 +1516,9 @@ int Swarm_BuildPacketHeader(void* buffer, uint8_t opcode, uint16_t payloadLen, u
 
 uint64_t Swarm_HeartbeatRecord(uint32_t nodeSlot) {
     static std::atomic<uint64_t> g_seq{1};
-    static std::atomic<uint64_t> g_last[64];
     const uint64_t ts = static_cast<uint64_t>(GetTickCount64());
     if (nodeSlot < 64U) {
-        g_last[nodeSlot].store(ts, std::memory_order_release);
+        g_swarmHeartbeatLast[nodeSlot].store(ts, std::memory_order_release);
     }
     return (g_seq.fetch_add(1, std::memory_order_acq_rel) << 32U) | (ts & 0xFFFFFFFFULL);
 }
@@ -1552,6 +1553,50 @@ void* Swarm_IOCP_Associate(void* socket, void* iocp, uint64_t key) {
                                                static_cast<ULONG_PTR>(key),
                                                0);
     return associated;
+}
+
+void* Swarm_IOCP_Create(void) {
+    return CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, 0);
+}
+
+int Swarm_HeartbeatCheck(uint32_t nodeSlot) {
+    if (nodeSlot >= 64U) {
+        return 0;
+    }
+    const uint64_t now = static_cast<uint64_t>(GetTickCount64());
+    const uint64_t last = g_swarmHeartbeatLast[nodeSlot].load(std::memory_order_acquire);
+    if (last == 0) {
+        return 0;
+    }
+    constexpr uint64_t kHeartbeatTimeoutMs = 3000ULL;
+    return (now - last <= kHeartbeatTimeoutMs) ? 1 : 0;
+}
+
+int Swarm_ValidatePacketHeader(const void* packet) {
+    if (packet == nullptr) {
+        return -1;
+    }
+    const auto* hdr = static_cast<const SwarmPacketHeaderBridge*>(packet);
+    if (hdr->magic != 0x52575244U || hdr->version != 0x01U) {
+        return -1;
+    }
+    if (hdr->payloadLen > 65535U) {
+        return -1;
+    }
+    const uint8_t* payload = static_cast<const uint8_t*>(packet) + sizeof(SwarmPacketHeaderBridge);
+    const uint64_t chk0 = checksumPayload16(payload, hdr->payloadLen);
+    const uint64_t chk1 = splitmix64(chk0 ^ 0xD6E8FEB86659FD93ULL);
+    uint64_t expected0 = 0;
+    uint64_t expected1 = 0;
+    std::memcpy(&expected0, hdr->checksum + 0, 8);
+    std::memcpy(&expected1, hdr->checksum + 8, 8);
+    return (expected0 == chk0 && expected1 == chk1) ? 0 : -1;
+}
+
+uint64_t Swarm_XXH64(const void* data, uint64_t len, uint64_t seed) {
+    const uint8_t* bytes = static_cast<const uint8_t*>(data);
+    uint64_t h = fnv1a64(bytes, static_cast<size_t>(len), seed ^ 1469598103934665603ULL);
+    return splitmix64(h ^ (len * 0x9E3779B97F4A7C15ULL));
 }
 
 int asm_camellia256_set_key(const uint8_t* key32) {
