@@ -231,7 +231,7 @@ extern "C" void rawrxd_enumerate_modules_peb(
     void* context);
 
 void WebView2Bridge::snapshotModules() {
-    auto callback = [](uint64_t base, uint32_t size, uint16_t nameLen, const wchar_t* namePtr, void*) {
+    auto callback = [](uint64_t base, uint32_t size, uint16_t nameLen, const wchar_t* namePtr, void* /*context*/) {
         // Construct MOD_LOAD packet
         struct {
             ipc::RawrIPCHeader header;
