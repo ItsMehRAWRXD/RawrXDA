@@ -18,6 +18,16 @@ struct SubsystemFallbackState {
     uint64_t omegaAgentsSpawned = 0;
     uint64_t omegaLastScore = 0;
     uint64_t omegaLastStatus = 0;
+    bool meshInitialized = false;
+    uint64_t meshDeltaOps = 0;
+    uint64_t meshMergeOps = 0;
+    uint64_t meshAggregateOps = 0;
+    uint64_t meshXorOps = 0;
+    uint64_t meshClosestOps = 0;
+    uint64_t meshVerifyOps = 0;
+    uint64_t meshVerifyPass = 0;
+    uint64_t meshShardHashOps = 0;
+    uint64_t meshLastScore = 0;
 };
 
 static SubsystemFallbackState g_subsystemState{};
@@ -202,22 +212,120 @@ extern "C" void asm_omega_agent_spawn(void) {
     g_subsystemState.omegaAgentsSpawned += 1;
     g_subsystemState.omegaLastStatus = 1;
 }
-extern "C" void asm_omega_observe_monitor(void) {}
-extern "C" void asm_omega_deploy_distribute(void) {}
-extern "C" void asm_omega_execute_pipeline(void) {}
-extern "C" void asm_omega_ingest_requirement(void) {}
-extern "C" void asm_omega_world_model_update(void) {}
+extern "C" void asm_omega_observe_monitor(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.omegaStagesCompleted += 1;
+    g_subsystemState.omegaLastScore = (g_subsystemState.omegaLastScore + 13u) % 100000u;
+}
+extern "C" void asm_omega_deploy_distribute(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.omegaStagesCompleted += 2;
+    g_subsystemState.omegaLastStatus = 1;
+    g_subsystemState.omegaLastScore = (g_subsystemState.omegaLastScore + 97u) % 100000u;
+}
+extern "C" void asm_omega_execute_pipeline(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.omegaCycles += 1;
+    g_subsystemState.omegaStagesCompleted += 4;
+    g_subsystemState.omegaLastScore = (g_subsystemState.omegaLastScore + 251u) % 100000u;
+}
+extern "C" void asm_omega_ingest_requirement(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.omegaCycles += 1;
+    g_subsystemState.omegaStagesCompleted += 1;
+    g_subsystemState.omegaLastScore = (g_subsystemState.omegaLastScore + 19u) % 100000u;
+}
+extern "C" void asm_omega_world_model_update(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.omegaStagesCompleted += 3;
+    g_subsystemState.omegaLastScore = (g_subsystemState.omegaLastScore + 59u) % 100000u;
+}
 
-extern "C" void asm_mesh_crdt_delta(void) {}
-extern "C" void asm_mesh_get_stats(void) {}
-extern "C" void asm_mesh_dht_find_closest(void) {}
-extern "C" void asm_mesh_shutdown(void) {}
-extern "C" void asm_mesh_fedavg_aggregate(void) {}
-extern "C" void asm_mesh_crdt_merge(void) {}
-extern "C" void asm_mesh_dht_xor_distance(void) {}
-extern "C" void asm_mesh_init(void) {}
-extern "C" void asm_mesh_zkp_verify(void) {}
-extern "C" void asm_mesh_shard_hash(void) {}
+extern "C" void asm_mesh_crdt_delta(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    if (!g_subsystemState.meshInitialized) {
+        return;
+    }
+    g_subsystemState.meshDeltaOps += 1;
+    g_subsystemState.meshLastScore = (g_subsystemState.meshLastScore + 7u) % 100000u;
+}
+extern "C" void asm_mesh_get_stats(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.meshLastScore =
+        (g_subsystemState.meshDeltaOps * 3u + g_subsystemState.meshMergeOps * 5u +
+         g_subsystemState.meshAggregateOps * 7u + g_subsystemState.meshXorOps * 11u +
+         g_subsystemState.meshVerifyPass * 17u) %
+        100000u;
+}
+extern "C" void asm_mesh_dht_find_closest(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    if (!g_subsystemState.meshInitialized) {
+        return;
+    }
+    g_subsystemState.meshClosestOps += 1;
+    g_subsystemState.meshLastScore =
+        (g_subsystemState.meshLastScore + (g_subsystemState.meshClosestOps % 97u)) % 100000u;
+}
+extern "C" void asm_mesh_shutdown(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.meshInitialized = false;
+}
+extern "C" void asm_mesh_fedavg_aggregate(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    if (!g_subsystemState.meshInitialized) {
+        return;
+    }
+    g_subsystemState.meshAggregateOps += 1;
+    g_subsystemState.meshLastScore = (g_subsystemState.meshLastScore + 23u) % 100000u;
+}
+extern "C" void asm_mesh_crdt_merge(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    if (!g_subsystemState.meshInitialized) {
+        return;
+    }
+    g_subsystemState.meshMergeOps += 1;
+    g_subsystemState.meshLastScore = (g_subsystemState.meshLastScore + 29u) % 100000u;
+}
+extern "C" void asm_mesh_dht_xor_distance(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    if (!g_subsystemState.meshInitialized) {
+        return;
+    }
+    g_subsystemState.meshXorOps += 1;
+    g_subsystemState.meshLastScore = (g_subsystemState.meshLastScore + 31u) % 100000u;
+}
+extern "C" void asm_mesh_init(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.meshInitialized = true;
+    g_subsystemState.meshDeltaOps = 0;
+    g_subsystemState.meshMergeOps = 0;
+    g_subsystemState.meshAggregateOps = 0;
+    g_subsystemState.meshXorOps = 0;
+    g_subsystemState.meshClosestOps = 0;
+    g_subsystemState.meshVerifyOps = 0;
+    g_subsystemState.meshVerifyPass = 0;
+    g_subsystemState.meshShardHashOps = 0;
+    g_subsystemState.meshLastScore = 0;
+}
+extern "C" void asm_mesh_zkp_verify(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    if (!g_subsystemState.meshInitialized) {
+        return;
+    }
+    g_subsystemState.meshVerifyOps += 1;
+    if ((g_subsystemState.meshVerifyOps % 2u) == 0u) {
+        g_subsystemState.meshVerifyPass += 1;
+    }
+}
+extern "C" void asm_mesh_shard_hash(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    if (!g_subsystemState.meshInitialized) {
+        return;
+    }
+    g_subsystemState.meshShardHashOps += 1;
+    g_subsystemState.meshLastScore =
+        (g_subsystemState.meshLastScore + g_subsystemState.meshShardHashOps * 2u) % 100000u;
+}
 extern "C" void asm_mesh_quorum_vote(void) {}
 extern "C" void asm_mesh_topology_update(void) {}
 extern "C" void asm_mesh_zkp_generate(void) {}
