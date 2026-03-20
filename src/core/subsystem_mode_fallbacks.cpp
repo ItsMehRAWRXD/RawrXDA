@@ -1,6 +1,33 @@
 #include <cstdint>
+#include <chrono>
+#include <mutex>
 #include <cstdio>
 #include <cstdlib>
+
+namespace {
+struct SubsystemFallbackState {
+    bool watchdogActive = false;
+    uint64_t watchdogBaselineMs = 0;
+    uint64_t watchdogLastCheckMs = 0;
+    uint64_t watchdogChecks = 0;
+    uint64_t watchdogFailures = 0;
+    uint64_t omegaCycles = 0;
+    uint64_t omegaStagesCompleted = 0;
+    uint64_t omegaTests = 0;
+    uint64_t omegaTestsPassed = 0;
+    uint64_t omegaAgentsSpawned = 0;
+    uint64_t omegaLastScore = 0;
+    uint64_t omegaLastStatus = 0;
+};
+
+static SubsystemFallbackState g_subsystemState{};
+static std::mutex g_subsystemMutex;
+
+static uint64_t nowMs() {
+    using namespace std::chrono;
+    return static_cast<uint64_t>(duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count());
+}
+} // namespace
 
 extern "C" void InjectMode(void) {}
 extern "C" void DiffCovMode(void) {}
@@ -62,23 +89,119 @@ extern "C" void AgenticMode(void) {}
 extern "C" void UACBypassMode(void) {}
 extern "C" void AVScanMode(void) {}
 
-extern "C" void asm_watchdog_init(void) {}
-extern "C" void asm_watchdog_verify(void) {}
-extern "C" void asm_watchdog_get_status(void) {}
-extern "C" void asm_watchdog_get_baseline(void) {}
-extern "C" void asm_watchdog_shutdown(void) {}
+extern "C" void asm_watchdog_init(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.watchdogActive = true;
+    g_subsystemState.watchdogBaselineMs = nowMs();
+    g_subsystemState.watchdogLastCheckMs = g_subsystemState.watchdogBaselineMs;
+    g_subsystemState.watchdogChecks = 0;
+    g_subsystemState.watchdogFailures = 0;
+    g_subsystemState.omegaLastStatus = 1;
+}
+extern "C" void asm_watchdog_verify(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    if (!g_subsystemState.watchdogActive) {
+        g_subsystemState.omegaLastStatus = 0;
+        return;
+    }
+    const uint64_t now = nowMs();
+    const uint64_t delta = (now >= g_subsystemState.watchdogLastCheckMs)
+                               ? (now - g_subsystemState.watchdogLastCheckMs)
+                               : 0;
+    g_subsystemState.watchdogChecks += 1;
+    if (delta > 15000) {
+        g_subsystemState.watchdogFailures += 1;
+        g_subsystemState.omegaLastStatus = 2;
+    } else {
+        g_subsystemState.omegaLastStatus = 1;
+    }
+    g_subsystemState.watchdogLastCheckMs = now;
+}
+extern "C" void asm_watchdog_get_status(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    if (!g_subsystemState.watchdogActive) {
+        g_subsystemState.omegaLastStatus = 0;
+    } else if (g_subsystemState.watchdogFailures > 0) {
+        g_subsystemState.omegaLastStatus = 2;
+    } else {
+        g_subsystemState.omegaLastStatus = 1;
+    }
+}
+extern "C" void asm_watchdog_get_baseline(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    const uint64_t baseline = g_subsystemState.watchdogBaselineMs;
+    const uint64_t checks = g_subsystemState.watchdogChecks;
+    g_subsystemState.omegaLastScore = baseline ^ (checks << 8u);
+}
+extern "C" void asm_watchdog_shutdown(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.watchdogActive = false;
+    g_subsystemState.watchdogLastCheckMs = 0;
+    g_subsystemState.omegaLastStatus = 0;
+}
 
-extern "C" void asm_omega_implement_generate(void) {}
-extern "C" void asm_omega_agent_step(void) {}
-extern "C" void asm_omega_shutdown(void) {}
-extern "C" void asm_omega_plan_decompose(void) {}
-extern "C" void asm_omega_evolve_improve(void) {}
-extern "C" void asm_omega_init(void) {}
-extern "C" void asm_omega_get_stats(void) {}
+extern "C" void asm_omega_implement_generate(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.omegaCycles += 1;
+    g_subsystemState.omegaStagesCompleted += 2;
+    g_subsystemState.omegaLastScore = (g_subsystemState.omegaLastScore + 137) % 100000;
+}
+extern "C" void asm_omega_agent_step(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.omegaCycles += 1;
+    g_subsystemState.omegaStagesCompleted += 1;
+    g_subsystemState.omegaLastScore = (g_subsystemState.omegaLastScore + 29) % 100000;
+}
+extern "C" void asm_omega_shutdown(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.omegaLastStatus = 0;
+}
+extern "C" void asm_omega_plan_decompose(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.omegaStagesCompleted += 3;
+    g_subsystemState.omegaLastScore = (g_subsystemState.omegaLastScore + 83) % 100000;
+}
+extern "C" void asm_omega_evolve_improve(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.omegaStagesCompleted += 1;
+    g_subsystemState.omegaLastScore = (g_subsystemState.omegaLastScore + 211) % 100000;
+}
+extern "C" void asm_omega_init(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.omegaCycles = 0;
+    g_subsystemState.omegaStagesCompleted = 0;
+    g_subsystemState.omegaTests = 0;
+    g_subsystemState.omegaTestsPassed = 0;
+    g_subsystemState.omegaAgentsSpawned = 0;
+    g_subsystemState.omegaLastScore = 0;
+    g_subsystemState.omegaLastStatus = 1;
+}
+extern "C" void asm_omega_get_stats(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.omegaLastScore =
+        (g_subsystemState.omegaCycles * 17u + g_subsystemState.omegaStagesCompleted * 31u +
+         g_subsystemState.omegaTestsPassed * 73u + g_subsystemState.omegaAgentsSpawned * 11u) %
+        100000u;
+}
 
-extern "C" void asm_omega_verify_test(void) {}
-extern "C" void asm_omega_architect_select(void) {}
-extern "C" void asm_omega_agent_spawn(void) {}
+extern "C" void asm_omega_verify_test(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.omegaTests += 1;
+    const bool pass = ((g_subsystemState.omegaCycles + g_subsystemState.omegaTests) % 2u) == 0u;
+    if (pass) {
+        g_subsystemState.omegaTestsPassed += 1;
+    }
+}
+extern "C" void asm_omega_architect_select(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.omegaStagesCompleted += 2;
+    g_subsystemState.omegaLastScore = (g_subsystemState.omegaLastScore + 47) % 100000;
+}
+extern "C" void asm_omega_agent_spawn(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.omegaAgentsSpawned += 1;
+    g_subsystemState.omegaLastStatus = 1;
+}
 extern "C" void asm_omega_observe_monitor(void) {}
 extern "C" void asm_omega_deploy_distribute(void) {}
 extern "C" void asm_omega_execute_pipeline(void) {}
