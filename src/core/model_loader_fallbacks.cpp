@@ -17,6 +17,3 @@ extern "C" bool ModelLoaderShutdown(void) {
     return false;
 }
 
-extern "C" bool Enterprise_DevUnlock(void) {
-    return false;
-}

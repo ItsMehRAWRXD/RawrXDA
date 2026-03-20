@@ -767,8 +767,8 @@ static void exportAuditReport(HWND hwndParent) {
 // ============================================================================
 // WINDOW PROCEDURE
 // ============================================================================
-static LRESULT CALLBACK auditDashboardWndProc(HWND hwnd, UINT msg,
-                                                WPARAM wParam, LPARAM lParam) {
+LRESULT CALLBACK auditDashboardWndProc(HWND hwnd, UINT msg,
+                                       WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_CREATE: {
             CREATESTRUCTW* cs = reinterpret_cast<CREATESTRUCTW*>(lParam);
