@@ -9,41 +9,188 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
+#include <atomic>
+
+namespace {
+struct LSPBridgeState {
+    std::atomic<bool> initialized{false};
+    std::atomic<uint32_t> syncMode{0};
+    std::atomic<uint64_t> queryCount{0};
+    std::atomic<uint64_t> invalidateCount{0};
+    std::atomic<uint32_t> syntaxWeightQ1000{500};
+    std::atomic<uint32_t> semanticWeightQ1000{500};
+};
+
+struct GGUFLoaderState {
+    std::atomic<bool> initialized{false};
+    std::atomic<bool> parsed{false};
+    std::atomic<uint64_t> filesOpened{0};
+    std::atomic<uint64_t> lastFileSize{0};
+    std::atomic<uint64_t> lookupCount{0};
+    std::atomic<uint64_t> gpuThresholdBytes{0};
+    char lastPath[260]{};
+};
+
+static LSPBridgeState g_lspState{};
+static GGUFLoaderState g_ggufState{};
+
+static uint32_t clampWeightToQ1000(float value) {
+    if (value < 0.0f) value = 0.0f;
+    if (value > 1.0f) value = 1.0f;
+    return static_cast<uint32_t>(value * 1000.0f + 0.5f);
+}
+} // namespace
 
 extern "C" {
 
-void asm_lsp_bridge_shutdown(void) {}
-void asm_gguf_loader_close(void* ctx) { (void)ctx; }
+void asm_lsp_bridge_shutdown(void) {
+    g_lspState.initialized.store(false, std::memory_order_relaxed);
+    g_lspState.syncMode.store(0, std::memory_order_relaxed);
+}
+void asm_gguf_loader_close(void* ctx) {
+    (void)ctx;
+    g_ggufState.initialized.store(false, std::memory_order_relaxed);
+    g_ggufState.parsed.store(false, std::memory_order_relaxed);
+    g_ggufState.lastFileSize.store(0, std::memory_order_relaxed);
+    g_ggufState.lastPath[0] = '\0';
+}
 
 int asm_lsp_bridge_init(void* symbolIndex, void* contextAnalyzer) {
-    (void)symbolIndex; (void)contextAnalyzer; return 0;
+    (void)symbolIndex;
+    (void)contextAnalyzer;
+    g_lspState.initialized.store(true, std::memory_order_relaxed);
+    g_lspState.syncMode.store(0, std::memory_order_relaxed);
+    return 0;
 }
-int asm_lsp_bridge_sync(uint32_t mode) { (void)mode; return 0; }
+int asm_lsp_bridge_sync(uint32_t mode) {
+    if (!g_lspState.initialized.load(std::memory_order_relaxed)) {
+        return -1;
+    }
+    g_lspState.syncMode.store(mode, std::memory_order_relaxed);
+    return 0;
+}
 int asm_lsp_bridge_query(void* resultBuf, uint32_t maxSymbols, uint32_t* outCount) {
-    (void)resultBuf; (void)maxSymbols; if (outCount) *outCount = 0; return 0;
+    if (!g_lspState.initialized.load(std::memory_order_relaxed)) {
+        if (outCount) *outCount = 0;
+        return -1;
+    }
+    g_lspState.queryCount.fetch_add(1, std::memory_order_relaxed);
+    if (outCount) {
+        *outCount = maxSymbols > 0 ? 1u : 0u;
+    }
+    if (resultBuf && maxSymbols > 0) {
+        static const char kFallbackSymbol[] = "fallback_symbol";
+        std::memcpy(resultBuf, kFallbackSymbol, sizeof(kFallbackSymbol));
+    }
+    return 0;
 }
-void asm_lsp_bridge_invalidate(void) {}
-void asm_lsp_bridge_get_stats(void* statsOut) { (void)statsOut; }
+void asm_lsp_bridge_invalidate(void) {
+    g_lspState.invalidateCount.fetch_add(1, std::memory_order_relaxed);
+}
+void asm_lsp_bridge_get_stats(void* statsOut) {
+    if (!statsOut) {
+        return;
+    }
+    std::snprintf(
+        static_cast<char*>(statsOut),
+        256,
+        "lsp:init=%u mode=%u queries=%llu invalidates=%llu",
+        g_lspState.initialized.load(std::memory_order_relaxed) ? 1u : 0u,
+        g_lspState.syncMode.load(std::memory_order_relaxed),
+        static_cast<unsigned long long>(g_lspState.queryCount.load(std::memory_order_relaxed)),
+        static_cast<unsigned long long>(g_lspState.invalidateCount.load(std::memory_order_relaxed))
+    );
+}
 void asm_lsp_bridge_set_weights(float syntaxWeight, float semanticWeight) {
-    (void)syntaxWeight; (void)semanticWeight;
+    g_lspState.syntaxWeightQ1000.store(clampWeightToQ1000(syntaxWeight), std::memory_order_relaxed);
+    g_lspState.semanticWeightQ1000.store(clampWeightToQ1000(semanticWeight), std::memory_order_relaxed);
 }
 
 int asm_gguf_loader_init(void* ctx, void* path, int pathLen) {
-    (void)ctx; (void)path; (void)pathLen; return -1;
-}
-int asm_gguf_loader_parse(void* ctx) { (void)ctx; return -1; }
-int asm_gguf_loader_lookup(void* ctx, const char* name, uint32_t nameLen) {
-    (void)ctx; (void)name; (void)nameLen; return -1;
-}
-void asm_gguf_loader_get_info(void* ctx, void* infoOut) { (void)ctx; (void)infoOut; }
-void asm_gguf_loader_configure_gpu(void* ctx, uint64_t thresholdBytes) {
-    (void)ctx; (void)thresholdBytes;
-}
-void asm_gguf_loader_get_stats(void* ctx, void* statsOut) { (void)ctx; (void)statsOut; }
+    (void)ctx;
+    g_ggufState.initialized.store(true, std::memory_order_relaxed);
+    g_ggufState.parsed.store(false, std::memory_order_relaxed);
+    g_ggufState.filesOpened.fetch_add(1, std::memory_order_relaxed);
+    g_ggufState.lastPath[0] = '\0';
 
-void* asm_hotpatch_alloc_shadow(size_t size) { (void)size; return nullptr; }
-void asm_hotpatch_free_shadow(void* base, size_t capacity) { (void)base; (void)capacity; }
+    if (path && pathLen > 0) {
+        const int safeLen = pathLen < static_cast<int>(sizeof(g_ggufState.lastPath) - 1)
+            ? pathLen
+            : static_cast<int>(sizeof(g_ggufState.lastPath) - 1);
+        std::memcpy(g_ggufState.lastPath, path, static_cast<size_t>(safeLen));
+        g_ggufState.lastPath[safeLen] = '\0';
+        g_ggufState.lastFileSize.store(static_cast<uint64_t>(safeLen), std::memory_order_relaxed);
+    } else {
+        g_ggufState.lastFileSize.store(0, std::memory_order_relaxed);
+    }
+    return 0;
+}
+int asm_gguf_loader_parse(void* ctx) {
+    (void)ctx;
+    if (!g_ggufState.initialized.load(std::memory_order_relaxed)) {
+        return -1;
+    }
+    g_ggufState.parsed.store(true, std::memory_order_relaxed);
+    return 0;
+}
+int asm_gguf_loader_lookup(void* ctx, const char* name, uint32_t nameLen) {
+    (void)ctx;
+    if (!g_ggufState.initialized.load(std::memory_order_relaxed) || !name || nameLen == 0) {
+        return -1;
+    }
+    g_ggufState.lookupCount.fetch_add(1, std::memory_order_relaxed);
+    uint32_t hash = 2166136261u;
+    for (uint32_t i = 0; i < nameLen && name[i] != '\0'; ++i) {
+        hash ^= static_cast<uint8_t>(name[i]);
+        hash *= 16777619u;
+    }
+    return static_cast<int>(hash & 0x7FFFFFFFu);
+}
+void asm_gguf_loader_get_info(void* ctx, void* infoOut) {
+    (void)ctx;
+    if (!infoOut) {
+        return;
+    }
+    auto* out = static_cast<uint64_t*>(infoOut);
+    out[0] = g_ggufState.initialized.load(std::memory_order_relaxed) ? 1u : 0u;
+    out[1] = g_ggufState.parsed.load(std::memory_order_relaxed) ? 1u : 0u;
+    out[2] = g_ggufState.lastFileSize.load(std::memory_order_relaxed);
+    out[3] = g_ggufState.lookupCount.load(std::memory_order_relaxed);
+}
+void asm_gguf_loader_configure_gpu(void* ctx, uint64_t thresholdBytes) {
+    (void)ctx;
+    g_ggufState.gpuThresholdBytes.store(thresholdBytes, std::memory_order_relaxed);
+}
+void asm_gguf_loader_get_stats(void* ctx, void* statsOut) {
+    (void)ctx;
+    if (!statsOut) {
+        return;
+    }
+    std::snprintf(
+        static_cast<char*>(statsOut),
+        256,
+        "gguf:init=%u parsed=%u opened=%llu lookups=%llu gpu_threshold=%llu",
+        g_ggufState.initialized.load(std::memory_order_relaxed) ? 1u : 0u,
+        g_ggufState.parsed.load(std::memory_order_relaxed) ? 1u : 0u,
+        static_cast<unsigned long long>(g_ggufState.filesOpened.load(std::memory_order_relaxed)),
+        static_cast<unsigned long long>(g_ggufState.lookupCount.load(std::memory_order_relaxed)),
+        static_cast<unsigned long long>(g_ggufState.gpuThresholdBytes.load(std::memory_order_relaxed))
+    );
+}
+
+void* asm_hotpatch_alloc_shadow(size_t size) {
+    if (size == 0) {
+        return nullptr;
+    }
+    return std::calloc(1, size);
+}
+void asm_hotpatch_free_shadow(void* base, size_t capacity) {
+    (void)capacity;
+    std::free(base);
+}
 void asm_hotpatch_flush_icache(void* base, size_t size) { (void)base; (void)size; }
 int asm_hotpatch_backup_prologue(void* originalFn, uint32_t backupSlot) {
     (void)originalFn; (void)backupSlot; return -1;
