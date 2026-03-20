@@ -3336,8 +3336,9 @@ if(WIN32)
         # Real lane - keep isolated handlers and runtime menu/command handlers.
         # DO NOT remove ssot_handlers_ext_isolated.cpp - it has working VSCEXT handlers 10000-10009
         # DO NOT add ssot_handlers_ext.cpp - it has unresolved symbols we haven't fixed
-        # win32_ide_link_stubs.cpp keeps only non-menu fallback symbols.
-        message(STATUS "Win32IDE: Real lane - using isolated handlers + runtime handlers + link shims")
+        # win32_ide_link_stubs.cpp keeps only non-menu fallback symbols and is appended
+        # only in explicit non-strict MSVC compatibility lanes.
+        message(STATUS "Win32IDE: Real lane - using isolated handlers + runtime handlers")
     endif()
 
     if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
@@ -3502,18 +3503,22 @@ if(WIN32)
     # Policy: Production builds MUST NOT link stub implementations
     # 
     # Strict enforcement: FATAL_ERROR unless emergency override set.
-    # No stubs permitted; ai_agent_masm_stubs.cpp exempt (provides MASM-required symbols).
+    # No stubs permitted; ai_agent_masm_stubs.cpp is the only explicit exception
+    # because it provides required MASM bridge symbols.
     # =========================================================================
     
     function(EnforceNoStubs target_name)
         get_target_property(SOURCES ${target_name} SOURCES)
+        if(NOT SOURCES OR SOURCES STREQUAL "SOURCES-NOTFOUND")
+            message(FATAL_ERROR "[ProductionLane] ${target_name} has no resolvable SOURCES property for stub enforcement.")
+        endif()
         set(STUB_VIOLATIONS "")
         set(STUB_COUNT 0)
         
         foreach(src ${SOURCES})
             # Detect stub files
-            if(src MATCHES "(_stubs\\.cpp$|_stub\\.cpp$|_stubs\\.asm$|_stub\\.asm$|/missing_handler|/link_stubs_.*\\.(cpp|asm)$|_link_shims?\\.(cpp|asm)$|_fallback[^/]*\\.(cpp|asm)$|_(mock|fake)\\.(cpp|asm)$)" OR
-               src MATCHES "(stub_|_stub\\.(cpp|asm)$|shim_|_shims?\\.(cpp|asm)$|shims?\\.(cpp|asm)$)" OR
+            if(src MATCHES "(_stubs\\.cpp$|/stubs\\.cpp$|_stub\\.cpp$|/stub_.*\\.cpp$|_stubs\\.asm$|/stubs\\.asm$|_stub\\.asm$|/stub_.*\\.asm$|/shim_.*\\.(cpp|asm)$|/missing_handler|/link_stubs_.*\\.(cpp|asm)$|_link_shims?\\.(cpp|asm)$|_fallback[^/]*\\.(cpp|asm)$|_(mock|fake)\\.(cpp|asm)$)" OR
+               src MATCHES "(stub_|_stub\\.(cpp|asm)$|shim_|_shims?\\.(cpp|asm)$|shims?\\.(cpp|asm)$|/stubs\\.(cpp|asm)$)" OR
                src MATCHES "(mock_|fake_|_(mock|fake)\\.(cpp|asm)$)")
                                 # ai_agent_masm_stubs.cpp provides required MASM symbols — exempt
                                 if(src MATCHES "ai_agent_masm_stubs\\.cpp$")
@@ -3527,6 +3532,7 @@ if(WIN32)
         # Enforce: No stubs in production
         if(STUB_COUNT GREATER 0)
             if(NOT DEFINED ENV{RAWRXD_EMERGENCY_STUB_LINK})
+                list(REMOVE_DUPLICATES STUB_VIOLATIONS)
                 list(JOIN STUB_VIOLATIONS "\n  - " STUB_LIST)
                 message(FATAL_ERROR
                     "\\n===============================================================\\n"
@@ -3577,8 +3583,12 @@ if(WIN32)
     
     # Mandatory symbol providers for Win32IDE link closure (no generic link_stubs units allowed).
     # Remove any other stubs that may have been added
-    list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX "(_stubs\\.cpp$|_stub\\.cpp$|_stubs\\.asm$|_stub\\.asm$|missing_handler|link_stubs_.*\\.(cpp|asm)$|_shims?\\.(cpp|asm)$|_link_shims?\\.(cpp|asm)$|_fallback[^/]*\\.(cpp|asm)$|_(mock|fake)\\.(cpp|asm)$|stub_|shim_|mock_|fake_)")
+    list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX "(_stubs\\.cpp$|/stubs\\.cpp$|_stub\\.cpp$|/stub_.*\\.cpp$|_stubs\\.asm$|/stubs\\.asm$|_stub\\.asm$|/stub_.*\\.asm$|/shim_.*\\.(cpp|asm)$|missing_handler|link_stubs_.*\\.(cpp|asm)$|_shims?\\.(cpp|asm)$|_link_shims?\\.(cpp|asm)$|_fallback[^/]*\\.(cpp|asm)$|_(mock|fake)\\.(cpp|asm)$|stub_|shim_|mock_|fake_)")
     # Keep required MASM bridge provider after broad stub filtering.
+    if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES AND NOT EXISTS "${CMAKE_SOURCE_DIR}/src/core/ai_agent_masm_stubs.cpp")
+        message(FATAL_ERROR "[ProductionLane] Required MASM bridge provider src/core/ai_agent_masm_stubs.cpp is missing.")
+    endif()
+    list(REMOVE_ITEM WIN32IDE_SOURCES src/core/ai_agent_masm_stubs.cpp)
     list(APPEND WIN32IDE_SOURCES src/core/ai_agent_masm_stubs.cpp)
 
 
@@ -3587,7 +3597,7 @@ if(WIN32)
         set(_RAWRXD_FORBIDDEN_WIN32IDE_SOURCES_POST "")
         foreach(_rawrxd_src IN LISTS WIN32IDE_SOURCES)
             if(_rawrxd_src MATCHES "(_stubs\\.cpp$|/stubs\\.cpp$|_stubs\\.asm$|/stubs\\.asm$|/.*_stub\\.(cpp|asm)$|/stub_.*\\.(cpp|asm)$|/shim_.*\\.(cpp|asm)$|/.*_(mock|fake)\\.(cpp|asm)$|/.*(mock_|fake_).*(\\.cpp|\\.asm)$|/link_stubs_.*\\.(cpp|asm)$|/.*_shims?\\.(cpp|asm)$|/.*_link_shims?\\.(cpp|asm)$|/.*_fallback[^/]*\\.(cpp|asm)$)" OR
-               _rawrxd_src MATCHES "(missing_handler|_stub\\.(cpp|asm)$|shim_|shims?\\.(cpp|asm)$|mock_|fake_|_(mock|fake)\\.(cpp|asm)$)")
+               _rawrxd_src MATCHES "(missing_handler|/stubs\\.(cpp|asm)$|_stub\\.(cpp|asm)$|stub_|shim_|shims?\\.(cpp|asm)$|mock_|fake_|_(mock|fake)\\.(cpp|asm)$)")
                 if(NOT _rawrxd_src MATCHES "ai_agent_masm_stubs\\.cpp$")
                     list(APPEND _RAWRXD_FORBIDDEN_WIN32IDE_SOURCES_POST "${_rawrxd_src}")
                 endif()
