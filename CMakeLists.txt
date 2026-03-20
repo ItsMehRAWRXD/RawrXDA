@@ -975,7 +975,6 @@ set(SOURCES
 # Keep default behavior conservative; enable per subsystem during targeted builds.
 option(RAWR_REPLACE_SSOT_HANDLERS "Replace SSOT minimal/isolated lane with full ssot_handlers_ext.cpp" OFF)
 option(RAWR_REPLACE_MASM_FALLBACKS "Remove MASM-related C++ fallback stubs (and optionally re-enable blocked ASM units)" OFF)
-option(RAWR_REPLACE_SWARM_LICENSE_FALLBACKS "Remove swarm/license fallback stubs from SOURCES" OFF)
 option(RAWRXD_ENABLE_MISSING_HANDLER_STUBS "Allow missing_handler_stubs.cpp fallback lane for Win32IDE wiring" OFF)
 option(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES "Strip stub/shim/mock source units from production targets" OFF)
 option(RAWRXD_INCLUDE_STRESS_AND_REPLAY_SOURCES "Include stress/replay harness sources in production targets" OFF)
@@ -992,6 +991,14 @@ if(NOT RAWRXD_INCLUDE_STRESS_AND_REPLAY_SOURCES)
         src/test_harness/replay_mock_inference.cpp
         src/test_harness/replay_harness.cpp
         src/test_harness/replay_reporter.cpp
+    )
+endif()
+if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
+    list(REMOVE_ITEM SOURCES
+        src/core/cot_fallback_system.cpp
+        src/core/dml_asm_fallback.cpp
+        src/win32app/agentic_bridge_headless.cpp
+        src/win32app/Win32IDE_logMessage.cpp
     )
 endif()
 
@@ -1026,14 +1033,6 @@ if(RAWR_REPLACE_MASM_FALLBACKS)
     endif()
 endif()
 
-if(RAWR_REPLACE_SWARM_LICENSE_FALLBACKS)
-    list(REMOVE_ITEM SOURCES
-        src/core/swarm_network_stubs.cpp
-        src/core/enterprise_license_stubs.cpp
-    )
-    message(STATUS "[ReplacementPass] Swarm/License: fallback stubs removed")
-endif()
-
 # Build target-scoped SSOT ownership partition for RawrEngine only.
 set(RAWR_ENGINE_SOURCES ${SOURCES})
 list(REMOVE_ITEM RAWR_ENGINE_SOURCES
@@ -1066,14 +1065,12 @@ if(RAWR_SSOT_PROVIDER_UPPER STREQUAL "CORE")
     src/core/ssot_handlers_ext_isolated.cpp
     src/core/ssot_handlers_ext.cpp
         src/core/auto_feature_registry.cpp
-        src/core/missing_handler_stubs.cpp
         src/core/feature_handlers.cpp
     )
 elseif(RAWR_SSOT_PROVIDER_UPPER STREQUAL "EXT")
     set(_RAWR_SSOT_EXT 1)
     list(REMOVE_ITEM RAWR_ENGINE_SOURCES
         src/core/ssot_handlers.cpp
-        src/core/missing_handler_stubs.cpp
         src/core/auto_feature_registry.cpp
         src/core/ssot_handlers_ext_runtime_minimal.cpp
         src/core/ssot_handlers_ext_isolated.cpp
@@ -1082,7 +1079,6 @@ elseif(RAWR_SSOT_PROVIDER_UPPER STREQUAL "AUTO")
     set(_RAWR_SSOT_AUTO 1)
     set(_RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS 1)
     list(REMOVE_ITEM RAWR_ENGINE_SOURCES
-        src/core/missing_handler_stubs.cpp
         src/core/ssot_handlers_ext_runtime_minimal.cpp
         src/core/ssot_handlers_ext_isolated.cpp
     )
@@ -1103,7 +1099,6 @@ elseif(RAWR_SSOT_PROVIDER_UPPER STREQUAL "FEATURES")
     list(REMOVE_ITEM RAWR_ENGINE_SOURCES
         src/core/ssot_handlers.cpp
         src/core/auto_feature_registry.cpp
-        src/core/missing_handler_stubs.cpp
         src/core/ssot_handlers_ext_runtime_minimal.cpp
         src/core/ssot_handlers_ext_isolated.cpp
         src/core/ssot_handlers_ext.cpp
@@ -1202,8 +1197,10 @@ target_sources(RawrEngine PRIVATE
     src/core/native_debugger_engine.cpp
     src/core/native_debugger_symbols.cpp
     src/agentic/AgentOllamaClient.cpp
-    src/core/rawr_engine_link_shims.cpp
 )
+if(NOT RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
+    target_sources(RawrEngine PRIVATE src/core/rawr_engine_link_shims.cpp)
+endif()
 if(RAWR_SSOT_PROVIDER_UPPER STREQUAL "EXT" OR RAWR_SSOT_PROVIDER_UPPER STREQUAL "STUBS")
     target_sources(RawrEngine PRIVATE src/core/auto_feature_stub_impl.cpp)
 endif()
@@ -1233,10 +1230,10 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/agent/quantum_missing_impl.cpp")
     # Keep Gold and RawrEngine on the same non-duplicated quantum time manager lane.
     list(REMOVE_ITEM GOLD_UNDERSCORE_SOURCES src/agent/quantum_dynamic_time_manager_impl.cpp)
 endif()
-list(APPEND GOLD_UNDERSCORE_SOURCES
-    src/core/rawr_engine_link_shims.cpp
-    src/core/ignite_800b.cpp
-)
+list(APPEND GOLD_UNDERSCORE_SOURCES src/core/ignite_800b.cpp)
+if(NOT RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
+    list(APPEND GOLD_UNDERSCORE_SOURCES src/core/rawr_engine_link_shims.cpp)
+endif()
 if(RAWR_SSOT_PROVIDER_UPPER STREQUAL "AUTO")
     # Production lane: prefer full handlers over stub providers.
     list(REMOVE_ITEM GOLD_UNDERSCORE_SOURCES
@@ -1336,7 +1333,7 @@ if(WIN32)
     endif()
 endif()
 
-# Gold-only sources: modules used by missing_handler_stubs but not in main SOURCES
+# Gold-only sources not present in the main SOURCES aggregation lane.
 target_sources(RawrXD_Gold PRIVATE
     src/core/native_debugger_engine.cpp
     src/core/native_debugger_symbols.cpp
@@ -1346,7 +1343,6 @@ target_sources(RawrXD_Gold PRIVATE
     src/core/ConfigurationValidator.cpp
     src/inference/PerformanceMonitor.cpp
     src/agentic/ErrorRecoveryManager.cpp
-    src/core/missing_handler_stubs.cpp
 )
 
 # Vulkan SDK for Gold build — linked later after find_package(Vulkan)
@@ -2253,6 +2249,9 @@ set(INFERENCE_ENGINE_SOURCES
     src/inference/PerformanceMonitor.cpp
 )
 list(REMOVE_DUPLICATES INFERENCE_ENGINE_SOURCES)
+if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
+    list(REMOVE_ITEM INFERENCE_ENGINE_SOURCES src/inference/inference_standalone_link_shims.cpp)
+endif()
 
 add_executable(RawrXD-InferenceEngine EXCLUDE_FROM_ALL ${INFERENCE_ENGINE_SOURCES})
 
@@ -3202,6 +3201,10 @@ if(WIN32)
             src/core/model_loader_fallbacks.cpp
             src/core/rawrxd_native_log_fallback.cpp
             src/llm_adapter/ggufrunner_link_fallbacks.cpp
+            src/inference/gpu_dispatch_gate_win32ide_fallback.cpp
+            src/inference/gguf_d3d12_bridge_link_fallback.cpp
+            src/win32app/v280_link_fallbacks.cpp
+            src/win32app/collab_cursor_fallbacks.cpp
         )
         message(STATUS "[ProductionLane] Win32IDE: stripped monaco/ssot/fallback shim units")
     endif()
@@ -3212,16 +3215,19 @@ if(WIN32)
         src/engine/rawr_engine.cpp
         src/engine/gguf_core.cpp
     )
-    # Use real model loader implementation in Win32IDE.
-    list(REMOVE_ITEM WIN32IDE_SOURCES src/core/rawrxd_model_loader_link_stub.cpp)
-    # Re-wire real providers needed by this target's link graph.
-    list(APPEND WIN32IDE_SOURCES
-        src/core/local_parity_bridge.cpp
-        src/core/subsystem_mode_fallbacks.cpp
-        src/core/model_loader_fallbacks.cpp
-        src/core/rawrxd_native_log_fallback.cpp
-        src/llm_adapter/ggufrunner_link_fallbacks.cpp
-    )
+    # Re-wire providers needed by this target's link graph.
+    list(APPEND WIN32IDE_SOURCES src/core/local_parity_bridge.cpp)
+    if(NOT RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
+        list(APPEND WIN32IDE_SOURCES
+            src/core/subsystem_mode_fallbacks.cpp
+            src/core/model_loader_fallbacks.cpp
+            src/core/rawrxd_native_log_fallback.cpp
+            src/llm_adapter/ggufrunner_link_fallbacks.cpp
+            src/win32app/collab_cursor_fallbacks.cpp
+        )
+    else()
+        message(STATUS "[ProductionLane] Win32IDE: fallback provider append skipped")
+    endif()
 
     list(APPEND WIN32IDE_SOURCES
         src/win32app/ai_workers_queue.cpp
@@ -3229,7 +3235,6 @@ if(WIN32)
         src/ui/ImportBridge.cpp
         src/ui/ExportBridge.cpp
         src/terminal/embedded_terminal.cpp
-        src/win32app/collab_cursor_fallbacks.cpp
     )
 
     set(WIN32IDE_EXTRA_ASM "")
