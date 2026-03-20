@@ -563,7 +563,7 @@ ToolResult ToolRegistry::HandleCodeEdit(const json& args, std::string& output) {
     std::wstring target = NormalizePath(ToWide(args.at("target").get<std::string>()));
     bool createBackup = args.value("create_backup", true);
 
-    std::ifstream file(target);
+    std::ifstream file(target.c_str());
     if (!file.is_open()) {
         output = "Failed to open target file";
         return ToolResult::ExecutionError;
@@ -613,7 +613,7 @@ ToolResult ToolRegistry::HandleCodeEdit(const json& args, std::string& output) {
         }
     }
 
-    std::ofstream out(target, std::ios::trunc);
+    std::ofstream out(target.c_str(), std::ios::trunc);
     if (!out.is_open()) {
         output = "Failed to open file for writing";
         return ToolResult::ExecutionError;

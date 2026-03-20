@@ -34,9 +34,6 @@
 #pragma comment(lib, "winhttp.lib")
 #include <shlobj.h>
 #include <windowsx.h>
-#include <wininet.h>
-
-#pragma comment(lib, "wininet.lib")
 #pragma comment(lib, "shell32.lib")
 #pragma comment(lib, "comctl32.lib")
 
@@ -443,7 +440,7 @@ static constexpr int MINIMAP_ENHANCED_WIDTH = 80;
 static constexpr int MINIMAP_CHAR_WIDTH = 2;
 static constexpr int MINIMAP_LINE_HEIGHT = 3;
 
-static LRESULT CALLBACK MinimapWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK MinimapWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 void Win32IDE::initMinimapEnhanced()
 {
@@ -614,7 +611,7 @@ void Win32IDE::paintMinimapEnhanced(HDC hdc, const RECT& rect)
     DeleteObject(miniFont);
 }
 
-static LRESULT CALLBACK MinimapWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK MinimapWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     Win32IDE* ide = (Win32IDE*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
 
@@ -1078,7 +1075,7 @@ void Win32IDE::showFuzzySymbolSearch()
 // controls (checkboxes, spinners, dropdowns, text fields) instead of raw JSON.
 // ============================================================================
 
-static INT_PTR CALLBACK SettingsGUIProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK SettingsGUIProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 void Win32IDE::initSettingsGUI()
 {
@@ -1164,7 +1161,7 @@ static int createSettingRow(HWND parent, int y, const char* label, const char* c
 #define SC_CANCEL_BTN 13061
 #define SC_RESET_BTN 13062
 
-static LRESULT CALLBACK SettingsGUIProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK SettingsGUIProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     static Win32IDE* s_ide = nullptr;
 

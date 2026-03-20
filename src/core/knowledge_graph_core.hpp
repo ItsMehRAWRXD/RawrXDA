@@ -364,7 +364,7 @@ private:
     ArcheologyDiscoveredCallback m_archeologyCb;   void* m_archeologyCbUD;
 
     // Telemetry
-    mutable alignas(64) Stats m_stats;
+    alignas(64) mutable Stats m_stats;
 };
 
 } // namespace Knowledge

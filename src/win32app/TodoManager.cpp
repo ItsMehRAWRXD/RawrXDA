@@ -199,10 +199,18 @@ bool TodoManager::UpdateTodo(int id, const json& updates) {
         return false;
     }
     
-    if (updates.contains("text")) todo->text = updates["text"];
-    if (updates.contains("priority")) todo->priority = updates["priority"];
-    if (updates.contains("status")) todo->status = updates["status"];
-    if (updates.contains("category")) todo->category = updates["category"];
+    if (updates.contains("text") && updates["text"].is_string()) {
+        todo->text = updates["text"].get<std::string>();
+    }
+    if (updates.contains("priority") && updates["priority"].is_string()) {
+        todo->priority = updates["priority"].get<std::string>();
+    }
+    if (updates.contains("status") && updates["status"].is_string()) {
+        todo->status = updates["status"].get<std::string>();
+    }
+    if (updates.contains("category") && updates["category"].is_string()) {
+        todo->category = updates["category"].get<std::string>();
+    }
     
     auto now = std::time(nullptr);
     std::tm tm;

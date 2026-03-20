@@ -144,7 +144,9 @@ else()
 endif()
 # Keep LTCG globally, but avoid executable-only/defaultlib overrides here.
 # /NODEFAULTLIB + /ENTRY + /SUBSYSTEM must not leak into DLL targets.
-add_link_options(/LTCG)
+if(MSVC)
+    add_link_options(/LTCG)
+endif()
 
 # WebView2 and WIL are in d:/rawrxd/include/
 include_directories("d:/rawrxd/include")
@@ -2339,10 +2341,12 @@ if(WIN32)
         src/agentic/ErrorRecoveryManager.cpp
     )
 
-    # MASM64 UI Dispatcher
-    set(WEBVIEW2_DISPATCHER src/asm/webview2_masm64_dispatcher.asm)
-    set_source_files_properties(${WEBVIEW2_DISPATCHER} PROPERTIES LANGUAGE ASM_MASM)
-    list(APPEND WIN32IDE_SOURCES ${WEBVIEW2_DISPATCHER})
+    # MASM64 UI Dispatcher (MSVC/MASM-only).
+    if(RAWR_HAS_MASM)
+        set(WEBVIEW2_DISPATCHER src/asm/webview2_masm64_dispatcher.asm)
+        set_source_files_properties(${WEBVIEW2_DISPATCHER} PROPERTIES LANGUAGE ASM_MASM)
+        list(APPEND WIN32IDE_SOURCES ${WEBVIEW2_DISPATCHER})
+    endif()
 
     # NOTE:
     # Win32IDE target creation/linking is performed in the canonical block below
@@ -3023,12 +3027,21 @@ if(WIN32)
         # Benchmarks (real implementation; replaces earlier IDE stubs)
         src/benchmark_menu_widget.cpp
         src/benchmark_runner.cpp
+        # Legacy benchmark stub compatibility units (kept for parity wiring/docs)
+        src/win32app/benchmark_menu_stub.cpp
+        src/win32app/benchmark_runner_stub.cpp
         src/win32app/feature_registry_panel.cpp
         src/ui/monaco_settings_dialog.cpp
         src/thermal/RAWRXD_ThermalDashboard.cpp
         src/win32app/VSCodeMarketplaceAPI.cpp
         # Multi-file search (real implementation; replaces earlier IDE stub)
         src/multi_file_search.cpp
+        # Legacy support unit used by older feature-manifest wiring
+        src/win32app/digestion_engine_stub.cpp
+        src/win32app/Win32IDE_logMessage_stub.cpp
+        # Completed modules previously documented as shipped
+        src/core/license_manager_panel.cpp
+        src/telemetry/logger.cpp
         # License Creator + Feature Registry dialogs (showLicenseCreatorDialog, showFeatureRegistryDialog)
         src/win32app/Win32IDE_LicenseCreator.cpp
         # License enforcement + manifest (g_FeatureManifest + featureName from license_validator_manifest.cpp; LicenseEnforcer from license_enforcement.cpp)
@@ -3048,6 +3061,52 @@ if(WIN32)
         src/win32app/Win32IDE_SnippetEngine.cpp
         src/win32app/Win32IDE_MultiCursor.cpp
     )
+
+    # Production lane source normalization:
+    # Prefer real implementation units over legacy compatibility stubs/shims.
+    list(REMOVE_ITEM WIN32IDE_SOURCES
+        src/core/enterprise_devunlock_stub_masm.cpp
+        src/core/memory_patch_byte_search_stubs.cpp
+        src/core/mesh_brain_asm_stubs.cpp
+        src/core/monaco_core_stubs.cpp
+        src/core/win32_ide_link_stubs.cpp
+        src/win32app/benchmark_menu_stub.cpp
+        src/win32app/benchmark_runner_stub.cpp
+        src/win32app/multi_file_search_stub.cpp
+        src/win32app/Win32IDE_logMessage_stub.cpp
+        src/win32app/digestion_engine_stub.cpp
+    )
+
+    # DbgEng COM interfaces used by the native debugger engine are MSVC/SDK-specific.
+    # For non-MSVC toolchains (e.g., MinGW cross-builds), keep the rest of Win32IDE
+    # buildable by excluding these units.
+    if(NOT MSVC)
+        list(REMOVE_ITEM WIN32IDE_SOURCES
+            src/core/native_debugger_engine.cpp
+            src/core/native_debugger_symbols.cpp
+            src/win32app/Win32IDE_NativeDebugPanel.cpp
+            src/core/shadow_page_detour.cpp
+            src/agent/agentic_deep_thinking_engine.cpp
+            src/agent/quantum_autonomous_todo_system.cpp
+            src/agent/quantum_multi_model_agent_cycling.cpp
+            src/agent/quantum_dynamic_time_manager.cpp
+            src/agent/quantum_production_orchestrator.cpp
+            src/agent/quantum_missing_impl.cpp
+            src/vulkan_compute.cpp
+            src/core/embedding_engine.cpp
+            src/core/vector_index.cpp
+            src/core/agentic_task_graph.cpp
+            src/core/vision_encoder.cpp
+            src/core/model_loader_fallbacks.cpp
+            src/core/masm_stress_harness.cpp
+            src/core/convergence_stress_harness.cpp
+            src/core/enterprise_stress_tests.cpp
+            src/win32app/Win32IDE_Minimap.cpp
+            src/win32app/Win32IDE_SettingsGUI.cpp
+            src/win32app/VulkanRenderer.cpp
+            src/win32app/OSExplorerInterceptor.cpp
+        )
+    endif()
      
     # =========================================================================
     # MultiWindow Task Scheduler Kernel (MASM64 DLL)

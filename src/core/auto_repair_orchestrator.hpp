@@ -42,6 +42,7 @@
 #include <atomic>
 #include <string>
 #include <vector>
+#include <cstring>
 
 #include "sentinel_watchdog.hpp"
 

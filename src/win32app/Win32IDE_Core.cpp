@@ -278,6 +278,7 @@ typedef void (*DeferredInitFn)(void* self);
 
 static void sehCallOnCreate(OnCreateFn fn, void* self, HWND hwnd)
 {
+#if defined(_MSC_VER)
     __try
     {
         fn(self, hwnd);
@@ -292,15 +293,30 @@ static void sehCallOnCreate(OnCreateFn fn, void* self, HWND hwnd)
         OutputDebugStringA(crashMsg);
         MessageBoxA(hwnd, crashMsg, "RawrXD IDE - Startup Warning", MB_OK | MB_ICONWARNING);
     }
+#else
+    try
+    {
+        fn(self, hwnd);
+    }
+    catch (...)
+    {
+        const char* crashMsg =
+            "[RawrXD] C++ exception caught in onCreate — window will still display.\n"
+            "Some panels may be missing.";
+        OutputDebugStringA(crashMsg);
+        MessageBoxA(hwnd, crashMsg, "RawrXD IDE - Startup Warning", MB_OK | MB_ICONWARNING);
+    }
+#endif
 }
 
-static void onCreateTrampoline(void* self, HWND hwnd)
+void onCreateTrampoline(void* self, HWND hwnd)
 {
     static_cast<Win32IDE*>(self)->onCreate(hwnd);
 }
 
 static void sehCallDeferredInit(DeferredInitFn fn, void* self)
 {
+#if defined(_MSC_VER)
     __try
     {
         fn(self);
@@ -312,6 +328,16 @@ static void sehCallDeferredInit(DeferredInitFn fn, void* self)
                  GetExceptionCode());
         OutputDebugStringA(crashMsg);
     }
+#else
+    try
+    {
+        fn(self);
+    }
+    catch (...)
+    {
+        OutputDebugStringA("[RawrXD] C++ exception in deferredHeavyInit — non-fatal.\n");
+    }
+#endif
 }
 
 // SEH wrapper for background thread body — standalone function (no C++ objects
@@ -320,6 +346,7 @@ typedef void (*BgThreadBodyFn)(void* self);
 
 static DWORD sehRunBgThread(BgThreadBodyFn fn, void* self)
 {
+#if defined(_MSC_VER)
     __try
     {
         fn(self);
@@ -344,9 +371,30 @@ static DWORD sehRunBgThread(BgThreadBodyFn fn, void* self)
         return code;
     }
     return 0;
+#else
+    try
+    {
+        fn(self);
+        return 0;
+    }
+    catch (...)
+    {
+        const char* crashMsg =
+            "[RawrXD] C++ exception in background init thread — non-fatal.\n"
+            "Some subsystems may be unavailable. The IDE window remains open.\n";
+        OutputDebugStringA(crashMsg);
+        FILE* f = fopen("rawrxd_crash.log", "a");
+        if (f)
+        {
+            fprintf(f, "BACKGROUND THREAD CRASH: C++ exception\n");
+            fclose(f);
+        }
+        return 1;
+    }
+#endif
 }
 
-static void deferredInitTrampoline(void* self)
+void deferredInitTrampoline(void* self)
 {
     static_cast<Win32IDE*>(self)->deferredHeavyInit();
 }

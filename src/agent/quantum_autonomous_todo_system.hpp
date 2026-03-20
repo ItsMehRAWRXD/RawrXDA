@@ -223,7 +223,8 @@ public:
     };
 
 public:
-    explicit QuantumAutonomousTodoSystem(const AutonomousConfig& config = AutonomousConfig{});
+    QuantumAutonomousTodoSystem() : QuantumAutonomousTodoSystem(AutonomousConfig{}) {}
+    explicit QuantumAutonomousTodoSystem(const AutonomousConfig& config);
     ~QuantumAutonomousTodoSystem();
 
     // Core autonomous operations

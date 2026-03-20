@@ -1,0 +1,844 @@
+{
+  "generated_at": "2026-03-20 19:19:05",
+  "repo_root": "/workspace",
+  "audit_roots": [
+    "history",
+    "history/runoff",
+    "history/reconstructed",
+    "history/all_versions",
+    "runoff",
+    "reconstructed",
+    "Full Source/runoff"
+  ],
+  "root_inventory": [
+    {
+      "path": "history",
+      "exists": true,
+      "files": 36121,
+      "directories": 6296,
+      "total_bytes": 743265480,
+      "total_mb": 708.83,
+      "top_extensions": [
+        {
+          "extension": ".cpp",
+          "count": 11820
+        },
+        {
+          "extension": ".asm",
+          "count": 5137
+        },
+        {
+          "extension": ".h",
+          "count": 4528
+        },
+        {
+          "extension": ".md",
+          "count": 4226
+        },
+        {
+          "extension": ".hpp",
+          "count": 2358
+        },
+        {
+          "extension": ".json",
+          "count": 2167
+        },
+        {
+          "extension": ".ps1",
+          "count": 1776
+        },
+        {
+          "extension": ".txt",
+          "count": 853
+        },
+        {
+          "extension": ".bat",
+          "count": 750
+        },
+        {
+          "extension": ".js",
+          "count": 507
+        },
+        {
+          "extension": ".py",
+          "count": 450
+        },
+        {
+          "extension": ".html",
+          "count": 377
+        },
+        {
+          "extension": ".psm1",
+          "count": 157
+        },
+        {
+          "extension": ".inc",
+          "count": 151
+        },
+        {
+          "extension": ".c",
+          "count": 146
+        }
+      ]
+    },
+    {
+      "path": "history/runoff",
+      "exists": true,
+      "files": 12112,
+      "directories": 25,
+      "total_bytes": 145447082,
+      "total_mb": 138.71,
+      "top_extensions": [
+        {
+          "extension": ".md",
+          "count": 2797
+        },
+        {
+          "extension": ".cpp",
+          "count": 2616
+        },
+        {
+          "extension": ".asm",
+          "count": 1583
+        },
+        {
+          "extension": ".h",
+          "count": 1489
+        },
+        {
+          "extension": ".ps1",
+          "count": 949
+        },
+        {
+          "extension": ".hpp",
+          "count": 757
+        },
+        {
+          "extension": ".bat",
+          "count": 341
+        },
+        {
+          "extension": ".txt",
+          "count": 254
+        },
+        {
+          "extension": ".js",
+          "count": 250
+        },
+        {
+          "extension": ".py",
+          "count": 231
+        },
+        {
+          "extension": ".json",
+          "count": 147
+        },
+        {
+          "extension": ".psm1",
+          "count": 104
+        },
+        {
+          "extension": ".html",
+          "count": 78
+        },
+        {
+          "extension": ".inc",
+          "count": 74
+        },
+        {
+          "extension": ".c",
+          "count": 62
+        }
+      ]
+    },
+    {
+      "path": "history/reconstructed",
+      "exists": true,
+      "files": 3139,
+      "directories": 238,
+      "total_bytes": 46309905,
+      "total_mb": 44.16,
+      "top_extensions": [
+        {
+          "extension": ".cpp",
+          "count": 987
+        },
+        {
+          "extension": ".h",
+          "count": 559
+        },
+        {
+          "extension": ".md",
+          "count": 417
+        },
+        {
+          "extension": ".asm",
+          "count": 382
+        },
+        {
+          "extension": ".hpp",
+          "count": 329
+        },
+        {
+          "extension": ".ps1",
+          "count": 127
+        },
+        {
+          "extension": ".bat",
+          "count": 73
+        },
+        {
+          "extension": ".txt",
+          "count": 55
+        },
+        {
+          "extension": ".py",
+          "count": 43
+        },
+        {
+          "extension": ".js",
+          "count": 28
+        },
+        {
+          "extension": ".c",
+          "count": 23
+        },
+        {
+          "extension": ".json",
+          "count": 19
+        },
+        {
+          "extension": ".inc",
+          "count": 17
+        },
+        {
+          "extension": ".html",
+          "count": 14
+        },
+        {
+          "extension": ".new",
+          "count": 11
+        }
+      ]
+    },
+    {
+      "path": "history/all_versions",
+      "exists": true,
+      "files": 13438,
+      "directories": 4128,
+      "total_bytes": 380642620,
+      "total_mb": 363.01,
+      "top_extensions": [
+        {
+          "extension": ".cpp",
+          "count": 6255
+        },
+        {
+          "extension": ".asm",
+          "count": 2111
+        },
+        {
+          "extension": ".h",
+          "count": 1902
+        },
+        {
+          "extension": ".hpp",
+          "count": 930
+        },
+        {
+          "extension": ".md",
+          "count": 575
+        },
+        {
+          "extension": ".ps1",
+          "count": 385
+        },
+        {
+          "extension": ".txt",
+          "count": 349
+        },
+        {
+          "extension": ".bat",
+          "count": 227
+        },
+        {
+          "extension": ".html",
+          "count": 181
+        },
+        {
+          "extension": ".py",
+          "count": 135
+        },
+        {
+          "extension": ".js",
+          "count": 125
+        },
+        {
+          "extension": ".json",
+          "count": 54
+        },
+        {
+          "extension": ".c",
+          "count": 44
+        },
+        {
+          "extension": ".inc",
+          "count": 40
+        },
+        {
+          "extension": ".tsx",
+          "count": 23
+        }
+      ]
+    },
+    {
+      "path": "runoff",
+      "exists": true,
+      "files": 1088,
+      "directories": 3,
+      "total_bytes": 32988528,
+      "total_mb": 31.46,
+      "top_extensions": [
+        {
+          "extension": ".md",
+          "count": 647
+        },
+        {
+          "extension": ".txt",
+          "count": 441
+        }
+      ]
+    },
+    {
+      "path": "reconstructed",
+      "exists": true,
+      "files": 9615,
+      "directories": 8225,
+      "total_bytes": 120672489,
+      "total_mb": 115.08,
+      "top_extensions": [
+        {
+          "extension": ".md",
+          "count": 2251
+        },
+        {
+          "extension": ".cpp",
+          "count": 1946
+        },
+        {
+          "extension": ".asm",
+          "count": 1438
+        },
+        {
+          "extension": ".h",
+          "count": 1148
+        },
+        {
+          "extension": ".ps1",
+          "count": 784
+        },
+        {
+          "extension": ".hpp",
+          "count": 548
+        },
+        {
+          "extension": ".js",
+          "count": 236
+        },
+        {
+          "extension": ".py",
+          "count": 206
+        },
+        {
+          "extension": ".txt",
+          "count": 199
+        },
+        {
+          "extension": ".bat",
+          "count": 163
+        },
+        {
+          "extension": ".json",
+          "count": 113
+        },
+        {
+          "extension": ".psm1",
+          "count": 100
+        },
+        {
+          "extension": ".inc",
+          "count": 72
+        },
+        {
+          "extension": ".html",
+          "count": 59
+        },
+        {
+          "extension": ".c",
+          "count": 57
+        }
+      ]
+    },
+    {
+      "path": "Full Source/runoff",
+      "exists": true,
+      "files": 994,
+      "directories": 3,
+      "total_bytes": 23143949,
+      "total_mb": 22.07,
+      "top_extensions": [
+        {
+          "extension": ".md",
+          "count": 558
+        },
+        {
+          "extension": ".txt",
+          "count": 251
+        },
+        {
+          "extension": ".ps1",
+          "count": 185
+        }
+      ]
+    }
+  ],
+  "historic_unique_files_considered": 47818,
+  "exact_duplicates": {
+    "group_count": 12077,
+    "file_count": 32616,
+    "reclaimable_bytes": 315356664,
+    "reclaimable_mb": 300.75,
+    "top_groups": [
+      {
+        "file_size": 250195,
+        "instances": 5,
+        "reclaimable_bytes": 1000780,
+        "sample_paths": [
+          "history/reconstructed/RawrXD_IDE_unified.asm",
+          "history/-1ec43a2c/WNq7.asm",
+          "history/all_versions/RawrXD_IDE_unified.asm/1770703917990_WNq7.asm",
+          "history/runoff/part_0010/d__rawrxd_RawrXD_IDE_unified.asm",
+          "reconstructed/RawrXD/RawrXD/IDE/unified.asm"
+        ]
+      },
+      {
+        "file_size": 259845,
+        "instances": 4,
+        "reclaimable_bytes": 779535,
+        "sample_paths": [
+          "history/all_versions/src/core/auto_feature_registry.cpp/1770895417886_VaID.cpp",
+          "history/reconstructed/src/core/auto_feature_registry.cpp",
+          "history/runoff/part_0012/d__rawrxd_src_core_auto_feature_registry.cpp",
+          "reconstructed/RawrXD/src/core/auto/feature/registry.cpp"
+        ]
+      },
+      {
+        "file_size": 259545,
+        "instances": 4,
+        "reclaimable_bytes": 778635,
+        "sample_paths": [
+          "history/all_versions/gui/ide_chatbot.html/1770546978698_zVYr.html",
+          "history/reconstructed/gui/ide_chatbot.html",
+          "history/runoff/part_0009/d__rawrxd_gui_ide_chatbot.html",
+          "reconstructed/RawrXD/gui/ide/chatbot.html"
+        ]
+      },
+      {
+        "file_size": 258190,
+        "instances": 4,
+        "reclaimable_bytes": 774570,
+        "sample_paths": [
+          "history/all_versions/src/qtapp/MainWindow.cpp/1768655849650_1R5t.cpp",
+          "history/reconstructed/src/qtapp/MainWindow.cpp",
+          "history/runoff/part_0024/e__RawrXD_src_qtapp_MainWindow.cpp",
+          "reconstructed/RawrXD/src/qtapp/MainWindow.cpp"
+        ]
+      },
+      {
+        "file_size": 249533,
+        "instances": 4,
+        "reclaimable_bytes": 748599,
+        "sample_paths": [
+          "history/all_versions/gui/ide_chatbot_win32.html/1770639563322_iViP.html",
+          "history/reconstructed/gui/ide_chatbot_win32.html",
+          "history/runoff/part_0009/d__rawrxd_gui_ide_chatbot_win32.html",
+          "reconstructed/RawrXD/gui/ide/chatbot/win32.html"
+        ]
+      },
+      {
+        "file_size": 182262,
+        "instances": 5,
+        "reclaimable_bytes": 729048,
+        "sample_paths": [
+          "history/-1430341f/rj9e.cpp",
+          "history/all_versions/src/tool_server.cpp/1770910080785_rj9e.cpp",
+          "history/reconstructed/src/tool_server.cpp",
+          "history/runoff/part_0014/d__rawrxd_src_tool_server.cpp",
+          "reconstructed/RawrXD/src/tool/server.cpp"
+        ]
+      },
+      {
+        "file_size": 173356,
+        "instances": 5,
+        "reclaimable_bytes": 693424,
+        "sample_paths": [
+          "history/-152bca6/Rfpd.cpp",
+          "history/all_versions/src/core/missing_handler_stubs.cpp/1770911690106_Rfpd.cpp",
+          "history/reconstructed/src/core/missing_handler_stubs.cpp",
+          "history/runoff/part_0012/d__rawrxd_src_core_missing_handler_stubs.cpp",
+          "reconstructed/RawrXD/src/core/missing/handler/stubs.cpp"
+        ]
+      },
+      {
+        "file_size": 197099,
+        "instances": 4,
+        "reclaimable_bytes": 591297,
+        "sample_paths": [
+          "history/all_versions/gui/ide_chatbot_standalone.html/1770636343724_muvI.html",
+          "history/reconstructed/gui/ide_chatbot_standalone.html",
+          "history/runoff/part_0009/d__rawrxd_gui_ide_chatbot_standalone.html",
+          "reconstructed/RawrXD/gui/ide/chatbot/standalone.html"
+        ]
+      },
+      {
+        "file_size": 260668,
+        "instances": 3,
+        "reclaimable_bytes": 521336,
+        "sample_paths": [
+          "history/all_versions/src/engine/react_ide_generator.cpp/1770627252913_KgKU.cpp",
+          "history/reconstructed/src/engine/react_ide_generator.cpp",
+          "history/runoff/part_0013/d__RawrXD_src_engine_react_ide_generator.cpp"
+        ]
+      },
+      {
+        "file_size": 245101,
+        "instances": 3,
+        "reclaimable_bytes": 490202,
+        "sample_paths": [
+          "history/all_versions/src/win32app/Win32IDE.h/1771606283213_OyHI.h",
+          "history/reconstructed/src/win32app/Win32IDE.h",
+          "history/runoff/part_0014/d__rawrxd_src_win32app_Win32IDE.h"
+        ]
+      },
+      {
+        "file_size": 145210,
+        "instances": 5,
+        "reclaimable_bytes": 580840,
+        "sample_paths": [
+          "history/-2771dbdc/dU8I.cpp",
+          "history/all_versions/3rdparty/ggml/src/ggml-hexagon/ggml-hexagon.cpp/1771127328162_dU8I.cpp",
+          "history/reconstructed/3rdparty/ggml/src/ggml-hexagon/ggml-hexagon.cpp",
+          "history/runoff/part_0009/d__rawrxd_3rdparty_ggml_src_ggml-hexagon_ggml-hexagon.cpp",
+          "reconstructed/RawrXD/3rdparty/ggml/src/ggml-hexagon/ggml-hexagon.cpp"
+        ]
+      },
+      {
+        "file_size": 176936,
+        "instances": 4,
+        "reclaimable_bytes": 530808,
+        "sample_paths": [
+          "history/all_versions/src/win32app/Win32IDE.cpp/1771269534809_DPrX.cpp",
+          "history/reconstructed/src/win32app/Win32IDE.cpp",
+          "history/runoff/part_0014/d__rawrxd_src_win32app_Win32IDE.cpp",
+          "reconstructed/RawrXD/src/win32app/Win32IDE.cpp"
+        ]
+      },
+      {
+        "file_size": 134806,
+        "instances": 5,
+        "reclaimable_bytes": 539224,
+        "sample_paths": [
+          "history/-2d8cc867/S12a.cpp",
+          "history/all_versions/src/core/feature_handlers.cpp/1770912309025_S12a.cpp",
+          "history/reconstructed/src/core/feature_handlers.cpp",
+          "history/runoff/part_0012/d__rawrxd_src_core_feature_handlers.cpp",
+          "reconstructed/RawrXD/src/core/feature/handlers.cpp"
+        ]
+      },
+      {
+        "file_size": 131728,
+        "instances": 5,
+        "reclaimable_bytes": 526912,
+        "sample_paths": [
+          "history/-2364aaff/se5U.cpp",
+          "history/all_versions/src/core/js_extension_host.cpp/1770914036726_se5U.cpp",
+          "history/reconstructed/src/core/js_extension_host.cpp",
+          "history/runoff/part_0012/d__rawrxd_src_core_js_extension_host.cpp",
+          "reconstructed/RawrXD/src/core/js/extension/host.cpp"
+        ]
+      },
+      {
+        "file_size": 123695,
+        "instances": 5,
+        "reclaimable_bytes": 494780,
+        "sample_paths": [
+          "history/-2d5227a0/YIyf.cpp",
+          "history/all_versions/src/modules/vscode_extension_api.cpp/1771104033026_YIyf.cpp",
+          "history/reconstructed/src/modules/vscode_extension_api.cpp",
+          "history/runoff/part_0013/d__rawrxd_src_modules_vscode_extension_api.cpp",
+          "reconstructed/RawrXD/src/modules/vscode/extension/api.cpp"
+        ]
+      },
+      {
+        "file_size": 149203,
+        "instances": 4,
+        "reclaimable_bytes": 447609,
+        "sample_paths": [
+          "history/all_versions/gui/multiwindow_ide.html/1770918305656_QVeH.html",
+          "history/reconstructed/gui/multiwindow_ide.html",
+          "history/runoff/part_0009/d__rawrxd_gui_multiwindow_ide.html",
+          "reconstructed/RawrXD/gui/multiwindow/ide.html"
+        ]
+      },
+      {
+        "file_size": 148415,
+        "instances": 4,
+        "reclaimable_bytes": 445245,
+        "sample_paths": [
+          "history/all_versions/src/win32app/Win32IDE_Commands.cpp/1771477201727_WFl5.cpp",
+          "history/reconstructed/src/win32app/Win32IDE_Commands.cpp",
+          "history/runoff/part_0014/d__RawrXD_src_win32app_Win32IDE_Commands.cpp",
+          "reconstructed/RawrXD/src/win32app/Win32IDE/Commands.cpp"
+        ]
+      },
+      {
+        "file_size": 143965,
+        "instances": 4,
+        "reclaimable_bytes": 431895,
+        "sample_paths": [
+          "history/all_versions/src/core/directml_compute.cpp/1770885551705_tRFW.cpp",
+          "history/reconstructed/src/core/directml_compute.cpp",
+          "history/runoff/part_0012/d__rawrxd_src_core_directml_compute.cpp",
+          "reconstructed/RawrXD/src/core/directml/compute.cpp"
+        ]
+      },
+      {
+        "file_size": 111040,
+        "instances": 5,
+        "reclaimable_bytes": 444160,
+        "sample_paths": [
+          "history/-1c12d068/oZeB.html",
+          "history/all_versions/gui/test_jumper.html/1770910653299_oZeB.html",
+          "history/reconstructed/gui/test_jumper.html",
+          "history/runoff/part_0009/d__rawrxd_gui_test_jumper.html",
+          "reconstructed/RawrXD/gui/test/jumper.html"
+        ]
+      },
+      {
+        "file_size": 108114,
+        "instances": 5,
+        "reclaimable_bytes": 432456,
+        "sample_paths": [
+          "history/reconstructed/CodexAIReverseEngine.asm",
+          "history/-103a804f/2JWq.asm",
+          "history/all_versions/CodexAIReverseEngine.asm/1770904226767_2JWq.asm",
+          "history/runoff/part_0009/d__rawrxd_CodexAIReverseEngine.asm",
+          "reconstructed/RawrXD/CodexAIReverseEngine.asm"
+        ]
+      },
+      {
+        "file_size": 133224,
+        "instances": 4,
+        "reclaimable_bytes": 399672,
+        "sample_paths": [
+          "history/-152bca6/0C3A.cpp",
+          "history/-152bca6/tHI6.cpp",
+          "history/all_versions/src/core/missing_handler_stubs.cpp/1770902452978_tHI6.cpp",
+          "history/all_versions/src/core/missing_handler_stubs.cpp/1770900002318_0C3A.cpp"
+        ]
+      },
+      {
+        "file_size": 132792,
+        "instances": 4,
+        "reclaimable_bytes": 398376,
+        "sample_paths": [
+          "history/-2d8cc867/zFIA.cpp",
+          "history/-2d8cc867/VDY1.cpp",
+          "history/all_versions/src/core/feature_handlers.cpp/1770907184375_zFIA.cpp",
+          "history/all_versions/src/core/feature_handlers.cpp/1770905807349_VDY1.cpp"
+        ]
+      },
+      {
+        "file_size": 131454,
+        "instances": 4,
+        "reclaimable_bytes": 394362,
+        "sample_paths": [
+          "history/all_versions/src/agent/agentic_deep_thinking_engine.cpp/1771128424318_WOtH.cpp",
+          "history/reconstructed/src/agent/agentic_deep_thinking_engine.cpp",
+          "history/runoff/part_0011/d__rawrxd_src_agent_agentic_deep_thinking_engine.cpp",
+          "reconstructed/RawrXD/src/agent/agentic/deep/thinking/engine.cpp"
+        ]
+      },
+      {
+        "file_size": 58024,
+        "instances": 9,
+        "reclaimable_bytes": 464192,
+        "sample_paths": [
+          "history/-127f76ad/zPHJ.txt",
+          "history/-127f76ad/GPVI.txt",
+          "history/-127f76ad/bMs3.txt",
+          "history/reconstructed/masm_digest_report.txt",
+          "history/all_versions/masm_digest_report.txt/1771284911767_bMs3.txt",
+          "history/all_versions/masm_digest_report.txt/1771284659346_zPHJ.txt",
+          "history/all_versions/masm_digest_report.txt/1771284524254_GPVI.txt",
+          "history/runoff/part_0010/d__rawrxd_masm_digest_report.txt"
+        ]
+      },
+      {
+        "file_size": 259623,
+        "instances": 2,
+        "reclaimable_bytes": 259623,
+        "sample_paths": [
+          "history/runoff/part_0008/d__lazy init ide_src_win32app_Win32IDE.cpp",
+          "reconstructed/lazy init ide/src/win32app/Win32IDE.cpp"
+        ]
+      }
+    ]
+  },
+  "parity_trees": {
+    "src": 4393,
+    "history_reconstructed_src": 1929,
+    "full_source_src": 3663
+  },
+  "parity_pairwise": {
+    "full_source_src__vs__history_reconstructed_src": {
+      "common_paths": 1380,
+      "same_content": 789,
+      "different_content": 591,
+      "only_full_source_src": 2283,
+      "only_history_reconstructed_src": 549
+    },
+    "full_source_src__vs__src": {
+      "common_paths": 2586,
+      "same_content": 60,
+      "different_content": 2526,
+      "only_full_source_src": 1077,
+      "only_src": 1807
+    },
+    "history_reconstructed_src__vs__src": {
+      "common_paths": 1893,
+      "same_content": 299,
+      "different_content": 1594,
+      "only_history_reconstructed_src": 36,
+      "only_src": 2500
+    }
+  },
+  "cross_tree_missing_examples": {
+    "in_both_historic_not_src_sample": [
+      "QtGUIStubs.hpp",
+      "core/analyzer_distiller_stubs.cpp",
+      "core/debug_engine_stubs.cpp",
+      "core/enterprise_license_stubs.cpp",
+      "core/monaco_core_stubs.cpp",
+      "core/streaming_orchestrator_stubs.cpp",
+      "core/swarm_network_stubs.cpp",
+      "rawrxd_inference_core_stubs.h",
+      "rawrxd_inference_stubs.hpp",
+      "stubs.cpp",
+      "telemetry/ai_metrics_stub.cpp",
+      "win32app/digestion_engine_stub.cpp"
+    ],
+    "in_src_not_historic_pair_sample": [
+      "AdvancedFeatures.h",
+      "AppState.h",
+      "Audit.txt",
+      "BareMetal_PE_Writer.asm",
+      "BeaconClient.asm",
+      "BeaconClient.cpp",
+      "BeaconClient.h",
+      "CLI_CONTRACT_v1.0.md",
+      "CLOUD_IMPLEMENTATION_SUMMARY.md",
+      "CLOUD_INTEGRATION_GUIDE.md",
+      "CLOUD_QUICK_REFERENCE.md",
+      "CMakeLists_RealInference.txt",
+      "COMPLETION_REPORT.md",
+      "CodebaseContextAnalyzer.cpp",
+      "CodexUltimate_fixed.asm",
+      "CompilerAgentBridge.h",
+      "EventBus.h",
+      "EventBus_Wiring.cpp",
+      "FINAL_1KB_AUDIT_REPORT.md",
+      "GlobalContextExpanded.h",
+      "GlobalContext_Expanded.cpp",
+      "HotpatchBridgeUnified.h",
+      "IDELogger.h",
+      "IDEMainWindow_Migrated.h",
+      "INFERENCE_ENGINE_AUDIT.md",
+      "KeywordHashTable.cpp",
+      "KeywordHashTable.h",
+      "LSPCore.h",
+      "LazyPagerBridge.hpp",
+      "MODULE_INCLUSION_POLICY.md",
+      "MainWndProc_Audit.asm",
+      "ModelNameValidator.cpp",
+      "NativeUIEngine.cpp",
+      "OmegaPro.asm",
+      "PE_Backend_Emitter.asm",
+      "PRODUCTION_MANIFEST.md",
+      "PerformanceMonitor.h",
+      "PerformanceOptimizer.cpp",
+      "Phase3_Agent_Kernel.cpp",
+      "Procs.txt",
+      "QtReplacements.hpp",
+      "QtReplacements_New.hpp",
+      "RawrXD_120B_MoE_Singularity.asm",
+      "RawrXD_120B_Telemetry_Trace.cpp",
+      "RawrXD_AVX512_SIMD.asm",
+      "RawrXD_Application.h",
+      "RawrXD_CDB_Harden.asm",
+      "RawrXD_ChatInput.asm",
+      "RawrXD_Complete_ReverseEngineered.asm",
+      "RawrXD_Dock_Engine.cpp",
+      "RawrXD_EditorCore.h",
+      "RawrXD_Enhancements_201_207.asm",
+      "RawrXD_Enhancements_208_214.asm",
+      "RawrXD_Enhancements_215_221.asm",
+      "RawrXD_Enhancements_222_228.asm",
+      "RawrXD_Enhancements_229_235.asm",
+      "RawrXD_Enhancements_236_242.asm",
+      "RawrXD_Final_Terminal_115.asm",
+      "RawrXD_GPT120B_PhysicalStress.asm",
+      "RawrXD_GPT120B_StressTest.asm",
+      "RawrXD_GPU_Memory_FIXED.asm",
+      "RawrXD_GUI_IDE.asm",
+      "RawrXD_Gate_260_266.asm",
+      "RawrXD_HeadlessWidgets.asm",
+      "RawrXD_HttpClient_Real.asm",
+      "RawrXD_HttpClient_Test.asm",
+      "RawrXD_HyperFrequency_200.asm",
+      "RawrXD_HyperVelocity_150.asm",
+      "RawrXD_IDE_Shell.asm",
+      "RawrXD_IDE_Wrapper.cpp",
+      "RawrXD_IDE_Wrapper.h",
+      "RawrXD_Ignition_Pulse_199.asm",
+      "RawrXD_InferenceClient.asm",
+      "RawrXD_Integrated.h",
+      "RawrXD_Interconnect.exp",
+      "RawrXD_Interfaces.h",
+      "RawrXD_LSP_Core.asm",
+      "RawrXD_Lexer_MASM.cpp",
+      "RawrXD_Live_120B_Ignition.cpp",
+      "RawrXD_Measure_Instrumentation.asm",
+      "RawrXD_MessageRouter.asm",
+      "RawrXD_MoE_Scheduler_StressTest.cpp",
+      "RawrXD_ModelInjection_Stack.asm",
+      "RawrXD_Native_Core.asm",
+      "RawrXD_Native_UI.asm",
+      "RawrXD_OMEGA_Seven_Stack.asm",
+      "RawrXD_OmegaDeobfuscator.asm",
+      "RawrXD_Omega_MoE_Benchmark.cpp",
+      "RawrXD_Omnipotent_Omniscience_200.asm",
+      "RawrXD_Omnipotent_Seal_143.asm",
+      "RawrXD_Omniscient_Merge.asm",
+      "RawrXD_Overdrive_150TPS.asm",
+      "RawrXD_PE_Writer.cpp",
+      "RawrXD_PE_Writer.h",
+      "RawrXD_PatternBridge.asm",
+      "RawrXD_PatternBridge.def",
+      "RawrXD_PatternBridge.exp",
+      "RawrXD_PatternBridgeClient.cpp",
+      "RawrXD_PatternEngine.cs",
+      "RawrXD_Performance_253_259.asm"
+    ]
+  }
+}
