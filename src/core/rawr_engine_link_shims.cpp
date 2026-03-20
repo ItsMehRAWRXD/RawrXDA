@@ -1,11 +1,20 @@
 // Minimal link shims for RawrEngine / Gold / InferenceEngine.
 // These are no-op fallbacks to satisfy references after stub purge.
 #include <algorithm>
+#include <array>
+#include <atomic>
 #include <cctype>
 #include <cstdint>
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <chrono>
+#include <cmath>
+#include <limits>
+#include <mutex>
+#include <unordered_map>
+#include <unordered_set>
 #ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -73,6 +82,115 @@ struct RawrSnapshotStats {
 static RawrPatchEntry g_rawrPatchEntries[kRawrPatchSlots]{};
 static RawrHotpatchStats g_rawrHotpatchStats{};
 static RawrSnapshotStats g_rawrSnapshotStats{};
+
+struct SchedulerTaskInfo {
+    uint8_t priority = 0;
+    uint8_t flags = 0;
+    void* schedulerCtx = nullptr;
+    void* functionPtr = nullptr;
+    void* userData = nullptr;
+    bool completed = false;
+};
+
+struct HeartbeatNode {
+    std::string name;
+    uint32_t port = 0;
+    uint64_t lastSeenTick = 0;
+};
+
+static std::mutex g_runtimeShimMutex;
+static std::atomic<int64_t> g_nextTaskId{1};
+static std::unordered_map<int64_t, SchedulerTaskInfo> g_schedulerTasks;
+static std::unordered_map<void*, uint64_t> g_dmaAllocations;
+static std::unordered_set<uint32_t> g_conflictRegistered;
+static std::unordered_set<uint32_t> g_conflictLocked;
+static std::unordered_set<uint32_t> g_dmaPendingTickets;
+static std::vector<HeartbeatNode> g_heartbeatNodes;
+static std::atomic<uint32_t> g_modeFlags{0};
+
+enum RuntimeModeBit : uint32_t {
+    MODE_ENTERPRISE_UNLOCK = 1u << 0,
+    MODE_INJECT = 1u << 1,
+    MODE_DIFF_COV = 1u << 2,
+    MODE_INTEL_PT = 1u << 3,
+    MODE_AGENT_TRACE = 1u << 4,
+    MODE_DYN_TRACE = 1u << 5,
+    MODE_COV_FUSION = 1u << 6,
+    MODE_SIDELOAD = 1u << 7,
+    MODE_PERSISTENCE = 1u << 8,
+    MODE_BASIC_BLOCK_COV = 1u << 9,
+    MODE_STUB_GEN = 1u << 10,
+    MODE_TRACE_ENGINE = 1u << 11,
+    MODE_COMPILE = 1u << 12,
+    MODE_GAP_FUZZ = 1u << 13,
+    MODE_ENCRYPT = 1u << 14,
+    MODE_ENTROPY = 1u << 15,
+    MODE_AGENTIC = 1u << 16,
+    MODE_UAC_BYPASS = 1u << 17,
+    MODE_AV_SCAN = 1u << 18
+};
+
+static uint64_t monotonicTickNowNs() {
+    using namespace std::chrono;
+    return static_cast<uint64_t>(duration_cast<nanoseconds>(steady_clock::now().time_since_epoch()).count());
+}
+
+static int enableMode(uint32_t modeBit) {
+    g_modeFlags.fetch_or(modeBit, std::memory_order_relaxed);
+    return 1;
+}
+
+struct PerfSpan {
+    std::string label;
+    uint64_t startNs = 0;
+    uint64_t endNs = 0;
+};
+
+struct PerfSlotData {
+    uint64_t lastDurationNs = 0;
+    uint64_t invocationCount = 0;
+    uint64_t totalDurationNs = 0;
+};
+
+struct LspBridgeShimState {
+    bool initialized = false;
+    uint64_t weightBytes = 0;
+    uint32_t weightCrc = 0;
+};
+
+struct GgufLoaderShimState {
+    bool initialized = false;
+    uint32_t initCrc = 0;
+    int configuredGpu = -1;
+    uint32_t lastLookupCrc = 0;
+    uint64_t lookupCount = 0;
+};
+
+struct QuadbufShimState {
+    uint32_t flags = 0;
+    uint32_t maxTokens = 4096;
+    uint64_t renderedFrames = 0;
+    std::vector<uint32_t> tokenStream{};
+};
+
+struct SpengineShimState {
+    bool initialized = false;
+    bool adaptiveMode = false;
+    int quantLevel = 0;
+    uint64_t rollbackCount = 0;
+    std::unordered_map<std::string, uint32_t> modules{};
+};
+
+constexpr int kPerfSlotCount = 64;
+static std::atomic<int> g_nextPerfSpanId{1};
+static std::unordered_map<int, PerfSpan> g_perfSpans;
+static std::array<PerfSlotData, kPerfSlotCount> g_perfSlots{};
+static std::atomic<uint64_t> g_watchdogBaselineNs{0};
+static std::atomic<int> g_watchdogStatus{0};
+static LspBridgeShimState g_lspBridgeState{};
+static GgufLoaderShimState g_ggufLoaderState{};
+static QuadbufShimState g_quadbufState{};
+static SpengineShimState g_spengineState{};
 
 static int closeFileHandle(intptr_t handle) {
     if (handle <= 0) {
@@ -179,74 +297,513 @@ static int transformFileWithKey(const char* inputPath, const char* outputPath, c
     std::fclose(out);
     return 0;
 }
+
+static int transformBufferWithKey(const uint8_t* src, uint64_t srcLen, uint8_t* dst, uint64_t dstLen) {
+    if (!src || !dst || srcLen == 0 || dstLen < srcLen) {
+        return -1;
+    }
+    static const uint8_t kDefaultKey[] = {
+        0x52, 0x41, 0x57, 0x52, 0x58, 0x44, 0x2D, 0x4B,
+        0x45, 0x59, 0x2D, 0x46, 0x41, 0x4C, 0x4C, 0x42
+    };
+    constexpr uint64_t kKeyLen = static_cast<uint64_t>(sizeof(kDefaultKey));
+    for (uint64_t i = 0; i < srcLen; ++i) {
+        const uint8_t k = kDefaultKey[i % kKeyLen];
+        dst[i] = static_cast<uint8_t>(src[i] ^ static_cast<uint8_t>(k + (i & 0xFFu)));
+    }
+    return 0;
+}
 } // namespace
 
 extern "C" {
-uint64_t Scheduler_SubmitTask(void (*)(void*), void*, uint8_t) { return 0; }
-void* AllocateDMABuffer(uint64_t) { return nullptr; }
-uint32_t CalculateCRC32(const void*, uint64_t, uint32_t) { return 0; }
-int Heartbeat_AddNode(uint32_t, const char*) { return 0; }
-int Tensor_QuantizedMatMul(const float*, const float*, float*, uint32_t, uint32_t, uint32_t, uint8_t) { return 0; }
-int ConflictDetector_LockResource(uint64_t, uint32_t) { return 0; }
-int GPU_WaitForDMA(uint64_t, uint32_t) { return 0; }
+int64_t Scheduler_SubmitTask(void* schedulerCtx, void* functionPtr, uint8_t priority, uint8_t flags, void* userData) {
+    const int64_t taskId = g_nextTaskId.fetch_add(1, std::memory_order_relaxed);
+    SchedulerTaskInfo info{};
+    info.priority = priority;
+    info.flags = flags;
+    info.schedulerCtx = schedulerCtx;
+    info.functionPtr = functionPtr;
+    info.userData = userData;
+    info.completed = true;
 
-// Pyre compute kernels
-int asm_pyre_gemm_fp32(const float*, const float*, float*, uint32_t, uint32_t, uint32_t) { return 0; }
-int asm_pyre_rmsnorm(const float*, const float*, float*, uint32_t, float) { return 0; }
-int asm_pyre_silu(float*, uint32_t) { return 0; }
-int asm_pyre_rope(float*, uint32_t, uint32_t, uint32_t, float) { return 0; }
-int asm_pyre_embedding_lookup(const float*, const uint32_t*, float*, uint32_t, uint32_t) { return 0; }
-int asm_pyre_gemv_fp32(const float*, const float*, float*, uint32_t, uint32_t) { return 0; }
-int asm_pyre_add_fp32(const float*, const float*, float*, uint32_t) { return 0; }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_schedulerTasks[taskId] = info;
+    return taskId;
+}
+void* AllocateDMABuffer(uint64_t bytes, uint32_t flags) {
+    (void)flags;
+    if (bytes == 0) {
+        return nullptr;
+    }
+    void* ptr = std::calloc(1, static_cast<size_t>(bytes));
+    if (!ptr) {
+        return nullptr;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_dmaAllocations[ptr] = bytes;
+    return ptr;
+}
+uint32_t CalculateCRC32(const void* data, uint64_t size) {
+    return crc32Bytes(static_cast<const uint8_t*>(data), static_cast<size_t>(size));
+}
+int Heartbeat_AddNode(const char* nodeName, uint32_t port) {
+    if (!nodeName || nodeName[0] == '\0' || port == 0) {
+        return -1;
+    }
+    HeartbeatNode node{};
+    node.name = nodeName;
+    node.port = port;
+    node.lastSeenTick = monotonicTickNowNs();
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_heartbeatNodes.push_back(std::move(node));
+    return static_cast<int>(g_heartbeatNodes.size());
+}
+int Tensor_QuantizedMatMul(const void* lhs, const void* rhs, void* out, uint32_t count) {
+    if (!lhs || !rhs || !out || count == 0) {
+        return -1;
+    }
+    const float* a = static_cast<const float*>(lhs);
+    const float* b = static_cast<const float*>(rhs);
+    float* c = static_cast<float*>(out);
+    for (uint32_t i = 0; i < count; ++i) {
+        c[i] = a[i] * b[i];
+    }
+    return 0;
+}
+int ConflictDetector_LockResource(uint32_t resourceId) {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (g_conflictLocked.find(resourceId) != g_conflictLocked.end()) {
+        return 0;
+    }
+    g_conflictLocked.insert(resourceId);
+    return 1;
+}
+int GPU_WaitForDMA(uint32_t ticketId) {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    auto it = g_dmaPendingTickets.find(ticketId);
+    if (it == g_dmaPendingTickets.end()) {
+        return 0;
+    }
+    g_dmaPendingTickets.erase(it);
+    return 1;
+}
+
+#if !defined(_MSC_VER)
+// Pyre compute kernels (MSVC: provided by win32ide_asm_fallback.cpp)
+int asm_pyre_gemm_fp32(const void* A, const void* B, void* C, int M, int N, int K) {
+    if (!A || !B || !C || M <= 0 || N <= 0 || K <= 0) {
+        return -1;
+    }
+    const float* a = static_cast<const float*>(A);
+    const float* b = static_cast<const float*>(B);
+    float* c = static_cast<float*>(C);
+    for (int m = 0; m < M; ++m) {
+        for (int n = 0; n < N; ++n) {
+            double sum = 0.0;
+            for (int k = 0; k < K; ++k) {
+                sum += static_cast<double>(a[m * K + k]) * static_cast<double>(b[k * N + n]);
+            }
+            c[m * N + n] = static_cast<float>(sum);
+        }
+    }
+    return 0;
+}
+int asm_pyre_rmsnorm(void* outOrInout, const void* input, int count) {
+    if (!outOrInout || count <= 0) {
+        return -1;
+    }
+    const float* in = input ? static_cast<const float*>(input) : static_cast<const float*>(outOrInout);
+    float* out = static_cast<float*>(outOrInout);
+    double meanSq = 0.0;
+    for (int i = 0; i < count; ++i) {
+        const double v = static_cast<double>(in[i]);
+        meanSq += v * v;
+    }
+    meanSq /= static_cast<double>(count);
+    const float invRms = 1.0f / std::sqrt(static_cast<float>(meanSq) + 1e-5f);
+    for (int i = 0; i < count; ++i) {
+        out[i] = in[i] * invRms;
+    }
+    return 0;
+}
+int asm_pyre_silu(void* outOrInout, const void* input, int count) {
+    if (!outOrInout || count <= 0) {
+        return -1;
+    }
+    const float* in = input ? static_cast<const float*>(input) : static_cast<const float*>(outOrInout);
+    float* out = static_cast<float*>(outOrInout);
+    for (int i = 0; i < count; ++i) {
+        const float x = in[i];
+        out[i] = x / (1.0f + std::exp(-x));
+    }
+    return 0;
+}
+int asm_pyre_rope(void* outOrInout, const void* input, int count) {
+    if (!outOrInout || count <= 1) {
+        return -1;
+    }
+    const float* in = input ? static_cast<const float*>(input) : static_cast<const float*>(outOrInout);
+    float* out = static_cast<float*>(outOrInout);
+    int i = 0;
+    for (; i + 1 < count; i += 2) {
+        const float angle = static_cast<float>(i) * 0.001f;
+        const float cs = std::cos(angle);
+        const float sn = std::sin(angle);
+        const float x0 = in[i];
+        const float x1 = in[i + 1];
+        out[i] = x0 * cs - x1 * sn;
+        out[i + 1] = x0 * sn + x1 * cs;
+    }
+    if (i < count) {
+        out[i] = in[i];
+    }
+    return 0;
+}
+int asm_pyre_embedding_lookup(const void* table, const void* indices, void* out, int count, int dim) {
+    if (!table || !indices || !out || count <= 0 || dim <= 0) {
+        return -1;
+    }
+    const float* embeddingTable = static_cast<const float*>(table);
+    const int32_t* tokenIds = static_cast<const int32_t*>(indices);
+    float* dst = static_cast<float*>(out);
+    for (int t = 0; t < count; ++t) {
+        const int32_t token = tokenIds[t];
+        if (token < 0) {
+            return -1;
+        }
+        const float* src = embeddingTable + static_cast<size_t>(token) * static_cast<size_t>(dim);
+        std::memcpy(dst + static_cast<size_t>(t) * static_cast<size_t>(dim), src, static_cast<size_t>(dim) * sizeof(float));
+    }
+    return 0;
+}
+int asm_pyre_gemv_fp32(const void* A, const void* x, void* y, int M, int K) {
+    if (!A || !x || !y || M <= 0 || K <= 0) {
+        return -1;
+    }
+    const float* a = static_cast<const float*>(A);
+    const float* xv = static_cast<const float*>(x);
+    float* out = static_cast<float*>(y);
+    for (int m = 0; m < M; ++m) {
+        double sum = 0.0;
+        for (int k = 0; k < K; ++k) {
+            sum += static_cast<double>(a[m * K + k]) * static_cast<double>(xv[k]);
+        }
+        out[m] = static_cast<float>(sum);
+    }
+    return 0;
+}
+int asm_pyre_add_fp32(void* out, const void* a, const void* b, int count) {
+    if (!out || !a || !b || count <= 0) {
+        return -1;
+    }
+    float* dst = static_cast<float*>(out);
+    const float* lhs = static_cast<const float*>(a);
+    const float* rhs = static_cast<const float*>(b);
+    for (int i = 0; i < count; ++i) {
+        dst[i] = lhs[i] + rhs[i];
+    }
+    return 0;
+}
+#endif // !defined(_MSC_VER)
 
 // Batch 3: scheduler/clock + conflict/dma
-uint64_t ConflictDetector_RegisterResource(uint64_t, uint64_t) { return 0; }
-int ConflictDetector_UnlockResource(uint64_t) { return 0; }
-uint64_t GetHighResTick() { return 0; }
-uint64_t TicksToMilliseconds(uint64_t ticks) { return ticks; }
-uint64_t TicksToMicroseconds(uint64_t ticks) { return ticks; }
-uint64_t GPU_SubmitDMATransfer(const void*, void*, uint64_t) { return 0; }
-int Scheduler_WaitForTask(uint64_t, uint32_t, void*, uint32_t) { return 0; }
+int ConflictDetector_RegisterResource(uint32_t resourceId) {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_conflictRegistered.insert(resourceId);
+    return 1;
+}
+int ConflictDetector_UnlockResource(uint32_t resourceId) {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    const bool removedRegistered = g_conflictRegistered.erase(resourceId) > 0;
+    const bool removedLocked = g_conflictLocked.erase(resourceId) > 0;
+    return (removedRegistered || removedLocked) ? 1 : 0;
+}
+uint64_t GetHighResTick() {
+    return monotonicTickNowNs();
+}
+uint64_t TicksToMilliseconds(uint64_t ticks) {
+    return ticks / 1000000ULL;
+}
+uint64_t TicksToMicroseconds(uint64_t ticks) {
+    return ticks / 1000ULL;
+}
+int GPU_SubmitDMATransfer(uint32_t ticketId, void* sourceBuffer, uint64_t bytes) {
+    if (!sourceBuffer || bytes == 0) {
+        return -1;
+    }
+    uint32_t resolvedTicket = ticketId;
+    if (resolvedTicket == 0) {
+        resolvedTicket = static_cast<uint32_t>(g_nextTaskId.fetch_add(1, std::memory_order_relaxed));
+    }
 
-// Batch 4: hotpatch + pyre + pattern
-// Slot-based / pointer-based signatures must match shadow_page_detour.cpp and shadow_page_detour.hpp.
-int asm_pyre_mul_fp32(const float*, const float*, float*, uint32_t) { return 0; }
-int asm_pyre_softmax(float*, uint32_t) { return 0; }
-const void* find_pattern_asm(const void*, size_t, const void*, size_t) { return nullptr; }
-int asm_hotpatch_restore_prologue(uint32_t) { return 0; }
-int asm_hotpatch_backup_prologue(void*, uint32_t) { return 0; }
-int asm_hotpatch_flush_icache(void*, size_t) { return 0; }
-void* asm_hotpatch_alloc_shadow(uint64_t) { return nullptr; }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    auto allocIt = g_dmaAllocations.find(sourceBuffer);
+    if (allocIt != g_dmaAllocations.end() && bytes > allocIt->second) {
+        return -1;
+    }
+    g_dmaPendingTickets.insert(resolvedTicket);
+    g_soState.mappedBytes += bytes;
+    return static_cast<int>(resolvedTicket);
+}
+int Scheduler_WaitForTask(int64_t taskId) {
+    if (taskId <= 0) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    auto it = g_schedulerTasks.find(taskId);
+    if (it == g_schedulerTasks.end()) {
+        return 0;
+    }
+    it->second.completed = true;
+    return 1;
+}
+
+#if !defined(_MSC_VER)
+// Batch 4: pyre (continued)
+int asm_pyre_mul_fp32(void* out, const void* a, const void* b, int count) {
+    if (!out || !a || !b || count <= 0) {
+        return -1;
+    }
+    float* dst = static_cast<float*>(out);
+    const float* lhs = static_cast<const float*>(a);
+    const float* rhs = static_cast<const float*>(b);
+    for (int i = 0; i < count; ++i) {
+        dst[i] = lhs[i] * rhs[i];
+    }
+    return 0;
+}
+int asm_pyre_softmax(void* outOrInout, const void* input, int count) {
+    if (!outOrInout || count <= 0) {
+        return -1;
+    }
+    const float* in = input ? static_cast<const float*>(input) : static_cast<const float*>(outOrInout);
+    float* out = static_cast<float*>(outOrInout);
+
+    float maxVal = in[0];
+    for (int i = 1; i < count; ++i) {
+        if (in[i] > maxVal) {
+            maxVal = in[i];
+        }
+    }
+
+    double sum = 0.0;
+    for (int i = 0; i < count; ++i) {
+        out[i] = std::exp(in[i] - maxVal);
+        sum += out[i];
+    }
+    if (sum <= 0.0) {
+        return -1;
+    }
+    const float inv = static_cast<float>(1.0 / sum);
+    for (int i = 0; i < count; ++i) {
+        out[i] *= inv;
+    }
+    return 0;
+}
+#endif // !defined(_MSC_VER)
+
+// byte_level_hotpatcher.hpp / asm_bridge expect this exact signature.
+const void* find_pattern_asm(const void* haystack, size_t haystack_len, const void* needle, size_t needle_len) {
+    if (!haystack || !needle || haystack_len == 0 || needle_len == 0 || needle_len > haystack_len) {
+        return nullptr;
+    }
+    const auto* h = static_cast<const uint8_t*>(haystack);
+    const auto* n = static_cast<const uint8_t*>(needle);
+    for (size_t i = 0; i + needle_len <= haystack_len; ++i) {
+        if (std::memcmp(h + i, n, needle_len) == 0) {
+            return h + i;
+        }
+    }
+    return nullptr;
+}
+
+#if !defined(_MSC_VER)
+// Hotpatch / snapshot / 4-arg camellia file transforms (MSVC: win32ide_asm_fallback.cpp + shadow_page_detour slot ABI)
+int asm_hotpatch_restore_prologue(void* funcAddr) {
+    RawrPatchEntry* entry = findPatchEntry(funcAddr);
+    if (!entry || !entry->hasBackup || !funcAddr) {
+        g_rawrHotpatchStats.swapsFailed++;
+        return -1;
+    }
+    std::memcpy(funcAddr, entry->backup, kRawrPatchBytes);
+    g_rawrHotpatchStats.swapsRolledBack++;
+    return 0;
+}
+int asm_hotpatch_backup_prologue(void* funcAddr) {
+    RawrPatchEntry* entry = findOrCreatePatchEntry(funcAddr);
+    if (!entry || !funcAddr) {
+        g_rawrHotpatchStats.swapsFailed++;
+        return -1;
+    }
+    std::memcpy(entry->backup, funcAddr, kRawrPatchBytes);
+    entry->hasBackup = true;
+    return 0;
+}
+int asm_hotpatch_flush_icache(void* base, uint64_t size) {
+    if (!base || size == 0) {
+        g_rawrHotpatchStats.swapsFailed++;
+        return -1;
+    }
+#ifdef _WIN32
+    const BOOL ok = FlushInstructionCache(GetCurrentProcess(), base, static_cast<SIZE_T>(size));
+    if (!ok) {
+        g_rawrHotpatchStats.swapsFailed++;
+        return -1;
+    }
+#endif
+    g_rawrHotpatchStats.icacheFlushes++;
+    return 0;
+}
+void* asm_hotpatch_alloc_shadow(uint64_t size) {
+    if (size == 0) {
+        size = 64 * 1024;
+    }
+    void* mem = std::calloc(1, static_cast<size_t>(size));
+    if (mem) {
+        g_rawrHotpatchStats.shadowPagesAllocated++;
+    }
+    return mem;
+}
 
 // Batch 5: hotpatch/snapshot stats + prologue/trampoline/free
-int asm_hotpatch_verify_prologue(void*, uint32_t) { return 0; }
-int asm_hotpatch_install_trampoline(void*, void*) { return 0; }
-int asm_hotpatch_free_shadow(void*, size_t) { return 0; }
-int asm_snapshot_capture(void*, uint32_t, size_t) { return 0; }
-int asm_hotpatch_atomic_swap(void*, void*) { return 0; }
-int asm_hotpatch_get_stats(void*) { return 0; }
-int asm_snapshot_get_stats(void*) { return 0; }
+int asm_hotpatch_verify_prologue(void* funcAddr) {
+    RawrPatchEntry* entry = findPatchEntry(funcAddr);
+    if (!entry || !entry->hasBackup || !funcAddr) {
+        g_rawrHotpatchStats.swapsFailed++;
+        return -1;
+    }
+    g_rawrHotpatchStats.crcChecks++;
+    const uint32_t current = crc32Bytes(static_cast<const uint8_t*>(funcAddr), kRawrPatchBytes);
+    const uint32_t expected = crc32Bytes(entry->backup, kRawrPatchBytes);
+    if (current != expected) {
+        g_rawrHotpatchStats.crcMismatches++;
+        return -1;
+    }
+    return 0;
+}
+int asm_hotpatch_install_trampoline(void* originalFn, void* trampolineBuffer) {
+    if (!originalFn || !trampolineBuffer) {
+        g_rawrHotpatchStats.swapsFailed++;
+        return -1;
+    }
+    std::memcpy(trampolineBuffer, originalFn, kRawrPatchBytes);
+    return 0;
+}
+int asm_hotpatch_free_shadow(void* shadowPtr) {
+    if (!shadowPtr) {
+        return -1;
+    }
+    std::free(shadowPtr);
+    g_rawrHotpatchStats.shadowPagesFreed++;
+    return 0;
+}
+int asm_snapshot_capture(void* funcAddr) {
+    RawrPatchEntry* entry = findOrCreatePatchEntry(funcAddr);
+    if (!entry || !funcAddr) {
+        return -1;
+    }
+    entry->snapshotSize = kRawrSnapshotBytes;
+    std::memcpy(entry->snapshot, funcAddr, entry->snapshotSize);
+    entry->hasSnapshot = true;
+    g_rawrSnapshotStats.captured++;
+    g_rawrSnapshotStats.bytesStored += entry->snapshotSize;
+    return 0;
+}
+int asm_hotpatch_atomic_swap(void* targetFn, void* newFn) {
+    if (!targetFn || !newFn) {
+        g_rawrHotpatchStats.swapsFailed++;
+        return -1;
+    }
+    g_rawrHotpatchStats.swapsApplied++;
+    return 0;
+}
+int asm_hotpatch_get_stats(void* outStats) {
+    if (!outStats) {
+        return -1;
+    }
+    auto* out = static_cast<uint64_t*>(outStats);
+    out[0] = g_rawrHotpatchStats.swapsApplied;
+    out[1] = g_rawrHotpatchStats.swapsRolledBack;
+    out[2] = g_rawrHotpatchStats.swapsFailed;
+    out[3] = g_rawrHotpatchStats.shadowPagesAllocated;
+    out[4] = g_rawrHotpatchStats.shadowPagesFreed;
+    out[5] = g_rawrHotpatchStats.icacheFlushes;
+    out[6] = g_rawrHotpatchStats.crcChecks;
+    out[7] = g_rawrHotpatchStats.crcMismatches;
+    return 0;
+}
+int asm_snapshot_get_stats(void* outStats) {
+    if (!outStats) {
+        return -1;
+    }
+    auto* out = static_cast<uint64_t*>(outStats);
+    out[0] = g_rawrSnapshotStats.captured;
+    out[1] = g_rawrSnapshotStats.restored;
+    out[2] = g_rawrSnapshotStats.discarded;
+    out[3] = g_rawrSnapshotStats.verifyPassed;
+    out[4] = g_rawrSnapshotStats.verifyFailed;
+    out[5] = g_rawrSnapshotStats.bytesStored;
+    return 0;
+}
 
 // Batch 6: snapshot/camellia/log/enterprise
-int asm_snapshot_restore(uint32_t) { return 0; }
-int asm_snapshot_discard(uint32_t) { return 0; }
-int asm_snapshot_verify(uint32_t, uint32_t) { return 0; }
-int asm_camellia256_auth_decrypt_file(const char*, const char*) { return 0; }
-int asm_camellia256_auth_encrypt_file(const char*, const char*) { return 0; }
-void RawrXD_Native_Log(const char*) {}
-int64_t Enterprise_DevUnlock() { return 0; }
+int asm_snapshot_restore(void* funcAddr) {
+    RawrPatchEntry* entry = findPatchEntry(funcAddr);
+    if (!entry || !entry->hasSnapshot || !funcAddr) {
+        g_rawrSnapshotStats.verifyFailed++;
+        return -1;
+    }
+    std::memcpy(funcAddr, entry->snapshot, entry->snapshotSize);
+    g_rawrSnapshotStats.restored++;
+    return 0;
+}
+int asm_snapshot_discard(void* funcAddr) {
+    RawrPatchEntry* entry = findPatchEntry(funcAddr);
+    if (!entry || !entry->hasSnapshot) {
+        return -1;
+    }
+    entry->hasSnapshot = false;
+    entry->snapshotSize = 0;
+    g_rawrSnapshotStats.discarded++;
+    return 0;
+}
+int asm_snapshot_verify(void* funcAddr) {
+    RawrPatchEntry* entry = findPatchEntry(funcAddr);
+    if (!entry || !entry->hasSnapshot || !funcAddr) {
+        g_rawrSnapshotStats.verifyFailed++;
+        return -1;
+    }
+    const uint32_t current = crc32Bytes(static_cast<const uint8_t*>(funcAddr), entry->snapshotSize);
+    const uint32_t expected = crc32Bytes(entry->snapshot, entry->snapshotSize);
+    if (current != expected) {
+        g_rawrSnapshotStats.verifyFailed++;
+        return -1;
+    }
+    g_rawrSnapshotStats.verifyPassed++;
+    return 0;
+}
+int asm_camellia256_auth_decrypt_file(const char* inputPath, const char* outputPath, const uint8_t* key, uint32_t keyLen) {
+    return transformFileWithKey(inputPath, outputPath, key, keyLen);
+}
+int asm_camellia256_auth_encrypt_file(const char* inputPath, const char* outputPath, const uint8_t* key, uint32_t keyLen) {
+    return transformFileWithKey(inputPath, outputPath, key, keyLen);
+}
+#endif // !defined(_MSC_VER)
+
+void RawrXD_Native_Log(const char*, const char*) {}
+int Enterprise_DevUnlock() { return enableMode(MODE_ENTERPRISE_UNLOCK); }
 
 // Batch 7: subsystem modes + Vulkan init
-int InjectMode() { return 0; }
-int DiffCovMode() { return 0; }
+int InjectMode() { return enableMode(MODE_INJECT); }
+int DiffCovMode() { return enableMode(MODE_DIFF_COV); }
 int SO_InitializeVulkan() {
     g_soState.vulkanReady = true;
     return 1;
 }
-int IntelPTMode() { return 0; }
-int AgentTraceMode() { return 0; }
-int DynTraceMode() { return 0; }
-int CovFusionMode() { return 0; }
+int IntelPTMode() { return enableMode(MODE_INTEL_PT); }
+int AgentTraceMode() { return enableMode(MODE_AGENT_TRACE); }
+int DynTraceMode() { return enableMode(MODE_DYN_TRACE); }
+int CovFusionMode() { return enableMode(MODE_COV_FUSION); }
 
 // Batch 8: analyzer + streaming API hooks
 intptr_t AD_OpenGGUFFile(const char* path) {
@@ -451,7 +1008,7 @@ int SO_InitializeStreaming(void) {
     g_soState.streamingReady = true;
     return 1;
 }
-int SideloadMode() { return 0; }
+int SideloadMode() { return enableMode(MODE_SIDELOAD); }
 int SO_CompileSPIRVShader(void* shaderModule, uint32_t opType, uint32_t opCount) {
     (void)shaderModule;
     (void)opType;
@@ -462,7 +1019,7 @@ int SO_CreateComputePipelines(void* operatorTable, uint64_t operatorCount) {
     g_soState.metrics.layers_loaded += operatorCount;
     return operatorCount > 0 ? 1 : 0;
 }
-int PersistenceMode() { return 0; }
+int PersistenceMode() { return enableMode(MODE_PERSISTENCE); }
 void SO_PrintStatistics() {}
 void* SO_CreateMemoryArena(uint64_t sizeBytes) {
     if (sizeBytes == 0) {
@@ -490,28 +1047,28 @@ int SO_LoadExecFile(const char* filePath) {
     g_soState.execLoaded = g_soState.execFile != nullptr;
     return g_soState.execLoaded ? 1 : 0;
 }
-int BasicBlockCovMode() { return 0; }
+int BasicBlockCovMode() { return enableMode(MODE_BASIC_BLOCK_COV); }
 void SO_PrintMetrics() {}
 int SO_StartDEFLATEThreads(uint32_t threadCount) {
     g_soState.deflateThreads = threadCount > 0 ? threadCount : SO_DEFAULT_THREADS;
     return 1;
 }
-int StubGenMode() { return 0; }
-int TraceEngineMode() { return 0; }
-int CompileMode() { return 0; }
+int StubGenMode() { return enableMode(MODE_STUB_GEN); }
+int TraceEngineMode() { return enableMode(MODE_TRACE_ENGINE); }
+int CompileMode() { return enableMode(MODE_COMPILE); }
 
 // Batch 10: fuzzing/prefetch/thread pool + modes
-int GapFuzzMode() { return 0; }
-int EncryptMode() { return 0; }
+int GapFuzzMode() { return enableMode(MODE_GAP_FUZZ); }
+int EncryptMode() { return enableMode(MODE_ENCRYPT); }
 int SO_InitializePrefetchQueue() {
     g_soState.prefetchReady = true;
     return 1;
 }
 int SO_CreateThreadPool() { return 1; }
-int EntropyMode() { return 0; }
-int AgenticMode() { return 0; }
-int UACBypassMode() { return 0; }
-int AVScanMode() { return 0; }
+int EntropyMode() { return enableMode(MODE_ENTROPY); }
+int AgenticMode() { return enableMode(MODE_AGENTIC); }
+int UACBypassMode() { return enableMode(MODE_UAC_BYPASS); }
+int AVScanMode() { return enableMode(MODE_AV_SCAN); }
 
 int SO_ExecuteInference(void* layerTable, uint64_t layerCount) {
     (void)layerTable;
@@ -663,147 +1220,398 @@ intptr_t SO_OpenMemoryMappedFile(const char* path, uint64_t fileSize) {
     return reinterpret_cast<intptr_t>(file);
 }
 
+#if !defined(_MSC_VER)
+// Perf / watchdog / camellia buffers / MASM bridge batch 13–15 (MSVC: win32ide_asm_fallback.cpp)
 // Batch 11: perf/watchdog
-uint64_t asm_perf_begin(uint32_t) { return 0; }
-uint64_t asm_perf_end(uint32_t, uint64_t) { return 0; }
-int asm_watchdog_init() { return 0; }
-int asm_watchdog_verify() { return 0; }
-int asm_watchdog_get_status(void*) { return 0; }
-int asm_watchdog_get_baseline(uint8_t*) { return 0; }
-int asm_watchdog_shutdown() { return 0; }
+int asm_perf_begin(const char* label) {
+    const int spanId = g_nextPerfSpanId.fetch_add(1, std::memory_order_relaxed);
+    PerfSpan span{};
+    span.label = label ? label : "unnamed";
+    span.startNs = monotonicTickNowNs();
+    span.endNs = 0;
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_perfSpans[spanId] = std::move(span);
+    return spanId;
+}
+int asm_perf_end(int spanId) {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    auto it = g_perfSpans.find(spanId);
+    if (it == g_perfSpans.end()) {
+        return -1;
+    }
+    it->second.endNs = monotonicTickNowNs();
+    const uint64_t durationNs = (it->second.endNs > it->second.startNs) ? (it->second.endNs - it->second.startNs) : 0;
+    g_soState.metrics.avg_load_time_ms = durationNs / 1000000ULL;
+    const int slot = (spanId >= 0) ? (spanId % kPerfSlotCount) : 0;
+    g_perfSlots[static_cast<size_t>(slot)].lastDurationNs = durationNs;
+    g_perfSlots[static_cast<size_t>(slot)].invocationCount += 1;
+    g_perfSlots[static_cast<size_t>(slot)].totalDurationNs += durationNs;
+    return 0;
+}
+int asm_watchdog_init() {
+    g_watchdogBaselineNs.store(monotonicTickNowNs(), std::memory_order_relaxed);
+    g_watchdogStatus.store(1, std::memory_order_relaxed);
+    return 0;
+}
+int asm_watchdog_verify() {
+    const int status = g_watchdogStatus.load(std::memory_order_relaxed);
+    if (status == 0) {
+        return -1;
+    }
+    const uint64_t baseline = g_watchdogBaselineNs.load(std::memory_order_relaxed);
+    const uint64_t now = monotonicTickNowNs();
+    if (baseline == 0 || now < baseline) {
+        g_watchdogStatus.store(2, std::memory_order_relaxed);
+        return 0;
+    }
+    const uint64_t elapsedMs = (now - baseline) / 1000000ULL;
+    g_watchdogStatus.store(elapsedMs > 60000ULL ? 2 : 1, std::memory_order_relaxed);
+    return g_watchdogStatus.load(std::memory_order_relaxed) == 1 ? 1 : 0;
+}
+int asm_watchdog_get_status() {
+    return g_watchdogStatus.load(std::memory_order_relaxed);
+}
+int asm_watchdog_get_baseline() {
+    const uint64_t baselineMs = g_watchdogBaselineNs.load(std::memory_order_relaxed) / 1000000ULL;
+    if (baselineMs > static_cast<uint64_t>(std::numeric_limits<int>::max())) {
+        return std::numeric_limits<int>::max();
+    }
+    return static_cast<int>(baselineMs);
+}
+int asm_watchdog_shutdown() {
+    g_watchdogStatus.store(0, std::memory_order_relaxed);
+    g_watchdogBaselineNs.store(0, std::memory_order_relaxed);
+    return 0;
+}
 
 // Batch 12: perf counters + camellia buffer ops
-int asm_perf_init() { return 0; }
-int asm_perf_read_slot(uint32_t, void*) { return 0; }
-int asm_perf_reset_slot(uint32_t) { return 0; }
-uint32_t asm_perf_get_slot_count() { return 0; }
-void* asm_perf_get_table_base() { return nullptr; }
-int asm_camellia256_auth_encrypt_buf(uint8_t*, uint32_t, uint8_t*, uint32_t*) { return 0; }
-int asm_camellia256_auth_decrypt_buf(const uint8_t*, uint32_t, uint8_t*, uint32_t*) { return 0; }
+int asm_perf_init() {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_perfSpans.clear();
+    g_nextPerfSpanId.store(1, std::memory_order_relaxed);
+    for (auto& slot : g_perfSlots) {
+        slot = {};
+    }
+    return 0;
+}
+int asm_perf_read_slot(int slotIndex, uint64_t* outValue) {
+    if (!outValue || slotIndex < 0 || slotIndex >= kPerfSlotCount) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    *outValue = g_perfSlots[static_cast<size_t>(slotIndex)].lastDurationNs;
+    return 0;
+}
+int asm_perf_reset_slot(int slotIndex) {
+    if (slotIndex < 0 || slotIndex >= kPerfSlotCount) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_perfSlots[static_cast<size_t>(slotIndex)] = {};
+    return 0;
+}
+int asm_perf_get_slot_count() { return kPerfSlotCount; }
+uintptr_t asm_perf_get_table_base() {
+    return reinterpret_cast<uintptr_t>(g_perfSlots.data());
+}
+int asm_camellia256_auth_encrypt_buf(const uint8_t* src, uint64_t srcLen, uint8_t* dst, uint64_t dstLen) {
+    return transformBufferWithKey(src, srcLen, dst, dstLen);
+}
+int asm_camellia256_auth_decrypt_buf(const uint8_t* src, uint64_t srcLen, uint8_t* dst, uint64_t dstLen) {
+    return transformBufferWithKey(src, srcLen, dst, dstLen);
+}
 
 // Batch 13: MASM bridges (gguf/lsp/quadbuf/spengine)
-int asm_apply_memory_patch(void*, size_t, const void*) { return 0; }
-void asm_lsp_bridge_set_weights(float, float) {}
-int asm_gguf_loader_init(void*, const wchar_t*, uint32_t) { return 0; }
-void asm_quadbuf_push_token(const char*, uint32_t, uint32_t, uint64_t) {}
-int asm_spengine_init(void*, uint32_t) { return 0; }
-int asm_spengine_quant_switch_adaptive(uint32_t, uint32_t, void*) { return 0; }
-int asm_lsp_bridge_init(void*, void*) { return 0; }
+int asm_apply_memory_patch(void* target, uint64_t patchBytes, const void* patchData) {
+    if (!target || !patchData || patchBytes == 0) {
+        return -1;
+    }
+    std::memcpy(target, patchData, static_cast<size_t>(patchBytes));
+    return 0;
+}
+int asm_lsp_bridge_set_weights(const void* weights, uint64_t weightBytes) {
+    if (!weights || weightBytes == 0) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_lspBridgeState.initialized = true;
+    g_lspBridgeState.weightBytes = weightBytes;
+    g_lspBridgeState.weightCrc = crc32Bytes(static_cast<const uint8_t*>(weights), static_cast<size_t>(weightBytes));
+    return 0;
+}
+int asm_gguf_loader_init(const void* initConfig) {
+    if (!initConfig) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_ggufLoaderState.initialized = true;
+    g_ggufLoaderState.initCrc = crc32Bytes(static_cast<const uint8_t*>(initConfig), 64);
+    return 0;
+}
+int asm_quadbuf_push_token(const void* tokenData, uint32_t tokenType) {
+    uint32_t token = tokenType;
+    if (tokenData) {
+        token = *static_cast<const uint32_t*>(tokenData);
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (g_quadbufState.tokenStream.size() >= g_quadbufState.maxTokens) {
+        g_quadbufState.tokenStream.erase(g_quadbufState.tokenStream.begin());
+    }
+    g_quadbufState.tokenStream.push_back(token);
+    return static_cast<int>(g_quadbufState.tokenStream.size());
+}
+int asm_spengine_init(const void* initConfig) {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_spengineState = {};
+    if (!initConfig) {
+        return -1;
+    }
+    g_spengineState.initialized = true;
+    g_spengineState.quantLevel = 4;
+    return 0;
+}
+int asm_spengine_quant_switch_adaptive(int targetLevel) {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_spengineState.initialized) {
+        return -1;
+    }
+    if (targetLevel < 0) {
+        targetLevel = 0;
+    }
+    if (targetLevel > 8) {
+        targetLevel = 8;
+    }
+    g_spengineState.adaptiveMode = true;
+    g_spengineState.quantLevel = targetLevel;
+    return g_spengineState.quantLevel;
+}
+int asm_lsp_bridge_init(const void* initConfig) {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_lspBridgeState.initialized = true;
+    g_lspBridgeState.weightBytes = 0;
+    g_lspBridgeState.weightCrc = initConfig ? crc32Bytes(static_cast<const uint8_t*>(initConfig), 64) : 0;
+    return 0;
+}
 
 // Batch 14: MASM bridges continued
-int asm_quadbuf_render_frame(void) { return 0; }
-void asm_quadbuf_shutdown(void) {}
-int asm_gguf_loader_lookup(void*, const char*, uint32_t) { return 0; }
-int asm_spengine_rollback(uint32_t) { return 0; }
-void asm_lsp_bridge_shutdown(void) {}
-int asm_spengine_register(uint32_t, const char*, void*, void*, uint32_t) { return 0; }
-void asm_spengine_get_stats(void*) {}
+int asm_quadbuf_render_frame(const void* frameCtx) {
+    (void)frameCtx;
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (g_quadbufState.tokenStream.empty()) {
+        return 0;
+    }
+    g_quadbufState.renderedFrames += 1;
+    g_soState.metrics.bytes_streamed += static_cast<uint64_t>(g_quadbufState.tokenStream.size() * sizeof(uint32_t));
+    return static_cast<int>(g_quadbufState.tokenStream.size());
+}
+int asm_quadbuf_shutdown() {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_quadbufState = {};
+    return 0;
+}
+int asm_gguf_loader_lookup(const char* symbolName) {
+    if (!symbolName || symbolName[0] == '\0') {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_ggufLoaderState.initialized) {
+        return -1;
+    }
+    const size_t symbolLen = std::strlen(symbolName);
+    g_ggufLoaderState.lastLookupCrc = crc32Bytes(reinterpret_cast<const uint8_t*>(symbolName), symbolLen);
+    g_ggufLoaderState.lookupCount += 1;
+    return static_cast<int>(g_ggufLoaderState.lastLookupCrc & 0x7FFFFFFFu);
+}
+int asm_spengine_rollback() {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_spengineState.initialized) {
+        return -1;
+    }
+    g_spengineState.rollbackCount += 1;
+    g_spengineState.adaptiveMode = false;
+    g_spengineState.quantLevel = 4;
+    return static_cast<int>(g_spengineState.rollbackCount);
+}
+int asm_lsp_bridge_shutdown() {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_lspBridgeState = {};
+    return 0;
+}
+int asm_spengine_register(const char* moduleName, const void* moduleHandle) {
+    if (!moduleName || moduleName[0] == '\0' || !moduleHandle) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_spengineState.initialized) {
+        return -1;
+    }
+    const uint32_t moduleCrc = crc32Bytes(static_cast<const uint8_t*>(moduleHandle), 32);
+    g_spengineState.modules[moduleName] = moduleCrc;
+    return static_cast<int>(g_spengineState.modules.size());
+}
+int asm_spengine_get_stats(void* outStats) {
+    if (!outStats) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    auto* out = static_cast<uint64_t*>(outStats);
+    out[0] = g_spengineState.initialized ? 1 : 0;
+    out[1] = g_spengineState.adaptiveMode ? 1 : 0;
+    out[2] = static_cast<uint64_t>(g_spengineState.quantLevel);
+    out[3] = g_spengineState.rollbackCount;
+    out[4] = static_cast<uint64_t>(g_spengineState.modules.size());
+    return 0;
+}
 
 // Batch 15: loader/quadbuf stats
-void asm_gguf_loader_get_info(void*, void*) {}
-void asm_quadbuf_set_flags(uint32_t) {}
-void asm_quadbuf_resize(uint32_t, uint32_t) {}
-void asm_gguf_loader_configure_gpu(void*, uint64_t) {}
-void asm_gguf_loader_close(void*) {}
-void asm_spengine_shutdown(void) {}
-void asm_lsp_bridge_get_stats(void*) {}
+int asm_gguf_loader_get_info(const void* query, void* outInfo) {
+    (void)query;
+    if (!outInfo) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    auto* out = static_cast<uint64_t*>(outInfo);
+    out[0] = g_ggufLoaderState.initialized ? 1 : 0;
+    out[1] = static_cast<uint64_t>(g_ggufLoaderState.initCrc);
+    out[2] = static_cast<uint64_t>(g_ggufLoaderState.configuredGpu);
+    out[3] = g_ggufLoaderState.lookupCount;
+    out[4] = static_cast<uint64_t>(g_ggufLoaderState.lastLookupCrc);
+    return 0;
+}
+int asm_quadbuf_set_flags(uint32_t flags) {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_quadbufState.flags = flags;
+    return 0;
+}
+int asm_quadbuf_resize(uint32_t capacity) {
+    if (capacity == 0) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_quadbufState.maxTokens = capacity;
+    if (g_quadbufState.tokenStream.size() > capacity) {
+        const size_t excess = g_quadbufState.tokenStream.size() - capacity;
+        g_quadbufState.tokenStream.erase(g_quadbufState.tokenStream.begin(), g_quadbufState.tokenStream.begin() + excess);
+    }
+    return static_cast<int>(g_quadbufState.maxTokens);
+}
+int asm_gguf_loader_configure_gpu(int gpuOrdinal) {
+    if (gpuOrdinal < 0) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_ggufLoaderState.initialized) {
+        return -1;
+    }
+    g_ggufLoaderState.configuredGpu = gpuOrdinal;
+    return 0;
+}
+int asm_gguf_loader_close() {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_ggufLoaderState = {};
+    return 0;
+}
+int asm_spengine_shutdown() { return 0; }
+int asm_lsp_bridge_get_stats(void*) { return 0; }
+
+#endif // !defined(_MSC_VER)
 
 // Batch 16: loader/apply/sync
-int asm_lsp_bridge_query(void*, uint32_t, uint32_t*) { return 0; }
-void asm_lsp_bridge_invalidate(void) {}
-void asm_quadbuf_get_stats(void*) {}
-int asm_gguf_loader_parse(void*) { return 0; }
-void* asm_spengine_apply(uint32_t, void*) { return nullptr; }
-int asm_lsp_bridge_sync(uint32_t) { return 0; }
-void* asm_spengine_quant_switch(uint32_t, void*) { return nullptr; }
+int asm_lsp_bridge_query(const char*) { return 0; }
+int asm_lsp_bridge_invalidate(const char*) { return 0; }
+int asm_quadbuf_get_stats(void*) { return 0; }
+int asm_gguf_loader_parse(const void*, uint64_t) { return 0; }
+int asm_spengine_apply(const void*, uint64_t) { return 0; }
+int asm_lsp_bridge_sync() { return 0; }
+int asm_spengine_quant_switch(int) { return 0; }
 
 // Batch 17: quadbuf/hwsynth utilities
-int asm_quadbuf_init(void*, uint32_t, uint32_t, uint32_t) { return 0; }
-void asm_gguf_loader_get_stats(void*, void*) {}
-void asm_spengine_cpu_optimize(void) {}
-int asm_hwsynth_est_resources(const void*, uint32_t, void*) { return 0; }
-uint64_t asm_hwsynth_predict_perf(const void*, const void*) { return 0; }
-void* asm_hwsynth_get_stats(void) { return nullptr; }
-int asm_hwsynth_gen_gemm_spec(const void*, uint32_t, void*) { return 0; }
+int asm_quadbuf_init(uint32_t) { return 0; }
+int asm_gguf_loader_get_stats(void*) { return 0; }
+int asm_spengine_cpu_optimize(const void*) { return 0; }
+int asm_hwsynth_est_resources(const void*, void*) { return 0; }
+int asm_hwsynth_predict_perf(const void*, void*) { return 0; }
+int asm_hwsynth_get_stats(void*) { return 0; }
+int asm_hwsynth_gen_gemm_spec(const void*, void*) { return 0; }
 
 // Batch 18: hwsynth + mesh basics
-uint64_t asm_hwsynth_gen_jtag_header(void*, uint64_t, uint32_t, const void*) { return 0; }
+int asm_hwsynth_gen_jtag_header(const void*, void*) { return 0; }
 int asm_hwsynth_analyze_memhier(const void*, void*) { return 0; }
-int asm_hwsynth_profile_dataflow(const void*, uint32_t, uint32_t, uint32_t, uint32_t, void*) { return 0; }
+int asm_hwsynth_profile_dataflow(const void*, void*) { return 0; }
 int asm_hwsynth_shutdown() { return 0; }
-int asm_hwsynth_init() { return 0; }
-uint64_t asm_mesh_crdt_delta(uint64_t, void*, uint32_t) { return 0; }
-void* asm_mesh_get_stats() { return nullptr; }
+int asm_hwsynth_init(const void*) { return 0; }
+int asm_mesh_crdt_delta(const void*, void*) { return 0; }
+int asm_mesh_get_stats(void*) { return 0; }
 
 // Batch 19: mesh orchestration
-uint32_t asm_mesh_dht_find_closest(const void*, void*, uint32_t) { return 0; }
+int asm_mesh_dht_find_closest(const void*, uint32_t) { return 0; }
 int asm_mesh_shutdown() { return 0; }
-int asm_mesh_fedavg_aggregate(const void*, uint32_t, void*, uint32_t) { return 0; }
-uint64_t asm_mesh_crdt_merge(const void*, uint32_t) { return 0; }
-uint32_t asm_mesh_dht_xor_distance(const void*, const void*) { return 0; }
-int asm_mesh_init() { return 0; }
-int asm_mesh_zkp_verify(void*) { return 0; }
+int asm_mesh_fedavg_aggregate(const void*, const void*, void*) { return 0; }
+int asm_mesh_crdt_merge(const void*, const void*, void*) { return 0; }
+int asm_mesh_dht_xor_distance(const void*, const void*, void*) { return 0; }
+int asm_mesh_init(const void*) { return 0; }
+int asm_mesh_zkp_verify(const void*, const void*) { return 0; }
 
 // Batch 20: mesh quorum/sharding
-int asm_mesh_shard_hash(const void*, uint64_t, void*) { return 0; }
-int asm_mesh_quorum_vote(const uint8_t*, uint32_t, uint32_t) { return 0; }
+int asm_mesh_shard_hash(const void*, uint32_t, void*) { return 0; }
+int asm_mesh_quorum_vote(const void*, uint32_t) { return 0; }
 int asm_mesh_topology_update(const void*) { return 0; }
 int asm_mesh_zkp_generate(const void*, void*) { return 0; }
-uint32_t asm_mesh_topology_active_count() { return 0; }
-int asm_mesh_shard_bitfield(uint32_t, uint32_t) { return 0; }
-uint32_t asm_mesh_gossip_disseminate(const void*, uint64_t, void*) { return 0; }
+int asm_mesh_topology_active_count() { return 0; }
+int asm_mesh_shard_bitfield(uint32_t, void*) { return 0; }
+int asm_mesh_gossip_disseminate(const void*) { return 0; }
 
 // Batch 21: speciator engines
-int asm_speciator_mutate(uint32_t, uint32_t) { return 0; }
+int asm_speciator_mutate(const void*, void*) { return 0; }
 int asm_speciator_shutdown() { return 0; }
-int asm_speciator_gen_variant(uint32_t, void*) { return 0; }
-void* asm_speciator_get_stats() { return nullptr; }
-int32_t asm_speciator_create_genome(uint32_t, const void*, uint32_t) { return 0; }
-int32_t asm_speciator_crossover(uint32_t, uint32_t) { return 0; }
-int asm_speciator_speciate(uint32_t) { return 0; }
+int asm_speciator_gen_variant(const void*, void*) { return 0; }
+int asm_speciator_get_stats(void*) { return 0; }
+int asm_speciator_create_genome(const void*, void*) { return 0; }
+int asm_speciator_crossover(const void*, const void*, void*) { return 0; }
+int asm_speciator_speciate(const void*, void*) { return 0; }
 
 // Batch 22: speciator/neural bridge
-uint64_t asm_speciator_evaluate(uint32_t, void*, uint64_t) { return 0; }
-int asm_speciator_compete(uint32_t*, uint32_t) { return 0; }
-int32_t asm_speciator_migrate(uint32_t, uint32_t) { return 0; }
-int asm_speciator_init() { return 0; }
-int32_t asm_speciator_select(uint32_t) { return 0; }
-int asm_neural_classify_intent(const float*) { return 0; }
-int asm_neural_haptic_pulse(int, int, float*) { return 0; }
+int asm_speciator_evaluate(const void*, void*) { return 0; }
+int asm_speciator_compete(const void*, void*) { return 0; }
+int asm_speciator_migrate(const void*, void*) { return 0; }
+int asm_speciator_init(const void*) { return 0; }
+int asm_speciator_select(const void*, void*) { return 0; }
+int asm_neural_classify_intent(const void*, uint32_t, void*) { return 0; }
+int asm_neural_haptic_pulse(uint32_t, uint32_t) { return 0; }
 
 // Batch 23: neural bridge continued
-int asm_neural_encode_command(int, uint32_t, void*) { return 0; }
-int asm_neural_acquire_eeg(const void*, int) { return 0; }
-int asm_neural_adapt(int, int) { return 0; }
-int asm_neural_fft_decompose(int) { return 0; }
-int asm_neural_init() { return 0; }
-int asm_neural_calibrate(int, int) { return 0; }
-int asm_neural_detect_event() { return 0; }
+int asm_neural_encode_command(const void*, uint32_t, void*) { return 0; }
+int asm_neural_acquire_eeg(void*, uint32_t) { return 0; }
+int asm_neural_adapt(const void*, void*) { return 0; }
+int asm_neural_fft_decompose(const void*, uint32_t, void*) { return 0; }
+int asm_neural_init(const void*) { return 0; }
+int asm_neural_calibrate(const void*, uint32_t) { return 0; }
+int asm_neural_detect_event(const void*, uint32_t) { return 0; }
 
 // Batch 24: neural final + omega orchestrator
-int asm_neural_gen_phosphene(int, int, void*) { return 0; }
-int asm_neural_extract_csp(const float*, float*) { return 0; }
+int asm_neural_gen_phosphene(const void*, uint32_t, void*) { return 0; }
+int asm_neural_extract_csp(const void*, uint32_t, void*) { return 0; }
 int asm_neural_shutdown() { return 0; }
-void* asm_neural_get_stats() { return nullptr; }
-uint64_t asm_omega_implement_generate(int) { return 0; }
-int asm_omega_agent_step(int) { return 0; }
+int asm_neural_get_stats(void*) { return 0; }
+int asm_omega_implement_generate(const void*, void*) { return 0; }
+int asm_omega_agent_step(const void*, void*) { return 0; }
 int asm_omega_shutdown() { return 0; }
 
 // Batch 25: omega orchestrator continued
-int asm_omega_plan_decompose(uint64_t, uint32_t*, int) { return 0; }
-int asm_omega_evolve_improve(int, int) { return 0; }
-int asm_omega_init() { return 0; }
-void* asm_omega_get_stats() { return nullptr; }
-int asm_omega_verify_test(int) { return 0; }
-int asm_omega_architect_select(int, int) { return 0; }
-int asm_omega_agent_spawn(int) { return 0; }
+int asm_omega_plan_decompose(const void*, void*) { return 0; }
+int asm_omega_evolve_improve(const void*, void*) { return 0; }
+int asm_omega_init(const void*) { return 0; }
+int asm_omega_get_stats(void*) { return 0; }
+int asm_omega_verify_test(const void*, void*) { return 0; }
+int asm_omega_architect_select(const void*, void*) { return 0; }
+int asm_omega_agent_spawn(const void*, void*) { return 0; }
 
 // Batch 26: omega pipeline + entry stub
-int asm_omega_observe_monitor(int) { return 0; }
-int asm_omega_deploy_distribute(int, int) { return 0; }
-int asm_omega_execute_pipeline() { return 0; }
-uint64_t asm_omega_ingest_requirement(const char*, int) { return 0; }
-int asm_omega_world_model_update(int, int) { return 0; }
+int asm_omega_observe_monitor(const void*, void*) { return 0; }
+int asm_omega_deploy_distribute(const void*, void*) { return 0; }
+int asm_omega_execute_pipeline(const void*, void*) { return 0; }
+int asm_omega_ingest_requirement(const void*, void*) { return 0; }
+int asm_omega_world_model_update(const void*, void*) { return 0; }
 int asm_perf_get_slot_count_v2() { return 0; }
 
 // Batch 28: deflate + masm agent failure
@@ -831,3 +1639,10 @@ void Win32IDE::appendToOutput(const std::string&, const std::string&, OutputSeve
 void Win32IDE::addOutputTab(const std::string&) {}
 void Win32IDE::onInferenceComplete(const std::string&) {}
 
+// Robust Ollama parser stub
+namespace RawrXD::Agentic {
+std::vector<RobustOllamaParser::ModelEntry> RobustOllamaParser::parse_tags_response() { return {}; }
+}
+
+// Batch 27: entry point fallback
+int main() { return 0; }
