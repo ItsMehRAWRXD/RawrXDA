@@ -84,22 +84,22 @@ extern "C" void asm_mesh_init(void) { noteModeCall("asm_mesh_init"); }
 extern "C" void asm_mesh_zkp_verify(void) { noteModeCall("asm_mesh_zkp_verify"); }
 extern "C" void asm_mesh_shard_hash(void) { noteModeCall("asm_mesh_shard_hash"); }
 extern "C" void asm_mesh_quorum_vote(void) { noteModeCall("asm_mesh_quorum_vote"); }
-extern "C" void asm_mesh_topology_update(void) {}
-extern "C" void asm_mesh_zkp_generate(void) {}
-extern "C" void asm_mesh_topology_active_count(void) {}
-extern "C" void asm_mesh_shard_bitfield(void) {}
-extern "C" void asm_mesh_gossip_disseminate(void) {}
+extern "C" void asm_mesh_topology_update(void) { noteModeCall("asm_mesh_topology_update"); }
+extern "C" void asm_mesh_zkp_generate(void) { noteModeCall("asm_mesh_zkp_generate"); }
+extern "C" void asm_mesh_topology_active_count(void) { noteModeCall("asm_mesh_topology_active_count"); }
+extern "C" void asm_mesh_shard_bitfield(void) { noteModeCall("asm_mesh_shard_bitfield"); }
+extern "C" void asm_mesh_gossip_disseminate(void) { noteModeCall("asm_mesh_gossip_disseminate"); }
 
-extern "C" void asm_speciator_mutate(void) {}
-extern "C" void asm_speciator_shutdown(void) {}
-extern "C" void asm_speciator_gen_variant(void) {}
-extern "C" void asm_speciator_get_stats(void) {}
-extern "C" void asm_speciator_create_genome(void) {}
-extern "C" void asm_speciator_crossover(void) {}
-extern "C" void asm_speciator_speciate(void) {}
-extern "C" void asm_speciator_evaluate(void) {}
-extern "C" void asm_speciator_compete(void) {}
-extern "C" void asm_speciator_migrate(void) {}
+extern "C" void asm_speciator_mutate(void) { noteModeCall("asm_speciator_mutate"); }
+extern "C" void asm_speciator_shutdown(void) { noteModeCall("asm_speciator_shutdown"); }
+extern "C" void asm_speciator_gen_variant(void) { noteModeCall("asm_speciator_gen_variant"); }
+extern "C" void asm_speciator_get_stats(void) { noteModeCall("asm_speciator_get_stats"); }
+extern "C" void asm_speciator_create_genome(void) { noteModeCall("asm_speciator_create_genome"); }
+extern "C" void asm_speciator_crossover(void) { noteModeCall("asm_speciator_crossover"); }
+extern "C" void asm_speciator_speciate(void) { noteModeCall("asm_speciator_speciate"); }
+extern "C" void asm_speciator_evaluate(void) { noteModeCall("asm_speciator_evaluate"); }
+extern "C" void asm_speciator_compete(void) { noteModeCall("asm_speciator_compete"); }
+extern "C" void asm_speciator_migrate(void) { noteModeCall("asm_speciator_migrate"); }
 extern "C" void asm_speciator_init(void) {}
 extern "C" void asm_speciator_select(void) {}
 
