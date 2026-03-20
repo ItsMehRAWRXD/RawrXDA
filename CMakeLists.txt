@@ -3151,6 +3151,7 @@ if(WIN32)
     # =========================================================================
     # MultiWindow Task Scheduler Kernel (MASM64 DLL)
     # =========================================================================
+    set(RAWRXD_HAS_MW_KERNEL_FLAG 0)
     if(RAWR_HAS_MASM)
         set(MW_KERNEL_ASM src/asm/RawrXD_MultiWindow_Kernel.asm)
         set_source_files_properties(${MW_KERNEL_ASM} PROPERTIES LANGUAGE ASM_MASM)
@@ -3174,10 +3175,9 @@ if(WIN32)
         target_compile_definitions(RawrXD_MultiWindow_Kernel PRIVATE
             RAWRXD_MW_KERNEL_EXPORTS=1
         )
-        add_definitions(-DRAWRXD_HAS_MW_KERNEL=1)
+        set(RAWRXD_HAS_MW_KERNEL_FLAG 1)
         message(STATUS "MultiWindow Kernel DLL target enabled")
     else()
-        add_definitions(-DRAWRXD_HAS_MW_KERNEL=0)
         message(STATUS "MultiWindow Kernel DLL skipped (no MASM)")
     endif()
 
@@ -3185,6 +3185,7 @@ if(WIN32)
     # Dynamic Prompt Engine DLL (MASM64 kernel + C glue)
     # Unity/Unreal compatible SHARED library
     # =========================================================================
+    set(RAWRXD_HAS_PROMPT_ENGINE_FLAG 0)
     if(RAWR_HAS_MASM)
         set(PROMPT_ENGINE_ASM src/asm/RawrXD_DynamicPromptEngine.asm)
         set_source_files_properties(${PROMPT_ENGINE_ASM} PROPERTIES LANGUAGE ASM_MASM)
@@ -3208,12 +3209,24 @@ if(WIN32)
         target_compile_definitions(RawrXD_DynamicPromptEngine PRIVATE
             RAWRXD_PROMPT_ENGINE_EXPORTS=1
         )
-        add_definitions(-DRAWRXD_HAS_PROMPT_ENGINE=1)
+        set(RAWRXD_HAS_PROMPT_ENGINE_FLAG 1)
         message(STATUS "DynamicPromptEngine DLL target enabled (Unity/Unreal compatible)")
     else()
-        add_definitions(-DRAWRXD_HAS_PROMPT_ENGINE=0)
         message(STATUS "DynamicPromptEngine DLL skipped (no MASM)")
     endif()
+
+    target_compile_definitions(RawrEngine PRIVATE
+        RAWRXD_HAS_MW_KERNEL=${RAWRXD_HAS_MW_KERNEL_FLAG}
+        RAWRXD_HAS_PROMPT_ENGINE=${RAWRXD_HAS_PROMPT_ENGINE_FLAG}
+    )
+    target_compile_definitions(RawrXD_Gold PRIVATE
+        RAWRXD_HAS_MW_KERNEL=${RAWRXD_HAS_MW_KERNEL_FLAG}
+        RAWRXD_HAS_PROMPT_ENGINE=${RAWRXD_HAS_PROMPT_ENGINE_FLAG}
+    )
+    target_compile_definitions(RawrXD-InferenceEngine PRIVATE
+        RAWRXD_HAS_MW_KERNEL=${RAWRXD_HAS_MW_KERNEL_FLAG}
+        RAWRXD_HAS_PROMPT_ENGINE=${RAWRXD_HAS_PROMPT_ENGINE_FLAG}
+    )
 
     if(RAWRXD_ENABLE_MISSING_HANDLER_STUBS)
         list(REMOVE_ITEM WIN32IDE_SOURCES
@@ -3554,6 +3567,8 @@ if(WIN32)
     target_compile_definitions(RawrXD-Win32IDE PRIVATE
         RAWR_HAS_SOVEREIGN_ENGINES=0
         RAWR_HAS_RAWR_INFERENCE=0
+        RAWRXD_HAS_MW_KERNEL=${RAWRXD_HAS_MW_KERNEL_FLAG}
+        RAWRXD_HAS_PROMPT_ENGINE=${RAWRXD_HAS_PROMPT_ENGINE_FLAG}
         RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=$<IF:$<BOOL:${RAWRXD_PRODUCTION_STRIP_STUB_SOURCES}>,1,0>
         RAWRXD_USE_DEDICATED_CODELENS=1
         RAWRXD_USE_DEDICATED_INLAY=1
@@ -3651,8 +3666,17 @@ if(WIN32)
         if(TARGET RawrXD-InferenceEngine)
             target_compile_definitions(RawrXD-InferenceEngine PRIVATE RAWR_HAS_QUICKJS=1)
         endif()
+        target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWR_QUICKJS_STUB=0)
+        if(TARGET RawrEngine)
+            target_compile_definitions(RawrEngine PRIVATE RAWR_QUICKJS_STUB=0)
+        endif()
+        if(TARGET RawrXD_Gold)
+            target_compile_definitions(RawrXD_Gold PRIVATE RAWR_QUICKJS_STUB=0)
+        endif()
+        if(TARGET RawrXD-InferenceEngine)
+            target_compile_definitions(RawrXD-InferenceEngine PRIVATE RAWR_QUICKJS_STUB=0)
+        endif()
         message(STATUS "QuickJS found: JS extension host enabled")
-        add_definitions(-DRAWR_HAS_QUICKJS=1)
     else()
         if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
             message(FATAL_ERROR "[ProductionLane] QuickJS not found at ${QUICKJS_DIR} and Win32IDE would require QuickJS stubs; strict production strip requires a real QuickJS provider.")
@@ -3663,12 +3687,15 @@ if(WIN32)
         target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWR_HAS_QUICKJS=0)
         if(TARGET RawrEngine)
             target_compile_definitions(RawrEngine PRIVATE RAWR_HAS_QUICKJS=0)
+            target_compile_definitions(RawrEngine PRIVATE RAWR_QUICKJS_STUB=1)
         endif()
         if(TARGET RawrXD_Gold)
             target_compile_definitions(RawrXD_Gold PRIVATE RAWR_HAS_QUICKJS=0)
+            target_compile_definitions(RawrXD_Gold PRIVATE RAWR_QUICKJS_STUB=1)
         endif()
         if(TARGET RawrXD-InferenceEngine)
             target_compile_definitions(RawrXD-InferenceEngine PRIVATE RAWR_HAS_QUICKJS=0)
+            target_compile_definitions(RawrXD-InferenceEngine PRIVATE RAWR_QUICKJS_STUB=1)
         endif()
     endif()
     
