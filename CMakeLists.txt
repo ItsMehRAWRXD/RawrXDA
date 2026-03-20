@@ -231,7 +231,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Static link MSVC runtime — no vcruntime140.dll dependency
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-add_definitions(-D_CRT_SECURE_NO_WARNINGS -DNOMINMAX -DWIN32_LEAN_AND_MEAN)
+add_compile_definitions(_CRT_SECURE_NO_WARNINGS NOMINMAX WIN32_LEAN_AND_MEAN)
 
 # =============================================================================
 # Persistent SDK Include/Lib Paths (Phase 41 Build Fix)
@@ -1012,6 +1012,12 @@ set_property(CACHE RAWR_SSOT_PROVIDER PROPERTY STRINGS CORE EXT AUTO STUBS FEATU
 
 if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES AND RAWRXD_INCLUDE_STRESS_AND_REPLAY_SOURCES)
     message(FATAL_ERROR "[ProductionLane] RAWRXD_INCLUDE_STRESS_AND_REPLAY_SOURCES=ON is incompatible with RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=ON.")
+endif()
+if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES AND RAWR_REPLACE_SSOT_HANDLERS)
+    message(FATAL_ERROR "[ProductionLane] RAWR_REPLACE_SSOT_HANDLERS=ON is incompatible with RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=ON.")
+endif()
+if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES AND RAWR_REPLACE_MASM_FALLBACKS)
+    message(FATAL_ERROR "[ProductionLane] RAWR_REPLACE_MASM_FALLBACKS=ON is incompatible with RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=ON.")
 endif()
 
 if(NOT RAWRXD_INCLUDE_STRESS_AND_REPLAY_SOURCES)
@@ -2853,7 +2859,6 @@ if(WIN32)
         src/core/ssot_handlers.cpp
         src/core/ssot_handlers_ext_isolated.cpp
         src/core/ssot_validation.cpp
-        src/core/win32_ide_link_stubs.cpp
 
         # Unified Command Dispatch — Zero-drift SSOT dispatch (replaces manual registration)
         src/core/unified_command_dispatch.cpp
@@ -3167,10 +3172,6 @@ if(WIN32)
 
     # Production lane source normalization:
     # Prefer real implementation units over legacy compatibility stubs/shims.
-    list(REMOVE_ITEM WIN32IDE_SOURCES
-        src/core/win32_ide_link_stubs.cpp
-        src/win32app/multi_file_search_stub.cpp
-    )
 
     # DbgEng COM interfaces used by the native debugger engine are MSVC/SDK-specific.
     # For non-MSVC toolchains (e.g., MinGW cross-builds), keep the rest of Win32IDE
@@ -3268,6 +3269,20 @@ if(WIN32)
     else()
         message(STATUS "DynamicPromptEngine DLL skipped (no MASM)")
     endif()
+    if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
+        if(NOT RAWRXD_HAS_MW_KERNEL_FLAG)
+            message(FATAL_ERROR "[ProductionLane] RawrXD_MultiWindow_Kernel must be enabled when RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=ON.")
+        endif()
+        if(NOT RAWRXD_HAS_PROMPT_ENGINE_FLAG)
+            message(FATAL_ERROR "[ProductionLane] RawrXD_DynamicPromptEngine must be enabled when RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=ON.")
+        endif()
+        if(NOT TARGET RawrXD_MultiWindow_Kernel)
+            message(FATAL_ERROR "[ProductionLane] RawrXD_MultiWindow_Kernel target is required in strict production strip mode.")
+        endif()
+        if(NOT TARGET RawrXD_DynamicPromptEngine)
+            message(FATAL_ERROR "[ProductionLane] RawrXD_DynamicPromptEngine target is required in strict production strip mode.")
+        endif()
+    endif()
 
     target_compile_definitions(RawrEngine PRIVATE
         RAWRXD_HAS_MW_KERNEL=${RAWRXD_HAS_MW_KERNEL_FLAG}
@@ -3301,8 +3316,6 @@ if(WIN32)
 
     if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
         list(REMOVE_ITEM WIN32IDE_SOURCES
-            src/core/ssot_missing_handlers_provider.cpp
-            src/core/win32_ide_link_stubs.cpp
             src/core/subsystem_mode_fallbacks.cpp
             src/core/model_loader_fallbacks.cpp
             src/core/rawrxd_native_log_fallback.cpp
@@ -3339,6 +3352,7 @@ if(WIN32)
     if(NOT RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
         if(MSVC)
             list(APPEND WIN32IDE_SOURCES
+                src/core/win32_ide_link_stubs.cpp
                 src/core/win32ide_asm_fallback.cpp
                 src/core/cot_fallback_system.cpp
                 src/core/subsystem_mode_fallbacks.cpp
@@ -4058,6 +4072,12 @@ else()
 endif()
 if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
     add_dependencies(self_test_gate RawrEngine RawrXD_Gold RawrXD-InferenceEngine)
+    if(TARGET RawrXD_MultiWindow_Kernel)
+        add_dependencies(self_test_gate RawrXD_MultiWindow_Kernel)
+    endif()
+    if(TARGET RawrXD_DynamicPromptEngine)
+        add_dependencies(self_test_gate RawrXD_DynamicPromptEngine)
+    endif()
 endif()
 
 # CI gate: stress_test — build and note availability
