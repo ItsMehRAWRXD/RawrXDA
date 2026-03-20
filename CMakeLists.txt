@@ -3247,11 +3247,12 @@ if(WIN32)
             src/win32app/v280_link_fallbacks.cpp
             src/win32app/collab_cursor_fallbacks.cpp
             src/win32app/rtp_protocol_fallback.cpp
+            src/modules/quickjs_node_shims.cpp
         )
         list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/.*_fallback[^/]*\\.cpp$")
         list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/.*_link_shims?\\.cpp$")
         list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/.*_shims?\\.cpp$")
-        message(STATUS "[ProductionLane] Win32IDE: stripped monaco/ssot/fallback shim units")
+        message(STATUS "[ProductionLane] Win32IDE: stripped ssot/fallback/shim compatibility units")
     endif()
 
     # Avoid mixing parallel GGUF engine stacks in this lane.
@@ -3632,12 +3633,43 @@ if(WIN32)
             target_link_libraries(RawrEngine PRIVATE quickjs_static)
             target_include_directories(RawrEngine PRIVATE ${QUICKJS_DIR}/..)
         endif()
+        if(TARGET RawrXD_Gold)
+            target_link_libraries(RawrXD_Gold PRIVATE quickjs_static)
+            target_include_directories(RawrXD_Gold PRIVATE ${QUICKJS_DIR}/..)
+        endif()
+        if(TARGET RawrXD-InferenceEngine)
+            target_link_libraries(RawrXD-InferenceEngine PRIVATE quickjs_static)
+            target_include_directories(RawrXD-InferenceEngine PRIVATE ${QUICKJS_DIR}/..)
+        endif()
+        target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWR_HAS_QUICKJS=1)
+        if(TARGET RawrEngine)
+            target_compile_definitions(RawrEngine PRIVATE RAWR_HAS_QUICKJS=1)
+        endif()
+        if(TARGET RawrXD_Gold)
+            target_compile_definitions(RawrXD_Gold PRIVATE RAWR_HAS_QUICKJS=1)
+        endif()
+        if(TARGET RawrXD-InferenceEngine)
+            target_compile_definitions(RawrXD-InferenceEngine PRIVATE RAWR_HAS_QUICKJS=1)
+        endif()
         message(STATUS "QuickJS found: JS extension host enabled")
         add_definitions(-DRAWR_HAS_QUICKJS=1)
     else()
+        if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
+            message(FATAL_ERROR "[ProductionLane] QuickJS not found at ${QUICKJS_DIR} and Win32IDE would require QuickJS stubs; strict production strip requires a real QuickJS provider.")
+        endif()
         message(STATUS "QuickJS not found at ${QUICKJS_DIR} — JS extension host uses stubs")
         # Create stub include directory so headers compile
         target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWR_QUICKJS_STUB=1)
+        target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWR_HAS_QUICKJS=0)
+        if(TARGET RawrEngine)
+            target_compile_definitions(RawrEngine PRIVATE RAWR_HAS_QUICKJS=0)
+        endif()
+        if(TARGET RawrXD_Gold)
+            target_compile_definitions(RawrXD_Gold PRIVATE RAWR_HAS_QUICKJS=0)
+        endif()
+        if(TARGET RawrXD-InferenceEngine)
+            target_compile_definitions(RawrXD-InferenceEngine PRIVATE RAWR_HAS_QUICKJS=0)
+        endif()
     endif()
     
     # Link RE library into Win32IDE
@@ -3949,7 +3981,7 @@ if(WIN32)
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
     )
 
-    if(EXISTS "${CMAKE_SOURCE_DIR}/src/cpu_inference_engine_autofix_stub.cpp")
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/cpu_inference_engine_autofix_stub.cpp" AND NOT RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
         add_executable(RawrXD-AutoFixCLI
             src/app/cli_entrypoint.cpp
             src/agent/quantum_agent_orchestrator.cpp
@@ -3973,6 +4005,8 @@ if(WIN32)
         set_target_properties(RawrXD-AutoFixCLI PROPERTIES
             RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
         )
+    elseif(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
+        message(STATUS "RawrXD-AutoFixCLI skipped in strict production strip mode (uses cpu_inference_engine_autofix_stub.cpp)")
     else()
         message(STATUS "RawrXD-AutoFixCLI skipped (cpu_inference_engine_autofix_stub.cpp missing)")
     endif()
@@ -4072,20 +4106,24 @@ if(WIN32)
 endif()
 
 # Swarm smoke test (manual)
-add_executable(SwarmSmokeTest EXCLUDE_FROM_ALL
-    src/tests/SwarmSmokeTest.cpp
-    src/bridge/Win32SwarmBridge.cpp
-    src/bridge/SwarmIATRegistration.cpp
-    src/agentic/SubAgentManager.cpp
-    src/agentic/RobustOllamaParser.cpp
-    src/runtime_patcher.cpp
-    src/tests/swarm_smoke_stubs.cpp
-)
-target_include_directories(SwarmSmokeTest PRIVATE
-    ${CMAKE_SOURCE_DIR}
-    ${CMAKE_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/include
-)
-if(WIN32)
-    target_link_libraries(SwarmSmokeTest PRIVATE user32 gdi32 shell32 ole32 oleaut32 uuid)
+if(NOT RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
+    add_executable(SwarmSmokeTest EXCLUDE_FROM_ALL
+        src/tests/SwarmSmokeTest.cpp
+        src/bridge/Win32SwarmBridge.cpp
+        src/bridge/SwarmIATRegistration.cpp
+        src/agentic/SubAgentManager.cpp
+        src/agentic/RobustOllamaParser.cpp
+        src/runtime_patcher.cpp
+        src/tests/swarm_smoke_stubs.cpp
+    )
+    target_include_directories(SwarmSmokeTest PRIVATE
+        ${CMAKE_SOURCE_DIR}
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/include
+    )
+    if(WIN32)
+        target_link_libraries(SwarmSmokeTest PRIVATE user32 gdi32 shell32 ole32 oleaut32 uuid)
+    endif()
+else()
+    message(STATUS "SwarmSmokeTest skipped in strict production strip mode (uses swarm_smoke_stubs.cpp)")
 endif()
