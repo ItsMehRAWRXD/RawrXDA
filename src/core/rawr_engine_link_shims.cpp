@@ -1,11 +1,16 @@
 // Minimal link shims for RawrEngine / Gold / InferenceEngine.
 // These are no-op fallbacks to satisfy references after stub purge.
 #include <algorithm>
+#include <atomic>
 #include <cctype>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <cmath>
+#include <mutex>
+#include <unordered_map>
+#include <unordered_set>
 #ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -73,6 +78,30 @@ struct RawrSnapshotStats {
 static RawrPatchEntry g_rawrPatchEntries[kRawrPatchSlots]{};
 static RawrHotpatchStats g_rawrHotpatchStats{};
 static RawrSnapshotStats g_rawrSnapshotStats{};
+
+struct SchedulerTaskInfo {
+    uint8_t priority = 0;
+    uint8_t flags = 0;
+    void* schedulerCtx = nullptr;
+    void* functionPtr = nullptr;
+    void* userData = nullptr;
+    bool completed = false;
+};
+
+struct HeartbeatNode {
+    std::string name;
+    uint32_t port = 0;
+    uint64_t lastSeenTick = 0;
+};
+
+static std::mutex g_runtimeShimMutex;
+static std::atomic<int64_t> g_nextTaskId{1};
+static std::unordered_map<int64_t, SchedulerTaskInfo> g_schedulerTasks;
+static std::unordered_map<void*, uint64_t> g_dmaAllocations;
+static std::unordered_set<uint32_t> g_conflictRegistered;
+static std::unordered_set<uint32_t> g_conflictLocked;
+static std::unordered_set<uint32_t> g_dmaPendingTickets;
+static std::vector<HeartbeatNode> g_heartbeatNodes;
 
 static int closeFileHandle(intptr_t handle) {
     if (handle <= 0) {
@@ -182,25 +211,200 @@ static int transformFileWithKey(const char* inputPath, const char* outputPath, c
 } // namespace
 
 extern "C" {
-int64_t Scheduler_SubmitTask(void*, void*, uint8_t, uint8_t, void*) { return 0; }
-void* AllocateDMABuffer(uint64_t, uint32_t) { return nullptr; }
-uint32_t CalculateCRC32(const void*, uint64_t) { return 0; }
-int Heartbeat_AddNode(const char*, uint32_t) { return 0; }
-int Tensor_QuantizedMatMul(const void*, const void*, void*, uint32_t) { return 0; }
-int ConflictDetector_LockResource(uint32_t) { return 0; }
-int GPU_WaitForDMA(uint32_t) { return 0; }
+int64_t Scheduler_SubmitTask(void* schedulerCtx, void* functionPtr, uint8_t priority, uint8_t flags, void* userData) {
+    const int64_t taskId = g_nextTaskId.fetch_add(1, std::memory_order_relaxed);
+    SchedulerTaskInfo info{};
+    info.priority = priority;
+    info.flags = flags;
+    info.schedulerCtx = schedulerCtx;
+    info.functionPtr = functionPtr;
+    info.userData = userData;
+    info.completed = true;
+
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_schedulerTasks[taskId] = info;
+    return taskId;
+}
+void* AllocateDMABuffer(uint64_t bytes, uint32_t flags) {
+    (void)flags;
+    if (bytes == 0) {
+        return nullptr;
+    }
+    void* ptr = std::calloc(1, static_cast<size_t>(bytes));
+    if (!ptr) {
+        return nullptr;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_dmaAllocations[ptr] = bytes;
+    return ptr;
+}
+uint32_t CalculateCRC32(const void* data, uint64_t size) {
+    return crc32Bytes(static_cast<const uint8_t*>(data), static_cast<size_t>(size));
+}
+int Heartbeat_AddNode(const char* nodeName, uint32_t port) {
+    if (!nodeName || nodeName[0] == '\0' || port == 0) {
+        return -1;
+    }
+    HeartbeatNode node{};
+    node.name = nodeName;
+    node.port = port;
+    node.lastSeenTick = 1;
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_heartbeatNodes.push_back(std::move(node));
+    return static_cast<int>(g_heartbeatNodes.size());
+}
+int Tensor_QuantizedMatMul(const void* lhs, const void* rhs, void* out, uint32_t count) {
+    if (!lhs || !rhs || !out || count == 0) {
+        return -1;
+    }
+    const float* a = static_cast<const float*>(lhs);
+    const float* b = static_cast<const float*>(rhs);
+    float* c = static_cast<float*>(out);
+    for (uint32_t i = 0; i < count; ++i) {
+        c[i] = a[i] * b[i];
+    }
+    return 0;
+}
+int ConflictDetector_LockResource(uint32_t resourceId) {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (g_conflictLocked.find(resourceId) != g_conflictLocked.end()) {
+        return 0;
+    }
+    g_conflictLocked.insert(resourceId);
+    return 1;
+}
+int GPU_WaitForDMA(uint32_t ticketId) {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    auto it = g_dmaPendingTickets.find(ticketId);
+    if (it == g_dmaPendingTickets.end()) {
+        return 0;
+    }
+    g_dmaPendingTickets.erase(it);
+    return 1;
+}
 
 // Pyre compute kernels
-int asm_pyre_gemm_fp32(const void*, const void*, void*, int, int, int) { return 0; }
-int asm_pyre_rmsnorm(void*, const void*, int) { return 0; }
-int asm_pyre_silu(void*, const void*, int) { return 0; }
-int asm_pyre_rope(void*, const void*, int) { return 0; }
-int asm_pyre_embedding_lookup(const void*, const void*, void*, int, int) { return 0; }
-int asm_pyre_gemv_fp32(const void*, const void*, void*, int, int) { return 0; }
-int asm_pyre_add_fp32(void*, const void*, const void*, int) { return 0; }
+int asm_pyre_gemm_fp32(const void* A, const void* B, void* C, int M, int N, int K) {
+    if (!A || !B || !C || M <= 0 || N <= 0 || K <= 0) {
+        return -1;
+    }
+    const float* a = static_cast<const float*>(A);
+    const float* b = static_cast<const float*>(B);
+    float* c = static_cast<float*>(C);
+    for (int m = 0; m < M; ++m) {
+        for (int n = 0; n < N; ++n) {
+            double sum = 0.0;
+            for (int k = 0; k < K; ++k) {
+                sum += static_cast<double>(a[m * K + k]) * static_cast<double>(b[k * N + n]);
+            }
+            c[m * N + n] = static_cast<float>(sum);
+        }
+    }
+    return 0;
+}
+int asm_pyre_rmsnorm(void* outOrInout, const void* input, int count) {
+    if (!outOrInout || count <= 0) {
+        return -1;
+    }
+    const float* in = input ? static_cast<const float*>(input) : static_cast<const float*>(outOrInout);
+    float* out = static_cast<float*>(outOrInout);
+    double meanSq = 0.0;
+    for (int i = 0; i < count; ++i) {
+        const double v = static_cast<double>(in[i]);
+        meanSq += v * v;
+    }
+    meanSq /= static_cast<double>(count);
+    const float invRms = 1.0f / std::sqrt(static_cast<float>(meanSq) + 1e-5f);
+    for (int i = 0; i < count; ++i) {
+        out[i] = in[i] * invRms;
+    }
+    return 0;
+}
+int asm_pyre_silu(void* outOrInout, const void* input, int count) {
+    if (!outOrInout || count <= 0) {
+        return -1;
+    }
+    const float* in = input ? static_cast<const float*>(input) : static_cast<const float*>(outOrInout);
+    float* out = static_cast<float*>(outOrInout);
+    for (int i = 0; i < count; ++i) {
+        const float x = in[i];
+        out[i] = x / (1.0f + std::exp(-x));
+    }
+    return 0;
+}
+int asm_pyre_rope(void* outOrInout, const void* input, int count) {
+    if (!outOrInout || count <= 1) {
+        return -1;
+    }
+    const float* in = input ? static_cast<const float*>(input) : static_cast<const float*>(outOrInout);
+    float* out = static_cast<float*>(outOrInout);
+    int i = 0;
+    for (; i + 1 < count; i += 2) {
+        const float angle = static_cast<float>(i) * 0.001f;
+        const float cs = std::cos(angle);
+        const float sn = std::sin(angle);
+        const float x0 = in[i];
+        const float x1 = in[i + 1];
+        out[i] = x0 * cs - x1 * sn;
+        out[i + 1] = x0 * sn + x1 * cs;
+    }
+    if (i < count) {
+        out[i] = in[i];
+    }
+    return 0;
+}
+int asm_pyre_embedding_lookup(const void* table, const void* indices, void* out, int count, int dim) {
+    if (!table || !indices || !out || count <= 0 || dim <= 0) {
+        return -1;
+    }
+    const float* embeddingTable = static_cast<const float*>(table);
+    const int32_t* tokenIds = static_cast<const int32_t*>(indices);
+    float* dst = static_cast<float*>(out);
+    for (int t = 0; t < count; ++t) {
+        const int32_t token = tokenIds[t];
+        if (token < 0) {
+            return -1;
+        }
+        const float* src = embeddingTable + static_cast<size_t>(token) * static_cast<size_t>(dim);
+        std::memcpy(dst + static_cast<size_t>(t) * static_cast<size_t>(dim), src, static_cast<size_t>(dim) * sizeof(float));
+    }
+    return 0;
+}
+int asm_pyre_gemv_fp32(const void* A, const void* x, void* y, int M, int K) {
+    if (!A || !x || !y || M <= 0 || K <= 0) {
+        return -1;
+    }
+    const float* a = static_cast<const float*>(A);
+    const float* xv = static_cast<const float*>(x);
+    float* out = static_cast<float*>(y);
+    for (int m = 0; m < M; ++m) {
+        double sum = 0.0;
+        for (int k = 0; k < K; ++k) {
+            sum += static_cast<double>(a[m * K + k]) * static_cast<double>(xv[k]);
+        }
+        out[m] = static_cast<float>(sum);
+    }
+    return 0;
+}
+int asm_pyre_add_fp32(void* out, const void* a, const void* b, int count) {
+    if (!out || !a || !b || count <= 0) {
+        return -1;
+    }
+    float* dst = static_cast<float*>(out);
+    const float* lhs = static_cast<const float*>(a);
+    const float* rhs = static_cast<const float*>(b);
+    for (int i = 0; i < count; ++i) {
+        dst[i] = lhs[i] + rhs[i];
+    }
+    return 0;
+}
 
 // Batch 3: scheduler/clock + conflict/dma
-int ConflictDetector_RegisterResource(uint32_t) { return 0; }
+int ConflictDetector_RegisterResource(uint32_t resourceId) {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_conflictRegistered.insert(resourceId);
+    return 1;
+}
 int ConflictDetector_UnlockResource(uint32_t) { return 0; }
 uint64_t GetHighResTick() { return 0; }
 uint64_t TicksToMilliseconds(uint64_t ticks) { return ticks; }
