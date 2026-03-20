@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <chrono>
 #include <cmath>
 #include <mutex>
 #include <unordered_map>
@@ -102,6 +103,27 @@ static std::unordered_set<uint32_t> g_conflictRegistered;
 static std::unordered_set<uint32_t> g_conflictLocked;
 static std::unordered_set<uint32_t> g_dmaPendingTickets;
 static std::vector<HeartbeatNode> g_heartbeatNodes;
+static std::atomic<uint32_t> g_modeFlags{0};
+
+enum RuntimeModeBit : uint32_t {
+    MODE_ENTERPRISE_UNLOCK = 1u << 0,
+    MODE_INJECT = 1u << 1,
+    MODE_DIFF_COV = 1u << 2,
+    MODE_INTEL_PT = 1u << 3,
+    MODE_AGENT_TRACE = 1u << 4,
+    MODE_DYN_TRACE = 1u << 5,
+    MODE_COV_FUSION = 1u << 6
+};
+
+static uint64_t monotonicTickNowNs() {
+    using namespace std::chrono;
+    return static_cast<uint64_t>(duration_cast<nanoseconds>(steady_clock::now().time_since_epoch()).count());
+}
+
+static int enableMode(uint32_t modeBit) {
+    g_modeFlags.fetch_or(modeBit, std::memory_order_relaxed);
+    return 1;
+}
 
 static int closeFileHandle(intptr_t handle) {
     if (handle <= 0) {
@@ -248,7 +270,7 @@ int Heartbeat_AddNode(const char* nodeName, uint32_t port) {
     HeartbeatNode node{};
     node.name = nodeName;
     node.port = port;
-    node.lastSeenTick = 1;
+    node.lastSeenTick = monotonicTickNowNs();
     std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
     g_heartbeatNodes.push_back(std::move(node));
     return static_cast<int>(g_heartbeatNodes.size());
@@ -405,17 +427,105 @@ int ConflictDetector_RegisterResource(uint32_t resourceId) {
     g_conflictRegistered.insert(resourceId);
     return 1;
 }
-int ConflictDetector_UnlockResource(uint32_t) { return 0; }
-uint64_t GetHighResTick() { return 0; }
-uint64_t TicksToMilliseconds(uint64_t ticks) { return ticks; }
-uint64_t TicksToMicroseconds(uint64_t ticks) { return ticks; }
-int GPU_SubmitDMATransfer(uint32_t, void*, uint64_t) { return 0; }
-int Scheduler_WaitForTask(int64_t) { return 0; }
+int ConflictDetector_UnlockResource(uint32_t resourceId) {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    const bool removedRegistered = g_conflictRegistered.erase(resourceId) > 0;
+    const bool removedLocked = g_conflictLocked.erase(resourceId) > 0;
+    return (removedRegistered || removedLocked) ? 1 : 0;
+}
+uint64_t GetHighResTick() {
+    return monotonicTickNowNs();
+}
+uint64_t TicksToMilliseconds(uint64_t ticks) {
+    return ticks / 1000000ULL;
+}
+uint64_t TicksToMicroseconds(uint64_t ticks) {
+    return ticks / 1000ULL;
+}
+int GPU_SubmitDMATransfer(uint32_t ticketId, void* sourceBuffer, uint64_t bytes) {
+    if (!sourceBuffer || bytes == 0) {
+        return -1;
+    }
+    uint32_t resolvedTicket = ticketId;
+    if (resolvedTicket == 0) {
+        resolvedTicket = static_cast<uint32_t>(g_nextTaskId.fetch_add(1, std::memory_order_relaxed));
+    }
+
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    auto allocIt = g_dmaAllocations.find(sourceBuffer);
+    if (allocIt != g_dmaAllocations.end() && bytes > allocIt->second) {
+        return -1;
+    }
+    g_dmaPendingTickets.insert(resolvedTicket);
+    g_soState.mappedBytes += bytes;
+    return static_cast<int>(resolvedTicket);
+}
+int Scheduler_WaitForTask(int64_t taskId) {
+    if (taskId <= 0) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    auto it = g_schedulerTasks.find(taskId);
+    if (it == g_schedulerTasks.end()) {
+        return 0;
+    }
+    it->second.completed = true;
+    return 1;
+}
 
 // Batch 4: hotpatch + pyre + pattern
-int asm_pyre_mul_fp32(void*, const void*, const void*, int) { return 0; }
-int asm_pyre_softmax(void*, const void*, int) { return 0; }
-int find_pattern_asm(const uint8_t*, uint64_t, const uint8_t*, uint64_t, uint64_t*) { return 0; }
+int asm_pyre_mul_fp32(void* out, const void* a, const void* b, int count) {
+    if (!out || !a || !b || count <= 0) {
+        return -1;
+    }
+    float* dst = static_cast<float*>(out);
+    const float* lhs = static_cast<const float*>(a);
+    const float* rhs = static_cast<const float*>(b);
+    for (int i = 0; i < count; ++i) {
+        dst[i] = lhs[i] * rhs[i];
+    }
+    return 0;
+}
+int asm_pyre_softmax(void* outOrInout, const void* input, int count) {
+    if (!outOrInout || count <= 0) {
+        return -1;
+    }
+    const float* in = input ? static_cast<const float*>(input) : static_cast<const float*>(outOrInout);
+    float* out = static_cast<float*>(outOrInout);
+
+    float maxVal = in[0];
+    for (int i = 1; i < count; ++i) {
+        if (in[i] > maxVal) {
+            maxVal = in[i];
+        }
+    }
+
+    double sum = 0.0;
+    for (int i = 0; i < count; ++i) {
+        out[i] = std::exp(in[i] - maxVal);
+        sum += out[i];
+    }
+    if (sum <= 0.0) {
+        return -1;
+    }
+    const float inv = static_cast<float>(1.0 / sum);
+    for (int i = 0; i < count; ++i) {
+        out[i] *= inv;
+    }
+    return 0;
+}
+int find_pattern_asm(const uint8_t* data, uint64_t dataLen, const uint8_t* pattern, uint64_t patternLen, uint64_t* outOffset) {
+    if (!data || !pattern || !outOffset || dataLen == 0 || patternLen == 0 || patternLen > dataLen) {
+        return -1;
+    }
+    for (uint64_t i = 0; i + patternLen <= dataLen; ++i) {
+        if (std::memcmp(data + i, pattern, static_cast<size_t>(patternLen)) == 0) {
+            *outOffset = i;
+            return 1;
+        }
+    }
+    return 0;
+}
 int asm_hotpatch_restore_prologue(void* funcAddr) {
     RawrPatchEntry* entry = findPatchEntry(funcAddr);
     if (!entry || !entry->hasBackup || !funcAddr) {
@@ -582,21 +692,23 @@ int asm_snapshot_verify(void* funcAddr) {
 int asm_camellia256_auth_decrypt_file(const char* inputPath, const char* outputPath, const uint8_t* key, uint32_t keyLen) {
     return transformFileWithKey(inputPath, outputPath, key, keyLen);
 }
-int asm_camellia256_auth_encrypt_file(const char*, const char*, const uint8_t*, uint32_t) { return 0; }
+int asm_camellia256_auth_encrypt_file(const char* inputPath, const char* outputPath, const uint8_t* key, uint32_t keyLen) {
+    return transformFileWithKey(inputPath, outputPath, key, keyLen);
+}
 void RawrXD_Native_Log(const char*, const char*) {}
-int Enterprise_DevUnlock() { return 0; }
+int Enterprise_DevUnlock() { return enableMode(MODE_ENTERPRISE_UNLOCK); }
 
 // Batch 7: subsystem modes + Vulkan init
-int InjectMode() { return 0; }
-int DiffCovMode() { return 0; }
+int InjectMode() { return enableMode(MODE_INJECT); }
+int DiffCovMode() { return enableMode(MODE_DIFF_COV); }
 int SO_InitializeVulkan() {
     g_soState.vulkanReady = true;
     return 1;
 }
-int IntelPTMode() { return 0; }
-int AgentTraceMode() { return 0; }
-int DynTraceMode() { return 0; }
-int CovFusionMode() { return 0; }
+int IntelPTMode() { return enableMode(MODE_INTEL_PT); }
+int AgentTraceMode() { return enableMode(MODE_AGENT_TRACE); }
+int DynTraceMode() { return enableMode(MODE_DYN_TRACE); }
+int CovFusionMode() { return enableMode(MODE_COV_FUSION); }
 
 // Batch 8: analyzer + streaming API hooks
 intptr_t AD_OpenGGUFFile(const char* path) {
