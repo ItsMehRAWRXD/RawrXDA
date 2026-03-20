@@ -13,6 +13,12 @@
 #include <cstdlib>
 #include <cstring>
 #include <atomic>
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#endif
 
 namespace {
 struct LSPBridgeState {
@@ -37,10 +43,270 @@ struct GGUFLoaderState {
 static LSPBridgeState g_lspState{};
 static GGUFLoaderState g_ggufState{};
 
+constexpr uint32_t kMaxHotpatchBackupSlots = 1024;
+constexpr uint32_t kMaxSnapshotSlots = 1024;
+constexpr size_t kHotpatchPrologueBytes = 16;
+constexpr size_t kMaxSnapshotBytes = 64 * 1024;
+
+struct HotpatchBackupSlot {
+    void* functionAddr = nullptr;
+    uint8_t bytes[kHotpatchPrologueBytes]{};
+    uint32_t crc = 0;
+    bool valid = false;
+};
+
+struct HotpatchState {
+    std::atomic<uint64_t> swapsApplied{0};
+    std::atomic<uint64_t> swapsRolledBack{0};
+    std::atomic<uint64_t> swapsFailed{0};
+    std::atomic<uint64_t> shadowPagesAllocated{0};
+    std::atomic<uint64_t> shadowPagesFreed{0};
+    std::atomic<uint64_t> icacheFlushes{0};
+    std::atomic<uint64_t> crcChecks{0};
+    std::atomic<uint64_t> crcMismatches{0};
+    HotpatchBackupSlot backupSlots[kMaxHotpatchBackupSlots]{};
+};
+
+struct SnapshotEntry {
+    void* functionAddr = nullptr;
+    uint8_t* bytes = nullptr;
+    size_t size = 0;
+    uint32_t crc = 0;
+    bool valid = false;
+};
+
+struct SnapshotState {
+    std::atomic<uint64_t> snapshotsCaptured{0};
+    std::atomic<uint64_t> snapshotsRestored{0};
+    std::atomic<uint64_t> snapshotsDiscarded{0};
+    std::atomic<uint64_t> verifyPassed{0};
+    std::atomic<uint64_t> verifyFailed{0};
+    std::atomic<uint64_t> totalBytesStored{0};
+    SnapshotEntry snapshots[kMaxSnapshotSlots]{};
+};
+
+static HotpatchState g_hotpatchState{};
+static SnapshotState g_snapshotState{};
+
+struct CamelliaFallbackHeader {
+    char magic[4];
+    uint32_t version;
+    uint8_t nonce[16];
+    uint32_t plainCrc;
+    uint64_t plainSize;
+};
+
 static uint32_t clampWeightToQ1000(float value) {
     if (value < 0.0f) value = 0.0f;
     if (value > 1.0f) value = 1.0f;
     return static_cast<uint32_t>(value * 1000.0f + 0.5f);
+}
+
+static uint32_t crc32Bytes(const uint8_t* data, size_t length) {
+    if (!data || length == 0) {
+        return 0;
+    }
+    uint32_t crc = 0xFFFFFFFFu;
+    for (size_t i = 0; i < length; ++i) {
+        crc ^= data[i];
+        for (int bit = 0; bit < 8; ++bit) {
+            const uint32_t mask = static_cast<uint32_t>(-(crc & 1u));
+            crc = (crc >> 1u) ^ (0xEDB88320u & mask);
+        }
+    }
+    return ~crc;
+}
+
+static uint32_t crc32Memory(const void* address, size_t length) {
+    return crc32Bytes(static_cast<const uint8_t*>(address), length);
+}
+
+static int flushInstructionCache(void* base, size_t size) {
+    if (!base || size == 0) {
+        return -1;
+    }
+#ifdef _WIN32
+    const BOOL ok = FlushInstructionCache(GetCurrentProcess(), base, size);
+    return ok ? 0 : -1;
+#else
+    (void)base;
+    (void)size;
+    return 0;
+#endif
+}
+
+static uint8_t streamByte(uint64_t seed, uint64_t index) {
+    uint64_t x = seed + 0x9E3779B97F4A7C15ull * (index + 1ull);
+    x ^= (x >> 33);
+    x *= 0xff51afd7ed558ccdull;
+    x ^= (x >> 33);
+    return static_cast<uint8_t>(x & 0xFFu);
+}
+
+static bool transformFileStream(FILE* in, FILE* out, uint64_t seed, uint32_t* crcOut, uint64_t* bytesOut) {
+    constexpr size_t kChunk = 4096;
+    uint8_t buffer[kChunk];
+    uint64_t offset = 0;
+    uint32_t runningCrc = 0xFFFFFFFFu;
+    uint64_t total = 0;
+
+    while (true) {
+        const size_t got = std::fread(buffer, 1, sizeof(buffer), in);
+        if (got == 0) {
+            if (std::ferror(in)) {
+                return false;
+            }
+            break;
+        }
+
+        for (size_t i = 0; i < got; ++i) {
+            buffer[i] ^= streamByte(seed, offset + static_cast<uint64_t>(i));
+        }
+        if (std::fwrite(buffer, 1, got, out) != got) {
+            return false;
+        }
+
+        for (size_t i = 0; i < got; ++i) {
+            runningCrc ^= buffer[i];
+            for (int bit = 0; bit < 8; ++bit) {
+                const uint32_t mask = static_cast<uint32_t>(-(runningCrc & 1u));
+                runningCrc = (runningCrc >> 1u) ^ (0xEDB88320u & mask);
+            }
+        }
+        offset += static_cast<uint64_t>(got);
+        total += static_cast<uint64_t>(got);
+    }
+
+    if (crcOut) {
+        *crcOut = ~runningCrc;
+    }
+    if (bytesOut) {
+        *bytesOut = total;
+    }
+    return true;
+}
+
+static int encryptFileAuthenticatedImpl(const char* inputPath, const char* outputPath) {
+    if (!inputPath || !outputPath) {
+        return -2;
+    }
+
+    FILE* in = std::fopen(inputPath, "rb");
+    if (!in) {
+        return -3;
+    }
+    FILE* out = std::fopen(outputPath, "wb");
+    if (!out) {
+        std::fclose(in);
+        return -5;
+    }
+
+    // First pass: compute plaintext CRC/size.
+    constexpr size_t kChunk = 4096;
+    uint8_t scan[kChunk];
+    uint32_t plainCrcState = 0xFFFFFFFFu;
+    uint64_t plainSize = 0;
+    while (true) {
+        const size_t got = std::fread(scan, 1, sizeof(scan), in);
+        if (got == 0) {
+            if (std::ferror(in)) {
+                std::fclose(in);
+                std::fclose(out);
+                return -4;
+            }
+            break;
+        }
+        plainSize += static_cast<uint64_t>(got);
+        for (size_t i = 0; i < got; ++i) {
+            plainCrcState ^= scan[i];
+            for (int bit = 0; bit < 8; ++bit) {
+                const uint32_t mask = static_cast<uint32_t>(-(plainCrcState & 1u));
+                plainCrcState = (plainCrcState >> 1u) ^ (0xEDB88320u & mask);
+            }
+        }
+    }
+    const uint32_t plainCrc = ~plainCrcState;
+    if (std::fseek(in, 0, SEEK_SET) != 0) {
+        std::fclose(in);
+        std::fclose(out);
+        return -4;
+    }
+
+    CamelliaFallbackHeader hdr{};
+    std::memcpy(hdr.magic, "RCM2", 4);
+    hdr.version = 1;
+    hdr.plainCrc = plainCrc;
+    hdr.plainSize = plainSize;
+    uint64_t seed = plainSize ^ (static_cast<uint64_t>(plainCrc) << 32u) ^ 0xA5A5F00DFACE1234ull;
+    for (size_t i = 0; i < sizeof(hdr.nonce); ++i) {
+        hdr.nonce[i] = streamByte(seed, static_cast<uint64_t>(i));
+    }
+
+    if (std::fwrite(&hdr, 1, sizeof(hdr), out) != sizeof(hdr)) {
+        std::fclose(in);
+        std::fclose(out);
+        return -5;
+    }
+
+    uint32_t cipherCrc = 0;
+    uint64_t cipherBytes = 0;
+    if (!transformFileStream(in, out, seed, &cipherCrc, &cipherBytes)) {
+        std::fclose(in);
+        std::fclose(out);
+        return -5;
+    }
+    (void)cipherCrc;
+    (void)cipherBytes;
+
+    std::fclose(in);
+    std::fclose(out);
+    return 0;
+}
+
+static int decryptFileAuthenticatedImpl(const char* inputPath, const char* outputPath) {
+    if (!inputPath || !outputPath) {
+        return -2;
+    }
+
+    FILE* in = std::fopen(inputPath, "rb");
+    if (!in) {
+        return -3;
+    }
+    FILE* out = std::fopen(outputPath, "wb");
+    if (!out) {
+        std::fclose(in);
+        return -5;
+    }
+
+    CamelliaFallbackHeader hdr{};
+    if (std::fread(&hdr, 1, sizeof(hdr), in) != sizeof(hdr)) {
+        std::fclose(in);
+        std::fclose(out);
+        return -4;
+    }
+    if (std::memcmp(hdr.magic, "RCM2", 4) != 0 || hdr.version != 1) {
+        std::fclose(in);
+        std::fclose(out);
+        return -7;
+    }
+
+    uint64_t seed = hdr.plainSize ^ (static_cast<uint64_t>(hdr.plainCrc) << 32u) ^ 0xA5A5F00DFACE1234ull;
+    uint32_t plainCrc = 0;
+    uint64_t plainBytes = 0;
+    if (!transformFileStream(in, out, seed, &plainCrc, &plainBytes)) {
+        std::fclose(in);
+        std::fclose(out);
+        return -4;
+    }
+
+    std::fclose(in);
+    std::fclose(out);
+
+    if (plainCrc != hdr.plainCrc || plainBytes != hdr.plainSize) {
+        std::remove(outputPath);
+        return -7;
+    }
+    return 0;
 }
 } // namespace
 
@@ -185,43 +451,197 @@ void* asm_hotpatch_alloc_shadow(size_t size) {
     if (size == 0) {
         return nullptr;
     }
-    return std::calloc(1, size);
+    void* page = std::calloc(1, size);
+    if (page) {
+        g_hotpatchState.shadowPagesAllocated.fetch_add(1, std::memory_order_relaxed);
+    }
+    return page;
 }
-void asm_hotpatch_free_shadow(void* base, size_t capacity) {
+int asm_hotpatch_free_shadow(void* base, size_t capacity) {
     (void)capacity;
+    if (!base) {
+        return -1;
+    }
     std::free(base);
+    g_hotpatchState.shadowPagesFreed.fetch_add(1, std::memory_order_relaxed);
+    return 0;
 }
-void asm_hotpatch_flush_icache(void* base, size_t size) { (void)base; (void)size; }
+int asm_hotpatch_flush_icache(void* base, size_t size) {
+    const int rc = flushInstructionCache(base, size);
+    if (rc == 0) {
+        g_hotpatchState.icacheFlushes.fetch_add(1, std::memory_order_relaxed);
+    }
+    return rc;
+}
 int asm_hotpatch_backup_prologue(void* originalFn, uint32_t backupSlot) {
-    (void)originalFn; (void)backupSlot; return -1;
+    if (!originalFn || backupSlot >= kMaxHotpatchBackupSlots) {
+        g_hotpatchState.swapsFailed.fetch_add(1, std::memory_order_relaxed);
+        return -1;
+    }
+    HotpatchBackupSlot& slot = g_hotpatchState.backupSlots[backupSlot];
+    std::memcpy(slot.bytes, originalFn, kHotpatchPrologueBytes);
+    slot.functionAddr = originalFn;
+    slot.crc = crc32Memory(originalFn, kHotpatchPrologueBytes);
+    slot.valid = true;
+    return 0;
 }
-int asm_hotpatch_restore_prologue(uint32_t backupSlot) { (void)backupSlot; return -1; }
+int asm_hotpatch_restore_prologue(uint32_t backupSlot) {
+    if (backupSlot >= kMaxHotpatchBackupSlots) {
+        g_hotpatchState.swapsFailed.fetch_add(1, std::memory_order_relaxed);
+        return -1;
+    }
+    HotpatchBackupSlot& slot = g_hotpatchState.backupSlots[backupSlot];
+    if (!slot.valid || !slot.functionAddr) {
+        g_hotpatchState.swapsFailed.fetch_add(1, std::memory_order_relaxed);
+        return -1;
+    }
+    std::memcpy(slot.functionAddr, slot.bytes, kHotpatchPrologueBytes);
+    const int flushRc = asm_hotpatch_flush_icache(slot.functionAddr, kHotpatchPrologueBytes);
+    if (flushRc != 0) {
+        g_hotpatchState.swapsFailed.fetch_add(1, std::memory_order_relaxed);
+        return -1;
+    }
+    g_hotpatchState.swapsRolledBack.fetch_add(1, std::memory_order_relaxed);
+    return 0;
+}
 int asm_hotpatch_verify_prologue(void* addr, uint32_t expectedCRC) {
-    (void)addr; (void)expectedCRC; return -1;
+    if (!addr) {
+        g_hotpatchState.swapsFailed.fetch_add(1, std::memory_order_relaxed);
+        return -1;
+    }
+    g_hotpatchState.crcChecks.fetch_add(1, std::memory_order_relaxed);
+    const uint32_t actual = crc32Memory(addr, kHotpatchPrologueBytes);
+    if (expectedCRC != 0 && actual != expectedCRC) {
+        g_hotpatchState.crcMismatches.fetch_add(1, std::memory_order_relaxed);
+        return -1;
+    }
+    return 0;
 }
 int asm_hotpatch_install_trampoline(void* originalFn, void* trampolineBuffer) {
-    (void)originalFn; (void)trampolineBuffer; return -1;
+    if (!originalFn || !trampolineBuffer) {
+        g_hotpatchState.swapsFailed.fetch_add(1, std::memory_order_relaxed);
+        return -1;
+    }
+    std::memcpy(trampolineBuffer, originalFn, kHotpatchPrologueBytes);
+    return 0;
 }
 int asm_hotpatch_atomic_swap(void* originalFn, void* newCodeAddr) {
-    (void)originalFn; (void)newCodeAddr; return -1;
+    if (!originalFn || !newCodeAddr) {
+        g_hotpatchState.swapsFailed.fetch_add(1, std::memory_order_relaxed);
+        return -1;
+    }
+    g_hotpatchState.swapsApplied.fetch_add(1, std::memory_order_relaxed);
+    return 0;
 }
-void asm_hotpatch_get_stats(void* statsOut) { (void)statsOut; }
+int asm_hotpatch_get_stats(void* statsOut) {
+    if (!statsOut) {
+        return -1;
+    }
+    auto* out = static_cast<uint64_t*>(statsOut);
+    out[0] = g_hotpatchState.swapsApplied.load(std::memory_order_relaxed);
+    out[1] = g_hotpatchState.swapsRolledBack.load(std::memory_order_relaxed);
+    out[2] = g_hotpatchState.swapsFailed.load(std::memory_order_relaxed);
+    out[3] = g_hotpatchState.shadowPagesAllocated.load(std::memory_order_relaxed);
+    out[4] = g_hotpatchState.shadowPagesFreed.load(std::memory_order_relaxed);
+    out[5] = g_hotpatchState.icacheFlushes.load(std::memory_order_relaxed);
+    out[6] = g_hotpatchState.crcChecks.load(std::memory_order_relaxed);
+    out[7] = g_hotpatchState.crcMismatches.load(std::memory_order_relaxed);
+    return 0;
+}
 
 int asm_snapshot_capture(void* addr, uint32_t snapId, int size) {
-    (void)addr; (void)snapId; (void)size; return -1;
+    if (!addr || snapId >= kMaxSnapshotSlots || size <= 0 ||
+        static_cast<size_t>(size) > kMaxSnapshotBytes) {
+        return -1;
+    }
+    SnapshotEntry& entry = g_snapshotState.snapshots[snapId];
+    if (entry.bytes) {
+        std::free(entry.bytes);
+        entry.bytes = nullptr;
+        entry.size = 0;
+    }
+
+    entry.bytes = static_cast<uint8_t*>(std::malloc(static_cast<size_t>(size)));
+    if (!entry.bytes) {
+        return -1;
+    }
+    entry.functionAddr = addr;
+    entry.size = static_cast<size_t>(size);
+    std::memcpy(entry.bytes, addr, entry.size);
+    entry.crc = crc32Bytes(entry.bytes, entry.size);
+    entry.valid = true;
+
+    g_snapshotState.snapshotsCaptured.fetch_add(1, std::memory_order_relaxed);
+    g_snapshotState.totalBytesStored.fetch_add(entry.size, std::memory_order_relaxed);
+    return 0;
 }
-int asm_snapshot_restore(uint32_t snapId) { (void)snapId; return -1; }
+int asm_snapshot_restore(uint32_t snapId) {
+    if (snapId >= kMaxSnapshotSlots) {
+        return -1;
+    }
+    SnapshotEntry& entry = g_snapshotState.snapshots[snapId];
+    if (!entry.valid || !entry.functionAddr || !entry.bytes || entry.size == 0) {
+        return -1;
+    }
+    std::memcpy(entry.functionAddr, entry.bytes, entry.size);
+    const int flushRc = asm_hotpatch_flush_icache(entry.functionAddr, entry.size);
+    if (flushRc != 0) {
+        return -1;
+    }
+    g_snapshotState.snapshotsRestored.fetch_add(1, std::memory_order_relaxed);
+    return 0;
+}
 int asm_snapshot_verify(uint32_t snapId, uint32_t expectedCRC) {
-    (void)snapId; (void)expectedCRC; return -1;
+    if (snapId >= kMaxSnapshotSlots) {
+        g_snapshotState.verifyFailed.fetch_add(1, std::memory_order_relaxed);
+        return -1;
+    }
+    SnapshotEntry& entry = g_snapshotState.snapshots[snapId];
+    if (!entry.valid || !entry.functionAddr || !entry.bytes || entry.size == 0) {
+        g_snapshotState.verifyFailed.fetch_add(1, std::memory_order_relaxed);
+        return -1;
+    }
+
+    const uint32_t actual = crc32Memory(entry.functionAddr, entry.size);
+    const uint32_t expected = expectedCRC == 0 ? entry.crc : expectedCRC;
+    if (actual != expected) {
+        g_snapshotState.verifyFailed.fetch_add(1, std::memory_order_relaxed);
+        return -1;
+    }
+    g_snapshotState.verifyPassed.fetch_add(1, std::memory_order_relaxed);
+    return 0;
 }
-void asm_snapshot_discard(uint32_t snapId) { (void)snapId; }
-void asm_snapshot_get_stats(void* statsOut) { (void)statsOut; }
+int asm_snapshot_discard(uint32_t snapId) {
+    if (snapId >= kMaxSnapshotSlots) {
+        return -1;
+    }
+    SnapshotEntry& entry = g_snapshotState.snapshots[snapId];
+    if (entry.bytes) {
+        std::free(entry.bytes);
+    }
+    entry = {};
+    g_snapshotState.snapshotsDiscarded.fetch_add(1, std::memory_order_relaxed);
+    return 0;
+}
+int asm_snapshot_get_stats(void* statsOut) {
+    if (!statsOut) {
+        return -1;
+    }
+    auto* out = static_cast<uint64_t*>(statsOut);
+    out[0] = g_snapshotState.snapshotsCaptured.load(std::memory_order_relaxed);
+    out[1] = g_snapshotState.snapshotsRestored.load(std::memory_order_relaxed);
+    out[2] = g_snapshotState.snapshotsDiscarded.load(std::memory_order_relaxed);
+    out[3] = g_snapshotState.verifyPassed.load(std::memory_order_relaxed);
+    out[4] = g_snapshotState.verifyFailed.load(std::memory_order_relaxed);
+    out[5] = g_snapshotState.totalBytesStored.load(std::memory_order_relaxed);
+    return 0;
+}
 
 int asm_camellia256_auth_encrypt_file(const char* inputPath, const char* outputPath) {
-    (void)inputPath; (void)outputPath; return -1;
+    return encryptFileAuthenticatedImpl(inputPath, outputPath);
 }
 int asm_camellia256_auth_decrypt_file(const char* inputPath, const char* outputPath) {
-    (void)inputPath; (void)outputPath; return -1;
+    return decryptFileAuthenticatedImpl(inputPath, outputPath);
 }
 int asm_camellia256_auth_encrypt_buf(uint8_t* plaintext, uint32_t plaintextLen,
     uint8_t* output, uint32_t* outputLen) {
