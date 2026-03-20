@@ -153,8 +153,11 @@ struct PerfSlotData {
 
 struct LspBridgeShimState {
     bool initialized = false;
+    bool synced = false;
     uint64_t weightBytes = 0;
     uint32_t weightCrc = 0;
+    uint32_t lastQueryCrc = 0;
+    uint64_t queryCount = 0;
 };
 
 struct GgufLoaderShimState {
@@ -163,6 +166,9 @@ struct GgufLoaderShimState {
     int configuredGpu = -1;
     uint32_t lastLookupCrc = 0;
     uint64_t lookupCount = 0;
+    uint32_t parseCrc = 0;
+    uint64_t parseCount = 0;
+    uint64_t parsedBytes = 0;
 };
 
 struct QuadbufShimState {
@@ -177,7 +183,17 @@ struct SpengineShimState {
     bool adaptiveMode = false;
     int quantLevel = 0;
     uint64_t rollbackCount = 0;
+    uint64_t appliedBytes = 0;
+    uint32_t optimizeProfileCrc = 0;
     std::unordered_map<std::string, uint32_t> modules{};
+};
+
+struct HwsynthShimState {
+    uint64_t estimateCalls = 0;
+    uint64_t predictCalls = 0;
+    uint64_t lastResourceScore = 0;
+    uint64_t lastLatencyUs = 0;
+    uint64_t lastThroughput = 0;
 };
 
 constexpr int kPerfSlotCount = 64;
@@ -190,6 +206,7 @@ static LspBridgeShimState g_lspBridgeState{};
 static GgufLoaderShimState g_ggufLoaderState{};
 static QuadbufShimState g_quadbufState{};
 static SpengineShimState g_spengineState{};
+static HwsynthShimState g_hwsynthState{};
 
 static int closeFileHandle(intptr_t handle) {
     if (handle <= 0) {
@@ -1496,25 +1513,193 @@ int asm_gguf_loader_close() {
     g_ggufLoaderState = {};
     return 0;
 }
-int asm_spengine_shutdown() { return 0; }
-int asm_lsp_bridge_get_stats(void*) { return 0; }
+int asm_spengine_shutdown() {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_spengineState = {};
+    return 0;
+}
+int asm_lsp_bridge_get_stats(void* outStats) {
+    if (!outStats) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    auto* out = static_cast<uint64_t*>(outStats);
+    out[0] = g_lspBridgeState.initialized ? 1 : 0;
+    out[1] = g_lspBridgeState.synced ? 1 : 0;
+    out[2] = g_lspBridgeState.weightBytes;
+    out[3] = static_cast<uint64_t>(g_lspBridgeState.weightCrc);
+    out[4] = g_lspBridgeState.queryCount;
+    out[5] = static_cast<uint64_t>(g_lspBridgeState.lastQueryCrc);
+    return 0;
+}
 
 // Batch 16: loader/apply/sync
-int asm_lsp_bridge_query(const char*) { return 0; }
-int asm_lsp_bridge_invalidate(const char*) { return 0; }
-int asm_quadbuf_get_stats(void*) { return 0; }
-int asm_gguf_loader_parse(const void*, uint64_t) { return 0; }
-int asm_spengine_apply(const void*, uint64_t) { return 0; }
-int asm_lsp_bridge_sync() { return 0; }
-int asm_spengine_quant_switch(int) { return 0; }
+int asm_lsp_bridge_query(const char* queryText) {
+    if (!queryText || queryText[0] == '\0') {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_lspBridgeState.initialized) {
+        return -1;
+    }
+    const size_t n = std::strlen(queryText);
+    g_lspBridgeState.lastQueryCrc = crc32Bytes(reinterpret_cast<const uint8_t*>(queryText), n);
+    g_lspBridgeState.queryCount += 1;
+    return static_cast<int>(g_lspBridgeState.lastQueryCrc & 0x7FFFFFFFu);
+}
+int asm_lsp_bridge_invalidate(const char* symbolName) {
+    if (!symbolName || symbolName[0] == '\0') {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_lspBridgeState.initialized) {
+        return -1;
+    }
+    const size_t n = std::strlen(symbolName);
+    const uint32_t crc = crc32Bytes(reinterpret_cast<const uint8_t*>(symbolName), n);
+    if (crc == g_lspBridgeState.lastQueryCrc) {
+        g_lspBridgeState.lastQueryCrc = 0;
+        return 1;
+    }
+    return 0;
+}
+int asm_quadbuf_get_stats(void* outStats) {
+    if (!outStats) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    auto* out = static_cast<uint64_t*>(outStats);
+    out[0] = static_cast<uint64_t>(g_quadbufState.flags);
+    out[1] = static_cast<uint64_t>(g_quadbufState.maxTokens);
+    out[2] = static_cast<uint64_t>(g_quadbufState.tokenStream.size());
+    out[3] = g_quadbufState.renderedFrames;
+    return 0;
+}
+int asm_gguf_loader_parse(const void* buffer, uint64_t payloadBytes) {
+    if (!buffer || payloadBytes == 0) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_ggufLoaderState.initialized) {
+        return -1;
+    }
+    const size_t crcWindow = static_cast<size_t>(std::min<uint64_t>(payloadBytes, 4096));
+    g_ggufLoaderState.parseCrc = crc32Bytes(static_cast<const uint8_t*>(buffer), crcWindow);
+    g_ggufLoaderState.parseCount += 1;
+    g_ggufLoaderState.parsedBytes += payloadBytes;
+    return 0;
+}
+int asm_spengine_apply(const void* patchBlob, uint64_t patchBytes) {
+    if (!patchBlob || patchBytes == 0) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_spengineState.initialized) {
+        return -1;
+    }
+    g_spengineState.appliedBytes += patchBytes;
+    return 0;
+}
+int asm_lsp_bridge_sync() {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_lspBridgeState.initialized) {
+        return -1;
+    }
+    g_lspBridgeState.synced = true;
+    return 0;
+}
+int asm_spengine_quant_switch(int targetLevel) {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_spengineState.initialized) {
+        return -1;
+    }
+    if (targetLevel < 0) {
+        targetLevel = 0;
+    }
+    if (targetLevel > 8) {
+        targetLevel = 8;
+    }
+    g_spengineState.adaptiveMode = false;
+    g_spengineState.quantLevel = targetLevel;
+    return g_spengineState.quantLevel;
+}
 
 // Batch 17: quadbuf/hwsynth utilities
-int asm_quadbuf_init(uint32_t) { return 0; }
-int asm_gguf_loader_get_stats(void*) { return 0; }
-int asm_spengine_cpu_optimize(const void*) { return 0; }
-int asm_hwsynth_est_resources(const void*, void*) { return 0; }
-int asm_hwsynth_predict_perf(const void*, void*) { return 0; }
-int asm_hwsynth_get_stats(void*) { return 0; }
+int asm_quadbuf_init(uint32_t capacity) {
+    if (capacity == 0) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_quadbufState = {};
+    g_quadbufState.maxTokens = capacity;
+    return 0;
+}
+int asm_gguf_loader_get_stats(void* outStats) {
+    if (!outStats) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    auto* out = static_cast<uint64_t*>(outStats);
+    out[0] = g_ggufLoaderState.initialized ? 1 : 0;
+    out[1] = g_ggufLoaderState.lookupCount;
+    out[2] = g_ggufLoaderState.parseCount;
+    out[3] = g_ggufLoaderState.parsedBytes;
+    out[4] = static_cast<uint64_t>(g_ggufLoaderState.parseCrc);
+    out[5] = static_cast<uint64_t>(g_ggufLoaderState.configuredGpu);
+    return 0;
+}
+int asm_spengine_cpu_optimize(const void* optimizeProfile) {
+    if (!optimizeProfile) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_spengineState.initialized) {
+        return -1;
+    }
+    g_spengineState.optimizeProfileCrc = crc32Bytes(static_cast<const uint8_t*>(optimizeProfile), 64);
+    return 0;
+}
+int asm_hwsynth_est_resources(const void* workloadSpec, void* outEstimate) {
+    if (!workloadSpec || !outEstimate) {
+        return -1;
+    }
+    const uint32_t score = crc32Bytes(static_cast<const uint8_t*>(workloadSpec), 64);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_hwsynthState.estimateCalls += 1;
+    g_hwsynthState.lastResourceScore = static_cast<uint64_t>(score % 10000u);
+    auto* out = static_cast<uint64_t*>(outEstimate);
+    out[0] = g_hwsynthState.lastResourceScore;
+    out[1] = 1 + (g_hwsynthState.lastResourceScore / 64u);
+    out[2] = 1 + (g_hwsynthState.lastResourceScore / 128u);
+    return 0;
+}
+int asm_hwsynth_predict_perf(const void* modelSpec, void* outPrediction) {
+    if (!modelSpec || !outPrediction) {
+        return -1;
+    }
+    const uint32_t score = crc32Bytes(static_cast<const uint8_t*>(modelSpec), 64);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_hwsynthState.predictCalls += 1;
+    g_hwsynthState.lastLatencyUs = 100 + (score % 5000u);
+    g_hwsynthState.lastThroughput = 10 + ((score / 7u) % 2000u);
+    auto* out = static_cast<uint64_t*>(outPrediction);
+    out[0] = g_hwsynthState.lastLatencyUs;
+    out[1] = g_hwsynthState.lastThroughput;
+    return 0;
+}
+int asm_hwsynth_get_stats(void* outStats) {
+    if (!outStats) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    auto* out = static_cast<uint64_t*>(outStats);
+    out[0] = g_hwsynthState.estimateCalls;
+    out[1] = g_hwsynthState.predictCalls;
+    out[2] = g_hwsynthState.lastResourceScore;
+    out[3] = g_hwsynthState.lastLatencyUs;
+    out[4] = g_hwsynthState.lastThroughput;
+    return 0;
+}
 int asm_hwsynth_gen_gemm_spec(const void*, void*) { return 0; }
 
 // Batch 18: hwsynth + mesh basics
