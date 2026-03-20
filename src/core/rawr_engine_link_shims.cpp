@@ -60,41 +60,41 @@ void RawrXD_Native_Log(const char*, const char*) {}
 int Enterprise_DevUnlock() { return 0; }
 
 // Batch 7: subsystem modes + Vulkan init
-int InjectMode() { return 0; }
-int DiffCovMode() { return 0; }
+void InjectMode(void) {}
+void DiffCovMode(void) {}
 int SO_InitializeVulkan() { return 0; }
-int IntelPTMode() { return 0; }
-int AgentTraceMode() { return 0; }
-int DynTraceMode() { return 0; }
-int CovFusionMode() { return 0; }
+void IntelPTMode(void) {}
+void AgentTraceMode(void) {}
+void DynTraceMode(void) {}
+void CovFusionMode(void) {}
 
 // Batch 8: subsystem API hooks
 int AD_ProcessGGUF(const char*, const char*) { return 0; }
 int SO_InitializeStreaming() { return 0; }
-int SideloadMode() { return 0; }
-int SO_CreateComputePipelines() { return 0; }
-int PersistenceMode() { return 0; }
-int SO_PrintStatistics() { return 0; }
-int SO_CreateMemoryArena() { return 0; }
+void SideloadMode(void) {}
+int SO_CreateComputePipelines(void*, uint64_t) { return 0; }
+void PersistenceMode(void) {}
+void SO_PrintStatistics(void) {}
+void* SO_CreateMemoryArena(uint64_t) { return nullptr; }
 
 // Batch 9: subsystem pipeline + tooling modes
-int SO_LoadExecFile(const char*, const char*) { return 0; }
-int BasicBlockCovMode() { return 0; }
-int SO_PrintMetrics() { return 0; }
-int SO_StartDEFLATEThreads() { return 0; }
-int StubGenMode() { return 0; }
-int TraceEngineMode() { return 0; }
-int CompileMode() { return 0; }
+int SO_LoadExecFile(const char*) { return 0; }
+void BasicBlockCovMode(void) {}
+void SO_PrintMetrics(void) {}
+int SO_StartDEFLATEThreads(uint32_t) { return 0; }
+void StubGenMode(void) {}
+void TraceEngineMode(void) {}
+void CompileMode(void) {}
 
 // Batch 10: fuzzing/prefetch/thread pool + modes
-int GapFuzzMode() { return 0; }
-int EncryptMode() { return 0; }
+void GapFuzzMode(void) {}
+void EncryptMode(void) {}
 int SO_InitializePrefetchQueue() { return 0; }
 int SO_CreateThreadPool() { return 0; }
-int EntropyMode() { return 0; }
-int AgenticMode() { return 0; }
-int UACBypassMode() { return 0; }
-int AVScanMode() { return 0; }
+void EntropyMode(void) {}
+void AgenticMode(void) {}
+void UACBypassMode(void) {}
+void AVScanMode(void) {}
 
 // Batch 11: perf/watchdog
 int asm_perf_begin(const char*) { return 0; }
