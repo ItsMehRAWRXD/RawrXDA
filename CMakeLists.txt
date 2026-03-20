@@ -3233,7 +3233,6 @@ if(WIN32)
         src/core/model_loader_fallbacks.cpp
         src/core/rawrxd_native_log_fallback.cpp
         src/llm_adapter/ggufrunner_link_fallbacks.cpp
-        src/agentic/masm_agent_failure_fallback.cpp
     )
 
     list(APPEND WIN32IDE_SOURCES
