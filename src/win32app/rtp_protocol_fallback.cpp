@@ -13,7 +13,23 @@ static uint64_t g_rtp_telemetry[8] = {0};
 static uint32_t g_rtp_stream_state = 0;
 
 void RTP_InitDescriptorTable(void) {
+    std::memset(g_rtp_descriptors, 0, sizeof(g_rtp_descriptors));
     g_rtp_descriptor_count = 0;
+    static const char kFallbackToolName[] = "fallback.dispatch";
+    static const char kFallbackToolDesc[] = "Fallback RTP dispatch handler";
+    RTPDescriptor& entry = g_rtp_descriptors[0];
+    entry.tool_id = 1;
+    entry.legacy_tool_id = 1;
+    entry.name_hash = 0xFA11BACCULL;
+    entry.name = kFallbackToolName;
+    entry.description = kFallbackToolDesc;
+    entry.param_count = 1;
+    g_rtp_descriptor_count = 1;
+
+    g_rtp_context_blob[0] = '{';
+    g_rtp_context_blob_size = 1;
+    std::memset(g_rtp_telemetry, 0, sizeof(g_rtp_telemetry));
+    g_rtp_stream_state = 0;
 }
 
 const RTPDescriptor* RTP_GetDescriptorTable(void) {
@@ -21,6 +37,7 @@ const RTPDescriptor* RTP_GetDescriptorTable(void) {
 }
 
 uint32_t RTP_GetDescriptorCount(void) {
+    g_rtp_telemetry[7] += 1;
     return g_rtp_descriptor_count;
 }
 
@@ -28,6 +45,18 @@ int32_t RTP_ValidatePacket(const void* packet, uint32_t packet_bytes) {
     if (packet == nullptr || packet_bytes < RTP_PACKET_HEADER_SIZE) {
         return -1;
     }
+    const RTPPacketHeader* hdr = static_cast<const RTPPacketHeader*>(packet);
+    if (hdr->magic != RTP_PACKET_MAGIC || hdr->version != RTP_PACKET_VERSION) {
+        return -1;
+    }
+    if (hdr->header_size < RTP_PACKET_HEADER_SIZE || hdr->header_size > packet_bytes) {
+        return -1;
+    }
+    const uint64_t totalBytes = static_cast<uint64_t>(hdr->header_size) + static_cast<uint64_t>(hdr->payload_size);
+    if (totalBytes > packet_bytes) {
+        return -1;
+    }
+    g_rtp_telemetry[0] += 1;
     return 0;
 }
 
