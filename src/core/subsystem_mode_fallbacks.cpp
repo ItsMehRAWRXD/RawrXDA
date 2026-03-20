@@ -1,18 +1,40 @@
-extern "C" void InjectMode(void) {}
-extern "C" void DiffCovMode(void) {}
-extern "C" void SO_InitializeVulkan(void) {}
-extern "C" void IntelPTMode(void) {}
-extern "C" void AgentTraceMode(void) {}
-extern "C" void DynTraceMode(void) {}
-extern "C" void CovFusionMode(void) {}
-extern "C" void AD_ProcessGGUF(void) {}
-extern "C" void SO_InitializeStreaming(void) {}
-extern "C" void SideloadMode(void) {}
-extern "C" void SO_CreateComputePipelines(void) {}
-extern "C" void PersistenceMode(void) {}
-extern "C" void SO_PrintStatistics(void) {}
-extern "C" void SO_CreateMemoryArena(void) {}
-extern "C" void SO_LoadExecFile(void) {}
+#include <atomic>
+#include <cstdint>
+
+namespace {
+std::atomic<uint64_t> g_modeCallCount{0};
+std::atomic<uint32_t> g_lastModeHash{0};
+
+inline uint32_t fnv1a32(const char* text) {
+    uint32_t hash = 2166136261u;
+    for (const unsigned char* p = reinterpret_cast<const unsigned char*>(text); *p != '\0'; ++p) {
+        hash ^= static_cast<uint32_t>(*p);
+        hash *= 16777619u;
+    }
+    return hash;
+}
+
+inline void noteModeCall(const char* modeName) {
+    g_modeCallCount.fetch_add(1, std::memory_order_relaxed);
+    g_lastModeHash.store(fnv1a32(modeName), std::memory_order_relaxed);
+}
+} // namespace
+
+extern "C" void InjectMode(void) { noteModeCall("InjectMode"); }
+extern "C" void DiffCovMode(void) { noteModeCall("DiffCovMode"); }
+extern "C" void SO_InitializeVulkan(void) { noteModeCall("SO_InitializeVulkan"); }
+extern "C" void IntelPTMode(void) { noteModeCall("IntelPTMode"); }
+extern "C" void AgentTraceMode(void) { noteModeCall("AgentTraceMode"); }
+extern "C" void DynTraceMode(void) { noteModeCall("DynTraceMode"); }
+extern "C" void CovFusionMode(void) { noteModeCall("CovFusionMode"); }
+extern "C" void AD_ProcessGGUF(void) { noteModeCall("AD_ProcessGGUF"); }
+extern "C" void SO_InitializeStreaming(void) { noteModeCall("SO_InitializeStreaming"); }
+extern "C" void SideloadMode(void) { noteModeCall("SideloadMode"); }
+extern "C" void SO_CreateComputePipelines(void) { noteModeCall("SO_CreateComputePipelines"); }
+extern "C" void PersistenceMode(void) { noteModeCall("PersistenceMode"); }
+extern "C" void SO_PrintStatistics(void) { noteModeCall("SO_PrintStatistics"); }
+extern "C" void SO_CreateMemoryArena(void) { noteModeCall("SO_CreateMemoryArena"); }
+extern "C" void SO_LoadExecFile(void) { noteModeCall("SO_LoadExecFile"); }
 extern "C" void BasicBlockCovMode(void) {}
 extern "C" void SO_PrintMetrics(void) {}
 extern "C" void SO_StartDEFLATEThreads(void) {}
