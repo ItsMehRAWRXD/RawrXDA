@@ -3086,7 +3086,6 @@ if(WIN32)
             src/core/native_debugger_engine.cpp
             src/core/native_debugger_symbols.cpp
             src/win32app/Win32IDE_NativeDebugPanel.cpp
-            src/core/shadow_page_detour.cpp
             src/agent/agentic_deep_thinking_engine.cpp
             src/agent/quantum_autonomous_todo_system.cpp
             src/agent/quantum_multi_model_agent_cycling.cpp
