@@ -42,7 +42,21 @@ struct SubsystemFallbackState {
     uint64_t speciatorCrossovers = 0;
     uint64_t speciatorEvaluations = 0;
     uint64_t speciatorCompetitions = 0;
+    uint64_t speciatorMigrations = 0;
+    uint64_t speciatorSelections = 0;
     uint64_t speciatorScore = 0;
+    bool neuralInitialized = false;
+    uint64_t neuralClassifyOps = 0;
+    uint64_t neuralHapticOps = 0;
+    uint64_t neuralEncodeOps = 0;
+    uint64_t neuralAcquireOps = 0;
+    uint64_t neuralAdaptOps = 0;
+    uint64_t neuralFftOps = 0;
+    uint64_t neuralCalibrateOps = 0;
+    uint64_t neuralDetectOps = 0;
+    uint64_t neuralPhospheneOps = 0;
+    uint64_t neuralCspOps = 0;
+    uint64_t neuralScore = 0;
 };
 
 static SubsystemFallbackState g_subsystemState{};
@@ -462,22 +476,125 @@ extern "C" void asm_speciator_compete(void) {
     g_subsystemState.speciatorScore =
         (g_subsystemState.speciatorScore + g_subsystemState.speciatorCompetitions * 15u) % 100000u;
 }
-extern "C" void asm_speciator_migrate(void) {}
-extern "C" void asm_speciator_init(void) {}
-extern "C" void asm_speciator_select(void) {}
+extern "C" void asm_speciator_migrate(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.speciatorInitialized = true;
+    g_subsystemState.speciatorMigrations += 1;
+    g_subsystemState.speciatorSpecies += (g_subsystemState.speciatorMigrations % 2u);
+    g_subsystemState.speciatorScore =
+        (g_subsystemState.speciatorScore + g_subsystemState.speciatorMigrations * 19u) % 100000u;
+}
+extern "C" void asm_speciator_init(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.speciatorInitialized = true;
+    g_subsystemState.speciatorGeneration = 1;
+    g_subsystemState.speciatorSpecies = 4;
+    g_subsystemState.speciatorMutations = 0;
+    g_subsystemState.speciatorVariants = 0;
+    g_subsystemState.speciatorCrossovers = 0;
+    g_subsystemState.speciatorEvaluations = 0;
+    g_subsystemState.speciatorCompetitions = 0;
+    g_subsystemState.speciatorMigrations = 0;
+    g_subsystemState.speciatorSelections = 0;
+    g_subsystemState.speciatorScore = 0;
+}
+extern "C" void asm_speciator_select(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.speciatorInitialized = true;
+    g_subsystemState.speciatorSelections += 1;
+    g_subsystemState.speciatorScore =
+        (g_subsystemState.speciatorScore + g_subsystemState.speciatorSelections * 11u) % 100000u;
+}
 
-extern "C" void asm_neural_classify_intent(void) {}
-extern "C" void asm_neural_haptic_pulse(void) {}
-extern "C" void asm_neural_encode_command(void) {}
-extern "C" void asm_neural_acquire_eeg(void) {}
-extern "C" void asm_neural_adapt(void) {}
-extern "C" void asm_neural_fft_decompose(void) {}
-extern "C" void asm_neural_init(void) {}
-extern "C" void asm_neural_calibrate(void) {}
-extern "C" void asm_neural_detect_event(void) {}
-extern "C" void asm_neural_gen_phosphene(void) {}
-extern "C" void asm_neural_extract_csp(void) {}
-extern "C" void asm_neural_shutdown(void) {}
+extern "C" void asm_neural_classify_intent(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.neuralInitialized = true;
+    g_subsystemState.neuralClassifyOps += 1;
+    g_subsystemState.neuralScore =
+        (g_subsystemState.neuralScore + g_subsystemState.neuralClassifyOps * 7u) % 100000u;
+}
+extern "C" void asm_neural_haptic_pulse(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.neuralInitialized = true;
+    g_subsystemState.neuralHapticOps += 1;
+    g_subsystemState.neuralScore =
+        (g_subsystemState.neuralScore + g_subsystemState.neuralHapticOps * 5u) % 100000u;
+}
+extern "C" void asm_neural_encode_command(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.neuralInitialized = true;
+    g_subsystemState.neuralEncodeOps += 1;
+    g_subsystemState.neuralScore =
+        (g_subsystemState.neuralScore + g_subsystemState.neuralEncodeOps * 13u) % 100000u;
+}
+extern "C" void asm_neural_acquire_eeg(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.neuralInitialized = true;
+    g_subsystemState.neuralAcquireOps += 1;
+    g_subsystemState.neuralScore =
+        (g_subsystemState.neuralScore + g_subsystemState.neuralAcquireOps * 3u) % 100000u;
+}
+extern "C" void asm_neural_adapt(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.neuralInitialized = true;
+    g_subsystemState.neuralAdaptOps += 1;
+    g_subsystemState.neuralScore =
+        (g_subsystemState.neuralScore + g_subsystemState.neuralAdaptOps * 17u) % 100000u;
+}
+extern "C" void asm_neural_fft_decompose(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.neuralInitialized = true;
+    g_subsystemState.neuralFftOps += 1;
+    g_subsystemState.neuralScore =
+        (g_subsystemState.neuralScore + g_subsystemState.neuralFftOps * 23u) % 100000u;
+}
+extern "C" void asm_neural_init(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.neuralInitialized = true;
+    g_subsystemState.neuralClassifyOps = 0;
+    g_subsystemState.neuralHapticOps = 0;
+    g_subsystemState.neuralEncodeOps = 0;
+    g_subsystemState.neuralAcquireOps = 0;
+    g_subsystemState.neuralAdaptOps = 0;
+    g_subsystemState.neuralFftOps = 0;
+    g_subsystemState.neuralCalibrateOps = 0;
+    g_subsystemState.neuralDetectOps = 0;
+    g_subsystemState.neuralPhospheneOps = 0;
+    g_subsystemState.neuralCspOps = 0;
+    g_subsystemState.neuralScore = 0;
+}
+extern "C" void asm_neural_calibrate(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.neuralInitialized = true;
+    g_subsystemState.neuralCalibrateOps += 1;
+    g_subsystemState.neuralScore =
+        (g_subsystemState.neuralScore + g_subsystemState.neuralCalibrateOps * 29u) % 100000u;
+}
+extern "C" void asm_neural_detect_event(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.neuralInitialized = true;
+    g_subsystemState.neuralDetectOps += 1;
+    g_subsystemState.neuralScore =
+        (g_subsystemState.neuralScore + g_subsystemState.neuralDetectOps * 31u) % 100000u;
+}
+extern "C" void asm_neural_gen_phosphene(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.neuralInitialized = true;
+    g_subsystemState.neuralPhospheneOps += 1;
+    g_subsystemState.neuralScore =
+        (g_subsystemState.neuralScore + g_subsystemState.neuralPhospheneOps * 37u) % 100000u;
+}
+extern "C" void asm_neural_extract_csp(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.neuralInitialized = true;
+    g_subsystemState.neuralCspOps += 1;
+    g_subsystemState.neuralScore =
+        (g_subsystemState.neuralScore + g_subsystemState.neuralCspOps * 41u) % 100000u;
+}
+extern "C" void asm_neural_shutdown(void) {
+    std::lock_guard<std::mutex> lock(g_subsystemMutex);
+    g_subsystemState.neuralInitialized = false;
+}
 extern "C" void asm_neural_get_stats(void) {}
 
 extern "C" void asm_hwsynth_est_resources(void) {}
