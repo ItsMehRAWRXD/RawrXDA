@@ -26,6 +26,10 @@
 
 #pragma comment(lib, "bcrypt.lib")
 
+#ifndef BCRYPT_ECDH_ALGORITHM
+#define BCRYPT_ECDH_ALGORITHM BCRYPT_ECDH_P256_ALGORITHM
+#endif
+
 // ============================================================================
 // KYBER REFERENCE IMPLEMENTATION — Simplified NTT-based polynomial arithmetic
 // ============================================================================

@@ -328,7 +328,7 @@ void BeaconStorage::SaveCheckpoint(BeaconStage stage, HRESULT result, const std:
     
     // Write to file
     std::wstring filePath = GetBeaconFilePath();
-    std::wofstream file(filePath, std::ios::app);
+    std::wofstream file(filePath.c_str(), std::ios::app);
     if (file.is_open()) {
         file << L"[" << std::chrono::system_clock::now().time_since_epoch().count() << L"] "
              << L"Stage=" << static_cast<int>(stage) << L" Result=0x" << std::hex << result << L"\n";
@@ -487,7 +487,7 @@ bool VerifyDigestFileCreated(const std::wstring& sourceFile) {
 std::string ReadDigestFile(const std::wstring& sourceFile) {
     std::wstring digestPath = sourceFile + L".digest";
     
-    std::wifstream file(digestPath);
+    std::wifstream file(digestPath.c_str());
     if (!file.is_open()) {
         return "";
     }

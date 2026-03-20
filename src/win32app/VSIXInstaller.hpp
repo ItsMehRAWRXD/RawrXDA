@@ -6,6 +6,7 @@
 #include <fstream>
 #include <algorithm>
 #include <cstdint>
+#include <cstring>
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN

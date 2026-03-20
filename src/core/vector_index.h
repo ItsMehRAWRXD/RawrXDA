@@ -112,7 +112,8 @@ public:
         bool useCosineDistance = true;   // false = L2 distance
     };
 
-    explicit HNSWIndex(const Config& config = {});
+    HNSWIndex() : HNSWIndex(Config{}) {}
+    explicit HNSWIndex(const Config& config);
     ~HNSWIndex();
 
     // Non-copyable

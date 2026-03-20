@@ -2,9 +2,14 @@
 #ifndef __d3d10effect_h__
 #define __d3d10effect_h__
 
+#if defined(__MINGW32__) || defined(__MINGW64__)
+// On MinGW toolchains, use the platform-provided D3D10 effect declarations.
+#include_next <d3d10effect.h>
+#else
+
 #include <d3d11.h>
 #include <d3d11shader.h>
-#include <Unknwn.h>
+#include <unknwn.h>
 #include <objbase.h>
 #include <vector>
 #include <string>
@@ -213,4 +218,5 @@ inline HRESULT D3DX10CreateEffectFromMemory(
     return S_OK;
 }
 
+#endif // __MINGW32__ || __MINGW64__
 #endif // __d3d10effect_h__

@@ -45,27 +45,42 @@ static bool TryGetPEImageBaseAndSize(const std::string& path, uint64_t& imageBas
         return false;
     }
 
+    LARGE_INTEGER liSize = {};
     bool ok = false;
-    __try {
-        if (*(const uint16_t*)(base + 0x00) != 0x5A4D) __leave; // MZ
-        uint32_t e_lfanew = *(const uint32_t*)(base + 0x3C);
-        const uint8_t* nt = base + e_lfanew;
-        if (*(const uint32_t*)(nt + 0x00) != 0x00004550) __leave; // PE\0\0
-        uint16_t optSize = *(const uint16_t*)(nt + 0x14);
-        const uint8_t* opt = nt + 0x18;
-        if (optSize < 0x40) __leave;
-        uint16_t magic = *(const uint16_t*)(opt + 0x00);
-        if (magic == 0x20B) {
-            imageBase = *(const uint64_t*)(opt + 0x18);
-            sizeOfImage = *(const uint32_t*)(opt + 0x38);
-            ok = (imageBase != 0 && sizeOfImage != 0);
-        } else if (magic == 0x10B) {
-            imageBase = *(const uint32_t*)(opt + 0x1C);
-            sizeOfImage = *(const uint32_t*)(opt + 0x38);
-            ok = (imageBase != 0 && sizeOfImage != 0);
+    if (GetFileSizeEx(hFile, &liSize) && liSize.QuadPart > 0) {
+        const size_t fileSize = static_cast<size_t>(liSize.QuadPart);
+        auto inRange = [fileSize](size_t off, size_t need) -> bool {
+            return off <= fileSize && need <= (fileSize - off);
+        };
+        auto rd16 = [base](size_t off) -> uint16_t {
+            return *reinterpret_cast<const uint16_t*>(base + off);
+        };
+        auto rd32 = [base](size_t off) -> uint32_t {
+            return *reinterpret_cast<const uint32_t*>(base + off);
+        };
+        auto rd64 = [base](size_t off) -> uint64_t {
+            return *reinterpret_cast<const uint64_t*>(base + off);
+        };
+
+        if (inRange(0x00, 2) && rd16(0x00) == 0x5A4D && inRange(0x3C, 4)) { // MZ
+            const uint32_t e_lfanew = rd32(0x3C);
+            if (inRange(e_lfanew, 0x18) && rd32(e_lfanew + 0x00) == 0x00004550) { // PE\0\0
+                const uint16_t optSize = rd16(e_lfanew + 0x14);
+                const size_t opt = static_cast<size_t>(e_lfanew) + 0x18;
+                if (optSize >= 0x40 && inRange(opt, optSize)) {
+                    const uint16_t magic = rd16(opt + 0x00);
+                    if (magic == 0x20B && inRange(opt + 0x38, 4) && inRange(opt + 0x18, 8)) {
+                        imageBase = rd64(opt + 0x18);
+                        sizeOfImage = rd32(opt + 0x38);
+                        ok = (imageBase != 0 && sizeOfImage != 0);
+                    } else if (magic == 0x10B && inRange(opt + 0x38, 4) && inRange(opt + 0x1C, 4)) {
+                        imageBase = rd32(opt + 0x1C);
+                        sizeOfImage = rd32(opt + 0x38);
+                        ok = (imageBase != 0 && sizeOfImage != 0);
+                    }
+                }
+            }
         }
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        ok = false;
     }
 
     UnmapViewOfFile(base);
@@ -92,19 +107,32 @@ static uint64_t TryGetPEEntryPointRVA(const std::string& path) {
     }
 
     uint64_t epRva = 0;
-    __try {
-        if (*(const uint16_t*)(base + 0x00) != 0x5A4D) __leave; // MZ
-        uint32_t e_lfanew = *(const uint32_t*)(base + 0x3C);
-        const uint8_t* nt = base + e_lfanew;
-        if (*(const uint32_t*)(nt + 0x00) != 0x00004550) __leave; // PE\0\0
-        uint16_t optSize = *(const uint16_t*)(nt + 0x14);
-        const uint8_t* opt = nt + 0x18;
-        if (optSize < 0x18) __leave;
-        uint16_t magic = *(const uint16_t*)(opt + 0x00);
-        if (magic != 0x10B && magic != 0x20B) __leave;
-        epRva = *(const uint32_t*)(opt + 0x10); // AddressOfEntryPoint
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        epRva = 0;
+    LARGE_INTEGER liSize = {};
+    if (GetFileSizeEx(hFile, &liSize) && liSize.QuadPart > 0) {
+        const size_t fileSize = static_cast<size_t>(liSize.QuadPart);
+        auto inRange = [fileSize](size_t off, size_t need) -> bool {
+            return off <= fileSize && need <= (fileSize - off);
+        };
+        auto rd16 = [base](size_t off) -> uint16_t {
+            return *reinterpret_cast<const uint16_t*>(base + off);
+        };
+        auto rd32 = [base](size_t off) -> uint32_t {
+            return *reinterpret_cast<const uint32_t*>(base + off);
+        };
+
+        if (inRange(0x00, 2) && rd16(0x00) == 0x5A4D && inRange(0x3C, 4)) { // MZ
+            const uint32_t e_lfanew = rd32(0x3C);
+            if (inRange(e_lfanew, 0x18) && rd32(e_lfanew + 0x00) == 0x00004550) { // PE\0\0
+                const uint16_t optSize = rd16(e_lfanew + 0x14);
+                const size_t opt = static_cast<size_t>(e_lfanew) + 0x18;
+                if (optSize >= 0x18 && inRange(opt, optSize)) {
+                    const uint16_t magic = rd16(opt + 0x00);
+                    if ((magic == 0x10B || magic == 0x20B) && inRange(opt + 0x10, 4)) {
+                        epRva = rd32(opt + 0x10); // AddressOfEntryPoint
+                    }
+                }
+            }
+        }
     }
 
     UnmapViewOfFile(base);
