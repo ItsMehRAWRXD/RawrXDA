@@ -253,6 +253,23 @@ struct NeuralShimState {
     uint64_t sampleRateHz = 256;
 };
 
+struct OmegaShimState {
+    bool initialized = false;
+    uint64_t generatedArtifacts = 0;
+    uint64_t steps = 0;
+    uint64_t plans = 0;
+    uint64_t evolutions = 0;
+    uint64_t tests = 0;
+    uint64_t testsPassed = 0;
+    uint64_t architectureChoices = 0;
+    uint64_t agentsSpawned = 0;
+    uint64_t monitorEvents = 0;
+    uint64_t deployOps = 0;
+    uint64_t pipelineRuns = 0;
+    uint64_t lastScore = 0;
+    uint64_t lastStateCrc = 0;
+};
+
 constexpr int kPerfSlotCount = 64;
 static std::atomic<int> g_nextPerfSpanId{1};
 static std::unordered_map<int, PerfSpan> g_perfSpans;
@@ -267,6 +284,7 @@ static HwsynthShimState g_hwsynthState{};
 static MeshShimState g_meshState{};
 static SpeciatorShimState g_speciatorState{};
 static NeuralShimState g_neuralState{};
+static OmegaShimState g_omegaState{};
 
 static int closeFileHandle(intptr_t handle) {
     if (handle <= 0) {
@@ -2416,25 +2434,235 @@ int asm_neural_extract_csp(const void* eegBlob, uint32_t sampleCount, void* outF
     out[3] = static_cast<float>(sampleCount);
     return 0;
 }
-int asm_neural_shutdown() { return 0; }
-int asm_neural_get_stats(void*) { return 0; }
-int asm_omega_implement_generate(const void*, void*) { return 0; }
-int asm_omega_agent_step(const void*, void*) { return 0; }
-int asm_omega_shutdown() { return 0; }
+int asm_neural_shutdown() {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_neuralState = {};
+    return 0;
+}
+int asm_neural_get_stats(void* outStats) {
+    if (!outStats) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    auto* out = static_cast<uint64_t*>(outStats);
+    out[0] = g_neuralState.initialized ? 1 : 0;
+    out[1] = g_neuralState.classifyCalls;
+    out[2] = g_neuralState.encodeCalls;
+    out[3] = g_neuralState.adaptCalls;
+    out[4] = g_neuralState.fftCalls;
+    out[5] = g_neuralState.calibrations;
+    out[6] = g_neuralState.eventsDetected;
+    out[7] = g_neuralState.hapticPulses;
+    out[8] = g_neuralState.eegSamplesCaptured;
+    out[9] = g_neuralState.lastIntent;
+    out[10] = g_neuralState.lastCommandCrc;
+    out[11] = g_neuralState.lastEventScore;
+    out[12] = g_neuralState.sampleRateHz;
+    return 0;
+}
+int asm_omega_implement_generate(const void* requirementBlob, void* outArtifact) {
+    if (!requirementBlob || !outArtifact) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(requirementBlob), 128);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_omegaState.initialized) {
+        return -1;
+    }
+    g_omegaState.generatedArtifacts += 1;
+    g_omegaState.lastStateCrc = crc;
+    auto* out = static_cast<uint64_t*>(outArtifact);
+    out[0] = g_omegaState.generatedArtifacts;
+    out[1] = crc;
+    return 0;
+}
+int asm_omega_agent_step(const void* stateBlob, void* outState) {
+    if (!stateBlob || !outState) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(stateBlob), 64);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_omegaState.initialized) {
+        return -1;
+    }
+    g_omegaState.steps += 1;
+    g_omegaState.lastStateCrc = crc;
+    auto* out = static_cast<uint64_t*>(outState);
+    out[0] = g_omegaState.steps;
+    out[1] = crc;
+    return 0;
+}
+int asm_omega_shutdown() {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_omegaState = {};
+    return 0;
+}
 
 // Batch 25: omega orchestrator continued
-int asm_omega_plan_decompose(const void*, void*) { return 0; }
-int asm_omega_evolve_improve(const void*, void*) { return 0; }
-int asm_omega_init(const void*) { return 0; }
-int asm_omega_get_stats(void*) { return 0; }
-int asm_omega_verify_test(const void*, void*) { return 0; }
-int asm_omega_architect_select(const void*, void*) { return 0; }
-int asm_omega_agent_spawn(const void*, void*) { return 0; }
+int asm_omega_plan_decompose(const void* goalBlob, void* outPlan) {
+    if (!goalBlob || !outPlan) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(goalBlob), 128);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_omegaState.initialized) {
+        return -1;
+    }
+    g_omegaState.plans += 1;
+    auto* out = static_cast<uint64_t*>(outPlan);
+    out[0] = g_omegaState.plans;
+    out[1] = 1u + (crc % 64u);
+    out[2] = crc;
+    return 0;
+}
+int asm_omega_evolve_improve(const void* baselineBlob, void* outCandidate) {
+    if (!baselineBlob || !outCandidate) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(baselineBlob), 128);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_omegaState.initialized) {
+        return -1;
+    }
+    g_omegaState.evolutions += 1;
+    g_omegaState.lastScore = 1000u + (crc % 9000u);
+    auto* out = static_cast<uint64_t*>(outCandidate);
+    out[0] = g_omegaState.lastScore;
+    out[1] = g_omegaState.evolutions;
+    return 0;
+}
+int asm_omega_init(const void* initBlob) {
+    if (!initBlob) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(initBlob), 64);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_omegaState = {};
+    g_omegaState.initialized = true;
+    g_omegaState.lastStateCrc = crc;
+    return 0;
+}
+int asm_omega_get_stats(void* outStats) {
+    if (!outStats) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    auto* out = static_cast<uint64_t*>(outStats);
+    out[0] = g_omegaState.initialized ? 1 : 0;
+    out[1] = g_omegaState.generatedArtifacts;
+    out[2] = g_omegaState.steps;
+    out[3] = g_omegaState.plans;
+    out[4] = g_omegaState.evolutions;
+    out[5] = g_omegaState.tests;
+    out[6] = g_omegaState.testsPassed;
+    out[7] = g_omegaState.architectureChoices;
+    out[8] = g_omegaState.agentsSpawned;
+    out[9] = g_omegaState.monitorEvents;
+    out[10] = g_omegaState.deployOps;
+    out[11] = g_omegaState.pipelineRuns;
+    out[12] = g_omegaState.lastScore;
+    out[13] = g_omegaState.lastStateCrc;
+    return 0;
+}
+int asm_omega_verify_test(const void* candidateBlob, void* outResult) {
+    if (!candidateBlob || !outResult) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(candidateBlob), 128);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_omegaState.initialized) {
+        return -1;
+    }
+    g_omegaState.tests += 1;
+    const bool pass = (crc & 1u) == 0u;
+    if (pass) {
+        g_omegaState.testsPassed += 1;
+    }
+    auto* out = static_cast<uint64_t*>(outResult);
+    out[0] = pass ? 1u : 0u;
+    out[1] = g_omegaState.testsPassed;
+    return pass ? 1 : 0;
+}
+int asm_omega_architect_select(const void* candidateSet, void* outChoice) {
+    if (!candidateSet || !outChoice) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(candidateSet), 128);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_omegaState.initialized) {
+        return -1;
+    }
+    g_omegaState.architectureChoices += 1;
+    const uint64_t choice = crc % 32u;
+    auto* out = static_cast<uint64_t*>(outChoice);
+    out[0] = choice;
+    out[1] = g_omegaState.architectureChoices;
+    return 0;
+}
+int asm_omega_agent_spawn(const void* agentSpec, void* outAgentHandle) {
+    if (!agentSpec || !outAgentHandle) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(agentSpec), 64);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_omegaState.initialized) {
+        return -1;
+    }
+    g_omegaState.agentsSpawned += 1;
+    auto* out = static_cast<uint64_t*>(outAgentHandle);
+    out[0] = g_omegaState.agentsSpawned;
+    out[1] = crc;
+    return 0;
+}
 
 // Batch 26: omega pipeline + entry stub
-int asm_omega_observe_monitor(const void*, void*) { return 0; }
-int asm_omega_deploy_distribute(const void*, void*) { return 0; }
-int asm_omega_execute_pipeline(const void*, void*) { return 0; }
+int asm_omega_observe_monitor(const void* telemetryBlob, void* outSummary) {
+    if (!telemetryBlob || !outSummary) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(telemetryBlob), 128);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_omegaState.initialized) {
+        return -1;
+    }
+    g_omegaState.monitorEvents += 1;
+    auto* out = static_cast<uint64_t*>(outSummary);
+    out[0] = g_omegaState.monitorEvents;
+    out[1] = crc % 1000u;
+    return 0;
+}
+int asm_omega_deploy_distribute(const void* artifactBlob, void* outDeployment) {
+    if (!artifactBlob || !outDeployment) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(artifactBlob), 128);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_omegaState.initialized) {
+        return -1;
+    }
+    g_omegaState.deployOps += 1;
+    auto* out = static_cast<uint64_t*>(outDeployment);
+    out[0] = g_omegaState.deployOps;
+    out[1] = 1u + (crc % 8u); // deployment target count
+    return 0;
+}
+int asm_omega_execute_pipeline(const void* planBlob, void* outExecStats) {
+    if (!planBlob || !outExecStats) {
+        return -1;
+    }
+    const uint32_t crc = crc32Bytes(static_cast<const uint8_t*>(planBlob), 128);
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    if (!g_omegaState.initialized) {
+        return -1;
+    }
+    g_omegaState.pipelineRuns += 1;
+    g_omegaState.lastScore = (g_omegaState.lastScore + (crc % 1000u)) % 100000u;
+    auto* out = static_cast<uint64_t*>(outExecStats);
+    out[0] = g_omegaState.pipelineRuns;
+    out[1] = g_omegaState.lastScore;
+    out[2] = 1u + (crc % 16u); // stage count
+    return 0;
+}
 int asm_omega_ingest_requirement(const void*, void*) { return 0; }
 int asm_omega_world_model_update(const void*, void*) { return 0; }
 int asm_perf_get_slot_count_v2() { return 0; }
