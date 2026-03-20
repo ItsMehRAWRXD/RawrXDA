@@ -3106,6 +3106,18 @@ if(WIN32)
             src/win32app/VulkanRenderer.cpp
             src/win32app/OSExplorerInterceptor.cpp
         )
+        # Non-MSVC link-closure fallbacks for debugger/minimap emitter symbols.
+        list(APPEND WIN32IDE_SOURCES
+            src/ui/debugger_emitter_nonmsvc.cpp
+            src/win32app/Win32IDE_NativeDebugPanel_nonmsvc.cpp
+            src/core/vision_encoder_nonmsvc.cpp
+            src/core/native_debugger_engine_nonmsvc.cpp
+            src/core/win32_kernel_bridge_nomasm.cpp
+            src/core/enterprise_camellia_nonmsvc.cpp
+            src/core/self_repair_loop_nonmsvc.cpp
+            src/core/native_speed_kernels_nonmsvc.cpp
+            src/core/multi_response_engine.cpp
+        )
     endif()
      
     # =========================================================================
@@ -3513,7 +3525,7 @@ if(WIN32)
         RAWRXD_USE_DEDICATED_CODELENS=1
         RAWRXD_USE_DEDICATED_INLAY=1
         RAWRXD_USE_DEDICATED_HOVER=1
-        RAWRXD_USE_DEDICATED_MINIMAP=1
+        $<$<BOOL:${MSVC}>:RAWRXD_USE_DEDICATED_MINIMAP=1>
     )
 
     # =========================================================================
@@ -3646,7 +3658,7 @@ if(WIN32)
         d2d1 dwrite d3d11 dcomp d3dcompiler dwmapi
         dxgi
         advapi32 crypt32 bcrypt wintrust
-        opengl32 wininet
+        opengl32 wininet gdiplus iphlpapi sapi
         pdh
         ${MASM_OBJECTS}
         ${_WIN32IDE_LINKED_MONOLITHIC_OBJS}
