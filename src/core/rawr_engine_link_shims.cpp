@@ -36,28 +36,28 @@ int Scheduler_WaitForTask(uint64_t, uint32_t, void*, uint32_t) { return 0; }
 int asm_pyre_mul_fp32(void*, const void*, const void*, int) { return 0; }
 int asm_pyre_softmax(void*, const void*, int) { return 0; }
 const void* find_pattern_asm(const void*, size_t, const void*, size_t) { return nullptr; }
-int asm_hotpatch_restore_prologue(void*) { return 0; }
-int asm_hotpatch_backup_prologue(void*) { return 0; }
-int asm_hotpatch_flush_icache(void*, uint64_t) { return 0; }
+int asm_hotpatch_restore_prologue(uint32_t) { return 0; }
+int asm_hotpatch_backup_prologue(void*, uint32_t) { return 0; }
+int asm_hotpatch_flush_icache(void*, size_t) { return 0; }
 void* asm_hotpatch_alloc_shadow(uint64_t) { return nullptr; }
 
 // Batch 5: hotpatch/snapshot stats + prologue/trampoline/free
-int asm_hotpatch_verify_prologue(void*) { return 0; }
+int asm_hotpatch_verify_prologue(void*, uint32_t) { return 0; }
 int asm_hotpatch_install_trampoline(void*, void*) { return 0; }
-int asm_hotpatch_free_shadow(void*) { return 0; }
-int asm_snapshot_capture(void*) { return 0; }
+int asm_hotpatch_free_shadow(void*, size_t) { return 0; }
+int asm_snapshot_capture(void*, uint32_t, size_t) { return 0; }
 int asm_hotpatch_atomic_swap(void*, void*) { return 0; }
 int asm_hotpatch_get_stats(void*) { return 0; }
 int asm_snapshot_get_stats(void*) { return 0; }
 
 // Batch 6: snapshot/camellia/log/enterprise
-int asm_snapshot_restore(void*) { return 0; }
-int asm_snapshot_discard(void*) { return 0; }
-int asm_snapshot_verify(void*) { return 0; }
-int asm_camellia256_auth_decrypt_file(const char*, const char*, const uint8_t*, uint32_t) { return 0; }
-int asm_camellia256_auth_encrypt_file(const char*, const char*, const uint8_t*, uint32_t) { return 0; }
+int asm_snapshot_restore(uint32_t) { return 0; }
+int asm_snapshot_discard(uint32_t) { return 0; }
+int asm_snapshot_verify(uint32_t, uint32_t) { return 0; }
+int asm_camellia256_auth_decrypt_file(const char*, const char*) { return 0; }
+int asm_camellia256_auth_encrypt_file(const char*, const char*) { return 0; }
 void RawrXD_Native_Log(const char*, const char*) {}
-int Enterprise_DevUnlock() { return 0; }
+int64_t Enterprise_DevUnlock() { return 0; }
 
 // Batch 7: subsystem modes + Vulkan init
 void InjectMode(void) {}
@@ -97,25 +97,25 @@ void UACBypassMode(void) {}
 void AVScanMode(void) {}
 
 // Batch 11: perf/watchdog
-int asm_perf_begin(const char*) { return 0; }
-int asm_perf_end(int) { return 0; }
+uint64_t asm_perf_begin(uint32_t) { return 0; }
+uint64_t asm_perf_end(uint32_t, uint64_t) { return 0; }
 int asm_watchdog_init() { return 0; }
 int asm_watchdog_verify() { return 0; }
-int asm_watchdog_get_status() { return 0; }
-int asm_watchdog_get_baseline() { return 0; }
+int asm_watchdog_get_status(void*) { return 0; }
+int asm_watchdog_get_baseline(uint8_t*) { return 0; }
 int asm_watchdog_shutdown() { return 0; }
 
 // Batch 12: perf counters + camellia buffer ops
 int asm_perf_init() { return 0; }
-int asm_perf_read_slot(int, uint64_t*) { return 0; }
-int asm_perf_reset_slot(int) { return 0; }
-int asm_perf_get_slot_count() { return 0; }
-uintptr_t asm_perf_get_table_base() { return 0; }
-int asm_camellia256_auth_encrypt_buf(const uint8_t*, uint64_t, uint8_t*, uint64_t) { return 0; }
-int asm_camellia256_auth_decrypt_buf(const uint8_t*, uint64_t, uint8_t*, uint64_t) { return 0; }
+int asm_perf_read_slot(uint32_t, void*) { return 0; }
+int asm_perf_reset_slot(uint32_t) { return 0; }
+uint32_t asm_perf_get_slot_count() { return 0; }
+void* asm_perf_get_table_base() { return nullptr; }
+int asm_camellia256_auth_encrypt_buf(uint8_t*, uint32_t, uint8_t*, uint32_t*) { return 0; }
+int asm_camellia256_auth_decrypt_buf(const uint8_t*, uint32_t, uint8_t*, uint32_t*) { return 0; }
 
 // Batch 13: MASM bridges (gguf/lsp/quadbuf/spengine)
-int asm_apply_memory_patch(void*, uint64_t, const void*) { return 0; }
+int asm_apply_memory_patch(void*, size_t, const void*) { return 0; }
 int asm_lsp_bridge_set_weights(const void*, uint64_t) { return 0; }
 int asm_gguf_loader_init(const void*) { return 0; }
 int asm_quadbuf_push_token(const void*, uint32_t) { return 0; }
