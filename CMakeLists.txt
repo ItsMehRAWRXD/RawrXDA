@@ -2472,13 +2472,10 @@ if(WIN32)
         src/win32app/main_win32.cpp
         src/win32app/HeadlessIDE.cpp
         src/agent/quantum_agent_orchestrator.cpp
-        src/inference/gpu_dispatch_gate_win32ide_fallback.cpp
-        src/inference/gguf_d3d12_bridge_link_fallback.cpp
         src/ui/RawrXD_MainLoop.cpp
         src/ui/webview2_bridge.cpp
         src/ui/debugger_core.cpp
         src/ui/agentic_bridge.cpp
-        src/win32app/v280_link_fallbacks.cpp
         src/win32app/RawrXD-Win32IDE.rc
         src/bridge/Win32SwarmBridge.cpp
         src/bridge/SwarmIATRegistration.cpp
@@ -2565,7 +2562,6 @@ if(WIN32)
         src/win32app/Win32IDE_SubAgent.cpp
         src/win32app/Win32IDE_AgentHistory.cpp
         src/win32app/Win32IDE_AgentPanel.cpp
-        src/win32app/rtp_protocol_fallback.cpp
         src/win32app/Win32IDE_DiskRecovery.cpp
         src/win32app/Win32TerminalManager.cpp
         src/win32app/TransparentRenderer.cpp
@@ -2863,7 +2859,6 @@ if(WIN32)
         src/core/ssot_handlers_ext_isolated.cpp
         src/core/ssot_validation.cpp
         src/core/win32_ide_link_stubs.cpp
-        src/core/win32ide_asm_fallback.cpp
 
         # Unified Command Dispatch — Zero-drift SSOT dispatch (replaces manual registration)
         src/core/unified_command_dispatch.cpp
@@ -2910,7 +2905,6 @@ if(WIN32)
         src/core/reasoning_profile.cpp
         src/core/deterministic_swarm.cpp
         src/core/reasoning_schema_versioning.cpp
-        src/core/cot_fallback_system.cpp
         src/core/input_guard_slicer.cpp
         src/core/safe_refactor_engine.cpp
         src/agentic_agent_coordinator.cpp
@@ -3203,17 +3197,6 @@ if(WIN32)
             src/core/vector_index.cpp
             src/core/agentic_task_graph.cpp
             src/core/vision_encoder.cpp
-            src/core/model_loader_fallbacks.cpp
-            src/core/subsystem_mode_fallbacks.cpp
-            src/core/rawrxd_native_log_fallback.cpp
-            src/llm_adapter/ggufrunner_link_fallbacks.cpp
-            src/inference/gpu_dispatch_gate_win32ide_fallback.cpp
-            src/inference/gguf_d3d12_bridge_link_fallback.cpp
-            src/core/win32ide_asm_fallback.cpp
-            src/win32app/v280_link_fallbacks.cpp
-            src/win32app/collab_cursor_fallbacks.cpp
-            src/win32app/rtp_protocol_fallback.cpp
-            src/core/cot_fallback_system.cpp
             src/core/masm_stress_harness.cpp
             src/core/convergence_stress_harness.cpp
             src/core/enterprise_stress_tests.cpp
@@ -3325,17 +3308,11 @@ if(WIN32)
         list(REMOVE_ITEM WIN32IDE_SOURCES
             src/core/ssot_missing_handlers_provider.cpp
             src/core/win32_ide_link_stubs.cpp
-            src/core/win32ide_asm_fallback.cpp
-            src/core/cot_fallback_system.cpp
             src/core/subsystem_mode_fallbacks.cpp
             src/core/model_loader_fallbacks.cpp
             src/core/rawrxd_native_log_fallback.cpp
             src/llm_adapter/ggufrunner_link_fallbacks.cpp
-            src/inference/gpu_dispatch_gate_win32ide_fallback.cpp
-            src/inference/gguf_d3d12_bridge_link_fallback.cpp
-            src/win32app/v280_link_fallbacks.cpp
             src/win32app/collab_cursor_fallbacks.cpp
-            src/win32app/rtp_protocol_fallback.cpp
         )
         list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/.*_fallback[^/]*\\.cpp$")
         list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/.*_link_shims?\\.cpp$")
@@ -3365,14 +3342,24 @@ if(WIN32)
     # Re-wire providers needed by this target's link graph.
     list(APPEND WIN32IDE_SOURCES src/core/local_parity_bridge.cpp)
     if(NOT RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
-        list(APPEND WIN32IDE_SOURCES
-            src/core/subsystem_mode_fallbacks.cpp
-            src/core/model_loader_fallbacks.cpp
-            src/core/rawrxd_native_log_fallback.cpp
-            src/llm_adapter/ggufrunner_link_fallbacks.cpp
-            src/win32app/collab_cursor_fallbacks.cpp
-            src/modules/quickjs_node_shims.cpp
-        )
+        if(MSVC)
+            list(APPEND WIN32IDE_SOURCES
+                src/core/win32ide_asm_fallback.cpp
+                src/core/cot_fallback_system.cpp
+                src/core/subsystem_mode_fallbacks.cpp
+                src/core/model_loader_fallbacks.cpp
+                src/core/rawrxd_native_log_fallback.cpp
+                src/llm_adapter/ggufrunner_link_fallbacks.cpp
+                src/inference/gpu_dispatch_gate_win32ide_fallback.cpp
+                src/inference/gguf_d3d12_bridge_link_fallback.cpp
+                src/win32app/v280_link_fallbacks.cpp
+                src/win32app/collab_cursor_fallbacks.cpp
+                src/win32app/rtp_protocol_fallback.cpp
+                src/modules/quickjs_node_shims.cpp
+            )
+        else()
+            message(STATUS "[Win32IDE] Non-MSVC fallback append skipped")
+        endif()
     else()
         message(STATUS "[ProductionLane] Win32IDE: fallback provider append skipped")
     endif()
