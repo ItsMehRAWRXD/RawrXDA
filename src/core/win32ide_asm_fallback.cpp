@@ -34,6 +34,7 @@ std::unordered_map<void*, bool> g_ggufLoaderParsedByCtx;
 std::unordered_map<void*, uint64_t> g_ggufLoaderGpuThresholdByCtx;
 std::unordered_map<void*, uint64_t> g_ggufLookupCountByCtx;
 std::unordered_map<uint32_t, void*> g_hotpatchBackupSlotMap;
+std::unordered_map<void*, void*> g_hotpatchTrampolineByFn;
 std::unordered_map<uint32_t, uint32_t> g_snapshotCrcById;
 uint64_t g_snapshotCaptureCount = 0;
 uint64_t g_snapshotRestoreCount = 0;
@@ -246,7 +247,12 @@ int asm_hotpatch_backup_prologue(void* originalFn, uint32_t backupSlot) {
 }
 int asm_hotpatch_restore_prologue(uint32_t backupSlot) {
     std::lock_guard<std::mutex> lock(g_fallbackMutex);
-    return g_hotpatchBackupSlotMap.count(backupSlot) > 0 ? 0 : -1;
+    auto it = g_hotpatchBackupSlotMap.find(backupSlot);
+    if (it == g_hotpatchBackupSlotMap.end()) {
+        return -1;
+    }
+    g_hotpatchBackupSlotMap.erase(it);
+    return 0;
 }
 int asm_hotpatch_verify_prologue(void* addr, uint32_t expectedCRC) {
     if (addr == nullptr) {
@@ -256,10 +262,20 @@ int asm_hotpatch_verify_prologue(void* addr, uint32_t expectedCRC) {
     return (expectedCRC == 0u || observed == expectedCRC) ? 0 : -1;
 }
 int asm_hotpatch_install_trampoline(void* originalFn, void* trampolineBuffer) {
-    return (originalFn != nullptr && trampolineBuffer != nullptr) ? 0 : -1;
+    if (originalFn == nullptr || trampolineBuffer == nullptr) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    g_hotpatchTrampolineByFn[originalFn] = trampolineBuffer;
+    return 0;
 }
 int asm_hotpatch_atomic_swap(void* originalFn, void* newCodeAddr) {
-    return (originalFn != nullptr && newCodeAddr != nullptr) ? 0 : -1;
+    if (originalFn == nullptr || newCodeAddr == nullptr) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    g_hotpatchTrampolineByFn[originalFn] = newCodeAddr;
+    return 0;
 }
 void asm_hotpatch_get_stats(void* statsOut) {
     if (statsOut == nullptr) {
@@ -270,7 +286,7 @@ void asm_hotpatch_get_stats(void* statsOut) {
     out[0] = g_hotpatchAllocCount;
     out[1] = g_hotpatchFreeCount;
     out[2] = g_hotpatchFlushCount;
-    out[3] = static_cast<uint64_t>(g_hotpatchBackupSlotMap.size());
+    out[3] = static_cast<uint64_t>(g_hotpatchBackupSlotMap.size() + g_hotpatchTrampolineByFn.size());
 }
 
 int asm_snapshot_capture(void* addr, uint32_t snapId, int size) {
