@@ -100,22 +100,22 @@ extern "C" void asm_speciator_speciate(void) { noteModeCall("asm_speciator_speci
 extern "C" void asm_speciator_evaluate(void) { noteModeCall("asm_speciator_evaluate"); }
 extern "C" void asm_speciator_compete(void) { noteModeCall("asm_speciator_compete"); }
 extern "C" void asm_speciator_migrate(void) { noteModeCall("asm_speciator_migrate"); }
-extern "C" void asm_speciator_init(void) {}
-extern "C" void asm_speciator_select(void) {}
+extern "C" void asm_speciator_init(void) { noteModeCall("asm_speciator_init"); }
+extern "C" void asm_speciator_select(void) { noteModeCall("asm_speciator_select"); }
 
-extern "C" void asm_neural_classify_intent(void) {}
-extern "C" void asm_neural_haptic_pulse(void) {}
-extern "C" void asm_neural_encode_command(void) {}
-extern "C" void asm_neural_acquire_eeg(void) {}
-extern "C" void asm_neural_adapt(void) {}
-extern "C" void asm_neural_fft_decompose(void) {}
-extern "C" void asm_neural_init(void) {}
-extern "C" void asm_neural_calibrate(void) {}
-extern "C" void asm_neural_detect_event(void) {}
-extern "C" void asm_neural_gen_phosphene(void) {}
-extern "C" void asm_neural_extract_csp(void) {}
-extern "C" void asm_neural_shutdown(void) {}
-extern "C" void asm_neural_get_stats(void) {}
+extern "C" void asm_neural_classify_intent(void) { noteModeCall("asm_neural_classify_intent"); }
+extern "C" void asm_neural_haptic_pulse(void) { noteModeCall("asm_neural_haptic_pulse"); }
+extern "C" void asm_neural_encode_command(void) { noteModeCall("asm_neural_encode_command"); }
+extern "C" void asm_neural_acquire_eeg(void) { noteModeCall("asm_neural_acquire_eeg"); }
+extern "C" void asm_neural_adapt(void) { noteModeCall("asm_neural_adapt"); }
+extern "C" void asm_neural_fft_decompose(void) { noteModeCall("asm_neural_fft_decompose"); }
+extern "C" void asm_neural_init(void) { noteModeCall("asm_neural_init"); }
+extern "C" void asm_neural_calibrate(void) { noteModeCall("asm_neural_calibrate"); }
+extern "C" void asm_neural_detect_event(void) { noteModeCall("asm_neural_detect_event"); }
+extern "C" void asm_neural_gen_phosphene(void) { noteModeCall("asm_neural_gen_phosphene"); }
+extern "C" void asm_neural_extract_csp(void) { noteModeCall("asm_neural_extract_csp"); }
+extern "C" void asm_neural_shutdown(void) { noteModeCall("asm_neural_shutdown"); }
+extern "C" void asm_neural_get_stats(void) { noteModeCall("asm_neural_get_stats"); }
 
 extern "C" void asm_hwsynth_est_resources(void) {}
 extern "C" void asm_hwsynth_predict_perf(void) {}
