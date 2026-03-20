@@ -30,6 +30,18 @@ SelfHealReport AgentSelfHealingOrchestrator::runHealingCycle() {
 AgentSelfHealingOrchestrator::AgentSelfHealingOrchestrator() = default;
 AgentSelfHealingOrchestrator::~AgentSelfHealingOrchestrator() = default;
 
-extern "C" void RawrXD_Disasm_HandleReq() {}
-extern "C" void RawrXD_Symbol_HandleReq() {}
-extern "C" void RawrXD_Module_HandleReq() {}
+namespace {
+static size_t g_disasmRequests = 0;
+static size_t g_symbolRequests = 0;
+static size_t g_moduleRequests = 0;
+}
+
+extern "C" void RawrXD_Disasm_HandleReq() {
+    g_disasmRequests += 1;
+}
+extern "C" void RawrXD_Symbol_HandleReq() {
+    g_symbolRequests += 1;
+}
+extern "C" void RawrXD_Module_HandleReq() {
+    g_moduleRequests += 1;
+}
