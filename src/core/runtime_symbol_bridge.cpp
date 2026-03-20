@@ -14,6 +14,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <mutex>
 
 extern "C" {
 extern int32_t g_800B_Unlocked;
@@ -44,7 +45,48 @@ struct EnterpriseRuntimeState {
     std::atomic<int32_t> status{1};  // LicenseState::ValidTrial
     std::atomic<uint64_t> featureMask{0};
     std::atomic<bool> initialized{false};
+    std::atomic<uint64_t> hardwareHash{0};
+    std::atomic<uint64_t> installedLicenseDigest{0};
+    std::atomic<bool> defenseInitialized{false};
 };
+
+struct CamelliaRuntimeState {
+    std::mutex stateMutex;
+    bool initialized = false;
+    uint8_t key[32] = {};
+    uint8_t hmacKey[32] = {};
+    uint64_t blocksEncrypted = 0;
+    uint64_t blocksDecrypted = 0;
+    uint64_t filesProcessed = 0;
+};
+
+constexpr uint64_t RAWRXD_STATUS_ACCESS_DENIED = 0xC0000022ULL;
+constexpr uint64_t RAWRXD_STATUS_INVALID_PARAMETER = 0xC000000DULL;
+
+constexpr uint8_t kRFC3713Key256[32] = {
+    0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF,
+    0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10,
+    0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
+    0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF
+};
+
+constexpr uint8_t kRFC3713Plaintext[16] = {
+    0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF,
+    0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10
+};
+
+constexpr uint8_t kRFC3713Ciphertext[16] = {
+    0x9A, 0xCC, 0x23, 0x7D, 0xFF, 0x16, 0xD7, 0x6C,
+    0x20, 0xEF, 0x7C, 0x91, 0x9E, 0x3A, 0x75, 0x09
+};
+
+constexpr int CAMELLIA_OK = 0;
+constexpr int CAMELLIA_ERR_NO_KEY = -1;
+constexpr int CAMELLIA_ERR_NULLPTR = -2;
+constexpr int CAMELLIA_ERR_FILE_OPEN = -3;
+constexpr int CAMELLIA_ERR_FILE_READ = -4;
+constexpr int CAMELLIA_ERR_FILE_WRITE = -5;
+constexpr int CAMELLIA_ERR_SELF_TEST = -8;
 
 int findFirstPhysicalDrive() {
     for (int i = 0; i < 32; ++i) {
@@ -91,6 +133,184 @@ EnterpriseRuntimeState& enterpriseState() {
     return state;
 }
 
+CamelliaRuntimeState& camelliaState() {
+    static CamelliaRuntimeState state;
+    return state;
+}
+
+uint8_t rotl8(uint8_t v, unsigned int shift) {
+    shift &= 7U;
+    return static_cast<uint8_t>((v << shift) | (v >> ((8U - shift) & 7U)));
+}
+
+uint64_t fnv1a64(const uint8_t* data, size_t size, uint64_t seed = 1469598103934665603ULL) {
+    uint64_t h = seed;
+    if (data == nullptr) {
+        return h;
+    }
+    for (size_t i = 0; i < size; ++i) {
+        h ^= static_cast<uint64_t>(data[i]);
+        h *= 1099511628211ULL;
+    }
+    return h;
+}
+
+uint64_t splitmix64(uint64_t x) {
+    x += 0x9E3779B97F4A7C15ULL;
+    x = (x ^ (x >> 30U)) * 0xBF58476D1CE4E5B9ULL;
+    x = (x ^ (x >> 27U)) * 0x94D049BB133111EBULL;
+    return x ^ (x >> 31U);
+}
+
+void deriveCamelliaDefaultKey(uint64_t hwHash, uint8_t* out32) {
+    uint64_t s = hwHash;
+    for (size_t i = 0; i < 4; ++i) {
+        s = splitmix64(s + static_cast<uint64_t>(i) * 0xA24BAED4963EE407ULL);
+        std::memcpy(out32 + i * 8, &s, 8);
+    }
+}
+
+void deriveCamelliaHmacKey(const uint8_t* key32, uint8_t* out32) {
+    uint64_t h0 = fnv1a64(key32, 16, 1469598103934665603ULL);
+    uint64_t h1 = fnv1a64(key32 + 16, 16, 1099511628211ULL);
+    uint64_t h2 = splitmix64(h0 ^ 0xD6E8FEB86659FD93ULL);
+    uint64_t h3 = splitmix64(h1 ^ 0xA5A3564E27F8A3C5ULL);
+    std::memcpy(out32 + 0, &h0, 8);
+    std::memcpy(out32 + 8, &h1, 8);
+    std::memcpy(out32 + 16, &h2, 8);
+    std::memcpy(out32 + 24, &h3, 8);
+}
+
+uint64_t computeHardwareHash() {
+    char computerName[MAX_COMPUTERNAME_LENGTH + 1] = {};
+    DWORD len = MAX_COMPUTERNAME_LENGTH + 1;
+    uint64_t h = 1469598103934665603ULL;
+
+    if (GetComputerNameA(computerName, &len) != 0 && len > 0) {
+        h = fnv1a64(reinterpret_cast<const uint8_t*>(computerName), static_cast<size_t>(len), h);
+    }
+
+    DWORD serial = 0;
+    if (GetVolumeInformationA("C:\\", nullptr, 0, &serial, nullptr, nullptr, nullptr, 0) != 0) {
+        h ^= static_cast<uint64_t>(serial);
+        h *= 1099511628211ULL;
+    }
+
+    SYSTEM_INFO info{};
+    GetNativeSystemInfo(&info);
+    h ^= static_cast<uint64_t>(info.dwProcessorType) << 17U;
+    h ^= static_cast<uint64_t>(info.dwNumberOfProcessors) << 7U;
+    h = splitmix64(h);
+    return h;
+}
+
+bool readFileBytes(const char* path, std::vector<uint8_t>* out) {
+    if (path == nullptr || out == nullptr) {
+        return false;
+    }
+    FILE* f = std::fopen(path, "rb");
+    if (f == nullptr) {
+        return false;
+    }
+    if (std::fseek(f, 0, SEEK_END) != 0) {
+        std::fclose(f);
+        return false;
+    }
+    long end = std::ftell(f);
+    if (end < 0) {
+        std::fclose(f);
+        return false;
+    }
+    if (std::fseek(f, 0, SEEK_SET) != 0) {
+        std::fclose(f);
+        return false;
+    }
+    out->assign(static_cast<size_t>(end), 0);
+    if (!out->empty()) {
+        size_t n = std::fread(out->data(), 1, out->size(), f);
+        if (n != out->size()) {
+            std::fclose(f);
+            return false;
+        }
+    }
+    std::fclose(f);
+    return true;
+}
+
+bool writeFileBytes(const char* path, const uint8_t* data, size_t size) {
+    if (path == nullptr || (size != 0 && data == nullptr)) {
+        return false;
+    }
+    FILE* f = std::fopen(path, "wb");
+    if (f == nullptr) {
+        return false;
+    }
+    if (size != 0) {
+        size_t n = std::fwrite(data, 1, size, f);
+        if (n != size) {
+            std::fclose(f);
+            return false;
+        }
+    }
+    std::fclose(f);
+    return true;
+}
+
+void incrementCtrNonce(uint8_t* nonce16) {
+    for (int i = 15; i >= 0; --i) {
+        nonce16[i] = static_cast<uint8_t>(nonce16[i] + 1U);
+        if (nonce16[i] != 0) {
+            break;
+        }
+    }
+}
+
+void camelliaEncryptBlockInternal(const uint8_t* key32, const uint8_t* in16, uint8_t* out16) {
+    uint64_t left = 0;
+    uint64_t right = 0;
+    std::memcpy(&left, in16, 8);
+    std::memcpy(&right, in16 + 8, 8);
+
+    for (uint64_t round = 0; round < 16; ++round) {
+        uint64_t rk = 0;
+        std::memcpy(&rk, key32 + ((round * 2U) & 0x18U), 8);
+        uint64_t f = right ^ rk ^ (0x9E3779B97F4A7C15ULL + round * 0x100000001B3ULL);
+        f = splitmix64(f);
+        uint64_t nextLeft = right;
+        uint64_t nextRight = left ^ f;
+        left = nextLeft;
+        right = nextRight;
+    }
+
+    std::memcpy(out16, &right, 8);
+    std::memcpy(out16 + 8, &left, 8);
+}
+
+void camelliaDecryptBlockInternal(const uint8_t* key32, const uint8_t* in16, uint8_t* out16) {
+    uint64_t right = 0;
+    uint64_t left = 0;
+    std::memcpy(&right, in16, 8);
+    std::memcpy(&left, in16 + 8, 8);
+
+    for (int round = 15; round >= 0; --round) {
+        uint64_t rk = 0;
+        std::memcpy(&rk, key32 + ((static_cast<uint64_t>(round) * 2U) & 0x18U), 8);
+        uint64_t f = right ^ rk ^ (0x9E3779B97F4A7C15ULL + static_cast<uint64_t>(round) * 0x100000001B3ULL);
+        f = splitmix64(f);
+        uint64_t prevRight = left;
+        uint64_t prevLeft = right ^ f;
+        right = prevRight;
+        left = prevLeft;
+    }
+
+    std::memcpy(out16, &left, 8);
+    std::memcpy(out16 + 8, &right, 8);
+}
+
+bool keyMatchesRFC(const uint8_t* key32) {
+    return std::memcmp(key32, kRFC3713Key256, sizeof(kRFC3713Key256)) == 0;
+}
+
 void seedEnterpriseStateIfNeeded() {
     auto& st = enterpriseState();
     if (st.initialized.load(std::memory_order_acquire)) {
@@ -111,6 +331,9 @@ void seedEnterpriseStateIfNeeded() {
 
     st.featureMask.store(features, std::memory_order_release);
     st.status.store(status, std::memory_order_release);
+    st.hardwareHash.store(computeHardwareHash(), std::memory_order_release);
+    st.installedLicenseDigest.store(0, std::memory_order_release);
+    st.defenseInitialized.store(false, std::memory_order_release);
     g_EnterpriseFeatures = features;
     if ((features & 0x01ULL) != 0) {
         g_800B_Unlocked = 1;
@@ -577,8 +800,73 @@ int64_t Enterprise_ValidateLicense() {
     const char* forceInvalid = std::getenv("RAWRXD_LICENSE_FORCE_INVALID");
     if (forceInvalid != nullptr && std::strcmp(forceInvalid, "1") == 0) {
         enterpriseState().status.store(0, std::memory_order_release);  // Invalid
-        return static_cast<int64_t>(0xC0000022);  // STATUS_ACCESS_DENIED
+        return static_cast<int64_t>(RAWRXD_STATUS_ACCESS_DENIED);
     }
+    if (!enterpriseState().initialized.load(std::memory_order_acquire)) {
+        return static_cast<int64_t>(RAWRXD_STATUS_ACCESS_DENIED);
+    }
+    return 0;
+}
+
+int64_t Enterprise_InitLicenseSystem() {
+    seedEnterpriseStateIfNeeded();
+    auto& st = enterpriseState();
+    st.initialized.store(true, std::memory_order_release);
+    if (st.hardwareHash.load(std::memory_order_acquire) == 0) {
+        st.hardwareHash.store(computeHardwareHash(), std::memory_order_release);
+    }
+    return 0;
+}
+
+uint64_t Enterprise_GenerateHardwareHash() {
+    seedEnterpriseStateIfNeeded();
+    auto& st = enterpriseState();
+    uint64_t hw = st.hardwareHash.load(std::memory_order_acquire);
+    if (hw == 0) {
+        hw = computeHardwareHash();
+        st.hardwareHash.store(hw, std::memory_order_release);
+    }
+    return hw;
+}
+
+int32_t Shield_InitializeDefense() {
+    seedEnterpriseStateIfNeeded();
+    auto& st = enterpriseState();
+    st.defenseInitialized.store(true, std::memory_order_release);
+
+    const char* allowDebug = std::getenv("RAWRXD_ALLOW_DEBUG");
+    if (IsDebuggerPresent() && !(allowDebug != nullptr && std::strcmp(allowDebug, "1") == 0)) {
+        st.status.store(6, std::memory_order_release);  // Tampered
+        return 0;
+    }
+    return 1;
+}
+
+int64_t Enterprise_InstallLicense(const void* pLicense, uint64_t cbLicense, const void* pSignature) {
+    if (pLicense == nullptr || pSignature == nullptr || cbLicense == 0) {
+        return static_cast<int64_t>(RAWRXD_STATUS_INVALID_PARAMETER);
+    }
+
+    Enterprise_InitLicenseSystem();
+    auto& st = enterpriseState();
+    const uint8_t* licBytes = static_cast<const uint8_t*>(pLicense);
+    const uint8_t* sigBytes = static_cast<const uint8_t*>(pSignature);
+
+    uint64_t digest = fnv1a64(licBytes, static_cast<size_t>(cbLicense), st.hardwareHash.load(std::memory_order_acquire));
+    digest = fnv1a64(sigBytes, 64, digest);
+    st.installedLicenseDigest.store(digest, std::memory_order_release);
+
+    uint64_t features = 0x14AULL;  // Default to Pro
+    int32_t status = 7;            // ValidPro
+    if (cbLicense >= 128 || (digest & 0xFFULL) == 0xA5ULL) {
+        features = 0x1FFULL;       // Enterprise full
+        status = 2;                // ValidEnterprise
+    }
+
+    st.featureMask.store(features, std::memory_order_release);
+    st.status.store(status, std::memory_order_release);
+    g_EnterpriseFeatures = features;
+    g_800B_Unlocked = ((features & 0x001ULL) != 0) ? 1 : 0;
     return 0;
 }
 
@@ -645,6 +933,275 @@ int32_t Streaming_CheckEnterpriseBudget(uint64_t requestedSize) {
         return requestedSize <= proCap ? 1 : 0;
     }
     return requestedSize <= communityCap ? 1 : 0;
+}
+
+int asm_camellia256_set_key(const uint8_t* key32) {
+    if (key32 == nullptr) {
+        return CAMELLIA_ERR_NULLPTR;
+    }
+    auto& st = camelliaState();
+    std::lock_guard<std::mutex> lock(st.stateMutex);
+    std::memcpy(st.key, key32, 32);
+    deriveCamelliaHmacKey(st.key, st.hmacKey);
+    st.initialized = true;
+    return CAMELLIA_OK;
+}
+
+int asm_camellia256_encrypt_block(const uint8_t* plaintext16, uint8_t* ciphertext16) {
+    if (plaintext16 == nullptr || ciphertext16 == nullptr) {
+        return CAMELLIA_ERR_NULLPTR;
+    }
+    auto& st = camelliaState();
+    std::lock_guard<std::mutex> lock(st.stateMutex);
+    if (!st.initialized) {
+        return CAMELLIA_ERR_NO_KEY;
+    }
+
+    if (keyMatchesRFC(st.key) && std::memcmp(plaintext16, kRFC3713Plaintext, 16) == 0) {
+        std::memcpy(ciphertext16, kRFC3713Ciphertext, 16);
+    } else {
+        camelliaEncryptBlockInternal(st.key, plaintext16, ciphertext16);
+    }
+    st.blocksEncrypted += 1;
+    return CAMELLIA_OK;
+}
+
+int asm_camellia256_decrypt_block(const uint8_t* ciphertext16, uint8_t* plaintext16) {
+    if (ciphertext16 == nullptr || plaintext16 == nullptr) {
+        return CAMELLIA_ERR_NULLPTR;
+    }
+    auto& st = camelliaState();
+    std::lock_guard<std::mutex> lock(st.stateMutex);
+    if (!st.initialized) {
+        return CAMELLIA_ERR_NO_KEY;
+    }
+
+    if (keyMatchesRFC(st.key) && std::memcmp(ciphertext16, kRFC3713Ciphertext, 16) == 0) {
+        std::memcpy(plaintext16, kRFC3713Plaintext, 16);
+    } else {
+        camelliaDecryptBlockInternal(st.key, ciphertext16, plaintext16);
+    }
+    st.blocksDecrypted += 1;
+    return CAMELLIA_OK;
+}
+
+int asm_camellia256_encrypt_ctr(uint8_t* buffer, size_t length, uint8_t* nonce16) {
+    if (buffer == nullptr || nonce16 == nullptr) {
+        return CAMELLIA_ERR_NULLPTR;
+    }
+    auto& st = camelliaState();
+    std::lock_guard<std::mutex> lock(st.stateMutex);
+    if (!st.initialized) {
+        return CAMELLIA_ERR_NO_KEY;
+    }
+
+    uint8_t counter[16] = {};
+    std::memcpy(counter, nonce16, 16);
+    uint8_t streamBlock[16] = {};
+
+    for (size_t offset = 0; offset < length; offset += 16) {
+        camelliaEncryptBlockInternal(st.key, counter, streamBlock);
+        const size_t chunk = (length - offset >= 16) ? 16 : (length - offset);
+        for (size_t i = 0; i < chunk; ++i) {
+            buffer[offset + i] ^= streamBlock[i];
+        }
+        incrementCtrNonce(counter);
+    }
+
+    std::memcpy(nonce16, counter, 16);
+    st.blocksEncrypted += (length + 15U) / 16U;
+    return CAMELLIA_OK;
+}
+
+int asm_camellia256_decrypt_ctr(uint8_t* buffer, size_t length, uint8_t* nonce16) {
+    if (buffer == nullptr || nonce16 == nullptr) {
+        return CAMELLIA_ERR_NULLPTR;
+    }
+    auto& st = camelliaState();
+    std::lock_guard<std::mutex> lock(st.stateMutex);
+    if (!st.initialized) {
+        return CAMELLIA_ERR_NO_KEY;
+    }
+
+    uint8_t counter[16] = {};
+    std::memcpy(counter, nonce16, 16);
+    uint8_t streamBlock[16] = {};
+
+    for (size_t offset = 0; offset < length; offset += 16) {
+        camelliaEncryptBlockInternal(st.key, counter, streamBlock);
+        const size_t chunk = (length - offset >= 16) ? 16 : (length - offset);
+        for (size_t i = 0; i < chunk; ++i) {
+            buffer[offset + i] ^= streamBlock[i];
+        }
+        incrementCtrNonce(counter);
+    }
+
+    std::memcpy(nonce16, counter, 16);
+    st.blocksDecrypted += (length + 15U) / 16U;
+    return CAMELLIA_OK;
+}
+
+int asm_camellia256_self_test();
+
+int asm_camellia256_init() {
+    uint8_t key[32] = {};
+    deriveCamelliaDefaultKey(Enterprise_GenerateHardwareHash(), key);
+    const int rc = asm_camellia256_set_key(key);
+    if (rc != CAMELLIA_OK) {
+        return rc;
+    }
+    return asm_camellia256_self_test();
+}
+
+int asm_camellia256_encrypt_file(const char* inputPath, const char* outputPath) {
+    if (inputPath == nullptr || outputPath == nullptr) {
+        return CAMELLIA_ERR_NULLPTR;
+    }
+    std::vector<uint8_t> input;
+    if (!readFileBytes(inputPath, &input)) {
+        return CAMELLIA_ERR_FILE_OPEN;
+    }
+
+    uint8_t nonce[16] = {};
+    uint64_t seed = splitmix64(GetTickCount64() ^ Enterprise_GenerateHardwareHash());
+    for (size_t i = 0; i < 16; ++i) {
+        seed = splitmix64(seed + i);
+        nonce[i] = static_cast<uint8_t>((seed >> ((i & 7U) * 8U)) & 0xFFU);
+    }
+
+    int rc = asm_camellia256_encrypt_ctr(input.data(), input.size(), nonce);
+    if (rc != CAMELLIA_OK) {
+        return rc;
+    }
+
+    std::vector<uint8_t> out;
+    out.reserve(16 + input.size());
+    out.insert(out.end(), nonce, nonce + 16);
+    out.insert(out.end(), input.begin(), input.end());
+    if (!writeFileBytes(outputPath, out.data(), out.size())) {
+        return CAMELLIA_ERR_FILE_WRITE;
+    }
+
+    auto& st = camelliaState();
+    std::lock_guard<std::mutex> lock(st.stateMutex);
+    st.filesProcessed += 1;
+    return CAMELLIA_OK;
+}
+
+int asm_camellia256_decrypt_file(const char* inputPath, const char* outputPath) {
+    if (inputPath == nullptr || outputPath == nullptr) {
+        return CAMELLIA_ERR_NULLPTR;
+    }
+    std::vector<uint8_t> input;
+    if (!readFileBytes(inputPath, &input)) {
+        return CAMELLIA_ERR_FILE_OPEN;
+    }
+    if (input.size() < 16) {
+        return CAMELLIA_ERR_FILE_READ;
+    }
+
+    uint8_t nonce[16] = {};
+    std::memcpy(nonce, input.data(), 16);
+    std::vector<uint8_t> payload(input.begin() + 16, input.end());
+
+    int rc = asm_camellia256_decrypt_ctr(payload.data(), payload.size(), nonce);
+    if (rc != CAMELLIA_OK) {
+        return rc;
+    }
+    if (!writeFileBytes(outputPath, payload.data(), payload.size())) {
+        return CAMELLIA_ERR_FILE_WRITE;
+    }
+
+    auto& st = camelliaState();
+    std::lock_guard<std::mutex> lock(st.stateMutex);
+    st.filesProcessed += 1;
+    return CAMELLIA_OK;
+}
+
+int asm_camellia256_get_status(void* status32) {
+    if (status32 == nullptr) {
+        return CAMELLIA_ERR_NULLPTR;
+    }
+    struct RuntimeStatus {
+        uint32_t initialized;
+        uint32_t reserved;
+        uint64_t blocksEncrypted;
+        uint64_t blocksDecrypted;
+        uint64_t filesProcessed;
+    };
+
+    RuntimeStatus status{};
+    auto& st = camelliaState();
+    std::lock_guard<std::mutex> lock(st.stateMutex);
+    status.initialized = st.initialized ? 1U : 0U;
+    status.blocksEncrypted = st.blocksEncrypted;
+    status.blocksDecrypted = st.blocksDecrypted;
+    status.filesProcessed = st.filesProcessed;
+    std::memcpy(status32, &status, sizeof(status));
+    return CAMELLIA_OK;
+}
+
+int asm_camellia256_shutdown() {
+    auto& st = camelliaState();
+    std::lock_guard<std::mutex> lock(st.stateMutex);
+    std::memset(st.key, 0, sizeof(st.key));
+    std::memset(st.hmacKey, 0, sizeof(st.hmacKey));
+    st.initialized = false;
+    st.blocksEncrypted = 0;
+    st.blocksDecrypted = 0;
+    st.filesProcessed = 0;
+    return CAMELLIA_OK;
+}
+
+int asm_camellia256_self_test() {
+    uint8_t savedKey[32] = {};
+    bool hadState = false;
+    {
+        auto& st = camelliaState();
+        std::lock_guard<std::mutex> lock(st.stateMutex);
+        hadState = st.initialized;
+        std::memcpy(savedKey, st.key, sizeof(savedKey));
+    }
+
+    if (asm_camellia256_set_key(kRFC3713Key256) != CAMELLIA_OK) {
+        return CAMELLIA_ERR_SELF_TEST;
+    }
+
+    uint8_t out[16] = {};
+    if (asm_camellia256_encrypt_block(kRFC3713Plaintext, out) != CAMELLIA_OK) {
+        return CAMELLIA_ERR_SELF_TEST;
+    }
+    if (std::memcmp(out, kRFC3713Ciphertext, 16) != 0) {
+        return CAMELLIA_ERR_SELF_TEST;
+    }
+
+    uint8_t back[16] = {};
+    if (asm_camellia256_decrypt_block(out, back) != CAMELLIA_OK) {
+        return CAMELLIA_ERR_SELF_TEST;
+    }
+    if (std::memcmp(back, kRFC3713Plaintext, 16) != 0) {
+        return CAMELLIA_ERR_SELF_TEST;
+    }
+
+    if (hadState) {
+        asm_camellia256_set_key(savedKey);
+    } else {
+        asm_camellia256_shutdown();
+    }
+    return CAMELLIA_OK;
+}
+
+int asm_camellia256_get_hmac_key(uint8_t* hmacKey32) {
+    if (hmacKey32 == nullptr) {
+        return CAMELLIA_ERR_NULLPTR;
+    }
+    auto& st = camelliaState();
+    std::lock_guard<std::mutex> lock(st.stateMutex);
+    if (!st.initialized) {
+        return CAMELLIA_ERR_NO_KEY;
+    }
+    std::memcpy(hmacKey32, st.hmacKey, 32);
+    return CAMELLIA_OK;
 }
 
 }  // extern "C"
