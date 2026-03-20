@@ -3113,7 +3113,9 @@ if(WIN32)
             src/core/vision_encoder_nonmsvc.cpp
             src/core/native_debugger_engine_nonmsvc.cpp
             src/core/win32_kernel_bridge_nomasm.cpp
+            src/core/enterprise_camellia_nonmsvc.cpp
             src/core/self_repair_loop_nonmsvc.cpp
+            src/core/native_speed_kernels_nonmsvc.cpp
             src/core/multi_response_engine.cpp
         )
     endif()

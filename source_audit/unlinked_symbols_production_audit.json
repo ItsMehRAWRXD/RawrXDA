@@ -2,10 +2,10 @@
   "repo_root": "/workspace",
   "log_path": "/workspace/source_audit/win32ide_production_link_latest.log",
   "build_make": "/workspace/build_completed_win/CMakeFiles/RawrXD-Win32IDE.dir/build.make",
-  "total_reference_lines": 295,
-  "unique_symbols": 116,
+  "total_reference_lines": 194,
+  "unique_symbols": 71,
   "classification_counts": {
-    "unlinked_despite_wired": 80,
+    "unlinked_despite_wired": 35,
     "dissolved_or_external": 18,
     "unwired_non_stub": 18
   },
@@ -53,20 +53,6 @@
       ],
       "definition_candidates_wired": [
         {
-          "path": "/workspace/src/core/feature_handlers.cpp",
-          "line": 1747,
-          "text": "g_deepThinkingFallbackState.lastTrace += \"[beacon] BeaconRouterInit fallback active\\n\";",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/core/feature_handlers.cpp",
-          "line": 1961,
-          "text": "#pragma comment(linker, \"/alternatename:BeaconRouterInit=BeaconRouterInit_fallback\")",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/universal_model_router.cpp",
           "line": 35,
           "text": "int BeaconRouterInit();",
@@ -79,13 +65,27 @@
           "text": "if (BeaconRouterInit() != 0) {",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/core/feature_handlers.cpp",
+          "line": 1747,
+          "text": "g_deepThinkingFallbackState.lastTrace += \"[beacon] BeaconRouterInit fallback active\\n\";",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/core/feature_handlers.cpp",
+          "line": 1961,
+          "text": "#pragma comment(linker, \"/alternatename:BeaconRouterInit=BeaconRouterInit_fallback\")",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
         }
       ],
       "definition_candidates_unwired": [],
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 16,
       "reference_lines": [
-        332
+        229
       ]
     },
     {
@@ -108,7 +108,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 352,
       "reference_lines": [
-        308
+        208
       ]
     },
     {
@@ -139,7 +139,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 350,
       "reference_lines": [
-        310
+        210
       ]
     },
     {
@@ -170,7 +170,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 350,
       "reference_lines": [
-        314
+        214
       ]
     },
     {
@@ -193,7 +193,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 350,
       "reference_lines": [
-        299
+        199
       ]
     },
     {
@@ -223,8 +223,8 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 350,
       "reference_lines": [
-        300,
-        315
+        200,
+        215
       ]
     },
     {
@@ -247,7 +247,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 437,
       "reference_lines": [
-        320
+        220
       ]
     },
     {
@@ -277,11 +277,11 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 350,
       "reference_lines": [
-        301,
-        316,
-        318,
-        319,
-        321
+        201,
+        216,
+        218,
+        219,
+        221
       ]
     },
     {
@@ -304,7 +304,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 350,
       "reference_lines": [
-        302
+        202
       ]
     },
     {
@@ -335,7 +335,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 350,
       "reference_lines": [
-        311
+        211
       ]
     },
     {
@@ -358,535 +358,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 437,
       "reference_lines": [
-        317
-      ]
-    },
-    {
-      "symbol": "Enterprise_CheckFeature",
-      "token": "Enterprise_CheckFeature",
-      "occurrences": 8,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "enterprise_license.cpp.obj",
-          "count": 8,
-          "mapped_sources": [
-            "/workspace/src/core/enterprise_license.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/enterprise_feature_manager.cpp",
-          "line": 130,
-          "text": "true,   // wiredToBackend: Enterprise_CheckFeature(0x08) in gpu_kernel_autotuner.cpp",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/core/enterprise_feature_manager.cpp",
-          "line": 142,
-          "text": "true,   // wiredToBackend: Enterprise_CheckFeature(0x10) in Initialize()",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/core/enterprise_feature_manager.cpp",
-          "line": 178,
-          "text": "true,   // wiredToBackend: Enterprise_CheckFeature(0x80) in Initialize()",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/core/enterprise_feature_manager.cpp",
-          "line": 438,
-          "text": "true,   // hasLicenseGate: Enterprise_CheckFeature(0x04) in initialize()",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/core/enterprise_feature_manager.cpp",
-          "line": 453,
-          "text": "true,   // hasLicenseGate: Enterprise_CheckFeature(0x08) in initialize()",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/core/enterprise_feature_manager.cpp",
-          "line": 617,
-          "text": "ss << \"  [+] Swarm orchestrator has Enterprise_CheckFeature(0x04) gate\\n\";",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/core/enterprise_feature_manager.cpp",
-          "line": 618,
-          "text": "ss << \"  [+] GPU kernel auto-tuner has Enterprise_CheckFeature(0x08) gate\\n\";",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/core/enterprise_license.cpp",
-          "line": 415,
-          "text": "return Enterprise_CheckFeature(static_cast<uint64_t>(feature)) != 0;",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/core/enterprise_license.cpp",
-          "line": 422,
-          "text": "return Enterprise_CheckFeature(featureMask) != 0;",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/include/enterprise_feature_manifest.hpp",
-          "line": 157,
-          "text": "constexpr const char* Swarm_Gate          = \"swarm_orchestrator.cpp (Enterprise_CheckFeature(0x04))\";",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/include/enterprise_feature_manifest.hpp",
-          "line": 163,
-          "text": "constexpr const char* GPUQuant_Gate       = \"gpu_kernel_autotuner.cpp (Enterprise_CheckFeature(0x08))\";",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "all_definition_candidates_count": 11,
-      "all_search_hits_count": 534,
-      "reference_lines": [
-        51,
-        52,
-        59,
-        62,
-        71,
-        77,
-        78,
-        81
-      ]
-    },
-    {
-      "symbol": "Enterprise_GenerateHardwareHash",
-      "token": "Enterprise_GenerateHardwareHash",
-      "occurrences": 1,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "enterprise_license.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/core/enterprise_license.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/enterprise_license.cpp",
-          "line": 465,
-          "text": "return Enterprise_GenerateHardwareHash();",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 350,
-      "reference_lines": [
-        86
-      ]
-    },
-    {
-      "symbol": "Enterprise_GetFeatureString",
-      "token": "Enterprise_GetFeatureString",
-      "occurrences": 1,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "enterprise_license.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/core/enterprise_license.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/enterprise_license.cpp",
-          "line": 453,
-          "text": "int64_t written = Enterprise_GetFeatureString(buffer, sizeof(buffer));",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 350,
-      "reference_lines": [
-        55
-      ]
-    },
-    {
-      "symbol": "Enterprise_GetLicenseStatus",
-      "token": "Enterprise_GetLicenseStatus",
-      "occurrences": 18,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "enterprise_license.cpp.obj",
-          "count": 18,
-          "mapped_sources": [
-            "/workspace/src/core/enterprise_license.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/enterprise_devunlock_bridge.cpp",
-          "line": 38,
-          "text": "int32_t Enterprise_GetLicenseStatus();",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/core/enterprise_license.cpp",
-          "line": 444,
-          "text": "return static_cast<LicenseState>(Enterprise_GetLicenseStatus());",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 2,
-      "all_search_hits_count": 351,
-      "reference_lines": [
-        54,
-        56,
-        57,
-        58,
-        60,
-        63,
-        65,
-        67,
-        69,
-        70,
-        72,
-        73,
-        76,
-        80,
-        82,
-        83,
-        84,
-        85
-      ]
-    },
-    {
-      "symbol": "Enterprise_InitLicenseSystem",
-      "token": "Enterprise_InitLicenseSystem",
-      "occurrences": 2,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "enterprise_license.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/core/enterprise_license.cpp"
-          ]
-        },
-        {
-          "obj": "enterprise_devunlock_bridge.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/core/enterprise_devunlock_bridge.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/enterprise_devunlock_bridge.cpp",
-          "line": 35,
-          "text": "int64_t Enterprise_InitLicenseSystem();",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/core/enterprise_devunlock_bridge.cpp",
-          "line": 107,
-          "text": "Enterprise_InitLicenseSystem();",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/core/enterprise_license.cpp",
-          "line": 274,
-          "text": "int64_t result = Enterprise_InitLicenseSystem();",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 3,
-      "all_search_hits_count": 354,
-      "reference_lines": [
-        75,
-        87
-      ]
-    },
-    {
-      "symbol": "Enterprise_InstallLicense",
-      "token": "Enterprise_InstallLicense",
-      "occurrences": 1,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "enterprise_license.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/core/enterprise_license.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/enterprise_license.cpp",
-          "line": 600,
-          "text": "int64_t result = Enterprise_InstallLicense(licenseBlob, static_cast<uint64_t>(blobSize), signature);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 350,
-      "reference_lines": [
-        68
-      ]
-    },
-    {
-      "symbol": "Enterprise_Shutdown",
-      "token": "Enterprise_Shutdown",
-      "occurrences": 1,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "enterprise_license.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/core/enterprise_license.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/enterprise_license.cpp",
-          "line": 394,
-          "text": "Enterprise_Shutdown();",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 350,
-      "reference_lines": [
-        66
-      ]
-    },
-    {
-      "symbol": "Enterprise_Unlock800BDualEngine",
-      "token": "Enterprise_Unlock800BDualEngine",
-      "occurrences": 2,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "enterprise_license.cpp.obj",
-          "count": 2,
-          "mapped_sources": [
-            "/workspace/src/core/enterprise_license.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/enterprise_license.cpp",
-          "line": 378,
-          "text": "(void)Enterprise_Unlock800BDualEngine();",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/core/enterprise_license.cpp",
-          "line": 429,
-          "text": "return Enterprise_Unlock800BDualEngine() != 0;",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/core/enterprise_feature_manager.cpp",
-          "line": 408,
-          "text": "true,   // hasLicenseGate: g_800B_Unlocked + Enterprise_Unlock800BDualEngine()",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_InitSequence.cpp",
-          "line": 234,
-          "text": "if (RawrXD::Enterprise_Unlock800BDualEngine() != 0) {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "all_definition_candidates_count": 4,
-      "all_search_hits_count": 441,
-      "reference_lines": [
-        53,
-        79
-      ]
-    },
-    {
-      "symbol": "Enterprise_ValidateLicense",
-      "token": "Enterprise_ValidateLicense",
-      "occurrences": 1,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "enterprise_license.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/core/enterprise_license.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/enterprise_license.cpp",
-          "line": 694,
-          "text": "int64_t result = Enterprise_ValidateLicense();",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 612,
-      "reference_lines": [
-        64
-      ]
-    },
-    {
-      "symbol": "FlashAttention_Forward",
-      "token": "FlashAttention_Forward",
-      "occurrences": 1,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "flash_attention.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/core/flash_attention.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/flash_attention.cpp",
-          "line": 110,
-          "text": "return FlashAttention_Forward(&cfg);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 355,
-      "reference_lines": [
-        113
-      ]
-    },
-    {
-      "symbol": "FlashAttention_GetTileConfig",
-      "token": "FlashAttention_GetTileConfig",
-      "occurrences": 3,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "flash_attention.cpp.obj",
-          "count": 3,
-          "mapped_sources": [
-            "/workspace/src/core/flash_attention.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/flash_attention.cpp",
-          "line": 118,
-          "text": "FlashAttention_GetTileConfig(&out);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/core/flash_attention.cpp",
-          "line": 136,
-          "text": "FlashAttention_GetTileConfig(&tc);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 2,
-      "all_search_hits_count": 352,
-      "reference_lines": [
-        110,
-        111,
-        112
-      ]
-    },
-    {
-      "symbol": "FlashAttention_Init",
-      "token": "FlashAttention_Init",
-      "occurrences": 1,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "flash_attention.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/core/flash_attention.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/flash_attention.cpp",
-          "line": 39,
-          "text": "int32_t avxResult = FlashAttention_Init();",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 437,
-      "reference_lines": [
-        109
+        217
       ]
     },
     {
@@ -917,7 +389,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 350,
       "reference_lines": [
-        297
+        197
       ]
     },
     {
@@ -948,7 +420,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 350,
       "reference_lines": [
-        298
+        198
       ]
     },
     {
@@ -971,7 +443,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 350,
       "reference_lines": [
-        312
+        212
       ]
     },
     {
@@ -994,7 +466,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 350,
       "reference_lines": [
-        313
+        213
       ]
     },
     {
@@ -1047,7 +519,7 @@
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 352,
       "reference_lines": [
-        287
+        187
       ]
     },
     {
@@ -1083,26 +555,26 @@
       ],
       "definition_candidates_unwired": [
         {
-          "path": "/workspace/src/core/kquant_dequantize_q4k.cpp",
-          "line": 286,
-          "text": "void KQuant_DequantizeQ4_K(const void* blocks, size_t n_blocks, float* out) {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/core/convergence_stress_harness.cpp",
           "line": 55,
           "text": "size_t KQuant_DequantizeQ4_K(const void* src, float* dst, size_t numElements);",
           "stublike_path": false,
           "removed_by_non_msvc_block": true
+        },
+        {
+          "path": "/workspace/src/core/kquant_dequantize_q4k.cpp",
+          "line": 286,
+          "text": "void KQuant_DequantizeQ4_K(const void* blocks, size_t n_blocks, float* out) {",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
         }
       ],
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 353,
       "reference_lines": [
-        278,
-        282,
-        290
+        178,
+        182,
+        190
       ]
     },
     {
@@ -1148,9 +620,9 @@
       "all_definition_candidates_count": 3,
       "all_search_hits_count": 351,
       "reference_lines": [
-        279,
-        283,
-        291
+        179,
+        183,
+        191
       ]
     },
     {
@@ -1251,10 +723,10 @@
       "all_definition_candidates_count": 88,
       "all_search_hits_count": 524,
       "reference_lines": [
-        205,
-        209,
-        215,
-        255
+        105,
+        109,
+        115,
+        155
       ]
     },
     {
@@ -1294,6 +766,13 @@
           "removed_by_non_msvc_block": false
         },
         {
+          "path": "/workspace/src/ggml_masm/compression.asm",
+          "line": 105060,
+          "text": "; void MC_GapBuffer_Destroy(MC_GapBuffer* pGB)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
           "path": "/workspace/src/ggml_masm/attention.asm",
           "line": 105060,
           "text": "; void MC_GapBuffer_Destroy(MC_GapBuffer* pGB)",
@@ -1302,6 +781,13 @@
         },
         {
           "path": "/workspace/src/ggml_masm/ggml_backend.asm",
+          "line": 105060,
+          "text": "; void MC_GapBuffer_Destroy(MC_GapBuffer* pGB)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
           "line": 105060,
           "text": "; void MC_GapBuffer_Destroy(MC_GapBuffer* pGB)",
           "stublike_path": false,
@@ -1322,20 +808,6 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/compression.asm",
-          "line": 105060,
-          "text": "; void MC_GapBuffer_Destroy(MC_GapBuffer* pGB)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
-          "line": 105060,
-          "text": "; void MC_GapBuffer_Destroy(MC_GapBuffer* pGB)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/digestion/digestion_asm_x64.asm",
           "line": 105060,
           "text": "; void MC_GapBuffer_Destroy(MC_GapBuffer* pGB)",
@@ -1350,7 +822,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/net/net.asm",
+          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
           "line": 105060,
           "text": "; void MC_GapBuffer_Destroy(MC_GapBuffer* pGB)",
           "stublike_path": false,
@@ -1360,26 +832,26 @@
       "all_definition_candidates_count": 87,
       "all_search_hits_count": 524,
       "reference_lines": [
-        197,
-        222,
-        223,
-        227,
-        228,
-        231,
-        233,
-        234,
-        237,
-        239,
-        241,
-        243,
-        244,
-        245,
-        247,
-        249,
-        252,
-        254,
-        256,
-        259
+        97,
+        122,
+        123,
+        127,
+        128,
+        131,
+        133,
+        134,
+        137,
+        139,
+        141,
+        143,
+        144,
+        145,
+        147,
+        149,
+        152,
+        154,
+        156,
+        159
       ]
     },
     {
@@ -1428,28 +900,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
-          "line": 105439,
-          "text": "; uint32_t MC_GapBuffer_GetLine(MC_GapBuffer* pGB, uint32_t lineIdx,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
-          "line": 105439,
-          "text": "; uint32_t MC_GapBuffer_GetLine(MC_GapBuffer* pGB, uint32_t lineIdx,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/ggml_masm/tensor_ops.asm",
-          "line": 105439,
-          "text": "; uint32_t MC_GapBuffer_GetLine(MC_GapBuffer* pGB, uint32_t lineIdx,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
           "line": 105439,
           "text": "; uint32_t MC_GapBuffer_GetLine(MC_GapBuffer* pGB, uint32_t lineIdx,",
           "stublike_path": false,
@@ -1463,7 +914,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
+          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
           "line": 105439,
           "text": "; uint32_t MC_GapBuffer_GetLine(MC_GapBuffer* pGB, uint32_t lineIdx,",
           "stublike_path": false,
@@ -1475,23 +926,44 @@
           "text": "; uint32_t MC_GapBuffer_GetLine(MC_GapBuffer* pGB, uint32_t lineIdx,",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
+          "line": 105439,
+          "text": "; uint32_t MC_GapBuffer_GetLine(MC_GapBuffer* pGB, uint32_t lineIdx,",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "line": 105439,
+          "text": "; uint32_t MC_GapBuffer_GetLine(MC_GapBuffer* pGB, uint32_t lineIdx,",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
+          "line": 105439,
+          "text": "; uint32_t MC_GapBuffer_GetLine(MC_GapBuffer* pGB, uint32_t lineIdx,",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
         }
       ],
       "all_definition_candidates_count": 87,
       "all_search_hits_count": 524,
       "reference_lines": [
-        190,
-        192,
-        194,
-        212,
-        218,
-        219,
-        220,
-        221,
-        240,
-        242,
-        260,
-        269
+        90,
+        92,
+        94,
+        112,
+        118,
+        119,
+        120,
+        121,
+        140,
+        142,
+        160,
+        169
       ]
     },
     {
@@ -1540,6 +1012,13 @@
           "removed_by_non_msvc_block": false
         },
         {
+          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
+          "line": 105005,
+          "text": "; bool MC_GapBuffer_Init(MC_GapBuffer* pGB, uint32_t initialCapacity)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
           "path": "/workspace/src/ggml_masm/quantization.asm",
           "line": 105005,
           "text": "; bool MC_GapBuffer_Init(MC_GapBuffer* pGB, uint32_t initialCapacity)",
@@ -1548,13 +1027,6 @@
         },
         {
           "path": "/workspace/src/ggml_masm/tensor_ops.asm",
-          "line": 105005,
-          "text": "; bool MC_GapBuffer_Init(MC_GapBuffer* pGB, uint32_t initialCapacity)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
           "line": 105005,
           "text": "; bool MC_GapBuffer_Init(MC_GapBuffer* pGB, uint32_t initialCapacity)",
           "stublike_path": false,
@@ -1582,7 +1054,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "path": "/workspace/src/net/net.asm",
           "line": 105005,
           "text": "; bool MC_GapBuffer_Init(MC_GapBuffer* pGB, uint32_t initialCapacity)",
           "stublike_path": false,
@@ -1592,11 +1064,11 @@
       "all_definition_candidates_count": 88,
       "all_search_hits_count": 524,
       "reference_lines": [
-        198,
-        224,
-        230,
-        246,
-        265
+        98,
+        124,
+        130,
+        146,
+        165
       ]
     },
     {
@@ -1624,13 +1096,6 @@
       "definition_candidates_wired": [],
       "definition_candidates_unwired": [
         {
-          "path": "/workspace/include/RawrXD_MonacoCore.h",
-          "line": 249,
-          "text": "return MC_GapBuffer_Insert(&m_buffer, pos, text, len) != 0;",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/ai/digestion_scanner.asm",
           "line": 105294,
           "text": "; bool MC_GapBuffer_Insert(MC_GapBuffer* pGB, uint32_t pos,",
@@ -1638,35 +1103,14 @@
           "removed_by_non_msvc_block": false
         },
         {
+          "path": "/workspace/include/RawrXD_MonacoCore.h",
+          "line": 249,
+          "text": "return MC_GapBuffer_Insert(&m_buffer, pos, text, len) != 0;",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
           "path": "/workspace/src/ggml_masm/attention.asm",
-          "line": 105294,
-          "text": "; bool MC_GapBuffer_Insert(MC_GapBuffer* pGB, uint32_t pos,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/quantization.asm",
-          "line": 105294,
-          "text": "; bool MC_GapBuffer_Insert(MC_GapBuffer* pGB, uint32_t pos,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
-          "line": 105294,
-          "text": "; bool MC_GapBuffer_Insert(MC_GapBuffer* pGB, uint32_t pos,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
-          "line": 105294,
-          "text": "; bool MC_GapBuffer_Insert(MC_GapBuffer* pGB, uint32_t pos,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/compression.asm",
           "line": 105294,
           "text": "; bool MC_GapBuffer_Insert(MC_GapBuffer* pGB, uint32_t pos,",
           "stublike_path": false,
@@ -1680,7 +1124,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
+          "path": "/workspace/src/ggml_masm/quantization.asm",
           "line": 105294,
           "text": "; bool MC_GapBuffer_Insert(MC_GapBuffer* pGB, uint32_t pos,",
           "stublike_path": false,
@@ -1692,19 +1136,47 @@
           "text": "; bool MC_GapBuffer_Insert(MC_GapBuffer* pGB, uint32_t pos,",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
+          "line": 105294,
+          "text": "; bool MC_GapBuffer_Insert(MC_GapBuffer* pGB, uint32_t pos,",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
+          "line": 105294,
+          "text": "; bool MC_GapBuffer_Insert(MC_GapBuffer* pGB, uint32_t pos,",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/ggml_masm/compression.asm",
+          "line": 105294,
+          "text": "; bool MC_GapBuffer_Insert(MC_GapBuffer* pGB, uint32_t pos,",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
+          "line": 105294,
+          "text": "; bool MC_GapBuffer_Insert(MC_GapBuffer* pGB, uint32_t pos,",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
         }
       ],
       "all_definition_candidates_count": 88,
       "all_search_hits_count": 524,
       "reference_lines": [
-        199,
-        201,
-        203,
-        204,
-        207,
-        232,
-        248,
-        267
+        99,
+        101,
+        103,
+        104,
+        107,
+        132,
+        148,
+        167
       ]
     },
     {
@@ -1746,14 +1218,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/quantization.asm",
-          "line": 105570,
-          "text": "; uint32_t MC_GapBuffer_Length(const MC_GapBuffer* pGB)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "path": "/workspace/src/ggml_masm/compression.asm",
           "line": 105570,
           "text": "; uint32_t MC_GapBuffer_Length(const MC_GapBuffer* pGB)",
           "stublike_path": false,
@@ -1761,6 +1226,13 @@
         },
         {
           "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
+          "line": 105570,
+          "text": "; uint32_t MC_GapBuffer_Length(const MC_GapBuffer* pGB)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/ggml_masm/quantization.asm",
           "line": 105570,
           "text": "; uint32_t MC_GapBuffer_Length(const MC_GapBuffer* pGB)",
           "stublike_path": false,
@@ -1781,7 +1253,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/compression.asm",
+          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
+          "line": 105570,
+          "text": "; uint32_t MC_GapBuffer_Length(const MC_GapBuffer* pGB)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/win32app/mcp_hooks.asm",
           "line": 105570,
           "text": "; uint32_t MC_GapBuffer_Length(const MC_GapBuffer* pGB)",
           "stublike_path": false,
@@ -1793,26 +1272,19 @@
           "text": "; uint32_t MC_GapBuffer_Length(const MC_GapBuffer* pGB)",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
-          "line": 105570,
-          "text": "; uint32_t MC_GapBuffer_Length(const MC_GapBuffer* pGB)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
         }
       ],
       "all_definition_candidates_count": 87,
       "all_search_hits_count": 524,
       "reference_lines": [
-        188,
-        214,
-        235,
-        236,
-        250,
-        251,
-        257,
-        258
+        88,
+        114,
+        135,
+        136,
+        150,
+        151,
+        157,
+        158
       ]
     },
     {
@@ -1854,6 +1326,13 @@
           "removed_by_non_msvc_block": false
         },
         {
+          "path": "/workspace/src/ggml_masm/compression.asm",
+          "line": 105582,
+          "text": "; uint32_t MC_GapBuffer_LineCount(const MC_GapBuffer* pGB)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
           "path": "/workspace/src/ggml_masm/quantization.asm",
           "line": 105582,
           "text": "; uint32_t MC_GapBuffer_LineCount(const MC_GapBuffer* pGB)",
@@ -1861,14 +1340,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
-          "line": 105582,
-          "text": "; uint32_t MC_GapBuffer_LineCount(const MC_GapBuffer* pGB)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
+          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
           "line": 105582,
           "text": "; uint32_t MC_GapBuffer_LineCount(const MC_GapBuffer* pGB)",
           "stublike_path": false,
@@ -1882,14 +1354,21 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
+          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
           "line": 105582,
           "text": "; uint32_t MC_GapBuffer_LineCount(const MC_GapBuffer* pGB)",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/compression.asm",
+          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "line": 105582,
+          "text": "; uint32_t MC_GapBuffer_LineCount(const MC_GapBuffer* pGB)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
           "line": 105582,
           "text": "; uint32_t MC_GapBuffer_LineCount(const MC_GapBuffer* pGB)",
           "stublike_path": false,
@@ -1901,38 +1380,31 @@
           "text": "; uint32_t MC_GapBuffer_LineCount(const MC_GapBuffer* pGB)",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
-          "line": 105582,
-          "text": "; uint32_t MC_GapBuffer_LineCount(const MC_GapBuffer* pGB)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
         }
       ],
       "all_definition_candidates_count": 87,
       "all_search_hits_count": 524,
       "reference_lines": [
-        186,
-        187,
-        189,
-        191,
-        195,
-        196,
-        200,
-        202,
-        206,
-        208,
-        210,
-        211,
-        213,
-        216,
-        217,
-        225,
-        226,
-        229,
-        238,
-        253
+        86,
+        87,
+        89,
+        91,
+        95,
+        96,
+        100,
+        102,
+        106,
+        108,
+        110,
+        111,
+        113,
+        116,
+        117,
+        125,
+        126,
+        129,
+        138,
+        153
       ]
     },
     {
@@ -1982,6 +1454,13 @@
           "removed_by_non_msvc_block": false
         },
         {
+          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
+          "line": 105595,
+          "text": "; uint32_t MC_TokenizeLine(const char* line, uint32_t len,",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
           "path": "/workspace/src/ggml_masm/quantization.asm",
           "line": 105595,
           "text": "; uint32_t MC_TokenizeLine(const char* line, uint32_t len,",
@@ -2003,13 +1482,6 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
-          "line": 105595,
-          "text": "; uint32_t MC_TokenizeLine(const char* line, uint32_t len,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/digestion/digestion_asm_x64.asm",
           "line": 105595,
           "text": "; uint32_t MC_TokenizeLine(const char* line, uint32_t len,",
@@ -2024,7 +1496,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/masm/masm_solo_compiler.asm",
+          "path": "/workspace/src/net/net.asm",
           "line": 105595,
           "text": "; uint32_t MC_TokenizeLine(const char* line, uint32_t len,",
           "stublike_path": false,
@@ -2034,7 +1506,7 @@
       "all_definition_candidates_count": 88,
       "all_search_hits_count": 525,
       "reference_lines": [
-        193
+        93
       ]
     },
     {
@@ -2065,7 +1537,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        342
+        239
       ]
     },
     {
@@ -2096,7 +1568,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        341
+        238
       ]
     },
     {
@@ -2127,7 +1599,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        343
+        240
       ]
     },
     {
@@ -2158,7 +1630,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        344
+        241
       ]
     },
     {
@@ -2196,9 +1668,9 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 350,
       "reference_lines": [
-        280,
-        284,
-        288
+        180,
+        184,
+        188
       ]
     },
     {
@@ -2236,9 +1708,9 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 350,
       "reference_lines": [
-        281,
-        285,
-        289
+        181,
+        185,
+        189
       ]
     },
     {
@@ -2269,7 +1741,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1,
       "reference_lines": [
-        178
+        78
       ]
     },
     {
@@ -2292,7 +1764,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        277
+        177
       ]
     },
     {
@@ -2315,7 +1787,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        276
+        176
       ]
     },
     {
@@ -2338,7 +1810,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        184
+        84
       ]
     },
     {
@@ -2383,9 +1855,9 @@
       "all_definition_candidates_count": 3,
       "all_search_hits_count": 3,
       "reference_lines": [
-        179,
-        181,
-        183
+        79,
+        81,
+        83
       ]
     },
     {
@@ -2408,7 +1880,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        180
+        80
       ]
     },
     {
@@ -2431,7 +1903,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 0,
       "reference_lines": [
-        182
+        82
       ]
     },
     {
@@ -2462,7 +1934,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 6,
       "reference_lines": [
-        340
+        237
       ]
     },
     {
@@ -2493,69 +1965,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 4,
       "reference_lines": [
-        339
-      ]
-    },
-    {
-      "symbol": "Shield_InitializeDefense",
-      "token": "Shield_InitializeDefense",
-      "occurrences": 1,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "enterprise_license.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/core/enterprise_license.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/enterprise_license.cpp",
-          "line": 257,
-          "text": "int32_t shieldResult = Shield_InitializeDefense();",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 353,
-      "reference_lines": [
-        74
-      ]
-    },
-    {
-      "symbol": "Streaming_CheckEnterpriseBudget",
-      "token": "Streaming_CheckEnterpriseBudget",
-      "occurrences": 1,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "enterprise_license.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/core/enterprise_license.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/enterprise_license.cpp",
-          "line": 720,
-          "text": "return Streaming_CheckEnterpriseBudget(requestedBytes) != 0;",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 263,
-      "reference_lines": [
-        61
+        236
       ]
     },
     {
@@ -2614,10 +2024,10 @@
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 354,
       "reference_lines": [
-        155,
-        157,
-        166,
-        173
+        55,
+        57,
+        66,
+        73
       ]
     },
     {
@@ -2704,11 +2114,11 @@
       "all_definition_candidates_count": 7,
       "all_search_hits_count": 357,
       "reference_lines": [
-        154,
-        163,
-        165,
-        171,
-        177
+        54,
+        63,
+        65,
+        71,
+        77
       ]
     },
     {
@@ -2746,7 +2156,7 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 351,
       "reference_lines": [
-        162
+        62
       ]
     },
     {
@@ -2805,9 +2215,9 @@
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 353,
       "reference_lines": [
-        156,
-        170,
-        176
+        56,
+        70,
+        76
       ]
     },
     {
@@ -2852,8 +2262,8 @@
       "all_definition_candidates_count": 3,
       "all_search_hits_count": 352,
       "reference_lines": [
-        158,
-        164
+        58,
+        64
       ]
     },
     {
@@ -2891,7 +2301,7 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 351,
       "reference_lines": [
-        161
+        61
       ]
     },
     {
@@ -2957,9 +2367,9 @@
       "all_definition_candidates_count": 5,
       "all_search_hits_count": 354,
       "reference_lines": [
-        159,
-        160,
-        172
+        59,
+        60,
+        72
       ]
     },
     {
@@ -3033,9 +2443,9 @@
       "all_definition_candidates_count": 6,
       "all_search_hits_count": 355,
       "reference_lines": [
-        167,
-        169,
-        175
+        67,
+        69,
+        75
       ]
     },
     {
@@ -3094,8 +2504,8 @@
       "all_definition_candidates_count": 4,
       "all_search_hits_count": 353,
       "reference_lines": [
-        168,
-        174
+        68,
+        74
       ]
     },
     {
@@ -3126,7 +2536,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 350,
       "reference_lines": [
-        307
+        207
       ]
     },
     {
@@ -3156,10 +2566,10 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 350,
       "reference_lines": [
-        303,
-        322,
-        326,
-        328
+        203,
+        222,
+        226,
+        228
       ]
     },
     {
@@ -3197,8 +2607,8 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 350,
       "reference_lines": [
-        296,
-        309
+        196,
+        209
       ]
     },
     {
@@ -3221,8 +2631,8 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 350,
       "reference_lines": [
-        324,
-        327
+        224,
+        227
       ]
     },
     {
@@ -3253,687 +2663,8 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 350,
       "reference_lines": [
-        323,
-        325
-      ]
-    },
-    {
-      "symbol": "asm_camellia256_decrypt_block",
-      "token": "asm_camellia256_decrypt_block",
-      "occurrences": 3,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "camellia256_bridge.cpp.obj",
-          "count": 2,
-          "mapped_sources": [
-            "/workspace/src/core/camellia256_bridge.cpp"
-          ]
-        },
-        {
-          "obj": "Win32IDE_AirgappedEnterprise.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_AirgappedEnterprise.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_AirgappedEnterprise.cpp",
-          "line": 1610,
-          "text": "asm_camellia256_decrypt_block(sentinelEnc, sentinelDec);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/test_harness/camellia256_test.cpp",
-          "line": 83,
-          "text": "rc = asm_camellia256_decrypt_block(ciphertext, decrypted);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "all_definition_candidates_count": 2,
-      "all_search_hits_count": 520,
-      "reference_lines": [
-        101,
-        107,
-        330
-      ]
-    },
-    {
-      "symbol": "asm_camellia256_decrypt_ctr",
-      "token": "asm_camellia256_decrypt_ctr",
-      "occurrences": 3,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "camellia256_bridge.cpp.obj",
-          "count": 3,
-          "mapped_sources": [
-            "/workspace/src/core/camellia256_bridge.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/camellia256_bridge.cpp",
-          "line": 303,
-          "text": "int result = asm_camellia256_decrypt_ctr(data, length, nonce);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/test_harness/camellia256_test.cpp",
-          "line": 121,
-          "text": "rc = asm_camellia256_decrypt_ctr(buffer, 37, nonce);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "all_definition_candidates_count": 2,
-      "all_search_hits_count": 780,
-      "reference_lines": [
-        94,
-        103,
-        105
-      ]
-    },
-    {
-      "symbol": "asm_camellia256_decrypt_file",
-      "token": "asm_camellia256_decrypt_file",
-      "occurrences": 1,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "camellia256_bridge.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/core/camellia256_bridge.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/camellia256_bridge.cpp",
-          "line": 204,
-          "text": "int result = asm_camellia256_decrypt_file(inputPath.c_str(), outputPath.c_str());",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 432,
-      "reference_lines": [
-        92
-      ]
-    },
-    {
-      "symbol": "asm_camellia256_encrypt_block",
-      "token": "asm_camellia256_encrypt_block",
-      "occurrences": 3,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "camellia256_bridge.cpp.obj",
-          "count": 2,
-          "mapped_sources": [
-            "/workspace/src/core/camellia256_bridge.cpp"
-          ]
-        },
-        {
-          "obj": "Win32IDE_AirgappedEnterprise.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_AirgappedEnterprise.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/win32app/Win32IDE_AirgappedEnterprise.cpp",
-          "line": 1605,
-          "text": "int blockResult = asm_camellia256_encrypt_block(sentinel, sentinelEnc);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/test_harness/camellia256_test.cpp",
-          "line": 76,
-          "text": "rc = asm_camellia256_encrypt_block(plaintext, ciphertext);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/test_harness/camellia256_test.cpp",
-          "line": 310,
-          "text": "rc = asm_camellia256_encrypt_block(block, out);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "all_definition_candidates_count": 3,
-      "all_search_hits_count": 608,
-      "reference_lines": [
-        100,
-        108,
-        329
-      ]
-    },
-    {
-      "symbol": "asm_camellia256_encrypt_ctr",
-      "token": "asm_camellia256_encrypt_ctr",
-      "occurrences": 3,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "camellia256_bridge.cpp.obj",
-          "count": 3,
-          "mapped_sources": [
-            "/workspace/src/core/camellia256_bridge.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/camellia256_bridge.cpp",
-          "line": 281,
-          "text": "int result = asm_camellia256_encrypt_ctr(data, length, nonce);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/test_harness/camellia256_test.cpp",
-          "line": 115,
-          "text": "int rc = asm_camellia256_encrypt_ctr(buffer, 37, nonce);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "all_definition_candidates_count": 2,
-      "all_search_hits_count": 952,
-      "reference_lines": [
-        93,
-        102,
-        106
-      ]
-    },
-    {
-      "symbol": "asm_camellia256_encrypt_file",
-      "token": "asm_camellia256_encrypt_file",
-      "occurrences": 1,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "camellia256_bridge.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/core/camellia256_bridge.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/camellia256_bridge.cpp",
-          "line": 188,
-          "text": "int result = asm_camellia256_encrypt_file(inputPath.c_str(), outputPath.c_str());",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 432,
-      "reference_lines": [
-        91
-      ]
-    },
-    {
-      "symbol": "asm_camellia256_get_hmac_key",
-      "token": "asm_camellia256_get_hmac_key",
-      "occurrences": 3,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "camellia256_bridge.cpp.obj",
-          "count": 3,
-          "mapped_sources": [
-            "/workspace/src/core/camellia256_bridge.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/camellia256_bridge.cpp",
-          "line": 583,
-          "text": "int result = asm_camellia256_get_hmac_key(m_hmacKey);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/ai/digestion_scanner.asm",
-          "line": 140698,
-          "text": ";   - asm_camellia256_get_hmac_key (from RawrXD_Camellia256.asm)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/attention.asm",
-          "line": 140698,
-          "text": ";   - asm_camellia256_get_hmac_key (from RawrXD_Camellia256.asm)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/quantization.asm",
-          "line": 140698,
-          "text": ";   - asm_camellia256_get_hmac_key (from RawrXD_Camellia256.asm)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/test_harness/camellia256_test.cpp",
-          "line": 144,
-          "text": "int rc = asm_camellia256_get_hmac_key(hmacKey);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/test_harness/camellia256_test.cpp",
-          "line": 304,
-          "text": "int rc = asm_camellia256_get_hmac_key(hmacKey);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
-          "line": 140698,
-          "text": ";   - asm_camellia256_get_hmac_key (from RawrXD_Camellia256.asm)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
-          "line": 140698,
-          "text": ";   - asm_camellia256_get_hmac_key (from RawrXD_Camellia256.asm)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
-          "line": 140698,
-          "text": ";   - asm_camellia256_get_hmac_key (from RawrXD_Camellia256.asm)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/compression.asm",
-          "line": 140698,
-          "text": ";   - asm_camellia256_get_hmac_key (from RawrXD_Camellia256.asm)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
-          "line": 140698,
-          "text": ";   - asm_camellia256_get_hmac_key (from RawrXD_Camellia256.asm)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "all_definition_candidates_count": 89,
-      "all_search_hits_count": 1124,
-      "reference_lines": [
-        89,
-        97,
-        99
-      ]
-    },
-    {
-      "symbol": "asm_camellia256_get_status",
-      "token": "asm_camellia256_get_status",
-      "occurrences": 2,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "camellia256_bridge.cpp.obj",
-          "count": 2,
-          "mapped_sources": [
-            "/workspace/src/core/camellia256_bridge.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/camellia256_bridge.cpp",
-          "line": 435,
-          "text": "asm_camellia256_get_status(&status);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 432,
-      "reference_lines": [
-        95,
-        104
-      ]
-    },
-    {
-      "symbol": "asm_camellia256_init",
-      "token": "asm_camellia256_init",
-      "occurrences": 1,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "camellia256_bridge.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/core/camellia256_bridge.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/camellia256_bridge.cpp",
-          "line": 86,
-          "text": "int result = asm_camellia256_init();",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/core/convergence_stress_harness.cpp",
-          "line": 43,
-          "text": "int   asm_camellia256_init();",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        },
-        {
-          "path": "/workspace/src/core/convergence_stress_harness.cpp",
-          "line": 299,
-          "text": "int r1 = asm_camellia256_init();",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        },
-        {
-          "path": "/workspace/src/core/convergence_stress_harness.cpp",
-          "line": 358,
-          "text": "asm_camellia256_init();",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        },
-        {
-          "path": "/workspace/src/core/convergence_stress_harness.cpp",
-          "line": 594,
-          "text": "asm_camellia256_init();",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        },
-        {
-          "path": "/workspace/src/core/convergence_stress_harness.cpp",
-          "line": 830,
-          "text": "asm_camellia256_init();",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        },
-        {
-          "path": "/workspace/src/core/convergence_stress_harness.cpp",
-          "line": 937,
-          "text": "asm_camellia256_init();",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        },
-        {
-          "path": "/workspace/src/core/convergence_stress_harness.cpp",
-          "line": 1030,
-          "text": "asm_camellia256_init();",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        }
-      ],
-      "all_definition_candidates_count": 8,
-      "all_search_hits_count": 439,
-      "reference_lines": [
-        98
-      ]
-    },
-    {
-      "symbol": "asm_camellia256_self_test",
-      "token": "asm_camellia256_self_test",
-      "occurrences": 1,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "camellia256_bridge.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/core/camellia256_bridge.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/camellia256_bridge.cpp",
-          "line": 168,
-          "text": "int result = asm_camellia256_self_test();",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/core/shadow_page_detour.cpp",
-          "line": 842,
-          "text": "int preTest = asm_camellia256_self_test();",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        },
-        {
-          "path": "/workspace/src/core/shadow_page_detour.cpp",
-          "line": 858,
-          "text": "preTest = asm_camellia256_self_test();",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        },
-        {
-          "path": "/workspace/src/core/shadow_page_detour.cpp",
-          "line": 903,
-          "text": "return asm_camellia256_self_test() == 0;",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        },
-        {
-          "path": "/workspace/src/test_harness/camellia256_test.cpp",
-          "line": 47,
-          "text": "int rc = asm_camellia256_self_test();",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/core/convergence_stress_harness.cpp",
-          "line": 45,
-          "text": "int   asm_camellia256_self_test();",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        }
-      ],
-      "all_definition_candidates_count": 6,
-      "all_search_hits_count": 437,
-      "reference_lines": [
-        90
-      ]
-    },
-    {
-      "symbol": "asm_camellia256_set_key",
-      "token": "asm_camellia256_set_key",
-      "occurrences": 1,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "camellia256_bridge.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/core/camellia256_bridge.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/camellia256_bridge.cpp",
-          "line": 141,
-          "text": "int result = asm_camellia256_set_key(key32);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/core/shadow_page_detour.cpp",
-          "line": 303,
-          "text": "int rc = asm_camellia256_set_key(kRFC3713Key256);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        },
-        {
-          "path": "/workspace/src/core/shadow_page_detour.cpp",
-          "line": 326,
-          "text": "int rc = asm_camellia256_set_key(kRFC3713Key256);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        },
-        {
-          "path": "/workspace/src/core/convergence_stress_harness.cpp",
-          "line": 44,
-          "text": "int   asm_camellia256_set_key(const uint8_t* key, uint32_t keyLen);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        },
-        {
-          "path": "/workspace/src/core/convergence_stress_harness.cpp",
-          "line": 303,
-          "text": "int r2 = asm_camellia256_set_key(testKey, 32);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        },
-        {
-          "path": "/workspace/src/core/convergence_stress_harness.cpp",
-          "line": 361,
-          "text": "asm_camellia256_set_key(testKey, 32);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        },
-        {
-          "path": "/workspace/src/core/convergence_stress_harness.cpp",
-          "line": 597,
-          "text": "asm_camellia256_set_key(fuzzKey, 32);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        },
-        {
-          "path": "/workspace/src/core/convergence_stress_harness.cpp",
-          "line": 833,
-          "text": "asm_camellia256_set_key(key, 32);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        },
-        {
-          "path": "/workspace/src/core/convergence_stress_harness.cpp",
-          "line": 940,
-          "text": "asm_camellia256_set_key(key, 32);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        },
-        {
-          "path": "/workspace/src/core/convergence_stress_harness.cpp",
-          "line": 1033,
-          "text": "asm_camellia256_set_key(key, 32);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": true
-        },
-        {
-          "path": "/workspace/src/test_harness/camellia256_test.cpp",
-          "line": 66,
-          "text": "int rc = asm_camellia256_set_key(key);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "all_definition_candidates_count": 12,
-      "all_search_hits_count": 615,
-      "reference_lines": [
-        88
-      ]
-    },
-    {
-      "symbol": "asm_camellia256_shutdown",
-      "token": "asm_camellia256_shutdown",
-      "occurrences": 2,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "camellia256_bridge.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/core/camellia256_bridge.cpp"
-          ]
-        },
-        {
-          "obj": "Win32IDE_FlagshipFeatures.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/win32app/Win32IDE_FlagshipFeatures.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/camellia256_bridge.cpp",
-          "line": 455,
-          "text": "int result = asm_camellia256_shutdown();",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/win32app/Win32IDE_FlagshipFeatures.cpp",
-          "line": 204,
-          "text": "int camResult = asm_camellia256_shutdown();",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 2,
-      "all_search_hits_count": 433,
-      "reference_lines": [
-        96,
-        331
+        223,
+        225
       ]
     },
     {
@@ -3973,7 +2704,7 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 438,
       "reference_lines": [
-        337
+        234
       ]
     },
     {
@@ -4033,7 +2764,7 @@
       "all_definition_candidates_count": 5,
       "all_search_hits_count": 615,
       "reference_lines": [
-        286
+        186
       ]
     },
     {
@@ -4073,7 +2804,7 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 438,
       "reference_lines": [
-        335
+        232
       ]
     },
     {
@@ -4113,7 +2844,7 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 438,
       "reference_lines": [
-        333
+        230
       ]
     },
     {
@@ -4153,9 +2884,9 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 438,
       "reference_lines": [
-        334,
-        336,
-        338
+        231,
+        233,
+        235
       ]
     },
     {
@@ -4198,20 +2929,6 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/quantization.asm",
-          "line": 103194,
-          "text": ";   int64_t asm_symbol_hash_lookup(",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
-          "line": 103194,
-          "text": ";   int64_t asm_symbol_hash_lookup(",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/ggml_masm/compression.asm",
           "line": 103194,
           "text": ";   int64_t asm_symbol_hash_lookup(",
@@ -4226,7 +2943,21 @@
           "removed_by_non_msvc_block": false
         },
         {
+          "path": "/workspace/src/ggml_masm/quantization.asm",
+          "line": 103194,
+          "text": ";   int64_t asm_symbol_hash_lookup(",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
           "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
+          "line": 103194,
+          "text": ";   int64_t asm_symbol_hash_lookup(",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
+          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
           "line": 103194,
           "text": ";   int64_t asm_symbol_hash_lookup(",
           "stublike_path": false,
@@ -4240,14 +2971,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
           "line": 103194,
           "text": ";   int64_t asm_symbol_hash_lookup(",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
+          "path": "/workspace/src/win32app/mcp_hooks.asm",
           "line": 103194,
           "text": ";   int64_t asm_symbol_hash_lookup(",
           "stublike_path": false,
@@ -4257,480 +2988,7 @@
       "all_definition_candidates_count": 88,
       "all_search_hits_count": 437,
       "reference_lines": [
-        185
-      ]
-    },
-    {
-      "symbol": "deflate_brutal_masm",
-      "token": "deflate_brutal_masm",
-      "occurrences": 1,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "brutal_gzip.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/codec/brutal_gzip.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/codec/brutal_gzip.cpp",
-          "line": 23,
-          "text": "void* compressed = deflate_brutal_masm(data.data(), data.size(), &out_len);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/llm_adapter/GGUFRunner.cpp",
-          "line": 1286,
-          "text": "out_ptr = deflate_brutal_masm(data, len, &out_len);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/include/deflate_brutal_std.hpp",
-          "line": 20,
-          "text": "void* out_ptr = deflate_brutal_masm(in.data(), in.size(), &out_len);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/include/deflate_brutal_std.hpp",
-          "line": 39,
-          "text": "void* out_ptr = deflate_brutal_masm(data, len, &out_len);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/include/codec/compression.h",
-          "line": 32,
-          "text": "std::vector<uint8_t> deflate_brutal_masm(const std::vector<uint8_t>& data, bool* success = nullptr);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/codec.cpp",
-          "line": 23,
-          "text": "void* deflate_brutal_masm(const void* src, size_t len, size_t* out_len) {",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/codec.cpp",
-          "line": 29,
-          "text": "return deflate_brutal_masm(src, len, out_len);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/include/deflate_brutal_qt.hpp",
-          "line": 27,
-          "text": "void* p = deflate_brutal_masm(in.data(), in.size(), &packedSz);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/include/deflate_brutal_qt.hpp",
-          "line": 44,
-          "text": "void* p = deflate_brutal_masm(data, size, &packedSz);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/orchestration/checkpoint_manager_impl.cpp",
-          "line": 37,
-          "text": "compressedData = codec::deflate_brutal_masm(stateData, &success);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/orchestration/checkpoint_manager.cpp",
-          "line": 128,
-          "text": "std::vector<uint8_t> out = codec::deflate_brutal_masm(data, &ok);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/qtapp/inflate_deflate_cpp.cpp",
-          "line": 17,
-          "text": "void* compressed = deflate_brutal_masm(in.constData(), in.size(), &out_len);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "all_definition_candidates_count": 14,
-      "all_search_hits_count": 301,
-      "reference_lines": [
-        50
-      ]
-    },
-    {
-      "symbol": "dequant_q2k_avx2",
-      "token": "dequant_q2k_avx2",
-      "occurrences": 2,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "native_speed_layer.cpp.obj",
-          "count": 2,
-          "mapped_sources": [
-            "/workspace/src/core/native_speed_layer.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/native_speed_layer.cpp",
-          "line": 66,
-          "text": "void dequant_q2k_avx2(const void* src, float* dst, uint64_t nblocks);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 263,
-      "reference_lines": [
-        120,
-        149
-      ]
-    },
-    {
-      "symbol": "dequant_q4_0_avx2",
-      "token": "dequant_q4_0_avx2",
-      "occurrences": 2,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "native_speed_layer.cpp.obj",
-          "count": 2,
-          "mapped_sources": [
-            "/workspace/src/core/native_speed_layer.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/native_speed_layer.cpp",
-          "line": 62,
-          "text": "void dequant_q4_0_avx2(const void* src, float* dst, uint64_t nblocks);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/ai/digestion_scanner.asm",
-          "line": 58572,
-          "text": "; dequant_q4_0_avx2(const void* src, float* dst, uint64_t nblocks)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/attention.asm",
-          "line": 58572,
-          "text": "; dequant_q4_0_avx2(const void* src, float* dst, uint64_t nblocks)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/quantization.asm",
-          "line": 58572,
-          "text": "; dequant_q4_0_avx2(const void* src, float* dst, uint64_t nblocks)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
-          "line": 58572,
-          "text": "; dequant_q4_0_avx2(const void* src, float* dst, uint64_t nblocks)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
-          "line": 58572,
-          "text": "; dequant_q4_0_avx2(const void* src, float* dst, uint64_t nblocks)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/compression.asm",
-          "line": 58572,
-          "text": "; dequant_q4_0_avx2(const void* src, float* dst, uint64_t nblocks)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
-          "line": 58572,
-          "text": "; dequant_q4_0_avx2(const void* src, float* dst, uint64_t nblocks)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
-          "line": 58572,
-          "text": "; dequant_q4_0_avx2(const void* src, float* dst, uint64_t nblocks)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
-          "line": 58572,
-          "text": "; dequant_q4_0_avx2(const void* src, float* dst, uint64_t nblocks)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/net/net.asm",
-          "line": 58572,
-          "text": "; dequant_q4_0_avx2(const void* src, float* dst, uint64_t nblocks)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "all_definition_candidates_count": 88,
-      "all_search_hits_count": 350,
-      "reference_lines": [
-        119,
-        152
-      ]
-    },
-    {
-      "symbol": "dequant_q4_0_avx512",
-      "token": "dequant_q4_0_avx512",
-      "occurrences": 2,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "native_speed_layer.cpp.obj",
-          "count": 2,
-          "mapped_sources": [
-            "/workspace/src/core/native_speed_layer.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/native_speed_layer.cpp",
-          "line": 63,
-          "text": "void dequant_q4_0_avx512(const void* src, float* dst, uint64_t nblocks);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 263,
-      "reference_lines": [
-        118,
-        153
-      ]
-    },
-    {
-      "symbol": "dequant_q8_0_avx2",
-      "token": "dequant_q8_0_avx2",
-      "occurrences": 2,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "native_speed_layer.cpp.obj",
-          "count": 2,
-          "mapped_sources": [
-            "/workspace/src/core/native_speed_layer.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/native_speed_layer.cpp",
-          "line": 64,
-          "text": "void dequant_q8_0_avx2(const void* src, float* dst, uint64_t nblocks);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/ai/digestion_scanner.asm",
-          "line": 58683,
-          "text": "; dequant_q8_0_avx2(const void* src, float* dst, uint64_t nblocks)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/attention.asm",
-          "line": 58683,
-          "text": "; dequant_q8_0_avx2(const void* src, float* dst, uint64_t nblocks)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/quantization.asm",
-          "line": 58683,
-          "text": "; dequant_q8_0_avx2(const void* src, float* dst, uint64_t nblocks)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
-          "line": 58683,
-          "text": "; dequant_q8_0_avx2(const void* src, float* dst, uint64_t nblocks)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
-          "line": 58683,
-          "text": "; dequant_q8_0_avx2(const void* src, float* dst, uint64_t nblocks)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
-          "line": 58683,
-          "text": "; dequant_q8_0_avx2(const void* src, float* dst, uint64_t nblocks)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/compression.asm",
-          "line": 58683,
-          "text": "; dequant_q8_0_avx2(const void* src, float* dst, uint64_t nblocks)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
-          "line": 58683,
-          "text": "; dequant_q8_0_avx2(const void* src, float* dst, uint64_t nblocks)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
-          "line": 58683,
-          "text": "; dequant_q8_0_avx2(const void* src, float* dst, uint64_t nblocks)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
-          "line": 58683,
-          "text": "; dequant_q8_0_avx2(const void* src, float* dst, uint64_t nblocks)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "all_definition_candidates_count": 88,
-      "all_search_hits_count": 350,
-      "reference_lines": [
-        122,
-        150
-      ]
-    },
-    {
-      "symbol": "dequant_q8_0_avx512",
-      "token": "dequant_q8_0_avx512",
-      "occurrences": 2,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "native_speed_layer.cpp.obj",
-          "count": 2,
-          "mapped_sources": [
-            "/workspace/src/core/native_speed_layer.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/native_speed_layer.cpp",
-          "line": 65,
-          "text": "void dequant_q8_0_avx512(const void* src, float* dst, uint64_t nblocks);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 263,
-      "reference_lines": [
-        121,
-        151
-      ]
-    },
-    {
-      "symbol": "g_FlashAttnCalls",
-      "token": "g_FlashAttnCalls",
-      "occurrences": 1,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "flash_attention.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/core/flash_attention.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/telemetry/UnifiedTelemetryCore.cpp",
-          "line": 334,
-          "text": "out.flashAttnCalls    = read64(\"g_FlashAttnCalls\");",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 268,
-      "reference_lines": [
-        115
-      ]
-    },
-    {
-      "symbol": "g_FlashAttnTiles",
-      "token": "g_FlashAttnTiles",
-      "occurrences": 1,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "flash_attention.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/core/flash_attention.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/telemetry/UnifiedTelemetryCore.cpp",
-          "line": 335,
-          "text": "out.flashAttnTiles    = read64(\"g_FlashAttnTiles\");",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 1,
-      "all_search_hits_count": 268,
-      "reference_lines": [
-        114
+        85
       ]
     },
     {
@@ -4753,7 +3011,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 611,
       "reference_lines": [
-        305
+        205
       ]
     },
     {
@@ -4776,7 +3034,7 @@
       "all_definition_candidates_count": 0,
       "all_search_hits_count": 611,
       "reference_lines": [
-        304
+        204
       ]
     },
     {
@@ -4807,7 +3065,7 @@
       "all_definition_candidates_count": 1,
       "all_search_hits_count": 1133,
       "reference_lines": [
-        306
+        206
       ]
     },
     {
@@ -4845,888 +3103,8 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 263,
       "reference_lines": [
-        135,
-        142
-      ]
-    },
-    {
-      "symbol": "native_nt_memcpy",
-      "token": "native_nt_memcpy",
-      "occurrences": 2,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "native_speed_layer.cpp.obj",
-          "count": 2,
-          "mapped_sources": [
-            "/workspace/src/core/native_speed_layer.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/native_speed_layer.cpp",
-          "line": 59,
-          "text": "void native_nt_memcpy(void* dst, const void* src, size_t bytes);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/core/native_speed_layer.cpp",
-          "line": 699,
-          "text": "m_dispatch.nt_memcpy = native_nt_memcpy;",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/ai/digestion_scanner.asm",
-          "line": 58521,
-          "text": "; native_nt_memcpy(void* dst, const void* src, size_t bytes)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/attention.asm",
-          "line": 58521,
-          "text": "; native_nt_memcpy(void* dst, const void* src, size_t bytes)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/compression.asm",
-          "line": 58521,
-          "text": "; native_nt_memcpy(void* dst, const void* src, size_t bytes)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/quantization.asm",
-          "line": 58521,
-          "text": "; native_nt_memcpy(void* dst, const void* src, size_t bytes)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
-          "line": 58521,
-          "text": "; native_nt_memcpy(void* dst, const void* src, size_t bytes)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
-          "line": 58521,
-          "text": "; native_nt_memcpy(void* dst, const void* src, size_t bytes)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
-          "line": 58521,
-          "text": "; native_nt_memcpy(void* dst, const void* src, size_t bytes)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
-          "line": 58521,
-          "text": "; native_nt_memcpy(void* dst, const void* src, size_t bytes)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
-          "line": 58521,
-          "text": "; native_nt_memcpy(void* dst, const void* src, size_t bytes)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/net/net.asm",
-          "line": 58521,
-          "text": "; native_nt_memcpy(void* dst, const void* src, size_t bytes)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "all_definition_candidates_count": 89,
-      "all_search_hits_count": 263,
-      "reference_lines": [
-        126,
-        143
-      ]
-    },
-    {
-      "symbol": "native_rmsnorm_avx2",
-      "token": "native_rmsnorm_avx2",
-      "occurrences": 2,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "native_speed_layer.cpp.obj",
-          "count": 2,
-          "mapped_sources": [
-            "/workspace/src/core/native_speed_layer.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/native_speed_layer.cpp",
-          "line": 43,
-          "text": "void native_rmsnorm_avx2(const float* x, const float* weight,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/core/native_speed_layer.cpp",
-          "line": 643,
-          "text": "m_dispatch.rmsnorm = native_rmsnorm_avx2;",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/ai/digestion_scanner.asm",
-          "line": 57869,
-          "text": "; native_rmsnorm_avx2(const float* x, const float* weight, float* y,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/attention.asm",
-          "line": 57869,
-          "text": "; native_rmsnorm_avx2(const float* x, const float* weight, float* y,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/quantization.asm",
-          "line": 57869,
-          "text": "; native_rmsnorm_avx2(const float* x, const float* weight, float* y,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
-          "line": 57869,
-          "text": "; native_rmsnorm_avx2(const float* x, const float* weight, float* y,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
-          "line": 57869,
-          "text": "; native_rmsnorm_avx2(const float* x, const float* weight, float* y,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
-          "line": 57869,
-          "text": "; native_rmsnorm_avx2(const float* x, const float* weight, float* y,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/compression.asm",
-          "line": 57869,
-          "text": "; native_rmsnorm_avx2(const float* x, const float* weight, float* y,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
-          "line": 57869,
-          "text": "; native_rmsnorm_avx2(const float* x, const float* weight, float* y,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
-          "line": 57869,
-          "text": "; native_rmsnorm_avx2(const float* x, const float* weight, float* y,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
-          "line": 57869,
-          "text": "; native_rmsnorm_avx2(const float* x, const float* weight, float* y,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "all_definition_candidates_count": 89,
-      "all_search_hits_count": 263,
-      "reference_lines": [
-        123,
-        146
-      ]
-    },
-    {
-      "symbol": "native_rmsnorm_avx512",
-      "token": "native_rmsnorm_avx512",
-      "occurrences": 3,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "native_speed_layer.cpp.obj",
-          "count": 3,
-          "mapped_sources": [
-            "/workspace/src/core/native_speed_layer.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/native_speed_layer.cpp",
-          "line": 45,
-          "text": "void native_rmsnorm_avx512(const float* x, const float* weight,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/core/native_speed_layer.cpp",
-          "line": 641,
-          "text": "m_dispatch.rmsnorm = native_rmsnorm_avx512;",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/ai/digestion_scanner.asm",
-          "line": 57989,
-          "text": "; native_rmsnorm_avx512(const float* x, const float* weight, float* y,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/attention.asm",
-          "line": 57989,
-          "text": "; native_rmsnorm_avx512(const float* x, const float* weight, float* y,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/compression.asm",
-          "line": 57989,
-          "text": "; native_rmsnorm_avx512(const float* x, const float* weight, float* y,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/quantization.asm",
-          "line": 57989,
-          "text": "; native_rmsnorm_avx512(const float* x, const float* weight, float* y,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
-          "line": 57989,
-          "text": "; native_rmsnorm_avx512(const float* x, const float* weight, float* y,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
-          "line": 57989,
-          "text": "; native_rmsnorm_avx512(const float* x, const float* weight, float* y,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
-          "line": 57989,
-          "text": "; native_rmsnorm_avx512(const float* x, const float* weight, float* y,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
-          "line": 57989,
-          "text": "; native_rmsnorm_avx512(const float* x, const float* weight, float* y,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
-          "line": 57989,
-          "text": "; native_rmsnorm_avx512(const float* x, const float* weight, float* y,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/net/net.asm",
-          "line": 57989,
-          "text": "; native_rmsnorm_avx512(const float* x, const float* weight, float* y,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "all_definition_candidates_count": 89,
-      "all_search_hits_count": 263,
-      "reference_lines": [
-        129,
-        131,
-        148
-      ]
-    },
-    {
-      "symbol": "native_rope_avx2",
-      "token": "native_rope_avx2",
-      "occurrences": 2,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "native_speed_layer.cpp.obj",
-          "count": 2,
-          "mapped_sources": [
-            "/workspace/src/core/native_speed_layer.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/native_speed_layer.cpp",
-          "line": 49,
-          "text": "void native_rope_avx2(float* q, float* k, int headDim, int nHeads,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/core/native_speed_layer.cpp",
-          "line": 659,
-          "text": "m_dispatch.rope = native_rope_avx2;",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/ggml_masm/attention.asm",
-          "line": 58434,
-          "text": "; native_rope_avx2(float* q, float* k, int headDim, int nHeads,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ai/digestion_scanner.asm",
-          "line": 58434,
-          "text": "; native_rope_avx2(float* q, float* k, int headDim, int nHeads,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/quantization.asm",
-          "line": 58434,
-          "text": "; native_rope_avx2(float* q, float* k, int headDim, int nHeads,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
-          "line": 58434,
-          "text": "; native_rope_avx2(float* q, float* k, int headDim, int nHeads,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/compression.asm",
-          "line": 58434,
-          "text": "; native_rope_avx2(float* q, float* k, int headDim, int nHeads,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
-          "line": 58434,
-          "text": "; native_rope_avx2(float* q, float* k, int headDim, int nHeads,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
-          "line": 58434,
-          "text": "; native_rope_avx2(float* q, float* k, int headDim, int nHeads,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
-          "line": 58434,
-          "text": "; native_rope_avx2(float* q, float* k, int headDim, int nHeads,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/net/net.asm",
-          "line": 58434,
-          "text": "; native_rope_avx2(float* q, float* k, int headDim, int nHeads,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
-          "line": 58434,
-          "text": "; native_rope_avx2(float* q, float* k, int headDim, int nHeads,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "all_definition_candidates_count": 89,
-      "all_search_hits_count": 263,
-      "reference_lines": [
-        125,
-        144
-      ]
-    },
-    {
-      "symbol": "native_softmax_avx2",
-      "token": "native_softmax_avx2",
-      "occurrences": 2,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "native_speed_layer.cpp.obj",
-          "count": 2,
-          "mapped_sources": [
-            "/workspace/src/core/native_speed_layer.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/native_speed_layer.cpp",
-          "line": 47,
-          "text": "void native_softmax_avx2(float* x, int n);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/core/native_speed_layer.cpp",
-          "line": 652,
-          "text": "m_dispatch.softmax = native_softmax_avx2;",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/ai/digestion_scanner.asm",
-          "line": 58107,
-          "text": "; native_softmax_avx2(float* x, int n)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/attention.asm",
-          "line": 58107,
-          "text": "; native_softmax_avx2(float* x, int n)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/compression.asm",
-          "line": 58107,
-          "text": "; native_softmax_avx2(float* x, int n)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/quantization.asm",
-          "line": 58107,
-          "text": "; native_softmax_avx2(float* x, int n)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
-          "line": 58107,
-          "text": "; native_softmax_avx2(float* x, int n)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
-          "line": 58107,
-          "text": "; native_softmax_avx2(float* x, int n)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
-          "line": 58107,
-          "text": "; native_softmax_avx2(float* x, int n)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
-          "line": 58107,
-          "text": "; native_softmax_avx2(float* x, int n)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
-          "line": 58107,
-          "text": "; native_softmax_avx2(float* x, int n)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
-          "line": 58107,
-          "text": "; native_softmax_avx2(float* x, int n)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "all_definition_candidates_count": 89,
-      "all_search_hits_count": 263,
-      "reference_lines": [
-        124,
-        145
-      ]
-    },
-    {
-      "symbol": "native_softmax_avx512",
-      "token": "native_softmax_avx512",
-      "occurrences": 3,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "native_speed_layer.cpp.obj",
-          "count": 3,
-          "mapped_sources": [
-            "/workspace/src/core/native_speed_layer.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/native_speed_layer.cpp",
-          "line": 48,
-          "text": "void native_softmax_avx512(float* x, int n);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/core/native_speed_layer.cpp",
-          "line": 650,
-          "text": "m_dispatch.softmax = native_softmax_avx512;",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/ai/digestion_scanner.asm",
-          "line": 58222,
-          "text": "; native_softmax_avx512(float* x, int n)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/attention.asm",
-          "line": 58222,
-          "text": "; native_softmax_avx512(float* x, int n)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/quantization.asm",
-          "line": 58222,
-          "text": "; native_softmax_avx512(float* x, int n)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
-          "line": 58222,
-          "text": "; native_softmax_avx512(float* x, int n)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/compression.asm",
-          "line": 58222,
-          "text": "; native_softmax_avx512(float* x, int n)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
-          "line": 58222,
-          "text": "; native_softmax_avx512(float* x, int n)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
-          "line": 58222,
-          "text": "; native_softmax_avx512(float* x, int n)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
-          "line": 58222,
-          "text": "; native_softmax_avx512(float* x, int n)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
-          "line": 58222,
-          "text": "; native_softmax_avx512(float* x, int n)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
-          "line": 58222,
-          "text": "; native_softmax_avx512(float* x, int n)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "all_definition_candidates_count": 89,
-      "all_search_hits_count": 263,
-      "reference_lines": [
-        130,
-        132,
-        147
-      ]
-    },
-    {
-      "symbol": "native_vdot_avx2",
-      "token": "native_vdot_avx2",
-      "occurrences": 1,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "native_speed_layer.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/core/native_speed_layer.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/native_speed_layer.cpp",
-          "line": 51,
-          "text": "void native_vdot_avx2(const float* a, const float* b, int n,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/core/native_speed_layer.cpp",
-          "line": 674,
-          "text": "native_vdot_avx2(a, b, n, &result);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/ai/digestion_scanner.asm",
-          "line": 58322,
-          "text": "; native_vdot_avx2(const float* a, const float* b, int n, float* result)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/attention.asm",
-          "line": 58322,
-          "text": "; native_vdot_avx2(const float* a, const float* b, int n, float* result)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/quantization.asm",
-          "line": 58322,
-          "text": "; native_vdot_avx2(const float* a, const float* b, int n, float* result)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
-          "line": 58322,
-          "text": "; native_vdot_avx2(const float* a, const float* b, int n, float* result)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/compression.asm",
-          "line": 58322,
-          "text": "; native_vdot_avx2(const float* a, const float* b, int n, float* result)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
-          "line": 58322,
-          "text": "; native_vdot_avx2(const float* a, const float* b, int n, float* result)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
-          "line": 58322,
-          "text": "; native_vdot_avx2(const float* a, const float* b, int n, float* result)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
-          "line": 58322,
-          "text": "; native_vdot_avx2(const float* a, const float* b, int n, float* result)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
-          "line": 58322,
-          "text": "; native_vdot_avx2(const float* a, const float* b, int n, float* result)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
-          "line": 58322,
-          "text": "; native_vdot_avx2(const float* a, const float* b, int n, float* result)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "all_definition_candidates_count": 89,
-      "all_search_hits_count": 263,
-      "reference_lines": [
-        116
-      ]
-    },
-    {
-      "symbol": "native_vdot_avx512",
-      "token": "native_vdot_avx512",
-      "occurrences": 1,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "native_speed_layer.cpp.obj",
-          "count": 1,
-          "mapped_sources": [
-            "/workspace/src/core/native_speed_layer.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/native_speed_layer.cpp",
-          "line": 53,
-          "text": "void native_vdot_avx512(const float* a, const float* b, int n,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/core/native_speed_layer.cpp",
-          "line": 668,
-          "text": "native_vdot_avx512(a, b, n, &result);",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [
-        {
-          "path": "/workspace/src/ai/digestion_scanner.asm",
-          "line": 58377,
-          "text": "; native_vdot_avx512(const float* a, const float* b, int n, float* result)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/attention.asm",
-          "line": 58377,
-          "text": "; native_vdot_avx512(const float* a, const float* b, int n, float* result)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/quantization.asm",
-          "line": 58377,
-          "text": "; native_vdot_avx512(const float* a, const float* b, int n, float* result)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
-          "line": 58377,
-          "text": "; native_vdot_avx512(const float* a, const float* b, int n, float* result)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/compression.asm",
-          "line": 58377,
-          "text": "; native_vdot_avx512(const float* a, const float* b, int n, float* result)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/ggml_masm/ggml_backend.asm",
-          "line": 58377,
-          "text": "; native_vdot_avx512(const float* a, const float* b, int n, float* result)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
-          "line": 58377,
-          "text": "; native_vdot_avx512(const float* a, const float* b, int n, float* result)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
-          "line": 58377,
-          "text": "; native_vdot_avx512(const float* a, const float* b, int n, float* result)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
-          "line": 58377,
-          "text": "; native_vdot_avx512(const float* a, const float* b, int n, float* result)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
-          "line": 58377,
-          "text": "; native_vdot_avx512(const float* a, const float* b, int n, float* result)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "all_definition_candidates_count": 89,
-      "all_search_hits_count": 263,
-      "reference_lines": [
-        117
+        49,
+        53
       ]
     },
     {
@@ -5783,13 +3161,6 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
-          "line": 58785,
-          "text": "; qgemv_q4_0_avx2(const void* A, const float* x, float* y, int M, int K)",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
           "path": "/workspace/src/ggml_masm/quantization.asm",
           "line": 58785,
           "text": "; qgemv_q4_0_avx2(const void* A, const float* x, float* y, int M, int K)",
@@ -5804,6 +3175,13 @@
           "removed_by_non_msvc_block": false
         },
         {
+          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
+          "line": 58785,
+          "text": "; qgemv_q4_0_avx2(const void* A, const float* x, float* y, int M, int K)",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
           "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
           "line": 58785,
           "text": "; qgemv_q4_0_avx2(const void* A, const float* x, float* y, int M, int K)",
@@ -5811,7 +3189,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/tensor_ops.asm",
+          "path": "/workspace/src/win32app/mcp_hooks.asm",
           "line": 58785,
           "text": "; qgemv_q4_0_avx2(const void* A, const float* x, float* y, int M, int K)",
           "stublike_path": false,
@@ -5825,7 +3203,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/net/net.asm",
+          "path": "/workspace/src/masm/masm_solo_compiler.asm",
           "line": 58785,
           "text": "; qgemv_q4_0_avx2(const void* A, const float* x, float* y, int M, int K)",
           "stublike_path": false,
@@ -5835,7 +3213,7 @@
       "all_definition_candidates_count": 89,
       "all_search_hits_count": 263,
       "reference_lines": [
-        137
+        51
       ]
     },
     {
@@ -5934,7 +3312,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
+          "path": "/workspace/src/masm/masm_solo_compiler.asm",
           "line": 58914,
           "text": "; qgemv_q8_0_avx2(const void* A, const float* x, float* y, int M, int K)",
           "stublike_path": false,
@@ -5944,85 +3322,7 @@
       "all_definition_candidates_count": 89,
       "all_search_hits_count": 263,
       "reference_lines": [
-        136
-      ]
-    },
-    {
-      "symbol": "sgemm_avx2",
-      "token": "sgemm_avx2",
-      "occurrences": 2,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "native_speed_layer.cpp.obj",
-          "count": 2,
-          "mapped_sources": [
-            "/workspace/src/core/native_speed_layer.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/native_speed_layer.cpp",
-          "line": 33,
-          "text": "void sgemm_avx2(const float* A, const float* B, float* C,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/core/native_speed_layer.cpp",
-          "line": 621,
-          "text": "m_dispatch.sgemm = sgemm_avx2;",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 2,
-      "all_search_hits_count": 350,
-      "reference_lines": [
-        133,
-        138
-      ]
-    },
-    {
-      "symbol": "sgemm_avx512",
-      "token": "sgemm_avx512",
-      "occurrences": 2,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "native_speed_layer.cpp.obj",
-          "count": 2,
-          "mapped_sources": [
-            "/workspace/src/core/native_speed_layer.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/native_speed_layer.cpp",
-          "line": 37,
-          "text": "void sgemm_avx512(const float* A, const float* B, float* C,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/core/native_speed_layer.cpp",
-          "line": 618,
-          "text": "m_dispatch.sgemm = sgemm_avx512;",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 2,
-      "all_search_hits_count": 350,
-      "reference_lines": [
-        127,
-        140
+        50
       ]
     },
     {
@@ -6060,47 +3360,8 @@
       "all_definition_candidates_count": 2,
       "all_search_hits_count": 350,
       "reference_lines": [
-        134,
-        139
-      ]
-    },
-    {
-      "symbol": "sgemv_avx512",
-      "token": "sgemv_avx512",
-      "occurrences": 2,
-      "classification": "unlinked_despite_wired",
-      "reason": "Definition candidates exist in current target sources; unresolved likely ABI/lib closure mismatch.",
-      "top_referencing_objects": [
-        {
-          "obj": "native_speed_layer.cpp.obj",
-          "count": 2,
-          "mapped_sources": [
-            "/workspace/src/core/native_speed_layer.cpp"
-          ]
-        }
-      ],
-      "definition_candidates_wired": [
-        {
-          "path": "/workspace/src/core/native_speed_layer.cpp",
-          "line": 39,
-          "text": "void sgemv_avx512(const float* A, const float* x, float* y,",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/core/native_speed_layer.cpp",
-          "line": 619,
-          "text": "m_dispatch.sgemv = sgemv_avx512;",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        }
-      ],
-      "definition_candidates_unwired": [],
-      "all_definition_candidates_count": 2,
-      "all_search_hits_count": 350,
-      "reference_lines": [
-        128,
-        141
+        48,
+        52
       ]
     },
     {
@@ -6171,14 +3432,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
+          "path": "/workspace/src/ggml_masm/compression.asm",
           "line": 150895,
           "text": "; uint32_t swarm_build_discovery_packet(",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/compression.asm",
+          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
           "line": 150895,
           "text": "; uint32_t swarm_build_discovery_packet(",
           "stublike_path": false,
@@ -6199,7 +3460,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/net/net.asm",
+          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
           "line": 150895,
           "text": "; uint32_t swarm_build_discovery_packet(",
           "stublike_path": false,
@@ -6209,8 +3470,8 @@
       "all_definition_candidates_count": 89,
       "all_search_hits_count": 525,
       "reference_lines": [
-        292,
-        295
+        192,
+        195
       ]
     },
     {
@@ -6267,6 +3528,13 @@
           "removed_by_non_msvc_block": false
         },
         {
+          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
+          "line": 150728,
+          "text": "; uint32_t swarm_compute_layer_crc32(",
+          "stublike_path": false,
+          "removed_by_non_msvc_block": false
+        },
+        {
           "path": "/workspace/src/ggml_masm/ggml_backend.asm",
           "line": 150728,
           "text": "; uint32_t swarm_compute_layer_crc32(",
@@ -6281,7 +3549,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
+          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
           "line": 150728,
           "text": "; uint32_t swarm_compute_layer_crc32(",
           "stublike_path": false,
@@ -6295,14 +3563,7 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/digestion/digestion_asm_x64.asm",
-          "line": 150728,
-          "text": "; uint32_t swarm_compute_layer_crc32(",
-          "stublike_path": false,
-          "removed_by_non_msvc_block": false
-        },
-        {
-          "path": "/workspace/src/net/net.asm",
+          "path": "/workspace/src/masm/masm_solo_compiler.asm",
           "line": 150728,
           "text": "; uint32_t swarm_compute_layer_crc32(",
           "stublike_path": false,
@@ -6312,7 +3573,7 @@
       "all_definition_candidates_count": 88,
       "all_search_hits_count": 611,
       "reference_lines": [
-        294
+        194
       ]
     },
     {
@@ -6376,14 +3637,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/ggml_masm/compression.asm",
+          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
           "line": 150646,
           "text": "; int swarm_receive_header(",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/digestion/RawrXD_DigestionEngine.asm",
+          "path": "/workspace/src/ggml_masm/compression.asm",
           "line": 150646,
           "text": "; int swarm_receive_header(",
           "stublike_path": false,
@@ -6397,14 +3658,14 @@
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
+          "path": "/workspace/src/net/net.asm",
           "line": 150646,
           "text": "; int swarm_receive_header(",
           "stublike_path": false,
           "removed_by_non_msvc_block": false
         },
         {
-          "path": "/workspace/src/win32app/mcp_hooks.asm",
+          "path": "/workspace/src/masm/RawrXD_HttpChatServer.asm",
           "line": 150646,
           "text": "; int swarm_receive_header(",
           "stublike_path": false,
@@ -6414,7 +3675,7 @@
       "all_definition_candidates_count": 88,
       "all_search_hits_count": 524,
       "reference_lines": [
-        293
+        193
       ]
     }
   ]

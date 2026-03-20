@@ -1,14 +1,14 @@
 # Win32IDE Unlinked + Dissolved Symbol Audit
 
 - Log: `/workspace/source_audit/win32ide_production_link_latest.log`
-- Total unresolved references: **295**
-- Unique unresolved symbols: **116**
+- Total unresolved references: **194**
+- Unique unresolved symbols: **71**
 
 ## Classification Summary
 
 | Classification | Count |
 |---|---:|
-| `unlinked_despite_wired` | 80 |
+| `unlinked_despite_wired` | 35 |
 | `dissolved_or_external` | 18 |
 | `unwired_non_stub` | 18 |
 
@@ -19,7 +19,7 @@
 | `MC_GapBuffer_Destroy` | 32 | `final_gauntlet.cpp.obj` | `/workspace/src/ai/digestion_scanner.asm` |
 | `MC_GapBuffer_LineCount` | 20 | `MonacoCoreEngine.cpp.obj` | `/workspace/src/ai/digestion_scanner.asm` |
 | `MC_GapBuffer_GetLine` | 12 | `MonacoCoreEngine.cpp.obj` | `/workspace/src/ai/digestion_scanner.asm` |
-| `MC_GapBuffer_Insert` | 8 | `MonacoCoreEngine.cpp.obj` | `/workspace/include/RawrXD_MonacoCore.h` |
+| `MC_GapBuffer_Insert` | 8 | `MonacoCoreEngine.cpp.obj` | `/workspace/src/ai/digestion_scanner.asm` |
 | `MC_GapBuffer_Length` | 8 | `final_gauntlet.cpp.obj` | `/workspace/src/ai/digestion_scanner.asm` |
 | `MC_GapBuffer_Init` | 5 | `final_gauntlet.cpp.obj` | `/workspace/include/RawrXD_MonacoCore.h` |
 | `MC_GapBuffer_Delete` | 4 | `MonacoCoreEngine.cpp.obj` | `/workspace/include/RawrXD_MonacoCore.h` |
@@ -64,9 +64,7 @@
 |---|---|---:|---|
 | `MC_GapBuffer_Destroy` | `unwired_non_stub` | 32 | `final_gauntlet.cpp.obj` |
 | `MC_GapBuffer_LineCount` | `unwired_non_stub` | 20 | `MonacoCoreEngine.cpp.obj` |
-| `Enterprise_GetLicenseStatus` | `unlinked_despite_wired` | 18 | `enterprise_license.cpp.obj` |
 | `MC_GapBuffer_GetLine` | `unwired_non_stub` | 12 | `MonacoCoreEngine.cpp.obj` |
-| `Enterprise_CheckFeature` | `unlinked_despite_wired` | 8 | `enterprise_license.cpp.obj` |
 | `MC_GapBuffer_Insert` | `unwired_non_stub` | 8 | `MonacoCoreEngine.cpp.obj` |
 | `MC_GapBuffer_Length` | `unwired_non_stub` | 8 | `final_gauntlet.cpp.obj` |
 | `Crdt_GetDocLength` | `dissolved_or_external` | 5 | `Win32IDE_CopilotGapPanel.cpp.obj` |
@@ -75,7 +73,6 @@
 | `MC_GapBuffer_Delete` | `unwired_non_stub` | 4 | `MonacoCoreEngine.cpp.obj` |
 | `Swarm_BuildPacketHeader` | `unlinked_despite_wired` | 4 | `swarm_coordinator.cpp.obj` |
 | `VecDb_GetNodeCount` | `dissolved_or_external` | 4 | `Win32IDE_CopilotGapPanel.cpp.obj` |
-| `FlashAttention_GetTileConfig` | `unlinked_despite_wired` | 3 | `flash_attention.cpp.obj` |
 | `KQuant_DequantizeQ4_K` | `unlinked_despite_wired` | 3 | `model_training_pipeline.cpp.obj` |
 | `KQuant_DequantizeQ6_K` | `unlinked_despite_wired` | 3 | `model_training_pipeline.cpp.obj` |
 | `Quant_DequantQ4_0` | `unlinked_despite_wired` | 3 | `model_training_pipeline.cpp.obj` |
@@ -84,22 +81,25 @@
 | `Swarm_HeartbeatRecord` | `unlinked_despite_wired` | 3 | `swarm_coordinator.cpp.obj` |
 | `Swarm_RingBuffer_Init` | `unlinked_despite_wired` | 3 | `swarm_coordinator.cpp.obj` |
 | `Swarm_ValidatePacketHeader` | `unlinked_despite_wired` | 3 | `swarm_coordinator.cpp.obj` |
-| `asm_camellia256_decrypt_block` | `unlinked_despite_wired` | 3 | `camellia256_bridge.cpp.obj` |
-| `asm_camellia256_decrypt_ctr` | `unlinked_despite_wired` | 3 | `camellia256_bridge.cpp.obj` |
-| `asm_camellia256_encrypt_block` | `unlinked_despite_wired` | 3 | `camellia256_bridge.cpp.obj` |
-| `asm_camellia256_encrypt_ctr` | `unlinked_despite_wired` | 3 | `camellia256_bridge.cpp.obj` |
-| `asm_camellia256_get_hmac_key` | `unlinked_despite_wired` | 3 | `camellia256_bridge.cpp.obj` |
 | `asm_scsi_read_capacity` | `unlinked_despite_wired` | 3 | `DiskRecoveryAgent.cpp.obj` |
-| `native_rmsnorm_avx512` | `unlinked_despite_wired` | 3 | `native_speed_layer.cpp.obj` |
-| `native_softmax_avx512` | `unlinked_despite_wired` | 3 | `native_speed_layer.cpp.obj` |
 | `Composer_GetTxCount` | `dissolved_or_external` | 2 | `copilot_gap_closer.cpp.obj` |
-| `Enterprise_InitLicenseSystem` | `unlinked_despite_wired` | 2 | `enterprise_license.cpp.obj` |
-| `Enterprise_Unlock800BDualEngine` | `unlinked_despite_wired` | 2 | `enterprise_license.cpp.obj` |
 | `Swarm_IOCP_Associate` | `unlinked_despite_wired` | 2 | `swarm_coordinator.cpp.obj` |
 | `Swarm_XXH64` | `unlinked_despite_wired` | 2 | `swarm_coordinator.cpp.obj` |
 | `VecDb_Init` | `unwired_non_stub` | 2 | `copilot_gap_closer.cpp.obj` |
 | `VecDb_Insert` | `dissolved_or_external` | 2 | `Win32IDE_CopilotGapPanel.cpp.obj` |
 | `VecDb_Search` | `unwired_non_stub` | 2 | `Win32IDE_CopilotGapPanel.cpp.obj` |
-| `asm_camellia256_get_status` | `unlinked_despite_wired` | 2 | `camellia256_bridge.cpp.obj` |
-| `asm_camellia256_shutdown` | `unlinked_despite_wired` | 2 | `camellia256_bridge.cpp.obj` |
+| `native_fused_mlp_avx2` | `unlinked_despite_wired` | 2 | `native_speed_layer.cpp.obj` |
+| `sgemv_avx2` | `unlinked_despite_wired` | 2 | `native_speed_layer.cpp.obj` |
+| `swarm_build_discovery_packet` | `unlinked_despite_wired` | 2 | `swarm_orchestrator.cpp.obj` |
+| `BeaconRouterInit` | `unlinked_despite_wired` | 1 | `universal_model_router.cpp.obj` |
+| `Composer_AddFileOp` | `dissolved_or_external` | 1 | `Win32IDE_CopilotGapPanel.cpp.obj` |
+| `Composer_BeginTransaction` | `unwired_non_stub` | 1 | `Win32IDE_CopilotGapPanel.cpp.obj` |
+| `Composer_Commit` | `unwired_non_stub` | 1 | `Win32IDE_CopilotGapPanel.cpp.obj` |
+| `Composer_GetState` | `dissolved_or_external` | 1 | `copilot_gap_closer.cpp.obj` |
+| `Crdt_DeleteText` | `dissolved_or_external` | 1 | `Win32IDE_CopilotGapPanel.cpp.obj` |
+| `Crdt_GetLamport` | `dissolved_or_external` | 1 | `copilot_gap_closer.cpp.obj` |
+| `Crdt_InitDocument` | `unwired_non_stub` | 1 | `Win32IDE_CopilotGapPanel.cpp.obj` |
+| `Crdt_InsertText` | `dissolved_or_external` | 1 | `Win32IDE_CopilotGapPanel.cpp.obj` |
+| `GapCloser_GetPerfCounters` | `unlinked_despite_wired` | 1 | `copilot_gap_closer.cpp.obj` |
+| `Git_ExtractContext` | `unlinked_despite_wired` | 1 | `copilot_gap_closer.cpp.obj` |
 
