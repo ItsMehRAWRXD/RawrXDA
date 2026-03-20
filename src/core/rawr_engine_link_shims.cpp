@@ -112,7 +112,19 @@ enum RuntimeModeBit : uint32_t {
     MODE_INTEL_PT = 1u << 3,
     MODE_AGENT_TRACE = 1u << 4,
     MODE_DYN_TRACE = 1u << 5,
-    MODE_COV_FUSION = 1u << 6
+    MODE_COV_FUSION = 1u << 6,
+    MODE_SIDELOAD = 1u << 7,
+    MODE_PERSISTENCE = 1u << 8,
+    MODE_BASIC_BLOCK_COV = 1u << 9,
+    MODE_STUB_GEN = 1u << 10,
+    MODE_TRACE_ENGINE = 1u << 11,
+    MODE_COMPILE = 1u << 12,
+    MODE_GAP_FUZZ = 1u << 13,
+    MODE_ENCRYPT = 1u << 14,
+    MODE_ENTROPY = 1u << 15,
+    MODE_AGENTIC = 1u << 16,
+    MODE_UAC_BYPASS = 1u << 17,
+    MODE_AV_SCAN = 1u << 18
 };
 
 static uint64_t monotonicTickNowNs() {
@@ -124,6 +136,17 @@ static int enableMode(uint32_t modeBit) {
     g_modeFlags.fetch_or(modeBit, std::memory_order_relaxed);
     return 1;
 }
+
+struct PerfSpan {
+    std::string label;
+    uint64_t startNs = 0;
+    uint64_t endNs = 0;
+};
+
+static std::atomic<int> g_nextPerfSpanId{1};
+static std::unordered_map<int, PerfSpan> g_perfSpans;
+static std::atomic<uint64_t> g_watchdogBaselineNs{0};
+static std::atomic<int> g_watchdogStatus{0};
 
 static int closeFileHandle(intptr_t handle) {
     if (handle <= 0) {
@@ -913,7 +936,7 @@ int SO_InitializeStreaming(void) {
     g_soState.streamingReady = true;
     return 1;
 }
-int SideloadMode() { return 0; }
+int SideloadMode() { return enableMode(MODE_SIDELOAD); }
 int SO_CompileSPIRVShader(void* shaderModule, uint32_t opType, uint32_t opCount) {
     (void)shaderModule;
     (void)opType;
@@ -924,7 +947,7 @@ int SO_CreateComputePipelines(void* operatorTable, uint64_t operatorCount) {
     g_soState.metrics.layers_loaded += operatorCount;
     return operatorCount > 0 ? 1 : 0;
 }
-int PersistenceMode() { return 0; }
+int PersistenceMode() { return enableMode(MODE_PERSISTENCE); }
 void SO_PrintStatistics() {}
 void* SO_CreateMemoryArena(uint64_t sizeBytes) {
     if (sizeBytes == 0) {
@@ -952,28 +975,28 @@ int SO_LoadExecFile(const char* filePath) {
     g_soState.execLoaded = g_soState.execFile != nullptr;
     return g_soState.execLoaded ? 1 : 0;
 }
-int BasicBlockCovMode() { return 0; }
+int BasicBlockCovMode() { return enableMode(MODE_BASIC_BLOCK_COV); }
 void SO_PrintMetrics() {}
 int SO_StartDEFLATEThreads(uint32_t threadCount) {
     g_soState.deflateThreads = threadCount > 0 ? threadCount : SO_DEFAULT_THREADS;
     return 1;
 }
-int StubGenMode() { return 0; }
-int TraceEngineMode() { return 0; }
-int CompileMode() { return 0; }
+int StubGenMode() { return enableMode(MODE_STUB_GEN); }
+int TraceEngineMode() { return enableMode(MODE_TRACE_ENGINE); }
+int CompileMode() { return enableMode(MODE_COMPILE); }
 
 // Batch 10: fuzzing/prefetch/thread pool + modes
-int GapFuzzMode() { return 0; }
-int EncryptMode() { return 0; }
+int GapFuzzMode() { return enableMode(MODE_GAP_FUZZ); }
+int EncryptMode() { return enableMode(MODE_ENCRYPT); }
 int SO_InitializePrefetchQueue() {
     g_soState.prefetchReady = true;
     return 1;
 }
 int SO_CreateThreadPool() { return 1; }
-int EntropyMode() { return 0; }
-int AgenticMode() { return 0; }
-int UACBypassMode() { return 0; }
-int AVScanMode() { return 0; }
+int EntropyMode() { return enableMode(MODE_ENTROPY); }
+int AgenticMode() { return enableMode(MODE_AGENTIC); }
+int UACBypassMode() { return enableMode(MODE_UAC_BYPASS); }
+int AVScanMode() { return enableMode(MODE_AV_SCAN); }
 
 int SO_ExecuteInference(void* layerTable, uint64_t layerCount) {
     (void)layerTable;
@@ -1126,9 +1149,32 @@ intptr_t SO_OpenMemoryMappedFile(const char* path, uint64_t fileSize) {
 }
 
 // Batch 11: perf/watchdog
-int asm_perf_begin(const char*) { return 0; }
-int asm_perf_end(int) { return 0; }
-int asm_watchdog_init() { return 0; }
+int asm_perf_begin(const char* label) {
+    const int spanId = g_nextPerfSpanId.fetch_add(1, std::memory_order_relaxed);
+    PerfSpan span{};
+    span.label = label ? label : "unnamed";
+    span.startNs = monotonicTickNowNs();
+    span.endNs = 0;
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    g_perfSpans[spanId] = std::move(span);
+    return spanId;
+}
+int asm_perf_end(int spanId) {
+    std::lock_guard<std::mutex> lock(g_runtimeShimMutex);
+    auto it = g_perfSpans.find(spanId);
+    if (it == g_perfSpans.end()) {
+        return -1;
+    }
+    it->second.endNs = monotonicTickNowNs();
+    const uint64_t durationNs = (it->second.endNs > it->second.startNs) ? (it->second.endNs - it->second.startNs) : 0;
+    g_soState.metrics.avg_load_time_ms = durationNs / 1000000ULL;
+    return 0;
+}
+int asm_watchdog_init() {
+    g_watchdogBaselineNs.store(monotonicTickNowNs(), std::memory_order_relaxed);
+    g_watchdogStatus.store(1, std::memory_order_relaxed);
+    return 0;
+}
 int asm_watchdog_verify() { return 0; }
 int asm_watchdog_get_status() { return 0; }
 int asm_watchdog_get_baseline() { return 0; }
