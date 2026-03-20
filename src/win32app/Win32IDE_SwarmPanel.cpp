@@ -19,7 +19,7 @@
 #include "Win32IDE.h"
 #include "swarm_coordinator.h"
 #include "swarm_worker.h"
-#include "enterprise_license.h"
+#include "../../include/enterprise_license.h"
 #include <sstream>
 #include <iomanip>
 

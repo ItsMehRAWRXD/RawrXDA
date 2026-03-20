@@ -1,5 +1,6 @@
 #include "core_generator.h"
 #include "../../include/enterprise_license.h"
+#include <algorithm>
 #include <iostream>
 #include <fstream>
 

@@ -27,21 +27,39 @@ Win32PluginLoader* Win32PluginLoader::s_instance = nullptr;
 // Isolate the SEH into a plain-C helper that calls a void(void) function ptr.
 // =============================================================================
 static bool safeCallPluginFn_void(void (*fn)()) {
+#if defined(_MSC_VER)
     __try {
         fn();
         return true;
     } __except(EXCEPTION_EXECUTE_HANDLER) {
         return false;
     }
+#else
+    try {
+        fn();
+        return true;
+    } catch (...) {
+        return false;
+    }
+#endif
 }
 
 static bool safeCallPluginFn_str(void (*fn)(const char*), const char* arg) {
+#if defined(_MSC_VER)
     __try {
         fn(arg);
         return true;
     } __except(EXCEPTION_EXECUTE_HANDLER) {
         return false;
     }
+#else
+    try {
+        fn(arg);
+        return true;
+    } catch (...) {
+        return false;
+    }
+#endif
 }
 
 // =============================================================================

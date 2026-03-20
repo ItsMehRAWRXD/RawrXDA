@@ -54,7 +54,7 @@ public:
         // Open database
         int result = sqlite3_open(m_dbPath.c_str(), &m_db);
         if (result != SQLITE_OK) {
-            LOG_ERROR("Failed to open SQLite database: %s", sqlite3_errmsg(m_db));
+            LOG_ERROR(std::string("Failed to open SQLite database: ") + sqlite3_errmsg(m_db));
             return false;
         }
 
@@ -71,7 +71,7 @@ public:
         }
 
         m_initialized = true;
-        LOG_INFO("SQLite3 database initialized at: %s", m_dbPath.c_str());
+        LOG_INFO(std::string("SQLite3 database initialized at: ") + m_dbPath);
         return true;
     }
 
@@ -106,7 +106,7 @@ public:
         int result = sqlite3_prepare_v2(m_db, sql.c_str(), -1, &stmt, nullptr);
 
         if (result != SQLITE_OK) {
-            LOG_ERROR("Failed to prepare SQL statement: %s", sqlite3_errmsg(m_db));
+            LOG_ERROR(std::string("Failed to prepare SQL statement: ") + sqlite3_errmsg(m_db));
             return false;
         }
 
@@ -124,7 +124,7 @@ public:
         }
 
         if (result != SQLITE_DONE && result != SQLITE_OK) {
-            LOG_ERROR("Failed to execute SQL statement: %s", sqlite3_errmsg(m_db));
+            LOG_ERROR(std::string("Failed to execute SQL statement: ") + sqlite3_errmsg(m_db));
             sqlite3_finalize(stmt);
             return false;
         }
@@ -145,7 +145,7 @@ public:
         int result = sqlite3_prepare_v2(m_db, sql.c_str(), -1, &stmt, nullptr);
 
         if (result != SQLITE_OK) {
-            LOG_ERROR("Failed to prepare parameterized SQL: %s", sqlite3_errmsg(m_db));
+            LOG_ERROR(std::string("Failed to prepare parameterized SQL: ") + sqlite3_errmsg(m_db));
             return false;
         }
 
@@ -168,7 +168,7 @@ public:
         }
 
         if (result != SQLITE_DONE && result != SQLITE_OK) {
-            LOG_ERROR("Failed to execute parameterized query: %s", sqlite3_errmsg(m_db));
+            LOG_ERROR(std::string("Failed to execute parameterized query: ") + sqlite3_errmsg(m_db));
             sqlite3_finalize(stmt);
             return false;
         }

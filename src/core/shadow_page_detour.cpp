@@ -149,7 +149,7 @@ AssembledBuffer AgenticAssembler::Compile(const std::string& masmSource) {
     if (!created) {
         snprintf(s_lastError, sizeof(s_lastError),
                  "AgenticAssembler: Failed to launch ml64.exe (err=%lu)",
-                 (unsigned long)GetLastError());
+                 (unsigned long)::GetLastError());
         DeleteFileA(asmPath);
         return result;
     }
@@ -349,13 +349,17 @@ struct ProtectedTestCtx {
 
 static DWORD WINAPI ProtectedTestThread(LPVOID param) {
     auto* ctx = static_cast<ProtectedTestCtx*>(param);
-    // Wrap in SEH __try/__except for crash safety
+    // Wrap in SEH __try/__except for crash safety when available.
+#if defined(_MSC_VER)
     __try {
         ctx->result = TestRunner::VerifyVectors(ctx->fn);
     }
     __except (EXCEPTION_EXECUTE_HANDLER) {
         ctx->result = false;
     }
+#else
+    ctx->result = TestRunner::VerifyVectors(ctx->fn);
+#endif
     return 0;
 }
 

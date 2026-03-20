@@ -119,7 +119,13 @@ uint64_t SpeciatorEngine::evaluateFitness(uint32_t genomeIndex, void* testFuncti
         auto& genome = m_population[genomeIndex];
         uint64_t diversity = 0;
         for (size_t i = 0; i < genome.geneCount && i < 256; i++) {
-            diversity += genome.genes[i] ^ (genome.genes[i] >> 4);
+            const auto& g = genome.genes[i];
+            const uint64_t packed =
+                static_cast<uint64_t>(g.opcode) ^
+                (static_cast<uint64_t>(g.operand1) << 16) ^
+                (static_cast<uint64_t>(g.operand2) << 32) ^
+                (static_cast<uint64_t>(g.flags) << 48);
+            diversity += packed ^ (packed >> 4);
         }
         // Combine with mutation history and generation
         fitness = diversity * 100 + genome.generation * 10 + genome.mutationCount;
@@ -152,7 +158,13 @@ PatchResult SpeciatorEngine::evaluateAll(void* testFunction, uint64_t iterations
         // Heuristic: gene diversity * generation bonus
         uint64_t diversity = 0;
         for (size_t j = 0; j < m_population[i].geneCount && j < 256; j++) {
-            diversity += m_population[i].genes[j] ^ (m_population[i].genes[j] >> 4);
+            const auto& g = m_population[i].genes[j];
+            const uint64_t packed =
+                static_cast<uint64_t>(g.opcode) ^
+                (static_cast<uint64_t>(g.operand1) << 16) ^
+                (static_cast<uint64_t>(g.operand2) << 32) ^
+                (static_cast<uint64_t>(g.flags) << 48);
+            diversity += packed ^ (packed >> 4);
         }
         m_population[i].fitness = diversity * 100 + m_population[i].generation * 10 + i;
     }

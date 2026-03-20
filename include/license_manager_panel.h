@@ -100,7 +100,7 @@ public:
     /// @return IDOK or IDCANCEL
     static INT_PTR show(HWND parentHwnd);
 
-private:
+public:
     static INT_PTR CALLBACK DialogProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
     // Dialog initialization
@@ -121,7 +121,7 @@ public:
     /// @return IDOK (license loaded) or IDCANCEL
     static INT_PTR show(HWND parentHwnd);
 
-private:
+public:
     static INT_PTR CALLBACK DialogProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
     static void onInitDialog(HWND hwnd);

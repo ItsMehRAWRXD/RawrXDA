@@ -179,7 +179,7 @@ void Win32IDE::handleDualAgentInitEndpoint(SOCKET client, const std::string& bod
     m_dualAgentInitialized = true;
     LOG_INFO("[Phase41] Dual-agent init (cpp fallback)");
     std::string resp = buildHttpResponse(200,
-        R"({"success":true,"message":"Dual-agent swarm initialized (cpp fallback)","bridge":"cpp-fallback"})");
+        "{\"success\":true,\"message\":\"Dual-agent swarm initialized (cpp fallback)\",\"bridge\":\"cpp-fallback\"}");
     send(client, resp.c_str(), (int)resp.size(), 0);
 #endif
 }
@@ -221,7 +221,7 @@ void Win32IDE::handleDualAgentShutdownEndpoint(SOCKET client) {
 #else
     m_dualAgentInitialized = false;
     std::string resp = buildHttpResponse(200,
-        R"({"success":true,"message":"Swarm shut down (cpp fallback)"})");
+        "{\"success\":true,\"message\":\"Swarm shut down (cpp fallback)\"}");
     send(client, resp.c_str(), (int)resp.size(), 0);
 #endif
 }
@@ -342,7 +342,7 @@ void Win32IDE::handleDualAgentHandoffEndpoint(SOCKET client, const std::string& 
 #else
     char buf[256];
     std::snprintf(buf, sizeof(buf),
-        R"({"success":true,"message":"Handoff acknowledged (cpp fallback)","bytes":%zu})",
+        "{\"success\":true,\"message\":\"Handoff acknowledged (cpp fallback)\",\"bytes\":%zu}",
         context.size());
     std::string resp = buildHttpResponse(200, buf);
     send(client, resp.c_str(), (int)resp.size(), 0);
@@ -453,7 +453,7 @@ void Win32IDE::handleDualAgentSubmitEndpoint(SOCKET client, const std::string& b
 #else
     char buf[256];
     std::snprintf(buf, sizeof(buf),
-        R"({"success":true,"message":"Task submitted (cpp fallback)","agent":"%s"})",
+        "{\"success\":true,\"message\":\"Task submitted (cpp fallback)\",\"agent\":\"%s\"}",
         agentName.c_str());
     std::string resp = buildHttpResponse(200, buf);
     send(client, resp.c_str(), (int)resp.size(), 0);

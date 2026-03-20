@@ -40,7 +40,7 @@ public:
 class SQLite3DatabaseManager {
 public:
     explicit SQLite3DatabaseManager(Win32IDE* ide);
-    ~SQLite3DatabaseManager();
+    ~SQLite3DatabaseManager() = default;
     bool initialize();
     void shutdown();
     bool saveSetting(const std::string& key, const std::string& value);
@@ -86,7 +86,7 @@ namespace IDEPlugin {
 class LanguagePluginManager {
 public:
     explicit LanguagePluginManager(Win32IDE* ide);
-    ~LanguagePluginManager();
+    ~LanguagePluginManager() = default;
     bool initialize();
     bool handleCommand(int commandId);
     std::string detectLanguage(const std::string& filename, const std::string& content);

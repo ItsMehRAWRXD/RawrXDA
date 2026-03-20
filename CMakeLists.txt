@@ -91,16 +91,6 @@ if(MSVC)
     if(_RAWR_MSVC_LIBPATHS)
         link_directories(${_RAWR_MSVC_LIBPATHS})
     endif()
-    foreach(_rawr_lib IN LISTS _RAWR_MSVC_LIBPATHS)
-        add_link_options("/LIBPATH:\"${_rawr_lib}\"")
-        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /LIBPATH:\"${_rawr_lib}\"")
-        set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /LIBPATH:\"${_rawr_lib}\"")
-        set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /LIBPATH:\"${_rawr_lib}\"")
-        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /LIBPATH:\"${_rawr_lib}\"")
-        set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /LIBPATH:\"${_rawr_lib}\"")
-        set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} /LIBPATH:\"${_rawr_lib}\"")
-        set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} /LIBPATH:\"${_rawr_lib}\"")
-    endforeach()
 endif()
 
 # ============================================================================
@@ -144,10 +134,15 @@ else()
 endif()
 # Keep LTCG globally, but avoid executable-only/defaultlib overrides here.
 # /NODEFAULTLIB + /ENTRY + /SUBSYSTEM must not leak into DLL targets.
-add_link_options(/LTCG)
+if(MSVC)
+    add_link_options(/LTCG)
+endif()
 
-# WebView2 and WIL are in d:/rawrxd/include/
-include_directories("d:/rawrxd/include")
+# WebView2 and WIL are expected under this optional local SDK path.
+set(RAWRXD_LOCAL_WIN32_SDK_DIR "d:/rawrxd/include")
+if(EXISTS "${RAWRXD_LOCAL_WIN32_SDK_DIR}")
+    include_directories("${RAWRXD_LOCAL_WIN32_SDK_DIR}")
+endif()
 
 option(RAWRXD_BUILD_CLI "Build the rawrxd CLI console target" OFF)
 if(RAWRXD_BUILD_CLI)
@@ -220,11 +215,6 @@ endif()
 enable_language(RC)
 
 message(STATUS "RawrXD v14.7.3 Target Configured - Zero Bloat Mode")
-
-# Enable ASM_MASM only on MSVC (ml64.exe required).
-if(MSVC)
-    enable_language(ASM_MASM)
-endif()
 
 # Default to Release builds (prevents /RTC1 + /O2 clash on Ninja single-config)
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -325,27 +315,16 @@ if(RAWR_HAS_MASM)
         src/asm/RawrXD_DualAgent_Orchestrator.asm
         src/asm/RawrXD_DiskRecoveryAgent.asm
         src/asm/disk_recovery_scsi.asm
-        # src/asm/RawrXD-AnalyzerDistiller.asm      # excluded: ml64 include errors (rawrxd_win64.inc segment nesting)
-        # src/asm/RawrXD-StreamingOrchestrator.asm  # excluded: ml64 include errors (rawrxd_win64.inc segment nesting)
+        # Legacy analyzer/streaming MASM lanes are superseded by production C++ providers.
         src/asm/RawrXD_Telemetry_Kernel.asm
         src/asm/RawrXD_Prometheus_Exporter.asm
         src/asm/RawrXD_SelfPatch_Agent.asm
         src/asm/RawrXD_SourceEdit_Kernel.asm
         src/asm/feature_dispatch_bridge.asm
         src/asm/gui_dispatch_bridge.asm
-        # src/asm/RawrXD_CopilotGapCloser.asm   # excluded: scaffold/invalid ml64 syntax (__real@*, missing .ENDPROLOG)
-        # src/asm/native_speed_kernels.asm      # excluded: scaffold/invalid ml64 syntax (__real@*, missing .ENDPROLOG)
-        # src/asm/DirectML_Bridge.asm           # excluded: scaffold/invalid ml64 syntax (__real@*, missing .ENDPROLOG)
-        # src/asm/RawrXD_Hotpatch_Kernel.asm    # excluded: scaffold/invalid ml64 syntax (__real@*, missing .ENDPROLOG)
-        # src/asm/RawrXD_Snapshot.asm           # excluded: scaffold/invalid ml64 syntax (__real@*, missing .ENDPROLOG)
-        # src/asm/RawrXD_Pyre_Compute.asm       # excluded: scaffold/invalid ml64 syntax (__real@*, missing .ENDPROLOG)
-        # src/asm/vision_projection_kernel.asm  # excluded: scaffold/invalid ml64 syntax (__real@*, missing .ENDPROLOG)
-        # src/asm/quantum_beaconism_backend.asm        # excluded: MASM build errors (undefined symbols / unwind prolog issues)
-        # src/asm/RawrXD_DualEngine_QuantumBeacon.asm  # excluded: MASM build errors (undefined symbols / unwind prolog issues)
-        # src/asm/RawrXD_DualEngine_Pure.asm    # excluded: ml64 errors (operand size mismatch)
+        # Legacy scaffold-only MASM lanes remain disabled in favor of real C++ units.
         src/asm/RawrXD_OverclockGov_Pure.asm
         src/asm/RawrXD_Emitter_v1.asm
-        src/asm/RawrXD_PDBKernel_v3.asm
         src/asm/RawrXD_IPC_Dispatcher.asm
         src/asm/RawrXD_AuditSystem_Pure.asm
         src/asm/Advanced_Code_Deobfuscator.asm
@@ -355,8 +334,9 @@ if(RAWR_HAS_MASM)
         # ASM unresolved stubs duplicate AllocateDMABuffer and cause LNK2005 in Win32IDE.
         # src/unresolved_asm_stubs.asm
         # User-provided production ASM (need ML64 syntax fixes: .endprolog, REAL4, scale): agentic_deep_thinking_kernels.asm, ai_completion_provider_masm.asm, agentic_puppeteer_byte_ops.asm
-        # src/RawrXD_Complete_ReverseEngineered.asm  # excluded: fragment missing struct defs/includes
+        # Legacy monolithic reverse-engineered fragment is superseded by modular C++ providers.
     )
+    list(REMOVE_DUPLICATES ASM_KERNEL_SOURCES)
     # Mark ASM files with MASM language property
     set_source_files_properties(${ASM_KERNEL_SOURCES} PROPERTIES LANGUAGE ASM_MASM)
     add_definitions(-DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1)
@@ -411,7 +391,6 @@ set(SOURCES
     src/codec/brutal_gzip.cpp
 
     src/core/execution_scheduler.cpp
-    src/asm/quantum_beaconism_backend.asm
     
     # Agentic Decision Tree + CLI Autonomy (Phase 19)
     src/cli/agentic_decision_tree.cpp
@@ -603,8 +582,8 @@ set(SOURCES
     # License anti-tampering (computeHMAC_SHA256, verifyLicenseKeyIntegrity) — required by enterprise_licensev2_impl
     src/core/license_anti_tampering.cpp
 
-    # Reverse-engineered bridge stubs (Heartbeat_Shutdown, GPU_*, GetHighResTick, TicksTo*, CalculateCRC32, AllocateDMABuffer, Tensor_QuantizedMatMul)
-    # stub file removed
+    # Reverse-engineered bridge runtime implementations (Heartbeat_*, GPU_*, GetHighResTick, TicksTo*, CRC32, DMA, scheduler/tensor C ABI)
+    src/core/subsystem_runtime_bridge.cpp
 
     # Support tier manager (SupportTierManager::Instance, GenerateStatusReport) — required by main, complete_server
     src/core/support_tier.cpp
@@ -661,6 +640,8 @@ set(SOURCES
     src/core/gguf_dml_bridge.cpp
     src/core/dml_streaming_integration.cpp
     src/core/dml_asm_fallback.cpp
+    src/core/analyzer_distiller.cpp
+    src/core/streaming_orchestrator.cpp
     src/dml_inference_engine.cpp
 
     # Agentic Watchdog — .text Section Integrity Verification Service
@@ -985,9 +966,32 @@ set(SOURCES
 # Keep default behavior conservative; enable per subsystem during targeted builds.
 option(RAWR_REPLACE_SSOT_HANDLERS "Replace SSOT minimal/isolated lane with full ssot_handlers_ext.cpp" OFF)
 option(RAWR_REPLACE_MASM_FALLBACKS "Remove MASM-related C++ fallback stubs (and optionally re-enable blocked ASM units)" OFF)
-option(RAWR_REPLACE_SWARM_LICENSE_FALLBACKS "Remove swarm/license fallback stubs from SOURCES" OFF)
-set(RAWR_SSOT_PROVIDER "EXT" CACHE STRING "SSOT owner for RawrEngine: CORE, EXT, AUTO, STUBS, FEATURES")
+option(RAWRXD_ENABLE_MISSING_HANDLER_STUBS "Allow missing_handler_stubs.cpp fallback lane for Win32IDE wiring" OFF)
+option(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES "Strip stub/shim/mock source units from production targets" OFF)
+option(RAWRXD_INCLUDE_STRESS_AND_REPLAY_SOURCES "Include stress/replay harness sources in production targets" OFF)
+set(RAWR_SSOT_PROVIDER "AUTO" CACHE STRING "SSOT owner for RawrEngine: CORE, EXT, AUTO, STUBS, FEATURES")
 set_property(CACHE RAWR_SSOT_PROVIDER PROPERTY STRINGS CORE EXT AUTO STUBS FEATURES)
+
+if(NOT RAWRXD_INCLUDE_STRESS_AND_REPLAY_SOURCES)
+    list(REMOVE_ITEM SOURCES
+        src/core/masm_stress_harness.cpp
+        src/core/convergence_stress_harness.cpp
+        src/core/enterprise_stress_tests.cpp
+        src/test_harness/replay_fixture.cpp
+        src/test_harness/replay_oracle.cpp
+        src/test_harness/replay_mock_inference.cpp
+        src/test_harness/replay_harness.cpp
+        src/test_harness/replay_reporter.cpp
+    )
+endif()
+if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
+    list(REMOVE_ITEM SOURCES
+        src/core/cot_fallback_system.cpp
+        src/core/dml_asm_fallback.cpp
+        src/win32app/agentic_bridge_headless.cpp
+        src/win32app/Win32IDE_logMessage.cpp
+    )
+endif()
 
 if(RAWR_REPLACE_SSOT_HANDLERS)
     list(REMOVE_ITEM SOURCES
@@ -1018,14 +1022,6 @@ if(RAWR_REPLACE_MASM_FALLBACKS)
     else()
         message(WARNING "[ReplacementPass] MASM replacement requested but RAWR_HAS_MASM=FALSE; fallback stubs removed without ASM replacements")
     endif()
-endif()
-
-if(RAWR_REPLACE_SWARM_LICENSE_FALLBACKS)
-    list(REMOVE_ITEM SOURCES
-        src/core/swarm_network_stubs.cpp
-        src/core/enterprise_license_stubs.cpp
-    )
-    message(STATUS "[ReplacementPass] Swarm/License: fallback stubs removed")
 endif()
 
 # Build target-scoped SSOT ownership partition for RawrEngine only.
@@ -1060,14 +1056,12 @@ if(RAWR_SSOT_PROVIDER_UPPER STREQUAL "CORE")
     src/core/ssot_handlers_ext_isolated.cpp
     src/core/ssot_handlers_ext.cpp
         src/core/auto_feature_registry.cpp
-        src/core/missing_handler_stubs.cpp
         src/core/feature_handlers.cpp
     )
 elseif(RAWR_SSOT_PROVIDER_UPPER STREQUAL "EXT")
     set(_RAWR_SSOT_EXT 1)
     list(REMOVE_ITEM RAWR_ENGINE_SOURCES
         src/core/ssot_handlers.cpp
-        src/core/missing_handler_stubs.cpp
         src/core/auto_feature_registry.cpp
         src/core/ssot_handlers_ext_runtime_minimal.cpp
         src/core/ssot_handlers_ext_isolated.cpp
@@ -1076,7 +1070,6 @@ elseif(RAWR_SSOT_PROVIDER_UPPER STREQUAL "AUTO")
     set(_RAWR_SSOT_AUTO 1)
     set(_RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS 1)
     list(REMOVE_ITEM RAWR_ENGINE_SOURCES
-        src/core/missing_handler_stubs.cpp
         src/core/ssot_handlers_ext_runtime_minimal.cpp
         src/core/ssot_handlers_ext_isolated.cpp
     )
@@ -1097,7 +1090,6 @@ elseif(RAWR_SSOT_PROVIDER_UPPER STREQUAL "FEATURES")
     list(REMOVE_ITEM RAWR_ENGINE_SOURCES
         src/core/ssot_handlers.cpp
         src/core/auto_feature_registry.cpp
-        src/core/missing_handler_stubs.cpp
         src/core/ssot_handlers_ext_runtime_minimal.cpp
         src/core/ssot_handlers_ext_isolated.cpp
         src/core/ssot_handlers_ext.cpp
@@ -1173,7 +1165,6 @@ target_include_directories(RawrEngine PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/modules
     ${CMAKE_CURRENT_SOURCE_DIR}/src/tools
     ${CMAKE_CURRENT_SOURCE_DIR}/src/telemetry
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/test_harness
     ${CMAKE_CURRENT_SOURCE_DIR}/src/reverse_engineering
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/include/gpu
@@ -1197,9 +1188,13 @@ target_sources(RawrEngine PRIVATE
     src/core/native_debugger_engine.cpp
     src/core/native_debugger_symbols.cpp
     src/agentic/AgentOllamaClient.cpp
-    src/core/rawr_engine_link_shims.cpp
-    src/core/auto_feature_stub_impl.cpp
 )
+if(NOT RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
+    target_sources(RawrEngine PRIVATE src/core/rawr_engine_link_shims.cpp)
+endif()
+if(RAWR_SSOT_PROVIDER_UPPER STREQUAL "EXT" OR RAWR_SSOT_PROVIDER_UPPER STREQUAL "STUBS")
+    target_sources(RawrEngine PRIVATE src/core/auto_feature_stub_impl.cpp)
+endif()
 
 # Win32 system libraries (same as Gold)
 if(WIN32)
@@ -1219,19 +1214,41 @@ endif()
 # =============================================================================
 set(GOLD_UNDERSCORE_SOURCES ${SOURCES})
 list(REMOVE_ITEM GOLD_UNDERSCORE_SOURCES
-    src/core/auto_feature_registry.cpp
-    src/core/ssot_handlers.cpp
-    src/core/ssot_handlers_ext_runtime_minimal.cpp
-    src/core/ssot_handlers_ext_isolated.cpp
     src/core/rawrengine_command_handlers.cpp
     src/core/ssot_validation.cpp
 )
-list(APPEND GOLD_UNDERSCORE_SOURCES
-    src/core/rawr_engine_link_shims.cpp
-    src/core/auto_feature_stub_impl.cpp
-    src/core/ignite_800b.cpp
-    src/core/missing_handler_stubs.cpp
-)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/agent/quantum_missing_impl.cpp")
+    # Keep Gold and RawrEngine on the same non-duplicated quantum time manager lane.
+    list(REMOVE_ITEM GOLD_UNDERSCORE_SOURCES src/agent/quantum_dynamic_time_manager_impl.cpp)
+endif()
+list(APPEND GOLD_UNDERSCORE_SOURCES src/core/ignite_800b.cpp)
+if(NOT RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
+    list(APPEND GOLD_UNDERSCORE_SOURCES src/core/rawr_engine_link_shims.cpp)
+endif()
+if(RAWR_SSOT_PROVIDER_UPPER STREQUAL "AUTO")
+    # Production lane: prefer full handlers over stub providers.
+    list(REMOVE_ITEM GOLD_UNDERSCORE_SOURCES
+        src/core/missing_handler_stubs.cpp
+        src/core/ssot_handlers_ext_runtime_minimal.cpp
+        src/core/ssot_handlers_ext_isolated.cpp
+    )
+    list(APPEND GOLD_UNDERSCORE_SOURCES src/core/ssot_handlers_ext.cpp)
+    set(_RAWR_GOLD_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS 1)
+else()
+    # Legacy lanes: retain fallback ownership to preserve link closure.
+    list(REMOVE_ITEM GOLD_UNDERSCORE_SOURCES
+        src/core/auto_feature_registry.cpp
+        src/core/ssot_handlers.cpp
+        src/core/ssot_handlers_ext_runtime_minimal.cpp
+        src/core/ssot_handlers_ext_isolated.cpp
+    )
+    list(APPEND GOLD_UNDERSCORE_SOURCES
+        src/core/auto_feature_stub_impl.cpp
+        src/core/missing_handler_stubs.cpp
+    )
+    set(_RAWR_GOLD_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS 0)
+endif()
+list(REMOVE_DUPLICATES GOLD_UNDERSCORE_SOURCES)
 add_executable(RawrXD_Gold ${GOLD_UNDERSCORE_SOURCES} ${ASM_KERNEL_SOURCES})
 
 if(WIN32)
@@ -1254,22 +1271,26 @@ target_include_directories(RawrXD_Gold PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/gpu
     ${CMAKE_CURRENT_SOURCE_DIR}/src/tools
     ${CMAKE_CURRENT_SOURCE_DIR}/src/telemetry
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/test_harness
     ${CMAKE_CURRENT_SOURCE_DIR}/src/reverse_engineering
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/include/gpu
 )
 
+if(RAWRXD_INCLUDE_STRESS_AND_REPLAY_SOURCES)
+    target_include_directories(RawrEngine PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/test_harness)
+    target_include_directories(RawrXD_Gold PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/test_harness)
+endif()
+
 target_link_libraries(RawrXD_Gold PRIVATE Threads::Threads)
 
 target_compile_definitions(RawrXD_Gold PRIVATE
     RAWRXD_GOLD_BUILD=1
-    RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS=1
-    RAWR_HAS_MASM=1
+    RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS=${_RAWR_GOLD_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS}
+    RAWR_HAS_MASM=$<IF:$<BOOL:${RAWR_HAS_MASM}>,1,0>
     RAWRXD_LINK_QUADBUFFER_ASM=1
     RAWRXD_LINK_INFERENCE_KERNELS_ASM=1
-    RAWRXD_LINK_ANALYZER_DISTILLER_ASM=1
-    RAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1
+    RAWRXD_LINK_ANALYZER_DISTILLER_ASM=0
+    RAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=0
     RAWRXD_LINK_TELEMETRY_KERNEL_ASM=1
     RAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1
     RAWRXD_LINK_SELFPATCH_AGENT_ASM=1
@@ -1303,7 +1324,7 @@ if(WIN32)
     endif()
 endif()
 
-# Gold-only sources: modules used by missing_handler_stubs but not in main SOURCES
+# Gold-only sources not present in the main SOURCES aggregation lane.
 target_sources(RawrXD_Gold PRIVATE
     src/core/native_debugger_engine.cpp
     src/core/native_debugger_symbols.cpp
@@ -1313,7 +1334,6 @@ target_sources(RawrXD_Gold PRIVATE
     src/core/ConfigurationValidator.cpp
     src/inference/PerformanceMonitor.cpp
     src/agentic/ErrorRecoveryManager.cpp
-    src/core/missing_handler_stubs.cpp
 )
 
 # Vulkan SDK for Gold build — linked later after find_package(Vulkan)
@@ -2200,6 +2220,7 @@ set(INFERENCE_ENGINE_SOURCES
     src/core/ignite_800b.cpp
     src/core/ConfigurationValidator.cpp
     src/inference/inference_standalone_link_shims.cpp
+    src/core/subsystem_runtime_bridge.cpp
     src/engine/gguf_core.cpp
     src/engine/inference_kernels.cpp
     src/engine/transformer.cpp
@@ -2214,12 +2235,15 @@ set(INFERENCE_ENGINE_SOURCES
     src/codec/compression.cpp
     src/codec/brutal_gzip.cpp
     src/utils/Diagnostics.cpp
-    src/core/ignite_800b.cpp
     src/inference/TitanLoaderDiagnostics.cpp
     src/inference/MemoryPressureGuard.cpp
     src/agentic/ErrorRecoveryManager.cpp
     src/inference/PerformanceMonitor.cpp
 )
+list(REMOVE_DUPLICATES INFERENCE_ENGINE_SOURCES)
+if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
+    list(REMOVE_ITEM INFERENCE_ENGINE_SOURCES src/inference/inference_standalone_link_shims.cpp)
+endif()
 
 add_executable(RawrXD-InferenceEngine EXCLUDE_FROM_ALL ${INFERENCE_ENGINE_SOURCES})
 
@@ -2241,7 +2265,7 @@ target_link_libraries(RawrXD-InferenceEngine PRIVATE Threads::Threads)
 
 if(WIN32)
     target_link_libraries(RawrXD-InferenceEngine PRIVATE
-        shlwapi psapi dbghelp winhttp bcrypt advapi32 crypt32
+        shlwapi psapi dbghelp winhttp bcrypt advapi32 crypt32 ntdll
     )
 endif()
 
@@ -2319,8 +2343,6 @@ if(WIN32)
     set(WIN32IDE_SOURCES
         src/win32app/main_win32.cpp
         src/win32app/HeadlessIDE.cpp
-        src/win32app/HeadlessIDE.h
-        src/win32app/HeadlessIDE.cpp
         src/agent/quantum_agent_orchestrator.cpp
         src/inference/gpu_dispatch_gate_win32ide_fallback.cpp
         src/inference/gguf_d3d12_bridge_link_fallback.cpp
@@ -2338,10 +2360,12 @@ if(WIN32)
         src/agentic/ErrorRecoveryManager.cpp
     )
 
-    # MASM64 UI Dispatcher
-    set(WEBVIEW2_DISPATCHER src/asm/webview2_masm64_dispatcher.asm)
-    set_source_files_properties(${WEBVIEW2_DISPATCHER} PROPERTIES LANGUAGE ASM_MASM)
-    list(APPEND WIN32IDE_SOURCES ${WEBVIEW2_DISPATCHER})
+    # MASM64 UI Dispatcher (MSVC/MASM-only).
+    if(RAWR_HAS_MASM)
+        set(WEBVIEW2_DISPATCHER src/asm/webview2_masm64_dispatcher.asm)
+        set_source_files_properties(${WEBVIEW2_DISPATCHER} PROPERTIES LANGUAGE ASM_MASM)
+        list(APPEND WIN32IDE_SOURCES ${WEBVIEW2_DISPATCHER})
+    endif()
 
     # NOTE:
     # Win32IDE target creation/linking is performed in the canonical block below
@@ -2410,19 +2434,13 @@ if(WIN32)
         src/win32app/Win32IDE_ExecutionGovernor.cpp
         src/win32app/Win32IDE_LayerEviction.cpp
         src/win32app/Win32IDE_SemanticIndexShim.cpp
-        src/win32app/Win32IDE_SubAgent.h
         src/win32app/Win32IDE_SubAgent.cpp
         src/win32app/Win32IDE_AgentHistory.cpp
         src/win32app/Win32IDE_AgentPanel.cpp
         src/win32app/rtp_protocol_fallback.cpp
-        src/win32app/win32ide_extension_command_fallback.cpp
         src/win32app/Win32IDE_DiskRecovery.cpp
         src/win32app/Win32TerminalManager.cpp
-        src/win32app/Win32TerminalManager.h
         src/win32app/TransparentRenderer.cpp
-        src/win32app/TransparentRenderer.h
-        src/win32app/ModelConnection.h
-        src/win32app/ContextManager.h
 
         # Plugin System — Phase 43: Native Win32 DLL loading (C ABI)
         src/plugin_system/win32_plugin_loader.cpp
@@ -2483,24 +2501,7 @@ if(WIN32)
         src/ai/repo_refactor_engine.cpp
 
         # AgenticObservability + SubsystemRegistry (required by AgentOrchestrator, ToolRegistry, feature_handlers)
-        src/agentic_observability.cpp
-        src/core/rawrxd_subsystem_api.cpp
-
-        # TelemetryCollector (required by model_bruteforce_engine)
-        # src/agent/telemetry_collector.cpp (moved to T5)
-
-        # EngineRegistry (required by sovereign_engines)
-        # src/runtime_core.cpp (moved to T5)
-
-        # ToolRegistry::inject_tools (required by runtime_core process_prompt)
-        # src/tool_registry.cpp (removed - duplicate of src/agentic/ToolRegistry.cpp)
-
-        # Mesh ASM stubs (asm_mesh_crdt_lookup etc. not in RawrXD_MeshBrain.asm)
-        # src/core/mesh_brain_asm_stubs.cpp (removed stub)
-
-        # AnalyzerDistiller + StreamingOrchestrator fallbacks (ASM modules excluded)
-        # src/core/analyzer_distiller_stubs.cpp (removed stub)
-        # src/core/streaming_orchestrator_stubs.cpp (removed stub)
+        # already added above in this block; keep single provider per file
 
         # Disk Recovery Agent (C++ implementation) + Tool handler + ASM wrapper
         src/agentic/DiskRecoveryAgent.cpp
@@ -2549,7 +2550,6 @@ if(WIN32)
         src/core/enterprise_license.cpp
         src/core/enterprise_licensev2_impl.cpp
         src/core/enterprise_devunlock_bridge.cpp
-        src/core/enterprise_devunlock_stub_masm.cpp
         src/core/monolithic_heap_globals.cpp
         src/tools/license_validator_manifest.cpp
         src/core/license_anti_tampering.cpp
@@ -2595,7 +2595,6 @@ if(WIN32)
         # Three-Layer Hotpatch System (Phase 14.2)
         src/core/model_memory_hotpatch.cpp
         src/core/byte_level_hotpatcher.cpp
-        src/core/memory_patch_byte_search_stubs.cpp
         src/core/unified_hotpatch_manager.cpp
         src/core/proxy_hotpatcher.cpp
         src/core/model_bruteforce_engine.cpp
@@ -2607,10 +2606,6 @@ if(WIN32)
         
         # Agent-Driven Hotpatch Orchestration (Phase 18)
         src/agent/agentic_hotpatch_orchestrator.cpp
-
-        # Shadow-Page Detour + Sentinel Watchdog (Layer 6)
-        src/core/shadow_page_detour.cpp
-        src/core/sentinel_watchdog.cpp
 
         # HTTP Client — WinHTTP async with future retention (CLI+GUI)
         src/agent/llm_http_client.cpp
@@ -2698,7 +2693,6 @@ if(WIN32)
 
         # Phase 28: MonacoCore Native Editor Engine — Toggleable Engine System
         src/core/MonacoCoreEngine.cpp
-        src/core/monaco_core_stubs.cpp
         src/core/WebView2EditorEngine.cpp
         src/core/RichEditEditorEngine.cpp
         src/core/EditorEngineFactory.cpp
@@ -2737,7 +2731,6 @@ if(WIN32)
         src/core/feature_handlers.cpp
         # auto_feature_registry excluded for Win32 IDE — use ssot_handlers (lightweight stubs)
         src/core/intent_engine.cpp
-        src/core/missing_handler_stubs.cpp
         src/core/model_training_pipeline.cpp
         src/agentic/AgentOllamaClient.cpp
         src/core/ssot_handlers.cpp
@@ -2860,7 +2853,6 @@ if(WIN32)
         src/security/secrets_scanner.cpp
         src/security/sast_rule_engine.cpp
         src/security/dependency_audit.cpp
-        src/security/InputSanitizer.cpp
         src/win32app/Win32IDE_AgentStreamingBridge.cpp
 
         # Phase 16: Semantic Code Intelligence
@@ -2885,7 +2877,6 @@ if(WIN32)
         src/win32app/Win32IDE_NetworkPanel.cpp
         src/core/omega_orchestrator.cpp
         src/core/mesh_brain.cpp
-        src/core/mesh_brain_asm_stubs.cpp
         src/core/speciator_engine.cpp
         src/core/neural_bridge.cpp
         src/core/self_host_engine.cpp
@@ -2972,8 +2963,6 @@ if(WIN32)
         src/win32app/Win32IDE_Refactor.cpp
         src/win32app/Win32IDE_SearchPanel.cpp
         src/win32app/Win32IDE_FuzzySearch.cpp
-        src/win32app/Win32IDE_CallStackSymbols.cpp
-        src/win32app/multi_file_search_stub.cpp
 
         # ═══════════════════════════════════════════════════════════════
         # Compile-Debt Resolved: IDE Cosmetics & Intelligence Layer
@@ -3029,6 +3018,10 @@ if(WIN32)
         src/win32app/VSCodeMarketplaceAPI.cpp
         # Multi-file search (real implementation; replaces earlier IDE stub)
         src/multi_file_search.cpp
+        # Legacy support unit wiring removed from production lane.
+        # Completed modules previously documented as shipped
+        src/core/license_manager_panel.cpp
+        src/telemetry/logger.cpp
         # License Creator + Feature Registry dialogs (showLicenseCreatorDialog, showFeatureRegistryDialog)
         src/win32app/Win32IDE_LicenseCreator.cpp
         # License enforcement + manifest (g_FeatureManifest + featureName from license_validator_manifest.cpp; LicenseEnforcer from license_enforcement.cpp)
@@ -3048,6 +3041,79 @@ if(WIN32)
         src/win32app/Win32IDE_SnippetEngine.cpp
         src/win32app/Win32IDE_MultiCursor.cpp
     )
+
+    if(NOT RAWRXD_INCLUDE_STRESS_AND_REPLAY_SOURCES)
+        list(REMOVE_ITEM WIN32IDE_SOURCES
+            src/core/masm_stress_harness.cpp
+            src/core/convergence_stress_harness.cpp
+            src/core/enterprise_stress_tests.cpp
+        )
+    endif()
+
+    # Production lane source normalization:
+    # Prefer real implementation units over legacy compatibility stubs/shims.
+    list(REMOVE_ITEM WIN32IDE_SOURCES
+        src/core/enterprise_devunlock_stub_masm.cpp
+        src/core/memory_patch_byte_search_stubs.cpp
+        src/core/mesh_brain_asm_stubs.cpp
+        src/core/monaco_core_stubs.cpp
+        src/core/subsystem_runtime_bridge.cpp
+        src/core/win32_ide_link_stubs.cpp
+        src/win32app/multi_file_search_stub.cpp
+    )
+
+    # DbgEng COM interfaces used by the native debugger engine are MSVC/SDK-specific.
+    # For non-MSVC toolchains (e.g., MinGW cross-builds), keep the rest of Win32IDE
+    # buildable by excluding these units.
+    if(NOT MSVC)
+        list(REMOVE_ITEM WIN32IDE_SOURCES
+            src/core/native_debugger_engine.cpp
+            src/core/native_debugger_symbols.cpp
+            src/win32app/Win32IDE_NativeDebugPanel.cpp
+            src/agent/agentic_deep_thinking_engine.cpp
+            src/agent/quantum_autonomous_todo_system.cpp
+            src/agent/quantum_multi_model_agent_cycling.cpp
+            src/agent/quantum_dynamic_time_manager.cpp
+            src/agent/quantum_production_orchestrator.cpp
+            src/agent/quantum_missing_impl.cpp
+            src/vulkan_compute.cpp
+            src/core/embedding_engine.cpp
+            src/core/vector_index.cpp
+            src/core/agentic_task_graph.cpp
+            src/core/vision_encoder.cpp
+            src/core/model_loader_fallbacks.cpp
+            src/core/masm_stress_harness.cpp
+            src/core/convergence_stress_harness.cpp
+            src/core/enterprise_stress_tests.cpp
+            src/win32app/Win32IDE_Minimap.cpp
+            src/win32app/Win32IDE_VisionEncoder.cpp
+            src/win32app/Win32IDE_Debugger.cpp
+            src/win32app/Win32IDE_ReverseEngineering.cpp
+            src/win32app/Win32IDE_SettingsGUI.cpp
+            src/win32app/VulkanRenderer.cpp
+            src/win32app/OSExplorerInterceptor.cpp
+        )
+        # Non-MSVC link-closure fallbacks for debugger/minimap emitter symbols.
+        list(APPEND WIN32IDE_SOURCES
+            src/ui/debugger_emitter_nonmsvc.cpp
+            src/win32app/Win32IDE_NativeDebugPanel_nonmsvc.cpp
+            src/core/vision_encoder_nonmsvc.cpp
+            src/core/native_debugger_engine_nonmsvc.cpp
+            src/core/win32_kernel_bridge_nomasm.cpp
+            src/core/enterprise_camellia_nonmsvc.cpp
+            src/core/self_repair_loop_nonmsvc.cpp
+            src/core/native_speed_kernels_nonmsvc.cpp
+            src/core/swarm_network_nonmsvc.cpp
+            src/core/agentic_embedding_singletons_nonmsvc.cpp
+            src/core/monaco_core_nonmsvc.cpp
+            src/core/kquant_nonmsvc.cpp
+            src/modules/copilot_gap_nonmsvc.cpp
+            src/cli/swarm_tensor_nonmsvc.cpp
+            src/core/remaining_link_closures_nonmsvc.cpp
+            src/win32app/OSExplorerInterceptor_nonmsvc.cpp
+            src/core/multi_response_engine.cpp
+        )
+    endif()
      
     # =========================================================================
     # MultiWindow Task Scheduler Kernel (MASM64 DLL)
@@ -3129,7 +3195,6 @@ if(WIN32)
         # Real lane - keep isolated handlers and runtime menu/command handlers.
         # DO NOT remove ssot_handlers_ext_isolated.cpp - it has working VSCEXT handlers 10000-10009
         # DO NOT add ssot_handlers_ext.cpp - it has unresolved symbols we haven't fixed
-        # missing_handler_stubs.cpp provides runtime command/menu implementations.
         # win32_ide_link_stubs.cpp keeps only non-menu fallback symbols.
         message(STATUS "Win32IDE: Real lane - using isolated handlers + runtime handlers + link shims")
     endif()
@@ -3138,8 +3203,20 @@ if(WIN32)
         list(REMOVE_ITEM WIN32IDE_SOURCES
             src/core/monaco_core_stubs.cpp
             src/core/ssot_missing_handlers_provider.cpp
+            src/core/win32_ide_link_stubs.cpp
+            src/core/win32ide_asm_fallback.cpp
+            src/core/subsystem_mode_fallbacks.cpp
+            src/core/model_loader_fallbacks.cpp
+            src/core/rawrxd_native_log_fallback.cpp
+            src/llm_adapter/ggufrunner_link_fallbacks.cpp
+            src/inference/gpu_dispatch_gate_win32ide_fallback.cpp
+            src/inference/gguf_d3d12_bridge_link_fallback.cpp
+            src/win32app/v280_link_fallbacks.cpp
+            src/win32app/collab_cursor_fallbacks.cpp
+            src/win32app/rtp_protocol_fallback.cpp
+            src/win32app/win32ide_extension_command_fallback.cpp
         )
-        message(STATUS "[ProductionLane] Win32IDE: stripped monaco/ssot stub units; kept missing_handler_stubs.cpp runtime handlers")
+        message(STATUS "[ProductionLane] Win32IDE: stripped monaco/ssot/fallback shim units")
     endif()
 
     # Avoid mixing parallel GGUF engine stacks in this lane.
@@ -3148,40 +3225,43 @@ if(WIN32)
         src/engine/rawr_engine.cpp
         src/engine/gguf_core.cpp
     )
-    # Use real model loader implementation in Win32IDE.
     list(REMOVE_ITEM WIN32IDE_SOURCES src/core/rawrxd_model_loader_link_stub.cpp)
-    # Re-wire real providers needed by this target's link graph.
+    list(APPEND WIN32IDE_SOURCES src/core/local_parity_bridge.cpp)
     list(APPEND WIN32IDE_SOURCES
         src/tool_registry.cpp
         src/agentic/RawrXD_ToolRegistry.cpp
         src/agent/DiskRecoveryAgent.cpp
-        src/core/local_parity_bridge.cpp
-        src/core/subsystem_mode_fallbacks.cpp
-        src/core/model_loader_fallbacks.cpp
-        src/core/rawrxd_native_log_fallback.cpp
-        src/llm_adapter/ggufrunner_link_fallbacks.cpp
+        src/core/runtime_symbol_bridge.cpp
+        src/core/multi_response_engine_runtime_ctor.cpp
+        src/ui/webview2_mingw_uuid.cpp
+        src/win32app/Win32IDE_ComponentManagers_Link.cpp
+        src/win32app/Win32IDE_NativeDebugPanel_fallback.cpp
+        src/win32app/Win32IDE_DebugAndVisionFallback.cpp
         src/agentic/masm_agent_failure_fallback.cpp
     )
+    if(NOT RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
+        list(APPEND WIN32IDE_SOURCES
+            src/core/subsystem_mode_fallbacks.cpp
+            src/core/model_loader_fallbacks.cpp
+            src/core/rawrxd_native_log_fallback.cpp
+            src/llm_adapter/ggufrunner_link_fallbacks.cpp
+            src/win32app/collab_cursor_fallbacks.cpp
+        )
+    else()
+        message(STATUS "[ProductionLane] Win32IDE: fallback provider append skipped")
+    endif()
 
     list(APPEND WIN32IDE_SOURCES
         src/win32app/ai_workers_queue.cpp
         # v14.7.0 Native Track B Modules
         src/ui/ImportBridge.cpp
         src/ui/ExportBridge.cpp
-        src/editor/ghost_text_renderer.hpp
         src/terminal/embedded_terminal.cpp
-        src/terminal/embedded_terminal.hpp
-        src/lsp/lsp_client_wired.hpp
-        src/agentic/multi_file_composer.hpp
-        src/git/git_wired.hpp
-        src/ui/warp_hud.hpp
-        src/ui/logic_bridge.hpp
-        src/config/settings.hpp
-        src/win32app/collab_cursor_fallbacks.cpp
     )
 
+    set(WIN32IDE_EXTRA_ASM "")
     if(RAWR_HAS_MASM)
-        list(APPEND ASM_KERNEL_SOURCES
+        set(WIN32IDE_EXTRA_ASM
             src/asm/RawrXD_PE_Importer.asm
             src/asm/RawrXD_PE_Exporter.asm
             src/asm/memory_patch.asm
@@ -3189,6 +3269,7 @@ if(WIN32)
             src/asm/ghost_text_ranker.asm
             src/asm/diff_engine.asm
         )
+        set_source_files_properties(${WIN32IDE_EXTRA_ASM} PROPERTIES LANGUAGE ASM_MASM)
     endif()
 
     # Gold Lane: prefer real implementations for Win32IDE agentic/autonomy path.
@@ -3202,6 +3283,7 @@ if(WIN32)
         list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*_stubs\\.cpp$")
         list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/reverse_engineered_stubs\\.cpp$")
         list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/link_stubs_.*\\.cpp$")
+        list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/.*_fallback\\.cpp$")
 
         list(REMOVE_ITEM WIN32IDE_SOURCES
             src/win32app/agentic_bridge_headless.cpp
@@ -3213,8 +3295,6 @@ if(WIN32)
             src/core/link_stubs_final.cpp
             src/core/link_stubs_remaining_classes.cpp
         )
-        # Re-add ai_agent_masm_stubs.cpp: provides masm_agent_failure_detect_simd (required by agentic_failure_detector.cpp)
-        list(APPEND WIN32IDE_SOURCES src/core/ai_agent_masm_stubs.cpp)
         message(STATUS "[Win32IDE] Agentic real lane enforced (stub/link-fallback units removed)")
     endif()
 
@@ -3226,7 +3306,7 @@ if(WIN32)
         set(_RAWRXD_FORBIDDEN_WIN32IDE_SOURCES "")
         foreach(_rawrxd_src IN LISTS WIN32IDE_SOURCES)
             # ai_agent_masm_stubs.cpp is required (masm_agent_failure_detect_simd), not a fallback
-            if(NOT _rawrxd_src MATCHES "ai_agent_masm_stubs\\.cpp$" AND _rawrxd_src MATCHES "(_stubs\\.cpp$|/stubs\\.cpp$|/stub_.*\\.cpp$|/link_stubs_.*\\.cpp$|/agentic_bridge_headless\\.cpp$|/Win32IDE_headless_stubs\\.cpp$)")
+            if(NOT _rawrxd_src MATCHES "ai_agent_masm_stubs\\.cpp$" AND _rawrxd_src MATCHES "(_stubs\\.cpp$|/stubs\\.cpp$|/stub_.*\\.cpp$|/link_stubs_.*\\.cpp$|/.*_fallback\\.cpp$|/agentic_bridge_headless\\.cpp$|/Win32IDE_headless_stubs\\.cpp$)")
                 list(APPEND _RAWRXD_FORBIDDEN_WIN32IDE_SOURCES "${_rawrxd_src}")
             endif()
         endforeach()
@@ -3255,7 +3335,7 @@ if(WIN32)
         foreach(src ${SOURCES})
             # Detect stub files
             if(src MATCHES "(_stubs\\.cpp$|_stubs\\.asm$|/missing_handler)" OR
-               src MATCHES "(stub_|shim_)" OR
+               src MATCHES "(stub_|shim_|fallback_)" OR
                src MATCHES "(mock_|fake_)")
                                 # ai_agent_masm_stubs.cpp provides required MASM symbols — exempt
                                 if(src MATCHES "ai_agent_masm_stubs\\.cpp$")
@@ -3319,7 +3399,9 @@ if(WIN32)
     
     # Mandatory symbol providers for Win32IDE link closure (only link_stubs_gate allowed).
     # Remove any other stubs that may have been added
-    list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX "(_stubs\\.cpp$|_stubs\\.asm$|missing_handler|stub_|shim_|mock_|fake_)")
+    list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX "(_stubs\\.cpp$|_stubs\\.asm$|missing_handler|stub_|shim_|fallback_|mock_|fake_)")
+    # Keep required MASM bridge provider after broad stub filtering.
+    list(APPEND WIN32IDE_SOURCES src/core/ai_agent_masm_stubs.cpp)
 
 
     # Pre-append strict guard: Verify no stubs were auto-added earlier
@@ -3327,7 +3409,7 @@ if(WIN32)
         set(_RAWRXD_FORBIDDEN_WIN32IDE_SOURCES_POST "")
         foreach(_rawrxd_src IN LISTS WIN32IDE_SOURCES)
             if(_rawrxd_src MATCHES "(_stubs\\.cpp$|/stubs\\.cpp$|/stub_.*\\.cpp$)" OR
-               _rawrxd_src MATCHES "(missing_handler|shim_|mock_|fake_)")
+               _rawrxd_src MATCHES "(missing_handler|shim_|fallback_|mock_|fake_)")
                 if(NOT _rawrxd_src MATCHES "ai_agent_masm_stubs\\.cpp$")
                     list(APPEND _RAWRXD_FORBIDDEN_WIN32IDE_SOURCES_POST "${_rawrxd_src}")
                 endif()
@@ -3342,21 +3424,6 @@ if(WIN32)
             )
         endif()
     endif()
-
-    # Final Duplicate Elimination (v14.7.4 Deep Clean)
-    list(REMOVE_ITEM WIN32IDE_SOURCES
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/tool_registry.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/agentic/RawrXD_ToolRegistry.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/agent/DiskRecoveryAgent.cpp"
-    )
-
-    # v14.7.5 LNK2005 Duplicate Symbol Elimination
-    # These dedicated feature files duplicate definitions already consolidated in
-    # Tier2/Tier5 cosmetics or in Win32IDE.cpp.  Keep the consolidation copies.
-    list(REMOVE_ITEM WIN32IDE_SOURCES
-        src/win32app/Win32IDE_CallStackSymbols.cpp       # dups initCallStackSymbols / handleCallStackCommand  (Tier5Cosmetics)
-        src/win32app/multi_file_search_stub.cpp          # dups MultiFileSearchWidget ctor/dtor  (multi_file_search.cpp)
-    )
 
     # v14.7.6 Batch 2 parity files — compilation fixes applied, re-enabled
     # (PeekView, AutoSave, TerminalSplit now compile cleanly)
@@ -3403,8 +3470,7 @@ if(WIN32)
         src/win32app/Win32IDE_ResourceGenerator.cpp
     )
 
-    add_executable(RawrXD-Win32IDE WIN32 ${WIN32IDE_SOURCES} ${ASM_KERNEL_SOURCES}
-        src/win32app/RawrXD-Win32IDE.rc)
+    add_executable(RawrXD-Win32IDE WIN32 ${WIN32IDE_SOURCES} ${ASM_KERNEL_SOURCES} ${WIN32IDE_EXTRA_ASM})
 
     # =========================================================================
     # PRODUCTION POLICY ENFORCEMENT
@@ -3454,7 +3520,7 @@ if(WIN32)
         RAWRXD_USE_DEDICATED_CODELENS=1
         RAWRXD_USE_DEDICATED_INLAY=1
         RAWRXD_USE_DEDICATED_HOVER=1
-        RAWRXD_USE_DEDICATED_MINIMAP=1
+        $<$<BOOL:${MSVC}>:RAWRXD_USE_DEDICATED_MINIMAP=1>
     )
 
     # =========================================================================
@@ -3584,10 +3650,11 @@ if(WIN32)
         Threads::Threads
         comctl32 comdlg32 shell32 ole32 oleaut32 uuid
         shlwapi psapi dbghelp winhttp ws2_32 winmm gdi32 user32 ntdll
+        gdiplus
         d2d1 dwrite d3d11 dcomp d3dcompiler dwmapi
         dxgi
         advapi32 crypt32 bcrypt wintrust
-        opengl32 wininet
+        opengl32 wininet gdiplus iphlpapi sapi
         pdh
         ${MASM_OBJECTS}
         ${_WIN32IDE_LINKED_MONOLITHIC_OBJS}
@@ -3747,8 +3814,9 @@ elseif(RAWR_ASAN AND NOT MSVC)
     add_link_options(-fsanitize=address)
 endif()
 
-# Build only the SSOT objects needed by the ownership guard.
-if(EXISTS "${CMAKE_SOURCE_DIR}/src/core/missing_handler_stubs.cpp")
+# Build SSOT stub-lane ownership guard only when explicitly enabled.
+set(RAWRXD_HAS_SSOT_STUB_LANE_GUARD OFF)
+if(RAWRXD_ENABLE_MISSING_HANDLER_STUBS AND EXISTS "${CMAKE_SOURCE_DIR}/src/core/missing_handler_stubs.cpp")
     add_library(ssot_stub_lane_objs OBJECT
         ${CMAKE_SOURCE_DIR}/src/core/missing_handler_stubs.cpp
         ${CMAKE_SOURCE_DIR}/src/core/ssot_missing_handlers_provider.cpp
@@ -3771,18 +3839,27 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/core/missing_handler_stubs.cpp")
         VERBATIM
     )
     add_dependencies(ssot_stub_lane_guard ssot_stub_lane_objs)
+    set(RAWRXD_HAS_SSOT_STUB_LANE_GUARD ON)
 else()
-    message(STATUS "[SSOT] missing_handler_stubs.cpp absent; stub lane guard disabled.")
+    message(STATUS "[SSOT] Stub lane guard disabled (set RAWRXD_ENABLE_MISSING_HANDLER_STUBS=ON to enable).")
 endif()
 
 option(RAWRXD_ENABLE_HEAVY_GATES "Run heavy ownership/compiled-symbol guards as part of self_test_gate" OFF)
 if(RAWRXD_ENABLE_HEAVY_GATES)
-    add_custom_target(self_test_gate
-        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config $<CONFIG> --target ssot_stub_lane_guard
-        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config $<CONFIG> --target RawrXD-Win32IDE
-        COMMENT "[CI Gate] Ownership guard + RawrXD-Win32IDE"
-        VERBATIM
-    )
+    if(RAWRXD_HAS_SSOT_STUB_LANE_GUARD)
+        add_custom_target(self_test_gate
+            COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config $<CONFIG> --target ssot_stub_lane_guard
+            COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config $<CONFIG> --target RawrXD-Win32IDE
+            COMMENT "[CI Gate] Ownership guard + RawrXD-Win32IDE"
+            VERBATIM
+        )
+    else()
+        add_custom_target(self_test_gate
+            COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config $<CONFIG> --target RawrXD-Win32IDE
+            COMMENT "[CI Gate] RawrXD-Win32IDE (stub ownership guard disabled)"
+            VERBATIM
+        )
+    endif()
 else()
     add_custom_target(self_test_gate
         COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config $<CONFIG> --target RawrXD-Win32IDE

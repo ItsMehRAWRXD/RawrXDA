@@ -17,6 +17,9 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#ifdef FILE_CREATE
+#undef FILE_CREATE
+#endif
 #endif
 
 namespace fs = std::filesystem;

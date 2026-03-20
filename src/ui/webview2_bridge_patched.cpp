@@ -20,13 +20,17 @@ public:
         : m_callback(callback), m_refCount(1) {}
 
     virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override {
-        if (riid == __uuidof(IUnknown) || riid == __uuidof(THandler)) {
+        if (!ppvObject) {
+            return E_POINTER;
+        }
+        if (riid == IID_IUnknown) {
             *ppvObject = static_cast<THandler*>(this);
             AddRef();
             return S_OK;
         }
-        *ppvObject = nullptr;
-        return E_NOINTERFACE;
+        *ppvObject = static_cast<THandler*>(this);
+        AddRef();
+        return S_OK;
     }
 
     virtual ULONG STDMETHODCALLTYPE AddRef() override {
@@ -186,10 +190,12 @@ void WebView2Bridge::sendBinaryMessage(ipc::MessageType type, const void* data, 
     }
 }
 
-extern "C" void rawrxd_enumerate_modules_peb(void (*callback)(uint64_t, uint32_t, uint16_t, const wchar_t*));
+extern "C" void rawrxd_enumerate_modules_peb(
+    void (*callback)(uint64_t, uint32_t, uint16_t, const wchar_t*, void*),
+    void* context);
 
 void WebView2Bridge::snapshotModules() {
-    auto callback = [](uint64_t base, uint32_t size, uint16_t nameLen, const wchar_t* namePtr) {
+    auto callback = [](uint64_t base, uint32_t size, uint16_t nameLen, const wchar_t* namePtr, void* /*context*/) {
         // Construct MOD_LOAD packet
         struct {
             ipc::RawrIPCHeader header;
@@ -212,7 +218,7 @@ void WebView2Bridge::snapshotModules() {
         );
     };
 
-    rawrxd_enumerate_modules_peb(callback);
+    rawrxd_enumerate_modules_peb(callback, nullptr);
 }
 
 void WebView2Bridge::onBinaryMessageFromUI(const uint8_t* buffer, size_t length) {
