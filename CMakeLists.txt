@@ -347,7 +347,6 @@ if(RAWR_HAS_MASM)
         # src/asm/RawrXD_DualEngine_Pure.asm    # excluded: ml64 errors (operand size mismatch)
         src/asm/RawrXD_OverclockGov_Pure.asm
         src/asm/RawrXD_Emitter_v1.asm
-        src/asm/RawrXD_PDBKernel_v3.asm
         src/asm/RawrXD_IPC_Dispatcher.asm
         src/asm/RawrXD_AuditSystem_Pure.asm
         src/asm/Advanced_Code_Deobfuscator.asm
@@ -359,6 +358,7 @@ if(RAWR_HAS_MASM)
         # User-provided production ASM (need ML64 syntax fixes: .endprolog, REAL4, scale): agentic_deep_thinking_kernels.asm, ai_completion_provider_masm.asm, agentic_puppeteer_byte_ops.asm
         # src/RawrXD_Complete_ReverseEngineered.asm  # excluded: fragment missing struct defs/includes
     )
+    list(REMOVE_DUPLICATES ASM_KERNEL_SOURCES)
     # Mark ASM files with MASM language property
     set_source_files_properties(${ASM_KERNEL_SOURCES} PROPERTIES LANGUAGE ASM_MASM)
     add_definitions(-DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1)
@@ -1238,6 +1238,7 @@ list(APPEND GOLD_UNDERSCORE_SOURCES
     src/core/ignite_800b.cpp
     src/core/missing_handler_stubs.cpp
 )
+list(REMOVE_DUPLICATES GOLD_UNDERSCORE_SOURCES)
 add_executable(RawrXD_Gold ${GOLD_UNDERSCORE_SOURCES} ${ASM_KERNEL_SOURCES})
 
 if(WIN32)
@@ -1274,8 +1275,8 @@ target_compile_definitions(RawrXD_Gold PRIVATE
     RAWR_HAS_MASM=1
     RAWRXD_LINK_QUADBUFFER_ASM=1
     RAWRXD_LINK_INFERENCE_KERNELS_ASM=1
-    RAWRXD_LINK_ANALYZER_DISTILLER_ASM=1
-    RAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1
+    RAWRXD_LINK_ANALYZER_DISTILLER_ASM=0
+    RAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=0
     RAWRXD_LINK_TELEMETRY_KERNEL_ASM=1
     RAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1
     RAWRXD_LINK_SELFPATCH_AGENT_ASM=1
@@ -2324,8 +2325,6 @@ if(WIN32)
     set(WIN32IDE_SOURCES
         src/win32app/main_win32.cpp
         src/win32app/HeadlessIDE.cpp
-        src/win32app/HeadlessIDE.h
-        src/win32app/HeadlessIDE.cpp
         src/agent/quantum_agent_orchestrator.cpp
         src/inference/gpu_dispatch_gate_win32ide_fallback.cpp
         src/inference/gguf_d3d12_bridge_link_fallback.cpp
@@ -2490,24 +2489,7 @@ if(WIN32)
         src/ai/repo_refactor_engine.cpp
 
         # AgenticObservability + SubsystemRegistry (required by AgentOrchestrator, ToolRegistry, feature_handlers)
-        src/agentic_observability.cpp
-        src/core/rawrxd_subsystem_api.cpp
-
-        # TelemetryCollector (required by model_bruteforce_engine)
-        # src/agent/telemetry_collector.cpp (moved to T5)
-
-        # EngineRegistry (required by sovereign_engines)
-        # src/runtime_core.cpp (moved to T5)
-
-        # ToolRegistry::inject_tools (required by runtime_core process_prompt)
-        # src/tool_registry.cpp (removed - duplicate of src/agentic/ToolRegistry.cpp)
-
-        # Mesh ASM stubs (asm_mesh_crdt_lookup etc. not in RawrXD_MeshBrain.asm)
-        # src/core/mesh_brain_asm_stubs.cpp (removed stub)
-
-        # AnalyzerDistiller + StreamingOrchestrator fallbacks (ASM modules excluded)
-        # src/core/analyzer_distiller_stubs.cpp (removed stub)
-        # src/core/streaming_orchestrator_stubs.cpp (removed stub)
+        # already added above in this block; keep single provider per file
 
         # Disk Recovery Agent (C++ implementation) + Tool handler + ASM wrapper
         src/agentic/DiskRecoveryAgent.cpp
@@ -2612,10 +2594,6 @@ if(WIN32)
         
         # Agent-Driven Hotpatch Orchestration (Phase 18)
         src/agent/agentic_hotpatch_orchestrator.cpp
-
-        # Shadow-Page Detour + Sentinel Watchdog (Layer 6)
-        src/core/shadow_page_detour.cpp
-        src/core/sentinel_watchdog.cpp
 
         # HTTP Client — WinHTTP async with future retention (CLI+GUI)
         src/agent/llm_http_client.cpp
@@ -2866,7 +2844,6 @@ if(WIN32)
         src/security/secrets_scanner.cpp
         src/security/sast_rule_engine.cpp
         src/security/dependency_audit.cpp
-        src/security/InputSanitizer.cpp
         src/win32app/Win32IDE_AgentStreamingBridge.cpp
 
         # Phase 16: Semantic Code Intelligence
@@ -3229,15 +3206,7 @@ if(WIN32)
         # v14.7.0 Native Track B Modules
         src/ui/ImportBridge.cpp
         src/ui/ExportBridge.cpp
-        src/editor/ghost_text_renderer.hpp
         src/terminal/embedded_terminal.cpp
-        src/terminal/embedded_terminal.hpp
-        src/lsp/lsp_client_wired.hpp
-        src/agentic/multi_file_composer.hpp
-        src/git/git_wired.hpp
-        src/ui/warp_hud.hpp
-        src/ui/logic_bridge.hpp
-        src/config/settings.hpp
         src/win32app/collab_cursor_fallbacks.cpp
     )
 
@@ -3406,9 +3375,9 @@ if(WIN32)
 
     # Final Duplicate Elimination (v14.7.4 Deep Clean)
     list(REMOVE_ITEM WIN32IDE_SOURCES
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/tool_registry.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/agentic/RawrXD_ToolRegistry.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/agent/DiskRecoveryAgent.cpp"
+        src/tool_registry.cpp
+        src/agentic/RawrXD_ToolRegistry.cpp
+        src/agent/DiskRecoveryAgent.cpp
     )
 
     # v14.7.5 LNK2005 Duplicate Symbol Elimination

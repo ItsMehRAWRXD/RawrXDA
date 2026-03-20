@@ -264,10 +264,3 @@ void Win32IDE::appendToOutput(const std::string&, const std::string&, OutputSeve
 void Win32IDE::addOutputTab(const std::string&) {}
 void Win32IDE::onInferenceComplete(const std::string&) {}
 
-// Robust Ollama parser stub
-namespace RawrXD::Agentic {
-std::vector<RobustOllamaParser::ModelEntry> RobustOllamaParser::parse_tags_response() { return {}; }
-}
-
-// Batch 27: entry point fallback
-int main() { return 0; }
