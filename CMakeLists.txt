@@ -1013,6 +1013,7 @@ if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
     list(FILTER SOURCES EXCLUDE REGEX ".*/.*_fallback[^/]*\\.cpp$")
     list(FILTER SOURCES EXCLUDE REGEX ".*/.*_link_shims?\\.cpp$")
     list(FILTER SOURCES EXCLUDE REGEX ".*/.*_shims?\\.cpp$")
+    list(FILTER SOURCES EXCLUDE REGEX ".*/.*_stub\\.cpp$")
     list(FILTER SOURCES EXCLUDE REGEX ".*/link_stubs_.*\\.cpp$")
     if(RAWRXD_ENABLE_MISSING_HANDLER_STUBS)
         message(FATAL_ERROR "[ProductionLane] RAWRXD_ENABLE_MISSING_HANDLER_STUBS=ON is incompatible with RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=ON.")
@@ -1131,6 +1132,7 @@ if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
     list(FILTER RAWR_ENGINE_SOURCES EXCLUDE REGEX ".*/.*_link_shims?\\.cpp$")
     list(FILTER RAWR_ENGINE_SOURCES EXCLUDE REGEX ".*/.*_shims?\\.cpp$")
     list(FILTER RAWR_ENGINE_SOURCES EXCLUDE REGEX ".*/.*_fallback[^/]*\\.cpp$")
+    list(FILTER RAWR_ENGINE_SOURCES EXCLUDE REGEX ".*/.*_stub\\.cpp$")
     list(FILTER RAWR_ENGINE_SOURCES EXCLUDE REGEX ".*/link_stubs_.*\\.cpp$")
 endif()
 
@@ -1291,6 +1293,7 @@ if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
     list(FILTER GOLD_UNDERSCORE_SOURCES EXCLUDE REGEX ".*/.*_link_shims?\\.cpp$")
     list(FILTER GOLD_UNDERSCORE_SOURCES EXCLUDE REGEX ".*/.*_shims?\\.cpp$")
     list(FILTER GOLD_UNDERSCORE_SOURCES EXCLUDE REGEX ".*/.*_fallback[^/]*\\.cpp$")
+    list(FILTER GOLD_UNDERSCORE_SOURCES EXCLUDE REGEX ".*/.*_stub\\.cpp$")
     list(FILTER GOLD_UNDERSCORE_SOURCES EXCLUDE REGEX ".*/link_stubs_.*\\.cpp$")
 endif()
 list(REMOVE_DUPLICATES GOLD_UNDERSCORE_SOURCES)
@@ -2292,6 +2295,7 @@ if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
     list(FILTER INFERENCE_ENGINE_SOURCES EXCLUDE REGEX ".*/.*_link_shims?\\.cpp$")
     list(FILTER INFERENCE_ENGINE_SOURCES EXCLUDE REGEX ".*/.*_shims?\\.cpp$")
     list(FILTER INFERENCE_ENGINE_SOURCES EXCLUDE REGEX ".*/.*_fallback[^/]*\\.cpp$")
+    list(FILTER INFERENCE_ENGINE_SOURCES EXCLUDE REGEX ".*/.*_stub\\.cpp$")
     list(FILTER INFERENCE_ENGINE_SOURCES EXCLUDE REGEX ".*/link_stubs_.*\\.cpp$")
 endif()
 
@@ -3269,6 +3273,7 @@ if(WIN32)
         list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/.*_fallback[^/]*\\.cpp$")
         list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/.*_link_shims?\\.cpp$")
         list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/.*_shims?\\.cpp$")
+        list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/.*_stub\\.cpp$")
         list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/link_stubs_.*\\.cpp$")
         message(STATUS "[ProductionLane] Win32IDE: stripped ssot/fallback/shim compatibility units")
     endif()
@@ -3327,6 +3332,7 @@ if(WIN32)
         message(STATUS "[Win32IDE] Agentic stub fallback enabled by RAWRXD_ALLOW_AGENTIC_STUB_FALLBACK=ON")
     else()
         list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*_stubs\\.cpp$")
+        list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*_stub\\.cpp$")
         list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/.*_shims?\\.cpp$")
         list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/reverse_engineered_stubs\\.cpp$")
         list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX ".*/link_stubs_.*\\.cpp$")
@@ -3357,7 +3363,7 @@ if(WIN32)
         set(_RAWRXD_FORBIDDEN_WIN32IDE_SOURCES "")
         foreach(_rawrxd_src IN LISTS WIN32IDE_SOURCES)
             # ai_agent_masm_stubs.cpp is required (masm_agent_failure_detect_simd), not a fallback
-            if(NOT _rawrxd_src MATCHES "ai_agent_masm_stubs\\.cpp$" AND _rawrxd_src MATCHES "(_stubs\\.cpp$|/stubs\\.cpp$|/stub_.*\\.cpp$|/.*_shims?\\.cpp$|/link_stubs_.*\\.cpp$|/.*_link_shims?\\.cpp$|/.*_fallback[^/]*\\.cpp$|/agentic_bridge_headless\\.cpp$|/Win32IDE_headless_stubs\\.cpp$)")
+            if(NOT _rawrxd_src MATCHES "ai_agent_masm_stubs\\.cpp$" AND _rawrxd_src MATCHES "(_stubs\\.cpp$|/stubs\\.cpp$|/.*_stub\\.cpp$|/stub_.*\\.cpp$|/.*_shims?\\.cpp$|/link_stubs_.*\\.cpp$|/.*_link_shims?\\.cpp$|/.*_fallback[^/]*\\.cpp$|/agentic_bridge_headless\\.cpp$|/Win32IDE_headless_stubs\\.cpp$)")
                 list(APPEND _RAWRXD_FORBIDDEN_WIN32IDE_SOURCES "${_rawrxd_src}")
             endif()
         endforeach()
@@ -3385,8 +3391,8 @@ if(WIN32)
         
         foreach(src ${SOURCES})
             # Detect stub files
-            if(src MATCHES "(_stubs\\.cpp$|_stubs\\.asm$|/missing_handler|/link_stubs_.*\\.cpp$|_link_shims?\\.cpp$|_fallback[^/]*\\.cpp$)" OR
-               src MATCHES "(stub_|shim_|_shims?\\.cpp$|shims?\\.cpp$)" OR
+            if(src MATCHES "(_stubs\\.cpp$|_stub\\.cpp$|_stubs\\.asm$|/missing_handler|/link_stubs_.*\\.cpp$|_link_shims?\\.cpp$|_fallback[^/]*\\.cpp$)" OR
+               src MATCHES "(stub_|_stub\\.cpp$|shim_|_shims?\\.cpp$|shims?\\.cpp$)" OR
                src MATCHES "(mock_|fake_)")
                                 # ai_agent_masm_stubs.cpp provides required MASM symbols — exempt
                                 if(src MATCHES "ai_agent_masm_stubs\\.cpp$")
@@ -3450,7 +3456,7 @@ if(WIN32)
     
     # Mandatory symbol providers for Win32IDE link closure (only link_stubs_gate allowed).
     # Remove any other stubs that may have been added
-    list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX "(_stubs\\.cpp$|_stubs\\.asm$|missing_handler|link_stubs_.*\\.cpp$|_shims?\\.cpp$|_link_shims?\\.cpp$|_fallback[^/]*\\.cpp$|stub_|shim_|mock_|fake_)")
+    list(FILTER WIN32IDE_SOURCES EXCLUDE REGEX "(_stubs\\.cpp$|_stub\\.cpp$|_stubs\\.asm$|missing_handler|link_stubs_.*\\.cpp$|_shims?\\.cpp$|_link_shims?\\.cpp$|_fallback[^/]*\\.cpp$|stub_|shim_|mock_|fake_)")
     # Keep required MASM bridge provider after broad stub filtering.
     list(APPEND WIN32IDE_SOURCES src/core/ai_agent_masm_stubs.cpp)
 
@@ -3459,8 +3465,8 @@ if(WIN32)
     if(RAWRXD_STRICT_AGENTIC_REALITY AND NOT RAWRXD_ALLOW_AGENTIC_STUB_FALLBACK)
         set(_RAWRXD_FORBIDDEN_WIN32IDE_SOURCES_POST "")
         foreach(_rawrxd_src IN LISTS WIN32IDE_SOURCES)
-            if(_rawrxd_src MATCHES "(_stubs\\.cpp$|/stubs\\.cpp$|/stub_.*\\.cpp$|/link_stubs_.*\\.cpp$|/.*_shims?\\.cpp$|/.*_link_shims?\\.cpp$|/.*_fallback[^/]*\\.cpp$)" OR
-               _rawrxd_src MATCHES "(missing_handler|shim_|shims?\\.cpp$|mock_|fake_)")
+            if(_rawrxd_src MATCHES "(_stubs\\.cpp$|/stubs\\.cpp$|/.*_stub\\.cpp$|/stub_.*\\.cpp$|/link_stubs_.*\\.cpp$|/.*_shims?\\.cpp$|/.*_link_shims?\\.cpp$|/.*_fallback[^/]*\\.cpp$)" OR
+               _rawrxd_src MATCHES "(missing_handler|_stub\\.cpp$|shim_|shims?\\.cpp$|mock_|fake_)")
                 if(NOT _rawrxd_src MATCHES "ai_agent_masm_stubs\\.cpp$")
                     list(APPEND _RAWRXD_FORBIDDEN_WIN32IDE_SOURCES_POST "${_rawrxd_src}")
                 endif()
