@@ -1218,22 +1218,40 @@ target_compile_definitions(RawrEngine PRIVATE
     $<$<BOOL:${_RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS}>:RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS=1>
 )
 
-# Sources used by missing_handler_stubs: debugger engine + symbols + Ollama client
-target_sources(RawrEngine PRIVATE
-    src/core/native_debugger_engine.cpp
-    src/core/native_debugger_symbols.cpp
-    src/agentic/AgentOllamaClient.cpp
-    src/core/rawr_engine_link_shims.cpp
-    src/core/auto_feature_stub_impl.cpp
-)
+# Sources used by missing_handler_stubs: debugger engine + symbols + Ollama client.
+# DbgEng-backed native debugger engine is MSVC/Windows-SDK specific.
+if(MSVC)
+    target_sources(RawrEngine PRIVATE
+        src/core/native_debugger_engine.cpp
+        src/core/native_debugger_symbols.cpp
+        src/agentic/AgentOllamaClient.cpp
+        src/core/rawr_engine_link_shims.cpp
+        src/core/auto_feature_stub_impl.cpp
+    )
+else()
+    target_compile_definitions(RawrEngine PRIVATE
+        RAWRXD_BATCH7_EXCLUDE_AGENTIC_EMBEDDING_VISION=1
+    )
+    target_sources(RawrEngine PRIVATE
+        src/agentic/AgentOllamaClient.cpp
+        src/core/rawr_engine_link_shims.cpp
+        src/core/auto_feature_stub_impl.cpp
+        src/core/runtime_symbol_bridge.cpp
+        src/core/minigw_runtime_symbol_batch7.cpp
+    )
+endif()
 
 # Win32 system libraries (same as Gold)
 if(WIN32)
     target_link_libraries(RawrEngine PRIVATE
         shlwapi psapi dbghelp comctl32 comdlg32 shell32 ole32 oleaut32 uuid
         winhttp ws2_32 ntdll advapi32 crypt32 opengl32 wininet gdi32 user32 bcrypt
-        d3d12 dxgi dxcore
+        winmm wintrust
+        d3d12 dxgi
     )
+    if(MSVC)
+        target_link_libraries(RawrEngine PRIVATE dxcore)
+    endif()
     if(NOT MSVC)
         target_link_libraries(RawrEngine PRIVATE gomp)
     endif()
@@ -1324,24 +1342,39 @@ if(WIN32)
     target_link_libraries(RawrXD_Gold PRIVATE
         shlwapi psapi dbghelp comctl32 comdlg32 shell32 ole32 oleaut32 uuid
         winhttp ws2_32 ntdll advapi32 crypt32 opengl32 wininet gdi32 user32 bcrypt
-        d3d12 dxgi dxcore
+        winmm wintrust
+        d3d12 dxgi
     )
+    if(MSVC)
+        target_link_libraries(RawrXD_Gold PRIVATE dxcore)
+    endif()
     if(NOT MSVC)
         target_link_libraries(RawrXD_Gold PRIVATE gomp)
     endif()
 endif()
 
 # Gold-only sources: modules used by missing_handler_stubs but not in main SOURCES
-target_sources(RawrXD_Gold PRIVATE
-    src/core/native_debugger_engine.cpp
-    src/core/native_debugger_symbols.cpp
-    src/agentic/AgentOllamaClient.cpp
-    src/logging/Logger.cpp
-    src/security/InputSanitizer.cpp
-    src/core/ConfigurationValidator.cpp
-    src/inference/PerformanceMonitor.cpp
-    src/agentic/ErrorRecoveryManager.cpp
-)
+if(MSVC)
+    target_sources(RawrXD_Gold PRIVATE
+        src/core/native_debugger_engine.cpp
+        src/core/native_debugger_symbols.cpp
+        src/agentic/AgentOllamaClient.cpp
+        src/logging/Logger.cpp
+        src/security/InputSanitizer.cpp
+        src/core/ConfigurationValidator.cpp
+        src/inference/PerformanceMonitor.cpp
+        src/agentic/ErrorRecoveryManager.cpp
+    )
+else()
+    target_sources(RawrXD_Gold PRIVATE
+        src/agentic/AgentOllamaClient.cpp
+        src/logging/Logger.cpp
+        src/security/InputSanitizer.cpp
+        src/core/ConfigurationValidator.cpp
+        src/inference/PerformanceMonitor.cpp
+        src/agentic/ErrorRecoveryManager.cpp
+    )
+endif()
 
 # Vulkan SDK for Gold build — linked later after find_package(Vulkan)
 

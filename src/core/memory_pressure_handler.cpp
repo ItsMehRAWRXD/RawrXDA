@@ -22,9 +22,25 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstring>
 
 namespace RawrXD {
 namespace Memory {
+
+#ifdef _WIN32
+namespace {
+void setThreadDescriptionCompat(std::thread::native_handle_type threadHandle,
+                                const wchar_t* threadName) {
+    using SetThreadDescriptionFn = HRESULT(WINAPI*)(HANDLE, PCWSTR);
+    static SetThreadDescriptionFn s_setThreadDescription =
+        reinterpret_cast<SetThreadDescriptionFn>(
+            GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "SetThreadDescription"));
+    if (s_setThreadDescription && threadName) {
+        s_setThreadDescription(static_cast<HANDLE>(threadHandle), threadName);
+    }
+}
+}  // namespace
+#endif
 
 // ============================================================================
 // Pressure Level Names
@@ -70,7 +86,7 @@ void MemoryPressureHandler::start() {
     m_monitorThread = std::thread(&MemoryPressureHandler::monitorLoop, this);
 
 #ifdef _WIN32
-    SetThreadDescription(m_monitorThread.native_handle(), L"RawrXD-MemoryMonitor");
+    setThreadDescriptionCompat(m_monitorThread.native_handle(), L"RawrXD-MemoryMonitor");
 #endif
 }
 

@@ -50,13 +50,22 @@ public:
     };
     
     struct PruningConfig {
-        float sparsity_target = 0.9f;       // 90% sparsity
-        float magnitude_threshold = 0.05f;  // Small weights pruned
-        float gradient_threshold = 0.01f;   // Low gradient = less important
-        bool adaptive_pruning = true;       // Adjust per layer type
+        float sparsity_target;       // 90% sparsity
+        float magnitude_threshold;   // Small weights pruned
+        float gradient_threshold;    // Low gradient = less important
+        bool adaptive_pruning;       // Adjust per layer type
+
+        constexpr PruningConfig(float sparsityTarget = 0.9f,
+                                float magnitudeThreshold = 0.05f,
+                                float gradientThreshold = 0.01f,
+                                bool adaptivePruning = true)
+            : sparsity_target(sparsityTarget),
+              magnitude_threshold(magnitudeThreshold),
+              gradient_threshold(gradientThreshold),
+              adaptive_pruning(adaptivePruning) {}
     };
     
-    explicit TensorPruningScorer(const PruningConfig& config = PruningConfig());
+    explicit TensorPruningScorer(PruningConfig config = PruningConfig{});
     ~TensorPruningScorer();
     
     // Score all tensors in model
@@ -103,11 +112,22 @@ public:
     };
     
     struct ReductionConfig {
-        ReductionStrategy strategy = MAGNITUDE_PRUNING;
-        float target_ratio = 3.3f;  // Reduce by 3.3x
-        bool streaming = true;       // Stream processing
-        size_t chunk_size = 1024*1024;  // 1MB chunks
-        float magnitude_threshold = 0.05f;  // Pruning cutoff
+        ReductionStrategy strategy;
+        float target_ratio;       // Reduce by 3.3x
+        bool streaming;           // Stream processing
+        size_t chunk_size;        // 1MB chunks
+        float magnitude_threshold;  // Pruning cutoff
+
+        constexpr ReductionConfig(ReductionStrategy reductionStrategy = MAGNITUDE_PRUNING,
+                                  float targetRatio = 3.3f,
+                                  bool enableStreaming = true,
+                                  size_t chunkSize = 1024 * 1024,
+                                  float magnitudeThreshold = 0.05f)
+            : strategy(reductionStrategy),
+              target_ratio(targetRatio),
+              streaming(enableStreaming),
+              chunk_size(chunkSize),
+              magnitude_threshold(magnitudeThreshold) {}
     };
     
     struct ReductionStats {
@@ -118,7 +138,7 @@ public:
         std::vector<std::string> pruned_tensors;
     };
     
-    explicit StreamingTensorReducer(const ReductionConfig& config = ReductionConfig());
+    explicit StreamingTensorReducer(ReductionConfig config = ReductionConfig{});
     ~StreamingTensorReducer();
     
     // Reduce all model tensors by target ratio
@@ -176,14 +196,25 @@ public:
     };
     
     struct HotpatchConfig {
-        bool enable_gpu_acceleration = true;
-        bool enable_kv_cache_preservation = true;
-        size_t max_swap_latency_ms = 100;
-        bool enable_async_loading = true;
-        size_t prefetch_buffer_mb = 512;
+        bool enable_gpu_acceleration;
+        bool enable_kv_cache_preservation;
+        size_t max_swap_latency_ms;
+        bool enable_async_loading;
+        size_t prefetch_buffer_mb;
+
+        constexpr HotpatchConfig(bool enableGpuAcceleration = true,
+                                 bool enableKvCachePreservation = true,
+                                 size_t maxSwapLatencyMs = 100,
+                                 bool enableAsyncLoading = true,
+                                 size_t prefetchBufferMb = 512)
+            : enable_gpu_acceleration(enableGpuAcceleration),
+              enable_kv_cache_preservation(enableKvCachePreservation),
+              max_swap_latency_ms(maxSwapLatencyMs),
+              enable_async_loading(enableAsyncLoading),
+              prefetch_buffer_mb(prefetchBufferMb) {}
     };
     
-    explicit ModelHotpatcher(const HotpatchConfig& config = HotpatchConfig());
+    explicit ModelHotpatcher(HotpatchConfig config = HotpatchConfig{});
     ~ModelHotpatcher();
     
     // Initialize with model path
@@ -247,13 +278,30 @@ class AutonomousInferenceEngine {
 public:
     struct InferenceConfig {
         std::string model_path;
-        bool enable_gpu = true;
-        bool enable_streaming_pruning = true;
-        bool enable_hotpatching = true;
-        float quality_target = 0.85f;
-        size_t max_memory_mb = 45000;  // 45GB for model + KV
-        bool enable_async_inference = true;
-        bool enable_ollama_blob_support = true;
+        bool enable_gpu;
+        bool enable_streaming_pruning;
+        bool enable_hotpatching;
+        float quality_target;
+        size_t max_memory_mb;  // 45GB for model + KV
+        bool enable_async_inference;
+        bool enable_ollama_blob_support;
+
+        InferenceConfig(const std::string& modelPath = "",
+                        bool enableGpu = true,
+                        bool enableStreamingPruning = true,
+                        bool enableHotpatching = true,
+                        float qualityTarget = 0.85f,
+                        size_t maxMemoryMb = 45000,
+                        bool enableAsyncInference = true,
+                        bool enableOllamaBlobSupport = true)
+            : model_path(modelPath),
+              enable_gpu(enableGpu),
+              enable_streaming_pruning(enableStreamingPruning),
+              enable_hotpatching(enableHotpatching),
+              quality_target(qualityTarget),
+              max_memory_mb(maxMemoryMb),
+              enable_async_inference(enableAsyncInference),
+              enable_ollama_blob_support(enableOllamaBlobSupport) {}
     };
     
     struct InferenceStats {
@@ -265,7 +313,7 @@ public:
         int total_tokens_generated;
     };
     
-    explicit AutonomousInferenceEngine(const InferenceConfig& config = InferenceConfig());
+    explicit AutonomousInferenceEngine(InferenceConfig config = InferenceConfig{});
     ~AutonomousInferenceEngine();
     
     // Load model without manual quantization (automatic tier detection)

@@ -308,6 +308,10 @@ struct MinigwCrdtDoc {
 
 namespace RawrXD::Agentic {
 
+#if !defined(RAWRXD_BATCH7_EXCLUDE_AGENTIC_EMBEDDING_VISION)
+AgenticTaskGraph::AgenticTaskGraph() = default;
+AgenticTaskGraph::~AgenticTaskGraph() = default;
+
 AgenticTaskGraph& AgenticTaskGraph::instance() {
     static AgenticTaskGraph s_instance;
     return s_instance;
@@ -418,6 +422,9 @@ void VisionEncoder::shutdown() {
 }
 
 }  // namespace RawrXD::Vision
+#else
+}  // namespace RawrXD::Agentic
+#endif
 
 extern "C" {
 

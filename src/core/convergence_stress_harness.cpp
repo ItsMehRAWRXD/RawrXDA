@@ -70,6 +70,23 @@ extern "C" {
 namespace RawrXD {
 namespace Convergence {
 
+namespace {
+template <typename Fn>
+bool runSehGuard(Fn&& fn) {
+#if defined(_MSC_VER)
+    __try {
+        fn();
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+#else
+    fn();
+    return true;
+#endif
+}
+}  // namespace
+
 // ============================================================================
 // Construction
 // ============================================================================
@@ -605,10 +622,10 @@ void ConvergenceStressHarness::runFuzzInputs(int module) {
                     fillRandomBuffer(inBuf, payloadLen);
 
                     uint32_t outLen = maxPayload + 128;
-                    __try {
+                    if (!runSehGuard([&]() {
                         int r = asm_camellia256_auth_encrypt_buf(inBuf, payloadLen, outBuf, &outLen);
                         (void)r;
-                    } __except (EXCEPTION_EXECUTE_HANDLER) {
+                    })) {
                         allPassed = false;
                         break;
                     }
@@ -629,10 +646,10 @@ void ConvergenceStressHarness::runFuzzInputs(int module) {
                 alignas(32) uint8_t fuzzBlock[144];
                 fillRandomBuffer(fuzzBlock, 144);
 
-                __try {
+                if (!runSehGuard([&]() {
                     size_t r = asm_dequant_q4_k_avx2(output, fuzzBlock);
                     (void)r;
-                } __except (EXCEPTION_EXECUTE_HANDLER) {
+                })) {
                     allPassed = false;
                     break;
                 }
@@ -653,10 +670,10 @@ void ConvergenceStressHarness::runFuzzInputs(int module) {
                 int types[] = { 0, 2, 3, 6, 7, 8 };
                 int typeIdx = nextRand() % 6;
 
-                __try {
+                if (!runSehGuard([&]() {
                     size_t r = KQuant_Dispatch(types[typeIdx], fuzzInput, output, 256);
                     (void)r;
-                } __except (EXCEPTION_EXECUTE_HANDLER) {
+                })) {
                     allPassed = false;
                     break;
                 }
@@ -692,7 +709,7 @@ static DWORD WINAPI ContentionTestThread(LPVOID param) {
     uint32_t localRng = data->rngSeed ^ GetCurrentThreadId();
 
     for (uint32_t i = 0; i < data->iterations; ++i) {
-        __try {
+        if (runSehGuard([&]() {
             switch (data->module) {
             case CONV_CAMAUTH: {
                 // All threads encrypt the same single byte
@@ -742,7 +759,9 @@ static DWORD WINAPI ContentionTestThread(LPVOID param) {
                 InterlockedIncrement(&data->passCount);
                 break;
             }
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
+        })) {
+            // success path already increments pass counters per module
+        } else {
             InterlockedIncrement(&data->failCount);
         }
     }

@@ -35,7 +35,7 @@ private:
     std::unique_ptr<SimpleTokenizer> tokenizer_;
     std::vector<float> kv_cache_;
     std::vector<float> model_weights_;
-    CPUInference::VulkanCompute* vulkan_engine_;
+    VulkanCompute* vulkan_engine_;
     std::vector<int32_t> generateWithKVCache(const std::vector<int32_t>& prompt_tokens, int max_tokens);
     int32_t runForwardPass(const std::vector<int32_t>& tokens);
 };
@@ -44,7 +44,7 @@ private:
 // TENSOR PRUNING SCORER IMPLEMENTATION
 //=============================================================================
 
-TensorPruningScorer::TensorPruningScorer(const PruningConfig& config)
+TensorPruningScorer::TensorPruningScorer(PruningConfig config)
     : config_(config) {
 }
 
@@ -143,7 +143,7 @@ std::vector<TensorPruningScorer::TensorScore> TensorPruningScorer::scoreAllTenso
 // STREAMING TENSOR REDUCER IMPLEMENTATION
 //=============================================================================
 
-StreamingTensorReducer::StreamingTensorReducer(const ReductionConfig& config)
+StreamingTensorReducer::StreamingTensorReducer(ReductionConfig config)
     : config_(config) {
     stats_.original_size_mb = 0;
     stats_.reduced_size_mb = 0;
@@ -317,7 +317,7 @@ void StreamingTensorReducer::reduceModelStreaming(
 // MODEL HOTPATCHER IMPLEMENTATION
 //=============================================================================
 
-ModelHotpatcher::ModelHotpatcher(const HotpatchConfig& config)
+ModelHotpatcher::ModelHotpatcher(HotpatchConfig config)
     : config_(config), current_tier_(TIER_70B) {
 }
 
@@ -527,7 +527,7 @@ std::string ModelHotpatcher::correctResponseWithTier(
 // AUTONOMOUS INFERENCE ENGINE IMPLEMENTATION
 //=============================================================================
 
-AutonomousInferenceEngine::AutonomousInferenceEngine(const InferenceConfig& config)
+AutonomousInferenceEngine::AutonomousInferenceEngine(InferenceConfig config)
     : config_(config),
       stats_{0.0f, 0.0f, 0.0f, 0, 0.0f, 0},
       pruner_(std::make_unique<TensorPruningScorer>()),

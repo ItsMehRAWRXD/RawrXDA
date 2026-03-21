@@ -149,6 +149,20 @@ extern "C" {
 #include <algorithm>
 #include <filesystem>
 
+namespace {
+#ifdef _WIN32
+void setThreadDescriptionCompat(HANDLE threadHandle, const wchar_t* threadName) {
+    using SetThreadDescriptionFn = HRESULT(WINAPI*)(HANDLE, PCWSTR);
+    static SetThreadDescriptionFn s_setThreadDescription =
+        reinterpret_cast<SetThreadDescriptionFn>(
+            GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "SetThreadDescription"));
+    if (s_setThreadDescription && threadName) {
+        s_setThreadDescription(threadHandle, threadName);
+    }
+}
+#endif
+}  // namespace
+
 // ============================================================================
 // Singleton
 // ============================================================================
@@ -1622,8 +1636,9 @@ void QuickJSExtensionHost::eventLoopEntry(QuickJSExtensionRuntime* rt) {
     if (!rt || !rt->context || !rt->runtime) return;
 
     // Set thread name for debugging
-    SetThreadDescription(GetCurrentThread(),
-        (L"QuickJS:" + std::wstring(rt->extensionId.begin(), rt->extensionId.end())).c_str());
+    const std::wstring threadName = L"QuickJS:" +
+                                    std::wstring(rt->extensionId.begin(), rt->extensionId.end());
+    setThreadDescriptionCompat(GetCurrentThread(), threadName.c_str());
 
     instance().logInfo("[QuickJS EventLoop] Started for '%s'", rt->extensionId.c_str());
 

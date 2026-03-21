@@ -1,18 +1,13 @@
 // Minimal link shims for RawrEngine / Gold / InferenceEngine.
 // These are no-op fallbacks to satisfy references after stub purge.
 #include <cstdint>
+#include <cstddef>
+#include <cstring>
 #include <string>
 #include <vector>
 #include "../agentic/RobustOllamaParser.h"
 
 extern "C" {
-int64_t Scheduler_SubmitTask(void*, void*, uint8_t, uint8_t, void*) { return 0; }
-void* AllocateDMABuffer(uint64_t, uint32_t) { return nullptr; }
-uint32_t CalculateCRC32(const void*, uint64_t) { return 0; }
-int Heartbeat_AddNode(const char*, uint32_t) { return 0; }
-int Tensor_QuantizedMatMul(const void*, const void*, void*, uint32_t) { return 0; }
-int ConflictDetector_LockResource(uint32_t) { return 0; }
-int GPU_WaitForDMA(uint32_t) { return 0; }
 
 // Pyre compute kernels
 int asm_pyre_gemm_fp32(const void*, const void*, void*, int, int, int) { return 0; }
@@ -23,19 +18,9 @@ int asm_pyre_embedding_lookup(const void*, const void*, void*, int, int) { retur
 int asm_pyre_gemv_fp32(const void*, const void*, void*, int, int) { return 0; }
 int asm_pyre_add_fp32(void*, const void*, const void*, int) { return 0; }
 
-// Batch 3: scheduler/clock + conflict/dma
-int ConflictDetector_RegisterResource(uint32_t) { return 0; }
-int ConflictDetector_UnlockResource(uint32_t) { return 0; }
-uint64_t GetHighResTick() { return 0; }
-uint64_t TicksToMilliseconds(uint64_t ticks) { return ticks; }
-uint64_t TicksToMicroseconds(uint64_t ticks) { return ticks; }
-int GPU_SubmitDMATransfer(uint32_t, void*, uint64_t) { return 0; }
-int Scheduler_WaitForTask(int64_t) { return 0; }
-
 // Batch 4: hotpatch + pyre + pattern
 int asm_pyre_mul_fp32(void*, const void*, const void*, int) { return 0; }
 int asm_pyre_softmax(void*, const void*, int) { return 0; }
-int find_pattern_asm(const uint8_t*, uint64_t, const uint8_t*, uint64_t, uint64_t*) { return 0; }
 int asm_hotpatch_restore_prologue(void*) { return 0; }
 int asm_hotpatch_backup_prologue(void*) { return 0; }
 int asm_hotpatch_flush_icache(void*, uint64_t) { return 0; }
@@ -238,6 +223,69 @@ int asm_omega_execute_pipeline(const void*, void*) { return 0; }
 int asm_omega_ingest_requirement(const void*, void*) { return 0; }
 int asm_omega_world_model_update(const void*, void*) { return 0; }
 int asm_perf_get_slot_count_v2() { return 0; }
+
+// Batch 27: orchestrator + k-quant fallback symbols
+int asm_orchestrator_init(void*, void*) { return 0; }
+int asm_orchestrator_dispatch(uint32_t, void*, void*) { return 0; }
+int asm_orchestrator_register_hook(uint32_t, void*, void*) { return 0; }
+void asm_orchestrator_set_vtable(uint32_t, void*) {}
+int asm_orchestrator_queue_async(uint32_t, void*, void*, void*) { return 0; }
+void asm_orchestrator_get_metrics(void* metricsOut) {
+    if (metricsOut) {
+        std::memset(metricsOut, 0, 128);
+    }
+}
+
+size_t asm_dequant_q4_k_avx2(float* output, const void* input) {
+    if (output == nullptr || input == nullptr) return 0;
+    const uint8_t* src = static_cast<const uint8_t*>(input);
+    for (size_t i = 0; i < 256; ++i) {
+        output[i] = (static_cast<float>(src[i % 144]) - 128.0f) / 32.0f;
+    }
+    return 256;
+}
+
+size_t asm_dequant_q4_k_avx512(float* output, const void* input) {
+    return asm_dequant_q4_k_avx2(output, input);
+}
+
+size_t asm_dequant_q4_k_batch(float* output, const void* input, size_t numElements) {
+    if (output == nullptr || input == nullptr || numElements == 0) return 0;
+    const uint8_t* src = static_cast<const uint8_t*>(input);
+    for (size_t i = 0; i < numElements; ++i) {
+        output[i] = (static_cast<float>(src[i % 144]) - 128.0f) / 32.0f;
+    }
+    return numElements;
+}
+
+size_t KQuant_DequantizeQ2_K(const void* src, float* dst, size_t numElements) {
+    if (src == nullptr || dst == nullptr) return 0;
+    const uint8_t* in = static_cast<const uint8_t*>(src);
+    for (size_t i = 0; i < numElements; ++i) {
+        dst[i] = static_cast<float>(in[i % 256] & 0x3U) - 1.5f;
+    }
+    return numElements;
+}
+
+size_t KQuant_DequantizeQ3_K(const void* src, float* dst, size_t numElements) {
+    if (src == nullptr || dst == nullptr) return 0;
+    const uint8_t* in = static_cast<const uint8_t*>(src);
+    for (size_t i = 0; i < numElements; ++i) {
+        dst[i] = static_cast<float>(in[i % 256] & 0x7U) - 3.5f;
+    }
+    return numElements;
+}
+
+size_t KQuant_Dispatch(int ggml_type, const void* src, float* dst, size_t numElements) {
+    switch (ggml_type) {
+        case 2:
+            return KQuant_DequantizeQ2_K(src, dst, numElements);
+        case 3:
+            return KQuant_DequantizeQ3_K(src, dst, numElements);
+        default:
+            return asm_dequant_q4_k_batch(dst, src, numElements);
+    }
+}
 
 // Batch 28: deflate + masm agent failure
 

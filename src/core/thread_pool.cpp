@@ -21,6 +21,21 @@
 namespace RawrXD {
 namespace Threading {
 
+#ifdef _WIN32
+namespace {
+void setThreadDescriptionCompat(std::thread::native_handle_type threadHandle,
+                                const wchar_t* threadName) {
+    using SetThreadDescriptionFn = HRESULT(WINAPI*)(HANDLE, PCWSTR);
+    static SetThreadDescriptionFn s_setThreadDescription =
+        reinterpret_cast<SetThreadDescriptionFn>(
+            GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "SetThreadDescription"));
+    if (s_setThreadDescription && threadName) {
+        s_setThreadDescription(static_cast<HANDLE>(threadHandle), threadName);
+    }
+}
+}  // namespace
+#endif
+
 // ============================================================================
 // Global singleton
 // ============================================================================
@@ -57,7 +72,7 @@ ThreadPool::ThreadPool(size_t numThreads, const char* name)
 #ifdef _WIN32
         wchar_t threadName[128];
         swprintf(threadName, 128, L"%hs-Worker-%zu", m_name.c_str(), i);
-        SetThreadDescription(m_threads.back().native_handle(), threadName);
+        setThreadDescriptionCompat(m_threads.back().native_handle(), threadName);
 #endif
     }
 }

@@ -913,6 +913,7 @@ void AgenticTransaction::journalRollback() {
 // ============================================================================
 // ============================================================================
 
+#if defined(_MSC_VER)
 AgenticTaskGraph::AgenticTaskGraph()
     : m_journal(nullptr)
     , m_nextNodeId(1)
@@ -1203,6 +1204,7 @@ bool AgenticTaskGraph::hasCycle() const {
     std::lock_guard<std::mutex> lock(m_mutex);
     return detectCycle();
 }
+#endif
 
 } // namespace Agentic
 } // namespace RawrXD

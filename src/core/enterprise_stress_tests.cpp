@@ -33,6 +33,23 @@
 namespace RawrXD {
 namespace Stress {
 
+namespace {
+template <typename Fn>
+bool runSehGuard(Fn&& fn) {
+#if defined(_MSC_VER)
+    __try {
+        fn();
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+#else
+    fn();
+    return true;
+#endif
+}
+}  // namespace
+
 // ============================================================================
 // Internal Helpers
 // ============================================================================
@@ -370,7 +387,7 @@ StressTestResult runJsonRpcFuzzer(const FuzzConfig& config,
         }
 
         // Feed fuzz data to JSON-RPC parser (wrapped in SEH for crash detection)
-        __try {
+        if (!runSehGuard([&]() {
             // The parser should handle all of these without crashing
             // We're testing that it doesn't access invalid memory
             size_t len = strlen(fuzzBuf);
@@ -378,8 +395,7 @@ StressTestResult runJsonRpcFuzzer(const FuzzConfig& config,
             // The actual parsing would be done by RPCDispatcher::dispatch()
             // but we test the raw input handling here
             (void)len; // Parser would be invoked here in full integration
-        }
-        __except (EXCEPTION_EXECUTE_HANDLER) {
+        })) {
             crashesDetected++;
             errorsDetected++;
             char dbg[128];
@@ -441,7 +457,7 @@ StressTestResult runLspBridgeFuzzer(const FuzzConfig& config,
     for (uint32_t i = 0; i < config.iterations; i++) {
         uint32_t strategy = rng.nextU32() % 5;
 
-        __try {
+        if (!runSehGuard([&]() {
             switch (strategy) {
                 case 0: // Random symbol query
                 {
@@ -483,8 +499,7 @@ StressTestResult runLspBridgeFuzzer(const FuzzConfig& config,
                     }
                     break;
             }
-        }
-        __except (EXCEPTION_EXECUTE_HANDLER) {
+        })) {
             crashesDetected++;
             errorsDetected++;
         }
@@ -535,7 +550,7 @@ StressTestResult runSwarmFuzzer(const FuzzConfig& config,
 
         uint32_t strategy = rng.nextU32() % 6;
 
-        __try {
+        if (!runSehGuard([&]() {
             switch (strategy) {
                 case 0: // Valid header, random payload
                 {
@@ -610,8 +625,7 @@ StressTestResult runSwarmFuzzer(const FuzzConfig& config,
                 (void)validVersion;
                 (void)validPayload;
             }
-        }
-        __except (EXCEPTION_EXECUTE_HANDLER) {
+        })) {
             crashesDetected++;
             errorsDetected++;
         }

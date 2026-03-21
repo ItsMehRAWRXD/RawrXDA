@@ -21,6 +21,23 @@
 namespace RawrXD {
 namespace Stress {
 
+namespace {
+template <typename Fn>
+bool runSehGuard(Fn&& fn) {
+#if defined(_MSC_VER)
+    __try {
+        fn();
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+#else
+    fn();
+    return true;
+#endif
+}
+}  // namespace
+
 // ============================================================================
 // Construction
 // ============================================================================
@@ -426,7 +443,7 @@ void MASMStressHarness::runFaultInjection(int module) {
     switch (module) {
     case STRESS_SELFPATCH:
         moduleName = "SelfPatch";
-        __try {
+        if (!runSehGuard([&]() {
             // Null patch address
             asm_spengine_register(0, nullptr, nullptr, nullptr, 0);
             // Apply with invalid ID
@@ -435,58 +452,58 @@ void MASMStressHarness::runFaultInjection(int module) {
             asm_spengine_rollback(0xFFFFFFFF);
             // Get stats with nullptr
             asm_spengine_get_stats(nullptr);
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
+        })) {
             passed = false;
         }
         break;
 
     case STRESS_GGUF_LOADER:
         moduleName = "GGUFLoader";
-        __try {
+        if (!runSehGuard([&]() {
             asm_gguf_loader_parse(nullptr);
             asm_gguf_loader_lookup(nullptr, nullptr, 0);
             asm_gguf_loader_get_info(nullptr, nullptr);
             asm_gguf_loader_get_stats(nullptr, nullptr);
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
+        })) {
             passed = false;
         }
         break;
 
     case STRESS_ORCHESTRATOR:
         moduleName = "Orchestrator";
-        __try {
+        if (!runSehGuard([&]() {
             asm_orchestrator_dispatch(0xFFFF, nullptr, nullptr);
             asm_orchestrator_register_hook(0, nullptr, nullptr);
             asm_orchestrator_set_vtable(0, nullptr);
             asm_orchestrator_queue_async(0, nullptr, nullptr, nullptr);
             asm_orchestrator_get_metrics(nullptr);
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
+        })) {
             passed = false;
         }
         break;
 
     case STRESS_QUADBUFFER:
         moduleName = "QuadBuffer";
-        __try {
+        if (!runSehGuard([&]() {
             asm_quadbuf_push_token(nullptr, 0, 0, 0);
             asm_quadbuf_render_frame();
             asm_quadbuf_get_stats(nullptr);
             asm_quadbuf_set_flags(0);
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
+        })) {
             passed = false;
         }
         break;
 
     case STRESS_LSP_BRIDGE:
         moduleName = "LSPBridge";
-        __try {
+        if (!runSehGuard([&]() {
             asm_lsp_bridge_sync(0);
             uint32_t outCount = 0;
             asm_lsp_bridge_query(nullptr, 0, &outCount);
             asm_lsp_bridge_invalidate();
             asm_lsp_bridge_set_weights(0.5f, 0.5f);
             asm_lsp_bridge_get_stats(nullptr);
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
+        })) {
             passed = false;
         }
         break;

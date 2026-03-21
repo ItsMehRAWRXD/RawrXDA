@@ -56,35 +56,73 @@ public:
     
     struct ProductionConfig {
         // Core settings
-        OrchestratorMode mode = OrchestratorMode::Balanced;
-        bool enable_autonomous_execution = true;
-        bool enable_production_audits = true;
-        bool enable_self_healing = true;
-        bool enable_quantum_optimization = true;
+        OrchestratorMode mode;
+        bool enable_autonomous_execution;
+        bool enable_production_audits;
+        bool enable_self_healing;
+        bool enable_quantum_optimization;
         
         // Quality enforcement
-        float min_production_readiness = 0.85f;
-        float min_code_quality = 0.80f;
-        float min_performance_score = 0.75f;
-        float min_security_score = 0.95f;
+        float min_production_readiness;
+        float min_code_quality;
+        float min_performance_score;
+        float min_security_score;
         
         // Timing and limits
-        std::chrono::minutes audit_interval{30};
-        std::chrono::hours max_autonomous_runtime{24};
-        int max_concurrent_tasks = 20;
-        int max_agent_count = 99;
+        std::chrono::minutes audit_interval;
+        std::chrono::hours max_autonomous_runtime;
+        int max_concurrent_tasks;
+        int max_agent_count;
         
         // PowerShell configuration
-        bool enable_pwsh_randomization = true;
-        std::chrono::minutes default_pwsh_timeout{10};
-        std::chrono::minutes max_pwsh_timeout{60};
+        bool enable_pwsh_randomization;
+        std::chrono::minutes default_pwsh_timeout;
+        std::chrono::minutes max_pwsh_timeout;
         
         // Self-optimization
-        bool enable_adaptive_thresholds = true;
-        float adaptation_rate = 0.1f;
-        bool enable_predictive_scaling = true;
+        bool enable_adaptive_thresholds;
+        float adaptation_rate;
+        bool enable_predictive_scaling;
         
-        ProductionConfig() = default;
+        ProductionConfig(
+            OrchestratorMode orchestratorMode = OrchestratorMode::Balanced,
+            bool enableAutonomousExecution = true,
+            bool enableProductionAudits = true,
+            bool enableSelfHealing = true,
+            bool enableQuantumOptimization = true,
+            float minProductionReadiness = 0.85f,
+            float minCodeQuality = 0.80f,
+            float minPerformanceScore = 0.75f,
+            float minSecurityScore = 0.95f,
+            std::chrono::minutes auditInterval = std::chrono::minutes(30),
+            std::chrono::hours maxAutonomousRuntime = std::chrono::hours(24),
+            int maxConcurrentTasks = 20,
+            int maxAgentCount = 99,
+            bool enablePwshRandomization = true,
+            std::chrono::minutes defaultPwshTimeout = std::chrono::minutes(10),
+            std::chrono::minutes maxPwshTimeout = std::chrono::minutes(60),
+            bool enableAdaptiveThresholds = true,
+            float adaptationRate = 0.1f,
+            bool enablePredictiveScaling = true)
+            : mode(orchestratorMode),
+              enable_autonomous_execution(enableAutonomousExecution),
+              enable_production_audits(enableProductionAudits),
+              enable_self_healing(enableSelfHealing),
+              enable_quantum_optimization(enableQuantumOptimization),
+              min_production_readiness(minProductionReadiness),
+              min_code_quality(minCodeQuality),
+              min_performance_score(minPerformanceScore),
+              min_security_score(minSecurityScore),
+              audit_interval(auditInterval),
+              max_autonomous_runtime(maxAutonomousRuntime),
+              max_concurrent_tasks(maxConcurrentTasks),
+              max_agent_count(maxAgentCount),
+              enable_pwsh_randomization(enablePwshRandomization),
+              default_pwsh_timeout(defaultPwshTimeout),
+              max_pwsh_timeout(maxPwshTimeout),
+              enable_adaptive_thresholds(enableAdaptiveThresholds),
+              adaptation_rate(adaptationRate),
+              enable_predictive_scaling(enablePredictiveScaling) {}
     };
     
     struct SystemMetrics {
@@ -138,7 +176,7 @@ public:
     };
 
 public:
-    explicit QuantumProductionOrchestrator(const ProductionConfig& config = ProductionConfig{});
+    explicit QuantumProductionOrchestrator(ProductionConfig config = ProductionConfig{});
     ~QuantumProductionOrchestrator();
     
     // Core orchestration

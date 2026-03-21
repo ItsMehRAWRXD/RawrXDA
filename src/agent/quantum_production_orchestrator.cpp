@@ -14,7 +14,7 @@ extern "C" {
 
 namespace RawrXD::Agent {
 
-QuantumProductionOrchestrator::QuantumProductionOrchestrator(const ProductionConfig& config)
+QuantumProductionOrchestrator::QuantumProductionOrchestrator(ProductionConfig config)
     : m_config(config)
     , m_masm_enabled(false)
     , m_masm_orchestration_context(nullptr)
