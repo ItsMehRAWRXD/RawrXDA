@@ -996,9 +996,7 @@ if(RAWR_REPLACE_SSOT_HANDLERS)
 endif()
 
 if(RAWR_REPLACE_MASM_FALLBACKS)
-    list(REMOVE_ITEM SOURCES
-        src/core/memory_patch_byte_search_stubs.cpp
-    )
+    # Legacy fallback source path is no longer wired in current source graph.
     if(RAWR_HAS_MASM)
         list(APPEND ASM_KERNEL_SOURCES
             src/asm/memory_patch.asm
@@ -1016,11 +1014,8 @@ if(RAWR_REPLACE_MASM_FALLBACKS)
 endif()
 
 if(RAWR_REPLACE_SWARM_LICENSE_FALLBACKS)
-    list(REMOVE_ITEM SOURCES
-        src/core/swarm_network_stubs.cpp
-        src/core/enterprise_license_stubs.cpp
-    )
-    message(STATUS "[ReplacementPass] Swarm/License: fallback stubs removed")
+    # Legacy fallback source paths are no longer wired in current source graph.
+    message(STATUS "[ReplacementPass] Swarm/License: legacy fallback paths already absent")
 endif()
 
 # Build target-scoped SSOT ownership partition for RawrEngine only.
@@ -1055,14 +1050,14 @@ if(RAWR_SSOT_PROVIDER_UPPER STREQUAL "CORE")
     src/core/ssot_handlers_ext_isolated.cpp
     src/core/ssot_handlers_ext.cpp
         src/core/auto_feature_registry.cpp
-        src/core/missing_handler_stubs.cpp
+        src/core/missing_handler_runtime.cpp
         src/core/feature_handlers.cpp
     )
 elseif(RAWR_SSOT_PROVIDER_UPPER STREQUAL "EXT")
     set(_RAWR_SSOT_EXT 1)
     list(REMOVE_ITEM RAWR_ENGINE_SOURCES
         src/core/ssot_handlers.cpp
-        src/core/missing_handler_stubs.cpp
+        src/core/missing_handler_runtime.cpp
         src/core/auto_feature_registry.cpp
         src/core/ssot_handlers_ext_runtime_minimal.cpp
         src/core/ssot_handlers_ext_isolated.cpp
@@ -1071,7 +1066,7 @@ elseif(RAWR_SSOT_PROVIDER_UPPER STREQUAL "AUTO")
     set(_RAWR_SSOT_AUTO 1)
     set(_RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS 1)
     list(REMOVE_ITEM RAWR_ENGINE_SOURCES
-        src/core/missing_handler_stubs.cpp
+        src/core/missing_handler_runtime.cpp
         src/core/ssot_handlers_ext_runtime_minimal.cpp
         src/core/ssot_handlers_ext_isolated.cpp
     )
@@ -1092,7 +1087,7 @@ elseif(RAWR_SSOT_PROVIDER_UPPER STREQUAL "FEATURES")
     list(REMOVE_ITEM RAWR_ENGINE_SOURCES
         src/core/ssot_handlers.cpp
         src/core/auto_feature_registry.cpp
-        src/core/missing_handler_stubs.cpp
+        src/core/missing_handler_runtime.cpp
         src/core/ssot_handlers_ext_runtime_minimal.cpp
         src/core/ssot_handlers_ext_isolated.cpp
         src/core/ssot_handlers_ext.cpp
@@ -1247,7 +1242,7 @@ list(APPEND GOLD_UNDERSCORE_SOURCES
 # Enforce production lane: do not backslide to command-handler stub providers.
 list(REMOVE_ITEM GOLD_UNDERSCORE_SOURCES
     src/core/auto_feature_lane_provider.cpp
-    src/core/missing_handler_stubs.cpp
+    src/core/missing_handler_runtime.cpp
 )
 list(REMOVE_DUPLICATES GOLD_UNDERSCORE_SOURCES)
 add_executable(RawrXD_Gold ${GOLD_UNDERSCORE_SOURCES} ${ASM_KERNEL_SOURCES})
@@ -2566,7 +2561,6 @@ if(WIN32)
         src/core/enterprise_license.cpp
         src/core/enterprise_licensev2_impl.cpp
         src/core/enterprise_devunlock_bridge.cpp
-        src/core/enterprise_devunlock_stub_masm.cpp
         src/core/monolithic_heap_globals.cpp
         src/tools/license_validator_manifest.cpp
         src/core/license_anti_tampering.cpp
@@ -2612,7 +2606,6 @@ if(WIN32)
         # Three-Layer Hotpatch System (Phase 14.2)
         src/core/model_memory_hotpatch.cpp
         src/core/byte_level_hotpatcher.cpp
-        src/core/memory_patch_byte_search_stubs.cpp
         src/core/unified_hotpatch_manager.cpp
         src/core/proxy_hotpatcher.cpp
         src/core/model_bruteforce_engine.cpp
@@ -2715,7 +2708,6 @@ if(WIN32)
 
         # Phase 28: MonacoCore Native Editor Engine — Toggleable Engine System
         src/core/MonacoCoreEngine.cpp
-        src/core/monaco_core_stubs.cpp
         src/core/WebView2EditorEngine.cpp
         src/core/RichEditEditorEngine.cpp
         src/core/EditorEngineFactory.cpp
@@ -2754,13 +2746,12 @@ if(WIN32)
         src/core/feature_handlers.cpp
         # auto_feature_registry excluded for Win32 IDE — use ssot_handlers (lightweight stubs)
         src/core/intent_engine.cpp
-        src/core/missing_handler_stubs.cpp
+        src/core/missing_handler_runtime.cpp
         src/core/model_training_pipeline.cpp
         src/agentic/AgentOllamaClient.cpp
         src/core/ssot_handlers.cpp
         src/core/ssot_handlers_ext_isolated.cpp
         src/core/ssot_validation.cpp
-        src/core/win32_ide_link_stubs.cpp
         src/core/win32ide_asm_runtime.cpp
 
         # Unified Command Dispatch — Zero-drift SSOT dispatch (replaces manual registration)
@@ -2903,7 +2894,6 @@ if(WIN32)
         src/win32app/Win32IDE_NetworkPanel.cpp
         src/core/omega_orchestrator.cpp
         src/core/mesh_brain.cpp
-        src/core/mesh_brain_asm_stubs.cpp
         src/core/speciator_engine.cpp
         src/core/neural_bridge.cpp
         src/core/self_host_engine.cpp
@@ -3079,11 +3069,6 @@ if(WIN32)
     # Production lane source normalization:
     # Prefer real implementation units over legacy compatibility stubs/shims.
     list(REMOVE_ITEM WIN32IDE_SOURCES
-        src/core/enterprise_devunlock_stub_masm.cpp
-        src/core/memory_patch_byte_search_stubs.cpp
-        src/core/mesh_brain_asm_stubs.cpp
-        src/core/monaco_core_stubs.cpp
-        src/core/win32_ide_link_stubs.cpp
         src/win32app/benchmark_menu_compat.cpp
         src/win32app/benchmark_runner_compat.cpp
         src/win32app/multi_file_search_compat.cpp
@@ -3202,17 +3187,16 @@ if(WIN32)
         # Real lane - keep isolated handlers and runtime menu/command handlers.
         # DO NOT remove ssot_handlers_ext_isolated.cpp - it has working VSCEXT handlers 10000-10009
         # DO NOT add ssot_handlers_ext.cpp - it has unresolved symbols we haven't fixed
-        # missing_handler_stubs.cpp provides runtime command/menu implementations.
+        # missing_handler_runtime.cpp provides runtime command/menu implementations.
         # win32_ide_link_stubs.cpp keeps only non-menu fallback symbols.
         message(STATUS "Win32IDE: Real lane - using isolated handlers + runtime handlers + link shims")
     endif()
 
     if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
         list(REMOVE_ITEM WIN32IDE_SOURCES
-            src/core/monaco_core_stubs.cpp
             src/core/ssot_missing_handlers_provider.cpp
         )
-        message(STATUS "[ProductionLane] Win32IDE: stripped monaco/ssot stub units; kept missing_handler_stubs.cpp runtime handlers")
+        message(STATUS "[ProductionLane] Win32IDE: stripped ssot stub units; kept missing_handler_runtime.cpp runtime handlers")
     endif()
 
     # Avoid mixing parallel GGUF engine stacks in this lane.
@@ -3222,7 +3206,6 @@ if(WIN32)
         src/engine/gguf_core.cpp
     )
     # Use real model loader implementation in Win32IDE.
-    list(REMOVE_ITEM WIN32IDE_SOURCES src/core/rawrxd_model_loader_link_stub.cpp)
     # Re-wire real providers needed by this target's link graph.
     list(APPEND WIN32IDE_SOURCES
         src/tool_registry.cpp
@@ -3258,7 +3241,6 @@ if(WIN32)
 
     # Replace fallback-only providers with real implementations.
     list(REMOVE_ITEM WIN32IDE_SOURCES
-        src/win32app/collab_cursor_fallbacks.cpp
         src/core/win32ide_asm_runtime.cpp
     )
 
@@ -3839,9 +3821,9 @@ elseif(RAWR_ASAN AND NOT MSVC)
 endif()
 
 # Build only the SSOT objects needed by the ownership guard.
-if(EXISTS "${CMAKE_SOURCE_DIR}/src/core/missing_handler_stubs.cpp")
+if(EXISTS "${CMAKE_SOURCE_DIR}/src/core/missing_handler_runtime.cpp")
     add_library(ssot_stub_lane_objs OBJECT
-        ${CMAKE_SOURCE_DIR}/src/core/missing_handler_stubs.cpp
+        ${CMAKE_SOURCE_DIR}/src/core/missing_handler_runtime.cpp
         ${CMAKE_SOURCE_DIR}/src/core/ssot_missing_handlers_provider.cpp
     )
     target_compile_definitions(ssot_stub_lane_objs PRIVATE
@@ -3863,7 +3845,7 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/core/missing_handler_stubs.cpp")
     )
     add_dependencies(ssot_stub_lane_guard ssot_stub_lane_objs)
 else()
-    message(STATUS "[SSOT] missing_handler_stubs.cpp absent; stub lane guard disabled.")
+    message(STATUS "[SSOT] missing_handler_runtime.cpp absent; stub lane guard disabled.")
 endif()
 
 option(RAWRXD_ENABLE_HEAVY_GATES "Run heavy ownership/compiled-symbol guards as part of self_test_gate" OFF)
