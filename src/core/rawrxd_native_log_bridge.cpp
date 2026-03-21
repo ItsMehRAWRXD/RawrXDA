@@ -24,7 +24,6 @@ extern "C" void RawrXD_Native_Log(const char* fmt, ...) {
 #endif
     va_end(args);
 
-    // Keep a deterministic stderr sink for headless diagnostics.
     std::fputs(message, stderr);
     const size_t len = std::strlen(message);
     if (len == 0 || message[len - 1] != '\n') {
