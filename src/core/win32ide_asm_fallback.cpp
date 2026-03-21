@@ -42,13 +42,18 @@ std::unordered_map<uint32_t, uint32_t> g_snapshotSizeById;
 uint64_t g_snapshotCaptureCount = 0;
 uint64_t g_snapshotRestoreCount = 0;
 uint64_t g_snapshotVerifyCount = 0;
+uint64_t g_snapshotVerifyFailureCount = 0;
 uint64_t g_snapshotDiscardCount = 0;
 uint64_t g_hotpatchAllocCount = 0;
 uint64_t g_hotpatchFreeCount = 0;
+uint64_t g_hotpatchFreeBytes = 0;
 uint64_t g_hotpatchFlushCount = 0;
+uint64_t g_hotpatchFlushBytes = 0;
 uint64_t g_hotpatchSwapCount = 0;
 uint64_t g_ggufInitCount = 0;
 uint64_t g_ggufParseCount = 0;
+uint64_t g_lspWeightSetCount = 0;
+uint64_t g_camelliaFileTransformBytes = 0;
 
 struct LspBridgeState {
     void* symbolIndex = nullptr;
@@ -106,7 +111,7 @@ int asm_lsp_bridge_sync(uint32_t mode) {
     if (!g_lspBridgeState.initialized) {
         return -1;
     }
-    g_lspBridgeState.lastMode = mode;
+    g_lspBridgeState.lastMode = mode & 0xFFFFu;
     g_lspBridgeState.syncCount += 1;
     return 0;
 }
@@ -124,6 +129,12 @@ int asm_lsp_bridge_query(void* resultBuf, uint32_t maxSymbols, uint32_t* outCoun
     if (resultBuf != nullptr && maxSymbols > 0) {
         uint32_t* out = static_cast<uint32_t*>(resultBuf);
         out[0] = g_lspBridgeState.lastMode;
+        if (maxSymbols > 1) {
+            out[1] = static_cast<uint32_t>(g_lspBridgeState.syncCount & 0xFFFFFFFFu);
+        }
+        if (maxSymbols > 2) {
+            out[2] = static_cast<uint32_t>(g_lspBridgeState.queryCount & 0xFFFFFFFFu);
+        }
     }
     g_lspBridgeState.queryCount += 1;
     return 0;
@@ -145,8 +156,11 @@ void asm_lsp_bridge_get_stats(void* statsOut) {
 }
 void asm_lsp_bridge_set_weights(float syntaxWeight, float semanticWeight) {
     std::lock_guard<std::mutex> lock(g_fallbackMutex);
-    g_lspBridgeState.syntaxWeight = syntaxWeight;
-    g_lspBridgeState.semanticWeight = semanticWeight;
+    const float safeSyntax = (std::isfinite(syntaxWeight) && syntaxWeight > 0.0f) ? syntaxWeight : 1.0f;
+    const float safeSemantic = (std::isfinite(semanticWeight) && semanticWeight > 0.0f) ? semanticWeight : 1.0f;
+    g_lspBridgeState.syntaxWeight = safeSyntax;
+    g_lspBridgeState.semanticWeight = safeSemantic;
+    g_lspWeightSetCount += 1;
 }
 
 int asm_gguf_loader_init(void* ctx, void* path, int pathLen) {
@@ -192,7 +206,8 @@ int asm_gguf_loader_lookup(void* ctx, const char* name, uint32_t nameLen) {
         return -1;
     }
     std::lock_guard<std::mutex> lock(g_fallbackMutex);
-    if (!g_ggufLoaderParsedByCtx[ctx]) {
+    const auto parsedIt = g_ggufLoaderParsedByCtx.find(ctx);
+    if (parsedIt == g_ggufLoaderParsedByCtx.end() || !parsedIt->second) {
         return -1;
     }
     uint32_t hash = 2166136261u;
@@ -200,7 +215,11 @@ int asm_gguf_loader_lookup(void* ctx, const char* name, uint32_t nameLen) {
         hash ^= static_cast<uint8_t>(name[i]);
         hash *= 16777619u;
     }
-    g_ggufLookupCountByCtx[ctx] += 1;
+    auto lookupIt = g_ggufLookupCountByCtx.find(ctx);
+    if (lookupIt == g_ggufLookupCountByCtx.end()) {
+        lookupIt = g_ggufLookupCountByCtx.emplace(ctx, 0ull).first;
+    }
+    lookupIt->second += 1;
     return static_cast<int>((hash % 4096u) + 1u);
 }
 void asm_gguf_loader_get_info(void* ctx, void* infoOut) {
@@ -210,11 +229,15 @@ void asm_gguf_loader_get_info(void* ctx, void* infoOut) {
     std::lock_guard<std::mutex> lock(g_fallbackMutex);
     uint64_t* out = static_cast<uint64_t*>(infoOut);
     const auto it = g_ggufLoaderPathByCtx.find(ctx);
+    const auto parsedIt = g_ggufLoaderParsedByCtx.find(ctx);
+    const auto thresholdIt = g_ggufLoaderGpuThresholdByCtx.find(ctx);
+    const auto sizeIt = g_ggufLoaderFileSizeByCtx.find(ctx);
+    const auto lookupIt = g_ggufLookupCountByCtx.find(ctx);
     out[0] = (it == g_ggufLoaderPathByCtx.end()) ? 0ull : static_cast<uint64_t>(it->second.size());
-    out[1] = g_ggufLoaderParsedByCtx[ctx] ? 1ull : 0ull;
-    out[2] = g_ggufLoaderGpuThresholdByCtx[ctx];
-    out[3] = g_ggufLoaderFileSizeByCtx[ctx];
-    out[4] = g_ggufLookupCountByCtx[ctx];
+    out[1] = (parsedIt != g_ggufLoaderParsedByCtx.end() && parsedIt->second) ? 1ull : 0ull;
+    out[2] = (thresholdIt != g_ggufLoaderGpuThresholdByCtx.end()) ? thresholdIt->second : 0ull;
+    out[3] = (sizeIt != g_ggufLoaderFileSizeByCtx.end()) ? sizeIt->second : 0ull;
+    out[4] = (lookupIt != g_ggufLookupCountByCtx.end()) ? lookupIt->second : 0ull;
 }
 void asm_gguf_loader_configure_gpu(void* ctx, uint64_t thresholdBytes) {
     if (ctx == nullptr) {
@@ -229,9 +252,12 @@ void asm_gguf_loader_get_stats(void* ctx, void* statsOut) {
     }
     std::lock_guard<std::mutex> lock(g_fallbackMutex);
     uint64_t* out = static_cast<uint64_t*>(statsOut);
-    out[0] = g_ggufLoaderParsedByCtx[ctx] ? 1ull : 0ull;
-    out[1] = g_ggufLookupCountByCtx[ctx];
-    out[2] = g_ggufLoaderGpuThresholdByCtx[ctx];
+    const auto parsedIt = g_ggufLoaderParsedByCtx.find(ctx);
+    const auto lookupIt = g_ggufLookupCountByCtx.find(ctx);
+    const auto thresholdIt = g_ggufLoaderGpuThresholdByCtx.find(ctx);
+    out[0] = (parsedIt != g_ggufLoaderParsedByCtx.end() && parsedIt->second) ? 1ull : 0ull;
+    out[1] = (lookupIt != g_ggufLookupCountByCtx.end()) ? lookupIt->second : 0ull;
+    out[2] = (thresholdIt != g_ggufLoaderGpuThresholdByCtx.end()) ? thresholdIt->second : 0ull;
     out[3] = g_ggufInitCount;
     out[4] = g_ggufParseCount;
 }
@@ -249,20 +275,23 @@ void* asm_hotpatch_alloc_shadow(size_t size) {
     return mem;
 }
 void asm_hotpatch_free_shadow(void* base, size_t capacity) {
-    (void)capacity;
     if (base == nullptr) {
         return;
     }
     ::operator delete(base);
     std::lock_guard<std::mutex> lock(g_fallbackMutex);
     g_hotpatchFreeCount += 1;
+    g_hotpatchFreeBytes += static_cast<uint64_t>(capacity);
+    g_hotpatchTrampolineByFn.erase(base);
+    g_hotpatchLastVerifyByFn.erase(base);
 }
 void asm_hotpatch_flush_icache(void* base, size_t size) {
-    (void)base;
-    (void)size;
     std::atomic_signal_fence(std::memory_order_seq_cst);
     std::lock_guard<std::mutex> lock(g_fallbackMutex);
     g_hotpatchFlushCount += 1;
+    if (base != nullptr) {
+        g_hotpatchFlushBytes += static_cast<uint64_t>(size);
+    }
 }
 int asm_hotpatch_backup_prologue(void* originalFn, uint32_t backupSlot) {
     if (originalFn == nullptr) {
@@ -281,6 +310,7 @@ int asm_hotpatch_restore_prologue(uint32_t backupSlot) {
     if (it == g_hotpatchBackupSlotMap.end()) {
         return -1;
     }
+    g_hotpatchLastVerifyByFn.erase(it->second);
     g_hotpatchBackupSlotMap.erase(it);
     return 0;
 }
@@ -319,7 +349,8 @@ void asm_hotpatch_get_stats(void* statsOut) {
     out[0] = g_hotpatchAllocCount;
     out[1] = g_hotpatchFreeCount;
     out[2] = g_hotpatchFlushCount;
-    out[3] = static_cast<uint64_t>(g_hotpatchBackupSlotMap.size() + g_hotpatchTrampolineByFn.size());
+    out[3] = static_cast<uint64_t>(g_hotpatchBackupSlotMap.size() + g_hotpatchTrampolineByFn.size()) +
+             g_hotpatchSwapCount;
 }
 
 int asm_snapshot_capture(void* addr, uint32_t snapId, int size) {
@@ -341,7 +372,9 @@ int asm_snapshot_capture(void* addr, uint32_t snapId, int size) {
 }
 int asm_snapshot_restore(uint32_t snapId) {
     std::lock_guard<std::mutex> lock(g_fallbackMutex);
-    const int rc = g_snapshotCrcById.count(snapId) > 0 ? 0 : -1;
+    const bool hasCrc = g_snapshotCrcById.count(snapId) > 0;
+    const bool hasSize = g_snapshotSizeById.count(snapId) > 0;
+    const int rc = (hasCrc && hasSize) ? 0 : -1;
     if (rc == 0) {
         g_snapshotRestoreCount += 1;
     }
@@ -351,11 +384,14 @@ int asm_snapshot_verify(uint32_t snapId, uint32_t expectedCRC) {
     std::lock_guard<std::mutex> lock(g_fallbackMutex);
     auto it = g_snapshotCrcById.find(snapId);
     if (it == g_snapshotCrcById.end()) {
+        g_snapshotVerifyFailureCount += 1;
         return -1;
     }
     const int rc = (expectedCRC == 0u || it->second == expectedCRC) ? 0 : -1;
     if (rc == 0) {
         g_snapshotVerifyCount += 1;
+    } else {
+        g_snapshotVerifyFailureCount += 1;
     }
     return rc;
 }
@@ -375,7 +411,7 @@ void asm_snapshot_get_stats(void* statsOut) {
     out[1] = g_snapshotCaptureCount;
     out[2] = g_snapshotRestoreCount;
     out[3] = g_snapshotVerifyCount;
-    out[4] = g_snapshotDiscardCount;
+    out[4] = g_snapshotDiscardCount + g_snapshotVerifyFailureCount;
 }
 
 int asm_camellia256_auth_encrypt_file(const char* inputPath, const char* outputPath) {
@@ -391,6 +427,7 @@ int asm_camellia256_auth_encrypt_file(const char* inputPath, const char* outputP
         return -1;
     }
     std::vector<char> buf(4096);
+    uint64_t transformedBytes = 0;
     while (in.good()) {
         in.read(buf.data(), static_cast<std::streamsize>(buf.size()));
         std::streamsize n = in.gcount();
@@ -398,6 +435,14 @@ int asm_camellia256_auth_encrypt_file(const char* inputPath, const char* outputP
             buf[static_cast<size_t>(i)] = static_cast<char>(static_cast<unsigned char>(buf[static_cast<size_t>(i)]) ^ 0xA5u);
         }
         out.write(buf.data(), n);
+        if (!out.good()) {
+            return -1;
+        }
+        transformedBytes += static_cast<uint64_t>(n);
+    }
+    {
+        std::lock_guard<std::mutex> lock(g_fallbackMutex);
+        g_camelliaFileTransformBytes += transformedBytes;
     }
     return out.good() ? 0 : -1;
 }
