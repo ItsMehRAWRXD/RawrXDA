@@ -69,6 +69,49 @@ WatchdogStatusShim g_watchdogStatus{
 std::array<uint8_t, 32> g_watchdogBaseline{};
 bool g_watchdogInitialized = false;
 
+struct HotpatchStatsShim {
+    uint64_t swapsApplied;
+    uint64_t swapsRolledBack;
+    uint64_t swapsFailed;
+    uint64_t shadowPagesAllocated;
+    uint64_t shadowPagesFreed;
+    uint64_t icacheFlushes;
+    uint64_t crcChecks;
+    uint64_t crcMismatches;
+};
+static_assert(sizeof(HotpatchStatsShim) == 64, "HotpatchStatsShim must remain 64 bytes");
+
+struct SnapshotStatsShim {
+    uint64_t snapshotsCaptured;
+    uint64_t snapshotsRestored;
+    uint64_t snapshotsDiscarded;
+    uint64_t verifyPassed;
+    uint64_t verifyFailed;
+    uint64_t totalBytesStored;
+};
+static_assert(sizeof(SnapshotStatsShim) == 48, "SnapshotStatsShim must remain 48 bytes");
+
+struct HotpatchBackupSlot {
+    bool valid;
+    void* funcAddr;
+    uint32_t crc32;
+    std::array<uint8_t, 16> bytes;
+};
+
+struct SnapshotEntry {
+    uint32_t id;
+    void* funcAddr;
+    uint32_t crc32;
+    std::vector<uint8_t> bytes;
+};
+
+constexpr uint32_t kHotpatchMaxBackupSlots = 256U;
+std::array<HotpatchBackupSlot, kHotpatchMaxBackupSlots> g_hotpatchBackups{};
+std::vector<SnapshotEntry> g_snapshotEntries;
+HotpatchStatsShim g_hotpatchStats{};
+SnapshotStatsShim g_snapshotStats{};
+std::mutex g_hotpatchMutex;
+
 uint64_t perfNowTicks() {
     const auto now = std::chrono::steady_clock::now().time_since_epoch();
     return static_cast<uint64_t>(
@@ -228,6 +271,49 @@ bool macEquals32(const uint8_t* a, const uint8_t* b) {
     return diff == 0U;
 }
 
+uint32_t crc32Bytes(const uint8_t* bytes, size_t size) {
+    if (bytes == nullptr) {
+        return 0U;
+    }
+    uint32_t crc = 0xFFFFFFFFU;
+    for (size_t i = 0; i < size; ++i) {
+        crc ^= static_cast<uint32_t>(bytes[i]);
+        for (int bit = 0; bit < 8; ++bit) {
+            const uint32_t mask = static_cast<uint32_t>(
+                -(static_cast<int32_t>(crc & 1U)));
+            crc = (crc >> 1U) ^ (0xEDB88320U & mask);
+        }
+    }
+    return ~crc;
+}
+
+bool writeExecutableMemory(void* dst, const void* src, size_t size) {
+    if (dst == nullptr || src == nullptr || size == 0U) {
+        return false;
+    }
+
+    DWORD oldProtect = 0;
+    if (!VirtualProtect(dst, size, PAGE_EXECUTE_READWRITE, &oldProtect)) {
+        return false;
+    }
+
+    std::memcpy(dst, src, size);
+    FlushInstructionCache(GetCurrentProcess(), dst, size);
+
+    DWORD ignored = 0;
+    VirtualProtect(dst, size, oldProtect, &ignored);
+    return true;
+}
+
+int findSnapshotEntryIndex(uint32_t snapshotId) {
+    for (size_t i = 0; i < g_snapshotEntries.size(); ++i) {
+        if (g_snapshotEntries[i].id == snapshotId) {
+            return static_cast<int>(i);
+        }
+    }
+    return -1;
+}
+
 }  // namespace
 
 extern "C" {
@@ -244,27 +330,246 @@ int asm_pyre_add_fp32(void*, const void*, const void*, int) { return 0; }
 // Batch 4: hotpatch + pyre + pattern
 int asm_pyre_mul_fp32(void*, const void*, const void*, int) { return 0; }
 int asm_pyre_softmax(void*, const void*, int) { return 0; }
-int asm_hotpatch_restore_prologue(void*) { return 0; }
-int asm_hotpatch_backup_prologue(void*) { return 0; }
-int asm_hotpatch_flush_icache(void*, uint64_t) { return 0; }
-void* asm_hotpatch_alloc_shadow(uint64_t) { return nullptr; }
+int asm_hotpatch_restore_prologue(uint32_t slotIndex) {
+    if (slotIndex >= kHotpatchMaxBackupSlots) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_hotpatchMutex);
+    HotpatchBackupSlot& slot = g_hotpatchBackups[slotIndex];
+    if (!slot.valid || slot.funcAddr == nullptr) {
+        return -2;
+    }
+    if (!writeExecutableMemory(slot.funcAddr, slot.bytes.data(), slot.bytes.size())) {
+        g_hotpatchStats.swapsFailed += 1ULL;
+        return -3;
+    }
+    g_hotpatchStats.swapsRolledBack += 1ULL;
+    return 0;
+}
+
+int asm_hotpatch_backup_prologue(void* funcAddr, uint32_t slotIndex) {
+    if (funcAddr == nullptr || slotIndex >= kHotpatchMaxBackupSlots) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_hotpatchMutex);
+    HotpatchBackupSlot& slot = g_hotpatchBackups[slotIndex];
+    slot.valid = true;
+    slot.funcAddr = funcAddr;
+    std::memcpy(slot.bytes.data(), funcAddr, slot.bytes.size());
+    slot.crc32 = crc32Bytes(slot.bytes.data(), slot.bytes.size());
+    return 0;
+}
+
+int asm_hotpatch_flush_icache(void* base, size_t size) {
+    if (base == nullptr || size == 0U) {
+        return -1;
+    }
+    const BOOL ok = FlushInstructionCache(GetCurrentProcess(), base, size);
+    std::lock_guard<std::mutex> lock(g_hotpatchMutex);
+    if (ok) {
+        g_hotpatchStats.icacheFlushes += 1ULL;
+        return 0;
+    }
+    return -2;
+}
+
+void* asm_hotpatch_alloc_shadow(size_t size) {
+    const size_t allocSize = (size == 0U) ? 65536U : size;
+    void* page = VirtualAlloc(nullptr, allocSize, MEM_COMMIT | MEM_RESERVE,
+                              PAGE_EXECUTE_READWRITE);
+    if (page != nullptr) {
+        std::lock_guard<std::mutex> lock(g_hotpatchMutex);
+        g_hotpatchStats.shadowPagesAllocated += 1ULL;
+    }
+    return page;
+}
 
 // Batch 5: hotpatch/snapshot stats + prologue/trampoline/free
-int asm_hotpatch_verify_prologue(void*) { return 0; }
-int asm_hotpatch_install_trampoline(void*, void*) { return 0; }
-int asm_hotpatch_free_shadow(void*) { return 0; }
-int asm_snapshot_capture(void*) { return 0; }
-int asm_hotpatch_atomic_swap(void*, void*) { return 0; }
-int asm_hotpatch_get_stats(void*) { return 0; }
-int asm_snapshot_get_stats(void*) { return 0; }
+int asm_hotpatch_verify_prologue(void* funcAddr, uint32_t expectedCRC) {
+    if (funcAddr == nullptr) {
+        return -1;
+    }
+
+    uint8_t prologue[16]{};
+    std::memcpy(prologue, funcAddr, sizeof(prologue));
+    const uint32_t actualCRC = crc32Bytes(prologue, sizeof(prologue));
+
+    std::lock_guard<std::mutex> lock(g_hotpatchMutex);
+    g_hotpatchStats.crcChecks += 1ULL;
+    if (actualCRC != expectedCRC) {
+        g_hotpatchStats.crcMismatches += 1ULL;
+        return 1;
+    }
+    return 0;
+}
+
+int asm_hotpatch_install_trampoline(void* originalFn, void* trampolineBuffer) {
+    if (originalFn == nullptr || trampolineBuffer == nullptr) {
+        return -1;
+    }
+
+    uint8_t trampoline[28]{};
+    std::memcpy(trampoline, originalFn, 14);
+    trampoline[14] = 0xFF;
+    trampoline[15] = 0x25;
+    trampoline[16] = 0x00;
+    trampoline[17] = 0x00;
+    trampoline[18] = 0x00;
+    trampoline[19] = 0x00;
+    void* jumpBack = static_cast<uint8_t*>(originalFn) + 14;
+    std::memcpy(&trampoline[20], &jumpBack, sizeof(jumpBack));
+
+    if (!writeExecutableMemory(trampolineBuffer, trampoline, sizeof(trampoline))) {
+        return -2;
+    }
+    return 0;
+}
+
+int asm_hotpatch_free_shadow(void* base, size_t) {
+    if (base == nullptr) {
+        return -1;
+    }
+    if (!VirtualFree(base, 0, MEM_RELEASE)) {
+        return -2;
+    }
+    std::lock_guard<std::mutex> lock(g_hotpatchMutex);
+    g_hotpatchStats.shadowPagesFreed += 1ULL;
+    return 0;
+}
+
+int asm_snapshot_capture(void* funcAddr, uint32_t snapshotId, size_t captureSize) {
+    if (funcAddr == nullptr || captureSize == 0U) {
+        return -1;
+    }
+
+    SnapshotEntry entry{};
+    entry.id = snapshotId;
+    entry.funcAddr = funcAddr;
+    entry.bytes.resize(captureSize);
+    std::memcpy(entry.bytes.data(), funcAddr, captureSize);
+    entry.crc32 = crc32Bytes(entry.bytes.data(), entry.bytes.size());
+
+    std::lock_guard<std::mutex> lock(g_hotpatchMutex);
+    const int existing = findSnapshotEntryIndex(snapshotId);
+    if (existing >= 0) {
+        g_snapshotStats.totalBytesStored -= static_cast<uint64_t>(
+            g_snapshotEntries[existing].bytes.size());
+        g_snapshotEntries[existing] = std::move(entry);
+    } else {
+        g_snapshotEntries.push_back(std::move(entry));
+    }
+    g_snapshotStats.snapshotsCaptured += 1ULL;
+    g_snapshotStats.totalBytesStored += captureSize;
+    return 0;
+}
+
+int asm_hotpatch_atomic_swap(void* targetFn, void* newFn) {
+    if (targetFn == nullptr || newFn == nullptr) {
+        return -1;
+    }
+
+    uint8_t patch[14] = {
+        0xFF, 0x25, 0x00, 0x00, 0x00, 0x00,
+        0, 0, 0, 0, 0, 0, 0, 0
+    };
+    std::memcpy(&patch[6], &newFn, sizeof(newFn));
+
+    if (!writeExecutableMemory(targetFn, patch, sizeof(patch))) {
+        std::lock_guard<std::mutex> lock(g_hotpatchMutex);
+        g_hotpatchStats.swapsFailed += 1ULL;
+        return -2;
+    }
+
+    std::lock_guard<std::mutex> lock(g_hotpatchMutex);
+    g_hotpatchStats.swapsApplied += 1ULL;
+    return 0;
+}
+
+int asm_hotpatch_get_stats(void* statsBuffer64) {
+    if (statsBuffer64 == nullptr) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_hotpatchMutex);
+    std::memcpy(statsBuffer64, &g_hotpatchStats, sizeof(g_hotpatchStats));
+    return 0;
+}
+
+int asm_snapshot_get_stats(void* statsBuffer48) {
+    if (statsBuffer48 == nullptr) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_hotpatchMutex);
+    std::memcpy(statsBuffer48, &g_snapshotStats, sizeof(g_snapshotStats));
+    return 0;
+}
 
 // Batch 6: snapshot/camellia/log/enterprise
-int asm_snapshot_restore(void*) { return 0; }
-int asm_snapshot_discard(void*) { return 0; }
-int asm_snapshot_verify(void*) { return 0; }
+int asm_snapshot_restore(uint32_t snapshotId) {
+    std::lock_guard<std::mutex> lock(g_hotpatchMutex);
+    const int idx = findSnapshotEntryIndex(snapshotId);
+    if (idx < 0) {
+        return -1;
+    }
+
+    SnapshotEntry& entry = g_snapshotEntries[static_cast<size_t>(idx)];
+    if (entry.funcAddr == nullptr || entry.bytes.empty()) {
+        return -2;
+    }
+    if (!writeExecutableMemory(entry.funcAddr, entry.bytes.data(), entry.bytes.size())) {
+        return -3;
+    }
+    g_snapshotStats.snapshotsRestored += 1ULL;
+    return 0;
+}
+
+int asm_snapshot_discard(uint32_t snapshotId) {
+    std::lock_guard<std::mutex> lock(g_hotpatchMutex);
+    const int idx = findSnapshotEntryIndex(snapshotId);
+    if (idx < 0) {
+        return -1;
+    }
+
+    const size_t eraseIndex = static_cast<size_t>(idx);
+    g_snapshotStats.totalBytesStored -= static_cast<uint64_t>(
+        g_snapshotEntries[eraseIndex].bytes.size());
+    g_snapshotEntries.erase(g_snapshotEntries.begin() + static_cast<std::ptrdiff_t>(eraseIndex));
+    g_snapshotStats.snapshotsDiscarded += 1ULL;
+    return 0;
+}
+
+int asm_snapshot_verify(uint32_t snapshotId, uint32_t expectedCRC) {
+    std::lock_guard<std::mutex> lock(g_hotpatchMutex);
+    const int idx = findSnapshotEntryIndex(snapshotId);
+    if (idx < 0) {
+        return -1;
+    }
+
+    const SnapshotEntry& entry = g_snapshotEntries[static_cast<size_t>(idx)];
+    if (entry.funcAddr == nullptr || entry.bytes.empty()) {
+        return -2;
+    }
+
+    std::vector<uint8_t> current(entry.bytes.size());
+    std::memcpy(current.data(), entry.funcAddr, current.size());
+    const uint32_t actualCRC = crc32Bytes(current.data(), current.size());
+    const uint32_t targetCRC = (expectedCRC != 0U) ? expectedCRC : entry.crc32;
+    if (actualCRC != targetCRC) {
+        g_snapshotStats.verifyFailed += 1ULL;
+        return 1;
+    }
+
+    g_snapshotStats.verifyPassed += 1ULL;
+    return 0;
+}
 int asm_camellia256_auth_decrypt_file(const char*, const char*, const uint8_t*, uint32_t) { return 0; }
 int asm_camellia256_auth_encrypt_file(const char*, const char*, const uint8_t*, uint32_t) { return 0; }
-void RawrXD_Native_Log(const char*, const char*) {}
+void RawrXD_Native_Log(const char* channel, const char* message) {
+    OutputDebugStringA("[RawrXD]");
+    OutputDebugStringA(channel != nullptr ? channel : "core");
+    OutputDebugStringA(": ");
+    OutputDebugStringA(message != nullptr ? message : "(null)");
+    OutputDebugStringA("\n");
+}
 int Enterprise_DevUnlock() { return 0; }
 
 // Batch 7: subsystem modes + Vulkan init
