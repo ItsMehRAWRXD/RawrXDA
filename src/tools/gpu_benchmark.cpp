@@ -239,7 +239,67 @@ void RunGEMMParityTest(uint32_t M, uint32_t K, uint32_t N)
 }
 
 
-extern "C" void attention_baseline(float* q, float* k, float* v, int batch_size, int seq_len, int head_size, int num_heads, float* output);
+extern "C" void attention_baseline(float* q, float* k, float* v,
+                                   int batch_size, int seq_len,
+                                   int head_size, int num_heads,
+                                   float* output) {
+    if (!q || !k || !v || !output || batch_size <= 0 || seq_len <= 0 ||
+        head_size <= 0 || num_heads <= 0) {
+        return;
+    }
+
+    const float scale = 1.0f / std::sqrt(static_cast<float>(head_size));
+    const int tokensPerBatch = seq_len * num_heads * head_size;
+
+    for (int b = 0; b < batch_size; ++b) {
+        const int batchOffset = b * tokensPerBatch;
+        for (int h = 0; h < num_heads; ++h) {
+            for (int i = 0; i < seq_len; ++i) {
+                float maxLogit = -3.402823e38f;
+                for (int j = 0; j < seq_len; ++j) {
+                    float dot = 0.0f;
+                    for (int d = 0; d < head_size; ++d) {
+                        const int qIdx = batchOffset + ((i * num_heads + h) * head_size + d);
+                        const int kIdx = batchOffset + ((j * num_heads + h) * head_size + d);
+                        dot += q[qIdx] * k[kIdx];
+                    }
+                    const float logit = dot * scale;
+                    if (logit > maxLogit) maxLogit = logit;
+                }
+
+                float sumExp = 0.0f;
+                for (int d = 0; d < head_size; ++d) {
+                    const int outIdx = batchOffset + ((i * num_heads + h) * head_size + d);
+                    output[outIdx] = 0.0f;
+                }
+
+                for (int j = 0; j < seq_len; ++j) {
+                    float dot = 0.0f;
+                    for (int d = 0; d < head_size; ++d) {
+                        const int qIdx = batchOffset + ((i * num_heads + h) * head_size + d);
+                        const int kIdx = batchOffset + ((j * num_heads + h) * head_size + d);
+                        dot += q[qIdx] * k[kIdx];
+                    }
+                    const float weight = std::exp(dot * scale - maxLogit);
+                    sumExp += weight;
+                    for (int d = 0; d < head_size; ++d) {
+                        const int vIdx = batchOffset + ((j * num_heads + h) * head_size + d);
+                        const int outIdx = batchOffset + ((i * num_heads + h) * head_size + d);
+                        output[outIdx] += weight * v[vIdx];
+                    }
+                }
+
+                if (sumExp > 0.0f) {
+                    const float inv = 1.0f / sumExp;
+                    for (int d = 0; d < head_size; ++d) {
+                        const int outIdx = batchOffset + ((i * num_heads + h) * head_size + d);
+                        output[outIdx] *= inv;
+                    }
+                }
+            }
+        }
+    }
+}
 
 void RunFlashAttentionParityTest(int seq_len) {
     const int head_dim = 64;
@@ -277,10 +337,13 @@ void RunFlashAttentionParityTest(int seq_len) {
     bridge.Initialize(device.Get(), cmdQueue.Get());
 
     Microsoft::WRL::ComPtr<ID3D12Resource> bufQ, bufK, bufV, bufOut;
-    bridge.CreateBuffer("q_buf", size * sizeof(float), &bufQ, Q_cpu.data());
-    bridge.CreateBuffer("k_buf", size * sizeof(float), &bufK, K_cpu.data());
-    bridge.CreateBuffer("v_buf", size * sizeof(float), &bufV, V_cpu.data());
-    bridge.CreateBuffer("o_buf", size * sizeof(float), &bufOut, nullptr);
+    bridge.UploadTensor(Q_cpu.data(), static_cast<uint64_t>(size * sizeof(float)),
+                        GGMLType::F32, bufQ);
+    bridge.UploadTensor(K_cpu.data(), static_cast<uint64_t>(size * sizeof(float)),
+                        GGMLType::F32, bufK);
+    bridge.UploadTensor(V_cpu.data(), static_cast<uint64_t>(size * sizeof(float)),
+                        GGMLType::F32, bufV);
+    bridge.AllocateBuffer(static_cast<uint64_t>(size * sizeof(float)), bufOut);
 
     auto start_gpu = std::chrono::high_resolution_clock::now();
     if (!bridge.DispatchFlashAttention(bufQ.Get(), bufK.Get(), bufV.Get(), bufOut.Get(), seq_len, head_dim, n_heads)) {

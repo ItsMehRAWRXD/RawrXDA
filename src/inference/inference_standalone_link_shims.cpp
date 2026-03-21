@@ -12,6 +12,10 @@ AgenticDeepThinkingEngine::~AgenticDeepThinkingEngine() = default;
 
 extern "C" {
 
+// Enterprise feature gates used by ignite_800b.cpp in standalone mode.
+int32_t g_800B_Unlocked = 0;
+uint64_t g_EnterpriseFeatures = 0;
+
 int asm_pyre_gemm_fp32(const float* A, const float* B, float* C,
                        uint32_t M, uint32_t N, uint32_t K) {
     if (!A || !B || !C || M == 0 || N == 0 || K == 0) return -1;

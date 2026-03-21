@@ -171,7 +171,7 @@ struct Slot {
  */
 struct ActiveWindowBudget {
     // Total active working set (configurable, default 2.5 GB)
-    static constexpr size_t TOTAL_BYTES = 2500 * 1024 * 1024;
+    static constexpr size_t TOTAL_BYTES = static_cast<size_t>(2500ULL) * 1024ULL * 1024ULL;
     
     // π-based partition ratios (compile-time)
     static constexpr double PI = 3.14159265358979323846;
@@ -452,7 +452,8 @@ private:
  */
 class PolymorphicLoader {
 public:
-    explicit PolymorphicLoader(size_t active_window_bytes = 2500 * 1024 * 1024);
+    explicit PolymorphicLoader(size_t active_window_bytes =
+                                   static_cast<size_t>(2500ULL) * 1024ULL * 1024ULL);
     ~PolymorphicLoader();
     
     /**
