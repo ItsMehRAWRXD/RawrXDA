@@ -2,40 +2,23 @@
 #include <cstdio>
 #include <cstring>
 
-#ifdef _WIN32
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <windows.h>
-#endif
+namespace {
+constexpr size_t kNativeLogSlots = 32;
+constexpr size_t kNativeLogLineCap = 256;
+char g_nativeLogRing[kNativeLogSlots][kNativeLogLineCap]{};
+unsigned g_nativeLogWriteIndex = 0;
+}
 
 extern "C" void RawrXD_Native_Log(const char* fmt, ...) {
-    if (!fmt || fmt[0] == '\0') {
+    if (!fmt) {
         return;
     }
-
-    char message[2048] = {};
+    char line[kNativeLogLineCap]{};
     va_list args;
     va_start(args, fmt);
-#if defined(_MSC_VER)
-    _vsnprintf_s(message, sizeof(message), _TRUNCATE, fmt, args);
-#else
-    vsnprintf(message, sizeof(message), fmt, args);
-#endif
+    std::vsnprintf(line, sizeof(line), fmt, args);
     va_end(args);
-
-    // Keep a deterministic stderr sink for headless diagnostics.
-    std::fputs(message, stderr);
-    const size_t len = std::strlen(message);
-    if (len == 0 || message[len - 1] != '\n') {
-        std::fputc('\n', stderr);
-    }
-    std::fflush(stderr);
-
-#ifdef _WIN32
-    OutputDebugStringA(message);
-    if (len == 0 || message[len - 1] != '\n') {
-        OutputDebugStringA("\n");
-    }
-#endif
+    std::strncpy(g_nativeLogRing[g_nativeLogWriteIndex % kNativeLogSlots], line, kNativeLogLineCap - 1);
+    g_nativeLogRing[g_nativeLogWriteIndex % kNativeLogSlots][kNativeLogLineCap - 1] = '\0';
+    g_nativeLogWriteIndex += 1;
 }
