@@ -39,7 +39,7 @@
 #include "execution_governor.h"
 
 // Phase 9C: Multi-Response Engine
-#include "multi_response_engine.h"
+#include "../win32app/multi_response_engine.h"
 
 // Phase 5: Agent History
 #include "agent_history.h"

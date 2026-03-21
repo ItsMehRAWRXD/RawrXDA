@@ -20,7 +20,7 @@
 #include "../core/agent_safety_contract.h"
 #include "../core/deterministic_replay.h"
 #include "../core/confidence_gate.h"
-#include "../core/multi_response_engine.h"
+#include "multi_response_engine.h"
 #include "../core/universal_model_hotpatcher.h"
 #include "../../include/swarm_orchestrator.h"
 #include "../agent_history.h"

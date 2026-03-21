@@ -1,121 +1,143 @@
-extern "C" void InjectMode(void) {}
-extern "C" void DiffCovMode(void) {}
-extern "C" void SO_InitializeVulkan(void) {}
-extern "C" void IntelPTMode(void) {}
-extern "C" void AgentTraceMode(void) {}
-extern "C" void DynTraceMode(void) {}
-extern "C" void CovFusionMode(void) {}
-extern "C" void AD_ProcessGGUF(void) {}
-extern "C" void SO_InitializeStreaming(void) {}
-extern "C" void SideloadMode(void) {}
-extern "C" void SO_CreateComputePipelines(void) {}
-extern "C" void PersistenceMode(void) {}
-extern "C" void SO_PrintStatistics(void) {}
-extern "C" void SO_CreateMemoryArena(void) {}
-extern "C" void SO_LoadExecFile(void) {}
-extern "C" void BasicBlockCovMode(void) {}
-extern "C" void SO_PrintMetrics(void) {}
-extern "C" void SO_StartDEFLATEThreads(void) {}
-extern "C" void StubGenMode(void) {}
-extern "C" void TraceEngineMode(void) {}
-extern "C" void CompileMode(void) {}
-extern "C" void GapFuzzMode(void) {}
-extern "C" void EncryptMode(void) {}
-extern "C" void SO_InitializePrefetchQueue(void) {}
-extern "C" void SO_CreateThreadPool(void) {}
-extern "C" void EntropyMode(void) {}
-extern "C" void AgenticMode(void) {}
-extern "C" void UACBypassMode(void) {}
-extern "C" void AVScanMode(void) {}
+#include <atomic>
+#include <cstdint>
 
-extern "C" void asm_watchdog_init(void) {}
-extern "C" void asm_watchdog_verify(void) {}
-extern "C" void asm_watchdog_get_status(void) {}
-extern "C" void asm_watchdog_get_baseline(void) {}
-extern "C" void asm_watchdog_shutdown(void) {}
+namespace {
+std::atomic<uint64_t> g_modeCallCount{0};
+std::atomic<uint32_t> g_lastModeHash{0};
 
-extern "C" void asm_omega_implement_generate(void) {}
-extern "C" void asm_omega_agent_step(void) {}
-extern "C" void asm_omega_shutdown(void) {}
-extern "C" void asm_omega_plan_decompose(void) {}
-extern "C" void asm_omega_evolve_improve(void) {}
-extern "C" void asm_omega_init(void) {}
-extern "C" void asm_omega_get_stats(void) {}
+inline uint32_t fnv1a32(const char* text) {
+    uint32_t hash = 2166136261u;
+    for (const unsigned char* p = reinterpret_cast<const unsigned char*>(text); *p != '\0'; ++p) {
+        hash ^= static_cast<uint32_t>(*p);
+        hash *= 16777619u;
+    }
+    return hash;
+}
 
-extern "C" void asm_omega_verify_test(void) {}
-extern "C" void asm_omega_architect_select(void) {}
-extern "C" void asm_omega_agent_spawn(void) {}
-extern "C" void asm_omega_observe_monitor(void) {}
-extern "C" void asm_omega_deploy_distribute(void) {}
-extern "C" void asm_omega_execute_pipeline(void) {}
-extern "C" void asm_omega_ingest_requirement(void) {}
-extern "C" void asm_omega_world_model_update(void) {}
+inline void noteModeCall(const char* modeName) {
+    g_modeCallCount.fetch_add(1, std::memory_order_relaxed);
+    g_lastModeHash.store(fnv1a32(modeName), std::memory_order_relaxed);
+}
+} // namespace
 
-extern "C" void asm_mesh_crdt_delta(void) {}
-extern "C" void asm_mesh_get_stats(void) {}
-extern "C" void asm_mesh_dht_find_closest(void) {}
-extern "C" void asm_mesh_shutdown(void) {}
-extern "C" void asm_mesh_fedavg_aggregate(void) {}
-extern "C" void asm_mesh_crdt_merge(void) {}
-extern "C" void asm_mesh_dht_xor_distance(void) {}
-extern "C" void asm_mesh_init(void) {}
-extern "C" void asm_mesh_zkp_verify(void) {}
-extern "C" void asm_mesh_shard_hash(void) {}
-extern "C" void asm_mesh_quorum_vote(void) {}
-extern "C" void asm_mesh_topology_update(void) {}
-extern "C" void asm_mesh_zkp_generate(void) {}
-extern "C" void asm_mesh_topology_active_count(void) {}
-extern "C" void asm_mesh_shard_bitfield(void) {}
-extern "C" void asm_mesh_gossip_disseminate(void) {}
+extern "C" void InjectMode(void) { noteModeCall("InjectMode"); }
+extern "C" void DiffCovMode(void) { noteModeCall("DiffCovMode"); }
+extern "C" void SO_InitializeVulkan(void) { noteModeCall("SO_InitializeVulkan"); }
+extern "C" void IntelPTMode(void) { noteModeCall("IntelPTMode"); }
+extern "C" void AgentTraceMode(void) { noteModeCall("AgentTraceMode"); }
+extern "C" void DynTraceMode(void) { noteModeCall("DynTraceMode"); }
+extern "C" void CovFusionMode(void) { noteModeCall("CovFusionMode"); }
+extern "C" void AD_ProcessGGUF(void) { noteModeCall("AD_ProcessGGUF"); }
+extern "C" void SO_InitializeStreaming(void) { noteModeCall("SO_InitializeStreaming"); }
+extern "C" void SideloadMode(void) { noteModeCall("SideloadMode"); }
+extern "C" void SO_CreateComputePipelines(void) { noteModeCall("SO_CreateComputePipelines"); }
+extern "C" void PersistenceMode(void) { noteModeCall("PersistenceMode"); }
+extern "C" void SO_PrintStatistics(void) { noteModeCall("SO_PrintStatistics"); }
+extern "C" void SO_CreateMemoryArena(void) { noteModeCall("SO_CreateMemoryArena"); }
+extern "C" void SO_LoadExecFile(void) { noteModeCall("SO_LoadExecFile"); }
+extern "C" void BasicBlockCovMode(void) { noteModeCall("BasicBlockCovMode"); }
+extern "C" void SO_PrintMetrics(void) { noteModeCall("SO_PrintMetrics"); }
+extern "C" void SO_StartDEFLATEThreads(void) { noteModeCall("SO_StartDEFLATEThreads"); }
+extern "C" void StubGenMode(void) { noteModeCall("StubGenMode"); }
+extern "C" void TraceEngineMode(void) { noteModeCall("TraceEngineMode"); }
+extern "C" void CompileMode(void) { noteModeCall("CompileMode"); }
+extern "C" void GapFuzzMode(void) { noteModeCall("GapFuzzMode"); }
+extern "C" void EncryptMode(void) { noteModeCall("EncryptMode"); }
+extern "C" void SO_InitializePrefetchQueue(void) { noteModeCall("SO_InitializePrefetchQueue"); }
+extern "C" void SO_CreateThreadPool(void) { noteModeCall("SO_CreateThreadPool"); }
+extern "C" void EntropyMode(void) { noteModeCall("EntropyMode"); }
+extern "C" void AgenticMode(void) { noteModeCall("AgenticMode"); }
+extern "C" void UACBypassMode(void) { noteModeCall("UACBypassMode"); }
+extern "C" void AVScanMode(void) { noteModeCall("AVScanMode"); }
 
-extern "C" void asm_speciator_mutate(void) {}
-extern "C" void asm_speciator_shutdown(void) {}
-extern "C" void asm_speciator_gen_variant(void) {}
-extern "C" void asm_speciator_get_stats(void) {}
-extern "C" void asm_speciator_create_genome(void) {}
-extern "C" void asm_speciator_crossover(void) {}
-extern "C" void asm_speciator_speciate(void) {}
-extern "C" void asm_speciator_evaluate(void) {}
-extern "C" void asm_speciator_compete(void) {}
-extern "C" void asm_speciator_migrate(void) {}
-extern "C" void asm_speciator_init(void) {}
-extern "C" void asm_speciator_select(void) {}
+extern "C" void asm_watchdog_init(void) { noteModeCall("asm_watchdog_init"); }
+extern "C" void asm_watchdog_verify(void) { noteModeCall("asm_watchdog_verify"); }
+extern "C" void asm_watchdog_get_status(void) { noteModeCall("asm_watchdog_get_status"); }
+extern "C" void asm_watchdog_get_baseline(void) { noteModeCall("asm_watchdog_get_baseline"); }
+extern "C" void asm_watchdog_shutdown(void) { noteModeCall("asm_watchdog_shutdown"); }
 
-extern "C" void asm_neural_classify_intent(void) {}
-extern "C" void asm_neural_haptic_pulse(void) {}
-extern "C" void asm_neural_encode_command(void) {}
-extern "C" void asm_neural_acquire_eeg(void) {}
-extern "C" void asm_neural_adapt(void) {}
-extern "C" void asm_neural_fft_decompose(void) {}
-extern "C" void asm_neural_init(void) {}
-extern "C" void asm_neural_calibrate(void) {}
-extern "C" void asm_neural_detect_event(void) {}
-extern "C" void asm_neural_gen_phosphene(void) {}
-extern "C" void asm_neural_extract_csp(void) {}
-extern "C" void asm_neural_shutdown(void) {}
-extern "C" void asm_neural_get_stats(void) {}
+extern "C" void asm_omega_implement_generate(void) { noteModeCall("asm_omega_implement_generate"); }
+extern "C" void asm_omega_agent_step(void) { noteModeCall("asm_omega_agent_step"); }
+extern "C" void asm_omega_shutdown(void) { noteModeCall("asm_omega_shutdown"); }
+extern "C" void asm_omega_plan_decompose(void) { noteModeCall("asm_omega_plan_decompose"); }
+extern "C" void asm_omega_evolve_improve(void) { noteModeCall("asm_omega_evolve_improve"); }
+extern "C" void asm_omega_init(void) { noteModeCall("asm_omega_init"); }
+extern "C" void asm_omega_get_stats(void) { noteModeCall("asm_omega_get_stats"); }
 
-extern "C" void asm_hwsynth_est_resources(void) {}
-extern "C" void asm_hwsynth_predict_perf(void) {}
-extern "C" void asm_hwsynth_get_stats(void) {}
-extern "C" void asm_hwsynth_gen_gemm_spec(void) {}
-extern "C" void asm_hwsynth_gen_jtag_header(void) {}
-extern "C" void asm_hwsynth_analyze_memhier(void) {}
-extern "C" void asm_hwsynth_profile_dataflow(void) {}
-extern "C" void asm_hwsynth_shutdown(void) {}
-extern "C" void asm_hwsynth_init(void) {}
+extern "C" void asm_omega_verify_test(void) { noteModeCall("asm_omega_verify_test"); }
+extern "C" void asm_omega_architect_select(void) { noteModeCall("asm_omega_architect_select"); }
+extern "C" void asm_omega_agent_spawn(void) { noteModeCall("asm_omega_agent_spawn"); }
+extern "C" void asm_omega_observe_monitor(void) { noteModeCall("asm_omega_observe_monitor"); }
+extern "C" void asm_omega_deploy_distribute(void) { noteModeCall("asm_omega_deploy_distribute"); }
+extern "C" void asm_omega_execute_pipeline(void) { noteModeCall("asm_omega_execute_pipeline"); }
+extern "C" void asm_omega_ingest_requirement(void) { noteModeCall("asm_omega_ingest_requirement"); }
+extern "C" void asm_omega_world_model_update(void) { noteModeCall("asm_omega_world_model_update"); }
 
-extern "C" void asm_quadbuf_push_token(void) {}
-extern "C" void asm_spengine_init(void) {}
-extern "C" void asm_spengine_quant_switch_adaptive(void) {}
-extern "C" void asm_quadbuf_render_frame(void) {}
-extern "C" void asm_spengine_rollback(void) {}
-extern "C" void asm_spengine_register(void) {}
-extern "C" void asm_spengine_get_stats(void) {}
-extern "C" void asm_quadbuf_set_flags(void) {}
-extern "C" void asm_quadbuf_resize(void) {}
-extern "C" void asm_quadbuf_get_stats(void) {}
-extern "C" void asm_spengine_apply(void) {}
-extern "C" void asm_spengine_quant_switch(void) {}
-extern "C" void asm_quadbuf_init(void) {}
-extern "C" void asm_spengine_cpu_optimize(void) {}
+extern "C" void asm_mesh_crdt_delta(void) { noteModeCall("asm_mesh_crdt_delta"); }
+extern "C" void asm_mesh_get_stats(void) { noteModeCall("asm_mesh_get_stats"); }
+extern "C" void asm_mesh_dht_find_closest(void) { noteModeCall("asm_mesh_dht_find_closest"); }
+extern "C" void asm_mesh_shutdown(void) { noteModeCall("asm_mesh_shutdown"); }
+extern "C" void asm_mesh_fedavg_aggregate(void) { noteModeCall("asm_mesh_fedavg_aggregate"); }
+extern "C" void asm_mesh_crdt_merge(void) { noteModeCall("asm_mesh_crdt_merge"); }
+extern "C" void asm_mesh_dht_xor_distance(void) { noteModeCall("asm_mesh_dht_xor_distance"); }
+extern "C" void asm_mesh_init(void) { noteModeCall("asm_mesh_init"); }
+extern "C" void asm_mesh_zkp_verify(void) { noteModeCall("asm_mesh_zkp_verify"); }
+extern "C" void asm_mesh_shard_hash(void) { noteModeCall("asm_mesh_shard_hash"); }
+extern "C" void asm_mesh_quorum_vote(void) { noteModeCall("asm_mesh_quorum_vote"); }
+extern "C" void asm_mesh_topology_update(void) { noteModeCall("asm_mesh_topology_update"); }
+extern "C" void asm_mesh_zkp_generate(void) { noteModeCall("asm_mesh_zkp_generate"); }
+extern "C" void asm_mesh_topology_active_count(void) { noteModeCall("asm_mesh_topology_active_count"); }
+extern "C" void asm_mesh_shard_bitfield(void) { noteModeCall("asm_mesh_shard_bitfield"); }
+extern "C" void asm_mesh_gossip_disseminate(void) { noteModeCall("asm_mesh_gossip_disseminate"); }
+
+extern "C" void asm_speciator_mutate(void) { noteModeCall("asm_speciator_mutate"); }
+extern "C" void asm_speciator_shutdown(void) { noteModeCall("asm_speciator_shutdown"); }
+extern "C" void asm_speciator_gen_variant(void) { noteModeCall("asm_speciator_gen_variant"); }
+extern "C" void asm_speciator_get_stats(void) { noteModeCall("asm_speciator_get_stats"); }
+extern "C" void asm_speciator_create_genome(void) { noteModeCall("asm_speciator_create_genome"); }
+extern "C" void asm_speciator_crossover(void) { noteModeCall("asm_speciator_crossover"); }
+extern "C" void asm_speciator_speciate(void) { noteModeCall("asm_speciator_speciate"); }
+extern "C" void asm_speciator_evaluate(void) { noteModeCall("asm_speciator_evaluate"); }
+extern "C" void asm_speciator_compete(void) { noteModeCall("asm_speciator_compete"); }
+extern "C" void asm_speciator_migrate(void) { noteModeCall("asm_speciator_migrate"); }
+extern "C" void asm_speciator_init(void) { noteModeCall("asm_speciator_init"); }
+extern "C" void asm_speciator_select(void) { noteModeCall("asm_speciator_select"); }
+
+extern "C" void asm_neural_classify_intent(void) { noteModeCall("asm_neural_classify_intent"); }
+extern "C" void asm_neural_haptic_pulse(void) { noteModeCall("asm_neural_haptic_pulse"); }
+extern "C" void asm_neural_encode_command(void) { noteModeCall("asm_neural_encode_command"); }
+extern "C" void asm_neural_acquire_eeg(void) { noteModeCall("asm_neural_acquire_eeg"); }
+extern "C" void asm_neural_adapt(void) { noteModeCall("asm_neural_adapt"); }
+extern "C" void asm_neural_fft_decompose(void) { noteModeCall("asm_neural_fft_decompose"); }
+extern "C" void asm_neural_init(void) { noteModeCall("asm_neural_init"); }
+extern "C" void asm_neural_calibrate(void) { noteModeCall("asm_neural_calibrate"); }
+extern "C" void asm_neural_detect_event(void) { noteModeCall("asm_neural_detect_event"); }
+extern "C" void asm_neural_gen_phosphene(void) { noteModeCall("asm_neural_gen_phosphene"); }
+extern "C" void asm_neural_extract_csp(void) { noteModeCall("asm_neural_extract_csp"); }
+extern "C" void asm_neural_shutdown(void) { noteModeCall("asm_neural_shutdown"); }
+extern "C" void asm_neural_get_stats(void) { noteModeCall("asm_neural_get_stats"); }
+
+extern "C" void asm_hwsynth_est_resources(void) { noteModeCall("asm_hwsynth_est_resources"); }
+extern "C" void asm_hwsynth_predict_perf(void) { noteModeCall("asm_hwsynth_predict_perf"); }
+extern "C" void asm_hwsynth_get_stats(void) { noteModeCall("asm_hwsynth_get_stats"); }
+extern "C" void asm_hwsynth_gen_gemm_spec(void) { noteModeCall("asm_hwsynth_gen_gemm_spec"); }
+extern "C" void asm_hwsynth_gen_jtag_header(void) { noteModeCall("asm_hwsynth_gen_jtag_header"); }
+extern "C" void asm_hwsynth_analyze_memhier(void) { noteModeCall("asm_hwsynth_analyze_memhier"); }
+extern "C" void asm_hwsynth_profile_dataflow(void) { noteModeCall("asm_hwsynth_profile_dataflow"); }
+extern "C" void asm_hwsynth_shutdown(void) { noteModeCall("asm_hwsynth_shutdown"); }
+extern "C" void asm_hwsynth_init(void) { noteModeCall("asm_hwsynth_init"); }
+
+extern "C" void asm_quadbuf_push_token(void) { noteModeCall("asm_quadbuf_push_token"); }
+extern "C" void asm_spengine_init(void) { noteModeCall("asm_spengine_init"); }
+extern "C" void asm_spengine_quant_switch_adaptive(void) { noteModeCall("asm_spengine_quant_switch_adaptive"); }
+extern "C" void asm_quadbuf_render_frame(void) { noteModeCall("asm_quadbuf_render_frame"); }
+extern "C" void asm_spengine_rollback(void) { noteModeCall("asm_spengine_rollback"); }
+extern "C" void asm_spengine_register(void) { noteModeCall("asm_spengine_register"); }
+extern "C" void asm_spengine_get_stats(void) { noteModeCall("asm_spengine_get_stats"); }
+extern "C" void asm_quadbuf_set_flags(void) { noteModeCall("asm_quadbuf_set_flags"); }
+extern "C" void asm_quadbuf_resize(void) { noteModeCall("asm_quadbuf_resize"); }
+extern "C" void asm_quadbuf_get_stats(void) { noteModeCall("asm_quadbuf_get_stats"); }
+extern "C" void asm_spengine_apply(void) { noteModeCall("asm_spengine_apply"); }
+extern "C" void asm_spengine_quant_switch(void) { noteModeCall("asm_spengine_quant_switch"); }
+extern "C" void asm_quadbuf_init(void) { noteModeCall("asm_quadbuf_init"); }
+extern "C" void asm_spengine_cpu_optimize(void) { noteModeCall("asm_spengine_cpu_optimize"); }

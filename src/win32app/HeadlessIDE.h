@@ -48,7 +48,7 @@
 #include "Win32IDE_AgenticBridge.h"
 #include "Win32IDE_Autonomy.h"
 #include "Win32IDE_SubAgent.h"
-#include "../core/multi_response_engine.h"
+#include "multi_response_engine.h"
 #include "../agentic_engine.h"
 #include "../gguf_loader.h"
 #include "../streaming_gguf_loader.h"
