@@ -2991,7 +2991,7 @@ if(WIN32)
         src/win32app/Win32IDE_SearchPanel.cpp
         src/win32app/Win32IDE_FuzzySearch.cpp
         src/win32app/Win32IDE_CallStackSymbols.cpp
-        src/win32app/multi_file_search_stub.cpp
+        src/win32app/multi_file_search_compat.cpp
 
         # ═══════════════════════════════════════════════════════════════
         # Compile-Debt Resolved: IDE Cosmetics & Intelligence Layer
@@ -3041,18 +3041,18 @@ if(WIN32)
         # Benchmarks (real implementation; replaces earlier IDE stubs)
         src/benchmark_menu_widget.cpp
         src/benchmark_runner.cpp
-        # Legacy benchmark stub compatibility units (kept for parity wiring/docs)
-        src/win32app/benchmark_menu_stub.cpp
-        src/win32app/benchmark_runner_stub.cpp
+        # Legacy benchmark compatibility units (kept for parity wiring/docs)
+        src/win32app/benchmark_menu_compat.cpp
+        src/win32app/benchmark_runner_compat.cpp
         src/win32app/feature_registry_panel.cpp
         src/ui/monaco_settings_dialog.cpp
         src/thermal/RAWRXD_ThermalDashboard.cpp
         src/win32app/VSCodeMarketplaceAPI.cpp
-        # Multi-file search (real implementation; replaces earlier IDE stub)
+        # Multi-file search (real implementation; replaces earlier IDE compatibility shim)
         src/multi_file_search.cpp
         # Legacy support unit used by older feature-manifest wiring
-        src/win32app/digestion_engine_stub.cpp
-        src/win32app/Win32IDE_logMessage_stub.cpp
+        src/win32app/digestion_engine_compat.cpp
+        src/win32app/Win32IDE_logMessage_compat.cpp
         # Completed modules previously documented as shipped
         src/core/license_manager_panel.cpp
         src/telemetry/logger.cpp
@@ -3084,11 +3084,11 @@ if(WIN32)
         src/core/mesh_brain_asm_stubs.cpp
         src/core/monaco_core_stubs.cpp
         src/core/win32_ide_link_stubs.cpp
-        src/win32app/benchmark_menu_stub.cpp
-        src/win32app/benchmark_runner_stub.cpp
-        src/win32app/multi_file_search_stub.cpp
-        src/win32app/Win32IDE_logMessage_stub.cpp
-        src/win32app/digestion_engine_stub.cpp
+        src/win32app/benchmark_menu_compat.cpp
+        src/win32app/benchmark_runner_compat.cpp
+        src/win32app/multi_file_search_compat.cpp
+        src/win32app/Win32IDE_logMessage_compat.cpp
+        src/win32app/digestion_engine_compat.cpp
     )
 
     # DbgEng COM interfaces used by the native debugger engine are MSVC/SDK-specific.
@@ -3446,7 +3446,7 @@ if(WIN32)
     # Tier2/Tier5 cosmetics or in Win32IDE.cpp.  Keep the consolidation copies.
     list(REMOVE_ITEM WIN32IDE_SOURCES
         src/win32app/Win32IDE_CallStackSymbols.cpp       # dups initCallStackSymbols / handleCallStackCommand  (Tier5Cosmetics)
-        src/win32app/multi_file_search_stub.cpp          # dups MultiFileSearchWidget ctor/dtor  (multi_file_search.cpp)
+        src/win32app/multi_file_search_compat.cpp        # dups MultiFileSearchWidget ctor/dtor  (multi_file_search.cpp)
     )
 
     # v14.7.6 Batch 2 parity files — compilation fixes applied, re-enabled
