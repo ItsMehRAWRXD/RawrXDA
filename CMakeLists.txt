@@ -103,12 +103,24 @@ if(MSVC)
     endforeach()
 endif()
 
+# Resolve PowerShell executable for cross-platform Windows builds.
+if(WIN32)
+    find_program(RAWRXD_POWERSHELL_CMD NAMES pwsh powershell)
+    if(RAWRXD_POWERSHELL_CMD)
+        set(RAWRXD_HAS_POWERSHELL ON)
+        message(STATUS "[Tooling] Using PowerShell executable: ${RAWRXD_POWERSHELL_CMD}")
+    else()
+        set(RAWRXD_HAS_POWERSHELL OFF)
+        message(WARNING "[Tooling] PowerShell executable not found; PowerShell-backed validation targets will be skipped.")
+    endif()
+endif()
+
 # ============================================================================
 # Scaffold/Placeholder Enforcement Target
 # ============================================================================
-if(WIN32)
+if(WIN32 AND RAWRXD_HAS_POWERSHELL)
     add_custom_target(enforce_no_scaffold
-        COMMAND powershell -NoProfile -ExecutionPolicy Bypass
+        COMMAND "${RAWRXD_POWERSHELL_CMD}" -NoProfile -ExecutionPolicy Bypass
                 -File ${CMAKE_SOURCE_DIR}/tools/enforce_no_scaffold.ps1
                 -Root ${CMAKE_SOURCE_DIR}
                 -FailOnMatch
@@ -1025,6 +1037,12 @@ if(RAWR_REPLACE_SWARM_LICENSE_FALLBACKS)
 endif()
 
 # Build target-scoped SSOT ownership partition for RawrEngine only.
+if(NOT RAWR_HAS_MASM)
+    list(REMOVE_ITEM SOURCES
+        src/asm/quantum_beaconism_backend.asm
+    )
+endif()
+
 set(RAWR_ENGINE_SOURCES ${SOURCES})
 list(REMOVE_ITEM RAWR_ENGINE_SOURCES
     src/core/ssot_validation.cpp
@@ -1122,17 +1140,17 @@ message(STATUS "[SSOT Ownership] RawrEngine provider=${RAWR_SSOT_PROVIDER_UPPER}
 # =============================================================================
 include(cmake/AutoFeatureRegistry.cmake)
 
-if(WIN32)
+if(WIN32 AND RAWRXD_HAS_POWERSHELL)
     add_custom_target(regen-ssot-beacons
-        COMMAND powershell -ExecutionPolicy Bypass -File ${CMAKE_SOURCE_DIR}/tools/sync_ssot_beacon_symbols.ps1 -RepoRoot ${CMAKE_SOURCE_DIR}
-        COMMAND powershell -ExecutionPolicy Bypass -File ${CMAKE_SOURCE_DIR}/tools/generate_ssot_beacon_table.ps1 -RepoRoot ${CMAKE_SOURCE_DIR}
+        COMMAND "${RAWRXD_POWERSHELL_CMD}" -ExecutionPolicy Bypass -File ${CMAKE_SOURCE_DIR}/tools/sync_ssot_beacon_symbols.ps1 -RepoRoot ${CMAKE_SOURCE_DIR}
+        COMMAND "${RAWRXD_POWERSHELL_CMD}" -ExecutionPolicy Bypass -File ${CMAKE_SOURCE_DIR}/tools/generate_ssot_beacon_table.ps1 -RepoRoot ${CMAKE_SOURCE_DIR}
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         COMMENT "Sync + regenerate SSOT beacon ownership artifacts"
         VERBATIM
     )
 
     add_custom_target(verify-ssot-ext-ownership
-        COMMAND powershell -ExecutionPolicy Bypass -File ${CMAKE_SOURCE_DIR}/tools/verify_ssot_ext_ownership.ps1 -RepoRoot ${CMAKE_SOURCE_DIR}
+        COMMAND "${RAWRXD_POWERSHELL_CMD}" -ExecutionPolicy Bypass -File ${CMAKE_SOURCE_DIR}/tools/verify_ssot_ext_ownership.ps1 -RepoRoot ${CMAKE_SOURCE_DIR}
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         COMMENT "Verify SSOT EXT ownership artifacts are consistent"
         VERBATIM
@@ -1147,7 +1165,12 @@ add_subdirectory(src/reverse_engineering)
 add_executable(RawrEngine ${RAWR_ENGINE_SOURCES} ${ASM_KERNEL_SOURCES})
 
 if(WIN32)
-    add_dependencies(RawrEngine regen-ssot-beacons verify-ssot-ext-ownership)
+    if(TARGET regen-ssot-beacons)
+        add_dependencies(RawrEngine regen-ssot-beacons)
+    endif()
+    if(TARGET verify-ssot-ext-ownership)
+        add_dependencies(RawrEngine verify-ssot-ext-ownership)
+    endif()
 endif()
 
 # Link RE library into RawrEngine
@@ -1254,7 +1277,9 @@ list(REMOVE_DUPLICATES GOLD_UNDERSCORE_SOURCES)
 add_executable(RawrXD_Gold ${GOLD_UNDERSCORE_SOURCES} ${ASM_KERNEL_SOURCES})
 
 if(WIN32)
-    add_dependencies(RawrXD_Gold regen-ssot-beacons)
+    if(TARGET regen-ssot-beacons)
+        add_dependencies(RawrXD_Gold regen-ssot-beacons)
+    endif()
 endif()
 
 target_link_libraries(RawrXD_Gold PRIVATE RawrXD-RE-Library)
@@ -2144,15 +2169,21 @@ endif()
 # Vulkan SDK (optional — GPU compute acceleration)
 # =============================================================================
 find_package(Vulkan QUIET)
+set(RAWR_VULKAN_HEADERS_FOUND OFF)
+set(RAWR_VULKAN_INCLUDE_DIRS "")
+set(RAWR_VULKAN_IMPORT_LIB "")
+set(RAWR_VULKAN_LINK_MODE "none")
+
 if(Vulkan_FOUND)
-    message(STATUS "[Vulkan] Found SDK: ${Vulkan_INCLUDE_DIRS}")
-    target_include_directories(RawrEngine PRIVATE ${Vulkan_INCLUDE_DIRS})
-    target_link_libraries(RawrEngine PRIVATE Vulkan::Vulkan)
-    target_compile_definitions(RawrEngine PRIVATE RAWR_HAS_VULKAN=1)
-    # Gold target
-    target_include_directories(RawrXD_Gold PRIVATE ${Vulkan_INCLUDE_DIRS})
-    target_link_libraries(RawrXD_Gold PRIVATE Vulkan::Vulkan)
-    target_compile_definitions(RawrXD_Gold PRIVATE RAWR_HAS_VULKAN=1)
+    message(STATUS "[Vulkan] Found SDK package: ${Vulkan_INCLUDE_DIRS}")
+    set(RAWR_VULKAN_HEADERS_FOUND ON)
+    set(RAWR_VULKAN_INCLUDE_DIRS ${Vulkan_INCLUDE_DIRS})
+    if(MINGW)
+        set(RAWR_VULKAN_LINK_MODE "mingw-importlib")
+        message(STATUS "[Vulkan] MinGW lane: using generated vulkan-1 import library")
+    else()
+        set(RAWR_VULKAN_LINK_MODE "package")
+    endif()
 else()
     # Try manual path — D: first, then C:
     file(GLOB _VK_SDK_DIRS "D:/VulkanSDK/1.*")
@@ -2163,20 +2194,81 @@ else()
         list(SORT _VK_SDK_DIRS)
         list(GET _VK_SDK_DIRS -1 _VK_SDK_DIR)
         message(STATUS "[Vulkan] Manual SDK: ${_VK_SDK_DIR}")
-        target_include_directories(RawrEngine PRIVATE "${_VK_SDK_DIR}/Include")
-        target_link_directories(RawrEngine PRIVATE "${_VK_SDK_DIR}/Lib")
-        target_link_libraries(RawrEngine PRIVATE vulkan-1)
-        target_compile_definitions(RawrEngine PRIVATE RAWR_HAS_VULKAN=1)
-        # Gold target
-        target_include_directories(RawrXD_Gold PRIVATE "${_VK_SDK_DIR}/Include")
-        target_link_directories(RawrXD_Gold PRIVATE "${_VK_SDK_DIR}/Lib")
-        target_link_libraries(RawrXD_Gold PRIVATE vulkan-1)
-        target_compile_definitions(RawrXD_Gold PRIVATE RAWR_HAS_VULKAN=1)
+        set(RAWR_VULKAN_HEADERS_FOUND ON)
+        set(RAWR_VULKAN_INCLUDE_DIRS "${_VK_SDK_DIR}/Include")
+        set(RAWR_VULKAN_LINK_MODE "sdk")
     else()
-        message(STATUS "[Vulkan] SDK not found — GPU compute uses CPU fallback")
-        target_compile_definitions(RawrEngine PRIVATE RAWR_HAS_VULKAN=0)
-        target_compile_definitions(RawrXD_Gold PRIVATE RAWR_HAS_VULKAN=0)
+        # Linux/MinGW fallback: use vendored headers from reconstructed tree.
+        if(EXISTS "${CMAKE_SOURCE_DIR}/third_party/vulkan_headers/vulkan/vulkan.h")
+            set(RAWR_VULKAN_FALLBACK_INCLUDE "${CMAKE_SOURCE_DIR}/third_party/vulkan_headers")
+        else()
+            find_path(RAWR_VULKAN_FALLBACK_INCLUDE
+                NAMES vulkan/vulkan.h
+                PATHS
+                    "${CMAKE_SOURCE_DIR}/reconstructed/RawrXD-production-lazy-init/include"
+                    "${CMAKE_SOURCE_DIR}/reconstructed/RawrXD-production-lazy-init/RawrXD-ModelLoader/include"
+            )
+        endif()
+        if(RAWR_VULKAN_FALLBACK_INCLUDE)
+            set(_RAWR_VK_HEADER_FILE "${RAWR_VULKAN_FALLBACK_INCLUDE}/vulkan/vulkan.h")
+            file(STRINGS "${_RAWR_VK_HEADER_FILE}" _RAWR_VK_STUB_MARKER REGEX "RAWRXD_VULKAN_STUB")
+            if(_RAWR_VK_STUB_MARKER)
+                message(STATUS "[Vulkan] Ignoring stub Vulkan header: ${_RAWR_VK_HEADER_FILE}")
+                set(RAWR_VULKAN_FALLBACK_INCLUDE "")
+            endif()
+        endif()
+        if(RAWR_VULKAN_FALLBACK_INCLUDE)
+            set(RAWR_VULKAN_HEADERS_FOUND ON)
+            set(RAWR_VULKAN_INCLUDE_DIRS "${RAWR_VULKAN_FALLBACK_INCLUDE}")
+            set(RAWR_VULKAN_LINK_MODE "mingw-importlib")
+            message(STATUS "[Vulkan] Using fallback headers: ${RAWR_VULKAN_FALLBACK_INCLUDE}")
+        else()
+            message(STATUS "[Vulkan] Headers not found — GPU compute uses CPU fallback")
+        endif()
     endif()
+endif()
+
+if(RAWR_VULKAN_HEADERS_FOUND)
+    target_include_directories(RawrEngine PRIVATE ${RAWR_VULKAN_INCLUDE_DIRS})
+    target_include_directories(RawrXD_Gold PRIVATE ${RAWR_VULKAN_INCLUDE_DIRS})
+    target_compile_definitions(RawrEngine PRIVATE RAWR_HAS_VULKAN=1)
+    target_compile_definitions(RawrXD_Gold PRIVATE RAWR_HAS_VULKAN=1)
+
+    if(RAWR_VULKAN_LINK_MODE STREQUAL "package")
+        target_link_libraries(RawrEngine PRIVATE Vulkan::Vulkan)
+        target_link_libraries(RawrXD_Gold PRIVATE Vulkan::Vulkan)
+    elseif(RAWR_VULKAN_LINK_MODE STREQUAL "sdk")
+        target_link_directories(RawrEngine PRIVATE "${_VK_SDK_DIR}/Lib")
+        target_link_directories(RawrXD_Gold PRIVATE "${_VK_SDK_DIR}/Lib")
+        target_link_libraries(RawrEngine PRIVATE vulkan-1)
+        target_link_libraries(RawrXD_Gold PRIVATE vulkan-1)
+    elseif(RAWR_VULKAN_LINK_MODE STREQUAL "mingw-importlib")
+        if(MINGW)
+            set(RAWR_VULKAN_DEF_FILE "${CMAKE_SOURCE_DIR}/src/vulkan/vulkan-1.def")
+            set(RAWR_VULKAN_IMPORT_LIB "${CMAKE_BINARY_DIR}/vulkan/libvulkan-1.a")
+            add_custom_command(
+                OUTPUT "${RAWR_VULKAN_IMPORT_LIB}"
+                COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/vulkan"
+                COMMAND x86_64-w64-mingw32-dlltool -d "${RAWR_VULKAN_DEF_FILE}" -D vulkan-1.dll -l "${RAWR_VULKAN_IMPORT_LIB}" -k
+                DEPENDS "${RAWR_VULKAN_DEF_FILE}"
+                COMMENT "[Vulkan] Generating MinGW import lib from DEF"
+                VERBATIM
+            )
+            add_custom_target(rawr_vulkan_importlib DEPENDS "${RAWR_VULKAN_IMPORT_LIB}")
+            add_dependencies(RawrEngine rawr_vulkan_importlib)
+            add_dependencies(RawrXD_Gold rawr_vulkan_importlib)
+            target_link_libraries(RawrEngine PRIVATE "${RAWR_VULKAN_IMPORT_LIB}")
+            target_link_libraries(RawrXD_Gold PRIVATE "${RAWR_VULKAN_IMPORT_LIB}")
+        else()
+            message(WARNING "[Vulkan] Fallback headers found but import library generation is only configured for MinGW.")
+            target_compile_definitions(RawrEngine PRIVATE RAWR_HAS_VULKAN=0)
+            target_compile_definitions(RawrXD_Gold PRIVATE RAWR_HAS_VULKAN=0)
+            set(RAWR_VULKAN_HEADERS_FOUND OFF)
+        endif()
+    endif()
+else()
+    target_compile_definitions(RawrEngine PRIVATE RAWR_HAS_VULKAN=0)
+    target_compile_definitions(RawrXD_Gold PRIVATE RAWR_HAS_VULKAN=0)
 endif()
 
 # RawrCodex.asm uses ADDR32 relocations — require /LARGEADDRESSAWARE:NO
@@ -3646,14 +3738,21 @@ if(WIN32)
     endif()
     
     # Vulkan SDK for Win32IDE
-    if(Vulkan_FOUND)
-        target_include_directories(RawrXD-Win32IDE PRIVATE ${Vulkan_INCLUDE_DIRS})
-        target_link_libraries(RawrXD-Win32IDE PRIVATE Vulkan::Vulkan)
-        target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWR_HAS_VULKAN=1)
-    elseif(_VK_SDK_DIRS)
-        target_include_directories(RawrXD-Win32IDE PRIVATE "${_VK_SDK_DIR}/Include")
-        target_link_directories(RawrXD-Win32IDE PRIVATE "${_VK_SDK_DIR}/Lib")
-        target_link_libraries(RawrXD-Win32IDE PRIVATE vulkan-1)
+    if(RAWR_VULKAN_HEADERS_FOUND)
+        target_include_directories(RawrXD-Win32IDE PRIVATE ${RAWR_VULKAN_INCLUDE_DIRS})
+        if(RAWR_VULKAN_LINK_MODE STREQUAL "package")
+            target_link_libraries(RawrXD-Win32IDE PRIVATE Vulkan::Vulkan)
+        elseif(RAWR_VULKAN_LINK_MODE STREQUAL "sdk")
+            target_link_directories(RawrXD-Win32IDE PRIVATE "${_VK_SDK_DIR}/Lib")
+            target_link_libraries(RawrXD-Win32IDE PRIVATE vulkan-1)
+        elseif(RAWR_VULKAN_LINK_MODE STREQUAL "mingw-importlib")
+            if(TARGET rawr_vulkan_importlib)
+                add_dependencies(RawrXD-Win32IDE rawr_vulkan_importlib)
+            endif()
+            if(RAWR_VULKAN_IMPORT_LIB)
+                target_link_libraries(RawrXD-Win32IDE PRIVATE "${RAWR_VULKAN_IMPORT_LIB}")
+            endif()
+        endif()
         target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWR_HAS_VULKAN=1)
     else()
         target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWR_HAS_VULKAN=0)
@@ -3854,15 +3953,23 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/core/missing_handler_stubs.cpp")
         ${CMAKE_SOURCE_DIR}/src/core
     )
 
-    add_custom_target(ssot_stub_lane_guard
-        COMMAND powershell -NoProfile -ExecutionPolicy Bypass
-            -File ${CMAKE_SOURCE_DIR}/tools/verify_stub_lane_handler_ownership.ps1
-            -RepoRoot ${CMAKE_SOURCE_DIR}
-            -BuildDir ${CMAKE_BINARY_DIR}
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        COMMENT "[CI Gate] Verifying SSOT stub-lane handler ownership"
-        VERBATIM
-    )
+    if(RAWRXD_HAS_POWERSHELL)
+        add_custom_target(ssot_stub_lane_guard
+            COMMAND "${RAWRXD_POWERSHELL_CMD}" -NoProfile -ExecutionPolicy Bypass
+                -File ${CMAKE_SOURCE_DIR}/tools/verify_stub_lane_handler_ownership.ps1
+                -RepoRoot ${CMAKE_SOURCE_DIR}
+                -BuildDir ${CMAKE_BINARY_DIR}
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            COMMENT "[CI Gate] Verifying SSOT stub-lane handler ownership"
+            VERBATIM
+        )
+    else()
+        add_custom_target(ssot_stub_lane_guard
+            COMMAND ${CMAKE_COMMAND} -E cmake_echo_color --yellow "[CI Gate] PowerShell unavailable; skipping SSOT stub-lane guard script."
+            COMMENT "[CI Gate] Skipping SSOT stub-lane guard (PowerShell unavailable)"
+            VERBATIM
+        )
+    endif()
     add_dependencies(ssot_stub_lane_guard ssot_stub_lane_objs)
 else()
     message(STATUS "[SSOT] missing_handler_stubs.cpp absent; stub lane guard disabled.")

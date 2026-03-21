@@ -154,10 +154,19 @@ public:
 class ActivationPruner {
 public:
     struct PruneConfig {
-        float magnitude_threshold = 0.01f;   // Prune values < threshold
-        float sparsity_target = 0.9f;        // Target 90% sparsity
-        bool use_entropy = true;             // Use entropy weighting
-        bool use_gradient = false;           // Use gradient importance (requires backprop)
+        float magnitude_threshold;            // Prune values < threshold
+        float sparsity_target;               // Target sparsity ratio
+        bool use_entropy;                    // Use entropy weighting
+        bool use_gradient;                   // Use gradient importance (requires backprop)
+
+        constexpr PruneConfig(float magnitudeThreshold = 0.01f,
+                              float sparsityTarget = 0.9f,
+                              bool useEntropy = true,
+                              bool useGradient = false)
+            : magnitude_threshold(magnitudeThreshold),
+              sparsity_target(sparsityTarget),
+              use_entropy(useEntropy),
+              use_gradient(useGradient) {}
     };
 
     struct SparseActivation {
@@ -176,7 +185,7 @@ public:
      * 4. Store only values + indices
      */
     static SparseActivation prune(const float* activation, uint32_t numel, 
-                                  const PruneConfig& cfg = {}) {
+                                  PruneConfig cfg = PruneConfig{}) {
         SparseActivation result;
         result.total_size = numel;
 
@@ -445,35 +454,35 @@ enum class CompressionTier {
 inline ActivationPruner::PruneConfig getCompressionConfig(CompressionTier tier) {
     switch (tier) {
         case CompressionTier::TIER_AGGRESSIVE:
-            return {
-                .magnitude_threshold = 0.001f,  // Keep 99.5%
-                .sparsity_target = 0.70f,       // 70% sparse
-                .use_entropy = true,
-                .use_gradient = false
+            return ActivationPruner::PruneConfig{
+                0.001f,  // Keep 99.5%
+                0.70f,   // 70% sparse
+                true,
+                false
             };
         case CompressionTier::TIER_BALANCED:
-            return {
-                .magnitude_threshold = 0.005f,  // Keep 98%
-                .sparsity_target = 0.55f,       // 55% sparse
-                .use_entropy = true,
-                .use_gradient = false
+            return ActivationPruner::PruneConfig{
+                0.005f,  // Keep 98%
+                0.55f,   // 55% sparse
+                true,
+                false
             };
         case CompressionTier::TIER_FAST:
-            return {
-                .magnitude_threshold = 0.01f,   // Keep 95%
-                .sparsity_target = 0.35f,       // 35% sparse
-                .use_entropy = false,
-                .use_gradient = false
+            return ActivationPruner::PruneConfig{
+                0.01f,   // Keep 95%
+                0.35f,   // 35% sparse
+                false,
+                false
             };
         case CompressionTier::TIER_ULTRA_FAST:
-            return {
-                .magnitude_threshold = 0.05f,   // Keep 80%
-                .sparsity_target = 0.20f,       // 20% sparse
-                .use_entropy = false,
-                .use_gradient = false
+            return ActivationPruner::PruneConfig{
+                0.05f,   // Keep 80%
+                0.20f,   // 20% sparse
+                false,
+                false
             };
     }
-    return {};
+    return ActivationPruner::PruneConfig{};
 }
 
 } // namespace inference

@@ -14,6 +14,8 @@
 // ============================================================================
 
 #pragma once
+#ifndef RAWRXD_TELEMETRY_EXPORTS_H
+#define RAWRXD_TELEMETRY_EXPORTS_H
 
 #include <cstdint>
 
@@ -320,3 +322,5 @@ private:
 #else
 // C-only: nothing else needed
 #endif // __cplusplus
+
+#endif // RAWRXD_TELEMETRY_EXPORTS_H

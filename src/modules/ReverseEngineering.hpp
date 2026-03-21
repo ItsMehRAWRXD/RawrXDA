@@ -135,13 +135,19 @@ public:
 class NativeCompiler {
 public:
     struct CompileOptions {
-        std::string targetArch = "x64";
-        std::string optimization = "O2";
-        bool generateDebugInfo = false;
-        bool enableIntrinsics = true;
+        std::string targetArch;
+        std::string optimization;
+        bool generateDebugInfo;
+        bool enableIntrinsics;
         std::vector<std::string> includePaths;
         std::vector<std::string> libraryPaths;
         std::vector<std::string> defines;
+
+        CompileOptions()
+            : targetArch("x64"),
+              optimization("O2"),
+              generateDebugInfo(false),
+              enableIntrinsics(true) {}
     };
 
     struct CompileResult {
@@ -153,10 +159,10 @@ public:
     };
 
     // Compile C++ to machine code (JIT-style)
-    static CompileResult CompileToNative(const std::string& sourceCode, const CompileOptions& options = {});
+    static CompileResult CompileToNative(const std::string& sourceCode, CompileOptions options = CompileOptions{});
     
     // Inline assembly compilation
-    static CompileResult CompileAssembly(const std::string& assembly, const CompileOptions& options = {});
+    static CompileResult CompileAssembly(const std::string& assembly, CompileOptions options = CompileOptions{});
     
     // Patch existing binary
     static bool PatchBinary(const std::string& filePath, uint64_t offset, const std::vector<uint8_t>& newCode);

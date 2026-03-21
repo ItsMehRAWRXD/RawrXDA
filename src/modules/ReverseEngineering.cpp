@@ -539,7 +539,7 @@ std::string RECodex::AnalyzeWithAI(const std::string& assembly, const std::strin
 // ===============================================================
 
 NativeCompiler::CompileResult NativeCompiler::CompileToNative(
-    const std::string& sourceCode, const CompileOptions& options) {
+    const std::string& sourceCode, CompileOptions options) {
     
     CompileResult result;
     result.success = false;
@@ -570,7 +570,7 @@ NativeCompiler::CompileResult NativeCompiler::CompileToNative(
 }
 
 NativeCompiler::CompileResult NativeCompiler::CompileAssembly(
-    const std::string& assembly, const CompileOptions& options) {
+    const std::string& assembly, CompileOptions options) {
     
     CompileResult result;
     result.success = false;
