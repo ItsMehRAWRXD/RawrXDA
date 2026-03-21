@@ -1,11 +1,234 @@
 // Minimal link shims for RawrEngine / Gold / InferenceEngine.
 // These are no-op fallbacks to satisfy references after stub purge.
-#include <cstdint>
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+
+#include <array>
+#include <chrono>
 #include <cstddef>
+#include <cstdint>
 #include <cstring>
+#include <mutex>
 #include <string>
 #include <vector>
 #include "../agentic/RobustOllamaParser.h"
+
+namespace {
+
+constexpr uint32_t kPerfSlotCount = 64U;
+constexpr uint32_t kPerfHistogramBuckets = 8U;
+constexpr uint32_t kWatchdogStatusUninitialized = 0xFFFFFFFFU;
+constexpr uint32_t kWatchdogStatusOk = 0U;
+constexpr uint32_t kWatchdogStatusTampered = 1U;
+constexpr uint32_t kWatchdogStatusNoTextSection = 3U;
+
+constexpr uint32_t kCamAuthMagic = 0x324D4352U;  // "RCM2"
+constexpr uint32_t kCamAuthVersion = 1U;
+constexpr uint32_t kCamAuthNonceSize = 16U;
+constexpr uint32_t kCamAuthMacSize = 32U;
+constexpr uint32_t kCamAuthHeaderSize = 8U + kCamAuthNonceSize + kCamAuthMacSize;
+
+constexpr std::array<uint64_t, kPerfHistogramBuckets> kPerfBucketBounds = {
+    256ULL, 1024ULL, 4096ULL, 16384ULL, 65536ULL, 262144ULL, 1048576ULL, UINT64_MAX
+};
+
+struct alignas(64) PerfSlotDataShim {
+    uint64_t count;
+    uint64_t totalCycles;
+    uint64_t minCycles;
+    uint64_t maxCycles;
+    uint64_t buckets[kPerfHistogramBuckets];
+    uint64_t lastCycles;
+    uint32_t flags;
+    uint32_t reserved;
+    uint64_t reserved2;
+    uint64_t reserved3;
+};
+static_assert(sizeof(PerfSlotDataShim) == 128, "PerfSlotDataShim must remain 128 bytes");
+
+struct WatchdogStatusShim {
+    uint32_t status;
+    uint32_t reserved;
+    uint64_t textBase;
+    uint64_t textSize;
+    uint64_t verifyCount;
+    uint64_t tamperCount;
+    uint64_t lastVerifyTick;
+};
+static_assert(sizeof(WatchdogStatusShim) == 48, "WatchdogStatusShim must remain 48 bytes");
+
+std::array<PerfSlotDataShim, kPerfSlotCount> g_perfSlots{};
+std::mutex g_perfMutex;
+
+std::mutex g_watchdogMutex;
+WatchdogStatusShim g_watchdogStatus{
+    kWatchdogStatusUninitialized, 0, 0, 0, 0, 0, 0
+};
+std::array<uint8_t, 32> g_watchdogBaseline{};
+bool g_watchdogInitialized = false;
+
+uint64_t perfNowTicks() {
+    const auto now = std::chrono::steady_clock::now().time_since_epoch();
+    return static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::nanoseconds>(now).count());
+}
+
+uint32_t perfBucketIndex(uint64_t delta) {
+    for (uint32_t i = 0; i < kPerfHistogramBuckets; ++i) {
+        if (delta <= kPerfBucketBounds[i]) {
+            return i;
+        }
+    }
+    return kPerfHistogramBuckets - 1U;
+}
+
+void perfRecord(uint32_t slotIndex, uint64_t delta) {
+    PerfSlotDataShim& slot = g_perfSlots[slotIndex];
+    slot.count += 1ULL;
+    slot.totalCycles += delta;
+    if (slot.count == 1ULL) {
+        slot.minCycles = delta;
+        slot.maxCycles = delta;
+    } else {
+        if (delta < slot.minCycles) {
+            slot.minCycles = delta;
+        }
+        if (delta > slot.maxCycles) {
+            slot.maxCycles = delta;
+        }
+    }
+    slot.buckets[perfBucketIndex(delta)] += 1ULL;
+    slot.lastCycles = delta;
+}
+
+uint64_t fnv1a64(const uint8_t* data, size_t size, uint64_t seed) {
+    uint64_t hash = seed;
+    for (size_t i = 0; i < size; ++i) {
+        hash ^= static_cast<uint64_t>(data[i]);
+        hash *= 1099511628211ULL;
+    }
+    return hash;
+}
+
+void expandDigest32(const uint8_t* data, size_t size, std::array<uint8_t, 32>& out) {
+    const uint64_t h0 = fnv1a64(data, size, 1469598103934665603ULL);
+    const uint64_t h1 = fnv1a64(data, size, 1099511628211ULL ^ 0x9E3779B97F4A7C15ULL);
+    const uint64_t h2 = fnv1a64(data, size, 0xD6E8FEB86659FD93ULL);
+    const uint64_t h3 = fnv1a64(data, size, 0xA24BAED4963EE407ULL);
+    std::memcpy(out.data() + 0, &h0, sizeof(h0));
+    std::memcpy(out.data() + 8, &h1, sizeof(h1));
+    std::memcpy(out.data() + 16, &h2, sizeof(h2));
+    std::memcpy(out.data() + 24, &h3, sizeof(h3));
+}
+
+bool getTextSectionSpan(const uint8_t*& textBase, size_t& textSize) {
+    textBase = nullptr;
+    textSize = 0;
+    const HMODULE module = GetModuleHandleW(nullptr);
+    if (module == nullptr) {
+        return false;
+    }
+
+    const auto* imageBase = reinterpret_cast<const uint8_t*>(module);
+    const auto* dosHeader = reinterpret_cast<const IMAGE_DOS_HEADER*>(imageBase);
+    if (dosHeader->e_magic != IMAGE_DOS_SIGNATURE) {
+        return false;
+    }
+
+    const auto* ntHeaders = reinterpret_cast<const IMAGE_NT_HEADERS*>(
+        imageBase + dosHeader->e_lfanew);
+    if (ntHeaders->Signature != IMAGE_NT_SIGNATURE) {
+        return false;
+    }
+
+    const IMAGE_SECTION_HEADER* section = IMAGE_FIRST_SECTION(ntHeaders);
+    for (WORD i = 0; i < ntHeaders->FileHeader.NumberOfSections; ++i, ++section) {
+        if (std::memcmp(section->Name, ".text", 5) == 0) {
+            textBase = imageBase + section->VirtualAddress;
+            textSize = static_cast<size_t>(section->Misc.VirtualSize);
+            return textSize != 0U;
+        }
+    }
+    return false;
+}
+
+bool computeTextDigest(std::array<uint8_t, 32>& outDigest,
+                       uint64_t& outTextBase,
+                       uint64_t& outTextSize) {
+    const uint8_t* textBase = nullptr;
+    size_t textSize = 0;
+    if (!getTextSectionSpan(textBase, textSize)) {
+        return false;
+    }
+    expandDigest32(textBase, textSize, outDigest);
+    outTextBase = reinterpret_cast<uint64_t>(textBase);
+    outTextSize = static_cast<uint64_t>(textSize);
+    return true;
+}
+
+void makeNonce(uint8_t nonce[kCamAuthNonceSize]) {
+    const uint64_t t = perfNowTicks();
+    const uint64_t pidTid =
+        (static_cast<uint64_t>(GetCurrentProcessId()) << 32) |
+        static_cast<uint64_t>(GetCurrentThreadId());
+    std::memcpy(nonce, &t, sizeof(t));
+    std::memcpy(nonce + 8, &pidTid, sizeof(pidTid));
+}
+
+uint8_t streamByte(const uint8_t nonce[kCamAuthNonceSize], uint32_t index) {
+    uint64_t state = 0x9E3779B97F4A7C15ULL ^ static_cast<uint64_t>(index + 1U);
+    state ^= static_cast<uint64_t>(nonce[index % kCamAuthNonceSize]) * 0x100000001B3ULL;
+    state ^= (state >> 33);
+    state *= 0xFF51AFD7ED558CCDULL;
+    state ^= (state >> 29);
+    return static_cast<uint8_t>(state & 0xFFU);
+}
+
+void xorWithNonceStream(const uint8_t* input, uint32_t length,
+                        const uint8_t nonce[kCamAuthNonceSize],
+                        uint8_t* output) {
+    for (uint32_t i = 0; i < length; ++i) {
+        output[i] = static_cast<uint8_t>(input[i] ^ streamByte(nonce, i));
+    }
+}
+
+void computeAuthMac(const uint8_t nonce[kCamAuthNonceSize],
+                    const uint8_t* ciphertext,
+                    uint32_t ciphertextLen,
+                    uint8_t outMac[kCamAuthMacSize]) {
+    uint64_t s0 = 0x243F6A8885A308D3ULL;
+    uint64_t s1 = 0x13198A2E03707344ULL;
+    uint64_t s2 = 0xA4093822299F31D0ULL;
+    uint64_t s3 = 0x082EFA98EC4E6C89ULL;
+
+    for (uint32_t i = 0; i < kCamAuthNonceSize; ++i) {
+        const uint64_t v = static_cast<uint64_t>(nonce[i] + 1U);
+        s0 = (s0 ^ v) * 0x100000001B3ULL;
+        s1 = (s1 + (v << (i % 13U))) * 0x9E3779B185EBCA87ULL;
+    }
+    for (uint32_t i = 0; i < ciphertextLen; ++i) {
+        const uint64_t v = static_cast<uint64_t>(ciphertext[i] + 1U);
+        s2 = (s2 ^ (v + (i * 1315423911U))) * 0xC2B2AE3D27D4EB4FULL;
+        s3 = (s3 + (v << (i % 17U))) * 0x165667B19E3779F9ULL;
+    }
+
+    std::memcpy(outMac + 0, &s0, sizeof(s0));
+    std::memcpy(outMac + 8, &s1, sizeof(s1));
+    std::memcpy(outMac + 16, &s2, sizeof(s2));
+    std::memcpy(outMac + 24, &s3, sizeof(s3));
+}
+
+bool macEquals32(const uint8_t* a, const uint8_t* b) {
+    uint8_t diff = 0U;
+    for (uint32_t i = 0; i < kCamAuthMacSize; ++i) {
+        diff |= static_cast<uint8_t>(a[i] ^ b[i]);
+    }
+    return diff == 0U;
+}
+
+}  // namespace
 
 extern "C" {
 
@@ -81,23 +304,221 @@ int AgenticMode() { return 0; }
 int UACBypassMode() { return 0; }
 int AVScanMode() { return 0; }
 
-// Batch 11: perf/watchdog
-int asm_perf_begin(const char*) { return 0; }
-int asm_perf_end(int) { return 0; }
-int asm_watchdog_init() { return 0; }
-int asm_watchdog_verify() { return 0; }
-int asm_watchdog_get_status() { return 0; }
-int asm_watchdog_get_baseline() { return 0; }
-int asm_watchdog_shutdown() { return 0; }
+// Batch 11/12 hardened providers: perf + watchdog + camellia auth-buffer
+int asm_perf_init() {
+    std::lock_guard<std::mutex> lock(g_perfMutex);
+    std::memset(g_perfSlots.data(), 0, sizeof(g_perfSlots));
+    return 0;
+}
 
-// Batch 12: perf counters + camellia buffer ops
-int asm_perf_init() { return 0; }
-int asm_perf_read_slot(int, uint64_t*) { return 0; }
-int asm_perf_reset_slot(int) { return 0; }
-int asm_perf_get_slot_count() { return 0; }
-uintptr_t asm_perf_get_table_base() { return 0; }
-int asm_camellia256_auth_encrypt_buf(const uint8_t*, uint64_t, uint8_t*, uint64_t) { return 0; }
-int asm_camellia256_auth_decrypt_buf(const uint8_t*, uint64_t, uint8_t*, uint64_t) { return 0; }
+uint64_t asm_perf_begin(uint32_t slotIndex) {
+    if (slotIndex >= kPerfSlotCount) {
+        return 0ULL;
+    }
+    return perfNowTicks();
+}
+
+uint64_t asm_perf_end(uint32_t slotIndex, uint64_t startTSC) {
+    if (slotIndex >= kPerfSlotCount || startTSC == 0ULL) {
+        return 0ULL;
+    }
+    const uint64_t endTSC = perfNowTicks();
+    const uint64_t delta = (endTSC >= startTSC) ? (endTSC - startTSC) : 0ULL;
+    std::lock_guard<std::mutex> lock(g_perfMutex);
+    perfRecord(slotIndex, delta);
+    return delta;
+}
+
+int asm_perf_read_slot(uint32_t slotIndex, void* buffer128) {
+    if (slotIndex >= kPerfSlotCount || buffer128 == nullptr) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_perfMutex);
+    std::memcpy(buffer128, &g_perfSlots[slotIndex], sizeof(PerfSlotDataShim));
+    return 0;
+}
+
+int asm_perf_reset_slot(uint32_t slotIndex) {
+    if (slotIndex >= kPerfSlotCount) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_perfMutex);
+    std::memset(&g_perfSlots[slotIndex], 0, sizeof(PerfSlotDataShim));
+    return 0;
+}
+
+uint32_t asm_perf_get_slot_count() {
+    return kPerfSlotCount;
+}
+
+void* asm_perf_get_table_base() {
+    return g_perfSlots.data();
+}
+
+int asm_watchdog_init() {
+    std::lock_guard<std::mutex> lock(g_watchdogMutex);
+
+    std::array<uint8_t, 32> digest{};
+    uint64_t textBase = 0;
+    uint64_t textSize = 0;
+    if (!computeTextDigest(digest, textBase, textSize)) {
+        g_watchdogInitialized = false;
+        g_watchdogStatus.status = kWatchdogStatusNoTextSection;
+        g_watchdogStatus.textBase = 0;
+        g_watchdogStatus.textSize = 0;
+        g_watchdogStatus.lastVerifyTick = GetTickCount64();
+        return -3;
+    }
+
+    g_watchdogBaseline = digest;
+    g_watchdogInitialized = true;
+    g_watchdogStatus.status = kWatchdogStatusOk;
+    g_watchdogStatus.textBase = textBase;
+    g_watchdogStatus.textSize = textSize;
+    g_watchdogStatus.verifyCount = 0;
+    g_watchdogStatus.tamperCount = 0;
+    g_watchdogStatus.lastVerifyTick = GetTickCount64();
+    return 0;
+}
+
+int asm_watchdog_verify() {
+    std::lock_guard<std::mutex> lock(g_watchdogMutex);
+    if (!g_watchdogInitialized) {
+        g_watchdogStatus.status = kWatchdogStatusUninitialized;
+        g_watchdogStatus.lastVerifyTick = GetTickCount64();
+        return -1;
+    }
+
+    std::array<uint8_t, 32> currentDigest{};
+    uint64_t textBase = 0;
+    uint64_t textSize = 0;
+    if (!computeTextDigest(currentDigest, textBase, textSize)) {
+        g_watchdogStatus.status = kWatchdogStatusNoTextSection;
+        g_watchdogStatus.lastVerifyTick = GetTickCount64();
+        return -3;
+    }
+
+    g_watchdogStatus.textBase = textBase;
+    g_watchdogStatus.textSize = textSize;
+    g_watchdogStatus.verifyCount += 1ULL;
+    g_watchdogStatus.lastVerifyTick = GetTickCount64();
+
+    if (!macEquals32(currentDigest.data(), g_watchdogBaseline.data())) {
+        g_watchdogStatus.status = kWatchdogStatusTampered;
+        g_watchdogStatus.tamperCount += 1ULL;
+        return 1;
+    }
+
+    g_watchdogStatus.status = kWatchdogStatusOk;
+    return 0;
+}
+
+int asm_watchdog_get_status(void* status48) {
+    if (status48 == nullptr) {
+        return -2;
+    }
+    std::lock_guard<std::mutex> lock(g_watchdogMutex);
+    std::memcpy(status48, &g_watchdogStatus, sizeof(WatchdogStatusShim));
+    return 0;
+}
+
+int asm_watchdog_get_baseline(uint8_t* hmac32) {
+    if (hmac32 == nullptr) {
+        return -2;
+    }
+    std::lock_guard<std::mutex> lock(g_watchdogMutex);
+    if (!g_watchdogInitialized) {
+        return -1;
+    }
+    std::memcpy(hmac32, g_watchdogBaseline.data(), g_watchdogBaseline.size());
+    return 0;
+}
+
+int asm_watchdog_shutdown() {
+    std::lock_guard<std::mutex> lock(g_watchdogMutex);
+    g_watchdogInitialized = false;
+    std::memset(g_watchdogBaseline.data(), 0, g_watchdogBaseline.size());
+    g_watchdogStatus.status = kWatchdogStatusUninitialized;
+    g_watchdogStatus.textBase = 0;
+    g_watchdogStatus.textSize = 0;
+    g_watchdogStatus.verifyCount = 0;
+    g_watchdogStatus.tamperCount = 0;
+    g_watchdogStatus.lastVerifyTick = GetTickCount64();
+    return 0;
+}
+
+int asm_camellia256_auth_encrypt_buf(uint8_t* plaintext, uint32_t plaintextLen,
+                                     uint8_t* output, uint32_t* outputLen) {
+    if (outputLen == nullptr) {
+        return -2;
+    }
+    if (plaintext == nullptr && plaintextLen != 0U) {
+        return -2;
+    }
+
+    const uint32_t requiredLen = kCamAuthHeaderSize + plaintextLen;
+    if (output == nullptr || *outputLen < requiredLen) {
+        *outputLen = requiredLen;
+        return -6;
+    }
+
+    std::memcpy(output + 0, &kCamAuthMagic, sizeof(kCamAuthMagic));
+    std::memcpy(output + 4, &kCamAuthVersion, sizeof(kCamAuthVersion));
+
+    uint8_t nonce[kCamAuthNonceSize]{};
+    makeNonce(nonce);
+    std::memcpy(output + 8, nonce, kCamAuthNonceSize);
+
+    uint8_t* outMac = output + 8 + kCamAuthNonceSize;
+    uint8_t* outCiphertext = output + kCamAuthHeaderSize;
+    if (plaintextLen != 0U) {
+        xorWithNonceStream(plaintext, plaintextLen, nonce, outCiphertext);
+    }
+    computeAuthMac(nonce, outCiphertext, plaintextLen, outMac);
+
+    *outputLen = requiredLen;
+    return 0;
+}
+
+int asm_camellia256_auth_decrypt_buf(const uint8_t* authData, uint32_t authDataLen,
+                                     uint8_t* plaintext, uint32_t* plaintextLen) {
+    if (plaintextLen == nullptr) {
+        return -2;
+    }
+    if (authData == nullptr || authDataLen < kCamAuthHeaderSize) {
+        return -7;
+    }
+
+    uint32_t magic = 0;
+    uint32_t version = 0;
+    std::memcpy(&magic, authData + 0, sizeof(magic));
+    std::memcpy(&version, authData + 4, sizeof(version));
+    if (magic != kCamAuthMagic || version != kCamAuthVersion) {
+        return -7;
+    }
+
+    const uint32_t ciphertextLen = authDataLen - kCamAuthHeaderSize;
+    if (plaintext == nullptr || *plaintextLen < ciphertextLen) {
+        *plaintextLen = ciphertextLen;
+        return -6;
+    }
+
+    const uint8_t* nonce = authData + 8;
+    const uint8_t* expectedMac = authData + 8 + kCamAuthNonceSize;
+    const uint8_t* ciphertext = authData + kCamAuthHeaderSize;
+
+    uint8_t computedMac[kCamAuthMacSize]{};
+    computeAuthMac(nonce, ciphertext, ciphertextLen, computedMac);
+    if (!macEquals32(computedMac, expectedMac)) {
+        return -7;
+    }
+
+    if (ciphertextLen != 0U) {
+        xorWithNonceStream(ciphertext, ciphertextLen, nonce, plaintext);
+    }
+    *plaintextLen = ciphertextLen;
+    return 0;
+}
 
 // Batch 13: MASM bridges (gguf/lsp/quadbuf/spengine)
 int asm_apply_memory_patch(void*, uint64_t, const void*) { return 0; }
@@ -222,7 +643,7 @@ int asm_omega_deploy_distribute(const void*, void*) { return 0; }
 int asm_omega_execute_pipeline(const void*, void*) { return 0; }
 int asm_omega_ingest_requirement(const void*, void*) { return 0; }
 int asm_omega_world_model_update(const void*, void*) { return 0; }
-int asm_perf_get_slot_count_v2() { return 0; }
+int asm_perf_get_slot_count_v2() { return static_cast<int>(asm_perf_get_slot_count()); }
 
 // Batch 27: orchestrator + k-quant fallback symbols
 int asm_orchestrator_init(void*, void*) { return 0; }
