@@ -1,5 +1,5 @@
 // Win32IDE bridge implementations for legacy model-loader C exports.
-// These are functional fallbacks that keep state and validate model paths.
+// Functional path normalization + CPU inference engine integration.
 
 #include <atomic>
 #include <cctype>
@@ -24,7 +24,6 @@ bool looksLikeWideString(const char* rawPath) {
     if (!rawPath || rawPath[0] == '\0') {
         return false;
     }
-    // Heuristic: UTF-16LE strings usually have zero high-byte for ASCII path chars.
     if (rawPath[1] != '\0') {
         return false;
     }
@@ -49,14 +48,12 @@ std::string normalizeModelPath(const char* rawPath) {
     if (!rawPath) {
         return {};
     }
-
 #ifdef _WIN32
     if (looksLikeWideString(rawPath)) {
         const wchar_t* widePath = reinterpret_cast<const wchar_t*>(rawPath);
         return std::filesystem::path(widePath).string();
     }
 #endif
-
     return std::string(rawPath);
 }
 
@@ -100,8 +97,6 @@ extern "C" bool LoadModel(const char* path) {
     }
 
     g_loadedModelPath = modelPath.string();
-
-    // Use the real CPU inference loader if available.
     auto* cpuEngine = RawrXD::CPUInferenceEngine::getInstance();
     if (!cpuEngine) {
         return false;

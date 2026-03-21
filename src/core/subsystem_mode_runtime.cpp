@@ -1,10 +1,9 @@
-// Fallback provider for subsystem mode exports that are expected to exist
-// for Win32IDE link closure when the corresponding ASM modules are unavailable.
+// Runtime provider for subsystem-mode exports expected by Win32IDE.
+// These symbols stay available when optional ASM modules are not linked.
 //
 // NOTE:
-// - AD_* and SO_* symbols are intentionally NOT defined here anymore.
-//   Win32IDE now links real providers from analyzer_distiller.cpp and
-//   streaming_orchestrator.cpp with correct ABI signatures.
+// - AD_* and SO_* symbols are intentionally defined in the real providers:
+//   analyzer_distiller.cpp and streaming_orchestrator.cpp.
 
 extern "C" void InjectMode(void) {}
 extern "C" void DiffCovMode(void) {}

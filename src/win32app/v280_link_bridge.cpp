@@ -13,8 +13,6 @@ std::atomic<bool> g_v280GhostActive{false};
 extern "C" int64_t V280_UI_WndProc_Hook(void* hwnd, uint32_t uMsg, uint64_t wParam, int64_t lParam) {
     (void)hwnd;
 
-    // Accept ghost text updates from bridge messages.
-    // wParam=0 clears; non-zero with lParam char* updates active text.
     if (uMsg == WM_V280_GHOST_TEXT) {
         if (wParam == 0 || lParam == 0) {
             g_v280GhostText.fill(0);
@@ -30,7 +28,6 @@ extern "C" int64_t V280_UI_WndProc_Hook(void* hwnd, uint32_t uMsg, uint64_t wPar
         return 0;
     }
 
-    // Let Tab/Escape control active ghost acceptance lifecycle.
     if (uMsg == 0x0100u /* WM_KEYDOWN */ && g_v280GhostActive.load(std::memory_order_acquire)) {
         if (wParam == 0x1Bu /* VK_ESCAPE */ || wParam == 0x09u /* VK_TAB */) {
             g_v280GhostText.fill(0);

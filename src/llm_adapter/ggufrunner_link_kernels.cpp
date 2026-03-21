@@ -50,8 +50,6 @@ extern "C" void ggml_gemm_q4_0(int M, int N, int K, const float* A, const uint8_
         return;
     }
 
-    // Fallback decode for packed Q4 data (two signed 4-bit values per byte).
-    // Layout assumption: B matrix is KxN in row-major quantized element order.
     for (int m = 0; m < M; ++m) {
         for (int n = 0; n < N; ++n) {
             float sum = 0.0f;
