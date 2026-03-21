@@ -16,13 +16,6 @@
 #include <algorithm>
 #include <fstream>
 
-#ifndef RAWRXD_LOG_INFO
-#define RAWRXD_LOG_INFO(msg) do { \
-    std::ostringstream _oss; _oss << "[INFO] " << msg << "\n"; \
-    OutputDebugStringA(_oss.str().c_str()); \
-} while(0)
-#endif
-
 // Settings GUI control IDs
 #define IDC_SETTINGS_SEARCH      9900
 #define IDC_SETTINGS_TREE        9901
@@ -79,7 +72,8 @@ void Win32IDE::buildSettingsSchema()
         cat.keys = {
             "aiTemperature", "aiTopP", "aiTopK", "aiMaxTokens",
             "aiContextWindow", "aiModelPath", "aiOllamaUrl",
-            "ghostText", "failureDetector", "failureMaxRetries"
+            "ghostText", "failureDetector", "failureMaxRetries",
+            "amdUnifiedMemory"
         };
         m_settingsSchema.push_back(cat);
     }
@@ -117,7 +111,8 @@ static std::string getSettingType(const std::string& key) {
     if (key == "autoSave" || key == "lineNumbers" || key == "wordWrap" ||
         key == "useSpaces" || key == "syntaxColoring" || key == "minimap" ||
         key == "smoothScroll" || key == "caretAnimation" || key == "breadcrumbs" ||
-        key == "ghostText" || key == "failureDetector" || key == "localServer" ||
+        key == "ghostText" || key == "failureDetector" || key == "amdUnifiedMemory" ||
+        key == "localServer" ||
         key == "autoUpdateCheck" || key == "showWelcomeOnStartup") {
         return "bool";
     }
@@ -161,6 +156,7 @@ static std::string getSettingLabel(const std::string& key) {
         {"ghostText", "Ghost Text (Inline Suggestions)"},
         {"failureDetector", "Failure Detector"},
         {"failureMaxRetries", "Max Retries"},
+        {"amdUnifiedMemory", "AMD Unified Memory (SAM)"},
         {"themeId", "Color Theme"},
         {"windowAlpha", "Window Transparency (0-255)"},
         {"fileIconTheme", "File Icon Theme"},
@@ -185,6 +181,9 @@ static std::string getSettingDescription(const std::string& key) {
         {"breadcrumbs", "Enable breadcrumb navigation above the editor."},
         {"aiTemperature", "Controls randomness: lower is more focused, higher is more creative."},
         {"ghostText", "Show inline AI completions as ghost text."},
+        {"amdUnifiedMemory",
+         "Enable RawrXD unified memory executor (Resizable BAR when available; else host-backed arena). "
+         "Requires Apply + Save. Toggle off to release the arena."},
         {"windowAlpha", "Window transparency level (255 = fully opaque)."},
         {"autoUpdateCheck", "Periodically check for application updates."},
         {"fileIconTheme", "Icon theme for file explorer (seti, material, none)."}
@@ -224,6 +223,7 @@ std::string Win32IDE_GetSettingValue(const IDESettings& s, const std::string& ke
     if (key == "ghostText") return s.ghostTextEnabled ? "true" : "false";
     if (key == "failureDetector") return s.failureDetectorEnabled ? "true" : "false";
     if (key == "failureMaxRetries") return std::to_string(s.failureMaxRetries);
+    if (key == "amdUnifiedMemory") return s.amdUnifiedMemoryEnabled ? "true" : "false";
     if (key == "themeId") return std::to_string(s.themeId);
     if (key == "windowAlpha") return std::to_string((int)s.windowAlpha);
     if (key == "fileIconTheme") return s.fileIconTheme;
@@ -266,6 +266,7 @@ static void Win32IDE_SetSettingValue(IDESettings& s, const std::string& key, con
     else if (key == "ghostText") s.ghostTextEnabled = toBool(value);
     else if (key == "failureDetector") s.failureDetectorEnabled = toBool(value);
     else if (key == "failureMaxRetries") s.failureMaxRetries = toInt(value);
+    else if (key == "amdUnifiedMemory") s.amdUnifiedMemoryEnabled = toBool(value);
     else if (key == "themeId") s.themeId = toInt(value);
     else if (key == "windowAlpha") s.windowAlpha = static_cast<BYTE>(toInt(value));
     else if (key == "fileIconTheme") s.fileIconTheme = value;
@@ -428,7 +429,7 @@ void Win32IDE::showSettingsGUI()
         m_hwndMain, nullptr, m_hInstance, this);
 
     if (!m_hwndSettingsGUI) {
-        RAWRXD_LOG_INFO("Failed to create settings GUI window");
+        RAWRXD_LOG_INFO("Win32IDE_SettingsGUI") << "Failed to create settings GUI window";
         return;
     }
 
@@ -605,7 +606,8 @@ void Win32IDE::onSettingsCategorySelect(int categoryIndex)
 void Win32IDE::onSettingChanged(const std::string& key, const std::string& value)
 {
     Win32IDE_SetSettingValue(m_settings, key, value);
-    RAWRXD_LOG_INFO("Setting changed: " << key << " = " << value);
+    RAWRXD_LOG_INFO("Win32IDE_SettingsGUI")
+        << "Setting changed: " << key << " = " << value;
 }
 
 // ============================================================================

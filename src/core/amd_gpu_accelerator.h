@@ -202,6 +202,11 @@ public:
     AccelResult mapBuffer(GPUBuffer& buffer);
     AccelResult unmapBuffer(GPUBuffer& buffer);
     const GPUMemoryPool& getMemoryPool() const { return m_memPool; }
+    
+    // ===== Unified Memory (AMD SAM) =====
+    AccelResult enableUnifiedMemory();   // Enable unified executor + widen pool when GPU stack is up
+    AccelResult disableUnifiedMemory();  // Shutdown unified executor and restore pool
+    bool isUnifiedMemoryEnabled() const { return m_memPool.unified; }
 
     // ===== Compute Dispatch =====
     AccelResult dispatchMatMul(const GPUBuffer& A, const GPUBuffer& B, GPUBuffer& C,
@@ -300,6 +305,9 @@ private:
     void* m_memoryData;
 
     AMDAccelStats m_stats;
+
+    /** Restores m_memPool.totalBytes when unified mode is turned off. */
+    uint64_t m_memPoolTotalBeforeUnified = 0;
 };
 
 #endif // AMD_GPU_ACCELERATOR_H

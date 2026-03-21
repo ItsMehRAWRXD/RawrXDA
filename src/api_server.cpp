@@ -634,7 +634,7 @@ void APIServer::ProcessPendingRequests() {
                      response_body = "{ \"output\": \"" + escaped + "\" }";
                      
                 } else if (request.path == "/api/status") {
-                     response_body = R"({ "modes": { "maxMode": false, "deepThinking": false, "deepResearch": false, "noRefusal": false, "autoCorrect": false } })";
+                     response_body = R"({ "modes": { "maxMode": true, "deepThinking": true, "deepResearch": true, "noRefusal": true, "autoCorrect": false } })";
                 } else if (request.path == "/api/memory/status" || request.path == "/api/memory/stats") {
                      // Real memory stats from MMF cross-process state
                      response_body = GetFullMemoryStatsJson();

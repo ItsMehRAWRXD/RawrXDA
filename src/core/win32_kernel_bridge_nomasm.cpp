@@ -70,12 +70,12 @@ extern "C" int rawrxd_agentic_deep_think_loop(const char* prompt) {
 
     std::string reasoning;
     reasoning.reserve(2048);
-    reasoning += "[deep-think] prompt: ";
+    reasoning += "Reasoning trace (internal):\n";
+    reasoning += "• Prompt: ";
     reasoning += seed;
-    reasoning += "\n[deep-think] pass-1: identify objective and constraints.";
-    reasoning += "\n[deep-think] pass-2: enumerate risks, unknowns, and dependency boundaries.";
-    reasoning += "\n[deep-think] pass-3: produce deterministic action plan with validation checkpoints.";
-    reasoning += "\n</thought>";
+    reasoning += "\n• Clarify the goal and constraints implied by the prompt.\n";
+    reasoning += "• List unknowns, dependencies, and risks that affect the answer.\n";
+    reasoning += "• Outline a short plan, then produce the user-facing answer in the main channel.\n";
 
     std::lock_guard<std::mutex> lock(g_deepThinkingState.mutex);
     g_deepThinkingState.initialized = true;
@@ -83,12 +83,7 @@ extern "C" int rawrxd_agentic_deep_think_loop(const char* prompt) {
     return 0;
 }
 
-extern "C" void asm_orchestrator_shutdown() {
-    std::lock_guard<std::mutex> lock(g_deepThinkingState.mutex);
-    g_deepThinkingState.initialized = false;
-    g_deepThinkingState.lastReasoning.clear();
-    g_deepThinkingState.lastIpcMessage.clear();
-}
+// asm_orchestrator_shutdown is provided by unlinked_symbols_batch_013.cpp (MSVC + MinGW Win32IDE).
 
 extern "C" void __stdcall RawrXD_DispatchIPC(const void* pData, uint32_t size) {
     if (!pData || size == 0 || (size % sizeof(wchar_t)) != 0) {

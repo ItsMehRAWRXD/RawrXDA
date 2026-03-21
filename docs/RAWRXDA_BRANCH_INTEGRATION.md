@@ -59,3 +59,5 @@ git merge --no-ff rawrxda/cursor/unlinked-dissolved-symbols-2b27 -m "merge(rawrx
 ```
 
 If CMake conflicts, prefer **keeping** a single `rawr_engine_link_shims.cpp` entry for RawrEngine (conditional `target_sources` already gates it) and **merging** stricter `EnforceNoStubs` patterns from 4264.
+
+**Win32IDE:** use `src/core/rawr_engine_link_shims.cpp` for link closure (and production-strip `REMOVE_ITEM` of that TU when stripping stubs). Do **not** reference `win32_ide_link_stubs.cpp` — it is not in the tree; stale list entries break consistency with SSOT merges.

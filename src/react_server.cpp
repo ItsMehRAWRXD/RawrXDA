@@ -105,10 +105,10 @@ void handle_api_request(SOCKET s, const std::string& method, const std::string& 
         // Return default status or simulated values
         std::string json = R"({
             "modes": {
-                "maxMode": false,
-                "deepThinking": false,
-                "deepResearch": false,
-                "noRefusal": false,
+                "maxMode": true,
+                "deepThinking": true,
+                "deepResearch": true,
+                "noRefusal": true,
                 "autoCorrect": false
             }
         })";

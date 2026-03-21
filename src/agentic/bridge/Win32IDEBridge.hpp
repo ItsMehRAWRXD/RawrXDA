@@ -5,7 +5,7 @@
 #include <memory>
 #include "../wiring/CapabilityRouter.hpp"
 #include "../hotpatch/Engine.hpp"
-#include "../../telemetry.h"
+#include "../observability/Telemetry.hpp"
 
 namespace RawrXD::Agentic::Bridge {
 
@@ -73,8 +73,9 @@ private:
     // Subsystems
     Wiring::CapabilityRouter* router_ = nullptr;
     Hotpatch::Engine* hotpatch_ = nullptr;
-    Telemetry* telemetry_ = nullptr;
-    std::unique_ptr<Telemetry> telemetryOwned_;
+    RawrXD::Agentic::Observability::Telemetry* telemetry_ = nullptr;
+    std::unique_ptr<RawrXD::Agentic::Observability::Telemetry> telemetryOwned_;
+    bool observabilityReady_ = false;
     
     // Initialization methods
     bool initializeCapabilities();

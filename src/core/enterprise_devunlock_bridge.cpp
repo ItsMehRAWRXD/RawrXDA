@@ -1,27 +1,39 @@
 // ============================================================================
-// enterprise_devunlock_bridge.cpp — Always-available Enterprise_DevUnlock bridge
+// enterprise_devunlock_bridge.cpp — Enterprise_DevUnlock (C ABI)
 // ============================================================================
-// UPDATED: The ASM module (RawrXD_EnterpriseLicense.asm) NOW exports
-// Enterprise_DevUnlock at line 31. This bridge is NO LONGER NEEDED when
-// RAWR_HAS_MASM=1.
-//
-// This bridge file provides Enterprise_DevUnlock ONLY when RAWR_HAS_MASM is
-// NOT active (i.e. when ASM is disabled and stubs are used). When MASM IS
-// active, this file compiles to nothing to avoid duplicate symbols.
+// extern "C" int64_t Enterprise_DevUnlock() for Win32IDE when monolithic ASM that
+// exported this symbol is not in ASM_KERNEL_SOURCES. Gate: RAWRXD_ENTERPRISE_DEV=1.
 //
 // NO SOURCE FILE IS TO BE SIMPLIFIED.
 // ============================================================================
 
-// Only compile when RAWR_HAS_MASM is NOT active (ASM disabled, use bridge)
-#if !defined(RAWR_HAS_MASM) || !RAWR_HAS_MASM
-
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <iostream>
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#endif
 #ifdef _MSC_VER
 #include <intrin.h>
 #endif
+
+namespace {
+void enterpriseLogLine(const char* line) {
+    if (!line) {
+        return;
+    }
+#ifdef _WIN32
+    ::OutputDebugStringA(line);
+    ::OutputDebugStringA("\n");
+#endif
+    std::fputs(line, stderr);
+    std::fputc('\n', stderr);
+}
+} // namespace
 
 // ============================================================================
 // Extern declarations — symbols provided by ASM or stubs
@@ -99,7 +111,7 @@ namespace {
 extern "C" int64_t Enterprise_DevUnlock() {
     // Check environment gate
     if (std::getenv("RAWRXD_ENTERPRISE_DEV") == nullptr) {
-        std::cout << "[Enterprise] Dev unlock requires RAWRXD_ENTERPRISE_DEV=1\n";
+        enterpriseLogLine("[Enterprise] Dev unlock requires RAWRXD_ENTERPRISE_DEV=1");
         return 0;
     }
 
@@ -119,7 +131,7 @@ extern "C" int64_t Enterprise_DevUnlock() {
 
     uint64_t payload[2] = { hwid, 0 };
 
-    std::cout << "[Enterprise] Dev Unlock: brute-forcing license hash...\n";
+    enterpriseLogLine("[Enterprise] Dev Unlock: brute-forcing license hash...");
 
     for (uint64_t x = 0; x < 0x100000000ULL; x++) {
         payload[1] = x;

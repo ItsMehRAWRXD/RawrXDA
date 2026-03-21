@@ -15,14 +15,6 @@
 
 // SCAFFOLD_028: Breadcrumbs and navigation
 
-
-#ifndef RAWRXD_LOG_INFO
-#define RAWRXD_LOG_INFO(msg) do { \
-    std::ostringstream _oss; _oss << "[INFO] " << msg << "\n"; \
-    OutputDebugStringA(_oss.str().c_str()); \
-} while(0)
-#endif
-
 // Breadcrumb bar colors (VS Code dark theme)
 static const COLORREF BC_BG           = RGB(37, 37, 38);
 static const COLORREF BC_TEXT         = RGB(169, 169, 169);
@@ -73,7 +65,7 @@ void Win32IDE::createBreadcrumbBar(HWND hwndParent)
     // Show/hide based on settings
     ShowWindow(m_hwndBreadcrumbs, m_settings.breadcrumbsEnabled ? SW_SHOW : SW_HIDE);
 
-    RAWRXD_LOG_INFO("Breadcrumb bar created");
+    RAWRXD_LOG_INFO("Win32IDE_Breadcrumbs") << "Breadcrumb bar created";
 }
 
 // ============================================================================

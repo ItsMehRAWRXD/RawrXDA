@@ -41,36 +41,6 @@
 // Semantic index (fuzzy search, references) → implemented in
 // Win32IDE_LSPClient.cpp::lspSemanticTokensFull() with 23-type token registry
 
-
-// Win32-native debug logging
-#ifndef RAWRXD_LOG_INFO
-#define RAWRXD_LOG_INFO(msg)                                                                                           \
-    do                                                                                                                 \
-    {                                                                                                                  \
-        std::ostringstream _oss;                                                                                       \
-        _oss << "[INFO] " << msg << "\n";                                                                              \
-        OutputDebugStringA(_oss.str().c_str());                                                                        \
-    } while (0)
-#endif
-#ifndef RAWRXD_LOG_WARNING
-#define RAWRXD_LOG_WARNING(msg)                                                                                        \
-    do                                                                                                                 \
-    {                                                                                                                  \
-        std::ostringstream _oss;                                                                                       \
-        _oss << "[WARN] " << msg << "\n";                                                                              \
-        OutputDebugStringA(_oss.str().c_str());                                                                        \
-    } while (0)
-#endif
-#ifndef RAWRXD_LOG_ERROR
-#define RAWRXD_LOG_ERROR(msg)                                                                                          \
-    do                                                                                                                 \
-    {                                                                                                                  \
-        std::ostringstream _oss;                                                                                       \
-        _oss << "[ERROR] " << msg << "\n";                                                                             \
-        OutputDebugStringA(_oss.str().c_str());                                                                        \
-    } while (0)
-#endif
-
 // ============================================================================
 // File-local singletons for classes that lack Instance() static methods
 // ============================================================================
@@ -324,7 +294,7 @@ void Win32IDE::shutdownTelemetryExport()
     auto& exporter = RawrXD::Telemetry::TelemetryExporter::Instance();
     exporter.StopAutoExport();
     m_telemetryExportInitialized = false;
-    RAWRXD_LOG_INFO("TelemetryExporter shut down");
+    RAWRXD_LOG_INFO("Win32IDE_CursorParity") << "TelemetryExporter shut down";
 }
 
 bool Win32IDE::handleTelemetryExportCommand(int commandId)
@@ -370,12 +340,13 @@ void Win32IDE::cmdTelExportJSON()
     auto result = exporter.ExportToFile(path, RawrXD::Telemetry::ExportFormat::JSON);
     if (result.success)
     {
-        RAWRXD_LOG_INFO("Telemetry exported to JSON: " << path);
+        RAWRXD_LOG_INFO("Win32IDE_CursorParity") << "Telemetry exported to JSON: " << path;
         MessageBoxA(m_hwndMain, ("Exported to: " + path).c_str(), "Telemetry Export", MB_OK);
     }
     else
     {
-        RAWRXD_LOG_ERROR("Telemetry JSON export failed: " << result.error);
+        RAWRXD_LOG_ERROR("Win32IDE_CursorParity")
+            << "Telemetry JSON export failed: " << result.error;
         MessageBoxA(m_hwndMain, result.error.c_str(), "Export Error", MB_ICONERROR);
     }
 }
@@ -458,7 +429,7 @@ void Win32IDE::initAgenticComposerUX()
     if (m_composerUXInitialized)
         return;
     m_composerUXInitialized = true;
-    RAWRXD_LOG_INFO("AgenticComposerUX initialized");
+    RAWRXD_LOG_INFO("Win32IDE_CursorParity") << "AgenticComposerUX initialized";
 }
 
 bool Win32IDE::handleComposerUXCommand(int commandId)
@@ -493,7 +464,7 @@ void Win32IDE::cmdComposerNewSession()
     initAgenticComposerUX();
     auto& composer = m_composerUX;
     uint64_t sessionId = composer.StartSession("IDE Session");
-    RAWRXD_LOG_INFO("Composer session created: " << sessionId);
+    RAWRXD_LOG_INFO("Win32IDE_CursorParity") << "Composer session created: " << sessionId;
     MessageBoxA(m_hwndMain, ("Session created: " + std::to_string(sessionId)).c_str(), "Agentic Composer", MB_OK);
 }
 
@@ -557,7 +528,8 @@ void Win32IDE::cmdComposerShowTranscript()
     {
         SetWindowTextA(m_hwndOutputTabs, json.c_str());
     }
-    RAWRXD_LOG_INFO("Composer transcript displayed (" << json.size() << " bytes)");
+    RAWRXD_LOG_INFO("Win32IDE_CursorParity")
+        << "Composer transcript displayed (" << json.size() << " bytes)";
 }
 
 void Win32IDE::cmdComposerShowMetrics()
@@ -594,7 +566,7 @@ void Win32IDE::initContextMentionParser()
     // ContextMentionParser is not a singleton — use file-local instance
     (void)getContextMentionParser();
     m_mentionParserInitialized = true;
-    RAWRXD_LOG_INFO("ContextMentionParser initialized");
+    RAWRXD_LOG_INFO("Win32IDE_CursorParity") << "ContextMentionParser initialized";
 }
 
 bool Win32IDE::handleMentionParserCommand(int commandId)
@@ -745,7 +717,8 @@ void Win32IDE::cmdVisionLoadFile()
     auto result = encoder.LoadFromFile(path);
     if (result.success)
     {
-        RAWRXD_LOG_INFO("Image loaded: " << path << " (" << result.image.width << "x" << result.image.height << ")");
+        RAWRXD_LOG_INFO("Win32IDE_CursorParity")
+            << "Image loaded: " << path << " (" << result.image.width << "x" << result.image.height << ")";
         MessageBoxA(
             m_hwndMain,
             (std::string("Loaded: ") + std::to_string(result.image.width) + "x" + std::to_string(result.image.height))
@@ -765,7 +738,8 @@ void Win32IDE::cmdVisionPasteClipboard()
     auto result = encoder.LoadFromClipboard();
     if (result.success)
     {
-        RAWRXD_LOG_INFO("Image pasted from clipboard (" << result.image.width << "x" << result.image.height << ")");
+        RAWRXD_LOG_INFO("Win32IDE_CursorParity")
+            << "Image pasted from clipboard (" << result.image.width << "x" << result.image.height << ")";
         MessageBoxA(
             m_hwndMain,
             (std::string("Pasted: ") + std::to_string(result.image.width) + "x" + std::to_string(result.image.height))
@@ -807,7 +781,8 @@ void Win32IDE::cmdVisionBuildPayload()
     auto payload = encoder.BuildMultimodalPayload(lastResult.image, "Describe this image.");
     if (!payload.empty())
     {
-        RAWRXD_LOG_INFO("Multimodal payload built (" << payload.size() << " chars)");
+        RAWRXD_LOG_INFO("Win32IDE_CursorParity")
+            << "Multimodal payload built (" << payload.size() << " chars)";
         appendToOutput(std::string("[Vision] Payload built (") + std::to_string(payload.size()) + " chars)\n");
         MessageBoxA(m_hwndMain, (std::string("Payload built (") + std::to_string(payload.size()) + " chars).").c_str(),
                     "Vision Payload", MB_OK);
@@ -828,7 +803,8 @@ void Win32IDE::initRefactoringEngine()
     auto& engine = RawrXD::IDE::RefactoringEngine::Instance();
     engine.Initialize();
     m_refactoringEngineInitialized = true;
-    RAWRXD_LOG_INFO("RefactoringEngine initialized (" << engine.GetAllRefactorings().size() << " refactorings)");
+    RAWRXD_LOG_INFO("Win32IDE_CursorParity")
+        << "RefactoringEngine initialized (" << engine.GetAllRefactorings().size() << " refactorings)";
 }
 
 bool Win32IDE::handleRefactoringCommand(int commandId)
@@ -980,7 +956,7 @@ void Win32IDE::cmdRefactorShowAll()
         oss << "  [" << r.id << "] " << r.name << "\n    " << r.description << "\n\n";
     }
     appendToOutput(oss.str());
-    RAWRXD_LOG_INFO("Listed " << all.size() << " refactorings");
+    RAWRXD_LOG_INFO("Win32IDE_CursorParity") << "Listed " << all.size() << " refactorings";
 }
 
 void Win32IDE::cmdRefactorLoadPlugin()
@@ -1006,7 +982,8 @@ void Win32IDE::initLanguageRegistry()
     auto& registry = RawrXD::Language::LanguageRegistry::Instance();
     registry.Initialize();
     m_languageRegistryInitialized = true;
-    RAWRXD_LOG_INFO("LanguageRegistry initialized (" << registry.GetAllLanguages().size() << " languages)");
+    RAWRXD_LOG_INFO("Win32IDE_CursorParity")
+        << "LanguageRegistry initialized (" << registry.GetAllLanguages().size() << " languages)";
 }
 
 bool Win32IDE::handleLanguageCommand(int commandId)
@@ -1074,7 +1051,7 @@ void Win32IDE::cmdLanguageListAll()
         oss << "\n";
     }
     appendToOutput(oss.str());
-    RAWRXD_LOG_INFO("Listed " << langs.size() << " languages");
+    RAWRXD_LOG_INFO("Win32IDE_CursorParity") << "Listed " << langs.size() << " languages";
 }
 
 void Win32IDE::cmdLanguageLoadPlugin()
@@ -1342,7 +1319,8 @@ void Win32IDE::initResourceGenerator()
     auto& gen = RawrXD::Resource::ResourceGeneratorEngine::Instance();
     gen.Initialize();
     m_resourceGeneratorInitialized = true;
-    RAWRXD_LOG_INFO("ResourceGeneratorEngine initialized (" << gen.GetAllTemplates().size() << " templates)");
+    RAWRXD_LOG_INFO("Win32IDE_CursorParity")
+        << "ResourceGeneratorEngine initialized (" << gen.GetAllTemplates().size() << " templates)";
 }
 
 bool Win32IDE::handleResourceGenCommand(int commandId)
@@ -1410,7 +1388,8 @@ void Win32IDE::cmdResourceGenerate()
     if (result.success)
     {
         appendToOutput(result.content);
-        RAWRXD_LOG_INFO("Generated resource: " << templateId << " (" << result.content.size() << " chars)");
+        RAWRXD_LOG_INFO("Win32IDE_CursorParity")
+            << "Generated resource: " << templateId << " (" << result.content.size() << " chars)";
 
         // Offer to save
         if (!result.suggestedFilename.empty())
@@ -1488,7 +1467,7 @@ void Win32IDE::cmdResourceListTemplates()
         oss << "\n";
     }
     appendToOutput(oss.str());
-    RAWRXD_LOG_INFO("Listed " << all.size() << " resource templates");
+    RAWRXD_LOG_INFO("Win32IDE_CursorParity") << "Listed " << all.size() << " resource templates";
 }
 
 void Win32IDE::cmdResourceSearchTemplates()
@@ -1643,7 +1622,7 @@ bool Win32IDE::handleFeaturesCommand(int commandId) { return false; }
 // ============================================================================
 void Win32IDE::initAllFeatureModules()
 {
-    RAWRXD_LOG_INFO("Initializing feature modules...");
+    RAWRXD_LOG_INFO("Win32IDE_CursorParity") << "Initializing feature modules...";
 
     initTelemetryExport();
     initAgenticComposerUX();
@@ -1656,9 +1635,10 @@ void Win32IDE::initAllFeatureModules()
 
     int check = RawrXD::Parity::verifyCursorParityWiring(this);
     if (check != 0)
-        RAWRXD_LOG_WARNING("Feature modules verification reported index: " << check);
+        RAWRXD_LOG_WARNING("Win32IDE_CursorParity")
+            << "Feature modules verification reported index: " << check;
 
-    RAWRXD_LOG_INFO("All feature modules initialized");
+    RAWRXD_LOG_INFO("Win32IDE_CursorParity") << "All feature modules initialized";
 }
 
 namespace RawrXD::Parity {

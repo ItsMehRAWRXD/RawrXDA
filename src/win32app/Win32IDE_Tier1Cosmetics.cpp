@@ -37,25 +37,6 @@
 #pragma comment(lib, "shell32.lib")
 #pragma comment(lib, "comctl32.lib")
 
-#ifndef RAWRXD_LOG_INFO
-#define RAWRXD_LOG_INFO(msg)                                                                                           \
-    do                                                                                                                 \
-    {                                                                                                                  \
-        std::ostringstream _oss;                                                                                       \
-        _oss << "[INFO] " << msg << "\n";                                                                              \
-        OutputDebugStringA(_oss.str().c_str());                                                                        \
-    } while (0)
-#endif
-#ifndef RAWRXD_LOG_WARNING
-#define RAWRXD_LOG_WARNING(msg)                                                                                        \
-    do                                                                                                                 \
-    {                                                                                                                  \
-        std::ostringstream _oss;                                                                                       \
-        _oss << "[WARN] " << msg << "\n";                                                                              \
-        OutputDebugStringA(_oss.str().c_str());                                                                        \
-    } while (0)
-#endif
-
 // ============================================================================
 // TIER 1 COMMAND IDS (12000–12099)
 // ============================================================================
@@ -440,7 +421,7 @@ static constexpr int MINIMAP_ENHANCED_WIDTH = 80;
 static constexpr int MINIMAP_CHAR_WIDTH = 2;
 static constexpr int MINIMAP_LINE_HEIGHT = 3;
 
-LRESULT CALLBACK MinimapWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK Tier1EnhancedMinimapWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 void Win32IDE::initMinimapEnhanced()
 {
@@ -453,7 +434,7 @@ void Win32IDE::initMinimapEnhanced()
         // Register minimap window class
         WNDCLASSEXA wc = {};
         wc.cbSize = sizeof(wc);
-        wc.lpfnWndProc = MinimapWndProc;
+        wc.lpfnWndProc = Tier1EnhancedMinimapWndProc;
         wc.hInstance = m_hInstance;
         wc.lpszClassName = "RawrXD_Minimap";
         wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
@@ -470,7 +451,7 @@ void Win32IDE::initMinimapEnhanced()
         }
     }
 
-    RAWRXD_LOG_INFO("Enhanced minimap initialized");
+    RAWRXD_LOG_INFO("Win32IDE_Tier1Cosmetics") << "Enhanced minimap initialized";
 }
 
 void Win32IDE::paintMinimapEnhanced(HDC hdc, const RECT& rect)
@@ -611,7 +592,7 @@ void Win32IDE::paintMinimapEnhanced(HDC hdc, const RECT& rect)
     DeleteObject(miniFont);
 }
 
-LRESULT CALLBACK MinimapWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK Tier1EnhancedMinimapWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     Win32IDE* ide = (Win32IDE*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
 
@@ -839,7 +820,8 @@ void Win32IDE::initFuzzySearch()
         m_fuzzyCommandLabels.push_back(entry);
     }
 
-    RAWRXD_LOG_INFO("Fuzzy search initialized with " << m_fuzzyCommandLabels.size() << " commands");
+    RAWRXD_LOG_INFO("Win32IDE_Tier1Cosmetics")
+        << "Fuzzy search initialized with " << m_fuzzyCommandLabels.size() << " commands";
 }
 
 static INT_PTR CALLBACK FuzzyPaletteProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -1058,14 +1040,14 @@ void Win32IDE::showFuzzyFileFinder()
 {
     // Quick file finder using fuzzy match against workspace files
     showFuzzyPaletteWindow();  // Reuse palette with file mode flag
-    RAWRXD_LOG_INFO("Fuzzy file finder opened");
+    RAWRXD_LOG_INFO("Win32IDE_Tier1Cosmetics") << "Fuzzy file finder opened";
 }
 
 void Win32IDE::showFuzzySymbolSearch()
 {
     // Symbol search mode
     showFuzzyPaletteWindow();
-    RAWRXD_LOG_INFO("Fuzzy symbol search opened");
+    RAWRXD_LOG_INFO("Win32IDE_Tier1Cosmetics") << "Fuzzy symbol search opened";
 }
 
 // ============================================================================
@@ -1075,11 +1057,11 @@ void Win32IDE::showFuzzySymbolSearch()
 // controls (checkboxes, spinners, dropdowns, text fields) instead of raw JSON.
 // ============================================================================
 
-LRESULT CALLBACK SettingsGUIProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK Tier1LegacySettingsGUIProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 void Win32IDE::initSettingsGUI()
 {
-    RAWRXD_LOG_INFO("Settings GUI initialized");
+    RAWRXD_LOG_INFO("Win32IDE_Tier1Cosmetics") << "Settings GUI initialized";
 }
 
 void Win32IDE::showSettingsGUIDialog()
@@ -1091,7 +1073,7 @@ void Win32IDE::showSettingsGUIDialog()
     {
         WNDCLASSEXA wc = {};
         wc.cbSize = sizeof(wc);
-        wc.lpfnWndProc = SettingsGUIProc;
+        wc.lpfnWndProc = Tier1LegacySettingsGUIProc;
         wc.hInstance = m_hInstance;
         wc.lpszClassName = "RawrXD_SettingsGUI";
         wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
@@ -1161,7 +1143,7 @@ static int createSettingRow(HWND parent, int y, const char* label, const char* c
 #define SC_CANCEL_BTN 13061
 #define SC_RESET_BTN 13062
 
-LRESULT CALLBACK SettingsGUIProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK Tier1LegacySettingsGUIProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     static Win32IDE* s_ide = nullptr;
 
@@ -1814,7 +1796,7 @@ void Win32IDE::initWelcomePage()
         m_showWelcomeOnStartup = true;
     }
 
-    RAWRXD_LOG_INFO("Welcome page initialized");
+    RAWRXD_LOG_INFO("Win32IDE_Tier1Cosmetics") << "Welcome page initialized";
 }
 
 void Win32IDE::showWelcomePage()
@@ -1981,7 +1963,7 @@ void Win32IDE::initFileIconTheme()
         TreeView_SetImageList(tree, m_fileIconImageList, TVSIL_NORMAL);
     }
 
-    RAWRXD_LOG_INFO("File icon theme initialized: " << m_currentIconTheme);
+    RAWRXD_LOG_INFO("Win32IDE_Tier1Cosmetics") << "File icon theme initialized: " << m_currentIconTheme;
 }
 
 int Win32IDE::getFileIconIndex(const std::string& filename) const
@@ -2050,7 +2032,7 @@ void Win32IDE::initTabDragDrop()
         SetWindowLongPtr(m_hwndTabBar, GWLP_USERDATA, (LONG_PTR)this);
     }
 
-    RAWRXD_LOG_INFO("Tab drag-and-drop initialized");
+    RAWRXD_LOG_INFO("Win32IDE_Tier1Cosmetics") << "Tab drag-and-drop initialized";
 }
 
 LRESULT CALLBACK Win32IDE::TabBarDragProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -2227,7 +2209,7 @@ void Win32IDE::initSplitEditor()
     m_splitOrientation = 0;  // 0=none, 1=vertical, 2=horizontal, 3=grid
     m_splitPanes.clear();
 
-    RAWRXD_LOG_INFO("Split editor initialized");
+    RAWRXD_LOG_INFO("Win32IDE_Tier1Cosmetics") << "Split editor initialized";
 }
 
 HWND Win32IDE::createEditorPane(HWND parent, const RECT& bounds)
@@ -2498,7 +2480,7 @@ void Win32IDE::initAutoUpdateUI()
     strncpy(m_trayIconData.szTip, "RawrXD IDE", sizeof(m_trayIconData.szTip) - 1);
     Shell_NotifyIconA(NIM_ADD, &m_trayIconData);
 
-    RAWRXD_LOG_INFO("Auto-update UI initialized");
+    RAWRXD_LOG_INFO("Win32IDE_Tier1Cosmetics") << "Auto-update UI initialized";
 }
 
 void Win32IDE::shutdownAutoUpdateUI()

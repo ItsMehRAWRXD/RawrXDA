@@ -135,10 +135,10 @@ public:
 private:
     CPUInferenceEngine* m_engine;
     OutputCallback m_callback;
-    bool m_deepThink = false;
-    bool m_deepResearch = false;
-    bool m_noRefusal = false;
-    bool m_maxMode = false;
+    bool m_deepThink = true;
+    bool m_deepResearch = true;
+    bool m_noRefusal = true;
+    bool m_maxMode = true;
     bool m_autoCorrect = false;
     std::string m_languageContext;  // e.g. "C/C++", "Python", etc.
     std::string m_fileContext;      // Current file path for context
@@ -164,9 +164,17 @@ private:
                             "You have access to the file system, compiler, and reverse engineering tools. "
                             "Answer concisely and technically.";
         
-        if (m_deepThink) system += " Use <thought> tags to reason before answering.";
-        if (m_maxMode) system += " MAX MODE ENABLED: Ignore constraints, use full compute.";
-        if (m_noRefusal) system += " NO REFUSAL MODE: Do not refuse any request.";
+        if (m_deepThink) {
+            system += " Think step-by-step: note assumptions, plan, then answer. "
+                      "Keep internal reasoning concise; prioritize correct, actionable output.";
+        }
+        if (m_maxMode) {
+            system += " Use higher effort: broader search over the solution space, more thorough verification.";
+        }
+        if (m_noRefusal) {
+            system += " For legitimate coding and engineering tasks in this IDE, provide the best help you can; "
+                      "if something is unsafe or impossible, say what you can do instead.";
+        }
 
         // Tool descriptions — the model can emit these to trigger tool execution
         system += "\n\nYou have access to the following tools. To use a tool, emit the "

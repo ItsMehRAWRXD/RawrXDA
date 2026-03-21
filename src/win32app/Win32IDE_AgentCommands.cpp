@@ -614,12 +614,12 @@ void Win32IDE::initializeAgenticBridge()
                     }
                 }
 
-                // Set default AI modes based on configuration or defaults
-                m_agenticBridge->SetMaxMode(false);       // Default off
-                m_agenticBridge->SetDeepThinking(true);   // Default on for better reasoning
-                m_agenticBridge->SetDeepResearch(false);  // Default off
-                m_agenticBridge->SetNoRefusal(false);     // Default off
-                m_agenticBridge->SetContextSize("32k");   // Default context size
+                // Default AI modes: all extended modes ON (chat panel matches bridge; user may toggle off).
+                m_agenticBridge->SetMaxMode(true);
+                m_agenticBridge->SetDeepThinking(true);
+                m_agenticBridge->SetDeepResearch(true);
+                m_agenticBridge->SetNoRefusal(true);
+                m_agenticBridge->SetContextSize("32k");  // Default context size
 
                 // Sync workspace root so agent has project context (see AGENTIC_AND_MODEL_LOADING_AUDIT.md)
                 if (!m_projectRoot.empty())
@@ -682,27 +682,35 @@ void Win32IDE::initializeAgenticBridge()
 
                 // --- Surgical Slot 20 Activation ---
                 // 1. Register the bridge with the IAT (maps slot 20 to our C++ implementation)
-                if (RawrXD::Bridge::RegisterSwarmBridgeWithIAT()) {
+                if (RawrXD::Bridge::RegisterSwarmBridgeWithIAT())
+                {
                     // 2. Perform actual initialization of the swarm system
                     RawrXD::Bridge::SwarmInitConfig swarmConfig;
                     memset(&swarmConfig, 0, sizeof(swarmConfig));
                     swarmConfig.structSize = sizeof(RawrXD::Bridge::SwarmInitConfig);
                     swarmConfig.maxSubAgents = 16;
-                    swarmConfig.taskTimeoutMs = 120000; // 2 minutes
+                    swarmConfig.taskTimeoutMs = 120000;  // 2 minutes
                     swarmConfig.enableGPUWorkStealing = 1;
-                    sprintf_s(swarmConfig.coordinatorModel, "gemma3:1b"); // Default coordinator
+                    sprintf_s(swarmConfig.coordinatorModel, "gemma3:1b");  // Default coordinator
 
-                    if (RawrXD::Bridge::InitializeSwarmSystem(&swarmConfig) == S_OK) {
+                    if (RawrXD::Bridge::InitializeSwarmSystem(&swarmConfig) == S_OK)
+                    {
                         LOG_INFO("Agentic Swarm System (Slot 20) initialized via bridge");
                         appendToOutput("✅ Agentic Swarm System initialized\n", "Output", OutputSeverity::Info);
-                    } else {
+                    }
+                    else
+                    {
                         LOG_ERROR("Failed to initialize Agentic Swarm System via bridge");
                     }
-                } else {
+                }
+                else
+                {
                     LOG_ERROR("Failed to register Swarm Bridge with IAT (Slot 20 hole remains)");
                 }
 
                 LOG_INFO("Agentic Bridge fully initialized with enhancements");
+
+                syncAgentModeUiFromBridge();
             }
             else
             {
@@ -823,7 +831,8 @@ void Win32IDE::onAgentStartLoop()
 void Win32IDE::onAgentExecuteCommand()
 {
     LOG_INFO("onAgentExecuteCommand called");
-    // Fallback when invoked from command palette: if chat input missing, we still surface a dialog-based Execute Command.
+    // Fallback when invoked from command palette: if chat input missing, we still surface a dialog-based Execute
+    // Command.
 
     if (!m_agenticBridge)
     {
@@ -895,9 +904,9 @@ void Win32IDE::onAgentExecuteCommand()
         // Fallback when invoked from command palette without chat panel: create inline input dialog
         // CreateWindowExA fallback for Execute Command
         char gotPrompt[2048] = {0};
-        HWND hwndFallback = CreateWindowExA(0, "STATIC", "Enter command:",
-            WS_CHILD, 0, 0, 0, 0, m_hwndMain, nullptr, m_hInstance, nullptr);
-        DestroyWindow(hwndFallback); // transient marker
+        HWND hwndFallback = CreateWindowExA(0, "STATIC", "Enter command:", WS_CHILD, 0, 0, 0, 0, m_hwndMain, nullptr,
+                                            m_hInstance, nullptr);
+        DestroyWindow(hwndFallback);  // transient marker
 
         if (DialogBoxParamA(
                 m_hInstance, "AGENT_PROMPT_DLG", m_hwndMain,
@@ -924,7 +933,8 @@ void Win32IDE::onAgentExecuteCommand()
                     }
                     return FALSE;
                 },
-                (LPARAM)gotPrompt) == IDOK && strlen(gotPrompt) > 0)
+                (LPARAM)gotPrompt) == IDOK &&
+            strlen(gotPrompt) > 0)
         {
             std::string command(gotPrompt);
             appendToOutput("⚡ Executing Agent Command (palette): " + command + "\n", "Output", OutputSeverity::Info);
@@ -1677,16 +1687,73 @@ void Win32IDE::handleAgentCommand(int commandId)
 // a clean callable API for programmatic use (e.g., from SidebarProcImpl).
 // ============================================================================
 
+void Win32IDE::syncAgentModeUiFromBridge()
+{
+    bool maxMode = false;
+    bool deep = false;
+    bool research = false;
+    bool noRefusal = false;
+    if (m_agenticBridge)
+    {
+        maxMode = m_agenticBridge->GetMaxMode();
+        deep = m_agenticBridge->GetDeepThinking();
+        research = m_agenticBridge->GetDeepResearch();
+        noRefusal = m_agenticBridge->GetNoRefusal();
+    }
+    else if (m_agent)
+    {
+        maxMode = m_agent->IsMaxMode();
+        deep = m_agent->IsDeepThink();
+        research = m_agent->IsDeepResearch();
+        noRefusal = m_agent->IsNoRefusal();
+    }
+    else
+    {
+        return;
+    }
+
+    if (m_hMenu)
+    {
+        CheckMenuItem(m_hMenu, IDM_AI_MODE_MAX, maxMode ? MF_CHECKED : MF_UNCHECKED);
+        CheckMenuItem(m_hMenu, IDM_AI_MODE_DEEP_THINK, deep ? MF_CHECKED : MF_UNCHECKED);
+        CheckMenuItem(m_hMenu, IDM_AI_MODE_DEEP_RESEARCH, research ? MF_CHECKED : MF_UNCHECKED);
+        CheckMenuItem(m_hMenu, IDM_AI_MODE_NO_REFUSAL, noRefusal ? MF_CHECKED : MF_UNCHECKED);
+    }
+    if (m_hwndChkMaxMode)
+        SendMessage(m_hwndChkMaxMode, BM_SETCHECK, maxMode ? BST_CHECKED : BST_UNCHECKED, 0);
+    if (m_hwndChkDeepThink)
+        SendMessage(m_hwndChkDeepThink, BM_SETCHECK, deep ? BST_CHECKED : BST_UNCHECKED, 0);
+    if (m_hwndChkDeepResearch)
+        SendMessage(m_hwndChkDeepResearch, BM_SETCHECK, research ? BST_CHECKED : BST_UNCHECKED, 0);
+    if (m_hwndChkNoRefusal)
+        SendMessage(m_hwndChkNoRefusal, BM_SETCHECK, noRefusal ? BST_CHECKED : BST_UNCHECKED, 0);
+
+    if (m_agent)
+    {
+        m_agent->SetMaxMode(maxMode);
+        m_agent->SetDeepThink(deep);
+        m_agent->SetDeepResearch(research);
+        m_agent->SetNoRefusal(noRefusal);
+    }
+}
+
 void Win32IDE::onAIModeMax()
 {
     LOG_INFO("onAIModeMax toggled");
-    bool current = (GetMenuState(m_hMenu, IDM_AI_MODE_MAX, MF_BYCOMMAND) & MF_CHECKED) != 0;
+    bool current = false;
+    if (m_agenticBridge)
+        current = m_agenticBridge->GetMaxMode();
+    else if (m_hMenu)
+        current = (GetMenuState(m_hMenu, IDM_AI_MODE_MAX, MF_BYCOMMAND) & MF_CHECKED) != 0;
     bool newState = !current;
-    CheckMenuItem(m_hMenu, IDM_AI_MODE_MAX, newState ? MF_CHECKED : MF_UNCHECKED);
+    if (m_hMenu)
+        CheckMenuItem(m_hMenu, IDM_AI_MODE_MAX, newState ? MF_CHECKED : MF_UNCHECKED);
     if (m_agenticBridge)
         m_agenticBridge->SetMaxMode(newState);
     if (m_nativeEngine)
         m_nativeEngine->SetMaxMode(newState);
+    if (m_agent)
+        m_agent->SetMaxMode(newState);
     if (m_hwndChkMaxMode)
         SendMessage(m_hwndChkMaxMode, BM_SETCHECK, newState ? BST_CHECKED : BST_UNCHECKED, 0);
     appendToOutput(std::string("Max Mode ") + (newState ? "ENABLED" : "DISABLED") + "\n", "Output",
@@ -1696,9 +1763,14 @@ void Win32IDE::onAIModeMax()
 void Win32IDE::onAIModeDeepThink()
 {
     LOG_INFO("onAIModeDeepThink toggled");
-    bool current = (GetMenuState(m_hMenu, IDM_AI_MODE_DEEP_THINK, MF_BYCOMMAND) & MF_CHECKED) != 0;
+    bool current = false;
+    if (m_agenticBridge)
+        current = m_agenticBridge->GetDeepThinking();
+    else if (m_hMenu)
+        current = (GetMenuState(m_hMenu, IDM_AI_MODE_DEEP_THINK, MF_BYCOMMAND) & MF_CHECKED) != 0;
     bool newState = !current;
-    CheckMenuItem(m_hMenu, IDM_AI_MODE_DEEP_THINK, newState ? MF_CHECKED : MF_UNCHECKED);
+    if (m_hMenu)
+        CheckMenuItem(m_hMenu, IDM_AI_MODE_DEEP_THINK, newState ? MF_CHECKED : MF_UNCHECKED);
     if (m_agenticBridge)
         m_agenticBridge->SetDeepThinking(newState);
     if (m_nativeEngine)
@@ -1712,13 +1784,20 @@ void Win32IDE::onAIModeDeepThink()
 void Win32IDE::onAIModeDeepResearch()
 {
     LOG_INFO("onAIModeDeepResearch toggled");
-    bool current = (GetMenuState(m_hMenu, IDM_AI_MODE_DEEP_RESEARCH, MF_BYCOMMAND) & MF_CHECKED) != 0;
+    bool current = false;
+    if (m_agenticBridge)
+        current = m_agenticBridge->GetDeepResearch();
+    else if (m_hMenu)
+        current = (GetMenuState(m_hMenu, IDM_AI_MODE_DEEP_RESEARCH, MF_BYCOMMAND) & MF_CHECKED) != 0;
     bool newState = !current;
-    CheckMenuItem(m_hMenu, IDM_AI_MODE_DEEP_RESEARCH, newState ? MF_CHECKED : MF_UNCHECKED);
+    if (m_hMenu)
+        CheckMenuItem(m_hMenu, IDM_AI_MODE_DEEP_RESEARCH, newState ? MF_CHECKED : MF_UNCHECKED);
     if (m_agenticBridge)
         m_agenticBridge->SetDeepResearch(newState);
     if (m_nativeEngine)
         m_nativeEngine->SetDeepResearch(newState);
+    if (m_agent)
+        m_agent->SetDeepResearch(newState);
     if (m_hwndChkDeepResearch)
         SendMessage(m_hwndChkDeepResearch, BM_SETCHECK, newState ? BST_CHECKED : BST_UNCHECKED, 0);
     appendToOutput(std::string("Deep Research ") + (newState ? "ENABLED" : "DISABLED") + "\n", "Output",
@@ -1728,11 +1807,18 @@ void Win32IDE::onAIModeDeepResearch()
 void Win32IDE::onAIModeNoRefusal()
 {
     LOG_INFO("onAIModeNoRefusal toggled");
-    bool current = (GetMenuState(m_hMenu, IDM_AI_MODE_NO_REFUSAL, MF_BYCOMMAND) & MF_CHECKED) != 0;
+    bool current = false;
+    if (m_agenticBridge)
+        current = m_agenticBridge->GetNoRefusal();
+    else if (m_hMenu)
+        current = (GetMenuState(m_hMenu, IDM_AI_MODE_NO_REFUSAL, MF_BYCOMMAND) & MF_CHECKED) != 0;
     bool newState = !current;
-    CheckMenuItem(m_hMenu, IDM_AI_MODE_NO_REFUSAL, newState ? MF_CHECKED : MF_UNCHECKED);
+    if (m_hMenu)
+        CheckMenuItem(m_hMenu, IDM_AI_MODE_NO_REFUSAL, newState ? MF_CHECKED : MF_UNCHECKED);
     if (m_agenticBridge)
         m_agenticBridge->SetNoRefusal(newState);
+    if (m_agent)
+        m_agent->SetNoRefusal(newState);
     if (m_hwndChkNoRefusal)
         SendMessage(m_hwndChkNoRefusal, BM_SETCHECK, newState ? BST_CHECKED : BST_UNCHECKED, 0);
     appendToOutput(std::string("No Refusal Mode ") + (newState ? "ENABLED" : "DISABLED") + "\n", "Output",
@@ -1872,11 +1958,10 @@ void Win32IDE::loadMemoryPlugin(const std::string& path)
         int size_needed = MultiByteToWideChar(CP_UTF8, 0, path.c_str(), (int)path.length(), NULL, 0);
         std::wstring wPath(size_needed, 0);
         MultiByteToWideChar(CP_UTF8, 0, path.c_str(), (int)path.length(), &wPath[0], size_needed);
-        
+
         if (!verifyPluginBeforeLoad(wPath.c_str()))
         {
-            appendToOutput("❌ Plugin blocked by signature policy: " + path + "\n",
-                           "Security", OutputSeverity::Error);
+            appendToOutput("❌ Plugin blocked by signature policy: " + path + "\n", "Security", OutputSeverity::Error);
             return;
         }
     }
@@ -1913,5 +1998,3 @@ void Win32IDE::loadMemoryPlugin(const std::string& path)
         FreeLibrary(hPlugin);
     }
 }
-
-

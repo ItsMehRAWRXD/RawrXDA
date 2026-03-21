@@ -44,22 +44,7 @@ int asm_watchdog_get_status(void*) { return 0; }
 int asm_watchdog_get_baseline(uint8_t*) { return 0; }
 int asm_watchdog_shutdown() { return 0; }
 
-uint64_t asm_omega_implement_generate(int) { return 0; }
-int asm_omega_agent_step(int) { return 0; }
-int asm_omega_shutdown() { return 0; }
-int asm_omega_plan_decompose(uint64_t, uint32_t*, int) { return 0; }
-int asm_omega_evolve_improve(int, int) { return 0; }
-int asm_omega_init() { return 0; }
-void* asm_omega_get_stats() { return nullptr; }
-
-int asm_omega_verify_test(int) { return 0; }
-int asm_omega_architect_select(int, int) { return 0; }
-int asm_omega_agent_spawn(int) { return 0; }
-int asm_omega_observe_monitor(int) { return 0; }
-int asm_omega_deploy_distribute(int, int) { return 0; }
-int asm_omega_execute_pipeline() { return 0; }
-uint64_t asm_omega_ingest_requirement(const char*, int) { return 0; }
-int asm_omega_world_model_update(int, int) { return 0; }
+// Omega ASM bridge: production implementations in omega_asm_native_kernel.cpp
 
 uint64_t asm_mesh_crdt_delta(uint64_t, void*, uint32_t) { return 0; }
 void* asm_mesh_get_stats() { return nullptr; }

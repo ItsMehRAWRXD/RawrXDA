@@ -300,9 +300,8 @@ static void sehCallOnCreate(OnCreateFn fn, void* self, HWND hwnd)
     }
     catch (...)
     {
-        const char* crashMsg =
-            "[RawrXD] C++ exception caught in onCreate — window will still display.\n"
-            "Some panels may be missing.";
+        const char* crashMsg = "[RawrXD] C++ exception caught in onCreate — window will still display.\n"
+                               "Some panels may be missing.";
         OutputDebugStringA(crashMsg);
         MessageBoxA(hwnd, crashMsg, "RawrXD IDE - Startup Warning", MB_OK | MB_ICONWARNING);
     }
@@ -379,9 +378,8 @@ static DWORD sehRunBgThread(BgThreadBodyFn fn, void* self)
     }
     catch (...)
     {
-        const char* crashMsg =
-            "[RawrXD] C++ exception in background init thread — non-fatal.\n"
-            "Some subsystems may be unavailable. The IDE window remains open.\n";
+        const char* crashMsg = "[RawrXD] C++ exception in background init thread — non-fatal.\n"
+                               "Some subsystems may be unavailable. The IDE window remains open.\n";
         OutputDebugStringA(crashMsg);
         FILE* f = fopen("rawrxd_crash.log", "a");
         if (f)
@@ -404,8 +402,7 @@ void deferredInitTrampoline(void* self)
 // v280 WndProc Hook — intercepts WM_CREATE/DESTROY/KEYDOWN/TIMER for
 // shared-memory inference bridge (ghost text, token polling, etc.)
 // Returns 1 (rax) if consumed, 0 if pass-through to normal dispatch.
-extern "C" int64_t V280_UI_WndProc_Hook(void* hwnd, uint32_t uMsg,
-                                          uint64_t wParam, int64_t lParam);
+extern "C" int64_t V280_UI_WndProc_Hook(void* hwnd, uint32_t uMsg, uint64_t wParam, int64_t lParam);
 // v280 ghost text query for WM_PAINT overlay
 extern "C" int V280_UI_IsGhostActive(void);
 extern "C" int V280_UI_GetGhostText(char* buf, int buf_size);
@@ -418,9 +415,9 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
     //   - Install/kill poll timer (WM_CREATE/WM_DESTROY)
     //   - Drive token polling (WM_TIMER with IDT_V280_POLL)
     //   - Trigger repaint on WM_V280_GHOST_TEXT
-    int64_t v280_result = V280_UI_WndProc_Hook(
-        (void*)hwnd, (uint32_t)uMsg, (uint64_t)wParam, (int64_t)lParam);
-    if (v280_result != 0) {
+    int64_t v280_result = V280_UI_WndProc_Hook((void*)hwnd, (uint32_t)uMsg, (uint64_t)wParam, (int64_t)lParam);
+    if (v280_result != 0)
+    {
         return 0;  // Message consumed by v280 bridge
     }
 
@@ -484,24 +481,25 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
                     showCommandPalette();
                 return 0;
             }
-            
+
             // Peek overlay keyboard shortcuts
-            if (isPeekOverlayActive()) {
+            if (isPeekOverlayActive())
+            {
                 bool ctrl = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
                 bool alt = (GetKeyState(VK_MENU) & 0x8000) != 0;
                 bool shift = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
                 handlePeekOverlayKey((UINT)wParam, ctrl, alt, shift);
                 return 0;
             }
-            
+
             // Peek definition (Alt+F12)
             if ((GetKeyState(VK_MENU) & 0x8000) && (wParam == VK_F12))
             {
                 routeCommand(IDM_LSP_GOTO_DEFINITION);
                 return 0;
             }
-            
-            // Peek references (Shift+F12)  
+
+            // Peek references (Shift+F12)
             if ((GetKeyState(VK_SHIFT) & 0x8000) && (wParam == VK_F12))
             {
                 routeCommand(IDM_LSP_FIND_REFERENCES);
@@ -535,18 +533,18 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 
             // ── v280 Ghost Text Overlay ──
             // Render inline completion suggestion (dimmed, italic)
-            if (V280_UI_IsGhostActive()) {
+            if (V280_UI_IsGhostActive())
+            {
                 char ghost_buf[4096];
                 int ghost_len = V280_UI_GetGhostText(ghost_buf, sizeof(ghost_buf));
-                if (ghost_len > 0) {
+                if (ghost_len > 0)
+                {
                     // Create ghost text font (italic, same face as editor)
-                    HFONT ghostFont = CreateFontA(
-                        -14, 0, 0, 0, FW_NORMAL,
-                        TRUE,  // italic
-                        FALSE, FALSE, DEFAULT_CHARSET,
-                        OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-                        CLEARTYPE_QUALITY, FIXED_PITCH | FF_MODERN,
-                        "Consolas");
+                    HFONT ghostFont =
+                        CreateFontA(-14, 0, 0, 0, FW_NORMAL,
+                                    TRUE,  // italic
+                                    FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+                                    CLEARTYPE_QUALITY, FIXED_PITCH | FF_MODERN, "Consolas");
                     HFONT oldFont = (HFONT)SelectObject(hdc, ghostFont);
 
                     // Ghost text color: dimmed gray (VS Code style)
@@ -556,11 +554,10 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
                     // Position: after cursor (approximate — real impl uses
                     // editor caret position from Scintilla/TextBuffer)
                     RECT ghostRect = ps.rcPaint;
-                    ghostRect.left += 80;   // indent from editor margin
-                    ghostRect.top += 40;    // below toolbar area
+                    ghostRect.left += 80;  // indent from editor margin
+                    ghostRect.top += 40;   // below toolbar area
 
-                    DrawTextA(hdc, ghost_buf, ghost_len, &ghostRect,
-                              DT_LEFT | DT_TOP | DT_NOPREFIX | DT_WORDBREAK);
+                    DrawTextA(hdc, ghost_buf, ghost_len, &ghostRect, DT_LEFT | DT_TOP | DT_NOPREFIX | DT_WORDBREAK);
 
                     SelectObject(hdc, oldFont);
                     DeleteObject(ghostFont);
@@ -2092,6 +2089,10 @@ void Win32IDE::deferredHeavyInitBody()
         {
             m_agent = std::make_unique<RawrXD::NativeAgent>(m_nativeEngine.get());
             m_agent->SetOutputCallback([this](const std::string& text) { postAgentOutputSafe(text); });
+            m_agent->SetMaxMode(true);
+            m_agent->SetDeepThink(true);
+            m_agent->SetDeepResearch(true);
+            m_agent->SetNoRefusal(true);
         }
     }
     catch (...)
@@ -2183,6 +2184,8 @@ void Win32IDE::deferredHeavyInitBody()
     {
         OutputDebugStringA("ERROR: loadSettings/applySettings failed\n");
     }
+    syncAgentModeUiFromBridge();
+
     if (isShuttingDown())
         return;
 
@@ -3236,5 +3239,3 @@ void Win32IDE::onCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 #endif
     DefWindowProcA(hwnd, WM_COMMAND, MAKEWPARAM(id, codeNotify), (LPARAM)hwndCtl);
 }
-
-

@@ -14,14 +14,6 @@
 
 #include "Win32IDE.h"
 #include <algorithm>
-#include <sstream>
-
-#ifndef RAWRXD_LOG_INFO
-#define RAWRXD_LOG_INFO(msg) do { \
-    std::ostringstream _oss; _oss << "[INFO] " << msg << "\n"; \
-    OutputDebugStringA(_oss.str().c_str()); \
-} while(0)
-#endif
 
 // Colors for fuzzy match highlighting
 static const COLORREF FUZZY_MATCH_COLOR    = RGB(255, 200, 60);    // yellow highlight

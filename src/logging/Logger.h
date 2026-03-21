@@ -6,15 +6,20 @@
 #include <memory>
 #include <vector>
 
-namespace RawrXD::Logging {
-
-// Windows headers define ERROR as a macro (wingdi.h: #define ERROR 0)
-// Save and undefine it so the enum compiles, then restore afterward.
+// Windows headers define ERROR / INFO as macros (wingdi.h, winuser.h, etc.).
+// Save and undefine so LogLevel::INFO / ::ERROR and RAWRXD_LOG_* macros compile.
 #ifdef ERROR
 #  pragma push_macro("ERROR")
 #  undef ERROR
 #  define RAWRXD_RESTORE_ERROR_MACRO
 #endif
+#ifdef INFO
+#  pragma push_macro("INFO")
+#  undef INFO
+#  define RAWRXD_RESTORE_INFO_MACRO
+#endif
+
+namespace RawrXD::Logging {
 
 enum class LogLevel {
     DEBUG,
@@ -105,15 +110,25 @@ private:
 
 } // namespace RawrXD::Logging
 
-// Restore the Windows ERROR macro after the namespace is closed
+// Restore Windows macros after the namespace is closed
 #ifdef RAWRXD_RESTORE_ERROR_MACRO
 #  pragma pop_macro("ERROR")
 #  undef RAWRXD_RESTORE_ERROR_MACRO
 #endif
+#ifdef RAWRXD_RESTORE_INFO_MACRO
+#  pragma pop_macro("INFO")
+#  undef RAWRXD_RESTORE_INFO_MACRO
+#endif
 
-// Convenience macros
-#define RAWRXD_LOG_DEBUG(component) RawrXD::Logging::LogStream(RawrXD::Logging::LogLevel::DEBUG, component, RawrXD::Logging::Logger::instance())
-#define RAWRXD_LOG_INFO(component) RawrXD::Logging::LogStream(RawrXD::Logging::LogLevel::INFO, component, RawrXD::Logging::Logger::instance())
-#define RAWRXD_LOG_WARNING(component) RawrXD::Logging::LogStream(RawrXD::Logging::LogLevel::WARNING, component, RawrXD::Logging::Logger::instance())
-#define RAWRXD_LOG_ERROR(component) RawrXD::Logging::LogStream(RawrXD::Logging::LogLevel::ERROR, component, RawrXD::Logging::Logger::instance())
-#define RAWRXD_LOG_CRITICAL(component) RawrXD::Logging::LogStream(RawrXD::Logging::LogLevel::CRITICAL, component, RawrXD::Logging::Logger::instance())
+// Convenience macros — use numeric LogLevel values so Windows headers' DEBUG/INFO/ERROR
+// macros cannot corrupt tokens during macro expansion (see LogLevel enum order).
+#define RAWRXD_LOG_DEBUG(component) \
+    RawrXD::Logging::LogStream(static_cast<RawrXD::Logging::LogLevel>(0), component, RawrXD::Logging::Logger::instance())
+#define RAWRXD_LOG_INFO(component) \
+    RawrXD::Logging::LogStream(static_cast<RawrXD::Logging::LogLevel>(1), component, RawrXD::Logging::Logger::instance())
+#define RAWRXD_LOG_WARNING(component) \
+    RawrXD::Logging::LogStream(static_cast<RawrXD::Logging::LogLevel>(2), component, RawrXD::Logging::Logger::instance())
+#define RAWRXD_LOG_ERROR(component) \
+    RawrXD::Logging::LogStream(static_cast<RawrXD::Logging::LogLevel>(3), component, RawrXD::Logging::Logger::instance())
+#define RAWRXD_LOG_CRITICAL(component) \
+    RawrXD::Logging::LogStream(static_cast<RawrXD::Logging::LogLevel>(4), component, RawrXD::Logging::Logger::instance())

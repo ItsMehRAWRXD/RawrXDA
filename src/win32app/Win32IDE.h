@@ -1,76 +1,91 @@
 #pragma once
 
+// Windows / Winsock include order (required for MSVC + MinGW):
+//   winsock2.h → ws2tcpip.h → windows.h → commdlg.h
+// winsock2 before windows.h avoids winsock vs winsock.h conflicts; commdlg.h needs
+// Windows types (e.g. CALLBACK, HWND) from windows.h.
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <commdlg.h>
+#include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#include <windows.h>
-#include <commdlg.h>
+
 
 // Undefine Windows macros that conflict with our code
 #ifdef ERROR
 #undef ERROR
 #endif
 
-#include <commctrl.h>
-#include <shlobj.h>
-#include <shellapi.h>
-#include <string>
-#include <vector>
-#include <array>
-#include <memory>
-#include <map>
-#include <unordered_map>
-#include <thread>
-#include <mutex>
-#include <atomic>
-#include <functional>
-#include <filesystem>
-#include "IDELogger.h"
-#include "Win32TerminalManager.h"
-#include "TransparentRenderer.h"
-#include "../gguf_loader.h"
-#include "../streaming_gguf_loader.h"
-#include "../model_source_resolver.h"
-#include "Win32IDE_AgenticBridge.h"
+#include "../../include/editor_engine.h"
+#include "../../include/plugin_system/win32_plugin_loader.h"
 #include "../full_agentic_ide/FullAgenticIDE.h"
+#include "../gguf_loader.h"
+#include "../model_source_resolver.h"
+#include "../modules/codex_ultimate.h"
+#include "../modules/copilot_gap_closer.h"
+#include "../modules/crucible_engine.h"
+#include "../modules/engine_manager.h"
+#include "../modules/game_engine_manager.h"
+#include "../streaming_gguf_loader.h"
+#include "IDELogger.h"
+#include "TransparentRenderer.h"
+#include "Win32IDE_AgenticBridge.h"
 #include "Win32IDE_Autonomy.h"
 #include "Win32IDE_SubAgent.h"
 #include "Win32IDE_WebView2.h"
-#include "../modules/engine_manager.h"
-#include "../modules/codex_ultimate.h"
-#include "../modules/game_engine_manager.h"
-#include "../modules/crucible_engine.h"
-#include "../modules/copilot_gap_closer.h"
-#include "../../include/editor_engine.h"
-#include "../../include/plugin_system/win32_plugin_loader.h"
+#include "Win32TerminalManager.h"
+#include <array>
+#include <atomic>
+#include <commctrl.h>
+#include <filesystem>
+#include <functional>
+#include <map>
+#include <memory>
+#include <mutex>
+#include <shellapi.h>
+#include <shlobj.h>
+#include <string>
+#include <thread>
+#include <unordered_map>
+#include <vector>
 
-#include "../modules/ExtensionLoader.hpp"
-#include "../modules/vscode_extension_api.h"
+
 #include "../../include/mcp_integration.h"
-#include "../core/native_inference_pipeline.hpp"
 #include "../core/70b_gguf_hotpatch.h"
 #include "../core/governor_throttling.h"
+#include "../core/native_inference_pipeline.hpp"
 #include "../core/problems_aggregator.hpp"
+#include "../modules/ExtensionLoader.hpp"
+#include "../modules/vscode_extension_api.h"
 #include "../ui/tool_action_status.h"
 #include <nlohmann/json.hpp>
+
 using json = nlohmann::json;
-#include <condition_variable>
 #include <climits>
+#include <condition_variable>
+
 
 #include "Win32IDE_Fwd.h"
 // Tier 3: File Watcher — full type needed for unique_ptr destructor
 #include "IocpFileWatcher.h"
 
-#include "../agentic/OllamaProvider.h"
 #include "../../include/agentic/agentic_composer_ux.h"
 #include "../agent/agentic_failure_detector.hpp"
+#include "../agentic/OllamaProvider.h"
 #include "agentic_mode_switcher.hpp"
+
 
 #include "Win32IDE_Commands.h"
 #include "Win32IDE_Types.h"
 
 // Forward declarations for peek overlay (definition in Win32IDE_PeekOverlay.cpp)
 class PeekOverlayWindow;
-struct PeekOverlayWindowDeleter { void operator()(PeekOverlayWindow*) noexcept; };
+struct PeekOverlayWindowDeleter
+{
+    void operator()(PeekOverlayWindow*) noexcept;
+};
 
 // Forward declarations for plugin managers defined in component translation units
 class EnterpriseStressTester;
@@ -80,16 +95,20 @@ class RefactoringPluginManager;
 class LanguagePluginManager;
 class ResourceGeneratorManager;
 
-namespace RawrXD {
+namespace RawrXD
+{
 class LayerEvictionManager;
 }
-struct LayerEvictionManagerDeleter {
+struct LayerEvictionManagerDeleter
+{
     void operator()(RawrXD::LayerEvictionManager* ptr) noexcept;
 };
 
 // Lightweight types used by Language Plugin subsystem
-namespace IDEPlugin {
-enum class TokenType {
+namespace IDEPlugin
+{
+enum class TokenType
+{
     Keyword,
     Identifier,
     String,
@@ -104,14 +123,16 @@ enum class TokenType {
     Unknown
 };
 
-struct SyntaxToken {
+struct SyntaxToken
+{
     TokenType type;
     int start;
     int length;
     std::string text;
 };
 
-enum class CompletionItemKind {
+enum class CompletionItemKind
+{
     Text,
     Method,
     Function,
@@ -139,7 +160,8 @@ enum class CompletionItemKind {
     TypeParameter
 };
 
-struct CompletionItem {
+struct CompletionItem
+{
     std::string label;
     std::string detail;
     std::string documentation;
@@ -147,16 +169,18 @@ struct CompletionItem {
     std::string insertText;
 };
 
-struct Diagnostic {
+struct Diagnostic
+{
     std::string source;
     int line;
     int column;
     std::string message;
     std::string severity;
 };
-} // namespace IDEPlugin
+}  // namespace IDEPlugin
 
-struct StressTestResults {
+struct StressTestResults
+{
     uint64_t operationsCompleted = 0;
     uint64_t errorsEncountered = 0;
     double avgResponseTimeUs = 0.0;
@@ -166,7 +190,8 @@ struct StressTestResults {
 
 using SQLiteQueryCallback = std::function<int(int, char**, char**)>;
 
-struct RefactoringOption {
+struct RefactoringOption
+{
     std::string name;
     std::string description;
 };
@@ -179,11 +204,12 @@ class Win32IDE
     friend void deferredInitTrampoline(void* self);
     friend void bgInitBody(void* self);
 
-public:
+  public:
     void runWorkspaceSearchFromDialog(const std::string& query);
-    void deferredHeavyInitBody();   // SEH-safe body, called from bg thread via sehRunBgThread
+    void deferredHeavyInitBody();  // SEH-safe body, called from bg thread via sehRunBgThread
 
-    enum class OutputSeverity {
+    enum class OutputSeverity
+    {
         Debug = 0,
         Info = 1,
         Warning = 2,
@@ -191,7 +217,8 @@ public:
         Success = 4
     };
 
-    enum class PanelTab {
+    enum class PanelTab
+    {
         Terminal = 0,
         Output = 1,
         Problems = 2,
@@ -227,7 +254,7 @@ public:
     // Agentic Framework — Full Agentic IDE owns the bridge (single entry point: src/full_agentic_ide/)
     std::unique_ptr<full_agentic_ide::FullAgenticIDE> m_fullAgenticIDE;
     AgenticBridge* m_agenticBridge = nullptr;  // Non-owning; set from m_fullAgenticIDE->getBridge()
-    bool m_multiAgentEnabled = false;  // Multi-agent orchestration toggle
+    bool m_multiAgentEnabled = false;          // Multi-agent orchestration toggle
     void initializeAgenticBridge();
     bool ensureAgenticBridgeHasModel(const std::string& path);
     void initializeAutonomy();
@@ -239,7 +266,7 @@ public:
     void onAgentStop();
 
     // Autonomy Framework Controls
-    std::unique_ptr<AutonomyManager> m_autonomyManager; // high-level autonomous orchestrator
+    std::unique_ptr<AutonomyManager> m_autonomyManager;  // high-level autonomous orchestrator
     void onAutonomyStart();
     void onAutonomyStop();
     void onAutonomyToggle();
@@ -260,8 +287,10 @@ public:
     void onAIModeDeepThink();
     void onAIModeDeepResearch();
     void onAIModeNoRefusal();
+    /** Sync main menu + agent chat panel checkboxes from AgenticBridge / NativeAgent (after init or config load). */
+    void syncAgentModeUiFromBridge();
     void onAIContextSize(int sizeEnum);
-    
+
     // Memory Plugin System (Native VSIX Style)
     // Note: loadMemoryPlugin is the legacy single-DLL loader.
     // For the full plugin system, use m_pluginLoader (Phase 43).
@@ -272,14 +301,14 @@ public:
     // AGENT MEMORY — Persistent observation store for agentic iterations
     // Phase 19B: Lets agents/models/swarms/end-users store & recall context
     // ========================================================================
-    struct AgentMemoryEntry {
+    struct AgentMemoryEntry
+    {
         std::string key;
         std::string value;
-        std::string source;       // "agent", "user", "swarm", etc.
-        uint64_t    timestampMs;
+        std::string source;  // "agent", "user", "swarm", etc.
+        uint64_t timestampMs;
     };
-    void onAgentMemoryStore(const std::string& key, const std::string& value,
-                            const std::string& source = "agent");
+    void onAgentMemoryStore(const std::string& key, const std::string& value, const std::string& source = "agent");
     void onAgentMemoryRecall(const std::string& key);
     void onAgentMemoryView();
     void onAgentMemoryClear();
@@ -313,7 +342,7 @@ public:
     void killTerminal(int paneId = -1);
     void killTerminalWithTimeout(int paneId, int timeoutMs);
     void setTerminalKillTimeout(int timeoutMs);
-    int  getTerminalKillTimeout() const;
+    int getTerminalKillTimeout() const;
 
     // ========================================================================
     // SPLIT CODE VIEWER — Split editor into two side-by-side code panes
@@ -328,9 +357,7 @@ public:
     // CROSS-IDE FINDPATTERN RVA PARITY TEST
     // Phase 19B: Ensures CLI & Win32IDE produce identical FindPattern results
     // ========================================================================
-    bool testFindPatternRVAParity(const std::string& binaryPath,
-                                   const std::string& pattern,
-                                   uint64_t& outRVA);
+    bool testFindPatternRVAParity(const std::string& binaryPath, const std::string& pattern, uint64_t& outRVA);
 
     // ========================================================================
     // LICENSE → MANIFEST WIRING
@@ -345,8 +372,8 @@ public:
     void initTranscendence();
     void shutdownTranscendence();
     bool handleTranscendenceCommand(int cmdId);
-    std::string handleTranscendenceEndpoint(
-        const std::string& method, const std::string& path, const std::string& body);
+    std::string handleTranscendenceEndpoint(const std::string& method, const std::string& path,
+                                            const std::string& body);
 
     // Comprehensive Logging System
     void initializeLogging();
@@ -366,12 +393,13 @@ public:
     IDESettings& getSettingsMut() { return m_settings; }
     bool isDebugActive() const { return m_debuggingActive; }
     const std::string& getDebugCurrentFile() const { return m_debuggerCurrentFile; }
-    int createTerminalPanePublic(Win32TerminalManager::ShellType type, const std::string& name) {
+    int createTerminalPanePublic(Win32TerminalManager::ShellType type, const std::string& name)
+    {
         return createTerminalPane(type, name);
     }
     void sendToAllTerminalsPublic(const std::string& cmd) { sendToAllTerminals(cmd); }
 
-private:
+  private:
     EngineManager* m_engineManager = nullptr;
     CodexUltimate* m_codexUltimate = nullptr;
 
@@ -433,19 +461,19 @@ private:
     void saveRecentFiles();
     void clearRecentFiles();
     std::string getFileDialogPath(bool isSave = false);
-    
+
     // GGUF Model operations
     bool loadGGUFModel(const std::string& filepath);
     std::string getModelInfo() const;
     bool loadTensorData(const std::string& tensorName, std::vector<uint8_t>& data);
-    
+
     // Unified model source resolution (HuggingFace, Ollama blobs, HTTP, local files)
     void openModelFromHuggingFace();
     void openModelFromOllama();
     void openModelFromURL();
     void openModelUnified();
     bool resolveAndLoadModel(const std::string& input);
-    
+
     // Streaming / Model UX — progress, cancellation, status feedback
     void showModelProgressBar(const std::string& operation);
     void updateModelProgress(float percent, const std::string& statusText);
@@ -464,9 +492,10 @@ private:
     // (AI Backend Abstraction — Phase 8B: see full declaration block below Settings section)
 
     // AI Inference Engine - Local GGUF Model Chat
-    struct InferenceConfig {
+    struct InferenceConfig
+    {
         int maxTokens = 512;
-        int contextWindow = 4096; // Added Context
+        int contextWindow = 4096;  // Added Context
         float temperature = 0.7f;
         float topP = 0.9f;
         int topK = 40;
@@ -476,23 +505,22 @@ private:
     };
 
     // ── Context Window Token Usage Tracking ──
-    struct ContextWindowUsage {
-        int maxTokens            = 128000;
-        int systemTokens         = 0;    // System instructions
-        int toolDefTokens        = 0;    // Tool definitions
-        int userContextTokens    = 0;    // User context / workspace info
-        int messageTokens        = 0;    // Conversation messages
-        int toolResultTokens     = 0;    // Tool call results
+    struct ContextWindowUsage
+    {
+        int maxTokens = 128000;
+        int systemTokens = 0;       // System instructions
+        int toolDefTokens = 0;      // Tool definitions
+        int userContextTokens = 0;  // User context / workspace info
+        int messageTokens = 0;      // Conversation messages
+        int toolResultTokens = 0;   // Tool call results
 
-        int totalUsed() const {
-            return systemTokens + toolDefTokens + userContextTokens +
-                   messageTokens + toolResultTokens;
+        int totalUsed() const
+        {
+            return systemTokens + toolDefTokens + userContextTokens + messageTokens + toolResultTokens;
         }
-        float percentage() const {
-            return maxTokens > 0 ? (float(totalUsed()) / float(maxTokens)) * 100.0f : 0.0f;
-        }
+        float percentage() const { return maxTokens > 0 ? (float(totalUsed()) / float(maxTokens)) * 100.0f : 0.0f; }
         bool isWarning() const { return percentage() >= 75.0f; }
-        bool isDanger()  const { return percentage() >= 90.0f; }
+        bool isDanger() const { return percentage() >= 90.0f; }
     };
 
     ContextWindowUsage m_contextUsage;
@@ -500,7 +528,7 @@ private:
     void setContextWindowMax(int maxTokens);
     void addContextTokens(const std::string& category, int tokens);
     std::string formatTokenCount(int tokens) const;
-    
+
     bool initializeInference();
     void shutdownInference();
     bool isModelLoaded() const;
@@ -530,7 +558,7 @@ private:
     void editCut();
     void editCopy();
     void editPaste();
-    
+
     // View Operations
     void toggleOutputPanel();
     void toggleTerminal();
@@ -541,49 +569,51 @@ private:
     void startCommandPrompt();
     void stopTerminal();
     void executeCommand();
-    
+
     // ========================================================================
     // FULL POWERSHELL ACCESS - Complete PowerShell Integration
     // ========================================================================
-    
+
     // PowerShell Execution
     std::string executePowerShellScript(const std::string& scriptPath, const std::vector<std::string>& args = {});
     std::string executePowerShellCommand(const std::string& command, bool async = false);
-    std::string invokePowerShellCmdlet(const std::string& cmdlet, const std::map<std::string, std::string>& parameters = {});
-    
+    std::string invokePowerShellCmdlet(const std::string& cmdlet,
+                                       const std::map<std::string, std::string>& parameters = {});
+
     // PowerShell Pipeline Support
     std::string executePowerShellPipeline(const std::vector<std::string>& commands);
     std::string pipeToPowerShell(const std::string& input, const std::string& command);
-    
+
     // PowerShell Module Management
     std::vector<std::string> getPowerShellModules();
     bool importPowerShellModule(const std::string& moduleName);
     bool removePowerShellModule(const std::string& moduleName);
     std::string getPowerShellModuleInfo(const std::string& moduleName);
-    
+
     // PowerShell Variable Access
     std::string getPowerShellVariable(const std::string& varName);
     bool setPowerShellVariable(const std::string& varName, const std::string& value);
     std::map<std::string, std::string> getAllPowerShellVariables();
-    
+
     // PowerShell Function Invocation
     std::string invokePowerShellFunction(const std::string& functionName, const std::vector<std::string>& args = {});
     bool definePowerShellFunction(const std::string& functionName, const std::string& functionBody);
     std::vector<std::string> listPowerShellFunctions();
-    
+
     // PowerShell Remoting
     bool enterPowerShellRemoteSession(const std::string& computerName, const std::string& credential = "");
     void exitPowerShellRemoteSession();
     std::string invokePowerShellRemoteCommand(const std::string& computerName, const std::string& command);
-    
+
     // PowerShell Object Manipulation
     std::string convertToPowerShellJson(const std::string& object);
     std::string convertFromPowerShellJson(const std::string& json);
     std::string selectPowerShellObject(const std::string& inputObject, const std::vector<std::string>& properties);
     std::string wherePowerShellObject(const std::string& inputObject, const std::string& filter);
-    
+
     // PowerShell Script Analysis
-    struct PSScriptAnalysis {
+    struct PSScriptAnalysis
+    {
         std::vector<std::string> errors;
         std::vector<std::string> warnings;
         std::vector<std::string> information;
@@ -593,13 +623,14 @@ private:
     };
     PSScriptAnalysis analyzePowerShellScript(const std::string& scriptPath);
     std::vector<std::string> getPowerShellCommandSyntax(const std::string& cmdlet);
-    
+
     // PowerShell Provider Access
     std::vector<std::string> getPowerShellProviders();
     std::string getPowerShellDrive(const std::string& driveName);
     std::vector<std::string> listPowerShellDrives();
-    bool newPowerShellDrive(const std::string& name, const std::string& root, const std::string& provider = "FileSystem");
-    
+    bool newPowerShellDrive(const std::string& name, const std::string& root,
+                            const std::string& provider = "FileSystem");
+
     // PowerShell Job Management
     int startPowerShellJob(const std::string& scriptBlock, const std::string& name = "");
     std::string getPowerShellJobStatus(int jobId);
@@ -607,25 +638,25 @@ private:
     bool removePowerShellJob(int jobId);
     std::vector<int> listPowerShellJobs();
     bool waitPowerShellJob(int jobId, int timeoutMs = -1);
-    
+
     // PowerShell Transcription
     bool startPowerShellTranscript(const std::string& path);
     bool stopPowerShellTranscript();
     std::string getPowerShellHistory(int count = 100);
     void clearPowerShellHistory();
-    
+
     // PowerShell Debugger Integration
     bool setPowerShellBreakpoint(const std::string& scriptPath, int line);
     bool removePowerShellBreakpoint(int breakpointId);
     std::vector<int> listPowerShellBreakpoints();
     bool enablePowerShellDebugMode();
     void disablePowerShellDebugMode();
-    
+
     // PowerShell Help System
     std::string getPowerShellHelp(const std::string& cmdlet, bool detailed = false, bool examples = false);
     std::vector<std::string> searchPowerShellHelp(const std::string& query);
     std::string getPowerShellAboutTopic(const std::string& topic);
-    
+
     // PowerShell Configuration
     std::string getPowerShellVersion();
     std::string getPowerShellEdition();
@@ -633,27 +664,29 @@ private:
     bool setPowerShellExecutionPolicy(const std::string& policy);
     std::map<std::string, std::string> getPowerShellEnvironmentVariables();
     bool setPowerShellEnvironmentVariable(const std::string& name, const std::string& value);
-    
+
     // PowerShell Event Handling
-    bool registerPowerShellEvent(const std::string& sourceIdentifier, const std::string& eventName, const std::string& action);
+    bool registerPowerShellEvent(const std::string& sourceIdentifier, const std::string& eventName,
+                                 const std::string& action);
     bool unregisterPowerShellEvent(const std::string& sourceIdentifier);
     std::vector<std::string> getPowerShellEvents();
-    
+
     // PowerShell Profile Management
     std::string getPowerShellProfilePath();
     bool editPowerShellProfile();
     bool reloadPowerShellProfile();
-    
+
     // PowerShell Output Formatting
     std::string formatPowerShellTable(const std::string& data, const std::vector<std::string>& properties = {});
     std::string formatPowerShellList(const std::string& data);
     std::string formatPowerShellWide(const std::string& data, int columns = 2);
     std::string formatPowerShellCustom(const std::string& data, const std::string& formatString);
-    
+
     // PowerShell Workflow Integration
     bool importPowerShellWorkflow(const std::string& workflowPath);
-    std::string executePowerShellWorkflow(const std::string& workflowName, const std::map<std::string, std::string>& parameters = {});
-    
+    std::string executePowerShellWorkflow(const std::string& workflowName,
+                                          const std::map<std::string, std::string>& parameters = {});
+
     // Direct RawrXD.ps1 Integration
     bool loadRawrXDPowerShellModule();
     std::string invokeRawrXDFunction(const std::string& functionName, const std::vector<std::string>& args = {});
@@ -662,7 +695,7 @@ private:
     std::string getRawrXDModelStatus();
     bool loadRawrXDGGUFModel(const std::string& modelPath, int maxZoneMB = 512);
     std::string invokeRawrXDInference(const std::string& prompt, int maxTokens = 100);
-    
+
     // Terminal Integration (5 features - Split panes, multiple terminals)
     int createTerminalPane(Win32TerminalManager::ShellType shellType, const std::string& name = "");
     void splitTerminalHorizontal();
@@ -679,9 +712,10 @@ private:
     void splitTerminalImpl(bool horizontal);
     void focusNextTerminalPane();
 
-public:
+  public:
     // Peek Definition/References Overlay (Win32IDE_PeekView.cpp)
-    struct PeekLocation {
+    struct PeekLocation
+    {
         std::string filePath;
         int line = 0;
         int col = 0;
@@ -699,7 +733,13 @@ public:
     std::vector<PeekLocation> scanForReferences(const std::string& symbol);
 
     // Auto-Save System (Win32IDE_AutoSave.cpp)
-    enum class AutoSaveMode { Off = 0, AfterDelay = 1, OnFocusChange = 2, OnWindowChange = 3 };
+    enum class AutoSaveMode
+    {
+        Off = 0,
+        AfterDelay = 1,
+        OnFocusChange = 2,
+        OnWindowChange = 3
+    };
     void initAutoSave();
     void shutdownAutoSave();
     void toggleAutoSave();
@@ -730,7 +770,7 @@ public:
     bool handleMultiCursorChar(WPARAM ch);
     bool handleMultiCursorClick(int charPos, bool altHeld);
     void updateMultiCursorStatusBar();
-    int  getMultiCursorCount() const;
+    int getMultiCursorCount() const;
 
     // Git Integration (7 features - Status, commit, push, pull)
     void updateGitStatus();
@@ -747,7 +787,7 @@ public:
     std::vector<GitFile> getGitChangedFiles() const;
     bool executeGitCommand(const std::string& command, std::string& output);
     void showCommitDialog();
-    
+
     // Menu Command System (25 features)
     void handleFileCommand(int commandId);
     void handleEditCommand(int commandId);
@@ -776,8 +816,7 @@ public:
     void showThermalDashboard();
 
     // Simple modal input dialog (implemented in Win32IDE_Quantum.cpp)
-    bool DialogBoxWithInput(const wchar_t* title, const wchar_t* prompt,
-                            wchar_t* buffer, size_t bufferSize);
+    bool DialogBoxWithInput(const wchar_t* title, const wchar_t* prompt, wchar_t* buffer, size_t bufferSize);
 
     // Security scans (Top-50 P0)
     bool handleSecurityCommand(int commandId);
@@ -815,7 +854,7 @@ public:
      *  Called automatically when debug is launched; can be called after build to target the built exe. */
     void setCurrentBinaryForReverseEngineering(const std::string& path);
 
-    HMENU createReverseEngineeringMenu(); // Helper to add the menu
+    HMENU createReverseEngineeringMenu();  // Helper to add the menu
 
     // ========================================================================
     // DECOMPILER VIEW — Direct2D Split View (Phase 18B)
@@ -825,8 +864,7 @@ public:
     //   3. Right-click variable rename with SSA graph propagation
     // ========================================================================
     void initDecompilerView();
-    void showDecompilerView(const std::string& decompCode,
-                            const std::string& disasmText,
+    void showDecompilerView(const std::string& decompCode, const std::string& disasmText,
                             const std::string& binaryName);
     void destroyDecompilerView();
     void decompViewRenameVariable(const std::string& oldName, const std::string& newName);
@@ -834,7 +872,7 @@ public:
     void decompViewSyncToAddress(uint64_t address);
     bool isDecompilerViewActive() const;
 
-public:
+  public:
     // ========================================================================
     // FEATURE MANIFEST & SELF-TEST (Phase 19)
     // Auto-introspects all IDE features across Win32/CLI/React/PowerShell
@@ -846,8 +884,7 @@ public:
     int getLoadedThemeCount() const { return static_cast<int>(m_themes.size()); }
     bool hasAgenticBridge() const { return m_agenticBridge != nullptr; }
 
-private:
-
+  private:
     // Command routing
     bool routeCommand(int commandId);
     std::string getCommandDescription(int commandId) const;
@@ -859,17 +896,17 @@ private:
     void loadTheme(const std::string& themeName);
     void saveTheme(const std::string& themeName);
     void applyTheme();
-    void applyThemeToAllControls();          // Deep apply: sidebar, activity bar, tabs, status bar, panels
+    void applyThemeToAllControls();  // Deep apply: sidebar, activity bar, tabs, status bar, panels
     void showThemeEditor();
-    void showThemePicker();                   // Proper picker dialog with preview
+    void showThemePicker();                                                      // Proper picker dialog with preview
     void logThemeDiff(const IDETheme& before, const IDETheme& candidate) const;  // Debug diff during preview
     void resetToDefaultTheme();
-    void populateBuiltinThemes();             // Register all 16 built-in themes
-    IDETheme getBuiltinTheme(int themeId) const;  // Factory method
-    void applyThemeById(int themeId);         // IDM_THEME_xxx → apply
-    void setWindowTransparency(BYTE alpha);   // WS_EX_LAYERED alpha
-    void showTransparencySlider();            // Custom slider dialog
-    void buildThemeMenu(HMENU hParentMenu);   // Build Appearance submenu
+    void populateBuiltinThemes();                                         // Register all 16 built-in themes
+    IDETheme getBuiltinTheme(int themeId) const;                          // Factory method
+    void applyThemeById(int themeId);                                     // IDM_THEME_xxx → apply
+    void setWindowTransparency(BYTE alpha);                               // WS_EX_LAYERED alpha
+    void showTransparencySlider();                                        // Custom slider dialog
+    void buildThemeMenu(HMENU hParentMenu);                               // Build Appearance submenu
     COLORREF blendColor(COLORREF base, COLORREF overlay, float t) const;  // Utility
 
     // Grant dialog procs access to private members
@@ -883,6 +920,7 @@ private:
     friend LRESULT CALLBACK SplitterBarProc(HWND, UINT, WPARAM, LPARAM);
 
     // Grant Tier 1 cosmetic callbacks access to private members
+    friend LRESULT CALLBACK Tier1EnhancedMinimapWndProc(HWND, UINT, WPARAM, LPARAM);
     friend LRESULT CALLBACK MinimapWndProc(HWND, UINT, WPARAM, LPARAM);
 
     // Theme session persistence
@@ -907,8 +945,9 @@ private:
     void loadSnippetsFromJson(const std::string& filePath, const std::string& language);
     void loadBuiltInSnippets();
     void loadUserSnippetFiles();
-    int  findSnippetByTrigger(const std::string& trigger, const std::string& language);
-    std::vector<std::pair<std::string, std::string>> getSnippetCompletions(const std::string& prefix, const std::string& language);
+    int findSnippetByTrigger(const std::string& trigger, const std::string& language);
+    std::vector<std::pair<std::string, std::string>> getSnippetCompletions(const std::string& prefix,
+                                                                           const std::string& language);
     bool tryExpandSnippetAtCursor();
 
     // Integrated help
@@ -917,15 +956,16 @@ private:
     void showPowerShellDocs();
     void searchHelp(const std::string& query);
 
-public:
+  public:
     // Enhanced output panel (public — accessed by BuildRunner, AgentStreamingBridge, AuditDashboard, etc.)
     void createOutputTabs();
     void addOutputTab(const std::string& name);
-    void appendToOutput(const std::string& text, const std::string& tabName = "General", OutputSeverity severity = OutputSeverity::Info);
+    void appendToOutput(const std::string& text, const std::string& tabName = "General",
+                        OutputSeverity severity = OutputSeverity::Info);
     void clearOutput(const std::string& tabName = "General");
     void formatOutput(const std::string& text, COLORREF color, const std::string& tabName = "");
-private:
 
+  private:
     // Enhanced clipboard
     void copyWithFormatting();
     void pasteWithoutFormatting();
@@ -936,7 +976,8 @@ private:
     // ========================================================================
     // INCREMENTAL SYNTAX COLORING (RichEdit-based)
     // ========================================================================
-    enum class TokenType {
+    enum class TokenType
+    {
         Default = 0,
         Keyword,
         BuiltinType,
@@ -948,12 +989,14 @@ private:
         Function,
         Bracket
     };
-    struct SyntaxToken {
-        int start;          // Character offset in the editor
-        int length;         // Token length
-        TokenType type;     // Token classification
+    struct SyntaxToken
+    {
+        int start;       // Character offset in the editor
+        int length;      // Token length
+        TokenType type;  // Token classification
     };
-    enum class SyntaxLanguage {
+    enum class SyntaxLanguage
+    {
         None = 0,
         Cpp,
         Python,
@@ -965,25 +1008,26 @@ private:
     };
 
     // Visible-range descriptor for syntax coloring optimization
-    struct VisibleLineRange {
-        int firstLine;      // First visible line (0-based)
-        int lastLine;       // Last visible line (0-based)
-        int lineCount;      // Total visible line count (including margin)
-        int lineHeight;     // Pixel height per line
+    struct VisibleLineRange
+    {
+        int firstLine;   // First visible line (0-based)
+        int lastLine;    // Last visible line (0-based)
+        int lineCount;   // Total visible line count (including margin)
+        int lineHeight;  // Pixel height per line
     };
 
     // Syntax coloring methods
     void initSyntaxColorizer();
     void applySyntaxColoring();
     void applySyntaxColoringForRange(int startChar, int endChar);
-    void applySyntaxColoringForVisibleRange();  // Named wrapper — colors only the visible range
-    VisibleLineRange getVisibleEditorLines() const;  // Accessor for the visible line range
+    void applySyntaxColoringForVisibleRange();        // Named wrapper — colors only the visible range
+    VisibleLineRange getVisibleEditorLines() const;   // Accessor for the visible line range
     SyntaxLanguage getCurrentSyntaxLanguage() const;  // Accessor for the detected language enum
     std::vector<SyntaxToken> tokenizeLine(const std::string& line, int lineStartOffset, SyntaxLanguage lang);
     std::vector<SyntaxToken> tokenizeDocument(const std::string& text, SyntaxLanguage lang);
     COLORREF getTokenColor(TokenType type) const;
     SyntaxLanguage detectLanguageFromExtension(const std::string& filePath) const;
-    void onEditorContentChanged();  // Debounced EN_CHANGE handler for syntax coloring
+    void onEditorContentChanged();    // Debounced EN_CHANGE handler for syntax coloring
     void toggleSyntaxHighlighting();  // Toggle syntax highlighting on/off
     bool isKeyword(const std::string& word, SyntaxLanguage lang) const;
     bool isBuiltinType(const std::string& word, SyntaxLanguage lang) const;
@@ -1023,7 +1067,8 @@ private:
     std::string getSessionFilePath() const;
 
     // Agent Inline Annotations
-    enum class AnnotationSeverity {
+    enum class AnnotationSeverity
+    {
         Hint = 0,
         Info = 1,
         Warning = 2,
@@ -1031,42 +1076,46 @@ private:
         Suggestion = 4
     };
     // Annotation Action Types — what happens when the user clicks an annotation
-    enum class AnnotationActionType {
-        None = 0,           // No action (display only)
-        JumpToLine,         // Navigate to the referenced line
-        ApplyFix,           // Apply a suggested code fix
-        AskAgent,           // Send the annotation context to the agent for elaboration
-        OpenFile,           // Open a referenced file
-        RunCommand,         // Execute a command palette command
-        Suppress            // Dismiss/suppress the annotation permanently
+    enum class AnnotationActionType
+    {
+        None = 0,    // No action (display only)
+        JumpToLine,  // Navigate to the referenced line
+        ApplyFix,    // Apply a suggested code fix
+        AskAgent,    // Send the annotation context to the agent for elaboration
+        OpenFile,    // Open a referenced file
+        RunCommand,  // Execute a command palette command
+        Suppress     // Dismiss/suppress the annotation permanently
     };
 
     // Annotation Action — attached to an annotation for click-to-act
-    struct AnnotationAction {
+    struct AnnotationAction
+    {
         AnnotationActionType type;
-        std::string label;          // Human-readable label for context menus
-        int targetLine;             // For JumpToLine: destination line (1-based)
-        std::string targetFile;     // For OpenFile / JumpToLine in another file
-        std::string fixContent;     // For ApplyFix: the replacement text
-        int fixStartLine;           // For ApplyFix: start line of replacement range
-        int fixEndLine;             // For ApplyFix: end line of replacement range
-        std::string agentPrompt;    // For AskAgent: pre-populated prompt
-        std::string commandId;      // For RunCommand: command to execute
+        std::string label;        // Human-readable label for context menus
+        int targetLine;           // For JumpToLine: destination line (1-based)
+        std::string targetFile;   // For OpenFile / JumpToLine in another file
+        std::string fixContent;   // For ApplyFix: the replacement text
+        int fixStartLine;         // For ApplyFix: start line of replacement range
+        int fixEndLine;           // For ApplyFix: end line of replacement range
+        std::string agentPrompt;  // For AskAgent: pre-populated prompt
+        std::string commandId;    // For RunCommand: command to execute
     };
 
-    struct InlineAnnotation {
-        int line;                   // 1-based line number
-        int column;                 // 0-based column (for inline placement)
+    struct InlineAnnotation
+    {
+        int line;    // 1-based line number
+        int column;  // 0-based column (for inline placement)
         AnnotationSeverity severity;
-        std::string text;           // Annotation message
-        std::string source;         // "agent", "linter", "diagnostics", etc.
-        COLORREF color;             // Computed from severity
-        bool visible;               // Can be toggled
-        std::vector<AnnotationAction> actions; // Click actions (may have multiple per annotation)
+        std::string text;                       // Annotation message
+        std::string source;                     // "agent", "linter", "diagnostics", etc.
+        COLORREF color;                         // Computed from severity
+        bool visible;                           // Can be toggled
+        std::vector<AnnotationAction> actions;  // Click actions (may have multiple per annotation)
     };
-    void addAnnotation(int line, AnnotationSeverity severity, const std::string& text, const std::string& source = "agent");
+    void addAnnotation(int line, AnnotationSeverity severity, const std::string& text,
+                       const std::string& source = "agent");
     void addAnnotationWithAction(int line, AnnotationSeverity severity, const std::string& text,
-                                  const AnnotationAction& action, const std::string& source = "agent");
+                                 const AnnotationAction& action, const std::string& source = "agent");
     void removeAnnotations(int line, const std::string& source = "");
     void clearAllAnnotations(const std::string& source = "");
     void paintAnnotations(HDC hdc, RECT& rc);
@@ -1122,7 +1171,8 @@ private:
     void exportModule();
 
     // Command Palette (Ctrl+Shift+P)
-    struct CommandPaletteItem {
+    struct CommandPaletteItem
+    {
         int id;
         std::string name;
         std::string shortcut;
@@ -1141,12 +1191,12 @@ private:
     HWND m_hwndCommandPaletteList;
     bool m_commandPaletteVisible;
     WNDPROC m_oldCommandPaletteInputProc;
-    std::vector<CommandPaletteItem> m_commandRegistry;      // reserved large upfront to avoid realloc invalidation
-    std::vector<CommandPaletteItem> m_filteredCommands;     // mirrors registry; also reserved
-    std::vector<std::vector<int>> m_fuzzyMatchPositions;    // per-item match highlight positions
-    uint64_t m_commandRegistryVersion = 0;                  // bump on rebuild to detect stale filtered indexes
-    uint64_t m_filteredVersion = 0;                         // version of current filtered list
-    std::unordered_map<int, int> m_commandMRU; // commandId -> usage count (session-only, no disk)
+    std::vector<CommandPaletteItem> m_commandRegistry;    // reserved large upfront to avoid realloc invalidation
+    std::vector<CommandPaletteItem> m_filteredCommands;   // mirrors registry; also reserved
+    std::vector<std::vector<int>> m_fuzzyMatchPositions;  // per-item match highlight positions
+    uint64_t m_commandRegistryVersion = 0;                // bump on rebuild to detect stale filtered indexes
+    uint64_t m_filteredVersion = 0;                       // version of current filtered list
+    std::unordered_map<int, int> m_commandMRU;            // commandId -> usage count (session-only, no disk)
 
     // Utility
     std::string getWindowText(HWND hwnd);
@@ -1168,7 +1218,8 @@ private:
     void replaceNext();
     void replaceAll();
     bool findText(const std::string& searchText, bool forward, bool caseSensitive, bool wholeWord, bool useRegex);
-    int replaceText(const std::string& searchText, const std::string& replaceText, bool all, bool caseSensitive, bool wholeWord, bool useRegex);
+    int replaceText(const std::string& searchText, const std::string& replaceText, bool all, bool caseSensitive,
+                    bool wholeWord, bool useRegex);
     static INT_PTR CALLBACK FindDialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
     static INT_PTR CALLBACK ReplaceDialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
@@ -1199,7 +1250,8 @@ private:
     static LRESULT CALLBACK FileExplorerContainerProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
     // Primary Sidebar (Left) - VS Code Activity Bar + Sidebar
-    enum class SidebarView {
+    enum class SidebarView
+    {
         None = 0,
         Explorer = 1,
         Search = 2,
@@ -1208,7 +1260,7 @@ private:
         Extensions = 5,
         DiskRecovery = 6
     };
-    
+
     void createActivityBar(HWND hwndParent);
     void createPrimarySidebar(HWND hwndParent);
     void toggleSidebar();
@@ -1219,7 +1271,7 @@ private:
     static LRESULT CALLBACK SidebarProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
     static LRESULT CALLBACK SidebarContentProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
     static WNDPROC s_sidebarContentOldProc;
-    
+
     // Explorer View
     void createExplorerView(HWND hwndParent);
     void refreshFileTree();
@@ -1234,7 +1286,7 @@ private:
     void revealInExplorer(const std::string& filePath);
     void handleExplorerContextMenu(POINT pt);
     static LRESULT CALLBACK ExplorerTreeProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-    
+
     // Search View
     void createSearchView(HWND hwndParent);
     void performWorkspaceSearch(const std::string& query, bool useRegex, bool caseSensitive, bool wholeWord);
@@ -1245,12 +1297,10 @@ private:
     void clearSearchResults();
     void createSearchPanel();
     void performSearch();
-    void searchDirectory(const std::string& dir, const char* query, int depth,
-                         bool caseSensitive, bool useRegex, bool wholeWord,
-                         const std::string& includeFilter,
-                         const std::string& excludeFilter);
+    void searchDirectory(const std::string& dir, const char* query, int depth, bool caseSensitive, bool useRegex,
+                         bool wholeWord, const std::string& includeFilter, const std::string& excludeFilter);
     void performSearchReplace(bool replaceAll);
-    
+
     // Source Control View
     void createSourceControlView(HWND hwndParent);
     void refreshSourceControlView();
@@ -1260,7 +1310,7 @@ private:
     void commitChangesFromSidebar();
     void syncRepository();
     void showSCMContextMenu(POINT pt);
-    
+
     // Run and Debug View
     void createRunDebugView(HWND hwndParent);
     void createLaunchConfiguration();
@@ -1278,7 +1328,7 @@ private:
     std::string debugConsoleHistoryPrev();
     std::string debugConsoleHistoryNext();
     void updateDebugVariables();
-    
+
     // Extensions View
     void createExtensionsView(HWND hwndParent);
     void searchExtensions(const std::string& query);
@@ -1290,10 +1340,10 @@ private:
     void showExtensionDetails(const std::string& extensionId);
     void loadInstalledExtensions();
     void handleExtensionCommand(int commandId);
-    
+
     // Tooling & Diagnostics
     void ExecuteToolingSmokeTest();  // CRITICAL FIX: Bounds-checked tool validation
-private:
+  private:
     void installFromVSIXFile();
     void showMultiFileSearchDialog();
     void showCICDSettingsDialog();
@@ -1301,16 +1351,18 @@ private:
     friend LRESULT CALLBACK CICDSettingsDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
     friend LRESULT CALLBACK MultiFileSearchDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
     friend LRESULT CALLBACK ModelRegistryDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+    friend LRESULT CALLBACK Tier1LegacySettingsGUIProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
     friend LRESULT CALLBACK SettingsGUIProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
     friend LRESULT CALLBACK auditDashboardWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-private:
+  private:
     // ========================================================================
     // POWERSHELL ACCESS - Private State
     // ========================================================================
-    
+
     // PowerShell Runtime State
-    struct PowerShellState {
+    struct PowerShellState
+    {
         bool initialized;
         bool remoteSessionActive;
         std::string remoteComputerName;
@@ -1327,9 +1379,10 @@ private:
         std::string edition;
     };
     PowerShellState m_psState;
-    
+
     // PowerShell Command Queue
-    struct PSCommand {
+    struct PSCommand
+    {
         int id;
         std::string command;
         bool async;
@@ -1337,9 +1390,10 @@ private:
     };
     std::vector<PSCommand> m_psCommandQueue;
     int m_nextPSCommandId;
-    
+
     // PowerShell Job Tracking
-    struct PSJob {
+    struct PSJob
+    {
         int id;
         std::string name;
         std::string scriptBlock;
@@ -1349,9 +1403,10 @@ private:
     };
     std::map<int, PSJob> m_psJobs;
     int m_nextPSJobId;
-    
+
     // PowerShell Module Cache
-    struct PSModule {
+    struct PSModule
+    {
         std::string name;
         std::string version;
         std::string path;
@@ -1360,18 +1415,18 @@ private:
         std::vector<std::string> exportedFunctions;
     };
     std::map<std::string, PSModule> m_psModuleCache;
-    
+
     // PowerShell Function Registry
-    std::map<std::string, std::string> m_psFunctions; // name -> body
-    
+    std::map<std::string, std::string> m_psFunctions;  // name -> body
+
     // PowerShell Event Handlers
-    std::map<std::string, std::string> m_psEventHandlers; // sourceId -> action
-    
+    std::map<std::string, std::string> m_psEventHandlers;  // sourceId -> action
+
     // RawrXD.ps1 Integration
     bool m_rawrXDModuleLoaded;
     std::string m_rawrXDModulePath;
     std::map<std::string, std::string> m_rawrXDFunctions;
-    
+
     // PowerShell Helper Functions
     std::string escapePowerShellString(const std::string& str);
     std::string buildPowerShellCommand(const std::string& cmdlet, const std::map<std::string, std::string>& params);
@@ -1382,24 +1437,24 @@ private:
     void initializePowerShellState();
     void updatePowerShellModuleCache();
     std::string getRawrXDPowerShellPath();
-    
+
     // GGUF Model loader (initialized in constructor) - supports both streaming and standard implementations
     std::unique_ptr<RawrXD::IGGUFLoader> m_ggufLoader;
     std::string m_loadedModelPath;
     RawrXD::GGUFMetadata m_currentModelMetadata;
     std::vector<RawrXD::TensorInfo> m_modelTensors;
-    bool m_useStreamingLoader; // preference to use streaming loader to minimize memory
-    bool m_useVulkanRenderer; // preference to use Vulkan renderer if enabled
-    bool m_useTitanKernel = true; // use Titan ASM/DLL inference when available (menu-togglable)
-    
+    bool m_useStreamingLoader;     // preference to use streaming loader to minimize memory
+    bool m_useVulkanRenderer;      // preference to use Vulkan renderer if enabled
+    bool m_useTitanKernel = true;  // use Titan ASM/DLL inference when available (menu-togglable)
+
     // Unified Model Source Resolver (HuggingFace, Ollama blobs, HTTP, local files)
     std::unique_ptr<RawrXD::ModelSourceResolver> m_modelResolver;
-    
+
     // Streaming / Model UX state
-    HWND m_hwndModelProgressBar;       // Progress bar control
-    HWND m_hwndModelProgressLabel;     // Status text label
-    HWND m_hwndModelProgressContainer; // Container panel
-    HWND m_hwndModelCancelBtn;         // Cancel button
+    HWND m_hwndModelProgressBar;        // Progress bar control
+    HWND m_hwndModelProgressLabel;      // Status text label
+    HWND m_hwndModelProgressContainer;  // Container panel
+    HWND m_hwndModelCancelBtn;          // Cancel button
     std::atomic<bool> m_modelOperationActive;
     std::atomic<bool> m_modelOperationCancelled;
     std::atomic<float> m_modelProgressPercent;
@@ -1443,7 +1498,7 @@ private:
     std::thread m_inferenceThread;
     std::mutex m_inferenceMutex;
     std::function<void(const std::string&, bool)> m_inferenceCallback;
-    
+
     // (AI Backend state — Phase 8B: see full block near Settings section)
 
     // Native Agent Integration
@@ -1451,25 +1506,26 @@ private:
     std::unique_ptr<RawrXD::CPUInferenceEngine> m_nativeEngine;
     bool m_nativeEngineLoaded = false;
     std::mutex m_outputMutex;
-    
+
     // Native Inference Pipeline — zero-dependency local AI core
     std::unique_ptr<RawrXD::NativeInferencePipeline> m_nativePipeline;
     bool m_nativePipelineReady = false;
-    
+
     // 70B GGUF Hotpatch System
     std::unique_ptr<RawrXD::GGUFHotpatch> m_ggufHotpatch;
-    
+
     // Governor/Throttling System
     std::unique_ptr<RawrXD::GovernorThrottling> m_governorThrottling;
     std::unique_ptr<RawrXD::LayerEvictionManager, LayerEvictionManagerDeleter> m_layerEvictionManager;
-    
+
     // Window Procedures for Subclassing
     static LRESULT CALLBACK CommandInputProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-    static LRESULT CALLBACK SidebarProcImpl(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam); // Renamed to avoid overload conflict
+    static LRESULT CALLBACK SidebarProcImpl(HWND hwnd, UINT uMsg, WPARAM wParam,
+                                            LPARAM lParam);  // Renamed to avoid overload conflict
     WNDPROC m_oldCommandInputProc = nullptr;
     WNDPROC m_oldSidebarProc = nullptr;
     WNDPROC m_oldFileExplorerContainerProc = nullptr;
-    
+
     // Extension Loader
     std::unique_ptr<RawrXD::ExtensionLoader> m_extensionLoader;
     void refreshExtensions();
@@ -1515,23 +1571,24 @@ private:
     HINSTANCE m_hInstance;
     HWND m_hwndMain;
     // ── Parity-audit: Visibility Watchdog members ──────────────────────────
-    HANDLE              m_watchdogThread   = nullptr;
-    volatile LONG       m_watchdogRunning  = 0;   // 1 = active, 0 = stop requested
+    HANDLE m_watchdogThread = nullptr;
+    volatile LONG m_watchdogRunning = 0;  // 1 = active, 0 = stop requested
     HWND m_hwndEditor;
-    HWND m_hwndLineNumbers;     // Line number gutter
-    HWND m_hwndTabBar;           // Editor tab bar
+    HWND m_hwndLineNumbers;  // Line number gutter
+    HWND m_hwndTabBar;       // Editor tab bar
     WNDPROC m_oldLineNumberProc;
-    int m_lineNumberWidth;       // Width of the gutter in pixels
-    int m_currentLine;           // Current cursor line (1-based)
+    int m_lineNumberWidth;  // Width of the gutter in pixels
+    int m_currentLine;      // Current cursor line (1-based)
 
     // Tab tracking
-    struct EditorTab {
+    struct EditorTab
+    {
         std::string filePath;
         std::string displayName;
         std::string content;
-        bool modified    = false;
-        bool isPinned    = false;  // Tier3C #26: Pinned tabs
-        bool isPreview   = false;  // Tier3C #27: Preview tabs
+        bool modified = false;
+        bool isPinned = false;   // Tier3C #26: Pinned tabs
+        bool isPreview = false;  // Tier3C #27: Preview tabs
     };
     std::vector<EditorTab> m_editorTabs;
     int m_activeTabIndex;
@@ -1558,34 +1615,34 @@ private:
     // Per-pane terminal managers replace the previous single manager
     std::string m_currentFile;
     bool m_fileModified;
-    
+
     // Multi-terminal support
     std::vector<TerminalPane> m_terminalPanes;
     int m_nextTerminalId;
     int m_activeTerminalId;
     bool m_terminalSplitHorizontal;
-    
+
     // Git integration
     GitStatus m_gitStatus;
     HWND m_hwndGitPanel;
     HWND m_hwndGitStatusText;
     HWND m_hwndGitFileList;
-    HWND m_hwndGitStatus    = nullptr;  // Source control status EDIT
-    HWND m_hwndGitBranch    = nullptr;  // Branch label STATIC
-    HWND m_hwndGitDiff      = nullptr;  // Diff view EDIT
+    HWND m_hwndGitStatus = nullptr;     // Source control status EDIT
+    HWND m_hwndGitBranch = nullptr;     // Branch label STATIC
+    HWND m_hwndGitDiff = nullptr;       // Diff view EDIT
     HWND m_hwndGitCommitMsg = nullptr;  // Commit message EDIT
     std::vector<GitFile> m_currentGitFiles;
     bool m_gitPanelVisible;
     WNDPROC m_gitPanelProc;
     std::string m_gitRepoPath;
     bool m_gitAutoRefresh;
-    HWND m_hwndCommitDialog; // commit dialog handle
+    HWND m_hwndCommitDialog;  // commit dialog handle
 
     // Git panel methods (Win32IDE_GitPanel.cpp)
     void createGitPanel();
     void refreshGitStatus();
     void handleGitPanelCommand(WORD cmdId);
-    
+
     // File operations
     std::vector<std::string> m_recentFiles;
     static const size_t MAX_RECENT_FILES = 10;
@@ -1599,10 +1656,10 @@ private:
     std::filesystem::file_time_type m_lastKnownFileWriteTime;
 
     // Debug console REPL members
-    HWND m_hwndDebugConsole       = nullptr;
+    HWND m_hwndDebugConsole = nullptr;
     HWND m_hwndDebugConsoleOutput = nullptr;
-    HWND m_hwndDebugConsoleInput  = nullptr;
-    HWND m_hwndOutputPanel        = nullptr;
+    HWND m_hwndDebugConsoleInput = nullptr;
+    HWND m_hwndOutputPanel = nullptr;
     WNDPROC m_debugConsoleOrigInputProc = nullptr;
     std::vector<std::string> m_debugConsoleHistory;
     int m_debugConsoleHistoryIndex = -1;
@@ -1611,25 +1668,25 @@ private:
     void* m_debugEngine = nullptr;
 
     // Peek overlay members
-    HWND m_hwndPeekOverlay     = nullptr;
-    HWND m_hwndPeekFileList    = nullptr;
-    HWND m_hwndPeekContent     = nullptr;
-    HWND m_hwndPeekCloseBtn    = nullptr;
+    HWND m_hwndPeekOverlay = nullptr;
+    HWND m_hwndPeekFileList = nullptr;
+    HWND m_hwndPeekContent = nullptr;
+    HWND m_hwndPeekCloseBtn = nullptr;
     std::vector<std::pair<std::string, int>> m_peekLocations;
-    int m_peekCurrentIndex     = -1;
-    
+    int m_peekCurrentIndex = -1;
+
     // Menu command system
     std::map<int, std::string> m_commandDescriptions;
     std::map<int, bool> m_commandStates;
 
     // Theme system
     IDETheme m_currentTheme;
-    IDETheme m_themeBeforePreview;             // Saved for Cancel in theme picker
+    IDETheme m_themeBeforePreview;  // Saved for Cancel in theme picker
     std::map<std::string, IDETheme> m_themes;
-    int m_activeThemeId;                      // IDM_THEME_xxx of current theme
-    int m_themeIdBeforePreview;               // Saved for Cancel in theme picker
+    int m_activeThemeId;         // IDM_THEME_xxx of current theme
+    int m_themeIdBeforePreview;  // Saved for Cancel in theme picker
     bool m_transparencyEnabled;
-    BYTE m_windowAlpha;                       // 0..255 (current window alpha)
+    BYTE m_windowAlpha;  // 0..255 (current window alpha)
     HBRUSH m_backgroundBrush;
     // Tracked brushes for themed surfaces (deleted + recreated on theme switch)
     HBRUSH m_sidebarBrush;
@@ -1641,7 +1698,7 @@ private:
     HFONT m_hFontUI;
     HFONT m_hFontPowerShell = nullptr;
     HFONT m_hFontPowerShellStatus = nullptr;
-    UINT  m_currentDpi = 96;
+    UINT m_currentDpi = 96;
 
     // Code snippets
     std::vector<CodeSnippet> m_codeSnippets;
@@ -1654,7 +1711,7 @@ private:
     int m_outputTabHeight;
     int m_selectedOutputTab;
     HWND m_hwndSeverityFilter;
-    int m_severityFilterLevel; // 0=All, 1=Info+, 2=Warn+, 3=Error only
+    int m_severityFilterLevel;  // 0=All, 1=Info+, 2=Warn+, 3=Error only
 
     // Session Persistence
     bool m_sessionRestored;
@@ -1663,9 +1720,10 @@ private:
     // Agent Inline Annotations State
     std::vector<InlineAnnotation> m_annotations;
     bool m_annotationsVisible;
-    HWND m_hwndAnnotationOverlay;    // Transparent overlay for inline annotation rendering
-    HFONT m_annotationFont;          // Smaller italic font for annotations
-    std::map<std::string, std::vector<InlineAnnotation>> m_annotationCache;  // Per-file annotation stash for tab switching
+    HWND m_hwndAnnotationOverlay;  // Transparent overlay for inline annotation rendering
+    HFONT m_annotationFont;        // Smaller italic font for annotations
+    std::map<std::string, std::vector<InlineAnnotation>>
+        m_annotationCache;  // Per-file annotation stash for tab switching
 
     // Clipboard history
     std::vector<std::string> m_clipboardHistory;
@@ -1747,10 +1805,10 @@ private:
     HWND m_hwndSearchOptions;
     HWND m_hwndIncludePattern;
     HWND m_hwndExcludePattern;
-    HWND m_hwndSearchReplace  = nullptr;
-    HWND m_hwndSearchInclude  = nullptr;
-    HWND m_hwndSearchExclude  = nullptr;
-    HWND m_hwndSearchStatus   = nullptr;
+    HWND m_hwndSearchReplace = nullptr;
+    HWND m_hwndSearchInclude = nullptr;
+    HWND m_hwndSearchExclude = nullptr;
+    HWND m_hwndSearchStatus = nullptr;
     std::vector<std::string> m_searchResults;
     bool m_searchInProgress;
 
@@ -1768,13 +1826,13 @@ private:
     bool m_debuggingActive;
 
     // Disk Recovery View
-    HWND m_hwndRecoveryTitle     = nullptr;
+    HWND m_hwndRecoveryTitle = nullptr;
     HWND m_hwndRecoveryDriveList = nullptr;
-    HWND m_hwndRecoveryOutPath   = nullptr;
-    HWND m_hwndRecoveryStatus    = nullptr;
-    HWND m_hwndRecoveryProgress  = nullptr;
-    HWND m_hwndRecoveryLog       = nullptr;
-    bool m_recoveryTimerActive   = false;
+    HWND m_hwndRecoveryOutPath = nullptr;
+    HWND m_hwndRecoveryStatus = nullptr;
+    HWND m_hwndRecoveryProgress = nullptr;
+    HWND m_hwndRecoveryLog = nullptr;
+    bool m_recoveryTimerActive = false;
 
     // Full Debugger UI HWNDs
     HWND m_hwndDebuggerContainer = nullptr;
@@ -1806,7 +1864,8 @@ private:
     HWND m_hwndExtensionsList;
     HWND m_hwndExtensionSearch;
     HWND m_hwndExtensionDetails;
-    struct Extension {
+    struct Extension
+    {
         std::string id;
         std::string name;
         std::string version;
@@ -1819,7 +1878,8 @@ private:
 
     // Outline View (code structure)
     HWND m_hwndOutlineTree;
-    struct OutlineItem {
+    struct OutlineItem
+    {
         std::string name;
         std::string type;  // function, class, variable, etc.
         int line;
@@ -1834,7 +1894,8 @@ private:
 
     // Timeline View (file history)
     HWND m_hwndTimelineList;
-    struct TimelineEntry {
+    struct TimelineEntry
+    {
         std::string message;
         std::string author;
         std::string date;
@@ -1887,10 +1948,10 @@ private:
     int m_secondarySidebarWidth;
     int m_currentMaxTokens;
     std::vector<std::string> m_availableModels;
-    std::vector<std::pair<std::string, std::string>> m_chatHistory; // role, message
+    std::vector<std::pair<std::string, std::string>> m_chatHistory;  // role, message
     // Tool action status per chat message (keyed by m_chatHistory index)
     std::map<size_t, std::vector<RawrXD::UI::ToolActionStatus>> m_chatToolActions;
-    RawrXD::UI::ToolActionAccumulator m_currentToolActions; // accumulator for current response
+    RawrXD::UI::ToolActionAccumulator m_currentToolActions;  // accumulator for current response
     static LRESULT CALLBACK SecondarySidebarProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
     // Panel (Bottom) - Terminal, Output, Problems, Debug Console
@@ -1909,7 +1970,8 @@ private:
     int m_panelHeight;
 
     // Problems tracking
-    struct ProblemItem {
+    struct ProblemItem
+    {
         std::string file;
         int line;
         int column;
@@ -1921,22 +1983,23 @@ private:
     int m_warningCount;
 
     // Enhanced Status Bar items
-    struct StatusBarInfo {
-        std::string remoteName;       // e.g., "WSL: Ubuntu" or empty
-        std::string branchName;       // e.g., "main"
-        int syncAhead;                // commits ahead
-        int syncBehind;               // commits behind
+    struct StatusBarInfo
+    {
+        std::string remoteName;  // e.g., "WSL: Ubuntu" or empty
+        std::string branchName;  // e.g., "main"
+        int syncAhead;           // commits ahead
+        int syncBehind;          // commits behind
         int errors;
         int warnings;
         int line;
         int column;
         int spacesOrTabWidth;
         bool useSpaces;
-        std::string encoding;         // e.g., "UTF-8"
-        std::string eolSequence;      // e.g., "LF" or "CRLF"
-        std::string languageMode;     // e.g., "C++", "Python"
+        std::string encoding;      // e.g., "UTF-8"
+        std::string eolSequence;   // e.g., "LF" or "CRLF"
+        std::string languageMode;  // e.g., "C++", "Python"
         bool copilotActive;
-        int copilotSuggestions;       // number of available suggestions
+        int copilotSuggestions;  // number of available suggestions
     };
     StatusBarInfo m_statusBarInfo;
     HWND m_statusBarParts[12];  // Individual status bar items for custom drawing
@@ -1990,16 +2053,16 @@ private:
     bool trySendToOllama(const std::string& prompt, std::string& outResponse);
 
     // Ollama config
-    std::string m_ollamaBaseUrl;      // e.g., http://localhost:11434
-    std::string m_ollamaModelOverride; // if set, use this tag instead of deriving from filename
+    std::string m_ollamaBaseUrl;        // e.g., http://localhost:11434
+    std::string m_ollamaModelOverride;  // if set, use this tag instead of deriving from filename
 
     // Optional panels (nullptr when feature not used)
-    ModelRegistry*         m_modelRegistry         = nullptr;
+    ModelRegistry* m_modelRegistry = nullptr;
     InterpretabilityPanel* m_interpretabilityPanel = nullptr;
-    BenchmarkMenu*         m_benchmarkMenu         = nullptr;
-    CheckpointManager*     m_checkpointManager     = nullptr;
-    CICDSettings*          m_ciCdSettings          = nullptr;
-    MultiFileSearchWidget* m_multiFileSearch       = nullptr;
+    BenchmarkMenu* m_benchmarkMenu = nullptr;
+    CheckpointManager* m_checkpointManager = nullptr;
+    CICDSettings* m_ciCdSettings = nullptr;
+    MultiFileSearchWidget* m_multiFileSearch = nullptr;
     ModelRegistry* getModelRegistry() { return m_modelRegistry; }
 
     // Project root (for build commands)
@@ -2167,8 +2230,8 @@ private:
     void onGhostTextTimer();
     std::string requestGhostTextCompletion(const std::string& context, const std::string& language);
     std::string requestGhostTextCompletion(const std::string& context, const std::string& language,
-                                            const std::string& suffix, const std::string& filePath,
-                                            int cursorLine, int cursorCol, uint64_t expectedSeq = 0);
+                                           const std::string& suffix, const std::string& filePath, int cursorLine,
+                                           int cursorCol, uint64_t expectedSeq = 0);
     void onGhostTextReady(int requestedCursorPos, const char* completionText);
     void dismissGhostText();
     void acceptGhostText();
@@ -2177,32 +2240,34 @@ private:
     void toggleGhostText();
     std::string trimGhostText(const std::string& raw);
 
-    struct GhostTextCacheEntry {
+    struct GhostTextCacheEntry
+    {
         std::string completion;
-        uint64_t    createdAtMs = 0;
+        uint64_t createdAtMs = 0;
     };
 
-    struct GhostTextMetrics {
+    struct GhostTextMetrics
+    {
         uint64_t requests = 0;
         uint64_t cacheHits = 0;
         uint64_t staleDrops = 0;
         uint64_t localWins = 0;
         uint64_t snippetWins = 0;
         uint64_t lspWins = 0;
-        double   lastLatencyMs = 0.0;
-        double   avgLatencyMs = 0.0;
+        double lastLatencyMs = 0.0;
+        double avgLatencyMs = 0.0;
     };
 
     // Ghost Text state
     RawrXD::GhostTextRenderer* m_ghostTextRendererOverlay = nullptr;
-    bool m_ghostTextEnabled     = false;
-    bool m_ghostTextVisible     = false;
-    bool m_ghostTextAccepted    = false;
-    bool m_ghostTextPending     = false;
+    bool m_ghostTextEnabled = false;
+    bool m_ghostTextVisible = false;
+    bool m_ghostTextAccepted = false;
+    bool m_ghostTextPending = false;
     std::string m_ghostTextContent;
-    int m_ghostTextLine         = -1;
-    int m_ghostTextColumn       = -1;
-    HFONT m_ghostTextFont       = nullptr;
+    int m_ghostTextLine = -1;
+    int m_ghostTextColumn = -1;
+    HFONT m_ghostTextFont = nullptr;
     std::atomic<uint64_t> m_ghostTextRequestSeq{0};
     std::mutex m_ghostTextCacheMutex;
     std::unordered_map<std::string, GhostTextCacheEntry> m_ghostTextCache;
@@ -2219,7 +2284,7 @@ private:
     std::vector<PeekItem> findReferencesAt(int line, int col);
     void handlePeekOverlayKey(UINT vk, bool ctrl, bool alt, bool shift);
     bool isPeekOverlayActive() const;
-    
+
     // Peek overlay state
     std::unique_ptr<PeekOverlayWindow, PeekOverlayWindowDeleter> m_peekOverlayWindow;
     bool m_peekOverlayActive = false;
@@ -2245,7 +2310,7 @@ private:
     HWND m_hwndAgentRejectAllBtn = nullptr;
     HWND m_hwndAgentNewSessionBtn = nullptr;
     void onBoundedAgentLoop();  // Ctrl+Shift+I → Bounded Agent (FIM tools)
-    void toggleAgentPanel();   // View > Agent Panel — show/hide agent chat panel
+    void toggleAgentPanel();    // View > Agent Panel — show/hide agent chat panel
 
     // Resolved Ollama model (used by GhostText, AI caller)
     std::string getResolvedOllamaModel() const;
@@ -2257,7 +2322,7 @@ private:
     void onAgenticModePlan();
     void onAgenticModeAgent();
     RawrXD::AgenticMode m_agenticMode = RawrXD::AgenticMode::Ask;
-    HWND m_hwndAgenticModeAsk  = nullptr;
+    HWND m_hwndAgenticModeAsk = nullptr;
     HWND m_hwndAgenticModePlan = nullptr;
     HWND m_hwndAgenticModeAgent = nullptr;
 
@@ -2315,42 +2380,38 @@ private:
     static const size_t MAX_PLAN_HISTORY = 50;
 
     // Plan Approval Dialog HWNDs
-    HWND m_hwndPlanDialog       = nullptr;
-    HWND m_hwndPlanList         = nullptr;  // ListView
-    HWND m_hwndPlanDetail       = nullptr;  // RichEdit / Static detail panel
-    HWND m_hwndPlanGoalLabel    = nullptr;
+    HWND m_hwndPlanDialog = nullptr;
+    HWND m_hwndPlanList = nullptr;    // ListView
+    HWND m_hwndPlanDetail = nullptr;  // RichEdit / Static detail panel
+    HWND m_hwndPlanGoalLabel = nullptr;
     HWND m_hwndPlanSummaryLabel = nullptr;
-    HWND m_hwndPlanBtnApprove   = nullptr;
-    HWND m_hwndPlanBtnEdit      = nullptr;
-    HWND m_hwndPlanBtnReject    = nullptr;
-    HWND m_hwndPlanBtnPause     = nullptr;
-    HWND m_hwndPlanBtnCancel    = nullptr;
-    HWND m_hwndPlanProgress     = nullptr;
+    HWND m_hwndPlanBtnApprove = nullptr;
+    HWND m_hwndPlanBtnEdit = nullptr;
+    HWND m_hwndPlanBtnReject = nullptr;
+    HWND m_hwndPlanBtnPause = nullptr;
+    HWND m_hwndPlanBtnCancel = nullptr;
+    HWND m_hwndPlanProgress = nullptr;
     HWND m_hwndPlanProgressLabel = nullptr;
-    HBRUSH m_planDialogBrush    = nullptr;
+    HBRUSH m_planDialogBrush = nullptr;
 
     // ========================================================================
     // Failure Detection & Self-Correction (Win32IDE_FailureDetector.cpp)
     // ========================================================================
     void initFailureDetector();
-    std::vector<AgentFailureType> detectFailures(const std::string& response,
-                                                  const std::string& originalPrompt);
+    std::vector<AgentFailureType> detectFailures(const std::string& response, const std::string& originalPrompt);
     bool detectRefusal(const std::string& response);
     bool detectHallucination(const std::string& response, const std::string& prompt);
     bool detectFormatViolation(const std::string& response, const std::string& prompt);
     bool detectInfiniteLoop(const std::string& response);
     bool detectQualityDegradation(const std::string& response);
-    std::string applyCorrectionStrategy(AgentFailureType failure,
-                                        const std::string& originalPrompt,
-                                        int retryAttempt);
+    std::string applyCorrectionStrategy(AgentFailureType failure, const std::string& originalPrompt, int retryAttempt);
     AgentResponse executeWithFailureDetection(const std::string& prompt);
     std::string failureTypeString(AgentFailureType type) const;
     std::string getFailureDetectorStats() const;
     void toggleFailureDetector();
 
     // Phase 4B: Failure Classification (returns structured FailureClassification)
-    FailureClassification classifyFailure(const std::string& response,
-                                          const std::string& originalPrompt);
+    FailureClassification classifyFailure(const std::string& response, const std::string& originalPrompt);
     std::vector<FailureClassification> classifyAllFailures(const std::string& response,
                                                            const std::string& originalPrompt);
 
@@ -2359,23 +2420,15 @@ private:
     //   2. Tool invocation result parsing
     //   3. Plan step output verification
     //   4. Agent command post-processing
-    FailureClassification hookPostGeneration(const std::string& response,
-                                             const std::string& prompt);
-    FailureClassification hookToolResult(const std::string& toolName,
-                                         const std::string& toolOutput);
-    FailureClassification hookPlanStepOutput(int stepIndex,
-                                             const std::string& output);
-    FailureClassification hookAgentCommand(const std::string& response,
-                                            const std::string& prompt);
-    FailureClassification hookSwarmMerge(const std::string& mergedResult,
-                                         int taskCount,
-                                         const std::string& strategy);
+    FailureClassification hookPostGeneration(const std::string& response, const std::string& prompt);
+    FailureClassification hookToolResult(const std::string& toolName, const std::string& toolOutput);
+    FailureClassification hookPlanStepOutput(int stepIndex, const std::string& output);
+    FailureClassification hookAgentCommand(const std::string& response, const std::string& prompt);
+    FailureClassification hookSwarmMerge(const std::string& mergedResult, int taskCount, const std::string& strategy);
 
     // Phase 4B: Bounded retry (max 1 retry, approval required)
-    std::string buildRetryPrompt(const FailureClassification& failure,
-                                 const std::string& originalPrompt);
-    bool showRetryApprovalInPlanDialog(int stepIndex,
-                                       const FailureClassification& failure);
+    std::string buildRetryPrompt(const FailureClassification& failure, const std::string& originalPrompt);
+    bool showRetryApprovalInPlanDialog(int stepIndex, const FailureClassification& failure);
     std::string getRetryStrategyDescription(AgentFailureType reason) const;
 
     // Phase 4B: Failure-aware plan execution (replaces blind retry)
@@ -2383,16 +2436,14 @@ private:
 
     // Failure detector state
     bool m_failureDetectorEnabled = false;
-    int m_failureMaxRetries       = 1;  // Phase 4B: hard cap at 1
+    int m_failureMaxRetries = 1;  // Phase 4B: hard cap at 1
     FailureStats m_failureStats;
 
     // ========================================================================
     // Failure Intelligence — Phase 6 (Win32IDE_FailureIntelligence.cpp)
     // ========================================================================
     // Phase 6.1 — Granular Classification
-    FailureReason classifyFailureReason(AgentFailureType type,
-                                         const std::string& response,
-                                         const std::string& prompt);
+    FailureReason classifyFailureReason(AgentFailureType type, const std::string& response, const std::string& prompt);
     FailureReason classifyRefusalReason(const std::string& response);
     FailureReason classifyHallucinationReason(const std::string& response);
     FailureReason classifyFormatReason(const std::string& response, const std::string& prompt);
@@ -2404,8 +2455,7 @@ private:
     // Phase 6.2 — Bounded Retry Strategies
     void initFailureIntelligence();
     RetryStrategy getRetryStrategyForReason(FailureReason reason) const;
-    std::string applyRetryStrategy(const RetryStrategy& strategy,
-                                    const std::string& originalPrompt);
+    std::string applyRetryStrategy(const RetryStrategy& strategy, const std::string& originalPrompt);
     AgentResponse executeWithFailureIntelligence(const std::string& prompt);
     void recordFailureIntelligence(const FailureIntelligenceRecord& record);
     void loadFailureIntelligenceHistory();
@@ -2414,65 +2464,67 @@ private:
     // Phase 6.3 — History-Aware Suggestion UI
     bool hasMatchingPreviousFailure(const std::string& prompt) const;
     std::vector<FailureIntelligenceRecord> getMatchingFailures(const std::string& prompt) const;
-    void showFailureSuggestionDialog(const std::string& prompt,
-                                     const std::vector<FailureIntelligenceRecord>& matches);
+    void showFailureSuggestionDialog(const std::string& prompt, const std::vector<FailureIntelligenceRecord>& matches);
     void showFailureIntelligencePanel();
     void showFailureIntelligenceStats();
     std::string getFailureIntelligenceStatsString() const;
     void toggleFailureIntelligence();
 
     // Failure Intelligence state
-    bool m_failureIntelligenceEnabled  = true;
-    int m_intelligenceMaxRetries       = 2;
+    bool m_failureIntelligenceEnabled = true;
+    int m_intelligenceMaxRetries = 2;
     std::vector<FailureIntelligenceRecord> m_failureIntelligenceHistory;
     std::map<int, FailureReasonStats> m_failureReasonStats;  // keyed by (int)FailureReason
     std::mutex m_failureIntelligenceMutex;
     static const size_t MAX_FAILURE_INTELLIGENCE_RECORDS = 500;
 
     // Failure Intelligence UI
-    HWND m_hwndFailureIntelPanel       = nullptr;
-    HWND m_hwndFailureIntelList        = nullptr;
-    HWND m_hwndFailureIntelDetail      = nullptr;
-    HWND m_hwndFailureIntelStats       = nullptr;
-    HWND m_hwndFailureSuggestionDlg    = nullptr;
+    HWND m_hwndFailureIntelPanel = nullptr;
+    HWND m_hwndFailureIntelList = nullptr;
+    HWND m_hwndFailureIntelDetail = nullptr;
+    HWND m_hwndFailureIntelStats = nullptr;
+    HWND m_hwndFailureSuggestionDlg = nullptr;
 
     // ========================================================================
     // AI Backend Switcher — Phase 8B (Win32IDE_BackendSwitcher.cpp)
     // ========================================================================
-    enum class AIBackendType {
-        LocalGGUF  = 0,   // Native CPU inference via RawrXD engine
-        Ollama     = 1,   // Ollama HTTP server (local or remote)
-        OpenAI     = 2,   // OpenAI API (gpt-4o, etc.)
-        Claude     = 3,   // Anthropic Claude API
-        Gemini     = 4,   // Google Gemini API
+    enum class AIBackendType
+    {
+        LocalGGUF = 0,        // Native CPU inference via RawrXD engine
+        Ollama = 1,           // Ollama HTTP server (local or remote)
+        OpenAI = 2,           // OpenAI API (gpt-4o, etc.)
+        Claude = 3,           // Anthropic Claude API
+        Gemini = 4,           // Google Gemini API
         ReasoningEngine = 5,  // RawrXD local reasoning engine
-        GitHubCopilot   = 6,  // GitHub Copilot extension
-        AmazonQ         = 7,  // Amazon Q extension
-        Count      = 8
+        GitHubCopilot = 6,    // GitHub Copilot extension
+        AmazonQ = 7,          // Amazon Q extension
+        Count = 8
     };
 
-    struct AIBackendConfig {
-        AIBackendType type      = AIBackendType::LocalGGUF;
-        std::string   name;           // Human-readable label ("Local GGUF", "Ollama", etc.)
-        std::string   endpoint;       // Base URL (e.g., "http://localhost:11434", "https://api.openai.com")
-        std::string   model;          // Model identifier (e.g., "llama3.2", "gpt-4o", "claude-sonnet-4-20250514")
-        std::string   apiKey;         // API key for remote backends (empty for local)
-        bool          enabled   = true;
-        int           timeoutMs = 30000;   // Request timeout
-        int           maxTokens = 2048;    // Default max tokens for this backend
-        float         temperature = 0.7f;  // Default temperature for this backend
+    struct AIBackendConfig
+    {
+        AIBackendType type = AIBackendType::LocalGGUF;
+        std::string name;      // Human-readable label ("Local GGUF", "Ollama", etc.)
+        std::string endpoint;  // Base URL (e.g., "http://localhost:11434", "https://api.openai.com")
+        std::string model;     // Model identifier (e.g., "llama3.2", "gpt-4o", "claude-sonnet-4-20250514")
+        std::string apiKey;    // API key for remote backends (empty for local)
+        bool enabled = true;
+        int timeoutMs = 30000;     // Request timeout
+        int maxTokens = 2048;      // Default max tokens for this backend
+        float temperature = 0.7f;  // Default temperature for this backend
     };
 
-    struct AIBackendStatus {
-        AIBackendType type       = AIBackendType::LocalGGUF;
-        bool          connected  = false;
-        bool          healthy    = false;
-        int           latencyMs  = -1;       // Last measured round-trip latency (-1 = unknown)
-        uint64_t      requestCount = 0;      // Total requests sent to this backend
-        uint64_t      failureCount = 0;      // Total failed requests
-        std::string   lastError;             // Last error message (empty if ok)
-        std::string   lastModel;             // Last model actually used
-        uint64_t      lastUsedEpochMs = 0;   // Epoch ms of last use
+    struct AIBackendStatus
+    {
+        AIBackendType type = AIBackendType::LocalGGUF;
+        bool connected = false;
+        bool healthy = false;
+        int latencyMs = -1;            // Last measured round-trip latency (-1 = unknown)
+        uint64_t requestCount = 0;     // Total requests sent to this backend
+        uint64_t failureCount = 0;     // Total failed requests
+        std::string lastError;         // Last error message (empty if ok)
+        std::string lastModel;         // Last model actually used
+        uint64_t lastUsedEpochMs = 0;  // Epoch ms of last use
     };
 
     // Backend Manager — initialization & lifecycle
@@ -2491,7 +2543,7 @@ private:
     std::vector<AIBackendConfig> listBackends() const;
     AIBackendConfig getBackendConfig(AIBackendType type) const;
     AIBackendStatus getBackendStatus(AIBackendType type) const;
-    std::string getBackendStatusString() const;         // Human-readable summary of all backends
+    std::string getBackendStatusString() const;  // Human-readable summary of all backends
 
     // Backend configuration mutations
     void setBackendEndpoint(AIBackendType type, const std::string& endpoint);
@@ -2507,8 +2559,7 @@ private:
 
     // Backend inference routing (delegates to correct engine)
     std::string routeInferenceRequest(const std::string& prompt);
-    void routeInferenceRequestAsync(const std::string& prompt,
-                                     std::function<void(const std::string&, bool)> callback);
+    void routeInferenceRequestAsync(const std::string& prompt, std::function<void(const std::string&, bool)> callback);
     std::string routeToLocalGGUF(const std::string& prompt);
     std::string routeToOllama(const std::string& prompt);
     std::string routeToOpenAI(const std::string& prompt);
@@ -2519,8 +2570,8 @@ private:
     std::string routeToAmazonQ(const std::string& prompt);
 
     // HTTP helpers for remote backends
-    std::string httpPost(const std::string& url, const std::string& body,
-                         const std::vector<std::string>& headers, int timeoutMs);
+    std::string httpPost(const std::string& url, const std::string& body, const std::vector<std::string>& headers,
+                         int timeoutMs);
 
     // Backend UI helpers
     void showBackendSwitcherDialog();
@@ -2541,11 +2592,11 @@ private:
     bool switchStreamingEngine(const std::string& engineName);
 
     // Backend Switcher state
-    AIBackendType m_activeBackend                           = AIBackendType::LocalGGUF;
-    std::array<AIBackendConfig, (size_t)AIBackendType::Count>  m_backendConfigs;
-    std::array<AIBackendStatus, (size_t)AIBackendType::Count>  m_backendStatuses;
-    bool          m_backendManagerInitialized                = false;
-    std::mutex    m_backendMutex;
+    AIBackendType m_activeBackend = AIBackendType::LocalGGUF;
+    std::array<AIBackendConfig, (size_t)AIBackendType::Count> m_backendConfigs;
+    std::array<AIBackendStatus, (size_t)AIBackendType::Count> m_backendStatuses;
+    bool m_backendManagerInitialized = false;
+    std::mutex m_backendMutex;
 
     // ========================================================================
     // LLM Router — Phase 8C (Win32IDE_LLMRouter.cpp)
@@ -2555,136 +2606,149 @@ private:
     // Fallback is explicit, auditable, never silent.
 
     // ---- Task classification ----
-    enum class LLMTaskType {
-        Chat           = 0,   // General conversation / Q&A
-        CodeGeneration = 1,   // Write new code from description
-        CodeReview     = 2,   // Analyze / review existing code
-        CodeEdit       = 3,   // Edit / refactor existing code
-        Planning       = 4,   // Multi-step plan generation
-        ToolExecution  = 5,   // Tool-call / function-calling tasks
-        Research       = 6,   // Summarization / information retrieval
-        General        = 7,   // Unclassified — default bucket
-        Count          = 8
+    enum class LLMTaskType
+    {
+        Chat = 0,            // General conversation / Q&A
+        CodeGeneration = 1,  // Write new code from description
+        CodeReview = 2,      // Analyze / review existing code
+        CodeEdit = 3,        // Edit / refactor existing code
+        Planning = 4,        // Multi-step plan generation
+        ToolExecution = 5,   // Tool-call / function-calling tasks
+        Research = 6,        // Summarization / information retrieval
+        General = 7,         // Unclassified — default bucket
+        Count = 8
     };
 
     // ---- Backend capability profile ----
-    struct BackendCapability {
-        AIBackendType backend         = AIBackendType::LocalGGUF;
-        int           maxContextTokens = 4096;
-        bool          supportsToolCalls = false;
-        bool          supportsStreaming = true;
-        bool          supportsFunctionCalling = false;
-        bool          supportsJsonMode = false;
-        int           costTier         = 0;     // 0 = free/local, 1 = cheap, 2 = moderate, 3 = expensive
-        float         qualityScore     = 0.5f;  // 0.0–1.0 subjective quality rating
-        std::string   notes;                    // Human-readable notes
+    struct BackendCapability
+    {
+        AIBackendType backend = AIBackendType::LocalGGUF;
+        int maxContextTokens = 4096;
+        bool supportsToolCalls = false;
+        bool supportsStreaming = true;
+        bool supportsFunctionCalling = false;
+        bool supportsJsonMode = false;
+        int costTier = 0;           // 0 = free/local, 1 = cheap, 2 = moderate, 3 = expensive
+        float qualityScore = 0.5f;  // 0.0–1.0 subjective quality rating
+        std::string notes;          // Human-readable notes
     };
 
     // ---- Routing decision (the core output of the router) ----
-    struct RoutingDecision {
-        AIBackendType selectedBackend   = AIBackendType::LocalGGUF;
-        AIBackendType fallbackBackend   = AIBackendType::Count;  // Count = no fallback
-        LLMTaskType   classifiedTask    = LLMTaskType::General;
-        float         confidence        = 0.0f;   // 0.0–1.0 classification confidence
-        std::string   reason;                      // Human-readable routing rationale
-        bool          policyOverride    = false;   // true if policy engine redirected
-        bool          fallbackUsed      = false;   // true if primary failed and fallback served
-        uint64_t      decisionEpochMs   = 0;       // When the decision was made
-        int           primaryLatencyMs  = -1;      // Latency of primary attempt (-1 = not yet)
-        int           fallbackLatencyMs = -1;      // Latency of fallback attempt (-1 = not used)
+    struct RoutingDecision
+    {
+        AIBackendType selectedBackend = AIBackendType::LocalGGUF;
+        AIBackendType fallbackBackend = AIBackendType::Count;  // Count = no fallback
+        LLMTaskType classifiedTask = LLMTaskType::General;
+        float confidence = 0.0f;       // 0.0–1.0 classification confidence
+        std::string reason;            // Human-readable routing rationale
+        bool policyOverride = false;   // true if policy engine redirected
+        bool fallbackUsed = false;     // true if primary failed and fallback served
+        uint64_t decisionEpochMs = 0;  // When the decision was made
+        int primaryLatencyMs = -1;     // Latency of primary attempt (-1 = not yet)
+        int fallbackLatencyMs = -1;    // Latency of fallback attempt (-1 = not used)
     };
 
     // ---- Per-task routing preference (user-configurable) ----
-    struct TaskRoutingPreference {
-        LLMTaskType   taskType          = LLMTaskType::General;
-        AIBackendType preferredBackend  = AIBackendType::LocalGGUF;
-        AIBackendType fallbackBackend   = AIBackendType::Count;
-        bool          allowFallback     = true;
-        int           maxFailuresBeforeSkip = 5;   // Skip a backend after N consecutive failures
+    struct TaskRoutingPreference
+    {
+        LLMTaskType taskType = LLMTaskType::General;
+        AIBackendType preferredBackend = AIBackendType::LocalGGUF;
+        AIBackendType fallbackBackend = AIBackendType::Count;
+        bool allowFallback = true;
+        int maxFailuresBeforeSkip = 5;  // Skip a backend after N consecutive failures
     };
 
     // ---- Router statistics ----
-    struct RouterStats {
-        uint64_t totalRouted           = 0;
-        uint64_t totalFallbacksUsed    = 0;
-        uint64_t totalPolicyOverrides  = 0;
+    struct RouterStats
+    {
+        uint64_t totalRouted = 0;
+        uint64_t totalFallbacksUsed = 0;
+        uint64_t totalPolicyOverrides = 0;
         uint64_t taskTypeCounts[(size_t)LLMTaskType::Count] = {};
         uint64_t backendSelections[(size_t)AIBackendType::Count] = {};
         uint64_t backendFallbacks[(size_t)AIBackendType::Count] = {};
     };
 
     // ---- Cost / latency record (one per routing event) ----
-    struct CostLatencyRecord {
-        LLMTaskType   task              = LLMTaskType::General;
-        AIBackendType backend           = AIBackendType::LocalGGUF;
-        int           latencyMs         = 0;
-        int           costTier          = 0;     // Snapshot of backend's costTier at routing time
-        float         qualityScore      = 0.0f;  // Snapshot of backend's qualityScore
-        uint64_t      epochMs           = 0;
-        bool          fallbackUsed      = false;
+    struct CostLatencyRecord
+    {
+        LLMTaskType task = LLMTaskType::General;
+        AIBackendType backend = AIBackendType::LocalGGUF;
+        int latencyMs = 0;
+        int costTier = 0;           // Snapshot of backend's costTier at routing time
+        float qualityScore = 0.0f;  // Snapshot of backend's qualityScore
+        uint64_t epochMs = 0;
+        bool fallbackUsed = false;
     };
 
     // ---- Aggregated cost/latency heatmap cell ----
-    struct HeatmapCell {
-        uint64_t      requestCount      = 0;
-        double        totalLatencyMs    = 0.0;
-        double        avgLatencyMs      = 0.0;
-        int           minLatencyMs      = INT_MAX;
-        int           maxLatencyMs      = 0;
-        double        avgCostTier       = 0.0;
-        double        avgQuality        = 0.0;
+    struct HeatmapCell
+    {
+        uint64_t requestCount = 0;
+        double totalLatencyMs = 0.0;
+        double avgLatencyMs = 0.0;
+        int minLatencyMs = INT_MAX;
+        int maxLatencyMs = 0;
+        double avgCostTier = 0.0;
+        double avgQuality = 0.0;
     };
 
     // ---- Per-task backend pin (user override) ----
-    struct TaskBackendPin {
-        LLMTaskType   task              = LLMTaskType::General;
-        AIBackendType pinnedBackend     = AIBackendType::Count;  // Count = not pinned
-        bool          active            = false;
-        std::string   reason;                                     // "User pinned via palette"
+    struct TaskBackendPin
+    {
+        LLMTaskType task = LLMTaskType::General;
+        AIBackendType pinnedBackend = AIBackendType::Count;  // Count = not pinned
+        bool active = false;
+        std::string reason;  // "User pinned via palette"
     };
 
     // ---- Ensemble vote (one backend's response in an ensemble query) ----
-    struct EnsembleVote {
-        AIBackendType backend           = AIBackendType::LocalGGUF;
-        std::string   response;
-        int           latencyMs         = -1;
-        float         confidenceWeight  = 0.0f;  // Derived from qualityScore * viability
-        bool          succeeded         = false;
+    struct EnsembleVote
+    {
+        AIBackendType backend = AIBackendType::LocalGGUF;
+        std::string response;
+        int latencyMs = -1;
+        float confidenceWeight = 0.0f;  // Derived from qualityScore * viability
+        bool succeeded = false;
     };
 
     // ---- Ensemble routing decision ----
-    struct EnsembleDecision {
-        LLMTaskType   classifiedTask    = LLMTaskType::General;
+    struct EnsembleDecision
+    {
+        LLMTaskType classifiedTask = LLMTaskType::General;
         std::vector<EnsembleVote> votes;
-        std::string   mergedResponse;            // The winning / merged output
-        AIBackendType winnerBackend     = AIBackendType::LocalGGUF;
-        float         winnerConfidence  = 0.0f;
-        int           totalLatencyMs    = 0;     // Wall-clock time for the whole ensemble
-        std::string   strategy;                  // "confidence-weighted", "fastest", "majority"
-        uint64_t      decisionEpochMs   = 0;
+        std::string mergedResponse;  // The winning / merged output
+        AIBackendType winnerBackend = AIBackendType::LocalGGUF;
+        float winnerConfidence = 0.0f;
+        int totalLatencyMs = 0;  // Wall-clock time for the whole ensemble
+        std::string strategy;    // "confidence-weighted", "fastest", "majority"
+        uint64_t decisionEpochMs = 0;
     };
 
     // ---- Offline routing simulation input ----
-    struct SimulationInput {
-        std::string   prompt;
-        LLMTaskType   expectedTask      = LLMTaskType::General;  // Ground truth (if known)
+    struct SimulationInput
+    {
+        std::string prompt;
+        LLMTaskType expectedTask = LLMTaskType::General;  // Ground truth (if known)
     };
 
     // ---- Offline routing simulation result ----
-    struct SimulationResult {
+    struct SimulationResult
+    {
         std::vector<SimulationInput> inputs;
-        struct PerInput {
-            std::string   prompt;
-            LLMTaskType   classifiedTask  = LLMTaskType::General;
+        struct PerInput
+        {
+            std::string prompt;
+            LLMTaskType classifiedTask = LLMTaskType::General;
             AIBackendType selectedBackend = AIBackendType::LocalGGUF;
-            float         confidence      = 0.0f;
-            std::string   reason;
-            bool          matchedExpected = false;  // Only meaningful when expectedTask is set
+            float confidence = 0.0f;
+            std::string reason;
+            bool matchedExpected = false;  // Only meaningful when expectedTask is set
         };
         std::vector<PerInput> results;
-        int     totalInputs          = 0;
-        int     correctClassifications = 0;   // Count of matchedExpected == true
-        float   classificationAccuracy = 0.0f;
+        int totalInputs = 0;
+        int correctClassifications = 0;  // Count of matchedExpected == true
+        float classificationAccuracy = 0.0f;
         std::string summaryText;
     };
 
@@ -2707,8 +2771,8 @@ private:
     // Core routing
     RoutingDecision selectBackendForTask(LLMTaskType task, const std::string& prompt);
     std::string routeWithIntelligence(const std::string& prompt);
-    std::string handleRoutingFallback(AIBackendType primary, AIBackendType fallback,
-                                       const std::string& prompt, RoutingDecision& decision);
+    std::string handleRoutingFallback(AIBackendType primary, AIBackendType fallback, const std::string& prompt,
+                                      RoutingDecision& decision);
 
     // Policy integration — failure-informed routing
     AIBackendType getFailureAdjustedBackend(AIBackendType preferred, LLMTaskType task) const;
@@ -2770,31 +2834,30 @@ private:
     void handleRouterSimulateEndpoint(SOCKET client, const std::string& body);
 
     // Router state
-    bool m_routerEnabled                                            = false;
-    bool m_routerInitialized                                        = false;
-    std::array<BackendCapability, (size_t)AIBackendType::Count>     m_backendCapabilities;
-    std::array<TaskRoutingPreference, (size_t)LLMTaskType::Count>   m_taskPreferences;
-    std::array<int, (size_t)AIBackendType::Count>                   m_consecutiveFailures = {};
-    RouterStats m_routerStats                                       = {};
-    RoutingDecision m_lastRoutingDecision                           = {};
+    bool m_routerEnabled = false;
+    bool m_routerInitialized = false;
+    std::array<BackendCapability, (size_t)AIBackendType::Count> m_backendCapabilities;
+    std::array<TaskRoutingPreference, (size_t)LLMTaskType::Count> m_taskPreferences;
+    std::array<int, (size_t)AIBackendType::Count> m_consecutiveFailures = {};
+    RouterStats m_routerStats = {};
+    RoutingDecision m_lastRoutingDecision = {};
     std::mutex m_routerMutex;
 
     // UX Enhancement state — per-task pinning
-    std::array<TaskBackendPin, (size_t)LLMTaskType::Count>          m_taskPins = {};
+    std::array<TaskBackendPin, (size_t)LLMTaskType::Count> m_taskPins = {};
 
     // UX Enhancement state — cost / latency heatmap
     // Indexed as [taskType][backendType]
-    std::array<std::array<HeatmapCell, (size_t)AIBackendType::Count>,
-               (size_t)LLMTaskType::Count>                          m_heatmap = {};
-    std::vector<CostLatencyRecord>                                  m_costLatencyLog;
+    std::array<std::array<HeatmapCell, (size_t)AIBackendType::Count>, (size_t)LLMTaskType::Count> m_heatmap = {};
+    std::vector<CostLatencyRecord> m_costLatencyLog;
     static const size_t MAX_COST_LATENCY_LOG = 2000;
 
     // Research state — ensemble routing
-    bool m_ensembleEnabled                                          = false;
-    EnsembleDecision m_lastEnsembleDecision                         = {};
+    bool m_ensembleEnabled = false;
+    EnsembleDecision m_lastEnsembleDecision = {};
 
     // Research state — last simulation result
-    SimulationResult m_lastSimulationResult                         = {};
+    SimulationResult m_lastSimulationResult = {};
 
     // ========================================================================
     // LSP Client Bridge — Phase 9A (Win32IDE_LSPClient.cpp)
@@ -2805,87 +2868,98 @@ private:
     // child processes communicating via JSON-RPC over stdin/stdout.
 
     // ---- Supported language servers ----
-    enum class LSPLanguage {
-        Cpp        = 0,    // clangd
-        Python     = 1,    // pyright-langserver (basedpyright) or pylsp
-        TypeScript = 2,    // typescript-language-server
-        Count      = 3
+    enum class LSPLanguage
+    {
+        Cpp = 0,         // clangd
+        Python = 1,      // pyright-langserver (basedpyright) or pylsp
+        TypeScript = 2,  // typescript-language-server
+        Count = 3
     };
 
     // ---- Per-server configuration ----
-    struct LSPServerConfig {
-        LSPLanguage language           = LSPLanguage::Cpp;
-        std::string name;              // "clangd", "pyright", "typescript-language-server"
-        std::string executablePath;    // Full path to the LSP binary
-        std::vector<std::string> args; // Command-line arguments
-        std::string rootUri;           // Workspace root URI ("file:///D:/rawrxd")
-        bool        enabled            = true;
-        int         initTimeoutMs      = 10000;
+    struct LSPServerConfig
+    {
+        LSPLanguage language = LSPLanguage::Cpp;
+        std::string name;               // "clangd", "pyright", "typescript-language-server"
+        std::string executablePath;     // Full path to the LSP binary
+        std::vector<std::string> args;  // Command-line arguments
+        std::string rootUri;            // Workspace root URI ("file:///D:/rawrxd")
+        bool enabled = true;
+        int initTimeoutMs = 10000;
     };
 
     // ---- Per-server runtime state ----
-    enum class LSPServerState {
-        Stopped     = 0,
-        Starting    = 1,
-        Running     = 2,
+    enum class LSPServerState
+    {
+        Stopped = 0,
+        Starting = 1,
+        Running = 2,
         ShuttingDown = 3,
-        Error       = 4
+        Error = 4
     };
 
-    struct LSPServerStatus {
-        LSPLanguage   language          = LSPLanguage::Cpp;
-        LSPServerState state            = LSPServerState::Stopped;
-        HANDLE        hProcess          = nullptr;    // Child process handle
-        HANDLE        hStdinWrite       = nullptr;    // Write end of stdin pipe
-        HANDLE        hStdoutRead       = nullptr;    // Read end of stdout pipe
-        DWORD         pid               = 0;
-        int           requestIdCounter  = 1;          // Monotonic JSON-RPC id
-        bool          initialized       = false;      // Server responded to initialize
-        std::string   lastError;
-        uint64_t      startedEpochMs    = 0;
-        uint64_t      requestCount      = 0;
-        uint64_t      notificationCount = 0;
+    struct LSPServerStatus
+    {
+        LSPLanguage language = LSPLanguage::Cpp;
+        LSPServerState state = LSPServerState::Stopped;
+        HANDLE hProcess = nullptr;     // Child process handle
+        HANDLE hStdinWrite = nullptr;  // Write end of stdin pipe
+        HANDLE hStdoutRead = nullptr;  // Read end of stdout pipe
+        DWORD pid = 0;
+        int requestIdCounter = 1;  // Monotonic JSON-RPC id
+        bool initialized = false;  // Server responded to initialize
+        std::string lastError;
+        uint64_t startedEpochMs = 0;
+        uint64_t requestCount = 0;
+        uint64_t notificationCount = 0;
     };
 
     // ---- LSP protocol types (minimal subset) ----
-    struct LSPPosition {
-        int line      = 0;    // 0-based
-        int character = 0;    // 0-based (UTF-16 offset)
+    struct LSPPosition
+    {
+        int line = 0;       // 0-based
+        int character = 0;  // 0-based (UTF-16 offset)
     };
 
-    struct LSPRange {
+    struct LSPRange
+    {
         LSPPosition start;
         LSPPosition end;
     };
 
-    struct LSPLocation {
-        std::string uri;      // "file:///path/to/file.cpp"
-        LSPRange    range;
+    struct LSPLocation
+    {
+        std::string uri;  // "file:///path/to/file.cpp"
+        LSPRange range;
     };
 
-    struct LSPDiagnostic {
-        LSPRange    range;
-        int         severity    = 1;    // 1=Error, 2=Warning, 3=Information, 4=Hint
-        std::string code;               // Diagnostic code (e.g., "-Wunused")
-        std::string source;             // "clangd", "pyright", etc.
+    struct LSPDiagnostic
+    {
+        LSPRange range;
+        int severity = 1;    // 1=Error, 2=Warning, 3=Information, 4=Hint
+        std::string code;    // Diagnostic code (e.g., "-Wunused")
+        std::string source;  // "clangd", "pyright", etc.
         std::string message;
     };
 
-    struct LSPHoverInfo {
-        std::string contents;           // Markdown hover text
-        LSPRange    range;              // Range the hover applies to
-        bool        valid = false;
+    struct LSPHoverInfo
+    {
+        std::string contents;  // Markdown hover text
+        LSPRange range;        // Range the hover applies to
+        bool valid = false;
     };
 
-    struct LSPCompletionItem {
+    struct LSPCompletionItem
+    {
         std::string label;
         std::string detail;
         std::string insertText;
-        int         kind       = 0;
-        bool        isSnippet  = false;
+        int kind = 0;
+        bool isSnippet = false;
     };
 
-    struct LSPSignatureHelpInfo {
+    struct LSPSignatureHelpInfo
+    {
         std::vector<std::string> signatures;
         std::string activeSignatureLabel;
         std::string activeDocumentation;
@@ -2894,15 +2968,17 @@ private:
         bool valid = false;
     };
 
-    struct LSPSymbolInfo {
+    struct LSPSymbolInfo
+    {
         std::string name;
-        int         kind     = 0;       // LSP SymbolKind (1=File ... 26=TypeParameter)
-        std::string detail;             // e.g., "void foo(int x)"
+        int kind = 0;        // LSP SymbolKind (1=File ... 26=TypeParameter)
+        std::string detail;  // e.g., "void foo(int x)"
         LSPLocation location;
-        std::string containerName;      // Enclosing symbol name
+        std::string containerName;  // Enclosing symbol name
     };
 
-    struct SemanticToken {
+    struct SemanticToken
+    {
         int line = 0;
         int startChar = 0;
         int length = 0;
@@ -2911,25 +2987,28 @@ private:
         std::string typeName;
     };
 
-    struct LSPWorkspaceEdit {
+    struct LSPWorkspaceEdit
+    {
         // uri → list of {range, newText}
-        struct TextEdit {
-            LSPRange    range;
+        struct TextEdit
+        {
+            LSPRange range;
             std::string newText;
         };
         std::map<std::string, std::vector<TextEdit>> changes;
     };
 
     // ---- LSP client statistics ----
-    struct LSPStats {
-        uint64_t totalDefinitionRequests    = 0;
-        uint64_t totalReferenceRequests     = 0;
-        uint64_t totalRenameRequests        = 0;
-        uint64_t totalHoverRequests         = 0;
-        uint64_t totalCompletionRequests    = 0;
-        uint64_t totalSignatureRequests     = 0;
-        uint64_t totalDiagnosticsReceived   = 0;
-        uint64_t totalServerRestarts        = 0;
+    struct LSPStats
+    {
+        uint64_t totalDefinitionRequests = 0;
+        uint64_t totalReferenceRequests = 0;
+        uint64_t totalRenameRequests = 0;
+        uint64_t totalHoverRequests = 0;
+        uint64_t totalCompletionRequests = 0;
+        uint64_t totalSignatureRequests = 0;
+        uint64_t totalDiagnosticsReceived = 0;
+        uint64_t totalServerRestarts = 0;
     };
 
     // LSP Client — lifecycle
@@ -2947,7 +3026,7 @@ private:
     LSPServerState getLSPServerState(LSPLanguage lang) const;
 
     // JSON-RPC transport
-    int  sendLSPRequest(LSPLanguage lang, const std::string& method, const nlohmann::json& params);
+    int sendLSPRequest(LSPLanguage lang, const std::string& method, const nlohmann::json& params);
     void sendLSPNotification(LSPLanguage lang, const std::string& method, const nlohmann::json& params);
     nlohmann::json readLSPResponse(LSPLanguage lang, int requestId, int timeoutMs = 5000);
     void lspReaderThread(LSPLanguage lang);
@@ -2968,8 +3047,7 @@ private:
     // Core LSP features (5 required)
     std::vector<LSPLocation> lspGotoDefinition(const std::string& uri, int line, int character);
     std::vector<LSPLocation> lspFindReferences(const std::string& uri, int line, int character);
-    LSPWorkspaceEdit lspRenameSymbol(const std::string& uri, int line, int character,
-                                      const std::string& newName);
+    LSPWorkspaceEdit lspRenameSymbol(const std::string& uri, int line, int character, const std::string& newName);
     LSPHoverInfo lspHover(const std::string& uri, int line, int character);
     std::vector<LSPCompletionItem> lspCompletion(const std::string& uri, int line, int character);
     LSPSignatureHelpInfo lspSignatureHelp(const std::string& uri, int line, int character, int triggerKind = 1);
@@ -3014,15 +3092,15 @@ private:
     void handleLSPDiagnosticsEndpoint(SOCKET client);
 
     // LSP Client state
-    bool m_lspInitialized                                       = false;
-    std::array<LSPServerConfig, (size_t)LSPLanguage::Count>     m_lspConfigs;
-    std::array<LSPServerStatus, (size_t)LSPLanguage::Count>     m_lspStatuses;
-    std::map<std::string, std::vector<LSPDiagnostic>>           m_lspDiagnostics;     // uri → diagnostics
-    std::map<int, nlohmann::json>                               m_lspPendingResponses; // requestId → response
-    LSPStats    m_lspStats                                      = {};
-    std::mutex  m_lspMutex;
-    std::mutex  m_lspDiagnosticsMutex;
-    std::mutex  m_lspResponseMutex;
+    bool m_lspInitialized = false;
+    std::array<LSPServerConfig, (size_t)LSPLanguage::Count> m_lspConfigs;
+    std::array<LSPServerStatus, (size_t)LSPLanguage::Count> m_lspStatuses;
+    std::map<std::string, std::vector<LSPDiagnostic>> m_lspDiagnostics;  // uri → diagnostics
+    std::map<int, nlohmann::json> m_lspPendingResponses;                 // requestId → response
+    LSPStats m_lspStats = {};
+    std::mutex m_lspMutex;
+    std::mutex m_lspDiagnosticsMutex;
+    std::mutex m_lspResponseMutex;
     std::condition_variable m_lspResponseCV;
     std::vector<std::thread> m_lspReaderThreads;
 
@@ -3111,12 +3189,15 @@ private:
 
     // RAII guard: increments on construction, decrements on destruction.
     // If IDE is shutting down at construction time, sets 'cancelled' flag.
-    struct DetachedThreadGuard {
+    struct DetachedThreadGuard
+    {
         std::atomic<int>& counter;
         bool cancelled;
         DetachedThreadGuard(std::atomic<int>& c, const std::atomic<bool>& shutting)
             : counter(c), cancelled(shutting.load(std::memory_order_acquire))
-        { counter.fetch_add(1, std::memory_order_acq_rel); }
+        {
+            counter.fetch_add(1, std::memory_order_acq_rel);
+        }
         ~DetachedThreadGuard() { counter.fetch_sub(1, std::memory_order_acq_rel); }
         DetachedThreadGuard(const DetachedThreadGuard&) = delete;
         DetachedThreadGuard& operator=(const DetachedThreadGuard&) = delete;
@@ -3132,10 +3213,8 @@ private:
     // ========================================================================
     void initAgentHistory();
     void shutdownAgentHistory();
-    void recordEvent(AgentEventType type, const std::string& agentId,
-                     const std::string& prompt, const std::string& result,
-                     int durationMs, bool success,
-                     const std::string& parentId = "",
+    void recordEvent(AgentEventType type, const std::string& agentId, const std::string& prompt,
+                     const std::string& result, int durationMs, bool success, const std::string& parentId = "",
                      const std::string& metadata = "");
     void recordSimpleEvent(AgentEventType type, const std::string& description);
     void flushEventLog();
@@ -3157,150 +3236,160 @@ private:
     std::string truncateForLog(const std::string& text, size_t maxLen = 512) const;
 
     // Agent History state
-    bool m_agentHistoryEnabled       = true;
+    bool m_agentHistoryEnabled = true;
     std::string m_currentSessionId;
-    std::vector<AgentEvent> m_eventBuffer;      // In-memory ring buffer for current session
+    std::vector<AgentEvent> m_eventBuffer;  // In-memory ring buffer for current session
     std::mutex m_eventBufferMutex;
     AgentHistoryStats m_historyStats;
-    static const size_t MAX_EVENT_BUFFER  = 1000;
+    static const size_t MAX_EVENT_BUFFER = 1000;
     static const size_t MAX_LOG_FIELD_LEN = 512;
 
     // Agent History UI
-    HWND m_hwndHistoryPanel   = nullptr;
-    HWND m_hwndHistoryList    = nullptr;
-    HWND m_hwndHistoryDetail  = nullptr;
-    HWND m_hwndHistoryFilter  = nullptr;
-    HWND m_hwndHistoryStats   = nullptr;
-    HWND m_hwndHistoryBtnReplay   = nullptr;
-    HWND m_hwndHistoryBtnExport   = nullptr;
-    HWND m_hwndHistoryBtnClear    = nullptr;
-    HWND m_hwndHistoryBtnRefresh  = nullptr;
+    HWND m_hwndHistoryPanel = nullptr;
+    HWND m_hwndHistoryList = nullptr;
+    HWND m_hwndHistoryDetail = nullptr;
+    HWND m_hwndHistoryFilter = nullptr;
+    HWND m_hwndHistoryStats = nullptr;
+    HWND m_hwndHistoryBtnReplay = nullptr;
+    HWND m_hwndHistoryBtnExport = nullptr;
+    HWND m_hwndHistoryBtnClear = nullptr;
+    HWND m_hwndHistoryBtnRefresh = nullptr;
 
     // ========================================================================
     // ASM Semantic Support (Win32IDE_AsmSemantic.cpp)
     // ========================================================================
 
     // ---- IDM defines for ASM commands (5082–5093) ----
-#define IDM_ASM_PARSE_SYMBOLS       5082
-#define IDM_ASM_GOTO_LABEL          5083
-#define IDM_ASM_FIND_LABEL_REFS     5084
-#define IDM_ASM_SHOW_SYMBOL_TABLE   5085
-#define IDM_ASM_INSTRUCTION_INFO    5086
-#define IDM_ASM_REGISTER_INFO       5087
-#define IDM_ASM_ANALYZE_BLOCK       5088
-#define IDM_ASM_SHOW_CALL_GRAPH     5089
-#define IDM_ASM_SHOW_DATA_FLOW      5090
-#define IDM_ASM_DETECT_CONVENTION   5091
-#define IDM_ASM_SHOW_SECTIONS       5092
-#define IDM_ASM_CLEAR_SYMBOLS       5093
+#define IDM_ASM_PARSE_SYMBOLS 5082
+#define IDM_ASM_GOTO_LABEL 5083
+#define IDM_ASM_FIND_LABEL_REFS 5084
+#define IDM_ASM_SHOW_SYMBOL_TABLE 5085
+#define IDM_ASM_INSTRUCTION_INFO 5086
+#define IDM_ASM_REGISTER_INFO 5087
+#define IDM_ASM_ANALYZE_BLOCK 5088
+#define IDM_ASM_SHOW_CALL_GRAPH 5089
+#define IDM_ASM_SHOW_DATA_FLOW 5090
+#define IDM_ASM_DETECT_CONVENTION 5091
+#define IDM_ASM_SHOW_SECTIONS 5092
+#define IDM_ASM_CLEAR_SYMBOLS 5093
 
     // ---- Symbol kinds for ASM analysis ----
-    enum class AsmSymbolKind {
-        Label       = 0,
-        Procedure   = 1,
-        Macro       = 2,
-        Equate      = 3,
-        DataDef     = 4,
-        Section     = 5,
-        Struct      = 6,
-        Extern      = 7,
-        Global      = 8,
-        Local       = 9,
-        Count       = 10
+    enum class AsmSymbolKind
+    {
+        Label = 0,
+        Procedure = 1,
+        Macro = 2,
+        Equate = 3,
+        DataDef = 4,
+        Section = 5,
+        Struct = 6,
+        Extern = 7,
+        Global = 8,
+        Local = 9,
+        Count = 10
     };
 
     // ---- Symbol reference (where a symbol is used) ----
-    struct AsmSymbolRef {
+    struct AsmSymbolRef
+    {
         std::string filePath;
-        int         line       = 0;
-        int         column     = 0;
-        bool        isDefinition = false;
+        int line = 0;
+        int column = 0;
+        bool isDefinition = false;
     };
 
     // ---- A single ASM symbol entry ----
-    struct AsmSymbol {
-        std::string   name;
-        AsmSymbolKind kind       = AsmSymbolKind::Label;
-        std::string   filePath;
-        int           line       = 0;
-        int           column     = 0;
-        int           endLine    = 0;
-        std::string   detail;
-        std::string   section;
+    struct AsmSymbol
+    {
+        std::string name;
+        AsmSymbolKind kind = AsmSymbolKind::Label;
+        std::string filePath;
+        int line = 0;
+        int column = 0;
+        int endLine = 0;
+        std::string detail;
+        std::string section;
         std::vector<AsmSymbolRef> references;
     };
 
     // ---- Instruction information ----
-    struct AsmInstructionInfo {
+    struct AsmInstructionInfo
+    {
         std::string mnemonic;
         std::string category;
         std::string description;
         std::string operands;
-        bool        affectsFlags = false;
+        bool affectsFlags = false;
     };
 
     // ---- Register information ----
-    struct AsmRegisterInfo {
+    struct AsmRegisterInfo
+    {
         std::string name;
         std::string category;
-        int         bits = 64;
+        int bits = 64;
         std::string description;
         std::string aliases;
     };
 
     // ---- Section descriptor ----
-    struct AsmSectionInfo {
+    struct AsmSectionInfo
+    {
         std::string name;
         std::string filePath;
-        int         startLine = 0;
-        int         endLine   = 0;
-        int         symbolCount = 0;
+        int startLine = 0;
+        int endLine = 0;
+        int symbolCount = 0;
     };
 
     // ---- Call graph edge ----
-    struct AsmCallEdge {
+    struct AsmCallEdge
+    {
         std::string caller;
         std::string callee;
         std::string filePath;
-        int         line = 0;
+        int line = 0;
     };
 
     // ---- Data flow reference ----
-    struct AsmDataFlowRef {
+    struct AsmDataFlowRef
+    {
         std::string symbol;
-        int         line = 0;
-        bool        isRead  = false;
-        bool        isWrite = false;
+        int line = 0;
+        bool isRead = false;
+        bool isWrite = false;
         std::string instruction;
     };
 
     // ---- AI analysis result for an ASM block ----
-    struct AsmBlockAnalysis {
+    struct AsmBlockAnalysis
+    {
         std::string summary;
         std::string callingConvention;
         std::vector<std::string> registersUsed;
         std::vector<std::string> registersModified;
         std::vector<std::string> memoryAccesses;
         std::vector<std::string> observations;
-        bool        isLeafFunction = false;
-        bool        usesStackFrame = false;
-        int         estimatedStackUsage = 0;
+        bool isLeafFunction = false;
+        bool usesStackFrame = false;
+        int estimatedStackUsage = 0;
     };
 
     // ---- Aggregate statistics ----
-    struct AsmSemanticStats {
-        uint64_t totalSymbols         = 0;
-        uint64_t totalLabels          = 0;
-        uint64_t totalProcedures      = 0;
-        uint64_t totalMacros          = 0;
-        uint64_t totalEquates         = 0;
-        uint64_t totalDataDefs        = 0;
-        uint64_t totalSections        = 0;
-        uint64_t totalExterns         = 0;
-        uint64_t totalFiles           = 0;
-        uint64_t totalParseTimeMs     = 0;
-        uint64_t gotoDefRequests      = 0;
-        uint64_t findRefsRequests     = 0;
+    struct AsmSemanticStats
+    {
+        uint64_t totalSymbols = 0;
+        uint64_t totalLabels = 0;
+        uint64_t totalProcedures = 0;
+        uint64_t totalMacros = 0;
+        uint64_t totalEquates = 0;
+        uint64_t totalDataDefs = 0;
+        uint64_t totalSections = 0;
+        uint64_t totalExterns = 0;
+        uint64_t totalFiles = 0;
+        uint64_t totalParseTimeMs = 0;
+        uint64_t gotoDefRequests = 0;
+        uint64_t findRefsRequests = 0;
         uint64_t analyzeBlockRequests = 0;
     };
 
@@ -3342,17 +3431,13 @@ private:
     std::string getCallGraphString(const std::string& filePath) const;
 
     // Data flow
-    std::vector<AsmDataFlowRef> analyzeDataFlow(const std::string& symbolName,
-                                                 const std::string& filePath) const;
-    std::string getDataFlowString(const std::string& symbolName,
-                                   const std::string& filePath) const;
+    std::vector<AsmDataFlowRef> analyzeDataFlow(const std::string& symbolName, const std::string& filePath) const;
+    std::string getDataFlowString(const std::string& symbolName, const std::string& filePath) const;
 
     // AI-assisted block analysis
-    AsmBlockAnalysis analyzeAsmBlock(const std::string& filePath,
-                                      int startLine, int endLine) const;
+    AsmBlockAnalysis analyzeAsmBlock(const std::string& filePath, int startLine, int endLine) const;
     AsmBlockAnalysis analyzeCurrentProcedure() const;
-    std::string detectCallingConvention(const std::string& filePath,
-                                         int startLine, int endLine) const;
+    std::string detectCallingConvention(const std::string& filePath, int startLine, int endLine) const;
     std::string getAsmBlockAnalysisString(const AsmBlockAnalysis& analysis) const;
 
     // Editor helpers (ASM)
@@ -3385,10 +3470,10 @@ private:
     void handleAsmAnalyzeEndpoint(SOCKET client, const std::string& body);
 
     // ASM Semantic state
-    bool m_asmSemanticInitialized                                = false;
-    std::map<std::string, AsmSymbol>     m_asmSymbolTable;
+    bool m_asmSemanticInitialized = false;
+    std::map<std::string, AsmSymbol> m_asmSymbolTable;
     std::map<std::string, std::vector<std::string>> m_asmFileSymbols;
-    mutable AsmSemanticStats m_asmStats                          = {};
+    mutable AsmSemanticStats m_asmStats = {};
     mutable std::mutex m_asmMutex;
 
     // ========================================================================
@@ -3397,84 +3482,90 @@ private:
     // ========================================================================
 
     // ---- IDM defines for Hybrid commands (5094–5109) ----
-#define IDM_HYBRID_COMPLETE         5094
-#define IDM_HYBRID_DIAGNOSTICS      5095
-#define IDM_HYBRID_SMART_RENAME     5096
-#define IDM_HYBRID_ANALYZE_FILE     5097
-#define IDM_HYBRID_AUTO_PROFILE     5098
-#define IDM_HYBRID_STATUS           5099
-#define IDM_HYBRID_SYMBOL_USAGE     5100
-#define IDM_HYBRID_EXPLAIN_SYMBOL   5101
-#define IDM_HYBRID_ANNOTATE_DIAG    5102
-#define IDM_HYBRID_STREAM_ANALYZE   5103
+#define IDM_HYBRID_COMPLETE 5094
+#define IDM_HYBRID_DIAGNOSTICS 5095
+#define IDM_HYBRID_SMART_RENAME 5096
+#define IDM_HYBRID_ANALYZE_FILE 5097
+#define IDM_HYBRID_AUTO_PROFILE 5098
+#define IDM_HYBRID_STATUS 5099
+#define IDM_HYBRID_SYMBOL_USAGE 5100
+#define IDM_HYBRID_EXPLAIN_SYMBOL 5101
+#define IDM_HYBRID_ANNOTATE_DIAG 5102
+#define IDM_HYBRID_STREAM_ANALYZE 5103
 #define IDM_HYBRID_SEMANTIC_PREFETCH 5104
-#define IDM_HYBRID_CORRECTION_LOOP  5105
+#define IDM_HYBRID_CORRECTION_LOOP 5105
 
     // ---- Hybrid completion result ----
-    struct HybridCompletionItem {
+    struct HybridCompletionItem
+    {
         std::string label;
         std::string detail;
         std::string insertText;
-        std::string source;       // "lsp", "ai", "asm", "merged"
-        float       confidence = 0.0f;
-        int         sortOrder  = 0;
+        std::string source;  // "lsp", "ai", "asm", "merged"
+        float confidence = 0.0f;
+        int sortOrder = 0;
     };
 
     // ---- Aggregate diagnostic with AI explanation ----
-    struct HybridDiagnostic {
+    struct HybridDiagnostic
+    {
         std::string filePath;
-        int         line       = 0;
-        int         character  = 0;
-        int         severity   = 0;   // 1=Error, 2=Warning, 3=Info, 4=Hint
+        int line = 0;
+        int character = 0;
+        int severity = 0;  // 1=Error, 2=Warning, 3=Info, 4=Hint
         std::string message;
-        std::string source;           // "lsp", "ai", "asm"
-        std::string aiExplanation;    // AI-generated fix suggestion
+        std::string source;         // "lsp", "ai", "asm"
+        std::string aiExplanation;  // AI-generated fix suggestion
         std::string suggestedFix;
     };
 
     // ---- Symbol usage analysis ----
-    struct HybridSymbolUsage {
+    struct HybridSymbolUsage
+    {
         std::string symbol;
-        std::string kind;             // "function", "variable", "procedure", etc.
-        int         definitionLine = 0;
+        std::string kind;  // "function", "variable", "procedure", etc.
+        int definitionLine = 0;
         std::string definitionFile;
-        int         referenceCount = 0;
-        std::vector<std::pair<std::string, int>> references; // (file, line) pairs
-        std::string aiSummary;        // AI-generated description of the symbol
+        int referenceCount = 0;
+        std::vector<std::pair<std::string, int>> references;  // (file, line) pairs
+        std::string aiSummary;                                // AI-generated description of the symbol
     };
 
     // ---- Streaming analysis result ----
-    struct HybridStreamAnalysis {
+    struct HybridStreamAnalysis
+    {
         std::string filePath;
-        int         totalLines     = 0;
-        int         symbolCount    = 0;
-        int         diagnosticCount = 0;
-        int         complexityScore = 0;
+        int totalLines = 0;
+        int symbolCount = 0;
+        int diagnosticCount = 0;
+        int complexityScore = 0;
         std::string summary;
         std::vector<HybridDiagnostic> diagnostics;
         std::vector<std::string> observations;
-        double      analysisTimeMs = 0.0;
+        double analysisTimeMs = 0.0;
     };
 
     // ---- LSP profile recommendation ----
-    struct LSPProfileRecommendation {
+    struct LSPProfileRecommendation
+    {
         LSPLanguage language;
         std::string serverName;
         std::string reason;
-        bool        isInstalled = false;
+        bool isInstalled = false;
     };
 
     // ---- Bridge statistics ----
-    struct HybridBridgeStats {
-        uint64_t hybridCompletions   = 0;
-        uint64_t aggregateDiagRuns   = 0;
-        uint64_t smartRenames        = 0;
-        uint64_t streamAnalyses      = 0;
-        uint64_t autoProfileSelects  = 0;
-        uint64_t semanticPrefetches  = 0;
-        uint64_t correctionLoops     = 0;
-        uint64_t symbolExplains      = 0;
-        double   totalBridgeTimeMs   = 0.0;
+    struct HybridBridgeStats
+    {
+        uint64_t hybridCompletions = 0;
+        uint64_t aggregateDiagRuns = 0;
+        uint64_t smartRenames = 0;
+        uint64_t streamAnalyses = 0;
+        uint64_t autoProfileSelects = 0;
+        uint64_t semanticPrefetches = 0;
+        uint64_t correctionLoops = 0;
+        uint64_t symbolExplains = 0;
+        double totalBridgeTimeMs = 0.0;
     };
 
     // Phase 9B — lifecycle
@@ -3482,15 +3573,13 @@ private:
     void shutdownLSPAIBridge();
 
     // Hybrid completion (LSP + AI + ASM merged)
-    std::vector<HybridCompletionItem> requestHybridCompletion(
-        const std::string& filePath, int line, int character);
+    std::vector<HybridCompletionItem> requestHybridCompletion(const std::string& filePath, int line, int character);
 
     // Aggregate diagnostics (LSP + AI analysis + ASM semantic)
     std::vector<HybridDiagnostic> aggregateDiagnostics(const std::string& filePath);
 
     // Smart rename (LSP rename + AI verification + ASM cross-ref)
-    bool hybridSmartRename(const std::string& filePath, int line, int character,
-                           const std::string& newName);
+    bool hybridSmartRename(const std::string& filePath, int line, int character, const std::string& newName);
 
     // Streaming large file analysis (uses StreamingEngineRegistry)
     HybridStreamAnalysis streamLargeFileAnalysis(const std::string& filePath);
@@ -3499,8 +3588,7 @@ private:
     std::vector<LSPProfileRecommendation> autoSelectLSPProfile();
 
     // Symbol usage analysis (LSP references + ASM refs + AI summary)
-    HybridSymbolUsage analyzeSymbolUsage(const std::string& symbol,
-                                          const std::string& filePath);
+    HybridSymbolUsage analyzeSymbolUsage(const std::string& symbol, const std::string& filePath);
 
     // AI-powered symbol explanation
     std::string explainSymbol(const std::string& symbol, const std::string& filePath);
@@ -3509,9 +3597,8 @@ private:
     void semanticPrefetch(const std::string& filePath);
 
     // Agent-LSP correction loop (detect bad output → re-query with LSP context)
-    std::string agentCorrectionLoop(const std::string& prompt,
-                                     const std::string& badOutput,
-                                     const std::string& filePath);
+    std::string agentCorrectionLoop(const std::string& prompt, const std::string& badOutput,
+                                    const std::string& filePath);
 
     // Diagnostic annotation overlay (merge diagnostics → IDE annotations)
     void annotateDiagnostics(const std::string& filePath);
@@ -3553,18 +3640,18 @@ private:
     // ========================================================================
 
     // ---- IDM defines for MultiResponse commands (5106–5117) ----
-#define IDM_MULTI_RESP_GENERATE         5106
-#define IDM_MULTI_RESP_SET_MAX          5107
+#define IDM_MULTI_RESP_GENERATE 5106
+#define IDM_MULTI_RESP_SET_MAX 5107
 #define IDM_MULTI_RESP_SELECT_PREFERRED 5108
-#define IDM_MULTI_RESP_COMPARE          5109
-#define IDM_MULTI_RESP_SHOW_STATS       5110
-#define IDM_MULTI_RESP_SHOW_TEMPLATES   5111
-#define IDM_MULTI_RESP_TOGGLE_TEMPLATE  5112
-#define IDM_MULTI_RESP_SHOW_PREFS       5113
-#define IDM_MULTI_RESP_SHOW_LATEST      5114
-#define IDM_MULTI_RESP_SHOW_STATUS      5115
-#define IDM_MULTI_RESP_CLEAR_HISTORY    5116
-#define IDM_MULTI_RESP_APPLY_PREFERRED  5117
+#define IDM_MULTI_RESP_COMPARE 5109
+#define IDM_MULTI_RESP_SHOW_STATS 5110
+#define IDM_MULTI_RESP_SHOW_TEMPLATES 5111
+#define IDM_MULTI_RESP_TOGGLE_TEMPLATE 5112
+#define IDM_MULTI_RESP_SHOW_PREFS 5113
+#define IDM_MULTI_RESP_SHOW_LATEST 5114
+#define IDM_MULTI_RESP_SHOW_STATUS 5115
+#define IDM_MULTI_RESP_CLEAR_HISTORY 5116
+#define IDM_MULTI_RESP_APPLY_PREFERRED 5117
 
     // Multi-Response lifecycle
     void initMultiResponse();
@@ -3602,53 +3689,53 @@ private:
     // ════════════════════════════════════════════════════════════════════
 
     // ---- IDM defines for Phase 10 commands (5118–5131) ----
-#define IDM_GOV_STATUS              5118
-#define IDM_GOV_SUBMIT_COMMAND      5119
-#define IDM_GOV_KILL_ALL            5120
-#define IDM_GOV_TASK_LIST           5121
-#define IDM_SAFETY_STATUS           5122
-#define IDM_SAFETY_RESET_BUDGET     5123
-#define IDM_SAFETY_ROLLBACK_LAST    5124
-#define IDM_SAFETY_SHOW_VIOLATIONS  5125
-#define IDM_REPLAY_STATUS           5126
-#define IDM_REPLAY_SHOW_LAST        5127
-#define IDM_REPLAY_EXPORT_SESSION   5128
-#define IDM_REPLAY_CHECKPOINT       5129
-#define IDM_CONFIDENCE_STATUS       5130
-#define IDM_CONFIDENCE_SET_POLICY   5131
+#define IDM_GOV_STATUS 5118
+#define IDM_GOV_SUBMIT_COMMAND 5119
+#define IDM_GOV_KILL_ALL 5120
+#define IDM_GOV_TASK_LIST 5121
+#define IDM_SAFETY_STATUS 5122
+#define IDM_SAFETY_RESET_BUDGET 5123
+#define IDM_SAFETY_ROLLBACK_LAST 5124
+#define IDM_SAFETY_SHOW_VIOLATIONS 5125
+#define IDM_REPLAY_STATUS 5126
+#define IDM_REPLAY_SHOW_LAST 5127
+#define IDM_REPLAY_EXPORT_SESSION 5128
+#define IDM_REPLAY_CHECKPOINT 5129
+#define IDM_CONFIDENCE_STATUS 5130
+#define IDM_CONFIDENCE_SET_POLICY 5131
 
     // ---- IDM defines for Phase 11 commands (5132–5155) ----
     // Swarm Control
-#define IDM_SWARM_STATUS            5132
-#define IDM_SWARM_START_LEADER      5133
-#define IDM_SWARM_START_WORKER      5134
-#define IDM_SWARM_START_HYBRID      5135
-#define IDM_SWARM_STOP              5136
+#define IDM_SWARM_STATUS 5132
+#define IDM_SWARM_START_LEADER 5133
+#define IDM_SWARM_START_WORKER 5134
+#define IDM_SWARM_START_HYBRID 5135
+#define IDM_SWARM_STOP 5136
     // Node Management
-#define IDM_SWARM_LIST_NODES        5137
-#define IDM_SWARM_ADD_NODE          5138
-#define IDM_SWARM_REMOVE_NODE       5139
-#define IDM_SWARM_BLACKLIST_NODE    5140
+#define IDM_SWARM_LIST_NODES 5137
+#define IDM_SWARM_ADD_NODE 5138
+#define IDM_SWARM_REMOVE_NODE 5139
+#define IDM_SWARM_BLACKLIST_NODE 5140
     // Build
-#define IDM_SWARM_BUILD_SOURCES     5141
-#define IDM_SWARM_BUILD_CMAKE       5142
-#define IDM_SWARM_START_BUILD       5143
-#define IDM_SWARM_CANCEL_BUILD      5144
+#define IDM_SWARM_BUILD_SOURCES 5141
+#define IDM_SWARM_BUILD_CMAKE 5142
+#define IDM_SWARM_START_BUILD 5143
+#define IDM_SWARM_CANCEL_BUILD 5144
     // Cache & Config
-#define IDM_SWARM_CACHE_STATUS      5145
-#define IDM_SWARM_CACHE_CLEAR       5146
-#define IDM_SWARM_SHOW_CONFIG       5147
-#define IDM_SWARM_TOGGLE_DISCOVERY  5148
+#define IDM_SWARM_CACHE_STATUS 5145
+#define IDM_SWARM_CACHE_CLEAR 5146
+#define IDM_SWARM_SHOW_CONFIG 5147
+#define IDM_SWARM_TOGGLE_DISCOVERY 5148
     // Task Graph & Events
-#define IDM_SWARM_SHOW_TASK_GRAPH   5149
-#define IDM_SWARM_SHOW_EVENTS       5150
-#define IDM_SWARM_SHOW_STATS        5151
-#define IDM_SWARM_RESET_STATS       5152
+#define IDM_SWARM_SHOW_TASK_GRAPH 5149
+#define IDM_SWARM_SHOW_EVENTS 5150
+#define IDM_SWARM_SHOW_STATS 5151
+#define IDM_SWARM_RESET_STATS 5152
     // Worker Control
-#define IDM_SWARM_WORKER_STATUS     5153
-#define IDM_SWARM_WORKER_CONNECT    5154
+#define IDM_SWARM_WORKER_STATUS 5153
+#define IDM_SWARM_WORKER_CONNECT 5154
 #define IDM_SWARM_WORKER_DISCONNECT 5155
-#define IDM_SWARM_FITNESS_TEST      5156
+#define IDM_SWARM_FITNESS_TEST 5156
 
     // Phase 10 lifecycle
     void initPhase10();
@@ -3793,38 +3880,38 @@ private:
 
     // ---- IDM defines for Native Debugger commands ----
     // Session Control (12A)
-#define IDM_DBG_LAUNCH              5157
-#define IDM_DBG_ATTACH              5158
-#define IDM_DBG_DETACH              5159
+#define IDM_DBG_LAUNCH 5157
+#define IDM_DBG_ATTACH 5158
+#define IDM_DBG_DETACH 5159
     // Execution Control (12B)
-#define IDM_DBG_GO                  5160
-#define IDM_DBG_STEP_OVER           5161
-#define IDM_DBG_STEP_INTO           5162
-#define IDM_DBG_STEP_OUT            5163
-#define IDM_DBG_BREAK               5164
-#define IDM_DBG_KILL                5165
+#define IDM_DBG_GO 5160
+#define IDM_DBG_STEP_OVER 5161
+#define IDM_DBG_STEP_INTO 5162
+#define IDM_DBG_STEP_OUT 5163
+#define IDM_DBG_BREAK 5164
+#define IDM_DBG_KILL 5165
     // Breakpoint Management (12C)
-#define IDM_DBG_ADD_BP              5166
-#define IDM_DBG_REMOVE_BP           5167
-#define IDM_DBG_ENABLE_BP           5168
-#define IDM_DBG_CLEAR_BPS           5169
-#define IDM_DBG_LIST_BPS            5170
+#define IDM_DBG_ADD_BP 5166
+#define IDM_DBG_REMOVE_BP 5167
+#define IDM_DBG_ENABLE_BP 5168
+#define IDM_DBG_CLEAR_BPS 5169
+#define IDM_DBG_LIST_BPS 5170
     // Watch Management (12D)
-#define IDM_DBG_ADD_WATCH           5171
-#define IDM_DBG_REMOVE_WATCH        5172
+#define IDM_DBG_ADD_WATCH 5171
+#define IDM_DBG_REMOVE_WATCH 5172
     // Inspection (12E)
-#define IDM_DBG_REGISTERS           5173
-#define IDM_DBG_STACK               5174
-#define IDM_DBG_MEMORY              5175
-#define IDM_DBG_DISASM              5176
-#define IDM_DBG_MODULES             5177
-#define IDM_DBG_THREADS             5178
-#define IDM_DBG_SWITCH_THREAD       5179
-#define IDM_DBG_EVALUATE            5180
-#define IDM_DBG_SET_REGISTER        5181
-#define IDM_DBG_SEARCH_MEMORY       5182
-#define IDM_DBG_SYMBOL_PATH         5183
-#define IDM_DBG_STATUS              5184
+#define IDM_DBG_REGISTERS 5173
+#define IDM_DBG_STACK 5174
+#define IDM_DBG_MEMORY 5175
+#define IDM_DBG_DISASM 5176
+#define IDM_DBG_MODULES 5177
+#define IDM_DBG_THREADS 5178
+#define IDM_DBG_SWITCH_THREAD 5179
+#define IDM_DBG_EVALUATE 5180
+#define IDM_DBG_SET_REGISTER 5181
+#define IDM_DBG_SEARCH_MEMORY 5182
+#define IDM_DBG_SYMBOL_PATH 5183
+#define IDM_DBG_STATUS 5184
 
     // Phase 12 lifecycle
     void initPhase12();
@@ -3893,98 +3980,98 @@ private:
     // Wires the three-layer hotpatch system into the Win32IDE command palette
     // and menu bar. IDM range: 9001 – 9030
 
-#define IDM_HOTPATCH_SHOW_STATUS        9001
-#define IDM_HOTPATCH_MEMORY_APPLY       9002
-#define IDM_HOTPATCH_MEMORY_REVERT      9003
-#define IDM_HOTPATCH_BYTE_APPLY         9004
-#define IDM_HOTPATCH_BYTE_SEARCH        9005
-#define IDM_HOTPATCH_SERVER_ADD         9006
-#define IDM_HOTPATCH_SERVER_REMOVE      9007
-#define IDM_HOTPATCH_PROXY_BIAS         9008
-#define IDM_HOTPATCH_PROXY_REWRITE      9009
-#define IDM_HOTPATCH_PROXY_TERMINATE    9010
-#define IDM_HOTPATCH_PROXY_VALIDATE     9011
-#define IDM_HOTPATCH_PRESET_SAVE        9012
-#define IDM_HOTPATCH_PRESET_LOAD        9013
-#define IDM_HOTPATCH_SHOW_EVENT_LOG     9014
-#define IDM_HOTPATCH_RESET_STATS        9015
-#define IDM_HOTPATCH_TOGGLE_ALL         9016
-#define IDM_HOTPATCH_SHOW_PROXY_STATS   9017
-#define IDM_HOTPATCH_SET_TARGET_TPS     9018
+#define IDM_HOTPATCH_SHOW_STATUS 9001
+#define IDM_HOTPATCH_MEMORY_APPLY 9002
+#define IDM_HOTPATCH_MEMORY_REVERT 9003
+#define IDM_HOTPATCH_BYTE_APPLY 9004
+#define IDM_HOTPATCH_BYTE_SEARCH 9005
+#define IDM_HOTPATCH_SERVER_ADD 9006
+#define IDM_HOTPATCH_SERVER_REMOVE 9007
+#define IDM_HOTPATCH_PROXY_BIAS 9008
+#define IDM_HOTPATCH_PROXY_REWRITE 9009
+#define IDM_HOTPATCH_PROXY_TERMINATE 9010
+#define IDM_HOTPATCH_PROXY_VALIDATE 9011
+#define IDM_HOTPATCH_PRESET_SAVE 9012
+#define IDM_HOTPATCH_PRESET_LOAD 9013
+#define IDM_HOTPATCH_SHOW_EVENT_LOG 9014
+#define IDM_HOTPATCH_RESET_STATS 9015
+#define IDM_HOTPATCH_TOGGLE_ALL 9016
+#define IDM_HOTPATCH_SHOW_PROXY_STATS 9017
+#define IDM_HOTPATCH_SET_TARGET_TPS 9018
 
 // ========================================================================
 // WEBVIEW2 + MONACO EDITOR COMMANDS — Phase 26 (9100 range)
 // ========================================================================
-#define IDM_VIEW_TOGGLE_MONACO          9100
-#define IDM_VIEW_MONACO_DEVTOOLS        9101
-#define IDM_VIEW_MONACO_RELOAD          9102
-#define IDM_VIEW_MONACO_ZOOM_IN         9103
-#define IDM_VIEW_MONACO_ZOOM_OUT        9104
-#define IDM_VIEW_MONACO_SYNC_THEME      9105
+#define IDM_VIEW_TOGGLE_MONACO 9100
+#define IDM_VIEW_MONACO_DEVTOOLS 9101
+#define IDM_VIEW_MONACO_RELOAD 9102
+#define IDM_VIEW_MONACO_ZOOM_IN 9103
+#define IDM_VIEW_MONACO_ZOOM_OUT 9104
+#define IDM_VIEW_MONACO_SYNC_THEME 9105
 
 // ========================================================================
 // LSP SERVER COMMANDS — Phase 27 (9200 range)
 // ========================================================================
-#define IDM_LSP_SERVER_START            9200
-#define IDM_LSP_SERVER_STOP             9201
-#define IDM_LSP_SERVER_STATUS           9202
-#define IDM_LSP_SERVER_REINDEX          9203
-#define IDM_LSP_SERVER_STATS            9204
-#define IDM_LSP_SERVER_PUBLISH_DIAG     9205
-#define IDM_LSP_SERVER_CONFIG           9206
-#define IDM_LSP_SERVER_EXPORT_SYMBOLS   9207
-#define IDM_LSP_SERVER_LAUNCH_STDIO     9208
+#define IDM_LSP_SERVER_START 9200
+#define IDM_LSP_SERVER_STOP 9201
+#define IDM_LSP_SERVER_STATUS 9202
+#define IDM_LSP_SERVER_REINDEX 9203
+#define IDM_LSP_SERVER_STATS 9204
+#define IDM_LSP_SERVER_PUBLISH_DIAG 9205
+#define IDM_LSP_SERVER_CONFIG 9206
+#define IDM_LSP_SERVER_EXPORT_SYMBOLS 9207
+#define IDM_LSP_SERVER_LAUNCH_STDIO 9208
 
 // ========================================================================
 // EDITOR ENGINE COMMANDS — Phase 28 (9300 range)
 // ========================================================================
-#define IDM_EDITOR_ENGINE_RICHEDIT_CMD  9300
-#define IDM_EDITOR_ENGINE_WEBVIEW2_CMD  9301
+#define IDM_EDITOR_ENGINE_RICHEDIT_CMD 9300
+#define IDM_EDITOR_ENGINE_WEBVIEW2_CMD 9301
 #define IDM_EDITOR_ENGINE_MONACOCORE_CMD 9302
-#define IDM_EDITOR_ENGINE_CYCLE_CMD     9303
-#define IDM_EDITOR_ENGINE_STATUS_CMD    9304
+#define IDM_EDITOR_ENGINE_CYCLE_CMD 9303
+#define IDM_EDITOR_ENGINE_STATUS_CMD 9304
 
 // ========================================================================
 // PDB SYMBOL SERVER COMMANDS — Phase 29 (9400 range)
 // ========================================================================
-#define IDM_PDB_LOAD                    9400
-#define IDM_PDB_FETCH                   9401
-#define IDM_PDB_STATUS                  9402
-#define IDM_PDB_CACHE_CLEAR             9403
-#define IDM_PDB_ENABLE                  9404
-#define IDM_PDB_RESOLVE                 9405
+#define IDM_PDB_LOAD 9400
+#define IDM_PDB_FETCH 9401
+#define IDM_PDB_STATUS 9402
+#define IDM_PDB_CACHE_CLEAR 9403
+#define IDM_PDB_ENABLE 9404
+#define IDM_PDB_RESOLVE 9405
 
 // Phase 29.3: PE Import/Export Table Provider
-#define IDM_PDB_IMPORTS                 9410
-#define IDM_PDB_EXPORTS                 9411
-#define IDM_PDB_IAT_STATUS              9412
+#define IDM_PDB_IMPORTS 9410
+#define IDM_PDB_EXPORTS 9411
+#define IDM_PDB_IAT_STATUS 9412
 
 // ============================================================================
 // PHASE 34: TELEMETRY EXPORT — Privacy-respecting IDE metrics (9900 range)
 // ============================================================================
-#define IDM_TELEMETRY_TOGGLE            9900
-#define IDM_TELEMETRY_EXPORT_JSON       9901
-#define IDM_TELEMETRY_EXPORT_CSV        9902
-#define IDM_TELEMETRY_SHOW_DASHBOARD    9903
-#define IDM_TELEMETRY_CLEAR             9904
-#define IDM_TELEMETRY_SNAPSHOT          9905
+#define IDM_TELEMETRY_TOGGLE 9900
+#define IDM_TELEMETRY_EXPORT_JSON 9901
+#define IDM_TELEMETRY_EXPORT_CSV 9902
+#define IDM_TELEMETRY_SHOW_DASHBOARD 9903
+#define IDM_TELEMETRY_CLEAR 9904
+#define IDM_TELEMETRY_SNAPSHOT 9905
 
 // ============================================================================
 // IDE SELF-AUDIT & VERIFICATION COMMANDS — Phase 31 (9500 range)
 // ============================================================================
-#define IDM_AUDIT_SHOW_DASHBOARD        9500
-#define IDM_AUDIT_RUN_FULL              9501
-#define IDM_AUDIT_DETECT_STUBS          9502
-#define IDM_AUDIT_CHECK_MENUS           9503
-#define IDM_AUDIT_RUN_TESTS             9504
-#define IDM_AUDIT_EXPORT_REPORT         9505
-#define IDM_AUDIT_QUICK_STATS           9506
+#define IDM_AUDIT_SHOW_DASHBOARD 9500
+#define IDM_AUDIT_RUN_FULL 9501
+#define IDM_AUDIT_DETECT_STUBS 9502
+#define IDM_AUDIT_CHECK_MENUS 9503
+#define IDM_AUDIT_RUN_TESTS 9504
+#define IDM_AUDIT_EXPORT_REPORT 9505
+#define IDM_AUDIT_QUICK_STATS 9506
 
 // ============================================================================
 // PHASE 32: FINAL GAUNTLET — Pre-Packaging Runtime Verification (9600 range)
 // ============================================================================
-#define IDM_GAUNTLET_RUN                9600
-#define IDM_GAUNTLET_EXPORT             9601
+#define IDM_GAUNTLET_RUN 9600
+#define IDM_GAUNTLET_EXPORT 9601
 
 // ============================================================================
 // BUILD COMMANDS — Unified Build Pipeline (9602+)
@@ -3994,32 +4081,32 @@ private:
 // ============================================================================
 // PHASE 33: VOICE CHAT — Native Win32 Audio Engine (9700 range)
 // ============================================================================
-#define IDM_VOICE_RECORD                9700
-#define IDM_VOICE_PTT                   9701
-#define IDM_VOICE_SPEAK                 9702
-#define IDM_VOICE_JOIN_ROOM             9703
-#define IDM_VOICE_SHOW_DEVICES          9704
-#define IDM_VOICE_METRICS               9705
-#define IDM_VOICE_TOGGLE_PANEL          9706
-#define IDM_VOICE_MODE_PTT              9707
-#define IDM_VOICE_MODE_CONTINUOUS       9708
-#define IDM_VOICE_MODE_DISABLED         9709
+#define IDM_VOICE_RECORD 9700
+#define IDM_VOICE_PTT 9701
+#define IDM_VOICE_SPEAK 9702
+#define IDM_VOICE_JOIN_ROOM 9703
+#define IDM_VOICE_SHOW_DEVICES 9704
+#define IDM_VOICE_METRICS 9705
+#define IDM_VOICE_TOGGLE_PANEL 9706
+#define IDM_VOICE_MODE_PTT 9707
+#define IDM_VOICE_MODE_CONTINUOUS 9708
+#define IDM_VOICE_MODE_DISABLED 9709
 
 // ============================================================================
 // PHASE 33: QUICK-WIN PORTS — Shortcut, Backup, Alerts (9800 range)
 // ============================================================================
-#define IDM_QW_SHORTCUT_EDITOR          9800
-#define IDM_QW_SHORTCUT_RESET           9801
-#define IDM_QW_BACKUP_CREATE            9810
-#define IDM_QW_BACKUP_RESTORE           9811
-#define IDM_QW_BACKUP_AUTO_TOGGLE       9812
-#define IDM_QW_BACKUP_LIST              9813
-#define IDM_QW_BACKUP_PRUNE             9814
-#define IDM_QW_ALERT_TOGGLE_MONITOR     9820
-#define IDM_QW_ALERT_SHOW_HISTORY       9821
-#define IDM_QW_ALERT_DISMISS_ALL        9822
-#define IDM_QW_ALERT_RESOURCE_STATUS    9823
-#define IDM_QW_SLO_DASHBOARD            9830
+#define IDM_QW_SHORTCUT_EDITOR 9800
+#define IDM_QW_SHORTCUT_RESET 9801
+#define IDM_QW_BACKUP_CREATE 9810
+#define IDM_QW_BACKUP_RESTORE 9811
+#define IDM_QW_BACKUP_AUTO_TOGGLE 9812
+#define IDM_QW_BACKUP_LIST 9813
+#define IDM_QW_BACKUP_PRUNE 9814
+#define IDM_QW_ALERT_TOGGLE_MONITOR 9820
+#define IDM_QW_ALERT_SHOW_HISTORY 9821
+#define IDM_QW_ALERT_DISMISS_ALL 9822
+#define IDM_QW_ALERT_RESOURCE_STATUS 9823
+#define IDM_QW_SLO_DASHBOARD 9830
 
     // Hotpatch command handlers (implemented in Win32IDE_HotpatchPanel.cpp)
     void initHotpatchUI();
@@ -4072,10 +4159,10 @@ private:
     // ========================================================================
     // DECOMPILER VIEW STATE — Direct2D Split View (Phase 18B)
     // ========================================================================
-    HWND m_hwndDecompView   = nullptr;  // Split-view container
-    HWND m_hwndDecompPane   = nullptr;  // Left pane: decompiler (Direct2D)
-    HWND m_hwndDisasmPane   = nullptr;  // Right pane: disassembly (Direct2D)
-    bool m_decompViewActive = false;    // True when decompiler view is showing
+    HWND m_hwndDecompView = nullptr;  // Split-view container
+    HWND m_hwndDecompPane = nullptr;  // Left pane: decompiler (Direct2D)
+    HWND m_hwndDisasmPane = nullptr;  // Right pane: disassembly (Direct2D)
+    bool m_decompViewActive = false;  // True when decompiler view is showing
 
     // ========================================================================
     // AGENT MEMORY STATE — Phase 19B
@@ -4111,11 +4198,11 @@ private:
     // ========================================================================
     // WEBVIEW2 + MONACO EDITOR STATE — Phase 26
     // ========================================================================
-    HWND                    m_hwndMonacoContainer = nullptr;
-    WebView2Container*      m_webView2 = nullptr;
-    bool                    m_monacoEditorActive = false;
-    MonacoEditorOptions     m_monacoOptions;
-    float                   m_monacoZoomLevel = 1.0f;
+    HWND m_hwndMonacoContainer = nullptr;
+    WebView2Container* m_webView2 = nullptr;
+    bool m_monacoEditorActive = false;
+    MonacoEditorOptions m_monacoOptions;
+    float m_monacoZoomLevel = 1.0f;
 
     // ========================================================================
     // LSP SERVER — Phase 27 (Embedded Language Server)
@@ -4140,10 +4227,8 @@ private:
 
     // In-process message forwarding (Win32IDE → LSP Server)
     void forwardToLSPServer(const std::string& method, const nlohmann::json& params);
-    void notifyLSPServerDidOpen(const std::string& uri, const std::string& languageId,
-                                 const std::string& content);
-    void notifyLSPServerDidChange(const std::string& uri, const std::string& content,
-                                   int version);
+    void notifyLSPServerDidOpen(const std::string& uri, const std::string& languageId, const std::string& content);
+    void notifyLSPServerDidChange(const std::string& uri, const std::string& content, int version);
     void notifyLSPServerDidClose(const std::string& uri);
 
     // HTTP endpoint
@@ -4203,7 +4288,8 @@ private:
     // ========================================================================
     // IDE SELF-AUDIT & VERIFICATION — Phase 31: CT Scanner / Compliance Auditor
     // ========================================================================
-    struct RuntimeValidationCheck {
+    struct RuntimeValidationCheck
+    {
         std::string name;
         bool passed = false;
         std::string detail;
@@ -4339,7 +4425,7 @@ private:
 
     // State
     bool m_telemetryInitialized = false;
-    bool m_telemetryEnabled     = false;
+    bool m_telemetryEnabled = false;
 
     // ========================================================================
     // PHASE 33 VOICE UX POLISH — Hotkey, status bar, device hot-swap
@@ -4372,8 +4458,8 @@ private:
     // Persistent binary flight recorder at %LOCALAPPDATA%\RawrXD\flight_recorder.bin
     // ========================================================================
     static constexpr int IDM_FR_EXPORT_JSON = 10100;
-    static constexpr int IDM_FR_DASHBOARD   = 10101;
-    static constexpr int IDM_FR_CLEAR       = 10102;
+    static constexpr int IDM_FR_DASHBOARD = 10101;
+    static constexpr int IDM_FR_CLEAR = 10102;
 
     void initFlightRecorder();
     void shutdownFlightRecorder();
@@ -4405,9 +4491,9 @@ private:
     std::string getInstructionsContent() const;
     bool m_instructionsInitialized = false;
 
-    static constexpr int IDM_INSTRUCTIONS_VIEW    = 10500;
-    static constexpr int IDM_INSTRUCTIONS_RELOAD  = 10501;
-    static constexpr int IDM_INSTRUCTIONS_COPY    = 10502;
+    static constexpr int IDM_INSTRUCTIONS_VIEW = 10500;
+    static constexpr int IDM_INSTRUCTIONS_RELOAD = 10501;
+    static constexpr int IDM_INSTRUCTIONS_COPY = 10502;
 
     // ========================================================================
     // PHASE 45: GAME ENGINE INTEGRATION (Unity + Unreal)
@@ -4480,54 +4566,54 @@ private:
     bool m_crucibleInitialized = false;
 
     // ── Crucible Command IDs ──
-    static constexpr int IDM_CRUCIBLE_RUN_ALL       = 10700;
-    static constexpr int IDM_CRUCIBLE_RUN_SHADOW    = 10701;
-    static constexpr int IDM_CRUCIBLE_RUN_CLUSTER   = 10702;
-    static constexpr int IDM_CRUCIBLE_RUN_SEMANTIC  = 10703;
-    static constexpr int IDM_CRUCIBLE_CANCEL        = 10704;
-    static constexpr int IDM_CRUCIBLE_STATUS        = 10705;
-    static constexpr int IDM_CRUCIBLE_REPORT        = 10706;
-    static constexpr int IDM_CRUCIBLE_EXPORT_JSON   = 10707;
-    static constexpr int IDM_CRUCIBLE_CONFIG        = 10708;
-    static constexpr int IDM_CRUCIBLE_HELP          = 10709;
+    static constexpr int IDM_CRUCIBLE_RUN_ALL = 10700;
+    static constexpr int IDM_CRUCIBLE_RUN_SHADOW = 10701;
+    static constexpr int IDM_CRUCIBLE_RUN_CLUSTER = 10702;
+    static constexpr int IDM_CRUCIBLE_RUN_SEMANTIC = 10703;
+    static constexpr int IDM_CRUCIBLE_CANCEL = 10704;
+    static constexpr int IDM_CRUCIBLE_STATUS = 10705;
+    static constexpr int IDM_CRUCIBLE_REPORT = 10706;
+    static constexpr int IDM_CRUCIBLE_EXPORT_JSON = 10707;
+    static constexpr int IDM_CRUCIBLE_CONFIG = 10708;
+    static constexpr int IDM_CRUCIBLE_HELP = 10709;
 
     // ── Game Engine Command IDs ──
-    static constexpr int IDM_GAME_ENGINE_DETECT           = 10600;
-    static constexpr int IDM_GAME_ENGINE_OPEN             = 10601;
-    static constexpr int IDM_GAME_ENGINE_CLOSE            = 10602;
-    static constexpr int IDM_GAME_ENGINE_STATUS           = 10603;
-    static constexpr int IDM_GAME_ENGINE_BUILD            = 10604;
-    static constexpr int IDM_GAME_ENGINE_PLAY             = 10605;
-    static constexpr int IDM_GAME_ENGINE_STOP             = 10606;
-    static constexpr int IDM_GAME_ENGINE_PAUSE            = 10607;
-    static constexpr int IDM_GAME_ENGINE_COMPILE          = 10608;
-    static constexpr int IDM_GAME_ENGINE_PROFILER_START   = 10609;
-    static constexpr int IDM_GAME_ENGINE_PROFILER_STOP    = 10610;
-    static constexpr int IDM_GAME_ENGINE_PROFILER_SNAP    = 10611;
-    static constexpr int IDM_GAME_ENGINE_DEBUG_START      = 10612;
-    static constexpr int IDM_GAME_ENGINE_DEBUG_STOP       = 10613;
-    static constexpr int IDM_GAME_ENGINE_BREAKPOINT       = 10614;
-    static constexpr int IDM_GAME_ENGINE_AI_SUMMARY       = 10615;
-    static constexpr int IDM_GAME_ENGINE_AI_SCENE         = 10616;
-    static constexpr int IDM_GAME_ENGINE_INSTALLATIONS    = 10617;
-    static constexpr int IDM_GAME_ENGINE_HELP             = 10618;
+    static constexpr int IDM_GAME_ENGINE_DETECT = 10600;
+    static constexpr int IDM_GAME_ENGINE_OPEN = 10601;
+    static constexpr int IDM_GAME_ENGINE_CLOSE = 10602;
+    static constexpr int IDM_GAME_ENGINE_STATUS = 10603;
+    static constexpr int IDM_GAME_ENGINE_BUILD = 10604;
+    static constexpr int IDM_GAME_ENGINE_PLAY = 10605;
+    static constexpr int IDM_GAME_ENGINE_STOP = 10606;
+    static constexpr int IDM_GAME_ENGINE_PAUSE = 10607;
+    static constexpr int IDM_GAME_ENGINE_COMPILE = 10608;
+    static constexpr int IDM_GAME_ENGINE_PROFILER_START = 10609;
+    static constexpr int IDM_GAME_ENGINE_PROFILER_STOP = 10610;
+    static constexpr int IDM_GAME_ENGINE_PROFILER_SNAP = 10611;
+    static constexpr int IDM_GAME_ENGINE_DEBUG_START = 10612;
+    static constexpr int IDM_GAME_ENGINE_DEBUG_STOP = 10613;
+    static constexpr int IDM_GAME_ENGINE_BREAKPOINT = 10614;
+    static constexpr int IDM_GAME_ENGINE_AI_SUMMARY = 10615;
+    static constexpr int IDM_GAME_ENGINE_AI_SCENE = 10616;
+    static constexpr int IDM_GAME_ENGINE_INSTALLATIONS = 10617;
+    static constexpr int IDM_GAME_ENGINE_HELP = 10618;
 
     // Unity-specific IDs
-    static constexpr int IDM_UNITY_CREATE_SCRIPT          = 10650;
-    static constexpr int IDM_UNITY_SCENE_LIST             = 10651;
-    static constexpr int IDM_UNITY_ASSET_BROWSER          = 10652;
-    static constexpr int IDM_UNITY_PACKAGE_MANAGER        = 10653;
+    static constexpr int IDM_UNITY_CREATE_SCRIPT = 10650;
+    static constexpr int IDM_UNITY_SCENE_LIST = 10651;
+    static constexpr int IDM_UNITY_ASSET_BROWSER = 10652;
+    static constexpr int IDM_UNITY_PACKAGE_MANAGER = 10653;
 
     // Unreal-specific IDs
-    static constexpr int IDM_UNREAL_CREATE_CLASS          = 10670;
-    static constexpr int IDM_UNREAL_CREATE_MODULE         = 10671;
-    static constexpr int IDM_UNREAL_CREATE_PLUGIN         = 10672;
-    static constexpr int IDM_UNREAL_GEN_PROJECT_FILES     = 10673;
-    static constexpr int IDM_UNREAL_LIVE_CODING           = 10674;
-    static constexpr int IDM_UNREAL_COOK_CONTENT          = 10675;
-    static constexpr int IDM_UNREAL_PACKAGE_PROJECT       = 10676;
-    static constexpr int IDM_UNREAL_LEVEL_LIST            = 10677;
-    static constexpr int IDM_UNREAL_BLUEPRINT_LIST        = 10678;
+    static constexpr int IDM_UNREAL_CREATE_CLASS = 10670;
+    static constexpr int IDM_UNREAL_CREATE_MODULE = 10671;
+    static constexpr int IDM_UNREAL_CREATE_PLUGIN = 10672;
+    static constexpr int IDM_UNREAL_GEN_PROJECT_FILES = 10673;
+    static constexpr int IDM_UNREAL_LIVE_CODING = 10674;
+    static constexpr int IDM_UNREAL_COOK_CONTENT = 10675;
+    static constexpr int IDM_UNREAL_PACKAGE_PROJECT = 10676;
+    static constexpr int IDM_UNREAL_LEVEL_LIST = 10677;
+    static constexpr int IDM_UNREAL_BLUEPRINT_LIST = 10678;
 
     // ========================================================================
     // PHASE 13: DISTRIBUTED PIPELINE ORCHESTRATOR
@@ -4546,15 +4632,15 @@ private:
     void cmdPipelineShutdown();
     bool m_pipelinePanelInitialized = false;
 
-    static constexpr int IDM_PIPELINE_STATUS       = 11000;
-    static constexpr int IDM_PIPELINE_SUBMIT       = 11001;
-    static constexpr int IDM_PIPELINE_CANCEL       = 11002;
-    static constexpr int IDM_PIPELINE_LIST_NODES   = 11003;
-    static constexpr int IDM_PIPELINE_ADD_NODE     = 11004;
-    static constexpr int IDM_PIPELINE_REMOVE_NODE  = 11005;
-    static constexpr int IDM_PIPELINE_DAG_VIEW     = 11006;
-    static constexpr int IDM_PIPELINE_STATS        = 11007;
-    static constexpr int IDM_PIPELINE_SHUTDOWN     = 11008;
+    static constexpr int IDM_PIPELINE_STATUS = 11000;
+    static constexpr int IDM_PIPELINE_SUBMIT = 11001;
+    static constexpr int IDM_PIPELINE_CANCEL = 11002;
+    static constexpr int IDM_PIPELINE_LIST_NODES = 11003;
+    static constexpr int IDM_PIPELINE_ADD_NODE = 11004;
+    static constexpr int IDM_PIPELINE_REMOVE_NODE = 11005;
+    static constexpr int IDM_PIPELINE_DAG_VIEW = 11006;
+    static constexpr int IDM_PIPELINE_STATS = 11007;
+    static constexpr int IDM_PIPELINE_SHUTDOWN = 11008;
 
     // ========================================================================
     // PHASE 14: HOTPATCH CONTROL PLANE
@@ -4577,19 +4663,19 @@ private:
     void cmdHPCtrlStats();
     bool m_hotpatchCtrlPanelInitialized = false;
 
-    static constexpr int IDM_HPCTRL_LIST_PATCHES   = 11100;
-    static constexpr int IDM_HPCTRL_PATCH_DETAIL   = 11101;
-    static constexpr int IDM_HPCTRL_VALIDATE       = 11102;
-    static constexpr int IDM_HPCTRL_STAGE          = 11103;
-    static constexpr int IDM_HPCTRL_APPLY          = 11104;
-    static constexpr int IDM_HPCTRL_ROLLBACK       = 11105;
-    static constexpr int IDM_HPCTRL_SUSPEND        = 11106;
-    static constexpr int IDM_HPCTRL_AUDIT_LOG      = 11107;
-    static constexpr int IDM_HPCTRL_TXN_BEGIN      = 11108;
-    static constexpr int IDM_HPCTRL_TXN_COMMIT     = 11109;
-    static constexpr int IDM_HPCTRL_TXN_ROLLBACK   = 11110;
-    static constexpr int IDM_HPCTRL_DEP_GRAPH      = 11111;
-    static constexpr int IDM_HPCTRL_STATS          = 11112;
+    static constexpr int IDM_HPCTRL_LIST_PATCHES = 11100;
+    static constexpr int IDM_HPCTRL_PATCH_DETAIL = 11101;
+    static constexpr int IDM_HPCTRL_VALIDATE = 11102;
+    static constexpr int IDM_HPCTRL_STAGE = 11103;
+    static constexpr int IDM_HPCTRL_APPLY = 11104;
+    static constexpr int IDM_HPCTRL_ROLLBACK = 11105;
+    static constexpr int IDM_HPCTRL_SUSPEND = 11106;
+    static constexpr int IDM_HPCTRL_AUDIT_LOG = 11107;
+    static constexpr int IDM_HPCTRL_TXN_BEGIN = 11108;
+    static constexpr int IDM_HPCTRL_TXN_COMMIT = 11109;
+    static constexpr int IDM_HPCTRL_TXN_ROLLBACK = 11110;
+    static constexpr int IDM_HPCTRL_DEP_GRAPH = 11111;
+    static constexpr int IDM_HPCTRL_STATS = 11112;
 
     // ========================================================================
     // PHASE 15: STATIC ANALYSIS ENGINE
@@ -4608,15 +4694,15 @@ private:
     void cmdSAShowStats();
     bool m_staticAnalysisPanelInitialized = false;
 
-    static constexpr int IDM_SA_BUILD_CFG          = 11200;
+    static constexpr int IDM_SA_BUILD_CFG = 11200;
     static constexpr int IDM_SA_COMPUTE_DOMINATORS = 11201;
-    static constexpr int IDM_SA_CONVERT_SSA        = 11202;
-    static constexpr int IDM_SA_DETECT_LOOPS       = 11203;
-    static constexpr int IDM_SA_OPTIMIZE           = 11204;
-    static constexpr int IDM_SA_FULL_ANALYSIS      = 11205;
-    static constexpr int IDM_SA_EXPORT_DOT         = 11206;
-    static constexpr int IDM_SA_EXPORT_JSON        = 11207;
-    static constexpr int IDM_SA_STATS              = 11208;
+    static constexpr int IDM_SA_CONVERT_SSA = 11202;
+    static constexpr int IDM_SA_DETECT_LOOPS = 11203;
+    static constexpr int IDM_SA_OPTIMIZE = 11204;
+    static constexpr int IDM_SA_FULL_ANALYSIS = 11205;
+    static constexpr int IDM_SA_EXPORT_DOT = 11206;
+    static constexpr int IDM_SA_EXPORT_JSON = 11207;
+    static constexpr int IDM_SA_STATS = 11208;
 
     // ========================================================================
     // PHASE 16: SEMANTIC CODE INTELLIGENCE
@@ -4640,13 +4726,14 @@ private:
     bool getEditorCursorFileLineCol(std::string& outFile, uint32_t& outLine1Based, uint32_t& outCol) const;
     void navigateToFileLine(const std::string& filePath, uint32_t line1Based);
 
-public:
+  public:
     // Unified Problems Panel (P0) — accessed by ProblemsListSubclassProc
     void initProblemsPanel();
     void refreshProblemsView();
     void onProblemsItemActivate(int index);
     const std::vector<RawrXD::ProblemEntry>& problemsViewCache() const { return m_problemsViewCache; }
-private:
+
+  private:
     void handleProblemsCommand(int commandId);
     void runBuildInBackground(const std::string& workingDir, const std::string& buildCommand);
     bool m_problemsPanelInitialized = false;
@@ -4656,7 +4743,7 @@ private:
 
     // Tier 5 Cosmetics state
     bool m_lineEndingSelectorInitialized = false;
-    int  m_lineEndingMode = 0;
+    int m_lineEndingMode = 0;
     bool m_debugWatchInitialized = false;
     bool m_callStackSymbolsInitialized = false;
     HWND m_hwndProblemsPanel = nullptr;
@@ -4665,19 +4752,19 @@ private:
 
     bool m_semanticPanelInitialized = false;
 
-    static constexpr int IDM_SEM_GO_TO_DEF         = 11300;
-    static constexpr int IDM_SEM_FIND_REFS         = 11301;
-    static constexpr int IDM_SEM_FIND_IMPLS        = 11302;
-    static constexpr int IDM_SEM_TYPE_HIERARCHY    = 11303;
-    static constexpr int IDM_SEM_CALL_GRAPH        = 11304;
-    static constexpr int IDM_SEM_SEARCH_SYMBOLS    = 11305;
-    static constexpr int IDM_SEM_FILE_SYMBOLS      = 11306;
-    static constexpr int IDM_SEM_UNUSED            = 11307;
-    static constexpr int IDM_SEM_INDEX_FILE        = 11308;
-    static constexpr int IDM_SEM_REBUILD_INDEX     = 11309;
-    static constexpr int IDM_SEM_SAVE_INDEX        = 11310;
-    static constexpr int IDM_SEM_LOAD_INDEX        = 11311;
-    static constexpr int IDM_SEM_STATS             = 11312;
+    static constexpr int IDM_SEM_GO_TO_DEF = 11300;
+    static constexpr int IDM_SEM_FIND_REFS = 11301;
+    static constexpr int IDM_SEM_FIND_IMPLS = 11302;
+    static constexpr int IDM_SEM_TYPE_HIERARCHY = 11303;
+    static constexpr int IDM_SEM_CALL_GRAPH = 11304;
+    static constexpr int IDM_SEM_SEARCH_SYMBOLS = 11305;
+    static constexpr int IDM_SEM_FILE_SYMBOLS = 11306;
+    static constexpr int IDM_SEM_UNUSED = 11307;
+    static constexpr int IDM_SEM_INDEX_FILE = 11308;
+    static constexpr int IDM_SEM_REBUILD_INDEX = 11309;
+    static constexpr int IDM_SEM_SAVE_INDEX = 11310;
+    static constexpr int IDM_SEM_LOAD_INDEX = 11311;
+    static constexpr int IDM_SEM_STATS = 11312;
 
     // ========================================================================
     // PHASE 17: ENTERPRISE TELEMETRY & COMPLIANCE
@@ -4704,22 +4791,22 @@ private:
     bool m_telemetryPanelInitialized = false;
     bool m_securityDashboardInitialized = false;
 
-    static constexpr int IDM_TEL_TRACE_STATUS      = 11400;
-    static constexpr int IDM_TEL_START_SPAN        = 11401;
-    static constexpr int IDM_TEL_AUDIT_LOG         = 11402;
-    static constexpr int IDM_TEL_AUDIT_VERIFY      = 11403;
+    static constexpr int IDM_TEL_TRACE_STATUS = 11400;
+    static constexpr int IDM_TEL_START_SPAN = 11401;
+    static constexpr int IDM_TEL_AUDIT_LOG = 11402;
+    static constexpr int IDM_TEL_AUDIT_VERIFY = 11403;
     static constexpr int IDM_TEL_COMPLIANCE_REPORT = 11404;
-    static constexpr int IDM_TEL_VIOLATIONS        = 11405;
-    static constexpr int IDM_TEL_LICENSE_STATUS    = 11406;
-    static constexpr int IDM_TEL_USAGE_METER       = 11407;
+    static constexpr int IDM_TEL_VIOLATIONS = 11405;
+    static constexpr int IDM_TEL_LICENSE_STATUS = 11406;
+    static constexpr int IDM_TEL_USAGE_METER = 11407;
     static constexpr int IDM_TEL_METRICS_DASHBOARD = 11408;
-    static constexpr int IDM_TEL_METRICS_FLUSH     = 11409;
-    static constexpr int IDM_TEL_EXPORT_AUDIT      = 11410;
-    static constexpr int IDM_TEL_EXPORT_OTLP       = 11411;
-    static constexpr int IDM_TEL_GDPR_EXPORT       = 11412;
-    static constexpr int IDM_TEL_GDPR_DELETE       = 11413;
-    static constexpr int IDM_TEL_SET_LEVEL         = 11414;
-    static constexpr int IDM_TEL_STATS             = 11415;
+    static constexpr int IDM_TEL_METRICS_FLUSH = 11409;
+    static constexpr int IDM_TEL_EXPORT_AUDIT = 11410;
+    static constexpr int IDM_TEL_EXPORT_OTLP = 11411;
+    static constexpr int IDM_TEL_GDPR_EXPORT = 11412;
+    static constexpr int IDM_TEL_GDPR_DELETE = 11413;
+    static constexpr int IDM_TEL_SET_LEVEL = 11414;
+    static constexpr int IDM_TEL_STATS = 11415;
 
     // ════════════════════════════════════════════════════════════════════════
     // Phase 49: Copilot Gap Closer (10800–10899)
@@ -4764,30 +4851,30 @@ private:
 
     // ── Copilot Gap Closer Command IDs ──
     // General
-    static constexpr int IDM_GAPCLOSE_INIT              = 10800;
-    static constexpr int IDM_GAPCLOSE_STATUS            = 10801;
-    static constexpr int IDM_GAPCLOSE_PERF              = 10802;
-    static constexpr int IDM_GAPCLOSE_HELP              = 10803;
+    static constexpr int IDM_GAPCLOSE_INIT = 10800;
+    static constexpr int IDM_GAPCLOSE_STATUS = 10801;
+    static constexpr int IDM_GAPCLOSE_PERF = 10802;
+    static constexpr int IDM_GAPCLOSE_HELP = 10803;
     // Vector Database
-    static constexpr int IDM_GAPCLOSE_VECDB_INIT        = 10810;
-    static constexpr int IDM_GAPCLOSE_VECDB_INSERT      = 10811;
-    static constexpr int IDM_GAPCLOSE_VECDB_SEARCH      = 10812;
-    static constexpr int IDM_GAPCLOSE_VECDB_DELETE      = 10813;
-    static constexpr int IDM_GAPCLOSE_VECDB_STATUS      = 10814;
-    static constexpr int IDM_GAPCLOSE_VECDB_BENCH       = 10815;
+    static constexpr int IDM_GAPCLOSE_VECDB_INIT = 10810;
+    static constexpr int IDM_GAPCLOSE_VECDB_INSERT = 10811;
+    static constexpr int IDM_GAPCLOSE_VECDB_SEARCH = 10812;
+    static constexpr int IDM_GAPCLOSE_VECDB_DELETE = 10813;
+    static constexpr int IDM_GAPCLOSE_VECDB_STATUS = 10814;
+    static constexpr int IDM_GAPCLOSE_VECDB_BENCH = 10815;
     // Composer
-    static constexpr int IDM_GAPCLOSE_COMPOSER_BEGIN    = 10820;
-    static constexpr int IDM_GAPCLOSE_COMPOSER_ADD      = 10821;
-    static constexpr int IDM_GAPCLOSE_COMPOSER_COMMIT   = 10822;
-    static constexpr int IDM_GAPCLOSE_COMPOSER_STATUS   = 10823;
+    static constexpr int IDM_GAPCLOSE_COMPOSER_BEGIN = 10820;
+    static constexpr int IDM_GAPCLOSE_COMPOSER_ADD = 10821;
+    static constexpr int IDM_GAPCLOSE_COMPOSER_COMMIT = 10822;
+    static constexpr int IDM_GAPCLOSE_COMPOSER_STATUS = 10823;
     // CRDT
-    static constexpr int IDM_GAPCLOSE_CRDT_INIT         = 10830;
-    static constexpr int IDM_GAPCLOSE_CRDT_INSERT       = 10831;
-    static constexpr int IDM_GAPCLOSE_CRDT_DELETE       = 10832;
-    static constexpr int IDM_GAPCLOSE_CRDT_STATUS       = 10833;
+    static constexpr int IDM_GAPCLOSE_CRDT_INIT = 10830;
+    static constexpr int IDM_GAPCLOSE_CRDT_INSERT = 10831;
+    static constexpr int IDM_GAPCLOSE_CRDT_DELETE = 10832;
+    static constexpr int IDM_GAPCLOSE_CRDT_STATUS = 10833;
     // Git Context
-    static constexpr int IDM_GAPCLOSE_GIT_CONTEXT       = 10840;
-    static constexpr int IDM_GAPCLOSE_GIT_BRANCH        = 10841;
+    static constexpr int IDM_GAPCLOSE_GIT_CONTEXT = 10840;
+    static constexpr int IDM_GAPCLOSE_GIT_BRANCH = 10841;
 
     // ════════════════════════════════════════════════════════════════════════
     // CURSOR/JB-PARITY FEATURE MODULES — Pluginable subsystems (11500–11599)
@@ -4807,14 +4894,14 @@ private:
     void cmdTelExportAutoStop();
     bool m_telemetryExportInitialized = false;
 
-    static constexpr int IDM_TELEXPORT_JSON         = 11500;
-    static constexpr int IDM_TELEXPORT_CSV          = 11501;
-    static constexpr int IDM_TELEXPORT_PROMETHEUS   = 11502;
-    static constexpr int IDM_TELEXPORT_OTLP         = 11503;
-    static constexpr int IDM_TELEXPORT_AUDIT_LOG    = 11504;
+    static constexpr int IDM_TELEXPORT_JSON = 11500;
+    static constexpr int IDM_TELEXPORT_CSV = 11501;
+    static constexpr int IDM_TELEXPORT_PROMETHEUS = 11502;
+    static constexpr int IDM_TELEXPORT_OTLP = 11503;
+    static constexpr int IDM_TELEXPORT_AUDIT_LOG = 11504;
     static constexpr int IDM_TELEXPORT_VERIFY_CHAIN = 11505;
-    static constexpr int IDM_TELEXPORT_AUTO_START   = 11506;
-    static constexpr int IDM_TELEXPORT_AUTO_STOP    = 11507;
+    static constexpr int IDM_TELEXPORT_AUTO_START = 11506;
+    static constexpr int IDM_TELEXPORT_AUTO_STOP = 11507;
 
     // ── Agentic Composer UX (session lifecycle, thinking, file changes) ──
     void initAgenticComposerUX();
@@ -4828,12 +4915,12 @@ private:
     bool m_composerUXInitialized = false;
     RawrXD::Agentic::AgenticComposerUX m_composerUX;
 
-    static constexpr int IDM_COMPOSER_NEW_SESSION     = 11510;
-    static constexpr int IDM_COMPOSER_END_SESSION     = 11511;
-    static constexpr int IDM_COMPOSER_APPROVE_ALL     = 11512;
-    static constexpr int IDM_COMPOSER_REJECT_ALL      = 11513;
+    static constexpr int IDM_COMPOSER_NEW_SESSION = 11510;
+    static constexpr int IDM_COMPOSER_END_SESSION = 11511;
+    static constexpr int IDM_COMPOSER_APPROVE_ALL = 11512;
+    static constexpr int IDM_COMPOSER_REJECT_ALL = 11513;
     static constexpr int IDM_COMPOSER_SHOW_TRANSCRIPT = 11514;
-    static constexpr int IDM_COMPOSER_SHOW_METRICS    = 11515;
+    static constexpr int IDM_COMPOSER_SHOW_METRICS = 11515;
 
     // ── @-Mention Context Parser (inline context assembly) ──
     void initContextMentionParser();
@@ -4844,10 +4931,10 @@ private:
     void cmdMentionRegisterCustom();
     bool m_mentionParserInitialized = false;
 
-    static constexpr int IDM_MENTION_PARSE            = 11520;
-    static constexpr int IDM_MENTION_SUGGEST          = 11521;
-    static constexpr int IDM_MENTION_ASSEMBLE_CTX     = 11522;
-    static constexpr int IDM_MENTION_REGISTER_CUSTOM  = 11523;
+    static constexpr int IDM_MENTION_PARSE = 11520;
+    static constexpr int IDM_MENTION_SUGGEST = 11521;
+    static constexpr int IDM_MENTION_ASSEMBLE_CTX = 11522;
+    static constexpr int IDM_MENTION_REGISTER_CUSTOM = 11523;
 
     // ── Vision Encoder (image input, clipboard paste, drag-drop) ──
     void initVisionEncoderUI();
@@ -4872,10 +4959,10 @@ private:
     bool auditIDEGUILayout(std::string& reportOut);
     void hotpatchIDELayout();
 
-    static constexpr int IDM_VISION_LOAD_FILE         = 11530;
-    static constexpr int IDM_VISION_PASTE_CLIPBOARD   = 11531;
-    static constexpr int IDM_VISION_SCREENSHOT        = 11532;
-    static constexpr int IDM_VISION_BUILD_PAYLOAD     = 11533;
+    static constexpr int IDM_VISION_LOAD_FILE = 11530;
+    static constexpr int IDM_VISION_PASTE_CLIPBOARD = 11531;
+    static constexpr int IDM_VISION_SCREENSHOT = 11532;
+    static constexpr int IDM_VISION_BUILD_PAYLOAD = 11533;
     static constexpr int IDM_VISION_VIEW_GUI_HOTPATCH = 11534;
 
     // ── Refactoring Engine (200+ pluginable refactorings) ──
@@ -4891,14 +4978,14 @@ private:
     void cmdRefactorLoadPlugin();
     bool m_refactoringEngineInitialized = false;
 
-    static constexpr int IDM_REFACTOR_EXTRACT_METHOD     = 11540;
-    static constexpr int IDM_REFACTOR_EXTRACT_VARIABLE   = 11541;
-    static constexpr int IDM_REFACTOR_RENAME_SYMBOL      = 11542;
-    static constexpr int IDM_REFACTOR_ORGANIZE_INCLUDES  = 11543;
-    static constexpr int IDM_REFACTOR_CONVERT_AUTO       = 11544;
-    static constexpr int IDM_REFACTOR_REMOVE_DEAD_CODE   = 11545;
-    static constexpr int IDM_REFACTOR_SHOW_ALL           = 11546;
-    static constexpr int IDM_REFACTOR_LOAD_PLUGIN        = 11547;
+    static constexpr int IDM_REFACTOR_EXTRACT_METHOD = 11540;
+    static constexpr int IDM_REFACTOR_EXTRACT_VARIABLE = 11541;
+    static constexpr int IDM_REFACTOR_RENAME_SYMBOL = 11542;
+    static constexpr int IDM_REFACTOR_ORGANIZE_INCLUDES = 11543;
+    static constexpr int IDM_REFACTOR_CONVERT_AUTO = 11544;
+    static constexpr int IDM_REFACTOR_REMOVE_DEAD_CODE = 11545;
+    static constexpr int IDM_REFACTOR_SHOW_ALL = 11546;
+    static constexpr int IDM_REFACTOR_LOAD_PLUGIN = 11547;
 
     // ── Language Plugin (60+ language descriptors, DLL extensible) ──
     void initLanguageRegistry();
@@ -4909,10 +4996,10 @@ private:
     void cmdLanguageSetForFile();
     bool m_languageRegistryInitialized = false;
 
-    static constexpr int IDM_LANG_DETECT              = 11550;
-    static constexpr int IDM_LANG_LIST_ALL            = 11551;
-    static constexpr int IDM_LANG_LOAD_PLUGIN         = 11552;
-    static constexpr int IDM_LANG_SET_FOR_FILE        = 11553;
+    static constexpr int IDM_LANG_DETECT = 11550;
+    static constexpr int IDM_LANG_LIST_ALL = 11551;
+    static constexpr int IDM_LANG_LOAD_PLUGIN = 11552;
+    static constexpr int IDM_LANG_SET_FOR_FILE = 11553;
 
     // ── Semantic Index (cross-language, dependency graph, type hierarchy) ──
     void initSemanticIndex();
@@ -4927,14 +5014,14 @@ private:
     void cmdSemanticLoadPlugin();
     bool m_semanticIndexInitialized = false;
 
-    static constexpr int IDM_SEMANTIC_BUILD_INDEX     = 11560;
-    static constexpr int IDM_SEMANTIC_FUZZY_SEARCH    = 11561;
-    static constexpr int IDM_SEMANTIC_FIND_REFS       = 11562;
-    static constexpr int IDM_SEMANTIC_SHOW_DEPS       = 11563;
-    static constexpr int IDM_SEMANTIC_TYPE_HIERARCHY  = 11564;
-    static constexpr int IDM_SEMANTIC_CALL_GRAPH      = 11565;
-    static constexpr int IDM_SEMANTIC_FIND_CYCLES     = 11566;
-    static constexpr int IDM_SEMANTIC_LOAD_PLUGIN     = 11567;
+    static constexpr int IDM_SEMANTIC_BUILD_INDEX = 11560;
+    static constexpr int IDM_SEMANTIC_FUZZY_SEARCH = 11561;
+    static constexpr int IDM_SEMANTIC_FIND_REFS = 11562;
+    static constexpr int IDM_SEMANTIC_SHOW_DEPS = 11563;
+    static constexpr int IDM_SEMANTIC_TYPE_HIERARCHY = 11564;
+    static constexpr int IDM_SEMANTIC_CALL_GRAPH = 11565;
+    static constexpr int IDM_SEMANTIC_FIND_CYCLES = 11566;
+    static constexpr int IDM_SEMANTIC_LOAD_PLUGIN = 11567;
 
     // ── Resource Generator (Docker, K8s, Terraform, CI/CD, config) ──
     void initResourceGenerator();
@@ -4946,14 +5033,14 @@ private:
     void cmdResourceLoadPlugin();
     bool m_resourceGeneratorInitialized = false;
 
-    static constexpr int IDM_RESOURCE_GENERATE        = 11570;
-    static constexpr int IDM_RESOURCE_GEN_PROJECT     = 11571;
-    static constexpr int IDM_RESOURCE_LIST_TEMPLATES  = 11572;
-    static constexpr int IDM_RESOURCE_SEARCH          = 11573;
-    static constexpr int IDM_RESOURCE_LOAD_PLUGIN     = 11574;
+    static constexpr int IDM_RESOURCE_GENERATE = 11570;
+    static constexpr int IDM_RESOURCE_GEN_PROJECT = 11571;
+    static constexpr int IDM_RESOURCE_LIST_TEMPLATES = 11572;
+    static constexpr int IDM_RESOURCE_SEARCH = 11573;
+    static constexpr int IDM_RESOURCE_LOAD_PLUGIN = 11574;
 
     // ── Enterprise Stress Tests (load testing, stability, perf validation) ──
-    static constexpr int IDM_ENTERPRISE_STRESS_RUN  = 11575;
+    static constexpr int IDM_ENTERPRISE_STRESS_RUN = 11575;
     static constexpr int IDM_ENTERPRISE_STRESS_STOP = 11576;
     static constexpr int IDM_ENTERPRISE_STRESS_SHOW = 11577;
 
@@ -4972,26 +5059,47 @@ private:
     bool handleTier2Command(int commandId);
     void renderTier2Overlays(HDC hdc);
 
-public:
+  public:
     // ── LSP Symbol Kinds (used by Outline, CodeLens, Inlay) ──
-    enum LSPSymbolKind {
-        SK_File = 1, SK_Module, SK_Namespace, SK_Package,
-        SK_Class, SK_Method, SK_Property, SK_Field,
-        SK_Constructor, SK_Enum, SK_Interface, SK_Function,
-        SK_Variable, SK_Constant, SK_String, SK_Number,
-        SK_Boolean, SK_Array, SK_Object, SK_Key,
-        SK_Null, SK_EnumMember, SK_Struct, SK_Event,
-        SK_Operator, SK_TypeParameter
+    enum LSPSymbolKind
+    {
+        SK_File = 1,
+        SK_Module,
+        SK_Namespace,
+        SK_Package,
+        SK_Class,
+        SK_Method,
+        SK_Property,
+        SK_Field,
+        SK_Constructor,
+        SK_Enum,
+        SK_Interface,
+        SK_Function,
+        SK_Variable,
+        SK_Constant,
+        SK_String,
+        SK_Number,
+        SK_Boolean,
+        SK_Array,
+        SK_Object,
+        SK_Key,
+        SK_Null,
+        SK_EnumMember,
+        SK_Struct,
+        SK_Event,
+        SK_Operator,
+        SK_TypeParameter
     };
-private:
 
+  private:
     // ── OutlineSymbol (enhanced outline model) ──
-    struct OutlineSymbol {
-        int kind = 0;          // LSPSymbolKind
+    struct OutlineSymbol
+    {
+        int kind = 0;  // LSPSymbolKind
         std::string name;
-        int line     = 0;
-        int column   = 0;
-        int endLine  = 0;
+        int line = 0;
+        int column = 0;
+        int endLine = 0;
         std::string detail;
         bool expanded = true;
         std::vector<OutlineSymbol> children;
@@ -5014,15 +5122,22 @@ private:
     COLORREF outlineKindColor(int kind) const;
 
     // ── DiffLine / DiffHunk (Git Diff Side-by-Side) ──
-    enum class DiffLineType { Context, Added, Removed };
+    enum class DiffLineType
+    {
+        Context,
+        Added,
+        Removed
+    };
 
-    struct DiffLine {
+    struct DiffLine
+    {
         std::string text;
         DiffLineType type = DiffLineType::Context;
         int lineNumber = -1;
     };
 
-    struct DiffHunk {
+    struct DiffHunk
+    {
         std::string header;
         int oldStart = 0;
         int newStart = 0;
@@ -5037,31 +5152,37 @@ private:
     void parseUnifiedDiff(const std::string& diff, const std::string& filePath);
     void markDiffLines();
     void createGitDiffPanel();
-    void populateGitDiffPane(HWND hwndRichEdit, const std::vector<DiffLine>& lines,
-                              const std::string& header);
+    void populateGitDiffPane(HWND hwndRichEdit, const std::vector<DiffLine>& lines, const std::string& header);
     void navigateDiffHunk(int direction);
     static LRESULT CALLBACK GitDiffPanelProc(HWND, UINT, WPARAM, LPARAM);
 
     bool m_gitDiffVisible = false;
     HWND m_hwndGitDiffPanel = nullptr;
-    HWND m_hwndGitDiffLeft  = nullptr;
+    HWND m_hwndGitDiffLeft = nullptr;
     HWND m_hwndGitDiffRight = nullptr;
-    HFONT m_gitDiffFont     = nullptr;
+    HFONT m_gitDiffFont = nullptr;
     std::vector<DiffLine> m_gitDiffLeftLines;
     std::vector<DiffLine> m_gitDiffRightLines;
     std::vector<DiffHunk> m_gitDiffHunks;
     int m_gitDiffCurrentHunk = -1;
 
     // ── Inline Diff Viewer (Side-by-Side + Inline mode) ──
-    struct DiffViewHunk {
-        enum HunkType { Added, Removed, Modified };
+    struct DiffViewHunk
+    {
+        enum HunkType
+        {
+            Added,
+            Removed,
+            Modified
+        };
         HunkType type = Added;
         int leftStart = 0, leftCount = 0;
         int rightStart = 0, rightCount = 0;
         std::string leftText, rightText;
     };
 
-    struct DiffViewState {
+    struct DiffViewState
+    {
         bool visible = false;
         std::string leftTitle, rightTitle;
         std::vector<std::string> leftLines, rightLines;
@@ -5074,8 +5195,8 @@ private:
 
     void initDiffView();
     void shutdownDiffView();
-    void openDiffView(const std::string& leftContent, const std::string& rightContent,
-                      const std::string& leftTitle, const std::string& rightTitle);
+    void openDiffView(const std::string& leftContent, const std::string& rightContent, const std::string& leftTitle,
+                      const std::string& rightTitle);
     void closeDiffView();
     void computeDiffHunks();
     void diffNavigateHunk(int direction);
@@ -5085,22 +5206,23 @@ private:
     static LRESULT CALLBACK DiffPanelProc(HWND, UINT, WPARAM, LPARAM);
 
     DiffViewState m_diffState;
-    HWND m_hwndDiffPanel   = nullptr;
-    HWND m_hwndDiffLeft    = nullptr;
-    HWND m_hwndDiffRight   = nullptr;
+    HWND m_hwndDiffPanel = nullptr;
+    HWND m_hwndDiffLeft = nullptr;
+    HWND m_hwndDiffRight = nullptr;
     HWND m_hwndDiffToolbar = nullptr;
 
-    static constexpr int IDC_DIFF_PANEL     = 10800;
-    static constexpr int IDC_DIFF_TOOLBAR   = 10801;
-    static constexpr int IDC_DIFF_LEFT      = 10802;
-    static constexpr int IDC_DIFF_RIGHT     = 10803;
-    static constexpr int IDC_DIFF_PREV_BTN  = 10804;
-    static constexpr int IDC_DIFF_NEXT_BTN  = 10805;
-    static constexpr int IDC_DIFF_INLINE_BTN= 10806;
+    static constexpr int IDC_DIFF_PANEL = 10800;
+    static constexpr int IDC_DIFF_TOOLBAR = 10801;
+    static constexpr int IDC_DIFF_LEFT = 10802;
+    static constexpr int IDC_DIFF_RIGHT = 10803;
+    static constexpr int IDC_DIFF_PREV_BTN = 10804;
+    static constexpr int IDC_DIFF_NEXT_BTN = 10805;
+    static constexpr int IDC_DIFF_INLINE_BTN = 10806;
     static constexpr int IDC_DIFF_CLOSE_BTN = 10807;
 
     // ── TerminalProfile / TerminalTabInfo (Terminal Tabs) ──
-    struct TerminalProfile {
+    struct TerminalProfile
+    {
         std::string name;
         std::string shellPath;
         std::string shellArgs;
@@ -5108,11 +5230,12 @@ private:
         COLORREF color = RGB(204, 204, 204);
     };
 
-    struct TerminalTabInfo {
+    struct TerminalTabInfo
+    {
         int profileIndex = 0;
         std::string title;
         COLORREF color = RGB(204, 204, 204);
-        bool active    = true;
+        bool active = true;
         HWND hwndOutput = nullptr;
         std::unique_ptr<Win32TerminalManager> manager;
     };
@@ -5127,20 +5250,21 @@ private:
     static LRESULT CALLBACK TerminalTabBarProc(HWND, UINT, WPARAM, LPARAM);
 
     HWND m_hwndTerminalTabBar = nullptr;
-    int m_activeTerminalTab   = 0;
+    int m_activeTerminalTab = 0;
     std::vector<TerminalProfile> m_terminalTabProfiles;
     std::vector<TerminalTabInfo> m_terminalTabs;
 
     // 13. Hover Documentation Tooltips
-    struct HoverTooltipState {
-        HWND hwndPopup  = nullptr;
-        bool visible    = false;
-        bool pending    = false;
+    struct HoverTooltipState
+    {
+        HWND hwndPopup = nullptr;
+        bool visible = false;
+        bool pending = false;
         std::string content;
-        HFONT hFont     = nullptr;
+        HFONT hFont = nullptr;
         HFONT hBoldFont = nullptr;
-        int line        = 0;
-        int column      = 0;
+        int line = 0;
+        int column = 0;
         POINT screenPos = {};
     };
 
@@ -5158,15 +5282,15 @@ private:
     static LRESULT CALLBACK HoverTooltipProc(HWND, UINT, WPARAM, LPARAM);
 
     HoverTooltipState m_hoverState;
-    HWND m_hwndHoverPopup   = nullptr;
-    bool m_hoverVisible     = false;
+    HWND m_hwndHoverPopup = nullptr;
+    bool m_hoverVisible = false;
     std::string m_hoverContent;
-    HFONT m_hoverFont       = nullptr;
-    HFONT m_hoverBoldFont   = nullptr;
-    bool m_hoverPending     = false;
-    int m_hoverLine         = 0;
-    int m_hoverColumn       = 0;
-    POINT m_hoverScreenPos  = {};
+    HFONT m_hoverFont = nullptr;
+    HFONT m_hoverBoldFont = nullptr;
+    bool m_hoverPending = false;
+    int m_hoverLine = 0;
+    int m_hoverColumn = 0;
+    POINT m_hoverScreenPos = {};
     static constexpr UINT_PTR HOVER_TIMER_ID = 42001;
     static constexpr int HOVER_TIMER_DELAY = 500;
     static constexpr UINT WM_HOVER_READY = WM_USER + 200;
@@ -5181,46 +5305,49 @@ private:
     static LRESULT CALLBACK SignatureHelpProc(HWND, UINT, WPARAM, LPARAM);
 
     HWND m_hwndSignaturePopup = nullptr;
-    bool m_signatureVisible   = false;
+    bool m_signatureVisible = false;
     std::string m_signatureContent;
     int m_signatureActiveParam = 0;
-    int m_signatureParamCount  = 0;
-    HFONT m_signatureFont      = nullptr;
+    int m_signatureParamCount = 0;
+    HFONT m_signatureFont = nullptr;
 
     // ── ReferenceResult (Find All References UI) ──
-    struct ReferenceResult {
+    struct ReferenceResult
+    {
         std::string filePath;
-        int line     = 0;
-        int column   = 0;
+        int line = 0;
+        int column = 0;
         std::string contextLine;
     };
 
     // ── RenameChange / RenamePreviewState (Rename Refactoring Preview) ──
-    struct RenameChange {
+    struct RenameChange
+    {
         std::string filePath;
-        int line     = 0;
-        int column   = 0;
+        int line = 0;
+        int column = 0;
         std::string oldText;
         std::string newText;
         std::string contextLine;
         bool selected = true;
     };
 
-    struct RenamePreviewState {
+    struct RenamePreviewState
+    {
         std::string oldName;
         std::string newName;
         std::vector<RenameChange> changes;
-        bool visible   = false;
+        bool visible = false;
         HWND hwndPanel = nullptr;
-        HWND hwndList  = nullptr;
-        HFONT hFont    = nullptr;
+        HWND hwndList = nullptr;
+        HFONT hFont = nullptr;
     };
 
     // 17. Rename Refactoring Preview
     void initRenamePreview();
     void shutdownRenamePreview();
     void showRenamePreview(const std::string& oldName, const std::string& newName,
-                            const std::vector<RenameChange>& changes);
+                           const std::vector<RenameChange>& changes);
     void closeRenamePreview();
     void applyRenameChanges();
     void applySelectedRenames();
@@ -5229,37 +5356,37 @@ private:
 
     RenamePreviewState m_renamePreview;
 
-    static constexpr int IDC_RENAME_PREVIEW     = 11280;
-    static constexpr int IDC_RENAME_INPUT       = 11281;
-    static constexpr int IDC_RENAME_CHECKLIST   = 11282;
-    static constexpr int IDC_RENAME_APPLY_BTN   = 11283;
-    static constexpr int IDC_RENAME_CANCEL_BTN  = 11284;
+    static constexpr int IDC_RENAME_PREVIEW = 11280;
+    static constexpr int IDC_RENAME_INPUT = 11281;
+    static constexpr int IDC_RENAME_CHECKLIST = 11282;
+    static constexpr int IDC_RENAME_APPLY_BTN = 11283;
+    static constexpr int IDC_RENAME_CANCEL_BTN = 11284;
 
     // 16. Find All References UI
     void initReferencePanel();
     void shutdownReferencePanel();
-    void showFindAllReferences(const std::string& symbol,
-                                const std::vector<ReferenceResult>& results);
+    void showFindAllReferences(const std::string& symbol, const std::vector<ReferenceResult>& results);
     void closeReferencePanel();
     void navigateToReference(int refIndex);
     void cmdFindAllReferences(const std::string& symbol);
     static LRESULT CALLBACK ReferencePanelProc(HWND, UINT, WPARAM, LPARAM);
 
     HWND m_hwndReferencePanel = nullptr;
-    HWND m_hwndReferenceTree  = nullptr;
+    HWND m_hwndReferenceTree = nullptr;
     bool m_referencePanelVisible = false;
     std::string m_referenceSymbol;
     std::vector<ReferenceResult> m_referenceResults;
     uint32_t m_referenceResultsVersion = 0;  // bump whenever results refresh
-    HFONT m_referenceFont     = nullptr;
+    HFONT m_referenceFont = nullptr;
 
     // ── CodeLensEntry ──
-    struct CodeLensEntry {
-        int line            = 0;
+    struct CodeLensEntry
+    {
+        int line = 0;
         std::string symbol;
-        int referenceCount  = 0;
+        int referenceCount = 0;
         std::string text;
-        COLORREF color      = RGB(150, 150, 150);
+        COLORREF color = RGB(150, 150, 150);
         std::string command;
     };
 
@@ -5267,7 +5394,7 @@ private:
     void initCodeLens();
     void shutdownCodeLens();
     void refreshCodeLens();
-    int  countSymbolReferences(const std::string& symbol);
+    int countSymbolReferences(const std::string& symbol);
     void renderCodeLens(HDC hdc);
     void renderCodeLens(HDC hdc, int lineY, int lineNumber);
     void toggleCodeLens();
@@ -5276,14 +5403,20 @@ private:
 
     bool m_codeLensEnabled = true;
     std::vector<CodeLensEntry> m_codeLensEntries;
-    HFONT m_codeLensFont   = nullptr;
+    HFONT m_codeLensFont = nullptr;
 
     // ── InlayHintEntry ──
-    enum class InlayHintKind { Type, Parameter, Enum };
+    enum class InlayHintKind
+    {
+        Type,
+        Parameter,
+        Enum
+    };
 
-    struct InlayHintEntry {
-        int line     = 0;
-        int column   = 0;
+    struct InlayHintEntry
+    {
+        int line = 0;
+        int column = 0;
         std::string text;
         InlayHintKind kind = InlayHintKind::Type;
         COLORREF color = RGB(104, 151, 187);
@@ -5301,26 +5434,26 @@ private:
 
     bool m_inlayHintsEnabled = true;
     std::vector<InlayHintEntry> m_inlayHintEntries;
-    HFONT m_inlayHintFont  = nullptr;
+    HFONT m_inlayHintFont = nullptr;
 
     // ── Tier 2 Command IDs (11700–11799) ──
-    static constexpr int IDM_TIER2_GITDIFF           = 11700;
-    static constexpr int IDM_TIER2_GITDIFF_CLOSE     = 11701;
-    static constexpr int IDM_TIER2_GITDIFF_PREV      = 11702;
-    static constexpr int IDM_TIER2_GITDIFF_NEXT      = 11703;
-    static constexpr int IDM_TIER2_TERMINAL_NEW      = 11710;
-    static constexpr int IDM_TIER2_TERMINAL_CLOSE    = 11711;
-    static constexpr int IDM_TIER2_HOVER             = 11720;
-    static constexpr int IDM_TIER2_SIGHELP           = 11721;
-    static constexpr int IDM_TIER2_OUTLINE_REFRESH   = 11730;
-    static constexpr int IDM_TIER2_OUTLINE_FILTER    = 11731;
-    static constexpr int IDM_TIER2_OUTLINE_SORT      = 11732;
-    static constexpr int IDM_TIER2_FIND_REFS         = 11740;
-    static constexpr int IDM_TIER2_RENAME_PREVIEW    = 11750;
-    static constexpr int IDM_TIER2_CODELENS_TOGGLE   = 11760;
-    static constexpr int IDM_TIER2_CODELENS_REFRESH  = 11761;
-    static constexpr int IDM_TIER2_INLAY_TOGGLE      = 11770;
-    static constexpr int IDM_TIER2_INLAY_REFRESH     = 11771;
+    static constexpr int IDM_TIER2_GITDIFF = 11700;
+    static constexpr int IDM_TIER2_GITDIFF_CLOSE = 11701;
+    static constexpr int IDM_TIER2_GITDIFF_PREV = 11702;
+    static constexpr int IDM_TIER2_GITDIFF_NEXT = 11703;
+    static constexpr int IDM_TIER2_TERMINAL_NEW = 11710;
+    static constexpr int IDM_TIER2_TERMINAL_CLOSE = 11711;
+    static constexpr int IDM_TIER2_HOVER = 11720;
+    static constexpr int IDM_TIER2_SIGHELP = 11721;
+    static constexpr int IDM_TIER2_OUTLINE_REFRESH = 11730;
+    static constexpr int IDM_TIER2_OUTLINE_FILTER = 11731;
+    static constexpr int IDM_TIER2_OUTLINE_SORT = 11732;
+    static constexpr int IDM_TIER2_FIND_REFS = 11740;
+    static constexpr int IDM_TIER2_RENAME_PREVIEW = 11750;
+    static constexpr int IDM_TIER2_CODELENS_TOGGLE = 11760;
+    static constexpr int IDM_TIER2_CODELENS_REFRESH = 11761;
+    static constexpr int IDM_TIER2_INLAY_TOGGLE = 11770;
+    static constexpr int IDM_TIER2_INLAY_REFRESH = 11771;
 
     // ════════════════════════════════════════════════════════════════════
     // TIER 3: POLISH (Quality of Life) — Features 31–39
@@ -5338,15 +5471,16 @@ private:
     void onCaretAnimationTick();
     void renderSmoothCaret(HDC hdc);
 
-    struct CaretAnimation {
-        float currentX   = 0.0f;
-        float currentY   = 0.0f;
-        float targetX    = 0.0f;
-        float targetY    = 0.0f;
-        bool  blinkOn    = true;
-        bool  animating  = false;
-        bool  enabled    = false;
-        int   blinkPhase = 0;
+    struct CaretAnimation
+    {
+        float currentX = 0.0f;
+        float currentY = 0.0f;
+        float targetX = 0.0f;
+        float targetY = 0.0f;
+        bool blinkOn = true;
+        bool animating = false;
+        bool enabled = false;
+        int blinkPhase = 0;
     };
     CaretAnimation m_caretAnim;
 
@@ -5356,13 +5490,13 @@ private:
     void toggleLigatures();
     IDWriteTextLayout* createLigatureLayout(const std::wstring& text, float maxWidth);
 
-    IDWriteFactory*    m_dwFactory     = nullptr;
-    IDWriteTextFormat* m_dwTextFormat  = nullptr;
-    bool               m_ligaturesEnabled = false;
+    IDWriteFactory* m_dwFactory = nullptr;
+    IDWriteTextFormat* m_dwTextFormat = nullptr;
+    bool m_ligaturesEnabled = false;
 
     // 33. High DPI Polish
-    void  onDpiChanged(UINT newDpi, const RECT* suggestedRect);
-    int   dpiScaleValue(int basePixels) const;
+    void onDpiChanged(UINT newDpi, const RECT* suggestedRect);
+    int dpiScaleValue(int basePixels) const;
     float getDpiScaleFactor() const;
     float m_dpiScaleFactor = 1.0f;
 
@@ -5371,12 +5505,13 @@ private:
     void onThemeAnimationTick();
     void applyThemeByIdAnimated(int themeId);
 
-    struct ThemeTransition {
+    struct ThemeTransition
+    {
         IDETheme fromTheme;
         IDETheme toTheme;
-        int      targetThemeId = 0;
-        UINT     elapsedMs     = 0;
-        bool     active        = false;
+        int targetThemeId = 0;
+        UINT elapsedMs = 0;
+        bool active = false;
     };
     ThemeTransition m_themeTransition;
 
@@ -5390,8 +5525,8 @@ private:
     // reloadCurrentFile() declared above (line ~1295)
 
     std::unique_ptr<IocpFileWatcher> m_fileWatcher;
-    std::string                      m_watchedFilePath;
-    bool                             m_fileChangedExternally = false;
+    std::string m_watchedFilePath;
+    bool m_fileChangedExternally = false;
 
     // 36. Save Status Indicator
     void updateSaveStatusIndicator();
@@ -5405,8 +5540,8 @@ private:
     void onFormatStatusTimerExpired();
     bool formatAndSave();
     bool requestLSPFormat();
-    bool m_formatInProgress  = false;
-    bool m_lspFormatEnabled  = false;
+    bool m_formatInProgress = false;
+    bool m_lspFormatEnabled = false;
 
     // 38. Language Mode Quick Switch
     void showLanguageModeSelector();
@@ -5415,7 +5550,7 @@ private:
     void showEncodingSelector();
     void reopenWithEncoding(const char* encodingName, int codePage);
     void saveWithEncoding(const char* encodingName, int codePage);
-    int  m_currentEncoding = 65001; // CP_UTF8
+    int m_currentEncoding = 65001;  // CP_UTF8
 
     // Tier 3: Status bar click routing
     void handleStatusBarClick(int partIndex);
@@ -5473,14 +5608,15 @@ private:
     void exitZenMode();
     bool m_zenModeActive = false;
 
-    struct ZenModePrevState {
-        bool sidebarWasVisible     = false;
-        bool statusBarWasVisible   = false;
+    struct ZenModePrevState
+    {
+        bool sidebarWasVisible = false;
+        bool statusBarWasVisible = false;
         bool activityBarWasVisible = false;
-        bool tabBarWasVisible      = false;
-        bool panelWasVisible       = false;
-        bool menuWasVisible        = false;
-        bool wasMaximized          = false;
+        bool tabBarWasVisible = false;
+        bool panelWasVisible = false;
+        bool menuWasVisible = false;
+        bool wasMaximized = false;
     };
     ZenModePrevState m_zenModePrevState;
 
@@ -5510,14 +5646,15 @@ private:
     void onLightbulbClicked();
     bool m_lightbulbEnabled = false;
     bool m_lightbulbVisible = false;
-    int  m_lightbulbLine    = -1;
+    int m_lightbulbLine = -1;
 
-    struct CodeAction {
+    struct CodeAction
+    {
         std::string title;
-        std::string kind;          // "quickfix", "refactor", "refactor.extract", "source.organizeImports", "suppress"
+        std::string kind;  // "quickfix", "refactor", "refactor.extract", "source.organizeImports", "suppress"
         int diagnosticIndex = -1;
-        bool isFromLSP = false;    // true if action came from LSP server
-        std::string lspEditJson;   // JSON string of workspace edit (only for LSP actions)
+        bool isFromLSP = false;   // true if action came from LSP server
+        std::string lspEditJson;  // JSON string of workspace edit (only for LSP actions)
     };
     std::vector<CodeAction> requestCodeActions(int line);
     void applyCodeAction(const CodeAction& action);
@@ -5531,17 +5668,18 @@ private:
     void foldAll();
     void unfoldAll();
     void paintFoldingControls(HDC hdc, const RECT& gutterRect);
-    int  getFoldRegionAtGutterClick(int y);
+    int getFoldRegionAtGutterClick(int y);
     bool m_codeFoldingEnabled = false;
 
-    struct FoldRegion {
-        int startLine       = 0;
-        int endLine         = 0;
-        int depth           = 0;
-        bool collapsed      = false;
+    struct FoldRegion
+    {
+        int startLine = 0;
+        int endLine = 0;
+        int depth = 0;
+        bool collapsed = false;
         std::string foldedText;
         int foldMarkerStart = 0;
-        int foldMarkerLen   = 0;
+        int foldMarkerLen = 0;
     };
     std::vector<FoldRegion> m_foldRegions;
     void foldRegion(FoldRegion& region);
@@ -5559,33 +5697,33 @@ private:
     bool handleTier1MouseWheel(WPARAM wParam, LPARAM lParam);
 
     // Tier 1 Command IDs (12000–12099)
-    static constexpr int IDM_T1_SMOOTH_SCROLL_TOGGLE  = 12000;
-    static constexpr int IDM_T1_SMOOTH_SCROLL_SPEED   = 12001;
-    static constexpr int IDM_T1_MINIMAP_TOGGLE        = 12010;
-    static constexpr int IDM_T1_MINIMAP_HIGHLIGHT     = 12011;
-    static constexpr int IDM_T1_BREADCRUMBS_TOGGLE    = 12020;
-    static constexpr int IDM_T1_FUZZY_PALETTE         = 12030;
-    static constexpr int IDM_T1_FUZZY_FILES           = 12031;
-    static constexpr int IDM_T1_FUZZY_SYMBOLS         = 12032;
-    static constexpr int IDM_T1_SETTINGS_GUI          = 12040;
-    static constexpr int IDM_T1_SETTINGS_RESET        = 12042;
-    static constexpr int IDM_T1_WELCOME_SHOW          = 12050;
-    static constexpr int IDM_T1_WELCOME_CLONE         = 12051;
-    static constexpr int IDM_T1_WELCOME_OPEN_FOLDER   = 12052;
-    static constexpr int IDM_T1_WELCOME_NEW_FILE      = 12053;
-    static constexpr int IDM_T1_ICON_THEME_SET        = 12060;
-    static constexpr int IDM_T1_ICON_THEME_SETI       = 12061;
-    static constexpr int IDM_T1_ICON_THEME_MATERIAL   = 12062;
-    static constexpr int IDM_T1_TAB_DRAG_ENABLE       = 12070;
-    static constexpr int IDM_T1_SPLIT_VERTICAL        = 12080;
-    static constexpr int IDM_T1_SPLIT_HORIZONTAL      = 12081;
-    static constexpr int IDM_T1_SPLIT_GRID_2X2        = 12082;
-    static constexpr int IDM_T1_SPLIT_CLOSE           = 12083;
-    static constexpr int IDM_T1_SPLIT_FOCUS_NEXT      = 12084;
-    static constexpr int IDM_T1_UPDATE_CHECK          = 12090;
-    static constexpr int IDM_T1_UPDATE_INSTALL        = 12091;
-    static constexpr int IDM_T1_UPDATE_DISMISS        = 12092;
-    static constexpr int IDM_T1_UPDATE_RELEASE_NOTES  = 12093;
+    static constexpr int IDM_T1_SMOOTH_SCROLL_TOGGLE = 12000;
+    static constexpr int IDM_T1_SMOOTH_SCROLL_SPEED = 12001;
+    static constexpr int IDM_T1_MINIMAP_TOGGLE = 12010;
+    static constexpr int IDM_T1_MINIMAP_HIGHLIGHT = 12011;
+    static constexpr int IDM_T1_BREADCRUMBS_TOGGLE = 12020;
+    static constexpr int IDM_T1_FUZZY_PALETTE = 12030;
+    static constexpr int IDM_T1_FUZZY_FILES = 12031;
+    static constexpr int IDM_T1_FUZZY_SYMBOLS = 12032;
+    static constexpr int IDM_T1_SETTINGS_GUI = 12040;
+    static constexpr int IDM_T1_SETTINGS_RESET = 12042;
+    static constexpr int IDM_T1_WELCOME_SHOW = 12050;
+    static constexpr int IDM_T1_WELCOME_CLONE = 12051;
+    static constexpr int IDM_T1_WELCOME_OPEN_FOLDER = 12052;
+    static constexpr int IDM_T1_WELCOME_NEW_FILE = 12053;
+    static constexpr int IDM_T1_ICON_THEME_SET = 12060;
+    static constexpr int IDM_T1_ICON_THEME_SETI = 12061;
+    static constexpr int IDM_T1_ICON_THEME_MATERIAL = 12062;
+    static constexpr int IDM_T1_TAB_DRAG_ENABLE = 12070;
+    static constexpr int IDM_T1_SPLIT_VERTICAL = 12080;
+    static constexpr int IDM_T1_SPLIT_HORIZONTAL = 12081;
+    static constexpr int IDM_T1_SPLIT_GRID_2X2 = 12082;
+    static constexpr int IDM_T1_SPLIT_CLOSE = 12083;
+    static constexpr int IDM_T1_SPLIT_FOCUS_NEXT = 12084;
+    static constexpr int IDM_T1_UPDATE_CHECK = 12090;
+    static constexpr int IDM_T1_UPDATE_INSTALL = 12091;
+    static constexpr int IDM_T1_UPDATE_DISMISS = 12092;
+    static constexpr int IDM_T1_UPDATE_RELEASE_NOTES = 12093;
 
     // 1. Smooth Scroll Animation
     void initSmoothScroll();
@@ -5593,12 +5731,13 @@ private:
     bool onSmoothMouseWheel(WPARAM wParam, LPARAM lParam);
     void onSmoothScrollTick();
 
-    struct SmoothScrollState {
-        bool  enabled    = true;
-        float velocityY  = 0.0f;
-        float currentY   = 0.0f;
-        float targetY    = 0.0f;
-        bool  animating  = false;
+    struct SmoothScrollState
+    {
+        bool enabled = true;
+        float velocityY = 0.0f;
+        float currentY = 0.0f;
+        float targetY = 0.0f;
+        bool animating = false;
     };
     SmoothScrollState m_smoothScroll;
 
@@ -5609,10 +5748,11 @@ private:
 
     // 3. Breadcrumbs (main implementation in Win32IDE_Breadcrumbs.cpp)
     static constexpr int IDC_BREADCRUMB_BAR = 9825;  // ESP: control ID for symbol path bar
-    struct BreadcrumbItem {
+    struct BreadcrumbItem
+    {
         std::string label;
         std::string symbolKind;
-        int line  = 0;
+        int line = 0;
         int column = 0;
     };
     void createBreadcrumbBar(HWND hwndParent);
@@ -5624,9 +5764,9 @@ private:
     static LRESULT CALLBACK BreadcrumbProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
     std::vector<BreadcrumbItem> m_breadcrumbPath;
     std::vector<RECT> m_breadcrumbRects;
-    int  m_breadcrumbHeight = 22;
+    int m_breadcrumbHeight = 22;
     HFONT m_breadcrumbFont = nullptr;
-    HWND  m_hwndBreadcrumbs = nullptr;
+    HWND m_hwndBreadcrumbs = nullptr;
 
     // 4. Command Palette Fuzzy Search
     void initFuzzySearch();
@@ -5634,22 +5774,23 @@ private:
     void showFuzzyPaletteWindow();
     void showFuzzyFileFinder();
     void showFuzzySymbolSearch();
-    int  fuzzyMatchScore(const std::string& pattern, const std::string& candidate,
-                         std::vector<int>* matchPositions = nullptr);
+    int fuzzyMatchScore(const std::string& pattern, const std::string& candidate,
+                        std::vector<int>* matchPositions = nullptr);
     void fuzzyFilterCommandPalette(const std::string& query);
-    void paintFuzzyHighlights(HDC hdc, RECT itemRect, const std::string& text,
-                              const std::vector<int>& matchPositions);
+    void paintFuzzyHighlights(HDC hdc, RECT itemRect, const std::string& text, const std::vector<int>& matchPositions);
 
-    struct FuzzyCommandEntry {
-        int         commandId = 0;
-        const char* label     = nullptr;
-        const char* category  = nullptr;
-        const char* cliAlias  = nullptr;
+    struct FuzzyCommandEntry
+    {
+        int commandId = 0;
+        const char* label = nullptr;
+        const char* category = nullptr;
+        const char* cliAlias = nullptr;
     };
     std::vector<FuzzyCommandEntry> m_fuzzyCommandLabels;
 
     // 5. Settings GUI
-    struct SettingsCategory {
+    struct SettingsCategory
+    {
         std::string name;
         std::vector<std::string> keys;
     };
@@ -5667,10 +5808,10 @@ private:
 
     std::vector<SettingsCategory> m_settingsSchema;
     std::string m_settingsSearchQuery;
-    HWND m_hwndSettingsGUI    = nullptr;
+    HWND m_hwndSettingsGUI = nullptr;
     HWND m_hwndSettingsSearch = nullptr;
-    HWND m_hwndSettingsTabs   = nullptr;
-    HWND m_hwndSettingsPanel  = nullptr;
+    HWND m_hwndSettingsTabs = nullptr;
+    HWND m_hwndSettingsPanel = nullptr;
 
     // 6. Welcome / Onboarding Page
     void initWelcomePage();
@@ -5679,15 +5820,15 @@ private:
     void handleWelcomeOpenFolder();
     void handleWelcomeNewFile();
     bool m_showWelcomeOnStartup = true;
-    bool m_welcomePageShown     = false;
+    bool m_welcomePageShown = false;
 
     // 7. File Icon Theme Support
     void initFileIconTheme();
-    int  getFileIconIndex(const std::string& filename) const;
+    int getFileIconIndex(const std::string& filename) const;
     void setFileIconTheme(const std::string& themeName);
     void showFileIconThemeSelector();
-    HIMAGELIST  m_fileIconImageList  = nullptr;
-    std::string m_currentIconTheme   = "seti";
+    HIMAGELIST m_fileIconImageList = nullptr;
+    std::string m_currentIconTheme = "seti";
 
     // 8. Drag-and-Drop File Tabs
     void initTabDragDrop();
@@ -5695,12 +5836,12 @@ private:
     void onTabDragTick();
     static LRESULT CALLBACK TabBarDragProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
     WNDPROC m_originalTabBarProc = nullptr;
-    bool    m_tabDragEnabled     = true;
-    bool    m_tabDragging        = false;
-    int     m_dragTabIndex       = -1;
-    int     m_dragInsertIndex    = -1;
-    int     m_dragStartX         = 0;
-    int     m_dragStartY         = 0;
+    bool m_tabDragEnabled = true;
+    bool m_tabDragging = false;
+    int m_dragTabIndex = -1;
+    int m_dragInsertIndex = -1;
+    int m_dragStartX = 0;
+    int m_dragStartY = 0;
 
     // 9. Split Editor (Grid Layout)
     void initSplitEditor();
@@ -5712,15 +5853,16 @@ private:
     void focusNextSplitPane();
     void layoutSplitPanes();
 
-    struct SplitEditorPane {
-        HWND        hwnd      = nullptr;
-        int         row       = 0;
-        int         col       = 0;
+    struct SplitEditorPane
+    {
+        HWND hwnd = nullptr;
+        int row = 0;
+        int col = 0;
         std::string filePath;
     };
     std::vector<SplitEditorPane> m_splitPanes;
-    bool m_splitEditorActive  = false;
-    int  m_splitOrientation   = 0; // 0=none, 1=vert, 2=horiz, 3=grid
+    bool m_splitEditorActive = false;
+    int m_splitOrientation = 0;  // 0=none, 1=vert, 2=horiz, 3=grid
 
     // 10. Auto-Update Notification UI
     void initAutoUpdateUI();
@@ -5730,8 +5872,8 @@ private:
     void installUpdate();
     void dismissUpdateNotification();
     void showReleaseNotes();
-    bool        m_updateAvailable  = false;
-    bool        m_updateDismissed  = false;
+    bool m_updateAvailable = false;
+    bool m_updateDismissed = false;
     std::string m_updateVersion;
     std::string m_updateUrl;
     NOTIFYICONDATAA m_trayIconData = {};
@@ -5769,17 +5911,17 @@ private:
     void cmdProvableStats();
     bool m_provableAgentInitialized = false;
 
-public:
-    static constexpr int IDM_PROVABLE_SHOW     = 13000;
-    static constexpr int IDM_PROVABLE_START    = 13001;
-    static constexpr int IDM_PROVABLE_RECORD   = 13002;
-    static constexpr int IDM_PROVABLE_VERIFY   = 13003;
-    static constexpr int IDM_PROVABLE_REPLAY   = 13004;
-    static constexpr int IDM_PROVABLE_EXPORT   = 13005;
-    static constexpr int IDM_PROVABLE_RESET    = 13006;
-    static constexpr int IDM_PROVABLE_STATS    = 13007;
-private:
+  public:
+    static constexpr int IDM_PROVABLE_SHOW = 13000;
+    static constexpr int IDM_PROVABLE_START = 13001;
+    static constexpr int IDM_PROVABLE_RECORD = 13002;
+    static constexpr int IDM_PROVABLE_VERIFY = 13003;
+    static constexpr int IDM_PROVABLE_REPLAY = 13004;
+    static constexpr int IDM_PROVABLE_EXPORT = 13005;
+    static constexpr int IDM_PROVABLE_RESET = 13006;
+    static constexpr int IDM_PROVABLE_STATS = 13007;
 
+  private:
     // ────────────────────────────────────────────────────────────────────────
     // 2. AI-Native Reverse Engineering IDE (13020–13039)
     //    AI-powered symbol renaming, vulnerability scanning, call-graph
@@ -5799,18 +5941,18 @@ private:
     void cmdAIREStats();
     bool m_aiReverseEngInitialized = false;
 
-public:
-    static constexpr int IDM_AIRE_SHOW         = 13020;
-    static constexpr int IDM_AIRE_LOAD         = 13021;
-    static constexpr int IDM_AIRE_AI_RENAME    = 13022;
-    static constexpr int IDM_AIRE_VULNSCAN     = 13023;
-    static constexpr int IDM_AIRE_ANNOTATE     = 13024;
-    static constexpr int IDM_AIRE_CALLGRAPH    = 13025;
-    static constexpr int IDM_AIRE_DIFF         = 13026;
-    static constexpr int IDM_AIRE_EXPORT       = 13027;
-    static constexpr int IDM_AIRE_STATS        = 13028;
-private:
+  public:
+    static constexpr int IDM_AIRE_SHOW = 13020;
+    static constexpr int IDM_AIRE_LOAD = 13021;
+    static constexpr int IDM_AIRE_AI_RENAME = 13022;
+    static constexpr int IDM_AIRE_VULNSCAN = 13023;
+    static constexpr int IDM_AIRE_ANNOTATE = 13024;
+    static constexpr int IDM_AIRE_CALLGRAPH = 13025;
+    static constexpr int IDM_AIRE_DIFF = 13026;
+    static constexpr int IDM_AIRE_EXPORT = 13027;
+    static constexpr int IDM_AIRE_STATS = 13028;
 
+  private:
     // ────────────────────────────────────────────────────────────────────────
     // 3. Airgapped Enterprise AI Dev Environment (13040–13059)
     //    Offline model vault, HWID-locked license validation, 9-framework
@@ -5832,19 +5974,19 @@ private:
     void cmdAirgapStats();
     bool m_airgappedEnterpriseInitialized = false;
 
-public:
-    static constexpr int IDM_AIRGAP_SHOW       = 13040;
+  public:
+    static constexpr int IDM_AIRGAP_SHOW = 13040;
     static constexpr int IDM_AIRGAP_COMPLIANCE = 13041;
-    static constexpr int IDM_AIRGAP_MODELS     = 13042;
-    static constexpr int IDM_AIRGAP_AUDIT      = 13043;
-    static constexpr int IDM_AIRGAP_DLP        = 13044;
-    static constexpr int IDM_AIRGAP_FIREWALL   = 13045;
-    static constexpr int IDM_AIRGAP_LICENSE    = 13046;
-    static constexpr int IDM_AIRGAP_ENCRYPT    = 13047;
-    static constexpr int IDM_AIRGAP_EXPORT     = 13048;
-    static constexpr int IDM_AIRGAP_STATS      = 13049;
-private:
+    static constexpr int IDM_AIRGAP_MODELS = 13042;
+    static constexpr int IDM_AIRGAP_AUDIT = 13043;
+    static constexpr int IDM_AIRGAP_DLP = 13044;
+    static constexpr int IDM_AIRGAP_FIREWALL = 13045;
+    static constexpr int IDM_AIRGAP_LICENSE = 13046;
+    static constexpr int IDM_AIRGAP_ENCRYPT = 13047;
+    static constexpr int IDM_AIRGAP_EXPORT = 13048;
+    static constexpr int IDM_AIRGAP_STATS = 13049;
 
+  private:
     // ════════════════════════════════════════════════════════════════════
     // TIER 5: COSMETIC FEATURES (#40-#50) — Line Ending, Network, Test
     //         Explorer, Debug Watch, Call Stack, Marketplace, Telemetry
@@ -6024,74 +6166,74 @@ private:
     void cmdCrashClear();
     void cmdCrashStats();
 
-public:
+  public:
     // Tier 5 Command IDs (11500–11609)
-    static constexpr int IDM_LINEENDING_DETECT     = 11500;
-    static constexpr int IDM_LINEENDING_TO_LF      = 11509;
+    static constexpr int IDM_LINEENDING_DETECT = 11500;
+    static constexpr int IDM_LINEENDING_TO_LF = 11509;
 
-    static constexpr int IDM_NETWORK_SHOW          = 11510;
-    static constexpr int IDM_NETWORK_ADD_PORT      = 11511;
-    static constexpr int IDM_NETWORK_REMOVE_PORT   = 11512;
-    static constexpr int IDM_NETWORK_TOGGLE        = 11513;
-    static constexpr int IDM_NETWORK_LIST          = 11514;
-    static constexpr int IDM_NETWORK_STATUS        = 11519;
+    static constexpr int IDM_NETWORK_SHOW = 11510;
+    static constexpr int IDM_NETWORK_ADD_PORT = 11511;
+    static constexpr int IDM_NETWORK_REMOVE_PORT = 11512;
+    static constexpr int IDM_NETWORK_TOGGLE = 11513;
+    static constexpr int IDM_NETWORK_LIST = 11514;
+    static constexpr int IDM_NETWORK_STATUS = 11519;
 
-    static constexpr int IDM_TESTEXPLORER_SHOW     = 11520;
-    static constexpr int IDM_TESTEXPLORER_RUN      = 11521;
-    static constexpr int IDM_TESTEXPLORER_REFRESH  = 11522;
-    static constexpr int IDM_TESTEXPLORER_FILTER   = 11529;
+    static constexpr int IDM_TESTEXPLORER_SHOW = 11520;
+    static constexpr int IDM_TESTEXPLORER_RUN = 11521;
+    static constexpr int IDM_TESTEXPLORER_REFRESH = 11522;
+    static constexpr int IDM_TESTEXPLORER_FILTER = 11529;
 
-    static constexpr int IDM_DBGWATCH_SHOW         = 11530;
-    static constexpr int IDM_DBGWATCH_CLEAR        = 11539;
+    static constexpr int IDM_DBGWATCH_SHOW = 11530;
+    static constexpr int IDM_DBGWATCH_CLEAR = 11539;
 
-    static constexpr int IDM_CALLSTACK_CAPTURE     = 11540;
-    static constexpr int IDM_CALLSTACK_SHOW        = 11541;
-    static constexpr int IDM_CALLSTACK_COPY        = 11542;
-    static constexpr int IDM_CALLSTACK_RESOLVE     = 11549;
+    static constexpr int IDM_CALLSTACK_CAPTURE = 11540;
+    static constexpr int IDM_CALLSTACK_SHOW = 11541;
+    static constexpr int IDM_CALLSTACK_COPY = 11542;
+    static constexpr int IDM_CALLSTACK_RESOLVE = 11549;
 
-    static constexpr int IDM_MARKETPLACE_SHOW      = 11550;
-    static constexpr int IDM_MARKETPLACE_SEARCH    = 11551;
-    static constexpr int IDM_MARKETPLACE_INSTALL   = 11552;
+    static constexpr int IDM_MARKETPLACE_SHOW = 11550;
+    static constexpr int IDM_MARKETPLACE_SEARCH = 11551;
+    static constexpr int IDM_MARKETPLACE_INSTALL = 11552;
     static constexpr int IDM_MARKETPLACE_UNINSTALL = 11553;
-    static constexpr int IDM_MARKETPLACE_LIST      = 11554;
-    static constexpr int IDM_MARKETPLACE_STATUS    = 11559;
+    static constexpr int IDM_MARKETPLACE_LIST = 11554;
+    static constexpr int IDM_MARKETPLACE_STATUS = 11559;
 
-    static constexpr int IDM_TELDASH_LOG           = 11565;
-    static constexpr int IDM_TELDASH_CLEAR         = 11566;
-    static constexpr int IDM_TELDASH_EXPORT        = 11567;
-    static constexpr int IDM_TELDASH_SHOW          = 11568;  // avoid conflict with IDM_SEMANTIC_BUILD_INDEX 11560
-    static constexpr int IDM_TELDASH_STATS         = 11569;
+    static constexpr int IDM_TELDASH_LOG = 11565;
+    static constexpr int IDM_TELDASH_CLEAR = 11566;
+    static constexpr int IDM_TELDASH_EXPORT = 11567;
+    static constexpr int IDM_TELDASH_SHOW = 11568;  // avoid conflict with IDM_SEMANTIC_BUILD_INDEX 11560
+    static constexpr int IDM_TELDASH_STATS = 11569;
 
-    static constexpr int IDM_SHORTCUT_SHOW         = 11570;
-    static constexpr int IDM_SHORTCUT_RECORD      = 11571;
-    static constexpr int IDM_SHORTCUT_RESET       = 11572;
-    static constexpr int IDM_SHORTCUT_SAVE        = 11573;
-    static constexpr int IDM_SHORTCUT_LIST        = 11579;
+    static constexpr int IDM_SHORTCUT_SHOW = 11570;
+    static constexpr int IDM_SHORTCUT_RECORD = 11571;
+    static constexpr int IDM_SHORTCUT_RESET = 11572;
+    static constexpr int IDM_SHORTCUT_SAVE = 11573;
+    static constexpr int IDM_SHORTCUT_LIST = 11579;
 
-    static constexpr int IDM_COLORPICK_SCAN        = 11580;
-    static constexpr int IDM_COLORPICK_PICK        = 11581;
-    static constexpr int IDM_COLORPICK_INSERT      = 11582;
-    static constexpr int IDM_COLORPICK_LIST        = 11589;
+    static constexpr int IDM_COLORPICK_SCAN = 11580;
+    static constexpr int IDM_COLORPICK_PICK = 11581;
+    static constexpr int IDM_COLORPICK_INSERT = 11582;
+    static constexpr int IDM_COLORPICK_LIST = 11589;
 
-    static constexpr int IDM_EMOJI_PICKER          = 11590;
-    static constexpr int IDM_EMOJI_INSERT         = 11591;
-    static constexpr int IDM_EMOJI_CONFIG         = 11592;
-    static constexpr int IDM_EMOJI_TEST            = 11599;
+    static constexpr int IDM_EMOJI_PICKER = 11590;
+    static constexpr int IDM_EMOJI_INSERT = 11591;
+    static constexpr int IDM_EMOJI_CONFIG = 11592;
+    static constexpr int IDM_EMOJI_TEST = 11599;
 
-    static constexpr int IDM_CRASH_SHOW            = 11600;
-    static constexpr int IDM_CRASH_TEST            = 11601;
-    static constexpr int IDM_CRASH_LOG             = 11602;
-    static constexpr int IDM_CRASH_CLEAR          = 11603;
-    static constexpr int IDM_CRASH_STATS           = 11609;
+    static constexpr int IDM_CRASH_SHOW = 11600;
+    static constexpr int IDM_CRASH_TEST = 11601;
+    static constexpr int IDM_CRASH_LOG = 11602;
+    static constexpr int IDM_CRASH_CLEAR = 11603;
+    static constexpr int IDM_CRASH_STATS = 11609;
 
     bool m_telemetryDashboardInitialized = false;
-    bool m_crashReporterInitialized      = false;
-    bool m_colorPickerInitialized        = false;
-    bool m_networkPanelInitialized       = false;
-    bool m_testExplorerInitialized       = false;
-    bool m_marketplaceInitialized        = false;
-    bool m_shortcutEditorInitialized     = false;
-    bool m_emojiSupportInitialized       = false;
+    bool m_crashReporterInitialized = false;
+    bool m_colorPickerInitialized = false;
+    bool m_networkPanelInitialized = false;
+    bool m_testExplorerInitialized = false;
+    bool m_marketplaceInitialized = false;
+    bool m_shortcutEditorInitialized = false;
+    bool m_emojiSupportInitialized = false;
 
     // Caret Animation
     bool m_caretAnimationEnabled = false;
@@ -6138,7 +6280,7 @@ public:
     static LRESULT CALLBACK LicenseCreatorWndProc(HWND, UINT, WPARAM, LPARAM);
     static LRESULT CALLBACK FeatureRegistryHostProc(HWND, UINT, WPARAM, LPARAM);
 
-private:
+  private:
 };
 
 // Global IDE instance for C-callable bridges (agent streaming, etc.). Set in initProblemsPanel().

@@ -174,10 +174,11 @@ class AgenticBridge
     HANDLE m_hStdinWrite;
 
     // Config Cache
-    bool m_maxMode = false;
-    bool m_deepThinking = false;
-    bool m_deepResearch = false;
-    bool m_noRefusal = false;
+    // Default ON: agent chat panel should ship with full reasoning modes enabled (user can toggle off).
+    bool m_maxMode = true;
+    bool m_deepThinking = true;
+    bool m_deepResearch = true;
+    bool m_noRefusal = true;
     bool m_autoCorrect = false;
     std::string m_languageContext;  // Current language (e.g. "C/C++")
     std::string m_fileContext;      // Current file path

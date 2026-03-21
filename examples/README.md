@@ -2,6 +2,10 @@
 
 This directory contains comprehensive examples demonstrating how to integrate the RawrXD toolchain into your C++ projects.
 
+### Tier G Sovereign (C, in-repo)
+
+For **`rawrxd_minimal_link`**, **`rawrxd_symbol_registry`**, and SOM REL32 smokes (no `C:\RawrXD` install), see **`examples/sovereign/README.md`**.
+
 ## Quick Start
 
 ### Method 1: Visual Studio Command Prompt

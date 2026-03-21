@@ -1,4 +1,5 @@
-#include "renderer.h"
+// Ship/renderer.h is a minimal IRenderer stub; Win32IDE needs the full interface in include/.
+#include "../../include/renderer.h"
 #include <iostream>
 #include <windows.h>
 #include <vector>

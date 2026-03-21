@@ -15,6 +15,7 @@
 #include "Win32IDE.h"
 #include "IDELogger.h"
 #include "../../include/local_parity_kernel.h"
+#include "../core/amd_gpu_accelerator.h"
 #include <richedit.h>
 #include <fstream>
 #include <sstream>
@@ -75,6 +76,7 @@ void Win32IDE::loadSettings() {
         m_settings.ghostTextEnabled  = j.value("ghostText", (int)m_settings.ghostTextEnabled) != 0;
         m_settings.failureDetectorEnabled = j.value("failureDetector", (int)m_settings.failureDetectorEnabled) != 0;
         m_settings.failureMaxRetries = j.value("failureMaxRetries", m_settings.failureMaxRetries);
+        m_settings.amdUnifiedMemoryEnabled = j.value("amdUnifiedMemoryEnabled", (int)m_settings.amdUnifiedMemoryEnabled) != 0;
 
         // Display Scaling
         m_settings.uiScalePercent    = j.value("uiScalePercent", m_settings.uiScalePercent);
@@ -140,6 +142,7 @@ void Win32IDE::saveSettings() {
     j["ghostText"]          = m_settings.ghostTextEnabled ? 1 : 0;
     j["failureDetector"]    = m_settings.failureDetectorEnabled ? 1 : 0;
     j["failureMaxRetries"]  = m_settings.failureMaxRetries;
+    j["amdUnifiedMemoryEnabled"] = m_settings.amdUnifiedMemoryEnabled ? 1 : 0;
 
     // Display Scaling
     j["uiScalePercent"]     = m_settings.uiScalePercent;
@@ -206,6 +209,7 @@ void Win32IDE::applyDefaultSettings() {
     m_settings.ghostTextEnabled    = true;
     m_settings.failureDetectorEnabled = true;
     m_settings.failureMaxRetries   = 3;
+    m_settings.amdUnifiedMemoryEnabled = false;
 
     m_settings.tabSize             = 4;
     m_settings.useSpaces           = true;
@@ -290,6 +294,21 @@ void Win32IDE::applySettings() {
     else
         LocalParity_SetModelPath(nullptr);
 
+    // AMD unified memory (SAM / host-backed executor) — toggled from Settings GUI
+    if (m_settings.amdUnifiedMemoryEnabled) {
+        AccelResult um = AMDGPUAccelerator::instance().enableUnifiedMemory();
+        if (!um.success) {
+            LOG_WARNING(std::string("AMD unified memory enable failed: ") + (um.detail ? um.detail : ""));
+        } else {
+            LOG_INFO(std::string("AMD unified memory: ") + (um.detail ? um.detail : "enabled"));
+        }
+    } else {
+        AccelResult um = AMDGPUAccelerator::instance().disableUnifiedMemory();
+        if (!um.success) {
+            LOG_WARNING(std::string("AMD unified memory disable failed: ") + (um.detail ? um.detail : ""));
+        }
+    }
+
     LOG_INFO("Settings applied");
 }
 
@@ -338,6 +357,7 @@ void Win32IDE::showSettingsDialog() {
     oss << "Ghost Text: " << (m_settings.ghostTextEnabled ? "ON" : "OFF") << "\r\n";
     oss << "Failure Detector: " << (m_settings.failureDetectorEnabled ? "ON" : "OFF")
         << " (retries: " << m_settings.failureMaxRetries << ")\r\n";
+    oss << "AMD Unified Memory (SAM): " << (m_settings.amdUnifiedMemoryEnabled ? "ON" : "OFF") << "\r\n";
     oss << "\r\n=== EDITOR ===\r\n";
     oss << "Tab Size: " << m_settings.tabSize << "\r\n";
     oss << "Use Spaces: " << (m_settings.useSpaces ? "ON" : "OFF") << "\r\n";

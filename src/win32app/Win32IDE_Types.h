@@ -328,6 +328,9 @@ struct IDESettings {
     bool        failureDetectorEnabled = true;
     int         failureMaxRetries   = 3;
 
+    /** AMD Smart Access Memory-style unified memory executor (BAR map or host-backed fallback). */
+    bool        amdUnifiedMemoryEnabled = false;
+
     // Editor
     int         tabSize             = 4;
     bool        useSpaces           = true;

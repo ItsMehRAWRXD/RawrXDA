@@ -12,7 +12,6 @@
 
 #include "Win32IDE.h"
 #include "multimodal/vision_encoder.h"
-#include "logging/logger.h"
 #include <windows.h>
 #include <string>
 #include <sstream>
@@ -36,13 +35,6 @@ static std::wstring utf8ToWide(const std::string& utf8) {
 }
 
 } // namespace
-
-#ifndef RAWRXD_LOG_INFO
-#define RAWRXD_LOG_INFO(msg) do { \
-    std::ostringstream _oss; _oss << "[INFO] " << msg << "\n"; \
-    OutputDebugStringA(_oss.str().c_str()); \
-} while(0)
-#endif
 
 #ifdef _WIN32
 #pragma comment(lib, "gdi32.lib")
@@ -294,7 +286,7 @@ void Win32IDE::cmdVisionViewIDEGUIAndHotpatch() {
     if (hadIssues) {
         hotpatchIDELayout();
         report = "[Auto-corrected]\n" + report;
-        RAWRXD_LOG_INFO("IDE GUI hotpatch applied: " << report);
+        RAWRXD_LOG_INFO("Win32IDE_GUILayoutHotpatch") << "IDE GUI hotpatch applied: " << report;
     }
 
     if (result.image.rawBytes.empty()) {

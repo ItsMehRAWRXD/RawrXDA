@@ -903,17 +903,13 @@ void rawrxd_init_deep_thinking() {
 }
 
 int rawrxd_agentic_deep_think_loop(const char* prompt) {
-    if (prompt == nullptr) {
+    if (prompt == nullptr || prompt[0] == '\0') {
         return 0;
     }
-    size_t score = 0;
-    for (const char* p = prompt; *p != '\0'; ++p) {
-        score += static_cast<unsigned char>(*p);
-    }
-    return static_cast<int>((score % 997U) + 1U);
+    rawrxd_init_deep_thinking();
+    // Return success: callers use this as a gate for “deep pass requested”, not a checksum gimmick.
+    return 1;
 }
-
-void asm_orchestrator_shutdown() {}
 
 #if !defined(_MSC_VER)
 using dupenv_s_import_t = int(__cdecl*)(char**, size_t*, const char*);

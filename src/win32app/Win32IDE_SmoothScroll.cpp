@@ -11,13 +11,6 @@
 #include "Win32IDE.h"
 #include <cmath>
 
-#ifndef RAWRXD_LOG_INFO
-#define RAWRXD_LOG_INFO(msg) do { \
-    std::ostringstream _oss; _oss << "[INFO] " << msg << "\n"; \
-    OutputDebugStringA(_oss.str().c_str()); \
-} while(0)
-#endif
-
 // ============================================================================
 // SMOOTH SCROLL INITIALIZATION
 // ============================================================================
@@ -40,7 +33,8 @@ void Win32IDE::initSmoothScroll()
         SetTimer(m_hwndMain, CARET_ANIM_TIMER_ID, CARET_ANIM_INTERVAL_MS, nullptr);
     }
 
-    RAWRXD_LOG_INFO("Smooth scroll initialized (frames=" << m_settings.smoothScrollFrames << ")");
+    RAWRXD_LOG_INFO("Win32IDE_SmoothScroll")
+        << "Smooth scroll initialized (frames=" << m_settings.smoothScrollFrames << ")";
 }
 
 void Win32IDE::shutdownSmoothScroll()

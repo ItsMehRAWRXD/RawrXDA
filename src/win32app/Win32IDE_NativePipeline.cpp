@@ -18,39 +18,16 @@
 #include <cstdio>
 #include <sstream>
 
-// Win32-native debug logging — unified LOG_* pipeline (per .cursorrules)
-#ifndef RAWRXD_LOG_INFO
-#define RAWRXD_LOG_INFO(msg) do { \
-    std::ostringstream _oss; _oss << msg; \
-    OutputDebugStringA(("[INFO] " + _oss.str() + "\n").c_str()); \
-    LOG_INFO(_oss.str()); \
-} while(0)
-#endif
-#ifndef RAWRXD_LOG_WARNING
-#define RAWRXD_LOG_WARNING(msg) do { \
-    std::ostringstream _oss; _oss << msg; \
-    OutputDebugStringA(("[WARN] " + _oss.str() + "\n").c_str()); \
-    LOG_WARNING(_oss.str()); \
-} while(0)
-#endif
-#ifndef RAWRXD_LOG_ERROR
-#define RAWRXD_LOG_ERROR(msg) do { \
-    std::ostringstream _oss; _oss << msg; \
-    OutputDebugStringA(("[ERROR] " + _oss.str() + "\n").c_str()); \
-    LOG_ERROR(_oss.str()); \
-} while(0)
-#endif
-
 // ============================================================================
 // initNativePipeline — Create and initialize the zero-dependency pipeline
 // ============================================================================
 bool Win32IDE::initNativePipeline() {
     if (m_nativePipeline && m_nativePipelineReady) {
-        RAWRXD_LOG_INFO("[NativePipeline] Already initialized");
+        RAWRXD_LOG_INFO("Win32IDE_NativePipeline") << "Already initialized";
         return true;
     }
 
-    RAWRXD_LOG_INFO("[NativePipeline] Initializing native inference pipeline...");
+    RAWRXD_LOG_INFO("Win32IDE_NativePipeline") << "Initializing native inference pipeline...";
 
     m_nativePipeline = std::make_unique<RawrXD::NativeInferencePipeline>();
 
@@ -78,15 +55,15 @@ bool Win32IDE::initNativePipeline() {
 
     PatchResult r = m_nativePipeline->Init(cfg);
     if (!r.success) {
-        RAWRXD_LOG_ERROR("[NativePipeline] Init failed: " << r.detail);
+        RAWRXD_LOG_ERROR("Win32IDE_NativePipeline") << "Init failed: " << r.detail;
         m_nativePipeline.reset();
         m_nativePipelineReady = false;
         return false;
     }
 
     m_nativePipelineReady = true;
-    RAWRXD_LOG_INFO("[NativePipeline] Initialized successfully ("
-                    << cfg.inferenceThreads << " threads)");
+    RAWRXD_LOG_INFO("Win32IDE_NativePipeline")
+        << "Initialized successfully (" << cfg.inferenceThreads << " threads)";
 
     // Update status bar
     if (m_hwndStatusBar) {
@@ -103,13 +80,13 @@ bool Win32IDE::initNativePipeline() {
 void Win32IDE::shutdownNativePipeline() {
     if (!m_nativePipeline) return;
 
-    RAWRXD_LOG_INFO("[NativePipeline] Shutting down...");
+    RAWRXD_LOG_INFO("Win32IDE_NativePipeline") << "Shutting down...";
 
     m_nativePipeline->Shutdown();
     m_nativePipeline.reset();
     m_nativePipelineReady = false;
 
-    RAWRXD_LOG_INFO("[NativePipeline] Shutdown complete");
+    RAWRXD_LOG_INFO("Win32IDE_NativePipeline") << "Shutdown complete";
 }
 
 // ============================================================================
@@ -124,7 +101,7 @@ bool Win32IDE::loadNativeModel(const std::string& ggufPath) {
         }
     }
 
-    RAWRXD_LOG_INFO("[NativePipeline] Loading model: " << ggufPath);
+    RAWRXD_LOG_INFO("Win32IDE_NativePipeline") << "Loading model: " << ggufPath;
 
     // Update status bar
     if (m_hwndStatusBar) {
@@ -136,7 +113,7 @@ bool Win32IDE::loadNativeModel(const std::string& ggufPath) {
 
     PatchResult r = m_nativePipeline->LoadModel(ggufPath.c_str());
     if (!r.success) {
-        RAWRXD_LOG_ERROR("[NativePipeline] Load failed: " << r.detail);
+        RAWRXD_LOG_ERROR("Win32IDE_NativePipeline") << "Load failed: " << r.detail;
 
         if (m_hwndStatusBar) {
             SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
@@ -148,7 +125,7 @@ bool Win32IDE::loadNativeModel(const std::string& ggufPath) {
     // Get model info for display
     char modelInfo[512];
     m_nativePipeline->GetModelInfo(modelInfo, sizeof(modelInfo));
-    RAWRXD_LOG_INFO("[NativePipeline] Model loaded: " << modelInfo);
+    RAWRXD_LOG_INFO("Win32IDE_NativePipeline") << "Model loaded: " << modelInfo;
 
     // Update status bar with model name
     if (m_hwndStatusBar) {
@@ -175,8 +152,8 @@ std::string Win32IDE::generateNativeResponse(const std::string& prompt) {
         return "⚠️ Native pipeline not ready. Please load a GGUF model first.";
     }
 
-    RAWRXD_LOG_INFO("[NativePipeline] Generating response for: "
-                    << prompt.substr(0, 80) << "...");
+    RAWRXD_LOG_INFO("Win32IDE_NativePipeline")
+        << "Generating response for: " << prompt.substr(0, 80) << "...";
 
     // Build the full chat prompt with system instructions and history
     std::string fullPrompt = buildChatPrompt(prompt);
@@ -198,9 +175,10 @@ std::string Win32IDE::generateNativeResponse(const std::string& prompt) {
             fullPrompt, ctxMax, modelName);
         fullPrompt = std::move(result.modifiedPrompt);
         if (result.mitigation != DeteriorationMitigation::None) {
-            RAWRXD_LOG_INFO("[ContextHotpatch] " << result.description
+            RAWRXD_LOG_INFO("Win32IDE_NativePipeline")
+                << "[ContextHotpatch] " << result.description
                 << " quality=" << result.qualityScore << "% saved "
-                << result.droppedTokens << " tokens");
+                << result.droppedTokens << " tokens";
         }
     }
 
@@ -217,7 +195,7 @@ std::string Win32IDE::generateNativeResponse(const std::string& prompt) {
         sampler);
 
     if (!r.success) {
-        RAWRXD_LOG_ERROR("[NativePipeline] Inference failed: " << r.detail);
+        RAWRXD_LOG_ERROR("Win32IDE_NativePipeline") << "Inference failed: " << r.detail;
         return std::string("⚠️ Inference error: ") + r.detail;
     }
 
@@ -281,9 +259,8 @@ void Win32IDE::onNativeAIComplete(WPARAM wParam, LPARAM lParam) {
     uint32_t outputLen    = static_cast<uint32_t>(wParam);
     float    tokensPerSec = *reinterpret_cast<float*>(&lParam);
 
-    RAWRXD_LOG_INFO("[NativePipeline] Inference complete: "
-                    << outputLen << " chars, "
-                    << tokensPerSec << " tok/s");
+    RAWRXD_LOG_INFO("Win32IDE_NativePipeline")
+        << "Inference complete: " << outputLen << " chars, " << tokensPerSec << " tok/s";
 
     // Append completion marker to chat
     if (m_hwndCopilotChatOutput) {
@@ -332,7 +309,7 @@ void Win32IDE::onNativeAIComplete(WPARAM wParam, LPARAM lParam) {
 // WM_NATIVE_AI_ERROR handler — inference failed
 // ============================================================================
 void Win32IDE::onNativeAIError() {
-    RAWRXD_LOG_ERROR("[NativePipeline] Inference error occurred");
+    RAWRXD_LOG_ERROR("Win32IDE_NativePipeline") << "Inference error occurred";
 
     // Show error in chat
     if (m_hwndCopilotChatOutput) {
@@ -348,7 +325,7 @@ void Win32IDE::onNativeAIError() {
     if (m_nativePipeline) {
         char diagBuf[1024];
         m_nativePipeline->GetDiagnostics(diagBuf, sizeof(diagBuf));
-        RAWRXD_LOG_ERROR("[NativePipeline] Diagnostics:\n" << diagBuf);
+        RAWRXD_LOG_ERROR("Win32IDE_NativePipeline") << "Diagnostics:\n" << diagBuf;
     }
 
     // Update status bar
@@ -362,7 +339,7 @@ void Win32IDE::onNativeAIError() {
 // WM_NATIVE_AI_PROGRESS handler — model loading progress
 // ============================================================================
 void Win32IDE::onNativeAIProgress() {
-    RAWRXD_LOG_INFO("[NativePipeline] Progress update received");
+    RAWRXD_LOG_INFO("Win32IDE_NativePipeline") << "Progress update received";
 
     if (m_hwndStatusBar) {
         SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,

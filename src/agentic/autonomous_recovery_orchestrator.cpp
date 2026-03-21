@@ -20,7 +20,7 @@
 #include "../agent/agent_self_repair.hpp"
 #include "../../include/hotpatch_telemetry_safety.h"
 #include "../../include/pdb_gsi_hash.h"
-#include "../../include/rawrxd_telemetry_exports.h"
+#include "rawrxd_telemetry_exports.h"
 
 #include <fstream>
 #include <sstream>

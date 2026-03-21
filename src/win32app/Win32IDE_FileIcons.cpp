@@ -13,13 +13,6 @@
 #include <sstream>
 #include <algorithm>
 
-#ifndef RAWRXD_LOG_INFO
-#define RAWRXD_LOG_INFO(msg) do { \
-    std::ostringstream _oss; _oss << "[INFO] " << msg << "\n"; \
-    OutputDebugStringA(_oss.str().c_str()); \
-} while(0)
-#endif
-
 // ============================================================================
 // FILE EXTENSION → COLOR/ICON MAPPING (Seti Theme)
 // ============================================================================
@@ -232,7 +225,7 @@ void Win32IDE::initFileIconTheme()
     // Create imagelist (16x16 icons)
     m_hFileIconList = ImageList_Create(16, 16, ILC_COLOR32 | ILC_MASK, 64, 16);
     if (!m_hFileIconList) {
-        RAWRXD_LOG_INFO("Failed to create file icon imagelist");
+        RAWRXD_LOG_INFO("Win32IDE_FileIcons") << "Failed to create file icon imagelist";
         return;
     }
 
@@ -260,7 +253,8 @@ void Win32IDE::initFileIconTheme()
         m_fileIconMap[SETI_ICONS[i].extension] = index;
     }
 
-    RAWRXD_LOG_INFO("File icon theme initialized (" << m_fileIconMap.size() << " icons)");
+    RAWRXD_LOG_INFO("Win32IDE_FileIcons")
+        << "File icon theme initialized (" << m_fileIconMap.size() << " icons)";
 }
 
 void Win32IDE::shutdownFileIconTheme()
@@ -321,5 +315,5 @@ void Win32IDE::applyFileIconsToTree(HWND hwndTree)
 
     TreeView_SetImageList(hwndTree, m_hFileIconList, TVSIL_NORMAL);
 
-    RAWRXD_LOG_INFO("File icons applied to tree view");
+    RAWRXD_LOG_INFO("Win32IDE_FileIcons") << "File icons applied to tree view";
 }

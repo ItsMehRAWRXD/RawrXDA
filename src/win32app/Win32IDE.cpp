@@ -6503,6 +6503,9 @@ void Win32IDE::createChatPanel()
 
     m_secondarySidebarVisible = true;
     m_secondarySidebarWidth = 320;
+
+    // Align checkboxes + AI menu with AgenticBridge / NativeAgent (defaults are ON).
+    syncAgentModeUiFromBridge();
 }
 
 void Win32IDE::populateModelSelector()

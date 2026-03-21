@@ -1,0 +1,86 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 20,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "ninja-release",
+      "displayName": "Ninja + Release (host)",
+      "description": "Bounded preset for normal toolchains (aligns with rawrxd::sovereign::TargetManifest — not a syscall lab).",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/cmake-preset-ninja-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "linux-ninja-release",
+      "displayName": "Linux: Ninja + Release",
+      "description": "Use on Linux runners or WSL; select explicitly: cmake --preset linux-ninja-release",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/cmake-preset-linux-ninja-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "darwin-ninja-release",
+      "displayName": "macOS: Ninja + Release",
+      "description": "Host build on Apple Silicon or Intel macOS; see docs/BUILD_HOST_MATRIX.md",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/cmake-preset-darwin-ninja-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "android-ndk-release",
+      "displayName": "Android NDK: Ninja + Release (cross)",
+      "description": "Requires ANDROID_NDK env pointing at NDK root. See docs/BUILD_HOST_MATRIX.md",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/cmake-preset-android-ndk-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_TOOLCHAIN_FILE": "$env{ANDROID_NDK}/build/cmake/android.toolchain.cmake",
+        "ANDROID_ABI": "arm64-v8a",
+        "ANDROID_PLATFORM": "android-26"
+      }
+    },
+    {
+      "name": "ios-xcode-release",
+      "displayName": "iOS: Xcode + Release (cross, macOS host only)",
+      "description": "Requires Xcode on macOS; not all repo targets support iOS — subset builds. See docs/BUILD_HOST_MATRIX.md",
+      "generator": "Xcode",
+      "binaryDir": "${sourceDir}/build/cmake-preset-ios-xcode-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_SYSTEM_NAME": "iOS"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "ninja-release",
+      "configurePreset": "ninja-release"
+    },
+    {
+      "name": "linux-ninja-release",
+      "configurePreset": "linux-ninja-release"
+    },
+    {
+      "name": "darwin-ninja-release",
+      "configurePreset": "darwin-ninja-release"
+    },
+    {
+      "name": "android-ndk-release",
+      "configurePreset": "android-ndk-release"
+    },
+    {
+      "name": "ios-xcode-release",
+      "configurePreset": "ios-xcode-release"
+    }
+  ]
+}

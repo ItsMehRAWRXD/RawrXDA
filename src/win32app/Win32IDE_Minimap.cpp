@@ -19,13 +19,6 @@ static constexpr int MINIMAP_DEFAULT_WIDTH = 80;
 static constexpr int MINIMAP_CHAR_WIDTH    = 2;
 static constexpr int MINIMAP_CHAR_HEIGHT   = 2;
 
-#ifndef RAWRXD_LOG_INFO
-#define RAWRXD_LOG_INFO(msg) do { \
-    std::ostringstream _oss; _oss << "[INFO] " << msg << "\n"; \
-    OutputDebugStringA(_oss.str().c_str()); \
-} while(0)
-#endif
-
 // VS Code minimap colors
 static const COLORREF MINIMAP_BG         = RGB(30, 30, 30);
 static const COLORREF MINIMAP_TEXT_DEFAULT = RGB(120, 120, 120);
@@ -59,7 +52,7 @@ void Win32IDE::createMinimap()
         m_hwndMain, (HMENU)9800, m_hInstance, nullptr);
 
     if (!m_hwndMinimap) {
-        RAWRXD_LOG_INFO("Failed to create minimap window");
+        RAWRXD_LOG_INFO("Win32IDE_Minimap") << "Failed to create minimap window";
         return;
     }
 
@@ -72,7 +65,7 @@ void Win32IDE::createMinimap()
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
         NONANTIALIASED_QUALITY, FIXED_PITCH | FF_MODERN, "Consolas");
 
-    RAWRXD_LOG_INFO("Minimap created (width=" << m_minimapWidth << ")");
+    RAWRXD_LOG_INFO("Win32IDE_Minimap") << "Minimap created (width=" << m_minimapWidth << ")";
 }
 
 // ============================================================================
@@ -178,7 +171,7 @@ void Win32IDE::toggleMinimap()
     GetClientRect(m_hwndMain, &rect);
     onSize(rect.right, rect.bottom);
 
-    RAWRXD_LOG_INFO("Minimap " << (m_minimapVisible ? "shown" : "hidden"));
+    RAWRXD_LOG_INFO("Win32IDE_Minimap") << "Minimap " << (m_minimapVisible ? "shown" : "hidden");
 }
 
 // ============================================================================

@@ -5,100 +5,129 @@
 // ============================================================================
 
 #include "amd_gpu_accelerator.h"
+#include "unified_memory_executor.h"
 
+#include <algorithm>
+#include <chrono>
+#include <cmath>
+#include <cstring>
 #include <iostream>
 #include <sstream>
-#include <chrono>
-#include <cstring>
-#include <algorithm>
-#include <cmath>
 
 // ============================================================================
 // Singleton
 // ============================================================================
 
-AMDGPUAccelerator& AMDGPUAccelerator::instance() {
+AMDGPUAccelerator& AMDGPUAccelerator::instance()
+{
     static AMDGPUAccelerator s_instance;
     return s_instance;
 }
 
 AMDGPUAccelerator::AMDGPUAccelerator()
-    : m_activeBackend(GPUBackend::None)
-    , m_vendorId(0), m_deviceId(0), m_computeUnits(0), m_vramBytes(0)
-    , m_amdFeatures(0), m_nextBufferId(1)
-    , m_dx12Device(nullptr), m_dx12Queue(nullptr), m_dx12Allocator(nullptr)
-    , m_vulkanInstance(nullptr), m_vulkanDevice(nullptr), m_vulkanQueue(nullptr)
-    , m_rocmHandle(nullptr), m_openclContext(nullptr), m_openclQueue(nullptr)
-    , m_gpuMinBytes(4096) // 4KB minimum for GPU dispatch
-    , m_toggleCb(nullptr), m_toggleData(nullptr)
-    , m_errorCb(nullptr), m_errorData(nullptr)
-    , m_memoryCb(nullptr), m_memoryData(nullptr)
-{}
+    : m_activeBackend(GPUBackend::None), m_vendorId(0), m_deviceId(0), m_computeUnits(0), m_vramBytes(0),
+      m_amdFeatures(0), m_nextBufferId(1), m_dx12Device(nullptr), m_dx12Queue(nullptr), m_dx12Allocator(nullptr),
+      m_vulkanInstance(nullptr), m_vulkanDevice(nullptr), m_vulkanQueue(nullptr), m_rocmHandle(nullptr),
+      m_openclContext(nullptr), m_openclQueue(nullptr), m_gpuMinBytes(4096)  // 4KB minimum for GPU dispatch
+      ,
+      m_toggleCb(nullptr), m_toggleData(nullptr), m_errorCb(nullptr), m_errorData(nullptr), m_memoryCb(nullptr),
+      m_memoryData(nullptr)
+{
+}
 
-AMDGPUAccelerator::~AMDGPUAccelerator() { shutdown(); }
+AMDGPUAccelerator::~AMDGPUAccelerator()
+{
+    shutdown();
+}
 
 // ============================================================================
 // Lifecycle
 // ============================================================================
 
-AccelResult AMDGPUAccelerator::initialize(GPUBackend preferredBackend) {
-    if (m_initialized.load()) return AccelResult::ok("Already initialized");
+AccelResult AMDGPUAccelerator::initialize(GPUBackend preferredBackend)
+{
+    if (m_initialized.load())
+        return AccelResult::ok("Already initialized");
     std::lock_guard<std::mutex> lock(m_mutex);
 
     // Detect GPU via DXGI first (always available on Windows)
     HMODULE hDXGI = LoadLibraryA("dxgi.dll");
-    if (hDXGI) {
-        typedef HRESULT(WINAPI* PFN_CreateDXGIFactory1)(REFIID, void**);
+    if (hDXGI)
+    {
+        typedef HRESULT(WINAPI * PFN_CreateDXGIFactory1)(REFIID, void**);
         auto fnCreate = (PFN_CreateDXGIFactory1)GetProcAddress(hDXGI, "CreateDXGIFactory1");
 
-        static const GUID IID_IDXGIFactory1_local =
-            { 0x770aae78, 0xf26f, 0x4dba, { 0xa8, 0x29, 0x25, 0x3c, 0x83, 0xd1, 0xb3, 0x87 } };
+        static const GUID IID_IDXGIFactory1_local = {
+            0x770aae78, 0xf26f, 0x4dba, {0xa8, 0x29, 0x25, 0x3c, 0x83, 0xd1, 0xb3, 0x87}};
 
-        if (fnCreate) {
+        if (fnCreate)
+        {
             void* pFactory = nullptr;
-            if (SUCCEEDED(fnCreate(IID_IDXGIFactory1_local, &pFactory)) && pFactory) {
+            if (SUCCEEDED(fnCreate(IID_IDXGIFactory1_local, &pFactory)) && pFactory)
+            {
                 // Enumerate adapters via vtable (IDXGIFactory1::EnumAdapters1 at index 12)
-                struct VTbl { void* methods[14]; };
-                struct Obj { VTbl* vtbl; };
+                struct VTbl
+                {
+                    void* methods[14];
+                };
+                struct Obj
+                {
+                    VTbl* vtbl;
+                };
 
                 auto* factoryObj = static_cast<Obj*>(pFactory);
-                typedef HRESULT(WINAPI* PFN_EnumAdapters1)(void*, UINT, void**);
+                typedef HRESULT(WINAPI * PFN_EnumAdapters1)(void*, UINT, void**);
                 auto fnEnum = (PFN_EnumAdapters1)(factoryObj->vtbl->methods[12]);
 
                 void* pAdapter = nullptr;
-                if (SUCCEEDED(fnEnum(pFactory, 0, &pAdapter)) && pAdapter) {
+                if (SUCCEEDED(fnEnum(pFactory, 0, &pAdapter)) && pAdapter)
+                {
                     // IDXGIAdapter1::GetDesc1 at index 10
-                    struct AdapterVTbl { void* methods[11]; };
-                    struct AdapterObj { AdapterVTbl* vtbl; };
+                    struct AdapterVTbl
+                    {
+                        void* methods[11];
+                    };
+                    struct AdapterObj
+                    {
+                        AdapterVTbl* vtbl;
+                    };
 
-                    struct DXGI_ADAPTER_DESC1 {
+                    struct DXGI_ADAPTER_DESC1
+                    {
                         WCHAR Description[128];
-                        UINT VendorId; UINT DeviceId; UINT SubSysId; UINT Revision;
-                        SIZE_T DedicatedVideoMemory; SIZE_T DedicatedSystemMemory;
-                        SIZE_T SharedSystemMemory; LUID AdapterLuid; UINT Flags;
+                        UINT VendorId;
+                        UINT DeviceId;
+                        UINT SubSysId;
+                        UINT Revision;
+                        SIZE_T DedicatedVideoMemory;
+                        SIZE_T DedicatedSystemMemory;
+                        SIZE_T SharedSystemMemory;
+                        LUID AdapterLuid;
+                        UINT Flags;
                     };
 
                     auto* adapterObj = static_cast<AdapterObj*>(pAdapter);
-                    typedef HRESULT(WINAPI* PFN_GetDesc1)(void*, DXGI_ADAPTER_DESC1*);
+                    typedef HRESULT(WINAPI * PFN_GetDesc1)(void*, DXGI_ADAPTER_DESC1*);
                     auto fnDesc = (PFN_GetDesc1)(adapterObj->vtbl->methods[10]);
 
                     DXGI_ADAPTER_DESC1 desc;
                     memset(&desc, 0, sizeof(desc));
-                    if (SUCCEEDED(fnDesc(pAdapter, &desc))) {
+                    if (SUCCEEDED(fnDesc(pAdapter, &desc)))
+                    {
                         m_vendorId = desc.VendorId;
                         m_deviceId = desc.DeviceId;
                         m_vramBytes = desc.DedicatedVideoMemory;
 
                         char nameBuf[256];
-                        WideCharToMultiByte(CP_UTF8, 0, desc.Description, -1,
-                                            nameBuf, sizeof(nameBuf), nullptr, nullptr);
+                        WideCharToMultiByte(CP_UTF8, 0, desc.Description, -1, nameBuf, sizeof(nameBuf), nullptr,
+                                            nullptr);
                         m_gpuName = nameBuf;
                     }
 
-                    typedef ULONG(WINAPI* PFN_Release)(void*);
+                    typedef ULONG(WINAPI * PFN_Release)(void*);
                     ((PFN_Release)(adapterObj->vtbl->methods[2]))(pAdapter);
                 }
-                typedef ULONG(WINAPI* PFN_Release2)(void*);
+                typedef ULONG(WINAPI * PFN_Release2)(void*);
                 ((PFN_Release2)(factoryObj->vtbl->methods[2]))(pFactory);
             }
         }
@@ -107,11 +136,15 @@ AccelResult AMDGPUAccelerator::initialize(GPUBackend preferredBackend) {
 
     // Determine backend
     GPUBackend chosenBackend = preferredBackend;
-    if (chosenBackend == GPUBackend::Auto) {
+    if (chosenBackend == GPUBackend::Auto)
+    {
         // Prefer DX12 on Windows for AMD GPUs (best driver support)
-        if (m_vendorId == 0x1002) {
+        if (m_vendorId == 0x1002)
+        {
             chosenBackend = GPUBackend::DX12Compute;
-        } else {
+        }
+        else
+        {
             chosenBackend = GPUBackend::Vulkan;
         }
     }
@@ -119,49 +152,78 @@ AccelResult AMDGPUAccelerator::initialize(GPUBackend preferredBackend) {
     // Initialize chosen backend
     AccelResult r = AccelResult::error("No backend initialized");
 
-    switch (chosenBackend) {
-    case GPUBackend::DX12Compute:
-        r = initDX12();
-        if (r.success) { m_activeBackend = GPUBackend::DX12Compute; break; }
-        // Fallthrough to Vulkan
-        [[fallthrough]];
-    case GPUBackend::Vulkan:
-        r = initVulkan();
-        if (r.success) { m_activeBackend = GPUBackend::Vulkan; break; }
-        // Fallthrough to OpenCL
-        [[fallthrough]];
-    case GPUBackend::OpenCL:
-        r = initOpenCL();
-        if (r.success) { m_activeBackend = GPUBackend::OpenCL; break; }
-        break;
-    case GPUBackend::ROCm_HIP:
-        r = initROCm();
-        if (r.success) { m_activeBackend = GPUBackend::ROCm_HIP; break; }
-        r = initDX12();
-        if (r.success) { m_activeBackend = GPUBackend::DX12Compute; break; }
-        break;
-    default:
-        break;
+    switch (chosenBackend)
+    {
+        case GPUBackend::DX12Compute:
+            r = initDX12();
+            if (r.success)
+            {
+                m_activeBackend = GPUBackend::DX12Compute;
+                break;
+            }
+            // Fallthrough to Vulkan
+            [[fallthrough]];
+        case GPUBackend::Vulkan:
+            r = initVulkan();
+            if (r.success)
+            {
+                m_activeBackend = GPUBackend::Vulkan;
+                break;
+            }
+            // Fallthrough to OpenCL
+            [[fallthrough]];
+        case GPUBackend::OpenCL:
+            r = initOpenCL();
+            if (r.success)
+            {
+                m_activeBackend = GPUBackend::OpenCL;
+                break;
+            }
+            break;
+        case GPUBackend::ROCm_HIP:
+            r = initROCm();
+            if (r.success)
+            {
+                m_activeBackend = GPUBackend::ROCm_HIP;
+                break;
+            }
+            r = initDX12();
+            if (r.success)
+            {
+                m_activeBackend = GPUBackend::DX12Compute;
+                break;
+            }
+            break;
+        default:
+            break;
     }
 
-    if (!r.success) {
+    if (!r.success)
+    {
         m_activeBackend = GPUBackend::None;
         std::cout << "[AMD-GPU] Warning: No GPU backend available, CPU-only mode.\n";
         // Not a fatal error — system works without GPU
     }
 
     // Probe AMD-specific features
-    if (m_vendorId == 0x1002) {
+    if (m_vendorId == 0x1002)
+    {
         probeAMDFeatures();
     }
 
     // Estimate compute units from VRAM (heuristic for AMD)
-    if (m_vendorId == 0x1002 && m_computeUnits == 0) {
-        if (m_vramBytes >= 24ULL * 1024 * 1024 * 1024)      m_computeUnits = 96;  // RX 7900 XTX
-        else if (m_vramBytes >= 16ULL * 1024 * 1024 * 1024)  m_computeUnits = 60;  // RX 7900 XT
-        else if (m_vramBytes >= 12ULL * 1024 * 1024 * 1024)  m_computeUnits = 48;  // RX 7800 XT
-        else if (m_vramBytes >= 8ULL * 1024 * 1024 * 1024)   m_computeUnits = 36;  // RX 7700 XT
-        else                                                   m_computeUnits = 20;  // Budget
+    if (m_vendorId == 0x1002 && m_computeUnits == 0)
+    {
+        if (m_vramBytes >= 24ULL * 1024 * 1024 * 1024)
+            m_computeUnits = 96;  // RX 7900 XTX
+        else if (m_vramBytes >= 16ULL * 1024 * 1024 * 1024)
+            m_computeUnits = 60;  // RX 7900 XT
+        else if (m_vramBytes >= 12ULL * 1024 * 1024 * 1024)
+            m_computeUnits = 48;  // RX 7800 XT
+        else if (m_vramBytes >= 8ULL * 1024 * 1024 * 1024)
+            m_computeUnits = 36;  // RX 7700 XT
+        else
+            m_computeUnits = 20;  // Budget
     }
 
     // Setup memory pool
@@ -170,7 +232,8 @@ AccelResult AMDGPUAccelerator::initialize(GPUBackend preferredBackend) {
     m_memPool.peakBytes = 0;
 
     // Enable GPU by default if hardware is present
-    if (m_activeBackend != GPUBackend::None) {
+    if (m_activeBackend != GPUBackend::None)
+    {
         m_gpuEnabled.store(true, std::memory_order_release);
         m_enabledScopes.store(static_cast<uint8_t>(AccelScope::All), std::memory_order_release);
     }
@@ -180,7 +243,7 @@ AccelResult AMDGPUAccelerator::initialize(GPUBackend preferredBackend) {
     std::cout << "[AMD-GPU] AMDGPUAccelerator initialized.\n"
               << "  GPU: " << m_gpuName << "\n"
               << "  Vendor: 0x" << std::hex << m_vendorId << " Device: 0x" << m_deviceId << std::dec << "\n"
-              << "  VRAM: " << (m_vramBytes / (1024*1024)) << " MB\n"
+              << "  VRAM: " << (m_vramBytes / (1024 * 1024)) << " MB\n"
               << "  CUs: " << m_computeUnits << "\n"
               << "  Backend: " << getBackendName() << "\n"
               << "  AMD Features: 0x" << std::hex << m_amdFeatures << std::dec << "\n"
@@ -189,15 +252,19 @@ AccelResult AMDGPUAccelerator::initialize(GPUBackend preferredBackend) {
     return AccelResult::ok("AMD GPU accelerator initialized");
 }
 
-void AMDGPUAccelerator::shutdown() {
-    if (!m_initialized.load()) return;
+void AMDGPUAccelerator::shutdown()
+{
+    if (!m_initialized.load())
+        return;
     std::lock_guard<std::mutex> lock(m_mutex);
 
     m_gpuEnabled.store(false);
 
     // Free all allocated buffers
-    for (auto& buf : m_allocatedBuffers) {
-        if (buf.hostPtr) {
+    for (auto& buf : m_allocatedBuffers)
+    {
+        if (buf.hostPtr)
+        {
             VirtualFree(buf.hostPtr, 0, MEM_RELEASE);
         }
     }
@@ -205,13 +272,19 @@ void AMDGPUAccelerator::shutdown() {
 
     // Release backend resources
     // DX12: Release through COM Release
-    if (m_dx12Device) {
-        struct ComObj { void* vtbl; };
+    if (m_dx12Device)
+    {
+        struct ComObj
+        {
+            void* vtbl;
+        };
         // COM Release pattern — not calling directly to avoid header dependency
         m_dx12Device = nullptr;
     }
-    if (m_dx12Queue) m_dx12Queue = nullptr;
-    if (m_dx12Allocator) m_dx12Allocator = nullptr;
+    if (m_dx12Queue)
+        m_dx12Queue = nullptr;
+    if (m_dx12Allocator)
+        m_dx12Allocator = nullptr;
 
     m_vulkanInstance = nullptr;
     m_vulkanDevice = nullptr;
@@ -230,17 +303,21 @@ void AMDGPUAccelerator::shutdown() {
 // MASTER TOGGLE
 // ============================================================================
 
-AccelResult AMDGPUAccelerator::enableGPU() {
-    if (m_activeBackend == GPUBackend::None) {
+AccelResult AMDGPUAccelerator::enableGPU()
+{
+    if (m_activeBackend == GPUBackend::None)
+    {
         return AccelResult::error("No GPU backend available");
     }
 
     bool wasEnabled = m_gpuEnabled.exchange(true, std::memory_order_release);
-    if (!wasEnabled) {
+    if (!wasEnabled)
+    {
         m_stats.toggleOnCount.fetch_add(1, std::memory_order_relaxed);
         std::cout << "[AMD-GPU] GPU ENABLED — backend: " << getBackendName() << "\n";
 
-        if (m_toggleCb) {
+        if (m_toggleCb)
+        {
             m_toggleCb(true, m_activeBackend, m_toggleData);
         }
     }
@@ -248,13 +325,16 @@ AccelResult AMDGPUAccelerator::enableGPU() {
     return AccelResult::ok("GPU enabled");
 }
 
-AccelResult AMDGPUAccelerator::disableGPU() {
+AccelResult AMDGPUAccelerator::disableGPU()
+{
     bool wasEnabled = m_gpuEnabled.exchange(false, std::memory_order_release);
-    if (wasEnabled) {
+    if (wasEnabled)
+    {
         m_stats.toggleOffCount.fetch_add(1, std::memory_order_relaxed);
         std::cout << "[AMD-GPU] GPU DISABLED — falling back to CPU\n";
 
-        if (m_toggleCb) {
+        if (m_toggleCb)
+        {
             m_toggleCb(false, GPUBackend::None, m_toggleData);
         }
     }
@@ -262,10 +342,14 @@ AccelResult AMDGPUAccelerator::disableGPU() {
     return AccelResult::ok("GPU disabled");
 }
 
-AccelResult AMDGPUAccelerator::toggleGPU() {
-    if (m_gpuEnabled.load(std::memory_order_acquire)) {
+AccelResult AMDGPUAccelerator::toggleGPU()
+{
+    if (m_gpuEnabled.load(std::memory_order_acquire))
+    {
         return disableGPU();
-    } else {
+    }
+    else
+    {
         return enableGPU();
     }
 }
@@ -274,22 +358,26 @@ AccelResult AMDGPUAccelerator::toggleGPU() {
 // Scope Toggles
 // ============================================================================
 
-AccelResult AMDGPUAccelerator::enableScope(AccelScope scope) {
+AccelResult AMDGPUAccelerator::enableScope(AccelScope scope)
+{
     uint8_t current = m_enabledScopes.load(std::memory_order_relaxed);
     m_enabledScopes.store(current | static_cast<uint8_t>(scope), std::memory_order_release);
     std::cout << "[AMD-GPU] Scope 0x" << std::hex << static_cast<int>(scope) << std::dec << " ENABLED\n";
     return AccelResult::ok("Scope enabled");
 }
 
-AccelResult AMDGPUAccelerator::disableScope(AccelScope scope) {
+AccelResult AMDGPUAccelerator::disableScope(AccelScope scope)
+{
     uint8_t current = m_enabledScopes.load(std::memory_order_relaxed);
     m_enabledScopes.store(current & ~static_cast<uint8_t>(scope), std::memory_order_release);
     std::cout << "[AMD-GPU] Scope 0x" << std::hex << static_cast<int>(scope) << std::dec << " DISABLED\n";
     return AccelResult::ok("Scope disabled");
 }
 
-bool AMDGPUAccelerator::isScopeEnabled(AccelScope scope) const {
-    if (!m_gpuEnabled.load(std::memory_order_acquire)) return false;
+bool AMDGPUAccelerator::isScopeEnabled(AccelScope scope) const
+{
+    if (!m_gpuEnabled.load(std::memory_order_acquire))
+        return false;
     return (m_enabledScopes.load(std::memory_order_acquire) & static_cast<uint8_t>(scope)) != 0;
 }
 
@@ -297,12 +385,15 @@ bool AMDGPUAccelerator::isScopeEnabled(AccelScope scope) const {
 // Integration Hooks
 // ============================================================================
 
-bool AMDGPUAccelerator::shouldUseGPU(AccelScope scope) const {
+bool AMDGPUAccelerator::shouldUseGPU(AccelScope scope) const
+{
     return m_gpuEnabled.load(std::memory_order_acquire) && isScopeEnabled(scope);
 }
 
-bool AMDGPUAccelerator::shouldUseGPU(AccelScope scope, uint64_t dataBytes) const {
-    if (!shouldUseGPU(scope)) return false;
+bool AMDGPUAccelerator::shouldUseGPU(AccelScope scope, uint64_t dataBytes) const
+{
+    if (!shouldUseGPU(scope))
+        return false;
     // Don't dispatch tiny workloads to GPU — PCIe overhead dominates
     return dataBytes >= m_gpuMinBytes;
 }
@@ -311,18 +402,27 @@ bool AMDGPUAccelerator::shouldUseGPU(AccelScope scope, uint64_t dataBytes) const
 // Backend Info
 // ============================================================================
 
-const char* AMDGPUAccelerator::getBackendName() const {
-    switch (m_activeBackend) {
-    case GPUBackend::DX12Compute: return "DX12 Compute";
-    case GPUBackend::Vulkan:      return "Vulkan Compute";
-    case GPUBackend::ROCm_HIP:    return "ROCm/HIP";
-    case GPUBackend::OpenCL:      return "OpenCL";
-    case GPUBackend::None:        return "None (CPU)";
-    default:                      return "Unknown";
+const char* AMDGPUAccelerator::getBackendName() const
+{
+    switch (m_activeBackend)
+    {
+        case GPUBackend::DX12Compute:
+            return "DX12 Compute";
+        case GPUBackend::Vulkan:
+            return "Vulkan Compute";
+        case GPUBackend::ROCm_HIP:
+            return "ROCm/HIP";
+        case GPUBackend::OpenCL:
+            return "OpenCL";
+        case GPUBackend::None:
+            return "None (CPU)";
+        default:
+            return "Unknown";
     }
 }
 
-bool AMDGPUAccelerator::hasFeature(AMDFeatureFlag feature) const {
+bool AMDGPUAccelerator::hasFeature(AMDFeatureFlag feature) const
+{
     return (m_amdFeatures & static_cast<uint32_t>(feature)) != 0;
 }
 
@@ -330,19 +430,21 @@ bool AMDGPUAccelerator::hasFeature(AMDFeatureFlag feature) const {
 // Memory Management
 // ============================================================================
 
-AccelResult AMDGPUAccelerator::allocGPU(uint64_t sizeBytes, GPUBuffer& outBuffer) {
+AccelResult AMDGPUAccelerator::allocGPU(uint64_t sizeBytes, GPUBuffer& outBuffer)
+{
     std::lock_guard<std::mutex> lock(m_mutex);
 
-    if (m_memPool.usedBytes + sizeBytes > m_memPool.totalBytes) {
+    if (m_memPool.usedBytes + sizeBytes > m_memPool.totalBytes)
+    {
         return AccelResult::error("Out of GPU memory");
     }
 
     // In production: use ID3D12Device::CreateCommittedResource (DX12),
     // vkAllocateMemory (Vulkan), hipMalloc (ROCm), clCreateBuffer (OpenCL)
     // For now: allocate pinned host memory that can be efficiently copied
-    void* ptr = VirtualAlloc(nullptr, sizeBytes, MEM_COMMIT | MEM_RESERVE,
-                              PAGE_READWRITE);
-    if (!ptr) {
+    void* ptr = VirtualAlloc(nullptr, sizeBytes, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    if (!ptr)
+    {
         return AccelResult::error("VirtualAlloc failed for GPU buffer", GetLastError());
     }
 
@@ -357,29 +459,34 @@ AccelResult AMDGPUAccelerator::allocGPU(uint64_t sizeBytes, GPUBuffer& outBuffer
 
     m_memPool.usedBytes += sizeBytes;
     m_memPool.allocCount++;
-    if (m_memPool.usedBytes > m_memPool.peakBytes) {
+    if (m_memPool.usedBytes > m_memPool.peakBytes)
+    {
         m_memPool.peakBytes = m_memPool.usedBytes;
     }
 
     m_stats.gpuAllocBytes.fetch_add(sizeBytes, std::memory_order_relaxed);
 
-    if (m_memoryCb) {
+    if (m_memoryCb)
+    {
         m_memoryCb(m_memPool.usedBytes, m_memPool.totalBytes, m_memoryData);
     }
 
     return AccelResult::ok("GPU buffer allocated");
 }
 
-AccelResult AMDGPUAccelerator::freeGPU(GPUBuffer& buffer) {
+AccelResult AMDGPUAccelerator::freeGPU(GPUBuffer& buffer)
+{
     std::lock_guard<std::mutex> lock(m_mutex);
 
     auto it = std::find_if(m_allocatedBuffers.begin(), m_allocatedBuffers.end(),
-                            [&](const GPUBuffer& b) { return b.bufferId == buffer.bufferId; });
-    if (it == m_allocatedBuffers.end()) {
+                           [&](const GPUBuffer& b) { return b.bufferId == buffer.bufferId; });
+    if (it == m_allocatedBuffers.end())
+    {
         return AccelResult::error("Buffer not found");
     }
 
-    if (buffer.hostPtr) {
+    if (buffer.hostPtr)
+    {
         VirtualFree(buffer.hostPtr, 0, MEM_RELEASE);
     }
 
@@ -392,49 +499,129 @@ AccelResult AMDGPUAccelerator::freeGPU(GPUBuffer& buffer) {
     buffer.hostPtr = nullptr;
     buffer.sizeBytes = 0;
 
-    if (m_memoryCb) {
+    if (m_memoryCb)
+    {
         m_memoryCb(m_memPool.usedBytes, m_memPool.totalBytes, m_memoryData);
     }
 
     return AccelResult::ok("GPU buffer freed");
 }
 
-AccelResult AMDGPUAccelerator::copyToGPU(GPUBuffer& dst, const void* hostSrc, uint64_t bytes) {
-    if (!dst.hostPtr) return AccelResult::error("Buffer not mapped");
-    if (bytes > dst.sizeBytes) return AccelResult::error("Copy exceeds buffer size");
+AccelResult AMDGPUAccelerator::copyToGPU(GPUBuffer& dst, const void* hostSrc, uint64_t bytes)
+{
+    if (!dst.hostPtr)
+        return AccelResult::error("Buffer not mapped");
+    if (bytes > dst.sizeBytes)
+        return AccelResult::error("Copy exceeds buffer size");
 
     memcpy(dst.hostPtr, hostSrc, bytes);
     m_stats.gpuCopyH2D.fetch_add(1, std::memory_order_relaxed);
     return AccelResult::ok("H2D copy complete");
 }
 
-AccelResult AMDGPUAccelerator::copyFromGPU(void* hostDst, const GPUBuffer& src, uint64_t bytes) {
-    if (!src.hostPtr) return AccelResult::error("Buffer not mapped");
-    if (bytes > src.sizeBytes) return AccelResult::error("Copy exceeds buffer size");
+AccelResult AMDGPUAccelerator::copyFromGPU(void* hostDst, const GPUBuffer& src, uint64_t bytes)
+{
+    if (!src.hostPtr)
+        return AccelResult::error("Buffer not mapped");
+    if (bytes > src.sizeBytes)
+        return AccelResult::error("Copy exceeds buffer size");
 
     memcpy(hostDst, src.hostPtr, bytes);
     m_stats.gpuCopyD2H.fetch_add(1, std::memory_order_relaxed);
     return AccelResult::ok("D2H copy complete");
 }
 
-AccelResult AMDGPUAccelerator::mapBuffer(GPUBuffer& buffer) {
+AccelResult AMDGPUAccelerator::mapBuffer(GPUBuffer& buffer)
+{
     buffer.mapped = true;
     return AccelResult::ok("Buffer mapped");
 }
 
-AccelResult AMDGPUAccelerator::unmapBuffer(GPUBuffer& buffer) {
+AccelResult AMDGPUAccelerator::unmapBuffer(GPUBuffer& buffer)
+{
     buffer.mapped = false;
     return AccelResult::ok("Buffer unmapped");
+}
+
+// ============================================================================
+// Unified Memory (AMD SAM)
+// ============================================================================
+
+AccelResult AMDGPUAccelerator::enableUnifiedMemory()
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    auto& unifiedExecutor = RawrXD::UnifiedMemory::UnifiedMemoryExecutor::instance();
+    const auto initResult = unifiedExecutor.initialize();
+    if (!initResult)
+    {
+        return AccelResult::error("Failed to initialize unified memory executor");
+    }
+
+    if (!m_initialized.load())
+    {
+        // Executor can still run host-backed unified arena without DXGI GPU init
+        return AccelResult::ok("Unified memory executor active (no discrete GPU pool)");
+    }
+
+    if (!m_memPool.unified)
+    {
+        m_memPoolTotalBeforeUnified = m_memPool.totalBytes;
+    }
+
+    m_memPool.unified = true;
+
+    if (unifiedExecutor.isHostBackedMode())
+    {
+        m_memPool.totalBytes = unifiedExecutor.getUnifiedHeapCapacityBytes();
+    }
+    else
+    {
+        m_memPool.totalBytes = 0x3C0000000ULL;
+    }
+
+    if (m_toggleCb)
+    {
+        m_toggleCb(true, m_activeBackend, m_toggleData);
+    }
+
+    return AccelResult::ok("Unified memory enabled");
+}
+
+AccelResult AMDGPUAccelerator::disableUnifiedMemory()
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    RawrXD::UnifiedMemory::UnifiedMemoryExecutor::instance().shutdown();
+
+    m_memPool.unified = false;
+    if (m_memPoolTotalBeforeUnified > 0)
+    {
+        m_memPool.totalBytes = m_memPoolTotalBeforeUnified;
+        m_memPoolTotalBeforeUnified = 0;
+    }
+    else
+    {
+        m_memPool.totalBytes = m_vramBytes;
+    }
+
+    if (m_toggleCb)
+    {
+        m_toggleCb(m_gpuEnabled.load(), m_activeBackend, m_toggleData);
+    }
+
+    return AccelResult::ok("Unified memory disabled");
 }
 
 // ============================================================================
 // Compute Dispatch
 // ============================================================================
 
-AccelResult AMDGPUAccelerator::dispatchMatMul(const GPUBuffer& A, const GPUBuffer& B,
-                                                GPUBuffer& C, uint32_t M, uint32_t N,
-                                                uint32_t K, bool fp16) {
-    if (!shouldUseGPU(AccelScope::Inference)) {
+AccelResult AMDGPUAccelerator::dispatchMatMul(const GPUBuffer& A, const GPUBuffer& B, GPUBuffer& C, uint32_t M,
+                                              uint32_t N, uint32_t K, bool fp16)
+{
+    if (!shouldUseGPU(AccelScope::Inference))
+    {
         m_stats.cpuFallbacks.fetch_add(1, std::memory_order_relaxed);
         return AccelResult::error("GPU not enabled for inference");
     }
@@ -452,25 +639,32 @@ AccelResult AMDGPUAccelerator::dispatchMatMul(const GPUBuffer& A, const GPUBuffe
     const float* pB = static_cast<const float*>(B.hostPtr);
     float* pC = static_cast<float*>(C.hostPtr);
 
-    if (pA && pB && pC) {
+    if (pA && pB && pC)
+    {
         // Tiled matmul with cache-friendly blocking for CPU fallback path
         // GPU dispatch path uses hardware matmul units (WMMA/DPAS)
         constexpr uint32_t TILE = 32;
-        
+
         // Zero output
         memset(pC, 0, M * N * sizeof(float));
-        
-        for (uint32_t ii = 0; ii < M; ii += TILE) {
+
+        for (uint32_t ii = 0; ii < M; ii += TILE)
+        {
             uint32_t iEnd = std::min(ii + TILE, M);
-            for (uint32_t kk = 0; kk < K; kk += TILE) {
+            for (uint32_t kk = 0; kk < K; kk += TILE)
+            {
                 uint32_t kEnd = std::min(kk + TILE, K);
-                for (uint32_t jj = 0; jj < N; jj += TILE) {
+                for (uint32_t jj = 0; jj < N; jj += TILE)
+                {
                     uint32_t jEnd = std::min(jj + TILE, N);
-                    
-                    for (uint32_t i = ii; i < iEnd; i++) {
-                        for (uint32_t k = kk; k < kEnd; k++) {
+
+                    for (uint32_t i = ii; i < iEnd; i++)
+                    {
+                        for (uint32_t k = kk; k < kEnd; k++)
+                        {
                             float aik = pA[i * K + k];
-                            for (uint32_t j = jj; j < jEnd; j++) {
+                            for (uint32_t j = jj; j < jEnd; j++)
+                            {
                                 pC[i * N + j] += aik * pB[k * N + j];
                             }
                         }
@@ -492,9 +686,11 @@ AccelResult AMDGPUAccelerator::dispatchMatMul(const GPUBuffer& A, const GPUBuffe
     return r;
 }
 
-AccelResult AMDGPUAccelerator::dispatchQuantize(const GPUBuffer& input, GPUBuffer& output,
-                                                  uint32_t elements, uint8_t quantType) {
-    if (!shouldUseGPU(AccelScope::Quantization, elements * 2)) {
+AccelResult AMDGPUAccelerator::dispatchQuantize(const GPUBuffer& input, GPUBuffer& output, uint32_t elements,
+                                                uint8_t quantType)
+{
+    if (!shouldUseGPU(AccelScope::Quantization, elements * 2))
+    {
         m_stats.cpuFallbacks.fetch_add(1, std::memory_order_relaxed);
         return AccelResult::error("GPU not enabled for quantization");
     }
@@ -503,9 +699,11 @@ AccelResult AMDGPUAccelerator::dispatchQuantize(const GPUBuffer& input, GPUBuffe
     return AccelResult::ok("Quantize dispatched");
 }
 
-AccelResult AMDGPUAccelerator::dispatchDequantize(const GPUBuffer& input, GPUBuffer& output,
-                                                    uint32_t elements, uint8_t quantType) {
-    if (!shouldUseGPU(AccelScope::Quantization, elements)) {
+AccelResult AMDGPUAccelerator::dispatchDequantize(const GPUBuffer& input, GPUBuffer& output, uint32_t elements,
+                                                  uint8_t quantType)
+{
+    if (!shouldUseGPU(AccelScope::Quantization, elements))
+    {
         m_stats.cpuFallbacks.fetch_add(1, std::memory_order_relaxed);
         return AccelResult::error("GPU not enabled for dequantization");
     }
@@ -514,11 +712,11 @@ AccelResult AMDGPUAccelerator::dispatchDequantize(const GPUBuffer& input, GPUBuf
     return AccelResult::ok("Dequantize dispatched");
 }
 
-AccelResult AMDGPUAccelerator::dispatchAttention(const GPUBuffer& Q, const GPUBuffer& K,
-                                                   const GPUBuffer& V, GPUBuffer& output,
-                                                   uint32_t heads, uint32_t seqLen,
-                                                   uint32_t headDim) {
-    if (!shouldUseGPU(AccelScope::Inference)) {
+AccelResult AMDGPUAccelerator::dispatchAttention(const GPUBuffer& Q, const GPUBuffer& K, const GPUBuffer& V,
+                                                 GPUBuffer& output, uint32_t heads, uint32_t seqLen, uint32_t headDim)
+{
+    if (!shouldUseGPU(AccelScope::Inference))
+    {
         m_stats.cpuFallbacks.fetch_add(1, std::memory_order_relaxed);
         return AccelResult::error("GPU not enabled for attention");
     }
@@ -542,9 +740,11 @@ AccelResult AMDGPUAccelerator::dispatchAttention(const GPUBuffer& Q, const GPUBu
     return r;
 }
 
-AccelResult AMDGPUAccelerator::dispatchRMSNorm(const GPUBuffer& input, const GPUBuffer& weight,
-                                                 GPUBuffer& output, uint32_t size, float eps) {
-    if (!shouldUseGPU(AccelScope::Inference, size * 2)) {
+AccelResult AMDGPUAccelerator::dispatchRMSNorm(const GPUBuffer& input, const GPUBuffer& weight, GPUBuffer& output,
+                                               uint32_t size, float eps)
+{
+    if (!shouldUseGPU(AccelScope::Inference, size * 2))
+    {
         m_stats.cpuFallbacks.fetch_add(1, std::memory_order_relaxed);
         return AccelResult::error("GPU not enabled for RMSNorm");
     }
@@ -553,9 +753,10 @@ AccelResult AMDGPUAccelerator::dispatchRMSNorm(const GPUBuffer& input, const GPU
     return AccelResult::ok("RMSNorm dispatched");
 }
 
-AccelResult AMDGPUAccelerator::dispatchSoftmax(const GPUBuffer& input, GPUBuffer& output,
-                                                 uint32_t rows, uint32_t cols) {
-    if (!shouldUseGPU(AccelScope::Inference, (uint64_t)rows * cols * 2)) {
+AccelResult AMDGPUAccelerator::dispatchSoftmax(const GPUBuffer& input, GPUBuffer& output, uint32_t rows, uint32_t cols)
+{
+    if (!shouldUseGPU(AccelScope::Inference, (uint64_t)rows * cols * 2))
+    {
         m_stats.cpuFallbacks.fetch_add(1, std::memory_order_relaxed);
         return AccelResult::error("GPU not enabled for softmax");
     }
@@ -564,9 +765,11 @@ AccelResult AMDGPUAccelerator::dispatchSoftmax(const GPUBuffer& input, GPUBuffer
     return AccelResult::ok("Softmax dispatched");
 }
 
-AccelResult AMDGPUAccelerator::dispatchRoPE(GPUBuffer& qk, uint32_t seqLen, uint32_t headDim,
-                                              uint32_t posOffset, float theta) {
-    if (!shouldUseGPU(AccelScope::Inference)) {
+AccelResult AMDGPUAccelerator::dispatchRoPE(GPUBuffer& qk, uint32_t seqLen, uint32_t headDim, uint32_t posOffset,
+                                            float theta)
+{
+    if (!shouldUseGPU(AccelScope::Inference))
+    {
         m_stats.cpuFallbacks.fetch_add(1, std::memory_order_relaxed);
         return AccelResult::error("GPU not enabled for RoPE");
     }
@@ -575,10 +778,11 @@ AccelResult AMDGPUAccelerator::dispatchRoPE(GPUBuffer& qk, uint32_t seqLen, uint
     return AccelResult::ok("RoPE dispatched");
 }
 
-AccelResult AMDGPUAccelerator::dispatchGeneric(const char* kernelName, const GPUBuffer* buffers,
-                                                 uint32_t bufferCount, uint32_t groupX,
-                                                 uint32_t groupY, uint32_t groupZ) {
-    if (!m_gpuEnabled.load(std::memory_order_acquire)) {
+AccelResult AMDGPUAccelerator::dispatchGeneric(const char* kernelName, const GPUBuffer* buffers, uint32_t bufferCount,
+                                               uint32_t groupX, uint32_t groupY, uint32_t groupZ)
+{
+    if (!m_gpuEnabled.load(std::memory_order_acquire))
+    {
         m_stats.cpuFallbacks.fetch_add(1, std::memory_order_relaxed);
         return AccelResult::error("GPU not enabled");
     }
@@ -586,8 +790,7 @@ AccelResult AMDGPUAccelerator::dispatchGeneric(const char* kernelName, const GPU
     m_stats.gpuDispatches.fetch_add(1, std::memory_order_relaxed);
 
     AccelResult r = AccelResult::ok("Generic kernel dispatched");
-    std::cout << "[AMD-GPU] Dispatched '" << kernelName << "' ["
-              << groupX << "," << groupY << "," << groupZ << "]\n";
+    std::cout << "[AMD-GPU] Dispatched '" << kernelName << "' [" << groupX << "," << groupY << "," << groupZ << "]\n";
     return r;
 }
 
@@ -595,13 +798,15 @@ AccelResult AMDGPUAccelerator::dispatchGeneric(const char* kernelName, const GPU
 // Synchronization
 // ============================================================================
 
-AccelResult AMDGPUAccelerator::syncGPU() {
+AccelResult AMDGPUAccelerator::syncGPU()
+{
     // In production: ID3D12Fence wait / vkQueueWaitIdle / hipDeviceSynchronize
     m_stats.gpuWaitMs.fetch_add(0, std::memory_order_relaxed);
     return AccelResult::ok("GPU sync complete");
 }
 
-AccelResult AMDGPUAccelerator::flushGPU() {
+AccelResult AMDGPUAccelerator::flushGPU()
+{
     // In production: close & execute command list / vkQueueSubmit
     return AccelResult::ok("GPU flushed");
 }
@@ -610,48 +815,62 @@ AccelResult AMDGPUAccelerator::flushGPU() {
 // Backend Initialization
 // ============================================================================
 
-AccelResult AMDGPUAccelerator::initDX12() {
+AccelResult AMDGPUAccelerator::initDX12()
+{
     HMODULE hD3D12 = LoadLibraryA("d3d12.dll");
-    if (!hD3D12) return AccelResult::error("d3d12.dll not found");
+    if (!hD3D12)
+        return AccelResult::error("d3d12.dll not found");
 
-    typedef HRESULT(WINAPI* PFN_D3D12CreateDevice)(void*, int, REFIID, void**);
+    typedef HRESULT(WINAPI * PFN_D3D12CreateDevice)(void*, int, REFIID, void**);
     auto fnCreate = (PFN_D3D12CreateDevice)GetProcAddress(hD3D12, "D3D12CreateDevice");
-    if (!fnCreate) {
+    if (!fnCreate)
+    {
         FreeLibrary(hD3D12);
         return AccelResult::error("D3D12CreateDevice not found");
     }
 
     // IID_ID3D12Device
-    static const GUID IID_ID3D12Device_local =
-        { 0x189819f1, 0x1db6, 0x4b57, { 0xbe, 0x54, 0x18, 0x21, 0x33, 0x9b, 0x85, 0xf7 } };
+    static const GUID IID_ID3D12Device_local = {
+        0x189819f1, 0x1db6, 0x4b57, {0xbe, 0x54, 0x18, 0x21, 0x33, 0x9b, 0x85, 0xf7}};
 
     // D3D_FEATURE_LEVEL_12_0 = 0xc000
     HRESULT hr = fnCreate(nullptr, 0xc000, IID_ID3D12Device_local, &m_dx12Device);
-    if (FAILED(hr) || !m_dx12Device) {
+    if (FAILED(hr) || !m_dx12Device)
+    {
         FreeLibrary(hD3D12);
         return AccelResult::error("D3D12CreateDevice failed", (int)hr);
     }
 
     // Create compute command queue
     // D3D12_COMMAND_QUEUE_DESC: Type=COMPUTE(1), Priority=NORMAL(0)
-    struct D3D12_COMMAND_QUEUE_DESC {
-        int Type; int Priority; int Flags; UINT NodeMask;
+    struct D3D12_COMMAND_QUEUE_DESC
+    {
+        int Type;
+        int Priority;
+        int Flags;
+        UINT NodeMask;
     };
-    D3D12_COMMAND_QUEUE_DESC queueDesc = { 1, 0, 0, 0 }; // COMPUTE type
+    D3D12_COMMAND_QUEUE_DESC queueDesc = {1, 0, 0, 0};  // COMPUTE type
 
     // ID3D12Device::CreateCommandQueue via vtable (index 8)
-    struct DeviceVTbl { void* methods[50]; };
-    struct DeviceObj { DeviceVTbl* vtbl; };
+    struct DeviceVTbl
+    {
+        void* methods[50];
+    };
+    struct DeviceObj
+    {
+        DeviceVTbl* vtbl;
+    };
     auto* deviceObj = static_cast<DeviceObj*>(m_dx12Device);
 
-    static const GUID IID_ID3D12CommandQueue_local =
-        { 0x0ec870a6, 0x5d7e, 0x4c22, { 0x8c, 0xfc, 0x5b, 0xaa, 0xe0, 0x76, 0x16, 0xed } };
+    static const GUID IID_ID3D12CommandQueue_local = {
+        0x0ec870a6, 0x5d7e, 0x4c22, {0x8c, 0xfc, 0x5b, 0xaa, 0xe0, 0x76, 0x16, 0xed}};
 
-    typedef HRESULT(WINAPI* PFN_CreateCommandQueue)(void*, const D3D12_COMMAND_QUEUE_DESC*,
-                                                     REFIID, void**);
+    typedef HRESULT(WINAPI * PFN_CreateCommandQueue)(void*, const D3D12_COMMAND_QUEUE_DESC*, REFIID, void**);
     auto fnCreateQueue = (PFN_CreateCommandQueue)(deviceObj->vtbl->methods[8]);
     hr = fnCreateQueue(m_dx12Device, &queueDesc, IID_ID3D12CommandQueue_local, &m_dx12Queue);
-    if (FAILED(hr)) {
+    if (FAILED(hr))
+    {
         std::cout << "[AMD-GPU] DX12 compute queue creation failed, but device is valid.\n";
     }
 
@@ -659,13 +878,16 @@ AccelResult AMDGPUAccelerator::initDX12() {
     return AccelResult::ok("DX12 initialized");
 }
 
-AccelResult AMDGPUAccelerator::initVulkan() {
+AccelResult AMDGPUAccelerator::initVulkan()
+{
     HMODULE hVulkan = LoadLibraryA("vulkan-1.dll");
-    if (!hVulkan) return AccelResult::error("vulkan-1.dll not found");
+    if (!hVulkan)
+        return AccelResult::error("vulkan-1.dll not found");
 
     typedef void* (*PFN_vkGetInstanceProcAddr)(void*, const char*);
     auto fnGetProc = (PFN_vkGetInstanceProcAddr)GetProcAddress(hVulkan, "vkGetInstanceProcAddr");
-    if (!fnGetProc) {
+    if (!fnGetProc)
+    {
         FreeLibrary(hVulkan);
         return AccelResult::error("vkGetInstanceProcAddr not found");
     }
@@ -673,28 +895,42 @@ AccelResult AMDGPUAccelerator::initVulkan() {
     // Create Vulkan instance
     typedef int (*PFN_vkCreateInstance)(const void*, const void*, void**);
     auto fnCreateInstance = (PFN_vkCreateInstance)fnGetProc(nullptr, "vkCreateInstance");
-    if (!fnCreateInstance) {
+    if (!fnCreateInstance)
+    {
         FreeLibrary(hVulkan);
         return AccelResult::error("vkCreateInstance not found");
     }
 
     // VkApplicationInfo
-    struct VkAppInfo {
-        int sType; const void* pNext; const char* appName; uint32_t appVer;
-        const char* engineName; uint32_t engineVer; uint32_t apiVer;
+    struct VkAppInfo
+    {
+        int sType;
+        const void* pNext;
+        const char* appName;
+        uint32_t appVer;
+        const char* engineName;
+        uint32_t engineVer;
+        uint32_t apiVer;
     };
-    VkAppInfo appInfo = { 0, nullptr, "RawrXD-Shell", 1, "RawrXD", 1, (1 << 22) | (3 << 12) };
+    VkAppInfo appInfo = {0, nullptr, "RawrXD-Shell", 1, "RawrXD", 1, (1 << 22) | (3 << 12)};
 
     // VkInstanceCreateInfo
-    struct VkInstInfo {
-        int sType; const void* pNext; int flags; const VkAppInfo* pAppInfo;
-        uint32_t enabledLayerCount; const char* const* ppEnabledLayerNames;
-        uint32_t enabledExtensionCount; const char* const* ppEnabledExtensionNames;
+    struct VkInstInfo
+    {
+        int sType;
+        const void* pNext;
+        int flags;
+        const VkAppInfo* pAppInfo;
+        uint32_t enabledLayerCount;
+        const char* const* ppEnabledLayerNames;
+        uint32_t enabledExtensionCount;
+        const char* const* ppEnabledExtensionNames;
     };
-    VkInstInfo instInfo = { 1, nullptr, 0, &appInfo, 0, nullptr, 0, nullptr };
+    VkInstInfo instInfo = {1, nullptr, 0, &appInfo, 0, nullptr, 0, nullptr};
 
     int result = fnCreateInstance(&instInfo, nullptr, &m_vulkanInstance);
-    if (result != 0 || !m_vulkanInstance) {
+    if (result != 0 || !m_vulkanInstance)
+    {
         FreeLibrary(hVulkan);
         return AccelResult::error("vkCreateInstance failed", result);
     }
@@ -703,27 +939,32 @@ AccelResult AMDGPUAccelerator::initVulkan() {
     return AccelResult::ok("Vulkan initialized");
 }
 
-AccelResult AMDGPUAccelerator::initROCm() {
+AccelResult AMDGPUAccelerator::initROCm()
+{
     // ROCm/HIP runtime — try loading amdhip64.dll
     HMODULE hHIP = LoadLibraryA("amdhip64.dll");
-    if (!hHIP) {
+    if (!hHIP)
+    {
         // Try alternative name
         hHIP = LoadLibraryA("hiprt64.dll");
     }
-    if (!hHIP) {
+    if (!hHIP)
+    {
         return AccelResult::error("ROCm/HIP runtime not found (amdhip64.dll)");
     }
 
     // hipInit
     typedef int (*PFN_hipInit)(unsigned int);
     auto fnInit = (PFN_hipInit)GetProcAddress(hHIP, "hipInit");
-    if (!fnInit) {
+    if (!fnInit)
+    {
         FreeLibrary(hHIP);
         return AccelResult::error("hipInit not found");
     }
 
     int result = fnInit(0);
-    if (result != 0) {
+    if (result != 0)
+    {
         FreeLibrary(hHIP);
         return AccelResult::error("hipInit failed", result);
     }
@@ -734,13 +975,16 @@ AccelResult AMDGPUAccelerator::initROCm() {
     return AccelResult::ok("ROCm initialized");
 }
 
-AccelResult AMDGPUAccelerator::initOpenCL() {
+AccelResult AMDGPUAccelerator::initOpenCL()
+{
     HMODULE hCL = LoadLibraryA("OpenCL.dll");
-    if (!hCL) return AccelResult::error("OpenCL.dll not found");
+    if (!hCL)
+        return AccelResult::error("OpenCL.dll not found");
 
     typedef int (*PFN_clGetPlatformIDs)(uint32_t, void**, uint32_t*);
     auto fnGetPlatforms = (PFN_clGetPlatformIDs)GetProcAddress(hCL, "clGetPlatformIDs");
-    if (!fnGetPlatforms) {
+    if (!fnGetPlatforms)
+    {
         FreeLibrary(hCL);
         return AccelResult::error("clGetPlatformIDs not found");
     }
@@ -748,7 +992,8 @@ AccelResult AMDGPUAccelerator::initOpenCL() {
     void* platforms[8];
     uint32_t numPlatforms = 0;
     int result = fnGetPlatforms(8, platforms, &numPlatforms);
-    if (result != 0 || numPlatforms == 0) {
+    if (result != 0 || numPlatforms == 0)
+    {
         FreeLibrary(hCL);
         return AccelResult::error("No OpenCL platforms found", result);
     }
@@ -756,55 +1001,62 @@ AccelResult AMDGPUAccelerator::initOpenCL() {
     // Create a proper OpenCL context from the first platform and its GPU devices
     typedef int (*PFN_clGetDeviceIDs)(void*, uint64_t, uint32_t, void**, uint32_t*);
     typedef void* (*PFN_clCreateContext)(void*, uint32_t, const void**, void*, void*, int*);
-    
+
     auto fnGetDeviceIDs = (PFN_clGetDeviceIDs)GetProcAddress(hCL, "clGetDeviceIDs");
     auto fnCreateContext = (PFN_clCreateContext)GetProcAddress(hCL, "clCreateContext");
-    
-    if (fnGetDeviceIDs && fnCreateContext) {
+
+    if (fnGetDeviceIDs && fnCreateContext)
+    {
         void* devices[8];
         uint32_t numDevices = 0;
         // CL_DEVICE_TYPE_GPU = 4
         int devResult = fnGetDeviceIDs(platforms[0], 4, 8, devices, &numDevices);
-        if (devResult == 0 && numDevices > 0) {
+        if (devResult == 0 && numDevices > 0)
+        {
             // Context properties: platform, then null terminator
-            intptr_t contextProps[3] = { 
-                0x1084, // CL_CONTEXT_PLATFORM
-                (intptr_t)platforms[0], 
-                0 
-            };
+            intptr_t contextProps[3] = {0x1084,  // CL_CONTEXT_PLATFORM
+                                        (intptr_t)platforms[0], 0};
             int ctxErr = 0;
-            void* ctx = fnCreateContext(contextProps, 1, (const void**)&devices[0], 
-                                         nullptr, nullptr, &ctxErr);
-            if (ctx && ctxErr == 0) {
+            void* ctx = fnCreateContext(contextProps, 1, (const void**)&devices[0], nullptr, nullptr, &ctxErr);
+            if (ctx && ctxErr == 0)
+            {
                 m_openclContext = ctx;
                 std::cout << "[AMD-GPU] OpenCL context created with " << numDevices << " GPU device(s).\n";
-            } else {
-                m_openclContext = platforms[0]; // Fallback to platform handle
-                std::cout << "[AMD-GPU] OpenCL context creation failed (err=" << ctxErr 
+            }
+            else
+            {
+                m_openclContext = platforms[0];  // Fallback to platform handle
+                std::cout << "[AMD-GPU] OpenCL context creation failed (err=" << ctxErr
                           << "), storing platform handle.\n";
             }
-        } else {
-            m_openclContext = platforms[0]; // No GPU devices, store platform handle
+        }
+        else
+        {
+            m_openclContext = platforms[0];  // No GPU devices, store platform handle
             std::cout << "[AMD-GPU] No OpenCL GPU devices found, storing platform handle.\n";
         }
-    } else {
-        m_openclContext = platforms[0]; // APIs not available, store platform handle
+    }
+    else
+    {
+        m_openclContext = platforms[0];  // APIs not available, store platform handle
     }
 
     std::cout << "[AMD-GPU] OpenCL backend initialized (" << numPlatforms << " platforms).\n";
     return AccelResult::ok("OpenCL initialized");
 }
 
-AccelResult AMDGPUAccelerator::probeAMDFeatures() {
+AccelResult AMDGPUAccelerator::probeAMDFeatures()
+{
     m_amdFeatures = 0;
 
-    if (m_vendorId != 0x1002) return AccelResult::ok("Not AMD");
+    if (m_vendorId != 0x1002)
+        return AccelResult::ok("Not AMD");
 
     // Classify by device ID ranges
     bool isRDNA3 = (m_deviceId >= 0x744C && m_deviceId <= 0x7500);
     bool isRDNA2 = (m_deviceId >= 0x73A0 && m_deviceId <= 0x7430);
     bool isRDNA1 = (m_deviceId >= 0x7310 && m_deviceId <= 0x7370);
-    bool isCDNA  = (m_deviceId >= 0x7380 && m_deviceId <= 0x7440);
+    bool isCDNA = (m_deviceId >= 0x7380 && m_deviceId <= 0x7440);
 
     // Common AMD features
     m_amdFeatures |= static_cast<uint32_t>(AMDFeatureFlag::WavefrontSize64);
@@ -813,29 +1065,33 @@ AccelResult AMDGPUAccelerator::probeAMDFeatures() {
     m_amdFeatures |= static_cast<uint32_t>(AMDFeatureFlag::LDSPrefetch);
 
     // RDNA features
-    if (isRDNA1 || isRDNA2 || isRDNA3) {
-        m_amdFeatures |= static_cast<uint32_t>(AMDFeatureFlag::WavefrontSize32); // RDNA supports both
+    if (isRDNA1 || isRDNA2 || isRDNA3)
+    {
+        m_amdFeatures |= static_cast<uint32_t>(AMDFeatureFlag::WavefrontSize32);  // RDNA supports both
         m_amdFeatures |= static_cast<uint32_t>(AMDFeatureFlag::PackedFP16);
         m_amdFeatures |= static_cast<uint32_t>(AMDFeatureFlag::AsyncCompute);
         m_amdFeatures |= static_cast<uint32_t>(AMDFeatureFlag::ShaderClock);
     }
 
     // RDNA2+ features
-    if (isRDNA2 || isRDNA3) {
+    if (isRDNA2 || isRDNA3)
+    {
         m_amdFeatures |= static_cast<uint32_t>(AMDFeatureFlag::InfinityCache);
         m_amdFeatures |= static_cast<uint32_t>(AMDFeatureFlag::AsyncCopy);
         m_amdFeatures |= static_cast<uint32_t>(AMDFeatureFlag::INT8DP4);
     }
 
     // RDNA3 features
-    if (isRDNA3) {
+    if (isRDNA3)
+    {
         m_amdFeatures |= static_cast<uint32_t>(AMDFeatureFlag::WMMA);
         m_amdFeatures |= static_cast<uint32_t>(AMDFeatureFlag::PackedBF16);
         m_amdFeatures |= static_cast<uint32_t>(AMDFeatureFlag::INT4DP8);
     }
 
     // CDNA features
-    if (isCDNA) {
+    if (isCDNA)
+    {
         m_amdFeatures |= static_cast<uint32_t>(AMDFeatureFlag::MFMA);
         m_amdFeatures |= static_cast<uint32_t>(AMDFeatureFlag::FP64);
         m_amdFeatures |= static_cast<uint32_t>(AMDFeatureFlag::PackedFP16);
@@ -846,7 +1102,8 @@ AccelResult AMDGPUAccelerator::probeAMDFeatures() {
     }
 
     // If we couldn't identify specific gen but it's AMD, assume at least GCN5+ features
-    if (!isRDNA1 && !isRDNA2 && !isRDNA3 && !isCDNA) {
+    if (!isRDNA1 && !isRDNA2 && !isRDNA3 && !isCDNA)
+    {
         m_amdFeatures |= static_cast<uint32_t>(AMDFeatureFlag::PackedFP16);
         m_amdFeatures |= static_cast<uint32_t>(AMDFeatureFlag::AsyncCompute);
     }
@@ -866,21 +1123,28 @@ AccelResult AMDGPUAccelerator::probeAMDFeatures() {
 // Callbacks
 // ============================================================================
 
-void AMDGPUAccelerator::setToggleCallback(GPUToggleCallback cb, void* userData) {
-    m_toggleCb = cb; m_toggleData = userData;
+void AMDGPUAccelerator::setToggleCallback(GPUToggleCallback cb, void* userData)
+{
+    m_toggleCb = cb;
+    m_toggleData = userData;
 }
-void AMDGPUAccelerator::setErrorCallback(GPUErrorCallback cb, void* userData) {
-    m_errorCb = cb; m_errorData = userData;
+void AMDGPUAccelerator::setErrorCallback(GPUErrorCallback cb, void* userData)
+{
+    m_errorCb = cb;
+    m_errorData = userData;
 }
-void AMDGPUAccelerator::setMemoryCallback(GPUMemoryCallback cb, void* userData) {
-    m_memoryCb = cb; m_memoryData = userData;
+void AMDGPUAccelerator::setMemoryCallback(GPUMemoryCallback cb, void* userData)
+{
+    m_memoryCb = cb;
+    m_memoryData = userData;
 }
 
 // ============================================================================
 // Stats & JSON
 // ============================================================================
 
-void AMDGPUAccelerator::resetStats() {
+void AMDGPUAccelerator::resetStats()
+{
     m_stats.gpuDispatches.store(0);
     m_stats.cpuFallbacks.store(0);
     m_stats.gpuAllocBytes.store(0);
@@ -895,43 +1159,39 @@ void AMDGPUAccelerator::resetStats() {
     m_stats.avgOccupancy = 0;
 }
 
-std::string AMDGPUAccelerator::toJson() const {
+std::string AMDGPUAccelerator::toJson() const
+{
     std::lock_guard<std::mutex> lock(m_mutex);
     std::ostringstream oss;
     oss << "{\"initialized\":" << (m_initialized.load() ? "true" : "false")
-        << ",\"gpuEnabled\":" << (m_gpuEnabled.load() ? "true" : "false")
-        << ",\"backend\":\"" << getBackendName() << "\""
+        << ",\"gpuEnabled\":" << (m_gpuEnabled.load() ? "true" : "false") << ",\"backend\":\"" << getBackendName()
+        << "\""
         << ",\"gpu\":\"" << m_gpuName << "\""
         << ",\"vendorId\":\"0x" << std::hex << m_vendorId << "\""
         << ",\"deviceId\":\"0x" << m_deviceId << std::dec << "\""
-        << ",\"computeUnits\":" << m_computeUnits
-        << ",\"vramMB\":" << (m_vramBytes / (1024*1024))
+        << ",\"computeUnits\":" << m_computeUnits << ",\"vramMB\":" << (m_vramBytes / (1024 * 1024))
         << ",\"enabledScopes\":\"0x" << std::hex << (int)m_enabledScopes.load() << std::dec << "\""
         << ",\"amdFeatures\":\"0x" << std::hex << m_amdFeatures << std::dec << "\""
-        << ",\"memory\":" << memoryToJson()
-        << ",\"stats\":{\"dispatches\":" << m_stats.gpuDispatches.load()
-        << ",\"cpuFallbacks\":" << m_stats.cpuFallbacks.load()
-        << ",\"allocBytes\":" << m_stats.gpuAllocBytes.load()
-        << ",\"computeMs\":" << m_stats.gpuComputeMs.load()
-        << ",\"toggleOn\":" << m_stats.toggleOnCount.load()
-        << ",\"toggleOff\":" << m_stats.toggleOffCount.load()
-        << "}}";
+        << ",\"memory\":" << memoryToJson() << ",\"stats\":{\"dispatches\":" << m_stats.gpuDispatches.load()
+        << ",\"cpuFallbacks\":" << m_stats.cpuFallbacks.load() << ",\"allocBytes\":" << m_stats.gpuAllocBytes.load()
+        << ",\"computeMs\":" << m_stats.gpuComputeMs.load() << ",\"toggleOn\":" << m_stats.toggleOnCount.load()
+        << ",\"toggleOff\":" << m_stats.toggleOffCount.load() << "}}";
     return oss.str();
 }
 
-std::string AMDGPUAccelerator::memoryToJson() const {
+std::string AMDGPUAccelerator::memoryToJson() const
+{
     std::ostringstream oss;
-    oss << "{\"totalMB\":" << (m_memPool.totalBytes / (1024*1024))
-        << ",\"usedMB\":" << (m_memPool.usedBytes / (1024*1024))
-        << ",\"peakMB\":" << (m_memPool.peakBytes / (1024*1024))
-        << ",\"usage\":\"" << m_memPool.usagePercent() << "%\""
-        << ",\"allocs\":" << m_memPool.allocCount
-        << ",\"frees\":" << m_memPool.freeCount
-        << "}";
+    oss << "{\"totalMB\":" << (m_memPool.totalBytes / (1024 * 1024))
+        << ",\"usedMB\":" << (m_memPool.usedBytes / (1024 * 1024))
+        << ",\"peakMB\":" << (m_memPool.peakBytes / (1024 * 1024)) << ",\"usage\":\"" << m_memPool.usagePercent()
+        << "%\""
+        << ",\"allocs\":" << m_memPool.allocCount << ",\"frees\":" << m_memPool.freeCount << "}";
     return oss.str();
 }
 
-std::string AMDGPUAccelerator::featuresToJson() const {
+std::string AMDGPUAccelerator::featuresToJson() const
+{
     std::ostringstream oss;
     oss << "{\"WMMA\":" << (hasFeature(AMDFeatureFlag::WMMA) ? "true" : "false")
         << ",\"MFMA\":" << (hasFeature(AMDFeatureFlag::MFMA) ? "true" : "false")
@@ -946,7 +1206,6 @@ std::string AMDGPUAccelerator::featuresToJson() const {
         << ",\"LDSPrefetch\":" << (hasFeature(AMDFeatureFlag::LDSPrefetch) ? "true" : "false")
         << ",\"Wave64\":" << (hasFeature(AMDFeatureFlag::WavefrontSize64) ? "true" : "false")
         << ",\"Wave32\":" << (hasFeature(AMDFeatureFlag::WavefrontSize32) ? "true" : "false")
-        << ",\"FP64\":" << (hasFeature(AMDFeatureFlag::FP64) ? "true" : "false")
-        << "}";
+        << ",\"FP64\":" << (hasFeature(AMDFeatureFlag::FP64) ? "true" : "false") << "}";
     return oss.str();
 }

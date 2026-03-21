@@ -15,13 +15,6 @@
 #include <sstream>
 #include <algorithm>
 
-#ifndef RAWRXD_LOG_INFO
-#define RAWRXD_LOG_INFO(msg) do { \
-    std::ostringstream _oss; _oss << "[INFO] " << msg << "\n"; \
-    OutputDebugStringA(_oss.str().c_str()); \
-} while(0)
-#endif
-
 // Minimum drag distance before initiating drag (avoid accidental drags)
 static const int TAB_DRAG_THRESHOLD = 5;
 
@@ -259,7 +252,8 @@ void Win32IDE::reorderTab(int fromIndex, int toIndex)
         TabCtrl_SetCurSel(m_hwndTabBar, m_activeTabIndex);
     }
 
-    RAWRXD_LOG_INFO("Tab reordered: " << fromIndex << " -> " << toIndex);
+    RAWRXD_LOG_INFO("Win32IDE_DragDropTabs")
+        << "Tab reordered: " << fromIndex << " -> " << toIndex;
 }
 
 // ============================================================================

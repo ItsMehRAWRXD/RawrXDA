@@ -2435,25 +2435,7 @@ int asm_neural_extract_csp(const void* eegBlob, uint32_t sampleCount, void* outF
 }
 int asm_neural_shutdown() { return 0; }
 int asm_neural_get_stats(void*) { return 0; }
-int asm_omega_implement_generate(const void*, void*) { return 0; }
-int asm_omega_agent_step(const void*, void*) { return 0; }
-int asm_omega_shutdown() { return 0; }
-
-// Batch 25: omega orchestrator continued
-int asm_omega_plan_decompose(const void*, void*) { return 0; }
-int asm_omega_evolve_improve(const void*, void*) { return 0; }
-int asm_omega_init(const void*) { return 0; }
-int asm_omega_get_stats(void*) { return 0; }
-int asm_omega_verify_test(const void*, void*) { return 0; }
-int asm_omega_architect_select(const void*, void*) { return 0; }
-int asm_omega_agent_spawn(const void*, void*) { return 0; }
-
-// Batch 26: omega pipeline + entry stub
-int asm_omega_observe_monitor(const void*, void*) { return 0; }
-int asm_omega_deploy_distribute(const void*, void*) { return 0; }
-int asm_omega_execute_pipeline(const void*, void*) { return 0; }
-int asm_omega_ingest_requirement(const void*, void*) { return 0; }
-int asm_omega_world_model_update(const void*, void*) { return 0; }
+// Omega: omega_asm_native_kernel.cpp (correct x64 ABI; do not duplicate here)
 int asm_perf_get_slot_count_v2() { return 0; }
 
 // Batch 28: deflate + masm agent failure

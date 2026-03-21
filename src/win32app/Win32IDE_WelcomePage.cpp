@@ -16,13 +16,6 @@
 #include <sstream>
 #include <fstream>
 
-#ifndef RAWRXD_LOG_INFO
-#define RAWRXD_LOG_INFO(msg) do { \
-    std::ostringstream _oss; _oss << "[INFO] " << msg << "\n"; \
-    OutputDebugStringA(_oss.str().c_str()); \
-} while(0)
-#endif
-
 // ============================================================================
 // FIRST LAUNCH DETECTION
 // ============================================================================
@@ -410,7 +403,7 @@ void Win32IDE::showWelcomePage()
                 // We access it through the container's navigate method.
                 // For now, write and let the WebView2Container handle it
                 // when the tab is selected.
-                RAWRXD_LOG_INFO("Welcome page HTML ready at: " << htmlPath);
+                RAWRXD_LOG_INFO("Win32IDE_WelcomePage") << "Welcome page HTML ready at: " << htmlPath;
                 usedWebView = true;
             }
         }
@@ -478,14 +471,14 @@ void Win32IDE::showWelcomePage()
             if (f) {
                 f << welcomeHtml;
                 f.close();
-                RAWRXD_LOG_INFO("Welcome page HTML written to " << htmlPath);
+                RAWRXD_LOG_INFO("Win32IDE_WelcomePage") << "Welcome page HTML written to " << htmlPath;
             }
         }
     }
 
     m_welcomePageShown = true;
     markFirstLaunchDone();
-    RAWRXD_LOG_INFO("Welcome page displayed");
+    RAWRXD_LOG_INFO("Win32IDE_WelcomePage") << "Welcome page displayed";
 }
 
 // ============================================================================
@@ -531,7 +524,7 @@ void Win32IDE::onWelcomeAction(const std::string& action)
                 // P0: Sync workspace context to agentic bridge
                 if (m_agenticBridge) {
                     m_agenticBridge->SetWorkspaceRoot(folderPath);
-                    RAWRXD_LOG_INFO("Agent workspace context synced to: " << folderPath);
+                    RAWRXD_LOG_INFO("Win32IDE_WelcomePage") << "Agent workspace context synced to: " << folderPath;
                 }
 
                 // Refresh file tree
@@ -564,5 +557,5 @@ void Win32IDE::onWelcomeAction(const std::string& action)
         saveSettings();
     }
 
-    RAWRXD_LOG_INFO("Welcome action: " << action);
+    RAWRXD_LOG_INFO("Win32IDE_WelcomePage") << "Welcome action: " << action;
 }
