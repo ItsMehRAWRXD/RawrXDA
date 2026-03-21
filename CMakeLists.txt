@@ -1068,12 +1068,6 @@ if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES)
     if(RAWRXD_ENABLE_MISSING_HANDLER_STUBS)
         message(FATAL_ERROR "[ProductionLane] RAWRXD_ENABLE_MISSING_HANDLER_STUBS=ON is incompatible with RAWRXD_PRODUCTION_STRIP_STUB_SOURCES=ON.")
     endif()
-    if(EXISTS "${CMAKE_SOURCE_DIR}/src/core/missing_handler_stubs.cpp")
-        file(READ "${CMAKE_SOURCE_DIR}/src/core/missing_handler_stubs.cpp" _RAWR_MISSING_HANDLER_STUBS_SRC)
-        if(_RAWR_MISSING_HANDLER_STUBS_SRC MATCHES "history/reconstructed")
-            message(FATAL_ERROR "[ProductionLane] src/core/missing_handler_stubs.cpp is history-indirected. Promote canonical ownership under src/core before strict production strip builds.")
-        endif()
-    endif()
 endif()
 
 if(RAWR_REPLACE_SSOT_HANDLERS)
@@ -1116,6 +1110,16 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/agent/quantum_missing_impl.cpp")
     list(REMOVE_ITEM RAWR_ENGINE_SOURCES src/agent/quantum_dynamic_time_manager_impl.cpp)
 endif()
 string(TOUPPER "${RAWR_SSOT_PROVIDER}" RAWR_SSOT_PROVIDER_UPPER)
+if(EXISTS "${CMAKE_SOURCE_DIR}/src/core/missing_handler_stubs.cpp")
+    file(READ "${CMAKE_SOURCE_DIR}/src/core/missing_handler_stubs.cpp" _RAWR_MISSING_HANDLER_STUBS_SRC)
+    if(_RAWR_MISSING_HANDLER_STUBS_SRC MATCHES "history/reconstructed")
+        if(RAWRXD_PRODUCTION_STRIP_STUB_SOURCES OR RAWRXD_ENABLE_MISSING_HANDLER_STUBS OR RAWR_SSOT_PROVIDER_UPPER STREQUAL "STUBS")
+            message(FATAL_ERROR "[SSOT Ownership] src/core/missing_handler_stubs.cpp must be canonically owned under src/core (history-indirected include wrapper is not allowed in strict/stub-provider lanes).")
+        else()
+            message(WARNING "[SSOT Ownership] src/core/missing_handler_stubs.cpp is history-indirected. Strict/stub-provider lanes will reject this.")
+        endif()
+    endif()
+endif()
 set(_RAWR_VALID_SSOT_PROVIDERS CORE EXT AUTO STUBS FEATURES)
 list(FIND _RAWR_VALID_SSOT_PROVIDERS "${RAWR_SSOT_PROVIDER_UPPER}" _rawwr_ssot_provider_idx)
 if(_rawwr_ssot_provider_idx EQUAL -1)
@@ -3363,11 +3367,12 @@ if(WIN32)
         list(REMOVE_ITEM WIN32IDE_SOURCES
             src/core/ssot_handlers.cpp
             src/core/ssot_handlers_ext_isolated.cpp
-        )
-        list(APPEND WIN32IDE_SOURCES
             src/core/ssot_missing_handlers_provider.cpp
         )
-        message(STATUS "[SSOT] Win32IDE: STUBS lane enabled (excluding ssot_handlers.cpp + ssot_handlers_ext_isolated.cpp; adding ssot_missing_handlers_provider.cpp)")
+        list(APPEND WIN32IDE_SOURCES
+            src/core/missing_handler_stubs.cpp
+        )
+        message(STATUS "[SSOT] Win32IDE: STUBS lane enabled (excluding ssot_handlers.cpp + ssot_handlers_ext_isolated.cpp + ssot_missing_handlers_provider.cpp; adding missing_handler_stubs.cpp)")
     else()
         # Real lane - keep isolated handlers and runtime menu/command handlers.
         # DO NOT remove ssot_handlers_ext_isolated.cpp - it has working VSCEXT handlers 10000-10009
@@ -4104,10 +4109,13 @@ endif()
 
 # Build SSOT stub-lane ownership guard only when explicitly enabled.
 set(RAWRXD_HAS_SSOT_STUB_LANE_GUARD OFF)
-if(RAWRXD_ENABLE_MISSING_HANDLER_STUBS AND EXISTS "${CMAKE_SOURCE_DIR}/src/core/missing_handler_stubs.cpp")
+if(RAWRXD_ENABLE_MISSING_HANDLER_STUBS)
+    if(NOT EXISTS "${CMAKE_SOURCE_DIR}/src/core/missing_handler_stubs.cpp")
+        message(FATAL_ERROR "[SSOT] RAWRXD_ENABLE_MISSING_HANDLER_STUBS=ON requires src/core/missing_handler_stubs.cpp.")
+    endif()
+
     add_library(ssot_stub_lane_objs OBJECT
         ${CMAKE_SOURCE_DIR}/src/core/missing_handler_stubs.cpp
-        ${CMAKE_SOURCE_DIR}/src/core/ssot_missing_handlers_provider.cpp
     )
     target_compile_definitions(ssot_stub_lane_objs PRIVATE
         RAWRXD_ENABLE_MISSING_HANDLER_STUBS=1
