@@ -1,7 +1,10 @@
+#include <atomic>
+#include <cstdint>
+
 namespace {
-static unsigned g_masmAgentFailureDetectCalls = 0;
+std::atomic<uint32_t> g_masmAgentFailureChecks{0};
 }
 
 extern "C" void masm_agent_failure_detect_simd(void) {
-    g_masmAgentFailureDetectCalls += 1;
+    g_masmAgentFailureChecks.fetch_add(1, std::memory_order_relaxed);
 }

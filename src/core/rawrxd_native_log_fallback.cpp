@@ -1,24 +1,35 @@
+#include <array>
 #include <cstdarg>
 #include <cstdio>
-#include <cstring>
-
-namespace {
-constexpr size_t kNativeLogSlots = 32;
-constexpr size_t kNativeLogLineCap = 256;
-char g_nativeLogRing[kNativeLogSlots][kNativeLogLineCap]{};
-unsigned g_nativeLogWriteIndex = 0;
-}
+#include <string>
+#include <windows.h>
 
 extern "C" void RawrXD_Native_Log(const char* fmt, ...) {
-    if (!fmt) {
+    if (fmt == nullptr) {
         return;
     }
-    char line[kNativeLogLineCap]{};
+
+    std::array<char, 2048> stackBuffer = {};
     va_list args;
     va_start(args, fmt);
-    std::vsnprintf(line, sizeof(line), fmt, args);
+    const int written = std::vsnprintf(stackBuffer.data(), stackBuffer.size(), fmt, args);
     va_end(args);
-    std::strncpy(g_nativeLogRing[g_nativeLogWriteIndex % kNativeLogSlots], line, kNativeLogLineCap - 1);
-    g_nativeLogRing[g_nativeLogWriteIndex % kNativeLogSlots][kNativeLogLineCap - 1] = '\0';
-    g_nativeLogWriteIndex += 1;
+    if (written < 0) {
+        return;
+    }
+
+    const char* text = stackBuffer.data();
+    std::string heapBuffer;
+    if (static_cast<size_t>(written) >= stackBuffer.size()) {
+        heapBuffer.resize(static_cast<size_t>(written) + 1U, '\0');
+        va_start(args, fmt);
+        std::vsnprintf(heapBuffer.data(), heapBuffer.size(), fmt, args);
+        va_end(args);
+        text = heapBuffer.c_str();
+    }
+
+    std::fputs(text, stderr);
+    std::fputc('\n', stderr);
+    OutputDebugStringA(text);
+    OutputDebugStringA("\n");
 }

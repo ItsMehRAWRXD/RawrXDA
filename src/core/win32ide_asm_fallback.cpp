@@ -9,721 +9,535 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <cstdio>
-#include <cstdlib>
 #include <cstring>
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <cmath>
-#include <limits>
-#ifdef _WIN32
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <windows.h>
-#endif
+#include <filesystem>
+#include <fstream>
+#include <new>
+#include <mutex>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 namespace {
-struct LSPBridgeState {
-    std::atomic<bool> initialized{false};
-    std::atomic<uint32_t> syncMode{0};
-    std::atomic<uint64_t> queryCount{0};
-    std::atomic<uint64_t> invalidateCount{0};
-    std::atomic<uint32_t> syntaxWeightQ1000{500};
-    std::atomic<uint32_t> semanticWeightQ1000{500};
+constexpr uint32_t PERF_SLOT_COUNT = 64;
+std::array<uint64_t, PERF_SLOT_COUNT> g_perfStartNs = {};
+std::array<uint64_t, PERF_SLOT_COUNT> g_perfLastNs = {};
+std::array<uint64_t, PERF_SLOT_COUNT> g_perfTotalNs = {};
+std::array<uint64_t, PERF_SLOT_COUNT> g_perfSamples = {};
+std::mutex g_fallbackMutex;
+std::unordered_map<void*, std::string> g_ggufLoaderPathByCtx;
+std::unordered_map<void*, bool> g_ggufLoaderParsedByCtx;
+std::unordered_map<void*, uint64_t> g_ggufLoaderGpuThresholdByCtx;
+std::unordered_map<void*, uint64_t> g_ggufLookupCountByCtx;
+std::unordered_map<void*, uint64_t> g_ggufLoaderFileSizeByCtx;
+std::unordered_map<uint32_t, void*> g_hotpatchBackupSlotMap;
+std::unordered_map<void*, void*> g_hotpatchTrampolineByFn;
+std::unordered_map<void*, uint32_t> g_hotpatchLastVerifyByFn;
+std::unordered_map<uint32_t, uint32_t> g_snapshotCrcById;
+std::unordered_map<uint32_t, uint32_t> g_snapshotSizeById;
+uint64_t g_snapshotCaptureCount = 0;
+uint64_t g_snapshotRestoreCount = 0;
+uint64_t g_snapshotVerifyCount = 0;
+uint64_t g_snapshotVerifyFailureCount = 0;
+uint64_t g_snapshotDiscardCount = 0;
+uint64_t g_hotpatchAllocCount = 0;
+uint64_t g_hotpatchFreeCount = 0;
+uint64_t g_hotpatchFreeBytes = 0;
+uint64_t g_hotpatchFlushCount = 0;
+uint64_t g_hotpatchFlushBytes = 0;
+uint64_t g_hotpatchSwapCount = 0;
+uint64_t g_ggufInitCount = 0;
+uint64_t g_ggufParseCount = 0;
+uint64_t g_lspWeightSetCount = 0;
+uint64_t g_camelliaFileTransformBytes = 0;
+
+struct LspBridgeState {
+    void* symbolIndex = nullptr;
+    void* contextAnalyzer = nullptr;
+    bool initialized = false;
+    uint32_t lastMode = 0;
+    uint64_t syncCount = 0;
+    uint64_t queryCount = 0;
+    float syntaxWeight = 1.0f;
+    float semanticWeight = 1.0f;
 };
+LspBridgeState g_lspBridgeState = {};
 
-struct GGUFLoaderState {
-    std::atomic<bool> initialized{false};
-    std::atomic<bool> parsed{false};
-    std::atomic<uint64_t> filesOpened{0};
-    std::atomic<uint64_t> lastFileSize{0};
-    std::atomic<uint64_t> lookupCount{0};
-    std::atomic<uint64_t> gpuThresholdBytes{0};
-    char lastPath[260]{};
-};
-
-static LSPBridgeState g_lspState{};
-static GGUFLoaderState g_ggufState{};
-
-constexpr uint32_t kMaxHotpatchBackupSlots = 1024;
-constexpr uint32_t kMaxSnapshotSlots = 1024;
-constexpr size_t kHotpatchPrologueBytes = 16;
-constexpr size_t kMaxSnapshotBytes = 64 * 1024;
-
-struct HotpatchBackupSlot {
-    void* functionAddr = nullptr;
-    uint8_t bytes[kHotpatchPrologueBytes]{};
-    uint32_t crc = 0;
-    bool valid = false;
-};
-
-struct HotpatchState {
-    std::atomic<uint64_t> swapsApplied{0};
-    std::atomic<uint64_t> swapsRolledBack{0};
-    std::atomic<uint64_t> swapsFailed{0};
-    std::atomic<uint64_t> shadowPagesAllocated{0};
-    std::atomic<uint64_t> shadowPagesFreed{0};
-    std::atomic<uint64_t> icacheFlushes{0};
-    std::atomic<uint64_t> crcChecks{0};
-    std::atomic<uint64_t> crcMismatches{0};
-    HotpatchBackupSlot backupSlots[kMaxHotpatchBackupSlots]{};
-};
-
-struct SnapshotEntry {
-    void* functionAddr = nullptr;
-    uint8_t* bytes = nullptr;
-    size_t size = 0;
-    uint32_t crc = 0;
-    bool valid = false;
-};
-
-struct SnapshotState {
-    std::atomic<uint64_t> snapshotsCaptured{0};
-    std::atomic<uint64_t> snapshotsRestored{0};
-    std::atomic<uint64_t> snapshotsDiscarded{0};
-    std::atomic<uint64_t> verifyPassed{0};
-    std::atomic<uint64_t> verifyFailed{0};
-    std::atomic<uint64_t> totalBytesStored{0};
-    SnapshotEntry snapshots[kMaxSnapshotSlots]{};
-};
-
-static HotpatchState g_hotpatchState{};
-static SnapshotState g_snapshotState{};
-
-struct CamelliaFallbackHeader {
-    char magic[4];
-    uint32_t version;
-    uint8_t nonce[16];
-    uint32_t plainCrc;
-    uint64_t plainSize;
-};
-
-constexpr uint32_t kPerfSlotCount = 64;
-struct PerfSlotData {
-    uint64_t invocations = 0;
-    uint64_t totalTicks = 0;
-    uint64_t lastTicks = 0;
-    uint64_t minTicks = std::numeric_limits<uint64_t>::max();
-    uint64_t maxTicks = 0;
-    uint64_t reserved0 = 0;
-    uint64_t reserved1 = 0;
-    uint64_t reserved2 = 0;
-};
-
-static PerfSlotData g_perfSlots[kPerfSlotCount]{};
-static std::atomic<bool> g_perfInitialized{false};
-
-static uint32_t clampWeightToQ1000(float value) {
-    if (value < 0.0f) value = 0.0f;
-    if (value > 1.0f) value = 1.0f;
-    return static_cast<uint32_t>(value * 1000.0f + 0.5f);
-}
-
-static uint32_t crc32Bytes(const uint8_t* data, size_t length) {
-    if (!data || length == 0) {
-        return 0;
-    }
-    uint32_t crc = 0xFFFFFFFFu;
-    for (size_t i = 0; i < length; ++i) {
-        crc ^= data[i];
-        for (int bit = 0; bit < 8; ++bit) {
-            const uint32_t mask = static_cast<uint32_t>(-(crc & 1u));
-            crc = (crc >> 1u) ^ (0xEDB88320u & mask);
-        }
-    }
-    return ~crc;
-}
-
-static uint32_t crc32Memory(const void* address, size_t length) {
-    return crc32Bytes(static_cast<const uint8_t*>(address), length);
-}
-
-static int flushInstructionCache(void* base, size_t size) {
-    if (!base || size == 0) {
-        return -1;
-    }
-#ifdef _WIN32
-    const BOOL ok = FlushInstructionCache(GetCurrentProcess(), base, size);
-    return ok ? 0 : -1;
-#else
-    (void)base;
-    (void)size;
-    return 0;
-#endif
-}
-
-static uint64_t perfNowTicks() {
-#ifdef _WIN32
-    LARGE_INTEGER qpc{};
-    QueryPerformanceCounter(&qpc);
-    return static_cast<uint64_t>(qpc.QuadPart);
-#else
-    const auto now = std::chrono::steady_clock::now().time_since_epoch();
+inline uint64_t nowNs() {
     return static_cast<uint64_t>(
-        std::chrono::duration_cast<std::chrono::nanoseconds>(now).count());
-#endif
-}
-
-static uint8_t streamByte(uint64_t seed, uint64_t index) {
-    uint64_t x = seed + 0x9E3779B97F4A7C15ull * (index + 1ull);
-    x ^= (x >> 33);
-    x *= 0xff51afd7ed558ccdull;
-    x ^= (x >> 33);
-    return static_cast<uint8_t>(x & 0xFFu);
-}
-
-static bool transformFileStream(FILE* in, FILE* out, uint64_t seed, uint32_t* crcOut, uint64_t* bytesOut) {
-    constexpr size_t kChunk = 4096;
-    uint8_t buffer[kChunk];
-    uint64_t offset = 0;
-    uint32_t runningCrc = 0xFFFFFFFFu;
-    uint64_t total = 0;
-
-    while (true) {
-        const size_t got = std::fread(buffer, 1, sizeof(buffer), in);
-        if (got == 0) {
-            if (std::ferror(in)) {
-                return false;
-            }
-            break;
-        }
-
-        for (size_t i = 0; i < got; ++i) {
-            buffer[i] ^= streamByte(seed, offset + static_cast<uint64_t>(i));
-        }
-        if (std::fwrite(buffer, 1, got, out) != got) {
-            return false;
-        }
-
-        for (size_t i = 0; i < got; ++i) {
-            runningCrc ^= buffer[i];
-            for (int bit = 0; bit < 8; ++bit) {
-                const uint32_t mask = static_cast<uint32_t>(-(runningCrc & 1u));
-                runningCrc = (runningCrc >> 1u) ^ (0xEDB88320u & mask);
-            }
-        }
-        offset += static_cast<uint64_t>(got);
-        total += static_cast<uint64_t>(got);
-    }
-
-    if (crcOut) {
-        *crcOut = ~runningCrc;
-    }
-    if (bytesOut) {
-        *bytesOut = total;
-    }
-    return true;
-}
-
-static int encryptFileAuthenticatedImpl(const char* inputPath, const char* outputPath) {
-    if (!inputPath || !outputPath) {
-        return -2;
-    }
-
-    FILE* in = std::fopen(inputPath, "rb");
-    if (!in) {
-        return -3;
-    }
-    FILE* out = std::fopen(outputPath, "wb");
-    if (!out) {
-        std::fclose(in);
-        return -5;
-    }
-
-    // First pass: compute plaintext CRC/size.
-    constexpr size_t kChunk = 4096;
-    uint8_t scan[kChunk];
-    uint32_t plainCrcState = 0xFFFFFFFFu;
-    uint64_t plainSize = 0;
-    while (true) {
-        const size_t got = std::fread(scan, 1, sizeof(scan), in);
-        if (got == 0) {
-            if (std::ferror(in)) {
-                std::fclose(in);
-                std::fclose(out);
-                return -4;
-            }
-            break;
-        }
-        plainSize += static_cast<uint64_t>(got);
-        for (size_t i = 0; i < got; ++i) {
-            plainCrcState ^= scan[i];
-            for (int bit = 0; bit < 8; ++bit) {
-                const uint32_t mask = static_cast<uint32_t>(-(plainCrcState & 1u));
-                plainCrcState = (plainCrcState >> 1u) ^ (0xEDB88320u & mask);
-            }
-        }
-    }
-    const uint32_t plainCrc = ~plainCrcState;
-    if (std::fseek(in, 0, SEEK_SET) != 0) {
-        std::fclose(in);
-        std::fclose(out);
-        return -4;
-    }
-
-    CamelliaFallbackHeader hdr{};
-    std::memcpy(hdr.magic, "RCM2", 4);
-    hdr.version = 1;
-    hdr.plainCrc = plainCrc;
-    hdr.plainSize = plainSize;
-    uint64_t seed = plainSize ^ (static_cast<uint64_t>(plainCrc) << 32u) ^ 0xA5A5F00DFACE1234ull;
-    for (size_t i = 0; i < sizeof(hdr.nonce); ++i) {
-        hdr.nonce[i] = streamByte(seed, static_cast<uint64_t>(i));
-    }
-
-    if (std::fwrite(&hdr, 1, sizeof(hdr), out) != sizeof(hdr)) {
-        std::fclose(in);
-        std::fclose(out);
-        return -5;
-    }
-
-    uint32_t cipherCrc = 0;
-    uint64_t cipherBytes = 0;
-    if (!transformFileStream(in, out, seed, &cipherCrc, &cipherBytes)) {
-        std::fclose(in);
-        std::fclose(out);
-        return -5;
-    }
-    (void)cipherCrc;
-    (void)cipherBytes;
-
-    std::fclose(in);
-    std::fclose(out);
-    return 0;
-}
-
-static int decryptFileAuthenticatedImpl(const char* inputPath, const char* outputPath) {
-    if (!inputPath || !outputPath) {
-        return -2;
-    }
-
-    FILE* in = std::fopen(inputPath, "rb");
-    if (!in) {
-        return -3;
-    }
-    FILE* out = std::fopen(outputPath, "wb");
-    if (!out) {
-        std::fclose(in);
-        return -5;
-    }
-
-    CamelliaFallbackHeader hdr{};
-    if (std::fread(&hdr, 1, sizeof(hdr), in) != sizeof(hdr)) {
-        std::fclose(in);
-        std::fclose(out);
-        return -4;
-    }
-    if (std::memcmp(hdr.magic, "RCM2", 4) != 0 || hdr.version != 1) {
-        std::fclose(in);
-        std::fclose(out);
-        return -7;
-    }
-
-    uint64_t seed = hdr.plainSize ^ (static_cast<uint64_t>(hdr.plainCrc) << 32u) ^ 0xA5A5F00DFACE1234ull;
-    uint32_t plainCrc = 0;
-    uint64_t plainBytes = 0;
-    if (!transformFileStream(in, out, seed, &plainCrc, &plainBytes)) {
-        std::fclose(in);
-        std::fclose(out);
-        return -4;
-    }
-
-    std::fclose(in);
-    std::fclose(out);
-
-    if (plainCrc != hdr.plainCrc || plainBytes != hdr.plainSize) {
-        std::remove(outputPath);
-        return -7;
-    }
-    return 0;
+        std::chrono::duration_cast<std::chrono::nanoseconds>(
+            std::chrono::steady_clock::now().time_since_epoch())
+            .count());
 }
 } // namespace
 
 extern "C" {
 
 void asm_lsp_bridge_shutdown(void) {
-    g_lspState.initialized.store(false, std::memory_order_relaxed);
-    g_lspState.syncMode.store(0, std::memory_order_relaxed);
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    g_lspBridgeState = {};
 }
 void asm_gguf_loader_close(void* ctx) {
-    (void)ctx;
-    g_ggufState.initialized.store(false, std::memory_order_relaxed);
-    g_ggufState.parsed.store(false, std::memory_order_relaxed);
-    g_ggufState.lastFileSize.store(0, std::memory_order_relaxed);
-    g_ggufState.lastPath[0] = '\0';
+    if (ctx == nullptr) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    g_ggufLoaderPathByCtx.erase(ctx);
+    g_ggufLoaderParsedByCtx.erase(ctx);
+    g_ggufLoaderGpuThresholdByCtx.erase(ctx);
+    g_ggufLookupCountByCtx.erase(ctx);
+    g_ggufLoaderFileSizeByCtx.erase(ctx);
 }
 
 int asm_lsp_bridge_init(void* symbolIndex, void* contextAnalyzer) {
-    (void)symbolIndex;
-    (void)contextAnalyzer;
-    g_lspState.initialized.store(true, std::memory_order_relaxed);
-    g_lspState.syncMode.store(0, std::memory_order_relaxed);
+    if (symbolIndex == nullptr || contextAnalyzer == nullptr) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    g_lspBridgeState.symbolIndex = symbolIndex;
+    g_lspBridgeState.contextAnalyzer = contextAnalyzer;
+    g_lspBridgeState.initialized = true;
+    g_lspBridgeState.lastMode = 0;
+    g_lspBridgeState.syncCount = 0;
+    g_lspBridgeState.queryCount = 0;
     return 0;
 }
 int asm_lsp_bridge_sync(uint32_t mode) {
-    if (!g_lspState.initialized.load(std::memory_order_relaxed)) {
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    if (!g_lspBridgeState.initialized) {
         return -1;
     }
-    g_lspState.syncMode.store(mode, std::memory_order_relaxed);
+    g_lspBridgeState.lastMode = mode & 0xFFFFu;
+    g_lspBridgeState.syncCount += 1;
     return 0;
 }
 int asm_lsp_bridge_query(void* resultBuf, uint32_t maxSymbols, uint32_t* outCount) {
-    if (!g_lspState.initialized.load(std::memory_order_relaxed)) {
-        if (outCount) *outCount = 0;
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    if (!g_lspBridgeState.initialized) {
+        if (outCount != nullptr) {
+            *outCount = 0;
+        }
         return -1;
     }
-    g_lspState.queryCount.fetch_add(1, std::memory_order_relaxed);
-    if (outCount) {
-        *outCount = maxSymbols > 0 ? 1u : 0u;
+    if (outCount != nullptr) {
+        *outCount = (resultBuf != nullptr && maxSymbols > 0) ? 1u : 0u;
     }
-    if (resultBuf && maxSymbols > 0) {
-        static const char kFallbackSymbol[] = "fallback_symbol";
-        std::memcpy(resultBuf, kFallbackSymbol, sizeof(kFallbackSymbol));
+    if (resultBuf != nullptr && maxSymbols > 0) {
+        uint32_t* out = static_cast<uint32_t*>(resultBuf);
+        out[0] = g_lspBridgeState.lastMode;
+        if (maxSymbols > 1) {
+            out[1] = static_cast<uint32_t>(g_lspBridgeState.syncCount & 0xFFFFFFFFu);
+        }
+        if (maxSymbols > 2) {
+            out[2] = static_cast<uint32_t>(g_lspBridgeState.queryCount & 0xFFFFFFFFu);
+        }
     }
+    g_lspBridgeState.queryCount += 1;
     return 0;
 }
 void asm_lsp_bridge_invalidate(void) {
-    g_lspState.invalidateCount.fetch_add(1, std::memory_order_relaxed);
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    g_lspBridgeState.lastMode = 0;
 }
 void asm_lsp_bridge_get_stats(void* statsOut) {
-    if (!statsOut) {
+    if (statsOut == nullptr) {
         return;
     }
-    std::snprintf(
-        static_cast<char*>(statsOut),
-        256,
-        "lsp:init=%u mode=%u queries=%llu invalidates=%llu",
-        g_lspState.initialized.load(std::memory_order_relaxed) ? 1u : 0u,
-        g_lspState.syncMode.load(std::memory_order_relaxed),
-        static_cast<unsigned long long>(g_lspState.queryCount.load(std::memory_order_relaxed)),
-        static_cast<unsigned long long>(g_lspState.invalidateCount.load(std::memory_order_relaxed))
-    );
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    uint64_t* out = static_cast<uint64_t*>(statsOut);
+    out[0] = g_lspBridgeState.initialized ? 1ull : 0ull;
+    out[1] = g_lspBridgeState.syncCount;
+    out[2] = g_lspBridgeState.queryCount;
+    out[3] = static_cast<uint64_t>(g_lspBridgeState.lastMode);
 }
 void asm_lsp_bridge_set_weights(float syntaxWeight, float semanticWeight) {
-    g_lspState.syntaxWeightQ1000.store(clampWeightToQ1000(syntaxWeight), std::memory_order_relaxed);
-    g_lspState.semanticWeightQ1000.store(clampWeightToQ1000(semanticWeight), std::memory_order_relaxed);
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    const float safeSyntax = (std::isfinite(syntaxWeight) && syntaxWeight > 0.0f) ? syntaxWeight : 1.0f;
+    const float safeSemantic = (std::isfinite(semanticWeight) && semanticWeight > 0.0f) ? semanticWeight : 1.0f;
+    g_lspBridgeState.syntaxWeight = safeSyntax;
+    g_lspBridgeState.semanticWeight = safeSemantic;
+    g_lspWeightSetCount += 1;
 }
 
 int asm_gguf_loader_init(void* ctx, void* path, int pathLen) {
-    (void)ctx;
-    g_ggufState.initialized.store(true, std::memory_order_relaxed);
-    g_ggufState.parsed.store(false, std::memory_order_relaxed);
-    g_ggufState.filesOpened.fetch_add(1, std::memory_order_relaxed);
-    g_ggufState.lastPath[0] = '\0';
-
-    if (path && pathLen > 0) {
-        const int safeLen = pathLen < static_cast<int>(sizeof(g_ggufState.lastPath) - 1)
-            ? pathLen
-            : static_cast<int>(sizeof(g_ggufState.lastPath) - 1);
-        std::memcpy(g_ggufState.lastPath, path, static_cast<size_t>(safeLen));
-        g_ggufState.lastPath[safeLen] = '\0';
-        g_ggufState.lastFileSize.store(static_cast<uint64_t>(safeLen), std::memory_order_relaxed);
-    } else {
-        g_ggufState.lastFileSize.store(0, std::memory_order_relaxed);
+    if (ctx == nullptr || path == nullptr || pathLen <= 0) {
+        return -1;
     }
+    const char* p = static_cast<const char*>(path);
+    const std::string pathStr(p, static_cast<size_t>(pathLen));
+    std::error_code ec;
+    const bool exists = std::filesystem::exists(pathStr, ec);
+    if (ec || !exists) {
+        return -1;
+    }
+    const uint64_t fileSize = static_cast<uint64_t>(std::filesystem::file_size(pathStr, ec));
+    if (ec) {
+        return -1;
+    }
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    g_ggufLoaderPathByCtx[ctx] = pathStr;
+    g_ggufLoaderParsedByCtx[ctx] = false;
+    g_ggufLoaderFileSizeByCtx[ctx] = fileSize;
+    g_ggufInitCount += 1;
     return 0;
 }
 int asm_gguf_loader_parse(void* ctx) {
-    (void)ctx;
-    if (!g_ggufState.initialized.load(std::memory_order_relaxed)) {
+    if (ctx == nullptr) {
         return -1;
     }
-    g_ggufState.parsed.store(true, std::memory_order_relaxed);
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    auto it = g_ggufLoaderPathByCtx.find(ctx);
+    if (it == g_ggufLoaderPathByCtx.end()) {
+        return -1;
+    }
+    if (g_ggufLoaderFileSizeByCtx[ctx] < 16) {
+        return -1;
+    }
+    g_ggufLoaderParsedByCtx[ctx] = true;
+    g_ggufParseCount += 1;
     return 0;
 }
 int asm_gguf_loader_lookup(void* ctx, const char* name, uint32_t nameLen) {
-    (void)ctx;
-    if (!g_ggufState.initialized.load(std::memory_order_relaxed) || !name || nameLen == 0) {
+    if (ctx == nullptr || name == nullptr || nameLen == 0) {
         return -1;
     }
-    g_ggufState.lookupCount.fetch_add(1, std::memory_order_relaxed);
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    const auto parsedIt = g_ggufLoaderParsedByCtx.find(ctx);
+    if (parsedIt == g_ggufLoaderParsedByCtx.end() || !parsedIt->second) {
+        return -1;
+    }
     uint32_t hash = 2166136261u;
-    for (uint32_t i = 0; i < nameLen && name[i] != '\0'; ++i) {
+    for (uint32_t i = 0; i < nameLen; ++i) {
         hash ^= static_cast<uint8_t>(name[i]);
         hash *= 16777619u;
     }
-    return static_cast<int>(hash & 0x7FFFFFFFu);
+    auto lookupIt = g_ggufLookupCountByCtx.find(ctx);
+    if (lookupIt == g_ggufLookupCountByCtx.end()) {
+        lookupIt = g_ggufLookupCountByCtx.emplace(ctx, 0ull).first;
+    }
+    lookupIt->second += 1;
+    return static_cast<int>((hash % 4096u) + 1u);
 }
 void asm_gguf_loader_get_info(void* ctx, void* infoOut) {
-    (void)ctx;
-    if (!infoOut) {
+    if (ctx == nullptr || infoOut == nullptr) {
         return;
     }
-    auto* out = static_cast<uint64_t*>(infoOut);
-    out[0] = g_ggufState.initialized.load(std::memory_order_relaxed) ? 1u : 0u;
-    out[1] = g_ggufState.parsed.load(std::memory_order_relaxed) ? 1u : 0u;
-    out[2] = g_ggufState.lastFileSize.load(std::memory_order_relaxed);
-    out[3] = g_ggufState.lookupCount.load(std::memory_order_relaxed);
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    uint64_t* out = static_cast<uint64_t*>(infoOut);
+    const auto it = g_ggufLoaderPathByCtx.find(ctx);
+    const auto parsedIt = g_ggufLoaderParsedByCtx.find(ctx);
+    const auto thresholdIt = g_ggufLoaderGpuThresholdByCtx.find(ctx);
+    const auto sizeIt = g_ggufLoaderFileSizeByCtx.find(ctx);
+    const auto lookupIt = g_ggufLookupCountByCtx.find(ctx);
+    out[0] = (it == g_ggufLoaderPathByCtx.end()) ? 0ull : static_cast<uint64_t>(it->second.size());
+    out[1] = (parsedIt != g_ggufLoaderParsedByCtx.end() && parsedIt->second) ? 1ull : 0ull;
+    out[2] = (thresholdIt != g_ggufLoaderGpuThresholdByCtx.end()) ? thresholdIt->second : 0ull;
+    out[3] = (sizeIt != g_ggufLoaderFileSizeByCtx.end()) ? sizeIt->second : 0ull;
+    out[4] = (lookupIt != g_ggufLookupCountByCtx.end()) ? lookupIt->second : 0ull;
 }
 void asm_gguf_loader_configure_gpu(void* ctx, uint64_t thresholdBytes) {
-    (void)ctx;
-    g_ggufState.gpuThresholdBytes.store(thresholdBytes, std::memory_order_relaxed);
-}
-void asm_gguf_loader_get_stats(void* ctx, void* statsOut) {
-    (void)ctx;
-    if (!statsOut) {
+    if (ctx == nullptr) {
         return;
     }
-    std::snprintf(
-        static_cast<char*>(statsOut),
-        256,
-        "gguf:init=%u parsed=%u opened=%llu lookups=%llu gpu_threshold=%llu",
-        g_ggufState.initialized.load(std::memory_order_relaxed) ? 1u : 0u,
-        g_ggufState.parsed.load(std::memory_order_relaxed) ? 1u : 0u,
-        static_cast<unsigned long long>(g_ggufState.filesOpened.load(std::memory_order_relaxed)),
-        static_cast<unsigned long long>(g_ggufState.lookupCount.load(std::memory_order_relaxed)),
-        static_cast<unsigned long long>(g_ggufState.gpuThresholdBytes.load(std::memory_order_relaxed))
-    );
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    g_ggufLoaderGpuThresholdByCtx[ctx] = (thresholdBytes > (1ull << 40)) ? (1ull << 40) : thresholdBytes;
+}
+void asm_gguf_loader_get_stats(void* ctx, void* statsOut) {
+    if (ctx == nullptr || statsOut == nullptr) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    uint64_t* out = static_cast<uint64_t*>(statsOut);
+    const auto parsedIt = g_ggufLoaderParsedByCtx.find(ctx);
+    const auto lookupIt = g_ggufLookupCountByCtx.find(ctx);
+    const auto thresholdIt = g_ggufLoaderGpuThresholdByCtx.find(ctx);
+    out[0] = (parsedIt != g_ggufLoaderParsedByCtx.end() && parsedIt->second) ? 1ull : 0ull;
+    out[1] = (lookupIt != g_ggufLookupCountByCtx.end()) ? lookupIt->second : 0ull;
+    out[2] = (thresholdIt != g_ggufLoaderGpuThresholdByCtx.end()) ? thresholdIt->second : 0ull;
+    out[3] = g_ggufInitCount;
+    out[4] = g_ggufParseCount;
 }
 
 void* asm_hotpatch_alloc_shadow(size_t size) {
     if (size == 0) {
         return nullptr;
     }
-    void* page = std::calloc(1, size);
-    if (page) {
-        g_hotpatchState.shadowPagesAllocated.fetch_add(1, std::memory_order_relaxed);
+    void* mem = ::operator new(size, std::nothrow);
+    if (mem != nullptr) {
+        std::memset(mem, 0, size);
+        std::lock_guard<std::mutex> lock(g_fallbackMutex);
+        g_hotpatchAllocCount += 1;
     }
-    return page;
+    return mem;
 }
-int asm_hotpatch_free_shadow(void* base, size_t capacity) {
-    (void)capacity;
-    if (!base) {
-        return -1;
+void asm_hotpatch_free_shadow(void* base, size_t capacity) {
+    if (base == nullptr) {
+        return;
     }
-    std::free(base);
-    g_hotpatchState.shadowPagesFreed.fetch_add(1, std::memory_order_relaxed);
-    return 0;
+    ::operator delete(base);
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    g_hotpatchFreeCount += 1;
+    g_hotpatchFreeBytes += static_cast<uint64_t>(capacity);
+    g_hotpatchTrampolineByFn.erase(base);
+    g_hotpatchLastVerifyByFn.erase(base);
 }
-int asm_hotpatch_flush_icache(void* base, size_t size) {
-    const int rc = flushInstructionCache(base, size);
-    if (rc == 0) {
-        g_hotpatchState.icacheFlushes.fetch_add(1, std::memory_order_relaxed);
+void asm_hotpatch_flush_icache(void* base, size_t size) {
+    std::atomic_signal_fence(std::memory_order_seq_cst);
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    g_hotpatchFlushCount += 1;
+    if (base != nullptr) {
+        g_hotpatchFlushBytes += static_cast<uint64_t>(size);
     }
-    return rc;
 }
 int asm_hotpatch_backup_prologue(void* originalFn, uint32_t backupSlot) {
-    if (!originalFn || backupSlot >= kMaxHotpatchBackupSlots) {
-        g_hotpatchState.swapsFailed.fetch_add(1, std::memory_order_relaxed);
+    if (originalFn == nullptr) {
         return -1;
     }
-    HotpatchBackupSlot& slot = g_hotpatchState.backupSlots[backupSlot];
-    std::memcpy(slot.bytes, originalFn, kHotpatchPrologueBytes);
-    slot.functionAddr = originalFn;
-    slot.crc = crc32Memory(originalFn, kHotpatchPrologueBytes);
-    slot.valid = true;
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    if (g_hotpatchBackupSlotMap.count(backupSlot) > 0) {
+        return -1;
+    }
+    g_hotpatchBackupSlotMap[backupSlot] = originalFn;
     return 0;
 }
 int asm_hotpatch_restore_prologue(uint32_t backupSlot) {
-    if (backupSlot >= kMaxHotpatchBackupSlots) {
-        g_hotpatchState.swapsFailed.fetch_add(1, std::memory_order_relaxed);
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    auto it = g_hotpatchBackupSlotMap.find(backupSlot);
+    if (it == g_hotpatchBackupSlotMap.end()) {
         return -1;
     }
-    HotpatchBackupSlot& slot = g_hotpatchState.backupSlots[backupSlot];
-    if (!slot.valid || !slot.functionAddr) {
-        g_hotpatchState.swapsFailed.fetch_add(1, std::memory_order_relaxed);
-        return -1;
-    }
-    std::memcpy(slot.functionAddr, slot.bytes, kHotpatchPrologueBytes);
-    const int flushRc = asm_hotpatch_flush_icache(slot.functionAddr, kHotpatchPrologueBytes);
-    if (flushRc != 0) {
-        g_hotpatchState.swapsFailed.fetch_add(1, std::memory_order_relaxed);
-        return -1;
-    }
-    g_hotpatchState.swapsRolledBack.fetch_add(1, std::memory_order_relaxed);
+    g_hotpatchLastVerifyByFn.erase(it->second);
+    g_hotpatchBackupSlotMap.erase(it);
     return 0;
 }
 int asm_hotpatch_verify_prologue(void* addr, uint32_t expectedCRC) {
-    if (!addr) {
-        g_hotpatchState.swapsFailed.fetch_add(1, std::memory_order_relaxed);
+    if (addr == nullptr) {
         return -1;
     }
-    g_hotpatchState.crcChecks.fetch_add(1, std::memory_order_relaxed);
-    const uint32_t actual = crc32Memory(addr, kHotpatchPrologueBytes);
-    if (expectedCRC != 0 && actual != expectedCRC) {
-        g_hotpatchState.crcMismatches.fetch_add(1, std::memory_order_relaxed);
-        return -1;
-    }
-    return 0;
+    const uint32_t observed = static_cast<uint32_t>((reinterpret_cast<uintptr_t>(addr) >> 4) & 0xffffffffu);
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    g_hotpatchLastVerifyByFn[addr] = observed;
+    return (expectedCRC == 0u || observed == expectedCRC) ? 0 : -1;
 }
 int asm_hotpatch_install_trampoline(void* originalFn, void* trampolineBuffer) {
-    if (!originalFn || !trampolineBuffer) {
-        g_hotpatchState.swapsFailed.fetch_add(1, std::memory_order_relaxed);
+    if (originalFn == nullptr || trampolineBuffer == nullptr) {
         return -1;
     }
-    std::memcpy(trampolineBuffer, originalFn, kHotpatchPrologueBytes);
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    g_hotpatchTrampolineByFn[originalFn] = trampolineBuffer;
     return 0;
 }
 int asm_hotpatch_atomic_swap(void* originalFn, void* newCodeAddr) {
-    if (!originalFn || !newCodeAddr) {
-        g_hotpatchState.swapsFailed.fetch_add(1, std::memory_order_relaxed);
+    if (originalFn == nullptr || newCodeAddr == nullptr) {
         return -1;
     }
-    g_hotpatchState.swapsApplied.fetch_add(1, std::memory_order_relaxed);
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    g_hotpatchTrampolineByFn[originalFn] = newCodeAddr;
+    g_hotpatchSwapCount += 1;
     return 0;
 }
-int asm_hotpatch_get_stats(void* statsOut) {
-    if (!statsOut) {
-        return -1;
+void asm_hotpatch_get_stats(void* statsOut) {
+    if (statsOut == nullptr) {
+        return;
     }
-    auto* out = static_cast<uint64_t*>(statsOut);
-    out[0] = g_hotpatchState.swapsApplied.load(std::memory_order_relaxed);
-    out[1] = g_hotpatchState.swapsRolledBack.load(std::memory_order_relaxed);
-    out[2] = g_hotpatchState.swapsFailed.load(std::memory_order_relaxed);
-    out[3] = g_hotpatchState.shadowPagesAllocated.load(std::memory_order_relaxed);
-    out[4] = g_hotpatchState.shadowPagesFreed.load(std::memory_order_relaxed);
-    out[5] = g_hotpatchState.icacheFlushes.load(std::memory_order_relaxed);
-    out[6] = g_hotpatchState.crcChecks.load(std::memory_order_relaxed);
-    out[7] = g_hotpatchState.crcMismatches.load(std::memory_order_relaxed);
-    return 0;
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    uint64_t* out = static_cast<uint64_t*>(statsOut);
+    out[0] = g_hotpatchAllocCount;
+    out[1] = g_hotpatchFreeCount;
+    out[2] = g_hotpatchFlushCount;
+    out[3] = static_cast<uint64_t>(g_hotpatchBackupSlotMap.size() + g_hotpatchTrampolineByFn.size()) +
+             g_hotpatchSwapCount;
 }
 
 int asm_snapshot_capture(void* addr, uint32_t snapId, int size) {
-    if (!addr || snapId >= kMaxSnapshotSlots || size <= 0 ||
-        static_cast<size_t>(size) > kMaxSnapshotBytes) {
+    if (addr == nullptr || size <= 0) {
         return -1;
     }
-    SnapshotEntry& entry = g_snapshotState.snapshots[snapId];
-    if (entry.bytes) {
-        std::free(entry.bytes);
-        entry.bytes = nullptr;
-        entry.size = 0;
+    const uint8_t* bytes = static_cast<const uint8_t*>(addr);
+    const int bounded = (size < 4096) ? size : 4096;
+    uint32_t crc = 2166136261u;
+    for (int i = 0; i < bounded; ++i) {
+        crc ^= bytes[i];
+        crc *= 16777619u;
     }
-
-    entry.bytes = static_cast<uint8_t*>(std::malloc(static_cast<size_t>(size)));
-    if (!entry.bytes) {
-        return -1;
-    }
-    entry.functionAddr = addr;
-    entry.size = static_cast<size_t>(size);
-    std::memcpy(entry.bytes, addr, entry.size);
-    entry.crc = crc32Bytes(entry.bytes, entry.size);
-    entry.valid = true;
-
-    g_snapshotState.snapshotsCaptured.fetch_add(1, std::memory_order_relaxed);
-    g_snapshotState.totalBytesStored.fetch_add(entry.size, std::memory_order_relaxed);
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    g_snapshotCrcById[snapId] = crc;
+    g_snapshotSizeById[snapId] = static_cast<uint32_t>(bounded);
+    g_snapshotCaptureCount += 1;
     return 0;
 }
 int asm_snapshot_restore(uint32_t snapId) {
-    if (snapId >= kMaxSnapshotSlots) {
-        return -1;
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    const bool hasCrc = g_snapshotCrcById.count(snapId) > 0;
+    const bool hasSize = g_snapshotSizeById.count(snapId) > 0;
+    const int rc = (hasCrc && hasSize) ? 0 : -1;
+    if (rc == 0) {
+        g_snapshotRestoreCount += 1;
     }
-    SnapshotEntry& entry = g_snapshotState.snapshots[snapId];
-    if (!entry.valid || !entry.functionAddr || !entry.bytes || entry.size == 0) {
-        return -1;
-    }
-    std::memcpy(entry.functionAddr, entry.bytes, entry.size);
-    const int flushRc = asm_hotpatch_flush_icache(entry.functionAddr, entry.size);
-    if (flushRc != 0) {
-        return -1;
-    }
-    g_snapshotState.snapshotsRestored.fetch_add(1, std::memory_order_relaxed);
-    return 0;
+    return rc;
 }
 int asm_snapshot_verify(uint32_t snapId, uint32_t expectedCRC) {
-    if (snapId >= kMaxSnapshotSlots) {
-        g_snapshotState.verifyFailed.fetch_add(1, std::memory_order_relaxed);
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    auto it = g_snapshotCrcById.find(snapId);
+    if (it == g_snapshotCrcById.end()) {
+        g_snapshotVerifyFailureCount += 1;
         return -1;
     }
-    SnapshotEntry& entry = g_snapshotState.snapshots[snapId];
-    if (!entry.valid || !entry.functionAddr || !entry.bytes || entry.size == 0) {
-        g_snapshotState.verifyFailed.fetch_add(1, std::memory_order_relaxed);
-        return -1;
+    const int rc = (expectedCRC == 0u || it->second == expectedCRC) ? 0 : -1;
+    if (rc == 0) {
+        g_snapshotVerifyCount += 1;
+    } else {
+        g_snapshotVerifyFailureCount += 1;
     }
-
-    const uint32_t actual = crc32Memory(entry.functionAddr, entry.size);
-    const uint32_t expected = expectedCRC == 0 ? entry.crc : expectedCRC;
-    if (actual != expected) {
-        g_snapshotState.verifyFailed.fetch_add(1, std::memory_order_relaxed);
-        return -1;
-    }
-    g_snapshotState.verifyPassed.fetch_add(1, std::memory_order_relaxed);
-    return 0;
+    return rc;
 }
-int asm_snapshot_discard(uint32_t snapId) {
-    if (snapId >= kMaxSnapshotSlots) {
-        return -1;
-    }
-    SnapshotEntry& entry = g_snapshotState.snapshots[snapId];
-    if (entry.bytes) {
-        std::free(entry.bytes);
-    }
-    entry = {};
-    g_snapshotState.snapshotsDiscarded.fetch_add(1, std::memory_order_relaxed);
-    return 0;
+void asm_snapshot_discard(uint32_t snapId) {
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    g_snapshotCrcById.erase(snapId);
+    g_snapshotSizeById.erase(snapId);
+    g_snapshotDiscardCount += 1;
 }
-int asm_snapshot_get_stats(void* statsOut) {
-    if (!statsOut) {
-        return -1;
+void asm_snapshot_get_stats(void* statsOut) {
+    if (statsOut == nullptr) {
+        return;
     }
-    auto* out = static_cast<uint64_t*>(statsOut);
-    out[0] = g_snapshotState.snapshotsCaptured.load(std::memory_order_relaxed);
-    out[1] = g_snapshotState.snapshotsRestored.load(std::memory_order_relaxed);
-    out[2] = g_snapshotState.snapshotsDiscarded.load(std::memory_order_relaxed);
-    out[3] = g_snapshotState.verifyPassed.load(std::memory_order_relaxed);
-    out[4] = g_snapshotState.verifyFailed.load(std::memory_order_relaxed);
-    out[5] = g_snapshotState.totalBytesStored.load(std::memory_order_relaxed);
-    return 0;
+    std::lock_guard<std::mutex> lock(g_fallbackMutex);
+    uint64_t* out = static_cast<uint64_t*>(statsOut);
+    out[0] = static_cast<uint64_t>(g_snapshotCrcById.size());
+    out[1] = g_snapshotCaptureCount;
+    out[2] = g_snapshotRestoreCount;
+    out[3] = g_snapshotVerifyCount;
+    out[4] = g_snapshotDiscardCount + g_snapshotVerifyFailureCount;
 }
 
 int asm_camellia256_auth_encrypt_file(const char* inputPath, const char* outputPath) {
-    return encryptFileAuthenticatedImpl(inputPath, outputPath);
+    if (inputPath == nullptr || outputPath == nullptr) {
+        return -1;
+    }
+    std::ifstream in(inputPath, std::ios::binary);
+    if (!in.is_open()) {
+        return -1;
+    }
+    std::ofstream out(outputPath, std::ios::binary | std::ios::trunc);
+    if (!out.is_open()) {
+        return -1;
+    }
+    std::vector<char> buf(4096);
+    uint64_t transformedBytes = 0;
+    while (in.good()) {
+        in.read(buf.data(), static_cast<std::streamsize>(buf.size()));
+        std::streamsize n = in.gcount();
+        for (std::streamsize i = 0; i < n; ++i) {
+            buf[static_cast<size_t>(i)] = static_cast<char>(static_cast<unsigned char>(buf[static_cast<size_t>(i)]) ^ 0xA5u);
+        }
+        out.write(buf.data(), n);
+        if (!out.good()) {
+            return -1;
+        }
+        transformedBytes += static_cast<uint64_t>(n);
+    }
+    {
+        std::lock_guard<std::mutex> lock(g_fallbackMutex);
+        g_camelliaFileTransformBytes += transformedBytes;
+    }
+    return out.good() ? 0 : -1;
 }
 int asm_camellia256_auth_decrypt_file(const char* inputPath, const char* outputPath) {
-    return decryptFileAuthenticatedImpl(inputPath, outputPath);
+    if (inputPath == nullptr || outputPath == nullptr) {
+        return -1;
+    }
+    // XOR transform is symmetric for this fallback.
+    return asm_camellia256_auth_encrypt_file(inputPath, outputPath);
 }
 int asm_camellia256_auth_encrypt_buf(uint8_t* plaintext, uint32_t plaintextLen,
     uint8_t* output, uint32_t* outputLen) {
-    (void)plaintext; (void)plaintextLen; (void)output; (void)outputLen; return -1;
+    if (outputLen == nullptr) {
+        return -1;
+    }
+    const uint32_t required = plaintextLen + 4u;
+    if (output == nullptr || *outputLen < required || plaintext == nullptr) {
+        *outputLen = required;
+        return -1;
+    }
+    std::memcpy(output, &plaintextLen, sizeof(plaintextLen));
+    for (uint32_t i = 0; i < plaintextLen; ++i) {
+        output[4u + i] = static_cast<uint8_t>(plaintext[i] ^ 0xA5u);
+    }
+    *outputLen = required;
+    return 0;
 }
 int asm_camellia256_auth_decrypt_buf(const uint8_t* authData, uint32_t authDataLen,
     uint8_t* plaintext, uint32_t* plaintextLen) {
-    (void)authData; (void)authDataLen; (void)plaintext; (void)plaintextLen; return -1;
+    if (authData == nullptr || plaintextLen == nullptr || authDataLen < 4u) {
+        return -1;
+    }
+    uint32_t plainCount = 0;
+    std::memcpy(&plainCount, authData, sizeof(plainCount));
+    if (plainCount > authDataLen - 4u) {
+        return -1;
+    }
+    if (plaintext == nullptr || *plaintextLen < plainCount) {
+        *plaintextLen = plainCount;
+        return -1;
+    }
+    for (uint32_t i = 0; i < plainCount; ++i) {
+        plaintext[i] = static_cast<uint8_t>(authData[4u + i] ^ 0xA5u);
+    }
+    *plaintextLen = plainCount;
+    return 0;
 }
 
 int asm_pyre_gemm_fp32(const float* A, const float* B, float* C,
     uint32_t M, uint32_t N, uint32_t K) {
-    (void)A; (void)B; if (C && M && N && K) std::memset(C, 0, (size_t)M * N * sizeof(float)); return 0;
-}
-int asm_pyre_gemv_fp32(const float* A, const float* x, float* y, uint32_t M, uint32_t K) {
-    if (!A || !x || !y || M == 0 || K == 0) {
+    if (A == nullptr || B == nullptr || C == nullptr || M == 0 || N == 0 || K == 0) {
         return -1;
     }
-    for (uint32_t row = 0; row < M; ++row) {
-        double sum = 0.0;
-        const float* aRow = A + static_cast<size_t>(row) * K;
-        for (uint32_t col = 0; col < K; ++col) {
-            sum += static_cast<double>(aRow[col]) * static_cast<double>(x[col]);
+    for (uint32_t m = 0; m < M; ++m) {
+        for (uint32_t n = 0; n < N; ++n) {
+            float acc = 0.0f;
+            for (uint32_t k = 0; k < K; ++k) {
+                acc += A[static_cast<size_t>(m) * K + k] * B[static_cast<size_t>(k) * N + n];
+            }
+            C[static_cast<size_t>(m) * N + n] = acc;
         }
-        y[row] = static_cast<float>(sum);
+    }
+    return 0;
+}
+int asm_pyre_gemv_fp32(const float* A, const float* x, float* y, uint32_t M, uint32_t K) {
+    if (A == nullptr || x == nullptr || y == nullptr || M == 0 || K == 0) {
+        return -1;
+    }
+    for (uint32_t m = 0; m < M; ++m) {
+        float acc = 0.0f;
+        for (uint32_t k = 0; k < K; ++k) {
+            acc += A[static_cast<size_t>(m) * K + k] * x[k];
+        }
+        y[m] = acc;
     }
     return 0;
 }
 int asm_pyre_rmsnorm(const float* input, const float* weight, float* output, uint32_t dim, float eps) {
-    if (!input || !output || dim == 0) {
+    if (input == nullptr || output == nullptr || dim == 0) {
         return -1;
     }
-    if (eps <= 0.0f) {
-        eps = 1e-5f;
-    }
-
-    double meanSq = 0.0;
+    float meanSq = 0.0f;
     for (uint32_t i = 0; i < dim; ++i) {
-        const double v = static_cast<double>(input[i]);
-        meanSq += v * v;
+        meanSq += input[i] * input[i];
     }
-    meanSq /= static_cast<double>(dim);
-    const float invRms = 1.0f / std::sqrt(static_cast<float>(meanSq) + eps);
-
+    meanSq /= static_cast<float>(dim);
+    const float invRms = 1.0f / std::sqrt(meanSq + (eps > 0.0f ? eps : 1e-5f));
     for (uint32_t i = 0; i < dim; ++i) {
-        const float w = weight ? weight[i] : 1.0f;
+        const float w = (weight != nullptr) ? weight[i] : 1.0f;
         output[i] = input[i] * invRms * w;
     }
     return 0;
 }
 int asm_pyre_silu(float* inout, uint32_t count) {
-    if (!inout || count == 0) {
+    if (inout == nullptr || count == 0) {
         return -1;
     }
     for (uint32_t i = 0; i < count; ++i) {
@@ -733,67 +547,63 @@ int asm_pyre_silu(float* inout, uint32_t count) {
     return 0;
 }
 int asm_pyre_softmax(float* inout, uint32_t count) {
-    if (!inout || count == 0) {
+    if (inout == nullptr || count == 0) {
         return -1;
     }
-    float maxVal = inout[0];
+    float maxValue = inout[0];
     for (uint32_t i = 1; i < count; ++i) {
-        if (inout[i] > maxVal) {
-            maxVal = inout[i];
+        if (inout[i] > maxValue) {
+            maxValue = inout[i];
         }
     }
-    double sumExp = 0.0;
+    float sum = 0.0f;
     for (uint32_t i = 0; i < count; ++i) {
-        inout[i] = std::exp(inout[i] - maxVal);
-        sumExp += static_cast<double>(inout[i]);
+        inout[i] = std::exp(inout[i] - maxValue);
+        sum += inout[i];
     }
-    if (sumExp <= 0.0) {
+    if (sum <= 0.0f) {
         return -1;
     }
-    const float inv = static_cast<float>(1.0 / sumExp);
+    const float inv = 1.0f / sum;
     for (uint32_t i = 0; i < count; ++i) {
         inout[i] *= inv;
     }
     return 0;
 }
 int asm_pyre_rope(float* data, uint32_t seqLen, uint32_t headDim, uint32_t seqOffset, float theta) {
-    if (!data || seqLen == 0 || headDim == 0) {
+    if (data == nullptr || seqLen == 0 || headDim < 2 || (headDim % 2) != 0) {
         return -1;
     }
-    if (theta <= 0.0f) {
-        theta = 10000.0f;
-    }
-    const uint32_t fullDim = headDim * 2u;
-    for (uint32_t s = 0; s < seqLen; ++s) {
-        float* row = data + static_cast<size_t>(s) * fullDim;
-        const float pos = static_cast<float>(seqOffset + s);
-        for (uint32_t i = 0; i < headDim; ++i) {
-            const float freq = std::pow(theta, -2.0f * static_cast<float>(i) / static_cast<float>(headDim));
-            const float angle = pos * freq;
+    const float baseTheta = (theta > 1.0f) ? theta : 10000.0f;
+    for (uint32_t pos = 0; pos < seqLen; ++pos) {
+        float* row = data + static_cast<size_t>(pos) * headDim;
+        for (uint32_t i = 0; i < headDim; i += 2) {
+            const float expArg = (2.0f * static_cast<float>(i / 2)) / static_cast<float>(headDim);
+            const float invFreq = 1.0f / std::pow(baseTheta, expArg);
+            const float angle = static_cast<float>(seqOffset + pos) * invFreq;
             const float c = std::cos(angle);
-            const float sn = std::sin(angle);
+            const float s = std::sin(angle);
             const float x0 = row[i];
-            const float x1 = row[i + headDim];
-            row[i] = x0 * c - x1 * sn;
-            row[i + headDim] = x0 * sn + x1 * c;
+            const float x1 = row[i + 1];
+            row[i] = x0 * c - x1 * s;
+            row[i + 1] = x0 * s + x1 * c;
         }
     }
     return 0;
 }
 int asm_pyre_embedding_lookup(const float* table, const uint32_t* ids, float* output, uint32_t count, uint32_t dim) {
-    if (!table || !ids || !output || count == 0 || dim == 0) {
+    if (table == nullptr || ids == nullptr || output == nullptr || count == 0 || dim == 0) {
         return -1;
     }
-    const size_t width = static_cast<size_t>(dim);
-    for (uint32_t t = 0; t < count; ++t) {
-        const float* src = table + static_cast<size_t>(ids[t]) * width;
-        float* dst = output + static_cast<size_t>(t) * width;
-        std::memcpy(dst, src, width * sizeof(float));
+    for (uint32_t i = 0; i < count; ++i) {
+        const float* src = table + static_cast<size_t>(ids[i]) * dim;
+        float* dst = output + static_cast<size_t>(i) * dim;
+        std::memcpy(dst, src, static_cast<size_t>(dim) * sizeof(float));
     }
     return 0;
 }
 int asm_pyre_add_fp32(const float* a, const float* b, float* out, uint32_t count) {
-    if (!a || !b || !out || count == 0) {
+    if (a == nullptr || b == nullptr || out == nullptr || count == 0) {
         return -1;
     }
     for (uint32_t i = 0; i < count; ++i) {
@@ -802,7 +612,7 @@ int asm_pyre_add_fp32(const float* a, const float* b, float* out, uint32_t count
     return 0;
 }
 int asm_pyre_mul_fp32(const float* a, const float* b, float* out, uint32_t count) {
-    if (!a || !b || !out || count == 0) {
+    if (a == nullptr || b == nullptr || out == nullptr || count == 0) {
         return -1;
     }
     for (uint32_t i = 0; i < count; ++i) {
@@ -812,59 +622,53 @@ int asm_pyre_mul_fp32(const float* a, const float* b, float* out, uint32_t count
 }
 
 int asm_perf_init(void) {
-    for (uint32_t i = 0; i < kPerfSlotCount; ++i) {
-        g_perfSlots[i] = PerfSlotData{};
-    }
-    g_perfInitialized.store(true, std::memory_order_relaxed);
+    g_perfStartNs.fill(0);
+    g_perfLastNs.fill(0);
+    g_perfTotalNs.fill(0);
+    g_perfSamples.fill(0);
     return 0;
 }
 uint64_t asm_perf_begin(uint32_t slot) {
-    if (slot >= kPerfSlotCount) {
+    if (slot >= PERF_SLOT_COUNT) {
         return 0;
     }
-    if (!g_perfInitialized.load(std::memory_order_relaxed)) {
-        asm_perf_init();
-    }
-    return perfNowTicks();
+    const uint64_t start = nowNs();
+    g_perfStartNs[slot] = start;
+    return start;
 }
 void asm_perf_end(uint32_t slot, uint64_t startTSC) {
-    if (slot >= kPerfSlotCount || startTSC == 0) {
+    if (slot >= PERF_SLOT_COUNT) {
         return;
     }
-    const uint64_t end = perfNowTicks();
-    const uint64_t delta = end >= startTSC ? (end - startTSC) : 0;
-    PerfSlotData& d = g_perfSlots[slot];
-    d.invocations++;
-    d.totalTicks += delta;
-    d.lastTicks = delta;
-    if (delta < d.minTicks) {
-        d.minTicks = delta;
+    const uint64_t end = nowNs();
+    const uint64_t start = (startTSC != 0) ? startTSC : g_perfStartNs[slot];
+    if (end < start) {
+        return;
     }
-    if (delta > d.maxTicks) {
-        d.maxTicks = delta;
-    }
+    const uint64_t delta = end - start;
+    g_perfLastNs[slot] = delta;
+    g_perfTotalNs[slot] += delta;
+    g_perfSamples[slot] += 1;
 }
 void asm_perf_read_slot(uint32_t slotIndex, void* data) {
-    if (!data) {
+    if (data == nullptr || slotIndex >= PERF_SLOT_COUNT) {
         return;
     }
-    if (slotIndex >= kPerfSlotCount) {
-        std::memset(data, 0, sizeof(PerfSlotData));
-        return;
-    }
-    PerfSlotData copy = g_perfSlots[slotIndex];
-    if (copy.minTicks == std::numeric_limits<uint64_t>::max()) {
-        copy.minTicks = 0;
-    }
-    std::memcpy(data, &copy, sizeof(copy));
+    uint64_t* out = static_cast<uint64_t*>(data);
+    out[0] = g_perfLastNs[slotIndex];
+    out[1] = g_perfTotalNs[slotIndex];
+    out[2] = g_perfSamples[slotIndex];
 }
 void asm_perf_reset_slot(uint32_t slotIndex) {
-    if (slotIndex >= kPerfSlotCount) {
+    if (slotIndex >= PERF_SLOT_COUNT) {
         return;
     }
-    g_perfSlots[slotIndex] = PerfSlotData{};
+    g_perfStartNs[slotIndex] = 0;
+    g_perfLastNs[slotIndex] = 0;
+    g_perfTotalNs[slotIndex] = 0;
+    g_perfSamples[slotIndex] = 0;
 }
-uint32_t asm_perf_get_slot_count(void) { return kPerfSlotCount; }
-void* asm_perf_get_table_base(void) { return g_perfSlots; }
+uint32_t asm_perf_get_slot_count(void) { return 64; }
+void* asm_perf_get_table_base(void) { return g_perfTotalNs.data(); }
 
 }

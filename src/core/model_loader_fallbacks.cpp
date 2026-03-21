@@ -1,55 +1,55 @@
 // Linker fallbacks for Win32IDE when model loader symbols are unavailable.
+#include <atomic>
 #include <cstdint>
+#include <filesystem>
+#include <mutex>
 #include <string>
+#include <cstdlib>
 
 namespace {
-struct ModelLoaderFallbackState {
-    bool initialized = false;
-    bool devUnlocked = false;
-    std::string activeModel;
-    uint64_t loadCount = 0;
-    uint64_t hotSwapCount = 0;
-};
-
-ModelLoaderFallbackState g_state{};
+std::mutex g_modelLoaderMutex;
+std::string g_loadedModelPath;
+std::atomic<bool> g_modelLoaderInitialized{false};
+std::atomic<uint64_t> g_hotSwapCount{0};
 }
 
 extern "C" bool LoadModel(const char* path) {
-    if (!g_state.initialized || path == nullptr || path[0] == '\0') {
+    if (path == nullptr || path[0] == '\0') {
         return false;
     }
-    g_state.activeModel = path;
-    g_state.loadCount += 1;
+    std::error_code ec;
+    const bool exists = std::filesystem::exists(path, ec);
+    if (ec || !exists) {
+        return false;
+    }
+    std::lock_guard<std::mutex> lock(g_modelLoaderMutex);
+    g_loadedModelPath = path;
     return true;
 }
 
 extern "C" bool ModelLoaderInit(void) {
-    g_state.initialized = true;
-    if (g_state.activeModel.empty()) {
-        g_state.activeModel = "fallback/default.gguf";
-    }
+    g_modelLoaderInitialized.store(true, std::memory_order_relaxed);
     return true;
 }
 
 extern "C" bool HotSwapModel(const char* model_id) {
-    if (!g_state.initialized || model_id == nullptr || model_id[0] == '\0') {
+    if (model_id == nullptr || model_id[0] == '\0' || !g_modelLoaderInitialized.load(std::memory_order_relaxed)) {
         return false;
     }
-    g_state.activeModel = model_id;
-    g_state.hotSwapCount += 1;
+    std::lock_guard<std::mutex> lock(g_modelLoaderMutex);
+    g_loadedModelPath = model_id;
+    g_hotSwapCount.fetch_add(1, std::memory_order_relaxed);
     return true;
 }
 
 extern "C" bool ModelLoaderShutdown(void) {
-    if (!g_state.initialized) {
-        return true;
-    }
-    g_state.initialized = false;
-    g_state.activeModel.clear();
+    g_modelLoaderInitialized.store(false, std::memory_order_relaxed);
+    std::lock_guard<std::mutex> lock(g_modelLoaderMutex);
+    g_loadedModelPath.clear();
     return true;
 }
 
 extern "C" bool Enterprise_DevUnlock(void) {
-    g_state.devUnlocked = true;
-    return true;
+    const char* unlock = std::getenv("RAWRXD_ENTERPRISE_UNLOCK");
+    return unlock != nullptr && unlock[0] == '1';
 }
