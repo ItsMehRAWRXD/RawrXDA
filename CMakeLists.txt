@@ -1272,10 +1272,19 @@ list(REMOVE_ITEM GOLD_UNDERSCORE_SOURCES
 )
 list(APPEND GOLD_UNDERSCORE_SOURCES
     src/core/rawr_engine_link_shims.cpp
-    src/core/auto_feature_stub_impl.cpp
     src/core/ignite_800b.cpp
-    src/core/ssot_handlers.cpp
 )
+if(MSVC)
+    list(APPEND GOLD_UNDERSCORE_SOURCES
+        src/core/ssot_handlers.cpp
+    )
+else()
+    list(APPEND GOLD_UNDERSCORE_SOURCES
+        src/core/auto_feature_stub_impl.cpp
+        src/core/rawrengine_command_handlers.cpp
+        src/core/minigw_runtime_symbol_batch7.cpp
+    )
+endif()
 add_executable(RawrXD_Gold ${GOLD_UNDERSCORE_SOURCES} ${ASM_KERNEL_SOURCES})
 
 if(WIN32)
@@ -1311,16 +1320,21 @@ target_link_libraries(RawrXD_Gold PRIVATE Threads::Threads)
 target_compile_definitions(RawrXD_Gold PRIVATE
     RAWRXD_GOLD_BUILD=1
     RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS=1
-    RAWR_HAS_MASM=1
-    RAWRXD_LINK_QUADBUFFER_ASM=1
-    RAWRXD_LINK_INFERENCE_KERNELS_ASM=1
-    RAWRXD_LINK_ANALYZER_DISTILLER_ASM=1
-    RAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1
-    RAWRXD_LINK_TELEMETRY_KERNEL_ASM=1
-    RAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1
-    RAWRXD_LINK_SELFPATCH_AGENT_ASM=1
-    RAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1
 )
+
+if(MSVC)
+    target_compile_definitions(RawrXD_Gold PRIVATE
+        RAWR_HAS_MASM=1
+        RAWRXD_LINK_QUADBUFFER_ASM=1
+        RAWRXD_LINK_INFERENCE_KERNELS_ASM=1
+        RAWRXD_LINK_ANALYZER_DISTILLER_ASM=1
+        RAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1
+        RAWRXD_LINK_TELEMETRY_KERNEL_ASM=1
+        RAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1
+        RAWRXD_LINK_SELFPATCH_AGENT_ASM=1
+        RAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1
+    )
+endif()
 
 if(MSVC)
     target_compile_options(RawrXD_Gold PRIVATE
@@ -1366,6 +1380,9 @@ if(MSVC)
         src/agentic/ErrorRecoveryManager.cpp
     )
 else()
+    target_compile_definitions(RawrXD_Gold PRIVATE
+        RAWRXD_BATCH7_EXCLUDE_AGENTIC_EMBEDDING_VISION=1
+    )
     target_sources(RawrXD_Gold PRIVATE
         src/agentic/AgentOllamaClient.cpp
         src/logging/Logger.cpp
@@ -1373,6 +1390,7 @@ else()
         src/core/ConfigurationValidator.cpp
         src/inference/PerformanceMonitor.cpp
         src/agentic/ErrorRecoveryManager.cpp
+        src/core/runtime_symbol_bridge.cpp
     )
 endif()
 

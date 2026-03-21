@@ -287,6 +287,32 @@ size_t KQuant_Dispatch(int ggml_type, const void* src, float* dst, size_t numEle
     }
 }
 
+// Batch 28: streaming + telemetry + self-repair scan bridges
+int64_t QB_Init(uint64_t, uint64_t) { return 0; }
+int64_t QB_Shutdown() { return 0; }
+int64_t QB_LoadModel(const wchar_t*, uint32_t) { return 0; }
+int64_t QB_StreamTensor(uint64_t, void*, uint64_t, uint32_t) { return 0; }
+int64_t QB_ReleaseTensor(uint64_t) { return 0; }
+int64_t QB_GetStats(void* statsOut) {
+    if (statsOut) {
+        std::memset(statsOut, 0, 128);
+    }
+    return 0;
+}
+int64_t QB_ForceEviction(uint64_t) { return 0; }
+int64_t QB_SetVRAMLimit(uint64_t) { return 0; }
+
+uint64_t g_Counter_AgentLoop = 0;
+uint64_t UTC_IncrementCounter(volatile uint64_t* counterAddr) {
+    if (counterAddr == nullptr) {
+        return 0;
+    }
+    return ++(*counterAddr);
+}
+
+void* asm_selfpatch_scan_text(const void*, size_t, const void*, size_t) { return nullptr; }
+int asm_selfpatch_scan_nop_sled(const void*, size_t) { return 0; }
+
 // Batch 28: deflate + masm agent failure
 
 }
