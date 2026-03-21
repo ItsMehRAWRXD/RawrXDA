@@ -61,3 +61,42 @@ git merge --no-ff rawrxda/cursor/unlinked-dissolved-symbols-2b27 -m "merge(rawrx
 If CMake conflicts, prefer **keeping** a single `rawr_engine_link_shims.cpp` entry for RawrEngine (conditional `target_sources` already gates it) and **merging** stricter `EnforceNoStubs` patterns from 4264.
 
 **Win32IDE:** use `src/core/rawr_engine_link_shims.cpp` for link closure (and production-strip `REMOVE_ITEM` of that TU when stripping stubs). Do **not** reference `win32_ide_link_stubs.cpp` — it is not in the tree; stale list entries break consistency with SSOT merges.
+
+---
+
+## 2026-03-21 — sequential merge into `main`
+
+On branch `backup/20260316-ide`, each RawrXDA agent line was merged **one at a time** (inspect → resolve → commit), then `main` was **fast-forwarded** to that tip:
+
+| Order | Remote merged | Notes |
+|------|----------------|--------|
+| 1 | `rawrxda/cursor/unlinked-and-dissolved-symbols-841f` | CMake conflicts: took incoming `CMakeLists.txt` then re-added `unified_memory_executor.cpp` (RawrEngine + Win32IDE lists). |
+| 2 | `rawrxda/cursor/unlinked-and-dissolved-symbols-2559` | `agentic_task_graph.cpp` + `rawrxd_telemetry_exports.h` small conflicts. |
+| 3 | `rawrxda/cursor/unlinked-dissolved-symbols-2b27` | Took incoming for 8 fallback/bridge TUs. |
+| 4 | `rawrxda/cursor/unlinked-dissolved-symbols-4264` | CMake: same pattern; `audit/PRODUCTION_SYMBOL_WIRING_BATCH_23.md` merged both narratives. |
+| 5 | `rawrxda/cursor/full-historic-source-dumps-fcc6` | Took incoming for 12 fallback TUs. |
+
+`rawrxda/backup/20260316-ide` was **already an ancestor** of local `backup/20260316-ide` — no separate merge.
+
+**Local branches removed** after they were contained in `main` (or force-deleted when Git refused `-d` due to upstream tracking): includes `backup/20260316-ide`, `rawrxda-mirror-*`, `2026-02-12-nsh4`, `pr-q4-avx2-forward-wire`, `preserve-untracked-output`, `production-lazy-init`, `recovery-clean-source`, `codex/*`, `combined/all-updates`, `integrate/rawrxda-all-symbols`, etc.
+
+**Re-create mirror pointers** (optional):
+
+```powershell
+git fetch rawrxda --prune
+git branch -f rawrxda-mirror-main rawrxda/main
+# …same table as above for cursor/* and backup…
+```
+
+### Branches left locally (not merged into `main`)
+
+These tips have **unrelated history** vs current `main` (`fatal: refusing to merge unrelated histories`). They were **not** merged and **not** deleted (would drop parallel work):
+
+- `agentic-ide-production`, `avx2-q4-v0.3.0`, `avx2-q4-v0.3.0-clean`, `clean-main`
+- `copilot/merge-repos-into-main`, `copilot/sub-pr-5`
+- `cursor/configure-vscode-github-copilot-for-powershell-gpt-5.1-codex-5162`
+- `dependabot/pip/pip-e1fbd7af7b`
+- `feature/pure-masm-ide-integration`, `feature/q4-avx2-dispatch`, `feature/q4-avx2-forward-wire`, `feature/q4-avx2-q4-dispatch-wire`, `feature/q8-avx2-dispatch`, `feature/q8-avx2-v2`
+- `lazy-production-init`, `pr-q4-avx2-dispatch`, `sync-source-20260114`
+
+To fold one in anyway: `git merge <branch> --allow-unrelated-histories` (expect mass conflicts) or cherry-pick specific commits.
